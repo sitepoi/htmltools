@@ -1,0 +1,373 @@
+<!-- ===== SECTION 1: SERVICE TOGGLES ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header active" data-section="service-toggles">
+    <span class="accordion-icon">⚙️</span>
+    <span class="accordion-title">Service Toggles</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body open" data-section="service-toggles">
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Pickup Enabled</span><span class="toggle-desc">Allow customers to place pickup orders</span></div>
+      <label class="switch"><input type="checkbox" id="pickup_enabled" data-key="service_toggles.pickup_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Delivery Enabled</span><span class="toggle-desc">Allow customers to place delivery orders</span></div>
+      <label class="switch"><input type="checkbox" id="delivery_enabled" data-key="service_toggles.delivery_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">On-Premise Dining</span><span class="toggle-desc">Enable in-restaurant ordering & dining</span></div>
+      <label class="switch"><input type="checkbox" id="on_premise_enabled" data-key="service_toggles.on_premise_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row sub-toggle" id="anon-ordering-row">
+      <div class="toggle-info"><span class="toggle-label">↳ Anonymous Ordering</span><span class="toggle-desc">Allow orders without account registration</span></div>
+      <label class="switch"><input type="checkbox" id="anonymous_ordering_allowed" data-key="service_toggles.anonymous_ordering_allowed"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Table Reservation</span><span class="toggle-desc">Enable table booking & reservation management</span></div>
+      <label class="switch"><input type="checkbox" id="table_reservation_enabled" data-key="service_toggles.table_reservation_enabled"><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 2: OPENING HOURS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="opening-hours">
+    <span class="accordion-icon">🕐</span>
+    <span class="accordion-title">Opening Hours</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="opening-hours">
+    <div class="hours-grid" id="hours-grid"></div>
+    <div class="time-editor" id="time-editor" style="display:none;">
+      <div class="time-editor-header">
+        <strong id="time-editor-title">Edit Hours</strong>
+        <button type="button" class="btn btn-sm btn-ghost" id="time-editor-close">✕</button>
+      </div>
+      <div id="time-ranges-container"></div>
+      <button type="button" class="btn btn-sm btn-outline" id="add-time-range">+ Add Time Range</button>
+      <div class="time-editor-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="save-time-ranges">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 4: SCHEDULED ORDERS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="scheduled-orders">
+    <span class="accordion-icon">📅</span>
+    <span class="accordion-title">Scheduled Orders</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="scheduled-orders">
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Enable Scheduled Orders</span><span class="toggle-desc">Allow customers to schedule orders in advance</span></div>
+      <label class="switch"><input type="checkbox" id="scheduled_enabled" data-key="scheduled_orders.enabled"><span class="slider"></span></label>
+    </div>
+    <div id="scheduled-conditional" class="conditional-block">
+      <fieldset class="settings-group">
+        <legend>Pickup Advance Settings</legend>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Minimum Advance (min)</label>
+            <input type="number" class="form-input" id="pickup_min_advance" data-key="scheduled_orders.pickup_min_advance" min="0" value="30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maximum Advance (min)</label>
+            <input type="number" class="form-input" id="pickup_max_advance" data-key="scheduled_orders.pickup_max_advance" min="0" value="1440">
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Delivery Advance Settings</legend>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Minimum Advance (min)</label>
+            <input type="number" class="form-input" id="delivery_min_advance" data-key="scheduled_orders.delivery_min_advance" min="0" value="45">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maximum Advance (min)</label>
+            <input type="number" class="form-input" id="delivery_max_advance" data-key="scheduled_orders.delivery_max_advance" min="0" value="1440">
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Time Slot Interval</legend>
+        <div class="form-group">
+          <select class="form-input" id="time_slot_interval" data-key="scheduled_orders.time_slot_interval">
+            <option value="15">15 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 5: RESERVATION SETTINGS ===== -->
+<div class="accordion" id="reservation-accordion" style="display:none;">
+  <button type="button" class="accordion-header" data-section="reservation-settings">
+    <span class="accordion-icon">🍽️</span>
+    <span class="accordion-title">Reservation Settings</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="reservation-settings">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Minimum Guests</label>
+        <input type="number" class="form-input" id="min_guests" data-key="reservation_settings.min_guests" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maximum Guests</label>
+        <input type="number" class="form-input" id="max_guests" data-key="reservation_settings.max_guests" min="1" value="10">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Minimum Advance (hours)</label>
+        <input type="number" class="form-input" id="min_advance_hours" data-key="reservation_settings.min_advance_hours" min="0" value="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maximum Advance (hours)</label>
+        <input type="number" class="form-input" id="max_advance_hours" data-key="reservation_settings.max_advance_hours" min="0" value="720">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Late Hold Time (minutes)</label>
+      <input type="number" class="form-input" id="late_hold_minutes" data-key="reservation_settings.late_hold_minutes" min="0" value="15">
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Pre-Order Enabled</span><span class="toggle-desc">Allow food pre-ordering with reservation</span></div>
+      <label class="switch"><input type="checkbox" id="pre_order_enabled" data-key="reservation_settings.pre_order_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Deposit Required</span><span class="toggle-desc">Require deposit to confirm reservation</span></div>
+      <label class="switch"><input type="checkbox" id="deposit_enabled" data-key="reservation_settings.deposit_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="form-group" id="deposit-amount-row" style="display:none;">
+      <label class="form-label">Deposit Amount ($)</label>
+      <input type="number" class="form-input" id="deposit_amount" data-key="reservation_settings.deposit_amount" min="0" step="0.01" value="0">
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 6: TAXATION & CURRENCY ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="taxation">
+    <span class="accordion-icon">💰</span>
+    <span class="accordion-title">Taxation & Currency</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="taxation">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Currency</label>
+        <select class="form-input" id="currency" data-key="taxation_currency.currency">
+          <option value="USD">USD - US Dollar ($)</option>
+          <option value="EUR">EUR - Euro (€)</option>
+          <option value="GBP">GBP - British Pound (£)</option>
+          <option value="TRY">TRY - Turkish Lira (₺)</option>
+          <option value="AED">AED - UAE Dirham</option>
+          <option value="SAR">SAR - Saudi Riyal</option>
+          <option value="CAD">CAD - Canadian Dollar</option>
+          <option value="AUD">AUD - Australian Dollar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tax Name</label>
+        <input type="text" class="form-input" id="tax_name" data-key="taxation_currency.tax_name" placeholder="e.g. VAT" value="Tax">
+      </div>
+    </div>
+    <fieldset class="settings-group">
+      <legend>Tax Mode</legend>
+      <div class="radio-row">
+        <label class="radio-label"><input type="radio" name="tax_mode" value="exclusive" data-key="taxation_currency.tax_mode" checked> Exclusive (added at checkout)</label>
+        <label class="radio-label"><input type="radio" name="tax_mode" value="inclusive" data-key="taxation_currency.tax_mode"> Inclusive (included in price)</label>
+      </div>
+    </fieldset>
+    <fieldset class="settings-group">
+      <legend>Tax Categories</legend>
+      <div class="table-wrap">
+        <table class="data-table" id="tax-categories-table">
+          <thead>
+            <tr>
+              <th>Category Name</th>
+              <th>Pickup %</th>
+              <th>Delivery %</th>
+              <th>In-Restaurant %</th>
+              <th>0%</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tax-categories-tbody"></tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm" id="add-tax-category">+ Add Category</button>
+    </fieldset>
+    <div class="form-group">
+      <label class="form-label">Delivery Fee Tax Rate (%)</label>
+      <input type="number" class="form-input" id="delivery_fee_tax_rate" data-key="taxation_currency.delivery_fee_tax_rate" min="0" max="100" step="0.01" value="0">
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 7: PAYMENT METHODS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="payment-methods">
+    <span class="accordion-icon">💳</span>
+    <span class="accordion-title">Payment Methods</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="payment-methods">
+    <div class="payment-grid">
+      <div class="payment-header-row">
+        <div class="payment-method-label"></div>
+        <div class="payment-col-header">Delivery</div>
+        <div class="payment-col-header">Pickup</div>
+      </div>
+      <div class="payment-row">
+        <div class="payment-method-label">💵 Cash</div>
+        <label class="switch"><input type="checkbox" id="cash_delivery" data-key="payment_methods.cash_delivery" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="cash_pickup" data-key="payment_methods.cash_pickup" checked><span class="slider"></span></label>
+      </div>
+      <div class="payment-row">
+        <div class="payment-method-label">💳 Card</div>
+        <label class="switch"><input type="checkbox" id="card_delivery" data-key="payment_methods.card_delivery" checked><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="card_pickup" data-key="payment_methods.card_pickup" checked><span class="slider"></span></label>
+      </div>
+      <div class="payment-row">
+        <div class="payment-method-label">📞 Call for Card</div>
+        <label class="switch"><input type="checkbox" id="call_for_card_delivery" data-key="payment_methods.call_for_card_delivery"><span class="slider"></span></label>
+        <label class="switch"><input type="checkbox" id="call_for_card_pickup" data-key="payment_methods.call_for_card_pickup"><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="toggle-row" style="margin-top:16px;">
+      <div class="toggle-info"><span class="toggle-label">Online Payment Gateway</span><span class="toggle-desc">Enable integrated online payment processing</span></div>
+      <label class="switch"><input type="checkbox" id="online_payment" data-key="payment_methods.online_payment"><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 8: ALERT SETTINGS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="alert-settings">
+    <span class="accordion-icon">🔔</span>
+    <span class="accordion-title">Alert Settings</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="alert-settings">
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Failed Push Alert</span><span class="toggle-desc">Notify when a push notification fails to deliver</span></div>
+      <label class="switch"><input type="checkbox" id="failed_push_alert" data-key="alert_settings.failed_push_alert"><span class="slider"></span></label>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Alert Sound</label>
+      <select class="form-input" id="alert_sound" data-key="alert_settings.sound">
+        <option value="default">Default Chime</option>
+        <option value="bell">Bell Ring</option>
+        <option value="ding">Ding</option>
+        <option value="buzz">Buzz</option>
+        <option value="silent">Silent</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Supervisor Phone</label>
+      <input type="tel" class="form-input" id="supervisor_phone" data-key="alert_settings.supervisor_phone" placeholder="+1 (555) 000-0000">
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 9: SOCIAL & SMART LINKS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="social-links">
+    <span class="accordion-icon">🔗</span>
+    <span class="accordion-title">Social & Smart Links</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="social-links">
+    <div class="form-group">
+      <label class="form-label">Facebook Page URL</label>
+      <input type="url" class="form-input" id="facebook_url" data-key="social_links.facebook_url" placeholder="https://facebook.com/your-restaurant">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Smart Menu Link</label>
+      <input type="text" class="form-input" id="smart_menu_link" data-key="social_links.smart_menu_link" readonly placeholder="Generated automatically">
+      <span class="field-hint">Read-only — generated by the system</span>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Website Integration</span><span class="toggle-desc">Embed ordering on your own website</span></div>
+      <label class="switch"><input type="checkbox" id="website_enabled" data-key="social_links.website_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="form-group" id="website-domain-row" style="display:none;">
+      <label class="form-label">Website Domain</label>
+      <input type="text" class="form-input" id="website_domain" data-key="social_links.website_domain" placeholder="example.com">
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">iOS App Enabled</span></div>
+      <label class="switch"><input type="checkbox" id="ios_app_enabled" data-key="social_links.ios_app_enabled"><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info"><span class="toggle-label">Android App Enabled</span></div>
+      <label class="switch"><input type="checkbox" id="android_app_enabled" data-key="social_links.android_app_enabled"><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION 10: DEVICE CONNECTIONS ===== -->
+<div class="accordion">
+  <button type="button" class="accordion-header" data-section="device-connections">
+    <span class="accordion-icon">📱</span>
+    <span class="accordion-title">Device Connections</span>
+    <svg class="accordion-chevron" viewBox="0 0 24 24" width="20" height="20"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="accordion-body" data-section="device-connections">
+    <div class="table-wrap">
+      <table class="data-table" id="devices-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>OS</th>
+            <th>Device ID</th>
+            <th>App Version</th>
+            <th>Last Check</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="devices-tbody">
+          <tr class="empty-row"><td colspan="6">No devices connected yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm" id="connect-device-btn">+ Connect New Device</button>
+    <div class="device-connect-panel" id="device-connect-panel" style="display:none;">
+      <h4>Connect New Device</h4>
+      <div class="form-group">
+        <label class="form-label">Platform</label>
+        <select class="form-input" id="new-device-platform">
+          <option value="pos">POS Terminal</option>
+          <option value="tablet">Tablet</option>
+          <option value="kds">Kitchen Display (KDS)</option>
+          <option value="printer">Receipt Printer</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Device ID / Serial</label>
+        <input type="text" class="form-input" id="new-device-id" placeholder="Enter device serial or ID">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="confirm-connect">Connect</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="cancel-connect">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save indicator -->
+<div class="save-bar" id="save-bar">
+  <span class="save-status" id="save-status">All changes saved</span>
+  <button type="button" class="btn btn-primary btn-sm" id="save-all-btn">Save All</button>
+</div>
+
+

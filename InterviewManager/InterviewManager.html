@@ -1,0 +1,696 @@
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-name">HireDesk</div>
+      <div class="brand-sub">Interview Management</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span> Dashboard</div>
+      <div class="nav-item" data-page="pipeline"><span class="nav-icon">⊞</span>
+        Pipeline<span class="nav-badge" id="nav-pipeline-count">0</span></div>
+      <div class="nav-item" data-page="positions"><span class="nav-icon">⬡</span>
+        Positions<span class="nav-badge" id="nav-positions-count">0</span></div>
+      <div class="nav-item" data-page="interviewers"><span class="nav-icon">◎</span>
+        Interviewers<span class="nav-badge" id="nav-interviewers-count">0</span></div>
+      <div class="nav-item" data-page="candidates"><span class="nav-icon">◉</span>
+        Candidates<span class="nav-badge" id="nav-candidates-count">0</span></div>
+      <div class="nav-item" data-page="screening"><span class="nav-icon">⊘</span>
+        Screening<span class="nav-badge" id="nav-screening-count">0</span></div>
+      <div class="nav-item" data-page="scheduler"><span class="nav-icon">◷</span>
+        Scheduler<span class="nav-badge" id="nav-scheduler-count">0</span></div>
+      <div class="nav-item" data-page="calendar"><span class="nav-icon">▦</span>
+        Calendar<span class="nav-badge" id="nav-calendar-count">0</span></div>
+      <div class="nav-item" data-page="scoring"><span class="nav-icon">◈</span> Scoring</div>
+      <div class="nav-item" data-page="reports"><span class="nav-icon">◫</span> Reports</div>
+      <div class="nav-item" data-page="placements"><span class="nav-icon">✦</span> Placements</div>
+      <div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span> Settings</div>
+    </nav>
+    <button class="btn btn-primary btn-sm" id="add-interview-btn">+ New Interview</button>
+  </aside>
+
+  <main class="main">
+    <button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>
+
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard" class="section active">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">Your hiring pipeline at a glance</div>
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+      <div class="dash-pipeline-row" id="dash-pipeline-overview"></div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Candidates</span><button class="btn btn-ghost btn-sm" data-action="navImport">+ Import Excel</button>
+          </div>
+          <div id="dash-recent-candidates"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Upcoming Interviews</span></div>
+          <div id="dash-upcoming-interviews"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE -->
+    <section id="sec-pipeline" class="section">
+      <div class="page-header">
+        <div class="page-title">Pipeline</div>
+        <div class="page-sub">All candidates across every stage</div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <input type="text" id="pipeline-search" placeholder="Search candidates..." style="width:220px">
+          <select id="pipeline-pos-filter" style="width:200px"><option value="">All positions</option></select>
+        </div>
+      </div>
+      <div class="kanban" id="kanban-board"></div>
+    </section>
+
+    <!-- POSITIONS -->
+    <section id="sec-positions" class="section">
+      <div class="page-header">
+        <div class="page-title">Positions</div>
+        <div class="page-sub">Define roles available for hiring</div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="add-position-btn">+ Add Position</button>
+          <input type="text" id="pos-search" placeholder="Search positions..." style="width:220px">
+          <select id="pos-filter-status" style="width:160px"><option value="">All statuses</option><option value="open">Open</option><option value="closed">Closed</option><option value="on-hold">On Hold</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>Applicants</th>
+                <th>Extra Criteria</th>
+                <th>Selected</th>
+                <th>Interviews</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="positions-table-body">
+              <tr>
+                <td class="table-empty" colspan="8">No positions yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERVIEWERS -->
+    <section id="sec-interviewers" class="section">
+      <div class="page-header">
+        <div class="page-title">Interviewers</div>
+        <div class="page-sub">Manage your interview panel and availability</div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="add-interviewer-btn">+ Add Interviewer</button>
+          <input type="text" id="ivr-search" placeholder="Search interviewers..." style="width:220px">
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Dept</th>
+                <th>Email</th>
+                <th>Availability (days)</th>
+                <th>Hours</th>
+                <th>Duration</th>
+                <th>Sessions</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="interviewers-table-body">
+              <tr>
+                <td class="table-empty" colspan="9">No interviewers yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CANDIDATES -->
+    <section id="sec-candidates" class="section">
+      <div class="page-header">
+        <div class="page-title">Candidates</div>
+        <div class="page-sub">All applicants — add manually or import from Excel</div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="add-candidate-btn">+ Add Candidate</button>
+          <button class="btn btn-ghost" id="open-import-btn">⬆ Import Excel</button>
+          <input type="text" id="cand-search" placeholder="Search name or email..." style="width:220px">
+          <select id="cand-filter-status" style="width:170px"><option value="">All stages</option><option value="active">Active</option><option value="screening_pending">Pending Screening</option><option value="advanced">Advanced</option><option value="eliminated">Eliminated</option><option value="selected">Selected</option></select>
+          <select id="cand-filter-pos" style="width:190px"><option value="">All positions</option></select>
+        </div>
+      </div>
+      <div id="bulk-actions-bar"
+        style="display:none;background:var(--accent-bg);border:1px solid var(--accent);border-radius:var(--r2);padding:8px 14px;margin-bottom:12px;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="bulk-count" style="font-size:12px;color:var(--accent);font-weight:500"></span>
+        <button class="btn btn-success btn-sm" id="bulk-advance-btn">✓ Advance</button>
+        <button class="btn btn-danger btn-sm" id="bulk-eliminate-btn">⛔ Eliminate</button>
+        <button class="btn btn-ghost btn-sm" id="bulk-clear-btn">Clear</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:32px"><input type="checkbox" id="select-all-cands"></th>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Source</th>
+                <th>Positions</th>
+                <th>Resume</th>
+                <th>Stage</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="candidates-table-body">
+              <tr>
+                <td class="table-empty" colspan="8">No candidates yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREENING -->
+    <section id="sec-screening" class="section">
+      <div class="page-header">
+        <div class="page-title">Screening</div>
+        <div class="page-sub">Advance or eliminate — all stages always visible</div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="margin:0;flex:1;min-width:150px">
+            <label class="form-label">Position</label><select id="screen-filter-pos"><option value="">All positions</option></select>
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:130px">
+            <label class="form-label">Stage</label><select id="screen-filter-status"><option value="">All</option><option value="pending">Pending</option><option value="advanced">Advanced</option><option value="eliminated">Eliminated</option></select>
+          </div>
+          <div class="form-group" style="margin:0;flex:1;min-width:160px"><label class="form-label">Search</label><input type="text" id="screen-search" placeholder="Name or email...">
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn btn-success btn-sm" id="screen-bulk-advance-btn">✓ Advance Checked</button>
+            <button class="btn btn-danger btn-sm" id="screen-bulk-elim-btn">⛔ Eliminate Checked</button>
+          </div>
+        </div>
+      </div>
+      <div id="screening-list"></div>
+    </section>
+
+    <!-- SCHEDULER -->
+    <section id="sec-scheduler" class="section">
+      <div class="page-header">
+        <div class="page-title">Interview Scheduler</div>
+        <div class="page-sub">Auto-schedule interviews — multiple interviewers = panel (all must be free at the same
+          time)</div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="open-scheduler-form-btn">⚡ Configure &amp; Schedule</button>
+          <button class="btn btn-ghost" id="clear-schedule-btn" style="display:none">🗑 Clear Schedule</button>
+        </div>
+      </div>
+      <div id="schedule-result-full"></div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section id="sec-calendar" class="section">
+      <div class="page-header">
+        <div class="page-title">Interview Calendar</div>
+        <div class="page-sub">View all scheduled interviews</div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <div class="tabs" style="border:none;margin:0">
+            <div class="tab active" data-cal-tab="list">☰ List</div>
+            <div class="tab" data-cal-tab="week">▦ Week</div>
+            <div class="tab" data-cal-tab="month">◫ Month</div>
+          </div>
+          <select id="cal-ivr-filter" style="width:200px"><option value="">All Interviewers</option></select>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-ghost btn-sm" id="cal-prev-btn">‹ Prev</button>
+            <span id="cal-period-label" style="font-size:13px;font-weight:500;min-width:160px;text-align:center"></span>
+            <button class="btn btn-ghost btn-sm" id="cal-next-btn">Next ›</button>
+            <button class="btn btn-ghost btn-sm" id="cal-today-btn">Today</button>
+          </div>
+        </div>
+      </div>
+      <div id="cal-view-list" class="cal-view"></div>
+      <div id="cal-view-week" class="cal-view" style="display:none"></div>
+      <div id="cal-view-month" class="cal-view" style="display:none"></div>
+    </section>
+
+    <!-- SCORING -->
+    <section id="sec-scoring" class="section">
+      <div class="page-header">
+        <div class="page-title">Interview Scoring</div>
+        <div class="page-sub">Record evaluation scores</div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><span class="card-title">Select Session</span></div>
+        <div class="input-row">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Interview</label><select id="score-interview"><option value="">Select interview...</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Interviewer</label><select id="score-interviewer"><option value="">Select interviewer...</option></select>
+          </div>
+        </div>
+      </div>
+      <div id="scoring-form-container"></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="sec-reports" class="section">
+      <div class="page-header">
+        <div class="page-title">Reports &amp; Recommendations</div>
+        <div class="page-sub">Aggregated scores and placement suggestions</div>
+      </div>
+      <div class="tabs">
+        <div class="tab active" data-tab="candidates">Rankings</div>
+        <div class="tab" data-tab="positions">By Position</div>
+        <div class="tab" data-tab="matrix">Matrix</div>
+        <div class="tab" data-tab="rejection">Rejection Emails</div>
+      </div>
+      <div id="report-candidates" class="report-tab-content"></div>
+      <div id="report-positions" class="report-tab-content" style="display:none"></div>
+      <div id="report-matrix" class="report-tab-content" style="display:none"></div>
+      <div id="report-rejection" class="report-tab-content" style="display:none"></div>
+    </section>
+
+    <!-- PLACEMENTS -->
+    <section id="sec-placements" class="section">
+      <div class="page-header">
+        <div class="page-title">Placements</div>
+        <div class="page-sub">Select candidates and manage offer letters</div>
+      </div>
+      <div id="placements-content"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="sec-settings" class="section">
+      <div class="page-header">
+        <div class="page-title">Settings</div>
+        <div class="page-sub">Global configuration for HireDesk</div>
+      </div>
+      <div class="card" style="max-width:600px">
+        <div class="card-header"><span class="card-title">Organization</span></div>
+        <div class="form-group"><label class="form-label">Company Name</label><input type="text" id="settings-company" placeholder="e.g. Acme Corp">
+        </div>
+        <div class="section-sep">
+          <div class="section-sep-label">Default Meeting Link
+            <span class="section-sep-badge">Used in all interview invitations by default</span></div>
+        </div>
+        <div class="form-group"><label class="form-label">Platform</label>
+          <select id="settings-meeting-platform"><option value="">None</option><option value="Zoom">Zoom</option><option value="Teams">Microsoft Teams</option><option value="Google Meet">Google Meet</option><option value="Webex">Webex</option><option value="Other">Other</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Default Meeting URL</label>
+          <input type="text" id="settings-meeting-url" placeholder="https://zoom.us/j/...">
+          <div style="font-size:11px;color:var(--text3);margin-top:5px">Included automatically in all invitation emails
+            unless overridden per-interview</div>
+        </div>
+        <div style="margin-top:8px"><button class="btn btn-primary" id="settings-save-btn">Save Settings</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- DRAWERS -->
+<div class="drawer-overlay" id="pos-drawer-overlay"></div>
+<div class="drawer" id="pos-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="pos-drawer-title">Add Position</div>
+    <button class="drawer-close" id="pos-drawer-close">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="form-group"><label class="form-label">Position Title *</label><input type="text" id="pos-title" placeholder="e.g. Senior Backend Engineer">
+    </div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Department</label><input type="text" id="pos-dept" placeholder="e.g. Engineering">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label><select id="pos-status"><option value="open">Open</option><option value="closed">Closed</option><option value="on-hold">On Hold</option></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label><textarea id="pos-desc" placeholder="Role description..." style="min-height:80px"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Close for New Interviews</label>
+      <div
+        style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2)">
+        <label class="toggle-switch danger"><input type="checkbox" id="pos-closed-int"><span class="toggle-slider"></span></label>
+        <span style="font-size:13px;color:var(--text2)">No new interviews for this position</span>
+      </div>
+    </div>
+    <div class="section-sep">
+      <div class="section-sep-label">Position-Specific Scoring
+        Criteria<span class="section-sep-badge pos-specific">Beyond HR defaults</span></div>
+    </div>
+    <div id="pos-criteria-list"></div>
+    <button class="btn btn-ghost btn-sm" id="pos-add-criterion-btn" style="margin-top:8px">+ Add Criterion</button>
+    <input type="hidden" id="pos-edit-id">
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-ghost" id="pos-drawer-cancel">Cancel</button><button class="btn btn-primary" id="pos-save-btn">Save Position</button>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="ivr-drawer-overlay"></div>
+<div class="drawer" id="ivr-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="ivr-drawer-title">Add Interviewer</div>
+    <button class="drawer-close" id="ivr-drawer-close">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="ivr-name" placeholder="e.g. Sarah Chen">
+      </div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="ivr-email" placeholder="sarah@company.com">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Role / Title</label><input type="text" id="ivr-role" placeholder="e.g. Engineering Manager">
+      </div>
+      <div class="form-group"><label class="form-label">Department</label><input type="text" id="ivr-dept" placeholder="e.g. Engineering">
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Interview Duration</label>
+      <select id="ivr-duration"><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option></select>
+    </div>
+    <div class="section-sep">
+      <div class="section-sep-label">Weekly Availability Slots</div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">Times in <strong>12-hour AM/PM format</strong>.
+      The scheduler only places interviews within these windows.</div>
+    <div id="ivr-slots-list"></div>
+    <button class="btn btn-ghost btn-sm" id="ivr-add-slot-btn" style="margin-top:8px">+ Add Availability Slot</button>
+    <input type="hidden" id="ivr-edit-id">
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-ghost" id="ivr-drawer-cancel">Cancel</button><button class="btn btn-primary" id="ivr-save-btn">Save Interviewer</button>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="cand-drawer-overlay"></div>
+<div class="drawer" id="cand-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="cand-drawer-title">Add Candidate</div>
+    <button class="drawer-close" id="cand-drawer-close">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div id="dup-warning-banner"
+      style="display:none;background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r2);padding:10px 14px;margin-bottom:14px;align-items:flex-start;gap:10px">
+      <span style="font-size:16px;flex-shrink:0">⚠️</span>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px;color:var(--amber);margin-bottom:3px">Possible Duplicate</div>
+        <div id="dup-warning-msg" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="dup-warning-dismiss">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Full Name *</label><input type="text" id="cand-name" placeholder="e.g. Alex Johnson" autocomplete="off">
+    </div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="cand-email" placeholder="alex@example.com">
+      </div>
+      <div class="form-group"><label class="form-label">Phone</label><input type="text" id="cand-phone" placeholder="+1 555 000 0000">
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Applied Via</label>
+        <select id="cand-source"><option value="">Select source...</option><option value="Website">Company Website</option><option value="JobBank">JobBank</option><option value="LinkedIn">LinkedIn</option><option value="Indeed">Indeed</option><option value="Referral">Employee Referral</option><option value="Agency">Recruitment Agency</option><option value="Other">Other</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Resume URL</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="cand-resume" placeholder="https://..."><button class="btn btn-ghost btn-sm" id="cand-preview-resume-btn" style="flex-shrink:0">👁</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Applied Positions</label>
+      <div class="dropdown-wrap">
+        <div class="multi-select" id="cand-positions-display">
+          <span class="multi-select-placeholder">Click to select...</span></div>
+        <div class="dropdown-list" id="cand-positions-dropdown"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label><textarea id="cand-notes" placeholder="Background, source, general notes..."></textarea>
+    </div>
+    <input type="hidden" id="cand-edit-id">
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-ghost" id="cand-drawer-cancel">Cancel</button><button class="btn btn-primary" id="cand-save-btn">Save Candidate</button>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="sched-drawer-overlay"></div>
+<div class="drawer" id="sched-drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Schedule Settings</div><button class="drawer-close" id="sched-drawer-close">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="form-group"><label class="form-label">Interview Week Start (Monday)</label><input type="date" id="sched-week-start">
+    </div>
+    <div class="form-group"><label class="form-label">Break Between Interviews</label>
+      <select id="sched-break"><option value="0">No break</option><option value="10">10 min</option><option value="15" selected>15 min</option><option value="30">30 min</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Position Filter</label><select id="sched-pos-filter"><option value="">All positions</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Interviewers <span class="label-hint">Multiple = panel interview</span></label>
+      <div class="dropdown-wrap">
+        <div class="multi-select" id="sched-interviewers-display">
+          <span class="multi-select-placeholder">Click to select interviewers...</span></div>
+        <div class="dropdown-list" id="sched-interviewers-dropdown"></div>
+      </div>
+    </div>
+    <div
+      style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:12px;margin-top:4px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">Advanced Candidates</div>
+      <div id="sched-candidates-preview" style="max-height:200px;overflow-y:auto"></div>
+    </div>
+    <div
+      style="background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r2);padding:10px 12px;margin-top:12px;font-size:12px;color:var(--amber)">
+      ⏰ Multiple interviewers = panel — only times when ALL are free will be used. Each candidate gets ONE interview
+      with the full panel.
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-ghost" id="sched-drawer-cancel">Cancel</button><button class="btn btn-primary" id="auto-schedule-btn">⚡ Auto-Schedule</button>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-title" id="confirm-title">Confirm</div>
+    <div class="modal-body" id="confirm-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="confirm-cancel-btn">Cancel</button><button class="btn btn-danger" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resume-modal">
+  <div class="modal modal-wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" style="margin:0">Resume Preview</div>
+      <div style="display:flex;gap:8px"><a id="resume-open-link" href="#" target="_blank" class="btn btn-ghost btn-sm">↗
+          Open tab</a><button class="btn btn-ghost btn-sm" id="resume-modal-close">✕</button></div>
+    </div>
+    <div id="resume-preview-content"
+      style="width:100%;height:72vh;border-radius:8px;overflow:hidden;background:var(--surface2)"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="email-modal">
+  <div class="modal modal-wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" style="margin:0" id="email-modal-title">Email</div>
+      <button class="btn btn-ghost btn-sm" id="email-modal-close">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">To</label><input type="text" id="email-to" style="background:var(--surface2)">
+    </div>
+    <div class="form-group"><label class="form-label">Subject</label><input type="text" id="email-subject"></div>
+    <div class="form-group">
+      <label class="form-label">Body</label><textarea id="email-body" style="min-height:280px;line-height:1.7"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="email-modal-close2">Cancel</button><button class="btn btn-primary" id="email-copy-btn">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="elim-modal">
+  <div class="modal">
+    <div class="modal-title">Elimination Reason</div>
+    <div class="modal-body" id="elim-modal-body"></div>
+    <div class="form-group">
+      <textarea id="elim-reason" placeholder="e.g. Does not meet minimum qualifications..." style="min-height:80px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="elim-cancel-btn">Cancel</button><button class="btn btn-danger" id="elim-ok-btn">Eliminate</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dup-confirm-modal">
+  <div class="modal">
+    <div style="font-size:24px;text-align:center;margin-bottom:10px">⚠️</div>
+    <div class="modal-title" style="text-align:center">Possible Duplicate</div>
+    <div class="modal-body" id="dup-confirm-body" style="text-align:center"></div>
+    <div id="dup-existing-cards" style="margin-bottom:16px"></div>
+    <div class="modal-actions" style="justify-content:center;gap:10px">
+      <button class="btn btn-ghost" id="dup-cancel-btn">Cancel</button><button class="btn btn-danger" id="dup-proceed-btn">Add Anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="import-modal">
+  <div class="modal modal-wide">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="modal-title" style="margin:0">Import Candidates from Excel / CSV</div>
+      <button class="btn btn-ghost btn-sm" id="import-modal-close">✕</button>
+    </div>
+    <div id="import-step-1">
+      <div class="drop-zone" id="excel-drop-zone">
+        <div style="font-size:32px;margin-bottom:10px">📊</div>
+        <div style="font-weight:500;margin-bottom:6px">Drop your Excel or CSV file here</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Supports .xlsx, .xls, .csv — duplicate rows
+          merged; same person+new position updates their profile</div>
+        <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none">
+        <button class="btn btn-primary" id="excel-browse-btn">Browse File</button>
+      </div>
+    </div>
+    <div id="import-step-2" style="display:none">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:14px">Map your columns. Same person found → positions
+        updated, no duplicate created.</div>
+      <div id="column-mapper"></div>
+      <div style="margin-top:14px;background:var(--surface2);border-radius:var(--r2);overflow:auto;max-height:180px">
+        <table id="import-preview-table" style="font-size:11px;min-width:100%"></table>
+      </div>
+      <div id="import-pos-match-section" style="margin-top:14px;display:none">
+        <div
+          style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">
+          Match Positions from File</div>
+        <div id="import-pos-match-list"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;justify-content:space-between;align-items:center">
+        <span id="import-row-count" style="font-size:12px;color:var(--text3)"></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" id="import-back-btn">← Back</button><button class="btn btn-primary" id="import-confirm-btn">Import</button>
+        </div>
+      </div>
+    </div>
+    <div id="import-step-3" style="display:none">
+      <div id="import-results-content"></div>
+      <div style="margin-top:16px;text-align:right"><button class="btn btn-primary" id="import-done-btn">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="interview-link-modal">
+  <div class="modal">
+    <div class="modal-title">Interview Meeting Link</div>
+    <div class="modal-body" id="interview-link-body"></div>
+    <div class="form-group"><label class="form-label">Platform</label>
+      <select id="il-platform"><option value="">Same as default</option><option value="Zoom">Zoom</option><option value="Teams">Microsoft Teams</option><option value="Google Meet">Google Meet</option><option value="Webex">Webex</option><option value="Other">Other</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Meeting URL <span class="label-hint">Leave blank to use default</span></label><input type="text" id="il-url" placeholder="https://...">
+    </div>
+    <input type="hidden" id="il-interview-id">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="il-cancel-btn">Cancel</button><button class="btn btn-primary" id="il-save-btn">Save Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- INTERVIEW DETAIL / EDIT MODAL -->
+<div class="modal-overlay" id="int-detail-modal">
+  <div class="modal" style="width:520px;max-width:96vw">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" style="margin:0" id="int-detail-title">Interview Details</div>
+      <button class="btn btn-ghost btn-sm" id="int-detail-close">✕</button>
+    </div>
+    <div id="int-conflict-warn"
+      style="display:none;background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r2);padding:9px 13px;margin-bottom:12px;font-size:12px;color:var(--amber)">
+      ⚠️ <strong>Time Conflict:</strong> <span id="int-conflict-msg"></span>
+    </div>
+    <div class="form-group">
+  <label class="form-label">Candidate</label>
+  <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+    <button class="btn btn-primary btn-sm" data-cand-filter="no-interview">No interview yet</button>
+    <button class="btn btn-ghost btn-sm" data-cand-filter="advanced">All advanced</button>
+    <button class="btn btn-ghost btn-sm" data-cand-filter="all">All candidates</button>
+  </div>
+  <div id="int-d-cand-banner" style="font-size:11px;color:var(--text3);margin-bottom:5px"></div>
+  <select id="int-d-candidate"><option value="">Select candidate...</option></select>
+</div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Date *</label><input type="date" id="int-d-date"></div>
+      <div class="form-group"><label class="form-label">Duration (min)</label>
+        <select id="int-d-duration"><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option><option value="120">120 min</option></select>
+      </div>
+    </div>
+    <div class="input-row">
+      <div class="form-group"><label class="form-label">Start Time</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="time" id="int-d-time" style="flex:1">
+          <span style="font-size:11px;color:var(--text3)" id="int-d-end-label"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Position</label><select id="int-d-position"><option value="">— General —</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Interviewers</label>
+      <div class="dropdown-wrap">
+        <div class="multi-select" id="int-d-ivr-display">
+          <span class="multi-select-placeholder">Click to select...</span></div>
+        <div class="dropdown-list" id="int-d-ivr-dropdown"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Meeting Link <span class="label-hint">overrides default</span></label>
+      <div style="display:flex;gap:6px">
+        <select id="int-d-platform" style="width:150px;flex-shrink:0"><option value="">Same as default</option><option value="Zoom">Zoom</option><option value="Teams">Teams</option><option value="Google Meet">Google Meet</option><option value="Webex">Webex</option><option value="Other">Other</option></select>
+        <input type="text" id="int-d-url" placeholder="https://... (blank = use default)">
+      </div>
+      <div id="int-d-default-url-hint" style="font-size:11px;color:var(--text3);margin-top:4px"></div>
+    </div>
+    <div class="form-group">
+  <label class="form-label">Interview Status</label>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2)">
+    <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" id="int-d-status-email"> ✉ Email Sent</label>
+    <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" id="int-d-status-called"> 📞 Called</label>
+    <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" id="int-d-status-done"> ✓ Interview Done</label>
+  </div>
+</div>
+    <div class="form-group">
+      <label class="form-label">Notes</label><textarea id="int-d-notes" style="min-height:60px" placeholder="Internal notes about this interview..."></textarea>
+    </div>
+    <input type="hidden" id="int-d-id">
+    <div style="display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-danger" id="int-d-delete-btn">🗑 Delete</button>
+        <button class="btn btn-ghost" id="int-d-score-btn">◈ Score</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="int-d-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="int-d-save-btn">Save Interview</button>
+      </div>
+    </div>
+  </div>
+  
+</div>

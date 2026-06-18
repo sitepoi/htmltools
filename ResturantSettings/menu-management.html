@@ -1,0 +1,220 @@
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<div class="menu-layout" id="menu-layout">
+
+  <!-- ===== LEFT PANEL ===== -->
+  <aside class="left-panel" id="left-panel">
+    <div class="panel-tabs">
+      <button type="button" class="panel-tab active" data-tab="categories">📂 Categories</button>
+      <button type="button" class="panel-tab" data-tab="modifier-groups">🧩 Modifier Groups</button>
+    </div>
+
+    <!-- Categories Tab -->
+    <div class="panel-content active" data-tab-content="categories">
+      <div class="panel-header">
+        <span class="panel-label">Categories</span>
+        <button type="button" class="btn btn-sm btn-primary" id="add-category-btn">+ Add</button>
+      </div>
+      <div class="category-list" id="category-list"></div>
+      <div class="category-form" id="category-form" style="display:none;">
+        <input type="text" class="form-input form-input-sm" id="category-name-input" placeholder="Category name">
+        <div class="form-actions-row">
+          <button type="button" class="btn btn-sm btn-primary" id="save-category-btn">Save</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="cancel-category-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modifier Groups Tab -->
+    <div class="panel-content" data-tab-content="modifier-groups">
+      <div class="panel-header">
+        <span class="panel-label">Modifier Groups</span>
+        <button type="button" class="btn btn-sm btn-primary" id="add-modgroup-btn">+ Add</button>
+      </div>
+      <div class="modgroup-list" id="modgroup-list"></div>
+      <div class="modgroup-form" id="modgroup-form" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Group Name</label>
+          <input type="text" class="form-input form-input-sm" id="modgroup-name-input" placeholder="e.g. Toppings">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Selection Type</label>
+          <select class="form-input form-input-sm" id="modgroup-type-input">
+            <option value="single">Single Select</option>
+            <option value="multi">Multi Select</option>
+          </select>
+        </div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="modgroup-required-input"> Required
+        </label>
+        <div class="form-label" style="margin-top:8px;">Options</div>
+        <div class="modgroup-options" id="modgroup-options-list"></div>
+        <button type="button" class="btn btn-sm btn-outline" id="add-modoption-btn">+ Add Option</button>
+        <div class="form-actions-row">
+          <button type="button" class="btn btn-sm btn-primary" id="save-modgroup-btn">Save Group</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="cancel-modgroup-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== CENTER PANEL ===== -->
+  <main class="center-panel" id="center-panel">
+    <div class="center-toolbar">
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input type="text" class="form-input search-input" id="search-input" placeholder="Search items...">
+      </div>
+      <select class="form-input sort-select" id="sort-select">
+        <option value="name_asc">Name A-Z</option>
+        <option value="name_desc">Name Z-A</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+      </select>
+    </div>
+    <div class="filter-chips" id="filter-chips">
+      <button type="button" class="chip" data-filter="vegetarian">🥬 Vegetarian</button>
+      <button type="button" class="chip" data-filter="vegan">🌱 Vegan</button>
+      <button type="button" class="chip" data-filter="gluten_free">🌾 Gluten-Free</button>
+      <button type="button" class="chip" data-filter="available">🟢 Available</button>
+    </div>
+    <div class="bulk-bar" id="bulk-bar" style="display:none;">
+      <span id="bulk-count">0 selected</span>
+      <select class="form-input form-input-sm" id="bulk-category-select" style="width:auto;">
+        <option value="">Move to category...</option>
+      </select>
+      <button type="button" class="btn btn-sm btn-outline" id="bulk-move-btn">Move</button>
+      <button type="button" class="btn btn-sm btn-outline" id="bulk-toggle-btn">Toggle Available</button>
+      <button type="button" class="btn btn-sm btn-danger" id="bulk-delete-btn">Delete</button>
+      <button type="button" class="btn btn-sm btn-ghost" id="bulk-clear-btn">Clear</button>
+    </div>
+    <div class="items-grid" id="items-grid">
+      <div class="empty-state">Select a category to view items</div>
+    </div>
+  </main>
+
+  <!-- ===== RIGHT PANEL (Item Drawer) ===== -->
+  <aside class="right-panel" id="right-panel" style="display:none;">
+    <div class="drawer-header">
+      <h3 id="drawer-title">New Item</h3>
+      <button type="button" class="btn btn-sm btn-ghost" id="close-drawer-btn">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body">
+      <!-- Basic Info -->
+      <div class="form-group">
+        <label class="form-label">Item Name *</label>
+        <input type="text" class="form-input" id="item-name" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Slug</label>
+        <input type="text" class="form-input" id="item-slug">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="item-description" rows="2"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Price *</label>
+          <input type="number" class="form-input" id="item-price" min="0" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sale Price</label>
+          <input type="number" class="form-input" id="item-sale-price" min="0" step="0.01">
+        </div>
+      </div>
+
+      <!-- Photo Upload -->
+      <div class="form-group">
+        <label class="form-label">Primary Photo</label>
+        <div class="photo-upload" id="primary-photo-upload">
+          <div class="photo-preview" id="primary-photo-preview"></div>
+          <label class="upload-btn">
+            <input type="file" accept="image/*" id="primary-photo-input" hidden>
+            📷 Choose Photo
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Photo Gallery</label>
+        <div class="photo-pool" id="photo-pool"></div>
+        <label class="upload-btn upload-btn-sm">
+          <input type="file" accept="image/*" id="gallery-photo-input" multiple hidden>
+          + Add Photos
+        </label>
+      </div>
+
+      <!-- Allergens -->
+      <div class="form-group">
+        <label class="form-label">Allergens</label>
+        <div class="chip-picker" id="allergen-picker"></div>
+      </div>
+
+      <!-- Dietary -->
+      <div class="form-group">
+        <label class="form-label">Dietary</label>
+        <div class="toggle-row">
+          <span>Vegetarian</span>
+          <label class="switch"><input type="checkbox" id="is-vegetarian"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Vegan</span>
+          <label class="switch"><input type="checkbox" id="is-vegan"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span>Gluten Free</span>
+          <label class="switch"><input type="checkbox" id="is-gluten-free"><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Spice Level -->
+      <div class="form-group">
+        <label class="form-label">Spice Level: <span id="spice-label">Not Spicy</span></label>
+        <input type="range" class="spice-slider" id="spice-level" min="0" max="5" value="0" step="1">
+        <div class="spice-labels"><span>Not Spicy</span><span>Mild</span><span>Medium</span><span>Hot</span><span>Very Hot</span><span>Extra Hot</span></div>
+      </div>
+
+      <!-- Calories & Prep Time -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Calories</label>
+          <input type="number" class="form-input" id="item-calories" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prep Time (min)</label>
+          <input type="number" class="form-input" id="item-prep-time" min="0">
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="form-group">
+        <label class="form-label">Tags</label>
+        <div class="chip-picker" id="tag-picker"></div>
+      </div>
+
+      <!-- Modifier Groups -->
+      <div class="form-group">
+        <label class="form-label">Modifier Groups</label>
+        <div class="checkbox-list" id="modgroup-checkboxes"></div>
+      </div>
+
+      <!-- Availability -->
+      <div class="toggle-row">
+        <span>Available</span>
+        <label class="switch"><input type="checkbox" id="is-available" checked><span class="slider"></span></label>
+      </div>
+    </div>
+    <div class="drawer-footer">
+      <button type="button" class="btn btn-ghost btn-sm" id="delete-item-btn" style="color:#ef4444;margin-right:auto;">🗑 Delete</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="cancel-item-btn">Cancel</button>
+      <button type="button" class="btn btn-primary btn-sm" id="save-item-btn">Save Item</button>
+    </div>
+  </aside>
+
+</div>
+
+<div class="save-bar" id="save-bar">
+  <span class="save-status" id="save-status">All changes saved</span>
+  <button type="button" class="btn btn-primary btn-sm" id="save-all-btn">Save All</button>
+</div>
