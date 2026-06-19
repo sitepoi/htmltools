@@ -771,7 +771,8 @@ function confirmAllSchedule() {
 		if (candidateHasConflict(slot.candidateId, startMs, endMs)) { skipped++; return }
 		if (!DB.interviews.find(i => i.candidateId === slot.candidateId)) {
 			const ivrIds = slot.interviewerIds || [slot.interviewerId].filter(Boolean);
-			DB.interviews.push({ id: genId(), candidateId: slot.candidateId, date: new Date(slot.startTime).toISOString().slice(0, 10), interviewerIds: ivrIds, notes: `Auto-scheduled. Time: ${fmtDateTime(slot.startTime)}${ivrIds.length > 1 ? ' (Panel: ' + ivrIds.map(id => { const i = DB.interviewers.find(x => x.id === id); return i ? i.name : '?' }).join(', ') + ')' : ''}`, scheduledTime: slot.startTime, durationMin: slot.durationMin, statusEmailSent: false, statusCalled: false, statusDone: false, createdAt: new Date().toISOString() });
+			const sd = new Date(slot.startTime); const localDate = sd.getFullYear() + '-' + String(sd.getMonth() + 1).padStart(2, '0') + '-' + String(sd.getDate()).padStart(2, '0');
+			DB.interviews.push({ id: genId(), candidateId: slot.candidateId, date: localDate, interviewerIds: ivrIds, notes: `Auto-scheduled. Time: ${fmtDateTime(slot.startTime)}${ivrIds.length > 1 ? ' (Panel: ' + ivrIds.map(id => { const i = DB.interviewers.find(x => x.id === id); return i ? i.name : '?' }).join(', ') + ')' : ''}`, scheduledTime: slot.startTime, durationMin: slot.durationMin, statusEmailSent: false, statusCalled: false, statusDone: false, createdAt: new Date().toISOString() });
 			created++;
 		}
 	});
@@ -947,7 +948,7 @@ function renderCandidateReport() {
 				sRows += '<div class="score-status-int"><div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:4px">' + fmtDate(int.date) + (int.statusDone ? ' Done' : '') + '</div>' + iRows + '</div>';
 			});
 			scoringStatusHTML = '<div class="score-status-section">' +
-				'<div class="score-status-toggle" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'open\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;user-select:none">' +
+				'<div class="score-status-toggle" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;user-select:none">' +
 				'<span class="toggle-arrow" style="transition:transform .2s;display:inline-block">▶</span> Scoring Status <span class="badge badge-gray" style="font-size:9px">' + candInts.length + ' interview' + (candInts.length !== 1 ? 's' : '') + '</span></div>' +
 				'<div class="score-status-body" style="display:none;margin-top:10px">' + sRows + '</div>' +
 				'</div>';
@@ -1061,18 +1062,64 @@ function showImportResults(results) {
 /* ══════════════════════════════════════════
 /* ══ CANDIDATE PRINT VIEW ══ */
 function renderCandidatePrintPage() {
+	const dateFilter = document.getElementById('cp-date-filter');
 	const sel = document.getElementById('cp-candidate-select');
-	if (sel) {
-		const cur = sel.value;
-		const candsWithInts = [...new Set(DB.interviews.map(i => i.candidateId))];
-		const opts = candsWithInts.map(cid => {
-			const c = DB.candidates.find(x => x.id === cid);
-			return c ? '<option value="' + cid + '" ' + (cid === cur ? 'selected' : '') + '>' + esc(c.name) + '</option>' : '';
-		}).join('');
-		sel.innerHTML = '<option value="">Select a candidate with scheduled interview...</option>' + opts;
-		if (cur) sel.value = cur;
+	if (!sel) return;
+	const cur = sel.value;
+	const curDate = dateFilter ? dateFilter.value : '';
+	// Build a map: candidateId -> earliest interview date (use scheduledTime for accurate local date)
+	const candDates = {};
+	DB.interviews.forEach(function(int) {
+		var d = int.scheduledTime ? new Date(int.scheduledTime) : new Date(int.date + 'T00:00:00');
+		var localDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+		if (!candDates[int.candidateId] || localDate < candDates[int.candidateId]) {
+			candDates[int.candidateId] = localDate;
+		}
+	});
+	// Get unique dates, sorted
+	const uniqueDates = [...new Set(Object.values(candDates))].sort();
+	// Populate date filter
+	if (dateFilter) {
+		const prev = dateFilter.value;
+		dateFilter.innerHTML = '<option value="">All dates (' + Object.keys(candDates).length + ' candidates)</option>' +
+			uniqueDates.map(function(d) {
+				return '<option value="' + d + '" ' + (d === prev ? 'selected' : '') + '>' + fmtDate(d) + '</option>';
+			}).join('');
+		dateFilter.value = prev;
 	}
+	// Build candidate list ordered by interview date
+	let candList = Object.keys(candDates).map(function(cid) {
+		return { id: cid, date: candDates[cid], cand: DB.candidates.find(function(x) { return x.id === cid; }) };
+	}).filter(function(x) { return x.cand; });
+	// Filter by selected date
+	if (curDate) {
+		candList = candList.filter(function(x) { return x.date === curDate; });
+	}
+	// Sort by date, then by name
+	candList.sort(function(a, b) {
+		if (a.date !== b.date) return (a.date || '').localeCompare(b.date || '');
+		return (a.cand.name || '').localeCompare(b.cand.name || '');
+	});
+	// Populate candidate dropdown with date prefix
+	sel.innerHTML = '<option value="">Select a candidate...</option>' +
+		candList.map(function(x) {
+			var selected = x.id === cur ? ' selected' : '';
+			return '<option value="' + x.id + '"' + selected + '>' + esc(x.cand.name) + '  —  ' + fmtDate(x.date) + '</option>';
+		}).join('');
+	if (cur) sel.value = cur;
 	renderCandidateCard();
+}
+function navigateCandidateCard(dir) {
+	const sel = document.getElementById('cp-candidate-select');
+	if (!sel) return;
+	const opts = sel.options;
+	let idx = sel.selectedIndex;
+	if (dir === 'prev') idx = Math.max(1, idx - 1);
+	else if (dir === 'next') idx = Math.min(opts.length - 1, idx + 1);
+	if (idx >= 0 && idx < opts.length) {
+		sel.selectedIndex = idx;
+		sel.dispatchEvent(new Event('change', { bubbles: true }));
+	}
 }
 function renderCandidateCard() {
 	const cid = document.getElementById('cp-candidate-select')?.value;
@@ -1086,7 +1133,15 @@ function renderCandidateCard() {
 	const defaultUrl = getDefaultMeetingUrl();
 	const defaultPlatform = getDefaultMeetingPlatform();
 	const coName = companyName();
-	container.innerHTML = ints.map(int => {
+	const todayStr = new Date().toISOString().slice(0, 10);
+	let pastWarning = '';
+	// Check if all interviews are in the past
+	const allPast = ints.length > 0 && ints.every(function(int) { return (int.date || '') < todayStr; });
+	if (allPast) {
+		pastWarning = '<div style="background:var(--amber-bg);border:1px solid var(--amber);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--amber);text-align:center;font-weight:500">' +
+			'\u26A0\uFE0F This interview is in the past. The card may contain outdated information.</div>';
+	}
+	container.innerHTML = pastWarning + ints.map(int => {
 		const ivrIds = (int.interviewerIds || [int.interviewerId]).filter(Boolean);
 		const ivrs = ivrIds.map(id => DB.interviewers.find(x => x.id === id)).filter(Boolean);
 		const ivrNames = ivrs.map(i => i.name).join(', ') || 'TBD';
@@ -1109,7 +1164,6 @@ function renderCandidateCard() {
 				'<div class="cp-details">' +
 					'<div class="cp-detail-row"><span class="cp-detail-icon">📅</span><div><span class="cp-detail-label">Date</span><span class="cp-detail-value">' + dateStr + '</span></div></div>' +
 					'<div class="cp-detail-row"><span class="cp-detail-icon">⏰</span><div><span class="cp-detail-label">Time</span><span class="cp-detail-value">' + timeStr + ' – ' + endStr + ' (' + (int.durationMin || 60) + ' minutes)</span></div></div>' +
-					'<div class="cp-detail-row"><span class="cp-detail-icon">👤</span><div><span class="cp-detail-label">Interviewer' + (ivrs.length > 1 ? 's' : '') + '</span><span class="cp-detail-value">' + esc(ivrNames) + '</span></div></div>' +
 					(effectiveUrl ? '<div class="cp-detail-row"><span class="cp-detail-icon">🔗</span><div><span class="cp-detail-label">' + (effectivePlatform || 'Meeting') + ' Link</span><span class="cp-detail-value"><a href="' + esc(effectiveUrl) + '" target="_blank" style="color:var(--accent)">' + esc(effectiveUrl) + '</a></span></div></div>' : '') +
 					(pos ? '<div class="cp-detail-row"><span class="cp-detail-icon">📋</span><div><span class="cp-detail-label">Position</span><span class="cp-detail-value">' + esc(pos.title) + (pos.dept ? ' — ' + esc(pos.dept) : '') + '</span></div></div>' : '') +
 				'</div>' +
@@ -1122,69 +1176,97 @@ function renderCandidateCard() {
 }
 function printCandidateCard() {
 	const container = document.getElementById('cp-card-container');
-	if (!container || !container.innerHTML.trim()) { tool.notify('Select a candidate first', 'warning'); return }
-	const printWin = window.open('', '_blank', 'width=800,height=600');
-	if (!printWin) { tool.notify('Popup blocked. Allow popups for printing.', 'warning'); return }
-	const coName = companyName();
-	printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interview Card</title>' +
-		'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#fff;color:#1a1d26;padding:16px;display:flex;justify-content:center}.cp-card{border:2px solid #3d5cff;border-radius:10px;overflow:hidden;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.1);page-break-inside:avoid}.cp-card-header{background:#3d5cff;color:#fff;padding:14px 18px;text-align:center}.cp-logo{font-size:17px;font-weight:700}.cp-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;opacity:.85;margin-top:3px}.cp-body{padding:14px 16px}.cp-greeting{font-size:13px;margin-bottom:8px;line-height:1.5}.cp-intro{font-size:11px;color:#5a6070;line-height:1.5;margin-bottom:12px}.cp-details{background:#f4f5f7;border-radius:6px;padding:10px 12px}.cp-detail-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #dde0e8}.cp-detail-row:last-child{border-bottom:none}.cp-detail-icon{font-size:16px;width:22px;text-align:center}.cp-detail-label{display:block;font-size:8px;color:#9399aa;text-transform:uppercase;margin-bottom:1px}.cp-detail-value{font-size:12px;font-weight:500;word-break:break-all}.cp-footer-note{margin-top:10px;font-size:10px;color:#9399aa;text-align:center}.cp-card-footer{background:#f0f1f4;padding:8px 16px;text-align:center;font-size:9px;color:#9399aa;text-transform:uppercase}@media print{body{padding:0}.cp-card{border:none;box-shadow:none;max-width:100%}}</style></head><body>' +
-		container.innerHTML + '</body></html>');
-	printWin.document.close();
-	setTimeout(() => printWin.print(), 500);
+	if (!container || !container.querySelector('.cp-card')) { tool.notify('Select a candidate first', 'warning'); return }
+	// Sandbox-safe print: overlay the card on the current page and use window.print()
+	const existing = document.getElementById('cp-print-overlay');
+	if (existing) existing.remove();
+	const overlay = document.createElement('div');
+	overlay.id = 'cp-print-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto';
+	overlay.innerHTML = '<div style="max-width:400px;width:100%">' + container.querySelector('.cp-card').outerHTML + '</div>';
+	const closeBtn = document.createElement('button');
+	closeBtn.textContent = 'Close';
+	closeBtn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:1;padding:8px 16px;background:#1a1d26;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:system-ui';
+	closeBtn.onclick = function() { overlay.remove(); };
+	overlay.appendChild(closeBtn);
+	const printBtn = document.createElement('button');
+	printBtn.textContent = 'Print';
+	printBtn.style.cssText = 'position:fixed;top:10px;right:80px;z-index:1;padding:8px 16px;background:#3d5cff;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:system-ui';
+	printBtn.onclick = function() { window.print(); };
+	overlay.appendChild(printBtn);
+	document.body.appendChild(overlay);
+	tool.notify('Card ready for print. Click Print or use Ctrl+P', 'info');
 }
 async function copyCandidateCardAsImage() {
 	const container = document.getElementById('cp-card-container');
 	if (!container || !container.querySelector('.cp-card')) { tool.notify('Select a candidate first', 'warning'); return }
+	var card = container.querySelector('.cp-card');
 	try {
-		// Use html2canvas if available, otherwise use a simpler approach
 		if (typeof html2canvas !== 'undefined') {
-			const card = container.querySelector('.cp-card');
-			const canvas = await html2canvas(card, { backgroundColor: '#ffffff', scale: 2, width: card.offsetWidth, height: card.offsetHeight });
-			const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-			tool.notify('Card copied as image! Paste into WhatsApp', 'success');
+			var canvas = await html2canvas(card, { backgroundColor: '#ffffff', scale: 2, width: card.offsetWidth, height: card.offsetHeight });
+			var blob = await new Promise(function(r) { canvas.toBlob(r, 'image/png'); });
+			try {
+				await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+				tool.notify('Card image copied to clipboard. Paste into WhatsApp or any chat.', 'success');
+			} catch(clipErr) {
+				// Clipboard API blocked (e.g. sandboxed iframe) — show overlay for manual screenshot
+				showCardOverlayForCopy(card);
+			}
 		} else {
-			// Fallback: open print-friendly window for screenshot
-			const card = container.querySelector('.cp-card');
-			const clone = card.cloneNode(true);
-			const win = window.open('', '_blank', 'width=700,height=500');
-			win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:system-ui;padding:16px;background:#fff;display:flex;justify-content:center}.cp-card{border:2px solid #3d5cff;border-radius:10px;overflow:hidden;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.1)}.cp-card-header{background:#3d5cff;color:#fff;padding:14px 18px;text-align:center}.cp-logo{font-size:17px;font-weight:700}.cp-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;opacity:.85;margin-top:3px}.cp-body{padding:14px 16px}.cp-greeting{font-size:13px;margin-bottom:8px}.cp-intro{font-size:11px;color:#5a6070;margin-bottom:12px}.cp-details{background:#f4f5f7;border-radius:6px;padding:10px 12px}.cp-detail-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #dde0e8}.cp-detail-row:last-child{border-bottom:none}.cp-detail-icon{font-size:16px;width:22px;text-align:center}.cp-detail-label{display:block;font-size:8px;color:#9399aa;text-transform:uppercase;margin-bottom:1px}.cp-detail-value{font-size:12px;font-weight:500;word-break:break-all}.cp-footer-note{margin-top:10px;font-size:10px;color:#9399aa;text-align:center}.cp-card-footer{background:#f0f1f4;padding:8px 16px;text-align:center;font-size:9px;color:#9399aa}</style></head><body>');
-			win.document.body.appendChild(clone);
-			win.document.close();
-			tool.notify('Card opened for screenshot. Use Win+Shift+S or Cmd+Shift+4', 'info');
+			showCardOverlayForCopy(card);
 		}
 	} catch(e) {
-		tool.notify('Copy failed: ' + e.message, 'error');
+		showCardOverlayForCopy(card);
 	}
 }
+function showCardOverlayForCopy(card) {
+	var existing = document.getElementById('cp-print-overlay');
+	if (existing) existing.remove();
+	var clone = card.cloneNode(true);
+	var overlay = document.createElement('div');
+	overlay.id = 'cp-print-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:20px';
+	var inner = document.createElement('div');
+	inner.style.cssText = 'background:#fff;border-radius:12px;padding:8px;max-width:400px;width:100%';
+	inner.appendChild(clone);
+	var hint = document.createElement('div');
+	hint.style.cssText = 'text-align:center;margin-top:10px;color:#fff;font-size:12px;font-family:system-ui';
+	hint.textContent = 'Use Win+Shift+S (or Cmd+Shift+4) to screenshot this card';
+	var closeBtn = document.createElement('button');
+	closeBtn.textContent = 'Close';
+	closeBtn.style.cssText = 'display:block;margin:10px auto 0;padding:8px 20px;background:#d63030;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-family:system-ui';
+	closeBtn.onclick = function() { overlay.remove(); };
+	inner.appendChild(hint);
+	inner.appendChild(closeBtn);
+	overlay.appendChild(inner);
+	overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+	document.body.appendChild(overlay);
+	tool.notify('Card displayed for screenshot. Use your system screenshot tool.', 'info');
+}
 function generateWhatsAppMessage() {
-	const cid = document.getElementById('cp-candidate-select')?.value;
+	var cid = document.getElementById('cp-candidate-select')?.value;
 	if (!cid) { tool.notify('Select a candidate first', 'warning'); return ''; }
-	const c = DB.candidates.find(x => x.id === cid);
+	var c = DB.candidates.find(function(x) { return x.id === cid; });
 	if (!c) return '';
-	const ints = DB.interviews.filter(i => i.candidateId === cid).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+	var ints = DB.interviews.filter(function(i) { return i.candidateId === cid; }).sort(function(a, b) { return (a.date || '').localeCompare(b.date || ''); });
 	if (!ints.length) { tool.notify('No interviews for this candidate', 'warning'); return ''; }
-	const int = ints[0];
-	const ivrIds = (int.interviewerIds || [int.interviewerId]).filter(Boolean);
-	const ivrs = ivrIds.map(id => DB.interviewers.find(x => x.id === id)).filter(Boolean);
-	const ivrNames = ivrs.map(i => i.name).join(', ') || 'TBD';
-	const pos = DB.positions.find(p => (c.positionIds || []).includes(p.id));
-	const posName = pos ? pos.title : 'the position';
-	const coName = companyName();
-	const dateObj = int.scheduledTime ? new Date(int.scheduledTime) : new Date(int.date + 'T09:00:00');
-	const endObj = new Date(dateObj.getTime() + (int.durationMin || 60) * 60000);
-	const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-	const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-	const endStr = endObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-	const effectiveUrl = int.meetingUrl || getDefaultMeetingUrl();
-	const effectivePlatform = int.meetingPlatform || getDefaultMeetingPlatform();
-	let msg = '';
+	var int = ints[0];
+	var pos = DB.positions.find(function(p) { return (c.positionIds || []).includes(p.id); });
+	var posName = pos ? pos.title : 'the position';
+	var coName = companyName();
+	var dateObj = int.scheduledTime ? new Date(int.scheduledTime) : new Date(int.date + 'T09:00:00');
+	var endObj = new Date(dateObj.getTime() + (int.durationMin || 60) * 60000);
+	var dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+	var timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+	var endStr = endObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+	var effectiveUrl = int.meetingUrl || getDefaultMeetingUrl();
+	var effectivePlatform = int.meetingPlatform || getDefaultMeetingPlatform();
+	var msg = '';
 	msg += '\uD83C\uDF1F *INTERVIEW CONFIRMATION* \uD83C\uDF1F\n\n';
 	msg += 'Dear *' + c.name + '*,\n\n';
 	msg += 'We are pleased to confirm your interview for the *' + posName + '* position at *' + coName + '*.\n\n';
 	msg += '\uD83D\uDCC5 *Date:* ' + dateStr + '\n';
 	msg += '\u23F0 *Time:* ' + timeStr + ' \u2013 ' + endStr + ' (' + (int.durationMin || 60) + ' min)\n';
-	msg += '\uD83D\uDC64 *Interviewer' + (ivrs.length > 1 ? 's' : '') + ':* ' + ivrNames + '\n';
 	if (effectiveUrl) msg += '\uD83D\uDD17 *' + (effectivePlatform || 'Meeting') + ' Link:* ' + effectiveUrl + '\n';
 	msg += '\nPlease confirm your attendance at your earliest convenience. Let us know if you have any questions!\n\n';
 	msg += 'Best regards,\n';
@@ -1192,13 +1274,30 @@ function generateWhatsAppMessage() {
 	return msg;
 }
 function copyWhatsAppMessage() {
-	const msg = generateWhatsAppMessage();
+	var msg = generateWhatsAppMessage();
 	if (!msg) return;
-	if (navigator.clipboard?.writeText) {
-		navigator.clipboard.writeText(msg).then(function() { tool.notify('WhatsApp message copied! Paste into chat', 'success'); });
-	} else {
-		const ta = document.createElement('textarea'); ta.value = msg; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); tool.notify('WhatsApp message copied!', 'success'); } catch(e) { tool.notify('Copy failed', 'error'); } document.body.removeChild(ta);
+	// Use textarea fallback — works in sandboxed iframes where clipboard API is blocked
+	var ta = document.createElement('textarea');
+	ta.value = msg;
+	ta.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:380px;height:200px;z-index:99999;padding:12px;font-family:system-ui;font-size:13px;border:2px solid #3d5cff;border-radius:8px;resize:none;background:#fff;color:#1a1d26';
+	ta.readOnly = false;
+	document.body.appendChild(ta);
+	ta.focus();
+	ta.select();
+	try {
+		var success = document.execCommand('copy');
+		if (success) {
+			tool.notify('WhatsApp message copied. Paste into your chat.', 'success');
+		} else {
+			tool.notify('Message shown on screen. Press Ctrl+C to copy, then paste into WhatsApp.', 'info');
+		}
+	} catch(e) {
+		tool.notify('Message shown on screen. Press Ctrl+C to copy, then paste into WhatsApp.', 'info');
 	}
+	// Auto-remove the textarea after a delay
+	setTimeout(function() {
+		if (ta.parentNode) { ta.style.opacity = '0'; ta.style.transition = 'opacity .3s'; setTimeout(function() { if (ta.parentNode) ta.remove(); }, 300); }
+	}, 8000);
 }
 
 
@@ -1261,7 +1360,7 @@ document.addEventListener('click', e => {
 	if (t.id === 'import-confirm-btn') confirmImport(); if (t.id === 'import-done-btn') { closeImportModal(); renderCandidates(); navigate('candidates') }
 	if (t.id === 'excel-browse-btn') document.getElementById('excel-file-input').click();
 	if (t.id === 'screen-bulk-advance-btn') bulkScreenAdvance(); if (t.id === 'screen-bulk-elim-btn') bulkScreenEliminate();
-	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
+	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-date-filter') renderCandidatePrintPage(); if (t.id === 'cp-prev-btn') navigateCandidateCard('prev'); if (t.id === 'cp-next-btn') navigateCandidateCard('next'); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
 	if (t.id === 'cal-prev-btn') calNavPrev(); if (t.id === 'cal-next-btn') calNavNext(); if (t.id === 'cal-today-btn') calNavToday();
 	if (t.id === 'bulk-advance-btn') { const ids = [...checkedCandIds]; const toAdv = ids.filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated && !DB.screenings.some(s => s.candidateId === id && s.status === 'advanced') }); toAdv.forEach(id => { DB.screenings.push({ candidateId: id, status: 'advanced', date: new Date().toISOString() }) }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${toAdv.length} advanced`, 'success') }
 	if (t.id === 'bulk-eliminate-btn') { const ids = [...checkedCandIds].filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated }); if (!ids.length) { tool.notify('No active candidates selected', 'warning'); return } openElimModal(`Eliminating ${ids.length} candidates:`, (reason) => { ids.forEach(id => { const c = DB.candidates.find(x => x.id === id); if (c) { c.eliminated = true; c.eliminationReason = reason; c.eliminationStage = 'screening'; c.eliminationDate = new Date().toISOString() } }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${ids.length} eliminated`, 'warning') }) }
@@ -1269,6 +1368,16 @@ document.addEventListener('click', e => {
 	if (t.id === 'select-all-cands') { document.querySelectorAll('.cand-check').forEach(cb => { cb.checked = t.checked; if (t.checked) checkedCandIds.add(cb.dataset.id); else checkedCandIds.delete(cb.dataset.id) }); updateBulkBar() }
 	// Candidate filter buttons in interview detail modal
 	if (t.dataset.candFilter) { intDetailCandFilter = t.dataset.candFilter; document.querySelectorAll('[data-cand-filter]').forEach(b => b.classList.toggle('btn-primary', b.dataset.candFilter === intDetailCandFilter)); document.querySelectorAll('[data-cand-filter]').forEach(b => b.classList.toggle('btn-ghost', b.dataset.candFilter !== intDetailCandFilter)); rebuildIntDetailCandDropdown(document.getElementById('int-d-candidate')?.value || '') }
+	// Scoring status toggle (Reports page) — use event delegation instead of inline onclick
+	if (t.closest('.score-status-toggle')) {
+		var toggle = t.closest('.score-status-toggle');
+		toggle.classList.toggle('open');
+		var body = toggle.nextElementSibling;
+		if (body && body.classList.contains('score-status-body')) {
+			var isOpen = body.classList.toggle('open');
+			body.style.display = isOpen ? 'block' : 'none';
+		}
+	}
 });
 
 document.addEventListener('change', e => {
@@ -1276,7 +1385,7 @@ document.addEventListener('change', e => {
 	if (t.id === 'score-interview' || t.id === 'score-interviewer') loadScoringForm(); if (t.id === 'score-position' || t.dataset.action === 'reloadScoringForm') reloadScoringFormWithNewPos();
 	if (t.id === 'screen-filter-pos' || t.id === 'screen-filter-status') renderScreening(); if (t.id === 'pipeline-pos-filter') renderPipeline(); if (t.id === 'sched-pos-filter') renderSchedCandidatesPreview();
 	if (t.id === 'cand-filter-status' || t.id === 'cand-filter-pos') renderCandidates(); if (t.id === 'pos-filter-status') renderPositions(); if (t.id === 'ivr-search') renderInterviewers();
-	if (t.id === 'cal-ivr-filter') { calIvrFilter = t.value; renderCalendar() } if (t.id === 'report-rec-filter' || t.id === 'report-elig-filter') renderCandidateReport();
+	if (t.id === 'cal-ivr-filter') { calIvrFilter = t.value; renderCalendar() } if (t.id === 'report-rec-filter' || t.id === 'report-elig-filter') renderCandidateReport(); if (t.id === 'cp-candidate-select') renderCandidateCard();
 	if (t.classList.contains('cand-check')) { if (t.checked) checkedCandIds.add(t.dataset.id); else checkedCandIds.delete(t.dataset.id); updateBulkBar() }
 	if (t.classList.contains('screen-check')) { if (t.checked) checkedScreenIds.add(t.dataset.id); else checkedScreenIds.delete(t.dataset.id) }
 	if (t.id === 'excel-file-input') handleExcelFile(t.files[0]);

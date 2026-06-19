@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DailySupervisionLogs — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- External libraries (same as production) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="DailySupervisionLogs.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #6c8cff; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3d5cff; color: #fff; }
+#th-bar .btn-clear { background: #d63030; color: #fff; }
+#th-bar .btn-reload { background: #1a9e65; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = ReadOnly</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  const STORAGE_KEY = 'daily_supervision_test_db';
+  const listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  let _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue() { return _value; },
+    setValue(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange(cb) { listeners.valueChange.push(cb); },
+    getFields() { return Object.assign({}, _fields); },
+    setField(id, value) { _fields[id] = value; },
+    setFields(obj) { Object.assign(_fields, obj); },
+    watchField(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange(cb) { listeners.fieldsChange.push(cb); },
+    param(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly() { return _readOnly; },
+    onReadonlyChange(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser() { return _user; },
+    onUserChange(cb) { listeners.userChange.push(cb); },
+    reportValid(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3d5cff', success: '#1a9e65', warning: '#b87010', error: '#d63030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML fallback */
+const EMBEDDED_HTML = `<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>
+<link
+	href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+	rel="stylesheet">
+
+<div class="csj">
+	<div class="wrap">
+
+		<header class="top">
+			<div class="brand">
+				<span class="badge">
+					<svg viewBox="0 0 512 512" fill="#c0392f" aria-hidden="true">
+						<path
+							d="M256 12l29.6 55.2c3.3 6.2 9.8 4.9 16.3 1.2l21.4-11.1-15.6 82.9c-3.3 15.6 7.4 15.6 12.8 8.9l37.3-41.7 12.1 28.3c1.4 3.3 5 2.8 9.6 1.9l47.1-9.9-15.3 55.6c-2 7.4-1.4 10.4 4.1 12.4l16.6 7.8-80.2 65.1c-4 3.3-2.5 6.6-1.1 11.9l7 23-78.2-6.6c-4.7 0-7.9 2.5-7.8 8.2l2.4 80.7h-23.7l2.4-80.7c.1-5.7-3.1-8.2-7.8-8.2l-78.2 6.6 7-23c1.4-5.3 2.9-8.6-1.1-11.9l-80.2-65.1 16.6-7.8c5.5-2 6.1-5 4.1-12.4l-15.3-55.6 47.1 9.9c4.6.9 8.2 1.4 9.6-1.9l12.1-28.3 37.3 41.7c5.4 6.7 16.1 6.7 12.8-8.9l-15.6-82.9 21.4 11.1c6.5 3.7 13 5 16.3-1.2z" />
+					</svg>
+					Daily Supervision Log
+				</span>
+				<h1>Daily <span class="thin">Supervision</span> Log</h1>
+			</div>
+			<div class="top-actions">
+				<div class="theme-toggle" id="themeToggle">
+					<button type="button" data-theme="light" class="on" title="Light theme"
+						aria-label="Light theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+							stroke-width="2">
+							<circle cx="12" cy="12" r="4" />
+							<path
+								d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+						</svg></button>
+					<button type="button" data-theme="dark" title="Dark theme" aria-label="Dark theme"><svg
+							viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" />
+						</svg></button>
+				</div>
+				<button class="btn ghost" id="exportBtn" title="Export to PDF, Excel or JSON">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+					</svg>
+					Export
+				</button>
+				<button class="btn ghost hide-ro" id="importBtn" title="Restore from a JSON backup">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 9l5-5 5 5M12 4v12" />
+					</svg>
+					Import
+				</button>
+				<input type="file" id="importFile" accept="application/json" hidden>
+			</div>
+		</header>
+
+		<section class="dossier" id="dossier"></section>
+
+		<nav class="tabs" id="tabs">
+			<button class="tab active" data-tab="overview"><span class="dot"></span>Overview</button>
+			<button class="tab" data-tab="records"><span class="dot sup"></span>Daily Supervision <span class="ct"
+					id="ctRec">0</span></button>
+		</nav>
+
+		<section class="view active" id="view-overview"></section>
+
+		<section class="view" id="view-records">
+			<div class="view-head">
+				<div class="lede">
+					<h2>Daily Supervision Records</h2>
+					<p>Day-to-day observations and feedback entered by the <b>supervisor</b>.</p>
+				</div>
+				<div class="toolbar">
+					<button class="btn sm ghost" id="toggleAll" data-state="collapsed"
+						title="Expand or collapse all">Expand all</button>
+					<div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="7" />
+							<path d="M21 21l-4-4" />
+						</svg><input type="search" id="searchRec" placeholder="Search supervision…"></div>
+					<button class="btn sup hide-ro" id="addRec"><svg viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2.2">
+							<path d="M12 5v14M5 12h14" />
+						</svg>New entry</button>
+				</div>
+			</div>
+			<div class="stream" id="stream"></div>
+		</section>
+
+		<div class="foot">
+			<span class="mono" id="recMeta"></span>
+			<span class="mono" id="savedAt"></span>
+		</div>
+	</div>
+
+	<div class="csj-overlay" id="overlay">
+		<div class="modal" id="modal">
+			<div class="modal-head">
+				<div>
+					<div class="eyebrow" id="mEyebrow"></div>
+					<h3 id="mTitle"></h3>
+				</div>
+				<button class="icon-btn" id="mClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+						stroke-width="2">
+						<path d="M18 6L6 18M6 6l12 12" />
+					</svg></button>
+			</div>
+			<div class="modal-body" id="mBody"></div>
+			<div class="modal-foot">
+				<button class="btn ghost" id="mCancel">Cancel</button>
+				<button class="btn primary" id="mSave">Save record</button>
+			</div>
+		</div>
+	</div>
+</div>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* Dynamic loader with embedded fallback */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'DailySupervisionLogs.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('DailySupervisionLogs.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* Toolbar + Sample Data */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL data?')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+});
+
+var SAMPLE_DATA = {
+  profile: {
+    employeeName: "Jordan Lee",
+    position: "Communications Assistant",
+    organization: "Riverside Community Centre",
+    startDate: "2026-05-05",
+    endDate: "2026-08-29",
+    author: "Maria Gonzalez"
+  },
+  records: [
+    {
+      id: "rec001",
+      date: "2026-06-02",
+      supervisor: "Maria Gonzalez",
+      tasks: "Drafted social media posts for the summer youth program. Updated the community newsletter layout in Canva. Assisted with front-desk inquiries during lunch coverage.",
+      feedback: "Jordan shows strong initiative — volunteered to redesign the newsletter banner without being asked. The social media copy was well-written and on-brand. Keep an eye on posting schedule consistency.",
+      strengths: "Creative initiative, strong writing skills, comfortable with design tools (Canva).",
+      improvements: "Time management — sometimes spends too long perfecting a single post. Prioritization will help.",
+      skills: ["Communication", "Creativity and Innovation", "Digital skills"],
+      rating: "Exceeds expectations",
+      hours: "7.5",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-02T16:30:00.000Z"
+    },
+    {
+      id: "rec002",
+      date: "2026-06-03",
+      supervisor: "Maria Gonzalez",
+      tasks: "Compiled data from the community survey responses into a summary spreadsheet. Participated in the team planning meeting for the July outreach campaign.",
+      feedback: "Good analytical work on the survey data. During the meeting, Jordan contributed a thoughtful idea about reaching seniors through local library bulletins. Encourage more active participation in future meetings.",
+      strengths: "Data analysis, thoughtful contributions in meetings.",
+      improvements: "Public speaking confidence — encourage presenting findings to the team next time.",
+      skills: ["Problem solving", "Collaboration", "Digital skills"],
+      rating: "Meets expectations",
+      hours: "7.0",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-03T16:45:00.000Z"
+    },
+    {
+      id: "rec003",
+      date: "2026-06-05",
+      supervisor: "Maria Gonzalez",
+      tasks: "Created and printed flyers for the upcoming community BBQ event. Coordinated with the facilities team to confirm setup requirements.",
+      feedback: "Flyer design was excellent — eye-catching and clear. Jordan handled the coordination with facilities independently and followed up to confirm all details.",
+      strengths: "Design skills, cross-team coordination, follow-through.",
+      improvements: "Budget awareness — discuss cost estimates before sending materials to print.",
+      skills: ["Creativity and Innovation", "Collaboration", "Communication"],
+      rating: "Exceeds expectations",
+      hours: "7.5",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-05T16:15:00.000Z"
+    },
+    {
+      id: "rec004",
+      date: "2026-06-09",
+      supervisor: "Maria Gonzalez",
+      tasks: "Responded to public inquiries via email and phone. Updated the organization's event calendar on the website.",
+      feedback: "Handled a difficult caller with patience and professionalism. Website updates were accurate but took longer than expected — the CMS interface needs practice.",
+      strengths: "Patience, professionalism with the public.",
+      improvements: "CMS proficiency — schedule a short training session on WordPress.",
+      skills: ["Communication", "Digital skills", "Adaptability"],
+      rating: "Meets expectations",
+      hours: "7.0",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-09T16:30:00.000Z"
+    },
+    {
+      id: "rec005",
+      date: "2026-06-11",
+      supervisor: "Maria Gonzalez",
+      tasks: "Assisted with the setup and teardown of the community BBQ event. Took photos for social media and the annual report.",
+      feedback: "Jordan was proactive throughout the event — arrived early, stayed late, and captured great photos. The real-time Instagram stories were well-received by our followers.",
+      strengths: "Event support, photography, social media engagement.",
+      improvements: "Continue building event planning skills — could take the lead on a smaller event later this summer.",
+      skills: ["Collaboration", "Creativity and Innovation", "Communication", "Problem solving"],
+      rating: "Exceeds expectations",
+      hours: "8.0",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-11T18:00:00.000Z"
+    },
+    {
+      id: "rec006",
+      date: "2026-06-16",
+      supervisor: "Maria Gonzalez",
+      tasks: "Wrote a press release for the new youth mentorship program. Began drafting the July newsletter content.",
+      feedback: "The press release draft was solid — needed only minor edits. Jordan has a natural talent for storytelling. The newsletter draft shows good planning but needs more community voices/quotes.",
+      strengths: "Writing quality, storytelling, planning ahead.",
+      improvements: "Incorporate more community voices — reach out to program participants for quotes and testimonials.",
+      skills: ["Communication", "Creativity and Innovation"],
+      rating: "Exceeds expectations",
+      hours: "7.5",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-16T16:00:00.000Z"
+    },
+    {
+      id: "rec007",
+      date: "2026-06-17",
+      supervisor: "Maria Gonzalez",
+      tasks: "Updated the contact database with new community partner information. Researched grant opportunities for the fall programs.",
+      feedback: "Database work was meticulous and well-organized. Grant research showed initiative — Jordan identified two relevant opportunities we hadn't considered.",
+      strengths: "Attention to detail, research skills, initiative.",
+      improvements: "Grant writing basics — would benefit from reviewing successful past applications.",
+      skills: ["Digital skills", "Problem solving", "Technical skills"],
+      rating: "Meets expectations",
+      hours: "7.0",
+      createdBy: "Maria Gonzalez",
+      createdAt: "2026-06-17T16:20:00.000Z"
+    }
+  ]
+};
+</script>
+</body>
+</html>

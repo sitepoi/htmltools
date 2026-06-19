@@ -12,13 +12,13 @@
 		<header class="top">
 			<div class="brand">
 				<span class="badge">
-					<svg viewBox="0 0 512 512" fill="#bb2e34" aria-hidden="true">
+					<svg viewBox="0 0 512 512" fill="#c0392f" aria-hidden="true">
 						<path
 							d="M256 12l29.6 55.2c3.3 6.2 9.8 4.9 16.3 1.2l21.4-11.1-15.6 82.9c-3.3 15.6 7.4 15.6 12.8 8.9l37.3-41.7 12.1 28.3c1.4 3.3 5 2.8 9.6 1.9l47.1-9.9-15.3 55.6c-2 7.4-1.4 10.4 4.1 12.4l16.6 7.8-80.2 65.1c-4 3.3-2.5 6.6-1.1 11.9l7 23-78.2-6.6c-4.7 0-7.9 2.5-7.8 8.2l2.4 80.7h-23.7l2.4-80.7c.1-5.7-3.1-8.2-7.8-8.2l-78.2 6.6 7-23c1.4-5.3 2.9-8.6-1.1-11.9l-80.2-65.1 16.6-7.8c5.5-2 6.1-5 4.1-12.4l-15.3-55.6 47.1 9.9c4.6.9 8.2 1.4 9.6-1.9l12.1-28.3 37.3 41.7c5.4 6.7 16.1 6.7 12.8-8.9l-15.6-82.9 21.4 11.1c6.5 3.7 13 5 16.3-1.2z" />
 					</svg>
-					Canada Summer Jobs · Personnel Record
+					Daily Supervision Log
 				</span>
-				<h1>Supervision &amp; <span class="thin">Mentorship</span> Log</h1>
+				<h1>Daily <span class="thin">Supervision</span> Log</h1>
 			</div>
 			<div class="top-actions">
 				<div class="theme-toggle" id="themeToggle">
@@ -54,56 +54,32 @@
 
 		<nav class="tabs" id="tabs">
 			<button class="tab active" data-tab="overview"><span class="dot"></span>Overview</button>
-			<button class="tab" data-tab="supervision"><span class="dot"></span>Daily Supervision <span class="ct"
-					id="ctSup">0</span></button>
-			<button class="tab" data-tab="mentorship"><span class="dot"></span>Weekly Mentorship <span class="ct"
-					id="ctMen">0</span></button>
+			<button class="tab" data-tab="records"><span class="dot sup"></span>Daily Supervision <span class="ct"
+					id="ctRec">0</span></button>
 		</nav>
 
 		<section class="view active" id="view-overview"></section>
 
-		<section class="view" id="view-supervision">
+		<section class="view" id="view-records">
 			<div class="view-head">
 				<div class="lede">
 					<h2>Daily Supervision Records</h2>
 					<p>Day-to-day observations and feedback entered by the <b>supervisor</b>.</p>
 				</div>
 				<div class="toolbar">
-					<button class="btn sm ghost" id="supToggleAll" data-state="collapsed"
+					<button class="btn sm ghost" id="toggleAll" data-state="collapsed"
 						title="Expand or collapse all">Expand all</button>
 					<div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 							<circle cx="11" cy="11" r="7" />
 							<path d="M21 21l-4-4" />
-						</svg><input type="search" id="searchSup" placeholder="Search supervision…"></div>
-					<button class="btn sup hide-ro" id="addSup"><svg viewBox="0 0 24 24" fill="none"
+						</svg><input type="search" id="searchRec" placeholder="Search supervision…"></div>
+					<button class="btn sup hide-ro" id="addRec"><svg viewBox="0 0 24 24" fill="none"
 							stroke="currentColor" stroke-width="2.2">
 							<path d="M12 5v14M5 12h14" />
 						</svg>New entry</button>
 				</div>
 			</div>
-			<div class="stream" id="streamSup"></div>
-		</section>
-
-		<section class="view" id="view-mentorship">
-			<div class="view-head">
-				<div class="lede">
-					<h2>Weekly Mentorship Records</h2>
-					<p>Weekly reflections, guidance and goal-setting entered by the <b>mentor</b>.</p>
-				</div>
-				<div class="toolbar">
-					<button class="btn sm ghost" id="menToggleAll" data-state="collapsed"
-						title="Expand or collapse all">Expand all</button>
-					<div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="11" cy="11" r="7" />
-							<path d="M21 21l-4-4" />
-						</svg><input type="search" id="searchMen" placeholder="Search mentorship…"></div>
-					<button class="btn men hide-ro" id="addMen"><svg viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2.2">
-							<path d="M12 5v14M5 12h14" />
-						</svg>New entry</button>
-				</div>
-			</div>
-			<div class="stream" id="streamMen"></div>
+			<div class="stream" id="stream"></div>
 		</section>
 
 		<div class="foot">
