@@ -77,6 +77,8 @@ function migrateSlot(s) {
 function getSettings() { return DB.settings || {} }
 function getDefaultMeetingUrl() { return getSettings().meetingUrl || '' }
 function getDefaultMeetingPlatform() { return getSettings().meetingPlatform || '' }
+function getDefaultDuration() { return parseInt(getSettings().defaultDuration) || 30 }
+function getDefaultBreak() { return parseInt(getSettings().defaultBreak) || 15 }
 function getStage(cid) {
 	if (DB.placements && DB.placements.some(p => p.selectedCandidateId === cid)) return 'selected';
 	const c = DB.candidates.find(x => x.id === cid); if (!c) return 'unknown';
@@ -135,6 +137,7 @@ function renderCurrentSection() {
 	else if (p === 'screening') renderScreening();
 	else if (p === 'scheduler') renderSchedulePage();
 	else if (p === 'calendar') renderCalendar();
+	else if (p === 'candidate-print') renderCandidatePrintPage();
 	else if (p === 'scoring') populateScoringSelects();
 	else if (p === 'reports') renderReports();
 	else if (p === 'placements') renderPlacements();
@@ -370,8 +373,23 @@ function generateInviteEmail(cand, interviewers, dateTime, dur, pos, int) {
 }
 
 /* ── settings ── */
-function renderSettings() { const s = getSettings(); const cn = document.getElementById('settings-company'); if (cn) cn.value = s.companyName || ''; const mp = document.getElementById('settings-meeting-platform'); if (mp) mp.value = s.meetingPlatform || ''; const mu = document.getElementById('settings-meeting-url'); if (mu) mu.value = s.meetingUrl || '' }
-function saveSettings() { DB.settings = DB.settings || {}; DB.settings.companyName = document.getElementById('settings-company')?.value.trim() || ''; DB.settings.meetingPlatform = document.getElementById('settings-meeting-platform')?.value || ''; DB.settings.meetingUrl = document.getElementById('settings-meeting-url')?.value.trim() || ''; persist(); tool.notify('Settings saved', 'success') }
+function renderSettings() {
+	const s = getSettings();
+	const cn = document.getElementById('settings-company'); if (cn) cn.value = s.companyName || '';
+	const mp = document.getElementById('settings-meeting-platform'); if (mp) mp.value = s.meetingPlatform || '';
+	const mu = document.getElementById('settings-meeting-url'); if (mu) mu.value = s.meetingUrl || '';
+	const dd = document.getElementById('settings-default-duration'); if (dd) dd.value = String(s.defaultDuration || '30');
+	const db = document.getElementById('settings-default-break'); if (db) db.value = String(s.defaultBreak || '15');
+}
+function saveSettings() {
+	DB.settings = DB.settings || {};
+	DB.settings.companyName = document.getElementById('settings-company')?.value.trim() || '';
+	DB.settings.meetingPlatform = document.getElementById('settings-meeting-platform')?.value || '';
+	DB.settings.meetingUrl = document.getElementById('settings-meeting-url')?.value.trim() || '';
+	DB.settings.defaultDuration = parseInt(document.getElementById('settings-default-duration')?.value) || 30;
+	DB.settings.defaultBreak = parseInt(document.getElementById('settings-default-break')?.value) || 15;
+	persist(); tool.notify('Settings saved', 'success');
+}
 
 /* ── pos criteria ── */
 function renderPosCriteriaList() { const el = document.getElementById('pos-criteria-list'); if (!el) return; if (!posCriteriaBuffer.length) { el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:4px 0">No additional criteria yet.</div>`; return } el.innerHTML = posCriteriaBuffer.map((c, i) => `<div class="pos-criterion-item"><input type="text" placeholder="Skill name" value="${esc(c.name)}" data-ci="${i}" data-field="name"><input type="text" placeholder="Description" value="${esc(c.desc || '')}" data-ci="${i}" data-field="desc"><button class="btn btn-danger btn-sm" data-action="rmCriterion" data-ci="${i}">✕</button></div>`).join('') }
@@ -612,6 +630,9 @@ function openSchedulerDrawer() {
 	const pf = document.getElementById('sched-pos-filter'); if (pf) { pf.innerHTML = '<option value="">All positions</option>' + DB.positions.map(p => `<option value="${p.id}">${esc(p.title)}</option>`).join('') }
 	// Default to today
 	const today = new Date(); const wsd = document.getElementById('sched-week-start'); if (wsd && !wsd.value) wsd.value = today.toISOString().slice(0, 10);
+	// Set default duration and break from settings
+	const sd = document.getElementById('sched-duration'); if (sd && !sd.value) { sd.value = ''; sd.options[0].textContent = 'Use company default (' + getDefaultDuration() + ' min)'; }
+	const sb = document.getElementById('sched-break'); if (sb) sb.value = String(getDefaultBreak());
 	buildSchedIvrDropdown(); renderSchedCandidatesPreview(); openDrawer('sched'); tool.resize();
 }
 function closeSchedulerDrawer() { closeDrawer('sched') }
@@ -642,8 +663,9 @@ function candidateHasConflict(candidateId, startMs, endMs) {
 function autoSchedule() {
 	// sched-week-start is now a SINGLE DAY
 	const schedDate = document.getElementById('sched-week-start')?.value;
-	const breakMin = parseInt(document.getElementById('sched-break')?.value || '15');
+	const breakMin = parseInt(document.getElementById('sched-break')?.value || String(getDefaultBreak()));
 	const filterPos = document.getElementById('sched-pos-filter')?.value || '';
+	const schedDurVal = parseInt(document.getElementById('sched-duration')?.value) || getDefaultDuration();
 	if (!schedDate) { tool.notify('Select a date', 'warning'); return }
 	if (!selectedSchedInterviewers.length) { tool.notify('Select at least one interviewer', 'warning'); return }
 	const interviewers = DB.interviewers.filter(i => selectedSchedInterviewers.includes(i.id));
@@ -652,12 +674,14 @@ function autoSchedule() {
 	const candidates = DB.candidates.filter(c => {
 		if (c.eliminated || !DB.screenings.some(s => s.candidateId === c.id && s.status === 'advanced')) return false;
 		if (filterPos && !(c.positionIds || []).includes(filterPos)) return false;
+		// Skip candidates who already have any interview (scheduled, done, or pending)
+		if (DB.interviews.some(i => i.candidateId === c.id)) return false;
 		return true;
 	});
 	if (!candidates.length) { tool.notify('No advanced candidates to schedule', 'warning'); return }
 
-	// Duration from interviewers' profile
-	const dur = interviewers.length === 1 ? (interviewers[0].duration || 60) : Math.min(...interviewers.map(i => i.duration || 60));
+	// Duration: use explicit scheduler setting, or company default, or interviewer profile as fallback
+	const dur = schedDurVal || (interviewers.length === 1 ? (interviewers[0].duration || getDefaultDuration()) : Math.min(...interviewers.map(i => i.duration || getDefaultDuration())));
 	// Day-of-week name for the selected date
 	const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 	const selectedDayName = DAY_NAMES[new Date(schedDate + 'T00:00:00').getDay()];
@@ -774,7 +798,12 @@ function populateScoringSelects() {
 	if (curInt) intSel.value = curInt; if (curIvr) ivrSel.value = curIvr; if (intSel.value && ivrSel.value) loadScoringForm();
 }
 function getCriteriaId(name) { return 'sc-' + name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-]/g, '') }
-function allCriteriaAvg(score) { const all = [...Object.values(score.criteria || {}), ...Object.values(score.extraCriteria || {})].filter(v => typeof v === 'number'); return all.length ? all.reduce((a, b) => a + b, 0) / all.length : 0 }
+function allCriteriaAvg(score) {
+	// If ineligible, return -1 as a sentinel (not a real score)
+	if (score.ineligible) return -1;
+	const all = [...Object.values(score.criteria || {}), ...Object.values(score.extraCriteria || {})].filter(v => typeof v === 'number');
+	return all.length ? all.reduce((a, b) => a + b, 0) / all.length : 0;
+}
 function loadScoringForm() {
 	const interviewId = document.getElementById('score-interview').value; const interviewerId = document.getElementById('score-interviewer').value; const container = document.getElementById('scoring-form-container'); if (!container) return;
 	if (!interviewId || !interviewerId) { container.innerHTML = ''; tool.resize(); return }
@@ -783,6 +812,7 @@ function loadScoringForm() {
 	const existing = DB.scores.find(s => s.interviewId === interviewId && s.interviewerId === interviewerId);
 	const appliedIds = candidate.positionIds || []; const appliedFirst = [...DB.positions.filter(p => appliedIds.includes(p.id)), ...DB.positions.filter(p => !appliedIds.includes(p.id))]; const exPosId = existing?.positionId || (appliedFirst[0]?.id || GENERAL_POS_ID);
 	const exCrit = existing?.criteria || {}; const exExtra = existing?.extraCriteria || {}; const exRec = existing?.recommendation || ''; const exNotes = existing?.notes || ''; const exSug = existing?.suggestedPositionId || '';
+	const exIneligible = existing?.ineligible || false;
 	const selPos = DB.positions.find(p => p.id === exPosId); const posExtra = (selPos?.extraCriteria || []).filter(c => c.name.trim()); const isGeneral = exPosId === GENERAL_POS_ID;
 	const posOptions = appliedFirst.map(p => `<option value="${p.id}" ${p.id === exPosId ? 'selected' : ''}>${esc(p.title)}${appliedIds.includes(p.id) ? ' ★' : ''}</option>`).join('') + `<option value="${GENERAL_POS_ID}" ${isGeneral ? 'selected' : ''}>— General Evaluation —</option>`;
 	const intSpecificUrl = interview.meetingUrl || ''; const defaultUrl = getDefaultMeetingUrl(); const effectiveUrl = intSpecificUrl || defaultUrl; const effectivePlatform = interview.meetingPlatform || getDefaultMeetingPlatform(); const isCustomLink = !!(intSpecificUrl && intSpecificUrl !== defaultUrl);
@@ -798,6 +828,15 @@ function loadScoringForm() {
       <div class="form-group" style="margin:0"><label class="form-label">Recommendation</label><select id="score-recommendation"><option value="" ${!exRec ? 'selected' : ''}>Select...</option><option value="strong-yes" ${'strong-yes' === exRec ? 'selected' : ''}>Strong Yes</option><option value="yes" ${'yes' === exRec ? 'selected' : ''}>Yes</option><option value="maybe" ${'maybe' === exRec ? 'selected' : ''}>Maybe</option><option value="no" ${'no' === exRec ? 'selected' : ''}>No</option></select></div>
     </div>
     ${!isGeneral ? `<div class="form-group"><label class="form-label">Suggest Alternative Position</label><select id="score-suggested-position"><option value="">— None —</option>${DB.positions.map(p => `<option value="${p.id}" ${p.id === exSug ? 'selected' : ''}>${esc(p.title)}</option>`).join('')}</select></div>` : ''}
+    <div class="form-group" style="margin-bottom:0">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r2)">
+        <label class="toggle-switch danger"><input type="checkbox" id="score-ineligible" ${exIneligible ? 'checked' : ''} data-action="toggleIneligible"><span class="toggle-slider"></span></label>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--red)">Not Eligible / Not Suitable</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">For grant-based or eligibility-restricted positions. When checked, scoring criteria become optional.</div>
+        </div>
+      </div>
+    </div>
     <div class="section-sep"><div class="section-sep-label">HR / General Criteria<span class="section-sep-badge">All positions</span></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">${HR_CRITERIA.map(cr => `<div class="criteria-row"><div><div class="criteria-name">${esc(cr.name)}</div><div class="criteria-desc">${esc(cr.desc)}</div></div><div><input type="number" id="${getCriteriaId(cr.name)}" min="1" max="10" value="${esc(exCrit[cr.name] || '')}" placeholder="1–10" data-ctype="hr" data-cname="${esc(cr.name)}"></div></div>`).join('')}</div>
     ${posExtra.length ? `<div class="section-sep"><div class="section-sep-label">Position-Specific<span class="section-sep-badge pos-specific">${esc(selPos.title)}</span></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">${posExtra.map(cr => `<div class="criteria-row"><div><div class="criteria-name">${esc(cr.name)}</div><div class="criteria-desc">${esc(cr.desc || '')}</div></div><div><input type="number" id="${getCriteriaId('extra_' + cr.name)}" min="1" max="10" value="${esc(exExtra[cr.name] || '')}" placeholder="1–10" data-ctype="extra" data-cname="${esc(cr.name)}"></div></div>`).join('')}</div>` : ''}
@@ -807,12 +846,17 @@ function loadScoringForm() {
 	updateScoreAvg(); tool.resize();
 }
 function reloadScoringFormWithNewPos() { const interviewId = document.getElementById('score-interview').value; const interviewerId = document.getElementById('score-interviewer').value; if (!interviewId || !interviewerId) return; const newPosId = document.getElementById('score-position')?.value; if (!newPosId) return; const hrSnap = {}; HR_CRITERIA.forEach(cr => { const el = document.getElementById(getCriteriaId(cr.name)); if (el) hrSnap[cr.name] = el.value }); const existing = DB.scores.find(s => s.interviewId === interviewId && s.interviewerId === interviewerId); if (existing) { existing.positionId = newPosId; existing.criteria = Object.assign({}, existing.criteria, hrSnap); existing.recommendation = document.getElementById('score-recommendation')?.value || ''; existing.notes = document.getElementById('score-notes')?.value || '' } loadScoringForm() }
-function updateScoreAvg() { const vals = []; document.querySelectorAll('#scoring-form-container input[type=number]').forEach(inp => { const v = parseFloat(inp.value || ''); if (!isNaN(v) && v >= 1 && v <= 10) vals.push(v) }); const el = document.getElementById('score-avg-display'); if (el) el.textContent = vals.length ? `Avg: ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)}/10` : '' }
+function updateScoreAvg() { const vals = []; document.querySelectorAll('#scoring-form-container input[type=number]').forEach(inp => { const v = parseFloat(inp.value || ''); if (!isNaN(v) && v >= 1 && v <= 10) vals.push(v) }); const el = document.getElementById('score-avg-display'); if (el) { const inel = document.getElementById('score-ineligible')?.checked; if (inel) el.textContent = 'Ineligible'; else el.textContent = vals.length ? 'Avg: ' + (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1) + '/10' : '' } }
 function submitScore(interviewId, interviewerId) {
-	if (isReadOnly) return; const positionId = document.getElementById('score-position')?.value; const recommendation = document.getElementById('score-recommendation')?.value; const suggestedPositionId = document.getElementById('score-suggested-position')?.value || ''; const notes = document.getElementById('score-notes')?.value.trim() || ''; const criteria = {}; const extraCriteria = {}; let filled = 0;
+	if (isReadOnly) return; const positionId = document.getElementById('score-position')?.value; const recommendation = document.getElementById('score-recommendation')?.value; const suggestedPositionId = document.getElementById('score-suggested-position')?.value || ''; const notes = document.getElementById('score-notes')?.value.trim() || ''; const ineligible = document.getElementById('score-ineligible')?.checked || false; const criteria = {}; const extraCriteria = {}; let filled = 0;
 	document.querySelectorAll('#scoring-form-container input[type=number]').forEach(inp => { const v = parseFloat(inp.value || ''); if (!isNaN(v) && v >= 1 && v <= 10) { if (inp.dataset.ctype === 'extra') extraCriteria[inp.dataset.cname] = v; else criteria[inp.dataset.cname] = v; filled++ } });
-	if (!positionId) { tool.notify('Select a position', 'warning'); return } if (!recommendation) { tool.notify('Select a recommendation', 'warning'); return } if (!filled) { tool.notify('Score at least one criterion', 'warning'); return }
-	const candidateId = DB.interviews.find(x => x.id === interviewId)?.candidateId; const idx = DB.scores.findIndex(s => s.interviewId === interviewId && s.interviewerId === interviewerId); const obj = { id: idx >= 0 ? DB.scores[idx].id : genId(), interviewId, interviewerId, positionId, candidateId, criteria, extraCriteria, recommendation, suggestedPositionId, notes, date: new Date().toISOString() }; if (idx >= 0) DB.scores[idx] = obj; else DB.scores.push(obj);
+	if (!positionId) { tool.notify('Select a position', 'warning'); return }
+	// When ineligible, recommendation and criteria are optional
+	if (!ineligible) {
+		if (!recommendation) { tool.notify('Select a recommendation', 'warning'); return }
+		if (!filled) { tool.notify('Score at least one criterion', 'warning'); return }
+	}
+	const candidateId = DB.interviews.find(x => x.id === interviewId)?.candidateId; const idx = DB.scores.findIndex(s => s.interviewId === interviewId && s.interviewerId === interviewerId); const obj = { id: idx >= 0 ? DB.scores[idx].id : genId(), interviewId, interviewerId, positionId, candidateId, criteria, extraCriteria, recommendation, suggestedPositionId, notes, ineligible, date: new Date().toISOString() }; if (idx >= 0) DB.scores[idx] = obj; else DB.scores.push(obj);
 	persist(); loadScoringForm(); tool.notify('Score saved', 'success');
 }
 function deleteScore(interviewId, interviewerId) { openConfirm('Remove Score', 'Remove this score?', () => { DB.scores = DB.scores.filter(s => !(s.interviewId === interviewId && s.interviewerId === interviewerId)); persist(); loadScoringForm(); tool.notify('Removed', 'info') }, 'Remove') }
@@ -830,18 +874,114 @@ function renderPipeline() {
 function switchReportTab(tab, el) { document.querySelectorAll('.report-tab-content').forEach(c => c.style.display = 'none'); document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('active')); const rc = document.getElementById('report-' + tab); if (rc) rc.style.display = ''; if (el) el.classList.add('active'); tool.resize() }
 function renderReports() { renderCandidateReport(); renderPositionReport(); renderMatrixReport(); renderRejectionReport() }
 function renderCandidateReport() {
-	const el = document.getElementById('report-candidates'); if (!el) return; if (!DB.scores.length) { el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">◫</div><p>No scores yet.</p></div>`; return }
+	const el = document.getElementById('report-candidates'); if (!el) return; if (!DB.scores.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">◫</div><p>No scores yet.</p></div>'; return }
+	const recFilter = document.getElementById('report-rec-filter')?.value || '';
+	const eligFilter = document.getElementById('report-elig-filter')?.value || '';
 	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))];
-	const rows = DB.candidates.map(c => { const posScores = allPosIds.map(posId => { const sc = DB.scores.filter(s => s.candidateId === c.id && s.positionId === posId); if (!sc.length) return null; const avg = sc.reduce((a, s) => a + allCriteriaAvg(s), 0) / sc.length; const recScore = sc.reduce((a, s) => a + getRecW(s.recommendation), 0); const isGeneral = posId === GENERAL_POS_ID; const pos = isGeneral ? null : DB.positions.find(p => p.id === posId); return { posId, pos, isGeneral, avg, recScore, count: sc.length, applied: (c.positionIds || []).includes(posId) } }).filter(Boolean); const best = posScores.length ? Math.max(...posScores.map(p => p.avg)) : 0; return { c, posScores, best } }).filter(x => x.posScores.length).sort((a, b) => b.best - a.best);
-	if (!rows.length) { el.innerHTML = `<div class="empty-state"><p>No scored candidates.</p></div>`; return }
-	el.innerHTML = rows.map((item, idx) => { const { c, posScores } = item; const elim = c.eliminated; const sel = getStage(c.id) === 'selected'; return `<div class="report-card" style="${elim ? 'opacity:.65' : ''}"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">${avatar(c.name, 40)}<div style="flex:1"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:15px;font-weight:600">${esc(c.name)}</span><span class="badge ${idx === 0 ? 'badge-amber' : idx < 3 ? 'badge-teal' : 'badge-gray'}">#${idx + 1}</span>${elim ? `<span class="badge badge-red">Eliminated</span>` : ''}${sel ? `<span class="badge badge-green">Selected</span>` : ''}</div><div style="font-size:11px;color:var(--text3)">${c.email || ''}</div></div><div style="text-align:right"><div style="font-family:var(--mono);font-size:20px;font-weight:600;color:var(--green)">${item.best.toFixed(1)}</div><div style="font-size:10px;color:var(--text3)">best avg</div></div></div><div class="report-positions">${posScores.sort((a, b) => b.avg - a.avg).map(ps => { const bc = ps.avg >= 7 ? 'var(--green)' : ps.avg >= 5 ? 'var(--amber)' : 'var(--red)'; const rb = ps.recScore > 0 ? 'badge-green' : ps.recScore < 0 ? 'badge-red' : 'badge-gray'; const rt = ps.recScore > 1 ? 'Strong Hire' : ps.recScore > 0 ? 'Hire' : ps.recScore === 0 ? 'Neutral' : 'No Hire'; const title = ps.isGeneral ? 'General' : esc(ps.pos?.title || '?'); const tag = ps.isGeneral ? `<span class="badge badge-teal">General</span>` : ps.applied ? `<span class="badge badge-blue">Applied</span>` : `<span class="badge badge-teal">Suggested</span>`; return `<div class="report-position ${ps.applied ? 'rp-applied' : ps.isGeneral ? 'rp-general' : ''}"><div style="font-size:11px;font-weight:500">${title} ${tag}</div><div style="font-family:var(--mono);font-size:18px;font-weight:600;color:${bc};margin-top:3px">${ps.avg.toFixed(1)}<span style="font-size:11px;color:var(--text3)">/10</span></div><div class="score-bar"><div class="score-bar-fill" style="width:${ps.avg * 10}%;background:${bc}"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">${ps.count} session${ps.count !== 1 ? 's' : ''} · <span class="badge ${rb}">${rt}</span></div></div>` }).join('')}</div></div>` }).join('');
+	const rows = DB.candidates.map(c => {
+		const posScores = allPosIds.map(posId => {
+			const sc = DB.scores.filter(s => s.candidateId === c.id && s.positionId === posId);
+			if (!sc.length) return null;
+			const inelCount = sc.filter(s => s.ineligible).length;
+			const validSc = sc.filter(s => !s.ineligible);
+			const avg = validSc.length ? validSc.reduce((a, s) => a + allCriteriaAvg(s), 0) / validSc.length : -1;
+			const recScore = sc.reduce((a, s) => a + getRecW(s.recommendation), 0);
+			const isGeneral = posId === GENERAL_POS_ID;
+			const pos = isGeneral ? null : DB.positions.find(p => p.id === posId);
+			const hasIneligible = inelCount > 0;
+			const allIneligible = sc.length > 0 && sc.every(s => s.ineligible);
+			return { posId, pos, isGeneral, avg, recScore, count: sc.length, inelCount, hasIneligible, allIneligible, applied: (c.positionIds || []).includes(posId), scores: sc };
+		}).filter(Boolean);
+		const filteredScores = recFilter ? posScores.filter(ps => ps.scores.some(s => s.recommendation === recFilter)) : posScores;
+		const eligFiltered = eligFilter === 'ineligible' ? filteredScores.filter(ps => ps.hasIneligible) : eligFilter === 'eligible' ? filteredScores.filter(ps => !ps.allIneligible) : filteredScores;
+		if (!eligFiltered.length) return null;
+		const best = eligFiltered.length ? Math.max(...eligFiltered.map(p => p.avg >= 0 ? p.avg : 0)) : 0;
+		return { c, posScores: eligFiltered, best };
+	}).filter(Boolean).sort((a, b) => b.best - a.best);
+	if (!rows.length) { const filtMsg = (recFilter || eligFilter) ? ' matching filters' : ''; el.innerHTML = '<div class="empty-state"><p>No scored candidates' + filtMsg + '.</p></div>'; return }
+	el.innerHTML = rows.map((item, idx) => {
+		const c = item.c, posScores = item.posScores;
+		const elim = c.eliminated;
+		const sel = getStage(c.id) === 'selected';
+		// Build position scores HTML
+		const scoresSorted = posScores.sort((a, b) => b.avg - a.avg);
+		let posScoresHTML = '';
+		scoresSorted.forEach(ps => {
+			const bc = ps.allIneligible ? 'var(--red)' : ps.avg >= 7 ? 'var(--green)' : ps.avg >= 5 ? 'var(--amber)' : 'var(--red)';
+			const rb = ps.recScore > 0 ? 'badge-green' : ps.recScore < 0 ? 'badge-red' : 'badge-gray';
+			const rt = ps.recScore > 1 ? 'Strong Hire' : ps.recScore > 0 ? 'Hire' : ps.recScore === 0 ? 'Neutral' : 'No Hire';
+			const title = ps.isGeneral ? 'General' : esc(ps.pos?.title || '?');
+			const tag = ps.isGeneral ? '<span class="badge badge-teal">General</span>' : ps.applied ? '<span class="badge badge-blue">Applied</span>' : '<span class="badge badge-teal">Suggested</span>';
+			const inelTag = ps.hasIneligible ? '<span class="badge badge-red">' + ps.inelCount + ' ineligible</span>' : '';
+			const rpClass = ps.applied ? 'rp-applied' : ps.isGeneral ? 'rp-general' : '';
+			const scoreDisplay = ps.allIneligible ? 'INELIGIBLE' : ps.avg.toFixed(1) + '<span style="font-size:11px;color:var(--text3)">/10</span>';
+			const barWidth = ps.allIneligible ? 100 : Math.round(ps.avg * 10);
+			posScoresHTML += '<div class="report-position ' + rpClass + '">' +
+				'<div style="font-size:11px;font-weight:500">' + title + ' ' + tag + ' ' + inelTag + '</div>' +
+				'<div style="font-family:var(--mono);font-size:18px;font-weight:600;color:' + bc + ';margin-top:3px">' + scoreDisplay + '</div>' +
+				'<div class="score-bar"><div class="score-bar-fill" style="width:' + barWidth + '%;background:' + bc + '"></div></div>' +
+				'<div style="font-size:10px;color:var(--text3);margin-top:2px">' + ps.count + ' session' + (ps.count !== 1 ? 's' : '') + ' <span class="badge ' + rb + '">' + rt + '</span></div>' +
+				'</div>';
+		});
+		// Build scoring status HTML
+		let scoringStatusHTML = '';
+		const candInts = DB.interviews.filter(i => i.candidateId === c.id);
+		if (candInts.length) {
+			let sRows = '';
+			candInts.forEach(int => {
+				const ivrIds = (int.interviewerIds || [int.interviewerId]).filter(Boolean);
+				let iRows = '';
+				ivrIds.forEach(ivrId => {
+					const ivr = DB.interviewers.find(x => x.id === ivrId);
+					const sc = DB.scores.find(s => s.interviewId === int.id && s.interviewerId === ivrId);
+					const isSc = !!sc;
+					const inel = sc?.ineligible;
+					const av = sc ? allCriteriaAvg(sc) : 0;
+					iRows += '<div class="score-status-row ' + (isSc ? 'scored' : 'pending') + '">' +
+						avatar(ivr ? ivr.name : '?', 20) +
+						'<span style="font-size:11px;font-weight:500">' + esc(ivr ? ivr.name : 'Unknown') + '</span>' +
+						(isSc ? (inel ? '<span class="badge badge-red">Ineligible</span>' : '<span class="badge badge-green">Scored ' + (av >= 0 ? av.toFixed(1) : '') + '</span>') : '<span class="badge badge-amber">Pending</span>') +
+						(isSc ? '<button class="btn btn-ghost btn-sm" data-action="goScore" data-id="' + int.id + '" style="margin-left:auto">View</button>' : '') +
+						'</div>';
+				});
+				sRows += '<div class="score-status-int"><div style="font-size:10px;font-weight:600;color:var(--text3);margin-bottom:4px">' + fmtDate(int.date) + (int.statusDone ? ' Done' : '') + '</div>' + iRows + '</div>';
+			});
+			scoringStatusHTML = '<div class="score-status-section">' +
+				'<div class="score-status-toggle" onclick="this.classList.toggle(\'open\');this.nextElementSibling.classList.toggle(\'open\')" style="cursor:pointer;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;user-select:none">' +
+				'<span class="toggle-arrow" style="transition:transform .2s;display:inline-block">▶</span> Scoring Status <span class="badge badge-gray" style="font-size:9px">' + candInts.length + ' interview' + (candInts.length !== 1 ? 's' : '') + '</span></div>' +
+				'<div class="score-status-body" style="display:none;margin-top:10px">' + sRows + '</div>' +
+				'</div>';
+		}
+		// Build report card
+		return '<div class="report-card" style="' + (elim ? 'opacity:.65' : '') + '">' +
+			'<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">' +
+				avatar(c.name, 40) +
+				'<div style="flex:1">' +
+					'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+						'<span style="font-size:15px;font-weight:600">' + esc(c.name) + '</span>' +
+						'<span class="badge ' + (idx === 0 ? 'badge-amber' : idx < 3 ? 'badge-teal' : 'badge-gray') + '">#' + (idx + 1) + '</span>' +
+						(elim ? '<span class="badge badge-red">Eliminated</span>' : '') +
+						(sel ? '<span class="badge badge-green">Selected</span>' : '') +
+					'</div>' +
+					'<div style="font-size:11px;color:var(--text3)">' + (c.email || '') + '</div>' +
+				'</div>' +
+				'<div style="text-align:right">' +
+					'<div style="font-family:var(--mono);font-size:20px;font-weight:600;color:var(--green)">' + item.best.toFixed(1) + '</div>' +
+					'<div style="font-size:10px;color:var(--text3)">best avg</div>' +
+				'</div>' +
+			'</div>' +
+			'<div class="report-positions">' + posScoresHTML + '</div>' +
+			scoringStatusHTML +
+		'</div>';
+	}).join('');
 }
+
 function renderPositionReport() {
 	const el = document.getElementById('report-positions'); if (!el) return; if (!DB.scores.length) { el.innerHTML = `<div class="empty-state"><p>No scores yet.</p></div>`; return }
 	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))];
-	const posData = allPosIds.map(posId => { const sc = DB.scores.filter(s => s.positionId === posId); if (!sc.length) return null; const isGeneral = posId === GENERAL_POS_ID; const pos = isGeneral ? { title: 'General Evaluation', status: 'open', id: GENERAL_POS_ID } : DB.positions.find(p => p.id === posId); if (!pos) return null; const ranked = [...new Set(sc.map(s => s.candidateId))].map(cid => { const cs = sc.filter(s => s.candidateId === cid); return { cand: DB.candidates.find(c => c.id === cid), avg: cs.reduce((a, s) => a + allCriteriaAvg(s), 0) / cs.length, recScore: cs.reduce((a, s) => a + getRecW(s.recommendation), 0), count: cs.length } }).filter(x => x.cand).sort((a, b) => b.avg - a.avg); return { pos, isGeneral, ranked } }).filter(Boolean);
+	const posData = allPosIds.map(posId => { const sc = DB.scores.filter(s => s.positionId === posId); if (!sc.length) return null; const isGeneral = posId === GENERAL_POS_ID; const pos = isGeneral ? { title: 'General Evaluation', status: 'open', id: GENERAL_POS_ID } : DB.positions.find(p => p.id === posId); if (!pos) return null; const ranked = [...new Set(sc.map(s => s.candidateId))].map(cid => { const cs = sc.filter(s => s.candidateId === cid); const validCs = cs.filter(s => !s.ineligible); const avg = validCs.length ? validCs.reduce((a, s) => a + allCriteriaAvg(s), 0) / validCs.length : -1; const inelCount = cs.filter(s => s.ineligible).length; return { cand: DB.candidates.find(c => c.id === cid), avg, inelCount, allIneligible: cs.length > 0 && cs.every(s => s.ineligible), recScore: cs.reduce((a, s) => a + getRecW(s.recommendation), 0), count: cs.length } }).filter(x => x.cand).sort((a, b) => b.avg - a.avg); return { pos, isGeneral, ranked } }).filter(Boolean);
 	if (!posData.length) { el.innerHTML = `<div class="empty-state"><p>No positions scored yet.</p></div>`; return }
-	el.innerHTML = posData.map(pd => { const sb = pd.isGeneral ? 'badge-teal' : { open: 'badge-green', closed: 'badge-gray', 'on-hold': 'badge-amber' }[pd.pos.status] || 'badge-gray'; return `<div class="report-card"><div style="margin-bottom:14px"><div style="font-size:15px;font-weight:600">${esc(pd.pos.title)}</div><div style="display:flex;gap:6px;margin-top:4px"><span class="badge ${sb}">${pd.isGeneral ? 'general' : pd.pos.status}</span><span class="badge badge-blue">${pd.ranked.length} candidates</span></div></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Candidate</th><th>Avg</th><th>Sessions</th><th>Rec</th></tr></thead><tbody>${pd.ranked.map((r, i) => { const applied = !pd.isGeneral && (r.cand.positionIds || []).includes(pd.pos.id); const bc = r.avg >= 7 ? 'var(--green)' : r.avg >= 5 ? 'var(--amber)' : 'var(--red)'; const rb = r.recScore > 0 ? 'badge-green' : r.recScore < 0 ? 'badge-red' : 'badge-gray'; return `<tr><td><span class="badge ${i === 0 ? 'badge-amber' : i < 3 ? 'badge-teal' : 'badge-gray'}">#${i + 1}</span></td><td><div style="display:flex;align-items:center;gap:7px">${avatar(r.cand.name, 24)}<div><div style="font-weight:500;font-size:12px">${esc(r.cand.name)}</div>${!applied && !pd.isGeneral ? '<span class="badge badge-teal" style="font-size:9px">Suggested</span>' : ''}</div></div></td><td><span style="font-family:var(--mono);font-weight:600;color:${bc}">${r.avg.toFixed(1)}</span></td><td>${r.count}</td><td><span class="badge ${rb}">${r.recScore > 1 ? 'Strong Hire' : r.recScore > 0 ? 'Hire' : r.recScore === 0 ? 'Neutral' : 'No Hire'}</span></td></tr>` }).join('')}</tbody></table></div></div>` }).join('');
+	el.innerHTML = posData.map(pd => { const sb = pd.isGeneral ? 'badge-teal' : { open: 'badge-green', closed: 'badge-gray', 'on-hold': 'badge-amber' }[pd.pos.status] || 'badge-gray'; return `<div class="report-card"><div style="margin-bottom:14px"><div style="font-size:15px;font-weight:600">${esc(pd.pos.title)}</div><div style="display:flex;gap:6px;margin-top:4px"><span class="badge ${sb}">${pd.isGeneral ? 'general' : pd.pos.status}</span><span class="badge badge-blue">${pd.ranked.length} candidates</span></div></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Candidate</th><th>Avg</th><th>Sessions</th><th>Rec</th></tr></thead><tbody>${pd.ranked.map((r, i) => { const applied = !pd.isGeneral && (r.cand.positionIds || []).includes(pd.pos.id); const bc = r.avg >= 7 ? 'var(--green)' : r.avg >= 5 ? 'var(--amber)' : 'var(--red)'; const rb = r.recScore > 0 ? 'badge-green' : r.recScore < 0 ? 'badge-red' : 'badge-gray'; return `<tr><td><span class="badge ${i === 0 ? 'badge-amber' : i < 3 ? 'badge-teal' : 'badge-gray'}">#${i + 1}</span></td><td><div style="display:flex;align-items:center;gap:7px">${avatar(r.cand.name, 24)}<div><div style="font-weight:500;font-size:12px">${esc(r.cand.name)}</div>${!applied && !pd.isGeneral ? '<span class="badge badge-teal" style="font-size:9px">Suggested</span>' : ''}</div></div></td><td><span style="font-family:var(--mono);font-weight:600;color:${bc}">${r.allIneligible ? 'INELIGIBLE' : r.avg.toFixed(1)}</span></td><td>${r.count}${r.inelCount ? ' <span class="badge badge-red" style="font-size:9px">' + r.inelCount + ' inel.</span>' : ''}</td><td><span class="badge ${rb}">${r.recScore > 1 ? 'Strong Hire' : r.recScore > 0 ? 'Hire' : r.recScore === 0 ? 'Neutral' : 'No Hire'}</span></td></tr>` }).join('')}</tbody></table></div></div>` }).join('');
 }
 function renderMatrixReport() {
 	const el = document.getElementById('report-matrix'); if (!el) return; const scoredCands = [...new Set(DB.scores.map(s => s.candidateId))]; const scoredPos = [...new Set(DB.scores.map(s => s.positionId))]; if (!scoredCands.length) { el.innerHTML = `<div class="empty-state"><p>No scores yet.</p></div>`; return }
@@ -919,6 +1059,150 @@ function showImportResults(results) {
 }
 
 /* ══════════════════════════════════════════
+/* ══ CANDIDATE PRINT VIEW ══ */
+function renderCandidatePrintPage() {
+	const sel = document.getElementById('cp-candidate-select');
+	if (sel) {
+		const cur = sel.value;
+		const candsWithInts = [...new Set(DB.interviews.map(i => i.candidateId))];
+		const opts = candsWithInts.map(cid => {
+			const c = DB.candidates.find(x => x.id === cid);
+			return c ? '<option value="' + cid + '" ' + (cid === cur ? 'selected' : '') + '>' + esc(c.name) + '</option>' : '';
+		}).join('');
+		sel.innerHTML = '<option value="">Select a candidate with scheduled interview...</option>' + opts;
+		if (cur) sel.value = cur;
+	}
+	renderCandidateCard();
+}
+function renderCandidateCard() {
+	const cid = document.getElementById('cp-candidate-select')?.value;
+	const container = document.getElementById('cp-card-container');
+	if (!container) return;
+	if (!cid) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖹</div><p>Select a candidate to view their interview card.</p></div>'; tool.resize(); return }
+	const c = DB.candidates.find(x => x.id === cid);
+	if (!c) { container.innerHTML = '<div class="empty-state"><p>Candidate not found.</p></div>'; tool.resize(); return }
+	const ints = DB.interviews.filter(i => i.candidateId === cid).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+	if (!ints.length) { container.innerHTML = '<div class="empty-state"><p>No interviews scheduled for this candidate.</p></div>'; tool.resize(); return }
+	const defaultUrl = getDefaultMeetingUrl();
+	const defaultPlatform = getDefaultMeetingPlatform();
+	const coName = companyName();
+	container.innerHTML = ints.map(int => {
+		const ivrIds = (int.interviewerIds || [int.interviewerId]).filter(Boolean);
+		const ivrs = ivrIds.map(id => DB.interviewers.find(x => x.id === id)).filter(Boolean);
+		const ivrNames = ivrs.map(i => i.name).join(', ') || 'TBD';
+		const pos = DB.positions.find(p => (c.positionIds || []).includes(p.id));
+		const dateObj = int.scheduledTime ? new Date(int.scheduledTime) : new Date(int.date + 'T09:00:00');
+		const endObj = new Date(dateObj.getTime() + (int.durationMin || 60) * 60000);
+		const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+		const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+		const endStr = endObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+		const effectiveUrl = int.meetingUrl || defaultUrl;
+		const effectivePlatform = int.meetingPlatform || defaultPlatform;
+		return '<div class="cp-card">' +
+			'<div class="cp-card-header">' +
+				'<div class="cp-logo">' + esc(coName) + '</div>' +
+				'<div class="cp-label">INTERVIEW CONFIRMATION</div>' +
+			'</div>' +
+			'<div class="cp-body">' +
+				'<div class="cp-greeting">Dear <strong>' + esc(c.name) + '</strong>,</div>' +
+				'<p class="cp-intro">We are pleased to confirm your interview' + (pos ? ' for the <strong>' + esc(pos.title) + '</strong> position' : '') + '.</p>' +
+				'<div class="cp-details">' +
+					'<div class="cp-detail-row"><span class="cp-detail-icon">📅</span><div><span class="cp-detail-label">Date</span><span class="cp-detail-value">' + dateStr + '</span></div></div>' +
+					'<div class="cp-detail-row"><span class="cp-detail-icon">⏰</span><div><span class="cp-detail-label">Time</span><span class="cp-detail-value">' + timeStr + ' – ' + endStr + ' (' + (int.durationMin || 60) + ' minutes)</span></div></div>' +
+					'<div class="cp-detail-row"><span class="cp-detail-icon">👤</span><div><span class="cp-detail-label">Interviewer' + (ivrs.length > 1 ? 's' : '') + '</span><span class="cp-detail-value">' + esc(ivrNames) + '</span></div></div>' +
+					(effectiveUrl ? '<div class="cp-detail-row"><span class="cp-detail-icon">🔗</span><div><span class="cp-detail-label">' + (effectivePlatform || 'Meeting') + ' Link</span><span class="cp-detail-value"><a href="' + esc(effectiveUrl) + '" target="_blank" style="color:var(--accent)">' + esc(effectiveUrl) + '</a></span></div></div>' : '') +
+					(pos ? '<div class="cp-detail-row"><span class="cp-detail-icon">📋</span><div><span class="cp-detail-label">Position</span><span class="cp-detail-value">' + esc(pos.title) + (pos.dept ? ' — ' + esc(pos.dept) : '') + '</span></div></div>' : '') +
+				'</div>' +
+				'<div class="cp-footer-note">Please confirm your attendance at your earliest convenience. If you have any questions, do not hesitate to contact us.</div>' +
+			'</div>' +
+			'<div class="cp-card-footer">' + esc(coName) + ' · Interview Confirmation · ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '</div>' +
+		'</div>';
+	}).join('');
+	tool.resize();
+}
+function printCandidateCard() {
+	const container = document.getElementById('cp-card-container');
+	if (!container || !container.innerHTML.trim()) { tool.notify('Select a candidate first', 'warning'); return }
+	const printWin = window.open('', '_blank', 'width=800,height=600');
+	if (!printWin) { tool.notify('Popup blocked. Allow popups for printing.', 'warning'); return }
+	const coName = companyName();
+	printWin.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interview Card</title>' +
+		'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:#fff;color:#1a1d26;padding:16px;display:flex;justify-content:center}.cp-card{border:2px solid #3d5cff;border-radius:10px;overflow:hidden;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.1);page-break-inside:avoid}.cp-card-header{background:#3d5cff;color:#fff;padding:14px 18px;text-align:center}.cp-logo{font-size:17px;font-weight:700}.cp-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;opacity:.85;margin-top:3px}.cp-body{padding:14px 16px}.cp-greeting{font-size:13px;margin-bottom:8px;line-height:1.5}.cp-intro{font-size:11px;color:#5a6070;line-height:1.5;margin-bottom:12px}.cp-details{background:#f4f5f7;border-radius:6px;padding:10px 12px}.cp-detail-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #dde0e8}.cp-detail-row:last-child{border-bottom:none}.cp-detail-icon{font-size:16px;width:22px;text-align:center}.cp-detail-label{display:block;font-size:8px;color:#9399aa;text-transform:uppercase;margin-bottom:1px}.cp-detail-value{font-size:12px;font-weight:500;word-break:break-all}.cp-footer-note{margin-top:10px;font-size:10px;color:#9399aa;text-align:center}.cp-card-footer{background:#f0f1f4;padding:8px 16px;text-align:center;font-size:9px;color:#9399aa;text-transform:uppercase}@media print{body{padding:0}.cp-card{border:none;box-shadow:none;max-width:100%}}</style></head><body>' +
+		container.innerHTML + '</body></html>');
+	printWin.document.close();
+	setTimeout(() => printWin.print(), 500);
+}
+async function copyCandidateCardAsImage() {
+	const container = document.getElementById('cp-card-container');
+	if (!container || !container.querySelector('.cp-card')) { tool.notify('Select a candidate first', 'warning'); return }
+	try {
+		// Use html2canvas if available, otherwise use a simpler approach
+		if (typeof html2canvas !== 'undefined') {
+			const card = container.querySelector('.cp-card');
+			const canvas = await html2canvas(card, { backgroundColor: '#ffffff', scale: 2, width: card.offsetWidth, height: card.offsetHeight });
+			const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+			await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+			tool.notify('Card copied as image! Paste into WhatsApp', 'success');
+		} else {
+			// Fallback: open print-friendly window for screenshot
+			const card = container.querySelector('.cp-card');
+			const clone = card.cloneNode(true);
+			const win = window.open('', '_blank', 'width=700,height=500');
+			win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:system-ui;padding:16px;background:#fff;display:flex;justify-content:center}.cp-card{border:2px solid #3d5cff;border-radius:10px;overflow:hidden;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.1)}.cp-card-header{background:#3d5cff;color:#fff;padding:14px 18px;text-align:center}.cp-logo{font-size:17px;font-weight:700}.cp-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;opacity:.85;margin-top:3px}.cp-body{padding:14px 16px}.cp-greeting{font-size:13px;margin-bottom:8px}.cp-intro{font-size:11px;color:#5a6070;margin-bottom:12px}.cp-details{background:#f4f5f7;border-radius:6px;padding:10px 12px}.cp-detail-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #dde0e8}.cp-detail-row:last-child{border-bottom:none}.cp-detail-icon{font-size:16px;width:22px;text-align:center}.cp-detail-label{display:block;font-size:8px;color:#9399aa;text-transform:uppercase;margin-bottom:1px}.cp-detail-value{font-size:12px;font-weight:500;word-break:break-all}.cp-footer-note{margin-top:10px;font-size:10px;color:#9399aa;text-align:center}.cp-card-footer{background:#f0f1f4;padding:8px 16px;text-align:center;font-size:9px;color:#9399aa}</style></head><body>');
+			win.document.body.appendChild(clone);
+			win.document.close();
+			tool.notify('Card opened for screenshot. Use Win+Shift+S or Cmd+Shift+4', 'info');
+		}
+	} catch(e) {
+		tool.notify('Copy failed: ' + e.message, 'error');
+	}
+}
+function generateWhatsAppMessage() {
+	const cid = document.getElementById('cp-candidate-select')?.value;
+	if (!cid) { tool.notify('Select a candidate first', 'warning'); return ''; }
+	const c = DB.candidates.find(x => x.id === cid);
+	if (!c) return '';
+	const ints = DB.interviews.filter(i => i.candidateId === cid).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+	if (!ints.length) { tool.notify('No interviews for this candidate', 'warning'); return ''; }
+	const int = ints[0];
+	const ivrIds = (int.interviewerIds || [int.interviewerId]).filter(Boolean);
+	const ivrs = ivrIds.map(id => DB.interviewers.find(x => x.id === id)).filter(Boolean);
+	const ivrNames = ivrs.map(i => i.name).join(', ') || 'TBD';
+	const pos = DB.positions.find(p => (c.positionIds || []).includes(p.id));
+	const posName = pos ? pos.title : 'the position';
+	const coName = companyName();
+	const dateObj = int.scheduledTime ? new Date(int.scheduledTime) : new Date(int.date + 'T09:00:00');
+	const endObj = new Date(dateObj.getTime() + (int.durationMin || 60) * 60000);
+	const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+	const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+	const endStr = endObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+	const effectiveUrl = int.meetingUrl || getDefaultMeetingUrl();
+	const effectivePlatform = int.meetingPlatform || getDefaultMeetingPlatform();
+	let msg = '';
+	msg += '\uD83C\uDF1F *INTERVIEW CONFIRMATION* \uD83C\uDF1F\n\n';
+	msg += 'Dear *' + c.name + '*,\n\n';
+	msg += 'We are pleased to confirm your interview for the *' + posName + '* position at *' + coName + '*.\n\n';
+	msg += '\uD83D\uDCC5 *Date:* ' + dateStr + '\n';
+	msg += '\u23F0 *Time:* ' + timeStr + ' \u2013 ' + endStr + ' (' + (int.durationMin || 60) + ' min)\n';
+	msg += '\uD83D\uDC64 *Interviewer' + (ivrs.length > 1 ? 's' : '') + ':* ' + ivrNames + '\n';
+	if (effectiveUrl) msg += '\uD83D\uDD17 *' + (effectivePlatform || 'Meeting') + ' Link:* ' + effectiveUrl + '\n';
+	msg += '\nPlease confirm your attendance at your earliest convenience. Let us know if you have any questions!\n\n';
+	msg += 'Best regards,\n';
+	msg += '*' + coName + '* HR Team';
+	return msg;
+}
+function copyWhatsAppMessage() {
+	const msg = generateWhatsAppMessage();
+	if (!msg) return;
+	if (navigator.clipboard?.writeText) {
+		navigator.clipboard.writeText(msg).then(function() { tool.notify('WhatsApp message copied! Paste into chat', 'success'); });
+	} else {
+		const ta = document.createElement('textarea'); ta.value = msg; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); tool.notify('WhatsApp message copied!', 'success'); } catch(e) { tool.notify('Copy failed', 'error'); } document.body.removeChild(ta);
+	}
+}
+
+
+/* ══════════════════════════════════════════
    EVENT DELEGATION
 ══════════════════════════════════════════ */
 document.addEventListener('click', e => {
@@ -946,6 +1230,7 @@ document.addEventListener('click', e => {
 		if (a === 'togglePosClosedInt') { const p = DB.positions.find(x => x.id === id); if (p) { p.closedForInterviews = t.checked; persist(); renderPlacements(); renderPositions() } }
 		if (a === 'toggleOfferSent') toggleOfferSent(t.dataset.posid, t.checked);
 		if (a === 'toggleRejSent') { const c = DB.candidates.find(x => x.id === id); if (c) { c.rejectionEmailSent = t.checked; persist(); tool.notify(t.checked ? 'Marked sent' : 'Unmarked', 'info') } }
+		if (a === 'toggleIneligible') { updateScoreAvg(); }
 		return;
 	}
 	const navItem = e.target.closest('.nav-item[data-page]'); if (navItem) { navigate(navItem.dataset.page); return }
@@ -976,7 +1261,7 @@ document.addEventListener('click', e => {
 	if (t.id === 'import-confirm-btn') confirmImport(); if (t.id === 'import-done-btn') { closeImportModal(); renderCandidates(); navigate('candidates') }
 	if (t.id === 'excel-browse-btn') document.getElementById('excel-file-input').click();
 	if (t.id === 'screen-bulk-advance-btn') bulkScreenAdvance(); if (t.id === 'screen-bulk-elim-btn') bulkScreenEliminate();
-	if (t.id === 'settings-save-btn') saveSettings();
+	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
 	if (t.id === 'cal-prev-btn') calNavPrev(); if (t.id === 'cal-next-btn') calNavNext(); if (t.id === 'cal-today-btn') calNavToday();
 	if (t.id === 'bulk-advance-btn') { const ids = [...checkedCandIds]; const toAdv = ids.filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated && !DB.screenings.some(s => s.candidateId === id && s.status === 'advanced') }); toAdv.forEach(id => { DB.screenings.push({ candidateId: id, status: 'advanced', date: new Date().toISOString() }) }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${toAdv.length} advanced`, 'success') }
 	if (t.id === 'bulk-eliminate-btn') { const ids = [...checkedCandIds].filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated }); if (!ids.length) { tool.notify('No active candidates selected', 'warning'); return } openElimModal(`Eliminating ${ids.length} candidates:`, (reason) => { ids.forEach(id => { const c = DB.candidates.find(x => x.id === id); if (c) { c.eliminated = true; c.eliminationReason = reason; c.eliminationStage = 'screening'; c.eliminationDate = new Date().toISOString() } }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${ids.length} eliminated`, 'warning') }) }
@@ -991,7 +1276,7 @@ document.addEventListener('change', e => {
 	if (t.id === 'score-interview' || t.id === 'score-interviewer') loadScoringForm(); if (t.id === 'score-position' || t.dataset.action === 'reloadScoringForm') reloadScoringFormWithNewPos();
 	if (t.id === 'screen-filter-pos' || t.id === 'screen-filter-status') renderScreening(); if (t.id === 'pipeline-pos-filter') renderPipeline(); if (t.id === 'sched-pos-filter') renderSchedCandidatesPreview();
 	if (t.id === 'cand-filter-status' || t.id === 'cand-filter-pos') renderCandidates(); if (t.id === 'pos-filter-status') renderPositions(); if (t.id === 'ivr-search') renderInterviewers();
-	if (t.id === 'cal-ivr-filter') { calIvrFilter = t.value; renderCalendar() }
+	if (t.id === 'cal-ivr-filter') { calIvrFilter = t.value; renderCalendar() } if (t.id === 'report-rec-filter' || t.id === 'report-elig-filter') renderCandidateReport();
 	if (t.classList.contains('cand-check')) { if (t.checked) checkedCandIds.add(t.dataset.id); else checkedCandIds.delete(t.dataset.id); updateBulkBar() }
 	if (t.classList.contains('screen-check')) { if (t.checked) checkedScreenIds.add(t.dataset.id); else checkedScreenIds.delete(t.dataset.id) }
 	if (t.id === 'excel-file-input') handleExcelFile(t.files[0]);
@@ -1017,7 +1302,9 @@ document.addEventListener('drop', e => { const dz = document.getElementById('exc
 document.addEventListener('dragenter', e => { const dz = document.getElementById('excel-drop-zone'); if (dz) dz.classList.add('dragover') });
 document.addEventListener('dragleave', e => { const dz = document.getElementById('excel-drop-zone'); if (dz) dz.classList.remove('dragover') });
 
-(function () { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; document.head.appendChild(s) })();
+(function () { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; document.head.appendChild(s);
+// Try loading html2canvas for copy-as-image feature
+const h2c = document.createElement('script'); h2c.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; document.head.appendChild(h2c) })();
 
 tool.onReady((val, fields) => {
 	tool.declareOutput({ type: 'object', properties: { positions: { type: 'array' }, interviewers: { type: 'array' }, candidates: { type: 'array' }, interviews: { type: 'array' }, scores: { type: 'array' }, screenings: { type: 'array' }, placements: { type: 'array' }, settings: { type: 'object' }, _theme: { type: 'string' } } });

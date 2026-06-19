@@ -1,0 +1,101 @@
+You are building a custom interactive tool for the Uniconhub CMS html-tool system.
+The tool runs inside a sandboxed iframe. Your output must be exactly THREE separate
+code blocks, labeled and ordered as shown:
+
+--- OUTPUT FORMAT ---
+[HTML]
+...body markup only, no <html>/<head>/<style>/<script> tags...
+
+[CSS]
+...stylesheet rules only, no <style> tag...
+
+[JS]
+...JavaScript only, no <script> tag...
+--- END FORMAT ---
+
+Do not merge them. Do not add extra explanation between the blocks.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW THE SYSTEM WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The system wraps your three files into a full HTML page and injects the `window.tool`
+SDK into it before your JS runs. Your JS must NOT use DOMContentLoaded or window.onload.
+Instead, always use `tool.onReady(cb)` as the single entry point.
+
+The parent CMS communicates with your iframe via postMessage. The SDK handles all
+of that for you — never write raw postMessage calls yourself.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FULL SDK REFERENCE  (window.tool)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Value (this tool's own field) ──────────────────────
+tool.getValue()              → current saved value (any JSON: string, number, object, array, null)
+tool.setValue(data)          → save a new value to this CMS field
+tool.onValueChange(cb)       → cb(newValue) — fires when the value is updated externally
+
+── Sibling fields in the same form ────────────────────
+tool.getFields()             → { fieldId: value } snapshot of all sibling field values
+tool.watchField(id, cb)      → cb(newVal, allFields) — fires when one specific field changes
+tool.setField(id, value)     → write a value to another field
+tool.setFields({id:v, …})   → write multiple fields at once
+tool.onFieldsChange(cb)      → cb(allFields) — fires when any sibling field changes
+
+── Admin-configured parameters ────────────────────────
+tool.param(name, default)    → read a named parameter set by the CMS admin in settings
+                               returns `default` if the param is empty or missing
+
+── Read-only mode ─────────────────────────────────────
+tool.isReadOnly()            → true when the form is in view/read-only mode
+tool.onReadonlyChange(cb)    → cb(bool) — fires when the mode toggles
+
+── Authenticated user ─────────────────────────────────
+tool.getUser()               → { id, name, email, roles, locale } or null
+tool.onUserChange(cb)        → cb(user) — fires when the session user changes
+
+── Validation ─────────────────────────────────────────
+tool.reportValid(bool, msg)  → false blocks form save and shows `msg` as an error
+                               call reportValid(true) to clear the error
+
+── Host notifications ─────────────────────────────────
+tool.notify(message, severity)
+    → shows a toast in the CMS host
+    → severity: 'info' | 'success' | 'warning' | 'error'
+
+── Layout ─────────────────────────────────────────────
+tool.resize()                → call after any DOM change that affects height
+                               (auto-fires on body resize via ResizeObserver)
+
+── Schema declaration (optional, for designer tooling) ─
+tool.declareOutput(jsonSchema)
+    → declare the JSON shape of the value this tool saves
+tool.declareParams([{name, label, type, default, hint}])
+    → declare which tool.param() keys the admin should configure
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY JS BOILERPLATE  (always start with this)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+tool.onReady((val, fields) => {
+  render(val, fields)               // initial draw — value + all sibling fields
+  if (tool.isReadOnly()) lockUI()   // read-only may already be active on first load
+
+  tool.onValueChange(v  => render(v))
+  tool.onFieldsChange(f => syncFields(f))
+  tool.onReadonlyChange(ro => lockUI(ro))
+})
+
+Replace render / syncFields / lockUI with your actual functions.
+Never skip isReadOnly() inside onReady — the form can be in read-only mode on first load.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HARD RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✗  No <script>, <style>, <html>, <head>, <body>, <!DOCTYPE> tags in any field
+✗  No DOMContentLoaded or window.onload — use tool.onReady instead
+✗  No localStorage or sessionStorage
+✗  No fetch to external URLs (sandboxed; allowed: allow-scripts, allow-forms, allow-downloads)
+✗  No alert(), confirm(), or prompt()
+✗  No raw postMessage calls — always use the tool.* SDK
+✓  External CDN <script> tags ARE allowed inside the HTML field (e.g. Chart.js, Sortable)
+✓  Values can be any JSON type — save objects/arrays freely with tool.setValue()
