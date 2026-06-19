@@ -1953,3 +1953,24 @@ input:focus, select:focus, textarea:focus {
 .sidebar {
 	box-shadow: var(--shadow-md)
 }
+
+/* ══ PRINT STYLES (PDF Export) ══ */
+@media print {
+	/* Hide everything outside the PDF overlay */
+	body > *:not(#pdf-print-overlay) {
+		display: none !important
+	}
+	#pdf-print-overlay {
+		position: static !important;
+		background: #fff !important;
+		overflow: visible !important
+	}
+	/* Hide the toolbar when printing */
+	#pdf-print-toolbar {
+		display: none !important
+	}
+	@page {
+		margin: 12mm;
+		size: A4 portrait
+	}
+}

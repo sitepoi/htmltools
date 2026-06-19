@@ -1,0 +1,91 @@
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
+<div class="toolbar no-print" id="toolbar">
+	<div class="brand">Employment Agreement <span class="status-badge draft" id="statusBadge">DRAFT</span></div>
+	<div class="tool-actions">
+		<button onclick="fillDemo()">&#128203; Fill Demo</button>
+		<button onclick="clearAll()">&#10005; Clear All</button>
+		<button onclick="pasteJSON()">&#128203; Paste JSON</button>
+		<button onclick="toggleHighlights()">&#128269; Highlights</button>
+		<button class="primary-btn" onclick="exportToPDF()">&#128196; Export PDF</button>
+		<button onclick="window.print()">&#128424; Print</button>
+	</div>
+</div>
+
+<div class="page" id="agreementPage">
+	<div class="watermark-layer"></div>
+</div>
+
+<div class="toc-sidebar no-print" id="tocSidebar">
+	<a href="#sec-parties" title="Parties"></a>
+	<a href="#sec-position" title="Position"></a>
+	<a href="#sec-duties" title="Duties"></a>
+	<a href="#sec-compensation" title="Compensation"></a>
+	<a href="#sec-location" title="Location"></a>
+	<a href="#sec-benefits" title="Benefits"></a>
+	<a href="#sec-vacation" title="Vacation"></a>
+	<a href="#sec-confidentiality" title="Confidentiality"></a>
+	<a href="#sec-policies" title="Policies"></a>
+	<a href="#sec-termination" title="Termination"></a>
+	<a href="#sec-general" title="General"></a>
+	<a href="#sec-signatures" title="Signatures"></a>
+	<a href="#sec-summary" title="Summary"></a>
+</div>
+
+<div class="export-overlay no-print" id="exportOverlay">
+	<div class="spinner"></div>
+	<p>Generating PDF document...</p>
+</div>
+
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+	<div class="drawer-header">
+		<h3 id="drawerTitle">Rich Text Editor</h3>
+		<button onclick="closeDrawer()">&times;</button>
+	</div>
+	<div class="drawer-editor-wrap">
+		<div id="drawerEditor"></div>
+	</div>
+	<div class="drawer-footer">
+		<button class="btn-cancel" onclick="closeDrawer()">Cancel</button>
+		<button class="btn-apply" onclick="applyDrawerContent()">Apply to Document</button>
+	</div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+	if (typeof tool === 'undefined') {
+		window.tool = {
+			_val: null, _readOnly: false,
+			getValue: function () { return this._val; },
+			setValue: function (v) { this._val = v; },
+			onValueChange: function (cb) { this._cbV = cb; },
+			isReadOnly: function () { return this._readOnly; },
+			onReadonlyChange: function (cb) { this._cbRO = cb; },
+			param: function (name, def) { return def; },
+			notify: function (msg, sev) { console.log('[' + (sev || 'info') + '] ' + msg); },
+			resize: function () { },
+			onReady: function (cb) { setTimeout(function () { cb(tool._val, {}); }, 10); }
+		};
+	}
+</script>
+
+<!-- Paste JSON Modal -->
+<div class="confirm-overlay" id="pasteOverlay">
+	<div class="confirm-card" style="max-width:560px">
+		<div class="confirm-icon">&#128203;</div>
+		<h3>Paste Agreement JSON</h3>
+		<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Copy the entire content of an
+			<code>agreement-content.json</code> file and paste it below. All fields will be populated automatically.</p>
+		<textarea id="pasteTextarea"
+			style="width:100%;height:200px;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px;resize:vertical"
+			placeholder="Paste JSON content here..."></textarea>
+		<div class="confirm-btns" style="margin-top:14px">
+			<button class="btn-cancel"
+				onclick="document.getElementById('pasteOverlay').classList.remove('open')">Cancel</button>
+			<button class="btn-danger" onclick="applyPastedJSON()">Apply JSON</button>
+		</div>
+	</div>
+</div>
+
+<!-- JSON data is provided by the CMS via tool.setValue() — use Paste JSON button for manual import -->

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTMLContentEditorAndViewer — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Monaco Editor loader (required by the tool) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<link rel="stylesheet" href="HTMLContentEditorAndViewer.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #6c8cff; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3d5cff; color: #fff; }
+#th-bar .btn-clear { background: #d63030; color: #fff; }
+#th-bar .btn-reload { background: #1a9e65; color: #fff; }
+#th-bar .btn-admin { background: #6c8cff; color: #fff; }
+#th-bar .btn-editor { background: #b87010; color: #fff; }
+#th-bar .btn-viewer { background: #5a6070; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Role:</span>
+  <button class="btn-admin" id="th-role-admin">Admin</button>
+  <button class="btn-editor" id="th-role-editor">Editor</button>
+  <button class="btn-viewer" id="th-role-viewer">Viewer</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = ReadOnly</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  const STORAGE_KEY = 'html_ceditor_test_db';
+  const listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  let _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  // Default user — admin
+  _user = {
+    id: 'user-001',
+    name: 'Alex Johnson',
+    email: 'alex@example.com',
+    roles: ['admin', 'editor']
+  };
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  function notifyUserChange() {
+    listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+  }
+
+  window.tool = {
+    getValue() { return _value; },
+    setValue(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange(cb) { listeners.valueChange.push(cb); },
+    getFields() { return Object.assign({}, _fields); },
+    setField(id, value) { _fields[id] = value; },
+    setFields(obj) { Object.assign(_fields, obj); },
+    watchField(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange(cb) { listeners.fieldsChange.push(cb); },
+    param(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly() { return _readOnly; },
+    onReadonlyChange(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser() { return _user; },
+    onUserChange(cb) { listeners.userChange.push(cb); },
+    _setUser(u) { _user = u; notifyUserChange(); },
+    reportValid(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3d5cff', success: '#1a9e65', warning: '#b87010', error: '#d63030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML fallback */
+const EMBEDDED_HTML = `<div id="app">
+	<div id="tab-bar">
+		<button class="tab-btn active" data-tab="viewer" id="btn-viewer">
+			<i class="ti ti-eye" aria-hidden="true"></i> Viewer
+		</button>
+		<button class="tab-btn" data-tab="code" id="btn-code">
+			<i class="ti ti-code" aria-hidden="true"></i> Code
+		</button>
+	</div>
+
+	<div id="pane-viewer" class="pane active">
+		<div id="viewer-toolbar">
+			<div id="viewer-toolbar-left">
+				<span id="viewer-label"><i class="ti ti-eye" aria-hidden="true"></i> <span
+						id="viewer-mode-label">Viewing</span></span>
+				<span id="autosave-indicator" style="display:none;">
+					<i class="ti ti-circle-check" aria-hidden="true"></i> Saved
+				</span>
+			</div>
+			<div id="viewer-toolbar-right">
+				<div id="rich-edit-toolbar" style="display:none;">
+					<button class="rte-btn" data-cmd="bold" title="Bold"><i class="ti ti-bold"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="italic" title="Italic"><i class="ti ti-italic"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="underline" title="Underline"><i class="ti ti-underline"
+							aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="h1" title="Heading 1">H1</button>
+					<button class="rte-btn" data-cmd="h2" title="Heading 2">H2</button>
+					<button class="rte-btn" data-cmd="h3" title="Heading 3">H3</button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="insertUnorderedList" title="Bullet list"><i class="ti ti-list"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="insertOrderedList" title="Numbered list"><i
+							class="ti ti-list-numbers" aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="createLink" title="Insert link"><i class="ti ti-link"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="unlink" title="Remove link"><i class="ti ti-unlink"
+							aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="undo" title="Undo"><i class="ti ti-arrow-back-up"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="redo" title="Redo"><i class="ti ti-arrow-forward-up"
+							aria-hidden="true"></i></button>
+				</div>
+				<div id="viewer-actions">
+					<button id="btn-toggle-edit" style="display:none;"><i class="ti ti-edit" aria-hidden="true"></i>
+						Edit</button>
+					<button id="btn-save-edit" style="display:none;"><i class="ti ti-check" aria-hidden="true"></i>
+						Save</button>
+					<button id="btn-cancel-edit" style="display:none;"><i class="ti ti-x" aria-hidden="true"></i>
+						Cancel</button>
+				</div>
+			</div>
+		</div>
+		<div id="edit-mode-banner">
+			<i class="ti ti-pencil" aria-hidden="true"></i>
+			Click any element to edit. Paste content from anywhere — formatting, tables and images are preserved.
+			Changes autosave silently.
+		</div>
+		<div id="preview-wrap">
+			<div id="preview-content"></div>
+		</div>
+	</div>
+
+	<div id="pane-code" class="pane">
+		<div id="code-subtab-bar">
+			<button class="code-subtab active" data-sub="html">
+				<i class="ti ti-brand-html5" aria-hidden="true"></i> HTML
+			</button>
+			<button class="code-subtab" data-sub="css">
+				<i class="ti ti-brand-css3" aria-hidden="true"></i> CSS
+				<span class="subtab-badge" id="css-badge" style="display:none;"></span>
+			</button>
+			<button class="code-subtab" data-sub="js">
+				<i class="ti ti-brand-javascript" aria-hidden="true"></i> JS
+				<span class="subtab-badge" id="js-badge" style="display:none;"></span>
+			</button>
+			<div id="code-toolbar-right">
+				<span id="char-count">0 chars</span>
+				<button id="btn-clear"><i class="ti ti-trash" aria-hidden="true"></i> Clear</button>
+			</div>
+		</div>
+
+		<div id="monaco-container">
+			<div id="monaco-html" class="monaco-pane active"></div>
+			<div id="monaco-css" class="monaco-pane"></div>
+			<div id="monaco-js" class="monaco-pane"></div>
+			<div id="monaco-loading">
+				<i class="ti ti-loader-2" aria-hidden="true"></i> Loading editor…
+			</div>
+		</div>
+	</div>
+
+	<div id="notes-panel">
+		<div id="notes-header">
+			<span id="notes-title"><i class="ti ti-notes" aria-hidden="true"></i> Notes</span>
+			<button id="notes-toggle" title="Collapse notes"><i class="ti ti-chevron-down"
+					aria-hidden="true"></i></button>
+		</div>
+		<div id="notes-body">
+			<div id="notes-list"></div>
+			<div id="notes-compose">
+				<textarea id="note-input" placeholder="Add a note about this document… (Ctrl+Enter to post)"
+					rows="2"></textarea>
+				<div id="notes-compose-actions">
+					<span id="notes-hint"><i class="ti ti-lock" aria-hidden="true"></i> Only you can see your notes
+						unless you are an admin</span>
+					<button id="btn-post-note"><i class="ti ti-send" aria-hidden="true"></i> Post</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* Dynamic loader with embedded fallback */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'HTMLContentEditorAndViewer.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('HTMLContentEditorAndViewer.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      // Strip the Monaco <script> tag from the fetched HTML since we already loaded it
+      html = html.replace(/<script[^>]*monaco-editor[^>]*><\/script>/gi, '');
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* Toolbar + Sample Data + Role switching */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL data?')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+
+  // Role switching
+  document.getElementById('th-role-admin').addEventListener('click', function() {
+    window.tool._setUser({
+      id: 'user-001',
+      name: 'Alex Johnson',
+      email: 'alex@example.com',
+      roles: ['admin', 'editor']
+    });
+    window.tool.notify('Switched to Admin', 'info');
+  });
+  document.getElementById('th-role-editor').addEventListener('click', function() {
+    window.tool._setUser({
+      id: 'user-002',
+      name: 'Sam Rivera',
+      email: 'sam@example.com',
+      roles: ['editor']
+    });
+    window.tool.notify('Switched to Editor', 'info');
+  });
+  document.getElementById('th-role-viewer').addEventListener('click', function() {
+    window.tool._setUser({
+      id: 'user-003',
+      name: 'Casey Kim',
+      email: 'casey@example.com',
+      roles: ['viewer']
+    });
+    window.tool.notify('Switched to Viewer (no edit rights)', 'info');
+  });
+});
+
+var SAMPLE_DATA = {
+  html: `<h1>Welcome to the Content Editor</h1>
+<p>This is a <strong>rich text</strong> document that demonstrates the capabilities of the HTML Content Editor &amp; Viewer tool. You can edit this content visually or switch to the <em>Code</em> tab to edit the raw HTML, CSS, and JavaScript.</p>
+<h2>Key Features</h2>
+<ul>
+  <li><strong>Visual Editing</strong> — Click the Edit button to modify content directly in the viewer. Paste rich content from Word, web pages, or anywhere — formatting, tables, and images are preserved.</li>
+  <li><strong>Code Editor</strong> — Powered by Monaco, the same editor that drives VS Code. Full syntax highlighting, autocompletion, and multi-language support for HTML, CSS, and JavaScript.</li>
+  <li><strong>Live Preview</strong> — When you add CSS or JS, the viewer switches to an iframe-based preview so you can see your styles and scripts in action.</li>
+  <li><strong>Notes</strong> — Collaborators can leave notes on the document. Admins see all notes; regular users only see their own.</li>
+</ul>
+<h2>Getting Started</h2>
+<ol>
+  <li>Switch between <strong>Viewer</strong> and <strong>Code</strong> tabs using the top bar.</li>
+  <li>In Code mode, use the subtabs (HTML / CSS / JS) to edit each layer independently.</li>
+  <li>Try adding some CSS below to style this document, or add JavaScript to make it interactive.</li>
+  <li>Use <strong>Ctrl+Shift+R</strong> to toggle read-only mode and see how the UI adapts.</li>
+</ol>
+<blockquote>
+  <p>Pro tip: The editor autosaves your changes. Look for the "Saved" indicator in the toolbar.</p>
+</blockquote>
+<h2>Sample Table</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Viewer Tab</th>
+      <th>Code Tab</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Visual editing</td>
+      <td>✅</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>Syntax highlighting</td>
+      <td>—</td>
+      <td>✅</td>
+    </tr>
+    <tr>
+      <td>CSS/JS support</td>
+      <td>Preview only</td>
+      <td>✅ Full editing</td>
+    </tr>
+    <tr>
+      <td>Notes</td>
+      <td>✅</td>
+      <td>✅</td>
+    </tr>
+  </tbody>
+</table>
+<p>Visit the <a href="https://microsoft.github.io/monaco-editor/" target="_blank" rel="noopener noreferrer">Monaco Editor homepage</a> to learn more about the code editor component.</p>`,
+  css: `/* Custom styles for the document */
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1 {
+  color: #1a365d;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  color: #2d3748;
+}
+
+blockquote {
+  background: #f7fafc;
+  border-radius: 0 4px 4px 0;
+}
+
+table {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+th {
+  background: #edf2f7 !important;
+  color: #2d3748;
+  font-weight: 600;
+}`,
+  js: `// Example: log when the document is ready
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('📄 HTML Content Editor — document ready');
+});`,
+  notes: [
+    {
+      id: 'note-001',
+      authorId: 'user-001',
+      authorName: 'Alex Johnson',
+      text: 'This is looking great! Let\'s add a section about accessibility best practices.',
+      createdAt: '2026-06-15T10:30:00.000Z',
+      updatedAt: null
+    },
+    {
+      id: 'note-002',
+      authorId: 'user-002',
+      authorName: 'Sam Rivera',
+      text: 'I noticed the table could use some zebra striping. I can add that CSS.',
+      createdAt: '2026-06-16T14:15:00.000Z',
+      updatedAt: '2026-06-16T14:20:00.000Z'
+    },
+    {
+      id: 'note-003',
+      authorId: 'user-001',
+      authorName: 'Alex Johnson',
+      text: 'Good idea, Sam! Also we should test how it looks with the read-only mode. Use Ctrl+Shift+R to toggle.',
+      createdAt: '2026-06-17T09:00:00.000Z',
+      updatedAt: null
+    }
+  ]
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmploymentAgreementBuilder — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="EmploymentAgreementBuilder.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #6c8cff; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3d5cff; color: #fff; }
+#th-bar .btn-clear { background: #d63030; color: #fff; }
+#th-bar .btn-reload { background: #1a9e65; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = ReadOnly</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  const STORAGE_KEY = 'employment_agreement_test_db';
+  const listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  let _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue() { return _value; },
+    setValue(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange(cb) { listeners.valueChange.push(cb); },
+    getFields() { return Object.assign({}, _fields); },
+    setField(id, value) { _fields[id] = value; },
+    setFields(obj) { Object.assign(_fields, obj); },
+    watchField(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange(cb) { listeners.fieldsChange.push(cb); },
+    param(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly() { return _readOnly; },
+    onReadonlyChange(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser() { return _user; },
+    onUserChange(cb) { listeners.userChange.push(cb); },
+    reportValid(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3d5cff', success: '#1a9e65', warning: '#b87010', error: '#d63030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML fallback */
+const EMBEDDED_HTML = `<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
+<div class="toolbar no-print" id="toolbar">
+	<div class="brand">Employment Agreement <span class="status-badge draft" id="statusBadge">DRAFT</span></div>
+	<div class="tool-actions">
+		<button onclick="fillDemo()">&#128203; Fill Demo</button>
+		<button onclick="clearAll()">&#10005; Clear All</button>
+		<button onclick="pasteJSON()">&#128203; Paste JSON</button>
+		<button onclick="toggleHighlights()">&#128269; Highlights</button>
+		<button class="primary-btn" onclick="exportToPDF()">&#128196; Export PDF</button>
+		<button onclick="window.print()">&#128424; Print</button>
+	</div>
+</div>
+
+<div class="page" id="agreementPage">
+	<div class="watermark-layer"></div>
+</div>
+
+<div class="toc-sidebar no-print" id="tocSidebar">
+	<a href="#sec-parties" title="Parties"></a>
+	<a href="#sec-position" title="Position"></a>
+	<a href="#sec-duties" title="Duties"></a>
+	<a href="#sec-compensation" title="Compensation"></a>
+	<a href="#sec-location" title="Location"></a>
+	<a href="#sec-benefits" title="Benefits"></a>
+	<a href="#sec-vacation" title="Vacation"></a>
+	<a href="#sec-confidentiality" title="Confidentiality"></a>
+	<a href="#sec-policies" title="Policies"></a>
+	<a href="#sec-termination" title="Termination"></a>
+	<a href="#sec-general" title="General"></a>
+	<a href="#sec-signatures" title="Signatures"></a>
+	<a href="#sec-summary" title="Summary"></a>
+</div>
+
+<div class="export-overlay no-print" id="exportOverlay">
+	<div class="spinner"></div>
+	<p>Generating PDF document...</p>
+</div>
+
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+	<div class="drawer-header">
+		<h3 id="drawerTitle">Rich Text Editor</h3>
+		<button onclick="closeDrawer()">&times;</button>
+	</div>
+	<div class="drawer-editor-wrap">
+		<div id="drawerEditor"></div>
+	</div>
+	<div class="drawer-footer">
+		<button class="btn-cancel" onclick="closeDrawer()">Cancel</button>
+		<button class="btn-apply" onclick="applyDrawerContent()">Apply to Document</button>
+	</div>
+</div>
+
+<div class="confirm-overlay" id="pasteOverlay">
+	<div class="confirm-card" style="max-width:560px">
+		<div class="confirm-icon">&#128203;</div>
+		<h3>Paste Agreement JSON</h3>
+		<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Copy the entire content of an
+			<code>agreement-content.json</code> file and paste it below. All fields will be populated automatically.</p>
+		<textarea id="pasteTextarea"
+			style="width:100%;height:200px;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px;resize:vertical"
+			placeholder="Paste JSON content here..."></textarea>
+		<div class="confirm-btns" style="margin-top:14px">
+			<button class="btn-cancel"
+				onclick="document.getElementById('pasteOverlay').classList.remove('open')">Cancel</button>
+			<button class="btn-danger" onclick="applyPastedJSON()">Apply JSON</button>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"><\/script>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* Dynamic loader with embedded fallback */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'EmploymentAgreementBuilder.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('EmploymentAgreementBuilder.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* Toolbar + Sample Data */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL data?')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+});
+
+var SAMPLE_DATA = {
+  agreementDate: "2026-07-01",
+  docRef: "CC-EMP-2026-DCP-001",
+  companyName: "CentreCanada Newcomer Services Society",
+  companyAddress: "93 6th Street, New Westminster, BC",
+  companyRegLabel: "CRA #",
+  companyRegNumber: "76991 3880 RR0001",
+  companyWebsite: "centrecanada.org",
+  companyTypeLabel: "Registered Canadian Charity",
+  companyProvince: "British Columbia",
+  employeeName: "Jane Doe",
+  employeeAddress: "123 Main Street, Suite 200",
+  employeeCity: "New Westminster, BC  V3M 1A1",
+  positionTitle: "Director of Community Programs",
+  employmentType: "Full-Time, Permanent",
+  reportsTo: "Executive Leadership",
+  startDate: "2026-07-01",
+  probationMonths: "3",
+  workLocation: "93 6th Street, New Westminster, BC",
+  travelReqs: "Various locations in Metro Vancouver",
+  salaryAmount: "72000",
+  compDetails: "Annual gross salary, commensurate with experience",
+  payFrequency: "bi-weekly",
+  salaryReview: "Annually by the Board; first review after 12 months",
+  expensePolicy: "Reasonable expenses reimbursed per policy",
+  empSignName: "Sarah Mitchell",
+  empSignTitle: "Executive Director",
+  empSignDate: "2026-06-15",
+  eeSignName: "Jane Doe",
+  eeSignDate: "2026-07-01",
+  _compPeriod: "annually",
+  rt_roleOverview: "<p>The <strong>Director of Community Programs</strong> is a key leadership role responsible for developing, implementing, and overseeing all community-based programs and services delivered by CentreCanada. This position ensures that programs align with the organization's mission, meet community needs, and comply with all regulatory and funding requirements.</p>",
+  rt_probationNote: "<p>The first <strong>3 months</strong> of employment shall constitute a probationary period. During this period, either Party may terminate this Agreement by providing <strong>1 week</strong> of written notice. Upon successful completion of employment, the Employee shall be confirmed in writing.</p>",
+  rt_dutiesBlock: "<h3>3.1 Program Leadership &amp; Strategic Direction</h3><ul><li>Lead the design, planning, and execution of all community programs and services in alignment with the organization's strategic plan.</li><li>Identify emerging community needs and develop responsive program initiatives.</li><li>Establish program goals, objectives, and performance indicators in collaboration with the Executive Leadership.</li><li>Prepare and present program reports to the Board of Directors as required.</li></ul><h3>3.2 Team Management &amp; Supervision</h3><ul><li>Recruit, train, supervise, and mentor program staff and volunteers.</li><li>Conduct regular performance reviews and provide ongoing feedback and professional development opportunities.</li><li>Foster a collaborative, inclusive, and supportive team culture.</li><li>Ensure all staff comply with organizational policies and procedures.</li></ul><h3>3.3 Community Engagement &amp; Partnerships</h3><ul><li>Build and maintain strong relationships with community partners, funders, government agencies, and other stakeholders.</li><li>Represent the organization at community events, meetings, and forums.</li><li>Promote the organization's programs and services through various communication channels.</li></ul><h3>3.4 Financial &amp; Administrative Oversight</h3><ul><li>Manage program budgets and ensure fiscal responsibility and compliance with funding agreements.</li><li>Oversee grant applications, reporting, and funder relations in coordination with the Executive Leadership.</li><li>Ensure accurate program data collection, record-keeping, and reporting.</li></ul>",
+  rt_locationHoursBlock: "<h3>5.1 Work Location</h3><p>The Employee's primary workplace shall be at the Employer's office located at 93 6th Street, New Westminster, BC. The Employee acknowledges that this position may require regular field and community travel within Metro Vancouver and surrounding areas.</p><h3>5.2 Hours of Work</h3><p>The standard work week shall consist of <strong>37.5 hours</strong> per week, Monday through Friday. Flexibility may be required for evening and weekend events, community engagement activities, and organizational functions. Any overtime must be pre-approved by the Executive Leadership.</p>",
+  rt_benefitsBlock: "<p>The Employee shall be eligible to participate in the Employer's benefits package following successful completion of the Probationary Period. The benefits package may include:</p><ul><li>Extended health and dental coverage;</li><li>Life insurance and AD&amp;D coverage;</li><li>RRSP contributions or matching, if offered;</li><li>Professional development and training allowance.</li></ul><p>The Employer reserves the right to modify, amend, or terminate any benefit plan at its sole discretion, in accordance with applicable legislation.</p>",
+  rt_vacationBlock: "<h3>7.1 Vacation</h3><p>The Employee shall be entitled to <strong>15 paid vacation days</strong> per calendar year, pro-rated for partial years of service. Vacation accrues monthly and must be taken at times mutually agreed upon by the Parties. Unused vacation may be carried forward up to a maximum of <strong>5 days</strong> per year, unless otherwise approved in writing.</p><h3>7.2 Statutory Holidays</h3><p>The Employee shall be entitled to all statutory holidays observed in the Province of British Columbia, in accordance with the <em>Employment Standards Act</em> (British Columbia).</p><h3>7.3 Sick Leave and Other Leaves</h3><p>The Employee shall be entitled to sick leave and other leaves of absence in accordance with the <em>Employment Standards Act</em> (British Columbia) and the Employer's policies as adopted from time to time.</p>",
+  rt_confidentialityBlock: "<h3>8.1 Confidential Information</h3><p>The Employee acknowledges that they shall have access to confidential and proprietary information including but not limited to participant records, financial data, strategic plans, donor information, and internal policies and procedures. The Employee agrees to hold all such information in strict confidence both during and after employment.</p><h3>8.2 Privacy Compliance</h3><p>The Employee shall comply with all applicable privacy legislation, including the <em>Personal Information Protection Act</em> (British Columbia) and the <em>Personal Information Protection and Electronic Documents Act</em> (Canada).</p><h3>8.3 Intellectual Property</h3><p>All work product, materials, documents, and intellectual property created or developed by the Employee in the course of employment shall be the exclusive property of the Employer.</p><h3>8.4 Survival</h3><p>The obligations under this Section shall survive the termination of this Agreement.</p>",
+  rt_policiesBlock: "<p>The Employee agrees to comply with all policies, procedures, and codes of conduct adopted by the Employer from time to time, including but not limited to:</p><ul><li>Safeguarding and vulnerable persons policies;</li><li>Anti-harassment and anti-discrimination policies;</li><li>Workplace health and safety policies;</li><li>Privacy and data protection policies;</li><li>Conflict of interest policies;</li><li>Social media and communications policies.</li></ul><p>Compliance with organizational policies is a condition of continued employment.</p>",
+  rt_terminationBlock: "<h3>10.1 Termination Without Cause</h3><p>The Employer may terminate the Employee's employment without cause by providing written notice in accordance with the <em>Employment Standards Act</em> (British Columbia), or pay in lieu thereof, plus any additional notice or severance as may be determined by the Employer in its sole discretion.</p><h3>10.2 Termination With Cause</h3><p>The Employer may terminate the Employee's employment for cause, without notice or compensation, in the event of gross misconduct, dishonesty, fraud, willful breach of this Agreement, or serious neglect of duties.</p><h3>10.3 Resignation</h3><p>The Employee may resign from employment by providing <strong>4 weeks</strong> of written notice to the Employer. The Employer may waive all or part of the notice period at its discretion.</p><h3>10.4 Return of Property</h3><p>Upon termination of employment, the Employee shall promptly return all Employer property including keys, equipment, documents, and data.</p>",
+  rt_generalBlock: "<ul><li><strong>Governing Law:</strong> This Agreement shall be governed by and construed in accordance with the laws of the Province of British Columbia and the applicable federal laws of Canada.</li><li><strong>Entire Agreement:</strong> This Agreement constitutes the entire agreement between the Parties with respect to the subject matter hereof and supersedes all prior agreements, understandings, and representations.</li><li><strong>Severability:</strong> If any provision of this Agreement is held to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.</li><li><strong>Amendment:</strong> No modification or amendment to this Agreement shall be effective unless made in writing and signed by both Parties.</li><li><strong>Waiver:</strong> The failure of either Party to enforce any provision of this Agreement shall not constitute a waiver of that provision or any other provision.</li><li><strong>Independent Legal Advice:</strong> The Employee acknowledges that they have had the opportunity to seek independent legal advice before signing this Agreement.</li><li><strong>Survival:</strong> Sections 8 (Confidentiality), 9 (Organizational Policies), and 11 (General Provisions) shall survive the termination of this Agreement.</li></ul>",
+  _signatures: {}
+};
+</script>
+</body>
+</html>

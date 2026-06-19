@@ -1,0 +1,118 @@
+<div id="app">
+	<div id="tab-bar">
+		<button class="tab-btn active" data-tab="viewer" id="btn-viewer">
+			<i class="ti ti-eye" aria-hidden="true"></i> Viewer
+		</button>
+		<button class="tab-btn" data-tab="code" id="btn-code">
+			<i class="ti ti-code" aria-hidden="true"></i> Code
+		</button>
+	</div>
+
+	<div id="pane-viewer" class="pane active">
+		<div id="viewer-toolbar">
+			<div id="viewer-toolbar-left">
+				<span id="viewer-label"><i class="ti ti-eye" aria-hidden="true"></i> <span
+						id="viewer-mode-label">Viewing</span></span>
+				<span id="autosave-indicator" style="display:none;">
+					<i class="ti ti-circle-check" aria-hidden="true"></i> Saved
+				</span>
+			</div>
+			<div id="viewer-toolbar-right">
+				<div id="rich-edit-toolbar" style="display:none;">
+					<button class="rte-btn" data-cmd="bold" title="Bold"><i class="ti ti-bold"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="italic" title="Italic"><i class="ti ti-italic"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="underline" title="Underline"><i class="ti ti-underline"
+							aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="h1" title="Heading 1">H1</button>
+					<button class="rte-btn" data-cmd="h2" title="Heading 2">H2</button>
+					<button class="rte-btn" data-cmd="h3" title="Heading 3">H3</button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="insertUnorderedList" title="Bullet list"><i class="ti ti-list"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="insertOrderedList" title="Numbered list"><i
+							class="ti ti-list-numbers" aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="createLink" title="Insert link"><i class="ti ti-link"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="unlink" title="Remove link"><i class="ti ti-unlink"
+							aria-hidden="true"></i></button>
+					<div class="rte-sep"></div>
+					<button class="rte-btn" data-cmd="undo" title="Undo"><i class="ti ti-arrow-back-up"
+							aria-hidden="true"></i></button>
+					<button class="rte-btn" data-cmd="redo" title="Redo"><i class="ti ti-arrow-forward-up"
+							aria-hidden="true"></i></button>
+				</div>
+				<div id="viewer-actions">
+					<button id="btn-toggle-edit" style="display:none;"><i class="ti ti-edit" aria-hidden="true"></i>
+						Edit</button>
+					<button id="btn-save-edit" style="display:none;"><i class="ti ti-check" aria-hidden="true"></i>
+						Save</button>
+					<button id="btn-cancel-edit" style="display:none;"><i class="ti ti-x" aria-hidden="true"></i>
+						Cancel</button>
+				</div>
+			</div>
+		</div>
+		<div id="edit-mode-banner">
+			<i class="ti ti-pencil" aria-hidden="true"></i>
+			Click any element to edit. Paste content from anywhere — formatting, tables and images are preserved.
+			Changes autosave silently.
+		</div>
+		<div id="preview-wrap">
+			<div id="preview-content"></div>
+		</div>
+	</div>
+
+	<div id="pane-code" class="pane">
+		<div id="code-subtab-bar">
+			<button class="code-subtab active" data-sub="html">
+				<i class="ti ti-brand-html5" aria-hidden="true"></i> HTML
+			</button>
+			<button class="code-subtab" data-sub="css">
+				<i class="ti ti-brand-css3" aria-hidden="true"></i> CSS
+				<span class="subtab-badge" id="css-badge" style="display:none;"></span>
+			</button>
+			<button class="code-subtab" data-sub="js">
+				<i class="ti ti-brand-javascript" aria-hidden="true"></i> JS
+				<span class="subtab-badge" id="js-badge" style="display:none;"></span>
+			</button>
+			<div id="code-toolbar-right">
+				<span id="char-count">0 chars</span>
+				<button id="btn-clear"><i class="ti ti-trash" aria-hidden="true"></i> Clear</button>
+			</div>
+		</div>
+
+		<div id="monaco-container">
+			<div id="monaco-html" class="monaco-pane active"></div>
+			<div id="monaco-css" class="monaco-pane"></div>
+			<div id="monaco-js" class="monaco-pane"></div>
+			<div id="monaco-loading">
+				<i class="ti ti-loader-2" aria-hidden="true"></i> Loading editor…
+			</div>
+		</div>
+	</div>
+
+	<div id="notes-panel">
+		<div id="notes-header">
+			<span id="notes-title"><i class="ti ti-notes" aria-hidden="true"></i> Notes</span>
+			<button id="notes-toggle" title="Collapse notes"><i class="ti ti-chevron-down"
+					aria-hidden="true"></i></button>
+		</div>
+		<div id="notes-body">
+			<div id="notes-list"></div>
+			<div id="notes-compose">
+				<textarea id="note-input" placeholder="Add a note about this document… (Ctrl+Enter to post)"
+					rows="2"></textarea>
+				<div id="notes-compose-actions">
+					<span id="notes-hint"><i class="ti ti-lock" aria-hidden="true"></i> Only you can see your notes
+						unless you are an admin</span>
+					<button id="btn-post-note"><i class="ti ti-send" aria-hidden="true"></i> Post</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>

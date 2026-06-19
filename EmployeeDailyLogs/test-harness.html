@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmployeeDailyLogs — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="EmployeeDailyLogs.css">
+<style>
+body { padding-top: 28px !important; margin: 0; background: #faf8f6; }
+#app-container { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #6c8cff; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3d5cff; color: #fff; }
+#th-bar .btn-clear { background: #d63030; color: #fff; }
+#th-bar .btn-reload { background: #1a9e65; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = ReadOnly</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  const STORAGE_KEY = 'employee_daily_logs_test_db';
+  const listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  let _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue() { return _value; },
+    setValue(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange(cb) { listeners.valueChange.push(cb); },
+    getFields() { return Object.assign({}, _fields); },
+    setField(id, value) { _fields[id] = value; },
+    setFields(obj) { Object.assign(_fields, obj); },
+    watchField(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange(cb) { listeners.fieldsChange.push(cb); },
+    param(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly() { return _readOnly; },
+    onReadonlyChange(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser() { return _user; },
+    onUserChange(cb) { listeners.userChange.push(cb); },
+    reportValid(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3d5cff', success: '#1a9e65', warning: '#b87010', error: '#d63030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML fallback */
+const EMBEDDED_HTML = `<div class="cwl" id="cwlRoot" data-theme="light">
+	<div class="cwl-bar">
+		<div class="cwl-bar-titles">
+			<h1 class="cwl-title">Daily Work Log</h1>
+			<p class="cwl-sub">Employee time &amp; activity record</p>
+		</div>
+		<div class="cwl-bar-actions">
+			<button type="button" id="themeBtn" class="cwl-theme" aria-label="Toggle dark mode">
+				<span class="cwl-theme-ico" id="themeIco">☀</span>
+				<span class="cwl-theme-txt" id="themeTxt">Light</span>
+			</button>
+			<button type="button" id="btnAdd" class="cwl-btn cwl-btn-primary">＋ Add work day</button>
+		</div>
+	</div>
+
+	<div class="cwl-emp">
+		<label class="cwl-field">
+			<span class="cwl-lab">Employee <span class="cwl-req">*</span></span>
+			<input type="text" id="empName" class="cwl-inp" placeholder="Full name" autocomplete="off">
+		</label>
+		<label class="cwl-field">
+			<span class="cwl-lab">Position</span>
+			<input type="text" id="empPos" class="cwl-inp" placeholder="Job title" autocomplete="off">
+		</label>
+		<div class="cwl-whoami" id="whoami"></div>
+	</div>
+
+	<section class="cwl-stats" id="statBar"></section>
+
+	<section class="cwl-list-wrap">
+		<div class="cwl-list-head">
+			<h2 class="cwl-h2">Logged days</h2>
+			<div class="cwl-list-tools">
+				<span class="cwl-count" id="dayCount"></span>
+				<button type="button" class="cwl-btn cwl-btn-ghost cwl-btn-sm" id="btnExport">Export CSV</button>
+			</div>
+		</div>
+		<div id="listBody" class="cwl-list"></div>
+	</section>
+
+	<div class="cwl-backdrop" id="backdrop" hidden>
+		<div class="cwl-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+			<div class="cwl-modal-head">
+				<h2 class="cwl-h2" id="modalTitle">Add work day</h2>
+				<button type="button" class="cwl-x" id="btnClose" aria-label="Close">×</button>
+			</div>
+			<div class="cwl-modal-body">
+
+				<div class="cwl-row">
+					<label class="cwl-field">
+						<span class="cwl-lab">Date <span class="cwl-req">*</span></span>
+						<input type="date" id="fDate" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">Location</span>
+						<select id="fLoc" class="cwl-inp">
+							<option value="On-site">On-site</option>
+							<option value="Remote">Remote</option>
+							<option value="Hybrid">Hybrid</option>
+							<option value="Field">Field</option>
+						</select>
+					</label>
+					<div class="cwl-field cwl-field-hours">
+						<span class="cwl-lab">Hours</span>
+						<div class="cwl-calc" id="fCalc">—</div>
+					</div>
+				</div>
+
+				<div class="cwl-row">
+					<label class="cwl-field">
+						<span class="cwl-lab">Start <span class="cwl-req">*</span></span>
+						<input type="time" id="fStart" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">End <span class="cwl-req">*</span></span>
+						<input type="time" id="fEnd" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">Break (min)</span>
+						<input type="number" id="fBreak" class="cwl-inp" min="0" step="5" value="0">
+					</label>
+				</div>
+
+				<label class="cwl-field cwl-field-full">
+					<span class="cwl-lab">Activity summary <span class="cwl-req">*</span></span>
+					<textarea id="fAct" class="cwl-inp cwl-area" rows="3"
+						placeholder="What did you work on today? (tasks, projects, outcomes)"></textarea>
+				</label>
+
+				<div class="cwl-field cwl-field-full">
+					<span class="cwl-lab">Reference links <span class="cwl-lab-soft">(optional &middot; paste a URL, no
+							uploads)</span></span>
+					<div class="cwl-link-add">
+						<input type="text" id="fLinkLabel" class="cwl-inp cwl-link-label" placeholder="Label (optional)"
+							autocomplete="off">
+						<input type="url" id="fLinkUrl" class="cwl-inp cwl-link-url" placeholder="https://…"
+							autocomplete="off">
+						<button type="button" class="cwl-btn cwl-btn-ghost cwl-btn-sm" id="btnAddLink">Add link</button>
+					</div>
+					<div class="cwl-links" id="linkList"></div>
+				</div>
+
+				<div class="cwl-note" id="modalNote" hidden></div>
+			</div>
+			<div class="cwl-modal-foot">
+				<button type="button" class="cwl-btn cwl-btn-ghost" id="btnCancel">Cancel</button>
+				<button type="button" class="cwl-btn cwl-btn-primary" id="btnSave">Add entry</button>
+			</div>
+		</div>
+	</div>
+</div>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* Dynamic loader with embedded fallback */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'EmployeeDailyLogs.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('EmployeeDailyLogs.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* Toolbar + Sample Data */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL data?')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+});
+
+var SAMPLE_DATA = {
+  employee: {
+    name: "Alex Rivera",
+    position: "Junior Software Developer"
+  },
+  entries: [
+    {
+      id: "e001",
+      date: "2026-06-02",
+      start: "08:30",
+      end: "17:00",
+      breakMin: 30,
+      location: "On-site",
+      activities: "Sprint planning for the new dashboard feature. Paired with senior dev on API integration for the reporting module. Reviewed and merged 3 pull requests.",
+      hours: 8,
+      links: [
+        { label: "Sprint board", url: "https://dev.azure.com/team/project/_sprints/2026-06" },
+        { label: "PR #142 - Dashboard API", url: "https://github.com/team/repo/pull/142" }
+      ],
+      approved: true,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-02T17:05:00.000Z",
+      verifiedBy: { id: null, name: "Sarah Chen" },
+      verifiedAt: "2026-06-03T09:12:00.000Z"
+    },
+    {
+      id: "e002",
+      date: "2026-06-03",
+      start: "09:00",
+      end: "17:30",
+      breakMin: 45,
+      location: "On-site",
+      activities: "Implemented the data export module. Wrote unit tests for the new service layer (coverage up to 87%). Fixed a bug in the date picker component that was affecting timezone calculations.",
+      hours: 7.75,
+      links: [
+        { label: "JIRA-452 - Export module", url: "https://jira.company.com/browse/PROJ-452" }
+      ],
+      approved: true,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-03T17:35:00.000Z",
+      verifiedBy: { id: null, name: "Sarah Chen" },
+      verifiedAt: "2026-06-04T08:45:00.000Z"
+    },
+    {
+      id: "e003",
+      date: "2026-06-05",
+      start: "08:00",
+      end: "16:00",
+      breakMin: 30,
+      location: "Remote",
+      activities: "Completed the user authentication flow refactor. Migrated legacy session tokens to JWT. Updated API documentation for the auth endpoints. Attended the cross-team architecture review.",
+      hours: 7.5,
+      links: [
+        { label: "Auth API docs", url: "https://docs.internal.company.com/api/auth" },
+        { label: "Architecture review notes", url: "https://wiki.company.com/arch-review-2026-06" }
+      ],
+      approved: false,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-05T16:10:00.000Z",
+      verifiedBy: null,
+      verifiedAt: null
+    },
+    {
+      id: "e004",
+      date: "2026-06-09",
+      start: "09:00",
+      end: "18:00",
+      breakMin: 60,
+      location: "On-site",
+      activities: "Investigated and resolved a production incident related to the payment gateway timeout. Deployed hotfix v2.4.1. Conducted a post-mortem write-up and created follow-up action items to add retry logic.",
+      hours: 8,
+      links: [
+        { label: "Incident #INC-789", url: "https://status.company.com/incidents/INC-789" },
+        { label: "Post-mortem doc", url: "https://docs.google.com/document/d/postmortem-jun09" }
+      ],
+      approved: true,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-09T18:15:00.000Z",
+      verifiedBy: { id: null, name: "Marcus Webb" },
+      verifiedAt: "2026-06-10T10:30:00.000Z"
+    },
+    {
+      id: "e005",
+      date: "2026-06-11",
+      start: "08:30",
+      end: "17:00",
+      breakMin: 30,
+      location: "Hybrid",
+      activities: "Started work on the notification service. Set up the message queue infrastructure with RabbitMQ. Wrote the initial consumer and publisher logic. Pair-programmed the frontend notification bell component with the UX team.",
+      hours: 8,
+      links: [],
+      approved: false,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-11T17:10:00.000Z",
+      verifiedBy: null,
+      verifiedAt: null
+    },
+    {
+      id: "e006",
+      date: "2026-06-16",
+      start: "09:00",
+      end: "17:00",
+      breakMin: 30,
+      location: "On-site",
+      activities: "Completed the notification service with email and push notification channels. Added integration tests for all notification types. Code review for teammate's search module PR.",
+      hours: 7.5,
+      links: [
+        { label: "PR #178 - Notification service", url: "https://github.com/team/repo/pull/178" }
+      ],
+      approved: true,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-16T17:20:00.000Z",
+      verifiedBy: { id: null, name: "Sarah Chen" },
+      verifiedAt: "2026-06-17T08:30:00.000Z"
+    },
+    {
+      id: "e007",
+      date: "2026-06-17",
+      start: "08:00",
+      end: "16:30",
+      breakMin: 30,
+      location: "Field",
+      activities: "On-site client visit for requirements gathering for the custom reporting module. Documented client workflows and identified 12 key feature requests. Shared findings with the product team in the afternoon debrief.",
+      hours: 8,
+      links: [
+        { label: "Client visit notes", url: "https://docs.google.com/document/d/client-visit-jun17" }
+      ],
+      approved: false,
+      loggedBy: { id: null, name: "Alex Rivera" },
+      loggedAt: "2026-06-17T16:45:00.000Z",
+      verifiedBy: null,
+      verifiedAt: null
+    }
+  ]
+};
+</script>
+</body>
+</html>

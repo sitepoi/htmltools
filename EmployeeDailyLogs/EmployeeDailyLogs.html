@@ -1,0 +1,111 @@
+<div class="cwl" id="cwlRoot" data-theme="light">
+	<div class="cwl-bar">
+		<div class="cwl-bar-titles">
+			<h1 class="cwl-title">Daily Work Log</h1>
+			<p class="cwl-sub">Employee time &amp; activity record</p>
+		</div>
+		<div class="cwl-bar-actions">
+			<button type="button" id="themeBtn" class="cwl-theme" aria-label="Toggle dark mode">
+				<span class="cwl-theme-ico" id="themeIco">☀</span>
+				<span class="cwl-theme-txt" id="themeTxt">Light</span>
+			</button>
+			<button type="button" id="btnAdd" class="cwl-btn cwl-btn-primary">＋ Add work day</button>
+		</div>
+	</div>
+
+	<div class="cwl-emp">
+		<label class="cwl-field">
+			<span class="cwl-lab">Employee <span class="cwl-req">*</span></span>
+			<input type="text" id="empName" class="cwl-inp" placeholder="Full name" autocomplete="off">
+		</label>
+		<label class="cwl-field">
+			<span class="cwl-lab">Position</span>
+			<input type="text" id="empPos" class="cwl-inp" placeholder="Job title" autocomplete="off">
+		</label>
+		<div class="cwl-whoami" id="whoami"></div>
+	</div>
+
+	<section class="cwl-stats" id="statBar"></section>
+
+	<section class="cwl-list-wrap">
+		<div class="cwl-list-head">
+			<h2 class="cwl-h2">Logged days</h2>
+			<div class="cwl-list-tools">
+				<span class="cwl-count" id="dayCount"></span>
+				<button type="button" class="cwl-btn cwl-btn-ghost cwl-btn-sm" id="btnExport">Export CSV</button>
+			</div>
+		</div>
+		<div id="listBody" class="cwl-list"></div>
+	</section>
+
+	<div class="cwl-backdrop" id="backdrop" hidden>
+		<div class="cwl-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+			<div class="cwl-modal-head">
+				<h2 class="cwl-h2" id="modalTitle">Add work day</h2>
+				<button type="button" class="cwl-x" id="btnClose" aria-label="Close">×</button>
+			</div>
+			<div class="cwl-modal-body">
+
+				<div class="cwl-row">
+					<label class="cwl-field">
+						<span class="cwl-lab">Date <span class="cwl-req">*</span></span>
+						<input type="date" id="fDate" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">Location</span>
+						<select id="fLoc" class="cwl-inp">
+							<option value="On-site">On-site</option>
+							<option value="Remote">Remote</option>
+							<option value="Hybrid">Hybrid</option>
+							<option value="Field">Field</option>
+						</select>
+					</label>
+					<div class="cwl-field cwl-field-hours">
+						<span class="cwl-lab">Hours</span>
+						<div class="cwl-calc" id="fCalc">—</div>
+					</div>
+				</div>
+
+				<div class="cwl-row">
+					<label class="cwl-field">
+						<span class="cwl-lab">Start <span class="cwl-req">*</span></span>
+						<input type="time" id="fStart" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">End <span class="cwl-req">*</span></span>
+						<input type="time" id="fEnd" class="cwl-inp">
+					</label>
+					<label class="cwl-field">
+						<span class="cwl-lab">Break (min)</span>
+						<input type="number" id="fBreak" class="cwl-inp" min="0" step="5" value="0">
+					</label>
+				</div>
+
+				<label class="cwl-field cwl-field-full">
+					<span class="cwl-lab">Activity summary <span class="cwl-req">*</span></span>
+					<textarea id="fAct" class="cwl-inp cwl-area" rows="3"
+						placeholder="What did you work on today? (tasks, projects, outcomes)"></textarea>
+				</label>
+
+				<div class="cwl-field cwl-field-full">
+					<span class="cwl-lab">Reference links <span class="cwl-lab-soft">(optional &middot; paste a URL, no
+							uploads)</span></span>
+					<div class="cwl-link-add">
+						<input type="text" id="fLinkLabel" class="cwl-inp cwl-link-label" placeholder="Label (optional)"
+							autocomplete="off">
+						<input type="url" id="fLinkUrl" class="cwl-inp cwl-link-url" placeholder="https://…"
+							autocomplete="off">
+						<button type="button" class="cwl-btn cwl-btn-ghost cwl-btn-sm" id="btnAddLink">Add link</button>
+					</div>
+					<div class="cwl-links" id="linkList"></div>
+				</div>
+
+				<div class="cwl-note" id="modalNote" hidden></div>
+			</div>
+			<div class="cwl-modal-foot">
+				<button type="button" class="cwl-btn cwl-btn-ghost" id="btnCancel">Cancel</button>
+				<button type="button" class="cwl-btn cwl-btn-primary" id="btnSave">Add entry</button>
+			</div>
+		</div>
+	</div>
+</div>

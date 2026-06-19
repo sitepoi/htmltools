@@ -994,6 +994,195 @@ function renderRejectionReport() {
 	el.innerHTML = nonSel.map(c => { const elim = c.eliminated; const posNames = (c.positionIds || []).map(pid => { const p = DB.positions.find(x => x.id === pid); return p ? p.title : '' }).filter(Boolean).join(', ') || 'the position'; return `<div class="email-card">${avatar(c.name, 34)}<div style="flex:1;min-width:0"><div style="font-weight:500;font-size:13px">${esc(c.name)}</div><div style="font-size:11px;color:var(--text3)">${c.email || 'No email'}</div><div style="margin-top:4px">${elim ? `<span class="badge badge-red">Screening</span>` : `<span class="badge badge-amber">Interview stage</span>`}</div></div><div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end"><button class="btn btn-ghost btn-sm" data-action="openRejEmail" data-id="${c.id}" data-stage="${elim ? 'screening' : 'interview'}">✉ Email</button><label class="email-sent-check"><input type="checkbox" ${c.rejectionEmailSent ? 'checked' : ''} data-action="toggleRejSent" data-id="${c.id}"> Sent</label></div></div>` }).join('');
 }
 
+/* ══ PDF EXPORT (REPORTS) ══ */
+function exportReportPDF() {
+	// Detect which tab is currently active
+	var activeTab = '';
+	var tabs = document.querySelectorAll('#sec-reports .tab');
+	tabs.forEach(function(t) { if (t.classList.contains('active')) activeTab = t.dataset.tab; });
+	if (!activeTab) activeTab = 'candidates';
+	var coName = companyName();
+	var todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+	var titleMap = { candidates: 'Candidate Rankings', positions: 'By Position', matrix: 'Score Matrix', rejection: 'Rejection Emails' };
+	var reportTitle = titleMap[activeTab] || 'Report';
+	// Build clean print table
+	var printBody = '';
+	if (activeTab === 'candidates') printBody = buildExportRankings();
+	else if (activeTab === 'positions') printBody = buildExportPositions();
+	else if (activeTab === 'matrix') printBody = buildExportMatrix();
+	else if (activeTab === 'rejection') printBody = buildExportRejections();
+	// Remove existing overlay
+	var existing = document.getElementById('pdf-print-overlay');
+	if (existing) existing.remove();
+	// Create overlay (direct DOM, no iframe — works in sandboxed environments)
+	var overlay = document.createElement('div');
+	overlay.id = 'pdf-print-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow-y:auto;font-family:system-ui,-apple-system,"Segoe UI",sans-serif';
+	// === TOOLBAR — sticky, compact, does NOT overlap content ===
+	var toolbar = document.createElement('div');
+	toolbar.id = 'pdf-print-toolbar';
+	toolbar.style.cssText = 'position:sticky;top:0;z-index:10;background:#13151c;color:#ebeef5;padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:13px;box-shadow:0 1px 6px rgba(0,0,0,.25)';
+	var lbl = document.createElement('span');
+	lbl.textContent = '📄 ' + reportTitle;
+	lbl.style.cssText = 'flex:1;font-weight:600;font-size:14px';
+	var printBtn = document.createElement('button');
+	printBtn.textContent = '🖨 Print / Save PDF';
+	printBtn.style.cssText = 'padding:7px 16px;background:#4361ee;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui';
+	printBtn.onclick = function() { window.print(); };
+	var closeBtn = document.createElement('button');
+	closeBtn.textContent = '✕ Close';
+	closeBtn.style.cssText = 'padding:7px 16px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui';
+	closeBtn.onclick = function() { overlay.remove(); };
+	toolbar.appendChild(lbl);
+	toolbar.appendChild(printBtn);
+	toolbar.appendChild(closeBtn);
+	overlay.appendChild(toolbar);
+	// === CONTENT — the actual report ===
+	var content = document.createElement('div');
+	content.style.cssText = 'max-width:960px;margin:0 auto;padding:40px 48px 60px;font-size:12px;line-height:1.5;color:#10131c';
+	content.innerHTML =
+		'<div style="text-align:center;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #4361ee">' +
+			'<div style="font-size:20px;font-weight:700;color:#4361ee;letter-spacing:-.3px;margin-bottom:2px">' + esc(coName) + '</div>' +
+			'<div style="font-size:16px;font-weight:600;letter-spacing:-.2px">' + esc(reportTitle) + '</div>' +
+			'<div style="font-size:11px;color:#8b90a5;margin-top:4px">Generated ' + todayStr + '</div>' +
+		'</div>' +
+		printBody +
+		'<div style="text-align:center;font-size:10px;color:#8b90a5;margin-top:28px;padding-top:12px;border-top:1px solid #e2e5ec">' + esc(coName) + ' · Confidential · ' + todayStr + '</div>';
+	overlay.appendChild(content);
+	// === STYLES for tables inside the overlay ===
+	var style = document.createElement('style');
+	style.textContent =
+		'#pdf-print-overlay table{width:100%;border-collapse:collapse;margin-bottom:20px}' +
+		'#pdf-print-overlay th{background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left}' +
+		'#pdf-print-overlay td{padding:7px 10px;border:1px solid #e2e5ec;font-size:11px}' +
+		'#pdf-print-overlay tr:nth-child(even) td{background:#fafbfc}' +
+		'#pdf-print-overlay .score-hi{color:#0d9e61;font-weight:700}' +
+		'#pdf-print-overlay .score-md{color:#b85c10;font-weight:700}' +
+		'#pdf-print-overlay .score-lo{color:#dc3545;font-weight:700}' +
+		'#pdf-print-overlay .rpt-summary{margin-bottom:16px;font-size:11px;color:#4a5068}';
+	overlay.appendChild(style);
+	document.body.appendChild(overlay);
+	// Scroll to top of overlay
+	overlay.scrollTop = 0;
+	tool.notify('PDF preview ready. Click Print / Save PDF to export, or take a screenshot.', 'info');
+}
+
+function buildExportRankings() {
+	var recFilter = document.getElementById('report-rec-filter')?.value || '';
+	var eligFilter = document.getElementById('report-elig-filter')?.value || '';
+	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	var rows = DB.candidates.map(function(c) {
+		var posScores = allPosIds.map(function(posId) {
+			var sc = DB.scores.filter(function(s) { return s.candidateId === c.id && s.positionId === posId; });
+			if (!sc.length) return null;
+			var inelCount = sc.filter(function(s) { return s.ineligible; }).length;
+			var validSc = sc.filter(function(s) { return !s.ineligible; });
+			var avg = validSc.length ? validSc.reduce(function(a, s) { return a + allCriteriaAvg(s); }, 0) / validSc.length : -1;
+			var recScore = sc.reduce(function(a, s) { return a + getRecW(s.recommendation); }, 0);
+			var isGeneral = posId === GENERAL_POS_ID;
+			var pos = isGeneral ? null : DB.positions.find(function(p) { return p.id === posId; });
+			var hasIneligible = inelCount > 0;
+			var allIneligible = sc.length > 0 && sc.every(function(s) { return s.ineligible; });
+			return { posId: posId, pos: pos, isGeneral: isGeneral, avg: avg, recScore: recScore, count: sc.length, inelCount: inelCount, hasIneligible: hasIneligible, allIneligible: allIneligible, applied: (c.positionIds || []).includes(posId), scores: sc };
+		}).filter(Boolean);
+		var filteredScores = recFilter ? posScores.filter(function(ps) { return ps.scores.some(function(s) { return s.recommendation === recFilter; }); }) : posScores;
+		var eligFiltered = eligFilter === 'ineligible' ? filteredScores.filter(function(ps) { return ps.hasIneligible; }) : eligFilter === 'eligible' ? filteredScores.filter(function(ps) { return !ps.allIneligible; }) : filteredScores;
+		if (!eligFiltered.length) return null;
+		var best = eligFiltered.length ? Math.max.apply(null, eligFiltered.map(function(p) { return p.avg >= 0 ? p.avg : 0; })) : 0;
+		return { c: c, posScores: eligFiltered, best: best };
+	}).filter(Boolean).sort(function(a, b) { return b.best - a.best; });
+	if (!rows.length) return '<p style="text-align:center;color:#9399aa;padding:40px">No scored candidates match the current filters.</p>';
+	var html = '<div class="rpt-summary">' + rows.length + ' candidates ranked · ';
+	if (recFilter) html += 'Recommendation: ' + recFilter + ' · ';
+	if (eligFilter) html += 'Eligibility: ' + eligFilter + ' · ';
+	html += 'Sorted by best average score</div>';
+	html += '<table><thead><tr><th>#</th><th>Candidate</th><th>Email</th><th>Best Score</th><th>Position Summary</th></tr></thead><tbody>';
+	rows.forEach(function(item, idx) {
+		var c = item.c;
+		var bestAvg = item.best.toFixed(1);
+		var scoreClass = item.best >= 7 ? 'score-hi' : item.best >= 5 ? 'score-md' : 'score-lo';
+		var posSummary = item.posScores.map(function(ps) {
+			var title = ps.isGeneral ? 'General' : (ps.pos ? ps.pos.title : '?');
+			var sc = ps.allIneligible ? 'INELIGIBLE' : ps.avg.toFixed(1);
+			var tag = ps.applied ? '★' : '';
+			return title + ': ' + sc + tag;
+		}).join('; ');
+		html += '<tr><td>' + (idx + 1) + '</td><td><strong>' + esc(c.name) + '</strong></td><td>' + esc(c.email || '—') + '</td><td class="' + scoreClass + '">' + bestAvg + '</td><td style="font-size:10px">' + esc(posSummary) + '</td></tr>';
+	});
+	html += '</tbody></table>';
+	return html;
+}
+
+function buildExportPositions() {
+	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	var posData = allPosIds.map(function(posId) {
+		var sc = DB.scores.filter(function(s) { return s.positionId === posId; });
+		if (!sc.length) return null;
+		var isGeneral = posId === GENERAL_POS_ID;
+		var pos = isGeneral ? { title: 'General Evaluation', status: 'open', id: GENERAL_POS_ID } : DB.positions.find(function(p) { return p.id === posId; });
+		if (!pos) return null;
+		var ranked = [...new Set(sc.map(function(s) { return s.candidateId; }))].map(function(cid) {
+			var cs = sc.filter(function(s) { return s.candidateId === cid; });
+			var validCs = cs.filter(function(s) { return !s.ineligible; });
+			var avg = validCs.length ? validCs.reduce(function(a, s) { return a + allCriteriaAvg(s); }, 0) / validCs.length : -1;
+			var inelCount = cs.filter(function(s) { return s.ineligible; }).length;
+			return { cand: DB.candidates.find(function(c) { return c.id === cid; }), avg: avg, inelCount: inelCount, allIneligible: cs.length > 0 && cs.every(function(s) { return s.ineligible; }), recScore: cs.reduce(function(a, s) { return a + getRecW(s.recommendation); }, 0), count: cs.length };
+		}).filter(function(x) { return x.cand; }).sort(function(a, b) { return b.avg - a.avg; });
+		return { pos: pos, isGeneral: isGeneral, ranked: ranked };
+	}).filter(Boolean);
+	if (!posData.length) return '<p style="text-align:center;color:#9399aa;padding:40px">No positions scored yet.</p>';
+	var html = '';
+	posData.forEach(function(pd) {
+		html += '<h3 style="margin:16px 0 8px;font-size:14px;color:#3d5cff">' + esc(pd.pos.title) + ' <span style="font-size:11px;color:#9399aa">(' + pd.ranked.length + ' candidates)</span></h3>';
+		html += '<table><thead><tr><th>#</th><th>Candidate</th><th>Avg Score</th><th>Sessions</th><th>Recommendation</th></tr></thead><tbody>';
+		pd.ranked.forEach(function(r, i) {
+			var scoreClass = r.avg >= 7 ? 'score-hi' : r.avg >= 5 ? 'score-md' : 'score-lo';
+			var recLbl = r.recScore > 1 ? 'Strong Hire' : r.recScore > 0 ? 'Hire' : r.recScore === 0 ? 'Neutral' : 'No Hire';
+			html += '<tr><td>' + (i + 1) + '</td><td><strong>' + esc(r.cand.name) + '</strong></td><td class="' + scoreClass + '">' + (r.allIneligible ? 'INELIGIBLE' : r.avg.toFixed(1)) + '</td><td>' + r.count + (r.inelCount ? ' (' + r.inelCount + ' inel.)' : '') + '</td><td>' + recLbl + '</td></tr>';
+		});
+		html += '</tbody></table>';
+	});
+	return html;
+}
+
+function buildExportMatrix() {
+	var scoredCands = [...new Set(DB.scores.map(function(s) { return s.candidateId; }))];
+	var scoredPos = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	if (!scoredCands.length) return '<p style="text-align:center;color:#9399aa;padding:40px">No scores yet.</p>';
+	var cands = DB.candidates.filter(function(c) { return scoredCands.includes(c.id); });
+	var positions = scoredPos.map(function(pid) { return pid === GENERAL_POS_ID ? { id: GENERAL_POS_ID, title: 'General' } : DB.positions.find(function(p) { return p.id === pid; }); }).filter(Boolean);
+	var html = '<table><thead><tr><th>Candidate</th>';
+	positions.forEach(function(p) { html += '<th>' + esc(p.title) + '</th>'; });
+	html += '</tr></thead><tbody>';
+	cands.forEach(function(c) {
+		html += '<tr><td><strong>' + esc(c.name) + '</strong></td>';
+		positions.forEach(function(pos) {
+			var sc = DB.scores.filter(function(s) { return s.candidateId === c.id && s.positionId === pos.id; });
+			if (!sc.length) { html += '<td style="text-align:center;color:#9399aa">—</td>'; return; }
+			var avg = sc.reduce(function(a, s) { return a + allCriteriaAvg(s); }, 0) / sc.length;
+			var scoreClass = avg >= 7 ? 'score-hi' : avg >= 5 ? 'score-md' : 'score-lo';
+			var applied = pos.id !== GENERAL_POS_ID && (c.positionIds || []).includes(pos.id);
+			html += '<td style="text-align:center"><span class="' + scoreClass + '">' + avg.toFixed(1) + '</span><br><span style="font-size:9px;color:#9399aa">' + (pos.id === GENERAL_POS_ID ? 'General' : applied ? 'Applied' : 'Suggested') + '</span></td>';
+		});
+		html += '</tr>';
+	});
+	html += '</tbody></table>';
+	return html;
+}
+
+function buildExportRejections() {
+	var nonSel = DB.candidates.filter(function(c) { return getStage(c.id) !== 'selected'; });
+	if (!nonSel.length) return '<p style="text-align:center;color:#9399aa;padding:40px">No non-selected candidates.</p>';
+	var html = '<table><thead><tr><th>Candidate</th><th>Email</th><th>Stage</th><th>Status</th></tr></thead><tbody>';
+	nonSel.forEach(function(c) {
+		var elim = c.eliminated;
+		var posNames = (c.positionIds || []).map(function(pid) { var p = DB.positions.find(function(x) { return x.id === pid; }); return p ? p.title : ''; }).filter(Boolean).join(', ') || 'the position';
+		html += '<tr><td><strong>' + esc(c.name) + '</strong></td><td>' + esc(c.email || '—') + '</td><td>' + (elim ? 'Screening' : 'Interview') + '</td><td>' + (c.rejectionEmailSent ? 'Sent' : 'Not sent') + '</td></tr>';
+	});
+	html += '</tbody></table>';
+	return html;
+}
+
 /* ══ PLACEMENTS ══ */
 function renderPlacements() {
 	const el = document.getElementById('placements-content'); if (!el) return; if (!DB.positions.length) { el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">✦</div><p>No positions defined yet.</p></div>`; return } if (!DB.placements) DB.placements = [];
@@ -1360,7 +1549,7 @@ document.addEventListener('click', e => {
 	if (t.id === 'import-confirm-btn') confirmImport(); if (t.id === 'import-done-btn') { closeImportModal(); renderCandidates(); navigate('candidates') }
 	if (t.id === 'excel-browse-btn') document.getElementById('excel-file-input').click();
 	if (t.id === 'screen-bulk-advance-btn') bulkScreenAdvance(); if (t.id === 'screen-bulk-elim-btn') bulkScreenEliminate();
-	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-date-filter') renderCandidatePrintPage(); if (t.id === 'cp-prev-btn') navigateCandidateCard('prev'); if (t.id === 'cp-next-btn') navigateCandidateCard('next'); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
+	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'export-report-pdf-btn') exportReportPDF(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-date-filter') renderCandidatePrintPage(); if (t.id === 'cp-prev-btn') navigateCandidateCard('prev'); if (t.id === 'cp-next-btn') navigateCandidateCard('next'); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
 	if (t.id === 'cal-prev-btn') calNavPrev(); if (t.id === 'cal-next-btn') calNavNext(); if (t.id === 'cal-today-btn') calNavToday();
 	if (t.id === 'bulk-advance-btn') { const ids = [...checkedCandIds]; const toAdv = ids.filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated && !DB.screenings.some(s => s.candidateId === id && s.status === 'advanced') }); toAdv.forEach(id => { DB.screenings.push({ candidateId: id, status: 'advanced', date: new Date().toISOString() }) }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${toAdv.length} advanced`, 'success') }
 	if (t.id === 'bulk-eliminate-btn') { const ids = [...checkedCandIds].filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated }); if (!ids.length) { tool.notify('No active candidates selected', 'warning'); return } openElimModal(`Eliminating ${ids.length} candidates:`, (reason) => { ids.forEach(id => { const c = DB.candidates.find(x => x.id === id); if (c) { c.eliminated = true; c.eliminationReason = reason; c.eliminationStage = 'screening'; c.eliminationDate = new Date().toISOString() } }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${ids.length} eliminated`, 'warning') }) }
