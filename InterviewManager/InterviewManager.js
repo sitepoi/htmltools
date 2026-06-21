@@ -141,6 +141,7 @@ function renderCurrentSection() {
 	else if (p === 'scoring') populateScoringSelects();
 	else if (p === 'reports') renderReports();
 	else if (p === 'placements') renderPlacements();
+	else if (p === 'hired-staff') renderHiredStaff();
 	else if (p === 'settings') renderSettings();
 }
 function updateNavBadges() {
@@ -376,6 +377,12 @@ function generateInviteEmail(cand, interviewers, dateTime, dur, pos, int) {
 function renderSettings() {
 	const s = getSettings();
 	const cn = document.getElementById('settings-company'); if (cn) cn.value = s.companyName || '';
+	const ce = document.getElementById('settings-email'); if (ce) ce.value = s.companyEmail || '';
+	const cp = document.getElementById('settings-phone'); if (cp) cp.value = s.companyPhone || '';
+	const cw = document.getElementById('settings-website'); if (cw) cw.value = s.companyWebsite || '';
+	const ca = document.getElementById('settings-address'); if (ca) ca.value = s.companyAddress || '';
+	const ct = document.getElementById('settings-type'); if (ct) ct.value = s.companyType || '';
+	const cr = document.getElementById('settings-reg-number'); if (cr) cr.value = s.companyRegNumber || '';
 	const mp = document.getElementById('settings-meeting-platform'); if (mp) mp.value = s.meetingPlatform || '';
 	const mu = document.getElementById('settings-meeting-url'); if (mu) mu.value = s.meetingUrl || '';
 	const dd = document.getElementById('settings-default-duration'); if (dd) dd.value = String(s.defaultDuration || '30');
@@ -383,11 +390,18 @@ function renderSettings() {
 }
 function saveSettings() {
 	DB.settings = DB.settings || {};
-	DB.settings.companyName = document.getElementById('settings-company')?.value.trim() || '';
-	DB.settings.meetingPlatform = document.getElementById('settings-meeting-platform')?.value || '';
-	DB.settings.meetingUrl = document.getElementById('settings-meeting-url')?.value.trim() || '';
-	DB.settings.defaultDuration = parseInt(document.getElementById('settings-default-duration')?.value) || 30;
-	DB.settings.defaultBreak = parseInt(document.getElementById('settings-default-break')?.value) || 15;
+	var el;
+	el = document.getElementById('settings-company'); DB.settings.companyName = el ? el.value.trim() : '';
+	el = document.getElementById('settings-email'); DB.settings.companyEmail = el ? el.value.trim() : '';
+	el = document.getElementById('settings-phone'); DB.settings.companyPhone = el ? el.value.trim() : '';
+	el = document.getElementById('settings-website'); DB.settings.companyWebsite = el ? el.value.trim() : '';
+	el = document.getElementById('settings-address'); DB.settings.companyAddress = el ? el.value.trim() : '';
+	el = document.getElementById('settings-type'); DB.settings.companyType = el ? el.value : '';
+	el = document.getElementById('settings-reg-number'); DB.settings.companyRegNumber = el ? el.value.trim() : '';
+	el = document.getElementById('settings-meeting-platform'); DB.settings.meetingPlatform = el ? el.value : '';
+	el = document.getElementById('settings-meeting-url'); DB.settings.meetingUrl = el ? el.value.trim() : '';
+	el = document.getElementById('settings-default-duration'); DB.settings.defaultDuration = el ? (parseInt(el.value) || 30) : 30;
+	el = document.getElementById('settings-default-break'); DB.settings.defaultBreak = el ? (parseInt(el.value) || 15) : 15;
 	persist(); tool.notify('Settings saved', 'success');
 }
 
@@ -400,8 +414,21 @@ function syncPosCriteria() { document.querySelectorAll('.pos-criterion-item').fo
 /* ══ POSITIONS ══ */
 function openPositionDrawer(editId) {
 	posCriteriaBuffer = [];
-	if (editId) { const p = DB.positions.find(x => x.id === editId); if (!p) return; document.getElementById('pos-title').value = p.title; document.getElementById('pos-dept').value = p.dept || ''; document.getElementById('pos-desc').value = p.desc || ''; document.getElementById('pos-status').value = p.status; document.getElementById('pos-closed-int').checked = p.closedForInterviews || false; document.getElementById('pos-edit-id').value = editId; document.getElementById('pos-drawer-title').textContent = 'Edit Position'; posCriteriaBuffer = JSON.parse(JSON.stringify(p.extraCriteria || [])) }
-	else { ['pos-title', 'pos-dept', 'pos-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' }); document.getElementById('pos-status').value = 'open'; document.getElementById('pos-closed-int').checked = false; document.getElementById('pos-edit-id').value = ''; document.getElementById('pos-drawer-title').textContent = 'Add Position' }
+	if (editId) { const p = DB.positions.find(x => x.id === editId); if (!p) return; document.getElementById('pos-title').value = p.title; document.getElementById('pos-dept').value = p.dept || ''; document.getElementById('pos-desc').value = p.desc || ''; document.getElementById('pos-status').value = p.status; document.getElementById('pos-closed-int').checked = p.closedForInterviews || false; document.getElementById('pos-edit-id').value = editId; document.getElementById('pos-drawer-title').textContent = 'Edit Position'; posCriteriaBuffer = JSON.parse(JSON.stringify(p.extraCriteria || []));
+		// New position detail fields
+		document.getElementById('pos-job-desc').innerHTML = p.jobDescription || '';
+		document.getElementById('pos-emp-basis').value = p.employmentBasis || '';
+		document.getElementById('pos-worker-class').value = p.workerClass || '';
+		document.getElementById('pos-start-date').value = p.startDate || '';
+		document.getElementById('pos-end-date').value = p.endDate || '';
+		document.getElementById('pos-wage-unit').value = p.wageUnit || '';
+		document.getElementById('pos-wage-amount').value = p.wageAmount || '';
+		document.getElementById('pos-weekly-hours').value = p.weeklyMinHours || '';
+	}
+	else { ['pos-title', 'pos-dept', 'pos-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' }); document.getElementById('pos-status').value = 'open'; document.getElementById('pos-closed-int').checked = false; document.getElementById('pos-edit-id').value = ''; document.getElementById('pos-drawer-title').textContent = 'Add Position';
+		document.getElementById('pos-job-desc').innerHTML = '';
+		['pos-emp-basis','pos-worker-class','pos-start-date','pos-end-date','pos-wage-unit','pos-wage-amount','pos-weekly-hours'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+	}
 	renderPosCriteriaList(); openDrawer('pos'); tool.resize();
 }
 function closePositionDrawer() { closeDrawer('pos') }
@@ -410,8 +437,17 @@ function savePosition() {
 	const title = document.getElementById('pos-title').value.trim(); const dept = document.getElementById('pos-dept').value.trim(); const desc = document.getElementById('pos-desc').value.trim(); const status = document.getElementById('pos-status').value; const closedForInterviews = document.getElementById('pos-closed-int').checked; const editId = document.getElementById('pos-edit-id').value;
 	if (!title) { tool.notify('Position title required', 'warning'); return }
 	const extraCriteria = posCriteriaBuffer.filter(c => c.name.trim());
-	if (editId) { const p = DB.positions.find(x => x.id === editId); if (p) { p.title = title; p.dept = dept; p.desc = desc; p.status = status; p.closedForInterviews = closedForInterviews; p.extraCriteria = extraCriteria } }
-	else DB.positions.push({ id: genId(), title, dept, desc, status, extraCriteria, closedForInterviews, createdAt: new Date().toISOString() });
+	// New position detail fields
+	const jobDescription = document.getElementById('pos-job-desc').innerHTML.trim();
+	const employmentBasis = document.getElementById('pos-emp-basis').value;
+	const workerClass = document.getElementById('pos-worker-class').value;
+	const startDate = document.getElementById('pos-start-date').value;
+	const endDate = document.getElementById('pos-end-date').value;
+	const wageUnit = document.getElementById('pos-wage-unit').value;
+	const wageAmount = document.getElementById('pos-wage-amount').value.trim();
+	const weeklyMinHours = document.getElementById('pos-weekly-hours').value.trim();
+	if (editId) { const p = DB.positions.find(x => x.id === editId); if (p) { p.title = title; p.dept = dept; p.desc = desc; p.status = status; p.closedForInterviews = closedForInterviews; p.extraCriteria = extraCriteria; p.jobDescription = jobDescription; p.employmentBasis = employmentBasis; p.workerClass = workerClass; p.startDate = startDate; p.endDate = endDate; p.wageUnit = wageUnit; p.wageAmount = wageAmount; p.weeklyMinHours = weeklyMinHours } }
+	else DB.positions.push({ id: genId(), title, dept, desc, status, extraCriteria, closedForInterviews, jobDescription, employmentBasis, workerClass, startDate, endDate, wageUnit, wageAmount, weeklyMinHours, createdAt: new Date().toISOString() });
 	persist(); closePositionDrawer(); renderPositions(); tool.notify(editId ? 'Position updated' : 'Position added', 'success');
 }
 function renderPositions() {
@@ -1197,6 +1233,160 @@ function openOfferLetter(posId, candId) { const pos = DB.positions.find(x => x.i
 function toggleOfferSent(posId, val) { const pl = DB.placements && DB.placements.find(p => p.positionId === posId); if (pl) pl.offerLetterSent = val; persist() }
 function togglePosClosedInt(posId, val) { const p = DB.positions.find(x => x.id === posId); if (!p) return; p.closedForInterviews = val; persist(); renderPlacements(); renderPositions() }
 
+/* ══ COMPANY INFO HELPERS ══ */
+function getCompanyEmail() { return getSettings().companyEmail || ''; }
+function getCompanyPhone() { return getSettings().companyPhone || ''; }
+function getCompanyWebsite() { return getSettings().companyWebsite || ''; }
+function getCompanyAddress() { return getSettings().companyAddress || ''; }
+
+/* ══ HIRED STAFF ══ */
+function renderHiredStaff() {
+	var container = document.getElementById('hired-staff-container');
+	if (!container) return;
+	var placements = (DB.placements || []).filter(function(p) { return p.selectedCandidateId; });
+	if (!placements.length) {
+		container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>No hired staff yet. Select candidates in <strong>Placements</strong> first.</p></div>';
+		tool.resize();
+		return;
+	}
+	var html = '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Position</th><th>Employment</th><th>Start Date</th><th>Salary</th><th>Actions</th></tr></thead><tbody>';
+	placements.forEach(function(pl) {
+		var pos = DB.positions.find(function(x) { return x.id === pl.positionId; });
+		var cand = DB.candidates.find(function(x) { return x.id === pl.selectedCandidateId; });
+		if (!pos || !cand) return;
+		var empBasis = pos.employmentBasis || '';
+		var workerClass = pos.workerClass || '';
+		var empType = [empBasis === 'full-time' ? 'Full-Time' : empBasis === 'part-time' ? 'Part-Time' : '', workerClass.charAt(0).toUpperCase() + workerClass.slice(1)].filter(Boolean).join(', ') || '—';
+		var wage = pos.wageAmount ? '$' + esc(pos.wageAmount) + ' / ' + (pos.wageUnit || '—') : '—';
+		html += '<tr>' +
+			'<td><div style="display:flex;align-items:center;gap:8px">' + avatar(cand.name, 28) + '<span style="font-weight:500">' + esc(cand.name) + '</span></div></td>' +
+			'<td>' + esc(pos.title) + '</td>' +
+			'<td>' + esc(empType) + '</td>' +
+			'<td>' + (pos.startDate ? fmtDate(pos.startDate) : '—') + '</td>' +
+			'<td>' + wage + '</td>' +
+			'<td><button class="btn btn-primary btn-sm" onclick="exportHiredStaffJSON(\'' + pl.positionId + '\',\'' + pl.selectedCandidateId + '\')">📋 Export JSON</button></td>' +
+			'</tr>';
+	});
+	html += '</tbody></table></div>';
+	container.innerHTML = html;
+	tool.resize();
+}
+
+function exportHiredStaffJSON(posId, candId) {
+	var pos = DB.positions.find(function(x) { return x.id === posId; });
+	var cand = DB.candidates.find(function(x) { return x.id === candId; });
+	if (!pos || !cand) { tool.notify('Staff data not found', 'error'); return; }
+	var s = getSettings();
+	var coName = companyName();
+	var todayStr = new Date().toISOString().slice(0, 10);
+	var empBasis = pos.employmentBasis || '';
+	var workerClass = pos.workerClass || 'employee';
+	var empType = [empBasis === 'full-time' ? 'Full-Time' : empBasis === 'part-time' ? 'Part-Time' : '', workerClass.charAt(0).toUpperCase() + workerClass.slice(1)].filter(Boolean).join(', ') || 'Employee';
+	var startDate = pos.startDate || todayStr;
+	var wageUnit = pos.wageUnit || 'monthly';
+	var payFreq = wageUnit === 'hour' ? 'hourly' : wageUnit === 'biweekly' ? 'bi-weekly' : 'monthly';
+	var wageAmt = pos.wageAmount || '';
+	var hours = pos.weeklyMinHours || '40';
+	var docRef = 'EMP-' + todayStr.replace(/-/g, '') + '-' + (cand.name || 'EMP').replace(/\s+/g, '-').toUpperCase().slice(0, 10);
+	var json = {
+		agreementDate: todayStr,
+		employeeName: cand.name || '',
+		employeeAddress: '',
+		employeeCity: '',
+		positionTitle: pos.title || '',
+		employmentType: empType,
+		reportsTo: 'Executive Leadership',
+		startDate: startDate,
+		probationMonths: '3',
+		workLocation: getCompanyAddress() || '',
+		travelReqs: '',
+		salaryAmount: wageAmt,
+		compDetails: (wageAmt ? payFreq.charAt(0).toUpperCase() + payFreq.slice(1) + ' gross salary of $' + wageAmt + ' for approximately ' + hours + ' hours per ' + (wageUnit === 'hour' ? 'week' : wageUnit === 'biweekly' ? 'bi-weekly period' : 'month') + '. All hours must be logged.' : ''),
+		payFrequency: payFreq,
+		salaryReview: '',
+		expensePolicy: '',
+		empSignName: '',
+		empSignTitle: '',
+		empSignDate: '',
+		eeSignName: '',
+		eeSignDate: '',
+		docRef: docRef,
+		rt_roleOverview: pos.jobDescription || '<p>' + esc(pos.desc || '') + '</p>',
+		rt_probationNote: '<p>The first <strong>3 months</strong> of employment shall constitute a probationary period.</p>',
+		rt_dutiesBlock: pos.jobDescription || '<p>As outlined in the Position Description.</p>',
+		rt_locationHoursBlock: '<h3>Work Location</h3><p>' + esc(getCompanyAddress() || 'To be determined') + '</p><h3>Hours of Work</h3><p>The Employee shall work a minimum of <strong>' + esc(hours) + ' hours per ' + (wageUnit === 'hour' ? 'week' : wageUnit === 'biweekly' ? 'bi-weekly period' : 'month') + '</strong>.</p>',
+		rt_benefitsBlock: '',
+		rt_vacationBlock: '',
+		rt_confidentialityBlock: '',
+		rt_policiesBlock: '',
+		rt_terminationBlock: '',
+		rt_generalBlock: '',
+		companyName: coName,
+		companyAddress: getCompanyAddress() || '',
+		companyRegLabel: 'CRA #',
+		companyRegNumber: s.companyRegNumber || '',
+		companyWebsite: s.companyWebsite || '',
+		companyTypeLabel: s.companyType || '',
+		companyProvince: 'British Columbia'
+	};
+	// Show the JSON in a modal-style overlay for copying
+	showJSONExportOverlay(json, cand.name, pos.title);
+}
+
+function showJSONExportOverlay(json, empName, posTitle) {
+	var existing = document.getElementById('json-export-overlay');
+	if (existing) existing.remove();
+	var overlay = document.createElement('div');
+	overlay.id = 'json-export-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+	var card = document.createElement('div');
+	card.style.cssText = 'background:#fff;border-radius:12px;width:700px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.25)';
+	var header = document.createElement('div');
+	header.style.cssText = 'padding:16px 20px;border-bottom:1px solid #e2e5ec;display:flex;align-items:center;justify-content:space-between';
+	header.innerHTML = '<div><div style="font-weight:700;font-size:15px;color:#10131c">JSON Export — ' + esc(empName) + '</div><div style="font-size:11px;color:#8b90a5">' + esc(posTitle) + '</div></div>';
+	var closeBtn = document.createElement('button');
+	closeBtn.textContent = '✕';
+	closeBtn.style.cssText = 'background:none;border:none;font-size:18px;cursor:pointer;color:#8b90a5;padding:4px 8px';
+	closeBtn.onclick = function() { overlay.remove(); };
+	header.appendChild(closeBtn);
+	var body = document.createElement('div');
+	body.style.cssText = 'flex:1;overflow-y:auto;padding:16px 20px';
+	var jsonStr = JSON.stringify(json, null, 2);
+	var textarea = document.createElement('textarea');
+	textarea.value = jsonStr;
+	textarea.style.cssText = 'width:100%;height:400px;font-family:"SF Mono","Fira Code","DM Mono",monospace;font-size:11px;line-height:1.5;border:1px solid #e2e5ec;border-radius:6px;padding:12px;resize:vertical;background:#fafbfc;color:#10131c;white-space:pre;overflow:auto';
+	textarea.readOnly = false;
+	body.appendChild(textarea);
+	var footer = document.createElement('div');
+	footer.style.cssText = 'padding:12px 20px;border-top:1px solid #e2e5ec;display:flex;gap:8px;justify-content:flex-end';
+	var copyBtn = document.createElement('button');
+	copyBtn.textContent = '📋 Copy JSON';
+	copyBtn.style.cssText = 'padding:8px 18px;background:#4361ee;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;font-family:system-ui';
+	copyBtn.onclick = function() {
+		textarea.select();
+		try {
+			var ok = document.execCommand('copy');
+			if (ok) tool.notify('JSON copied to clipboard', 'success');
+			else fallbackCopy(jsonStr);
+		} catch(e) { fallbackCopy(jsonStr); }
+	};
+	var doneBtn = document.createElement('button');
+	doneBtn.textContent = 'Close';
+	doneBtn.style.cssText = 'padding:8px 18px;background:#e2e5ec;color:#10131c;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;font-family:system-ui';
+	doneBtn.onclick = function() { overlay.remove(); };
+	footer.appendChild(copyBtn);
+	footer.appendChild(doneBtn);
+	card.appendChild(header);
+	card.appendChild(body);
+	card.appendChild(footer);
+	overlay.appendChild(card);
+	overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+	document.body.appendChild(overlay);
+	textarea.focus();
+	textarea.select();
+	tool.notify('JSON generated for ' + empName + '. Copy and use in your agreement application.', 'info');
+}
+
 /* ══ DASHBOARD ══ */
 function renderDashboard() {
 	const stats = [{ val: DB.positions.filter(p => p.status === 'open').length, label: 'Open Positions', color: 'var(--green)' }, { val: DB.candidates.filter(c => !c.eliminated).length, label: 'Active Candidates', color: 'var(--accent)' }, { val: DB.candidates.filter(c => DB.screenings.some(s => s.candidateId === c.id && s.status === 'advanced')).length, label: 'Advanced', color: 'var(--teal)' }, { val: DB.candidates.filter(c => c.eliminated).length, label: 'Eliminated', color: 'var(--red)' }, { val: (DB.placements || []).filter(p => p.selectedCandidateId).length, label: 'Placed', color: 'var(--amber)' }];
@@ -1566,6 +1756,22 @@ document.addEventListener('click', e => {
 			var isOpen = body.classList.toggle('open');
 			body.style.display = isOpen ? 'block' : 'none';
 		}
+	}
+	// Rich text editor toolbar buttons
+	if (t.closest('.rte-btn')) {
+		e.preventDefault();
+		var btn = t.closest('.rte-btn');
+		var cmd = btn.dataset.cmd;
+		var val = btn.dataset.val || null;
+		if (cmd === 'createLink') {
+			var url = prompt('Enter URL:', 'https://');
+			if (url) document.execCommand(cmd, false, url);
+		} else {
+			document.execCommand(cmd, false, val);
+		}
+		// Refocus the editor
+		var editor = btn.closest('.drawer-body') ? btn.closest('.drawer-body').querySelector('.rte-editor') : null;
+		if (editor) editor.focus();
 	}
 });
 

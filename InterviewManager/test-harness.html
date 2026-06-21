@@ -126,6 +126,7 @@ const EMBEDDED_HTML = `<div id="app">
 			<div class="nav-item" data-page="scoring"><span class="nav-icon">◈</span> Scoring</div>
 			<div class="nav-item" data-page="reports"><span class="nav-icon">◫</span> Reports</div>
 			<div class="nav-item" data-page="placements"><span class="nav-icon">✦</span> Placements</div>
+			<div class="nav-item" data-page="hired-staff"><span class="nav-icon">👥</span> Hired Staff</div>
 			<div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span> Settings</div>
 		</nav>
 		<button class="btn btn-primary btn-sm" id="add-interview-btn">+ New Interview</button>
@@ -453,6 +454,7 @@ const EMBEDDED_HTML = `<div id="app">
 					<option value="eligible">Eligible</option>
 					<option value="ineligible">Ineligible</option>
 				</select>
+				<button class="btn btn-primary btn-sm" id="export-report-pdf-btn" style="margin-left:auto">📄 Export PDF</button>
 			</div>
 			<div id="report-candidates" class="report-tab-content"></div>
 			<div id="report-positions" class="report-tab-content" style="display:none"></div>
@@ -469,6 +471,15 @@ const EMBEDDED_HTML = `<div id="app">
 			<div id="placements-content"></div>
 		</section>
 
+		<!-- HIRED STAFF -->
+		<section id="sec-hired-staff" class="section">
+			<div class="page-header">
+				<div class="page-title">Hired Staff</div>
+				<div class="page-sub">Placed candidates and JSON export for employment records</div>
+			</div>
+			<div id="hired-staff-container"></div>
+		</section>
+
 		<!-- SETTINGS -->
 		<section id="sec-settings" class="section">
 			<div class="page-header">
@@ -479,6 +490,27 @@ const EMBEDDED_HTML = `<div id="app">
 				<div class="card-header"><span class="card-title">Organization</span></div>
 				<div class="form-group"><label class="form-label">Company Name</label><input type="text"
 						id="settings-company" placeholder="e.g. Acme Corp">
+				</div>
+				<div class="input-row">
+					<div class="form-group"><label class="form-label">Company Email</label><input type="email" id="settings-email" placeholder="hr@company.com"></div>
+					<div class="form-group"><label class="form-label">Company Phone</label><input type="text" id="settings-phone" placeholder="+1 (555) 000-0000"></div>
+				</div>
+				<div class="form-group"><label class="form-label">Company Website</label><input type="text" id="settings-website" placeholder="https://www.company.com"></div>
+				<div class="form-group"><label class="form-label">Company Address</label><input type="text" id="settings-address" placeholder="123 Main St, City, Province"></div>
+				<div class="input-row">
+					<div class="form-group">
+						<label class="form-label">Company Type</label>
+						<select id="settings-type">
+							<option value="">— Select —</option>
+							<option value="For-Profit Corporation">For-Profit Corporation</option>
+							<option value="Non-Profit Organization">Non-Profit Organization</option>
+							<option value="Registered Charity">Registered Charity</option>
+							<option value="Sole Proprietorship">Sole Proprietorship</option>
+							<option value="Partnership">Partnership</option>
+							<option value="Other">Other</option>
+						</select>
+					</div>
+					<div class="form-group"><label class="form-label">Registration Number</label><input type="text" id="settings-reg-number" placeholder="e.g. CRA 123456789"></div>
 				</div>
 				<div class="section-sep">
 					<div class="section-sep-label">Default Meeting Link
@@ -559,9 +591,45 @@ const EMBEDDED_HTML = `<div id="app">
 			</div>
 		</div>
 		<div class="form-group">
-			<label class="form-label">Description</label><textarea id="pos-desc" placeholder="Role description..."
-				style="min-height:80px"></textarea>
+			<label class="form-label">Description (Short Summary)</label><textarea id="pos-desc" placeholder="Brief role summary..."
+				style="min-height:60px"></textarea>
 		</div>
+		<div class="section-sep"><div class="section-sep-label">Job Description (Detailed)<span class="section-sep-badge">Rich Text</span></div></div>
+		<div class="rte-toolbar" id="pos-rte-toolbar">
+			<button type="button" class="rte-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+			<button type="button" class="rte-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+			<button type="button" class="rte-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+			<span class="rte-sep"></span>
+			<button type="button" class="rte-btn" data-cmd="formatBlock" data-val="h3" title="Heading">H</button>
+			<button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bullet List">•≡</button>
+			<button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered List">1≡</button>
+			<span class="rte-sep"></span>
+			<button type="button" class="rte-btn" data-cmd="createLink" title="Link">🔗</button>
+		</div>
+		<div class="rte-editor" id="pos-job-desc" contenteditable="true" placeholder="Paste or type the full job description here…"></div>
+		<div class="section-sep"><div class="section-sep-label">Position Details</div></div>
+		<div class="input-row">
+			<div class="form-group">
+				<label class="form-label">Employment Basis</label>
+				<select id="pos-emp-basis"><option value="">— Select —</option><option value="full-time">Full-Time</option><option value="part-time">Part-Time</option></select>
+			</div>
+			<div class="form-group">
+				<label class="form-label">Worker Classification</label>
+				<select id="pos-worker-class"><option value="">— Select —</option><option value="employee">Employee</option><option value="contractor">Contractor</option><option value="volunteer">Volunteer</option></select>
+			</div>
+		</div>
+		<div class="input-row">
+			<div class="form-group"><label class="form-label">Start Date</label><input type="date" id="pos-start-date"></div>
+			<div class="form-group"><label class="form-label">End Date</label><input type="date" id="pos-end-date"></div>
+		</div>
+		<div class="input-row">
+			<div class="form-group">
+				<label class="form-label">Wage Unit</label>
+				<select id="pos-wage-unit"><option value="">— Select —</option><option value="hour">Per Hour</option><option value="biweekly">Bi-Weekly</option><option value="monthly">Monthly</option></select>
+			</div>
+			<div class="form-group"><label class="form-label">Wage (per unit)</label><input type="text" id="pos-wage-amount" placeholder="e.g. 1000"></div>
+		</div>
+		<div class="form-group"><label class="form-label">Weekly Minimum Hours</label><input type="text" id="pos-weekly-hours" placeholder="e.g. 40"></div>
 		<div class="form-group">
 			<label class="form-label">Close for New Interviews</label>
 			<div
@@ -1131,7 +1199,7 @@ var SAMPLE_DATA = {
     { candidateId:'c11', status:'advanced', date:'2026-06-13T00:00:00.000Z' }
   ],
   placements: [],
-  settings: { companyName:'Acme Corp', meetingPlatform:'Zoom', meetingUrl:'https://zoom.us/j/acme-default', defaultDuration:30, defaultBreak:15 },
+  settings: { companyName:'Acme Corp', companyEmail:'hr@acmecorp.com', companyPhone:'+1 (555) 100-2000', companyWebsite:'https://www.acmecorp.com', companyAddress:'123 Main Street, Vancouver, BC V6B 1A1', companyType:'Registered Charity', companyRegNumber:'123456789', meetingPlatform:'Zoom', meetingUrl:'https://zoom.us/j/acme-default', defaultDuration:30, defaultBreak:15 },
   _theme: 'light'
 };
 </script>

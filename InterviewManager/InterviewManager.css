@@ -1954,6 +1954,189 @@ input:focus, select:focus, textarea:focus {
 	box-shadow: var(--shadow-md)
 }
 
+/* ══ RICH TEXT EDITOR ══ */
+.rte-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 8px;
+	background: var(--surface2);
+	border: 1px solid var(--border);
+	border-bottom: none;
+	border-radius: var(--r2) var(--r2) 0 0;
+	flex-wrap: wrap
+}
+.rte-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 12px;
+	color: var(--text2);
+	transition: all .15s;
+	font-family: var(--font)
+}
+.rte-btn:hover {
+	background: var(--accent-bg);
+	color: var(--accent);
+	border-color: var(--accent)
+}
+.rte-btn b, .rte-btn i, .rte-btn u {
+	font-size: 13px
+}
+.rte-sep {
+	width: 1px;
+	height: 20px;
+	background: var(--border);
+	margin: 0 4px
+}
+.rte-editor {
+	min-height: 140px;
+	max-height: 360px;
+	overflow-y: auto;
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: 0 0 var(--r2) var(--r2);
+	padding: 10px 12px;
+	font-family: var(--font);
+	font-size: 13px;
+	line-height: 1.6;
+	color: var(--text);
+	outline: none;
+	transition: border-color .18s, box-shadow .18s
+}
+.rte-editor:focus {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px rgba(67,97,238,.12)
+}
+.rte-editor[placeholder]:empty:before {
+	content: attr(placeholder);
+	color: var(--text3);
+	pointer-events: none
+}
+.rte-editor h3 {
+	font-size: 14px;
+	margin: 8px 0 4px;
+	font-weight: 600
+}
+.rte-editor ul, .rte-editor ol {
+	padding-left: 18px;
+	margin: 4px 0
+}
+.rte-editor li {
+	margin-bottom: 2px
+}
+.rte-editor a {
+	color: var(--accent)
+}
+
+/* ══ AGREEMENT DOCUMENT ══ */
+.agr-doc {
+	background: #fff;
+	color: #10131c;
+	font-size: 11px;
+	line-height: 1.6;
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif
+}
+.agr-header {
+	text-align: center;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 3px solid #4361ee
+}
+.agr-company {
+	font-size: 22px;
+	font-weight: 700;
+	color: #4361ee;
+	letter-spacing: -.3px
+}
+.agr-title {
+	font-size: 18px;
+	font-weight: 600;
+	margin: 4px 0;
+	letter-spacing: 1px;
+	text-transform: uppercase
+}
+.agr-ref {
+	font-size: 10px;
+	color: #8b90a5
+}
+table.agr-meta {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 20px
+}
+table.agr-meta td {
+	padding: 6px 10px;
+	border: 1px solid #e2e5ec;
+	font-size: 12px
+}
+table.agr-meta td:first-child {
+	background: #f2f4f7;
+	font-weight: 600;
+	width: 150px;
+	color: #4a5068
+}
+.agr-section {
+	margin-bottom: 18px
+}
+.agr-section-title {
+	font-size: 13px;
+	font-weight: 700;
+	border-bottom: 1px solid #e2e5ec;
+	padding-bottom: 5px;
+	margin-bottom: 10px;
+	color: #4361ee
+}
+.agr-section-body {
+	font-size: 12px;
+	line-height: 1.7
+}
+.agr-section-body ul, .agr-section-body ol {
+	padding-left: 20px;
+	margin: 6px 0
+}
+.agr-section-body li {
+	margin-bottom: 4px
+}
+.agr-section-body h3 {
+	font-size: 13px;
+	margin: 12px 0 6px
+}
+.agr-sig-block {
+	margin-top: 30px;
+	display: flex;
+	gap: 40px;
+	flex-wrap: wrap
+}
+.agr-sig-line {
+	flex: 1;
+	min-width: 180px
+}
+.agr-sig-label {
+	font-weight: 600;
+	margin-bottom: 28px;
+	font-size: 12px
+}
+.agr-sig-date {
+	font-size: 10px;
+	color: var(--text3);
+	margin-top: 4px
+}
+.agr-footer {
+	text-align: center;
+	font-size: 9px;
+	color: var(--text3);
+	margin-top: 28px;
+	padding-top: 12px;
+	border-top: 1px solid var(--border)
+}
+
 /* ══ PRINT STYLES (PDF Export) ══ */
 @media print {
 	/* Hide everything outside the PDF overlay */
