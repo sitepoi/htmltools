@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrantPlanner — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="GrantPlanner.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — GrantPlanner</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'grant_planner_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('GrantPlanner DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Embedded HTML (no server needed) ── */
+var EMBEDDED_HTML = '<div id="app">\
+	<aside class="sidebar">\
+		<div class="sidebar-brand">\
+			<div class="brand-logo">⬡</div>\
+			<div class="brand-name">GrantPlanner</div>\
+			<div class="brand-sub">Budget &amp; Activity Management</div>\
+		</div>\
+		<nav class="nav">\
+			<div class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span>Dashboard</div>\
+			<div class="nav-item" data-page="grant"><span class="nav-icon">⚒</span>Grant Setup</div>\
+			<div class="nav-item" data-page="activities"><span class="nav-icon">⊞</span>Activities<span class="nav-badge" id="nav-activities-count">0</span></div>\
+			<div class="nav-item" data-page="budget"><span class="nav-icon">💰</span>Budget<span class="nav-badge" id="nav-budget-count">0</span></div>\
+		<div class="nav-item" data-page="documents"><span class="nav-icon">📄</span>Documents<span class="nav-badge" id="nav-documents-count">0</span></div>\
+		<div class="nav-item nav-execution" data-page="expenses"><span class="nav-icon">⊘</span>Expenses<span class="nav-badge" id="nav-expenses-count">0</span></div>\
+		<div class="nav-item nav-execution" data-page="reports"><span class="nav-icon">◫</span>Reports</div>\
+	</nav>\
+	<button class="btn btn-primary btn-full nav-execution" id="btn-quick-expense">+ Log Expense</button>\
+	</aside>\
+\
+	<main class="main">\
+		<button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>\
+\
+		<!-- PHASE STEPPER -->\
+		<div class="phase-stepper" id="phase-stepper">\
+			<div class="phase-step" data-phase="drafting"><div class="phase-dot">1</div><div class="phase-label">Drafting</div></div>\
+			<div class="phase-line"></div>\
+			<div class="phase-step" data-phase="applied"><div class="phase-dot">2</div><div class="phase-label">Applied</div></div>\
+			<div class="phase-line"></div>\
+			<div class="phase-step" data-phase="approved"><div class="phase-dot">3</div><div class="phase-label">Approved</div></div>\
+			<div class="phase-line"></div>\
+			<div class="phase-step" data-phase="closed"><div class="phase-dot">4</div><div class="phase-label">Closed</div></div>\
+		</div>\
+\
+		<!-- DASHBOARD -->\
+		<section id="sec-dashboard" class="section active">\
+			<div class="page-header">\
+				<div class="page-title" id="dash-grant-name">Grant Dashboard</div>\
+				<div class="page-sub" id="dash-grant-sub">Set up your grant to get started</div>\
+			</div>\
+			<div class="stats-row" id="dash-stats"></div>\
+			<div id="dash-checklist-card" class="card" style="display:none">\
+				<div class="card-header"><span class="card-title">🧭 Application Checklist</span><span id="checklist-progress" class="checklist-progress"></span></div>\
+				<div id="dash-checklist"></div>\
+			</div>\
+			<div class="dash-grid" id="dash-budget-row">\
+				<div class="card card-budget-overview">\
+					<div class="card-header"><span class="card-title">Budget Overview</span></div>\
+					<div id="dash-budget-bar-wrap">\
+						<div class="budget-bar-bg"><div class="budget-bar-fill" id="dash-budget-bar" style="width:0%"></div></div>\
+						<div class="budget-bar-labels">\
+							<span id="dash-budget-spent">$0 spent</span>\
+							<span id="dash-budget-remaining">$0 remaining</span>\
+						</div>\
+					</div>\
+				</div>\
+				<div class="card">\
+					<div class="card-header"><span class="card-title">Upcoming Activities</span></div>\
+					<div id="dash-upcoming-activities"><div class="empty-state">No activities planned</div></div>\
+				</div>\
+			</div>\
+			<div class="dash-grid dash-grid-3" id="dash-bottom-row">\
+				<div class="card">\
+					<div class="card-header"><span class="card-title">Recent Expenses</span></div>\
+					<div id="dash-recent-expenses"><div class="empty-state">No expenses recorded</div></div>\
+				</div>\
+				<div class="card">\
+					<div class="card-header"><span class="card-title">Budget by Category</span></div>\
+					<div id="dash-category-breakdown"><div class="empty-state">No budget categories defined</div></div>\
+				</div>\
+			</div>\
+		</section>\
+\
+		<!-- GRANT SETUP -->\
+		<section id="sec-grant" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Grant Setup</div>\
+				<div class="page-sub">Configure your grant details and funding information</div>\
+			</div>\
+			<div class="card">\
+				<div class="form-grid">\
+					<div class="form-field">\
+						<label class="form-label">Grant Name <span class="req">*</span></label>\
+						<input type="text" id="grant-name" class="form-input" placeholder="e.g. Community Health Initiative 2026">\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">Grant ID / Reference</label>\
+						<input type="text" id="grant-id" class="form-input" placeholder="e.g. GR-2026-0042">\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">Funding Source / Funder <span class="req">*</span></label>\
+						<input type="text" id="grant-funder" class="form-input" placeholder="e.g. National Science Foundation">\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">Total Budget Amount <span class="req">*</span></label>\
+						<div class="input-with-prefix">\
+							<span class="input-prefix">$</span>\
+							<input type="number" id="grant-budget" class="form-input" placeholder="0.00" min="0" step="0.01">\
+						</div>\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">Currency</label>\
+						<select id="grant-currency" class="form-input">\
+							<option value="USD">USD ($)</option>\
+							<option value="EUR">EUR (€)</option>\
+							<option value="GBP">GBP (£)</option>\
+							<option value="TRY">TRY (₺)</option>\
+							<option value="CAD">CAD (C$)</option>\
+							<option value="AUD">AUD (A$)</option>\
+						</select>\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">Start Date</label>\
+						<input type="date" id="grant-start" class="form-input">\
+					</div>\
+					<div class="form-field">\
+						<label class="form-label">End Date</label>\
+						<input type="date" id="grant-end" class="form-input">\
+					</div>\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Description / Notes</label>\
+						<textarea id="grant-desc" class="form-input form-textarea" rows="2" placeholder="Brief description of the grant purpose and scope..."></textarea>\
+					</div>\
+				</div>\
+\
+				<div class="section-sep"><div class="section-sep-label">Application Narrative <span class="section-sep-badge">For submission</span></div></div>\
+				<div class="form-grid">\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Problem Statement / Need</label>\
+						<textarea id="grant-problem" class="form-input form-textarea" rows="3" placeholder="What problem does this project solve? What community need does it address?"></textarea>\
+					</div>\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Goals & Objectives</label>\
+						<textarea id="grant-goals" class="form-input form-textarea" rows="3" placeholder="Specific, measurable goals. What will be achieved?"></textarea>\
+					</div>\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Methodology / Approach</label>\
+						<textarea id="grant-method" class="form-input form-textarea" rows="3" placeholder="How will the project be implemented? Methods, timeline, key personnel."></textarea>\
+					</div>\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Target Beneficiaries / Community</label>\
+						<textarea id="grant-beneficiaries" class="form-input form-textarea" rows="2" placeholder="Who will benefit? Demographics, number of people reached."></textarea>\
+					</div>\
+					<div class="form-field form-field-full">\
+						<label class="form-label">Sustainability Plan</label>\
+						<textarea id="grant-sustainability" class="form-input form-textarea" rows="2" placeholder="How will the project continue after grant funding ends?"></textarea>\
+					</div>\
+				</div>\
+				<div class="form-actions">\
+					<button class="btn btn-primary" id="btn-save-grant">Save Grant Details</button>\
+				</div>\
+			</div>\
+		</section>\
+\
+		<!-- DOCUMENTS -->\
+		<section id="sec-documents" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Documents</div>\
+				<div class="page-sub">Upload reference documents for this grant application</div>\
+				<div class="page-toolbar">\
+					<button class="btn btn-primary" id="btn-add-document">+ Add Document</button>\
+				</div>\
+			</div>\
+			<div class="card">\
+				<div class="table-wrap">\
+					<table>\
+						<thead><tr><th>Document</th><th>Type</th><th>Date Added</th><th>Status</th><th></th></tr></thead>\
+						<tbody id="documents-table-body"><tr><td class="table-empty" colspan="5">No documents added yet</td></tr></tbody>\
+					</table>\
+				</div>\
+			</div>\
+		</section>\
+\
+		<!-- ACTIVITIES -->\
+		<section id="sec-activities" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Activity Planning</div>\
+				<div class="page-sub">Plan activities, timelines, costs, and expected attendance</div>\
+				<div class="page-toolbar">\
+					<button class="btn btn-primary" id="btn-add-activity">+ Add Activity</button>\
+					<input type="text" id="act-search" class="form-input" placeholder="Search activities..." style="width:220px">\
+					<select id="act-filter-status" class="form-input" style="width:150px">\
+						<option value="">All Statuses</option>\
+						<option value="planned">Planned</option>\
+						<option value="in-progress">In Progress</option>\
+						<option value="completed">Completed</option>\
+						<option value="cancelled">Cancelled</option>\
+					</select>\
+					<select id="act-filter-priority" class="form-input" style="width:150px">\
+						<option value="">All Priorities</option>\
+						<option value="high">High</option>\
+						<option value="medium">Medium</option>\
+						<option value="low">Low</option>\
+					</select>\
+				</div>\
+			</div>\
+			<div class="card">\
+				<div class="table-wrap">\
+					<table>\
+						<thead>\
+							<tr>\
+								<th>Activity</th>\
+								<th>Dates</th>\
+								<th>Budget</th>\
+								<th>Attendees</th>\
+								<th>Priority</th>\
+								<th>Status</th>\
+								<th></th>\
+							</tr>\
+						</thead>\
+						<tbody id="activities-table-body"><tr><td class="table-empty" colspan="7">No activities planned yet</td></tr></tbody>\
+					</table>\
+				</div>\
+			</div>\
+		</section>\
+\
+		<!-- BUDGET -->\
+		<section id="sec-budget" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Budget Management</div>\
+				<div class="page-sub">Allocate your grant budget across categories and track utilization</div>\
+				<div class="page-toolbar">\
+					<button class="btn btn-primary" id="btn-add-category">+ Add Category</button>\
+				</div>\
+			</div>\
+			<div class="card" id="budget-categories-card">\
+				<div class="table-wrap">\
+					<table>\
+						<thead>\
+							<tr>\
+								<th>Category</th>\
+								<th>Allocated</th>\
+								<th>Spent</th>\
+								<th>Remaining</th>\
+								<th>Utilization</th>\
+								<th></th>\
+							</tr>\
+						</thead>\
+						<tbody id="budget-table-body"><tr><td class="table-empty" colspan="6">No budget categories defined</td></tr></tbody>\
+					</table>\
+				</div>\
+			</div>\
+			<div class="card" style="margin-top:16px">\
+				<div class="card-header"><span class="card-title">Allocation Summary</span></div>\
+				<div id="budget-summary-bars"></div>\
+			</div>\
+		</section>\
+\
+		<!-- EXPENSES -->\
+		<section id="sec-expenses" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Expense Tracking</div>\
+				<div class="page-sub">Log and manage all grant-related expenditures</div>\
+				<div class="page-toolbar">\
+					<button class="btn btn-primary" id="btn-add-expense">+ Log Expense</button>\
+					<input type="text" id="exp-search" class="form-input" placeholder="Search expenses..." style="width:200px">\
+					<select id="exp-filter-activity" class="form-input" style="width:180px"><option value="">All Activities</option></select>\
+					<select id="exp-filter-category" class="form-input" style="width:180px"><option value="">All Categories</option></select>\
+				</div>\
+			</div>\
+			<div class="card">\
+				<div class="table-wrap">\
+					<table>\
+						<thead>\
+							<tr>\
+								<th>Date</th>\
+								<th>Description</th>\
+								<th>Activity</th>\
+								<th>Category</th>\
+								<th>Amount</th>\
+								<th></th>\
+							</tr>\
+						</thead>\
+						<tbody id="expenses-table-body"><tr><td class="table-empty" colspan="6">No expenses recorded yet</td></tr></tbody>\
+					</table>\
+				</div>\
+			</div>\
+		</section>\
+\
+		<!-- REPORTS -->\
+		<section id="sec-reports" class="section">\
+			<div class="page-header">\
+				<div class="page-title">Reports</div>\
+				<div class="page-sub">Financial summary, budget vs actual, and spending analysis</div>\
+			</div>\
+			<div class="stats-row" id="report-stats"></div>\
+			<div class="dash-grid">\
+				<div class="card">\
+					<div class="card-header"><span class="card-title">Budget vs Actual Spending</span></div>\
+					<div id="report-budget-vs-actual"></div>\
+				</div>\
+				<div class="card">\
+					<div class="card-header"><span class="card-title">Spending by Activity</span></div>\
+					<div id="report-spending-by-activity"></div>\
+				</div>\
+			</div>\
+			<div class="dash-grid">\
+				<div class="card">\
+					<div class="card-header">\
+						<span class="card-title">Expense Timeline</span>\
+						<button class="btn btn-ghost btn-sm" id="btn-export-csv">⬇ Export CSV</button>\
+					</div>\
+					<div id="report-expense-timeline"></div>\
+				</div>\
+			</div>\
+		</section>\
+	</main>\
+</div>\
+\
+<!-- MODALS -->\
+<div class="modal-backdrop" id="modal-backdrop" hidden>\
+	<div class="modal" id="modal-activity" role="dialog" aria-modal="true">\
+		<div class="modal-head">\
+			<h2 class="modal-title" id="modal-activity-title">Add Activity</h2>\
+			<button class="modal-x" id="btn-close-activity" aria-label="Close">×</button>\
+		</div>\
+		<div class="modal-body">\
+			<div class="form-grid">\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Activity Name <span class="req">*</span></label>\
+					<input type="text" id="f-act-name" class="form-input" placeholder="e.g. Community Workshop Series">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Start Date</label>\
+					<input type="date" id="f-act-start" class="form-input">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">End Date</label>\
+					<input type="date" id="f-act-end" class="form-input">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Budget Allocation</label>\
+					<div class="input-with-prefix"><span class="input-prefix">$</span><input type="number" id="f-act-budget" class="form-input" placeholder="0.00" min="0" step="0.01"></div>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Expected Attendees</label>\
+					<input type="number" id="f-act-attendees" class="form-input" placeholder="0" min="0">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Category</label>\
+					<select id="f-act-category" class="form-input"><option value="">Select category...</option></select>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Priority</label>\
+					<select id="f-act-priority" class="form-input">\
+						<option value="medium">Medium</option>\
+						<option value="high">High</option>\
+						<option value="low">Low</option>\
+					</select>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Status</label>\
+					<select id="f-act-status" class="form-input">\
+						<option value="planned">Planned</option>\
+						<option value="in-progress">In Progress</option>\
+						<option value="completed">Completed</option>\
+						<option value="cancelled">Cancelled</option>\
+					</select>\
+				</div>\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Description</label>\
+					<textarea id="f-act-desc" class="form-input form-textarea" rows="2" placeholder="Describe the activity purpose and deliverables..."></textarea>\
+				</div>\
+			</div>\
+\
+			<div class="section-sep">\
+				<div class="section-sep-label">Line Items <span class="section-sep-badge">Break down costs</span></div>\
+			</div>\
+			<div class="line-items-toggle">\
+				<label class="toggle-row">\
+					<input type="checkbox" id="f-act-auto-sum" checked>\
+					<span>Auto-calculate budget from line items</span>\
+				</label>\
+			</div>\
+			<div id="line-items-container"></div>\
+			<button class="btn btn-ghost btn-sm" id="btn-add-line-item" style="margin-top:6px">+ Add Line Item</button>\
+			<div class="line-items-total" id="line-items-total" style="display:none"></div>\
+		</div>\
+		<div class="modal-foot">\
+			<input type="hidden" id="f-act-id">\
+			<button class="btn btn-ghost" id="btn-cancel-activity">Cancel</button>\
+			<button class="btn btn-danger btn-ghost" id="btn-delete-activity" style="display:none;margin-right:auto">Delete</button>\
+			<button class="btn btn-primary" id="btn-save-activity">Save Activity</button>\
+		</div>\
+	</div>\
+\
+	<div class="modal" id="modal-expense" role="dialog" aria-modal="true">\
+		<div class="modal-head">\
+			<h2 class="modal-title" id="modal-expense-title">Log Expense</h2>\
+			<button class="modal-x" id="btn-close-expense" aria-label="Close">×</button>\
+		</div>\
+		<div class="modal-body">\
+			<div class="form-grid">\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Description <span class="req">*</span></label>\
+					<input type="text" id="f-exp-desc" class="form-input" placeholder="e.g. Venue rental for workshop">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Date <span class="req">*</span></label>\
+					<input type="date" id="f-exp-date" class="form-input">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Amount <span class="req">*</span></label>\
+					<div class="input-with-prefix"><span class="input-prefix">$</span><input type="number" id="f-exp-amount" class="form-input" placeholder="0.00" min="0" step="0.01"></div>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Activity</label>\
+					<select id="f-exp-activity" class="form-input"><option value="">No specific activity</option></select>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Budget Category</label>\
+					<select id="f-exp-category" class="form-input"><option value="">Select category...</option></select>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Vendor / Payee</label>\
+					<input type="text" id="f-exp-vendor" class="form-input" placeholder="e.g. ABC Supplies Inc.">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Receipt / Ref #</label>\
+					<input type="text" id="f-exp-receipt" class="form-input" placeholder="e.g. INV-2026-001">\
+				</div>\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Notes</label>\
+					<textarea id="f-exp-notes" class="form-input form-textarea" rows="2" placeholder="Additional notes..."></textarea>\
+				</div>\
+			</div>\
+		</div>\
+		<div class="modal-foot">\
+			<input type="hidden" id="f-exp-id">\
+			<button class="btn btn-ghost" id="btn-cancel-expense">Cancel</button>\
+			<button class="btn btn-danger btn-ghost" id="btn-delete-expense" style="display:none;margin-right:auto">Delete</button>\
+			<button class="btn btn-primary" id="btn-save-expense">Save Expense</button>\
+		</div>\
+	</div>\
+\
+	<div class="modal" id="modal-category" role="dialog" aria-modal="true">\
+		<div class="modal-head">\
+			<h2 class="modal-title" id="modal-category-title">Add Budget Category</h2>\
+			<button class="modal-x" id="btn-close-category" aria-label="Close">×</button>\
+		</div>\
+		<div class="modal-body">\
+			<div class="form-grid">\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Category Name <span class="req">*</span></label>\
+					<input type="text" id="f-cat-name" class="form-input" placeholder="e.g. Personnel, Equipment, Travel">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Allocated Amount <span class="req">*</span></label>\
+					<div class="input-with-prefix"><span class="input-prefix">$</span><input type="number" id="f-cat-amount" class="form-input" placeholder="0.00" min="0" step="0.01"></div>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Color</label>\
+					<input type="color" id="f-cat-color" class="form-input" value="#4361ee">\
+				</div>\
+			</div>\
+		</div>\
+		<div class="modal-foot">\
+			<input type="hidden" id="f-cat-id">\
+			<button class="btn btn-ghost" id="btn-cancel-category">Cancel</button>\
+			<button class="btn btn-danger btn-ghost" id="btn-delete-category" style="display:none;margin-right:auto">Delete</button>\
+			<button class="btn btn-primary" id="btn-save-category">Save Category</button>\
+		</div>\
+	</div>\
+\
+	<div class="modal modal-confirm" id="modal-confirm" role="dialog" aria-modal="true">\
+		<div class="modal-head"><h2 class="modal-title" id="confirm-title">Confirm</h2></div>\
+		<div class="modal-body"><p id="confirm-body"></p></div>\
+		<div class="modal-foot">\
+			<button class="btn btn-ghost" id="btn-confirm-cancel">Cancel</button>\
+			<button class="btn btn-danger" id="btn-confirm-ok">Confirm</button>\
+		</div>\
+	</div>\
+\
+	<div class="modal" id="modal-document" role="dialog" aria-modal="true">\
+		<div class="modal-head">\
+			<h2 class="modal-title" id="modal-document-title">Add Document</h2>\
+			<button class="modal-x" id="btn-close-document" aria-label="Close">×</button>\
+		</div>\
+		<div class="modal-body">\
+			<div class="form-grid">\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Document Name <span class="req">*</span></label>\
+					<input type="text" id="f-doc-name" class="form-input" placeholder="e.g. Organization Charter">\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Document Type</label>\
+					<select id="f-doc-type" class="form-input">\
+						<option value="org-doc">Organization Document</option>\
+						<option value="grant-doc">Grant Document</option>\
+						<option value="financial">Financial / Budget</option>\
+						<option value="proposal">Proposal / Narrative</option>\
+						<option value="support-letter">Support Letter</option>\
+						<option value="other">Other</option>\
+					</select>\
+				</div>\
+				<div class="form-field">\
+					<label class="form-label">Status</label>\
+					<select id="f-doc-status" class="form-input">\
+						<option value="draft">Draft</option>\
+						<option value="ready">Ready</option>\
+						<option value="submitted">Submitted</option>\
+					</select>\
+				</div>\
+				<div class="form-field form-field-full">\
+					<label class="form-label">File URL / Path</label>\
+					<input type="text" id="f-doc-url" class="form-input" placeholder="https://... or /files/document.pdf">\
+				</div>\
+				<div class="form-field form-field-full">\
+					<label class="form-label">Notes</label>\
+					<textarea id="f-doc-notes" class="form-input form-textarea" rows="2" placeholder="Document description or notes..."></textarea>\
+				</div>\
+			</div>\
+		</div>\
+		<div class="modal-foot">\
+			<input type="hidden" id="f-doc-id">\
+			<button class="btn btn-ghost" id="btn-cancel-document">Cancel</button>\
+			<button class="btn btn-danger btn-ghost" id="btn-delete-document" style="display:none;margin-right:auto">Delete</button>\
+			<button class="btn btn-primary" id="btn-save-document">Save Document</button>\
+		</div>\
+	</div>\
+</div>';
+
+/* ── Loader (no server needed — uses embedded HTML) ── */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'GrantPlanner.js';
+    script.onload = function() { status.textContent = 'Ready \u2713'; };
+    script.onerror = function() { status.textContent = 'JS FAILED \u2014 check console'; };
+    document.body.appendChild(script);
+  }
+
+  status.textContent = 'Using embedded HTML (file:// mode)';
+  container.innerHTML = EMBEDDED_HTML;
+  loadJS();
+})();
+</script>
+
+<script>
+/* ── Sample Data & Toolbar ── */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL Grant Planner data? This cannot be undone.')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+});
+
+var SAMPLE_DATA = {
+  grant: {
+    name: 'Community Health & Wellness Initiative',
+    id: 'GR-2026-0042',
+    funder: 'National Public Health Foundation',
+    totalBudget: 250000,
+    currency: 'USD',
+    startDate: '2026-01-15',
+    endDate: '2026-12-31',
+    description: 'A comprehensive community health program focused on preventive care, mental wellness workshops, and youth fitness education across underserved neighborhoods.',
+    phase: 'approved',
+    problem: 'Underserved communities in our region face significant barriers to preventive healthcare access, with higher rates of chronic disease and limited health literacy. Recent community assessments reveal 34% of residents lack regular primary care, and emergency room utilization for non-emergency conditions is 2.5x the national average.',
+    goals: '1) Provide free health screenings to 2,000+ community members; 2) Deliver 6 mental wellness workshops to 200+ participants; 3) Run an 8-week youth fitness camp reaching 120 children; 4) Train 30 community health educators for sustainable local capacity; 5) Establish 10 neighborhood walking clubs engaging 300+ seniors.',
+    method: 'The project uses a multi-pronged community-based approach. Health screening fairs partner with local clinics. Mental wellness workshops use licensed therapists and evidence-based curricula. Youth camps combine sports, nutrition education, and cooking classes. The train-the-trainer model ensures sustainability. All activities are delivered in accessible community venues.',
+    beneficiaries: 'Primary beneficiaries are 2,000+ residents of underserved neighborhoods including low-income families, seniors, youth aged 8-14, and individuals with limited healthcare access. Secondary beneficiaries include 30 trained health educators and 10 walking club leaders.',
+    sustainability: 'The train-the-trainer model builds permanent local health education capacity. Walking clubs become self-sustaining community groups. Partnerships with clinics ensure ongoing referral pathways. We will seek follow-on funding from local government and corporate sponsors for program continuation.'
+  },
+  budgetCategories: [
+    { id: 'cat1', name: 'Personnel & Staff', allocated: 85000, color: '#2563eb' },
+    { id: 'cat2', name: 'Equipment & Supplies', allocated: 45000, color: '#0d9488' },
+    { id: 'cat3', name: 'Venue & Facilities', allocated: 35000, color: '#7c3aed' },
+    { id: 'cat4', name: 'Training & Materials', allocated: 30000, color: '#d97706' },
+    { id: 'cat5', name: 'Travel & Transport', allocated: 20000, color: '#ea580c' },
+    { id: 'cat6', name: 'Marketing & Outreach', allocated: 18000, color: '#16a34a' },
+    { id: 'cat7', name: 'Administration', allocated: 12000, color: '#0891b2' },
+    { id: 'cat8', name: 'Contingency', allocated: 5000, color: '#9333ea' }
+  ],
+  activities: [
+    {
+      id: 'act1',
+      name: 'Community Health Screening Fair',
+      description: 'Free health screenings including blood pressure, diabetes, and cholesterol checks for community members. Partnering with local clinics for follow-up care.',
+      startDate: '2026-03-15',
+      endDate: '2026-03-16',
+      budgetAllocated: 28000,
+      expectedAttendees: 500,
+      category: 'cat3',
+      priority: 'high',
+      status: 'completed',
+      lineItems: [
+        { id: 'li1a', description: 'Venue rental — Community Hall (2 days)', cost: 3500, status: 'completed' },
+        { id: 'li1b', description: 'Medical screening equipment rental', cost: 8200, status: 'completed' },
+        { id: 'li1c', description: 'Lab test kits & supplies (500 pcs)', cost: 6500, status: 'completed' },
+        { id: 'li1d', description: 'Staffing — 8 nurses & 4 volunteers', cost: 5800, status: 'completed' },
+        { id: 'li1e', description: 'Marketing & community outreach', cost: 2500, status: 'completed' },
+        { id: 'li1f', description: 'Printed materials & signage', cost: 1500, status: 'completed' }
+      ]
+    },
+    {
+      id: 'act2',
+      name: 'Youth Fitness Summer Camp',
+      description: 'An 8-week summer program teaching nutrition, exercise, and healthy habits to children aged 8-14. Includes sports clinics and cooking workshops.',
+      startDate: '2026-06-15',
+      endDate: '2026-08-07',
+      budgetAllocated: 45000,
+      expectedAttendees: 120,
+      category: 'cat2',
+      priority: 'high',
+      status: 'in-progress',
+      lineItems: [
+        { id: 'li2a', description: 'Sports equipment — balls, cones, mats', cost: 7200, status: 'completed' },
+        { id: 'li2b', description: 'Portable cooking stations & utensils', cost: 3400, status: 'completed' },
+        { id: 'li2c', description: 'Coach stipends (4 coaches × 8 weeks)', cost: 16000, status: 'in-progress' },
+        { id: 'li2d', description: 'Nutritionist consultant fees', cost: 6000, status: 'in-progress' },
+        { id: 'li2e', description: 'Healthy snacks & ingredients (weekly)', cost: 4800, status: 'in-progress' },
+        { id: 'li2f', description: 'Camp t-shirts & water bottles', cost: 2600, status: 'completed' },
+        { id: 'li2g', description: 'Field trip transportation', cost: 5000, status: 'planned' }
+      ]
+    },
+    {
+      id: 'act3',
+      name: 'Mental Wellness Workshop Series',
+      description: 'Monthly workshops on stress management, mindfulness, and emotional resilience. Led by licensed therapists. 6 sessions total.',
+      startDate: '2026-04-01',
+      endDate: '2026-09-30',
+      budgetAllocated: 32000,
+      expectedAttendees: 200,
+      category: 'cat4',
+      priority: 'medium',
+      status: 'in-progress'
+    },
+    {
+      id: 'act4',
+      name: 'Senior Nutrition Program',
+      description: 'Weekly meal preparation and nutrition education sessions for senior citizens. Includes home delivery for mobility-impaired participants.',
+      startDate: '2026-05-01',
+      endDate: '2026-11-30',
+      budgetAllocated: 38000,
+      expectedAttendees: 80,
+      category: 'cat1',
+      priority: 'medium',
+      status: 'in-progress',
+      lineItems: [
+        { id: 'li4a', description: 'Program coordinator salary (8 months)', cost: 18000, status: 'in-progress' },
+        { id: 'li4b', description: 'Weekly meal ingredients', cost: 9600, status: 'in-progress' },
+        { id: 'li4c', description: 'Home delivery service (fuel & driver)', cost: 5000, status: 'in-progress' },
+        { id: 'li4d', description: 'Nutrition education materials', cost: 2400, status: 'planned' },
+        { id: 'li4e', description: 'Kitchen equipment & storage', cost: 3000, status: 'completed' }
+      ]
+    },
+    {
+      id: 'act5',
+      name: 'Health Educator Training',
+      description: 'Certification program for community health educators. Train-the-trainer model to build local capacity for ongoing health education.',
+      startDate: '2026-09-01',
+      endDate: '2026-10-15',
+      budgetAllocated: 25000,
+      expectedAttendees: 30,
+      category: 'cat4',
+      priority: 'medium',
+      status: 'planned'
+    },
+    {
+      id: 'act6',
+      name: 'Neighborhood Walking Clubs',
+      description: 'Establish 10 neighborhood walking groups with trained leaders. Includes pedometer distribution and monthly progress tracking.',
+      startDate: '2026-07-01',
+      endDate: '2026-12-15',
+      budgetAllocated: 15000,
+      expectedAttendees: 300,
+      category: 'cat6',
+      priority: 'low',
+      status: 'planned'
+    },
+    {
+      id: 'act7',
+      name: 'Annual Health Symposium',
+      description: 'Year-end conference showcasing program outcomes, research findings, and community impact. Keynote speakers and breakout sessions.',
+      startDate: '2026-12-01',
+      endDate: '2026-12-02',
+      budgetAllocated: 35000,
+      expectedAttendees: 250,
+      category: 'cat3',
+      priority: 'low',
+      status: 'planned'
+    }
+  ],
+  expenses: [
+    { id: 'exp1', description: 'Venue rental — Community Center Hall', date: '2026-03-10', amount: 3500, activityId: 'act1', category: 'cat3', vendor: 'City Community Center', receiptRef: 'INV-2026-0310', notes: 'Two-day rental for health screening fair' },
+    { id: 'exp2', description: 'Medical screening equipment rental', date: '2026-03-12', amount: 8200, activityId: 'act1', category: 'cat2', vendor: 'MedEquip Rentals Inc.', receiptRef: 'INV-2026-0312', notes: 'Blood pressure monitors, glucose meters, cholesterol kits' },
+    { id: 'exp3', description: 'Lab test kits (500 units)', date: '2026-03-14', amount: 6500, activityId: 'act1', category: 'cat2', vendor: 'HealthSupply Co.', receiptRef: 'PO-2026-089', notes: 'Rapid test kits for screenings' },
+    { id: 'exp4', description: 'Project Manager salary — Q1', date: '2026-03-31', amount: 12500, activityId: '', category: 'cat1', vendor: '', receiptRef: 'PAY-Q1-2026', notes: 'Quarterly salary for grant project manager' },
+    { id: 'exp5', description: 'Workshop facilitator fees (2 therapists)', date: '2026-04-15', amount: 4800, activityId: 'act3', category: 'cat1', vendor: 'Wellness Professionals Group', receiptRef: 'INV-2026-0415', notes: 'First two workshop sessions' },
+    { id: 'exp6', description: 'Sports equipment for summer camp', date: '2026-05-20', amount: 7200, activityId: 'act2', category: 'cat2', vendor: 'SportsGear Direct', receiptRef: 'INV-2026-0520', notes: 'Balls, cones, mats, agility equipment' },
+    { id: 'exp7', description: 'Kitchen supplies for cooking workshops', date: '2026-06-01', amount: 3400, activityId: 'act2', category: 'cat2', vendor: 'RestaurantSupply Co.', receiptRef: 'INV-2026-0601', notes: 'Portable cooking stations and utensils' },
+    { id: 'exp8', description: 'Meal ingredients — Senior program (June)', date: '2026-06-05', amount: 2800, activityId: 'act4', category: 'cat2', vendor: 'FreshFoods Market', receiptRef: 'INV-2026-0605', notes: 'Weekly meal prep for 80 seniors' },
+    { id: 'exp9', description: 'Marketing flyers and posters', date: '2026-06-10', amount: 1850, activityId: 'act6', category: 'cat6', vendor: 'PrintWorks Ltd.', receiptRef: 'INV-2026-0610', notes: 'Neighborhood walking club promotion' },
+    { id: 'exp10', description: 'Staff training — Mental Health First Aid', date: '2026-06-15', amount: 3200, activityId: 'act3', category: 'cat4', vendor: 'MHFA Training Institute', receiptRef: 'INV-2026-0615', notes: 'Certification for 8 staff members' },
+    { id: 'exp11', description: 'Participant transportation vouchers', date: '2026-06-18', amount: 4200, activityId: 'act4', category: 'cat5', vendor: 'City Transit Authority', receiptRef: 'PO-2026-145', notes: 'Bus passes for senior participants (Q2)' },
+    { id: 'exp12', description: 'Office supplies and software licenses', date: '2026-06-20', amount: 1850, activityId: '', category: 'cat7', vendor: 'OfficeMax + Atlassian', receiptRef: 'INV-2026-0620', notes: 'Quarterly admin supplies & Jira licenses' }
+  ],
+  documents: [
+    { id: 'doc1', name: 'Organization Charter & 501(c)(3) Status', type: 'org-doc', status: 'submitted', url: '', dateAdded: '2025-11-10', notes: 'Official nonprofit registration documents' },
+    { id: 'doc2', name: 'Grant Agreement — NPHF-2026-0042', type: 'grant-doc', status: 'submitted', url: '', dateAdded: '2026-01-20', notes: 'Signed grant agreement with funding terms' },
+    { id: 'doc3', name: 'Annual Financial Statements 2025', type: 'financial', status: 'ready', url: '', dateAdded: '2026-02-01', notes: 'Audited financials for previous fiscal year' },
+    { id: 'doc4', name: 'Project Narrative & Proposal', type: 'proposal', status: 'submitted', url: '', dateAdded: '2026-01-10', notes: 'Full grant proposal document' },
+    { id: 'doc5', name: 'Support Letter — City Health Department', type: 'support-letter', status: 'ready', url: '', dateAdded: '2026-01-15', notes: 'Letter of support from municipal partner' }
+  ],
+  _theme: 'light'
+};
+</script>
+</body>
+</html>
