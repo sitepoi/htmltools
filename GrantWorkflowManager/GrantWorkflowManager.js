@@ -32,7 +32,7 @@ function qsa(sel) { return document.querySelectorAll(sel); }
 
 /* ── State ── */
 let DB = {
-	grant: { name: '', id: '', funder: '', totalBudget: 0, currency: 'USD', startDate: '', endDate: '', description: '', phase: 'drafting', problem: '', goals: '', method: '', beneficiaries: '', sustainability: '' },
+	grant: { name: '', year: '', targetAppDate: '', funder: '', totalBudget: 0, targetBudget: 0, approvedBudget: 0, otherFunding: 0, currency: 'USD', startDate: '', endDate: '', description: '', phase: 'drafting', problem: '', goals: '', method: '', beneficiaries: '', sustainability: '' },
 	activities: [],
 	expenses: [],
 	budgetCategories: [],
@@ -50,6 +50,9 @@ let editingCategoryId = null;
 let editingDocumentId = null;
 let confirmCb = null;
 let lineItemsBuffer = [];
+let quickInputCb = null;
+let currentQAIndex = 0;
+let isReviewing = false;
 
 /* ── Phase ── */
 function getPhase() { return DB.grant.phase || 'drafting'; }
@@ -89,7 +92,7 @@ function refreshDashboardStats() {
 	const phaseBadge = `<span class="badge badge-${phase === 'drafting' ? 'low' : phase === 'applied' ? 'medium' : phase === 'approved' ? 'in-progress' : 'completed'}">${phase.charAt(0).toUpperCase() + phase.slice(1)}</span>`;
 	if (el('dash-grant-sub')) {
 		el('dash-grant-sub').innerHTML = g.name
-			? `${g.funder || 'Unknown Funder'}${g.id ? ' · ' + g.id : ''} &nbsp; ${phaseBadge}`
+			? `${g.funder || 'Unknown Funder'}${g.year ? ' · ' + g.year : ''} &nbsp; ${phaseBadge}`
 			: 'Set up your grant to get started';
 	}
 
@@ -155,11 +158,13 @@ function persist() {
 function render(val) {
 	if (val && typeof val === 'object' && !Array.isArray(val)) {
 		DB = Object.assign({
-			grant: { name: '', id: '', funder: '', totalBudget: 0, currency: 'USD', startDate: '', endDate: '', description: '', phase: 'drafting', problem: '', goals: '', method: '', beneficiaries: '', sustainability: '' },
+			grant: { name: '', year: '', targetAppDate: '', funder: '', totalBudget: 0, currency: 'USD', startDate: '', endDate: '', description: '', phase: 'drafting', problem: '', goals: '', method: '', beneficiaries: '', sustainability: '' },
 			activities: [],
 			expenses: [],
 			budgetCategories: [],
 			documents: [],
+			applicationSources: [],
+			applicationQA: [],
 			checklist: {},
 			_theme: 'light'
 		}, val);
@@ -168,6 +173,8 @@ function render(val) {
 		if (!Array.isArray(DB.expenses)) DB.expenses = [];
 		if (!Array.isArray(DB.budgetCategories)) DB.budgetCategories = [];
 		if (!Array.isArray(DB.documents)) DB.documents = [];
+		if (!Array.isArray(DB.applicationSources)) DB.applicationSources = [];
+		if (!Array.isArray(DB.applicationQA)) DB.applicationQA = [];
 		if (!DB.checklist || typeof DB.checklist !== 'object') DB.checklist = {};
 	}
 	if (DB._theme) applyTheme(DB._theme);
@@ -197,6 +204,7 @@ function renderCurrentSection() {
 	switch (currentPage) {
 		case 'dashboard': renderDashboard(); break;
 		case 'grant': syncGrantForm(); break;
+		case 'application': renderApplicationQA(); break;
 		case 'documents': renderDocuments(); break;
 		case 'activities': renderActivities(); break;
 		case 'budget': renderBudget(); break;
@@ -211,12 +219,74 @@ function updateNavBadges() {
 	set('nav-budget-count', DB.budgetCategories.length);
 	set('nav-expenses-count', DB.expenses.length);
 	set('nav-documents-count', DB.documents.length);
+	set('nav-application-count', (DB.applicationQA && DB.applicationQA.length) || 0);
 }
 
 /* ── Grant helpers ── */
 function getGrant() { return DB.grant || {}; }
 function getCurrency() { return getGrant().currency || 'USD'; }
-function getTotalBudget() { return Number(getGrant().totalBudget) || 0; }
+function getTotalBudget() {
+	const g = getGrant();
+	const phase = g.phase || 'drafting';
+	// Phase-aware budget: use approved budget if available, otherwise target/total
+	if (phase === 'approved' || phase === 'closed') {
+		return Number(g.approvedBudget) || Number(g.totalBudget) || Number(g.targetBudget) || 0;
+	}
+	return Number(g.targetBudget) || Number(g.totalBudget) || 0;
+}
+
+function getActiveBudgetLabel() {
+	const phase = getPhase();
+	if (phase === 'drafting') return 'Target Budget';
+	if (phase === 'applied') return 'Applied Budget';
+	if (phase === 'approved' || phase === 'closed') return 'Approved Budget';
+	return 'Budget';
+}
+
+function refreshBudgetSummary() {
+	const phase = getPhase();
+	const grantInp = el('bs-input-grant');
+	const otherInp = el('bs-input-other');
+
+	const grantVal = grantInp ? parseFloat(grantInp.value) || 0 : 0;
+	const otherVal = otherInp ? parseFloat(otherInp.value) || 0 : 0;
+	const total = grantVal + otherVal;
+
+	const fmt = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+	const bsValTotal = el('bs-val-total');
+	const bsLabelGrant = el('bs-label-grant');
+	const bsDotGrant = el('bs-dot-grant');
+	const bsHelpGrant = el('bs-help-grant');
+	const barGrant = el('bs-bar-grant');
+	const barOther = el('bs-bar-other');
+
+	if (bsValTotal) bsValTotal.textContent = fmt(total);
+
+	// Phase-aware label, dot color, and help text
+	const grantLabel = (phase === 'approved' || phase === 'closed') ? 'Approved Grant' : 'Grant Funding';
+	if (bsLabelGrant) bsLabelGrant.textContent = grantLabel;
+	if (bsDotGrant) bsDotGrant.style.background = (phase === 'approved' || phase === 'closed') ? 'var(--green)' : 'var(--accent)';
+	if (bsHelpGrant) {
+		bsHelpGrant.setAttribute('data-tip',
+			(phase === 'approved' || phase === 'closed')
+				? 'The actual amount the grantor approved. This may differ from what you applied for. All expense tracking uses this figure.'
+				: 'The amount you are requesting from this grant. In Drafting this is your estimate. After applying it becomes your Applied Budget.'
+		);
+	}
+
+	// Bar chart
+	if (total > 0) {
+		const grantPct = (grantVal / total) * 100;
+		const otherPct = (otherVal / total) * 100;
+		if (barGrant) { barGrant.style.width = grantPct + '%'; barGrant.style.display = grantPct > 0 ? '' : 'none'; }
+		if (barOther) { barOther.style.width = otherPct + '%'; barOther.style.display = otherPct > 0 ? '' : 'none'; }
+	} else {
+		if (barGrant) { barGrant.style.width = '0%'; barGrant.style.display = 'none'; }
+		if (barOther) { barOther.style.width = '0%'; barOther.style.display = 'none'; }
+	}
+}
+
 function getTotalAllocated() { return DB.budgetCategories.reduce((s, c) => s + (Number(c.allocated) || 0), 0); }
 function getTotalSpent() { return DB.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0); }
 function getRemaining() { return getTotalBudget() - getTotalSpent(); }
@@ -232,6 +302,10 @@ function getBudgetUtilizationPct() {
 	if (budget <= 0) return 0;
 	return Math.min(100, (getTotalSpent() / budget) * 100);
 }
+
+// Safe element value setter — silently skips missing elements
+function setVal(id, val) { const e = el(id); if (e) e.value = val; }
+function getVal(id, fallback) { const e = el(id); return e ? e.value : (fallback !== undefined ? fallback : ''); }
 
 /* ══════════════════════════════════════════
    MODALS
@@ -256,6 +330,16 @@ function openConfirm(title, body, cb) {
 	openModal('modal-confirm');
 }
 
+function openQuickInput(title, label, placeholder, cb) {
+	quickInputCb = cb;
+	el('qui-title').textContent = title;
+	el('qui-label').textContent = label;
+	el('qui-input').placeholder = placeholder || '';
+	el('qui-input').value = '';
+	openModal('modal-quick-input');
+	setTimeout(() => el('qui-input').focus(), 100);
+}
+
 /* ══════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════ */
@@ -277,7 +361,7 @@ function renderDashboard() {
 	el('dash-grant-name').textContent = g.name || 'Grant Dashboard';
 	const phaseBadge = `<span class="badge badge-${phase === 'drafting' ? 'low' : phase === 'applied' ? 'medium' : phase === 'approved' ? 'in-progress' : 'completed'}">${phase.charAt(0).toUpperCase() + phase.slice(1)}</span>`;
 	el('dash-grant-sub').innerHTML = g.name
-		? `${g.funder || 'Unknown Funder'}${g.id ? ' · ' + g.id : ''} &nbsp; ${phaseBadge}`
+		? `${g.funder || 'Unknown Funder'}${g.year ? ' · ' + g.year : ''} &nbsp; ${phaseBadge}`
 		: 'Set up your grant to get started';
 
 	// Stats row — phase-aware
@@ -398,11 +482,8 @@ const CHECKLIST_ITEMS = [
 	{ key: 'budget_set', label: 'Set total budget amount', hint: 'Grant Setup' },
 	{ key: 'categories', label: 'Define budget categories & allocations', hint: 'Budget' },
 	{ key: 'activities', label: 'Plan at least 2 activities with timelines', hint: 'Activities' },
-	{ key: 'problem_stmt', label: 'Write problem statement / needs assessment', hint: 'Grant Setup' },
-	{ key: 'goals', label: 'Define goals & measurable objectives', hint: 'Grant Setup' },
-	{ key: 'methodology', label: 'Describe methodology and approach', hint: 'Grant Setup' },
-	{ key: 'beneficiaries', label: 'Identify target beneficiaries', hint: 'Grant Setup' },
-	{ key: 'sustainability', label: 'Plan for sustainability after funding', hint: 'Grant Setup' },
+	{ key: 'problem_stmt', label: 'Write project summary', hint: 'Grant Setup' },
+	{ key: 'application_qa', label: 'Complete application Q&A (AI-powered)', hint: 'Apply' },
 	{ key: 'documents', label: 'Attach supporting documents', hint: 'Documents' }
 ];
 
@@ -414,11 +495,8 @@ function getChecklistState() {
 		budget_set: !!(Number(g.totalBudget) > 0),
 		categories: DB.budgetCategories.length > 0,
 		activities: DB.activities.length >= 2,
-		problem_stmt: !!(g.problem && g.problem.length > 30),
-		goals: !!(g.goals && g.goals.length > 30),
-		methodology: !!(g.method && g.method.length > 30),
-		beneficiaries: !!(g.beneficiaries && g.beneficiaries.length > 10),
-		sustainability: !!(g.sustainability && g.sustainability.length > 10),
+		problem_stmt: !!(g.problem && g.problem.length > 20),
+		application_qa: (DB.applicationQA && DB.applicationQA.length >= 3 && DB.applicationQA.filter(q => (q.answer || '').length > 20).length >= 2),
 		documents: DB.documents.length > 0,
 		...st
 	};
@@ -432,7 +510,8 @@ function renderChecklist() {
 	el('checklist-progress').textContent = done + '/' + total;
 	el('dash-checklist').innerHTML = CHECKLIST_ITEMS.map(item => {
 		const isDone = state[item.key];
-		return `<div class="checklist-item${isDone ? ' done' : ''}" onclick="navigate('${item.key === 'categories' ? 'budget' : item.key === 'activities' ? 'activities' : item.key === 'documents' ? 'documents' : 'grant'}')">
+		const target = item.key === 'categories' ? 'budget' : item.key === 'activities' ? 'activities' : item.key === 'documents' ? 'documents' : item.key === 'application_qa' ? 'application' : 'grant';
+		return `<div class="checklist-item${isDone ? ' done' : ''}" onclick="navigate('${target}')">
 			<div class="checklist-check">✓</div>
 			<span class="checklist-label">${item.label}</span>
 			<span class="checklist-hint">→ ${item.hint}</span>
@@ -623,45 +702,224 @@ function renderApplicationQA() {
 	el('app-qa-active').style.display = isActive ? '' : 'none';
 
 	if (isActive) {
-		renderAppQASources();
-		renderAppQAQuestions();
+		renderQANav();
+		renderQASourcesInline();
+		renderQACurrentQuestion();
+		updateQAProgress();
+		updateQAScore();
 	}
 	updateNavBadges();
 	tool.resize();
 }
 
-function renderAppQASources() {
-	const sources = DB.applicationSources || [];
-	const container = el('app-qa-sources');
-	if (sources.length === 0) {
-		container.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">No source documents yet. Add grant call documents or URLs.</div>';
-	} else {
-		container.innerHTML = sources.map((s, i) => `<div class="source-doc-card">
-			<span class="source-doc-icon">${s.type === 'url' ? '🔗' : '📄'}</span>
-			<div class="source-doc-info"><div class="source-doc-name">${esc(s.name || 'Untitled')}</div><div class="source-doc-meta">${s.type === 'url' ? esc(s.url || '') : (s.fileName || 'Uploaded file')} · ${s.dateAdded || ''}</div></div>
-			<button class="btn btn-ghost btn-xs" onclick="removeAppSource(${i})" style="color:var(--red)">×</button>
-		</div>`).join('');
+/* ── Question Navigator Sidebar ── */
+function renderQANav() {
+	const questions = DB.applicationQA || [];
+	const container = el('qa-nav');
+	if (!container) return;
+
+	let html = '';
+	questions.forEach((q, i) => {
+		let dotClass = '';
+		if (q.aiScore != null) dotClass = ' scored';
+		else if ((q.answer || '').trim().length > 0) dotClass = ' filled';
+
+		const active = i === currentQAIndex ? ' active' : '';
+		const label = esc(q.question).substring(0, 30) + (q.question.length > 30 ? '…' : '');
+		html += `<div class="qa-nav-item${active}" data-index="${i}" onclick="selectQuestion(${i})">
+			<span class="qa-nav-dot${dotClass}"></span>
+			<span class="qa-nav-num">${i + 1}</span>
+			<span class="qa-nav-label">${label}</span>
+		</div>`;
+	});
+
+	html += `<div class="qa-nav-add" onclick="addAppQuestion()">+ Add Question</div>`;
+
+	container.innerHTML = html;
+}
+
+/* ── Current Question Panel ── */
+function renderQACurrentQuestion() {
+	const questions = DB.applicationQA || [];
+	const panel = el('qa-panel');
+	if (!panel) return;
+
+	if (questions.length === 0) {
+		panel.innerHTML = '<div class="qa-panel-empty" style="text-align:center;padding:60px 20px;color:var(--text3)"><div style="font-size:36px;margin-bottom:8px">📝</div><div>No questions yet. Add a source document and click "Generate Questions"</div></div>';
+		return;
+	}
+
+	if (currentQAIndex >= questions.length) currentQAIndex = questions.length - 1;
+	if (currentQAIndex < 0) currentQAIndex = 0;
+
+	const q = questions[currentQAIndex];
+	const answer = q.answer || '';
+	const score = q.aiScore;
+
+	let scoreHtml = '';
+	if (score != null) {
+		const sc = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+		scoreHtml = `<span class="qa-panel-score ${sc}">AI Score: ${score}/100</span>`;
+	}
+
+	panel.innerHTML = `
+		<div class="qa-panel-header">
+			<div>
+				<div class="qa-panel-qnum">Question ${currentQAIndex + 1} of ${questions.length}</div>
+				<div class="qa-panel-question">${esc(q.question)}</div>
+			</div>
+			${scoreHtml}
+		</div>
+		<textarea class="qa-panel-answer" id="qa-panel-answer" placeholder="Type your answer here... (save happens automatically on blur)" onblur="updateAppAnswer(${currentQAIndex}, this.value)">${esc(answer)}</textarea>
+		<div class="qa-panel-meta">
+			<span>${q.source ? '📎 From: ' + esc(q.source) : '✏️ Custom question'}</span>
+			<span>${answer.length} characters</span>
+		</div>
+		<div class="qa-panel-nav">
+			<button class="btn btn-ghost btn-sm" onclick="goPrevQuestion()" ${currentQAIndex === 0 ? 'disabled' : ''}>← Previous</button>
+			<button class="btn btn-ghost btn-sm" onclick="removeAppQuestion(${currentQAIndex})" style="color:var(--red)">🗑 Delete</button>
+			<button class="btn btn-ghost btn-sm" onclick="goNextQuestion()" ${currentQAIndex >= questions.length - 1 ? 'disabled' : ''}>Next →</button>
+		</div>
+	`;
+}
+
+/* ── Navigation ── */
+function selectQuestion(index) {
+	const questions = DB.applicationQA || [];
+	if (index < 0 || index >= questions.length) return;
+
+	// Save current answer first
+	const curAnswer = el('qa-panel-answer');
+	if (curAnswer && currentQAIndex < questions.length && currentQAIndex >= 0) {
+		questions[currentQAIndex].answer = curAnswer.value;
+		persist();
+	}
+
+	currentQAIndex = index;
+	renderQANav();
+	renderQACurrentQuestion();
+	updateQAProgress();
+}
+
+function goPrevQuestion() { selectQuestion(currentQAIndex - 1); }
+function goNextQuestion() { selectQuestion(currentQAIndex + 1); }
+
+/* ── Answer Update ── */
+function updateAppAnswer(index, value) {
+	const questions = DB.applicationQA || [];
+	if (index < 0 || index >= questions.length) return;
+	questions[index].answer = value || '';
+	renderQANav();
+	updateQAProgress();
+	persist();
+}
+
+/* ── Progress ── */
+function updateQAProgress() {
+	const questions = DB.applicationQA || [];
+	const total = questions.length;
+	const filled = questions.filter(q => (q.answer || '').trim().length > 0).length;
+	const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+
+	const fill = el('qa-progress-fill');
+	const text = el('qa-progress-text');
+	if (fill) fill.style.width = pct + '%';
+	if (text) text.textContent = pct + '% complete (' + filled + '/' + total + ' answered)';
+}
+
+/* ── AI Quality Score ── */
+function updateQAScore() {
+	const questions = DB.applicationQA || [];
+	const scored = questions.filter(q => q.aiScore != null);
+	if (scored.length === 0) {
+		const wrap = el('qa-score-wrap');
+		if (wrap) wrap.style.display = 'none';
+		return;
+	}
+
+	const avg = Math.round(scored.reduce((s, q) => s + (q.aiScore || 0), 0) / scored.length);
+	const wrap = el('qa-score-wrap');
+	const value = el('qa-score-value');
+	const badge = el('qa-score-badge');
+
+	if (wrap) wrap.style.display = '';
+	if (value) value.textContent = avg + '/100';
+	if (badge) {
+		badge.textContent = avg >= 70 ? 'Strong' : avg >= 40 ? 'Adequate' : 'Needs Work';
+		badge.className = 'qa-score-badge ' + (avg >= 70 ? 'high' : avg >= 40 ? 'medium' : 'low');
 	}
 }
 
-function renderAppQAQuestions() {
+/* ── AI Review All Answers ── */
+function reviewAllAnswers() {
 	const questions = DB.applicationQA || [];
-	const container = el('app-qa-questions');
-	if (questions.length === 0) {
-		container.innerHTML = '<div class="card"><div class="empty-state">No questions yet. Click "Generate Questions from Documents" or add manually.</div></div>';
+	if (questions.length === 0) { tool.notify('No questions to review', 'warning'); return; }
+	if (isReviewing) return;
+
+	isReviewing = true;
+	const btn = el('btn-ai-review');
+	if (btn) { btn.disabled = true; btn.textContent = '⏳ Reviewing...'; }
+
+	// Build prompt with all Q&A
+	const qaText = questions.map((q, i) => `Q${i + 1}: ${q.question}\nA${i + 1}: ${q.answer || '(not answered)'}`).join('\n\n');
+	const prompt = `Review these grant application answers. For each question, assign a quality score from 0-100 based on: completeness, specificity, relevance, and persuasiveness. Return ONLY a JSON array of numbers, e.g. [85, 60, 90, 30]. Do NOT include any other text.\n\n${qaText}`;
+
+	tool.notify('AI is reviewing your answers...', 'info');
+
+	requestAIGenerate(prompt, 'Answer quality review').then(response => {
+		let scores = [];
+		if (response) {
+			try {
+				const parsed = JSON.parse(response);
+				scores = Array.isArray(parsed) ? parsed : [];
+			} catch (e) {
+				scores = [];
+			}
+		}
+		// Fallback: basic heuristic
+		if (scores.length !== questions.length) {
+			scores = questions.map(q => {
+				const a = (q.answer || '').trim();
+				if (!a) return 0;
+				let sc = 20;
+				if (a.length > 50) sc += 15;
+				if (a.length > 150) sc += 15;
+				if (a.length > 300) sc += 10;
+				if (/\d/.test(a)) sc += 10;
+				if (/because|therefore|specifically|for example/i.test(a)) sc += 15;
+				if (/outcome|measure|impact|result/i.test(a)) sc += 15;
+				return Math.min(100, sc);
+			});
+			tool.notify('AI unavailable — used basic answer analysis. Connect AI for deeper review.', 'info');
+		} else {
+			tool.notify(`AI reviewed ${scores.length} answers!`, 'success');
+		}
+
+		questions.forEach((q, i) => { q.aiScore = scores[i] != null ? Math.round(Number(scores[i])) : null; });
+		updateQAScore();
+		renderQANav();
+		renderQACurrentQuestion();
+		persist();
+		isReviewing = false;
+		if (btn) { btn.disabled = false; btn.textContent = '⭐ AI Review All Answers'; }
+	}).catch(() => {
+		tool.notify('AI review failed. Try again later.', 'error');
+		isReviewing = false;
+		if (btn) { btn.disabled = false; btn.textContent = '⭐ AI Review All Answers'; }
+	});
+}
+
+/* ── Sources (inline bottom bar) ── */
+function renderQASourcesInline() {
+	const sources = DB.applicationSources || [];
+	const container = el('qa-sources-list');
+	if (!container) return;
+	if (sources.length === 0) {
+		container.innerHTML = 'None';
 	} else {
-		container.innerHTML = questions.map((q, i) => `<div class="qa-card">
-			<div class="qa-card-header">
-				<div class="qa-card-number">${i + 1}</div>
-				<div class="qa-card-question">${esc(q.question)}</div>
-				<button class="btn btn-ghost btn-xs" onclick="removeAppQuestion(${i})" style="color:var(--red);flex-shrink:0">×</button>
-			</div>
-			<textarea class="qa-card-answer" placeholder="Type your answer here..." onchange="updateAppAnswer(${i}, this.value)">${esc(q.answer || '')}</textarea>
-			<div class="qa-card-meta">
-				<span>${q.source ? '📎 From: ' + esc(q.source) : '✏️ Custom question'}</span>
-				<span>${(q.answer || '').length} characters</span>
-			</div>
-		</div>`).join('');
+		container.innerHTML = sources.map((s, i) =>
+			`<span class="source-doc-card"><span class="source-doc-icon">${s.type === 'url' ? '🔗' : '📄'}</span>${esc(s.name || 'Untitled')} <button class="btn btn-ghost btn-xs" onclick="removeAppSource(${i})" style="color:var(--red);margin-left:4px">×</button></span>`
+		).join('');
 	}
 }
 
@@ -669,34 +927,53 @@ function startApplicationQA() {
 	if (!DB.applicationSources) DB.applicationSources = [];
 	if (!DB.applicationQA) DB.applicationQA = [];
 	if (DB.applicationQA.length === 0) {
-		// Auto-add starter questions based on grant data
 		const g = getGrant();
 		DB.applicationQA = [
-			{ id: genId(), question: 'Describe your organization and its mission.', answer: '', source: 'Organization profile' },
-			{ id: genId(), question: 'What is the specific problem or need this project addresses?', answer: g.problem || '', source: 'Grant Setup' },
-			{ id: genId(), question: 'What are the key objectives and expected outcomes?', answer: g.goals || '', source: 'Grant Setup' }
+			{ id: genId(), question: 'Describe your organization and its mission.', answer: '', source: 'Organization profile', aiScore: null },
+			{ id: genId(), question: 'What is the specific problem or need this project addresses?', answer: g.problem || '', source: 'Grant Setup', aiScore: null },
+			{ id: genId(), question: 'What are the key objectives and expected outcomes?', answer: g.goals || '', source: 'Grant Setup', aiScore: null }
 		];
 	}
+	currentQAIndex = 0;
 	renderApplicationQA();
 	persist();
 }
 
 function addAppSource() {
-	const name = prompt('Source name (e.g., "Grant Call Document"):');
-	if (!name) return;
-	const type = confirm('Is this a URL? (OK = URL, Cancel = File upload)') ? 'url' : 'file';
-	let url = '';
-	if (type === 'url') {
-		url = prompt('Enter the URL:');
-		if (!url) return;
-	}
+	setVal('f-src-name', '');
+	setVal('f-src-url', '');
+	openModal('modal-add-source');
+	const nameEl = el('f-src-name');
+	if (nameEl) setTimeout(() => nameEl.focus(), 100);
+}
+
+function saveAppSource() {
+	const name = getVal('f-src-name').trim();
+	const url = getVal('f-src-url').trim();
+	if (!name) { tool.notify('Source name is required', 'warning'); return; }
+	const type = url ? 'url' : 'file';
 	if (!DB.applicationSources) DB.applicationSources = [];
 	DB.applicationSources.push({
 		id: genId(), name, type, url, fileName: '', dateAdded: new Date().toISOString().slice(0, 10)
 	});
+	closeAllModals();
 	renderApplicationQA();
 	persist();
 	tool.notify('Source added. Use "Generate Questions" to analyze it with AI.', 'success');
+}
+
+function uploadAppSourceFile() {
+	tool.notify('Opening file picker...', 'info');
+	if (typeof tool.requestUpload === 'function') {
+		tool.requestUpload('.pdf,.docx,.txt', (err, file) => {
+			if (err) { tool.notify('Upload failed: ' + err, 'error'); return; }
+			const urlEl = el('f-src-url'); if (urlEl) urlEl.value = file.url || '';
+			const nameEl = el('f-src-name'); if (nameEl && !nameEl.value) nameEl.value = file.name || '';
+			tool.notify(`Uploaded: ${file.name}`, 'success');
+		});
+	} else {
+		tool.notify('File upload requires CMS integration. Paste a URL or use the test harness mock.', 'warning');
+	}
 }
 
 function removeAppSource(index) {
@@ -717,25 +994,23 @@ function generateQuestions() {
 	const sourceSummary = sources.map(s => `${s.name} (${s.type}): ${s.url || s.fileName || 'uploaded'}`).join('; ');
 	const prompt = `Based on the following grant application sources: ${sourceSummary}. Generate 5-8 specific questions that the applicant needs to answer for this grant. The grant is "${getGrant().name || 'Untitled'}" from "${getGrant().funder || 'Unknown funder'}". Make questions specific and practical. Return ONLY a JSON array of question strings.`;
 
-	// Show loading
-	el('app-qa-questions').innerHTML = '<div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div>Analyzing documents with AI...</div>';
+	// Show loading in the panel
+	const panel = el('qa-panel');
+	if (panel) panel.innerHTML = '<div class="ai-loading"><div class="ai-loading-dots"><span></span><span></span><span></span></div>Analyzing documents with AI...</div>';
 	tool.resize();
 
 	requestAIGenerate(prompt, sourceSummary).then(response => {
 		let questions = [];
 		if (response) {
 			try {
-				// Try to parse JSON array
 				const parsed = JSON.parse(response);
 				questions = Array.isArray(parsed) ? parsed : [];
 			} catch (e) {
-				// Try to extract from text
 				questions = response.split('\n').filter(l => l.trim().length > 10).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim());
 			}
 		}
 
 		if (questions.length === 0) {
-			// Fallback: generate from template
 			questions = generateFallbackQuestions();
 			tool.notify('AI not available — using template questions. Integrate AI via CMS for custom results.', 'info');
 		} else {
@@ -744,16 +1019,18 @@ function generateQuestions() {
 
 		if (!DB.applicationQA) DB.applicationQA = [];
 		questions.forEach(q => {
-			DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'AI-generated from sources' });
+			DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'AI-generated from sources', aiScore: null });
 		});
+		currentQAIndex = DB.applicationQA.length - questions.length; // focus first new question
 		renderApplicationQA();
 		persist();
 	}).catch(() => {
 		const questions = generateFallbackQuestions();
 		if (!DB.applicationQA) DB.applicationQA = [];
 		questions.forEach(q => {
-			DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'Template (AI unavailable)' });
+			DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'Template (AI unavailable)', aiScore: null });
 		});
+		currentQAIndex = Math.max(0, DB.applicationQA.length - questions.length);
 		renderApplicationQA();
 		persist();
 		tool.notify('Generated template questions. Connect AI via CMS for custom grant-specific questions.', 'info');
@@ -775,26 +1052,22 @@ function generateFallbackQuestions() {
 }
 
 function addAppQuestion() {
-	const q = prompt('Enter your custom question:');
-	if (!q) return;
-	if (!DB.applicationQA) DB.applicationQA = [];
-	DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'Manually added' });
-	renderApplicationQA();
-	persist();
+	openQuickInput('Add Custom Question', 'Enter your custom question:', '', (q) => {
+		if (!q) return;
+		if (!DB.applicationQA) DB.applicationQA = [];
+		DB.applicationQA.push({ id: genId(), question: q, answer: '', source: 'Manually added', aiScore: null });
+		currentQAIndex = DB.applicationQA.length - 1;
+		renderApplicationQA();
+		persist();
+	});
 }
 
 function removeAppQuestion(index) {
 	if (!DB.applicationQA) return;
 	DB.applicationQA.splice(index, 1);
+	if (currentQAIndex >= DB.applicationQA.length) currentQAIndex = Math.max(0, DB.applicationQA.length - 1);
 	renderApplicationQA();
 	persist();
-}
-
-function updateAppAnswer(index, value) {
-	if (DB.applicationQA && DB.applicationQA[index]) {
-		DB.applicationQA[index].answer = value;
-		persist();
-	}
 }
 
 function utilPctText(pct) {
@@ -839,45 +1112,64 @@ function accentColor(status) {
 ══════════════════════════════════════════ */
 function syncGrantForm() {
 	const g = getGrant();
+	const phase = getPhase();
 	el('grant-name').value = g.name || '';
-	el('grant-id').value = g.id || '';
+	if (el('grant-year')) el('grant-year').value = g.year || '';
+	if (el('grant-app-date')) el('grant-app-date').value = g.targetAppDate || '';
 	el('grant-funder').value = g.funder || '';
-	el('grant-budget').value = g.totalBudget || '';
+	// Editable budget breakdown — phase-aware grant amount
+	const bsGrant = el('bs-input-grant');
+	const bsOther = el('bs-input-other');
+	if (bsGrant) bsGrant.value = (phase === 'approved' || phase === 'closed')
+		? (g.approvedBudget || g.targetBudget || g.totalBudget || '')
+		: (g.targetBudget || g.totalBudget || '');
+	if (bsOther) bsOther.value = g.otherFunding || '';
 	el('grant-currency').value = g.currency || 'USD';
 	el('grant-start').value = g.startDate || '';
 	el('grant-end').value = g.endDate || '';
 	el('grant-desc').value = g.description || '';
 	el('grant-problem').value = g.problem || '';
-	el('grant-goals').value = g.goals || '';
-	el('grant-method').value = g.method || '';
-	el('grant-beneficiaries').value = g.beneficiaries || '';
-	el('grant-sustainability').value = g.sustainability || '';
+	if (el('grant-goals')) el('grant-goals').value = g.goals || '';
+	if (el('grant-method')) el('grant-method').value = g.method || '';
+	if (el('grant-beneficiaries')) el('grant-beneficiaries').value = g.beneficiaries || '';
+	if (el('grant-sustainability')) el('grant-sustainability').value = g.sustainability || '';
+
+	refreshBudgetSummary();
 }
 
 function saveGrant() {
 	const name = el('grant-name').value.trim();
 	const funder = el('grant-funder').value.trim();
-	const budget = parseFloat(el('grant-budget').value) || 0;
+	const phase = getPhase();
+
+	// Read from editable budget breakdown
+	const bsGrant = el('bs-input-grant');
+	const bsOther = el('bs-input-other');
+	const budget = bsGrant ? parseFloat(bsGrant.value) || 0 : 0;
+	const otherFunding = bsOther ? parseFloat(bsOther.value) || 0 : 0;
 
 	if (!name) { tool.notify('Grant name is required', 'warning'); return; }
-	if (!funder) { tool.notify('Funding source is required', 'warning'); return; }
-	if (budget <= 0) { tool.notify('Budget must be greater than zero', 'warning'); return; }
+	// Funder and budget are optional — can be filled in later
 
 	DB.grant = {
 		name: name,
-		id: el('grant-id').value.trim(),
 		funder: funder,
+		year: el('grant-year')?.value || DB.grant.year || '',
+		targetAppDate: el('grant-app-date')?.value || DB.grant.targetAppDate || '',
 		totalBudget: budget,
+		targetBudget: (phase === 'approved' || phase === 'closed') ? (DB.grant.targetBudget || budget) : budget,
+		approvedBudget: (phase === 'approved' || phase === 'closed') ? budget : (DB.grant.approvedBudget || 0),
+		otherFunding: otherFunding,
 		currency: el('grant-currency').value,
 		startDate: el('grant-start').value,
 		endDate: el('grant-end').value,
 		description: el('grant-desc').value.trim(),
 		phase: DB.grant.phase || 'drafting',
 		problem: el('grant-problem').value.trim(),
-		goals: el('grant-goals').value.trim(),
-		method: el('grant-method').value.trim(),
-		beneficiaries: el('grant-beneficiaries').value.trim(),
-		sustainability: el('grant-sustainability').value.trim()
+		goals: el('grant-goals')?.value?.trim() || DB.grant.goals || '',
+		method: el('grant-method')?.value?.trim() || DB.grant.method || '',
+		beneficiaries: el('grant-beneficiaries')?.value?.trim() || DB.grant.beneficiaries || '',
+		sustainability: el('grant-sustainability')?.value?.trim() || DB.grant.sustainability || ''
 	};
 
 	persist();
@@ -934,33 +1226,38 @@ function renderActivities() {
 function openActivityModal(id) {
 	editingActivityId = id || null;
 	const a = id ? getActivityById(id) : null;
-	el('modal-activity-title').textContent = id ? 'Edit Activity' : 'Add Activity';
-	el('f-act-id').value = id || '';
-	el('f-act-name').value = a ? a.name : '';
-	el('f-act-start').value = a ? a.startDate : '';
-	el('f-act-end').value = a ? a.endDate : '';
-	el('f-act-budget').value = a ? (a.budgetAllocated || '') : '';
-	el('f-act-attendees').value = a ? (a.expectedAttendees || '') : '';
-	el('f-act-desc').value = a ? (a.description || '') : '';
-	el('f-act-priority').value = a ? (a.priority || 'medium') : 'medium';
-	el('f-act-status').value = a ? (a.status || 'planned') : 'planned';
+	const titleEl = el('modal-activity-title');
+	if (titleEl) titleEl.textContent = id ? 'Edit Activity' : 'Add Activity';
+	setVal('f-act-id', id || '');
+	setVal('f-act-name', a ? a.name : '');
+	setVal('f-act-start', a ? a.startDate : '');
+	setVal('f-act-end', a ? a.endDate : '');
+	setVal('f-act-budget', a ? (a.budgetAllocated || '') : '');
+	setVal('f-act-estimated-budget', a ? (a.estimatedBudget || '') : '');
+	setVal('f-act-attendees', a ? (a.expectedAttendees || '') : '');
+	setVal('f-act-desc', a ? (a.description || '') : '');
+	setVal('f-act-priority', a ? (a.priority || 'medium') : 'medium');
+	setVal('f-act-status', a ? (a.status || 'planned') : 'planned');
 
 	// Outcomes
-	el('f-act-actual-attendees').value = a ? (a.actualAttendees || '') : '';
-	el('f-act-completion').value = a ? (a.completionPct || '') : '';
-	el('f-act-outcomes').value = a ? (a.outcomes || '') : '';
-	el('f-act-lessons').value = a ? (a.lessons || '') : '';
+	setVal('f-act-actual-attendees', a ? (a.actualAttendees || '') : '');
+	setVal('f-act-completion', a ? (a.completionPct || '') : '');
+	setVal('f-act-outcomes', a ? (a.outcomes || '') : '');
+	setVal('f-act-lessons', a ? (a.lessons || '') : '');
 
 	// Populate category dropdown
 	const catSelect = el('f-act-category');
-	catSelect.innerHTML = '<option value="">Select category...</option>' + DB.budgetCategories.map(c => `<option value="${c.id}" ${a && a.category === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-	if (a) catSelect.value = a.category || '';
+	if (catSelect) {
+		catSelect.innerHTML = '<option value="">Select category...</option>' + DB.budgetCategories.map(c => `<option value="${c.id}" ${a && a.category === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+		if (a) catSelect.value = a.category || '';
+	}
 
 	// Line items
 	const hasLineItems = a && a.lineItems && a.lineItems.length > 0;
 	lineItemsBuffer = hasLineItems ? a.lineItems.map(li => ({...li})) : [];
 	const autoSum = a ? (a.lineItems && a.lineItems.length > 0) : true;
-	el('f-act-auto-sum').checked = autoSum;
+	const autoSumEl = el('f-act-auto-sum');
+	if (autoSumEl) autoSumEl.checked = autoSum;
 	el('f-act-budget').readOnly = autoSum && lineItemsBuffer.length > 0;
 	el('f-act-budget').style.opacity = (autoSum && lineItemsBuffer.length > 0) ? '0.6' : '1';
 	renderLineItems();
@@ -1020,9 +1317,11 @@ function updateLineItem(index, field, value) {
 		else lineItemsBuffer[index][field] = value;
 	}
 	refreshLineItemsTotal();
-	if (el('f-act-auto-sum').checked) {
+	const autoSumEl = el('f-act-auto-sum');
+	const budgetEl = el('f-act-budget');
+	if (autoSumEl && autoSumEl.checked && budgetEl) {
 		const total = getLineItemsTotal(lineItemsBuffer);
-		el('f-act-budget').value = total > 0 ? total.toFixed(2) : '';
+		budgetEl.value = total > 0 ? total.toFixed(2) : '';
 	}
 }
 
@@ -1030,52 +1329,58 @@ function refreshLineItemsTotal() {
 	const total = getLineItemsTotal(lineItemsBuffer);
 	const cur = getCurrency();
 	const totalEl = el('line-items-total');
-	if (lineItemsBuffer.length > 0) {
-		totalEl.style.display = 'block';
-		totalEl.textContent = 'Line items total: ' + fmtCurrency(total, cur);
-	} else {
-		totalEl.style.display = 'none';
+	if (totalEl) {
+		if (lineItemsBuffer.length > 0) {
+			totalEl.style.display = 'block';
+			totalEl.textContent = 'Line items total: ' + fmtCurrency(total, cur);
+		} else {
+			totalEl.style.display = 'none';
+		}
 	}
-	const autoSum = el('f-act-auto-sum').checked;
-	if (autoSum && lineItemsBuffer.length > 0) {
-		el('f-act-budget').readOnly = true;
-		el('f-act-budget').style.opacity = '0.6';
+	const autoSumEl = el('f-act-auto-sum');
+	const budgetEl = el('f-act-budget');
+	const autoSum = autoSumEl && autoSumEl.checked;
+	if (autoSum && lineItemsBuffer.length > 0 && budgetEl) {
+		budgetEl.readOnly = true;
+		budgetEl.style.opacity = '0.6';
 		const total2 = getLineItemsTotal(lineItemsBuffer);
-		el('f-act-budget').value = total2 > 0 ? total2.toFixed(2) : '';
-	} else {
-		el('f-act-budget').readOnly = false;
-		el('f-act-budget').style.opacity = '1';
+		budgetEl.value = total2 > 0 ? total2.toFixed(2) : '';
+	} else if (budgetEl) {
+		budgetEl.readOnly = false;
+		budgetEl.style.opacity = '1';
 	}
 }
 
 function saveActivity() {
-	const id = el('f-act-id').value;
-	const name = el('f-act-name').value.trim();
+	const id = getVal('f-act-id');
+	const name = getVal('f-act-name').trim();
 	if (!name) { tool.notify('Activity name is required', 'warning'); return; }
 
-	const autoSum = el('f-act-auto-sum').checked && lineItemsBuffer.length > 0;
-	const budgetManual = parseFloat(el('f-act-budget').value) || 0;
+	const autoSumEl = el('f-act-auto-sum');
+	const autoSum = autoSumEl && autoSumEl.checked && lineItemsBuffer.length > 0;
+	const budgetManual = parseFloat(getVal('f-act-budget', '0')) || 0;
 	const budgetFromItems = getLineItemsTotal(lineItemsBuffer);
 	const finalBudget = autoSum ? budgetFromItems : budgetManual;
 
 	const data = {
 		id: id || genId(),
 		name: name,
-		description: el('f-act-desc').value.trim(),
-		startDate: el('f-act-start').value,
-		endDate: el('f-act-end').value,
+		description: getVal('f-act-desc').trim(),
+		startDate: getVal('f-act-start'),
+		endDate: getVal('f-act-end'),
 		budgetAllocated: finalBudget,
-		expectedAttendees: parseInt(el('f-act-attendees').value) || 0,
-		category: el('f-act-category').value,
-		priority: el('f-act-priority').value,
-		status: el('f-act-status').value,
+		estimatedBudget: parseFloat(getVal('f-act-estimated-budget', '0')) || 0,
+		expectedAttendees: parseInt(getVal('f-act-attendees', '0')) || 0,
+		category: getVal('f-act-category'),
+		priority: getVal('f-act-priority'),
+		status: getVal('f-act-status'),
 		lineItems: lineItemsBuffer.length > 0 ? lineItemsBuffer.map(li => ({
 			id: li.id, description: li.description || '', cost: Number(li.cost) || 0, status: li.status || 'planned'
 		})) : [],
-		actualAttendees: parseInt(el('f-act-actual-attendees').value) || 0,
-		completionPct: parseInt(el('f-act-completion').value) || 0,
-		outcomes: el('f-act-outcomes').value.trim(),
-		lessons: el('f-act-lessons').value.trim()
+		actualAttendees: parseInt(getVal('f-act-actual-attendees', '0')) || 0,
+		completionPct: parseInt(getVal('f-act-completion', '0')) || 0,
+		outcomes: getVal('f-act-outcomes').trim(),
+		lessons: getVal('f-act-lessons').trim()
 	};
 
 	if (id) {
@@ -1435,8 +1740,9 @@ function renderReportSummary(cur) {
 				<div style="font-size:12px;line-height:1.8">
 					<div><strong>Grant:</strong> ${esc(g.name || '—')}</div>
 					<div><strong>Funder:</strong> ${esc(g.funder || '—')}</div>
-					<div><strong>ID:</strong> ${esc(g.id || '—')}</div>
-					<div><strong>Period:</strong> ${fmtDate(g.startDate)} → ${fmtDate(g.endDate)}</div>
+					<div><strong>Year:</strong> ${esc(g.year || '—')}</div>
+					<div><strong>Target App Date:</strong> ${fmtDate(g.targetAppDate) || '—'}</div>
+					<div><strong>Funding Period:</strong> ${fmtDate(g.startDate)} → ${fmtDate(g.endDate)}</div>
 					<div><strong>Phase:</strong> ${phase.charAt(0).toUpperCase() + phase.slice(1)}</div>
 					<div><strong>Documents:</strong> ${docCount} attached</div>
 				</div>
@@ -1775,8 +2081,11 @@ function exportCSV(type) {
    EVENT BINDINGS
 ══════════════════════════════════════════ */
 function bindEvents() {
+	// Helper: safe event binding
+	const on = (id, event, fn) => { const e = el(id); if (e) e.addEventListener(event, fn); };
+
 	// Theme toggle
-	el('theme-toggle').addEventListener('click', toggleTheme);
+	on('theme-toggle', 'click', toggleTheme);
 
 	// Navigation
 	qsa('.nav-item').forEach(n => {
@@ -1798,74 +2107,103 @@ function bindEvents() {
 	});
 
 	// Document modal
-	el('btn-add-document').addEventListener('click', () => openDocumentModal(null));
-	el('btn-close-document').addEventListener('click', closeAllModals);
-	el('btn-cancel-document').addEventListener('click', closeAllModals);
-	el('btn-save-document').addEventListener('click', saveDocument);
-	el('btn-delete-document').addEventListener('click', () => {
-		const id = el('f-doc-id').value;
-		if (id) { closeAllModals(); deleteDocument(id); }
+	on('btn-add-document', 'click', () => openDocumentModal(null));
+	on('btn-close-document', 'click', closeAllModals);
+	on('btn-cancel-document', 'click', closeAllModals);
+	on('btn-save-document', 'click', saveDocument);
+	on('btn-delete-document', 'click', () => {
+		const id = el('f-doc-id'); if (!id) return;
+		closeAllModals(); deleteDocument(id.value);
 	});
+	on('btn-doc-upload', 'click', () => {
+		tool.notify('Opening file picker...', 'info');
+		if (typeof tool.requestUpload === 'function') {
+			tool.requestUpload('*', (err, file) => {
+				if (err) { tool.notify('Upload failed: ' + err, 'error'); return; }
+				const u = el('f-doc-url'); if (u) u.value = file.url || '';
+				const n = el('f-doc-name'); if (n && !n.value) n.value = file.name || '';
+				tool.notify(`Uploaded: ${file.name}`, 'success');
+			});
+		} else {
+			tool.notify('File upload requires CMS integration (tool.requestUpload). Paste URL manually for now.', 'warning');
+		}
+	});
+
+	// Quick Input modal
+	on('btn-save-qui', 'click', () => {
+		const inp = el('qui-input');
+		const val = inp ? inp.value.trim() : '';
+		closeAllModals();
+		if (quickInputCb) { const cb = quickInputCb; quickInputCb = null; cb(val); }
+	});
+	on('btn-cancel-qui', 'click', () => { quickInputCb = null; closeAllModals(); });
+	on('btn-close-qui', 'click', () => { quickInputCb = null; closeAllModals(); });
 
 	// Application Q&A
-	el('btn-ai-start').addEventListener('click', startApplicationQA);
-	el('btn-ai-manual').addEventListener('click', () => { if (!DB.applicationQA) DB.applicationQA = []; addAppQuestion(); });
-	el('btn-ai-generate').addEventListener('click', generateQuestions);
-	el('btn-ai-add-source').addEventListener('click', addAppSource);
-	el('btn-ai-add-question').addEventListener('click', addAppQuestion);
-	el('btn-ai-check-reqs').addEventListener('click', analyzeDocumentGaps);
+	on('btn-ai-start', 'click', startApplicationQA);
+	on('btn-ai-manual', 'click', () => { if (!DB.applicationQA) DB.applicationQA = []; addAppQuestion(); });
+	on('btn-ai-generate', 'click', generateQuestions);
+	on('btn-ai-add-source', 'click', addAppSource);
+	on('btn-ai-add-question', 'click', addAppQuestion);
+	on('btn-ai-check-reqs', 'click', analyzeDocumentGaps);
+
+	// Source modal
+	on('btn-save-source', 'click', saveAppSource);
+	on('btn-cancel-source', 'click', closeAllModals);
+	on('btn-close-source', 'click', closeAllModals);
+	on('btn-src-upload', 'click', uploadAppSourceFile);
 
 	// Activity modal
-	el('btn-add-activity').addEventListener('click', () => openActivityModal(null));
-	el('btn-close-activity').addEventListener('click', closeAllModals);
-	el('btn-cancel-activity').addEventListener('click', closeAllModals);
-	el('btn-save-activity').addEventListener('click', saveActivity);
-	el('btn-delete-activity').addEventListener('click', () => {
-		const id = el('f-act-id').value;
-		if (id) { closeAllModals(); deleteActivity(id); }
+	on('btn-add-activity', 'click', () => openActivityModal(null));
+	on('btn-close-activity', 'click', closeAllModals);
+	on('btn-cancel-activity', 'click', closeAllModals);
+	on('btn-save-activity', 'click', saveActivity);
+	on('btn-delete-activity', 'click', () => {
+		const fe = el('f-act-id'); if (!fe) return;
+		const id = fe.value; if (id) { closeAllModals(); deleteActivity(id); }
 	});
-	el('btn-add-line-item').addEventListener('click', addLineItem);
-	el('f-act-auto-sum').addEventListener('change', refreshLineItemsTotal);
+	on('btn-add-line-item', 'click', addLineItem);
+	on('f-act-auto-sum', 'change', refreshLineItemsTotal);
 
 	// Activity filters
-	el('act-search').addEventListener('input', renderActivities);
-	el('act-filter-status').addEventListener('change', renderActivities);
-	el('act-filter-priority').addEventListener('change', renderActivities);
+	on('act-search', 'input', renderActivities);
+	on('act-filter-status', 'change', renderActivities);
+	on('act-filter-priority', 'change', renderActivities);
 
 	// Category modal
-	el('btn-add-category').addEventListener('click', () => openCategoryModal(null));
-	el('btn-close-category').addEventListener('click', closeAllModals);
-	el('btn-cancel-category').addEventListener('click', closeAllModals);
-	el('btn-save-category').addEventListener('click', saveCategory);
-	el('btn-delete-category').addEventListener('click', () => {
-		const id = el('f-cat-id').value;
-		if (id) { closeAllModals(); deleteCategory(id); }
+	on('btn-add-category', 'click', () => openCategoryModal(null));
+	on('btn-close-category', 'click', closeAllModals);
+	on('btn-cancel-category', 'click', closeAllModals);
+	on('btn-save-category', 'click', saveCategory);
+	on('btn-delete-category', 'click', () => {
+		const fe = el('f-cat-id'); if (!fe) return;
+		const id = fe.value; if (id) { closeAllModals(); deleteCategory(id); }
 	});
 
 	// Expense modal
-	el('btn-add-expense').addEventListener('click', () => openExpenseModal(null));
-	el('btn-close-expense').addEventListener('click', closeAllModals);
-	el('btn-cancel-expense').addEventListener('click', closeAllModals);
-	el('btn-save-expense').addEventListener('click', saveExpense);
-	el('btn-delete-expense').addEventListener('click', () => {
-		const id = el('f-exp-id').value;
-		if (id) { closeAllModals(); deleteExpense(id); }
+	on('btn-add-expense', 'click', () => openExpenseModal(null));
+	on('btn-close-expense', 'click', closeAllModals);
+	on('btn-cancel-expense', 'click', closeAllModals);
+	on('btn-save-expense', 'click', saveExpense);
+	on('btn-delete-expense', 'click', () => {
+		const fe = el('f-exp-id'); if (!fe) return;
+		const id = fe.value; if (id) { closeAllModals(); deleteExpense(id); }
 	});
 
 	// Expense filters
-	el('exp-search').addEventListener('input', renderExpenses);
-	el('exp-filter-activity').addEventListener('change', renderExpenses);
-	el('exp-filter-category').addEventListener('change', renderExpenses);
+	on('exp-search', 'input', renderExpenses);
+	on('exp-filter-activity', 'change', renderExpenses);
+	on('exp-filter-category', 'change', renderExpenses);
 
 	// Confirm modal
-	el('btn-confirm-cancel').addEventListener('click', () => { closeAllModals(); });
-	el('btn-confirm-ok').addEventListener('click', () => {
+	on('btn-confirm-cancel', 'click', () => { closeAllModals(); });
+	on('btn-confirm-ok', 'click', () => {
 		if (confirmCb) { confirmCb(); confirmCb = null; }
 		closeAllModals();
 	});
 
 	// Modal backdrop click to close
-	el('modal-backdrop').addEventListener('click', (e) => {
+	on('modal-backdrop', 'click', (e) => {
 		if (e.target === el('modal-backdrop')) closeAllModals();
 	});
 
@@ -1895,7 +2233,8 @@ function bindEvents() {
 
 	// Keyboard shortcut: Escape to close modals
 	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape' && !el('modal-backdrop').hidden) closeAllModals();
+		const mb = el('modal-backdrop');
+		if (e.key === 'Escape' && mb && !mb.hidden) closeAllModals();
 	});
 }
 

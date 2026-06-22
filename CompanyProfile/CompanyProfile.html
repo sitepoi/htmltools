@@ -1,0 +1,560 @@
+<div id="app">
+	<header class="cp-header">
+		<div class="cp-header-left">
+			<div class="cp-logo">🏢</div>
+			<div class="cp-title-group">
+				<div class="cp-app-title">Company Profile</div>
+				<div class="cp-app-sub" id="cp-org-name-display">—</div>
+			</div>
+		</div>
+		<div class="cp-header-right">
+			<div class="cp-save-indicator" id="cp-save-indicator">
+				<span class="cp-save-dot"></span>
+				<span class="cp-save-text">All changes saved</span>
+			</div>
+			<button class="cp-btn cp-btn-icon" id="cp-expand-all" title="Previous Section">◂</button>
+			<button class="cp-btn cp-btn-icon" id="cp-collapse-all" title="Next Section">▸</button>
+			<button class="cp-theme-toggle" id="cp-theme-toggle" title="Toggle dark / light mode">
+				<span class="cp-theme-toggle-icon-moon">🌙</span>
+				<span class="cp-theme-toggle-icon-sun">☀️</span>
+			</button>
+		</div>
+	</header>
+
+	<div class="cp-layout">
+		<aside class="cp-sidebar" id="cp-sidebar">
+			<nav class="cp-nav" id="cp-nav"></nav>
+			<div class="cp-sidebar-footer">
+				<div class="cp-progress">
+					<div class="cp-progress-label">Completion</div>
+					<div class="cp-progress-bar"><div class="cp-progress-fill" id="cp-progress-fill"></div></div>
+					<div class="cp-progress-pct" id="cp-progress-pct">0%</div>
+				</div>
+			</div>
+		</aside>
+
+		<main class="cp-main" id="cp-main">
+
+			<!-- BASIC INFORMATION -->
+			<section class="cp-section" data-section="basic" id="sec-basic">
+				<div class="cp-section-header" data-section-toggle="basic">
+					<div class="cp-section-icon">📋</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Basic Information</h2>
+						<p class="cp-section-desc">Core company identity and classification</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field-row">
+						<div class="cp-field cp-field-full">
+							<label class="cp-label">Legal Company Name <span class="cp-required">*</span></label>
+							<input type="text" class="cp-input" id="f-legalName" placeholder="Registered legal name">
+						</div>
+					</div>
+					<div class="cp-field-row">
+						<div class="cp-field cp-field-full">
+							<label class="cp-label">Trade Name / DBA</label>
+							<input type="text" class="cp-input" id="f-tradeName" placeholder="Doing business as (if different)">
+						</div>
+					</div>
+					<div class="cp-field-row cp-field-row-3">
+						<div class="cp-field">
+							<label class="cp-label">Company Type <span class="cp-required">*</span></label>
+							<select class="cp-input cp-select" id="f-companyType">
+								<option value="">— Select —</option>
+								<option value="corporation">Corporation (For-Profit)</option>
+								<option value="llc">Limited Liability Company (LLC)</option>
+								<option value="partnership">Partnership</option>
+								<option value="sole-proprietorship">Sole Proprietorship</option>
+								<option value="nonprofit">Non-Profit Organization</option>
+								<option value="registered-charity">Registered Charity</option>
+								<option value="cooperative">Cooperative</option>
+								<option value="joint-venture">Joint Venture</option>
+								<option value="public">Public Company</option>
+								<option value="government">Government Entity</option>
+								<option value="other">Other</option>
+							</select>
+						</div>
+						<div class="cp-field">
+							<label class="cp-label">Year Established</label>
+							<input type="number" class="cp-input" id="f-yearEstablished" placeholder="e.g. 2010" min="1800" max="2099">
+						</div>
+						<div class="cp-field">
+							<label class="cp-label">Number of Employees</label>
+							<input type="number" class="cp-input" id="f-numEmployees" placeholder="e.g. 250" min="0">
+						</div>
+					</div>
+					<div class="cp-field-row">
+						<div class="cp-field cp-field-full">
+							<label class="cp-label">Registration / Business Number</label>
+							<input type="text" class="cp-input" id="f-businessNumber" placeholder="Government registration or business number">
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- MISSION, VISION & ABOUT -->
+			<section class="cp-section" data-section="mission" id="sec-mission">
+				<div class="cp-section-header" data-section-toggle="mission">
+					<div class="cp-section-icon">🎯</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Mission, Vision & About</h2>
+						<p class="cp-section-desc">Organizational purpose and strategic direction</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field">
+						<label class="cp-label">Mission Statement</label>
+						<textarea class="cp-input cp-textarea" id="f-mission" rows="3" placeholder="Why does the organization exist? What is its core purpose?"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Vision Statement</label>
+						<textarea class="cp-input cp-textarea" id="f-vision" rows="3" placeholder="What does the organization aspire to become?"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Core Values</label>
+						<textarea class="cp-input cp-textarea" id="f-values" rows="3" placeholder="Guiding principles and beliefs (one per line)"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">About the Organization</label>
+						<textarea class="cp-input cp-textarea" id="f-about" rows="4" placeholder="General description, history, and overview of products &amp; services"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Strategic Targets / Goals</label>
+						<textarea class="cp-input cp-textarea" id="f-targets" rows="3" placeholder="Key organizational targets and goals"></textarea>
+					</div>
+				</div>
+			</section>
+
+			<!-- SALES TAX DEFINITIONS -->
+			<section class="cp-section" data-section="taxes" id="sec-taxes">
+				<div class="cp-section-header" data-section-toggle="taxes">
+					<div class="cp-section-icon">🧾</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Sales Tax Definitions</h2>
+						<p class="cp-section-desc">Tax responsibilities, rates, and registration numbers</p>
+					</div>
+					<div class="cp-section-badge" id="cp-taxes-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-taxes-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-tax">+ Add Tax Definition</button>
+				</div>
+			</section>
+
+			<!-- HEADQUARTERS -->
+			<section class="cp-section" data-section="headquarters" id="sec-headquarters">
+				<div class="cp-section-header" data-section-toggle="headquarters">
+					<div class="cp-section-icon">🏛️</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Headquarters &amp; Main Office</h2>
+						<p class="cp-section-desc">Primary business address and contact information</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field">
+						<label class="cp-label">Office / Location Name</label>
+						<input type="text" class="cp-input" id="f-hq-name" placeholder="e.g. Corporate Headquarters">
+					</div>
+					<div class="cp-field-row">
+						<div class="cp-field cp-field-full">
+							<label class="cp-label">Street Address</label>
+							<input type="text" class="cp-input" id="f-hq-address" placeholder="Street address, building, suite">
+						</div>
+					</div>
+					<div class="cp-field-row cp-field-row-3">
+						<div class="cp-field"><label class="cp-label">City</label><input type="text" class="cp-input" id="f-hq-city"></div>
+						<div class="cp-field"><label class="cp-label">State / Province</label><input type="text" class="cp-input" id="f-hq-state"></div>
+						<div class="cp-field"><label class="cp-label">Postal / ZIP Code</label><input type="text" class="cp-input" id="f-hq-postal"></div>
+					</div>
+					<div class="cp-field-row">
+						<div class="cp-field"><label class="cp-label">Country</label><input type="text" class="cp-input" id="f-hq-country" placeholder="e.g. Canada"></div>
+					</div>
+					<div class="cp-field-row cp-field-row-2">
+						<div class="cp-field"><label class="cp-label">Email</label><input type="email" class="cp-input" id="f-hq-email" placeholder="info@company.com"></div>
+						<div class="cp-field"><label class="cp-label">Phone</label><input type="text" class="cp-input" id="f-hq-phone" placeholder="+1 (555) 000-0000"></div>
+					</div>
+					<div class="cp-field-row">
+						<div class="cp-field cp-field-full"><label class="cp-label">Website</label><input type="url" class="cp-input" id="f-hq-website" placeholder="https://www.company.com"></div>
+					</div>
+				</div>
+			</section>
+
+			<!-- OTHER OFFICES -->
+			<section class="cp-section" data-section="offices" id="sec-offices">
+				<div class="cp-section-header" data-section-toggle="offices">
+					<div class="cp-section-icon">🏢</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Other Offices &amp; Branches</h2>
+						<p class="cp-section-desc">Additional locations, branches, and satellite offices</p>
+					</div>
+					<div class="cp-section-badge" id="cp-offices-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-offices-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-office">+ Add Office / Branch</button>
+				</div>
+			</section>
+
+			<!-- BILLING ADDRESS -->
+			<section class="cp-section" data-section="billing" id="sec-billing">
+				<div class="cp-section-header" data-section-toggle="billing">
+					<div class="cp-section-icon">💳</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Billing Address</h2>
+						<p class="cp-section-desc">Address used for invoicing and financial correspondence</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<label class="cp-checkbox-label"><input type="checkbox" id="f-billing-same" checked> Same as Headquarters</label>
+					<div id="cp-billing-fields">
+						<div class="cp-field-row"><div class="cp-field cp-field-full"><label class="cp-label">Street Address</label><input type="text" class="cp-input" id="f-billing-address"></div></div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">City</label><input type="text" class="cp-input" id="f-billing-city"></div>
+							<div class="cp-field"><label class="cp-label">State / Province</label><input type="text" class="cp-input" id="f-billing-state"></div>
+							<div class="cp-field"><label class="cp-label">Postal / ZIP Code</label><input type="text" class="cp-input" id="f-billing-postal"></div>
+						</div>
+						<div class="cp-field-row"><div class="cp-field"><label class="cp-label">Country</label><input type="text" class="cp-input" id="f-billing-country"></div></div>
+						<div class="cp-field-row"><div class="cp-field cp-field-full"><label class="cp-label">Billing Email</label><input type="email" class="cp-input" id="f-billing-email" placeholder="billing@company.com"></div></div>
+					</div>
+				</div>
+			</section>
+
+			<!-- GEOGRAPHIC COVERAGE -->
+			<section class="cp-section" data-section="geographic" id="sec-geographic">
+				<div class="cp-section-header" data-section-toggle="geographic">
+					<div class="cp-section-icon">🌍</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Geographic Coverage</h2>
+						<p class="cp-section-desc">Areas where the business operates (used for tender matching)</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field">
+						<label class="cp-label">Countries of Operation</label>
+						<textarea class="cp-input cp-textarea" id="f-geo-countries" rows="2" placeholder="One country per line, e.g.&#10;Canada&#10;United States"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">States / Provinces</label>
+						<textarea class="cp-input cp-textarea" id="f-geo-states" rows="2" placeholder="One per line, e.g.&#10;British Columbia&#10;Ontario&#10;Alberta"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Cities / Service Areas</label>
+						<textarea class="cp-input cp-textarea" id="f-geo-cities" rows="3" placeholder="One per line, e.g.&#10;Vancouver&#10;Toronto&#10;Calgary"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Excluded Cities / Areas <span class="cp-hint">(no operations)</span></label>
+						<textarea class="cp-input cp-textarea" id="f-geo-excluded" rows="2" placeholder="One per line"></textarea>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Service Radius / Coverage Notes</label>
+						<input type="text" class="cp-input" id="f-geo-notes" placeholder="e.g. Within 200km of Vancouver, Nationwide, etc.">
+					</div>
+				</div>
+			</section>
+
+			<!-- CONTACTS -->
+			<section class="cp-section" data-section="contacts" id="sec-contacts">
+				<div class="cp-section-header" data-section-toggle="contacts">
+					<div class="cp-section-icon">👤</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Contacts</h2>
+						<p class="cp-section-desc">Key people and points of contact</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Primary Contact</h3>
+						<div class="cp-field-row cp-field-row-2">
+							<div class="cp-field"><label class="cp-label">Full Name</label><input type="text" class="cp-input" id="f-primary-name"></div>
+							<div class="cp-field"><label class="cp-label">Title / Position</label><input type="text" class="cp-input" id="f-primary-title"></div>
+						</div>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field"><label class="cp-label">Email</label><input type="email" class="cp-input" id="f-primary-email"></div>
+							<div class="cp-field"><label class="cp-label">Phone</label><input type="text" class="cp-input" id="f-primary-phone"></div>
+							<div class="cp-field"><label class="cp-label">LinkedIn URL</label><input type="url" class="cp-input" id="f-primary-linkedin"></div>
+						</div>
+					</div>
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Other Contacts</h3>
+						<div class="cp-array-container" id="cp-contacts-container"></div>
+						<button class="cp-btn cp-btn-add" data-action="add-contact">+ Add Contact</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- WEBLINKS & SOCIAL MEDIA -->
+			<section class="cp-section" data-section="weblinks" id="sec-weblinks">
+				<div class="cp-section-header" data-section-toggle="weblinks">
+					<div class="cp-section-icon">🔗</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Weblinks &amp; Social Media</h2>
+						<p class="cp-section-desc">Online presence and digital channels</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field-row cp-field-row-3">
+						<div class="cp-field"><label class="cp-label">🌐 Website</label><input type="url" class="cp-input" id="f-wl-website" placeholder="https://"></div>
+						<div class="cp-field"><label class="cp-label">📧 Email</label><input type="email" class="cp-input" id="f-wl-email" placeholder="info@company.com"></div>
+						<div class="cp-field"><label class="cp-label">🔗 LinkedIn</label><input type="url" class="cp-input" id="f-wl-linkedin" placeholder="https://linkedin.com/company/"></div>
+					</div>
+					<div class="cp-field-row cp-field-row-3">
+						<div class="cp-field"><label class="cp-label">📘 Facebook</label><input type="url" class="cp-input" id="f-wl-facebook" placeholder="https://facebook.com/"></div>
+						<div class="cp-field"><label class="cp-label">📷 Instagram</label><input type="url" class="cp-input" id="f-wl-instagram" placeholder="https://instagram.com/"></div>
+						<div class="cp-field"><label class="cp-label">🐦 X / Twitter</label><input type="url" class="cp-input" id="f-wl-twitter" placeholder="https://x.com/"></div>
+					</div>
+					<div class="cp-field-row cp-field-row-3">
+						<div class="cp-field"><label class="cp-label">▶️ YouTube</label><input type="url" class="cp-input" id="f-wl-youtube" placeholder="https://youtube.com/@"></div>
+						<div class="cp-field"><label class="cp-label">🎵 TikTok</label><input type="url" class="cp-input" id="f-wl-tiktok" placeholder="https://tiktok.com/@"></div>
+						<div class="cp-field"><label class="cp-label">💬 WhatsApp</label><input type="text" class="cp-input" id="f-wl-whatsapp" placeholder="WhatsApp number or link"></div>
+					</div>
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Other Social Media Links</h3>
+						<div class="cp-array-container" id="cp-othersocial-container"></div>
+						<button class="cp-btn cp-btn-add" data-action="add-othersocial">+ Add Social Link</button>
+					</div>
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Other Web Sources</h3>
+						<div class="cp-array-container" id="cp-otherweb-container"></div>
+						<button class="cp-btn cp-btn-add" data-action="add-otherweb">+ Add Web Source</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- INDUSTRY & OPERATIONS -->
+			<section class="cp-section" data-section="industry" id="sec-industry">
+				<div class="cp-section-header" data-section-toggle="industry">
+					<div class="cp-section-icon">🏭</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Industry &amp; Operations</h2>
+						<p class="cp-section-desc">Sector classification, capabilities, and codes</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-field-row cp-field-row-2">
+						<div class="cp-field">
+							<label class="cp-label">Primary Industry</label>
+							<select class="cp-input cp-select" id="f-industry-primary">
+								<option value="">— Select —</option>
+								<option value="construction">Construction</option>
+								<option value="technology">Technology &amp; IT</option>
+								<option value="healthcare">Healthcare</option>
+								<option value="education">Education</option>
+								<option value="manufacturing">Manufacturing</option>
+								<option value="retail">Retail &amp; Wholesale</option>
+								<option value="finance">Finance &amp; Insurance</option>
+								<option value="transportation">Transportation &amp; Logistics</option>
+								<option value="energy">Energy &amp; Utilities</option>
+								<option value="agriculture">Agriculture &amp; Food</option>
+								<option value="hospitality">Hospitality &amp; Tourism</option>
+								<option value="realestate">Real Estate</option>
+								<option value="consulting">Consulting &amp; Professional Services</option>
+								<option value="nonprofit">Non-Profit &amp; Social Services</option>
+								<option value="media">Media &amp; Communications</option>
+								<option value="mining">Mining &amp; Natural Resources</option>
+								<option value="pharma">Pharmaceuticals &amp; Life Sciences</option>
+								<option value="environmental">Environmental Services</option>
+								<option value="security">Security &amp; Defense</option>
+								<option value="other">Other</option>
+							</select>
+						</div>
+						<div class="cp-field">
+							<label class="cp-label">Sub-Industries</label>
+							<input type="text" class="cp-input" id="f-industry-sub" placeholder="Comma-separated, e.g. Road Construction, Bridge Building">
+						</div>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Specializations / Special Notes</label>
+						<textarea class="cp-input cp-textarea" id="f-industry-specializations" rows="2" placeholder="Any special expertise, niche focus, or notable capabilities"></textarea>
+					</div>
+					<div class="cp-field-row cp-field-row-2">
+						<div class="cp-field">
+							<label class="cp-label">UNSPSC Codes <span class="cp-hint">(comma-separated)</span></label>
+							<input type="text" class="cp-input" id="f-unspsc" placeholder="e.g. 72101500, 72102901">
+						</div>
+						<div class="cp-field">
+							<label class="cp-label">NAICS Codes <span class="cp-hint">(comma-separated)</span></label>
+							<input type="text" class="cp-input" id="f-naics" placeholder="e.g. 236220, 237310">
+						</div>
+					</div>
+					<div class="cp-field">
+						<label class="cp-label">Other Keywords / Tags</label>
+						<input type="text" class="cp-input" id="f-otherkeywords" placeholder="Comma-separated search keywords">
+					</div>
+
+					<!-- CAPABILITIES -->
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Capabilities / Products / Services</h3>
+						<div class="cp-array-container" id="cp-capabilities-container"></div>
+						<button class="cp-btn cp-btn-add" data-action="add-capability">+ Add Capability</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- DOCUMENTS & CERTIFICATES -->
+			<section class="cp-section" data-section="documents" id="sec-documents">
+				<div class="cp-section-header" data-section-toggle="documents">
+					<div class="cp-section-icon">📜</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Documents &amp; Certificates</h2>
+						<p class="cp-section-desc">Certifications, licenses, and valuable documents</p>
+					</div>
+					<div class="cp-section-badge" id="cp-certs-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-certs-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-cert">+ Add Certificate / Document</button>
+				</div>
+			</section>
+
+			<!-- REFERENCE LETTERS -->
+			<section class="cp-section" data-section="refletters" id="sec-refletters">
+				<div class="cp-section-header" data-section-toggle="refletters">
+					<div class="cp-section-icon">✉️</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Reference Letters</h2>
+						<p class="cp-section-desc">Letters of recommendation and references</p>
+					</div>
+					<div class="cp-section-badge" id="cp-refletters-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-refletters-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-refletter">+ Add Reference Letter</button>
+				</div>
+			</section>
+
+			<!-- ASSETS - OWNED -->
+			<section class="cp-section" data-section="assets-owned" id="sec-assets-owned">
+				<div class="cp-section-header" data-section-toggle="assets-owned">
+					<div class="cp-section-icon">🏗️</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Owned Assets</h2>
+						<p class="cp-section-desc">Equipment, vehicles, facilities, and other owned resources</p>
+					</div>
+					<div class="cp-section-badge" id="cp-assets-owned-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-assets-owned-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-asset-owned">+ Add Owned Asset</button>
+				</div>
+			</section>
+
+			<!-- ASSETS - PARTNER ACCESSIBLE -->
+			<section class="cp-section" data-section="assets-partner" id="sec-assets-partner">
+				<div class="cp-section-header" data-section-toggle="assets-partner">
+					<div class="cp-section-icon">🤝</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Partner Accessible Assets</h2>
+						<p class="cp-section-desc">Resources available through partnerships and alliances</p>
+					</div>
+					<div class="cp-section-badge" id="cp-assets-partner-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-assets-partner-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-asset-partner">+ Add Partner Asset</button>
+				</div>
+			</section>
+
+			<!-- HUMAN RESOURCES -->
+			<section class="cp-section" data-section="hr" id="sec-hr">
+				<div class="cp-section-header" data-section-toggle="hr">
+					<div class="cp-section-icon">👥</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Human Resources &amp; Capacity</h2>
+						<p class="cp-section-desc">Staff capabilities, skills, and expertise</p>
+					</div>
+					<div class="cp-section-badge" id="cp-hr-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-hr-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-hr">+ Add Staff Member</button>
+				</div>
+			</section>
+
+			<!-- FINANCIALS -->
+			<section class="cp-section" data-section="financials" id="sec-financials">
+				<div class="cp-section-header" data-section-toggle="financials">
+					<div class="cp-section-icon">💰</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Financials</h2>
+						<p class="cp-section-desc">Revenue history, assets, and financial standing</p>
+					</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Annual Revenues</h3>
+						<div class="cp-array-container" id="cp-revenues-container"></div>
+						<button class="cp-btn cp-btn-add" data-action="add-revenue">+ Add Year</button>
+					</div>
+					<div class="cp-subsection">
+						<h3 class="cp-subsection-title">Financial Summary</h3>
+						<div class="cp-field-row cp-field-row-3">
+							<div class="cp-field">
+								<label class="cp-label">Current Assets</label>
+								<div class="cp-input-with-prefix"><span class="cp-prefix">$</span><input type="number" class="cp-input cp-input-prefixed" id="f-currentAssets" placeholder="0.00" min="0" step="0.01"></div>
+							</div>
+							<div class="cp-field">
+								<label class="cp-label">Current Liabilities</label>
+								<div class="cp-input-with-prefix"><span class="cp-prefix">$</span><input type="number" class="cp-input cp-input-prefixed" id="f-currentLiabilities" placeholder="0.00" min="0" step="0.01"></div>
+							</div>
+							<div class="cp-field">
+								<label class="cp-label">Working Capital</label>
+								<div class="cp-input-with-prefix"><span class="cp-prefix">$</span><input type="number" class="cp-input cp-input-prefixed" id="f-workingCapital" placeholder="0.00" min="0" step="0.01"></div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- REFERENCE PROJECTS -->
+			<section class="cp-section" data-section="projects" id="sec-projects">
+				<div class="cp-section-header" data-section-toggle="projects">
+					<div class="cp-section-icon">📁</div>
+					<div class="cp-section-title-group">
+						<h2 class="cp-section-title">Reference Projects &amp; Experience</h2>
+						<p class="cp-section-desc">Past projects and client engagements</p>
+					</div>
+					<div class="cp-section-badge" id="cp-projects-count">0</div>
+					<div class="cp-section-toggle">▾</div>
+				</div>
+				<div class="cp-section-body">
+					<div class="cp-array-container" id="cp-projects-container"></div>
+					<button class="cp-btn cp-btn-add" data-action="add-project">+ Add Project</button>
+				</div>
+			</section>
+
+		</main>
+	</div>
+
+	<!-- MODAL for editing complex items -->
+	<div class="cp-modal-overlay" id="cp-modal-overlay">
+		<div class="cp-modal" id="cp-modal">
+			<div class="cp-modal-header">
+				<h3 class="cp-modal-title" id="cp-modal-title"></h3>
+				<button class="cp-btn cp-btn-icon cp-modal-close" id="cp-modal-close">✕</button>
+			</div>
+			<div class="cp-modal-body" id="cp-modal-body"></div>
+			<div class="cp-modal-footer">
+				<button class="cp-btn cp-btn-secondary" id="cp-modal-cancel">Cancel</button>
+				<button class="cp-btn cp-btn-primary" id="cp-modal-save">Save</button>
+			</div>
+		</div>
+	</div>
+
+</div>
