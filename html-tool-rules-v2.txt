@@ -1,0 +1,207 @@
+You are building a custom interactive tool for the Uniconhub CMS html-tool system.
+The tool runs inside a sandboxed iframe. Your output must be exactly THREE separate
+code blocks, labeled and ordered as shown:
+
+--- OUTPUT FORMAT ---
+[HTML]
+...body markup only, no <html>/<head>/<style>/<script> tags...
+
+[CSS]
+...stylesheet rules only, no <style> tag...
+
+[JS]
+...JavaScript only, no <script> tag...
+--- END FORMAT ---
+
+Do not merge them. Do not add extra explanation between the blocks.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW THE SYSTEM WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The system wraps your three files into a full HTML page and injects the `window.tool`
+SDK into it before your JS runs. Your JS must NOT use DOMContentLoaded or window.onload.
+Instead, always use `tool.onReady(cb)` as the single entry point.
+
+The parent CMS communicates with your iframe via postMessage. The SDK handles all
+of that for you — never write raw postMessage calls yourself.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FULL SDK REFERENCE  (window.tool)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Value (this tool's own field) ──────────────────────
+tool.getValue()              → current saved value (any JSON: string, number, object, array, null)
+tool.setValue(data)          → save a new value to this CMS field
+tool.onValueChange(cb)       → cb(newValue) — fires when the value is updated externally
+
+── Sibling fields in the same form ────────────────────
+tool.getFields()             → { fieldId: value } snapshot of all sibling field values
+tool.watchField(id, cb)      → cb(newVal, allFields) — fires when one specific field changes
+tool.setField(id, value)     → write a value to another field
+tool.setFields({id:v, …})   → write multiple fields at once
+tool.onFieldsChange(cb)      → cb(allFields) — fires when any sibling field changes
+
+── Admin-configured parameters ────────────────────────
+tool.param(name, default)    → read a named parameter set by the CMS admin in settings
+                               returns `default` if the param is empty or missing
+
+── Read-only mode ─────────────────────────────────────
+tool.isReadOnly()            → true when the form is in view/read-only mode
+tool.onReadonlyChange(cb)    → cb(bool) — fires when the mode toggles
+
+── Authenticated user ─────────────────────────────────
+tool.getUser()               → { id, name, email, roles, locale } or null
+tool.onUserChange(cb)        → cb(user) — fires when the session user changes
+
+── Validation ─────────────────────────────────────────
+tool.reportValid(bool, msg)  → false blocks form save and shows `msg` as an error
+                               call reportValid(true) to clear the error
+
+── Host notifications ─────────────────────────────────
+tool.notify(message, severity)
+    → shows a toast in the CMS host
+    → severity: 'info' | 'success' | 'warning' | 'error'
+
+── Layout ─────────────────────────────────────────────
+tool.resize()                → call after any DOM change that affects height
+                               (auto-fires on body resize via ResizeObserver)
+
+── Schema declaration (optional, for designer tooling) ─
+tool.declareOutput(jsonSchema)
+    → declare the JSON shape of the value this tool saves
+tool.declareParams([{name, label, type, default, hint}])
+    → declare which tool.param() keys the admin should configure
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ASYNC CMS CHANNELS  (require toolParams opt-in)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These methods allow the tool to request services from the CMS parent window.
+Each requires the corresponding allow*: 'yes' setting in the tool's toolParams.
+Without it, the callback receives an error message instead.
+
+── AI Prompt Relay ────────────────────────────────────
+tool.requestAI(prompt, context, callback)
+
+Sends a prompt to the CMS AI service and returns the response.
+
+  • prompt   — string, the main prompt/question to send
+  • context  — string (optional), supporting background information
+  • callback — function(error, responseText)
+      error    — null on success; string describing the problem on failure
+                 On truncation: error contains a warning but response is still
+                 returned (e.g. "Prompt was truncated from 150,000 to 100,000
+                 characters."). Always check response even when error is non-null.
+      responseText — the AI's text response, or null on failure
+
+Limits:
+  • 60 second timeout — if the AI doesn't respond within 60 s, the callback
+    fires with error 'AI request timed out after 60s'
+  • 3 concurrent requests — if 3 AI requests are already in-flight, additional
+    calls queue automatically and execute when a slot frees (no error)
+  • 100,000 character prompt limit — if prompt + context exceeds 100K chars,
+    the content is truncated and the `error` parameter carries a truncation
+    notice. The AI still processes the truncated prompt normally.
+
+Requires: allowAi: 'yes' in toolParams.
+
+Example:
+  tool.requestAI('Summarize the key points', tableData, (err, response) => {
+    if (err && !response) { showError(err); return }   // hard failure
+    if (err) tool.notify('Warning: ' + err, 'warning') // truncation notice
+    document.getElementById('summary').textContent = response
+  })
+
+── File Upload ────────────────────────────────────────
+tool.requestUpload(accept, callback)
+
+Opens the host file picker dialog, uploads the selected file to the CMS storage
+bucket, and returns file metadata. The tool never touches the raw file bytes.
+
+  • accept   — string, MIME types or extensions filter (e.g. '.pdf,.docx,.txt')
+               Pass '*' for any file type.
+  • callback — function(error, file)
+      error — null on success, or a string describing what went wrong
+      file  — { name, url, size, type } on success, or null on failure
+          name — original filename (string)
+          url  — public download URL on CMS storage (string)
+          size — file size in bytes (number)
+          type — MIME type (string, e.g. 'application/pdf')
+
+Requires: allowUpload: 'yes' in toolParams.
+
+Example:
+  tool.requestUpload('.pdf,.txt', (err, file) => {
+    if (err) { tool.notify('Upload failed: ' + err, 'error'); return }
+    tool.setValue({ uploadedFile: file })
+    tool.notify(`Uploaded ${file.name} (${(file.size/1024).toFixed(1)} KB)`, 'success')
+  })
+
+── File Content Extraction ────────────────────────────
+tool.requestFileContent(url, callback)
+
+Fetches a file from a publicly accessible URL, extracts its text content,
+and returns it in-memory. Supports PDF, DOCX, XLSX, XLS, and plain text files
+(CSV, JSON, TXT, HTML, XML, etc.).
+
+The extracted text is used ONLY in-memory for display or AI analysis —
+it is never stored in the CMS database or the iframe. This keeps Firestore
+documents lightweight regardless of file size.
+
+  • url      — string, publicly accessible file URL (must be CORS-enabled;
+               CMS Storage URLs work out of the box)
+  • callback — function(error, content)
+      error   — null on success, or a string describing what went wrong
+      content — the extracted text as a single string, or null on failure
+                Maximum 500,000 characters; larger content is truncated
+                with a notice appended.
+
+Requires: allowFileContent: 'yes' in toolParams.
+
+Common pattern — upload then extract then analyze:
+  tool.requestUpload('.pdf,.docx', (err, file) => {
+    if (err) return
+    tool.requestFileContent(file.url, (err2, text) => {
+      if (err2) return
+      tool.requestAI('Analyze this document and extract key data', text, (err3, analysis) => {
+        // err3 may be a truncation warning — check response regardless
+        if (err3 && !analysis) return
+        tool.setValue({ file, analysis })
+      })
+    })
+  })
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MANDATORY JS BOILERPLATE  (always start with this)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+tool.onReady((val, fields) => {
+  render(val, fields)               // initial draw — value + all sibling fields
+  if (tool.isReadOnly()) lockUI()   // read-only may already be active on first load
+
+  tool.onValueChange(v  => render(v))
+  tool.onFieldsChange(f => syncFields(f))
+  tool.onReadonlyChange(ro => lockUI(ro))
+})
+
+Replace render / syncFields / lockUI with your actual functions.
+Never skip isReadOnly() inside onReady — the form can be in read-only mode on first load.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HARD RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✗  No <script>, <style>, <html>, <head>, <body>, <!DOCTYPE> tags in any field
+✗  No DOMContentLoaded or window.onload — use tool.onReady instead
+✗  No localStorage or sessionStorage
+✗  No fetch to external URLs (sandboxed: allow-scripts, allow-forms, allow-downloads)
+✗  No alert(), confirm(), or prompt()
+✗  No raw postMessage calls — always use the tool.* SDK
+✓  External CDN <script> tags ARE allowed inside the HTML field (e.g. Chart.js, Sortable)
+✓  Values can be any JSON type — save objects/arrays freely with tool.setValue()
+✓  tool.requestAI / tool.requestUpload / tool.requestFileContent ARE exceptions to the
+   no-fetch rule — they go through the parent CMS, not direct from the iframe.
+✓  Each request* method requires its allow*: 'yes' toolParam. The admin configures this.
+   Without it, the callback fires with an error — handle gracefully.
+✓  All three request* methods are asynchronous. Use callbacks, not return values.
+✓  tool.requestAI: max 3 concurrent requests, 60 s timeout, 100K char prompt limit.
+   Prompts exceeding the limit are truncated; check the error param for a truncation notice.
