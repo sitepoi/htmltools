@@ -1,0 +1,613 @@
+<!-- ── HEADER ── -->
+<header class="mm-header">
+  <div class="mm-header-brand">
+    <div class="mm-logo">🤝</div>
+    <div class="mm-brand-text">
+      <div class="mm-brand-name">Matchmaking</div>
+      <div class="mm-brand-sub">Privacy-First Candidate Matching Engine</div>
+    </div>
+  </div>
+  <div class="mm-header-actions">
+    <button class="mm-btn mm-btn-ghost" id="btn-toggle-ro" title="Toggle Read-Only">🔒</button>
+    <span class="mm-badge" id="badge-candidate-count">0 Candidates</span>
+  </div>
+</header>
+
+<!-- ── TAB NAVIGATION ── -->
+<nav class="mm-tabs" id="mm-tabs">
+  <button class="mm-tab active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="mm-tab" data-tab="candidates">👥 Candidates</button>
+  <button class="mm-tab" data-tab="form">📝 Add Candidate</button>
+  <button class="mm-tab" data-tab="matches">💞 Match Results</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- DASHBOARD VIEW -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-view active" id="view-dashboard">
+  <div class="mm-stats-row" id="dash-stats">
+    <div class="mm-stat-card">
+      <div class="mm-stat-icon">👤</div>
+      <div class="mm-stat-num" id="stat-total">0</div>
+      <div class="mm-stat-label">Total Candidates</div>
+    </div>
+    <div class="mm-stat-card">
+      <div class="mm-stat-icon">♂️</div>
+      <div class="mm-stat-num" id="stat-male">0</div>
+      <div class="mm-stat-label">Male</div>
+    </div>
+    <div class="mm-stat-card">
+      <div class="mm-stat-icon">♀️</div>
+      <div class="mm-stat-num" id="stat-female">0</div>
+      <div class="mm-stat-label">Female</div>
+    </div>
+    <div class="mm-stat-card">
+      <div class="mm-stat-icon">💞</div>
+      <div class="mm-stat-num" id="stat-matched">0</div>
+      <div class="mm-stat-label">Matches Generated</div>
+    </div>
+  </div>
+
+  <div class="mm-card">
+    <div class="mm-card-header">
+      <span class="mm-card-title">⚡ Quick Actions</span>
+    </div>
+    <div class="mm-quick-actions">
+      <button class="mm-btn mm-btn-primary" id="btn-quick-add">➕ Add New Candidate</button>
+      <button class="mm-btn mm-btn-secondary" id="btn-quick-match">🔍 Run Matchmaking</button>
+      <button class="mm-btn mm-btn-outline" id="btn-quick-export">📋 Export Summary</button>
+    </div>
+  </div>
+
+  <div class="mm-card">
+    <div class="mm-card-header">
+      <span class="mm-card-title">📈 Matching Overview</span>
+    </div>
+    <div class="mm-match-overview" id="dash-match-overview">
+      <div class="mm-empty">Run matchmaking to see results here</div>
+    </div>
+  </div>
+
+  <div class="mm-card">
+    <div class="mm-card-header">
+      <span class="mm-card-title">🕐 Recent Candidates</span>
+    </div>
+    <div class="mm-table-wrap">
+      <table class="mm-table">
+        <thead><tr><th>Code</th><th>Gender</th><th>Age</th><th>Location</th><th>Education</th><th>Added</th><th></th></tr></thead>
+        <tbody id="dash-recent-candidates"><tr><td class="mm-table-empty" colspan="7">No candidates yet</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- CANDIDATES LIST VIEW -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-view" id="view-candidates">
+  <div class="mm-view-header">
+    <div>
+      <div class="mm-view-title">All Candidates</div>
+      <div class="mm-view-sub">Privacy-protected candidate registry</div>
+    </div>
+    <div class="mm-view-toolbar">
+      <input type="text" class="mm-input" id="cand-search" placeholder="🔍 Search by code, location, education...">
+      <select class="mm-input mm-select" id="cand-filter-gender">
+        <option value="">All Genders</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+      </select>
+      <button class="mm-btn mm-btn-primary" id="btn-add-candidate">➕ Add Candidate</button>
+    </div>
+  </div>
+  <div class="mm-card">
+    <div class="mm-table-wrap">
+      <table class="mm-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Gender</th>
+            <th>Age</th>
+            <th>Location</th>
+            <th>Education</th>
+            <th>Languages</th>
+            <th>Height</th>
+            <th>Added</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="candidates-table-body">
+          <tr><td class="mm-table-empty" colspan="9">No candidates registered yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- ADD/EDIT CANDIDATE FORM VIEW -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-view" id="view-form">
+  <div class="mm-view-header">
+    <div>
+      <div class="mm-view-title" id="form-title">Add New Candidate</div>
+      <div class="mm-view-sub">All information is confidential and anonymized for matching</div>
+    </div>
+    <div class="mm-view-toolbar">
+      <button class="mm-btn mm-btn-outline" id="btn-form-cancel">Cancel</button>
+      <button class="mm-btn mm-btn-primary" id="btn-form-save">💾 Save Candidate</button>
+    </div>
+  </div>
+
+  <form id="candidate-form" autocomplete="off">
+    <input type="hidden" id="form-candidate-id">
+
+    <!-- PRIVACY NOTICE -->
+    <div class="mm-card mm-card-notice">
+      <div class="mm-notice-title">🔒 Privacy & Confidentiality Notice</div>
+      <div class="mm-notice-text">
+        <p>Bu form, aracılar için öncelikle sizleri tanımak, beklentilerinizi ve kriterlerinizi net bir şekilde anlamak amacıyla hazırlanmıştır. Verilen bilgiler, onayınız olmadan ekibimiz dışında üçüncü kişilerle asla paylaşılmayacaktır. Kimliğinize dair tüm unsurlar silinerek yalnızca vasıflar ve beklentiler aktarılacaktır.</p>
+      </div>
+    </div>
+
+    <!-- BASIC INFO -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📋 Basic Information</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field">
+          <label class="mm-label">Cinsiyet / Gender <span class="mm-req">*</span></label>
+          <select class="mm-input mm-select" id="f-gender" required>
+            <option value="">-- Seçiniz --</option>
+            <option value="male">Erkek / Male</option>
+            <option value="female">Kadın / Female</option>
+          </select>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Soyisim, İsim <span class="mm-req">*</span></label>
+          <input type="text" class="mm-input" id="f-fullname" placeholder="Ad Soyad" required>
+          <span class="mm-hint">İsimler matching sırasında gizlenir, sadece kod isim gösterilir</span>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">İkamet (Ülke, Şehir) <span class="mm-req">*</span></label>
+          <input type="text" class="mm-input" id="f-location" placeholder="örn: Kanada, Toronto" required>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">İrtibat (Tel / e-mail)</label>
+          <input type="text" class="mm-input" id="f-contact" placeholder="Telefon veya e-posta">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Danışmanı</label>
+          <input type="text" class="mm-input" id="f-consultant" placeholder="Danışman adı">
+        </div>
+      </div>
+    </div>
+
+    <!-- REFERENCE INFO -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📎 Referans Bilgileri</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field">
+          <label class="mm-label">Referans İsim ve Soyisim</label>
+          <input type="text" class="mm-input" id="f-ref-name" placeholder="Referans adı">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Referans Telefon</label>
+          <input type="text" class="mm-input" id="f-ref-phone" placeholder="Telefon numarası">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Referans İkamet (Ülke, Şehir)</label>
+          <input type="text" class="mm-input" id="f-ref-location" placeholder="örn: Kanada, Vancouver">
+        </div>
+        <small class="mm-hint mm-form-field mm-form-field-full">Birden fazla referans olabilir. Bunlardan birinin haftalık mutad katıldığınız sohbet grubunuzun sorumlusu olmasını tavsiye ederiz.</small>
+      </div>
+    </div>
+
+    <!-- BIRTH INFO -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🎂 Doğum Bilgileri</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field">
+          <label class="mm-label">Resmî Doğum Tarihi <span class="mm-req">*</span></label>
+          <input type="date" class="mm-input" id="f-birth-date" required>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Gerçek Doğum Tarihi (farklı ise)</label>
+          <input type="date" class="mm-input" id="f-birth-real">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Doğum Yeri</label>
+          <input type="text" class="mm-input" id="f-birth-place" placeholder="Şehir, Ülke">
+        </div>
+      </div>
+    </div>
+
+    <!-- LANGUAGE -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🗣️ Dil Bilgisi</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field">
+          <label class="mm-label">Anadil <span class="mm-req">*</span></label>
+          <input type="text" class="mm-input" id="f-native-lang" placeholder="örn: Türkçe" required>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Diğer Diller ve Seviyeleri</label>
+          <textarea class="mm-input mm-textarea" id="f-other-langs" rows="3" placeholder="örn: İngilizce - İleri, Arapça - Orta, Fransızca - Başlangıç"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- FAMILY INFO -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">👨‍👩‍👧‍👦 Aile Bilgileri</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Annenizin Adı, Doğum Yeri, Mesleği, İkameti, Meşguliyeti</label>
+          <textarea class="mm-input mm-textarea" id="f-mother-info" rows="2" placeholder="Anne bilgileri..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Babanızın Adı, Doğum Yeri, Mesleği, İkameti, Meşguliyeti</label>
+          <textarea class="mm-input mm-textarea" id="f-father-info" rows="2" placeholder="Baba bilgileri..."></textarea>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Toplam Kardeş Sayısı</label>
+          <input type="number" class="mm-input" id="f-siblings-total" min="0" placeholder="0">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Erkek Kardeş Sayısı</label>
+          <input type="number" class="mm-input" id="f-siblings-brothers" min="0" placeholder="0">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Kız Kardeş Sayısı</label>
+          <input type="number" class="mm-input" id="f-siblings-sisters" min="0" placeholder="0">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Kardeşler Arası Sıralamanız</label>
+          <input type="text" class="mm-input" id="f-sibling-rank" placeholder="örn: 2. çocuk / en büyük / ortanca">
+        </div>
+      </div>
+    </div>
+
+    <!-- EDUCATION & CAREER -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🎓 Eğitim ve Mesleki Geçmiş</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Eğitim, iş, hizmet ve gönüllülük geçmişiniz (mekan ve yıllar belirtiniz)</label>
+          <textarea class="mm-input mm-textarea" id="f-education" rows="4" placeholder="Okul, bölüm, yıllar... İş tecrübesi, pozisyonlar... Gönüllü çalışmalar..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOBBIES -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🎨 Hobiler ve İlgi Alanları</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Sizi dinlendiren ve keyif aldığınız aktiviteler</label>
+          <textarea class="mm-input mm-textarea" id="f-hobbies" rows="2" placeholder="Spor, müzik, seyahat, doğa yürüyüşleri..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Sanatsal ve Zanaatsal Kabiliyetler</label>
+          <textarea class="mm-input mm-textarea" id="f-artistic" rows="2" placeholder="Enstrüman, resim, el sanatları, yazı..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Film, dizi tercihleri; takip ettiğiniz hesaplar</label>
+          <textarea class="mm-input mm-textarea" id="f-media" rows="2" placeholder="Ne tarz film/dizilerden hoşlanırsınız?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTELLECTUAL & SPIRITUAL -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📚 Fikrî ve Ruhî Hayat</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">5 vakit namazla ilgili durumunuzu nasıl değerlendiriyorsunuz?</label>
+          <textarea class="mm-input mm-textarea" id="f-prayer" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Kitap okuma alışkanlığınız hakkında bilgi verir misiniz? Hangi tür kitapları tercih ediyorsunuz? Sizi en çok etkileyen kitaplar hangileridir?</label>
+          <textarea class="mm-input mm-textarea" id="f-reading" rows="3" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Hayatınıza yön veren şahsiyetler</label>
+          <textarea class="mm-input mm-textarea" id="f-role-models" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Dahil olduğunuz gönüllülük / mentörlük faaliyetleri</label>
+          <textarea class="mm-input mm-textarea" id="f-volunteering" rows="2" placeholder="Dinleyici olarak katıldıklarınız dahil..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERSONAL CHARACTERISTICS -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🧠 Kişisel Özellikler</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Kendinizi nasıl tanımlarsınız, temel karakter özellikleriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-personality" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">İnsanlarla münasebette önem verdiğiniz hususlar, hassas olduğunuz konular, kırmızı çizgileriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-redlines" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Bayan-Erkek münasebetlerinde yaklaşımlarınız</label>
+          <textarea class="mm-input mm-textarea" id="f-gender-relations" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Güçlü ve zayıf yönleriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-strengths-weaknesses" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Hayatınıza yön veren değer yargılarınız</label>
+          <textarea class="mm-input mm-textarea" id="f-values" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Bir şeye karar vermeniz gerektiğinde neye göre karar verirsiniz?</label>
+          <textarea class="mm-input mm-textarea" id="f-decision-making" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Hayatınızda en önemli insanlar ve rolleri</label>
+          <textarea class="mm-input mm-textarea" id="f-important-people" rows="2" placeholder="..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARRIAGE VIEWS -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">💍 Evlilik Hakkındaki Görüş ve Düşünceler</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Evlilik sizin için nedir? 5 madde ile evlilikten beklentileriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-marriage-expectations" rows="4" placeholder="1.&#10;2.&#10;3.&#10;4.&#10;5."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">"Evlilik emek ister" sözüne katılıyor musunuz? "Emek" ile kastedilen nedir?</label>
+          <textarea class="mm-input mm-textarea" id="f-marriage-effort" rows="2" placeholder="..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPOUSE CRITERIA -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🎯 Eş Adayı Kriterleri ve Beklentiler</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Kırmızı çizgileriniz (olmazsa olmazlarınız)</label>
+          <textarea class="mm-input mm-textarea" id="f-spouse-redlines" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Sarı çizgileriniz (ikinci derece önemli, çok da sorun olmayacak meseleler)</label>
+          <textarea class="mm-input mm-textarea" id="f-spouse-yellowlines" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Yeşil Alan (özellikle arzu ettikleriniz): ahlaki, fiziksel, karakter özellikleri ve diğer</label>
+          <textarea class="mm-input mm-textarea" id="f-spouse-green" rows="3" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Eşinizin sosyal medya hesapları hakkında kanaatiniz</label>
+          <textarea class="mm-input mm-textarea" id="f-spouse-social-media" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Kabul edilebilir yaş aralığı (min)</label>
+          <input type="number" class="mm-input" id="f-age-min" min="18" max="99" placeholder="Min yaş">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Kabul edilebilir yaş aralığı (max)</label>
+          <input type="number" class="mm-input" id="f-age-max" min="18" max="99" placeholder="Max yaş">
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Geçmiş birliktelik / söz / nişan / evlilik / boşanma durumuna yaklaşımınız</label>
+          <textarea class="mm-input mm-textarea" id="f-spouse-past" rows="2" placeholder="Kabul edilebilir / edilemez durumlar..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Aday tercihinizde ailenizin rolü nedir?</label>
+          <textarea class="mm-input mm-textarea" id="f-family-role" rows="2" placeholder="..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTLEMENT -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🏠 Yerleşim ve İkamet</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Evlilik vesilesiyle şehir/ülke değiştirme konusundaki bakış açınız</label>
+          <textarea class="mm-input mm-textarea" id="f-relocation-view" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Kanada ve yurtdışındaki oturum durumunuz (PR, vatandaşlık vs.)</label>
+          <input type="text" class="mm-input" id="f-residency-status" placeholder="örn: Kanada vatandaşı, PR">
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Şu anki ikamet durumunuz (tek, aile, öğrenci evi, yurt vb.)</label>
+          <input type="text" class="mm-input" id="f-current-housing" placeholder="...">
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Evlilik sonrası ikamet planlarınız</label>
+          <textarea class="mm-input mm-textarea" id="f-future-housing" rows="2" placeholder="Nerede ve ne şartlarda yaşamak istiyorsunuz?"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- FUTURE PLANS -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">🔮 Geleceğe Dair Planlar</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Geçiminizi nasıl temin ediyorsunuz?</label>
+          <input type="text" class="mm-input" id="f-income-source" placeholder="...">
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Eğitim, kariyer ve iş hayatı ile ilgili plan, hedef ve hayalleriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-career-plans" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Ev bütçesi ve geçim ekonomisi ile ilgili kanaatleriniz</label>
+          <textarea class="mm-input mm-textarea" id="f-budget-views" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Finansal gelecek tasarınız ve yaşam tarzı tercihiniz</label>
+          <textarea class="mm-input mm-textarea" id="f-financial-future" rows="3" placeholder="Ev sahibi olma, minimalist/konfor odaklı yaşam, gelir beklentisi..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- RELATIONSHIPS -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">💬 Birliktelikler</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Geçmiş birliktelik, söz, nişan veya evlilik; görüştüğünüz kişiler (isim paylaşımı isteğe bağlı)</label>
+          <textarea class="mm-input mm-textarea" id="f-past-relationships" rows="2" placeholder="..."></textarea>
+        </div>
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Fikrinizde, hayalinizde veya hayatınızda biri var mı?</label>
+          <textarea class="mm-input mm-textarea" id="f-current-interest" rows="2" placeholder="Varsa yazmaktan çekinmeyin..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDITIONAL NOTES -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📝 Eklemek İstediğiniz Hususlar</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Kendinizle ilgili bilinmesinde fayda gördüğünüz veya muhatabınızla ilgili bilmek istediğiniz hususlar</label>
+          <textarea class="mm-input mm-textarea" id="f-additional-notes" rows="3" placeholder="..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHYSICAL INFO -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📏 Fiziksel Bilgiler</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field">
+          <label class="mm-label">Boy (cm)</label>
+          <input type="number" class="mm-input" id="f-height" min="100" max="250" placeholder="örn: 175">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Kilo (kg)</label>
+          <input type="number" class="mm-input" id="f-weight" min="30" max="200" placeholder="örn: 70">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Göz Rengi</label>
+          <input type="text" class="mm-input" id="f-eye-color" placeholder="örn: Kahverengi">
+        </div>
+        <div class="mm-form-field">
+          <label class="mm-label">Saç Rengi ve Tipi</label>
+          <input type="text" class="mm-input" id="f-hair" placeholder="örn: Siyah, düz">
+        </div>
+      </div>
+    </div>
+
+    <!-- PHOTO UPLOAD -->
+    <div class="mm-card">
+      <div class="mm-card-header"><span class="mm-card-title">📸 Fotoğraf ve Video</span></div>
+      <div class="mm-form-grid">
+        <div class="mm-form-field mm-form-field-full">
+          <label class="mm-label">Fotoğraf ve video dosyaları</label>
+          <div class="mm-upload-area" id="upload-area">
+            <div class="mm-upload-zone" id="upload-zone">
+              <div class="mm-upload-icon">📁</div>
+              <div class="mm-upload-text">Fotoğraf veya video yüklemek için tıklayın</div>
+              <div class="mm-upload-hint">.jpg, .png, .mp4 — Max 50MB</div>
+            </div>
+            <div class="mm-upload-list" id="upload-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM ACTIONS -->
+    <div class="mm-form-actions">
+      <button type="button" class="mm-btn mm-btn-outline" id="btn-form-cancel-btm">İptal / Cancel</button>
+      <button type="submit" class="mm-btn mm-btn-primary mm-btn-lg">💾 Kaydet / Save Candidate</button>
+    </div>
+  </form>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MATCH RESULTS VIEW -->
+<!-- ═══════════════════════════════════════════════ -->
+<section class="mm-view" id="view-matches">
+  <div class="mm-view-header">
+    <div>
+      <div class="mm-view-title">Match Results</div>
+      <div class="mm-view-sub">Top 10 opposite-gender matches with compatibility scores</div>
+    </div>
+    <div class="mm-view-toolbar">
+      <select class="mm-input mm-select" id="match-select-candidate">
+        <option value="">Select a candidate...</option>
+      </select>
+      <button class="mm-btn mm-btn-primary" id="btn-run-match">🔍 Run Matchmaking</button>
+      <button class="mm-btn mm-btn-secondary" id="btn-ai-match">🤖 AI Deep Match</button>
+    </div>
+  </div>
+
+  <!-- Match Summary -->
+  <div class="mm-card" id="match-summary-card" style="display:none">
+    <div class="mm-card-header">
+      <span class="mm-card-title">📊 Match Summary</span>
+      <span id="match-base-candidate"></span>
+    </div>
+    <div class="mm-match-stats" id="match-stats"></div>
+  </div>
+
+  <!-- Match Results List -->
+  <div id="match-results-container">
+    <div class="mm-card">
+      <div class="mm-empty" id="match-empty">Select a candidate and run matchmaking to see top 10 matches</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODALS -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<!-- Candidate Detail Modal -->
+<div class="mm-modal" id="modal-detail">
+  <div class="mm-modal-backdrop" id="modal-detail-backdrop"></div>
+  <div class="mm-modal-content">
+    <div class="mm-modal-header">
+      <span class="mm-modal-title" id="modal-detail-title">Candidate Detail</span>
+      <button class="mm-modal-close" id="modal-detail-close">✕</button>
+    </div>
+    <div class="mm-modal-body" id="modal-detail-body"></div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div class="mm-modal" id="modal-delete">
+  <div class="mm-modal-backdrop" id="modal-delete-backdrop"></div>
+  <div class="mm-modal-content mm-modal-sm">
+    <div class="mm-modal-header">
+      <span class="mm-modal-title">⚠️ Delete Candidate</span>
+      <button class="mm-modal-close" id="modal-delete-close">✕</button>
+    </div>
+    <div class="mm-modal-body">
+      <p>Are you sure you want to delete this candidate? This action cannot be undone.</p>
+      <p class="mm-modal-candidate-name" id="modal-delete-name"></p>
+    </div>
+    <div class="mm-modal-footer">
+      <button class="mm-btn mm-btn-outline" id="btn-delete-cancel">Cancel</button>
+      <button class="mm-btn mm-btn-danger" id="btn-delete-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Progress Modal -->
+<div class="mm-modal" id="modal-ai-progress">
+  <div class="mm-modal-backdrop"></div>
+  <div class="mm-modal-content mm-modal-sm">
+    <div class="mm-modal-body mm-modal-body-center">
+      <div class="mm-spinner"></div>
+      <p class="mm-modal-progress-text" id="ai-progress-text">AI is analyzing candidates...</p>
+      <div class="mm-progress-bar"><div class="mm-progress-fill" id="ai-progress-bar"></div></div>
+    </div>
+  </div>
+</div>

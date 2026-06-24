@@ -963,16 +963,18 @@ function saveAppSource() {
 }
 
 function uploadAppSourceFile() {
-	tool.notify('Opening file picker...', 'info');
+	// Trigger native file input (always works in iframe)
+	const fi = el('src-file-input');
+	if (fi) { fi.value = ''; fi.click(); }
+	// Also try CMS upload as secondary
 	if (typeof tool.requestUpload === 'function') {
 		tool.requestUpload('.pdf,.docx,.txt', (err, file) => {
-			if (err) { tool.notify('Upload failed: ' + err, 'error'); return; }
-			const urlEl = el('f-src-url'); if (urlEl) urlEl.value = file.url || '';
-			const nameEl = el('f-src-name'); if (nameEl && !nameEl.value) nameEl.value = file.name || '';
-			tool.notify(`Uploaded: ${file.name}`, 'success');
+			if (!err && file) {
+				const urlEl = el('f-src-url'); if (urlEl && !urlEl.value) urlEl.value = file.url || '';
+				const nameEl = el('f-src-name'); if (nameEl && !nameEl.value) nameEl.value = file.name || '';
+				tool.notify(`Uploaded via CMS: ${file.name}`, 'success');
+			}
 		});
-	} else {
-		tool.notify('File upload requires CMS integration. Paste a URL or use the test harness mock.', 'warning');
 	}
 }
 
@@ -2115,18 +2117,50 @@ function bindEvents() {
 		const id = el('f-doc-id'); if (!id) return;
 		closeAllModals(); deleteDocument(id.value);
 	});
+	// ── Native file input: Document upload (always works in iframe) ──
 	on('btn-doc-upload', 'click', () => {
-		tool.notify('Opening file picker...', 'info');
+		const fi = el('doc-file-input');
+		if (fi) { fi.value = ''; fi.click(); }
+		// Also try CMS upload as secondary (may populate URL with server path)
 		if (typeof tool.requestUpload === 'function') {
 			tool.requestUpload('*', (err, file) => {
-				if (err) { tool.notify('Upload failed: ' + err, 'error'); return; }
-				const u = el('f-doc-url'); if (u) u.value = file.url || '';
-				const n = el('f-doc-name'); if (n && !n.value) n.value = file.name || '';
-				tool.notify(`Uploaded: ${file.name}`, 'success');
+				if (!err && file) {
+					const u = el('f-doc-url'); if (u && !u.value) u.value = file.url || '';
+					const n = el('f-doc-name'); if (n && !n.value) n.value = file.name || '';
+					tool.notify(`Uploaded via CMS: ${file.name}`, 'success');
+				}
 			});
-		} else {
-			tool.notify('File upload requires CMS integration (tool.requestUpload). Paste URL manually for now.', 'warning');
 		}
+	});
+	on('doc-file-input', 'change', () => {
+		const fi = el('doc-file-input');
+		if (!fi || !fi.files || !fi.files[0]) return;
+		const file = fi.files[0];
+		const n = el('f-doc-name'); if (n && !n.value) n.value = file.name;
+		const u = el('f-doc-url'); if (u) u.value = file.name;
+		tool.notify(`File selected: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`, 'success');
+	});
+	// ── Native file input: Source upload ──
+	on('btn-src-upload', 'click', () => {
+		const fi = el('src-file-input');
+		if (fi) { fi.value = ''; fi.click(); }
+		if (typeof tool.requestUpload === 'function') {
+			tool.requestUpload('.pdf,.docx,.txt', (err, file) => {
+				if (!err && file) {
+					const urlEl = el('f-src-url'); if (urlEl && !urlEl.value) urlEl.value = file.url || '';
+					const nameEl = el('f-src-name'); if (nameEl && !nameEl.value) nameEl.value = file.name || '';
+					tool.notify(`Uploaded via CMS: ${file.name}`, 'success');
+				}
+			});
+		}
+	});
+	on('src-file-input', 'change', () => {
+		const fi = el('src-file-input');
+		if (!fi || !fi.files || !fi.files[0]) return;
+		const file = fi.files[0];
+		const n = el('f-src-name'); if (n && !n.value) n.value = file.name;
+		const u = el('f-src-url'); if (u) u.value = file.name;
+		tool.notify(`File selected: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`, 'success');
 	});
 
 	// Quick Input modal
@@ -2151,7 +2185,6 @@ function bindEvents() {
 	on('btn-save-source', 'click', saveAppSource);
 	on('btn-cancel-source', 'click', closeAllModals);
 	on('btn-close-source', 'click', closeAllModals);
-	on('btn-src-upload', 'click', uploadAppSourceFile);
 
 	// Activity modal
 	on('btn-add-activity', 'click', () => openActivityModal(null));
