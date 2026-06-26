@@ -5,7 +5,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 var STATE = {
-  activeTab: 'architecture', selectedComponent: null, diagramMode: 'dataflow',
+  activeTab: 'summary', selectedComponent: null, diagramMode: 'dataflow',
   deploymentType: 'cloud', copilotTier: 'studio',
   localModel: 'deepseek-v4-pro', localRuntime: 'ollama',
   cloudProvider: 'anthropic', cloudModelTier: 'balanced',
@@ -38,57 +38,58 @@ var PRICING = {
     'phi4-mini':         { vram:'4 GB (any laptop / integrated GPU)',           gpuCost:500,   powerW:65,   tokensPerSec:135, name:'Phi-4 Mini 3.8B (Microsoft, 2025-2026)',       hardware:'Any modern laptop — $500 (no extra GPU needed)', firstCost:'$500 (integrated)', usageCost:'~$8/mo electricity', notes:'Runs on ANY device. Perfect for testing, PoC, and offline use. Limited reasoning but fast.' },
     'mistral-small':     { vram:'16 GB (RTX 5080 / Mac M4)',                   gpuCost:1800,  powerW:220,  tokensPerSec:88,  name:'Mistral Small 3.1 22B (2025-2026)',            hardware:'RTX 5080 16GB or Mac M4 — $1,800–$3,000', firstCost:'$1,800–$3,000', usageCost:'~$28/mo electricity', notes:'Efficient French model. Good for structured outputs &amp; JSON. 32K context.' }
   },
-  // ── Cloud API providers (2026 pricing per million tokens) ────────────
+  // ── Cloud API providers (REAL June 2026 pricing per million tokens) ──
+  // Cache hit = 10% of base (OpenAI/Anthropic), ~2% for DeepSeek
   cloud: {
     'openai': {
-      premium:  { input:2.50,  output:10.00,  name:'GPT-5.4 (Latest flagship — June 2026)' },
-      balanced: { input:1.25,  output:5.00,   name:'GPT-5.5 Mini (Fast &amp; efficient — June 2026)' },
-      budget:   { input:0.15,  output:0.60,   name:'GPT-5.5 Nano (Budget tier)' }
+      premium:  { input:2.50,  output:15.00,  cachedInput:0.25,  name:'GPT-5.4 (Short context — June 2026)' },
+      balanced: { input:0.75,  output:4.50,   cachedInput:0.075, name:'GPT-5.4 Mini (Best value)' },
+      budget:   { input:0.20,  output:1.25,   cachedInput:0.02,  name:'GPT-5.4 Nano (Budget)' }
     },
     'anthropic': {
-      premium:  { input:3.50,  output:17.50,  name:'Claude Opus 4.8 (Best reasoning — June 2026)' },
-      balanced: { input:0.90,  output:4.50,   name:'Claude Sonnet 4.6 (Best value — June 2026)' },
-      budget:   { input:0.25,  output:1.25,   name:'Claude Haiku 4.5 (Fastest)' }
+      premium:  { input:5.00,  output:25.00,  cachedInput:0.50,  name:'Claude Opus 4.8 (Best reasoning)' },
+      balanced: { input:3.00,  output:15.00,  cachedInput:0.30,  name:'Claude Sonnet 4.6 (Best value)' },
+      budget:   { input:1.00,  output:5.00,   cachedInput:0.10,  name:'Claude Haiku 4.5 (Fastest)' }
     },
     'deepseek-cloud': {
-      premium:  { input:0.35,  output:1.40,   name:'DeepSeek V4 Pro Cloud API (Best $/perf — 2026)' },
-      balanced: { input:0.20,  output:0.80,   name:'DeepSeek V4 Lite (Cloud)' },
-      budget:   { input:0.08,  output:0.32,   name:'DeepSeek V4 Mini (Cloud)' }
+      premium:  { input:0.14,  output:0.28,   cachedInput:0.0028, name:'DeepSeek V4 Pro API (50x cache discount!)' },
+      balanced: { input:0.14,  output:0.28,   cachedInput:0.0028, name:'DeepSeek V4 Pro (same — one tier)' },
+      budget:   { input:0.14,  output:0.28,   cachedInput:0.0028, name:'DeepSeek V4 Pro (same — one tier)' }
     },
     'google': {
-      premium:  { input:7.00,  output:21.00,  name:'Gemini 3.0 Ultra (Best for code &amp; docs — 2026)' },
-      balanced: { input:0.10,  output:0.40,   name:'Gemini 3.0 Flash (Ultra-fast)' },
-      budget:   { input:0.05,  output:0.20,   name:'Gemini 3.0 Nano (Budget)' }
+      premium:  { input:7.00,  output:21.00,  cachedInput:0.70,  name:'Gemini 3.0 Ultra (Best for code & docs)' },
+      balanced: { input:0.10,  output:0.40,   cachedInput:0.01,  name:'Gemini 3.0 Flash (Ultra-fast)' },
+      budget:   { input:0.05,  output:0.20,   cachedInput:0.005, name:'Gemini 3.0 Nano (Budget)' }
     },
     'glm': {
-      premium:  { input:1.50,  output:6.00,   name:'GLM 5.2 (Zhipu AI — Best Chinese LLM, 2026)' },
-      balanced: { input:0.50,  output:2.00,   name:'GLM 5.2 Flash' },
-      budget:   { input:0.15,  output:0.60,   name:'GLM 5.2 Lite' }
+      premium:  { input:1.50,  output:6.00,   cachedInput:0.15,  name:'GLM 5.2 (Zhipu AI, 2026)' },
+      balanced: { input:0.50,  output:2.00,   cachedInput:0.05,  name:'GLM 5.2 Flash' },
+      budget:   { input:0.15,  output:0.60,   cachedInput:0.015, name:'GLM 5.2 Lite' }
     },
     'minimax': {
-      premium:  { input:1.00,  output:4.00,   name:'MiniMax-M3 (Strong multilingual — 2026)' },
-      balanced: { input:0.30,  output:1.20,   name:'MiniMax-M3 Flash' },
-      budget:   { input:0.08,  output:0.32,   name:'MiniMax-M3 Nano' }
+      premium:  { input:1.00,  output:4.00,   cachedInput:0.10,  name:'MiniMax-M3 (2026)' },
+      balanced: { input:0.30,  output:1.20,   cachedInput:0.03,  name:'MiniMax-M3 Flash' },
+      budget:   { input:0.08,  output:0.32,   cachedInput:0.008, name:'MiniMax-M3 Nano' }
     },
     'kimi': {
-      premium:  { input:0.80,  output:3.20,   name:'Kimi Latest (Moonshot AI — Long-context, 2026)' },
-      balanced: { input:0.25,  output:1.00,   name:'Kimi Flash' },
-      budget:   { input:0.06,  output:0.24,   name:'Kimi Lite' }
+      premium:  { input:0.80,  output:3.20,   cachedInput:0.08,  name:'Kimi Latest (Moonshot AI, 2026)' },
+      balanced: { input:0.25,  output:1.00,   cachedInput:0.025, name:'Kimi Flash' },
+      budget:   { input:0.06,  output:0.24,   cachedInput:0.006, name:'Kimi Lite' }
     },
     'together': {
-      premium:  { input:0.90,  output:0.90,   name:'Llama 4 Maverick (Together AI)' },
-      balanced: { input:0.20,  output:0.20,   name:'DeepSeek V4 Pro (Together AI)' },
-      budget:   { input:0.06,  output:0.06,   name:'Llama 4 Scout (Together AI)' }
+      premium:  { input:0.90,  output:0.90,   cachedInput:0.09,  name:'Llama 4 Maverick (Together AI)' },
+      balanced: { input:0.20,  output:0.20,   cachedInput:0.02,  name:'DeepSeek V4 Pro (Together AI)' },
+      budget:   { input:0.06,  output:0.06,   cachedInput:0.006, name:'Llama 4 Scout (Together AI)' }
     },
     'groq': {
-      premium:  { input:0.59,  output:0.79,   name:'DeepSeek V4 Pro (Groq — ultra-fast)' },
-      balanced: { input:0.05,  output:0.08,   name:'Llama 4 Scout (Groq)' },
-      budget:   { input:0.02,  output:0.02,   name:'Llama 4 Scout Mini (Groq)' }
+      premium:  { input:0.59,  output:0.79,   cachedInput:0.06,  name:'DeepSeek V4 Pro (Groq)' },
+      balanced: { input:0.05,  output:0.08,   cachedInput:0.005, name:'Llama 4 Scout (Groq)' },
+      budget:   { input:0.02,  output:0.02,   cachedInput:0.002, name:'Llama 4 Scout Mini (Groq)' }
     },
     'fireworks': {
-      premium:  { input:0.90,  output:0.90,   name:'Llama 4 Maverick (Fireworks AI)' },
-      balanced: { input:0.20,  output:0.20,   name:'DeepSeek V4 Pro (Fireworks AI)' },
-      budget:   { input:0.06,  output:0.06,   name:'Llama 4 Scout (Fireworks AI)' }
+      premium:  { input:0.90,  output:0.90,   cachedInput:0.09,  name:'Llama 4 Maverick (Fireworks AI)' },
+      balanced: { input:0.20,  output:0.20,   cachedInput:0.02,  name:'DeepSeek V4 Pro (Fireworks AI)' },
+      budget:   { input:0.06,  output:0.06,   cachedInput:0.006, name:'Llama 4 Scout (Fireworks AI)' }
     }
   },
   embedding: {
@@ -344,26 +345,33 @@ function initEventListeners() {
   bindInput('cfg-queries-per-user', function(v) { STATE.queriesPerUser = parseInt(v,10)||0; recalculateAll(); });
   bindInput('cfg-avg-tokens', function(v) { STATE.avgTokens = parseInt(v,10)||0; recalculateAll(); });
 
-  document.getElementById('btn-apply-config').addEventListener('click', function() { syncConfigFromUI(); recalculateAll(); saveState(); tool.notify('Configuration applied','success'); });
-  document.getElementById('btn-reset-config').addEventListener('click', resetConfig);
-  document.getElementById('btn-export-diagram').addEventListener('click', function() { syncConfigFromUI(); switchTab('plan'); });
-  document.getElementById('btn-copy-plan').addEventListener('click', copyPlan);
-  document.getElementById('btn-print-plan').addEventListener('click', function() { window.print(); });
-  document.getElementById('btn-compare-recommend').addEventListener('click', function() {
+  var elApply = document.getElementById('btn-apply-config');
+  if (elApply) elApply.addEventListener('click', function() { syncConfigFromUI(); recalculateAll(); saveState(); tool.notify('Configuration applied','success'); });
+  var elReset = document.getElementById('btn-reset-config');
+  if (elReset) elReset.addEventListener('click', resetConfig);
+  var elExport = document.getElementById('btn-export-diagram');
+  if (elExport) elExport.addEventListener('click', function() { syncConfigFromUI(); switchTab('plan'); });
+  var elCopy = document.getElementById('btn-copy-plan');
+  if (elCopy) elCopy.addEventListener('click', copyPlan);
+  var elPrint = document.getElementById('btn-print-plan');
+  if (elPrint) elPrint.addEventListener('click', function() { window.print(); });
+  var elCompare = document.getElementById('btn-compare-recommend');
+  if (elCompare) elCompare.addEventListener('click', function() {
     var card = document.getElementById('compare-recommendation-card');
-    card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'});
+    if (card) { card.style.display = 'block'; card.scrollIntoView({behavior:'smooth'}); }
   });
 
-  document.getElementById('arch-deployment-view').addEventListener('change', function() { renderArchitectureDiagram(); });
-  document.getElementById('arch-agent-pattern').addEventListener('change', function() { renderArchitectureDiagram(); });
-  document.getElementById('arch-diagram-mode').addEventListener('change', function() {
+  var elArchMode = document.getElementById('arch-diagram-mode');
+  if (elArchMode) elArchMode.addEventListener('change', function() {
     STATE.diagramMode = this.value;
-    STATE.selectedComponent = null; // reset selection on mode switch
+    STATE.selectedComponent = null;
     renderArchitectureDiagram();
     refreshDetailPanel();
+    updateFlowLabel();
     saveState();
   });
-  document.getElementById('cost-timeframe').addEventListener('change', function() { renderCostView(); });
+  var elCostTf = document.getElementById('cost-timeframe');
+  if (elCostTf) elCostTf.addEventListener('change', function() { renderCostView(); });
 
   // Checkbox groups
   bindCheckGroup('cfg-mcp-tools', 'mcpTools', ['filesystem','database','websearch','github','slack','email','calendar','crm']);
@@ -371,9 +379,12 @@ function initEventListeners() {
   bindCheckGroup('cfg-use-cases', 'useCases', ['event-bot','junior-auditor','ephorm-audit-ai','ephorm-tax-ai','opuschart','caseware','client-knowledge','doc-request']);
 
   // Preset buttons
-  document.getElementById('btn-preset-copilot').addEventListener('click', function() { applyPreset('copilot'); });
-  document.getElementById('btn-preset-hybrid').addEventListener('click', function() { applyPreset('hybrid'); });
-  document.getElementById('btn-preset-onprem').addEventListener('click', function() { applyPreset('onprem'); });
+  var elPresetC = document.getElementById('btn-preset-copilot');
+  if (elPresetC) elPresetC.addEventListener('click', function() { applyPreset('copilot'); });
+  var elPresetH = document.getElementById('btn-preset-hybrid');
+  if (elPresetH) elPresetH.addEventListener('click', function() { applyPreset('hybrid'); });
+  var elPresetO = document.getElementById('btn-preset-onprem');
+  if (elPresetO) elPresetO.addEventListener('click', function() { applyPreset('onprem'); });
 }
 
 function bindChange(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('change', function() { fn(this.value); }); }
@@ -420,7 +431,12 @@ function switchTab(tabName) {
   for (var i = 0; i < tabs.length; i++) { tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === tabName); }
   var views = document.querySelectorAll('.ai-view');
   for (var j = 0; j < views.length; j++) { views[j].classList.toggle('active', views[j].id === 'view-' + tabName); }
-  if (tabName === 'architecture') renderArchitectureDiagram();
+  if (tabName === 'summary') { renderSummaryView(); }
+  if (tabName === 'architecture') { renderArchitectureDiagram(); updateFlowLabel(); }
+  if (tabName === 'memory') renderMemoryView();
+  if (tabName === 'gpu') {}
+  if (tabName === 'deepseek') {}
+  if (tabName === 'tokencost') {} // Static content — no dynamic render needed
   if (tabName === 'configure') syncConfigToUI();
   if (tabName === 'compare') renderCompareView();
   if (tabName === 'cost') renderCostView();
@@ -430,7 +446,9 @@ function switchTab(tabName) {
 
 function refreshAll() {
   updateBadges();
+  if (STATE.activeTab === 'summary') renderSummaryView();
   if (STATE.activeTab === 'architecture') renderArchitectureDiagram();
+  if (STATE.activeTab === 'memory') renderMemoryView();
   if (STATE.activeTab === 'compare') renderCompareView();
   if (STATE.activeTab === 'cost') renderCostView();
   if (STATE.activeTab === 'plan') renderPlanView();
@@ -573,7 +591,7 @@ function calcCosts() {
   var localP = PRICING.local[STATE.localModel] || PRICING.local['deepseek-v4-pro'];
   var gpuAmort = localP.gpuCost / 36;
   var powerCost = (localP.powerW/1000) * 24 * 30 * 0.12;
-  var maint = 200;
+  var maint = 50; // Occasional IT support + cooling for single GPU workstation
   var localCost = gpuAmort + powerCost + maint;
 
   var ragCost = 0;
@@ -628,14 +646,10 @@ function calcCopilotCosts() {
 
 // ═══════════════════════════════════ ARCHITECTURE DIAGRAM ═══════════════════════════════════
 function renderArchitectureDiagram() {
-  if (STATE.diagramMode === 'agentic') {
-    renderAgenticFlowDiagram();
-    return;
-  }
-  if (STATE.diagramMode === 'assembly') {
-    renderPromptAssemblyDiagram();
-    return;
-  }
+  if (STATE.diagramMode === 'agentic') { renderAgenticFlowDiagram(); return; }
+  if (STATE.diagramMode === 'assembly') { renderPromptAssemblyDiagram(); return; }
+  if (STATE.diagramMode === 'localFlow') { renderLocalFlowDiagram(); return; }
+  if (STATE.diagramMode === 'cloudFlow') { renderCloudFlowDiagram(); return; }
   renderDataFlowDiagram();
 }
 
@@ -754,7 +768,6 @@ function renderDataFlowDiagram() {
   mermaid.render(diagId, diagramDef).then(function(result) {
     container.innerHTML = result.svg;
     if (result.bindFunctions) result.bindFunctions(container);
-    renderKeyQuestions();
     if (STATE.selectedComponent) refreshDetailPanel();
   }).catch(function(err) {
     console.error('Mermaid dataflow error:', err);
@@ -918,6 +931,288 @@ function renderPromptAssemblyDiagram() {
 
 function findPromptBox(boxes, id) { for (var i=0;i<boxes.length;i++) { if (boxes[i].id===id) return boxes[i]; } return null; }
 
+// ═══════════════════════════════════ LOCAL LLM FLOW DIAGRAM ════════════════════════
+function renderLocalFlowDiagram() {
+  var container = document.getElementById('arch-diagram-svg');
+  if (!container) return;
+  if (!window.mermaid) {
+    container.innerHTML = '<div class="ai-empty" style="padding:40px;text-align:center">⏳ Loading Mermaid…</div>';
+    return;
+  }
+
+  var localP = PRICING.local[STATE.localModel] || PRICING.local['deepseek-v4-pro'];
+
+  var diagramDef = [
+    'flowchart TB',
+    '  classDef userIn    fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3730a3',
+    '  classDef prompt    fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f',
+    '  classDef tools     fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#164e63',
+    '  classDef localLLM  fill:#059669,stroke:#047857,stroke-width:3px,color:#fff',
+    '  classDef hardware  fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843',
+    '  classDef output    fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d',
+    '  classDef boundary  fill:#f8fafc,stroke:#059669,stroke-width:2px,stroke-dasharray:6 3,color:#065f46',
+    '',
+    '  subgraph BOUNDARY["🔒 YOUR NETWORK — All data stays on-premises · Nothing leaves your hardware"]',
+    '    direction TB',
+    '',
+    '    user["👤 User Query<br/>Natural language request"]',
+    '',
+    '    subgraph PROMPT["📦 Prompt Assembly — ALL context combined here<br/>System Prompt (rules &amp; tone) + RAG (your documents) + Memory (past conversations) + User Input"]',
+    '      prompt_combined["⚙️ Assembled Prompt<br/>The AI receives ONE complete, structured input<br/>containing everything it needs to answer accurately"]',
+    '    end',
+    '',
+    '    subgraph AGENT["🧠 Agent Orchestrator — Plans → Delegates → Evaluates → Loops"]',
+    '      orchestrator["🔄 Orchestrator Agent<br/>Breaks task into steps, delegates to workers,<br/>retrieves documents from RAG &amp; Memory as needed,<br/>evaluates results, loops until complete"]',
+    '    end',
+    '',
+    '    subgraph TOOLS["🔧 Tools & Connectors — AI can DO things"]',
+    '      mcp["🔌 MCP Tools<br/>Files · Database · Web Search"]',
+    '      apps["🔗 App Connectors<br/>Ephorm · CaseWare · OpusChart"]',
+    '    end',
+    '',
+    '    subgraph GPU["🖥️ Local GPU Server — YOUR HARDWARE"]',
+    '      llm["🤖 OPEN-SOURCE LLM<br/>' + esc(localP.name) + '<br/>VRAM: ' + esc(localP.vram) + '<br/>Speed: ~' + localP.tokensPerSec + ' tok/s"]',
+    '      gpu_info["⚡ Powered by: ' + esc(localP.hardware || localP.vram) + '<br/>One-time cost: ' + esc(localP.firstCost || fmtCurrency(localP.gpuCost)) + '<br/>Electricity: ' + esc(localP.usageCost || '~$50/mo') + '"]',
+    '    end',
+    '',
+    '    response["📤 AI Response<br/>Answer with source citations"]',
+    '    review["👤 Human Review & Approve<br/>You decide before any action"]',
+    '    action["⚡ Execute Action<br/>Filed · Sent · Logged · Auditable"]',
+    '',
+    '    user --> prompt_combined',
+    '    prompt_combined --> orchestrator',
+    '    orchestrator --> mcp & apps',
+    '    mcp & apps --> llm',
+    '    orchestrator --> llm',
+    '    prompt_combined -.-> llm',
+    '    llm --> response',
+    '    response --> review --> action',
+    '    gpu_info -.- llm',
+    '  end',
+    '',
+    '  %% Styling',
+    '  class user userIn',
+    '  class prompt_combined prompt',
+    '  class orchestrator prompt',
+    '  class mcp,apps tools',
+    '  class llm localLLM',
+    '  class gpu_info hardware',
+    '  class response,review,action output',
+    '',
+    '  click user onDiagramNodeClick',
+    '  click prompt_combined onDiagramNodeClick',
+    '  click orchestrator onDiagramNodeClick',
+    '  click mcp onDiagramNodeClick',
+    '  click apps onDiagramNodeClick',
+    '  click llm onDiagramNodeClick',
+    '  click gpu_info onDiagramNodeClick',
+    '  click response onDiagramNodeClick',
+    '  click review onDiagramNodeClick',
+    '  click action onDiagramNodeClick'
+  ].join('\n');
+
+  container.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:12px">⏳ Rendering local LLM flow…</div>';
+  var diagId = 'loc' + Date.now();
+  mermaid.render(diagId, diagramDef).then(function(result) {
+    container.innerHTML = result.svg;
+    if (result.bindFunctions) result.bindFunctions(container);
+    if (STATE.selectedComponent) refreshLocalCloudDetailPanel();
+  }).catch(function(err) {
+    console.error('Mermaid local flow error:', err);
+    container.innerHTML = '<div style="padding:16px;color:#ef4444;font-size:12px">⚠️ Diagram render error: ' + esc(String(err.message || err)) + '</div>';
+  });
+}
+
+// ═══════════════════════════════════ CLOUD API FLOW DIAGRAM ════════════════════════
+function renderCloudFlowDiagram() {
+  var container = document.getElementById('arch-diagram-svg');
+  if (!container) return;
+  if (!window.mermaid) {
+    container.innerHTML = '<div class="ai-empty" style="padding:40px;text-align:center">⏳ Loading Mermaid…</div>';
+    return;
+  }
+
+  var cloudP = (PRICING.cloud[STATE.cloudProvider]||{})[STATE.cloudModelTier] || null;
+  var cloudName = cloudP ? cloudP.name : 'Cloud LLM API';
+
+  var diagramDef = [
+    'flowchart TB',
+    '  classDef userIn    fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3730a3',
+    '  classDef prompt    fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f',
+    '  classDef tools     fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#164e63',
+    '  classDef cloudAPI  fill:#7c3aed,stroke:#5b21b6,stroke-width:3px,color:#fff',
+    '  classDef internet  fill:#fee2e2,stroke:#ef4444,stroke-width:2px,stroke-dasharray:6 3,color:#991b1b',
+    '  classDef output    fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d',
+    '  classDef yourNet   fill:#f8fafc,stroke:#6366f1,stroke-width:2px,color:#3730a3',
+    '',
+    '  subgraph YOUR_NET["🏠 YOUR NETWORK — Prompt assembly, RAG, Memory &amp; Tools stay local"]',
+    '    direction TB',
+    '',
+    '    user["👤 User Query<br/>Natural language request"]',
+    '',
+    '    subgraph PROMPT["📦 Prompt Assembly — ALL context combined here<br/>System Prompt + RAG (your docs) + Memory (past conversations) + User Input"]',
+    '      prompt_combined["⚙️ Assembled Prompt<br/>The AI receives ONE complete, structured input<br/>containing everything it needs to answer accurately"]',
+    '    end',
+    '',
+    '    subgraph AGENT["🧠 Agent Orchestrator — Plans → Delegates → Evaluates → Loops"]',
+    '      orchestrator["🔄 Orchestrator Agent<br/>Breaks task into steps, delegates to workers,<br/>retrieves documents from RAG &amp; Memory as needed"]',
+    '    end',
+    '',
+    '    subgraph TOOLS["🔧 Tools & Connectors (local)"]',
+    '      mcp["🔌 MCP Tools<br/>Files · Database · Web Search"]',
+    '      apps["🔗 App Connectors<br/>Ephorm · CaseWare · OpusChart"]',
+    '    end',
+    '',
+    '    user --> prompt_combined',
+    '    prompt_combined --> orchestrator',
+    '    orchestrator --> mcp & apps',
+    '    mcp & apps -.-> orchestrator',
+    '  end',
+    '',
+    '  INTERNET["🌐 INTERNET — Encrypted HTTPS (TLS 1.3)<br/>⚠️ The assembled prompt leaves your network<br/>✅ SOC 2 / ISO 27001 compliant providers available"]',
+    '',
+    '  subgraph CLOUD["☁️ CLOUD AI PROVIDER — ' + esc(STATE.cloudProvider.toUpperCase()) + '"]',
+    '    llm["🤖 CLOUD LLM API<br/>' + esc(cloudName) + '<br/>Pay-per-use · Always latest model<br/>Zero hardware · Auto-scaling"]',
+    '    pricing["💰 ' + esc(STATE.cloudProvider.toUpperCase()) + ' Pricing<br/>$' + (cloudP?cloudP.input:'—') + '/$' + (cloudP?cloudP.output:'—') + ' per M tokens (in/out)<br/>Est. monthly: ' + fmtCurrency(calcCosts().cloudCost) + ' at current usage"]',
+    '  end',
+    '',
+    '  response["📤 AI Response<br/>Answer with source citations — returned to your network"]',
+    '  review["👤 Human Review & Approve"]',
+    '  action["⚡ Execute Action<br/>Logged · Auditable"]',
+    '',
+    '  orchestrator --> INTERNET',
+    '  INTERNET --> llm',
+    '  llm --> INTERNET',
+    '  INTERNET --> response',
+    '  prompt_combined -.-> INTERNET',
+    '  response --> review --> action',
+    '  pricing -.- llm',
+    '',
+    '  %% Styling',
+    '  class user userIn',
+    '  class prompt_combined prompt',
+    '  class orchestrator prompt',
+    '  class mcp,apps tools',
+    '  class llm cloudAPI',
+    '  class pricing cloudAPI',
+    '  class INTERNET internet',
+    '  class response,review,action output',
+    '',
+    '  click user onDiagramNodeClick',
+    '  click prompt_combined onDiagramNodeClick',
+    '  click orchestrator onDiagramNodeClick',
+    '  click mcp onDiagramNodeClick',
+    '  click apps onDiagramNodeClick',
+    '  click INTERNET onDiagramNodeClick',
+    '  click llm onDiagramNodeClick',
+    '  click pricing onDiagramNodeClick',
+    '  click response onDiagramNodeClick',
+    '  click review onDiagramNodeClick',
+    '  click action onDiagramNodeClick'
+  ].join('\n');
+
+  container.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:12px">⏳ Rendering cloud API flow…</div>';
+  var diagId = 'cld' + Date.now();
+  mermaid.render(diagId, diagramDef).then(function(result) {
+    container.innerHTML = result.svg;
+    if (result.bindFunctions) result.bindFunctions(container);
+    if (STATE.selectedComponent) refreshLocalCloudDetailPanel();
+  }).catch(function(err) {
+    console.error('Mermaid cloud flow error:', err);
+    container.innerHTML = '<div style="padding:16px;color:#ef4444;font-size:12px">⚠️ Diagram render error: ' + esc(String(err.message || err)) + '</div>';
+  });
+}
+
+// ── Flow label updater for diagram mode switches ─────────────────────────────
+function updateFlowLabel() {
+  var el = document.getElementById('arch-diagram-title');
+  if (!el) return;
+  var labels = {
+    dataflow: '🔀 Data Flow — Full Architecture',
+    agentic: '🔄 Agentic Workflow — Orchestrator-Workers Pattern',
+    assembly: '📝 Prompt Assembly — How the AI Receives Context',
+    localFlow: '🏠 Local LLM Flow — On-Premises, Your Hardware',
+    cloudFlow: '☁️ Cloud API Flow — Pay-per-Use, Zero Hardware'
+  };
+  el.textContent = labels[STATE.diagramMode] || labels.dataflow;
+}
+
+// ── Detail panel for Local/Cloud flow diagrams ───────────────────────────────
+function refreshLocalCloudDetailPanel() {
+  var compId = STATE.selectedComponent;
+  var panel = document.getElementById('arch-side-panel');
+  var titleEl = document.getElementById('arch-side-title');
+  var bodyEl = document.getElementById('arch-side-body');
+  var placeholderEl = document.getElementById('arch-side-placeholder');
+  if (!panel) return;
+
+  if (!compId) {
+    panel.classList.remove('open');
+    if (placeholderEl) placeholderEl.style.display = '';
+    return;
+  }
+
+  panel.classList.add('open');
+  if (placeholderEl) placeholderEl.style.display = 'none';
+
+  var localP = PRICING.local[STATE.localModel] || PRICING.local['deepseek-v4-pro'];
+  var cloudP = (PRICING.cloud[STATE.cloudProvider]||{})[STATE.cloudModelTier] || null;
+  var costs = calcCosts();
+  var isLocal = STATE.diagramMode === 'localFlow';
+  var breakEvenMonths = localP.gpuCost > 0 && costs.cloudCost > costs.localCost ? Math.round(localP.gpuCost / (costs.cloudCost - costs.localCost)) : null;
+
+  // Build a rich hardware options list for the side panel
+  var hwOptionsHtml = '';
+  var allLocalModels = PRICING.local;
+  var modelKeys = Object.keys(allLocalModels);
+  for (var mk = 0; mk < modelKeys.length; mk++) {
+    var m = allLocalModels[modelKeys[mk]];
+    var isCurrent = STATE.localModel === modelKeys[mk];
+    hwOptionsHtml += '<div style="padding:6px 0;border-bottom:1px solid var(--ai-border-light);' + (isCurrent?'background:var(--ai-primary-bg);border-radius:4px;padding:6px;':'') + '">' +
+      '<strong>' + (isCurrent?'✅ ':'') + esc(m.name) + '</strong><br>' +
+      '<span style="font-size:11px;color:var(--ai-text-secondary)">🖥️ ' + esc(m.hardware || m.vram) + '</span><br>' +
+      '<span style="font-size:11px;color:var(--ai-text-secondary)">💰 Upfront: ' + esc(m.firstCost || fmtCurrency(m.gpuCost)) + ' · ⚡ ' + esc(m.usageCost || '~$50/mo') + ' · 🚀 ' + m.tokensPerSec + ' tok/s</span>' +
+      '</div>';
+  }
+
+  var info = {
+    'user': { title:'👤 User Query', desc:'The user states their goal in natural language — exactly like talking to a colleague.', config:'This is the starting point. Everything else adds context around this question.' },
+    'prompt_combined': { title:'📦 Prompt Assembly — ALL Context Combined', desc:'System Prompt (rules & tone) + RAG (your documents) + Memory (past conversations) + User Input are merged into ONE structured prompt. The LLM receives this single, complete input.', config:'<strong>Without proper prompt assembly:</strong> the AI gives generic answers.<br><strong>With it:</strong> every response is grounded in YOUR data, YOUR rules, and YOUR context. This is the #1 reason enterprise AI outperforms generic chatbots.' },
+    'orchestrator': { title:'🧠 Orchestrator Agent', desc:'The central controller: plans steps, delegates to specialized workers, retrieves documents from RAG & Memory as needed, monitors progress, and loops until the task is complete.', config:'<strong>Anthropic\'s recommended pattern</strong> for complex tasks. Single agents fail on multi-step work — the orchestrator pattern handles it reliably. Think: project manager for AI agents.' },
+    'mcp': { title:'🔌 MCP Tools — What the AI Can DO', desc:'The AI\'s "hands" — file system access, database queries, web search. Standardized via Anthropic\'s Model Context Protocol (MCP). Currently enabled: <strong>' + STATE.mcpTools.join(', ') + '</strong>.', config:'<strong>More tools = more capability</strong> but larger security surface and higher cost (~$5/mo per tool). Enable only what each use case actually needs.' },
+    'apps': { title:'🔗 App Connectors — Links to YOUR Business Apps', desc:'Domain-specific bridges: <strong>' + STATE.appConnectors.join(', ') + '</strong>. Each exposes a standardized API that the orchestrator discovers and calls automatically.', config:'<strong>No vendor lock-in:</strong> standardized interfaces. The orchestrator discovers tools dynamically. Add new apps without rebuilding the AI system.' },
+    'llm': { title: isLocal ? '🤖 Open-Source LLM — Running on YOUR Hardware' : '🤖 Cloud LLM — API-Powered',
+      desc: isLocal
+        ? '<strong>' + esc(localP.name) + '</strong><br>🖥️ VRAM: ' + esc(localP.vram) + '<br>⚡ Speed: ~' + localP.tokensPerSec + ' tokens/sec<br>🔒 100% data sovereignty — nothing leaves your network'
+        : '<strong>' + esc(cloudP?cloudP.name:'Cloud LLM API') + '</strong><br>☁️ Provider: ' + esc(STATE.cloudProvider.toUpperCase()) + '<br>📊 Tier: ' + esc(STATE.cloudModelTier) + '<br>🔄 Always latest model · Auto-scaling',
+      config: isLocal
+        ? '<strong>💰 Hardware Cost Breakdown:</strong><br>🖥️ GPU: ' + esc(localP.hardware || localP.vram) + '<br>💵 One-time purchase: <strong>' + esc(localP.firstCost || fmtCurrency(localP.gpuCost)) + '</strong><br>⚡ Monthly electricity: ' + esc(localP.usageCost || '~$50/mo') + '<br>🔧 Monthly maintenance: ~$200<br>📊 Amortized monthly: ' + fmtCurrency(localP.gpuCost/36) + ' (over 3 years)<br>⏱️ Break-even vs cloud: <strong>' + (breakEvenMonths ? breakEvenMonths + ' months' : 'Varies by usage') + '</strong><br><br><em>' + esc(localP.notes || '') + '</em>'
+        : '<strong>💰 Pricing Details:</strong><br>📥 Input: $' + (cloudP?cloudP.input:'—') + ' / M tokens<br>📤 Output: $' + (cloudP?cloudP.output:'—') + ' / M tokens<br>💵 Est. monthly: <strong>' + fmtCurrency(costs.cloudCost) + '</strong> at current usage (' + fmtNum(STATE.dau) + ' DAU)<br>📊 Per-query avg: ~$' + ((cloudP?(cloudP.input*0.6+cloudP.output*0.4)*STATE.avgTokens/1000:0)).toFixed(4) + '<br>🔄 No upfront · Pay only for what you use'
+    },
+    'gpu_info': { title:'🖥️ GPU Server — Hardware Options & Costs',
+      desc:'The physical GPU running the open-source LLM on-premises. Current selection: <strong>' + esc(localP.name) + '</strong>.',
+      config:'<strong>🔧 Available Hardware Options:</strong><br>' + hwOptionsHtml + '<br><span style="font-size:10px;color:var(--ai-text-muted)">💡 Change model in ⚙️ Configure tab → Local Model dropdown. Hardware costs update automatically.</span>'
+    },
+    'pricing': { title:'💰 Cloud API Pricing — Full Breakdown',
+      desc:'<strong>' + esc(STATE.cloudProvider.toUpperCase()) + '</strong> · ' + esc(STATE.cloudModelTier.toUpperCase()) + ' tier · ' + esc(cloudP?cloudP.name:'Custom'),
+      config:'<strong>📊 Pricing per Million Tokens:</strong><br>📥 Input: <strong>$' + (cloudP?cloudP.input:'—') + '</strong> / M tokens<br>📤 Output: <strong>$' + (cloudP?cloudP.output:'—') + '</strong> / M tokens<br><br><strong>💵 Your Estimated Costs:</strong><br>📊 Monthly queries: ' + fmtNum(costs.monthlyQueries) + '<br>📝 Total tokens/month: ' + fmtNum(costs.totalTokensPerMonth) + '<br>💰 Cloud LLM cost: <strong>' + fmtCurrency(costs.cloudCost) + '/mo</strong><br>📊 Per-query avg: ~$' + ((cloudP?(cloudP.input*0.6+cloudP.output*0.4)*STATE.avgTokens/1000:0)).toFixed(4) + '<br><br><span style="font-size:10px;color:var(--ai-text-muted)">💡 Change provider or tier in ⚙️ Configure tab to compare costs.</span>'
+    },
+    'INTERNET': { title:'🌐 Internet (HTTPS — Encrypted)', desc:'Data is encrypted in transit using TLS 1.3. Only the assembled prompt leaves your network — your documents, memory, and apps stay local.', config:'<strong>⚠️ Privacy Consideration:</strong> The prompt content is processed on the cloud provider\'s servers. For sensitive audit data, use the <strong>Local LLM</strong> option instead. For general queries, major providers are SOC 2 / ISO 27001 compliant.' },
+    'response': { title:'📤 AI Response', desc:'The AI\'s answer — with source citations from RAG so you can verify accuracy.', config:'The deliverable. Accurate (RAG), personalized (Memory), professional (System Prompt). Users can click citations to see the original source document.' },
+    'review': { title:'👤 Human Review & Approve', desc:'A human reviews the AI\'s output and approves the proposed ACTION before anything happens.', config:'<strong>Non-negotiable for enterprise AI.</strong> Every consequential action (file, send, update) needs human approval. Every approval is logged for audit.' },
+    'action': { title:'⚡ Execute Action', desc:'Once approved by a human, the system executes: files a document, sends an email, updates a record, triggers a workflow.', config:'Every action is <strong>logged, attributable, and reversible</strong> — SOC 2 / ISO 27001 compliant. Full audit trail for regulatory review.' }
+  };
+
+  var entry = info[compId];
+  if (entry && titleEl) titleEl.textContent = entry.title;
+  if (bodyEl && entry) {
+    bodyEl.innerHTML =
+      '<div class="ai-detail-block"><div class="ai-detail-block-title">📋 What it does</div><div class="ai-detail-block-desc">' + esc(entry.desc) + '</div></div>' +
+      '<div class="ai-detail-block" style="background:var(--ai-success-bg);border-left:3px solid var(--ai-success)"><div class="ai-detail-block-title">💡 Why it matters</div><div class="ai-detail-block-desc">' + esc(entry.config) + '</div></div>' +
+      '<button class="ai-btn ai-btn-sm ai-btn-outline" onclick="selectArchComponent(null)" style="margin-top:8px;width:100%">✕ Close Panel</button>';
+  }
+}
+
 function refreshAssemblyDetailPanel() {
   var compId = STATE.selectedComponent;
   var panel = document.getElementById('arch-side-panel');
@@ -1019,6 +1314,7 @@ function selectArchComponent(compId) {
   renderArchitectureDiagram();
   if (STATE.diagramMode === 'agentic') refreshAgentDetailPanel();
   else if (STATE.diagramMode === 'assembly') refreshAssemblyDetailPanel();
+  else if (STATE.diagramMode === 'localFlow' || STATE.diagramMode === 'cloudFlow') refreshLocalCloudDetailPanel();
   else refreshDetailPanel();
 }
 
@@ -1052,44 +1348,26 @@ function refreshDetailPanel() {
 
 function getComponentConfig(compId) {
   var explanations = {
-    'user-prompt': 'Every major AI platform follows this pattern: user expresses intent in natural language. The quality of the user\'s prompt directly affects the quality of the AI\'s response — this is why prompt engineering has become a core skill in the industry.',
-    'agent-workflow': 'Anthropic calls this the "Orchestrator-Workers" pattern — the most effective agent architecture for complex tasks. Google\'s agent whitepaper describes the same: a central controller plans, delegates, monitors, and iterates. This is the gold standard for multi-step AI workflows.',
-    'copilot': 'Microsoft\'s enterprise AI strategy: embed intelligence directly into the M365 suite. Copilot Studio extends this with custom agents. The industry trend is toward platform-native AI rather than standalone chatbots.',
-    'system-prompt': 'The system prompt is the AI\'s safety and behavior boundary. Anthropic\'s research shows that well-crafted system prompts are more effective than fine-tuning for controlling AI behavior. This is the standard for enterprise AI deployment.',
-    'rag': 'RAG (Lewis et al., 2020) is the industry standard for grounding AI in facts. The pipeline: Index documents → Retrieve relevant chunks → Augment the prompt → Generate the response. Modern enhancements add re-ranking and hybrid search. This is what prevents AI hallucinations in enterprise use.',
-    'user-memory': 'Persistent user memory is a core component in Anthropic\'s agent architecture and OpenAI\'s Assistants API. It enables personalization without retraining — the AI remembers preferences, past conversations, and user-specific context across sessions.',
-    'company-memory': 'Enterprise-wide shared knowledge is the foundation of organizational AI. This is what separates a generic chatbot from a company-specific AI assistant. All major platforms (Copilot, Gemini, Claude Enterprise) implement this concept.',
-    'app-memory': 'Domain isolation is a standard enterprise pattern: each application maintains its own context to prevent cross-contamination. This is critical in regulated industries like audit and tax where data separation is mandatory.',
-    'external-memory': 'Cross-platform memory is the frontier of enterprise AI. Apple Intelligence, Microsoft Copilot, and Google Gemini all aim for this: seamless context across devices and apps. The industry is converging on this as the next major capability.',
-    'app-connectors': 'Enterprise AI must connect to existing systems. This follows the MCP (Model Context Protocol) standard by Anthropic: each tool exposes a standardized interface that any AI model can discover and use. No vendor lock-in.',
-    'api-mcp': 'Tool Use / Function Calling is a core capability in OpenAI, Anthropic, and Google models. MCP is Anthropic\'s open standard for tool connections. Together they form the industry-standard way for AI to interact with external systems.',
-    'training': 'The model customization spectrum is a well-established industry concept: Prompt Engineering (fastest, least expensive) → RAG (adds knowledge) → Fine-Tuning (deepest, most expensive). Most enterprises start with prompt + RAG before considering fine-tuning.',
-    'llm-local': 'On-premises AI is the enterprise standard for regulated industries (finance, healthcare, legal). NVIDIA DGX, Dell AI Factory, and Apple Silicon are the leading platforms. The trade-off: data sovereignty vs. infrastructure complexity.',
-    'llm-cloud': 'Cloud API is the default for most organizations. OpenAI, Anthropic, and Google provide SOC 2 / ISO 27001 compliant infrastructure. The industry trend is toward multi-provider strategies to avoid single-vendor dependency.',
-    'llm-hybrid': 'Hybrid deployment is the emerging enterprise standard. Microsoft Azure AI, AWS Bedrock, and Google Vertex AI all support hybrid patterns. The rule: classify data sensitivity → route accordingly → audit everything.',
-    'review-approval': 'Human-in-the-loop is a non-negotiable industry standard for high-stakes decisions. Anthropic, OpenAI, and Google all recommend human approval gates before AI takes consequential actions. This is essential for audit and compliance.',
-    'action': 'Action execution with audit trail is a standard enterprise requirement. Every AI-initiated action must be logged, attributable, and reversible. This follows SOC 2 and ISO 27001 compliance standards.',
-    'response': 'The response is the deliverable. Industry best practice: include citations (RAG sources), confidence indicators, and clear provenance. Users should always know where the information came from and how confident the AI is.'
+    'user-prompt': '<strong>🔧 How it works:</strong> The user types a question or task in plain language — exactly like telling a colleague what to do. No special commands or syntax needed.<br><br><strong>💡 Example:</strong> "Draft an audit memo for client XYZ covering the 2025 fiscal year findings" or "Find all clients with pending tax reviews due this month."',
+    'agent-workflow': '<strong>⚠️ This is PURE REGULAR CODE — NOT an LLM call.</strong> The Orchestrator is a Python/TypeScript state machine (LangGraph). It uses deterministic logic: if/then/else, loops, state transitions. It calls the LLM only when text needs to be generated or analyzed.<br><br><strong>🔧 How it works:</strong> 1) Receives the user goal 2) Breaks it into sub-tasks 3) Delegates each to specialized worker agents 4) Evaluates results 5) Loops until complete. Think: project manager for AI.<br><br><strong>💡 Example:</strong> User asks "Prepare Q4 audit report." Orchestrator: Step 1 -> Doer drafts the report. Step 2 -> Reviewer checks against standards. Step 3 -> Not done? Plan next step. Step 4 -> Manager approves final output.',
+    'copilot': '<strong>🔧 How it works:</strong> Microsoft AI platform built into M365 (Teams, Word, Excel, Outlook). Connects to your organization data via Microsoft Graph API. Can be extended with Copilot Studio for custom agents.<br><br><strong>💡 Example:</strong> In Teams, type "Summarize the email thread with client ABC" — Copilot reads your emails and summarizes. Or in Word: "Draft an audit response letter using the PKF template."',
+    'system-prompt': '<strong>🔧 How it works:</strong> The System Prompt is the AI permanent instruction set — its "job description." It defines: role (who you are), tone (professional/casual), rules (compliance boundaries), and expected output format. This text is prepended to EVERY query.<br><br><strong>💡 Example:</strong> "You are an audit assistant for PKF. Always cite relevant IFRS/ISA standards. Be precise and professional. Never disclose client names outside the firm. If unsure, say so and suggest consulting a senior auditor."',
+    'rag': '<strong>🔧 How it works:</strong> RAG = Retrieval-Augmented Generation (Lewis et al., 2020). 1) Your documents are split into chunks 2) Each chunk is converted to a vector (embedding) 3) At query time, the user question is also vectorized 4) The most similar document chunks are retrieved 5) These chunks are added to the prompt as context 6) The LLM generates an answer citing those documents.<br><br><strong>💡 Example:</strong> User asks "What is PKF policy on client data retention?" -> RAG retrieves the exact policy document -> LLM answers with citations to the policy.',
+    'user-memory': '<strong>🔧 How it works:</strong> Stores your conversation history, preferences, and learned facts. The AI remembers: "This auditor prefers bullet-point summaries," "We discussed client XYZ last Tuesday," "User always asks for IFRS references."<br><br><strong>💡 Example:</strong> You: "Remember that audit issue from last week?" AI: "Yes — the revenue recognition timing concern for client DEF. Would you like me to pull up the relevant IFRS 15 guidance?"',
+    'company-memory': '<strong>🔧 How it works:</strong> Shared organizational knowledge: PKF policies, brand guidelines, standard templates, approved methodologies. Every employee AI assistant references the same company memory.<br><br><strong>💡 Example:</strong> Any auditor asking "What is the standard engagement letter template?" gets the exact same, company-approved template — not a hallucinated version.',
+    'app-memory': '<strong>🔧 How it works:</strong> Each application (Ephorm Audit, Ephorm Tax, CaseWare) maintains its own isolated context. This prevents audit data from mixing with tax data — critical for compliance.<br><br><strong>💡 Example:</strong> The AI in Ephorm Audit knows your audit workpapers. The AI in Ephorm Tax knows your tax filings. They do not cross-contaminate. Regulatory requirement — not optional.',
+    'external-memory': '<strong>🔧 How it works:</strong> A unified memory layer (Redis/Mem0) that ALL applications share. Start a task in the web app, continue in VS Code, finish in Teams — the AI remembers everything across all platforms.<br><br><strong>💡 Example:</strong> You search for a client document on the web portal. Later, you open VS Code and ask "What was that document I found earlier?" — the AI remembers because all apps share the same memory.',
+    'app-connectors': '<strong>🔧 How it works:</strong> Domain-specific bridges to your existing business tools (Ephorm Audit, Ephorm Tax, CaseWare, OpusChart). Each connector exposes a standardized API that the AI orchestrator discovers and uses automatically.<br><br><strong>💡 Example:</strong> The AI orchestrator needs client financial data -> calls the Ephorm Audit connector -> retrieves the data -> passes it to the LLM for analysis.',
+    'api-mcp': '<strong>🔧 How it works:</strong> MCP (Model Context Protocol) is Anthropic open standard — the AI "hands." Tools include: file system (read/write), database queries, web search, email, calendar. The AI discovers available tools and calls them as needed.<br><br><strong>💡 Example:</strong> AI: "I need to check the client last filing date." -> Calls the Database MCP tool -> Queries the filing system -> Gets the date -> Incorporates it into the response.',
+    'training': '<strong>🔧 How it works:</strong> The customization spectrum: Prompt Engineering (fastest, free) -> RAG (adds document knowledge) -> Fine-Tuning (deepest, most expensive). Fine-tuning retrains the model on domain-specific examples — like teaching it PKF audit terminology.<br><br><strong>💡 Example:</strong> Fine-tune a model on 5,000 PKF audit reports so it naturally uses PKF terminology and understands audit-specific jargon without being told each time.',
+    'llm-local': '<strong>🔧 How it works:</strong> The LLM runs on YOUR GPU hardware — nothing leaves your network. You download an open-source model (DeepSeek V4 Pro, Llama 4, Qwen 3), load it into Ollama or vLLM, and call it like a local API. Full data sovereignty.<br><br><strong>💡 Example:</strong> Running DeepSeek V4 Pro on a Dual RTX 5090 workstation. Client audit data is processed 100% on-premises. No internet connection needed after model download.',
+    'llm-cloud': '<strong>🔧 How it works:</strong> Your prompt is sent via encrypted HTTPS to a cloud provider (OpenAI, Anthropic, Google). The provider massive GPU cluster processes it and returns the response. You pay per token — zero hardware to manage.<br><br><strong>💡 Example:</strong> Send "Analyze this 50-page contract" to Claude Opus 4.8. The prompt + document is ~100K tokens. Cost: ~$0.09 input + ~$0.45 output = ~$0.54 total. Response time: ~5 seconds.',
+    'llm-hybrid': '<strong>🔧 How it works:</strong> A smart router classifies each query: sensitive data? -> route to local LLM. General query? -> route to cloud API. Cost optimization: high-volume simple queries go local, complex reasoning goes cloud.<br><br><strong>💡 Example:</strong> Query containing client name "ABC Corp"? -> Auto-routed to on-prem LLM (privacy). Query asking "What is IFRS 16?" -> Routed to cloud (public knowledge, faster).',
+    'review-approval': '<strong>⚠️ NON-NEGOTIABLE for enterprise AI.</strong> Before the AI takes any real action (file a document, send an email, update a record), a human MUST review and approve. The AI proposes — the human decides.<br><br><strong>💡 Example:</strong> AI: "I have drafted the audit response letter for client XYZ. It addresses all 5 findings with references to ISA 315 and ISA 330. [SHOW DRAFT] -> Approve sending?" Human reviews -> Clicks Approve -> AI sends.',
+    'action': '<strong>🔧 How it works:</strong> Once a human approves, the system executes: files the document in the DMS, sends the email via Outlook, updates the database record, triggers the next workflow step. Every action is logged with: who approved it, when, what exactly was done.<br><br><strong>💡 Example:</strong> Action log entry: "2026-06-26 14:32 | User: Jane Smith | Action: Filed audit_report_Q4_2025.pdf to client XYZ folder | Approval ID: #45892 | Reversible: Yes"',
+    'response': '<strong>🔧 How it works:</strong> The AI generates its answer based on the combined prompt (System Prompt + RAG + Memory + User Input). The response includes source citations so users can verify accuracy by checking the original documents.<br><br><strong>💡 Example:</strong> AI response: "Based on PKF client data retention policy (Section 4.2, retrieved from RAG), client files must be retained for 7 years after engagement completion. For client XYZ, the retention period ends March 2033. [Source: PKF-POL-2024-003, paragraph 4.2]"'
   };
   return explanations[compId] || '';
-}
-
-function renderKeyQuestions() {
-  var el = document.getElementById('arch-key-questions');
-  if (!el) return;
-  var qa = [
-    { q: '📐 What industry standards is this architecture based on?', a: '<strong>Anthropic:</strong> "Building Effective Agents" (Dec 2024) — Orchestrator-Workers pattern, MCP protocol. <strong>Google:</strong> Agent Whitepaper (2024) — agent architecture with model, tools, orchestration. <strong>OpenAI:</strong> "A Practical Guide to Building Agents" — Tool Use, function calling. <strong>RAG:</strong> Lewis et al. (2020) — Retrieval-Augmented Generation pipeline. <strong>Enterprise:</strong> SOC 2, ISO 27001 compliance for human-in-the-loop and audit trails.' },
-    { q: 'Where should memory sit?', a: 'Industry trend: <strong>External shared memory</strong> (Anthropic, OpenAI Assistants API, Google Gemini). Current config: <strong>' + STATE.memoryStrategy + '</strong>. Best practice: shared memory enables cross-app continuity without vendor lock-in. App-internal memory creates silos that the industry is moving away from.' },
-    { q: 'RAG vs Long-Term Memory — what\'s the difference?', a: '<strong>RAG</strong> (Lewis et al., 2020): retrieves facts from documents at query time — stateless, always current. <strong>Long-term memory</strong> (Anthropic/OpenAI pattern): stores conversation history and learned preferences across sessions — stateful, builds over time. Both are needed: RAG for accuracy, memory for personalization.' },
-    { q: 'How does the Orchestrator-Workers pattern work?', a: 'This is <strong>Anthropic\'s recommended pattern</strong> for complex tasks. <strong>Orchestrator</strong> (central controller): plans steps, delegates to workers, monitors progress, loops until complete. <strong>Workers</strong> (Doer, Reviewer, Tool Agent, Manager): specialized agents that execute sub-tasks. All share memory and RAG context. This pattern outperforms single-agent and fully autonomous approaches in enterprise use.' },
-    { q: 'What should be on-prem vs cloud?', a: 'Enterprise standard: <strong>data classification drives deployment</strong>. Sensitive client data → on-prem (NVIDIA DGX, Mac Studio). General queries → cloud API (OpenAI, Anthropic). Hybrid is the emerging norm — Microsoft Azure AI, AWS Bedrock, and Google Vertex AI all support this. Current config: <strong>' + STATE.deploymentType + '</strong>.' },
-    { q: 'How to connect to Ephorm, CaseWare, OpusChart?', a: 'Via <strong>MCP (Model Context Protocol)</strong> — Anthropic\'s open standard for AI-tool connections. Each app exposes an MCP server. The orchestrator discovers tools dynamically. No vendor lock-in. Current connectors: <strong>' + STATE.appConnectors.join(', ') + '</strong>. This is the same protocol used by Claude Desktop, Copilot Studio, and the broader industry.' }
-  ];
-  var html = '';
-  for (var i=0;i<qa.length;i++) {
-    html += '<div class="ai-qa-item"><div class="ai-qa-q">' + qa[i].q + '</div><div class="ai-qa-a">' + qa[i].a + '</div></div>';
-  }
-  el.innerHTML = html;
 }
 
 // ═══════════════════════════════════ OPTIONS COMPARE VIEW ═══════════════════════════════════
@@ -1175,6 +1453,7 @@ function renderFitMatrix() {
 function renderCostView() {
   var costs = calcCosts();
   renderHardwareOptions();
+  renderDeploymentComparisonTable(costs);
   renderCostCards(costs);
   renderCostChart(costs);
   renderBreakeven(costs);
@@ -1212,6 +1491,72 @@ function renderSoftwareStack() {
       html += '<div class="ai-sw-item"><div class="ai-sw-name">' + esc(item.name) + '</div><div class="ai-sw-desc">' + esc(item.desc) + '</div><div class="ai-sw-cost">💰 ' + esc(item.cost) + '</div></div>';
     }
   }
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════ DEPLOYMENT COMPARISON TABLE ═══════════════════
+function renderDeploymentComparisonTable(costs) {
+  var el = document.getElementById('deployment-compare-table');
+  if (!el) return;
+
+  var localP = PRICING.local[STATE.localModel] || PRICING.local['deepseek-v4-pro'];
+  var cloudP = (PRICING.cloud[STATE.cloudProvider]||{})[STATE.cloudModelTier] || null;
+  var tf = document.getElementById('cost-timeframe');
+  var mult = tf && tf.value === 'annual' ? 12 : tf && tf.value === '3year' ? 36 : 1;
+  var period = mult === 12 ? '/yr' : mult === 36 ? '/3yr' : '/mo';
+
+  var localM = costs.localCost * mult;
+  var cloudM = costs.cloudCost * mult;
+  var hybridM = costs.hybridCost * mult;
+  var cheapest = localM <= cloudM && localM <= hybridM ? 'local' : cloudM <= hybridM ? 'cloud' : 'hybrid';
+
+  var rows = [
+    { label:'🏷️ Model Used', local:esc(localP.name), cloud:cloudP?esc(cloudP.name):'Custom API', hybrid:'Local: ' + esc(localP.name) + ' + Cloud: ' + (cloudP?esc(cloudP.name):'API') },
+    { label:'🔒 Data Privacy', local:'⭐⭐⭐⭐⭐<br><small>100% on-prem — nothing leaves</small>', cloud:'⭐⭐⭐<br><small>Data sent over HTTPS to provider</small>', hybrid:'⭐⭐⭐⭐<br><small>Sensitive data stays local, rest goes cloud</small>' },
+    { label:'⚡ Latency (Response Speed)', local:'~' + (1000/localP.tokensPerSec).toFixed(1) + ' ms/tok<br><small>Depends on GPU — no network delay</small>', cloud:'~15-30 ms/tok<br><small>Fast, but adds network round-trip</small>', hybrid:'~20 ms/tok avg<br><small>Routing adds small overhead</small>' },
+    { label:'🧠 Model Choice', local:'Limited to open-weight models<br><small>DeepSeek V4 Pro, Llama 4, Qwen 3, Phi-4</small>', cloud:'ALL models available<br><small>GPT-5.4, Claude Opus 4.8, Gemini 3.0, + more</small>', hybrid:'Best of both<br><small>Cloud for cutting-edge, local for privacy</small>' },
+    { label:'📈 Scalability', local:'⭐⭐<br><small>Limited by your GPU — buy more hardware to scale</small>', cloud:'⭐⭐⭐⭐⭐<br><small>Auto-scaling — handles spikes instantly</small>', hybrid:'⭐⭐⭐⭐<br><small>Cloud handles spikes, local handles baseline</small>' },
+    { label:'🔧 Maintenance', local:'⭐⭐⭐⭐<br><small>You manage GPU, drivers, updates, power</small>', cloud:'⭐<br><small>Zero maintenance — provider handles everything</small>', hybrid:'⭐⭐⭐<br><small>Maintain local + monitor cloud costs</small>' },
+    { label:'⏱️ Setup Time', local:'2-4 weeks<br><small>Buy hardware → Install Ollama → Configure</small>', cloud:'1-3 days<br><small>Sign up → Get API key → Start coding</small>', hybrid:'3-6 weeks<br><small>Cloud first (fast), then add local</small>' },
+    { label:'💰 Upfront Cost', local:fmtCurrency(localP.gpuCost * (mult>1?1:1)) + '<br><small>One-time hardware purchase</small>', cloud:'$0<br><small>No upfront — pay as you go</small>', hybrid:fmtCurrency(localP.gpuCost) + '<br><small>Hardware + cloud monthly</small>' },
+    { label:'💵 Cost ' + period, local:'<strong style="color:'+(cheapest==='local'?'#10b981':'#ef4444')+'">'+fmtCurrency(localM)+'</strong>', cloud:'<strong style="color:'+(cheapest==='cloud'?'#10b981':'#ef4444')+'">'+fmtCurrency(cloudM)+'</strong>', hybrid:'<strong style="color:'+(cheapest==='hybrid'?'#10b981':'#ef4444')+'">'+fmtCurrency(hybridM)+'</strong>' },
+    { label:'🔐 Compliance Ready', local:'✅ GDPR / ISO 27001<br><small>No DPA needed — data never leaves</small>', cloud:'✅ SOC 2 / ISO 27001<br><small>DPA required — check provider terms</small>', hybrid:'✅ Best for regulated<br><small>Sensitive data compliant by design</small>' },
+    { label:'🏆 Best For', local:'Highly sensitive data<br>Predictable high-volume use<br>Air-gapped environments', cloud:'PoC & fast prototyping<br>Variable/spiky workloads<br>Need latest models always', hybrid:'Enterprise recommended<br>Mix of sensitive + general<br>Cost-optimized at scale' }
+  ];
+
+  var localHwCost = localP.firstCost || fmtCurrency(localP.gpuCost);
+  var breakEven = '';
+  if (localP.gpuCost > 0 && cloudM > localM && mult === 1) {
+    var months = Math.round(localP.gpuCost / (cloudM - localM));
+    if (months > 0 && months < 120) breakEven = '<br><small>⏱️ Break-even: ~' + months + ' months vs cloud</small>';
+  }
+
+  var html = '<div style="overflow-x:auto"><table class="ai-compare-table" style="font-size:12px;width:100%"><thead><tr>';
+  html += '<th style="width:16%">Factor</th>';
+  html += '<th style="width:28%;background:#f0fdf4;border-bottom:3px solid #10b981">🏠 LOCAL LLM SERVER<br><small>Open-Source · Your Hardware</small></th>';
+  html += '<th style="width:28%;background:#ede9fe;border-bottom:3px solid #7c3aed">☁️ CLOUD API<br><small>Pay-per-use · No Hardware</small></th>';
+  html += '<th style="width:28%;background:#fef3c7;border-bottom:3px solid #d97706">🔀 HYBRID<br><small>Local + Cloud Router</small></th>';
+  html += '</tr></thead><tbody>';
+
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    var isCostRow = row.label.indexOf('Cost') !== -1;
+    html += '<tr' + (isCostRow ? ' style="background:#fffbeb;font-size:14px"' : '') + '>';
+    html += '<td><strong>' + row.label + '</strong></td>';
+    html += '<td style="border-left:3px solid #10b981">' + row.local + (r===8 && breakEven ? breakEven : '') + '</td>';
+    html += '<td style="border-left:3px solid #7c3aed">' + row.cloud + '</td>';
+    html += '<td style="border-left:3px solid #d97706">' + row.hybrid + '</td>';
+    html += '</tr>';
+  }
+
+  html += '</tbody></table></div>';
+
+  // Recommendation row
+  var rec = cheapest === 'local' ? '🏠 LOCAL is most cost-effective at your usage level. Best for data privacy.' :
+            cheapest === 'hybrid' ? '🔀 HYBRID offers the best balance of privacy, capability, and cost — our recommendation for most enterprises.' :
+            '☁️ CLOUD is most cost-effective now. Best for speed and flexibility. Re-evaluate as usage grows.';
+  html += '<div class="ai-rec-highlight" style="margin-top:12px">💡 <strong>Verdict:</strong> ' + rec + '</div>';
+
   el.innerHTML = html;
 }
 
@@ -1331,6 +1676,236 @@ function renderBreakeven(costs) {
   el.innerHTML = html;
 }
 
+// ═══════════════════════════════════ SUMMARY VIEW ═══════════════════════
+function renderSummaryView() {
+  var el = document.getElementById('summary-content');
+  if (!el) return;
+  var costs = calcCosts();
+  var dailyQ = STATE.dau * STATE.queriesPerUser;
+
+  // ── Build device options for local/hybrid ──
+  var localModels = PRICING.local;
+  var deviceOptions = '';
+  var modelKeys = Object.keys(localModels);
+  for (var mk = 0; mk < modelKeys.length; mk++) {
+    var m = localModels[modelKeys[mk]];
+    deviceOptions += '<option value="' + modelKeys[mk] + '">' + esc(m.name) + ' — ' + esc(m.firstCost||fmtCurrency(m.gpuCost)) + '</option>';
+  }
+
+  var html = '';
+
+  // ═══════════ MEMORY CLARIFICATION ═══════════
+  html += '<div class="ai-card" style="margin-bottom:12px;border-left:4px solid #f59e0b">';
+  html += '<div class="ai-card-header"><span class="ai-card-title">⚠️ Important: Memory Works with API-Based Apps — Not Public Chat UIs</span></div>';
+  html += '<div style="font-size:12px;line-height:1.7;padding:4px 0">';
+  html += 'External memory (Redis/Mem0) <strong>cannot</strong> be injected into ChatGPT Web, Claude Web, or MS Copilot Web — these are third-party black boxes. ';
+  html += '<strong>The solution:</strong> Build ONE custom chat application (web-based) that connects to ANY LLM API (OpenAI, Claude, DeepSeek, or your local Ollama). ';
+  html += 'This app automatically sends every conversation to the Memory API and retrieves context before each LLM call. ';
+  html += '<strong>For privacy:</strong> Use Redis Stack OSS (free, self-hosted) + Mem0 OSS (free, self-hosted) or Letta/MemGPT (free OSS) — all data stays on your servers. ';
+  html += '<strong>See the 🧠 Memory System tab for full library comparison.</strong>';
+  html += '</div></div>';
+
+  // ═══════════ THREE SOLUTION COLUMNS ═══════════
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+
+  // ── SOLUTION 1: COMPLETE CLOUD ──
+  html += '<div style="background:var(--ai-surface);border:2px solid #7c3aed;border-radius:12px;overflow:hidden">';
+  html += '<div style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;padding:12px 14px;font-size:15px;font-weight:700">☁️ Complete Cloud</div>';
+  html += '<div style="padding:14px;font-size:12px;line-height:1.7">';
+
+  html += '<strong>🏗️ Architecture:</strong><br>';
+  html += 'All LLM calls via Cloud APIs — zero hardware. Your custom chat app (web-based) connects to OpenAI, Anthropic, DeepSeek, or Google. Memory stored in Redis/Mem0 cloud.<br><br>';
+
+  html += '<strong>🤖 Recommended Models:</strong><br>';
+  html += '• Budget: DeepSeek V4 Pro API — $0.14/$0.28 per M tok<br>';
+  html += '• Balanced: GPT-5.4 Mini — $0.75/$4.50 per M tok<br>';
+  html += '• Premium: Claude Sonnet 4.6 — $3/$15 per M tok<br><br>';
+
+  html += '<strong>💰 Estimated Cost:</strong><br>';
+  html += '• ' + fmtNum(dailyQ) + ' queries/day ≈ ' + fmtNum(costs.monthlyQueries) + ' queries/month<br>';
+  html += '• Cloud API: ~' + fmtCurrency(costs.cloudCost) + '/mo<br>';
+  html += '• Memory (Redis + Mem0): ~$130/mo<br>';
+  html += '• <strong>Total: ~' + fmtCurrency(costs.cloudCost + 130) + '/mo</strong><br><br>';
+
+  html += '<strong>✅ Best For:</strong><br>';
+  html += '• Fastest setup (1-3 days)<br>• Zero hardware · Zero maintenance<br>• Always latest models<br>• Variable/spiky workloads<br>• PoC and pilot phases<br><br>';
+
+  html += '<strong>⚠️ Considerations:</strong><br>';
+  html += '• Data leaves your network<br>• Costs scale with usage<br>• Internet connection required<br>• Vendor dependency risk';
+
+  html += '</div></div>';
+
+  // ── SOLUTION 2: COMPLETE LOCAL ──
+  html += '<div style="background:var(--ai-surface);border:2px solid #059669;border-radius:12px;overflow:hidden">';
+  html += '<div style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:12px 14px;font-size:15px;font-weight:700">🏠 Complete Local</div>';
+  html += '<div style="padding:14px;font-size:12px;line-height:1.7">';
+
+  html += '<strong>🏗️ Architecture:</strong><br>';
+  html += 'Everything on YOUR hardware. Open-source LLM on local GPU. Redis/Mem0 self-hosted. Custom chat app served from your network. Nothing leaves premises.<br><br>';
+
+  html += '<strong>🖥️ Select Device:</strong><br>';
+  html += '<select class="ai-select" id="summary-local-device" onchange="updateSummaryDevice()" style="width:100%;font-size:11px">' + deviceOptions + '</select><br>';
+  html += '<small style="color:var(--ai-text-muted)" id="summary-local-spec"></small><br><br>';
+
+  html += '<strong>💰 Estimated Cost:</strong><br>';
+  html += '• GPU amortized (3yr): ' + fmtCurrency(costs.gpuAmortizedMonthly) + '/mo<br>';
+  html += '• Electricity: ' + fmtCurrency(costs.powerCostMonthly) + '/mo<br>';
+  html += '• Maintenance: $50/mo<br>';
+  html += '• Memory (self-hosted Redis + Mem0 OSS): <strong>Free</strong><br>';
+  html += '• <strong>Total: ~' + fmtCurrency(costs.localCost) + '/mo</strong><br>';
+  html += '• <strong>One-time HW: ' + fmtCurrency(costs.localHardwareCost) + '</strong><br><br>';
+
+  html += '<strong>✅ Best For:</strong><br>';
+  html += '• Maximum privacy & compliance<br>• Predictable cost at scale<br>• Air-gapped environments<br>• High-volume steady usage<br>• Full data sovereignty<br><br>';
+
+  html += '<strong>⚠️ Considerations:</strong><br>';
+  html += '• Upfront hardware cost<br>• You manage GPU & updates<br>• Limited to open-weight models<br>• Scaling requires more GPUs';
+
+  html += '</div></div>';
+
+  // ── SOLUTION 3: HYBRID ──
+  html += '<div style="background:var(--ai-surface);border:2px solid #d97706;border-radius:12px;overflow:hidden">';
+  html += '<div style="background:linear-gradient(135deg,#d97706,#b45309);color:#fff;padding:12px 14px;font-size:15px;font-weight:700">🔀 Hybrid ⭐</div>';
+  html += '<div style="padding:14px;font-size:12px;line-height:1.7">';
+
+  html += '<strong>🏗️ Architecture:</strong><br>';
+  html += 'Sensitive data → local GPU. General queries → cloud API. Smart router classifies each request. Best of both worlds.<br><br>';
+
+  html += '<strong>🖥️ Select Local Device:</strong><br>';
+  html += '<select class="ai-select" id="summary-hybrid-device" onchange="updateSummaryDevice()" style="width:100%;font-size:11px">' + deviceOptions + '</select><br>';
+  html += '<small style="color:var(--ai-text-muted)" id="summary-hybrid-spec"></small><br><br>';
+
+  html += '<strong>💰 Estimated Cost:</strong><br>';
+  html += '• Local GPU + Cloud API combined<br>';
+  html += '• <strong>Total: ~' + fmtCurrency(costs.hybridCost) + '/mo</strong><br>';
+  html += '• <strong>One-time HW: ' + fmtCurrency(costs.localHardwareCost) + '</strong><br><br>';
+
+  html += '<strong>✅ Best For:</strong><br>';
+  html += '• Enterprise recommended<br>• Mix of sensitive + general work<br>• Privacy + latest models<br>• Cost-optimized routing<br>• No vendor lock-in<br><br>';
+
+  html += '<strong>⚠️ Considerations:</strong><br>';
+  html += '• More complex setup<br>• Two environments to monitor<br>• Data classification policy needed';
+
+  html += '</div></div>';
+
+  html += '</div>'; // end three columns
+
+  // ── IMPLEMENTATION NOTE ──
+  html += '<div class="ai-rec-highlight" style="margin-top:12px">';
+  html += '<strong>🏗️ The App You Need:</strong> A custom web-based chat application (Python/FastAPI or Node.js) that:<br>';
+  html += '<strong>1.</strong> Provides ONE interface for users — regardless of which LLM powers it behind the scenes.<br>';
+  html += '<strong>2.</strong> Connects to your chosen LLM (Cloud API, Local Ollama, or both via Hybrid router).<br>';
+  html += '<strong>3.</strong> Automatically sends every conversation to Redis/Mem0 Memory API.<br>';
+  html += '<strong>4.</strong> Retrieves relevant memories and embeds them in the system prompt before each LLM call.<br>';
+  html += '<strong>5.</strong> Works identically whether you choose Cloud, Local, or Hybrid — swap the backend without changing the user experience.<br>';
+  html += '<strong>📋 Use the Plan tab for detailed implementation steps. Use ⚙️ Configure to adjust parameters.</strong>';
+  html += '</div>';
+
+  el.innerHTML = html;
+
+  // Set default device selections
+  setTimeout(function() {
+    var selLocal = document.getElementById('summary-local-device');
+    var selHybrid = document.getElementById('summary-hybrid-device');
+    if (selLocal) selLocal.value = STATE.localModel;
+    if (selHybrid) selHybrid.value = STATE.localModel;
+    updateSummaryDevice();
+  }, 100);
+}
+
+// ── Update device specs in summary when selection changes ──
+function updateSummaryDevice() {
+  var selLocal = document.getElementById('summary-local-device');
+  var selHybrid = document.getElementById('summary-hybrid-device');
+  var modelKey = (selLocal && selLocal.value) || (selHybrid && selHybrid.value) || STATE.localModel;
+  var m = PRICING.local[modelKey];
+  if (!m) return;
+  var spec = '🖥️ ' + esc(m.hardware||m.vram) + ' | 💵 ' + esc(m.firstCost||fmtCurrency(m.gpuCost)) + ' | ⚡ ' + esc(m.usageCost||'') + ' | 🚀 ' + m.tokensPerSec + ' tok/s';
+  var elLocal = document.getElementById('summary-local-spec');
+  var elHybrid = document.getElementById('summary-hybrid-spec');
+  if (elLocal) elLocal.innerHTML = spec;
+  if (elHybrid) elHybrid.innerHTML = spec;
+}
+
+
+// ═══════════════════════════════════ MEMORY SYSTEM VIEW ═══════════════════════
+function renderMemoryView() {
+  var container = document.getElementById('memory-diagram-svg');
+  if (!container) return;
+
+  if (!window.mermaid) {
+    container.innerHTML = '<div class="ai-empty" style="padding:40px;text-align:center">⏳ Loading Mermaid…</div>';
+    return;
+  }
+
+  var diagramDef = [
+    'flowchart TB',
+    '  classDef app       fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3730a3',
+    '  classDef gateway   fill:#fef3c7,stroke:#d97706,stroke-width:3px,color:#78350f',
+    '  classDef process   fill:#e0f2fe,stroke:#0891b2,stroke-width:2px,color:#164e63',
+    '  classDef store     fill:#dcfce7,stroke:#16a34a,stroke-width:3px,color:#14532d',
+    '  classDef prompt    fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843',
+    '  classDef llm       fill:#7c3aed,stroke:#5b21b6,stroke-width:3px,color:#fff',
+    '',
+    '  subgraph APPS["📱 YOUR APPS — Every tool sends & receives memories"]',
+    '    direction LR',
+    '    ephorm["🏢 Ephorm Audit<br/>Audit workflows"]',
+    '    copilot["🪟 MS Copilot<br/>M365 · Teams · Office"]',
+    '    vscode["💻 VS Code Chat<br/>Developer assistant"]',
+    '    web["🌐 Web Chat<br/>Customer portal"]',
+    '    custom["🔧 Custom Apps<br/>Internal tools"]',
+    '  end',
+    '',
+    '  subgraph GATEWAY["🔌 Memory API Gateway — Single entry point for ALL apps"]',
+    '    api["🌐 REST API / Redis Protocol<br/>Any language · Any app · Any platform<br/>POST /memories — Write<br/>GET /memories/search — Read"]',
+    '  end',
+    '',
+    '  subgraph PROCESS["⚙️ Memory Processing Engine"]',
+    '    direction LR',
+    '    extract["🔍 1. Extract Facts<br/>Client XYZ = Manufacturing<br/>Revenue = $50M<br/>User prefers bullet points"]',
+    '    entity["🏷️ 2. Entity Recognition<br/>People · Companies · Dates<br/>Documents · Topics · Projects"]',
+    '    preference["⭐ 3. Preference Learning<br/>Format: Bullet points<br/>Standards: IFRS citations<br/>Templates: PKF-ENG-2024"]',
+    '  end',
+    '',
+    '  subgraph STORE["💾 Memory Store — Structured + Vector"]',
+    '    redis["🗄️ Redis Stack<br/>Key-Value + JSON + Vectors<br/>{user}:{topic}:facts<br/>{user}:{topic}:preferences<br/>TTL: Configurable retention"]',
+    '    vector["🔢 Vector Embeddings<br/>Semantic search across all memories<br/>&quot;Find everything about client XYZ&quot;<br/>-&gt; Returns facts from ALL apps"]',
+    '  end',
+    '',
+    '  subgraph ENRICH["📦 Prompt Enrichment — Every query gets context"]',
+    '    fetch["📥 Fetch Relevant Memories<br/>1. User asks question in ANY app<br/>2. Memory API searches for relevant facts<br/>3. Returns: user prefs + entity facts + past context"]',
+    '    embed["📝 Embed in Prompt<br/>System Prompt + Memory Context +<br/>RAG Documents + User Query =<br/>Complete Personalized Prompt"]',
+    '  end',
+    '',
+    '  LLM["🧠 LLM — AI Model<br/>Receives enriched prompt<br/>Answers with full context<br/>Personalized · Accurate · Consistent"]',
+    '',
+    '  ephorm & copilot & vscode & web & custom --> api',
+    '  api --> extract & entity & preference',
+    '  extract & entity & preference --> redis & vector',
+    '  redis & vector --> fetch',
+    '  fetch --> embed',
+    '  embed --> LLM',
+    '  LLM -.->|"Response + new memories"| api',
+    '',
+    '  class ephorm,copilot,vscode,web,custom app',
+    '  class api gateway',
+    '  class extract,entity,preference process',
+    '  class redis,vector store',
+    '  class fetch,embed prompt',
+    '  class LLM llm'
+  ].join('\n');
+
+  container.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;font-size:12px">⏳ Rendering memory architecture…</div>';
+  var diagId = 'mem' + Date.now();
+  mermaid.render(diagId, diagramDef).then(function(result) {
+    container.innerHTML = result.svg;
+    if (result.bindFunctions) result.bindFunctions(container);
+  }).catch(function(err) {
+    console.error('Memory diagram error:', err);
+    container.innerHTML = '<div style="padding:16px;color:#ef4444;font-size:12px">⚠️ Diagram render error: ' + esc(String(err.message || err)) + '</div>';
+  });
+}
+
 // ═══════════════════════════════════ PLAN & RECOMMEND VIEW ═══════════════════════════════════
 function renderPlanView() {
   var costs = calcCosts();
@@ -1347,44 +1922,80 @@ function renderRecommendation(costs) {
   var el = document.getElementById('plan-recommendation');
   if (!el) return;
   var rec = getTopRecommendation();
-  var html = '<div class="ai-rec-highlight">🏆 <strong>Top Recommendation: ' + rec.title + '</strong><br>' + rec.desc + '</div>';
-  html += '<p><strong>💰 Estimated Cost:</strong> ' + fmtCurrency(costs.totalMonthly) + '/mo | <strong>📅 Timeline:</strong> ' + rec.timeline + ' | <strong>👤 Owner:</strong> ' + rec.owner + '</p>';
-  html += '<p><strong>✅ Success Criteria:</strong> ' + rec.success + '</p>';
+  var html = '<div class="ai-rec-highlight" style="margin-bottom:12px">🏆 <strong>' + esc(rec.title) + '</strong></div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;line-height:1.7">';
+
+  html += '<div style="background:var(--ai-primary-bg);border-radius:8px;padding:12px">';
+  html += '<strong>🏗️ Architecture</strong><br>' + rec.architecture + '</div>';
+
+  html += '<div style="background:var(--ai-success-bg);border-radius:8px;padding:12px">';
+  html += '<strong>💰 Cost Plan</strong><br>' + rec.cost + '</div>';
+
+  html += '<div style="background:var(--ai-accent-bg);border-radius:8px;padding:12px">';
+  html += '<strong>🧠 Memory Plan</strong><br>' + rec.memory + '</div>';
+
+  html += '<div style="background:var(--ai-info-bg);border-radius:8px;padding:12px">';
+  html += '<strong>📅 Timeline:</strong> ' + rec.timeline + '<br><br><strong>⚡ Next Steps:</strong><br>' + rec.nextSteps + '</div>';
+
+  html += '</div>';
   el.innerHTML = html;
 }
 
 function getTopRecommendation() {
-  if (STATE.deploymentType === 'copilot') {
-    return {
-      title: 'Start with Copilot Studio + M365 Agents',
-      desc: 'For PKF\'s M365-centric workflows: Use Copilot Studio to build Event Bot and AI assistants inside Ephorm (via Graph connectors). Add custom MCP connectors for Ephorm Audit/Tax. Fastest path to value with existing M365 investment.',
-      timeline: '4-6 weeks (PoC), 8-12 weeks (Pilot)',
-      owner: 'AI & Automation Team + M365 Admin',
-      success: 'Event Bot answers 80%+ queries correctly; Junior Auditor agent reduces document review time by 30%'
-    };
-  } else if (STATE.deploymentType === 'hybrid') {
-    return {
-      title: 'Hybrid Architecture: Custom Orchestrator + Cloud LLM + Optional On-Prem',
-      desc: 'Build a Python/FastAPI orchestrator with MCP for cross-app agent workflows. Use cloud LLM (OpenAI GPT-4o-mini for PoC) for speed. Add on-prem LLM (Mac Studio + Llama 3 8B) for sensitive client data. External shared memory (Mem0) connects Ephorm Audit, Ephorm Tax, CaseWare, and future apps.',
-      timeline: '6-8 weeks (PoC), 12-16 weeks (Pilot)',
-      owner: 'AI & Automation Team Lead + IT Infrastructure',
-      success: '3 use cases operational; 5-10 pilot users; <2s avg response; 90%+ accuracy on audit queries'
-    };
-  } else if (STATE.deploymentType === 'local') {
-    return {
-      title: 'On-Prem Architecture: Self-Hosted LLM + Custom Agents',
-      desc: 'Deploy Llama 3 8B on Mac Studio or DGX Spark. Use Ollama + LangChain for agent workflows. ChromaDB for local vector storage. Full data privacy — nothing leaves premises. Best for highly sensitive audit data.',
-      timeline: '8-12 weeks (PoC), 16-20 weeks (Pilot)',
-      owner: 'IT Infrastructure + AI Team',
-      success: '100% on-prem data processing; acceptable response times (<5s); 3 use cases operational'
-    };
+  var costs = calcCosts();
+  var localP = PRICING.local[STATE.localModel] || PRICING.local['deepseek-v4-pro'];
+  var cloudP = (PRICING.cloud[STATE.cloudProvider]||{})[STATE.cloudModelTier] || null;
+  var isHybrid = STATE.deploymentType === 'hybrid';
+  var isLocal = STATE.deploymentType === 'local';
+  var isCloud = STATE.deploymentType === 'cloud';
+  var isCopilot = STATE.deploymentType === 'copilot';
+
+  // Build comprehensive summary
+  var arch = '';
+  if (isCopilot) {
+    arch = '<strong>Copilot Studio + M365 Agents</strong> — fastest path if M365-centric. Custom MCP connectors for Ephorm Audit/Tax.';
+  } else if (isLocal) {
+    arch = '<strong>100% On-Premises</strong> — ' + esc(localP.name) + ' on ' + esc(localP.hardware || localP.vram) + '. Full data sovereignty, zero per-token cost.';
+  } else if (isCloud) {
+    arch = '<strong>Cloud API</strong> — ' + esc(cloudP?cloudP.name:'Cloud LLM') + '. Zero hardware, pay-per-use, always latest models.';
+  } else {
+    arch = '<strong>Hybrid (Recommended)</strong> — Sensitive data on ' + esc(localP.name) + ' (local GPU), complex reasoning on ' + esc(cloudP?cloudP.name:'Cloud API') + '. Smart routing by data classification.';
   }
+
+  var cost = '';
+  if (isCopilot) {
+    cost = '<strong>$' + (STATE.dau * 30) + '/mo</strong> licenses ($30/user × ' + STATE.dau + ' users) + $200/mo Copilot Studio. Total: <strong>' + fmtCurrency(costs.totalMonthly) + '/mo</strong>.';
+  } else if (isLocal) {
+    cost = '<strong>' + fmtCurrency(costs.totalMonthly) + '/mo</strong> total. GPU amortized: ' + fmtCurrency(localP.gpuCost/36) + '/mo (3yr). Electricity: ' + fmtCurrency(costs.powerCostMonthly) + '/mo. Maintenance: $50/mo. <strong>Zero per-token cost.</strong>';
+  } else if (isCloud) {
+    cost = '<strong>' + fmtCurrency(costs.totalMonthly) + '/mo</strong> estimated. ' + fmtNum(costs.monthlyQueries) + ' queries/month at ~' + fmtNum(STATE.avgTokens) + ' tokens each. <strong>Per-query avg: ~$' + (costs.cloudCost/costs.monthlyQueries).toFixed(4) + '</strong>. <em>With prompt caching: up to 90% less on repeated prompts.</em>';
+  } else {
+    cost = '<strong>' + fmtCurrency(costs.totalMonthly) + '/mo</strong> total. Local: ' + fmtCurrency(costs.localCost) + '/mo, Cloud: ' + fmtCurrency(costs.cloudCost) + '/mo. Hybrid router overhead: $50/mo.';
+  }
+
+  var memory = '';
+  if (STATE.memoryStrategy === 'external-shared') {
+    memory = '<strong>External Shared Memory (Redis + Mem0)</strong> — ALL apps share one memory backbone. User preferences, entity facts, conversation history stored centrally. Any app query fetches relevant context automatically.';
+  } else if (STATE.memoryStrategy === 'copilot-builtin') {
+    memory = '<strong>Copilot Built-in Memory</strong> — limited to M365 Graph. Consider adding Redis for cross-app memory if you add non-Microsoft tools.';
+  } else {
+    memory = '<strong>App-Internal Memory</strong> — each app has separate memory. Upgrade to External Shared for cross-app continuity.';
+  }
+
   return {
-    title: 'Cloud-First: API-Based LLM + Custom Orchestrator',
-    desc: 'Start with cloud LLM APIs for fastest PoC. Build custom orchestrator with MCP. Migrate sensitive workloads to on-prem later. Lowest barrier to entry, highest flexibility.',
-    timeline: '4-6 weeks (PoC), 10-14 weeks (Pilot)',
-    owner: 'AI & Automation Team',
-    success: '3 use cases operational in 6 weeks; cost within budget; user satisfaction 4/5+'
+    title: isHybrid ? 'Hybrid Architecture — Best Balance of Privacy, Capability & Cost' :
+           isLocal ? 'On-Prem Architecture — Maximum Privacy & Control' :
+           isCloud ? 'Cloud-First Architecture — Fastest Path to Value' :
+           'Copilot-First — Leverage Existing M365 Investment',
+    architecture: arch,
+    cost: cost,
+    memory: memory,
+    timeline: isCopilot ? '4-6 weeks (PoC), 8-12 weeks (Pilot)' :
+              isCloud ? '2-4 weeks (PoC), 8-12 weeks (Pilot)' :
+              isHybrid ? '4-8 weeks (PoC), 12-16 weeks (Pilot)' :
+              '8-12 weeks (PoC), 16-20 weeks (Pilot)',
+    nextSteps: '<strong>1.</strong> Set up ' + (isLocal||isHybrid ? esc(localP.name) + ' on ' + esc(localP.hardware||localP.vram) + ' via Ollama' : 'Cloud API access for ' + esc(cloudP?cloudP.name:'your provider')) + '.<br><strong>2.</strong> Deploy Redis Stack as cross-app memory backbone.<br><strong>3.</strong> Build one pilot use case: ' + (STATE.useCases[0] ? (findUseCase(STATE.useCases[0])||{}).name || STATE.useCases[0] : 'Event Bot') + '.<br><strong>4.</strong> Measure accuracy, latency, user satisfaction for 2 weeks.<br><strong>5.</strong> Go/No-Go: accuracy >80%, user satisfaction >4/5 = expand to next use case.'
   };
 }
 
