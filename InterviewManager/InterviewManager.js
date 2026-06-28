@@ -39,9 +39,12 @@ let calTab = 'list';
 let calIvrFilter = '';
 let calCursor = new Date();
 let intDetailCandFilter = 'no-interview'; // 'no-interview' | 'advanced' | 'all'
+let posMetaBuffer = null; // copy-paste buffer for position metadata
+let tableSort = { positions: { col: 'title', asc: true }, interviewers: { col: 'name', asc: true }, candidates: { col: 'name', asc: true }, hiredStaff: { col: 'name', asc: true } };
 
 /* ── helpers ── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }
+function isPosHidden(posId) { if (posId === GENERAL_POS_ID) return false; var p = DB.positions.find(function(x) { return x.id === posId; }); return !!(p && p.hideFromReports) }
 function avatarColor(n) { let h = 0; for (let c of n) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff; return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length] }
 function initials(n) { return n.split(' ').map(w => w[0]?.toUpperCase() || '').slice(0, 2).join('') }
 function avatar(n, s = 30) { const c = avatarColor(n); return `<div class="avatar" style="width:${s}px;height:${s}px;background:${c}22;color:${c};font-size:${Math.round(s * .38)}px">${initials(n)}</div>` }
@@ -50,6 +53,20 @@ function fmtDateTime(d) { if (!d) return '—'; return new Date(d).toLocaleStrin
 function fmtTime(d) { if (!d) return ''; return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }
 function getRecW(r) { return { 'strong-yes': 2, 'yes': 1, 'maybe': 0, 'no': -1 }[r] || 0 }
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
+function sortByKey(arr, key, asc) {
+	return arr.slice().sort(function(a, b) {
+		var va = (a[key] || '').toString().toLowerCase();
+		var vb = (b[key] || '').toString().toLowerCase();
+		if (va < vb) return asc ? -1 : 1;
+		if (va > vb) return asc ? 1 : -1;
+		return 0;
+	});
+}
+function sortIndicator(col, table) {
+	var st = tableSort[table];
+	if (!st || st.col !== col) return '';
+	return st.asc ? ' ▲' : ' ▼';
+}
 function normalizeName(n) { return String(n || '').toLowerCase().replace(/\s+/g, ' ').trim() }
 function normalizeEmail(e) { return String(e || '').toLowerCase().trim() }
 
@@ -412,9 +429,20 @@ function removePosCriterion(i) { posCriteriaBuffer.splice(i, 1); renderPosCriter
 function syncPosCriteria() { document.querySelectorAll('.pos-criterion-item').forEach(item => { item.querySelectorAll('input').forEach(inp => { const ci = parseInt(inp.dataset.ci), field = inp.dataset.field; if (!isNaN(ci) && field && posCriteriaBuffer[ci]) posCriteriaBuffer[ci][field] = inp.value.trim() }) }) }
 
 /* ══ POSITIONS ══ */
+function renderPosPlacementStatus() {
+	var el = document.getElementById('pos-placement-status'); if (!el) return;
+	var editId = document.getElementById('pos-edit-id').value;
+	if (!editId) { el.innerHTML = '<span class="multi-select-placeholder">Save position first to see placement status</span>'; return; }
+	var pl = (DB.placements || []).find(function(p) { return p.positionId === editId && p.selectedCandidateId; });
+	if (!pl) { el.innerHTML = '<span class="multi-select-placeholder">No candidate selected in placements</span>'; return; }
+	var cand = DB.candidates.find(function(c) { return c.id === pl.selectedCandidateId; });
+	if (!cand) { el.innerHTML = '<span class="multi-select-placeholder">Selected candidate not found</span>'; return; }
+	var statusHtml = pl.offerLetterSent ? '<span class="badge badge-green">Offer sent</span>' : '<span class="badge badge-amber">Offer pending</span>';
+	el.innerHTML = avatar(cand.name, 26) + '<span style="font-weight:500">' + esc(cand.name) + '</span>' + statusHtml;
+}
 function openPositionDrawer(editId) {
 	posCriteriaBuffer = [];
-	if (editId) { const p = DB.positions.find(x => x.id === editId); if (!p) return; document.getElementById('pos-title').value = p.title; document.getElementById('pos-dept').value = p.dept || ''; document.getElementById('pos-desc').value = p.desc || ''; document.getElementById('pos-status').value = p.status; document.getElementById('pos-closed-int').checked = p.closedForInterviews || false; document.getElementById('pos-edit-id').value = editId; document.getElementById('pos-drawer-title').textContent = 'Edit Position'; posCriteriaBuffer = JSON.parse(JSON.stringify(p.extraCriteria || []));
+	if (editId) { const p = DB.positions.find(x => x.id === editId); if (!p) return; document.getElementById('pos-title').value = p.title; document.getElementById('pos-dept').value = p.dept || ''; document.getElementById('pos-desc').value = p.desc || ''; document.getElementById('pos-status').value = p.status; document.getElementById('pos-closed-int').checked = p.closedForInterviews || false; document.getElementById('pos-hide-reports').checked = p.hideFromReports || false; document.getElementById('pos-edit-id').value = editId; document.getElementById('pos-drawer-title').textContent = 'Edit Position'; posCriteriaBuffer = JSON.parse(JSON.stringify(p.extraCriteria || []));
 		// New position detail fields
 		document.getElementById('pos-job-desc').innerHTML = p.jobDescription || '';
 		document.getElementById('pos-emp-basis').value = p.employmentBasis || '';
@@ -425,16 +453,16 @@ function openPositionDrawer(editId) {
 		document.getElementById('pos-wage-amount').value = p.wageAmount || '';
 		document.getElementById('pos-weekly-hours').value = p.weeklyMinHours || '';
 	}
-	else { ['pos-title', 'pos-dept', 'pos-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' }); document.getElementById('pos-status').value = 'open'; document.getElementById('pos-closed-int').checked = false; document.getElementById('pos-edit-id').value = ''; document.getElementById('pos-drawer-title').textContent = 'Add Position';
+	else { ['pos-title', 'pos-dept', 'pos-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '' }); document.getElementById('pos-status').value = 'open'; document.getElementById('pos-closed-int').checked = false; document.getElementById('pos-hide-reports').checked = false; document.getElementById('pos-edit-id').value = ''; document.getElementById('pos-drawer-title').textContent = 'Add Position';
 		document.getElementById('pos-job-desc').innerHTML = '';
 		['pos-emp-basis','pos-worker-class','pos-start-date','pos-end-date','pos-wage-unit','pos-wage-amount','pos-weekly-hours'].forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
 	}
-	renderPosCriteriaList(); openDrawer('pos'); tool.resize();
+	renderPosCriteriaList(); renderPosPlacementStatus(); openDrawer('pos'); tool.resize();
 }
 function closePositionDrawer() { closeDrawer('pos') }
 function savePosition() {
 	if (isReadOnly) return; syncPosCriteria();
-	const title = document.getElementById('pos-title').value.trim(); const dept = document.getElementById('pos-dept').value.trim(); const desc = document.getElementById('pos-desc').value.trim(); const status = document.getElementById('pos-status').value; const closedForInterviews = document.getElementById('pos-closed-int').checked; const editId = document.getElementById('pos-edit-id').value;
+	const title = document.getElementById('pos-title').value.trim(); const dept = document.getElementById('pos-dept').value.trim(); const desc = document.getElementById('pos-desc').value.trim(); const status = document.getElementById('pos-status').value; const closedForInterviews = document.getElementById('pos-closed-int').checked; const hideFromReports = document.getElementById('pos-hide-reports').checked; const editId = document.getElementById('pos-edit-id').value;
 	if (!title) { tool.notify('Position title required', 'warning'); return }
 	const extraCriteria = posCriteriaBuffer.filter(c => c.name.trim());
 	// New position detail fields
@@ -446,17 +474,50 @@ function savePosition() {
 	const wageUnit = document.getElementById('pos-wage-unit').value;
 	const wageAmount = document.getElementById('pos-wage-amount').value.trim();
 	const weeklyMinHours = document.getElementById('pos-weekly-hours').value.trim();
-	if (editId) { const p = DB.positions.find(x => x.id === editId); if (p) { p.title = title; p.dept = dept; p.desc = desc; p.status = status; p.closedForInterviews = closedForInterviews; p.extraCriteria = extraCriteria; p.jobDescription = jobDescription; p.employmentBasis = employmentBasis; p.workerClass = workerClass; p.startDate = startDate; p.endDate = endDate; p.wageUnit = wageUnit; p.wageAmount = wageAmount; p.weeklyMinHours = weeklyMinHours } }
-	else DB.positions.push({ id: genId(), title, dept, desc, status, extraCriteria, closedForInterviews, jobDescription, employmentBasis, workerClass, startDate, endDate, wageUnit, wageAmount, weeklyMinHours, createdAt: new Date().toISOString() });
+	if (editId) { const p = DB.positions.find(x => x.id === editId); if (p) { p.title = title; p.dept = dept; p.desc = desc; p.status = status; p.closedForInterviews = closedForInterviews; p.hideFromReports = hideFromReports; p.extraCriteria = extraCriteria; p.jobDescription = jobDescription; p.employmentBasis = employmentBasis; p.workerClass = workerClass; p.startDate = startDate; p.endDate = endDate; p.wageUnit = wageUnit; p.wageAmount = wageAmount; p.weeklyMinHours = weeklyMinHours } }
+	else DB.positions.push({ id: genId(), title, dept, desc, status, extraCriteria, closedForInterviews, hideFromReports, jobDescription, employmentBasis, workerClass, startDate, endDate, wageUnit, wageAmount, weeklyMinHours, createdAt: new Date().toISOString() });
 	persist(); closePositionDrawer(); renderPositions(); tool.notify(editId ? 'Position updated' : 'Position added', 'success');
+}
+
+/* ══ COPY / PASTE POSITION METADATA ══ */
+function copyPosMeta() {
+	posMetaBuffer = {
+		employmentBasis: document.getElementById('pos-emp-basis').value,
+		workerClass: document.getElementById('pos-worker-class').value,
+		startDate: document.getElementById('pos-start-date').value,
+		endDate: document.getElementById('pos-end-date').value,
+		wageUnit: document.getElementById('pos-wage-unit').value,
+		wageAmount: document.getElementById('pos-wage-amount').value,
+		weeklyMinHours: document.getElementById('pos-weekly-hours').value
+	};
+	tool.notify('Position details copied. Open another position and click Paste.', 'success');
+}
+function pastePosMeta() {
+	if (!posMetaBuffer) { tool.notify('Nothing copied yet. Open a position and click Copy first.', 'warning'); return; }
+	document.getElementById('pos-emp-basis').value = posMetaBuffer.employmentBasis || '';
+	document.getElementById('pos-worker-class').value = posMetaBuffer.workerClass || '';
+	document.getElementById('pos-start-date').value = posMetaBuffer.startDate || '';
+	document.getElementById('pos-end-date').value = posMetaBuffer.endDate || '';
+	document.getElementById('pos-wage-unit').value = posMetaBuffer.wageUnit || '';
+	document.getElementById('pos-wage-amount').value = posMetaBuffer.wageAmount || '';
+	document.getElementById('pos-weekly-hours').value = posMetaBuffer.weeklyMinHours || '';
+	tool.notify('Position details pasted. Review and save.', 'info');
 }
 function renderPositions() {
 	const search = (document.getElementById('pos-search')?.value || '').toLowerCase(); const filterStatus = document.getElementById('pos-filter-status')?.value || '';
 	let list = DB.positions; if (search) list = list.filter(p => p.title.toLowerCase().includes(search) || (p.dept || '').toLowerCase().includes(search)); if (filterStatus) list = list.filter(p => p.status === filterStatus);
-	const tbody = document.getElementById('positions-table-body'); if (!tbody) return; if (!list.length) { tbody.innerHTML = `<tr><td class="table-empty" colspan="8">No positions match</td></tr>`; return }
-	tbody.innerHTML = list.map(pos => {
-		const apps = DB.candidates.filter(c => (c.positionIds || []).includes(pos.id)).length; const sb = { open: 'badge-green', closed: 'badge-gray', 'on-hold': 'badge-amber' }[pos.status] || 'badge-gray'; const extra = (pos.extraCriteria || []).filter(c => c.name).length; const pl = (DB.placements || []).find(p => p.positionId === pos.id && p.selectedCandidateId); const sel = pl ? DB.candidates.find(c => c.id === pl.selectedCandidateId) : null; const intCount = DB.interviews.filter(i => (DB.candidates.find(c => c.id === i.candidateId)?.positionIds || []).includes(pos.id)).length;
-		return `<tr><td><div style="font-weight:500">${esc(pos.title)}</div><div style="font-size:11px;color:var(--text3)">${esc(pos.desc || '').slice(0, 60)}${pos.desc && pos.desc.length > 60 ? '…' : ''}</div>${pos.closedForInterviews ? `<span class="badge badge-red" style="margin-top:4px">Closed</span>` : ''}</td><td>${esc(pos.dept || '—')}</td><td><span class="badge ${sb}">${pos.status}</span></td><td><span class="badge badge-blue">${apps}</span></td><td>${extra ? `<span class="badge badge-purple">+${extra}</span>` : '—'}</td><td>${sel ? `<div style="display:flex;align-items:center;gap:7px">${avatar(sel.name, 26)}<span style="font-size:12px;font-weight:500">${esc(sel.name)}</span></div>` : '—'}</td><td><span class="badge badge-teal">${intCount}</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm" data-action="editPos" data-id="${pos.id}">Edit</button><button class="btn btn-danger btn-sm" data-action="delPos" data-id="${pos.id}">Del</button></div></td></tr>`;
+	// Sort
+	var st = tableSort.positions;
+	list = sortByKey(list.map(function(p) { return Object.assign({}, p, { _apps: DB.candidates.filter(function(c) { return (c.positionIds || []).includes(p.id); }).length, _extra: (p.extraCriteria || []).filter(function(c) { return c.name; }).length, _sel: ((DB.placements || []).find(function(pl) { return pl.positionId === p.id && pl.selectedCandidateId; }) ? DB.candidates.find(function(c) { return c.id === (DB.placements || []).find(function(pl) { return pl.positionId === p.id && pl.selectedCandidateId; }).selectedCandidateId; }) : null), _ints: DB.interviews.filter(function(i) { return (DB.candidates.find(function(c) { return c.id === i.candidateId; })?.positionIds || []).includes(p.id); }).length }); }), st.col === 'title' ? 'title' : st.col === 'dept' ? 'dept' : st.col === 'status' ? 'status' : st.col === 'apps' ? '_apps' : st.col === 'extra' ? '_extra' : st.col === 'selected' ? '_sel' : st.col === 'interviews' ? '_ints' : 'title', st.asc);
+	const tbody = document.getElementById('positions-table-body'); if (!tbody) return; if (!list.length) { tbody.innerHTML = '<tr><td class=\"table-empty\" colspan=\"8\">No positions match</td></tr>'; return }
+	tbody.innerHTML = list.map(function(p) {
+		var apps = p._apps != null ? p._apps : DB.candidates.filter(function(c) { return (c.positionIds || []).includes(p.id); }).length;
+		var sb = { open: 'badge-green', closed: 'badge-gray', 'on-hold': 'badge-amber' }[p.status] || 'badge-gray';
+		var extra = p._extra != null ? p._extra : (p.extraCriteria || []).filter(function(c) { return c.name; }).length;
+		var pl = (DB.placements || []).find(function(x) { return x.positionId === p.id && x.selectedCandidateId; });
+		var sel = p._sel !== undefined ? p._sel : (pl ? DB.candidates.find(function(c) { return c.id === pl.selectedCandidateId; }) : null);
+		var intCount = p._ints != null ? p._ints : DB.interviews.filter(function(i) { return (DB.candidates.find(function(c) { return c.id === i.candidateId; })?.positionIds || []).includes(p.id); }).length;
+		return '<tr><td><div style=\"font-weight:500\">' + esc(p.title) + '</div><div style=\"font-size:11px;color:var(--text3)\">' + esc(p.desc || '').slice(0, 60) + (p.desc && p.desc.length > 60 ? '…' : '') + '</div>' + (p.closedForInterviews ? '<span class=\"badge badge-red\" style=\"margin-top:4px\">Closed</span>' : '') + (p.hideFromReports ? '<span class=\"badge badge-gray\" style=\"margin-top:4px;margin-left:4px\">Hidden</span>' : '') + '</td><td>' + esc(p.dept || '—') + '</td><td><span class=\"badge ' + sb + '\">' + p.status + '</span></td><td><span class=\"badge badge-blue\">' + apps + '</span></td><td>' + (extra ? '<span class=\"badge badge-purple\">+' + extra + '</span>' : '—') + '</td><td>' + (sel ? '<div style=\"display:flex;align-items:center;gap:7px\">' + avatar(sel.name, 26) + '<span style=\"font-size:12px;font-weight:500\">' + esc(sel.name) + '</span></div>' : '—') + '</td><td><span class=\"badge badge-teal\">' + intCount + '</span></td><td><div style=\"display:flex;gap:5px\"><button class=\"btn btn-ghost btn-sm\" data-action=\"editPos\" data-id=\"' + p.id + '\">Edit</button><button class=\"btn btn-danger btn-sm\" data-action=\"delPos\" data-id=\"' + p.id + '\">Del</button></div></td></tr>';
 	}).join('');
 }
 function deletePosition(id) { const p = DB.positions.find(x => x.id === id); if (!p) return; openConfirm('Delete Position', `Delete "${p.title}"?`, () => { DB.positions = DB.positions.filter(x => x.id !== id); DB.candidates.forEach(c => { c.positionIds = (c.positionIds || []).filter(pid => pid !== id) }); persist(); renderPositions(); tool.notify('Deleted', 'info') }, 'Delete') }
@@ -491,10 +552,15 @@ function saveInterviewer() {
 }
 function renderInterviewers() {
 	const search = (document.getElementById('ivr-search')?.value || '').toLowerCase(); let list = DB.interviewers; if (search) list = list.filter(i => i.name.toLowerCase().includes(search) || (i.role || '').toLowerCase().includes(search));
-	const tbody = document.getElementById('interviewers-table-body'); if (!tbody) return; if (!list.length) { tbody.innerHTML = `<tr><td class="table-empty" colspan="9">No interviewers yet</td></tr>`; return }
-	tbody.innerHTML = list.map(ivr => {
-		const sessions = DB.scores.filter(s => s.interviewerId === ivr.id).length; const slots = (ivr.slots || []).map(migrateSlot); const uniqueDays = [...new Set(slots.map(s => s.day))].join(', ') || '—'; const hoursSummary = slots.length ? slots.map(s => `${s.day}: ${slotLabel(s)} – ${slotLabel({ hour12: s.toHour12, minute: s.toMinute, ampm: s.toAmpm })}`).join('; ') : 'No slots defined';
-		return `<tr><td><div style="display:flex;align-items:center;gap:10px">${avatar(ivr.name, 34)}<div><div style="font-weight:500">${esc(ivr.name)}</div></div></div></td><td>${esc(ivr.role || '—')}</td><td>${esc(ivr.dept || '—')}</td><td style="font-size:12px">${esc(ivr.email || '—')}</td><td><span class="badge badge-teal">${slots.length} slot${slots.length !== 1 ? 's' : ''}</span> <span style="font-size:11px;color:var(--text3)">${uniqueDays}</span></td><td title="${esc(hoursSummary)}" style="font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(hoursSummary)}</td><td><span class="badge badge-gray">${ivr.duration || 60} min</span></td><td><span class="badge badge-purple">${sessions}</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm" data-action="editIvr" data-id="${ivr.id}">Edit</button><button class="btn btn-danger btn-sm" data-action="delIvr" data-id="${ivr.id}">Del</button></div></td></tr>`;
+	// Sort
+	var st = tableSort.interviewers;
+	list = sortByKey(list.map(function(i) { return Object.assign({}, i, { _slots: (i.slots || []).length, _sessions: DB.scores.filter(function(s) { return s.interviewerId === i.id; }).length }); }), st.col === 'name' ? 'name' : st.col === 'role' ? 'role' : st.col === 'dept' ? 'dept' : st.col === 'email' ? 'email' : st.col === 'slots' ? '_slots' : st.col === 'sessions' ? '_sessions' : 'name', st.asc);
+	const tbody = document.getElementById('interviewers-table-body'); if (!tbody) return; if (!list.length) { tbody.innerHTML = '<tr><td class=\"table-empty\" colspan=\"9\">No interviewers yet</td></tr>'; return }
+	tbody.innerHTML = list.map(function(ivr) {
+		var sessions = ivr._sessions != null ? ivr._sessions : DB.scores.filter(function(s) { return s.interviewerId === ivr.id; }).length;
+		var slots = (ivr.slots || []).map(migrateSlot); var uniqueDays = [...new Set(slots.map(function(s) { return s.day; }))].join(', ') || '—';
+		var hoursSummary = slots.length ? slots.map(function(s) { return s.day + ': ' + slotLabel(s) + ' – ' + slotLabel({ hour12: s.toHour12, minute: s.toMinute, ampm: s.toAmpm }); }).join('; ') : 'No slots defined';
+		return '<tr><td><div style=\"display:flex;align-items:center;gap:10px\">' + avatar(ivr.name, 34) + '<div><div style=\"font-weight:500\">' + esc(ivr.name) + '</div></div></div></td><td>' + esc(ivr.role || '—') + '</td><td>' + esc(ivr.dept || '—') + '</td><td style=\"font-size:12px\">' + esc(ivr.email || '—') + '</td><td><span class=\"badge badge-teal\">' + (ivr._slots != null ? ivr._slots : slots.length) + ' slot' + (slots.length !== 1 ? 's' : '') + '</span> <span style=\"font-size:11px;color:var(--text3)\">' + uniqueDays + '</span></td><td title=\"' + esc(hoursSummary) + '\" style=\"font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">' + esc(hoursSummary) + '</td><td><span class=\"badge badge-gray\">' + (ivr.duration || 60) + ' min</span></td><td><span class=\"badge badge-purple\">' + sessions + '</span></td><td><div style=\"display:flex;gap:5px\"><button class=\"btn btn-ghost btn-sm\" data-action=\"editIvr\" data-id=\"' + ivr.id + '\">Edit</button><button class=\"btn btn-danger btn-sm\" data-action=\"delIvr\" data-id=\"' + ivr.id + '\">Del</button></div></td></tr>';
 	}).join('');
 }
 function deleteInterviewer(id) { const i = DB.interviewers.find(x => x.id === id); if (!i) return; openConfirm('Delete', `Remove ${i.name}?`, () => { DB.interviewers = DB.interviewers.filter(x => x.id !== id); DB.interviews.forEach(int => { int.interviewerIds = (int.interviewerIds || []).filter(iid => iid !== id) }); persist(); renderInterviewers(); tool.notify('Removed', 'info') }, 'Delete') }
@@ -525,17 +591,21 @@ function saveCandidate() { doSaveCandidate(false) }
 function deleteCandidate(id) { const c = DB.candidates.find(x => x.id === id); if (!c) return; openConfirm('Delete', `Delete "${c.name}"?`, () => { DB.candidates = DB.candidates.filter(x => x.id !== id); DB.interviews = DB.interviews.filter(i => i.candidateId !== id); DB.scores = DB.scores.filter(s => s.candidateId !== id); DB.screenings = DB.screenings.filter(s => s.candidateId !== id); persist(); renderCandidates(); tool.notify('Deleted', 'info') }, 'Delete') }
 function renderCandidates() {
 	const search = (document.getElementById('cand-search')?.value || '').toLowerCase(); const filterStatus = document.getElementById('cand-filter-status')?.value || '';
-	const pf = document.getElementById('cand-filter-pos'); if (pf) { const cur = pf.value; pf.innerHTML = '<option value="">All positions</option>' + DB.positions.map(p => `<option value="${p.id}" ${p.id === cur ? 'selected' : ''}>${esc(p.title)}</option>`).join(''); if (cur) pf.value = cur }
+	const pf = document.getElementById('cand-filter-pos'); if (pf) { const cur = pf.value; pf.innerHTML = '<option value="">All positions</option>' + DB.positions.map(p => '<option value="' + p.id + '" ' + (p.id === cur ? 'selected' : '') + '>' + esc(p.title) + '</option>').join(''); if (cur) pf.value = cur }
 	const filterPos = pf?.value || ''; let list = DB.candidates;
 	if (search) list = list.filter(c => c.name.toLowerCase().includes(search) || (c.email || '').toLowerCase().includes(search));
 	if (filterPos) list = list.filter(c => (c.positionIds || []).includes(filterPos));
 	if (filterStatus) { list = list.filter(c => { const stage = getStage(c.id); if (filterStatus === 'eliminated') return c.eliminated; if (filterStatus === 'advanced') return stage === 'advanced'; if (filterStatus === 'selected') return stage === 'selected'; if (filterStatus === 'screening_pending') return stage === 'pending'; if (filterStatus === 'active') return !c.eliminated && stage !== 'selected'; return true }) }
+	// Sort
+	var st = tableSort.candidates;
+	var col = st.col === 'stage' ? '_stage' : st.col === 'source' ? 'source' : st.col === 'email' ? 'email' : 'name';
+	list = sortByKey(list.map(function(c) { return Object.assign({}, c, { _stage: getStage(c.id) }); }), col, st.asc);
 	const tbody = document.getElementById('candidates-table-body'); if (!tbody) return;
-	if (!list.length) { tbody.innerHTML = `<tr><td class="table-empty" colspan="8">No candidates match</td></tr>`; updateBulkBar(); return }
-	tbody.innerHTML = list.map(c => {
-		const positions = (c.positionIds || []).map(pid => { const p = DB.positions.find(x => x.id === pid); return p ? `<span class="badge badge-blue" style="font-size:9px">${esc(p.title)}</span>` : '' }).join('');
-		const stage = getStage(c.id); const stageMap = { selected: 'badge-green', advanced: 'badge-teal', pending: 'badge-gray', eliminated: 'badge-red', new: 'badge-gray' }; const stageLbl = { selected: 'Selected', advanced: 'Advanced', pending: 'Pending', eliminated: 'Eliminated', new: 'New' };
-		return `<tr><td><input type="checkbox" class="cand-check" data-id="${c.id}" ${checkedCandIds.has(c.id) ? 'checked' : ''}></td><td><div style="display:flex;align-items:center;gap:9px">${avatar(c.name, 34)}<div><div style="font-weight:500">${esc(c.name)}</div>${c.eliminationReason ? `<div style="font-size:10px;color:var(--red)">⛔ ${esc(c.eliminationReason.slice(0, 40))}</div>` : ''}</div></div></td><td><div style="font-size:12px">${esc(c.email || '—')}</div><div style="font-size:11px;color:var(--text3)">${esc(c.phone || '')}</div></td><td>${c.source ? `<span class="badge badge-gray">${esc(c.source)}</span>` : '—'}</td><td><div style="display:flex;gap:3px;flex-wrap:wrap">${positions || '<span style="color:var(--text3)">None</span>'}</div></td><td>${c.resume ? `<span class="resume-link" data-action="previewResume" data-url="${esc(c.resume)}">📄 View</span>` : '—'}</td><td><span class="badge ${stageMap[stage] || 'badge-gray'}">${stageLbl[stage] || stage}</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm" data-action="editCand" data-id="${c.id}">Edit</button><button class="btn btn-danger btn-sm" data-action="delCand" data-id="${c.id}">Del</button></div></td></tr>`;
+	if (!list.length) { tbody.innerHTML = '<tr><td class=\"table-empty\" colspan=\"8\">No candidates match</td></tr>'; updateBulkBar(); return }
+	tbody.innerHTML = list.map(function(c) {
+		var positions = (c.positionIds || []).map(function(pid) { var p = DB.positions.find(function(x) { return x.id === pid; }); return p ? '<span class=\"badge badge-blue\" style=\"font-size:9px\">' + esc(p.title) + '</span>' : ''; }).join('');
+		var stage = c._stage || getStage(c.id); var stageMap = { selected: 'badge-green', advanced: 'badge-teal', pending: 'badge-gray', eliminated: 'badge-red', new: 'badge-gray' }; var stageLbl = { selected: 'Selected', advanced: 'Advanced', pending: 'Pending', eliminated: 'Eliminated', new: 'New' };
+		return '<tr><td><input type=\"checkbox\" class=\"cand-check\" data-id=\"' + c.id + '\" ' + (checkedCandIds.has(c.id) ? 'checked' : '') + '></td><td><div style=\"display:flex;align-items:center;gap:9px\">' + avatar(c.name, 34) + '<div><div style=\"font-weight:500\">' + esc(c.name) + '</div>' + (c.eliminationReason ? '<div style=\"font-size:10px;color:var(--red)\">⛔ ' + esc(c.eliminationReason.slice(0, 40)) + '</div>' : '') + '</div></div></td><td><div style=\"font-size:12px\">' + esc(c.email || '—') + '</div><div style=\"font-size:11px;color:var(--text3)\">' + esc(c.phone || '') + '</div></td><td>' + (c.source ? '<span class=\"badge badge-gray\">' + esc(c.source) + '</span>' : '—') + '</td><td><div style=\"display:flex;gap:3px;flex-wrap:wrap\">' + (positions || '<span style=\"color:var(--text3)\">None</span>') + '</div></td><td>' + (c.resume ? '<span class=\"resume-link\" data-action=\"previewResume\" data-url=\"' + esc(c.resume) + '\">📄 View</span>' : '—') + '</td><td><span class=\"badge ' + (stageMap[stage] || 'badge-gray') + '\">' + (stageLbl[stage] || stage) + '</span></td><td><div style=\"display:flex;gap:5px\"><button class=\"btn btn-ghost btn-sm\" data-action=\"editCand\" data-id=\"' + c.id + '\">Edit</button><button class=\"btn btn-danger btn-sm\" data-action=\"delCand\" data-id=\"' + c.id + '\">Del</button></div></td></tr>';
 	}).join('');
 	updateBulkBar();
 }
@@ -914,7 +984,7 @@ function renderCandidateReport() {
 	const el = document.getElementById('report-candidates'); if (!el) return; if (!DB.scores.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">◫</div><p>No scores yet.</p></div>'; return }
 	const recFilter = document.getElementById('report-rec-filter')?.value || '';
 	const eligFilter = document.getElementById('report-elig-filter')?.value || '';
-	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))];
+	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))].filter(function(pid) { return !isPosHidden(pid); });
 	const rows = DB.candidates.map(c => {
 		const posScores = allPosIds.map(posId => {
 			const sc = DB.scores.filter(s => s.candidateId === c.id && s.positionId === posId);
@@ -1015,13 +1085,13 @@ function renderCandidateReport() {
 
 function renderPositionReport() {
 	const el = document.getElementById('report-positions'); if (!el) return; if (!DB.scores.length) { el.innerHTML = `<div class="empty-state"><p>No scores yet.</p></div>`; return }
-	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))];
+	const allPosIds = [...new Set(DB.scores.map(s => s.positionId))].filter(function(pid) { return !isPosHidden(pid); });
 	const posData = allPosIds.map(posId => { const sc = DB.scores.filter(s => s.positionId === posId); if (!sc.length) return null; const isGeneral = posId === GENERAL_POS_ID; const pos = isGeneral ? { title: 'General Evaluation', status: 'open', id: GENERAL_POS_ID } : DB.positions.find(p => p.id === posId); if (!pos) return null; const ranked = [...new Set(sc.map(s => s.candidateId))].map(cid => { const cs = sc.filter(s => s.candidateId === cid); const validCs = cs.filter(s => !s.ineligible); const avg = validCs.length ? validCs.reduce((a, s) => a + allCriteriaAvg(s), 0) / validCs.length : -1; const inelCount = cs.filter(s => s.ineligible).length; return { cand: DB.candidates.find(c => c.id === cid), avg, inelCount, allIneligible: cs.length > 0 && cs.every(s => s.ineligible), recScore: cs.reduce((a, s) => a + getRecW(s.recommendation), 0), count: cs.length } }).filter(x => x.cand).sort((a, b) => b.avg - a.avg); return { pos, isGeneral, ranked } }).filter(Boolean);
 	if (!posData.length) { el.innerHTML = `<div class="empty-state"><p>No positions scored yet.</p></div>`; return }
 	el.innerHTML = posData.map(pd => { const sb = pd.isGeneral ? 'badge-teal' : { open: 'badge-green', closed: 'badge-gray', 'on-hold': 'badge-amber' }[pd.pos.status] || 'badge-gray'; return `<div class="report-card"><div style="margin-bottom:14px"><div style="font-size:15px;font-weight:600">${esc(pd.pos.title)}</div><div style="display:flex;gap:6px;margin-top:4px"><span class="badge ${sb}">${pd.isGeneral ? 'general' : pd.pos.status}</span><span class="badge badge-blue">${pd.ranked.length} candidates</span></div></div><div class="table-wrap"><table><thead><tr><th>Rank</th><th>Candidate</th><th>Avg</th><th>Sessions</th><th>Rec</th></tr></thead><tbody>${pd.ranked.map((r, i) => { const applied = !pd.isGeneral && (r.cand.positionIds || []).includes(pd.pos.id); const bc = r.avg >= 7 ? 'var(--green)' : r.avg >= 5 ? 'var(--amber)' : 'var(--red)'; const rb = r.recScore > 0 ? 'badge-green' : r.recScore < 0 ? 'badge-red' : 'badge-gray'; return `<tr><td><span class="badge ${i === 0 ? 'badge-amber' : i < 3 ? 'badge-teal' : 'badge-gray'}">#${i + 1}</span></td><td><div style="display:flex;align-items:center;gap:7px">${avatar(r.cand.name, 24)}<div><div style="font-weight:500;font-size:12px">${esc(r.cand.name)}</div>${!applied && !pd.isGeneral ? '<span class="badge badge-teal" style="font-size:9px">Suggested</span>' : ''}</div></div></td><td><span style="font-family:var(--mono);font-weight:600;color:${bc}">${r.allIneligible ? 'INELIGIBLE' : r.avg.toFixed(1)}</span></td><td>${r.count}${r.inelCount ? ' <span class="badge badge-red" style="font-size:9px">' + r.inelCount + ' inel.</span>' : ''}</td><td><span class="badge ${rb}">${r.recScore > 1 ? 'Strong Hire' : r.recScore > 0 ? 'Hire' : r.recScore === 0 ? 'Neutral' : 'No Hire'}</span></td></tr>` }).join('')}</tbody></table></div></div>` }).join('');
 }
 function renderMatrixReport() {
-	const el = document.getElementById('report-matrix'); if (!el) return; const scoredCands = [...new Set(DB.scores.map(s => s.candidateId))]; const scoredPos = [...new Set(DB.scores.map(s => s.positionId))]; if (!scoredCands.length) { el.innerHTML = `<div class="empty-state"><p>No scores yet.</p></div>`; return }
+	const el = document.getElementById('report-matrix'); if (!el) return; const scoredCands = [...new Set(DB.scores.map(s => s.candidateId))]; const scoredPos = [...new Set(DB.scores.map(s => s.positionId))].filter(function(pid) { return !isPosHidden(pid); }); if (!scoredCands.length) { el.innerHTML = `<div class="empty-state"><p>No scores yet.</p></div>`; return }
 	const cands = DB.candidates.filter(c => scoredCands.includes(c.id)); const positions = scoredPos.map(pid => pid === GENERAL_POS_ID ? { id: GENERAL_POS_ID, title: 'General' } : DB.positions.find(p => p.id === pid)).filter(Boolean);
 	el.innerHTML = `<div class="card"><div class="table-wrap"><table style="table-layout:fixed"><thead><tr><th style="width:150px">Candidate</th>${positions.map(p => `<th style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(p.title)}</th>`).join('')}</tr></thead><tbody>${cands.map(c => { const cells = positions.map(pos => { const sc = DB.scores.filter(s => s.candidateId === c.id && s.positionId === pos.id); if (!sc.length) return '<td style="text-align:center;color:var(--text3)">—</td>'; const avg = sc.reduce((a, s) => a + allCriteriaAvg(s), 0) / sc.length; const col = avg >= 7 ? 'var(--green)' : avg >= 5 ? 'var(--amber)' : 'var(--red)'; const applied = pos.id !== GENERAL_POS_ID && (c.positionIds || []).includes(pos.id); return `<td style="text-align:center"><div style="font-family:var(--mono);font-weight:600;color:${col};font-size:14px">${avg.toFixed(1)}</div><div style="font-size:10px;color:${applied ? 'var(--accent)' : 'var(--teal)'}">${pos.id === GENERAL_POS_ID ? 'General' : applied ? 'Applied' : 'Suggested'}</div></td>` }).join(''); return `<tr><td><div style="display:flex;align-items:center;gap:6px">${avatar(c.name, 22)}<span style="font-size:12px;font-weight:500">${esc(c.name)}</span></div></td>${cells}</tr>` }).join('')}</tbody></table></div></div>`;
 }
@@ -1031,6 +1101,108 @@ function renderRejectionReport() {
 }
 
 /* ══ PDF EXPORT (REPORTS) ══ */
+function captureOverlayForDownload(overlay, filename) {
+	var content = overlay.querySelector('#pdf-print-content');
+	if (!content) { tool.notify('Could not capture content', 'error'); return; }
+	var toolbar = overlay.querySelector('#pdf-print-toolbar');
+
+	function showFallback(msg) {
+		if (toolbar) {
+			toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 Preview</span>' +
+				'<span style="color:#f5a623;font-size:11px">⚠ ' + msg + '</span>' +
+				'<button id="pdf-dl-html-btn" style="padding:7px 16px;background:#4361ee;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui">💾 Download HTML</button>' +
+				'<button style="padding:7px 16px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui" onclick="this.closest(\'#pdf-print-overlay\').remove()">✕ Close</button>';
+			var htmlBtn = document.getElementById('pdf-dl-html-btn');
+			if (htmlBtn) {
+				htmlBtn.onclick = function() {
+					// Build a self-contained HTML file from the overlay content
+					var pageHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + filename + '</title>' +
+						'<style>body{font-family:system-ui,-apple-system,sans-serif;color:#10131c;padding:40px 48px;max-width:960px;margin:0 auto}' +
+						'table{width:100%;border-collapse:collapse;margin-bottom:20px}' +
+						'th{background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left}' +
+						'td{padding:7px 10px;border:1px solid #e2e5ec;font-size:11px}' +
+						'tr:nth-child(even) td{background:#fafbfc}' +
+						'@media print{body{padding:20px 30px}}</style></head><body>' +
+						content.innerHTML + '</body></html>';
+					var blob = new Blob([pageHTML], { type: 'text/html;charset=utf-8' });
+					var url = URL.createObjectURL(blob);
+					var a = document.createElement('a');
+					a.href = url;
+					a.download = filename + '.html';
+					document.body.appendChild(a);
+					a.click();
+					setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+					tool.notify('Downloaded ' + filename + '.html — open in browser to print/save as PDF', 'success');
+				};
+			}
+		}
+	}
+
+	if (toolbar) {
+		toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 Generating preview…</span>' +
+			'<span style="color:#8b90a5;font-size:11px">⏳ Loading capture library…</span>';
+	}
+
+	// Wait for html2canvas to load (it's loaded async via CDN) and for DOM to render
+	function tryCapture(attempts) {
+		attempts = attempts || 0;
+		if (typeof html2canvas === 'undefined') {
+			if (attempts < 20) { setTimeout(function() { tryCapture(attempts + 1); }, 300); return; }
+			showFallback('Image library not loaded. Use system screenshot (Win+Shift+S).');
+			return;
+		}
+		// Ensure content has rendered
+		if (content.offsetHeight === 0 && attempts < 30) {
+			setTimeout(function() { tryCapture(attempts + 1); }, 200);
+			return;
+		}
+		if (toolbar) {
+			toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 Generating preview…</span>' +
+				'<span style="color:#8b90a5;font-size:11px">⏳ Capturing as image…</span>';
+		}
+		html2canvas(content, { backgroundColor: '#ffffff', scale: 2, allowTaint: true }).then(function(canvas) {
+			content.innerHTML = '';
+			content.style.cssText = 'max-width:960px;margin:0 auto;padding:20px 20px 40px;text-align:center';
+			canvas.style.maxWidth = '100%';
+			canvas.style.height = 'auto';
+			canvas.style.boxShadow = '0 2px 16px rgba(0,0,0,.12)';
+			canvas.style.borderRadius = '4px';
+			content.appendChild(canvas);
+
+			if (toolbar) {
+				toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📷 Preview ready</span>' +
+					'<button id="pdf-dl-btn" style="padding:7px 16px;background:#0d9e61;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui">💾 Download PNG</button>' +
+					'<button style="padding:7px 16px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui" onclick="this.closest(\'#pdf-print-overlay\').remove()">✕ Close</button>';
+				var dlBtn = document.getElementById('pdf-dl-btn');
+				if (dlBtn) {
+					dlBtn.onclick = function() {
+						canvas.toBlob(function(blob) {
+							var url = URL.createObjectURL(blob);
+							var a = document.createElement('a');
+							a.href = url;
+							a.download = filename + '.png';
+							document.body.appendChild(a);
+							a.click();
+							setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+							tool.notify('Downloaded ' + filename + '.png', 'success');
+						}, 'image/png');
+					};
+				}
+			}
+			tool.notify('Preview ready — click Download PNG to save', 'info');
+		}).catch(function(err) {
+			// If the first attempt fails, try once more without scale
+			if (attempts < 5) {
+				setTimeout(function() { tryCapture(attempts + 5); }, 300);
+				return;
+			}
+			showFallback('Capture failed. Use system screenshot (Win+Shift+S).');
+		});
+	}
+
+	setTimeout(function() { tryCapture(0); }, 200);
+}
+
 function exportReportPDF() {
 	// Detect which tab is currently active
 	var activeTab = '';
@@ -1058,23 +1230,11 @@ function exportReportPDF() {
 	var toolbar = document.createElement('div');
 	toolbar.id = 'pdf-print-toolbar';
 	toolbar.style.cssText = 'position:sticky;top:0;z-index:10;background:#13151c;color:#ebeef5;padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:13px;box-shadow:0 1px 6px rgba(0,0,0,.25)';
-	var lbl = document.createElement('span');
-	lbl.textContent = '📄 ' + reportTitle;
-	lbl.style.cssText = 'flex:1;font-weight:600;font-size:14px';
-	var printBtn = document.createElement('button');
-	printBtn.textContent = '🖨 Print / Save PDF';
-	printBtn.style.cssText = 'padding:7px 16px;background:#4361ee;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui';
-	printBtn.onclick = function() { window.print(); };
-	var closeBtn = document.createElement('button');
-	closeBtn.textContent = '✕ Close';
-	closeBtn.style.cssText = 'padding:7px 16px;background:#dc3545;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;font-family:system-ui';
-	closeBtn.onclick = function() { overlay.remove(); };
-	toolbar.appendChild(lbl);
-	toolbar.appendChild(printBtn);
-	toolbar.appendChild(closeBtn);
+	toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 ' + reportTitle + '</span><span style="color:#8b90a5;font-size:11px">⏳ Rendering…</span>';
 	overlay.appendChild(toolbar);
 	// === CONTENT — the actual report ===
 	var content = document.createElement('div');
+	content.id = 'pdf-print-content';
 	content.style.cssText = 'max-width:960px;margin:0 auto;padding:40px 48px 60px;font-size:12px;line-height:1.5;color:#10131c';
 	content.innerHTML =
 		'<div style="text-align:center;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #4361ee">' +
@@ -1098,15 +1258,14 @@ function exportReportPDF() {
 		'#pdf-print-overlay .rpt-summary{margin-bottom:16px;font-size:11px;color:#4a5068}';
 	overlay.appendChild(style);
 	document.body.appendChild(overlay);
-	// Scroll to top of overlay
 	overlay.scrollTop = 0;
-	tool.notify('PDF preview ready. Click Print / Save PDF to export, or take a screenshot.', 'info');
+	captureOverlayForDownload(overlay, 'Report_' + reportTitle.replace(/\s+/g, '_'));
 }
 
 function buildExportRankings() {
 	var recFilter = document.getElementById('report-rec-filter')?.value || '';
 	var eligFilter = document.getElementById('report-elig-filter')?.value || '';
-	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))].filter(function(pid) { return !isPosHidden(pid); });
 	var rows = DB.candidates.map(function(c) {
 		var posScores = allPosIds.map(function(posId) {
 			var sc = DB.scores.filter(function(s) { return s.candidateId === c.id && s.positionId === posId; });
@@ -1150,7 +1309,7 @@ function buildExportRankings() {
 }
 
 function buildExportPositions() {
-	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	var allPosIds = [...new Set(DB.scores.map(function(s) { return s.positionId; }))].filter(function(pid) { return !isPosHidden(pid); });
 	var posData = allPosIds.map(function(posId) {
 		var sc = DB.scores.filter(function(s) { return s.positionId === posId; });
 		if (!sc.length) return null;
@@ -1183,7 +1342,7 @@ function buildExportPositions() {
 
 function buildExportMatrix() {
 	var scoredCands = [...new Set(DB.scores.map(function(s) { return s.candidateId; }))];
-	var scoredPos = [...new Set(DB.scores.map(function(s) { return s.positionId; }))];
+	var scoredPos = [...new Set(DB.scores.map(function(s) { return s.positionId; }))].filter(function(pid) { return !isPosHidden(pid); });
 	if (!scoredCands.length) return '<p style="text-align:center;color:#9399aa;padding:40px">No scores yet.</p>';
 	var cands = DB.candidates.filter(function(c) { return scoredCands.includes(c.id); });
 	var positions = scoredPos.map(function(pid) { return pid === GENERAL_POS_ID ? { id: GENERAL_POS_ID, title: 'General' } : DB.positions.find(function(p) { return p.id === pid; }); }).filter(Boolean);
@@ -1260,7 +1419,7 @@ function renderPlacements() {
 			'<span class="psum-count">' + all.length + ' candidate' + (all.length !== 1 ? 's' : '') + '</span>' +
 			(selCand ? '<span class="psum-selected">' + avatar(selCand.name, 22) + esc(selCand.name) + '</span>' : '<span class="psum-none">No selection</span>') +
 			'</div>';
-		return '<div class="placement-card">' +
+		return '<div class="placement-card collapsed">' +
 			// HEADER — click to toggle expand/collapse
 			'<div class="placement-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;cursor:pointer" data-action="togglePlacement">' +
 				'<div style="display:flex;align-items:center;gap:10px">' +
@@ -1312,22 +1471,29 @@ function renderHiredStaff() {
 		tool.resize();
 		return;
 	}
-	var html = '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Position</th><th>Employment</th><th>Start Date</th><th>Salary</th><th>Actions</th></tr></thead><tbody>';
-	placements.forEach(function(pl) {
+	// Sort
+	var st = tableSort.hiredStaff;
+	var rows = placements.map(function(pl) {
 		var pos = DB.positions.find(function(x) { return x.id === pl.positionId; });
 		var cand = DB.candidates.find(function(x) { return x.id === pl.selectedCandidateId; });
-		if (!pos || !cand) return;
+		if (!pos || !cand) return null;
 		var empBasis = pos.employmentBasis || '';
 		var workerClass = pos.workerClass || '';
 		var empType = [empBasis === 'full-time' ? 'Full-Time' : empBasis === 'part-time' ? 'Part-Time' : '', workerClass.charAt(0).toUpperCase() + workerClass.slice(1)].filter(Boolean).join(', ') || '—';
 		var wage = pos.wageAmount ? '$' + esc(pos.wageAmount) + ' / ' + (pos.wageUnit || '—') : '—';
+		return { pl: pl, pos: pos, cand: cand, empType: empType, wage: wage, startDate: pos.startDate || '' };
+	}).filter(Boolean);
+	var col = st.col === 'position' ? 'pos.title' : st.col === 'employment' ? 'empType' : st.col === 'startDate' ? 'startDate' : st.col === 'salary' ? 'wage' : 'cand.name';
+	rows = sortByKey(rows, col === 'pos.title' ? 'pos.title' : col === 'cand.name' ? 'cand.name' : col, st.asc);
+	var html = '<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Position</th><th>Employment</th><th>Start Date</th><th>Salary</th><th>Actions</th></tr></thead><tbody>';
+	rows.forEach(function(r) {
 		html += '<tr>' +
-			'<td><div style="display:flex;align-items:center;gap:8px">' + avatar(cand.name, 28) + '<span style="font-weight:500">' + esc(cand.name) + '</span></div></td>' +
-			'<td>' + esc(pos.title) + '</td>' +
-			'<td>' + esc(empType) + '</td>' +
-			'<td>' + (pos.startDate ? fmtDate(pos.startDate) : '—') + '</td>' +
-			'<td>' + wage + '</td>' +
-			'<td><button class="btn btn-primary btn-sm" onclick="exportHiredStaffJSON(\'' + pl.positionId + '\',\'' + pl.selectedCandidateId + '\')">📋 Export JSON</button></td>' +
+			'<td><div style="display:flex;align-items:center;gap:8px">' + avatar(r.cand.name, 28) + '<span style="font-weight:500">' + esc(r.cand.name) + '</span></div></td>' +
+			'<td>' + esc(r.pos.title) + '</td>' +
+			'<td>' + esc(r.empType) + '</td>' +
+			'<td>' + (r.pos.startDate ? fmtDate(r.pos.startDate) : '—') + '</td>' +
+			'<td>' + r.wage + '</td>' +
+			'<td><button class="btn btn-primary btn-sm" data-action="exportHiredStaffJSON" data-posid="' + r.pl.positionId + '" data-candid="' + r.pl.selectedCandidateId + '">📋 Export JSON</button></td>' +
 			'</tr>';
 	});
 	html += '</tbody></table></div>';
@@ -1448,6 +1614,168 @@ function showJSONExportOverlay(json, empName, posTitle) {
 	textarea.focus();
 	textarea.select();
 	tool.notify('JSON generated for ' + empName + '. Copy and use in your agreement application.', 'info');
+}
+
+/* ══ EXPORT POSITIONS ══ */
+function getSortedPositionsForExport() {
+	var st = tableSort.positions;
+	return sortByKey(DB.positions.filter(function(p) { return !p.hideFromReports; }).map(function(p) {
+		var apps = DB.candidates.filter(function(c) { return (c.positionIds || []).includes(p.id); }).length;
+		var extra = (p.extraCriteria || []).filter(function(c) { return c.name; }).length;
+		var pl = (DB.placements || []).find(function(pl) { return pl.positionId === p.id && pl.selectedCandidateId; });
+		var sel = pl ? DB.candidates.find(function(c) { return c.id === pl.selectedCandidateId; }) : null;
+		var ints = DB.interviews.filter(function(i) { return (DB.candidates.find(function(c) { return c.id === i.candidateId; })?.positionIds || []).includes(p.id); }).length;
+		return Object.assign({}, p, { _apps: apps, _extra: extra, _sel: sel, _ints: ints });
+	}), st.col === 'title' ? 'title' : st.col === 'dept' ? 'dept' : st.col === 'status' ? 'status' : st.col === 'apps' ? '_apps' : st.col === 'extra' ? '_extra' : st.col === 'selected' ? '_sel' : st.col === 'interviews' ? '_ints' : 'title', st.asc);
+}
+
+function exportPositionsExcel() {
+	var rows = [['Title', 'Department', 'Status', 'Applicants', 'Selected']];
+	var sorted = getSortedPositionsForExport();
+	sorted.forEach(function(pos) {
+		var apps = DB.candidates.filter(function(c) { return (c.positionIds || []).includes(pos.id); }).length;
+		var pl = (DB.placements || []).find(function(p) { return p.positionId === pos.id && p.selectedCandidateId; });
+		var sel = pl ? DB.candidates.find(function(c) { return c.id === pl.selectedCandidateId; }) : null;
+		rows.push([pos.title, pos.dept || '', pos.status, String(apps), sel ? sel.name : '']);
+	});
+	if (typeof XLSX === 'undefined') { tool.notify('Excel library not loaded. Try CSV instead.', 'error'); return; }
+	var ws = XLSX.utils.aoa_to_sheet(rows);
+	ws['!cols'] = [{wch:28},{wch:18},{wch:10},{wch:10},{wch:22}];
+	var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Positions');
+	XLSX.writeFile(wb, 'Positions_' + new Date().toISOString().slice(0,10) + '.xlsx');
+	tool.notify('Positions exported to Excel', 'success');
+}
+
+function exportPositionsPDF() {
+	var coName = companyName();
+	var todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+	var sorted = getSortedPositionsForExport();
+	var rows = '';
+	sorted.forEach(function(pos) {
+		var apps = DB.candidates.filter(function(c) { return (c.positionIds || []).includes(pos.id); }).length;
+		var pl = (DB.placements || []).find(function(p) { return p.positionId === pos.id && p.selectedCandidateId; });
+		var sel = pl ? DB.candidates.find(function(c) { return c.id === pl.selectedCandidateId; }) : null;
+		var sb = { open: 'green', closed: 'gray', 'on-hold': '#b85c10' }[pos.status] || 'gray';
+		rows += '<tr><td><strong>' + esc(pos.title) + '</strong></td><td>' + esc(pos.dept || '—') + '</td><td style="color:' + sb + ';font-weight:600">' + pos.status + '</td><td>' + apps + '</td><td>' + esc(sel ? sel.name : '—') + '</td></tr>';
+	});
+	// Remove existing overlay
+	var existing = document.getElementById('pdf-print-overlay');
+	if (existing) existing.remove();
+	var overlay = document.createElement('div');
+	overlay.id = 'pdf-print-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow-y:auto;font-family:system-ui,-apple-system,"Segoe UI",sans-serif';
+	var toolbar = document.createElement('div');
+	toolbar.id = 'pdf-print-toolbar';
+	toolbar.style.cssText = 'position:sticky;top:0;z-index:10;background:#13151c;color:#ebeef5;padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:13px;box-shadow:0 1px 6px rgba(0,0,0,.25)';
+	toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 Positions Report</span>' +
+		'<span style="color:#8b90a5;font-size:11px">⏳ Rendering…</span>';
+	overlay.appendChild(toolbar);
+	var content = document.createElement('div');
+	content.id = 'pdf-print-content';
+	content.style.cssText = 'max-width:960px;margin:0 auto;padding:40px 48px 60px;font-size:12px;line-height:1.5;color:#10131c';
+	content.innerHTML =
+		'<div style="text-align:center;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #4361ee">' +
+			'<div style="font-size:20px;font-weight:700;color:#4361ee;letter-spacing:-.3px;margin-bottom:2px">' + esc(coName) + '</div>' +
+			'<div style="font-size:16px;font-weight:600;letter-spacing:-.2px">Positions Report</div>' +
+			'<div style="font-size:11px;color:#8b90a5;margin-top:4px">Generated ' + todayStr + ' · ' + sorted.length + ' positions</div>' +
+		'</div>' +
+		'<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Title</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Dept</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Status</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Applicants</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Selected</th>' +
+		'</tr></thead><tbody>' + rows + '</tbody></table>' +
+		'<div style="text-align:center;font-size:10px;color:#8b90a5;margin-top:28px;padding-top:12px;border-top:1px solid #e2e5ec">' + esc(coName) + ' · Confidential · ' + todayStr + '</div>';
+	// Style for table rows
+	var style = document.createElement('style');
+	style.textContent =
+		'#pdf-print-overlay td{padding:7px 10px;border:1px solid #e2e5ec;font-size:11px}' +
+		'#pdf-print-overlay tr:nth-child(even) td{background:#fafbfc}';
+	overlay.appendChild(style);
+	overlay.appendChild(content);
+	document.body.appendChild(overlay);
+	overlay.scrollTop = 0;
+	captureOverlayForDownload(overlay, 'Positions_Report');
+}
+function exportHiredStaffExcel() {
+	var placements = (DB.placements || []).filter(function(p) { return p.selectedCandidateId; });
+	if (!placements.length) { tool.notify('No hired staff to export', 'warning'); return; }
+	var rows = [['Employee', 'Email', 'Position', 'Employment', 'Start Date', 'Salary', 'Pay Frequency', 'Weekly Hours']];
+	placements.forEach(function(pl) {
+		var pos = DB.positions.find(function(x) { return x.id === pl.positionId; });
+		var cand = DB.candidates.find(function(x) { return x.id === pl.selectedCandidateId; });
+		if (!pos || !cand) return;
+		var empBasis = pos.employmentBasis || '';
+		var workerClass = pos.workerClass || '';
+		var empType = [empBasis === 'full-time' ? 'Full-Time' : empBasis === 'part-time' ? 'Part-Time' : '', workerClass.charAt(0).toUpperCase() + workerClass.slice(1)].filter(Boolean).join(', ') || '';
+		var wage = pos.wageAmount || '';
+		var wageUnit = pos.wageUnit || '';
+		var payFreq = wageUnit === 'hour' ? 'hourly' : wageUnit === 'biweekly' ? 'bi-weekly' : 'monthly';
+		rows.push([cand.name, cand.email || '', pos.title, empType, pos.startDate || '', wage, payFreq, pos.weeklyMinHours || '']);
+	});
+	if (typeof XLSX === 'undefined') { tool.notify('Excel library not loaded.', 'error'); return; }
+	var ws = XLSX.utils.aoa_to_sheet(rows);
+	ws['!cols'] = [{wch:24},{wch:28},{wch:26},{wch:20},{wch:12},{wch:10},{wch:12},{wch:10}];
+	var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Hired Staff');
+	XLSX.writeFile(wb, 'Hired_Staff_' + new Date().toISOString().slice(0,10) + '.xlsx');
+	tool.notify('Hired staff exported to Excel', 'success');
+}
+
+function exportHiredStaffPDF() {
+	var coName = companyName();
+	var todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+	var placements = (DB.placements || []).filter(function(p) { return p.selectedCandidateId; });
+	if (!placements.length) { tool.notify('No hired staff to export', 'warning'); return; }
+	var rows = '';
+	placements.forEach(function(pl) {
+		var pos = DB.positions.find(function(x) { return x.id === pl.positionId; });
+		var cand = DB.candidates.find(function(x) { return x.id === pl.selectedCandidateId; });
+		if (!pos || !cand) return;
+		var empBasis = pos.employmentBasis || '';
+		var workerClass = pos.workerClass || '';
+		var empType = [empBasis === 'full-time' ? 'Full-Time' : empBasis === 'part-time' ? 'Part-Time' : '', workerClass.charAt(0).toUpperCase() + workerClass.slice(1)].filter(Boolean).join(', ') || '—';
+		var wage = pos.wageAmount ? '$' + esc(pos.wageAmount) + ' / ' + (pos.wageUnit || '—') : '—';
+		rows += '<tr><td><strong>' + esc(cand.name) + '</strong></td><td>' + esc(cand.email || '—') + '</td><td>' + esc(pos.title) + '</td><td>' + esc(empType) + '</td><td>' + (pos.startDate ? fmtDate(pos.startDate) : '—') + '</td><td>' + wage + '</td></tr>';
+	});
+	var existing = document.getElementById('pdf-print-overlay');
+	if (existing) existing.remove();
+	var overlay = document.createElement('div');
+	overlay.id = 'pdf-print-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;overflow-y:auto;font-family:system-ui,-apple-system,"Segoe UI",sans-serif';
+	var toolbar = document.createElement('div');
+	toolbar.id = 'pdf-print-toolbar';
+	toolbar.style.cssText = 'position:sticky;top:0;z-index:10;background:#13151c;color:#ebeef5;padding:8px 20px;display:flex;align-items:center;gap:12px;font-size:13px;box-shadow:0 1px 6px rgba(0,0,0,.25)';
+	toolbar.innerHTML = '<span style="flex:1;font-weight:600;font-size:14px">📄 Hired Staff Report</span>' +
+		'<span style="color:#8b90a5;font-size:11px">⏳ Rendering…</span>';
+	overlay.appendChild(toolbar);
+	var content = document.createElement('div');
+	content.id = 'pdf-print-content';
+	content.style.cssText = 'max-width:960px;margin:0 auto;padding:40px 48px 60px;font-size:12px;line-height:1.5;color:#10131c';
+	content.innerHTML =
+		'<div style="text-align:center;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #4361ee">' +
+			'<div style="font-size:20px;font-weight:700;color:#4361ee;letter-spacing:-.3px;margin-bottom:2px">' + esc(coName) + '</div>' +
+			'<div style="font-size:16px;font-weight:600;letter-spacing:-.2px">Hired Staff Report</div>' +
+			'<div style="font-size:11px;color:#8b90a5;margin-top:4px">Generated ' + todayStr + ' · ' + placements.length + ' staff</div>' +
+		'</div>' +
+		'<table style="width:100%;border-collapse:collapse;margin-bottom:20px"><thead><tr>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Employee</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Email</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Position</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Employment</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Start Date</th>' +
+			'<th style="background:#f2f4f7;font-size:10px;font-weight:600;color:#4a5068;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border:1px solid #e2e5ec;text-align:left">Salary</th>' +
+		'</tr></thead><tbody>' + rows + '</tbody></table>' +
+		'<div style="text-align:center;font-size:10px;color:#8b90a5;margin-top:28px;padding-top:12px;border-top:1px solid #e2e5ec">' + esc(coName) + ' · Confidential · ' + todayStr + '</div>';
+	var style = document.createElement('style');
+	style.textContent =
+		'#pdf-print-overlay td{padding:7px 10px;border:1px solid #e2e5ec;font-size:11px}' +
+		'#pdf-print-overlay tr:nth-child(even) td{background:#fafbfc}';
+	overlay.appendChild(style);
+	overlay.appendChild(content);
+	document.body.appendChild(overlay);
+	overlay.scrollTop = 0;
+	captureOverlayForDownload(overlay, 'Hired_Staff_Report');
 }
 
 /* ══ DASHBOARD ══ */
@@ -1761,7 +2089,7 @@ document.addEventListener('click', e => {
 		if (a === 'sendRejScreening') sendRejScreening(id); if (a === 'previewResume') openResumePreview(t.dataset.url);
 		if (a === 'goScore') goScore(id); if (a === 'reloadScoringForm') reloadScoringFormWithNewPos();
 		if (a === 'submitScore') submitScore(t.dataset.int, t.dataset.ivr); if (a === 'deleteScore') deleteScore(t.dataset.int, t.dataset.ivr);
-		if (a === 'selectForPos') selectForPos(t.dataset.posid, t.dataset.candid); if (a === 'deselectForPos') deselectForPos(t.dataset.posid); if (a === 'openOfferLetter') openOfferLetter(t.dataset.posid, t.dataset.candid);
+		if (a === 'selectForPos') selectForPos(t.dataset.posid, t.dataset.candid); if (a === 'deselectForPos') deselectForPos(t.dataset.posid); if (a === 'openOfferLetter') openOfferLetter(t.dataset.posid, t.dataset.candid); if (a === 'exportHiredStaffJSON') exportHiredStaffJSON(t.dataset.posid, t.dataset.candid);
 		if (a === 'togglePlacement') { var card = t.closest('.placement-card'); if (card) card.classList.toggle('collapsed') }
 		if (a === 'openRejEmail') { const c = DB.candidates.find(x => x.id === id); if (c) { const pn = (c.positionIds || []).map(pid => { const p = DB.positions.find(x => x.id === pid); return p ? p.title : '' }).filter(Boolean).join(', ') || 'the position'; openEmailModal('Rejection Email', c.email || '', `Your Application — ${pn}`, generateRejectionEmail(c, pn)) } }
 		if (a === 'sendInviteEmail') sendInviteEmail(id); if (a === 'sendInviteFromCal') sendInviteFromCal(id);
@@ -1803,7 +2131,7 @@ document.addEventListener('click', e => {
 	if (t.id === 'import-confirm-btn') confirmImport(); if (t.id === 'import-done-btn') { closeImportModal(); renderCandidates(); navigate('candidates') }
 	if (t.id === 'excel-browse-btn') document.getElementById('excel-file-input').click();
 	if (t.id === 'screen-bulk-advance-btn') bulkScreenAdvance(); if (t.id === 'screen-bulk-elim-btn') bulkScreenEliminate();
-	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'export-report-pdf-btn') exportReportPDF(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-date-filter') renderCandidatePrintPage(); if (t.id === 'cp-prev-btn') navigateCandidateCard('prev'); if (t.id === 'cp-next-btn') navigateCandidateCard('next'); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
+	if (t.id === 'settings-save-btn') saveSettings(); if (t.id === 'export-report-pdf-btn') exportReportPDF(); if (t.id === 'export-positions-pdf-btn') exportPositionsPDF(); if (t.id === 'export-positions-excel-btn') exportPositionsExcel(); if (t.id === 'export-hired-pdf-btn') exportHiredStaffPDF(); if (t.id === 'export-hired-excel-btn') exportHiredStaffExcel(); if (t.id === 'pos-copy-meta-btn') copyPosMeta(); if (t.id === 'pos-paste-meta-btn') pastePosMeta(); if (t.id === 'cp-candidate-select') renderCandidateCard(); if (t.id === 'cp-date-filter') renderCandidatePrintPage(); if (t.id === 'cp-prev-btn') navigateCandidateCard('prev'); if (t.id === 'cp-next-btn') navigateCandidateCard('next'); if (t.id === 'cp-print-btn') printCandidateCard(); if (t.id === 'cp-copy-img-btn') copyCandidateCardAsImage(); if (t.id === 'cp-copy-wa-btn') copyWhatsAppMessage();
 	if (t.id === 'cal-prev-btn') calNavPrev(); if (t.id === 'cal-next-btn') calNavNext(); if (t.id === 'cal-today-btn') calNavToday();
 	if (t.id === 'bulk-advance-btn') { const ids = [...checkedCandIds]; const toAdv = ids.filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated && !DB.screenings.some(s => s.candidateId === id && s.status === 'advanced') }); toAdv.forEach(id => { DB.screenings.push({ candidateId: id, status: 'advanced', date: new Date().toISOString() }) }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${toAdv.length} advanced`, 'success') }
 	if (t.id === 'bulk-eliminate-btn') { const ids = [...checkedCandIds].filter(id => { const c = DB.candidates.find(x => x.id === id); return c && !c.eliminated }); if (!ids.length) { tool.notify('No active candidates selected', 'warning'); return } openElimModal(`Eliminating ${ids.length} candidates:`, (reason) => { ids.forEach(id => { const c = DB.candidates.find(x => x.id === id); if (c) { c.eliminated = true; c.eliminationReason = reason; c.eliminationStage = 'screening'; c.eliminationDate = new Date().toISOString() } }); checkedCandIds.clear(); persist(); renderCandidates(); tool.notify(`${ids.length} eliminated`, 'warning') }) }
@@ -1836,6 +2164,20 @@ document.addEventListener('click', e => {
 		// Refocus the editor
 		var editor = btn.closest('.drawer-body') ? btn.closest('.drawer-body').querySelector('.rte-editor') : null;
 		if (editor) editor.focus();
+	}
+	// Sortable table headers
+	var sortTh = t.closest('th[data-sort]');
+	if (sortTh) {
+		var col = sortTh.dataset.sort;
+		var tbl = sortTh.dataset.table || 'positions';
+		var st = tableSort[tbl];
+		if (st) {
+			if (st.col === col) st.asc = !st.asc;
+			else { st.col = col; st.asc = true; }
+		}
+		if (tbl === 'positions') renderPositions();
+		else if (tbl === 'interviewers') renderInterviewers();
+		else if (tbl === 'candidates') renderCandidates();
 	}
 });
 

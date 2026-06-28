@@ -257,26 +257,51 @@ function fmtCurrency(n) { if (n >= 1000000) return '$'+(n/1000000).toFixed(1)+'M
 function fmtNum(n) { if (n >= 1000000) return (n/1000000).toFixed(1)+'M'; if (n >= 1000) return (n/1000).toFixed(1)+'K'; return String(Math.round(n)); }
 
 // ═══════════════════════════════════ SDK INIT ═══════════════════════════════════
-tool.onReady(function(val, fields) {
-  // Initialize Mermaid (CDN script loaded via HTML field)
-  if (window.mermaid) {
-    try {
-      mermaid.initialize({
-        startOnLoad: false, theme: 'base', securityLevel: 'loose',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        themeVariables: {
-          fontSize: '13px', primaryColor: '#ede9fe', primaryTextColor: '#3730a3',
-          primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#e0f2fe',
-          tertiaryColor: '#f0fdf4', clusterBkg: '#f8fafc', clusterBorder: '#e2e8f0',
-          edgeLabelBackground: '#f8fafc', titleColor: '#1e1b4b'
-        }
-      });
-    } catch(e) {
-      console.warn('Mermaid init failed:', e);
+// ── Robust Mermaid loader for iframe / CMS compatibility ──────────────────────
+function loadMermaid(callback) {
+  if (window.mermaid) { callback(); return; }
+  var urls = [
+    'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js',
+    'https://unpkg.com/mermaid@11/dist/mermaid.min.js'
+  ];
+  var tryIdx = 0;
+  function tryNext() {
+    if (tryIdx >= urls.length) {
+      console.warn('Mermaid CDN failed — diagrams will show text fallback');
+      callback();
+      return;
     }
+    var script = document.createElement('script');
+    script.src = urls[tryIdx];
+    script.onload = function() { if (window.mermaid) { initMermaid(); callback(); } else { tryIdx++; tryNext(); } };
+    script.onerror = function() { tryIdx++; tryNext(); };
+    document.head.appendChild(script);
+    tryIdx++;
   }
+  tryNext();
+}
 
-  // ── Remove loadMermaid/initMermaid helper functions (no longer needed) ──
+function initMermaid() {
+  if (!window.mermaid) return;
+  try {
+    mermaid.initialize({
+      startOnLoad: false, theme: 'base', securityLevel: 'loose',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      themeVariables: {
+        fontSize: '13px', primaryColor: '#ede9fe', primaryTextColor: '#3730a3',
+        primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#e0f2fe',
+        tertiaryColor: '#f0fdf4', clusterBkg: '#f8fafc', clusterBorder: '#e2e8f0',
+        edgeLabelBackground: '#f8fafc', titleColor: '#1e1b4b'
+      }
+    });
+  } catch(e) {
+    console.warn('Mermaid init failed:', e);
+  }
+}
+
+tool.onReady(function(val, fields) {
+  // Initialize Mermaid with CDN fallback (works in iframes)
+  loadMermaid(function() {
   if (val && typeof val === 'object') restoreState(val);
   STATE.readOnly = tool.isReadOnly(); STATE.user = tool.getUser();
 
@@ -293,6 +318,7 @@ tool.onReady(function(val, fields) {
   lockUI(STATE.readOnly);
   refreshAll();
   tool.resize();
+  });
 });
 
 function restoreState(v) {

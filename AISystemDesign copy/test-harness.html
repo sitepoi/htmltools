@@ -1,5 +1,127 @@
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<!-- ── HEADER ── -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agent Architecture Designer — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="AISystemDesign.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a78bfa; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #7c3aed; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-dump { background: #0d9488; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+.ai-header { top: 28px !important; }
+.ai-tabs { top: 85px !important; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — AI Agent Architecture Designer</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-hybrid">🔀 Hybrid Preset</button>
+  <button class="btn-load" id="th-load-copilot">🪟 Copilot Preset</button>
+  <button class="btn-load" id="th-load-onprem">🖥️ On-Prem Preset</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-dump" id="th-dump">📋 Dump</button>
+  <span class="sep">|</span>
+  <button id="th-toggle-ro" style="background:#16a34a;color:#fff">🔒 RO: OFF</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = RO toggle</span> <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span> <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<script>
+(function() {
+  var STORAGE_KEY = 'ai_arch_design_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = { id: 'test', name: 'Admin', email: 'admin@pkf.com', roles: ['admin'], locale: 'en' }, _fields = {}, _value = null;
+
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch(e) { _value = null; } }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+  function notifyListeners(event, data) { var list = listeners[event] || []; for (var i=0;i<list.length;i++) { try { list[i](data); } catch(e) {} } }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); notifyListeners('valueChange', data); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function() {},
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) { var p = (new URLSearchParams(window.location.search)).get(name); return p !== null && p !== '' ? p : (fallback !== undefined ? fallback : ''); },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#6366f1', success: '#10b981', warning: '#d97706', error: '#ef4444' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:'+(colors[severity]||'#333')+';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message; document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    requestAI: function(prompt, context, callback) { setTimeout(function() { callback(null, 'Mock AI response.'); }, 500); },
+    requestUpload: function(accept, callback) {
+      var inp = document.createElement('input'); inp.type = 'file'; inp.accept = accept;
+      inp.onchange = function() { var f = inp.files[0]; if (!f) { callback('No file', null); return; } callback(null, { name: f.name, url: URL.createObjectURL(f), size: f.size, type: f.type || 'application/octet-stream' }); };
+      inp.click();
+    },
+    requestFileContent: function(url, callback) { callback(null, '[Mock content]'); },
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _setReadOnly: function(v) { _readOnly = v; notifyListeners('readonlyChange', v);
+      var btn = document.getElementById('th-toggle-ro'); if (btn) { btn.textContent = v ? '🔓 RO: ON' : '🔒 RO: OFF'; btn.style.background = v ? '#dc2626' : '#16a34a'; }
+    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('AI Arch State:', JSON.parse(JSON.stringify(_value))); },
+    _loadPreset: function(preset) {
+      var data = { companyName:'PKF', temperature:0.7, maxTokens:4096, agentPersona:'all', ragEnabled:'yes', topK:5, chunkSize:1024, docCount:50000, userMemory:'enabled', userMemoryRetention:'90d', companyMemory:'enabled', appMemory:'enabled', externalMemory:'enabled', mcpEnabled:'yes', mcpTools:['filesystem','database','websearch'], workers:4, dau:10, queriesPerUser:15, avgTokens:2000, pilotPhase:'pilot' };
+      if (preset === 'hybrid') {
+        Object.assign(data, { deploymentType:'hybrid', localModel:'deepseek-v4-pro', localRuntime:'ollama', cloudProvider:'anthropic', cloudModelTier:'balanced', memoryStrategy:'external-shared', memoryBackend:'redis', vectorDb:'pinecone', embeddingModel:'text-embedding-3-small', appConnectors:['ephorm-audit','ephorm-tax','caseware'], useCases:['event-bot','junior-auditor','ephorm-audit-ai'] });
+      } else if (preset === 'copilot') {
+        Object.assign(data, { deploymentType:'copilot', copilotTier:'studio', cloudProvider:'anthropic', cloudModelTier:'balanced', memoryStrategy:'copilot-builtin', memoryBackend:'redis', vectorDb:'pinecone', embeddingModel:'text-embedding-3-small', appConnectors:['ephorm-audit','ephorm-tax'], useCases:['event-bot','ephorm-audit-ai','ephorm-tax-ai'] });
+      } else if (preset === 'onprem') {
+        Object.assign(data, { deploymentType:'local', localModel:'deepseek-v4-pro', localRuntime:'ollama', memoryStrategy:'external-shared', memoryBackend:'sqlite', vectorDb:'chromadb', embeddingModel:'bge-large', appConnectors:['ephorm-audit','ephorm-tax'], useCases:['junior-auditor','ephorm-audit-ai'] });
+      }
+      save(data); window.location.reload();
+    },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('State dumped to console', 'info'); }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('th-load-hybrid').addEventListener('click', function() { window.tool._loadPreset('hybrid'); });
+    document.getElementById('th-load-copilot').addEventListener('click', function() { window.tool._loadPreset('copilot'); });
+    document.getElementById('th-load-onprem').addEventListener('click', function() { window.tool._loadPreset('onprem'); });
+    document.getElementById('th-clear').addEventListener('click', function() { window.tool._clearData(); });
+    document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+    document.getElementById('th-dump').addEventListener('click', function() { window.tool._dump(); window.tool.notify('State dumped to console', 'info'); });
+    document.getElementById('th-toggle-ro').addEventListener('click', function() { window.tool._toggleReadOnly(); });
+  });
+})();
+</script>
+
+<!-- ═══════════════════ HTML BODY ═══════════════════ -->
 <header class="ai-header">
   <div class="ai-header-brand">
     <div class="ai-logo">🧠</div>
@@ -15,11 +137,10 @@
   </div>
 </header>
 
-<!-- ── TAB NAVIGATION ── -->
 <nav class="ai-tabs" id="ai-tabs">
   <button class="ai-tab active" data-tab="summary">📋 Summary</button>
   <button class="ai-tab" data-tab="architecture">🏗️ Architecture</button>
-  <button class="ai-tab" data-tab="memory">🧠 Memory System</button>
+  <button class="ai-tab" data-tab="memory">🧠 Memory</button>
   <button class="ai-tab" data-tab="gpu">💻 GPU Guide</button>
   <button class="ai-tab" data-tab="deepseek">🖥️ Run DeepSeek</button>
   <button class="ai-tab" data-tab="tokencost">📊 Token Costs</button>
@@ -29,10 +150,6 @@
   <button class="ai-tab" data-tab="plan">📋 Plan & Recommend</button>
 </nav>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- SUMMARY VIEW — First Tab, Three Solutions -->
-<!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view active" id="view-summary">
   <div class="ai-view-header">
     <div>
@@ -44,59 +161,33 @@
     <div style="text-align:center;padding:60px;color:var(--ai-text-muted)">⏳ Loading solutions…</div>
   </div>
 </section>
+</section>
 
 <!-- ════════════════════════════════════════════════════════ -->
 <!-- ARCHITECTURE VIEW -->
 <!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-architecture">
   <div class="ai-view-header">
-    <div>
-      <div class="ai-view-title">System Architecture</div>
-      <div class="ai-view-sub">Click any box to learn what it does and how it works</div>
-    </div>
+    <div><div class="ai-view-title">System Architecture</div><div class="ai-view-sub">Click any box to learn what it does</div></div>
     <div class="ai-view-toolbar">
-      <select class="ai-select" id="arch-diagram-mode" style="width:auto">
-        <option value="dataflow">📊 Data Flow Diagram</option>
-        <option value="agentic">🔄 Agentic Flow Diagram</option>
-        <option value="assembly">📝 Prompt Assembly Diagram</option>
-        <option value="localFlow">🏠 Local LLM Flow (Simplified)</option>
-        <option value="cloudFlow">☁️ Cloud API Flow (Simplified)</option>
-      </select>
+      <select class="ai-select" id="arch-diagram-mode" style="width:auto"><option value="dataflow">📊 Data Flow</option><option value="agentic">🔄 Agentic Flow</option><option value="assembly">📝 Prompt Assembly</option><option value="localFlow">🏠 Local LLM Flow</option><option value="cloudFlow">☁️ Cloud API Flow</option></select>
       <button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-export-diagram">📋 View Plan</button>
     </div>
   </div>
-
-  <!-- Diagram + Side Panel Container -->
   <div class="ai-arch-layout" id="arch-layout">
-    <!-- Diagram Area -->
     <div class="ai-arch-diagram-area">
-      <div class="ai-card" id="arch-diagram-container" style="margin-bottom:0">
-        <div class="ai-card-header">
-          <span class="ai-card-title" id="arch-diagram-title">🔀 Data Flow Diagram</span>
-        </div>
-        <div class="ai-diagram-wrap" id="arch-diagram-svg"></div>
-        <div class="ai-flow-legend" style="padding:4px 12px;font-size:10px;color:var(--ai-text-muted);border-top:1px solid var(--ai-border-light)">
-          <span>💡 Click any box for details →</span>
-        </div>
-      </div>
+      <div class="ai-card" id="arch-diagram-container" style="margin-bottom:0"><div class="ai-card-header"><span class="ai-card-title" id="arch-diagram-title">🔀 Data Flow Diagram</span></div><div class="ai-diagram-wrap" id="arch-diagram-svg"></div><div class="ai-flow-legend" style="padding:4px 12px;font-size:10px;color:var(--ai-text-muted);border-top:1px solid var(--ai-border-light)">💡 Click any box for details →</div></div>
     </div>
-    <!-- Side Detail Panel -->
     <div class="ai-arch-side-panel" id="arch-side-panel">
       <div class="ai-arch-side-inner">
-        <div class="ai-card-header" style="padding:0 0 10px 0;margin-bottom:10px">
-          <span class="ai-card-title" id="arch-side-title">📌 Component Details</span>
-        </div>
+        <div class="ai-card-header" style="padding:0 0 10px 0;margin-bottom:10px"><span class="ai-card-title" id="arch-side-title">📌 Component Details</span></div>
         <div class="ai-arch-side-body" id="arch-side-body"></div>
-        <div class="ai-arch-side-placeholder" id="arch-side-placeholder">
-          <div class="ai-empty">👈 Click any component<br>in the diagram to see<br>its details here</div>
-        </div>
+        <div class="ai-arch-side-placeholder" id="arch-side-placeholder"><div class="ai-empty">👈 Click any component<br>in the diagram to see<br>its details here</div></div>
       </div>
     </div>
   </div>
-
 </section>
 
-<!-- ════════════════════════════════════════════════════════ -->
 <!-- ════════════════════════════════════════════════════════ -->
 <!-- MEMORY SYSTEM VIEW -->
 <!-- ════════════════════════════════════════════════════════ -->
@@ -481,8 +572,6 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
-
-<!-- ════════════════════════════════════════════════════════ -->
 <!-- RUN DEEPSEEK V4 PRO VIEW -->
 <!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-deepseek">
@@ -629,6 +718,7 @@ AI: [Generates personalized memo with:
 
 
 <!-- ════════════════════════════════════════════════════════ -->
+
 <!-- TOKEN COST COMPARISON VIEW -->
 <!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-tokencost">
@@ -862,303 +952,58 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
-
-<!-- 2. CONFIGURE VIEW -->
-<!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-configure">
-  <div class="ai-view-header">
-    <div>
-      <div class="ai-view-title">⚙️ System Configuration</div>
-      <div class="ai-view-sub">Adjust all parameters to simulate your AI system architecture</div>
-    </div>
-    <div class="ai-view-toolbar">
-      <button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-copilot">🪟 Copilot Preset</button>
-      <button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-hybrid">🔀 Hybrid Preset</button>
-      <button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-onprem">🖥️ On-Prem Preset</button>
-      <button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-reset-config">🔄 Reset</button>
-      <button class="ai-btn ai-btn-primary ai-btn-sm" id="btn-apply-config">✅ Apply & Save</button>
-    </div>
-  </div>
-
+  <div class="ai-view-header"><div><div class="ai-view-title">⚙️ System Configuration</div><div class="ai-view-sub">Adjust all parameters to simulate your AI system architecture</div></div><div class="ai-view-toolbar"><button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-copilot">🪟 Copilot Preset</button><button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-hybrid">🔀 Hybrid Preset</button><button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-preset-onprem">🖥️ On-Prem Preset</button><button class="ai-btn ai-btn-outline ai-btn-sm" id="btn-reset-config">🔄 Reset</button><button class="ai-btn ai-btn-primary ai-btn-sm" id="btn-apply-config">✅ Apply & Save</button></div></div>
   <div class="ai-config-grid">
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">🤖 LLM Provider & Model</span> <span style="font-size:10px;color:var(--ai-text-muted);margin-left:8px">💡 Choose which AI model powers your system. Cloud = pay-per-use API, Local = runs on your hardware.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">Deployment Type</label>
-          <select class="ai-select" id="cfg-deployment-type">
-            <option value="copilot">🪟 Microsoft Copilot (M365 + Studio)</option>
-            <option value="cloud">☁️ Cloud LLM (API-Based)</option>
-            <option value="local">🖥️ On-Prem / Local LLM</option>
-            <option value="hybrid">🔀 Hybrid (Local + Cloud)</option>
-          </select>
-        </div>
-        <div class="ai-field" id="cfg-copilot-group" style="display:none">
-          <label class="ai-label">Copilot Configuration</label>
-          <select class="ai-select" id="cfg-copilot-tier">
-            <option value="m365">Microsoft 365 Copilot (Built-in)</option>
-            <option value="studio">Copilot Studio (Custom Agents)</option>
-            <option value="azure">Azure AI + Copilot Stack</option>
-          </select>
-        </div>
-        <div class="ai-field" id="cfg-local-model-group">
-          <label class="ai-label">Local Model <span style="font-size:9px;color:var(--ai-text-muted)">💡 Open-source models run on your own GPU. Higher VRAM = larger model. See hardware section for costs.</span></label>
-          <select class="ai-select" id="cfg-local-model">
-            <option value="deepseek-v4-pro">DeepSeek V4 Pro — 48 GB VRAM (Best coding & reasoning)</option>
-            <option value="llama-latest">Llama 4 Latest — 24 GB VRAM (Best all-rounder)</option>
-            <option value="qwen-latest">Qwen 3 Latest — 48 GB VRAM (Best multilingual)</option>
-            <option value="phi4-medium">Phi-4 Medium 14B — 16 GB VRAM (Best lightweight)</option>
-            <option value="phi4-mini">Phi-4 Mini 3.8B — 4 GB VRAM (Laptop friendly)</option>
-            <option value="mistral-small">Mistral Small 3.1 — 16 GB VRAM (Best structured JSON)</option>
-          </select>
-        </div>
-        <div class="ai-field" id="cfg-local-runtime-group">
-          <label class="ai-label">Local Runtime</label>
-          <select class="ai-select" id="cfg-local-runtime">
-            <option value="ollama">Ollama</option>
-            <option value="lmstudio">LM Studio</option>
-            <option value="llamacpp">llama.cpp</option>
-            <option value="vllm">vLLM</option>
-          </select>
-        </div>
-        <div class="ai-field" id="cfg-cloud-provider-group">
-          <label class="ai-label">Cloud Provider</label>
-          <select class="ai-select" id="cfg-cloud-provider">
-            <option value="anthropic">Anthropic (Claude Opus 4.8 · Sonnet 4.6)</option>
-            <option value="openai">OpenAI (GPT-5.4 · GPT-5.5 Mini/Nano)</option>
-            <option value="deepseek-cloud">DeepSeek Cloud (V4 Pro — Best $/perf)</option>
-            <option value="google">Google (Gemini 3.0 Ultra · Flash)</option>
-            <option value="glm">GLM 5.2 (Zhipu AI — Best Chinese LLM)</option>
-            <option value="minimax">MiniMax-M3 (Strong multilingual)</option>
-            <option value="kimi">Kimi Latest (Moonshot AI — Long context)</option>
-            <option value="together">Together AI (Llama 4, DeepSeek V4)</option>
-            <option value="groq">Groq (Ultra-fast inference)</option>
-            <option value="fireworks">Fireworks AI</option>
-          </select>
-        </div>
-        <div class="ai-field" id="cfg-cloud-model-group">
-          <label class="ai-label">Cloud Model Tier <span style="font-size:9px;color:var(--ai-text-muted)">💡 Premium = most capable (best for complex tasks), Balanced = best value (everyday use), Budget = cheapest (simple tasks).</span></label>
-          <select class="ai-select" id="cfg-cloud-model">
-            <option value="premium">🚀 Premium — Best model, highest cost (GPT-5.4 / Claude Opus 4.8 / Gemini 3.0 Ultra)</option>
-            <option value="balanced">⚖️ Balanced — Best value, good quality (GPT-5.5 Mini / Claude Sonnet 4.6 / Gemini Flash)</option>
-            <option value="budget">💰 Budget — Lowest cost, basic tasks (GPT-5.5 Nano / Claude Haiku / Gemini Nano)</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Temperature <span class="ai-range-val" id="cfg-temp-val">0.2</span> <span style="font-size:9px;color:var(--ai-text-muted)">💡 How "creative" the AI is. Lower = more factual & precise (use for coding/audit). Higher = more varied & creative.</span></label>
-          <input type="range" class="ai-range" id="cfg-temperature" min="0" max="2" step="0.1" value="0.2">
-          <div style="margin-top:4px"><span style="font-size:10px;color:var(--ai-text-muted)">⚡ Quick Presets: 
-            <button type="button" class="ai-btn ai-btn-sm ai-btn-outline" onclick="var e=document.getElementById('cfg-temperature');e.value='0.2';e.dispatchEvent(new Event('input'));var t=document.getElementById('cfg-max-tokens');t.value='4096';t.dispatchEvent(new Event('input'))">💻 Coding (temp 0.2, 4K tokens)</button>
-            <button type="button" class="ai-btn ai-btn-sm ai-btn-outline" onclick="var e=document.getElementById('cfg-temperature');e.value='0.7';e.dispatchEvent(new Event('input'));var t=document.getElementById('cfg-max-tokens');t.value='2048';t.dispatchEvent(new Event('input'))">💬 Everyday Q&amp;A (temp 0.7, 2K tokens)</button>
-            <button type="button" class="ai-btn ai-btn-sm ai-btn-outline" onclick="var e=document.getElementById('cfg-temperature');e.value='0.5';e.dispatchEvent(new Event('input'));var t=document.getElementById('cfg-max-tokens');t.value='32768';t.dispatchEvent(new Event('input'))">📄 Large Prompts (temp 0.5, 32K tokens)</button>
-          </span></div>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Max Tokens <span class="ai-range-val" id="cfg-tokens-val">4096</span> <span style="font-size:9px;color:var(--ai-text-muted)">💡 Maximum words the AI can output in one response. ~1 token ≈ 0.75 words. Higher = longer answers but more cost.</span></label>
-          <input type="range" class="ai-range" id="cfg-max-tokens" min="256" max="131072" step="256" value="4096">
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">📝 Prompts & Agent Persona</span> <span style="font-size:10px;color:var(--ai-text-muted)">💡 This defines WHO the AI is and HOW it behaves. The System Prompt is the AI's "job description" — it sets the rules, tone, and boundaries for every response.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">Agent Persona <span style="font-size:9px;color:var(--ai-text-muted)">💡 Which role does this agent play? "All" runs the full team. Or pick a single role for testing.</span></label>
-          <select class="ai-select" id="cfg-agent-persona">
-            <option value="all">All Personas (Doer + Reviewer + Manager)</option>
-            <option value="doer">Doer Agent Only</option>
-            <option value="reviewer">Reviewer Agent Only</option>
-            <option value="manager">Manager Agent Only</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">System Prompt Template <span style="font-size:9px;color:var(--ai-text-muted)">💡 This is the AI's permanent instructions. It tells the AI: who you are, what company you work for, how to behave, what tone to use, and what rules to follow. Without it, the AI gives generic answers.</span></label>
-          <textarea class="ai-textarea" id="cfg-system-prompt" rows="4">You are a helpful AI assistant for {{company_name}}. You have access to the company knowledge base, user-specific memory, and shared organizational memory. Always provide accurate, context-aware responses. If unsure, acknowledge limitations and suggest escalation paths.</textarea>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Company Name</label>
-          <input type="text" class="ai-input" id="cfg-company-name" value="PKF" placeholder="e.g. PKF">
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">📚 RAG — Knowledge Base</span> <span style="font-size:10px;color:var(--ai-text-muted)">💡 RAG = Retrieval-Augmented Generation. It gives the AI access to YOUR documents so it can answer based on real data — not guessing. Without RAG, the AI only knows what it was trained on. With RAG, it can cite specific policies, standards, and client documents.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">RAG Enabled <span style="font-size:9px;color:var(--ai-text-muted)">💡 Turn ON for enterprise use. The AI will search your documents before answering. Turn OFF for simple chatbots that don't need document access.</span></label>
-          <select class="ai-select" id="cfg-rag-enabled"><option value="yes">✅ Enabled</option><option value="no">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Vector Database <span style="font-size:9px;color:var(--ai-text-muted)">💡 Where your documents are stored as searchable vectors. ChromaDB is free & local. Pinecone is cloud & serverless.</span></label>
-          <select class="ai-select" id="cfg-vector-db">
-            <option value="chromadb">ChromaDB (Local)</option><option value="pinecone">Pinecone (Cloud)</option>
-            <option value="weaviate">Weaviate</option><option value="qdrant">Qdrant</option>
-            <option value="pgvector">pgvector (PostgreSQL)</option><option value="faiss">FAISS (Local)</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Embedding Model</label>
-          <select class="ai-select" id="cfg-embedding-model">
-            <option value="text-embedding-3-large">OpenAI text-embedding-3-large (3072d)</option>
-            <option value="text-embedding-3-small">OpenAI text-embedding-3-small (1536d)</option>
-            <option value="bge-large">BGE-Large (Local, 1024d)</option>
-            <option value="e5-mistral">E5-Mistral (Local, 4096d)</option>
-            <option value="nomic-embed">Nomic Embed (Local, 768d)</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Chunk Size <span class="ai-range-val" id="cfg-chunk-val">1024</span></label>
-          <input type="range" class="ai-range" id="cfg-chunk-size" min="128" max="4096" step="128" value="1024">
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Top-K <span class="ai-range-val" id="cfg-topk-val">5</span></label>
-          <input type="range" class="ai-range" id="cfg-topk" min="1" max="20" step="1" value="5">
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Document Count</label>
-          <input type="number" class="ai-input" id="cfg-doc-count" value="10000" min="0" max="1000000" step="1000">
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">🧠 Memory Architecture</span> <span style="font-size:10px;color:var(--ai-text-muted)">💡 Memory is what the AI REMEMBERS across conversations. External Shared Memory (like Redis) means ALL your apps (web chat, VS Code, GitHub Copilot, MS Copilot, custom apps) share the same memory. You ask something in one app — another app remembers it. Think of it as a universal AI brain.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">Memory Strategy <span style="font-size:9px;color:var(--ai-text-muted)">💡 External Shared = one memory for all apps (recommended). Inside Each App = separate memory per app. Hybrid = both.</span></label>
-          <select class="ai-select" id="cfg-memory-strategy">
-            <option value="external-shared">🌐 External Shared Memory (Recommended)</option>
-            <option value="app-internal">📱 Inside Each App</option>
-            <option value="copilot-builtin">🪟 Copilot Built-in Only</option>
-            <option value="hybrid-memory">🔀 Hybrid (App + Shared)</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">👤 User Memory</label>
-          <select class="ai-select" id="cfg-user-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Retention</label>
-          <select class="ai-select" id="cfg-user-memory-retention">
-            <option value="session">Session Only</option><option value="30d">30 Days</option>
-            <option value="90d">90 Days</option><option value="1y">1 Year</option><option value="forever">Permanent</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">🏢 Company Memory</label>
-          <select class="ai-select" id="cfg-company-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">📱 App Memory</label>
-          <select class="ai-select" id="cfg-app-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">🌐 External Shared Memory</label>
-          <select class="ai-select" id="cfg-external-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Memory Backend <span style="font-size:9px;color:var(--ai-text-muted)">💡 Where memories are stored. <strong>Redis</strong> can be a cross-app memory backbone — ANY application (web chat, VS Code, GitHub Copilot, MS Copilot, custom app) connects via Redis keys. Mem0 adds AI-native memory with automatic fact extraction. <strong>Key libraries:</strong> Mem0 (AI-native, $99/mo), Letta/MemGPT (OSS, hierarchical memory), Zep (enterprise graph memory), Redis Stack (universal key-value backbone).</span></label>
-          <select class="ai-select" id="cfg-memory-backend">
-            <option value="redis">Redis (Cross-app backbone)</option><option value="postgres">PostgreSQL</option>
-            <option value="sqlite">SQLite (Local)</option><option value="mongodb">MongoDB</option>
-            <option value="mem0">Mem0 (AI Memory Platform)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">🔌 API, MCP & App Connectors</span> <span style="font-size:10px;color:var(--ai-text-muted)">💡 MCP (Model Context Protocol) = the AI's "hands" — tools it can use to DO things (search, send email, query databases). App Connectors = links to YOUR specific business apps (Ephorm, CaseWare, etc). <strong>More tools = more capability BUT also more cost (~$5-8/mo per tool) and larger security surface.</strong> Only enable what you need.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">MCP (Model Context Protocol) <span style="font-size:9px;color:var(--ai-text-muted)">💡 Anthropic's open standard for tool connections. Enables the AI to go beyond text — it can read files, search the web, query databases.</span></label>
-          <select class="ai-select" id="cfg-mcp-enabled"><option value="yes">✅ Enabled</option><option value="no">❌ Disabled</option></select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">MCP Tools</label>
-          <div class="ai-check-group" id="cfg-mcp-tools">
-            <label class="ai-check"><input type="checkbox" checked> File System</label>
-            <label class="ai-check"><input type="checkbox" checked> Database</label>
-            <label class="ai-check"><input type="checkbox" checked> Web Search</label>
-            <label class="ai-check"><input type="checkbox"> GitHub</label>
-            <label class="ai-check"><input type="checkbox"> Slack/Teams</label>
-            <label class="ai-check"><input type="checkbox"> Email</label>
-            <label class="ai-check"><input type="checkbox"> Calendar</label>
-            <label class="ai-check"><input type="checkbox"> CRM</label>
-          </div>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">🔗 App Connectors (PKF Stack)</label>
-          <div class="ai-check-group" id="cfg-app-connectors">
-            <label class="ai-check"><input type="checkbox" checked> Ephorm Audit</label>
-            <label class="ai-check"><input type="checkbox" checked> Ephorm Tax</label>
-            <label class="ai-check"><input type="checkbox"> OpusChart</label>
-            <label class="ai-check"><input type="checkbox"> CaseWare</label>
-            <label class="ai-check"><input type="checkbox"> Client Files</label>
-            <label class="ai-check"><input type="checkbox"> Knowledge Wiki/SP</label>
-            <label class="ai-check"><input type="checkbox"> Custom APIs</label>
-            <label class="ai-check"><input type="checkbox"> SaaS Integrations</label>
-          </div>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Workers <span class="ai-range-val" id="cfg-workers-val">4</span></label>
-          <input type="range" class="ai-range" id="cfg-workers" min="1" max="32" step="1" value="4">
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">📊 Usage & Pilot Scope</span></div>
-      <div class="ai-config-body">
-        <div class="ai-field">
-          <label class="ai-label">Pilot Phase</label>
-          <select class="ai-select" id="cfg-pilot-phase">
-            <option value="poc">PoC (2-3 users, 1 use case)</option>
-            <option value="pilot">Pilot (5-10 users, 2-3 use cases)</option>
-            <option value="scale">Scale-Up (20+ users, all use cases)</option>
-            <option value="production">Production (50+ users)</option>
-          </select>
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">DAU — Daily Active Users <span style="font-size:9px;color:var(--ai-text-muted)">💡 How many unique people will use the AI system each day. This directly determines your cost — more users = more queries = higher cloud API bills or more hardware needed.</span></label>
-          <input type="number" class="ai-input" id="cfg-dau" value="10" min="1" max="1000000" step="1">
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Queries Per User / Day</label>
-          <input type="number" class="ai-input" id="cfg-queries-per-user" value="15" min="1" max="1000" step="1">
-        </div>
-        <div class="ai-field">
-          <label class="ai-label">Avg Tokens Per Query</label>
-          <input type="number" class="ai-input" id="cfg-avg-tokens" value="2000" min="100" max="100000" step="100">
-        </div>
-      </div>
-    </div>
-
-    <div class="ai-card ai-config-card">
-      <div class="ai-card-header"><span class="ai-card-title">🎯 Target Use Cases</span> <span style="font-size:10px;color:var(--ai-text-muted)">💡 What will your AI actually DO? <strong>More use cases = more connectors needed = higher cost and more complex architecture.</strong> Start with 1-2 use cases for PoC, expand later. Each use case drives which apps to connect, what tools the AI needs, and how much memory/storage is required.</span></div>
-      <div class="ai-config-body">
-        <div class="ai-check-group" id="cfg-use-cases" style="flex-direction:column">
-          <label class="ai-check"><input type="checkbox" checked> Event Bot / Event Radar</label>
-          <label class="ai-check"><input type="checkbox" checked> Junior Auditor Agent</label>
-          <label class="ai-check"><input type="checkbox" checked> AI inside Ephorm Audit</label>
-          <label class="ai-check"><input type="checkbox"> AI inside Ephorm Tax</label>
-          <label class="ai-check"><input type="checkbox"> OpusChart Integration</label>
-          <label class="ai-check"><input type="checkbox"> CaseWare Connector</label>
-          <label class="ai-check"><input type="checkbox"> Client File / Knowledge Search</label>
-          <label class="ai-check"><input type="checkbox"> Document Request Automation</label>
-        </div>
-      </div>
-    </div>
-
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">🤖 LLM Provider & Model</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">Deployment Type</label><select class="ai-select" id="cfg-deployment-type"><option value="copilot">🪟 Microsoft Copilot (M365 + Studio)</option><option value="cloud">☁️ Cloud LLM (API)</option><option value="local">🖥️ On-Prem / Local LLM</option><option value="hybrid">🔀 Hybrid (Local + Cloud)</option></select></div>
+      <div class="ai-field" id="cfg-copilot-group" style="display:none"><label class="ai-label">Copilot Config</label><select class="ai-select" id="cfg-copilot-tier"><option value="m365">M365 Copilot (Built-in)</option><option value="studio">Copilot Studio (Custom Agents)</option><option value="azure">Azure AI + Copilot Stack</option></select></div>
+      <div class="ai-field" id="cfg-local-model-group"><label class="ai-label">Local Model</label><select class="ai-select" id="cfg-local-model"><option value="deepseek-v4-pro">DeepSeek V4 Pro (48 GB)</option><option value="llama-latest">Llama 4 Latest (24 GB)</option><option value="qwen-latest">Qwen 3 Latest (48 GB)</option><option value="phi4-medium">Phi-4 Medium 14B (16 GB)</option><option value="phi4-mini">Phi-4 Mini 3.8B (4 GB)</option><option value="mistral-small">Mistral Small 3.1 (16 GB)</option></select></div>
+      <div class="ai-field" id="cfg-local-runtime-group"><label class="ai-label">Local Runtime</label><select class="ai-select" id="cfg-local-runtime"><option value="ollama">Ollama</option><option value="lmstudio">LM Studio</option><option value="llamacpp">llama.cpp</option><option value="vllm">vLLM</option></select></div>
+      <div class="ai-field" id="cfg-cloud-provider-group"><label class="ai-label">Cloud Provider</label><select class="ai-select" id="cfg-cloud-provider"><option value="anthropic">Anthropic (Claude Opus 4.8 · Sonnet 4.6)</option><option value="openai">OpenAI (GPT-5.4 · GPT-5.5)</option><option value="deepseek-cloud">DeepSeek Cloud (V4 Pro)</option><option value="google">Google (Gemini 3.0 Ultra)</option><option value="glm">GLM 5.2 (Zhipu AI)</option><option value="minimax">MiniMax-M3</option><option value="kimi">Kimi Latest (Moonshot AI)</option><option value="together">Together AI</option><option value="groq">Groq (Ultra-fast)</option><option value="fireworks">Fireworks AI</option></select></div>
+      <div class="ai-field"><label class="ai-label">Cloud Tier</label><select class="ai-select" id="cfg-cloud-model"><option value="premium">🚀 Premium (Best model)</option><option value="balanced">⚖️ Balanced (Best value)</option><option value="budget">💰 Budget (Cost-saving)</option></select></div>
+      <div class="ai-field"><label class="ai-label">Temperature <span class="ai-range-val" id="cfg-temp-val">0.2</span> <span style="font-size:9px;color:var(--ai-text-muted);margin-left:8px">💡 <em>Low=precise (coding) 0.2 · Mid=balanced 0.7 · High=creative 1.2</em></span></label><input type="range" class="ai-range" id="cfg-temperature" min="0" max="2" step="0.1" value="0.2"></div>
+      <div class="ai-field" style="margin-bottom:4px"><span style="font-size:10px;color:var(--ai-text-muted)">⚡ Presets: <button class="ai-btn ai-btn-sm ai-btn-outline" onclick="document.getElementById('cfg-temperature').value='0.2';document.getElementById('cfg-temperature').dispatchEvent(new Event('input'));document.getElementById('cfg-max-tokens').value='4096';document.getElementById('cfg-max-tokens').dispatchEvent(new Event('input'))">💻 Coding (0.2 / 4K)</button> <button class="ai-btn ai-btn-sm ai-btn-outline" onclick="document.getElementById('cfg-temperature').value='0.7';document.getElementById('cfg-temperature').dispatchEvent(new Event('input'));document.getElementById('cfg-max-tokens').value='2048';document.getElementById('cfg-max-tokens').dispatchEvent(new Event('input'))">💬 Q&amp;A (0.7 / 2K)</button> <button class="ai-btn ai-btn-sm ai-btn-outline" onclick="document.getElementById('cfg-temperature').value='0.5';document.getElementById('cfg-temperature').dispatchEvent(new Event('input'));document.getElementById('cfg-max-tokens').value='32768';document.getElementById('cfg-max-tokens').dispatchEvent(new Event('input'))">📄 Large Prompt (0.5 / 32K)</button></span></div>
+      <div class="ai-field"><label class="ai-label">Max Tokens <span class="ai-range-val" id="cfg-tokens-val">4096</span> <span style="font-size:9px;color:var(--ai-text-muted);margin-left:8px">💡 <em>Max words the AI can output. Higher = longer answers.</em></span></label><input type="range" class="ai-range" id="cfg-max-tokens" min="256" max="131072" step="256" value="4096"></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">📝 Prompts & Agent Persona</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">Agent Persona</label><select class="ai-select" id="cfg-agent-persona"><option value="all">All (Doer + Reviewer + Manager)</option><option value="doer">Doer Only</option><option value="reviewer">Reviewer Only</option><option value="manager">Manager Only</option></select></div>
+      <div class="ai-field"><label class="ai-label">System Prompt</label><textarea class="ai-textarea" id="cfg-system-prompt" rows="4">You are a helpful AI assistant for {{company_name}}. You have access to the company knowledge base, user-specific memory, and shared organizational memory.</textarea></div>
+      <div class="ai-field"><label class="ai-label">Company Name</label><input type="text" class="ai-input" id="cfg-company-name" value="PKF"></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">📚 RAG — Knowledge Base</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">RAG</label><select class="ai-select" id="cfg-rag-enabled"><option value="yes">✅ Enabled</option><option value="no">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">Vector DB</label><select class="ai-select" id="cfg-vector-db"><option value="chromadb">ChromaDB</option><option value="pinecone">Pinecone</option><option value="weaviate">Weaviate</option><option value="qdrant">Qdrant</option><option value="pgvector">pgvector</option><option value="faiss">FAISS</option></select></div>
+      <div class="ai-field"><label class="ai-label">Embedding</label><select class="ai-select" id="cfg-embedding-model"><option value="text-embedding-3-large">OpenAI large (3072d)</option><option value="text-embedding-3-small">OpenAI small (1536d)</option><option value="bge-large">BGE-Large (1024d)</option><option value="e5-mistral">E5-Mistral (4096d)</option><option value="nomic-embed">Nomic Embed (768d)</option></select></div>
+      <div class="ai-field"><label class="ai-label">Chunk Size <span class="ai-range-val" id="cfg-chunk-val">1024</span></label><input type="range" class="ai-range" id="cfg-chunk-size" min="128" max="4096" step="128" value="1024"></div>
+      <div class="ai-field"><label class="ai-label">Top-K <span class="ai-range-val" id="cfg-topk-val">5</span></label><input type="range" class="ai-range" id="cfg-topk" min="1" max="20" step="1" value="5"></div>
+      <div class="ai-field"><label class="ai-label">Documents</label><input type="number" class="ai-input" id="cfg-doc-count" value="50000" min="0" max="1000000" step="1000"></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">🧠 Memory Architecture</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">Memory Strategy</label><select class="ai-select" id="cfg-memory-strategy"><option value="external-shared">🌐 External Shared (Recommended)</option><option value="app-internal">📱 Inside Each App</option><option value="copilot-builtin">🪟 Copilot Only</option><option value="hybrid-memory">🔀 Hybrid</option></select></div>
+      <div class="ai-field"><label class="ai-label">👤 User</label><select class="ai-select" id="cfg-user-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">Retention</label><select class="ai-select" id="cfg-user-memory-retention"><option value="session">Session</option><option value="30d">30 Days</option><option value="90d">90 Days</option><option value="1y">1 Year</option><option value="forever">Permanent</option></select></div>
+      <div class="ai-field"><label class="ai-label">🏢 Company</label><select class="ai-select" id="cfg-company-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">📱 App</label><select class="ai-select" id="cfg-app-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">🌐 External Shared</label><select class="ai-select" id="cfg-external-memory"><option value="enabled">✅ Enabled</option><option value="disabled">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">Backend</label><select class="ai-select" id="cfg-memory-backend"><option value="redis">Redis</option><option value="postgres">PostgreSQL</option><option value="sqlite">SQLite</option><option value="mongodb">MongoDB</option><option value="mem0">Mem0</option></select></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">🔌 API, MCP & App Connectors</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">MCP</label><select class="ai-select" id="cfg-mcp-enabled"><option value="yes">✅ Enabled</option><option value="no">❌ Disabled</option></select></div>
+      <div class="ai-field"><label class="ai-label">MCP Tools</label><div class="ai-check-group" id="cfg-mcp-tools"><label class="ai-check"><input type="checkbox" checked> FS</label><label class="ai-check"><input type="checkbox" checked> DB</label><label class="ai-check"><input type="checkbox" checked> Search</label><label class="ai-check"><input type="checkbox"> GitHub</label><label class="ai-check"><input type="checkbox"> Slack</label><label class="ai-check"><input type="checkbox"> Email</label><label class="ai-check"><input type="checkbox"> Calendar</label><label class="ai-check"><input type="checkbox"> CRM</label></div></div>
+      <div class="ai-field"><label class="ai-label">PKF App Connectors</label><div class="ai-check-group" id="cfg-app-connectors"><label class="ai-check"><input type="checkbox" checked> Ephorm Audit</label><label class="ai-check"><input type="checkbox" checked> Ephorm Tax</label><label class="ai-check"><input type="checkbox"> OpusChart</label><label class="ai-check"><input type="checkbox"> CaseWare</label><label class="ai-check"><input type="checkbox"> Client Files</label><label class="ai-check"><input type="checkbox"> Wiki/SP</label><label class="ai-check"><input type="checkbox"> Custom APIs</label><label class="ai-check"><input type="checkbox"> SaaS</label></div></div>
+      <div class="ai-field"><label class="ai-label">Workers <span class="ai-range-val" id="cfg-workers-val">4</span></label><input type="range" class="ai-range" id="cfg-workers" min="1" max="32" step="1" value="4"></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">📊 Usage & Pilot</span></div><div class="ai-config-body">
+      <div class="ai-field"><label class="ai-label">Phase</label><select class="ai-select" id="cfg-pilot-phase"><option value="poc">PoC (2-3 users)</option><option value="pilot">Pilot (5-10 users)</option><option value="scale">Scale (20+)</option><option value="production">Production (50+)</option></select></div>
+      <div class="ai-field"><label class="ai-label">DAU <span style="font-size:9px;color:var(--ai-text-muted);margin-left:4px">💡 <em>Daily Active Users — how many people use AI each day</em></span></label><input type="number" class="ai-input" id="cfg-dau" value="10" min="1" max="1000000" step="1"></div>
+      <div class="ai-field"><label class="ai-label">Queries/User/Day</label><input type="number" class="ai-input" id="cfg-queries-per-user" value="15" min="1" max="1000" step="1"></div>
+      <div class="ai-field"><label class="ai-label">Tokens/Query</label><input type="number" class="ai-input" id="cfg-avg-tokens" value="2000" min="100" max="100000" step="100"></div>
+    </div></div>
+    <div class="ai-card ai-config-card"><div class="ai-card-header"><span class="ai-card-title">🎯 Use Cases</span></div><div class="ai-config-body"><div class="ai-check-group" id="cfg-use-cases" style="flex-direction:column"><label class="ai-check"><input type="checkbox" checked> Event Bot</label><label class="ai-check"><input type="checkbox" checked> Junior Auditor</label><label class="ai-check"><input type="checkbox" checked> Ephorm Audit AI</label><label class="ai-check"><input type="checkbox"> Ephorm Tax AI</label><label class="ai-check"><input type="checkbox"> OpusChart</label><label class="ai-check"><input type="checkbox"> CaseWare</label><label class="ai-check"><input type="checkbox"> Client Knowledge</label><label class="ai-check"><input type="checkbox"> Doc Automation</label></div></div></div>
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- OPTIONS COMPARE VIEW -->
-<!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-compare">
   <div class="ai-view-header">
     <div>
@@ -1179,9 +1024,6 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
-<!-- ════════════════════════════════════════════════════════ -->
-<!-- 4. COST & HARDWARE VIEW -->
-<!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-cost">
   <div class="ai-view-header">
     <div>
@@ -1210,8 +1052,6 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
-<!-- 5. PLAN & RECOMMEND VIEW -->
-<!-- ════════════════════════════════════════════════════════ -->
 <section class="ai-view" id="view-plan">
   <div class="ai-view-header">
     <div>
@@ -1237,3 +1077,7 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="AISystemDesign.js"></script>
+</body>
+</html>

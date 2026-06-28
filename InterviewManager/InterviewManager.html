@@ -86,6 +86,9 @@
 						<option value="closed">Closed</option>
 						<option value="on-hold">On Hold</option>
 					</select>
+					<span style="color:var(--border2);margin:0 2px">|</span>
+					<button class="btn btn-ghost btn-sm" id="export-positions-pdf-btn">📄 PDF</button>
+					<button class="btn btn-ghost btn-sm" id="export-positions-excel-btn">📊 Excel</button>
 				</div>
 			</div>
 			<div class="card">
@@ -93,13 +96,13 @@
 					<table>
 						<thead>
 							<tr>
-								<th>Title</th>
-								<th>Department</th>
-								<th>Status</th>
-								<th>Applicants</th>
-								<th>Extra Criteria</th>
-								<th>Selected</th>
-								<th>Interviews</th>
+								<th data-sort="title" style="cursor:pointer">Title</th>
+								<th data-sort="dept" style="cursor:pointer">Department</th>
+								<th data-sort="status" style="cursor:pointer">Status</th>
+								<th data-sort="apps" style="cursor:pointer">Applicants</th>
+								<th data-sort="extra" style="cursor:pointer">Extra Criteria</th>
+								<th data-sort="selected" style="cursor:pointer">Selected</th>
+								<th data-sort="interviews" style="cursor:pointer">Interviews</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -128,14 +131,14 @@
 					<table>
 						<thead>
 							<tr>
-								<th>Name</th>
-								<th>Role</th>
-								<th>Dept</th>
-								<th>Email</th>
+								<th data-sort="name" data-table="interviewers" style="cursor:pointer">Name</th>
+								<th data-sort="role" data-table="interviewers" style="cursor:pointer">Role</th>
+								<th data-sort="dept" data-table="interviewers" style="cursor:pointer">Dept</th>
+								<th data-sort="email" data-table="interviewers" style="cursor:pointer">Email</th>
 								<th>Availability (days)</th>
 								<th>Hours</th>
 								<th>Duration</th>
-								<th>Sessions</th>
+								<th data-sort="sessions" data-table="interviewers" style="cursor:pointer">Sessions</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -184,12 +187,12 @@
 						<thead>
 							<tr>
 								<th style="width:32px"><input type="checkbox" id="select-all-cands"></th>
-								<th>Name</th>
-								<th>Contact</th>
-								<th>Source</th>
+								<th data-sort="name" data-table="candidates" style="cursor:pointer">Name</th>
+								<th data-sort="email" data-table="candidates" style="cursor:pointer">Contact</th>
+								<th data-sort="source" data-table="candidates" style="cursor:pointer">Source</th>
 								<th>Positions</th>
 								<th>Resume</th>
-								<th>Stage</th>
+								<th data-sort="stage" data-table="candidates" style="cursor:pointer">Stage</th>
 								<th></th>
 							</tr>
 						</thead>
@@ -375,6 +378,10 @@
 			<div class="page-header">
 				<div class="page-title">Hired Staff</div>
 				<div class="page-sub">Placed candidates and JSON export for employment records</div>
+				<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+					<button class="btn btn-ghost btn-sm" id="export-hired-pdf-btn">📄 PDF</button>
+					<button class="btn btn-ghost btn-sm" id="export-hired-excel-btn">📊 Excel</button>
+				</div>
 			</div>
 			<div id="hired-staff-container"></div>
 		</section>
@@ -506,7 +513,7 @@
 			<button type="button" class="rte-btn" data-cmd="createLink" title="Link">🔗</button>
 		</div>
 		<div class="rte-editor" id="pos-job-desc" contenteditable="true" placeholder="Paste or type the full job description here…"></div>
-		<div class="section-sep"><div class="section-sep-label">Position Details</div></div>
+		<div class="section-sep"><div class="section-sep-label">Position Details <span style="display:inline-flex;gap:6px;margin-left:auto"><button class="btn btn-ghost btn-sm" id="pos-copy-meta-btn" title="Copy all position detail fields" style="font-size:11px">📋 Copy</button><button class="btn btn-ghost btn-sm" id="pos-paste-meta-btn" title="Paste position details from last copy" style="font-size:11px">📋 Paste</button></span></div></div>
 		<div class="input-row">
 			<div class="form-group">
 				<label class="form-label">Employment Basis</label>
@@ -530,12 +537,27 @@
 		</div>
 		<div class="form-group"><label class="form-label">Weekly Minimum Hours</label><input type="text" id="pos-weekly-hours" placeholder="e.g. 40"></div>
 		<div class="form-group">
+			<label class="form-label">Placement Status</label>
+			<div id="pos-placement-status" style="padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);font-size:13px;color:var(--text3);min-height:38px;display:flex;align-items:center;gap:8px">
+				<span class="multi-select-placeholder">No candidate selected in placements</span>
+			</div>
+		</div>
+		<div class="form-group">
 			<label class="form-label">Close for New Interviews</label>
 			<div
 				style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2)">
 				<label class="toggle-switch danger"><input type="checkbox" id="pos-closed-int"><span
 						class="toggle-slider"></span></label>
 				<span style="font-size:13px;color:var(--text2)">No new interviews for this position</span>
+			</div>
+		</div>
+		<div class="form-group">
+			<label class="form-label">Visibility in Reports</label>
+			<div
+				style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2)">
+				<label class="toggle-switch"><input type="checkbox" id="pos-hide-reports"><span
+						class="toggle-slider"></span></label>
+				<span style="font-size:13px;color:var(--text2)">Hide this position from all reports (rankings, matrix, score exports)</span>
 			</div>
 		</div>
 		<div class="section-sep">

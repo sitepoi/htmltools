@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WarehouseManager — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="WarehouseManager.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-min { background: #7c3aed; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — WarehouseManager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-min" id="th-load-min">Load Minimal</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'warehouse_manager_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('WarehouseManager DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Embedded HTML fallback ── */
+var EMBEDDED_HTML = '<div id="topbar">\
+	<div class="topbar-brand">🏭 Warehouse Manager</div>\
+	<div class="topbar-tabs" id="topbarTabs">\
+		<button class="tb-tab active" data-tab="products">📦 Products</button>\
+		<button class="tb-tab" data-tab="warehouses">🏗️ Warehouses</button>\
+		<button class="tb-tab" data-tab="inventory">📊 Inventory</button>\
+		<button class="tb-tab" data-tab="invoices">🧾 Invoices</button>\
+		<button class="tb-tab" data-tab="info">ℹ️ Data Info</button>\
+	</div>\
+	<div class="topbar-actions">\
+		<span class="size-indicator" id="sizeIndicator" title="Document size"></span>\
+		<span class="readonly-badge" id="readonlyBadge" style="display:none">🔒 Read Only</span>\
+	</div>\
+</div>\
+<div id="mainContent"></div>\
+<div id="modalOverlay" class="modal-overlay" style="display:none">\
+	<div class="modal" id="modalBox">\
+		<div class="modal-header"><span class="modal-title" id="modalTitle"></span><button class="modal-close" id="modalClose">✕</button></div>\
+		<div class="modal-body" id="modalBody"></div>\
+		<div class="modal-footer" id="modalFooter"></div>\
+	</div>\
+</div>\
+<div id="confirmOverlay" class="modal-overlay" style="display:none">\
+	<div class="modal modal-sm">\
+		<div class="modal-header"><span class="modal-title">Confirm</span><button class="modal-close" id="confirmClose">✕</button></div>\
+		<div class="modal-body" id="confirmBody"></div>\
+		<div class="modal-footer" id="confirmFooter"></div>\
+	</div>\
+</div>\
+<div id="toastContainer"></div>';
+</script>
+
+<script>
+/* ── Dynamic loader with embedded fallback ── */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'WarehouseManager.js';
+    script.onload = function() { status.textContent = '✅ Ready'; };
+    script.onerror = function() { status.textContent = '❌ JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('WarehouseManager.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* ── Toolbar + Sample Data ── */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(SAMPLE_DATA);
+  });
+  document.getElementById('th-load-min').addEventListener('click', function() {
+    window.tool._loadSampleData(MINIMAL_DATA);
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear ALL warehouse data? This cannot be undone.')) window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+});
+
+/* ── Sample Data (compact DB format) ── */
+var SAMPLE_DATA = {
+  _v: 1,
+  p: [
+    { i:'p1', n:'Widget Alpha', s:'WGT-ALPHA', u:'pcs', d:'Standard aluminum widget for industrial use' },
+    { i:'p2', n:'Widget Beta', s:'WGT-BETA', u:'pcs', d:'Heavy-duty steel widget with corrosion resistance' },
+    { i:'p3', n:'Copper Wire 2.5mm', s:'CW-2.5', u:'m', d:'2.5mm diameter copper electrical wire, 99.9% pure' },
+    { i:'p4', n:'Stainless Bolt M8', s:'BLT-M8-SS', u:'pcs', d:'M8×30mm stainless steel hex bolt A2-70' },
+    { i:'p5', n:'Rubber Gasket 50mm', s:'GSK-50', u:'pcs', d:'50mm EPDM rubber gasket, heat resistant up to 120°C' },
+    { i:'p6', n:'Lubricant Oil 5L', s:'OIL-5L', u:'can', d:'Synthetic industrial lubricant, ISO VG 46' },
+    { i:'p7', n:'Steel Plate 2mm', s:'SPL-2', u:'sheet', d:'2mm cold-rolled steel plate, 1200×2400mm' },
+    { i:'p8', n:'LED Panel 60W', s:'LED-60W', u:'pcs', d:'60W LED ceiling panel, 600×600mm, 4000K' },
+    { i:'p9', n:'PVC Pipe 32mm', s:'PVC-32', u:'m', d:'32mm PVC-U pipe, pressure class PN10' },
+    { i:'p10', n:'Safety Gloves XL', s:'GLV-XL', u:'pair', d:'Cut-resistant safety gloves, size XL, EN388 certified' }
+  ],
+  w: [
+    { i:'w1', n:'Main Warehouse', l:'Building A, Floor 1, Zone North' },
+    { i:'w2', n:'Secondary Storage', l:'Building B, Ground Floor' },
+    { i:'w3', n:'Outdoor Yard', l:'Lot C, Covered Section' }
+  ],
+  v: [
+    { p:'p1', w:'w1', q:250 }, { p:'p1', w:'w2', q:120 }, { p:'p1', w:'w3', q:80 },
+    { p:'p2', w:'w1', q:180 }, { p:'p2', w:'w2', q:95 }, { p:'p2', w:'w3', q:0 },
+    { p:'p3', w:'w1', q:5000 }, { p:'p3', w:'w2', q:3200 }, { p:'p3', w:'w3', q:0 },
+    { p:'p4', w:'w1', q:15000 }, { p:'p4', w:'w2', q:8000 }, { p:'p4', w:'w3', q:2000 },
+    { p:'p5', w:'w1', q:420 }, { p:'p5', w:'w2', q:310 }, { p:'p5', w:'w3', q:0 },
+    { p:'p6', w:'w1', q:85 }, { p:'p6', w:'w2', q:40 }, { p:'p6', w:'w3', q:0 },
+    { p:'p7', w:'w1', q:60 }, { p:'p7', w:'w2', q:0 }, { p:'p7', w:'w3', q:35 },
+    { p:'p8', w:'w1', q:200 }, { p:'p8', w:'w2', q:150 }, { p:'p8', w:'w3', q:0 },
+    { p:'p9', w:'w1', q:900 }, { p:'p9', w:'w2', q:0 }, { p:'p9', w:'w3', q:450 },
+    { p:'p10', w:'w1', q:600 }, { p:'p10', w:'w2', q:350 }, { p:'p10', w:'w3', q:0 }
+  ],
+  n: [
+    {
+      i:'n1', m:'INV-2606-0001', c:'Acme Construction Ltd.', t:'2026-06-10', s:'paid',
+      e:[{ p:'p1', w:'w1', q:50 },{ p:'p4', w:'w1', q:2000 },{ p:'p5', w:'w1', q:30 }]
+    },
+    {
+      i:'n2', m:'INV-2606-0002', c:'Metro Electrical Services', t:'2026-06-14', s:'sent',
+      e:[{ p:'p3', w:'w2', q:500 },{ p:'p8', w:'w2', q:25 }]
+    },
+    {
+      i:'n3', m:'INV-2606-0003', c:'BuildRight Corp', t:'2026-06-16', s:'draft',
+      e:[{ p:'p2', w:'w1', q:40 },{ p:'p7', w:'w3', q:10 },{ p:'p9', w:'w3', q:100 }]
+    },
+    {
+      i:'n4', m:'INV-2606-0004', c:'QuickFix Repairs', t:'2026-06-18', s:'cancelled',
+      e:[{ p:'p6', w:'w2', q:5 },{ p:'p10', w:'w2', q:50 }]
+    },
+    {
+      i:'n5', m:'INV-2606-0005', c:'Urban Development Inc.', t:'2026-06-20', s:'sent',
+      e:[{ p:'p1', w:'w2', q:30 },{ p:'p4', w:'w2', q:1500 },{ p:'p7', w:'w1', q:8 },{ p:'p8', w:'w1', q:40 }]
+    },
+    {
+      i:'n6', m:'INV-2606-0006', c:'SafeWork Supplies', t:'2026-06-22', s:'draft',
+      e:[{ p:'p10', w:'w1', q:200 },{ p:'p6', w:'w1', q:10 }]
+    },
+    {
+      i:'n7', m:'INV-2606-0007', c:'GreenTech Solutions', t:'2026-06-24', s:'paid',
+      e:[{ p:'p8', w:'w2', q:60 },{ p:'p3', w:'w1', q:800 }]
+    },
+    {
+      i:'n8', m:'INV-2606-0008', c:'Delta Industrial', t:'2026-06-25', s:'sent',
+      e:[{ p:'p2', w:'w2', q:25 },{ p:'p5', w:'w2', q:50 },{ p:'p9', w:'w1', q:150 }]
+    }
+  ]
+};
+
+/* ── Minimal Data (quick test) ── */
+var MINIMAL_DATA = {
+  _v: 1,
+  p: [
+    { i:'p1', n:'Test Widget', s:'TW-001', u:'pcs', d:'A simple test product' },
+    { i:'p2', n:'Test Cable', s:'TC-001', u:'m', d:'A simple test cable' }
+  ],
+  w: [
+    { i:'w1', n:'Test Warehouse', l:'Test Location' }
+  ],
+  v: [
+    { p:'p1', w:'w1', q:100 },
+    { p:'p2', w:'w1', q:500 }
+  ],
+  n: [
+    { i:'n1', m:'TEST-001', c:'Test Client', t:'2026-06-26', s:'draft',
+      e:[{ p:'p1', w:'w1', q:10 }]
+    }
+  ]
+};
+</script>
+</body>
+</html>
