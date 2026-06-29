@@ -1,0 +1,153 @@
+<div class="iar">
+  <div class="iar-wrap">
+
+    <!-- Header -->
+    <header class="iar-header">
+      <div class="iar-brand">
+        <span class="iar-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Incident &amp; Accident Report
+        </span>
+        <h1>Incident &amp; <span class="iar-thin">Accident</span> Report</h1>
+      </div>
+      <div class="iar-header-msg">
+        <p>Reporting helps keep everyone safe. This is not about blame - it is about preventing the next incident.</p>
+      </div>
+    </header>
+
+    <!-- Section: WHAT HAPPENED -->
+    <section class="iar-section" id="sec-what">
+      <h2 class="iar-section-title">What Happened</h2>
+      <div class="iar-grid">
+        <div class="iar-field">
+          <label for="iar-type">Type of incident</label>
+          <select id="iar-type">
+            <option value="">-- Select type --</option>
+            <option value="injury">Injury</option>
+            <option value="nearMiss">Near-miss (almost hurt)</option>
+            <option value="propertyDamage">Property damage</option>
+            <option value="safetyConcern">Safety concern</option>
+            <option value="environmental">Environmental (spill, etc.)</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="iar-field iar-half">
+          <label for="iar-incidentDate">Date of incident</label>
+          <input type="date" id="iar-incidentDate">
+        </div>
+        <div class="iar-field iar-half">
+          <label for="iar-incidentTime">Time of incident</label>
+          <input type="time" id="iar-incidentTime">
+        </div>
+      </div>
+      <div class="iar-field">
+        <label for="iar-location">Location where it happened</label>
+        <input type="text" id="iar-location" placeholder="e.g. Kitchen, parking lot, Room 204">
+      </div>
+      <div class="iar-field">
+        <label for="iar-description">Description</label>
+        <textarea id="iar-description" rows="5" placeholder="Describe what happened in your own words. Include what you were doing, what went wrong, and anything else you remember."></textarea>
+      </div>
+      <div class="iar-field">
+        <label for="iar-peopleInvolved">People involved or witnesses</label>
+        <input type="text" id="iar-peopleInvolved" placeholder="Names if known">
+      </div>
+      <div class="iar-grid iar-grid-3">
+        <div class="iar-field">
+          <label for="iar-firstAidGiven">Was first aid given?</label>
+          <select id="iar-firstAidGiven">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="iar-field">
+          <label for="iar-medicalNeeded">Was medical attention needed?</label>
+          <select id="iar-medicalNeeded">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="iar-field iar-medical-details" id="iar-medicalDetailsWrap" style="display:none">
+          <label for="iar-medicalDetails">Describe medical attention</label>
+          <input type="text" id="iar-medicalDetails" placeholder="What medical attention was provided?">
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: WHO IS REPORTING -->
+    <section class="iar-section" id="sec-who">
+      <h2 class="iar-section-title">Who Is Reporting</h2>
+      <div class="iar-grid">
+        <div class="iar-field">
+          <label for="iar-reporterName">Your name</label>
+          <input type="text" id="iar-reporterName" placeholder="Full name">
+        </div>
+        <div class="iar-field">
+          <label for="iar-supervisorName">Your supervisor's name</label>
+          <input type="text" id="iar-supervisorName" placeholder="Supervisor's full name">
+        </div>
+        <div class="iar-field">
+          <label for="iar-reportDate">Date of report</label>
+          <input type="date" id="iar-reportDate">
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: FOLLOW-UP -->
+    <section class="iar-section iar-followup" id="sec-followup">
+      <h2 class="iar-section-title">Follow-Up <span class="iar-section-badge">Supervisor</span></h2>
+      <div class="iar-field">
+        <label for="iar-actionsTaken">Actions taken</label>
+        <textarea id="iar-actionsTaken" rows="3" placeholder="What actions were taken after the incident?"></textarea>
+      </div>
+      <div class="iar-field">
+        <label for="iar-investigationNotes">Investigation notes</label>
+        <textarea id="iar-investigationNotes" rows="3" placeholder="Findings from any investigation"></textarea>
+      </div>
+      <div class="iar-grid iar-grid-3">
+        <div class="iar-field">
+          <label for="iar-resolved">Is this resolved?</label>
+          <select id="iar-resolved">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="iar-field">
+          <label for="iar-followUpSupervisor">Supervisor name</label>
+          <input type="text" id="iar-followUpSupervisor" placeholder="Supervisor completing follow-up">
+        </div>
+        <div class="iar-field">
+          <label for="iar-followUpDate">Date</label>
+          <input type="date" id="iar-followUpDate">
+        </div>
+      </div>
+    </section>
+
+    <!-- Actions -->
+    <div class="iar-actions no-print">
+      <button class="iar-btn iar-btn-primary" id="iar-submit">Submit Report</button>
+      <button class="iar-btn iar-btn-ghost" id="iar-print">Print Report</button>
+    </div>
+
+    <!-- Confirmation -->
+    <div class="iar-confirmation" id="iar-confirmation" style="display:none">
+      <div class="iar-confirm-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+        <h3>Your report has been recorded.</h3>
+        <p>Your supervisor will follow up. Thank you for helping keep everyone safe.</p>
+        <button class="iar-btn iar-btn-outline" id="iar-new-report">File Another Report</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="iar-foot">
+      <span class="iar-foot-meta" id="iar-savedAt"></span>
+      <span class="iar-foot-meta" id="iar-submittedAt"></span>
+    </div>
+
+  </div>
+</div>

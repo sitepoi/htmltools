@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Incident &amp; Accident Report — Test Harness</title>
+<link rel="stylesheet" href="IncidentAccidentReportForm.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-toggle-ro { background: #d97706; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — Incident &amp; Accident Report</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-toggle-ro" id="th-ro">Toggle Read-Only</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'incident_report_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = { id: 'test-user', name: 'Jordan Taylor', email: 'jordan@example.org', roles: ['staff'], locale: 'en-CA' };
+  var _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  var SAMPLE_DATA = {
+    type: "nearMiss",
+    incidentDate: "2026-06-25",
+    incidentTime: "14:30",
+    location: "Kitchen area, near the stove",
+    description: "I was carrying a pot of hot water to the sink when the floor mat slipped under my foot. I caught myself on the counter and did not fall, but the water splashed and could have burned someone. The mat was not secured properly.",
+    peopleInvolved: "Alex Chen (was nearby)",
+    firstAidGiven: false,
+    medicalNeeded: false,
+    medicalDetails: "",
+    reporterName: "Jordan Taylor",
+    supervisorName: "Maria Rodriguez",
+    reportDate: "2026-06-28",
+    followUp: {
+      actionsTaken: "",
+      investigationNotes: "",
+      resolved: false,
+      supervisorName: "",
+      followUpDate: ""
+    },
+    submittedAt: ""
+  };
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = v;
+      document.getElementById('th-status').textContent = v ? 'READ-ONLY' : 'EDIT MODE';
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+    },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); document.getElementById('th-status').textContent = _readOnly ? 'READ-ONLY' : 'EDIT MODE'; cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('IncidentReport DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Embedded HTML body ── */
+var EMBEDDED_HTML = '<div class="iar">\
+  <div class="iar-wrap">\
+    <header class="iar-header">\
+      <div class="iar-brand">\
+        <span class="iar-badge">\
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">\
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>\
+          </svg>\
+          Incident &amp; Accident Report\
+        </span>\
+        <h1>Incident &amp; <span class="iar-thin">Accident</span> Report</h1>\
+      </div>\
+      <div class="iar-header-msg">\
+        <p>Reporting helps keep everyone safe. This is not about blame - it is about preventing the next incident.</p>\
+      </div>\
+    </header>\
+    <section class="iar-section" id="sec-what">\
+      <h2 class="iar-section-title">What Happened</h2>\
+      <div class="iar-grid">\
+        <div class="iar-field">\
+          <label for="iar-type">Type of incident</label>\
+          <select id="iar-type">\
+            <option value="">-- Select type --</option>\
+            <option value="injury">Injury</option>\
+            <option value="nearMiss">Near-miss (almost hurt)</option>\
+            <option value="propertyDamage">Property damage</option>\
+            <option value="safetyConcern">Safety concern</option>\
+            <option value="environmental">Environmental (spill, etc.)</option>\
+            <option value="other">Other</option>\
+          </select>\
+        </div>\
+        <div class="iar-field iar-half">\
+          <label for="iar-incidentDate">Date of incident</label>\
+          <input type="date" id="iar-incidentDate">\
+        </div>\
+        <div class="iar-field iar-half">\
+          <label for="iar-incidentTime">Time of incident</label>\
+          <input type="time" id="iar-incidentTime">\
+        </div>\
+      </div>\
+      <div class="iar-field">\
+        <label for="iar-location">Location where it happened</label>\
+        <input type="text" id="iar-location" placeholder="e.g. Kitchen, parking lot, Room 204">\
+      </div>\
+      <div class="iar-field">\
+        <label for="iar-description">Description</label>\
+        <textarea id="iar-description" rows="5" placeholder="Describe what happened in your own words. Include what you were doing, what went wrong, and anything else you remember."></textarea>\
+      </div>\
+      <div class="iar-field">\
+        <label for="iar-peopleInvolved">People involved or witnesses</label>\
+        <input type="text" id="iar-peopleInvolved" placeholder="Names if known">\
+      </div>\
+      <div class="iar-grid iar-grid-3">\
+        <div class="iar-field">\
+          <label for="iar-firstAidGiven">Was first aid given?</label>\
+          <select id="iar-firstAidGiven">\
+            <option value="false">No</option>\
+            <option value="true">Yes</option>\
+          </select>\
+        </div>\
+        <div class="iar-field">\
+          <label for="iar-medicalNeeded">Was medical attention needed?</label>\
+          <select id="iar-medicalNeeded">\
+            <option value="false">No</option>\
+            <option value="true">Yes</option>\
+          </select>\
+        </div>\
+        <div class="iar-field iar-medical-details" id="iar-medicalDetailsWrap" style="display:none">\
+          <label for="iar-medicalDetails">Describe medical attention</label>\
+          <input type="text" id="iar-medicalDetails" placeholder="What medical attention was provided?">\
+        </div>\
+      </div>\
+    </section>\
+    <section class="iar-section" id="sec-who">\
+      <h2 class="iar-section-title">Who Is Reporting</h2>\
+      <div class="iar-grid">\
+        <div class="iar-field">\
+          <label for="iar-reporterName">Your name</label>\
+          <input type="text" id="iar-reporterName" placeholder="Full name">\
+        </div>\
+        <div class="iar-field">\
+          <label for="iar-supervisorName">Your supervisor\'s name</label>\
+          <input type="text" id="iar-supervisorName" placeholder="Supervisor\'s full name">\
+        </div>\
+        <div class="iar-field">\
+          <label for="iar-reportDate">Date of report</label>\
+          <input type="date" id="iar-reportDate">\
+        </div>\
+      </div>\
+    </section>\
+    <section class="iar-section iar-followup" id="sec-followup">\
+      <h2 class="iar-section-title">Follow-Up <span class="iar-section-badge">Supervisor</span></h2>\
+      <div class="iar-field">\
+        <label for="iar-actionsTaken">Actions taken</label>\
+        <textarea id="iar-actionsTaken" rows="3" placeholder="What actions were taken after the incident?"></textarea>\
+      </div>\
+      <div class="iar-field">\
+        <label for="iar-investigationNotes">Investigation notes</label>\
+        <textarea id="iar-investigationNotes" rows="3" placeholder="Findings from any investigation"></textarea>\
+      </div>\
+      <div class="iar-grid iar-grid-3">\
+        <div class="iar-field">\
+          <label for="iar-resolved">Is this resolved?</label>\
+          <select id="iar-resolved">\
+            <option value="false">No</option>\
+            <option value="true">Yes</option>\
+          </select>\
+        </div>\
+        <div class="iar-field">\
+          <label for="iar-followUpSupervisor">Supervisor name</label>\
+          <input type="text" id="iar-followUpSupervisor" placeholder="Supervisor completing follow-up">\
+        </div>\
+        <div class="iar-field">\
+          <label for="iar-followUpDate">Date</label>\
+          <input type="date" id="iar-followUpDate">\
+        </div>\
+      </div>\
+    </section>\
+    <div class="iar-actions no-print">\
+      <button class="iar-btn iar-btn-primary" id="iar-submit">Submit Report</button>\
+      <button class="iar-btn iar-btn-ghost" id="iar-print">Print Report</button>\
+    </div>\
+    <div class="iar-confirmation" id="iar-confirmation" style="display:none">\
+      <div class="iar-confirm-box">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">\
+          <path d="M20 6L9 17l-5-5"/>\
+        </svg>\
+        <h3>Your report has been recorded.</h3>\
+        <p>Your supervisor will follow up. Thank you for helping keep everyone safe.</p>\
+        <button class="iar-btn iar-btn-outline" id="iar-new-report">File Another Report</button>\
+      </div>\
+    </div>\
+    <div class="iar-foot">\
+      <span class="iar-foot-meta" id="iar-savedAt"></span>\
+      <span class="iar-foot-meta" id="iar-submittedAt"></span>\
+    </div>\
+  </div>\
+</div>';
+</script>
+
+<script src="IncidentAccidentReportForm.js"></script>
+
+<script>
+/* ── Harness wiring ── */
+(function() {
+  var container = document.getElementById('app-container');
+  container.innerHTML = EMBEDDED_HTML;
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(window.tool._sampleData || SAMPLE_DATA);
+  });
+  // Store sample data for the load button
+  window.tool._sampleData = {
+    type: "nearMiss",
+    incidentDate: "2026-06-25",
+    incidentTime: "14:30",
+    location: "Kitchen area, near the stove",
+    description: "I was carrying a pot of hot water to the sink when the floor mat slipped under my foot. I caught myself on the counter and did not fall, but the water splashed and could have burned someone. The mat was not secured properly.",
+    peopleInvolved: "Alex Chen (was nearby)",
+    firstAidGiven: false,
+    medicalNeeded: false,
+    medicalDetails: "",
+    reporterName: "Jordan Taylor",
+    supervisorName: "Maria Rodriguez",
+    reportDate: "2026-06-28",
+    followUp: {
+      actionsTaken: "",
+      investigationNotes: "",
+      resolved: false,
+      supervisorName: "",
+      followUpDate: ""
+    },
+    submittedAt: ""
+  };
+
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+
+  document.getElementById('th-ro').addEventListener('click', function() {
+    window.tool._toggleReadOnly();
+    window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info');
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!-- ══════════════════════════════════════════════
+  SHELL LAYOUT — Sidebar + Main + Settings Panel
+══════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- ── Mobile Nav Toggle ── -->
+  <button id="nav-toggle" class="no-print" title="Toggle navigation">☰</button>
+
+  <!-- ── Left Sidebar (sticky TOC) ── -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" id="sidebar-logo">🍁</div>
+      <div class="sidebar-title">CSJ Handbook <span id="sidebar-year"></span></div>
+    </div>
+    <ul id="toc-list"><li class="toc-loading">Loading…</li></ul>
+  </nav>
+
+  <!-- ── Main Content Area ── -->
+  <main id="content">
+    <!-- Top action bar -->
+    <div id="top-bar" class="no-print">
+      <div id="mode-badge"></div>
+      <div id="top-actions"></div>
+    </div>
+
+    <!-- Handbook rendered view -->
+    <div id="handbook-view"></div>
+
+    <!-- Footer -->
+    <footer id="footer">
+      <p><span class="maple">🍁</span> <span id="footer-company"></span> Handbook · <span id="footer-year"></span> · For Internal Use</p>
+      <p><span id="footer-duration"></span> Employment Term · Made possible through the Canada Summer Jobs program</p>
+      <p>This handbook is a guide. It does not replace applicable laws, collective agreements, or your employment contract.</p>
+    </footer>
+  </main>
+
+  <!-- ── Settings Panel (slide-out, edit mode only) ── -->
+  <div id="settings-overlay"></div>
+  <aside id="settings-panel">
+    <div class="settings-header">
+      <h2>⚙️ Handbook Settings</h2>
+      <button id="settings-close" title="Close settings">✕</button>
+    </div>
+    <div class="settings-body" id="settings-form"></div>
+    <div class="settings-footer">
+      <button id="settings-cancel" class="btn btn-secondary">Cancel</button>
+      <button id="settings-save" class="btn btn-primary">💾 Save &amp; Apply</button>
+    </div>
+  </aside>
+
+  <!-- ── Back to Top ── -->
+  <button id="back-to-top" class="no-print" title="Back to top">↑</button>
+
+  <!-- ── Section scrollspy sentinel ── -->
+  <div id="scroll-sentinel"></div>
+
+  <!-- ── Glossary Drawer ── -->
+  <div id="glossary-overlay"></div>
+  <aside id="glossary-drawer">
+    <div class="glossary-header">
+      <h2 id="glossary-title">📖 Term Explained</h2>
+      <button id="glossary-close" title="Close">✕</button>
+    </div>
+    <div class="glossary-body" id="glossary-body"></div>
+  </aside>
+</div>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSJ Staff Handbook — Test Harness</title>
+<link rel="stylesheet" href="SummerJobs_StaffHandbook.css">
+<style>
+body { padding-top: 32px !important; margin: 0; }
+#app { min-height: calc(100vh - 32px); }
+#th-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+  background: #0f172a; color: #e6edf5;
+  font-family: system-ui; font-size: 11px;
+  padding: 4px 14px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button {
+  border: none; padding: 3px 10px; border-radius: 4px;
+  cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600;
+}
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-togglereadonly { background: #d97706; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — CSJ Staff Handbook</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-togglereadonly" id="th-ro">Toggle Read-Only</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<!-- Embedded HTML body from tool.html -->
+<div id="app">
+  <button id="nav-toggle" class="no-print" title="Toggle navigation">☰</button>
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo" id="sidebar-logo">🍁</div>
+      <div class="sidebar-title">CSJ Handbook <span id="sidebar-year"></span></div>
+    </div>
+    <ul id="toc-list"><li class="toc-loading">Loading…</li></ul>
+  </nav>
+  <main id="content">
+    <div id="top-bar" class="no-print">
+      <div id="mode-badge"></div>
+      <div id="top-actions"></div>
+    </div>
+    <div id="handbook-view"></div>
+    <footer id="footer">
+      <p><span class="maple">🍁</span> <span id="footer-company"></span> Handbook · <span id="footer-year"></span> · For Internal Use</p>
+      <p><span id="footer-duration"></span> Employment Term · Made possible through the Canada Summer Jobs program</p>
+      <p>This handbook is a guide. It does not replace applicable laws, collective agreements, or your employment contract.</p>
+    </footer>
+  </main>
+  <div id="settings-overlay"></div>
+  <aside id="settings-panel">
+    <div class="settings-header">
+      <h2>⚙️ Handbook Settings</h2>
+      <button id="settings-close" title="Close settings">✕</button>
+    </div>
+    <div class="settings-body" id="settings-form"></div>
+    <div class="settings-footer">
+      <button id="settings-cancel" class="btn btn-secondary">Cancel</button>
+      <button id="settings-save" class="btn btn-primary">💾 Save &amp; Apply</button>
+    </div>
+  </aside>
+  <button id="back-to-top" class="no-print" title="Back to top">↑</button>
+  <div id="scroll-sentinel"></div>
+  <div id="glossary-overlay"></div>
+  <aside id="glossary-drawer">
+    <div class="glossary-header">
+      <h2 id="glossary-title">📖 Term Explained</h2>
+      <button id="glossary-close" title="Close">✕</button>
+    </div>
+    <div class="glossary-body" id="glossary-body"></div>
+  </aside>
+</div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'csj_handbook_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = { id: 'test-user', name: 'Test Admin', email: 'admin@test.ca', roles: ['admin'], locale: 'en-CA' };
+  var _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  var SAMPLE_DATA = {
+    programYear: '2026',
+    effectiveDate: 'June 26, 2026',
+    durationWeeks: 8,
+    durationLabel: '8 Weeks (2 Months)',
+    hoursPerWeek: 35,
+    dailyStart: '10:00 AM',
+    dailyEnd: '5:30 PM',
+    breakStart: '2:00 PM',
+    breakEnd: '2:30 PM',
+    breakMin: 30,
+    shiftHrs: 7.5,
+    paidHrs: 7.0,
+    workDays: 'Monday – Friday',
+    weekend: 'Saturday / Sunday',
+    holidays: [
+      { name: 'Canada Day', date: 'July 1', note: 'Regular workday — 30-day qualifying period not met' },
+      { name: 'BC Day (Civic Holiday)', date: 'First Monday of August', note: '✅ Paid day off — 30-day rule met, no make-up required' },
+      { name: 'Labour Day', date: 'First Monday of September', note: 'Outside contract dates — does not apply' }
+    ],
+    contacts: {
+      supervisor:  { name: 'Sarah Mitchell', phone: '416-555-0101', email: 'sarah@example.org' },
+      hr:          { name: 'James Chen', phone: '416-555-0102', email: 'james@example.org' },
+      safety:      { name: 'Maria Rodriguez', phone: '416-555-0103', email: 'maria@example.org' },
+      it:          { name: 'Dev Patel', phone: '416-555-0104', email: 'dev@example.org' },
+      afterHours:  { name: 'Security Desk', phone: '416-555-0199', email: 'security@example.org' }
+    },
+    emergencyLoc: {
+      fireAlarm: 'Main hallway near elevator, 2nd floor stairwell',
+      fireExt: 'Kitchen, hallway by Room 204, reception desk',
+      firstAid: 'Reception desk and staff kitchen cabinet',
+      primaryExit: 'Main entrance lobby',
+      secondaryExit: 'East stairwell to parking lot',
+      assembly: 'South parking lot, near flagpole',
+      eyewash: 'Lab corridor, Room 112'
+    },
+    orgName: 'our organization',
+    orgNameCap: 'Our organization',
+    companyName: 'Maple Leaf Community Services',
+    companyLogo: '',
+    province: 'British Columbia',
+    contractStartDate: 'June 26, 2026',
+    contractEndDate: 'August 21, 2026'
+  };
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = v;
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+      document.getElementById('th-status').textContent = v ? 'READ-ONLY' : 'EDIT MODE';
+    },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    requestUpload: function(accept, cb) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = accept || 'image/*';
+      input.onchange = function() {
+        var f = input.files[0];
+        if (!f) { cb('No file selected', null); return; }
+        var reader = new FileReader();
+        reader.onload = function() {
+          cb(null, { name: f.name, url: reader.result, size: f.size, type: f.type });
+        };
+        reader.onerror = function() { cb('Read error', null); };
+        reader.readAsDataURL(f);
+      };
+      input.click();
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(SAMPLE_DATA); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('CSJ Handbook DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  // Toolbar buttons
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData();
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+  document.getElementById('th-ro').addEventListener('click', function() {
+    window.tool._toggleReadOnly();
+    window.tool.notify(window.tool.isReadOnly() ? '🔒 READ-ONLY MODE' : '🔓 EDIT MODE', 'info');
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+      window.tool._toggleReadOnly();
+      window.tool.notify(window.tool.isReadOnly() ? '🔒 READ-ONLY MODE' : '🔓 EDIT MODE', 'info');
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      window.tool._dump();
+      window.tool.notify('📋 DB dumped to console', 'info');
+    }
+  });
+})();
+</script>
+
+<script src="SummerJobs_StaffHandbook.js"></script>
+
+</body>
+</html>

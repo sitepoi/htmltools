@@ -1,0 +1,771 @@
+<div class="stv" id="stvRoot" data-theme="light">
+
+  <!-- Header -->
+  <div class="stv-header">
+    <div class="stv-header-titles">
+      <h1 class="stv-title">Staff Training Verification</h1>
+      <p class="stv-sub">CSJ Workplace Safety &amp; Compliance Training</p>
+    </div>
+    <div class="stv-progress-wrap">
+      <div class="stv-progress-bar">
+        <div class="stv-progress-fill" id="progFill"></div>
+      </div>
+      <span class="stv-progress-label" id="progLabel">0 of 11 modules complete</span>
+      <button type="button" class="stv-btn stv-btn-export" id="btnExportPdf">📄 Export / Print PDF</button>
+    </div>
+  </div>
+
+  <!-- Staff info -->
+  <div class="stv-staff">
+    <label class="stv-field">
+      <span class="stv-lab">Staff Name <span class="stv-req">*</span></span>
+      <input type="text" id="staffName" class="stv-inp" placeholder="Your full name" autocomplete="off">
+    </label>
+    <label class="stv-field">
+      <span class="stv-lab">Date</span>
+      <input type="date" id="trainDate" class="stv-inp">
+    </label>
+  </div>
+
+  <!-- Resources banner -->
+  <div class="stv-resources" id="resBanner">
+    <button type="button" class="stv-res-toggle" id="resToggle" aria-expanded="false">
+      <span class="stv-res-icon">📚</span> WorkSafeBC Resources
+      <span class="stv-res-chev">▾</span>
+    </button>
+    <div class="stv-res-list" id="resList" hidden>
+      <a href="https://www.worksafebc.com/youngworkers" target="_blank" rel="noopener" class="stv-res-link">Young Worker Safety</a>
+      <a href="https://www.worksafebc.com/ohs-education" target="_blank" rel="noopener" class="stv-res-link">OHS Orientation Checklist</a>
+      <a href="https://www.worksafebc.com/bullying-harassment" target="_blank" rel="noopener" class="stv-res-link">Harassment Prevention Toolkit</a>
+      <a href="https://www.worksafebc.com/emergency-planning" target="_blank" rel="noopener" class="stv-res-link">Emergency Planning</a>
+      <a href="https://www.worksafebc.com/whmis" target="_blank" rel="noopener" class="stv-res-link">WHMIS 2015</a>
+      <a href="https://www.worksafebc.com/rights-responsibilities" target="_blank" rel="noopener" class="stv-res-link">Worker Rights &amp; Responsibilities</a>
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <div class="stv-modules" id="modulesWrap">
+
+    <!-- Section: Legally Required -->
+    <div class="stv-section-head">
+      <span class="stv-section-icon">⚖</span>
+      <span class="stv-section-label">Legally Required &mdash; Self-Study + Quiz</span>
+    </div>
+
+    <!-- MODULE 1: OHS -->
+    <section class="stv-mod" id="mod-ohs">
+      <button type="button" class="stv-mod-head" data-mod="ohs" aria-expanded="false">
+        <span class="stv-mod-num">1</span>
+        <span class="stv-mod-title">Workplace Health &amp; Safety (OHS) Orientation</span>
+        <span class="stv-mod-badge" id="badge-ohs"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-ohs" hidden>
+        <div class="stv-content">
+          <h3>Your Safety at Work</h3>
+          <p>Your health and safety matter. BC law gives you rights and your employer responsibilities. Here is what you need to know.</p>
+
+          <h4>Your Three Worker Rights</h4>
+          <ol>
+            <li><strong>Right to Know</strong> — You have the right to know about hazards in your workplace and how to protect yourself.</li>
+            <li><strong>Right to Participate</strong> — You can take part in keeping your workplace safe, like joining the safety committee or reporting concerns.</li>
+            <li><strong>Right to Refuse Unsafe Work</strong> — If you believe a task is dangerous to you or others, you can say no. Tell your supervisor right away. You cannot be punished for refusing unsafe work.</li>
+          </ol>
+
+          <h4>Reporting Hazards and Injuries</h4>
+          <p>If you see something unsafe, tell your supervisor immediately. If you get hurt at work, no matter how small it seems:</p>
+          <ul>
+            <li>Tell your supervisor right away</li>
+            <li>Get first aid if you need it</li>
+            <li>Fill out an incident report form</li>
+          </ul>
+          <p>Reporting is not about getting anyone in trouble — it is about preventing the next injury.</p>
+
+          <h4>Personal Protective Equipment (PPE)</h4>
+          <p>Your supervisor will tell you what PPE you need for your role. Common PPE includes safety glasses, steel-toed boots, gloves, high-visibility vests, and hard hats. You must wear the PPE required for your tasks — no exceptions.</p>
+
+          <h4>What You Need to Know</h4>
+          <ul>
+            <li>Where the first aid kit is kept</li>
+            <li>Where fire extinguishers are located</li>
+            <li>Where emergency exits are (know at least two)</li>
+            <li>Where the eyewash station is (if applicable)</li>
+            <li>Where the assembly point is (the meeting spot outside after evacuation)</li>
+          </ul>
+          <p><strong>No alcohol or drugs</strong> are allowed on the premises. <strong>No phone use</strong> while operating equipment or machinery.</p>
+        </div>
+
+        <div class="stv-questions">
+          <h4>Comprehension Check</h4>
+          <label class="stv-q">1. If you see something unsafe, what do you do first?
+            <input type="text" class="stv-inp" data-mod="ohs" data-q="0" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">2. Where is the assembly point at your workplace?
+            <input type="text" class="stv-inp" data-mod="ohs" data-q="1" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">3. Name one thing you must always wear or use for safety in your role.
+            <input type="text" class="stv-inp" data-mod="ohs" data-q="2" placeholder="Your answer...">
+          </label>
+        </div>
+
+        <div class="stv-confirm">
+          <label class="stv-check">
+            <input type="checkbox" data-mod="ohs" class="stv-cb">
+            <span>I have read and understood this training module.</span>
+          </label>
+          <label class="stv-field stv-init-field">
+            <span class="stv-lab">Your initials</span>
+            <div class="stv-sig-mini">
+              <canvas id="sig-init-ohs" width="180" height="52"></canvas>
+              <button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-ohs')">✕</button>
+            </div>
+            <input type="hidden" class="stv-init" data-mod="ohs" value="">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 2: Harassment -->
+    <section class="stv-mod" id="mod-harassment">
+      <button type="button" class="stv-mod-head" data-mod="harassment" aria-expanded="false">
+        <span class="stv-mod-num">2</span>
+        <span class="stv-mod-title">Workplace Violence &amp; Harassment Prevention</span>
+        <span class="stv-mod-badge" id="badge-harassment"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-harassment" hidden>
+        <div class="stv-content">
+          <h3>Respect at Work</h3>
+          <p>Everyone has the right to a workplace free from harassment and discrimination. BC law protects you.</p>
+
+          <h4>What is Harassment?</h4>
+          <p>Harassment is any unwanted behaviour that hurts, humiliates, or intimidates someone. It includes:</p>
+          <ul>
+            <li>Verbal abuse, yelling, or insults</li>
+            <li>Offensive jokes — including "just joking" about someone's background, appearance, or identity</li>
+            <li>Unwanted physical contact — touching, pushing, blocking someone's way</li>
+            <li>Sexual comments, gestures, or advances</li>
+            <li>Cyberbullying — nasty messages, posts, or sharing photos without consent</li>
+            <li>Deliberately excluding or isolating a coworker</li>
+          </ul>
+
+          <h4>What is Discrimination?</h4>
+          <p>Treating someone unfairly because of who they are. Protected grounds include: race, gender, age, religion, disability, sexual orientation, Indigenous identity, and more.</p>
+
+          <h4>How to Report</h4>
+          <p>If you experience or witness harassment:</p>
+          <ol>
+            <li><strong>Tell your supervisor.</strong> They must take your report seriously.</li>
+            <li><strong>If your supervisor is the problem</strong>, go to HR or the next level of management.</li>
+            <li>You are <strong>protected from retaliation</strong>. It is illegal to punish you for reporting in good faith.</li>
+          </ol>
+
+          <h4>Bystander Responsibility</h4>
+          <p>If you see harassment happening, you have a responsibility to speak up. You can:</p>
+          <ul>
+            <li>Tell the person their behaviour is not okay (if safe to do so)</li>
+            <li>Support the person being targeted — ask if they are okay</li>
+            <li>Report what you saw to a supervisor or HR</li>
+          </ul>
+          <p>Silence makes it worse. Speaking up makes the workplace safer for everyone.</p>
+
+          <h4>Investigation Timeline</h4>
+          <p>Reports are investigated within 5 business days. All investigations are confidential. Your privacy is protected.</p>
+        </div>
+
+        <div class="stv-questions">
+          <h4>Comprehension Check</h4>
+          <label class="stv-q">1. If a coworker makes an offensive joke and you hear it, what should you do?
+            <input type="text" class="stv-inp" data-mod="harassment" data-q="0" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">2. Who can you report harassment to if your supervisor is the problem?
+            <input type="text" class="stv-inp" data-mod="harassment" data-q="1" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">3. Will you face consequences for reporting harassment in good faith? (Yes/No)
+            <input type="text" class="stv-inp" data-mod="harassment" data-q="2" placeholder="Your answer...">
+          </label>
+        </div>
+
+        <div class="stv-confirm">
+          <label class="stv-check">
+            <input type="checkbox" data-mod="harassment" class="stv-cb">
+            <span>I have read and understood this training module.</span>
+          </label>
+          <label class="stv-field stv-init-field">
+            <span class="stv-lab">Your initials</span>
+            <div class="stv-sig-mini">
+              <canvas id="sig-init-harassment" width="180" height="52"></canvas>
+              <button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-harassment')">✕</button>
+            </div>
+            <input type="hidden" class="stv-init" data-mod="harassment" value="">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 3: Emergency -->
+    <section class="stv-mod" id="mod-emergency">
+      <button type="button" class="stv-mod-head" data-mod="emergency" aria-expanded="false">
+        <span class="stv-mod-num">3</span>
+        <span class="stv-mod-title">Emergency Procedures &amp; Evacuation</span>
+        <span class="stv-mod-badge" id="badge-emergency"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-emergency" hidden>
+        <div class="stv-content">
+          <h3>Know What to Do in an Emergency</h3>
+          <p>Emergencies are rare, but being prepared saves lives. Know these procedures.</p>
+
+          <h4>Fire</h4>
+          <ol>
+            <li>Activate the fire alarm pull station if you discover a fire</li>
+            <li>Call 911</li>
+            <li>Evacuate using the nearest safe exit</li>
+            <li><strong>Do NOT use elevators</strong> — always use stairs</li>
+            <li>Go to the assembly point</li>
+            <li>Do not re-enter the building until emergency officials say it is safe</li>
+          </ol>
+
+          <h4>Medical Emergency</h4>
+          <ol>
+            <li>Call 911 immediately</li>
+            <li>Send someone to meet the paramedics at the entrance</li>
+            <li>Get the first aid kit</li>
+            <li>Only give first aid if you are trained to do so</li>
+            <li>Notify your supervisor as soon as possible</li>
+          </ol>
+
+          <h4>Lockdown / Security Threat</h4>
+          <p>Use the <strong>Run — Hide — Fight</strong> framework:</p>
+          <ul>
+            <li><strong>Run:</strong> If there is a safe path, run. Leave belongings behind. Help others if you can.</li>
+            <li><strong>Hide:</strong> If you cannot run, hide. Lock or barricade the door. Turn off lights. Silence your phone.</li>
+            <li><strong>Fight:</strong> As a last resort, if your life is in danger, fight back with anything available.</li>
+          </ul>
+          <p><strong>Do not</strong> open doors during a lockdown unless you are certain it is safe. <strong>Do not</strong> post about the situation on social media — this can put people at risk.</p>
+
+          <h4>Know Your Locations</h4>
+          <p>Make sure you know where these are at your workplace:</p>
+          <ul>
+            <li>Fire alarm pull stations</li>
+            <li>Fire extinguishers</li>
+            <li>First aid kit</li>
+            <li>Primary and secondary exits</li>
+            <li>Assembly point (meeting spot outside)</li>
+            <li>Eyewash station (if applicable)</li>
+          </ul>
+        </div>
+
+        <div class="stv-questions">
+          <h4>Comprehension Check</h4>
+          <label class="stv-q">1. During a fire evacuation, can you use the elevator? (Yes/No)
+            <input type="text" class="stv-inp" data-mod="emergency" data-q="0" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">2. Where do you go after evacuating the building?
+            <input type="text" class="stv-inp" data-mod="emergency" data-q="1" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">3. If there is a security threat and you cannot run, what do you do?
+            <input type="text" class="stv-inp" data-mod="emergency" data-q="2" placeholder="Your answer...">
+          </label>
+        </div>
+
+        <div class="stv-confirm">
+          <label class="stv-check">
+            <input type="checkbox" data-mod="emergency" class="stv-cb">
+            <span>I have read and understood this training module.</span>
+          </label>
+          <label class="stv-field stv-init-field">
+            <span class="stv-lab">Your initials</span>
+            <div class="stv-sig-mini">
+              <canvas id="sig-init-emergency" width="180" height="52"></canvas>
+              <button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-emergency')">✕</button>
+            </div>
+            <input type="hidden" class="stv-init" data-mod="emergency" value="">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 4: WHMIS -->
+    <section class="stv-mod" id="mod-whmis">
+      <button type="button" class="stv-mod-head" data-mod="whmis" aria-expanded="false">
+        <span class="stv-mod-num">4</span>
+        <span class="stv-mod-title">WHMIS 2015 — Hazardous Materials</span>
+        <span class="stv-mod-badge" id="badge-whmis"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-whmis" hidden>
+        <div class="stv-content">
+          <h3>Understanding Hazardous Materials</h3>
+          <p><strong>WHMIS</strong> stands for <strong>Workplace Hazardous Materials Information System</strong>. It is a Canada-wide system for labelling and providing information about hazardous products used at work.</p>
+
+          <h4>How to Read Labels</h4>
+          <p><strong>Supplier labels</strong> appear on products from manufacturers. They include:</p>
+          <ul>
+            <li>Product name</li>
+            <li>Hazard symbols (pictograms)</li>
+            <li>Signal words (Danger or Warning)</li>
+            <li>Hazard statements</li>
+            <li>Precautionary statements</li>
+            <li>Supplier information</li>
+          </ul>
+          <p><strong>Workplace labels</strong> are used when a product is transferred to a new container. They must have the product name, safe handling information, and a reference to the SDS.</p>
+
+          <h4>Safety Data Sheets (SDS)</h4>
+          <p>An SDS is a detailed document for each hazardous product. It tells you everything you need to know: what the product is, what hazards it has, how to handle it safely, and what to do in an emergency. Your workplace must keep SDSs where you can easily find them. Ask your supervisor where they are located.</p>
+
+          <h4>Common Hazard Symbols</h4>
+          <div class="stv-symbols">
+            <div class="stv-sym"><span class="stv-sym-icon">🔥</span> <strong>Flame</strong> — Flammable. Keep away from heat and sparks.</div>
+            <div class="stv-sym"><span class="stv-sym-icon">💀</span> <strong>Skull &amp; Crossbones</strong> — Toxic. Can cause serious illness or death if swallowed, inhaled, or absorbed through skin.</div>
+            <div class="stv-sym"><span class="stv-sym-icon">🧪</span> <strong>Corrosion</strong> — Corrosive. Can burn skin and eyes, or damage metal.</div>
+            <div class="stv-sym"><span class="stv-sym-icon">⚠️</span> <strong>Exclamation Mark</strong> — Irritant. May cause skin, eye, or respiratory irritation.</div>
+            <div class="stv-sym"><span class="stv-sym-icon">💥</span> <strong>Exploding Bomb</strong> — Explosive. Can explode if exposed to heat, shock, or friction.</div>
+          </div>
+
+          <h4>If You Are Exposed</h4>
+          <ol>
+            <li><strong>Rinse</strong> the affected area with water immediately (15+ minutes for eyes or skin)</li>
+            <li><strong>Report</strong> the incident to your supervisor right away</li>
+            <li><strong>Seek medical help</strong> if needed — bring the SDS or product label with you</li>
+          </ol>
+        </div>
+
+        <div class="stv-questions">
+          <h4>Comprehension Check</h4>
+          <label class="stv-q">1. What does the skull and crossbones symbol (💀) mean?
+            <input type="text" class="stv-inp" data-mod="whmis" data-q="0" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">2. Where do you find Safety Data Sheets in your workplace?
+            <input type="text" class="stv-inp" data-mod="whmis" data-q="1" placeholder="Your answer...">
+          </label>
+          <label class="stv-q">3. If a chemical splashes on your skin, what do you do first?
+            <input type="text" class="stv-inp" data-mod="whmis" data-q="2" placeholder="Your answer...">
+          </label>
+        </div>
+
+        <div class="stv-confirm">
+          <label class="stv-check">
+            <input type="checkbox" data-mod="whmis" class="stv-cb">
+            <span>I have read and understood this training module.</span>
+          </label>
+          <label class="stv-field stv-init-field">
+            <span class="stv-lab">Your initials</span>
+            <div class="stv-sig-mini">
+              <canvas id="sig-init-whmis" width="180" height="52"></canvas>
+              <button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-whmis')">✕</button>
+            </div>
+            <input type="hidden" class="stv-init" data-mod="whmis" value="">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Organizational -->
+    <div class="stv-section-head stv-section-head-sup">
+      <span class="stv-section-icon">🏢</span>
+      <span class="stv-section-label">Organizational &mdash; Supervisor-Led</span>
+    </div>
+
+    <!-- MODULE 5: Orientation -->
+    <section class="stv-mod stv-mod-sup" id="mod-orientation">
+      <button type="button" class="stv-mod-head" data-mod="orientation" aria-expanded="false">
+        <span class="stv-mod-num">5</span>
+        <span class="stv-mod-title">Workplace Orientation &amp; Onboarding</span>
+        <span class="stv-mod-badge" id="badge-orientation"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-orientation" hidden>
+        <div class="stv-content">
+          <p>Covers the organization's mission, structure, facilities tour, key contacts, work hours, breaks, dress code, parking/transit, and how to access the staff handbook.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="orientation" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="orientation" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-orientation-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-orientation-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="orientation" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-orientation-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-orientation-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="orientation" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="orientation" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 6: Paperwork -->
+    <section class="stv-mod stv-mod-sup" id="mod-paperwork">
+      <button type="button" class="stv-mod-head" data-mod="paperwork" aria-expanded="false">
+        <span class="stv-mod-num">6</span>
+        <span class="stv-mod-title">Handbook, Paperwork &amp; Documentation</span>
+        <span class="stv-mod-badge" id="badge-paperwork"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-paperwork" hidden>
+        <div class="stv-content">
+          <p>Covers employment contract, tax forms, emergency contact form, confidentiality agreement, code of conduct acknowledgement, and how to access and use the staff handbook as a reference.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="paperwork" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="paperwork" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-paperwork-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-paperwork-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="paperwork" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-paperwork-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-paperwork-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="paperwork" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="paperwork" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 7: Industrial Skills -->
+    <section class="stv-mod stv-mod-sup" id="mod-industrial">
+      <button type="button" class="stv-mod-head" data-mod="industrial" aria-expanded="false">
+        <span class="stv-mod-num">7</span>
+        <span class="stv-mod-title">Industrial Skills &amp; Job-Specific Training</span>
+        <span class="stv-mod-badge" id="badge-industrial"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-industrial" hidden>
+        <div class="stv-content">
+          <p>Covers equipment operation, tool safety, job-specific procedures, lifting techniques, workshop/kitchen/field protocols, and any certifications required for the role.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="industrial" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="industrial" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-industrial-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-industrial-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="industrial" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-industrial-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-industrial-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="industrial" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="industrial" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 8: Ethics -->
+    <section class="stv-mod stv-mod-sup" id="mod-ethics">
+      <button type="button" class="stv-mod-head" data-mod="ethics" aria-expanded="false">
+        <span class="stv-mod-num">8</span>
+        <span class="stv-mod-title">Ethics, Integrity &amp; Professional Conduct</span>
+        <span class="stv-mod-badge" id="badge-ethics"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-ethics" hidden>
+        <div class="stv-content">
+          <p>Covers honesty in reporting hours and activities, proper use of organizational resources, conflicts of interest, accepting gifts, maintaining professional boundaries, and representing the organization positively in the community.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="ethics" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="ethics" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-ethics-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-ethics-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="ethics" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-ethics-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-ethics-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="ethics" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="ethics" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 9: EDI -->
+    <section class="stv-mod stv-mod-sup" id="mod-edi">
+      <button type="button" class="stv-mod-head" data-mod="edi" aria-expanded="false">
+        <span class="stv-mod-num">9</span>
+        <span class="stv-mod-title">Equity, Diversity &amp; Inclusion (EDI)</span>
+        <span class="stv-mod-badge" id="badge-edi"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-edi" hidden>
+        <div class="stv-content">
+          <p>Covers the organization's commitment to an inclusive workplace, understanding unconscious bias, respectful language and behaviour, cultural awareness, accessibility and accommodations, and how to raise EDI concerns.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="edi" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="edi" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-edi-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-edi-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="edi" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-edi-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-edi-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="edi" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="edi" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 10: Confidentiality -->
+    <section class="stv-mod stv-mod-sup" id="mod-confidentiality">
+      <button type="button" class="stv-mod-head" data-mod="confidentiality" aria-expanded="false">
+        <span class="stv-mod-num">10</span>
+        <span class="stv-mod-title">Confidentiality &amp; Data Privacy</span>
+        <span class="stv-mod-badge" id="badge-confidentiality"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-confidentiality" hidden>
+        <div class="stv-content">
+          <p>Covers what information is confidential (client data, personnel records, financial information), secure storage and disposal, who you can share information with, social media guidelines, and breach reporting procedures.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="confidentiality" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="confidentiality" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-confidentiality-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-confidentiality-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="confidentiality" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-confidentiality-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-confidentiality-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="confidentiality" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="confidentiality" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MODULE 11: Client Service -->
+    <section class="stv-mod stv-mod-sup" id="mod-clientservice">
+      <button type="button" class="stv-mod-head" data-mod="clientservice" aria-expanded="false">
+        <span class="stv-mod-num">11</span>
+        <span class="stv-mod-title">Client &amp; Community Service Standards</span>
+        <span class="stv-mod-badge" id="badge-clientservice"></span>
+        <span class="stv-mod-chev">▾</span>
+      </button>
+      <div class="stv-mod-body" id="body-clientservice" hidden>
+        <div class="stv-content">
+          <p>Covers how to greet and interact with clients and community members, active listening, handling complaints, respecting client dignity and privacy, cultural sensitivity, and representing the organization in public.</p>
+        </div>
+        <div class="stv-sup-form">
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Date Completed</span>
+              <input type="date" class="stv-inp" data-mod="clientservice" data-sup="date">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Delivered By (Supervisor/Trainer)</span>
+              <input type="text" class="stv-inp" data-mod="clientservice" data-sup="deliveredBy" placeholder="Full name" autocomplete="off">
+            </label>
+          </div>
+          <div class="stv-sup-row">
+            <label class="stv-field">
+              <span class="stv-lab">Staff Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-clientservice-staff" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-clientservice-staff')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="clientservice" data-sup="staffInitials" value="">
+            </label>
+            <label class="stv-field">
+              <span class="stv-lab">Supervisor Initials</span>
+              <div class="stv-sig-mini"><canvas id="sig-init-clientservice-sup" width="180" height="52"></canvas><button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-clientservice-sup')">✕</button></div>
+              <input type="hidden" class="stv-init" data-mod="clientservice" data-sup="supervisorInitials" value="">
+            </label>
+          </div>
+          <div class="stv-confirm">
+            <label class="stv-check">
+              <input type="checkbox" data-mod="clientservice" class="stv-cb">
+              <span>This training has been delivered and acknowledged.</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full Signatures -->
+    <div class="stv-sig-section" id="sigSection">
+      <div class="stv-section-head">
+        <span class="stv-section-icon">✍</span>
+        <span class="stv-section-label">Signatures</span>
+      </div>
+      <div class="stv-sig-grid">
+        <div class="stv-sig-block">
+          <div class="stv-sig-label">Staff Member</div>
+          <div class="stv-sig-pad-wrap">
+            <canvas id="sigEmployee" width="460" height="110"></canvas>
+            <button type="button" class="stv-sig-clear" onclick="clearSignature('sigEmployee')">Clear</button>
+          </div>
+          <div class="stv-sig-name">Print Name: <span class="stv-sig-name-val" id="sigEmpName"></span></div>
+          <div class="stv-sig-date">Date: <span id="sigEmpDate"></span></div>
+        </div>
+        <div class="stv-sig-block">
+          <div class="stv-sig-label">Supervisor / Manager</div>
+          <div class="stv-sig-pad-wrap">
+            <canvas id="sigSupervisor" width="460" height="110"></canvas>
+            <button type="button" class="stv-sig-clear" onclick="clearSignature('sigSupervisor')">Clear</button>
+          </div>
+          <div class="stv-sig-name">Print Name: <input type="text" id="sigSupName" class="stv-inp stv-sig-name-inp" placeholder="Supervisor full name" autocomplete="off"></div>
+          <div class="stv-sig-date">Date: <input type="date" id="sigSupDate" class="stv-inp stv-sig-date-inp"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handbook Acknowledgement -->
+    <div class="stv-handbook" id="handbookSection">
+      <div class="stv-handbook-head">
+        <span class="stv-handbook-icon">📖</span>
+        <h2 class="stv-handbook-title">Handbook Acknowledgement</h2>
+      </div>
+      <div class="stv-handbook-body">
+        <p class="stv-handbook-text">I confirm that I have received, read, and understood the contents of the <strong>CSJ Staff Handbook</strong>. I agree to abide by the rules, policies, and standards outlined in the handbook for the duration of my employment term.</p>
+        <p class="stv-handbook-text">I understand that:</p>
+        <ul class="stv-handbook-list">
+          <li>This handbook does not guarantee employment beyond my contract term</li>
+          <li>Policies may be updated and I will be notified of changes</li>
+          <li>Violations of these policies may result in disciplinary action</li>
+          <li>My confidentiality obligations continue after my employment ends</li>
+          <li>I have the right to ask questions about any content in this handbook</li>
+          <li>Attendance at all mandatory training sessions is a condition of my employment</li>
+          <li>Ethics and professional standards apply to everything I do in this workplace</li>
+        </ul>
+      </div>
+      <div class="stv-handbook-ack">
+        <label class="stv-check stv-check-lg">
+          <input type="checkbox" id="hbConfirmed" class="stv-cb">
+          <span>I have read and understood the Staff Handbook</span>
+        </label>
+        <div class="stv-handbook-fields">
+          <label class="stv-field">
+            <span class="stv-lab">Your initials</span>
+            <div class="stv-sig-mini">
+              <canvas id="sig-init-handbook" width="180" height="52"></canvas>
+              <button type="button" class="stv-sig-clear stv-sig-clear-sm" onclick="clearSignature('sig-init-handbook')">✕</button>
+            </div>
+            <input type="hidden" id="hbInitials" value="">
+          </label>
+          <label class="stv-field">
+            <span class="stv-lab">Date</span>
+            <input type="date" id="hbDate" class="stv-inp">
+          </label>
+        </div>
+        <div class="stv-handbook-status" id="hbStatus"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Submit area -->
+  <div class="stv-submit-area">
+    <div class="stv-submit-msg" id="submitMsg"></div>
+    <button type="button" class="stv-btn stv-btn-submit" id="btnSubmit">Submit All Training Verifications</button>
+  </div>
+
+  <!-- Confirmation overlay -->
+  <div class="stv-confirmed" id="confirmedPanel" hidden>
+    <div class="stv-confirmed-icon">✓</div>
+    <h2>Training Verified</h2>
+    <p>Your training verification has been recorded. Your supervisor will review it.</p>
+    <p class="stv-confirmed-meta" id="confirmedMeta"></p>
+  </div>
+
+</div>

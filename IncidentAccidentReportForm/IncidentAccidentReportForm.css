@@ -1,0 +1,411 @@
+/* ============================================================
+   Incident & Accident Report Form - CSS
+   BC red (#c8102e) accent. Clean, accessible, print-friendly.
+   ============================================================ */
+
+:root {
+  --iar-red: #c8102e;
+  --iar-red-deep: #9e0d24;
+  --iar-red-soft: #fde8ec;
+  --iar-radius: 10px;
+  --iar-fs: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --iar-fd: Georgia, 'Times New Roman', serif;
+}
+
+/* Guard against host CSS bleed */
+.iar *,
+.iar *::before,
+.iar *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid #e5e7eb;
+  outline: 0;
+  background-image: none;
+}
+
+.iar {
+  font-family: var(--iar-fs);
+  color: #1b1e23;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  background: #f7f8fa;
+  padding: 0 16px 40px;
+  min-height: 100vh;
+}
+
+.iar h1,
+.iar h2,
+.iar h3 {
+  font-family: var(--iar-fd);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.iar-wrap {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.iar-header {
+  padding: 22px 0 10px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.iar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.iar-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 5px 12px 5px 8px;
+  border-radius: 100px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.iar-badge svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--iar-red);
+}
+
+.iar-header h1 {
+  font-size: clamp(22px, 3.5vw, 30px);
+}
+
+.iar-thin {
+  font-style: italic;
+  font-weight: 400;
+  color: #666;
+}
+
+.iar-header-msg {
+  margin-top: 10px;
+  padding: 12px 16px;
+  background: var(--iar-red-soft);
+  border-left: 4px solid var(--iar-red);
+  border-radius: 0 8px 8px 0;
+  font-size: 14px;
+  color: #5a1a24;
+  line-height: 1.5;
+}
+
+.iar-header-msg p {
+  margin: 0;
+}
+
+/* ── Sections ── */
+.iar-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--iar-radius);
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.03);
+}
+
+.iar-section-title {
+  font-size: 17px;
+  color: var(--iar-red);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--iar-red-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iar-section-badge {
+  font-family: var(--iar-fs);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #f0f0f0;
+  color: #666;
+  padding: 3px 10px;
+  border-radius: 100px;
+}
+
+/* ── Follow-up section visual distinction ── */
+.iar-followup {
+  border-color: #d5d8dc;
+  background: #fafbfc;
+}
+
+/* ── Fields ── */
+.iar-field {
+  margin-bottom: 16px;
+}
+
+.iar-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 5px;
+}
+
+.iar-field input,
+.iar-field select,
+.iar-field textarea {
+  width: 100%;
+  padding: 10px 13px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #1b1e23;
+  background: #fff;
+  border: 1.5px solid #d5d8dc;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.iar-field input:focus,
+.iar-field select:focus,
+.iar-field textarea:focus {
+  border-color: var(--iar-red);
+  box-shadow: 0 0 0 3px var(--iar-red-soft);
+}
+
+.iar-field input::placeholder,
+.iar-field textarea::placeholder {
+  color: #aaa;
+}
+
+.iar-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.iar-field select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* ── Grids ── */
+.iar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 18px;
+}
+
+.iar-grid-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.iar-half {
+  /* handled by grid */
+}
+
+/* ── Buttons ── */
+.iar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 0 0 24px;
+}
+
+.iar-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iar-btn-primary {
+  background: var(--iar-red);
+  color: #fff;
+  border: none;
+}
+
+.iar-btn-primary:hover {
+  background: var(--iar-red-deep);
+  box-shadow: 0 2px 8px rgba(200,16,46,.3);
+}
+
+.iar-btn-primary:active {
+  transform: scale(0.98);
+}
+
+.iar-btn-ghost {
+  background: #fff;
+  color: #444;
+  border: 1.5px solid #d5d8dc;
+}
+
+.iar-btn-ghost:hover {
+  background: #f5f6f8;
+  border-color: #bbb;
+}
+
+.iar-btn-outline {
+  background: #fff;
+  color: var(--iar-red);
+  border: 2px solid var(--iar-red);
+}
+
+.iar-btn-outline:hover {
+  background: var(--iar-red-soft);
+}
+
+/* ── Confirmation ── */
+.iar-confirmation {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.iar-confirm-box {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: var(--iar-radius);
+  padding: 36px 24px;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.iar-confirm-box svg {
+  width: 48px;
+  height: 48px;
+  color: #3f7d52;
+  margin-bottom: 14px;
+}
+
+.iar-confirm-box h3 {
+  font-size: 20px;
+  color: #1b1e23;
+  margin-bottom: 8px;
+}
+
+.iar-confirm-box p {
+  font-size: 15px;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* ── Footer ── */
+.iar-foot {
+  display: flex;
+  gap: 18px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 10px;
+}
+
+.iar-foot-meta {
+  font-size: 11px;
+  color: #999;
+  font-family: 'SF Mono', 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* ── Read-only state ── */
+.iar[data-readonly="true"] .iar-field input,
+.iar[data-readonly="true"] .iar-field select,
+.iar[data-readonly="true"] .iar-field textarea {
+  background: #f5f6f8;
+  border-color: #e5e7eb;
+  color: #555;
+  cursor: default;
+  pointer-events: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.iar[data-readonly="true"] .iar-field select {
+  background-image: none;
+  padding-right: 13px;
+}
+
+.iar[data-readonly="true"] .iar-btn,
+.iar[data-readonly="true"] .iar-actions {
+  display: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .iar-grid,
+  .iar-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .iar-section {
+    padding: 16px;
+  }
+
+  .iar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .iar-actions {
+    flex-direction: column;
+  }
+}
+
+/* ── Print ── */
+@media print {
+  .iar {
+    background: #fff;
+    padding: 0;
+    font-size: 12px;
+  }
+
+  .iar-section {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+    margin-bottom: 10px;
+    padding: 14px;
+  }
+
+  .no-print,
+  .iar-actions,
+  .iar-foot {
+    display: none !important;
+  }
+
+  .iar-header-msg {
+    background: #f9f9f9;
+    border-left: 2px solid #000;
+  }
+
+  .iar-section-title {
+    color: #000;
+    border-bottom-color: #ccc;
+  }
+
+  .iar-field input,
+  .iar-field select,
+  .iar-field textarea {
+    border: 1px solid #ccc;
+    background: #fff;
+  }
+}
