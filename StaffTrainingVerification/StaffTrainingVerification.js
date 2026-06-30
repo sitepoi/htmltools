@@ -16,116 +16,7 @@ var TOTAL_MODS = MODS.length;
 var readOnly = false;
 var _selfSave = false;
 var _saveTimer = null;
-var _sigStore = {};
 var $ = function (id) { return document.getElementById(id); };
-
-/* ---- Signature helpers (adapted from EmploymentAgreementBuilder) ---- */
-function initSignaturePad(canvasId) {
-  var canvas = document.getElementById(canvasId);
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d'), drawing = false;
-  var rect = canvas.getBoundingClientRect();
-  if (rect.width === 0 || rect.height === 0) return;
-  canvas.width = rect.width * 2;
-  canvas.height = rect.height * 2;
-  ctx.scale(2, 2);
-  ctx.strokeStyle = '#1a1a1a';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  function gp(e) {
-    var r = canvas.getBoundingClientRect();
-    return { x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top };
-  }
-  function start(e) { if (readOnly) return; e.preventDefault(); drawing = true; var p = gp(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-  function move(e) { if (!drawing) return; e.preventDefault(); var p = gp(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-  function stop() { if (!drawing) return; drawing = false; storeSignatures(); }
-  canvas.addEventListener('mousedown', start);
-  canvas.addEventListener('mousemove', move);
-  canvas.addEventListener('mouseup', stop);
-  canvas.addEventListener('mouseleave', stop);
-  canvas.addEventListener('touchstart', start, { passive: false });
-  canvas.addEventListener('touchmove', move, { passive: false });
-  canvas.addEventListener('touchend', stop);
-}
-
-function clearSignature(canvasId) {
-  var c = document.getElementById(canvasId);
-  if (!c) return;
-  c.getContext('2d').clearRect(0, 0, c.width, c.height);
-  storeSignatures();
-  updateProgress();
-  updateSubmitState();
-  tool.notify('Cleared.', 'info');
-}
-
-function isCanvasEmpty(canvas) {
-  if (!canvas || canvas.width === 0 || canvas.height === 0) return true;
-  try {
-    var ctx = canvas.getContext('2d', { willReadFrequently: true });
-    var d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    for (var i = 3; i < d.length; i += 4) if (d[i] !== 0) return false;
-    return true;
-  } catch(e) { return true; }
-}
-
-function getAllSigCanvasIds() {
-  var ids = [];
-  ['ohs','harassment','emergency','whmis'].forEach(function(m) { ids.push('sig-init-' + m); });
-  ['orientation','paperwork','industrial','ethics','edi','confidentiality','clientservice'].forEach(function(m) {
-    ids.push('sig-init-' + m + '-staff');
-    ids.push('sig-init-' + m + '-sup');
-  });
-  ids.push('sig-init-handbook');
-  ids.push('sigEmployee');
-  ids.push('sigSupervisor');
-  return ids;
-}
-
-function storeSignatures() {
-  var sigs = {};
-  getAllSigCanvasIds().forEach(function(id) {
-    var c = document.getElementById(id);
-    if (c && !isCanvasEmpty(c)) sigs[id] = c.toDataURL('image/png');
-  });
-  _sigStore = sigs;
-  copySigsToHidden();
-}
-
-function restoreSignatures(sigData) {
-  if (!sigData) return;
-  Object.keys(sigData).forEach(function(id) {
-    var c = document.getElementById(id);
-    if (c && sigData[id]) {
-      var img = new Image();
-      img.onload = function() { c.getContext('2d').drawImage(img, 0, 0); };
-      img.src = sigData[id];
-    }
-  });
-}
-
-function initAllSignaturePads() {
-  getAllSigCanvasIds().forEach(function(id) { initSignaturePad(id); });
-}
-
-function copySigsToHidden() {
-  ['ohs','harassment','emergency','whmis'].forEach(function(m) {
-    var c = document.getElementById('sig-init-' + m);
-    var h = document.querySelector('.stv-init[data-mod="' + m + '"]');
-    if (h) h.value = (c && !isCanvasEmpty(c)) ? 'signed' : '';
-  });
-  ['orientation','paperwork','industrial','ethics','edi','confidentiality','clientservice'].forEach(function(m) {
-    var cStaff = document.getElementById('sig-init-' + m + '-staff');
-    var cSup = document.getElementById('sig-init-' + m + '-sup');
-    var hStaff = document.querySelector('.stv-init[data-mod="' + m + '"][data-sup="staffInitials"]');
-    var hSup = document.querySelector('.stv-init[data-mod="' + m + '"][data-sup="supervisorInitials"]');
-    if (hStaff) hStaff.value = (cStaff && !isCanvasEmpty(cStaff)) ? 'signed' : '';
-    if (hSup) hSup.value = (cSup && !isCanvasEmpty(cSup)) ? 'signed' : '';
-  });
-  var cHb = document.getElementById('sig-init-handbook');
-  var hHb = document.getElementById('hbInitials');
-  if (hHb) hHb.value = (cHb && !isCanvasEmpty(cHb)) ? 'signed' : '';
-}
 
 function isSelf(m) { return m.type === 'self'; }
 function isSup(m) { return m.type === 'supervised'; }
@@ -154,9 +45,6 @@ function gatherData() {
     date: $('trainDate').value || '',
     modules: {},
     submittedAt: currentValue ? currentValue.submittedAt || '' : '',
-    _signatures: _sigStore,
-    _sigSupervisorName: $('sigSupName') ? ($('sigSupName').value || '').trim() : '',
-    _sigSupervisorDate: $('sigSupDate') ? $('sigSupDate').value || '' : '',
     handbookAcknowledged: {
       confirmed: $('hbConfirmed') ? $('hbConfirmed').checked : false,
       initials: $('hbInitials') ? ($('hbInitials').value || '').trim() : '',
@@ -237,21 +125,8 @@ function populateUI(data) {
   if ($('hbInitials')) $('hbInitials').value = hb.initials || '';
   if ($('hbDate')) $('hbDate').value = hb.dateAcknowledged || '';
 
-  // Supervisor signature fields
-  if ($('sigSupName')) $('sigSupName').value = (data._sigSupervisorName || '');
-  if ($('sigSupDate')) $('sigSupDate').value = (data._sigSupervisorDate || '');
-
-  // Update staff name in signature section
-  if ($('sigEmpName')) $('sigEmpName').textContent = data.staffName || '';
-  if ($('sigEmpDate')) $('sigEmpDate').textContent = data.date || '';
-
   updateProgress();
   updateSubmitState();
-  
-  setTimeout(function() {
-    initAllSignaturePads();
-    if (data._signatures) restoreSignatures(data._signatures);
-  }, 100);
 }
 
 /* ---- Check if a supervised module is complete ---- */
@@ -324,20 +199,6 @@ function updateProgress() {
     if (hbStatus) { hbStatus.textContent = 'Handbook acknowledgement incomplete'; hbStatus.className = 'stv-handbook-status stv-hb-pending'; }
   } else {
     if (hbStatus) { hbStatus.textContent = ''; hbStatus.className = 'stv-handbook-status'; }
-  }
-
-  // Full signature status
-  var sigEmpEmpty = isCanvasEmpty($('sigEmployee'));
-  var sigSupEmpty = isCanvasEmpty($('sigSupervisor'));
-  var sigSec = $('sigSection');
-  if (sigSec) {
-    if (!sigEmpEmpty && !sigSupEmpty) {
-      sigSec.style.borderColor = 'var(--stv-green)';
-    } else if (!sigEmpEmpty || !sigSupEmpty) {
-      sigSec.style.borderColor = 'var(--stv-amber)';
-    } else {
-      sigSec.style.borderColor = '';
-    }
   }
 
   var pct = Math.round((done / TOTAL_MODS) * 100);
@@ -435,10 +296,6 @@ function validateForm() {
 /* ---- Save ---- */
 function saveValue(data) {
   _selfSave = true;
-  storeSignatures();
-  data._signatures = _sigStore;
-  data._sigSupervisorName = $('sigSupName') ? ($('sigSupName').value || '').trim() : '';
-  data._sigSupervisorDate = $('sigSupDate') ? $('sigSupDate').value || '' : '';
   try { tool.setValue(data); } catch (e) {}
   _selfSave = false;
   validateForm();
@@ -540,14 +397,8 @@ function bindEvents() {
     });
   });
 
-  // Initials fields (both self and supervised)
-  document.querySelectorAll('.stv-init').forEach(function (inp) {
-    inp.addEventListener('input', function () {
-      updateProgress();
-      updateSubmitState();
-      saveDebounced();
-    });
-  });
+  // Initials fields - no longer needed since they're hidden (signatures use canvases)
+  // Keep for backward compat but don't attach input listeners that cascade into saves
 
   // Answer fields (self-study only) - debounced auto-save
   document.querySelectorAll('.stv-inp[data-q]').forEach(function (inp) {
@@ -589,18 +440,10 @@ function bindEvents() {
     });
   }
 
-  // Handbook fields - update state + debounced save
+  // Handbook checkbox - update state + debounced save
   var hbConfirmed = $('hbConfirmed');
   if (hbConfirmed) {
     hbConfirmed.addEventListener('change', function () {
-      updateProgress();
-      updateSubmitState();
-      saveDebounced();
-    });
-  }
-  var hbInitials = $('hbInitials');
-  if (hbInitials) {
-    hbInitials.addEventListener('input', function () {
       updateProgress();
       updateSubmitState();
       saveDebounced();
