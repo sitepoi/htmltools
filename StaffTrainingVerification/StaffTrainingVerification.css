@@ -430,129 +430,6 @@
 }
 .stv-sup-row .stv-field { flex: 1; }
 
-/* ---- Export button ---- */
-.stv-btn-export {
-  background: #fff;
-  color: var(--stv-red);
-  border: 2px solid var(--stv-red);
-  margin-left: auto;
-  font-size: 0.82rem;
-  padding: 8px 16px;
-  white-space: nowrap;
-}
-.stv-btn-export:hover { background: var(--stv-red); color: #fff; }
-
-/* ---- Signature pads (mini initials) ---- */
-.stv-sig-mini {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.stv-sig-mini canvas {
-  border: 1px solid var(--stv-border);
-  border-radius: 4px;
-  background: #fdfdfd;
-  cursor: crosshair;
-  width: 180px;
-  height: 52px;
-}
-.stv-sig-clear {
-  font-size: 10px;
-  padding: 2px 8px;
-  border: 1px solid var(--stv-border);
-  border-radius: 3px;
-  background: #f5f5f5;
-  color: var(--stv-text-muted);
-  cursor: pointer;
-  font-family: inherit;
-  line-height: 1;
-}
-.stv-sig-clear:hover { background: #fce8eb; color: var(--stv-red); border-color: var(--stv-red); }
-.stv-sig-clear-sm { font-size: 11px; padding: 2px 7px; min-width: 22px; text-align: center; }
-
-/* ---- Full signature section ---- */
-.stv-sig-section {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  background: var(--stv-surface);
-  border: 2px solid var(--stv-border);
-  border-radius: var(--stv-radius);
-  padding: 20px;
-  box-shadow: var(--stv-shadow);
-}
-.stv-sig-section .stv-section-head { margin-top: 0; margin-bottom: 16px; }
-.stv-sig-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
-}
-.stv-sig-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.stv-sig-label {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--stv-text);
-  border-bottom: 1px solid var(--stv-border);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-  text-align: center;
-  width: 100%;
-}
-.stv-sig-pad-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-.stv-sig-pad-wrap canvas {
-  border: 2px solid var(--stv-border);
-  border-radius: 6px;
-  background: #fdfdfd;
-  cursor: crosshair;
-  width: 100%;
-  max-width: 460px;
-  height: 110px;
-}
-.stv-sig-name, .stv-sig-date {
-  margin-top: 8px;
-  font-size: 0.82rem;
-  color: var(--stv-text-soft);
-  width: 100%;
-  text-align: center;
-}
-.stv-sig-name-val { font-weight: 600; color: var(--stv-text); }
-.stv-sig-name-inp { width: 100%; margin-top: 2px; text-align: center; }
-.stv-sig-date-inp { width: auto; min-width: 150px; margin-top: 2px; }
-
-/* Read-only */
-.stv[data-readonly="true"] .stv-sig-mini canvas,
-.stv[data-readonly="true"] .stv-sig-pad-wrap canvas {
-  pointer-events: none;
-  cursor: default;
-  opacity: 0.8;
-}
-.stv[data-readonly="true"] .stv-sig-clear { display: none; }
-.stv[data-readonly="true"] .stv-btn-export { display: inline-flex; }
-
-/* Print */
-@media print {
-  .stv-btn-export { display: none; }
-  .stv-sig-clear { display: none; }
-  .stv-sig-mini canvas { border: 1px solid #ccc; }
-  .stv-sig-pad-wrap canvas { border: 1px solid #ccc; }
-  .stv-sig-section { border: 1px solid #ccc; box-shadow: none; break-inside: avoid; }
-  .stv-sig-grid { gap: 24px; }
-}
-
-/* Mobile */
-@media (max-width: 600px) {
-  .stv-btn-export { margin-left: 0; width: 100%; justify-content: center; }
-  .stv-sig-grid { grid-template-columns: 1fr; gap: 20px; }
-}
-
 /* ---- Handbook Acknowledgement ---- */
 .stv-handbook {
   margin-top: 16px;
@@ -641,6 +518,86 @@
   .stv-handbook-head { border-bottom-color: #ccc; background: #faf9f7; }
   .stv-handbook-ack { border-top-color: #ccc; }
 }
+
+/* ---- Signature Pads ---- */
+.stv-pad-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stv-pad-wrap canvas {
+  border: 1.5px solid #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+  cursor: crosshair;
+  touch-action: none;
+  width: 200px;
+  height: 50px;
+}
+.stv-pad-clear {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #9ca3af;
+  font-family: inherit;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.stv-pad-clear:hover {
+  background: #fee;
+  color: #c33;
+  border-color: #c33;
+}
+
+/* Full signature section */
+.stv-sig-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--stv-surface);
+  border: 1px solid var(--stv-border);
+  border-radius: var(--stv-radius);
+  box-shadow: var(--stv-shadow);
+}
+.stv-sig-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--stv-red-dark);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.stv-pad-lg canvas {
+  width: 100%;
+  height: 100px;
+}
+.stv-sig-hint {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--stv-text-muted);
+  margin-top: 6px;
+}
+
+/* Export button */
+.stv-btn-export {
+  display: block;
+  margin: 12px auto 0;
+  background: #1a5276;
+  color: #fff;
+}
+.stv-btn-export:hover { background: #143d5c; }
+
+/* Read-only: disable drawing */
+.stv[data-readonly="true"] .stv-pad-wrap canvas {
+  pointer-events: none;
+  background: #f0f0f0;
+  border-color: #ddd;
+}
+.stv[data-readonly="true"] .stv-pad-clear { display: none; }
+.stv[data-readonly="true"] .stv-btn-export { display: none; }
 
 /* ---- Confirmed panel ---- */
 .stv-confirmed {
@@ -735,4 +692,8 @@
   .stv-mod-head[aria-expanded="false"] + .stv-mod-body { display: block !important; }
   .stv-section-head { break-after: avoid; }
   .stv-mod-sup .stv-mod-head { border-bottom-color: #1a5276; }
+  .stv-pad-wrap canvas { border: 1.5px solid #999; background: #fff; }
+  .stv-pad-clear { display: none; }
+  .stv-sig-section { break-inside: avoid; border: 1px solid #ccc; }
+  .stv-sig-section canvas { border-color: #999; }
 }

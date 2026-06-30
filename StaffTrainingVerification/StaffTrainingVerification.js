@@ -18,6 +18,79 @@ var _selfSave = false;
 var _saveTimer = null;
 var $ = function (id) { return document.getElementById(id); };
 
+/* ---- Signature Pad Engine ---- */
+function initSignaturePad(canvasId) {
+  var canvas = $(canvasId);
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d'), drawing = false;
+  var rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return;
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  ctx.strokeStyle = '#1a1a2e';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  function gp(e) {
+    var r = canvas.getBoundingClientRect();
+    return { x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top };
+  }
+  function start(e) { if (readOnly) return; e.preventDefault(); drawing = true; var p = gp(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
+  function move(e) { if (!drawing) return; e.preventDefault(); var p = gp(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
+  function stop() { if (!drawing) return; drawing = false; saveDebounced(); }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', stop);
+  canvas.addEventListener('mouseleave', stop);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', stop);
+}
+
+function clearSignature(canvasId) {
+  var c = $(canvasId);
+  if (!c) return;
+  c.getContext('2d').clearRect(0, 0, c.width, c.height);
+  saveDebounced();
+  updateProgress();
+  updateSubmitState();
+}
+
+function isCanvasEmpty(canvas) {
+  if (!canvas || canvas.width === 0 || canvas.height === 0) return true;
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  var d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (var i = 3; i < d.length; i += 4) { if (d[i] !== 0) return false; }
+  return true;
+}
+
+function canvasToData(canvasId) {
+  var c = $(canvasId);
+  if (!c || isCanvasEmpty(c)) return '';
+  return c.toDataURL('image/png');
+}
+
+function loadCanvasFromData(canvasId, dataUrl) {
+  if (!dataUrl) return;
+  var c = $(canvasId);
+  if (!c) return;
+  var img = new Image();
+  img.onload = function () { c.getContext('2d').drawImage(img, 0, 0); };
+  img.src = dataUrl;
+}
+
+/* ---- Export PDF ---- */
+function exportPDF() {
+  tool.notify('Opening print dialog — use Save as PDF to create the signed record.', 'info');
+  setTimeout(function () { window.print(); }, 300);
+}
+
+/* ---- All signature pad IDs ---- */
+function allPadIds() {
+  return ['sigFull'];
+}
+
 function isSelf(m) { return m.type === 'self'; }
 function isSup(m) { return m.type === 'supervised'; }
 
@@ -49,7 +122,8 @@ function gatherData() {
       confirmed: $('hbConfirmed') ? $('hbConfirmed').checked : false,
       initials: $('hbInitials') ? ($('hbInitials').value || '').trim() : '',
       dateAcknowledged: $('hbDate') ? $('hbDate').value || '' : ''
-    }
+    },
+    signature: canvasToData('sigFull')
   };
   var prev = currentValue ? (currentValue.modules || {}) : {};
 
@@ -67,21 +141,19 @@ function gatherData() {
       data.modules[m.id] = {
         type: 'self',
         completed: completed,
-        initials: initEl ? (initEl.value || '').trim() : '',
+        initials: (document.querySelector('.stv-init[data-mod="' + m.id + '"]') || {}).value || '',
         answers: answers,
         dateCompleted: completed ? (prev[m.id] ? prev[m.id].dateCompleted || '' : '') : '',
         deliveredBy: ''
       };
     } else {
-      var staffInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
-      var supInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
       var dateEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="date"]');
       var delByEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="deliveredBy"]');
       data.modules[m.id] = {
         type: 'supervised',
         completed: completed,
-        staffInitials: staffInitEl ? (staffInitEl.value || '').trim() : '',
-        supervisorInitials: supInitEl ? (supInitEl.value || '').trim() : '',
+        staffInitials: (document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]') || {}).value || '',
+        supervisorInitials: (document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]') || {}).value || '',
         dateCompleted: dateEl ? dateEl.value || '' : '',
         deliveredBy: delByEl ? (delByEl.value || '').trim() : ''
       };
@@ -103,18 +175,18 @@ function populateUI(data) {
 
     if (isSelf(m)) {
       var initEl = document.querySelector('.stv-init[data-mod="' + m.id + '"]');
-      if (initEl) initEl.value = mod.initials || '';
+      if (initEl) initEl.value = (mod.initials || '').length < 200 ? (mod.initials || '') : '';
       for (var q = 0; q < 3; q++) {
         var inp = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-q="' + q + '"]');
         if (inp) inp.value = (mod.answers && mod.answers[q]) ? mod.answers[q] : '';
       }
     } else {
-      var staffInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
-      var supInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
       var dateEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="date"]');
       var delByEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="deliveredBy"]');
-      if (staffInitEl) staffInitEl.value = mod.staffInitials || '';
-      if (supInitEl) supInitEl.value = mod.supervisorInitials || '';
+      var staffInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
+      var supInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
+      if (staffInitEl) staffInitEl.value = (mod.staffInitials || '').length < 200 ? (mod.staffInitials || '') : '';
+      if (supInitEl) supInitEl.value = (mod.supervisorInitials || '').length < 200 ? (mod.supervisorInitials || '') : '';
       if (dateEl) dateEl.value = mod.dateCompleted || '';
       if (delByEl) delByEl.value = mod.deliveredBy || '';
     }
@@ -122,8 +194,10 @@ function populateUI(data) {
   // Handbook fields
   var hb = data.handbookAcknowledged || { confirmed: false, initials: '', dateAcknowledged: '' };
   if ($('hbConfirmed')) $('hbConfirmed').checked = !!hb.confirmed;
-  if ($('hbInitials')) $('hbInitials').value = hb.initials || '';
+  if ($('hbInitials')) $('hbInitials').value = (hb.initials || '').length < 200 ? (hb.initials || '') : '';
   if ($('hbDate')) $('hbDate').value = hb.dateAcknowledged || '';
+  // Full signature
+  loadCanvasFromData('sigFull', data.signature);
 
   updateProgress();
   updateSubmitState();
@@ -168,10 +242,10 @@ function updateProgress() {
         if (badge) { badge.textContent = ''; badge.className = 'stv-mod-badge'; }
       }
     } else {
-      var sInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
-      var pInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
       var delByEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="deliveredBy"]');
       var dateEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="date"]');
+      var sInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
+      var pInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
       var hasStaffInit = sInitEl ? (sInitEl.value || '').trim().length > 0 : false;
       var hasSupInit = pInitEl ? (pInitEl.value || '').trim().length > 0 : false;
       var hasDelBy = delByEl ? (delByEl.value || '').trim().length > 0 : false;
@@ -225,15 +299,18 @@ function updateSubmitState() {
     return (mod.staffInitials || '').length > 0 || (mod.supervisorInitials || '').length > 0 ||
       (mod.deliveredBy || '').length > 0 || (mod.dateCompleted || '').length > 0;
   });
-  var hbOk = data.handbookAcknowledged && data.handbookAcknowledged.confirmed && (data.handbookAcknowledged.initials || '').length > 0;
-  btn.disabled = !hasName || !allDone || !hbOk;
+  var hbOk = data.handbookAcknowledged && data.handbookAcknowledged.confirmed && (data.handbookAcknowledged.initials || '').trim().length > 0;
+  var hasSig = (data.signature || '').length > 0;
+  btn.disabled = !hasName || !allDone || !hbOk || !hasSig;
   var msgEl = $('submitMsg');
   if (!hasName && someStarted) {
     msgEl.textContent = 'Enter your name before submitting.';
   } else if (hasName && !allDone) {
     msgEl.textContent = 'Complete all ' + TOTAL_MODS + ' modules before submitting.';
   } else if (hasName && allDone && !hbOk) {
-    msgEl.textContent = 'Acknowledge the Staff Handbook (check the box and enter your initials).';
+    msgEl.textContent = 'Acknowledge the Staff Handbook (check the box and sign your initials).';
+  } else if (hasName && allDone && hbOk && !hasSig) {
+    msgEl.textContent = 'Sign your full signature at the bottom of the form.';
   } else {
     msgEl.textContent = '';
   }
@@ -290,6 +367,10 @@ function validateForm() {
     tool.reportValid(false, 'Acknowledge the Staff Handbook before saving.');
     return;
   }
+  if (!(data.signature || '')) {
+    tool.reportValid(false, 'Sign your full signature before saving.');
+    return;
+  }
   tool.reportValid(true);
 }
 
@@ -298,7 +379,7 @@ function saveValue(data) {
   _selfSave = true;
   try { tool.setValue(data); } catch (e) {}
   _selfSave = false;
-  validateForm();
+  // Validation only fires on explicit submit/checkbox, not on auto-save strokes
 }
 
 /* ---- Debounced save ---- */
@@ -329,6 +410,10 @@ function submitAll() {
   var hb = data.handbookAcknowledged || {};
   if (!hb.confirmed || !(hb.initials || '').trim()) {
     tool.notify('Please acknowledge the Staff Handbook before submitting.', 'warning');
+    return;
+  }
+  if (!(data.signature || '')) {
+    tool.notify('Please sign your full signature at the bottom before submitting.', 'warning');
     return;
   }
   // Timestamp completed modules that don't have a date yet
@@ -397,8 +482,25 @@ function bindEvents() {
     });
   });
 
-  // Initials fields - no longer needed since they're hidden (signatures use canvases)
-  // Keep for backward compat but don't attach input listeners that cascade into saves
+  // Init full signature pad only
+  initSignaturePad('sigFull');
+
+  // Clear button for full signature
+  document.querySelectorAll('.stv-pad-clear').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var target = this.getAttribute('data-target');
+      if (target) clearSignature(target);
+    });
+  });
+
+  // Initials text fields (both self and supervised) — debounced save
+  document.querySelectorAll('.stv-init').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      updateProgress();
+      updateSubmitState();
+      saveDebounced();
+    });
+  });
 
   // Answer fields (self-study only) - debounced auto-save
   document.querySelectorAll('.stv-inp[data-q]').forEach(function (inp) {
@@ -440,10 +542,18 @@ function bindEvents() {
     });
   }
 
-  // Handbook checkbox - update state + debounced save
+  // Handbook checkbox + initials
   var hbConfirmed = $('hbConfirmed');
   if (hbConfirmed) {
     hbConfirmed.addEventListener('change', function () {
+      updateProgress();
+      updateSubmitState();
+      saveDebounced();
+    });
+  }
+  var hbInitials = $('hbInitials');
+  if (hbInitials) {
+    hbInitials.addEventListener('input', function () {
       updateProgress();
       updateSubmitState();
       saveDebounced();
@@ -456,36 +566,16 @@ function bindEvents() {
     });
   }
 
+  // Export PDF button
+  var exportBtn = $('btnExport');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportPDF);
+  }
+
   // Submit button
   var submitBtn = $('btnSubmit');
   if (submitBtn) {
     submitBtn.addEventListener('click', submitAll);
-  }
-
-  // Export PDF button
-  var exportBtn = $('btnExportPdf');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', exportToPDF);
-  }
-}
-
-/* ---- Export PDF ---- */
-function exportToPDF() {
-  if (typeof tool !== 'undefined' && tool.requestExportPdf) {
-    var staffName = ($('staffName').value || 'staff').trim().replace(/[^a-zA-Z0-9_-]/g, '-');
-    tool.requestExportPdf({
-      filename: 'training-verification-' + (staffName || 'record'),
-      landscape: false
-    }, function(err, file) {
-      if (err) {
-        tool.notify('Export failed: ' + err, 'error');
-        return;
-      }
-      tool.notify('Document exported: ' + file.url, 'success');
-      window.open(file.url, '_blank');
-    });
-  } else {
-    window.print();
   }
 }
 

@@ -138,7 +138,8 @@ var EMBEDDED_HTML = '<div class="stv" id="stvRoot" data-theme="light">' +
 '    <section class="stv-mod stv-mod-sup" id="mod-clientservice"><button type="button" class="stv-mod-head" data-mod="clientservice" aria-expanded="false"><span class="stv-mod-num">11</span><span class="stv-mod-title">Client &amp; Community Service Standards</span><span class="stv-mod-badge" id="badge-clientservice"></span><span class="stv-mod-chev">▾</span></button><div class="stv-mod-body" id="body-clientservice" hidden><div class="stv-content"><p>Covers how to greet and interact with clients and community members, active listening, handling complaints, respecting client dignity and privacy, cultural sensitivity, and representing the organization in public.</p></div><div class="stv-sup-form"><div class="stv-sup-row"><label class="stv-field"><span class="stv-lab">Date Completed</span><input type="date" class="stv-inp" data-mod="clientservice" data-sup="date"></label><label class="stv-field"><span class="stv-lab">Delivered By (Supervisor/Trainer)</span><input type="text" class="stv-inp" data-mod="clientservice" data-sup="deliveredBy" placeholder="Full name" autocomplete="off"></label></div><div class="stv-sup-row"><label class="stv-field"><span class="stv-lab">Staff Initials</span><input type="text" class="stv-inp stv-init" data-mod="clientservice" data-sup="staffInitials" placeholder="ABC" maxlength="5" autocomplete="off"></label><label class="stv-field"><span class="stv-lab">Supervisor Initials</span><input type="text" class="stv-inp stv-init" data-mod="clientservice" data-sup="supervisorInitials" placeholder="ABC" maxlength="5" autocomplete="off"></label></div><div class="stv-confirm"><label class="stv-check"><input type="checkbox" data-mod="clientservice" class="stv-cb"><span>This training has been delivered and acknowledged.</span></label></div></div></div></section>' +
 '    <div class="stv-handbook" id="handbookSection"><div class="stv-handbook-head"><span class="stv-handbook-icon">📖</span><h2 class="stv-handbook-title">Handbook Acknowledgement</h2></div><div class="stv-handbook-body"><p class="stv-handbook-text">I confirm that I have received, read, and understood the contents of the <strong>CSJ Staff Handbook</strong>. I agree to abide by the rules, policies, and standards outlined in the handbook for the duration of my employment term.</p><p class="stv-handbook-text">I understand that:</p><ul class="stv-handbook-list"><li>This handbook does not guarantee employment beyond my contract term</li><li>Policies may be updated and I will be notified of changes</li><li>Violations of these policies may result in disciplinary action</li><li>My confidentiality obligations continue after my employment ends</li><li>I have the right to ask questions about any content in this handbook</li><li>Attendance at all mandatory training sessions is a condition of my employment</li><li>Ethics and professional standards apply to everything I do in this workplace</li></ul></div><div class="stv-handbook-ack"><label class="stv-check stv-check-lg"><input type="checkbox" id="hbConfirmed" class="stv-cb"><span>I have read and understood the Staff Handbook</span></label><div class="stv-handbook-fields"><label class="stv-field"><span class="stv-lab">Your initials</span><input type="text" id="hbInitials" class="stv-inp stv-init" placeholder="ABC" maxlength="5" autocomplete="off"></label><label class="stv-field"><span class="stv-lab">Date</span><input type="date" id="hbDate" class="stv-inp"></label></div><div class="stv-handbook-status" id="hbStatus"></div></div></div>' +
 '  </div>' +
-'  <div class="stv-submit-area"><div class="stv-submit-msg" id="submitMsg"></div><button type="button" class="stv-btn stv-btn-submit" id="btnSubmit">Submit All Training Verifications</button></div>' +
+'  <div class="stv-sig-section"><div class="stv-sig-label">Full Signature</div><div class="stv-pad-wrap stv-pad-lg"><canvas id="sigFull" width="500" height="100"></canvas><button type="button" class="stv-pad-clear" data-target="sigFull">Clear</button></div><div class="stv-sig-hint">Sign above using your mouse, touch screen, or stylus</div></div>' +
+'  <div class="stv-submit-area"><div class="stv-submit-msg" id="submitMsg"></div><button type="button" class="stv-btn stv-btn-submit" id="btnSubmit">Submit All Training Verifications</button><button type="button" class="stv-btn stv-btn-export" id="btnExport">🖨 Print / Save PDF</button></div>' +
 '  <div class="stv-confirmed" id="confirmedPanel" hidden><div class="stv-confirmed-icon">✓</div><h2>Training Verified</h2><p>Your training verification has been recorded. Your supervisor will review it.</p><p class="stv-confirmed-meta" id="confirmedMeta"></p></div>' +
 '</div>';
 </script>
@@ -163,27 +164,27 @@ var EMBEDDED_HTML = '<div class="stv" id="stvRoot" data-theme="light">' +
     loadJS();
   }
 
-  status.textContent = 'Fetching HTML...';
-  var fallbackTimer = setTimeout(function() {
+  status.textContent = 'Loading...';
+  // Detect file:// immediately — skip fetch to avoid CORS errors and 2s delay
+  if (window.location.protocol === 'file:') {
     status.textContent = 'Using embedded HTML (file:// mode)';
     injectHTML(EMBEDDED_HTML);
-  }, 2000);
-
-  fetch('StaffTrainingVerification.html')
-    .then(function(resp) {
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      return resp.text();
-    })
-    .then(function(html) {
-      clearTimeout(fallbackTimer);
-      status.textContent = 'HTML loaded (live)';
-      injectHTML(html);
-    })
-    .catch(function() {
-      clearTimeout(fallbackTimer);
-      status.textContent = 'Using embedded HTML (fetch unavailable)';
-      injectHTML(EMBEDDED_HTML);
-    });
+  } else {
+    status.textContent = 'Fetching HTML...';
+    fetch('StaffTrainingVerification.html')
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.text();
+      })
+      .then(function(html) {
+        status.textContent = 'HTML loaded (live)';
+        injectHTML(html);
+      })
+      .catch(function() {
+        status.textContent = 'Using embedded HTML (fetch unavailable)';
+        injectHTML(EMBEDDED_HTML);
+      });
+  }
 })();
 </script>
 
@@ -209,6 +210,8 @@ document.addEventListener('DOMContentLoaded', function() {
       confidentiality: { type: "supervised", completed: false, staffInitials: "", supervisorInitials: "", dateCompleted: "", deliveredBy: "" },
       clientservice: { type: "supervised", completed: false, staffInitials: "", supervisorInitials: "", dateCompleted: "", deliveredBy: "" }
     },
+    handbookAcknowledged: { confirmed: false, initials: "", dateAcknowledged: "" },
+    signature: "",
     submittedAt: ""
   };
 
@@ -228,10 +231,8 @@ document.addEventListener('DOMContentLoaded', function() {
       confidentiality: { type: "supervised", completed: true, staffInitials: "TM", supervisorInitials: "SC", dateCompleted: todayStr, deliveredBy: "Sarah Chen" },
       clientservice: { type: "supervised", completed: true, staffInitials: "TM", supervisorInitials: "MK", dateCompleted: todayStr, deliveredBy: "Maria Kim" }
     },
-    handbookAcknowledged: { confirmed: true, initials: "TM", dateAcknowledged: todayStr },
-    _signatures: {},
-    _sigSupervisorName: "Sarah Chen",
-    _sigSupervisorDate: todayStr,
+    handbookAcknowledged: { confirmed: true, initials: "", dateAcknowledged: todayStr },
+    signature: "",
     submittedAt: new Date().toISOString()
   };
 
