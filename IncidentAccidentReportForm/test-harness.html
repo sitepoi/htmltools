@@ -273,9 +273,6 @@ var EMBEDDED_HTML = '<div class="iar">\
   var container = document.getElementById('app-container');
   container.innerHTML = EMBEDDED_HTML;
 
-  document.getElementById('th-load-sample').addEventListener('click', function() {
-    window.tool._loadSampleData(window.tool._sampleData || SAMPLE_DATA);
-  });
   // Store sample data for the load button
   window.tool._sampleData = {
     type: "nearMiss",
@@ -299,6 +296,10 @@ var EMBEDDED_HTML = '<div class="iar">\
     },
     submittedAt: ""
   };
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(window.tool._sampleData);
+  });
 
   document.getElementById('th-clear').addEventListener('click', function() {
     window.tool._clearData();

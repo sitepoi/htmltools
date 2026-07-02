@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Task Manager — Test Harness</title>
+<link rel="stylesheet" href="PersonalTaskManager.css">
+<style>
+body { padding-top: 32px !important; margin: 0; }
+#app { min-height: calc(100vh - 32px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-toggle-ro { background: #d97706; color: #fff; }
+#th-bar .btn-toggle-role { background: #7c3aed; color: #fff; }
+#th-bar .btn-dump { background: #2563eb; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — Personal Task Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-toggle-ro" id="th-ro">Toggle Read-Only</button>
+  <button class="btn-toggle-role" id="th-role">Toggle Manager/Staff</button>
+  <button class="btn-dump" id="th-dump">Dump DB</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span class="hint">Double-click task = quick status cycle</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">EDIT MODE (Manager)</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK with requestObjects + getPermittedUsers ── */
+(function() {
+  var STORAGE_KEY = 'ptm_test_db';
+  var OBJ_STORAGE_KEY = 'ptm_test_objects';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'manager-1', name: 'Sarah Chen', email: 'sarah@example.org', roles: ['manager', 'staff'] };
+  var _fields = {}, _value = null;
+  var MANAGER_USER = { id: 'manager-1', name: 'Sarah Chen', email: 'sarah@example.org', roles: ['manager', 'staff'] };
+  var STAFF_USER = { id: 'staff-1', name: 'Alex Rivera', email: 'alex@example.org', roles: ['staff'] };
+  var _isManager = true;
+  var _permittedUsers = [
+    { id: 'manager-1', name: 'Sarah Chen', email: 'sarah@example.org', roles: ['manager', 'staff'] },
+    { id: 'staff-1', name: 'Alex Rivera', email: 'alex@example.org', roles: ['staff'] },
+    { id: 'staff-2', name: 'Jordan Kim', email: 'jordan@example.org', roles: ['staff'] }
+  ];
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  function loadObjects() {
+    try { var raw = localStorage.getItem(OBJ_STORAGE_KEY); return raw ? JSON.parse(raw) : { taskSprints: [], taskItems: [] }; }
+    catch(e) { return { taskSprints: [], taskItems: [] }; }
+  }
+  function saveObjects(objs) {
+    try { localStorage.setItem(OBJ_STORAGE_KEY, JSON.stringify(objs)); } catch(e) {}
+  }
+
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function nowISO() { return new Date().toISOString(); }
+
+  function requestObjects(action, params, cb) {
+    setTimeout(function () {
+      var objs = loadObjects();
+      var type = params.mainObjectType;
+      if (!objs[type]) objs[type] = [];
+
+      switch (action) {
+        case 'query':
+          var list = params.typeId
+            ? objs[type].filter(function (o) { return o.typeId === params.typeId; })
+            : objs[type].slice();
+          cb(null, { objects: list });
+          break;
+        case 'get':
+          var found = null;
+          for (var i = 0; i < objs[type].length; i++) {
+            if (objs[type][i]._id === params.objectId || objs[type][i].id === params.objectId) {
+              found = objs[type][i]; break;
+            }
+          }
+          cb(null, { object: found || null });
+          break;
+        case 'create':
+          var newObj = {
+            _id: genId(), id: genId(), name: params.name || "",
+            cmsObjectType: type, typeId: params.typeId || "default",
+            productData: params.productData || { data_categoriesBased: {} },
+            created: nowISO(), updated: nowISO()
+          };
+          objs[type].push(newObj);
+          saveObjects(objs);
+          cb(null, { object: newObj });
+          break;
+        case 'update':
+          var updated = false;
+          for (var j = 0; j < objs[type].length; j++) {
+            if (objs[type][j]._id === params.objectId || objs[type][j].id === params.objectId) {
+              if (params.name !== undefined) objs[type][j].name = params.name;
+              if (params.productData) {
+                if (!objs[type][j].productData) objs[type][j].productData = {};
+                if (!objs[type][j].productData.data_categoriesBased) objs[type][j].productData.data_categoriesBased = {};
+                Object.assign(objs[type][j].productData.data_categoriesBased, params.productData.data_categoriesBased || {});
+              }
+              objs[type][j].updated = nowISO();
+              updated = true; break;
+            }
+          }
+          saveObjects(objs);
+          cb(null, { ok: updated });
+          break;
+        case 'delete':
+          objs[type] = objs[type].filter(function (o) {
+            return o._id !== params.objectId && o.id !== params.objectId;
+          });
+          saveObjects(objs);
+          cb(null, { ok: true });
+          break;
+        case 'batch':
+          var ops = params.operations || [];
+          var results = [], failed = null;
+          (function processNext(idx) {
+            if (idx >= ops.length) {
+              saveObjects(objs);
+              if (failed) cb(failed, null);
+              else cb(null, { ok: true, results: results });
+              return;
+            }
+            var op = ops[idx];
+            requestObjects(op.action, {
+              mainObjectType: op.mainObjectType, typeId: op.typeId,
+              objectId: op.objectId, name: op.name, productData: op.productData
+            }, function (err2, result2) {
+              if (err2 && !failed) failed = err2;
+              results.push(result2);
+              processNext(idx + 1);
+            });
+          })(0);
+          return;
+        default:
+          cb("Unknown action: " + action, null);
+      }
+    }, 50);
+  }
+
+  function generateSampleData() {
+    var objs = loadObjects();
+    var sprintId = 'sprint-' + genId();
+    objs.taskSprints = [{
+      _id: sprintId, id: sprintId, name: "Sprint 1 — Onboarding",
+      cmsObjectType: "taskSprints-uniconbaseapps", typeId: "default",
+      productData: { data_categoriesBased: {
+        startDate: "2026-06-15", endDate: "2026-06-30",
+        managerId: "manager-1", goal: "Successfully onboard new team members and complete first sprint deliverables",
+        status: "active"
+      }},
+      created: nowISO(), updated: nowISO()
+    }];
+
+    var sampleTasks = [
+      { title: "Complete new hire paperwork", status: "done", priority: "high", assignedTo: "staff-1", assigneeName: "Alex Rivera", dueDate: "2026-06-18", notes: "All forms submitted to HR", labels: ["hr", "onboarding"] },
+      { title: "Set up development environment", status: "done", priority: "high", assignedTo: "staff-1", assigneeName: "Alex Rivera", dueDate: "2026-06-19", notes: "VS Code, Node.js, Docker installed", labels: ["dev", "setup"] },
+      { title: "Review team handbook", status: "inProgress", priority: "medium", assignedTo: "staff-1", assigneeName: "Alex Rivera", dueDate: "2026-06-25", notes: "Pages 1-45 completed", labels: ["docs"] },
+      { title: "Shadow senior developer", status: "inProgress", priority: "medium", assignedTo: "staff-1", assigneeName: "Alex Rivera", dueDate: "2026-06-28", labels: ["training"] },
+      { title: "Complete security awareness training", status: "todo", priority: "critical", assignedTo: "staff-1", assigneeName: "Alex Rivera", dueDate: "2026-06-30", notes: "Mandatory compliance training", labels: ["security", "compliance"] },
+      { title: "Prepare onboarding presentation", status: "todo", priority: "medium", assignedTo: "manager-1", assigneeName: "Sarah Chen", dueDate: "2026-06-20", notes: "For next new hire cohort", labels: ["docs", "presentation"] },
+      { title: "Update documentation for API v2", status: "inProgress", priority: "high", assignedTo: "staff-2", assigneeName: "Jordan Kim", dueDate: "2026-06-22", labels: ["docs", "api"] },
+      { title: "Fix login page accessibility issues", status: "blocked", priority: "high", assignedTo: "staff-2", assigneeName: "Jordan Kim", dueDate: "2026-06-24", notes: "Waiting for design team mockups", labels: ["bug", "accessibility"] },
+      { title: "Write unit tests for payment module", status: "todo", priority: "medium", assignedTo: "staff-2", assigneeName: "Jordan Kim", dueDate: "2026-06-29", labels: ["dev", "testing"] },
+      { title: "Sprint retro preparation", status: "todo", priority: "low", assignedTo: "manager-1", assigneeName: "Sarah Chen", dueDate: "2026-06-30", notes: "Collect feedback from team", labels: ["process"] }
+    ];
+
+    objs.taskItems = sampleTasks.map(function (t) {
+      var tid = 'task-' + genId();
+      return {
+        _id: tid, id: tid, name: t.title, cmsObjectType: "taskItems-uniconbaseapps", typeId: "default",
+        productData: { data_categoriesBased: {
+          title: t.title, description: "", status: t.status,
+          assignedTo: t.assignedTo, assigneeName: t.assigneeName, assigneeEmail: "",
+          sprintId: sprintId, priority: t.priority, dueDate: t.dueDate,
+          completedAt: t.status === "done" ? nowISO() : "", notes: t.notes || "",
+          labels: t.labels || [], attachments: [], links: []
+        }},
+        created: nowISO(), updated: nowISO()
+      };
+    });
+
+    saveObjects(objs);
+    save({ selectedSprintId: sprintId, _theme: "light" });
+    return sprintId;
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = v;
+      document.getElementById('th-status').textContent = (v ? 'READ-ONLY' : 'EDIT MODE') + ' (' + (_isManager ? 'Manager' : 'Staff') + ')';
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+    },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    _setUser: function(u) {
+      _user = u;
+      _isManager = !!(u.roles && (u.roles.indexOf('manager') > -1 || u.roles.indexOf('admin') > -1));
+      document.getElementById('th-status').textContent = (_readOnly ? 'READ-ONLY' : 'EDIT MODE') + ' (' + (_isManager ? 'Manager' : 'Staff') + ')';
+      listeners.userChange.forEach(function(cb) { try { cb(u); } catch(e) {} });
+    },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    getPermittedUsers: function() { return _permittedUsers.slice(); },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    requestObjects: requestObjects,
+    onReady: function(cb) {
+      load();
+      document.getElementById('th-status').textContent = (_readOnly ? 'READ-ONLY' : 'EDIT MODE') + ' (' + (_isManager ? 'Manager' : 'Staff') + ')';
+      cb(_value, _fields);
+    },
+    _loadSampleData: function() {
+      generateSampleData();
+      window.location.reload();
+    },
+    _clearData: function() {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(OBJ_STORAGE_KEY);
+      window.location.reload();
+    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _toggleRole: function() {
+      this._setUser(_isManager ? STAFF_USER : MANAGER_USER);
+      window.tool.notify('Switched to ' + (_isManager ? 'Manager' : 'Staff') + ' view', 'info');
+      window.location.reload();
+    },
+    _dump: function() {
+      console.log('PTM UI State:', JSON.parse(JSON.stringify(_value || {})));
+      console.log('PTM Objects:', loadObjects());
+      console.log('Current user:', JSON.parse(JSON.stringify(_user)));
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<!-- INJECT HTML BODY BEFORE PTM JS LOADS -->
+<script>
+(function() {
+  var c = document.getElementById("app-container");
+  c.innerHTML =
+      '<div class="ptm">\n' +
+      '  <div class="ptm-wrap">\n' +
+      '\n' +
+      '    <!-- HEADER -->\n' +
+      '    <header class="ptm-header">\n' +
+      '      <div class="ptm-brand">\n' +
+      '        <span class="ptm-badge">\n' +
+      '          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>\n' +
+      '          Task Manager\n' +
+      '        </span>\n' +
+      '        <h1>Personal <span class="ptm-thin">Task</span> Manager</h1>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-user-area">\n' +
+      '        <span class="ptm-role-badge" id="ptmRoleBadge">Staff</span>\n' +
+      '        <span class="ptm-user-name" id="ptmUserName">—</span>\n' +
+      '      </div>\n' +
+      '    </header>\n' +
+      '\n' +
+      '    <!-- SPRINT SELECTOR BAR -->\n' +
+      '    <div class="ptm-sprint-bar">\n' +
+      '      <div class="ptm-sprint-left">\n' +
+      '        <label class="ptm-sprint-label" for="ptmSprintSelect">Sprint / Period</label>\n' +
+      '        <select id="ptmSprintSelect"><option value="">— No sprint selected —</option></select>\n' +
+      '        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnNewSprint">+ New Sprint</button>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-sprint-right">\n' +
+      '        <span class="ptm-sprint-dates" id="ptmSprintDates"></span>\n' +
+      '        <span class="ptm-sprint-status" id="ptmSprintStatus"></span>\n' +
+      '        <button class="ptm-btn ptm-btn-outline ptm-btn-sm ptm-sprint-edit-btn" id="ptmBtnEditSprint" style="display:none" title="Edit sprint name, dates, and team">✎ Edit</button>\n' +
+      '        <button class="ptm-btn ptm-btn-danger ptm-btn-sm ptm-sprint-edit-btn" id="ptmBtnDeleteSprintBar" style="display:none" title="Delete this sprint and all its tasks">✕ Delete</button>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- SPRINT FORM (collapsible) -->\n' +
+      '    <div class="ptm-sprint-form" id="ptmSprintForm" style="display:none">\n' +
+      '      <div class="ptm-card">\n' +
+      '        <h3 class="ptm-card-title" id="ptmSprintFormTitle">Create Sprint</h3>\n' +
+      '        <div class="ptm-form-grid">\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmSprintName">Sprint Name <span class="ptm-req">*</span></label>\n' +
+      '            <input type="text" id="ptmSprintName" placeholder="e.g. Sprint 1, Q3 Planning" maxlength="120">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmSprintStart">Start Date <span class="ptm-req">*</span></label>\n' +
+      '            <input type="date" id="ptmSprintStart">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmSprintEnd">End Date <span class="ptm-req">*</span></label>\n' +
+      '            <input type="date" id="ptmSprintEnd">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmSprintGoal">Sprint Goal</label>\n' +
+      '            <input type="text" id="ptmSprintGoal" placeholder="What is the key outcome this sprint aims to achieve?" maxlength="300">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmSprintStatusSelect">Status</label>\n' +
+      '            <select id="ptmSprintStatusSelect">\n' +
+      '              <option value="active">Active</option>\n' +
+      '              <option value="planned">Planned</option>\n' +
+      '              <option value="completed">Completed</option>\n' +
+      '            </select>\n' +
+      '          </div>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-form-actions">\n' +
+      '          <button class="ptm-btn ptm-btn-primary" id="ptmBtnSaveSprint">Save Sprint</button>\n' +
+      '          <button class="ptm-btn ptm-btn-ghost" id="ptmBtnCancelSprint">Cancel</button>\n' +
+      '          <button class="ptm-btn ptm-btn-danger ptm-btn-right" id="ptmBtnDeleteSprint" style="display:none">Delete Sprint</button>\n' +
+      '        </div>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- STATS ROW -->\n' +
+      '    <div class="ptm-stats-row" id="ptmStatsRow">\n' +
+      '      <div class="ptm-stat">\n' +
+      '        <div class="ptm-stat-value" id="ptmStatTotal">0</div>\n' +
+      '        <div class="ptm-stat-label">Total Tasks</div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-stat ptm-stat-todo">\n' +
+      '        <div class="ptm-stat-value" id="ptmStatTodo">0</div>\n' +
+      '        <div class="ptm-stat-label">To Do</div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-stat ptm-stat-progress">\n' +
+      '        <div class="ptm-stat-value" id="ptmStatProgress">0</div>\n' +
+      '        <div class="ptm-stat-label">In Progress</div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-stat ptm-stat-done">\n' +
+      '        <div class="ptm-stat-value" id="ptmStatDone">0</div>\n' +
+      '        <div class="ptm-stat-label">Done</div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-stat ptm-stat-blocked">\n' +
+      '        <div class="ptm-stat-value" id="ptmStatBlocked">0</div>\n' +
+      '        <div class="ptm-stat-label">Blocked</div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-stat ptm-stat-progressbar">\n' +
+      '        <div class="ptm-progress-wrap">\n' +
+      '          <div class="ptm-progress-bar" id="ptmProgressBar" style="width:0%"></div>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-stat-label"><span id="ptmProgressPct">0%</span> complete</div>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- SPRINT GOAL BANNER -->\n' +
+      '    <div class="ptm-goal-banner" id="ptmGoalBanner" style="display:none">\n' +
+      '      <span class="ptm-goal-icon">🎯</span>\n' +
+      '      <span class="ptm-goal-text" id="ptmGoalText"></span>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- VIEW TABS -->\n' +
+      '    <div class="ptm-view-tabs" id="ptmViewTabs">\n' +
+      '      <button class="ptm-view-tab active" data-view="board">📋 Board</button>\n' +
+      '      <button class="ptm-view-tab" data-view="list">📝 List</button>\n' +
+      '      <button class="ptm-view-tab ptm-view-tab-staff" data-view="report" id="ptmTabReport">📊 My Report</button>\n' +
+      '      <button class="ptm-view-tab" data-view="team" id="ptmTabTeam">👥 Team</button>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- BOARD TOOLBAR -->\n' +
+      '    <div class="ptm-board-toolbar" id="ptmBoardToolbar">\n' +
+      '      <div class="ptm-toolbar-left">\n' +
+      '        <input type="search" id="ptmSearchInput" class="ptm-search-input" placeholder="🔍 Search tasks…">\n' +
+      '        <select id="ptmFilterAssignee" class="ptm-filter-select">\n' +
+      '          <option value="">All Assignees</option>\n' +
+      '        </select>\n' +
+      '        <select id="ptmFilterPriority" class="ptm-filter-select">\n' +
+      '          <option value="">All Priorities</option>\n' +
+      '          <option value="critical">Critical</option>\n' +
+      '          <option value="high">High</option>\n' +
+      '          <option value="medium">Medium</option>\n' +
+      '          <option value="low">Low</option>\n' +
+      '        </select>\n' +
+      '        <select id="ptmFilterStatus" class="ptm-filter-select">\n' +
+      '          <option value="">All Statuses</option>\n' +
+      '          <option value="todo">To Do</option>\n' +
+      '          <option value="inProgress">In Progress</option>\n' +
+      '          <option value="done">Done</option>\n' +
+      '          <option value="blocked">Blocked</option>\n' +
+      '        </select>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-toolbar-right">\n' +
+      '        <span class="ptm-toolbar-info" id="ptmTaskCount">0 tasks</span>\n' +
+      '        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnExportPdf" title="Export sprint report as PDF">📄 PDF</button>\n' +
+      '        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnExportCsv" title="Export tasks as CSV">📊 CSV</button>\n' +
+      '        <button class="ptm-btn ptm-btn-primary" id="ptmBtnAddTask" disabled title="Select a sprint first">+ Add Task</button>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- KANBAN BOARD VIEW -->\n' +
+      '    <div class="ptm-board" id="ptmBoard">\n' +
+      '      <div class="ptm-column" data-status="todo">\n' +
+      '        <div class="ptm-column-header">\n' +
+      '          <span class="ptm-col-dot ptm-dot-todo"></span>\n' +
+      '          <span>To Do</span>\n' +
+      '          <span class="ptm-col-count" id="ptmColCountTodo">0</span>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-col-body" id="ptmColTodo"></div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-column" data-status="inProgress">\n' +
+      '        <div class="ptm-column-header">\n' +
+      '          <span class="ptm-col-dot ptm-dot-progress"></span>\n' +
+      '          <span>In Progress</span>\n' +
+      '          <span class="ptm-col-count" id="ptmColCountProgress">0</span>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-col-body" id="ptmColProgress"></div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-column" data-status="done">\n' +
+      '        <div class="ptm-column-header">\n' +
+      '          <span class="ptm-col-dot ptm-dot-done"></span>\n' +
+      '          <span>Done</span>\n' +
+      '          <span class="ptm-col-count" id="ptmColCountDone">0</span>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-col-body" id="ptmColDone"></div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-column" data-status="blocked">\n' +
+      '        <div class="ptm-column-header">\n' +
+      '          <span class="ptm-col-dot ptm-dot-blocked"></span>\n' +
+      '          <span>Blocked</span>\n' +
+      '          <span class="ptm-col-count" id="ptmColCountBlocked">0</span>\n' +
+      '        </div>\n' +
+      '        <div class="ptm-col-body" id="ptmColBlocked"></div>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- LIST VIEW -->\n' +
+      '    <div class="ptm-list-view" id="ptmListView" style="display:none">\n' +
+      '      <div class="ptm-list-table-wrap">\n' +
+      '        <table class="ptm-list-table">\n' +
+      '          <thead>\n' +
+      '            <tr>\n' +
+      '              <th class="ptm-sortable" data-sort="priority">!</th>\n' +
+      '              <th class="ptm-sortable" data-sort="title">Title</th>\n' +
+      '              <th class="ptm-sortable" data-sort="status">Status</th>\n' +
+      '              <th class="ptm-sortable" data-sort="assignedTo">Assignee</th>\n' +
+      '              <th class="ptm-sortable" data-sort="dueDate">Due Date</th>\n' +
+      '              <th class="ptm-sortable" data-sort="sprintId">Sprint</th>\n' +
+      '              <th>Actions</th>\n' +
+      '            </tr>\n' +
+      '          </thead>\n' +
+      '          <tbody id="ptmListBody"></tbody>\n' +
+      '        </table>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- MY REPORT VIEW (staff) -->\n' +
+      '    <div class="ptm-report-view" id="ptmReportView" style="display:none">\n' +
+      '      <div class="ptm-report-grid">\n' +
+      '        <div class="ptm-card ptm-report-card">\n' +
+      '          <div class="ptm-card-title">📈 Completion Overview</div>\n' +
+      '          <div class="ptm-report-donut-wrap">\n' +
+      '            <div class="ptm-donut-ring">\n' +
+      '              <svg viewBox="0 0 120 120" class="ptm-donut-svg">\n' +
+      '                <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" stroke-width="12"/>\n' +
+      '                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ptm-done)" stroke-width="12" stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" id="ptmDonutDone"/>\n' +
+      '                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ptm-progress)" stroke-width="12" stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" id="ptmDonutProgress" transform="rotate(0 60 60)"/>\n' +
+      '              </svg>\n' +
+      '              <div class="ptm-donut-center">\n' +
+      '                <div class="ptm-donut-pct" id="ptmDonutPct">0%</div>\n' +
+      '                <div class="ptm-donut-label">done</div>\n' +
+      '              </div>\n' +
+      '            </div>\n' +
+      '            <div class="ptm-donut-legend">\n' +
+      '              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-done)"></span> Done: <b id="ptmLegendDone">0</b></div>\n' +
+      '              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-progress)"></span> In Progress: <b id="ptmLegendProgress">0</b></div>\n' +
+      '              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-todo)"></span> To Do: <b id="ptmLegendTodo">0</b></div>\n' +
+      '              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-blocked)"></span> Blocked: <b id="ptmLegendBlocked">0</b></div>\n' +
+      '            </div>\n' +
+      '          </div>\n' +
+      '        </div>\n' +
+      '\n' +
+      '        <div class="ptm-card ptm-report-card">\n' +
+      '          <div class="ptm-card-title">⏱️ Workload Breakdown</div>\n' +
+      '          <div class="ptm-workload-bars" id="ptmWorkloadBars"></div>\n' +
+      '        </div>\n' +
+      '\n' +
+      '        <div class="ptm-card ptm-report-card">\n' +
+      '          <div class="ptm-card-title">🔴 Attention Needed</div>\n' +
+      '          <div class="ptm-overdue-list" id="ptmOverdueList"></div>\n' +
+      '        </div>\n' +
+      '\n' +
+      '        <div class="ptm-card ptm-report-card">\n' +
+      '          <div class="ptm-card-title">📅 Recent Activity</div>\n' +
+      '          <div class="ptm-activity-list" id="ptmActivityList"></div>\n' +
+      '        </div>\n' +
+      '\n' +
+      '        <div class="ptm-card ptm-report-card ptm-report-full">\n' +
+      '          <div class="ptm-card-title">📋 Completed This Sprint</div>\n' +
+      '          <div class="ptm-completed-list" id="ptmCompletedList"></div>\n' +
+      '        </div>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- TEAM VIEW -->\n' +
+      '    <div class="ptm-team-view" id="ptmTeamView" style="display:none">\n' +
+      '      <div class="ptm-card">\n' +
+      '        <div class="ptm-card-title">👥 Team — Permitted Users</div>\n' +
+      '        <p class="ptm-team-desc">These users have access to this tool via CMS object permissions. Assign tasks to any of them.</p>\n' +
+      '        <div class="ptm-team-grid" id="ptmTeamGrid"></div>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- EMPTY STATE (no sprint) -->\n' +
+      '    <div class="ptm-empty-state" id="ptmEmptyState">\n' +
+      '      <div class="ptm-empty-icon">📋</div>\n' +
+      '      <h3>No Sprint Selected</h3>\n' +
+      '      <p>Create a sprint to start managing tasks. A sprint can be a 2-week period, a month, or any custom duration.</p>\n' +
+      '      <button class="ptm-btn ptm-btn-primary" id="ptmBtnEmptyCreate">+ Create Your First Sprint</button>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- EMPTY STATE (no tasks in sprint) -->\n' +
+      '    <div class="ptm-empty-state" id="ptmEmptyTasks" style="display:none">\n' +
+      '      <div class="ptm-empty-icon">✅</div>\n' +
+      '      <h3>No Tasks Yet</h3>\n' +
+      '      <p>Add tasks to this sprint to get started.</p>\n' +
+      '      <button class="ptm-btn ptm-btn-primary" id="ptmBtnEmptyTask">+ Add First Task</button>\n' +
+      '    </div>\n' +
+      '\n' +
+      '    <!-- FOOTER -->\n' +
+      '    <div class="ptm-footer">\n' +
+      '      <span class="ptm-footer-text" id="ptmSavedAt"></span>\n' +
+      '      <span class="ptm-footer-text" id="ptmLastSync"></span>\n' +
+      '    </div>\n' +
+      '  </div>\n' +
+      '\n' +
+      '  <!-- TASK MODAL OVERLAY -->\n' +
+      '  <div class="ptm-overlay" id="ptmTaskOverlay" style="display:none">\n' +
+      '    <div class="ptm-modal ptm-modal-lg">\n' +
+      '      <div class="ptm-modal-head">\n' +
+      '        <h3 id="ptmModalTitle">New Task</h3>\n' +
+      '        <button class="ptm-icon-btn" id="ptmModalClose">&times;</button>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-modal-body">\n' +
+      '        <div class="ptm-form-grid">\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmTaskTitle">Title <span class="ptm-req">*</span></label>\n' +
+      '            <input type="text" id="ptmTaskTitle" placeholder="What needs to be done?" maxlength="200">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmTaskDesc">Description</label>\n' +
+      '            <textarea id="ptmTaskDesc" rows="3" placeholder="Details, acceptance criteria, notes…"></textarea>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmTaskStatus">Status</label>\n' +
+      '            <select id="ptmTaskStatus">\n' +
+      '              <option value="todo">To Do</option>\n' +
+      '              <option value="inProgress">In Progress</option>\n' +
+      '              <option value="done">Done</option>\n' +
+      '              <option value="blocked">Blocked</option>\n' +
+      '            </select>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmTaskPriority">Priority</label>\n' +
+      '            <select id="ptmTaskPriority">\n' +
+      '              <option value="medium">Medium</option>\n' +
+      '              <option value="low">Low</option>\n' +
+      '              <option value="high">High</option>\n' +
+      '              <option value="critical">Critical</option>\n' +
+      '            </select>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmTaskAssignee">Assigned To</label>\n' +
+      '            <select id="ptmTaskAssignee"><option value="">— Unassigned —</option></select>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-half">\n' +
+      '            <label for="ptmTaskDueDate">Due Date</label>\n' +
+      '            <input type="date" id="ptmTaskDueDate">\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmTaskLabels">Labels</label>\n' +
+      '            <div class="ptm-labels-input-row">\n' +
+      '              <input type="text" id="ptmTaskLabelsInput" placeholder="Type label and press Enter (e.g. bug, feature, docs)" maxlength="40">\n' +
+      '            </div>\n' +
+      '            <div class="ptm-labels-chips" id="ptmLabelsChips"></div>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label>Links &amp; Attachments</label>\n' +
+      '            <div class="ptm-attach-row">\n' +
+      '              <input type="text" id="ptmLinkUrl" placeholder="Paste a URL…" class="ptm-attach-url">\n' +
+      '              <input type="text" id="ptmLinkLabel" placeholder="Label (optional)" class="ptm-attach-label" maxlength="60">\n' +
+      '              <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnAddLink">+ Link</button>\n' +
+      '              <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnUploadFile">📎 Upload</button>\n' +
+      '            </div>\n' +
+      '            <div class="ptm-attach-list" id="ptmAttachList"></div>\n' +
+      '          </div>\n' +
+      '          <div class="ptm-field ptm-field-full">\n' +
+      '            <label for="ptmTaskNotes">Notes</label>\n' +
+      '            <textarea id="ptmTaskNotes" rows="2" placeholder="Additional notes…"></textarea>\n' +
+      '          </div>\n' +
+      '        </div>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-modal-actions">\n' +
+      '        <button class="ptm-btn ptm-btn-primary" id="ptmBtnSaveTask">Save Task</button>\n' +
+      '        <button class="ptm-btn ptm-btn-ghost" id="ptmBtnCancelTask">Cancel</button>\n' +
+      '        <button class="ptm-btn ptm-btn-danger ptm-btn-right" id="ptmBtnDeleteTask" style="display:none">Delete Task</button>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '  </div>\n' +
+      '\n' +
+      '  <!-- CONFIRM MODAL -->\n' +
+      '  <div class="ptm-overlay" id="ptmConfirmOverlay" style="display:none">\n' +
+      '    <div class="ptm-modal ptm-modal-sm">\n' +
+      '      <div class="ptm-modal-head">\n' +
+      '        <h3>Confirm</h3>\n' +
+      '        <button class="ptm-icon-btn" id="ptmConfirmClose">&times;</button>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-modal-body">\n' +
+      '        <p id="ptmConfirmMsg">Are you sure?</p>\n' +
+      '      </div>\n' +
+      '      <div class="ptm-modal-actions">\n' +
+      '        <button class="ptm-btn ptm-btn-danger" id="ptmBtnConfirmYes">Yes, Delete</button>\n' +
+      '        <button class="ptm-btn ptm-btn-ghost" id="ptmBtnConfirmNo">Cancel</button>\n' +
+      '      </div>\n' +
+      '    </div>\n' +
+      '  </div>\n' +
+      '\n' +
+      '</div>';
+})();
+</script>
+
+<script src="PersonalTaskManager.js"></script>
+
+<script>
+/* ── Test harness controls ── */
+document.getElementById('th-load-sample').addEventListener('click', function() {
+  if (confirm('Load sample data? This will replace any existing data.')) {
+    window.tool._loadSampleData();
+  }
+});
+document.getElementById('th-clear').addEventListener('click', function() {
+  if (confirm('Clear ALL data? This cannot be undone.')) {
+    window.tool._clearData();
+  }
+});
+document.getElementById('th-reload').addEventListener('click', function() {
+  window.location.reload();
+});
+document.getElementById('th-ro').addEventListener('click', function() {
+  window.tool._toggleReadOnly();
+});
+document.getElementById('th-role').addEventListener('click', function() {
+  window.tool._toggleRole();
+});
+document.getElementById('th-dump').addEventListener('click', function() {
+  window.tool._dump();
+  window.tool.notify('DB dumped to console (F12)', 'info');
+});
+</script>
+</body>
+</html>

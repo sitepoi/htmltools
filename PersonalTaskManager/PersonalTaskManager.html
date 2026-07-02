@@ -1,0 +1,373 @@
+<div class="ptm">
+  <div class="ptm-wrap">
+
+    <!-- HEADER -->
+    <header class="ptm-header">
+      <div class="ptm-brand">
+        <span class="ptm-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
+          Task Manager
+        </span>
+        <h1>Personal <span class="ptm-thin">Task</span> Manager</h1>
+      </div>
+      <div class="ptm-user-area">
+        <span class="ptm-role-badge" id="ptmRoleBadge">Staff</span>
+        <span class="ptm-user-name" id="ptmUserName">—</span>
+      </div>
+    </header>
+
+    <!-- SPRINT SELECTOR BAR -->
+    <div class="ptm-sprint-bar">
+      <div class="ptm-sprint-left">
+        <label class="ptm-sprint-label" for="ptmSprintSelect">Sprint / Period</label>
+        <select id="ptmSprintSelect"><option value="">— No sprint selected —</option></select>
+        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnNewSprint">+ New Sprint</button>
+      </div>
+      <div class="ptm-sprint-right">
+        <span class="ptm-sprint-dates" id="ptmSprintDates"></span>
+        <span class="ptm-sprint-status" id="ptmSprintStatus"></span>
+        <button class="ptm-btn ptm-btn-outline ptm-btn-sm ptm-sprint-edit-btn" id="ptmBtnEditSprint" style="display:none" title="Edit sprint name, dates, and team">✎ Edit</button>
+        <button class="ptm-btn ptm-btn-danger ptm-btn-sm ptm-sprint-edit-btn" id="ptmBtnDeleteSprintBar" style="display:none" title="Delete this sprint and all its tasks">✕ Delete</button>
+      </div>
+    </div>
+
+    <!-- SPRINT FORM (collapsible) -->
+    <div class="ptm-sprint-form" id="ptmSprintForm" style="display:none">
+      <div class="ptm-card">
+        <h3 class="ptm-card-title" id="ptmSprintFormTitle">Create Sprint</h3>
+        <div class="ptm-form-grid">
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmSprintName">Sprint Name <span class="ptm-req">*</span></label>
+            <input type="text" id="ptmSprintName" placeholder="e.g. Sprint 1, Q3 Planning" maxlength="120">
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmSprintStart">Start Date <span class="ptm-req">*</span></label>
+            <input type="date" id="ptmSprintStart">
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmSprintEnd">End Date <span class="ptm-req">*</span></label>
+            <input type="date" id="ptmSprintEnd">
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmSprintGoal">Sprint Goal</label>
+            <input type="text" id="ptmSprintGoal" placeholder="What is the key outcome this sprint aims to achieve?" maxlength="300">
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmSprintStatusSelect">Status</label>
+            <select id="ptmSprintStatusSelect">
+              <option value="active">Active</option>
+              <option value="planned">Planned</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+        <div class="ptm-form-actions">
+          <button class="ptm-btn ptm-btn-primary" id="ptmBtnSaveSprint">Save Sprint</button>
+          <button class="ptm-btn ptm-btn-ghost" id="ptmBtnCancelSprint">Cancel</button>
+          <button class="ptm-btn ptm-btn-danger ptm-btn-right" id="ptmBtnDeleteSprint" style="display:none">Delete Sprint</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="ptm-stats-row" id="ptmStatsRow">
+      <div class="ptm-stat">
+        <div class="ptm-stat-value" id="ptmStatTotal">0</div>
+        <div class="ptm-stat-label">Total Tasks</div>
+      </div>
+      <div class="ptm-stat ptm-stat-todo">
+        <div class="ptm-stat-value" id="ptmStatTodo">0</div>
+        <div class="ptm-stat-label">To Do</div>
+      </div>
+      <div class="ptm-stat ptm-stat-progress">
+        <div class="ptm-stat-value" id="ptmStatProgress">0</div>
+        <div class="ptm-stat-label">In Progress</div>
+      </div>
+      <div class="ptm-stat ptm-stat-done">
+        <div class="ptm-stat-value" id="ptmStatDone">0</div>
+        <div class="ptm-stat-label">Done</div>
+      </div>
+      <div class="ptm-stat ptm-stat-blocked">
+        <div class="ptm-stat-value" id="ptmStatBlocked">0</div>
+        <div class="ptm-stat-label">Blocked</div>
+      </div>
+      <div class="ptm-stat ptm-stat-progressbar">
+        <div class="ptm-progress-wrap">
+          <div class="ptm-progress-bar" id="ptmProgressBar" style="width:0%"></div>
+        </div>
+        <div class="ptm-stat-label"><span id="ptmProgressPct">0%</span> complete</div>
+      </div>
+    </div>
+
+    <!-- SPRINT GOAL BANNER -->
+    <div class="ptm-goal-banner" id="ptmGoalBanner" style="display:none">
+      <span class="ptm-goal-icon">🎯</span>
+      <span class="ptm-goal-text" id="ptmGoalText"></span>
+    </div>
+
+    <!-- VIEW TABS -->
+    <div class="ptm-view-tabs" id="ptmViewTabs">
+      <button class="ptm-view-tab active" data-view="board">📋 Board</button>
+      <button class="ptm-view-tab" data-view="list">📝 List</button>
+      <button class="ptm-view-tab ptm-view-tab-staff" data-view="report" id="ptmTabReport">📊 My Report</button>
+      <button class="ptm-view-tab" data-view="team" id="ptmTabTeam">👥 Team</button>
+    </div>
+
+    <!-- BOARD TOOLBAR -->
+    <div class="ptm-board-toolbar" id="ptmBoardToolbar">
+      <div class="ptm-toolbar-left">
+        <input type="search" id="ptmSearchInput" class="ptm-search-input" placeholder="🔍 Search tasks…">
+        <select id="ptmFilterAssignee" class="ptm-filter-select">
+          <option value="">All Assignees</option>
+        </select>
+        <select id="ptmFilterPriority" class="ptm-filter-select">
+          <option value="">All Priorities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select id="ptmFilterStatus" class="ptm-filter-select">
+          <option value="">All Statuses</option>
+          <option value="todo">To Do</option>
+          <option value="inProgress">In Progress</option>
+          <option value="done">Done</option>
+          <option value="blocked">Blocked</option>
+        </select>
+      </div>
+      <div class="ptm-toolbar-right">
+        <span class="ptm-toolbar-info" id="ptmTaskCount">0 tasks</span>
+        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnExportPdf" title="Export sprint report as PDF">📄 PDF</button>
+        <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnExportCsv" title="Export tasks as CSV">📊 CSV</button>
+        <button class="ptm-btn ptm-btn-primary" id="ptmBtnAddTask" disabled title="Select a sprint first">+ Add Task</button>
+      </div>
+    </div>
+
+    <!-- KANBAN BOARD VIEW -->
+    <div class="ptm-board" id="ptmBoard">
+      <div class="ptm-column" data-status="todo">
+        <div class="ptm-column-header">
+          <span class="ptm-col-dot ptm-dot-todo"></span>
+          <span>To Do</span>
+          <span class="ptm-col-count" id="ptmColCountTodo">0</span>
+        </div>
+        <div class="ptm-col-body" id="ptmColTodo"></div>
+      </div>
+      <div class="ptm-column" data-status="inProgress">
+        <div class="ptm-column-header">
+          <span class="ptm-col-dot ptm-dot-progress"></span>
+          <span>In Progress</span>
+          <span class="ptm-col-count" id="ptmColCountProgress">0</span>
+        </div>
+        <div class="ptm-col-body" id="ptmColProgress"></div>
+      </div>
+      <div class="ptm-column" data-status="done">
+        <div class="ptm-column-header">
+          <span class="ptm-col-dot ptm-dot-done"></span>
+          <span>Done</span>
+          <span class="ptm-col-count" id="ptmColCountDone">0</span>
+        </div>
+        <div class="ptm-col-body" id="ptmColDone"></div>
+      </div>
+      <div class="ptm-column" data-status="blocked">
+        <div class="ptm-column-header">
+          <span class="ptm-col-dot ptm-dot-blocked"></span>
+          <span>Blocked</span>
+          <span class="ptm-col-count" id="ptmColCountBlocked">0</span>
+        </div>
+        <div class="ptm-col-body" id="ptmColBlocked"></div>
+      </div>
+    </div>
+
+    <!-- LIST VIEW -->
+    <div class="ptm-list-view" id="ptmListView" style="display:none">
+      <div class="ptm-list-table-wrap">
+        <table class="ptm-list-table">
+          <thead>
+            <tr>
+              <th class="ptm-sortable" data-sort="priority">!</th>
+              <th class="ptm-sortable" data-sort="title">Title</th>
+              <th class="ptm-sortable" data-sort="status">Status</th>
+              <th class="ptm-sortable" data-sort="assignedTo">Assignee</th>
+              <th class="ptm-sortable" data-sort="dueDate">Due Date</th>
+              <th class="ptm-sortable" data-sort="sprintId">Sprint</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ptmListBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MY REPORT VIEW (staff) -->
+    <div class="ptm-report-view" id="ptmReportView" style="display:none">
+      <div class="ptm-report-grid">
+        <div class="ptm-card ptm-report-card">
+          <div class="ptm-card-title">📈 Completion Overview</div>
+          <div class="ptm-report-donut-wrap">
+            <div class="ptm-donut-ring">
+              <svg viewBox="0 0 120 120" class="ptm-donut-svg">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" stroke-width="12"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ptm-done)" stroke-width="12" stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" id="ptmDonutDone"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--ptm-progress)" stroke-width="12" stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" id="ptmDonutProgress" transform="rotate(0 60 60)"/>
+              </svg>
+              <div class="ptm-donut-center">
+                <div class="ptm-donut-pct" id="ptmDonutPct">0%</div>
+                <div class="ptm-donut-label">done</div>
+              </div>
+            </div>
+            <div class="ptm-donut-legend">
+              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-done)"></span> Done: <b id="ptmLegendDone">0</b></div>
+              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-progress)"></span> In Progress: <b id="ptmLegendProgress">0</b></div>
+              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-todo)"></span> To Do: <b id="ptmLegendTodo">0</b></div>
+              <div class="ptm-legend-item"><span class="ptm-legend-dot" style="background:var(--ptm-blocked)"></span> Blocked: <b id="ptmLegendBlocked">0</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ptm-card ptm-report-card">
+          <div class="ptm-card-title">⏱️ Workload Breakdown</div>
+          <div class="ptm-workload-bars" id="ptmWorkloadBars"></div>
+        </div>
+
+        <div class="ptm-card ptm-report-card">
+          <div class="ptm-card-title">🔴 Attention Needed</div>
+          <div class="ptm-overdue-list" id="ptmOverdueList"></div>
+        </div>
+
+        <div class="ptm-card ptm-report-card">
+          <div class="ptm-card-title">📅 Recent Activity</div>
+          <div class="ptm-activity-list" id="ptmActivityList"></div>
+        </div>
+
+        <div class="ptm-card ptm-report-card ptm-report-full">
+          <div class="ptm-card-title">📋 Completed This Sprint</div>
+          <div class="ptm-completed-list" id="ptmCompletedList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM VIEW -->
+    <div class="ptm-team-view" id="ptmTeamView" style="display:none">
+      <div class="ptm-card">
+        <div class="ptm-card-title">👥 Team — Permitted Users</div>
+        <p class="ptm-team-desc">These users have access to this tool via CMS object permissions. Assign tasks to any of them.</p>
+        <div class="ptm-team-grid" id="ptmTeamGrid"></div>
+      </div>
+    </div>
+
+    <!-- EMPTY STATE (no sprint) -->
+    <div class="ptm-empty-state" id="ptmEmptyState">
+      <div class="ptm-empty-icon">📋</div>
+      <h3>No Sprint Selected</h3>
+      <p>Create a sprint to start managing tasks. A sprint can be a 2-week period, a month, or any custom duration.</p>
+      <button class="ptm-btn ptm-btn-primary" id="ptmBtnEmptyCreate">+ Create Your First Sprint</button>
+    </div>
+
+    <!-- EMPTY STATE (no tasks in sprint) -->
+    <div class="ptm-empty-state" id="ptmEmptyTasks" style="display:none">
+      <div class="ptm-empty-icon">✅</div>
+      <h3>No Tasks Yet</h3>
+      <p>Add tasks to this sprint to get started.</p>
+      <button class="ptm-btn ptm-btn-primary" id="ptmBtnEmptyTask">+ Add First Task</button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="ptm-footer">
+      <span class="ptm-footer-text" id="ptmSavedAt"></span>
+      <span class="ptm-footer-text" id="ptmLastSync"></span>
+    </div>
+  </div>
+
+  <!-- TASK MODAL OVERLAY -->
+  <div class="ptm-overlay" id="ptmTaskOverlay" style="display:none">
+    <div class="ptm-modal ptm-modal-lg">
+      <div class="ptm-modal-head">
+        <h3 id="ptmModalTitle">New Task</h3>
+        <button class="ptm-icon-btn" id="ptmModalClose">&times;</button>
+      </div>
+      <div class="ptm-modal-body">
+        <div class="ptm-form-grid">
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmTaskTitle">Title <span class="ptm-req">*</span></label>
+            <input type="text" id="ptmTaskTitle" placeholder="What needs to be done?" maxlength="200">
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmTaskDesc">Description</label>
+            <textarea id="ptmTaskDesc" rows="3" placeholder="Details, acceptance criteria, notes…"></textarea>
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmTaskStatus">Status</label>
+            <select id="ptmTaskStatus">
+              <option value="todo">To Do</option>
+              <option value="inProgress">In Progress</option>
+              <option value="done">Done</option>
+              <option value="blocked">Blocked</option>
+            </select>
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmTaskPriority">Priority</label>
+            <select id="ptmTaskPriority">
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmTaskAssignee">Assigned To</label>
+            <select id="ptmTaskAssignee"><option value="">— Unassigned —</option></select>
+          </div>
+          <div class="ptm-field ptm-field-half">
+            <label for="ptmTaskDueDate">Due Date</label>
+            <input type="date" id="ptmTaskDueDate">
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmTaskLabels">Labels</label>
+            <div class="ptm-labels-input-row">
+              <input type="text" id="ptmTaskLabelsInput" placeholder="Type label and press Enter (e.g. bug, feature, docs)" maxlength="40">
+            </div>
+            <div class="ptm-labels-chips" id="ptmLabelsChips"></div>
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label>Links &amp; Attachments</label>
+            <div class="ptm-attach-row">
+              <input type="text" id="ptmLinkUrl" placeholder="Paste a URL…" class="ptm-attach-url">
+              <input type="text" id="ptmLinkLabel" placeholder="Label (optional)" class="ptm-attach-label" maxlength="60">
+              <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnAddLink">+ Link</button>
+              <button class="ptm-btn ptm-btn-outline ptm-btn-sm" id="ptmBtnUploadFile">📎 Upload</button>
+            </div>
+            <div class="ptm-attach-list" id="ptmAttachList"></div>
+          </div>
+          <div class="ptm-field ptm-field-full">
+            <label for="ptmTaskNotes">Notes</label>
+            <textarea id="ptmTaskNotes" rows="2" placeholder="Additional notes…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="ptm-modal-actions">
+        <button class="ptm-btn ptm-btn-primary" id="ptmBtnSaveTask">Save Task</button>
+        <button class="ptm-btn ptm-btn-ghost" id="ptmBtnCancelTask">Cancel</button>
+        <button class="ptm-btn ptm-btn-danger ptm-btn-right" id="ptmBtnDeleteTask" style="display:none">Delete Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div class="ptm-overlay" id="ptmConfirmOverlay" style="display:none">
+    <div class="ptm-modal ptm-modal-sm">
+      <div class="ptm-modal-head">
+        <h3>Confirm</h3>
+        <button class="ptm-icon-btn" id="ptmConfirmClose">&times;</button>
+      </div>
+      <div class="ptm-modal-body">
+        <p id="ptmConfirmMsg">Are you sure?</p>
+      </div>
+      <div class="ptm-modal-actions">
+        <button class="ptm-btn ptm-btn-danger" id="ptmBtnConfirmYes">Yes, Delete</button>
+        <button class="ptm-btn ptm-btn-ghost" id="ptmBtnConfirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+</div>

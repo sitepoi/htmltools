@@ -14,7 +14,7 @@ var MODS = [
 ];
 var TOTAL_MODS = MODS.length;
 var readOnly = false;
-var _selfSave = false;
+var _recentSaves = {};
 var _saveTimer = null;
 var $ = function (id) { return document.getElementById(id); };
 
@@ -115,13 +115,13 @@ function defaultData() {
 function gatherData() {
   var data = {
     staffName: ($('staffName').value || '').trim(),
-    date: $('trainDate').value || '',
+    date: ($('trainDate').value || '').trim(),
     modules: {},
     submittedAt: currentValue ? currentValue.submittedAt || '' : '',
     handbookAcknowledged: {
       confirmed: $('hbConfirmed') ? $('hbConfirmed').checked : false,
-      initials: $('hbInitials') ? ($('hbInitials').value || '').trim() : '',
-      dateAcknowledged: $('hbDate') ? $('hbDate').value || '' : ''
+      initials: $('hbInitials') ? ($('hbInitials').value || '') : '',
+      dateAcknowledged: ($('hbDate') ? $('hbDate').value || '' : '').trim()
     },
     signature: canvasToData('sigFull')
   };
@@ -136,12 +136,12 @@ function gatherData() {
       var answers = [];
       for (var q = 0; q < 3; q++) {
         var inp = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-q="' + q + '"]');
-        answers.push(inp ? (inp.value || '').trim() : '');
+        answers.push(inp ? (inp.value || '') : '');
       }
       data.modules[m.id] = {
         type: 'self',
         completed: completed,
-        initials: (document.querySelector('.stv-init[data-mod="' + m.id + '"]') || {}).value || '',
+        initials: ((document.querySelector('.stv-init[data-mod="' + m.id + '"]') || {}).value || '').trim(),
         answers: answers,
         dateCompleted: completed ? (prev[m.id] ? prev[m.id].dateCompleted || '' : '') : '',
         deliveredBy: ''
@@ -152,10 +152,10 @@ function gatherData() {
       data.modules[m.id] = {
         type: 'supervised',
         completed: completed,
-        staffInitials: (document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]') || {}).value || '',
-        supervisorInitials: (document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]') || {}).value || '',
-        dateCompleted: dateEl ? dateEl.value || '' : '',
-        deliveredBy: delByEl ? (delByEl.value || '').trim() : ''
+        staffInitials: ((document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]') || {}).value || '').trim(),
+        supervisorInitials: ((document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]') || {}).value || '').trim(),
+        dateCompleted: (dateEl ? dateEl.value || '' : '').trim(),
+        deliveredBy: (delByEl ? (delByEl.value || '') : '').trim()
       };
     }
   });
@@ -165,30 +165,34 @@ function gatherData() {
 /* ---- Populate DOM from saved data ---- */
 function populateUI(data) {
   if (!data) return;
-  $('staffName').value = data.staffName || '';
-  $('trainDate').value = data.date || '';
+  if ($('staffName').value !== (data.staffName || '')) $('staffName').value = data.staffName || '';
+  if ($('trainDate').value !== (data.date || '')) $('trainDate').value = data.date || '';
 
   MODS.forEach(function (m) {
     var cb = document.querySelector('.stv-cb[data-mod="' + m.id + '"]');
     var mod = (data.modules && data.modules[m.id]) ? data.modules[m.id] : defaultModData(m);
-    if (cb) cb.checked = !!mod.completed;
+    if (cb && cb.checked !== !!mod.completed) cb.checked = !!mod.completed;
 
     if (isSelf(m)) {
       var initEl = document.querySelector('.stv-init[data-mod="' + m.id + '"]');
-      if (initEl) initEl.value = (mod.initials || '').length < 200 ? (mod.initials || '') : '';
+      var newInit = (mod.initials || '').length < 200 ? (mod.initials || '') : '';
+      if (initEl && initEl.value !== newInit) initEl.value = newInit;
       for (var q = 0; q < 3; q++) {
         var inp = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-q="' + q + '"]');
-        if (inp) inp.value = (mod.answers && mod.answers[q]) ? mod.answers[q] : '';
+        var newAns = (mod.answers && mod.answers[q]) ? mod.answers[q] : '';
+        if (inp && inp.value !== newAns) inp.value = newAns;
       }
     } else {
       var dateEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="date"]');
       var delByEl = document.querySelector('.stv-inp[data-mod="' + m.id + '"][data-sup="deliveredBy"]');
       var staffInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="staffInitials"]');
       var supInitEl = document.querySelector('.stv-init[data-mod="' + m.id + '"][data-sup="supervisorInitials"]');
-      if (staffInitEl) staffInitEl.value = (mod.staffInitials || '').length < 200 ? (mod.staffInitials || '') : '';
-      if (supInitEl) supInitEl.value = (mod.supervisorInitials || '').length < 200 ? (mod.supervisorInitials || '') : '';
-      if (dateEl) dateEl.value = mod.dateCompleted || '';
-      if (delByEl) delByEl.value = mod.deliveredBy || '';
+      var sNew = (mod.staffInitials || '').length < 200 ? (mod.staffInitials || '') : '';
+      var pNew = (mod.supervisorInitials || '').length < 200 ? (mod.supervisorInitials || '') : '';
+      if (staffInitEl && staffInitEl.value !== sNew) staffInitEl.value = sNew;
+      if (supInitEl && supInitEl.value !== pNew) supInitEl.value = pNew;
+      if (dateEl && dateEl.value !== (mod.dateCompleted || '')) dateEl.value = mod.dateCompleted || '';
+      if (delByEl && delByEl.value !== (mod.deliveredBy || '')) delByEl.value = mod.deliveredBy || '';
     }
   });
   // Handbook fields
@@ -376,9 +380,17 @@ function validateForm() {
 
 /* ---- Save ---- */
 function saveValue(data) {
-  _selfSave = true;
+  var hash = JSON.stringify(data);
+  _recentSaves[hash] = Date.now() + 8000; // keep for 8s to catch late echoes
   try { tool.setValue(data); } catch (e) {}
-  _selfSave = false;
+  // Purge expired entries (keep map small)
+  var now = Date.now();
+  var keys = Object.keys(_recentSaves);
+  if (keys.length > 30) {
+    for (var i = 0; i < keys.length; i++) {
+      if (_recentSaves[keys[i]] < now) delete _recentSaves[keys[i]];
+    }
+  }
   // Validation only fires on explicit submit/checkbox, not on auto-save strokes
 }
 
@@ -584,7 +596,6 @@ var currentValue = null;
 
 /* ---- Render ---- */
 function render(val) {
-  if (_selfSave) return;
   currentValue = val || defaultData();
   if (!currentValue.modules) currentValue = defaultData();
   populateUI(currentValue);
@@ -624,7 +635,14 @@ tool.onReady(function (val) {
   if (tool.isReadOnly()) lockUI(true);
 
   tool.onValueChange(function (v) {
-    if (_selfSave) return;
+    if (!v) return;
+    // Skip re-render if this is our own save echoing back (handles out-of-order postMessage)
+    var incomingHash = JSON.stringify(v);
+    if (_recentSaves[incomingHash]) {
+      delete _recentSaves[incomingHash];
+      return;
+    }
+    // External change (another user) — full re-render
     currentValue = v;
     render(v);
   });

@@ -170,16 +170,18 @@
   }
 
   function updateSubmittedState() {
+    var conf = $("#iar-confirmation");
+    var submitBtn = $("#iar-submit");
+    var newReportBtn = $("#iar-new-report");
+
     if (submitted) {
-      $$(".iar-section").forEach(function (sec) { sec.style.display = "none"; });
-      var conf = $("#iar-confirmation");
       if (conf) conf.style.display = "";
-      var foot = $(".iar-foot");
-      if (foot) foot.style.display = "flex";
+      if (submitBtn) submitBtn.style.display = "none";
+      if (newReportBtn) newReportBtn.style.display = readOnly ? "none" : "";
     } else {
-      $$(".iar-section").forEach(function (sec) { sec.style.display = ""; });
-      var conf = $("#iar-confirmation");
       if (conf) conf.style.display = "none";
+      if (submitBtn) submitBtn.style.display = readOnly ? "none" : "";
+      if (newReportBtn) newReportBtn.style.display = "none";
     }
     updateValidity();
   }
@@ -188,8 +190,9 @@
   function applyReadonly() {
     ROOT.setAttribute("data-readonly", readOnly ? "true" : "false");
 
-    var fuFields = $$("#sec-followup input, #sec-followup select, #sec-followup textarea");
-    fuFields.forEach(function (el) {
+    // In read-only mode, all form fields become non-editable
+    var allFields = $$(".iar-field input, .iar-field select, .iar-field textarea");
+    allFields.forEach(function (el) {
       if (readOnly) {
         el.setAttribute("readonly", "");
         el.style.pointerEvents = "none";
@@ -200,6 +203,18 @@
         el.style.background = "";
       }
     });
+
+    // Submit button hidden when read-only or already submitted
+    var submitBtn = $("#iar-submit");
+    if (submitBtn) submitBtn.style.display = (readOnly || submitted) ? "none" : "";
+
+    // New report button hidden when read-only
+    var newReportBtn = $("#iar-new-report");
+    if (newReportBtn) newReportBtn.style.display = (readOnly || !submitted) ? "none" : "";
+
+    // Print button always visible
+    var printBtn = $("#iar-print");
+    if (printBtn) printBtn.style.display = "";
   }
 
   /* ---- Wire events ---- */
@@ -245,7 +260,6 @@
         submitted = true;
         persistNow();
         updateSubmittedState();
-        applyReadonly();
         notify("Your report has been recorded.", "success");
         resize();
       });

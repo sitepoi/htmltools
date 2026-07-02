@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttendCheck — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="AttendanceChecker.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — AttendCheck</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'attendance_checker_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('AttendCheck DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = '<div id="app"><aside class="sidebar"><div class="sidebar-brand"><div class="brand-icon">✓</div><div class="brand-name">AttendCheck</div><div class="brand-sub">Attendance Management</div></div><nav class="nav"><div class="nav-item active" data-page="people"><span class="nav-icon">👥</span>People<span class="nav-badge" id="nav-people-count">0</span></div><div class="nav-item" data-page="events"><span class="nav-icon">📅</span>Events<span class="nav-badge" id="nav-events-count">0</span></div><div class="nav-item" data-page="calendar"><span class="nav-icon">🗓</span>Calendar<span class="nav-badge" id="nav-calendar-count">0</span></div><div class="nav-item" data-page="reports"><span class="nav-icon">📊</span>Reports</div></nav><button class="btn btn-primary btn-full" id="btn-quick-event">+ Quick Event</button></aside><main class="main"><button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button><section id="sec-people" class="section active"><div class="page-header"><div class="page-title">People</div><div class="page-sub">Manage the individuals whose attendance you need to track</div><div class="page-actions"><button class="btn btn-primary" id="btn-add-person">+ Add Person</button><button class="btn btn-ghost" id="btn-import-people">📥 Import</button><input type="text" id="people-search" class="search-input" placeholder="Search people..."></div></div><div class="people-grid" id="people-grid"><div class="empty-state"><div class="empty-icon">👥</div><h3>No people added yet</h3><p>Add the individuals whose attendance you want to track across events and activities.</p><button class="btn btn-primary" id="btn-add-person-empty">+ Add First Person</button></div></div></section><section id="sec-events" class="section"><div class="page-header"><div class="page-title">Events</div><div class="page-sub">Create individual events or recurring series for attendance tracking</div><div class="page-actions"><button class="btn btn-primary" id="btn-add-event">+ Add Event</button><button class="btn btn-outline" id="btn-add-series">🔄 Add Series</button><input type="text" id="events-search" class="search-input" placeholder="Search events..."></div></div><div class="events-list" id="events-list"><div class="empty-state"><div class="empty-icon">📅</div><h3>No events created yet</h3><p>Create events to start tracking attendance. You can add single events or recurring series.</p><button class="btn btn-primary" id="btn-add-event-empty">+ Create First Event</button></div></div></section><section id="sec-calendar" class="section"><div class="page-header"><div class="page-title">Calendar</div><div class="page-sub">View and manage attendance across all events</div><div class="page-actions" style="gap:6px"><div class="cal-nav"><button class="btn btn-icon" id="cal-prev" title="Previous">◀</button><button class="btn btn-ghost" id="cal-today">Today</button><button class="btn btn-icon" id="cal-next" title="Next">▶</button><h3 class="cal-title" id="cal-title">June 2026</h3></div><div class="cal-view-btns"><button class="btn btn-ghost btn-sm cal-view-btn active" data-view="day">Day</button><button class="btn btn-ghost btn-sm cal-view-btn" data-view="week">Week</button><button class="btn btn-ghost btn-sm cal-view-btn" data-view="month">Month</button></div></div></div><div class="calendar-container" id="calendar-container"></div></section><section id="sec-reports" class="section"><div class="page-header"><div class="page-title">Reports</div><div class="page-sub">Comprehensive attendance summaries and latency analysis</div><div class="page-actions"><button class="btn btn-outline" id="btn-export-report">📄 Export</button></div></div><div class="reports-tabs"><button class="report-tab active" data-tab="summary">Summary</button><button class="report-tab" data-tab="latency">Latency Report</button><button class="report-tab" data-tab="absence">Absence Report</button><button class="report-tab" data-tab="cards">Person Cards</button></div><div class="report-content" id="report-content"></div></section></main></div><div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal"><div class="modal-header"><h3 id="modal-title">Modal Title</h3><button class="btn btn-icon modal-close" id="modal-close">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div><div class="drawer-overlay" id="drawer-overlay"><div class="drawer" id="drawer"><div class="drawer-header"><div><h3 id="drawer-event-title">Event Attendance</h3><div class="drawer-event-meta" id="drawer-event-meta"></div></div><button class="btn btn-icon drawer-close" id="drawer-close">✕</button></div><div class="drawer-body" id="drawer-body"></div><div class="drawer-footer"><div class="drawer-stats" id="drawer-stats"></div><button class="btn btn-primary" id="drawer-save">Save Attendance</button></div></div></div><div class="toast-container" id="toast-container"></div>';
+</script>
+
+<script>
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'AttendanceChecker.js';
+    script.onload = function() { status.textContent = 'Ready — click "Load Sample Data" to test'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('AttendanceChecker.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      // Fallback already triggered by timer
+    });
+})();
+</script>
+
+<script>
+/* ── Sample Data Generator ── */
+(function() {
+  var today = new Date();
+  function dateISO(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function generateSampleData() {
+    var people = [
+      { id: uid(), name: "Alice Johnson", email: "alice@example.com", phone: "+1 555-0101", group: "Engineering" },
+      { id: uid(), name: "Bob Smith", email: "bob@example.com", phone: "+1 555-0102", group: "Engineering" },
+      { id: uid(), name: "Carol Davis", email: "carol@example.com", phone: "+1 555-0103", group: "Design" },
+      { id: uid(), name: "Dave Wilson", email: "dave@example.com", phone: "+1 555-0104", group: "Design" },
+      { id: uid(), name: "Eve Martinez", email: "eve@example.com", phone: "+1 555-0105", group: "Product" },
+      { id: uid(), name: "Frank Brown", email: "frank@example.com", phone: "+1 555-0106", group: "Engineering" },
+      { id: uid(), name: "Grace Lee", email: "grace@example.com", phone: "+1 555-0107", group: "Product" },
+      { id: uid(), name: "Henry Taylor", email: "henry@example.com", phone: "+1 555-0108", group: "Engineering" }
+    ];
+
+    var seriesId1 = uid();
+    var events = [];
+    var attendance = {};
+
+    var monday = new Date(today);
+    monday.setDate(monday.getDate() - ((today.getDay() + 6) % 7));
+    for (var i = 0; i < 5; i++) {
+      var d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      if (d > today) break;
+      var evId = uid();
+      events.push({
+        id: evId, title: "Daily Standup (" + (i + 1) + "/5)", date: dateISO(d),
+        time: "09:00", endTime: "09:30", location: "Conference Room A",
+        description: "Daily team standup meeting.", color: "#2563eb", seriesId: seriesId1
+      });
+      people.forEach(function(p, pi) {
+        var key = evId + "-" + p.id;
+        if (pi === 2 && i >= 2) { attendance[key] = { status: "late", lateMinutes: 10 + i * 5, notes: "Traffic" }; }
+        else if (pi === 4 && i === 3) { attendance[key] = { status: "absent", lateMinutes: 0, notes: "Doctor" }; }
+        else if (pi === 7 && i >= 1) { attendance[key] = { status: "absent", lateMinutes: 0, notes: "" }; }
+        else { attendance[key] = { status: "present", lateMinutes: 0, notes: "" }; }
+      });
+    }
+
+    var lastFriday = new Date(today);
+    lastFriday.setDate(lastFriday.getDate() - ((today.getDay() + 2) % 7));
+    if (lastFriday <= today) {
+      var revId = uid();
+      events.push({
+        id: revId, title: "Weekly Sprint Review", date: dateISO(lastFriday),
+        time: "14:00", endTime: "15:00", location: "Main Hall",
+        description: "Weekly sprint review and demo.", color: "#16a34a", seriesId: null
+      });
+      people.forEach(function(p, pi) {
+        var key = revId + "-" + p.id;
+        attendance[key] = { status: pi === 7 ? "absent" : "present", lateMinutes: 0, notes: "" };
+      });
+    }
+
+    if (today.getDay() >= 1 && today.getDay() <= 5) {
+      events.push({
+        id: uid(), title: "Design Thinking Workshop", date: dateISO(today),
+        time: "11:00", endTime: "12:30", location: "Training Room 3",
+        description: "Interactive workshop on design thinking methodologies.", color: "#7c3aed", seriesId: null
+      });
+    }
+
+    return { people: people, events: events, attendance: attendance, _theme: "light" };
+  }
+
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool._loadSampleData(generateSampleData());
+  };
+  document.getElementById('th-clear').onclick = function() {
+    window.tool._clearData();
+  };
+  document.getElementById('th-reload').onclick = function() {
+    window.location.reload();
+  };
+})();
+</script>
+</body>
+</html>

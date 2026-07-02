@@ -1,0 +1,135 @@
+<div id="app">
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<div class="brand-icon">✓</div>
+			<div class="brand-name">AttendCheck</div>
+			<div class="brand-sub">Attendance Management</div>
+		</div>
+		<nav class="nav">
+			<div class="nav-item active" data-page="people"><span class="nav-icon">👥</span>People<span class="nav-badge" id="nav-people-count">0</span></div>
+			<div class="nav-item" data-page="events"><span class="nav-icon">📅</span>Events<span class="nav-badge" id="nav-events-count">0</span></div>
+			<div class="nav-item" data-page="calendar"><span class="nav-icon">🗓</span>Calendar<span class="nav-badge" id="nav-calendar-count">0</span></div>
+			<div class="nav-item" data-page="reports"><span class="nav-icon">📊</span>Reports</div>
+		</nav>
+		<button class="btn btn-primary btn-full" id="btn-quick-event">+ Quick Event</button>
+	</aside>
+
+	<main class="main">
+		<button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>
+
+		<!-- PEOPLE -->
+		<section id="sec-people" class="section active">
+			<div class="page-header">
+				<div class="page-title">People</div>
+				<div class="page-sub">Manage the individuals whose attendance you need to track</div>
+				<div class="page-actions">
+					<button class="btn btn-primary" id="btn-add-person">+ Add Person</button>
+					<button class="btn btn-ghost" id="btn-import-people">📥 Import</button>
+					<input type="text" id="people-search" class="search-input" placeholder="Search people...">
+				</div>
+			</div>
+			<div class="people-grid" id="people-grid">
+				<div class="empty-state">
+					<div class="empty-icon">👥</div>
+					<h3>No people added yet</h3>
+					<p>Add the individuals whose attendance you want to track across events and activities.</p>
+					<button class="btn btn-primary" id="btn-add-person-empty">+ Add First Person</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- EVENTS -->
+		<section id="sec-events" class="section">
+			<div class="page-header">
+				<div class="page-title">Events</div>
+				<div class="page-sub">Create individual events or recurring series for attendance tracking</div>
+				<div class="page-actions">
+					<button class="btn btn-primary" id="btn-add-event">+ Add Event</button>
+					<button class="btn btn-outline" id="btn-add-series">🔄 Add Series</button>
+					<input type="text" id="events-search" class="search-input" placeholder="Search events...">
+				</div>
+			</div>
+			<div class="events-list" id="events-list">
+				<div class="empty-state">
+					<div class="empty-icon">📅</div>
+					<h3>No events created yet</h3>
+					<p>Create events to start tracking attendance. You can add single events or recurring series.</p>
+					<button class="btn btn-primary" id="btn-add-event-empty">+ Create First Event</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- CALENDAR -->
+		<section id="sec-calendar" class="section">
+			<div class="page-header">
+				<div class="page-title">Calendar</div>
+				<div class="page-sub">View and manage attendance across all events</div>
+				<div class="page-actions" style="gap:6px">
+					<div class="cal-nav">
+						<button class="btn btn-icon" id="cal-prev" title="Previous">◀</button>
+						<button class="btn btn-ghost" id="cal-today">Today</button>
+						<button class="btn btn-icon" id="cal-next" title="Next">▶</button>
+						<h3 class="cal-title" id="cal-title">June 2026</h3>
+					</div>
+					<div class="cal-view-btns">
+						<button class="btn btn-ghost btn-sm cal-view-btn active" data-view="day">Day</button>
+						<button class="btn btn-ghost btn-sm cal-view-btn" data-view="week">Week</button>
+						<button class="btn btn-ghost btn-sm cal-view-btn" data-view="month">Month</button>
+					</div>
+				</div>
+			</div>
+			<div class="calendar-container" id="calendar-container"></div>
+		</section>
+
+		<!-- REPORTS -->
+		<section id="sec-reports" class="section">
+			<div class="page-header">
+				<div class="page-title">Reports</div>
+				<div class="page-sub">Comprehensive attendance summaries and latency analysis</div>
+				<div class="page-actions">
+					<button class="btn btn-outline" id="btn-export-report">📄 Export</button>
+				</div>
+			</div>
+			<div class="reports-tabs">
+				<button class="report-tab active" data-tab="summary">Summary</button>
+				<button class="report-tab" data-tab="latency">Latency Report</button>
+				<button class="report-tab" data-tab="absence">Absence Report</button>
+				<button class="report-tab" data-tab="cards">Person Cards</button>
+			</div>
+			<div class="report-content" id="report-content"></div>
+		</section>
+	</main>
+</div>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay" id="modal-overlay">
+	<div class="modal" id="modal">
+		<div class="modal-header">
+			<h3 id="modal-title">Modal Title</h3>
+			<button class="btn btn-icon modal-close" id="modal-close">✕</button>
+		</div>
+		<div class="modal-body" id="modal-body"></div>
+		<div class="modal-footer" id="modal-footer"></div>
+	</div>
+</div>
+
+<!-- ATTENDANCE DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay">
+	<div class="drawer" id="drawer">
+		<div class="drawer-header">
+			<div>
+				<h3 id="drawer-event-title">Event Attendance</h3>
+				<div class="drawer-event-meta" id="drawer-event-meta"></div>
+			</div>
+			<button class="btn btn-icon drawer-close" id="drawer-close">✕</button>
+		</div>
+		<div class="drawer-body" id="drawer-body"></div>
+		<div class="drawer-footer">
+			<div class="drawer-stats" id="drawer-stats"></div>
+			<button class="btn btn-primary" id="drawer-save">Save Attendance</button>
+		</div>
+	</div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
