@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eğitim Programı Sunumu — Test Harness</title>
+<link rel="stylesheet" href="EducationProgramPresentation.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .btn-dump { background: #2563eb; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — Eğitim Programı Sunumu</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Slide 6'ya Git</button>
+  <button class="btn-clear" id="th-clear">Başa Dön</button>
+  <button class="btn-reload" id="th-reload">Yenile</button>
+  <button class="btn-ro" id="th-ro">Salt Okunur Aç/Kapa</button>
+  <button class="btn-dump" id="th-dump">DB'yi Konsola Yaz</button>
+  <span class="sep">|</span>
+  <span class="hint">← → tuşları ile gezin</span>
+  <span class="sep">|</span>
+  <span class="hint">Home/End = Baş/Son</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Hazır ✓</span>
+</div>
+
+<div id="app-container"></div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'egitim_sunumu_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'user-1', name: 'Test Kullanıcı', email: 'test@example.org', roles: ['editor'], locale: 'tr' };
+  var _fields = {};
+  var _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) {
+    _value = v;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {}
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = !!v;
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+      document.getElementById('th-status').textContent = _readOnly ? 'SALT OKUNUR MOD' : 'DÜZENLEME MODU';
+    },
+
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+
+    getPermittedUsers: function() { return [
+      { id: 'user-1', name: 'Test Kullanıcı', email: 'test@example.org', roles: ['editor'] },
+      { id: 'user-2', name: 'Ayşe Yılmaz', email: 'ayse@example.org', roles: ['viewer'] },
+      { id: 'user-3', name: 'Mehmet Demir', email: 'mehmet@example.org', roles: ['editor'] }
+    ]; },
+    onPermittedUsersChange: function(cb) { /* no-op for test */ },
+
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+
+    declareOutput: function() {},
+    declareParams: function() {},
+
+    onReady: function(cb) {
+      load();
+      cb(_value, _fields);
+    },
+
+    /* Test helpers */
+    _loadSampleData: function() {
+      save({ currentSlide: 5 }); /* Slide 6: Kayıt & Sınav Süreci */
+      window.location.reload();
+    },
+    _clearData: function() {
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.reload();
+    },
+    _toggleReadOnly: function() {
+      this._setReadOnly(!_readOnly);
+    },
+    _dump: function() {
+      console.log('📊 Eğitim Sunumu DB:', JSON.parse(JSON.stringify(_value)));
+      console.log('📋 Mevcut Slide:', _value ? _value.currentSlide : '(yok)');
+    },
+
+    /* Async channel mocks (no-ops for presentation) */
+    requestAI: function(prompt, context, callback) {
+      console.log('[MOCK AI] Prompt:', prompt.slice(0, 80) + '...');
+      setTimeout(function() { callback(null, 'AI yanıtı (mock)'); }, 300);
+    },
+    requestUpload: function(accept, callback) {
+      var mockFile = { name: 'test.pdf', url: 'https://example.org/mock/test.pdf', size: 102400, type: 'application/pdf' };
+      setTimeout(function() { callback(null, mockFile); }, 300);
+    },
+    requestFileContent: function(url, callback) {
+      setTimeout(function() { callback(null, 'Mock dosya içeriği...'); }, 300);
+    },
+    requestExportPdf: function(options, callback) {
+      var mockFile = { name: (options.filename || 'export') + '.html', url: 'https://example.org/mock/export.html', size: 5000, type: 'text/html' };
+      setTimeout(function() { callback(null, mockFile); }, 300);
+    },
+    requestSendEmail: function(options, callback) {
+      console.log('[MOCK EMAIL] To:', options.to, 'Subject:', options.subject);
+      setTimeout(function() { callback(null, { ok: true }); }, 300);
+    },
+    requestObjects: function(action, params, callback) {
+      console.log('[MOCK CRUD]', action, params.mainObjectType);
+      setTimeout(function() { callback(null, { objects: [], ok: true }); }, 200);
+    }
+  };
+
+  /* Keyboard shortcuts */
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+      window.tool._toggleReadOnly();
+      window.tool.notify(window.tool.isReadOnly() ? 'SALT OKUNUR MOD' : 'DÜZENLEME MODU', 'info');
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      window.tool._dump();
+      window.tool.notify('DB konsola yazıldı', 'info');
+    }
+  });
+})();
+</script>
+
+<!-- INJECT HTML CONTENT -->
+<script>
+(function() {
+  var c = document.getElementById('app-container');
+  c.innerHTML = '<div id="app">' +
+  '<aside class="sidebar" id="sidebar">' +
+    '<div class="sidebar-brand">' +
+      '<div class="brand-logo">🎓</div>' +
+      '<div class="brand-name">Eğitim Programı</div>' +
+      '<div class="brand-sub">UNICONHUB</div>' +
+    '</div>' +
+    '<nav class="slide-nav" id="slide-nav">' +
+      '<div class="nav-item active" data-slide="0"><span class="nav-num">00</span>Genel Bakış</div>' +
+      '<div class="nav-group-label">Organizasyon</div>' +
+      '<div class="nav-item" data-slide="1"><span class="nav-num">01</span>Şubeler & Temsilciler</div>' +
+      '<div class="nav-item" data-slide="2"><span class="nav-num">02</span>WhatsApp Grup Sistemi</div>' +
+      '<div class="nav-group-label">Akademik Programlar</div>' +
+      '<div class="nav-item" data-slide="3"><span class="nav-num">03</span>IB & AP Hazırlık</div>' +
+      '<div class="nav-item" data-slide="4"><span class="nav-num">04</span>CEMC Deneme Sınavları</div>' +
+      '<div class="nav-item" data-slide="5"><span class="nav-num">05</span>CEMC Matematik Kampı</div>' +
+      '<div class="nav-item" data-slide="6"><span class="nav-num">06</span>Kayıt & Sınav Süreci</div>' +
+      '<div class="nav-item" data-slide="7"><span class="nav-num">07</span>Online Matematik Dersleri</div>' +
+      '<div class="nav-group-label">Kariyer & Gelişim</div>' +
+      '<div class="nav-item" data-slide="8"><span class="nav-num">08</span>Burs Semineri</div>' +
+      '<div class="nav-item" data-slide="9"><span class="nav-num">09</span>Üniversite & Kariyer</div>' +
+      '<div class="nav-item" data-slide="10"><span class="nav-num">10</span>Makale Yarışmaları</div>' +
+      '<div class="nav-item" data-slide="11"><span class="nav-num">11</span>Drone Pilot Kulübü</div>' +
+      '<div class="nav-group-label">Eğitim Modeli</div>' +
+      '<div class="nav-item" data-slide="12"><span class="nav-num">12</span>Müfredat Bazlı Takip</div>' +
+      '<div class="nav-item" data-slide="13"><span class="nav-num">13</span>Mentor Sistemi</div>' +
+      '<div class="nav-item" data-slide="14"><span class="nav-num">14</span>Yıllık Takvim</div>' +
+      '<div class="nav-group-label">Topluluk</div>' +
+      '<div class="nav-item" data-slide="15"><span class="nav-num">15</span>Başarılı Öğrenciler</div>' +
+      '<div class="nav-item" data-slide="16"><span class="nav-num">16</span>TRADES & College</div>' +
+      '<div class="nav-item" data-slide="17"><span class="nav-num">17</span>Finansman Modeli</div>' +
+    '</nav>' +
+  '</aside>' +
+  '<main class="main">' +
+    '<div class="topbar">' +
+      '<button class="btn-menu" id="btn-menu" title="Menü">☰</button>' +
+      '<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div>' +
+      '<span class="progress-text" id="progress-text">1 / 18</span>' +
+      '<div class="topbar-actions"><span class="readonly-badge" id="readonly-badge" style="display:none">👁 Salt Okunur</span></div>' +
+    '</div>' +
+    '<div class="slide-container" id="slide-container">' +
+      renderAllSlides() +
+    '</div>' +
+    '<div class="slide-nav-bottom">' +
+      '<button class="btn-nav" id="btn-prev" title="Önceki">◀ Önceki</button>' +
+      '<div class="slide-dots" id="slide-dots"></div>' +
+      '<button class="btn-nav" id="btn-next" title="Sonraki">Sonraki ▶</button>' +
+    '</div>' +
+  '</main>' +
+'</div>';
+})();
+
+/* Render all 18 slides as embedded HTML */
+function renderAllSlides() {
+  var slides = [
+    /* 0 - Genel Bakış */
+    '<section class="slide active" data-slide="0">' +
+      '<div class="slide-hero">' +
+        '<h1 class="hero-title">Kapsamlı Eğitim Programı</h1>' +
+        '<p class="hero-sub">Öğrencilerin akademik başarısını, kariyer gelişimini ve kişisel becerilerini destekleyen çok yönlü bir eğitim ekosistemi</p>' +
+        '<div class="hero-stats">' +
+          '<div class="hero-stat"><span class="hero-stat-num">17</span><span class="hero-stat-label">Program Bileşeni</span></div>' +
+          '<div class="hero-stat"><span class="hero-stat-num">8</span><span class="hero-stat-label">Sınıf Seviyesi</span></div>' +
+          '<div class="hero-stat"><span class="hero-stat-num">∞</span><span class="hero-stat-label">Potansiyel Öğrenci</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="slide-body">' +
+        '<div class="overview-grid">' +
+          '<div class="overview-card"><div class="ov-icon">🏛️</div><div class="ov-title">Organizasyon</div><div class="ov-desc">Farklı şehirlerde şubeler, temsilciler ve WhatsApp grup sistemi ile yapılandırılmış iletişim ağı</div></div>' +
+          '<div class="overview-card"><div class="ov-icon">📚</div><div class="ov-title">Akademik</div><div class="ov-desc">IB/AP hazırlık, CEMC sınavları, online matematik dersleri ve müfredat bazlı kişisel takip</div></div>' +
+          '<div class="overview-card"><div class="ov-icon">🚀</div><div class="ov-title">Kariyer</div><div class="ov-desc">Burs seminerleri, üniversite & kariyer sunumları, makale yarışmaları, drone pilot lisansı</div></div>' +
+          '<div class="overview-card"><div class="ov-icon">🤝</div><div class="ov-title">Topluluk</div><div class="ov-desc">Mentor sistemi, başarılı öğrenci sunumları, TRADES & College programları ile güçlü ağ</div></div>' +
+        '</div>' +
+        '<div class="info-box"><strong>🔄 Öncelikli Model:</strong> Charity faaliyeti ve ücretsiz olarak planlanmaktadır. Sürdürülebilirlik için grant desteği ve gerektiğinde ücretli hizmet seçenekleri tartışılacaktır.</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 1 - Şubeler & Temsilciler */
+    '<section class="slide" data-slide="1">' +
+      '<div class="slide-header"><span class="slide-num">01</span><h2>Şubeler & Temsilciler</h2><p class="slide-tagline">Farklı şehirlerde yapılandırılmış yerel organizasyon ağı</p></div>' +
+      '<div class="slide-body"><div class="card"><div class="card-header"><span class="card-icon">🏙️</span>Şehir Bazlı Yapılanma</div><div class="card-body"><p>Her şehirde bir <strong>şube</strong> ve bu şubeye bağlı <strong>temsilciler</strong> bulunacaktır. Temsilciler, o şehirdeki öğrenci ve veli iletişimini koordine edecek, yerel etkinlikleri organize edecektir.</p><ul class="detail-list"><li>Her şehirde en az bir temsilci görevlendirilmesi</li><li>Şehir temsilcisinin yerel okullarla irtibat kurması</li><li>Şubeler arası koordinasyon için düzenli toplantılar</li><li>Yerel etkinliklerin (kamp, sınav, seminer) şehir bazlı planlanması</li></ul></div></div></div>' +
+    '</section>',
+
+    /* 2 - WhatsApp Grup Sistemi */
+    '<section class="slide" data-slide="2">' +
+      '<div class="slide-header"><span class="slide-num">02</span><h2>WhatsApp Grup Sistemi</h2><p class="slide-tagline">İki katmanlı WhatsApp grubu yapısı ile etkili iletişim</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="two-col">' +
+          '<div class="card"><div class="card-header"><span class="card-icon">👨‍👩‍👧‍👦</span>A. Veli WhatsApp Grubu</div><div class="card-body"><p>Her şehir için <strong>tek bir toplu veli WhatsApp grubu</strong> oluşturulacak. Tüm toplu erişimler bu grup üzerinden yapılacak.</p><ul class="detail-list"><li>Şehir bazlı — her şehir için bir grup</li><li>Tüm duyurular buradan yapılır</li><li>Veli katılımı zorunludur</li></ul></div></div>' +
+          '<div class="card"><div class="card-header"><span class="card-icon">🎒</span>B. Grade WhatsApp Grupları</div><div class="card-body"><p>Her sınıf seviyesi için ayrı WhatsApp grubu:</p><div class="grade-grid"><span class="grade-badge">Grade 5</span><span class="grade-badge">Grade 6</span><span class="grade-badge">Grade 7</span><span class="grade-badge">Grade 8</span><span class="grade-badge">Grade 9</span><span class="grade-badge">Grade 10</span><span class="grade-badge">Grade 11</span><span class="grade-badge">Grade 12</span></div></div></div>' +
+        '</div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">📋</span>Mesaj Kuralları</div><div class="card-body"><div class="rule-row"><div class="rule-item"><strong>Bizim Mesajlarımız:</strong> Tüm mesajlar yazım kalitesi, format ve içerik olarak düzenli ve profesyonel olacak.</div><div class="rule-item"><strong>Veli Mesajları:</strong> Konu dışı mesajlara izin verilmeyecek. İlgisiz mesajları admin silip, atan kişiye neden sildiğini bildirecek veya kendisinin silmesini talep edecek.</div></div></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 3 - IB & AP Hazırlık */
+    '<section class="slide" data-slide="3">' +
+      '<div class="slide-header"><span class="slide-num">03</span><h2>IB & AP Hazırlık Programları</h2><p class="slide-tagline">Uluslararası programlara yönelik kapsamlı hazırlık ve kurs desteği</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🌍</span>IB Programı Desteği</div><div class="card-body"><p>IB programına girmiş öğrenciler için özel bir <strong>IB WhatsApp grubu</strong> oluşturulacak. Bu grup üzerinden IB derslerine yönelik kurslar organize edilecek.</p><ul class="detail-list"><li>IB müfredatına uygun ders kursları</li><li>IB sınavlarına yönelik hazırlık çalışmaları</li><li>IB öğrencileri arası deneyim paylaşımı</li></ul></div></div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">📢</span>Büyüme Stratejisi</div><div class="card-body"><p>Herkesten tanıdıkları <strong>IB okuyan veya eski IB öğrencilerini</strong> bu gruba eklemesini istiyoruz.</p><ul class="detail-list"><li>Kurs satabileceğimiz potansiyel öğrenci havuzu genişler</li><li>IB deneyimi olan öğrenciler mentor olarak katkı sağlar</li><li>Ağızdan ağıza büyüme ile organik erişim artar</li></ul></div></div>' +
+        '<div class="card"><div class="card-header"><span class="card-icon">📐</span>AP Programı</div><div class="card-body"><p>AP (Advanced Placement) sınavlarına hazırlanan öğrenciler için benzer yapı kurulacak. AP Calculus, AP Physics, AP Chemistry gibi derslerde destek sağlanacak.</p></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 4 - CEMC Deneme Sınavları */
+    '<section class="slide" data-slide="4">' +
+      '<div class="slide-header"><span class="slide-num">04</span><h2>CEMC Deneme Sınavları</h2><p class="slide-tagline">Waterloo Üniversitesi CEMC sınavlarına aylık deneme ile hazırlık</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🏆</span>Waterloo CEMC Sınavları</div><div class="card-body"><p>Waterloo Üniversitesi\'nin düzenlediği <strong>CEMC (Centre for Education in Mathematics and Computing)</strong> sınavlarına hazırlık için:</p><ul class="detail-list"><li><strong>Ayda bir</strong> deneme sınavı yapılacak</li><li>Her sınavda kayıt alınacak</li><li>Sonuçlar sistemde öğrenci kaydı altında biriktirilecek</li><li>Gerçek CEMC sınavları öncesi yoğun hazırlık</li></ul></div></div>' +
+        '<div class="info-box"><strong>📊 Hedef:</strong> Öğrencilerin CEMC sınavlarında yüksek başarı göstererek Waterloo Üniversitesi başta olmak üzere prestijli okullara kabul şansını artırmak.</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 5 - CEMC Matematik Kampı */
+    '<section class="slide" data-slide="5">' +
+      '<div class="slide-header"><span class="slide-num">05</span><h2>CEMC Matematik Kampı</h2><p class="slide-tagline">Gerçek sınav öncesi şehirlerde yoğunlaştırılmış tam gün kamp</p></div>' +
+      '<div class="slide-body"><div class="card"><div class="card-header"><span class="card-icon">🏕️</span>Kamp Formatı</div><div class="card-body"><p>CEMC gerçek sınavlarından önce, <strong>her şehirdeki şube</strong> katılacak öğrencilere <strong>1 tam gün matematik kampı</strong> düzenleyecek.</p><div class="camp-schedule"><div class="camp-day"><div class="camp-day-title">📅 1. Gün</div><div class="camp-day-desc">Grade 7 & 8 öğrencileri</div></div><div class="camp-day"><div class="camp-day-title">📅 2. Gün</div><div class="camp-day-desc">Grade 9 & 10 öğrencileri</div></div></div><ul class="detail-list"><li>Toplam en az <strong>2 gün</strong> (yılda)</li><li>Tam gün yoğun program</li><li>Deneyimli eğitmenler eşliğinde</li><li>Sınav stratejileri ve pratik çözüm teknikleri</li></ul></div></div></div>' +
+    '</section>',
+
+    /* 6 - Kayıt & Sınav Süreci */
+    '<section class="slide" data-slide="6">' +
+      '<div class="slide-header"><span class="slide-num">06</span><h2>Kayıt & Sınav Süreci Yönetimi</h2><p class="slide-tagline">CEMC deneme sınavları için uçtan uca kayıt ve takip sistemi</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="phase-timeline"><div class="phase-step"><div class="phase-dot">1</div><div class="phase-label">Kayıt Aşaması</div></div><div class="phase-line"></div><div class="phase-step"><div class="phase-dot">2</div><div class="phase-label">Sınav Aşaması</div></div><div class="phase-line"></div><div class="phase-step"><div class="phase-dot">3</div><div class="phase-label">Sınav Sonrası</div></div></div>' +
+        '<div class="accordion">' +
+          '<div class="accordion-item open"><div class="accordion-header" data-toggle="acc-reg"><span>📝 Kayıt Aşaması</span><span class="acc-arrow">▾</span></div><div class="accordion-body" id="acc-reg"><ul class="detail-list"><li><strong>Kayıt Paketi:</strong> Form, kayıt sayfası, broşür ve WhatsApp mesajları paket halinde hazırlanıp herkese gönderilecek.</li><li><strong>Kayıt Formu:</strong> Adres dahil tüm bilgilerin düzenli toplanması</li><li><strong>Tanıtım:</strong> Kayıt formları ve broşürlerin WhatsApp gruplarında birkaç defa paylaşılması</li><li><strong>Kayıt Emaili:</strong> Sistem üzerinden kayıtlı tüm öğrencilere email gönderilmesi</li><li><strong>Hatırlatma Mesajları:</strong> Standart formatlarda WhatsApp\'tan gönderilmesi</li><li><strong>Öğrenci Kayıtları:</strong> Sisteme kayıt ve bilgi güncellemesi</li></ul></div></div>' +
+          '<div class="accordion-item"><div class="accordion-header" data-toggle="acc-exam"><span>🧪 Sınav Aşaması</span><span class="acc-arrow">▸</span></div><div class="accordion-body" id="acc-exam" style="display:none"><ul class="detail-list"><li><strong>Son Hatırlatma Emaili:</strong> Sınavdan bir gece önce hatırlatma</li><li><strong>Fotoğraf:</strong> Sınav sırasında sınıfın arkadan 1-2 fotoğrafı çekilerek gruplarda paylaşılması (şehir veli grubu + School Advisory Group)</li></ul></div></div>' +
+          '<div class="accordion-item"><div class="accordion-header" data-toggle="acc-post"><span>📊 Sınav Sonrası</span><span class="acc-arrow">▸</span></div><div class="accordion-body" id="acc-post" style="display:none"><ul class="detail-list"><li><strong>Yeni Öğrenci Kaydı:</strong> Sistemde kaydı olmayan öğrencilerin eklenmesi</li><li><strong>Sınavların Okunması:</strong> Sonuçların öğrenci kaydı altına girilmesi</li><li><strong>Sonuç Emaili:</strong> Veli ve öğrenci emaillerine gönderilmesi</li><li><strong>Email Güncellemeleri:</strong> Hatalı emaillerin tespiti ve güncellenmesi</li></ul></div></div>' +
+        '</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 7 - Online Matematik Dersleri */
+    '<section class="slide" data-slide="7">' +
+      '<div class="slide-header"><span class="slide-num">07</span><h2>Online Matematik Dersleri</h2><p class="slide-tagline">Her grade için haftalık online dersler ile sürekli akademik destek</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="phase-timeline"><div class="phase-step"><div class="phase-dot">1</div><div class="phase-label">Planlama</div></div><div class="phase-line"></div><div class="phase-step"><div class="phase-dot">2</div><div class="phase-label">Ders Öncesi</div></div><div class="phase-line"></div><div class="phase-step"><div class="phase-dot">3</div><div class="phase-label">Ders Sırası</div></div><div class="phase-line"></div><div class="phase-step"><div class="phase-dot">4</div><div class="phase-label">Ders Sonrası</div></div></div>' +
+        '<div class="accordion">' +
+          '<div class="accordion-item open"><div class="accordion-header" data-toggle="acc-plan"><span>📅 Planlama</span><span class="acc-arrow">▾</span></div><div class="accordion-body" id="acc-plan"><ul class="detail-list"><li><strong>Takvim Planı:</strong> Ders takviminin düzenli şekilde planlanması</li><li><strong>Takvimi Paylaşma:</strong> Haftalık takvimin WhatsApp gruplarında paylaşılması</li><li><strong>Öğretmen Yetiştirme:</strong> 2 haftada bir zümre, sorumlu belirlenecek</li><li><strong>Grade 10:</strong> Ömer abi zümreleri yapacak</li></ul></div></div>' +
+          '<div class="accordion-item"><div class="accordion-header" data-toggle="acc-pre"><span>⏰ Ders Öncesi</span><span class="acc-arrow">▸</span></div><div class="accordion-body" id="acc-pre" style="display:none"><ul class="detail-list"><li><strong>Erken Hatırlatma:</strong> Her dersten 15-30 dk önce standart mesaj</li><li><strong>Başlama Mesajı:</strong> Ders başladığı anda standart format mesajı</li></ul></div></div>' +
+          '<div class="accordion-item"><div class="accordion-header" data-toggle="acc-during"><span>💻 Ders Sırasında</span><span class="acc-arrow">▸</span></div><div class="accordion-body" id="acc-during" style="display:none"><ul class="detail-list"><li><strong>Platform:</strong> Zoom veya Teams</li><li><strong>Ücretli Yazılım:</strong> Süresiz program, 45 dk free ile ders yapılmayacak</li><li><strong>Kolay Giriş:</strong> Login istemeyecek</li><li><strong>Öğretmen Yetkinliği:</strong> Aracı iyi kullanacak</li></ul></div></div>' +
+          '<div class="accordion-item"><div class="accordion-header" data-toggle="acc-post2"><span>📤 Ders Sonrası</span><span class="acc-arrow">▸</span></div><div class="accordion-body" id="acc-post2" style="display:none"><ul class="detail-list"><li><strong>Ödev Gönderme:</strong> Mümkünse IXL, değilse PDF</li><li><strong>Ödev Takibi:</strong> Bitirenin işaretleyebileceği kolay sistem</li></ul></div></div>' +
+        '</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 8 - Burs Semineri */
+    '<section class="slide" data-slide="8">' +
+      '<div class="slide-header"><span class="slide-num">08</span><h2>Burs Semineri</h2><p class="slide-tagline">Aylık online burs semineri ile öğrencilere finansal fırsatlar</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">💰</span>Seminer Formatı</div><div class="card-body"><ul class="detail-list"><li><strong>Ayda bir</strong> online burs semineri (Zoom)</li><li>Bir sonraki ay başvurulabilecek <strong>bursların listesi</strong> hazırlanır</li><li>Tüm katılımcılara Zoom üzerinden anlatım</li><li>Sunum dosyası <strong>sadece katılanlara</strong> Zoom chat üzerinden verilir</li></ul></div></div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">🔒</span>Gelecek Planı</div><div class="card-body"><p>Sunumu sadece katılımcılarla sınırlamak için, ileride <strong>yazılımsal mekanizma</strong> ile içerik koruması düşünülmektedir.</p></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 9 - Üniversite & Kariyer */
+    '<section class="slide" data-slide="9">' +
+      '<div class="slide-header"><span class="slide-num">09</span><h2>Üniversite & Kariyer Seminerleri</h2><p class="slide-tagline">Mesleklerinde aktif çalışan veya o bölüme girmiş kişilerden ilham verici sunumlar</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🎯</span>Hedef Kitle</div><div class="card-body"><p>Grade 10\'dan 30 yaşa kadar. Mesleklerinde aktif çalışan profesyoneller veya üniversitede o bölüme girebilmiş öğrenciler tecrübelerini paylaşacak.</p></div></div>' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🏥</span>Hedef Meslek Grupları</div><div class="card-body"><div class="career-grid"><div class="career-item"><span class="career-icon">🩺</span>Medicine</div><div class="career-item"><span class="career-icon">🏥</span>Nursing</div><div class="career-item"><span class="career-icon">💻</span>Software Engineering</div><div class="career-item"><span class="career-icon">🏗️</span>Engineering</div><div class="career-item"><span class="career-icon">📊</span>CPA / Accounting</div><div class="career-item"><span class="career-icon">🔧</span>Skilled Trades</div><div class="career-item"><span class="career-icon">⚖️</span>Law</div><div class="career-item"><span class="career-icon">🤖</span>Data / AI</div></div></div></div>' +
+        '<div class="info-box"><strong>🔍 İhtiyaç:</strong> Bu mesleklerin uzmanlarını veya o bölümlere girmiş öğrencileri bulup sunum yaptırmamız gerekiyor.</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 10 - Makale Yarışmaları */
+    '<section class="slide" data-slide="10">' +
+      '<div class="slide-header"><span class="slide-num">10</span><h2>Makale Yarışmaları</h2><p class="slide-tagline">Her ay yazma becerilerini geliştiren makale yarışmalarına katılım</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">✍️</span>Yarışma Sistemi</div><div class="card-body"><ul class="detail-list"><li>Her ay herkesin bir makale yarışmasına yazı göndermesi teşvik edilecek</li><li>Özel <strong>WhatsApp grubu</strong> üzerinden takip</li><li>Yazı gönderenler bizi haberdar edecek</li></ul></div></div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">💡</span>Geliştirme Fikirleri</div><div class="card-body"><ul class="detail-list"><li>Yazı yazma <strong>workshop\'ları</strong></li><li>Teşvik mekanizmaları</li><li>Grade 4\'ten üniversite sona kadar</li><li>Başarılı yazıların ödüllendirilmesi</li></ul></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 11 - Drone Pilot Kulübü */
+    '<section class="slide" data-slide="11">' +
+      '<div class="slide-header"><span class="slide-num">11</span><h2>Drone Pilot License Kulübü</h2><p class="slide-tagline">Kanada\'da drone uçurma lisansı için eğitim ve topluluk</p></div>' +
+      '<div class="slide-body"><div class="card"><div class="card-header"><span class="card-icon">🚁</span>Kulüp Amacı</div><div class="card-body"><p>Kanada\'da drone uçurma lisansı almaları için bir kulüp kurulacak.</p><ul class="detail-list"><li>İyi bir <strong>hobi</strong> edinme fırsatı</li><li>Geleceğe dair bir <strong>meslek</strong> öğrenme imkanı</li><li>Drone teknolojisi büyüyen bir sektör</li><li>Transport Canada lisanslama sürecine hazırlık</li></ul></div></div></div>' +
+    '</section>',
+
+    /* 12 - Müfredat Bazlı Takip */
+    '<section class="slide" data-slide="12">' +
+      '<div class="slide-header"><span class="slide-num">12</span><h2>Müfredat Bazlı Kişisel Takip Eğitimi</h2><p class="slide-tagline">Cohort bazlı ve okul derslerine paralel birebir eğitim takibi</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="two-col">' +
+          '<div class="card"><div class="card-header"><span class="card-icon">👥</span>Cohort Bazlı Eğitim</div><div class="card-body"><p>Harici konularda (örn. drone) uzun müfredatlı eğitim içerikleri. Öğrenciler cohort\'lar halinde kaydolup, mentorler adım adım içerik gönderecek ve çalışmaları takip edecek.</p></div></div>' +
+          '<div class="card"><div class="card-header"><span class="card-icon">🏫</span>Okul Derslerine Paralel</div><div class="card-body"><p>Örn. Math 9 alan öğrenci kaydedilecek, dönem boyunca dersine paralel içerikler gönderilecek, okul derslerinin yüksek olması takip edilecek.</p></div></div>' +
+        '</div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">🔥</span>Motivasyon & Katılım</div><div class="card-body"><p>Bu sistem <strong>birebir ilgi</strong> ile çalışacak. Liderlik tablosu, rozet sistemi, cohort içi rekabet gibi mekanizmalar değerlendirilebilir.</p></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 13 - Mentor Sistemi */
+    '<section class="slide" data-slide="13">' +
+      '<div class="slide-header"><span class="slide-num">13</span><h2>Mentor Sistemi</h2><p class="slide-tagline">Her öğrenciye birebir akademik takip sağlayan mentor ağı</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🧑‍🏫</span>Mentor Görevleri</div><div class="card-body"><ul class="detail-list"><li>Öğrencinin okul derslerinin haftalık takibi</li><li>Müfredat paralelinde içerik gönderimi</li><li>Ödev ve çalışma takibi</li><li>Öğrenci gelişim raporlaması</li><li>Veli ile düzenli iletişim</li></ul></div></div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">💼</span>Mentor Modeli</div><div class="card-body"><ul class="detail-list"><li>Mentorler bize <strong>kayıt olmalı</strong></li><li><strong>Gönüllü</strong> veya <strong>ücretli</strong> olabilir</li><li>Ücretli olacaksa hangi level\'dan itibaren belirlenmeli</li><li>Mentor eğitimi ve sertifikasyon programı düşünülebilir</li></ul></div></div>' +
+      '</div>' +
+    '</section>',
+
+    /* 14 - Yıllık Takvim */
+    '<section class="slide" data-slide="14">' +
+      '<div class="slide-header"><span class="slide-num">14</span><h2>Yıllık Takvim Uygulaması</h2><p class="slide-tagline">Tüm faaliyetlerin birleştirildiği, filtrelenebilir merkezi takvim</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">📅</span>Takvim Özellikleri</div><div class="card-body"><ul class="detail-list"><li>Tüm faaliyetlerin listesine erişim</li><li>Kendileri ile alakalı olmayanları <strong>filtreleyebilme</strong></li><li>Şehir, grade, program türü bazlı filtreleme</li></ul></div></div>' +
+        '<div class="info-box"><strong>ℹ️ Not:</strong> Takvim uygulaması şimdi yapılmayacak — bu sunumda açıklaması yer almaktadır. Ayrı bir proje olarak ele alınacak.</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 15 - Başarılı Öğrenciler */
+    '<section class="slide" data-slide="15">' +
+      '<div class="slide-header"><span class="slide-num">15</span><h2>Başarılı Öğrenci Sunumları</h2><p class="slide-tagline">Rol model öğrencilerin ilham verici başarı hikayeleri</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">🌟</span>Sunum Yapacak Profiller</div><div class="card-body"><div class="profile-grid"><div class="profile-item">🎓 Üniversite bitirmiş</div><div class="profile-item">📖 Üniversite okuyan</div><div class="profile-item">✅ Kabul almış</div><div class="profile-item">💰 Burs bulmuş</div><div class="profile-item">🌍 IB\'ye kabul almış / okuyor / bitirmiş</div><div class="profile-item">🔧 TRADES alanına gitmiş</div><div class="profile-item">⭐ Çıraklık / ustalık yolunda veya tamamlamış</div></div></div></div>' +
+        '<div class="info-box"><strong>🎯 Amaç:</strong> Öğrencilerin kendi seviyelerinden rol modeller görmesini sağlamak, "ben de yapabilirim" duygusunu aşılamak.</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 16 - TRADES & College */
+    '<section class="slide" data-slide="16">' +
+      '<div class="slide-header"><span class="slide-num">16</span><h2>TRADES & College Programları</h2><p class="slide-tagline">Üniversite dışı kariyer yolları için yapılandırılmış rehberlik</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="two-col">' +
+          '<div class="card"><div class="card-header"><span class="card-icon">🔧</span>TRADES Alanı</div><div class="card-body"><p>Üniversite okumayacak olanlara meslek edinmeleri için mentorluk, meslek tanıtım sunumları, çıraklık ve ustalık yol haritası. TRADES başlı başına bir konu!</p></div></div>' +
+          '<div class="card"><div class="card-header"><span class="card-icon">🏛️</span>College Programı</div><div class="card-body"><p>BCIT, JIBC gibi okullardan direk meslek edinme. College başvuru süreci rehberliği, bölüm seçimi danışmanlığı, mezuniyet sonrası iş imkanları.</p></div></div>' +
+        '</div>' +
+      '</div>' +
+    '</section>',
+
+    /* 17 - Finansman Modeli */
+    '<section class="slide" data-slide="17">' +
+      '<div class="slide-header"><span class="slide-num">17</span><h2>Sürdürülebilirlik & Finansman Modeli</h2><p class="slide-tagline">Charity\'den sürdürülebilir modele geçiş stratejisi</p></div>' +
+      '<div class="slide-body">' +
+        '<div class="card"><div class="card-header"><span class="card-icon">❤️</span>Öncelikli Model: Charity</div><div class="card-body"><p>Tüm faaliyetler <strong>öncelikle charity faaliyeti ve ücretsiz</strong> olarak planlanmaktadır. Topluma hizmet ve eğitimde fırsat eşitliği temel amaçtır.</p></div></div>' +
+        '<div class="card accent"><div class="card-header"><span class="card-icon">⚖️</span>Sürdürülebilirlik Tartışmaları</div><div class="card-body"><div class="funding-grid"><div class="funding-option"><div class="funding-icon">💰</div><div class="funding-title">Ücretli Hizmet</div><div class="funding-desc">Bazı hizmetler ücretli olabilir. Hangi hizmetlerin ücretli olacağı tartışılmalı.</div></div><div class="funding-option"><div class="funding-icon">📝</div><div class="funding-title">Grant Desteği</div><div class="funding-desc">Ücretler grant bulunursa buradan karşılanabilir.</div></div><div class="funding-option"><div class="funding-icon">🤝</div><div class="funding-title">Karma Model</div><div class="funding-desc">Temel hizmetler ücretsiz, premium ücretli. Gönüllü + ücretli mentor karma sistemi.</div></div></div></div></div>' +
+      '</div>' +
+    '</section>'
+  ];
+
+  return slides.join('');
+}
+</script>
+
+<!-- LOAD TOOL JS -->
+<script src="EducationProgramPresentation.js"></script>
+
+<!-- TOOLBAR WIRING -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData();
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+  document.getElementById('th-ro').addEventListener('click', function() {
+    window.tool._toggleReadOnly();
+    window.tool.notify(window.tool.isReadOnly() ? 'SALT OKUNUR MOD' : 'DÜZENLEME MODU', 'info');
+  });
+  document.getElementById('th-dump').addEventListener('click', function() {
+    window.tool._dump();
+    window.tool.notify('DB konsola yazıldı (F12 ile bakın)', 'info');
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eğitim Programı Sunumu — Test Harness</title>
+<link rel="stylesheet" href="EducationProgramPresentation.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .btn-dump { background: #2563eb; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — Eğitim Programı Sunumu</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Slide 6'ya Git</button>
+  <button class="btn-clear" id="th-clear">Başa Dön</button>
+  <button class="btn-reload" id="th-reload">Yenile</button>
+  <button class="btn-ro" id="th-ro">Salt Okunur</button>
+  <button class="btn-dump" id="th-dump">DB Yaz</button>
+  <span class="sep">|</span>
+  <span class="hint">← → gezin | Kartlara tıkla aç/kapa | Esc kapat</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Hazır ✓</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── MOCK TOOL SDK ── */
+(function() {
+  var STORAGE_KEY = 'egitim_sunumu_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _fields = {}, _value = null;
+  var _user = { id: 'user-1', name: 'Test Kullanıcı', email: 'test@example.org', roles: ['editor'], locale: 'tr' };
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch(e) { _value = null; } }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fb) { var p = (new URLSearchParams(window.location.search)).get(name); return p !== null && p !== '' ? p : fb; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = !!v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); document.getElementById('th-status').textContent = _readOnly ? 'SALT OKUNUR' : 'DÜZENLEME'; },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function(cb) {},
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message; document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function() { save({ currentSlide: 5 }); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('📊 DB:', JSON.parse(JSON.stringify(_value))); },
+    requestAI: function() { var cb = arguments[arguments.length-1]; setTimeout(function() { cb(null, 'Mock'); }, 100); },
+    requestUpload: function(a, cb) { setTimeout(function() { cb(null, { name: 't.pdf', url: '#', size: 1, type: 'pdf' }); }, 100); },
+    requestFileContent: function(u, cb) { setTimeout(function() { cb(null, 'Mock'); }, 100); },
+    requestExportPdf: function(o, cb) { setTimeout(function() { cb(null, { name: 'e.html', url: '#', size: 1, type: 'html' }); }, 100); },
+    requestSendEmail: function(o, cb) { setTimeout(function() { cb(null, { ok: true }); }, 100); },
+    requestObjects: function(a, p, cb) { setTimeout(function() { cb(null, { objects: [], ok: true }); }, 100); }
+  };
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'SALT OKUNUR' : 'DÜZENLEME', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB konsola yazıldı', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── HELPERS ── */
+function card(cls, icon, title, desc, drawerHtml) {
+  var c = cls || '';
+  return '<div class="pres-card' + (c ? ' ' + c : '') + '"><div class="pres-card-front"><div class="pres-card-icon">' + icon + '</div><div class="pres-card-title">' + title + '</div><div class="pres-card-desc">' + desc + '</div><div class="pres-card-hint">Detaylar için tıklayın ▸</div></div><div class="pres-card-drawer"><div class="drawer-inner">' + drawerHtml + '</div></div></div>';
+}
+function li(t) { return '<li>' + t + '</li>'; }
+function ul(arr) { return '<ul class="detail-list">' + arr.map(li).join('') + '</ul>'; }
+
+/* ── BUILD ALL SLIDES ── */
+(function() {
+var H = '';
+H += '<div id="app">' +
+'<aside class="sidebar" id="sidebar">' +
+'<div class="sidebar-brand"><div class="brand-logo">🎓</div><div class="brand-name">Eğitim Programı</div><div class="brand-sub">UNICONHUB</div></div>' +
+'<nav class="slide-nav" id="slide-nav">' +
+'<div class="nav-item active" data-slide="0"><span class="nav-num">00</span>Genel Bakış</div>' +
+'<div class="nav-group-label">Organizasyon</div>' +
+'<div class="nav-item" data-slide="1"><span class="nav-num">01</span>Şubeler & Temsilciler</div>' +
+'<div class="nav-item" data-slide="2"><span class="nav-num">02</span>WhatsApp Grup Sistemi</div>' +
+'<div class="nav-group-label">Akademik Programlar</div>' +
+'<div class="nav-item" data-slide="3"><span class="nav-num">03</span>IB & AP Hazırlık</div>' +
+'<div class="nav-item" data-slide="4"><span class="nav-num">04</span>CEMC Deneme Sınavları</div>' +
+'<div class="nav-item" data-slide="5"><span class="nav-num">05</span>CEMC Matematik Kampı</div>' +
+'<div class="nav-item" data-slide="6"><span class="nav-num">06</span>Kayıt & Sınav Süreci</div>' +
+'<div class="nav-item" data-slide="7"><span class="nav-num">07</span>Online Matematik Dersleri</div>' +
+'<div class="nav-group-label">Kariyer & Gelişim</div>' +
+'<div class="nav-item" data-slide="8"><span class="nav-num">08</span>Burs Semineri</div>' +
+'<div class="nav-item" data-slide="9"><span class="nav-num">09</span>Üniversite & Kariyer</div>' +
+'<div class="nav-item" data-slide="10"><span class="nav-num">10</span>Makale Yarışmaları</div>' +
+'<div class="nav-item" data-slide="11"><span class="nav-num">11</span>Drone Pilot Kulübü</div>' +
+'<div class="nav-group-label">Eğitim Modeli</div>' +
+'<div class="nav-item" data-slide="12"><span class="nav-num">12</span>Müfredat Bazlı Takip</div>' +
+'<div class="nav-item" data-slide="13"><span class="nav-num">13</span>Mentor Sistemi</div>' +
+'<div class="nav-item" data-slide="14"><span class="nav-num">14</span>Yıllık Takvim</div>' +
+'<div class="nav-group-label">Topluluk</div>' +
+'<div class="nav-item" data-slide="15"><span class="nav-num">15</span>Başarılı Öğrenciler</div>' +
+'<div class="nav-item" data-slide="16"><span class="nav-num">16</span>TRADES & College</div>' +
+'<div class="nav-item" data-slide="17"><span class="nav-num">17</span>Finansman Modeli</div>' +
+'</nav></aside>' +
+'<main class="main">' +
+'<div class="topbar"><button class="btn-menu" id="btn-menu" title="Menü">☰</button><div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div><span class="progress-text" id="progress-text">1 / 18</span><div class="topbar-actions"><span class="readonly-badge" id="readonly-badge" style="display:none">👁 Salt Okunur</span></div></div>' +
+'<div class="slide-container" id="slide-container">';
+
+/* 0 */
+H += '<section class="slide active" data-slide="0">' +
+'<div class="pres-hero"><div class="pres-icon">🎓</div><h1 class="pres-title">Kapsamlı Eğitim Programı</h1><p class="pres-sub">Akademik başarı, kariyer gelişimi ve kişisel beceriler için çok yönlü eğitim ekosistemi</p><div class="pres-stats"><div class="pres-stat"><span class="pres-stat-num">17</span><span class="pres-stat-label">Program Bileşeni</span></div><div class="pres-stat"><span class="pres-stat-num">8</span><span class="pres-stat-label">Sınıf Seviyesi</span></div><div class="pres-stat"><span class="pres-stat-num">∞</span><span class="pres-stat-label">Potansiyel Öğrenci</span></div></div></div>' +
+'<div class="pres-cards">' +
+card('','🏛️','Organizasyon','Şubeler, temsilciler ve WhatsApp grup sistemi ile yapılandırılmış iletişim ağı',ul(['Farklı şehirlerde <strong>şubeler</strong> ve her şubeye bağlı <strong>temsilciler</strong>','Her şehirde en az bir temsilci görevlendirilmesi','Şehir temsilcisinin yerel okullarla irtibat kurması','Şubeler arası koordinasyon için düzenli toplantılar','Yerel etkinliklerin şehir bazlı planlanması','İki katmanlı WhatsApp grup sistemi ile organize iletişim'])) +
+card('','📚','Akademik','IB/AP hazırlık, CEMC sınavları, online dersler ve müfredat bazlı kişisel takip',ul(['<strong>IB & AP Hazırlık:</strong> Uluslararası programlara yönelik kurslar ve özel WhatsApp grubu','<strong>CEMC Deneme Sınavları:</strong> Waterloo Üniversitesi sınavlarına aylık hazırlık','<strong>CEMC Matematik Kampı:</strong> Sınav öncesi tam gün yoğun kamp (Grade 7-10)','<strong>Online Matematik Dersleri:</strong> Her grade için haftalık canlı dersler','<strong>Müfredat Bazlı Takip:</strong> Cohort ve okul derslerine paralel birebir eğitim'])) +
+card('','🚀','Kariyer','Burs seminerleri, üniversite & kariyer sunumları, makale yarışmaları, drone pilot lisansı',ul(['<strong>Burs Semineri:</strong> Aylık online — başvurulabilecek bursların listesi ve anlatımı','<strong>Üniversite & Kariyer:</strong> 8 farklı meslek grubunda profesyonellerden sunumlar','<strong>Makale Yarışmaları:</strong> Her ay yazma becerilerini geliştiren yarışmalara katılım','<strong>Drone Pilot Kulübü:</strong> Kanada\'da drone lisansı için eğitim ve topluluk'])) +
+card('','🤝','Topluluk','Mentor sistemi, başarılı öğrenci sunumları, TRADES & College programları',ul(['<strong>Mentor Sistemi:</strong> Birebir akademik takip sağlayan gönüllü/ücretli mentor ağı','<strong>Başarılı Öğrenciler:</strong> Rol model öğrencilerin ilham verici başarı hikayeleri','<strong>TRADES Programı:</strong> Üniversite dışı mesleki kariyer için mentorluk ve rehberlik','<strong>College Programı:</strong> BCIT, JIBC gibi okullardan direk meslek edinme desteği','<strong>Yıllık Takvim:</strong> Tüm faaliyetlerin filtrelenebilir merkezi takvimi'])) +
+'</div><div class="pres-footer-note">🔄 Öncelikli Model: Charity faaliyeti ve ücretsiz. Sürdürülebilirlik için grant desteği ve ücretli seçenekler tartışılacak.</div></section>';
+
+/* 1 */
+H += '<section class="slide" data-slide="1">' +
+'<div class="pres-hero"><div class="pres-icon">🏙️</div><h2 class="pres-title">Şubeler & Temsilciler</h2><p class="pres-sub">Farklı şehirlerde yapılandırılmış yerel organizasyon ağı</p></div>' +
+'<div class="pres-cards">' +
+card('','🏢','Şehir Bazlı Yapılanma','Her şehirde bir şube ve bağlı temsilciler ile yerel koordinasyon','<p>Her şehirde bir <strong>şube</strong> ve bu şubeye bağlı <strong>temsilciler</strong> bulunacaktır.</p>'+ul(['Her şehirde en az bir temsilci görevlendirilmesi','Şehir temsilcisinin yerel okullarla irtibat kurması','Şubeler arası koordinasyon için düzenli toplantılar','Yerel etkinliklerin şehir bazlı planlanması','Her temsilci kendi şehrindeki WhatsApp gruplarını yönetir'])) +
+card('','📋','Temsilci Görevleri','Yerel okullarla irtibat, etkinlik organizasyonu ve şehir içi iletişim',ul(['Bulunduğu şehirdeki veli WhatsApp grubunun yöneticiliği','Yerel okullarla iletişim ve işbirliği geliştirme','CEMC deneme sınavları ve matematik kamplarının yerel organizasyonu','Yeni öğrenci ve velilere ulaşma, kayıt sürecini yönetme','Merkez ofise düzenli raporlama','Şehirdeki etkinliklerin fotoğraf/video ile belgelenmesi'])) +
+'</div></section>';
+
+/* 2 */
+H += '<section class="slide" data-slide="2">' +
+'<div class="pres-hero"><div class="pres-icon">💬</div><h2 class="pres-title">WhatsApp Grup Sistemi</h2><p class="pres-sub">İki katmanlı WhatsApp grubu yapısı ile etkili ve düzenli iletişim</p></div>' +
+'<div class="pres-cards">' +
+card('','👨‍👩‍👧‍👦','Veli WhatsApp Grubu','Her şehir için tek toplu veli grubu — tüm duyurular buradan','<p>Her şehir için <strong>tek bir toplu veli WhatsApp grubu</strong> oluşturulacak.</p>'+ul(['Şehir bazlı — her şehir için bir grup','Tüm duyurular ve genel bilgilendirmeler buradan','Veli katılımı zorunludur','Etkinlik fotoğrafları bu grupta paylaşılır','Burs, sınav, kamp duyurularının ilk paylaşım noktası'])) +
+card('','🎒','Grade WhatsApp Grupları','Grade 5\'ten 12\'ye her sınıf seviyesi için ayrı öğrenci grubu','<p>Her sınıf seviyesi için ayrı WhatsApp grubu:</p><div class="grade-grid-big"><span>Grade 5</span><span>Grade 6</span><span>Grade 7</span><span>Grade 8</span><span>Grade 9</span><span>Grade 10</span><span>Grade 11</span><span>Grade 12</span></div>'+ul(['Her grade için özel içerik ve duyurular','Online ders hatırlatmaları grade gruplarında','Ödev ve kaynak paylaşımları bu gruplardan','Öğrenciler arası etkileşim ve dayanışma'])) +
+card('accent','📏','Mesaj Kuralları','Profesyonel iletişim standartları ve grup yönetim prensipleri','<div class="rule-block"><strong>✅ Bizim Mesajlarımız:</strong> Tüm mesajlar yazım kalitesi, format ve içerik olarak düzenli ve profesyonel olacak.</div><div class="rule-block"><strong>🚫 Veli Mesajları:</strong> Konu dışı mesajlara izin verilmeyecek. Admin ilgisiz mesajı silip nedenini bildirecek.</div><div class="rule-block"><strong>📌 Grup Yönetimi:</strong> Her grubun en az bir admini olacak. Adminler düzenli olarak kuralları hatırlatacak.</div>') +
+'</div></section>';
+
+/* 3 */
+H += '<section class="slide" data-slide="3">' +
+'<div class="pres-hero"><div class="pres-icon">🌍</div><h2 class="pres-title">IB & AP Hazırlık Programları</h2><p class="pres-sub">Uluslararası programlara yönelik kapsamlı hazırlık ve kurs desteği</p></div>' +
+'<div class="pres-cards">' +
+card('','🎯','IB Programı Desteği','IB müfredatına uygun kurslar, özel WhatsApp grubu ve sınav hazırlığı','<p>IB programına girmiş öğrenciler için özel <strong>IB WhatsApp grubu</strong> oluşturulacak.</p>'+ul(['IB müfredatına uygun ders kursları','IB sınavlarına yönelik hazırlık çalışmaları','IB öğrencileri arası deneyim paylaşımı','Extended Essay ve TOK desteği','CAS rehberliği'])) +
+card('accent','📢','Büyüme Stratejisi','IB öğrenci ağını genişletme ve organik erişim planı','<p>Herkesten tanıdıkları <strong>IB okuyan veya eski IB öğrencilerini</strong> gruba eklemesini istiyoruz.</p>'+ul(['Kurs satabileceğimiz potansiyel öğrenci havuzu genişler','IB deneyimi olan öğrenciler mentor olarak katkı sağlar','Ağızdan ağıza büyüme ile organik erişim artar','Mezun IB öğrencilerinin başarı hikayeleri yeni öğrencilere ilham verir'])) +
+card('','📐','AP Programı','AP Calculus, Physics, Chemistry derslerinde destek ve hazırlık','<p>AP sınavlarına hazırlanan öğrenciler için benzer yapı kurulacak.</p>'+ul(['AP Calculus AB/BC hazırlık kursları','AP Physics 1/2/C hazırlık kursları','AP Chemistry hazırlık kursları','AP sınav stratejileri ve deneme sınavları','AP kredi transferi konusunda rehberlik'])) +
+'</div></section>';
+
+/* 4 */
+H += '<section class="slide" data-slide="4">' +
+'<div class="pres-hero"><div class="pres-icon">🏆</div><h2 class="pres-title">CEMC Deneme Sınavları</h2><p class="pres-sub">Waterloo Üniversitesi CEMC sınavlarına aylık deneme ile sistematik hazırlık</p></div>' +
+'<div class="pres-cards">' +
+card('','📝','Sınav Sistemi','Ayda bir deneme sınavı, kayıt takibi ve sonuçların biriktirilmesi','<p>Waterloo Üniversitesi <strong>CEMC</strong> sınavlarına hazırlık:</p>'+ul(['<strong>Ayda bir</strong> deneme sınavı','Her sınavda düzenli kayıt alınması','Sonuçların öğrenci kaydı altında biriktirilmesi','Zaman içinde gelişim takibi','Pascal (G9), Cayley (G10), Fermat (G11) kategorileri'])) +
+card('accent','📊','Hedef & Ölçüm','CEMC başarısı ile prestijli üniversitelere kabul şansını artırma',ul(['Waterloo ve prestijli okullara kabul şansını artırma','Matematik becerilerini uluslararası standartlarda ölçme','Her deneme sınavında ilerlemeyi grafiksel takip','Zayıf alanları tespit edip hedefe yönelik çalışma','CEMC sertifikaları ile özgeçmiş güçlendirme'])) +
+'</div></section>';
+
+/* 5 */
+H += '<section class="slide" data-slide="5">' +
+'<div class="pres-hero"><div class="pres-icon">🏕️</div><h2 class="pres-title">CEMC Matematik Kampı</h2><p class="pres-sub">Gerçek sınav öncesi şehirlerde yoğunlaştırılmış tam gün kamp</p></div>' +
+'<div class="pres-cards">' +
+card('','📅','Kamp Formatı','Grade 7-8 ve 9-10 için ayrı günlerde tam gün yoğun program','<p>CEMC gerçek sınavlarından önce <strong>her şehirdeki şube</strong> tam gün kamp düzenleyecek.</p><div class="camp-days"><div class="camp-day-card"><div class="camp-day-title">📅 1. Gün</div><div class="camp-day-desc">Grade 7 & 8</div><div class="camp-day-info">Pascal sınavına hazırlık</div></div><div class="camp-day-card"><div class="camp-day-title">📅 2. Gün</div><div class="camp-day-desc">Grade 9 & 10</div><div class="camp-day-info">Cayley & Fermat hazırlık</div></div></div>'+ul(['Toplam en az <strong>2 gün</strong> (yılda)','Tam gün: 10:00 - 16:00','Öğle yemeği ve ikramlar dahil'])) +
+card('','🧮','Kamp İçeriği','Sınav stratejileri, pratik çözüm teknikleri ve deneyimli eğitmenler',ul(['CEMC sınav formatına özel strateji eğitimi','Geçmiş yıl sorularının çözümü ve analizi','Zaman yönetimi teknikleri','Pratik çözüm ve kısa yol yöntemleri','Deneyimli eğitmenler eşliğinde birebir destek','Grup çalışması ve akran öğrenmesi','Kamp sonu değerlendirme ve geri bildirim'])) +
+'</div></section>';
+
+/* 6 */
+H += '<section class="slide" data-slide="6">' +
+'<div class="pres-hero"><div class="pres-icon">📋</div><h2 class="pres-title">Kayıt & Sınav Süreci</h2><p class="pres-sub">CEMC deneme sınavları için uçtan uca kayıt, sınav ve sonuç yönetimi</p></div>' +
+'<div class="pres-cards">' +
+card('','📝','1. Kayıt Aşaması','Paket hazırlık, form dağıtımı, email ve WhatsApp duyuruları',ul(['<strong>Kayıt Paketi:</strong> Form, kayıt sayfası, broşür ve WhatsApp mesajları paket halinde hazırlanıp gönderilecek','<strong>Kayıt Formu:</strong> Adres dahil tüm bilgilerin düzenli toplanması','<strong>Tanıtım:</strong> WhatsApp gruplarında birkaç defa paylaşım ve hatırlatma','<strong>Kayıt Emaili:</strong> Sistemden kayıtlı tüm öğrencilere email — kolaylaştırıcı özellik eklenecek','<strong>Hatırlatma Mesajları:</strong> Standart WhatsApp formatında','<strong>Öğrenci Kayıtları:</strong> Sisteme kayıt ve bilgi güncellemesi'])) +
+card('','🧪','2. Sınav Aşaması','Son hatırlatma, fotoğraf çekimi ve gruplarda paylaşım',ul(['<strong>Son Hatırlatma Emaili:</strong> Sınavdan bir gece önce kayıtlılara','<strong>Fotoğraf & Video:</strong> Sınıfın arkadan çekilmiş görüntüleri<ul><li>Şehir veli WhatsApp grubunda</li><li>School Advisory Group WhatsApp grubunda</li></ul>','<strong>Yoklama:</strong> Sınav günü katılım takibi'])) +
+card('accent','📊','3. Sınav Sonrası','Sonuç girişi, email gönderimi ve veri güncelleme',ul(['<strong>Yeni Öğrenci Kaydı:</strong> Sistemde kaydı olmayanların eklenmesi','<strong>Sınavların Okunması:</strong> Sonuçların öğrenci kaydı altına girilmesi','<strong>Sonuç Emaili:</strong> Veli ve öğrenci emaillerine gönderim','<strong>Email Güncellemeleri:</strong> Hatalı emaillerin takibi ve düzeltilmesi'])) +
+'</div></section>';
+
+/* 7 */
+H += '<section class="slide" data-slide="7">' +
+'<div class="pres-hero"><div class="pres-icon">💻</div><h2 class="pres-title">Online Matematik Dersleri</h2><p class="pres-sub">Her grade için haftalık online dersler ile sürekli akademik destek</p></div>' +
+'<div class="pres-cards">' +
+card('','📅','Planlama & Takvim','Ders takvimi, öğretmen zümreleri ve haftalık düzen',ul(['<strong>Takvim Planı:</strong> Her grade için haftalık bir ders','<strong>Paylaşım:</strong> Haftalık takvim WhatsApp gruplarında','<strong>Zümre:</strong> 2 haftada bir öğretmen koordinasyon toplantısı','<strong>Grade 10:</strong> Ömer abi zümreleri yapacak'])) +
+card('','🎥','Ders Akışı','Öncesi hatırlatmalar, Zoom/Teams oturumu ve sonrası ödevler','<p><strong>Ders Öncesi:</strong></p>'+ul(['15-30 dk önce standart hatırlatma mesajı','Ders başladığında "ders başladı" mesajı'])+'<p><strong>Ders Sonrası:</strong></p>'+ul(['Mümkünse IXL üzerinden ödev','Değilse PDF/döküman grade gruplarında','Ödev takibi: bitiren işaretler veya IXL takip'])) +
+card('accent','⚙️','Teknik & Kalite','Platform gereksinimleri, öğretmen yetkinliği ve standartlar',ul(['<strong>Platform:</strong> Zoom veya Teams','<strong>Ücretli Yazılım:</strong> Süresiz, 45 dk free ile ders yapılmayacak','<strong>Kolay Giriş:</strong> Login istemeyecek','<strong>Öğretmen Yetkinliği:</strong> Platform aracını iyi kullanacak'])) +
+'</div></section>';
+
+/* 8 */
+H += '<section class="slide" data-slide="8">' +
+'<div class="pres-hero"><div class="pres-icon">💰</div><h2 class="pres-title">Burs Semineri</h2><p class="pres-sub">Aylık online burs semineri ile öğrencilere finansal fırsatlar</p></div>' +
+'<div class="pres-cards">' +
+card('','🎙️','Seminer Formatı','Ayda bir Zoom\'da güncel burs listesi ve başvuru rehberliği',ul(['<strong>Ayda bir</strong> online (Zoom)','Gelecek ay başvurulabilecek <strong>bursların listesi</strong> hazırlanır','Tüm katılımcılara Zoom üzerinden anlatım','Sunum dosyası <strong>sadece katılanlara</strong> Zoom chat\'ten verilir','Burs başvuru tarihleri ve ipuçları paylaşılır'])) +
+card('accent','🔒','İçerik Koruması','Sunumların sadece katılımcılara özel kalması için mekanizma','<p>Sunumu sadece katılımcılarla sınırlamak için <strong>yazılımsal mekanizma</strong>:</p>'+ul(['İçerik korunur, sadece katılımcılara özel kalır','Canlı katılım teşvik edilir','Premium içerik stratejisinin ilk adımı olabilir'])) +
+'</div></section>';
+
+/* 9 */
+H += '<section class="slide" data-slide="9">' +
+'<div class="pres-hero"><div class="pres-icon">🚀</div><h2 class="pres-title">Üniversite & Kariyer Seminerleri</h2><p class="pres-sub">Profesyonellerden ve üniversite öğrencilerinden ilham verici sunumlar</p></div>' +
+'<div class="pres-cards">' +
+card('','🎯','Hedef Kitle & Format','Grade 10\'dan 30 yaşa — kariyer yolu ve meslek tanıtımı','<p>Grade 10\'dan 30 yaşa kadar herkes. Meslekte aktif profesyoneller veya bölüme girmiş öğrenciler tecrübelerini paylaşacak.</p>'+ul(['Nasıl o mesleğe ulaşıldığı','Mesleğin günlük özellikleri ve zorlukları','Kariyer yol haritası ve tavsiyeler','Soru-cevap bölümü','Her seminer 45-60 dakika'])) +
+card('','🏥','8 Hedef Meslek Grubu','Medicine, Engineering, Law, Data/AI ve daha fazlası','<p>Bu mesleklerin uzmanlarını bulup sunum yaptırmamız gerekiyor:</p><div class="career-grid-detail"><div class="career-item-detail"><span>🩺</span> Medicine</div><div class="career-item-detail"><span>🏥</span> Nursing</div><div class="career-item-detail"><span>💻</span> Software Engineering</div><div class="career-item-detail"><span>🏗️</span> Engineering</div><div class="career-item-detail"><span>📊</span> CPA / Accounting</div><div class="career-item-detail"><span>🔧</span> Skilled Trades</div><div class="career-item-detail"><span>⚖️</span> Law</div><div class="career-item-detail"><span>🤖</span> Data / AI</div></div>') +
+'</div></section>';
+
+/* 10 */
+H += '<section class="slide" data-slide="10">' +
+'<div class="pres-hero"><div class="pres-icon">✍️</div><h2 class="pres-title">Makale Yarışmaları</h2><p class="pres-sub">Her ay yazma becerilerini geliştiren yarışmalara katılım ve takip</p></div>' +
+'<div class="pres-cards">' +
+card('','📋','Takip Sistemi','WhatsApp grubu ile aylık yarışma takibi ve katılım teşviki',ul(['Her ay herkesin bir makale yarışmasına yazı göndermesi teşvik edilecek','Özel <strong>WhatsApp grubu</strong> üzerinden aylık takip','Yazı gönderenler bizi haberdar edecek','Aylık yarışma listesi düzenli paylaşılacak','Son başvuru tarihleri hatırlatılacak'])) +
+card('accent','💡','Geliştirme Fikirleri','Workshop\'lar, teşvikler ve Grade 4\'ten üniversiteye geniş katılım',ul(['Yazı yazma <strong>workshop\'ları</strong>','Teşvik mekanizmaları (rozet, sertifika)','Grade 4\'ten üniversite sona kadar geniş aralık','Başarılı yazıların ödüllendirilmesi ve paylaşılması','Yazma becerilerini geliştiren mini kurslar','Yarışma kazananlarının tecrübe paylaşımı'])) +
+'</div></section>';
+
+/* 11 */
+H += '<section class="slide" data-slide="11">' +
+'<div class="pres-hero"><div class="pres-icon">🚁</div><h2 class="pres-title">Drone Pilot License Kulübü</h2><p class="pres-sub">Kanada\'da drone uçurma lisansı için eğitim, topluluk ve mesleki fırsatlar</p></div>' +
+'<div class="pres-cards">' +
+card('','🎯','Kulüp Amacı & Vizyon','Hobi ve geleceğin mesleği — Transport Canada lisansına hazırlık','<p>Kanada\'da drone uçurma lisansı almaları için bir kulüp:</p>'+ul(['İyi bir <strong>hobi</strong> edinme fırsatı','Geleceğe dair bir <strong>meslek</strong> (fotoğrafçılık, haritalama, tarım, inşaat, denetim)','Drone teknolojisi büyüyen bir sektör','Transport Canada lisanslama sürecine hazırlık','Temel ve ileri drone pilotluğu eğitimleri','Güvenlik ve yasal düzenlemeler'])) +
+'</div></section>';
+
+/* 12 */
+H += '<section class="slide" data-slide="12">' +
+'<div class="pres-hero"><div class="pres-icon">📚</div><h2 class="pres-title">Müfredat Bazlı Kişisel Takip</h2><p class="pres-sub">Cohort ve okul derslerine paralel birebir eğitim — en kapsamlı bileşen</p></div>' +
+'<div class="pres-cards">' +
+card('','👥','Cohort Bazlı Eğitim','Uzun müfredatlı, adım adım mentor takipli grup eğitimi','<p>Harici konularda (örn. drone) uzun müfredatlı içerikler. Öğrenciler cohort\'lar halinde kaydolur, mentorler adım adım içerik gönderir ve takip eder.</p>'+ul(['Yapılandırılmış müfredat ve içerik paketleri','Cohort dinamiği ve akran desteği','Mentor tarafından düzenli içerik gönderimi','Her adımda çalışma takibi ve geri bildirim','Program sonunda sınav ve sonuç takibi'])) +
+card('','🏫','Okul Derslerine Paralel','Dönem boyu okul müfredatıyla senkronize, birebir takip','<p>Örn. Math 9 alan bir öğrenci — dönem boyunca:</p>'+ul(['Dersine paralel içerikler gönderilir','Okul derslerinin yüksek olması takip edilir','Gönderilen dersleri çalışması sağlanır','Eğitimi bitirmesi takip edilir','Birebir ilgi ile kişiselleştirilmiş öğrenme'])) +
+card('accent','🔥','Motivasyon Sistemi','Liderlik tablosu, rozetler ve cohort içi rekabet','<p>Bu sistem <strong>birebir ilgi</strong> ile çalışır. Öğrencinin diğerlerinden haberdar olup heyecan duyması için:</p>'+ul(['Liderlik tablosu (leaderboard)','Rozet ve başarı sistemi','Cohort içi rekabet ve işbirliği','İlerleme grafikleri ve görsel geri bildirim','Haftalık "öne çıkan öğrenci" duyuruları'])) +
+'</div></section>';
+
+/* 13 */
+H += '<section class="slide" data-slide="13">' +
+'<div class="pres-hero"><div class="pres-icon">🧑‍🏫</div><h2 class="pres-title">Mentor Sistemi</h2><p class="pres-sub">Her öğrenciye birebir akademik takip sağlayan gönüllü ve ücretli mentor ağı</p></div>' +
+'<div class="pres-cards">' +
+card('','📋','Mentor Görevleri','Haftalık ders takibi, içerik gönderimi, ödev kontrolü, veli iletişimi',ul(['Öğrencinin okul derslerinin haftalık takibi','Müfredat paralelinde içerik gönderimi','Ödev ve çalışma takibi','Öğrenci gelişim raporlaması','Veli ile düzenli iletişim'])) +
+card('accent','💼','Mentor Modeli','Gönüllü/ücretli seçenekleri, seviye bazlı ücretlendirme',ul(['Mentorler bize <strong>kayıt olmalı</strong>','<strong>Gönüllü</strong> veya <strong>ücretli</strong> olabilir','Hangi level\'dan itibaren ücretli? — tartışılacak','Mentor eğitimi ve sertifikasyon programı','Mentor-öğrenci eşleştirme sistemi','Mentor performans değerlendirmesi'])) +
+'</div></section>';
+
+/* 14 */
+H += '<section class="slide" data-slide="14">' +
+'<div class="pres-hero"><div class="pres-icon">📅</div><h2 class="pres-title">Yıllık Takvim Uygulaması</h2><p class="pres-sub">Tüm faaliyetlerin birleştiği, kişiselleştirilebilir ve filtrelenebilir merkezi takvim</p></div>' +
+'<div class="pres-cards">' +
+card('','🗓️','Takvim Özellikleri','Şehir, grade ve program türü bazlı filtreleme ile kişiselleştirme',ul(['Tüm faaliyet listesine öğrenci/veli erişimi','Alakasız etkinlikleri <strong>filtreleyebilme</strong>','Örn: Grade 5 burs dinlemez, Grade 9 Grade 7 dersine gelmez','Şehir, grade ve program türü bazlı filtre','Takvim aboneliği ve bildirimler'])) +
+'</div><div class="pres-footer-note">ℹ️ Bu uygulama şimdi yapılmayacak — konsept açıklaması bu sunumda yer almaktadır. Ayrı proje olarak ele alınacak.</div></section>';
+
+/* 15 */
+H += '<section class="slide" data-slide="15">' +
+'<div class="pres-hero"><div class="pres-icon">🌟</div><h2 class="pres-title">Başarılı Öğrenci Sunumları</h2><p class="pres-sub">Rol model öğrencilerin ilham verici başarı hikayeleri</p></div>' +
+'<div class="pres-cards">' +
+card('','👥','Sunum Yapacak 7 Profil','Üniversite bitiren, kabul alan, burs bulan, IB mezunu, tradesperson...','<div class="profile-grid-detail"><div class="profile-item-detail">🎓 Üniversite bitirmiş</div><div class="profile-item-detail">📖 Üniversite okuyan</div><div class="profile-item-detail">✅ Kabul almış</div><div class="profile-item-detail">💰 Burs bulmuş</div><div class="profile-item-detail">🌍 IB\'ye kabul / okuyor / bitirmiş</div><div class="profile-item-detail">🔧 TRADES alanına gitmiş</div><div class="profile-item-detail">⭐ Çıraklık / ustalık yolunda</div></div><p style="margin-top:16px"><strong>🎯 Amaç:</strong> "Ben de yapabilirim" duygusunu aşılamak, rol modellerle ilham vermek.</p>') +
+'</div></section>';
+
+/* 16 */
+H += '<section class="slide" data-slide="16">' +
+'<div class="pres-hero"><div class="pres-icon">🔧</div><h2 class="pres-title">TRADES & College Programları</h2><p class="pres-sub">Üniversite dışı kariyer yolları için yapılandırılmış rehberlik</p></div>' +
+'<div class="pres-cards">' +
+card('','🔨','TRADES Alanı','Üniversite okumayacaklar için meslek edinme ve çıraklık yol haritası','<p><strong>TRADES başlı başına bir konu</strong> olarak ele alınmalı:</p>'+ul(['Mentorluk programı','Meslek tanıtım sunumları','Çıraklık ve ustalık yol haritası','Başarılı tradesperson\'larla buluşma','Sertifikasyon ve lisanslama bilgilendirmesi','İş imkanları ve kazanç potansiyeli'])) +
+card('','🏛️','College Programı','BCIT, JIBC gibi okullardan direk meslek edinme rehberliği',ul(['BCIT, JIBC gibi okullardan direk meslek edinme','College başvuru süreci rehberliği','Bölüm ve program seçimi danışmanlığı','Mezuniyet sonrası iş imkanları','College-üniversite karşılaştırması (maliyet, süre)'])) +
+'</div></section>';
+
+/* 17 */
+H += '<section class="slide" data-slide="17">' +
+'<div class="pres-hero"><div class="pres-icon">⚖️</div><h2 class="pres-title">Finansman & Sürdürülebilirlik</h2><p class="pres-sub">Charity temelli modelden sürdürülebilir yapıya geçiş stratejisi</p></div>' +
+'<div class="pres-cards">' +
+card('','❤️','Öncelik: Charity','Tüm faaliyetler öncelikle ücretsiz ve toplum hizmeti odaklı',ul(['Topluma hizmet ve eğitimde fırsat eşitliği temel amaç','Gönüllü mentor ve eğitmen desteği ile maliyet minimizasyonu','Topluluk kaynaklarının verimli kullanımı'])) +
+card('','💰','Ücretli Hizmet','Ölçeklenebilirlik için bazı hizmetlerin ücretlendirilmesi','<p>İnsanların daha iyi emek verebilmesi, ölçeklenebilme ve sürdürülebilirlik için:</p>'+ul(['Hangi hizmetler ücretli olacak? — tartışılmalı','Hangi level\'dan itibaren ücret alınacak?','Premium birebir mentorluk paketleri','Özel kurs ve sertifika programları'])) +
+card('accent','📝','Grant & Karma Model','Grant başvuruları ve gönüllü/ücretli karma mentor sistemi',ul(['Ücretler grant bulunursa oradan karşılanabilir','Grant yazımı ve başvuru süreci ayrı çalışma konusu','<strong>Karma Model:</strong> Temel hizmetler ücretsiz, premium ücretli/grant destekli','Gönüllü + ücretli mentor karma sistemi','Sponsorluk ve kurumsal destek arayışları'])) +
+'</div></section>';
+
+H += '</div>' +
+'<div class="slide-nav-bottom"><button class="btn-nav" id="btn-prev" title="Önceki (←)">◀</button><div class="slide-dots" id="slide-dots"></div><button class="btn-nav" id="btn-next" title="Sonraki (→)">▶</button></div>' +
+'</main></div>';
+
+document.getElementById('app-container').innerHTML = H;
+document.getElementById('th-status').textContent = 'Hazır ✓ (18 slayt, inline drawer)';
+})();
+</script>
+
+<script src="EducationProgramPresentation.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('th-load-sample').addEventListener('click', function() { window.tool._loadSampleData(); });
+  document.getElementById('th-clear').addEventListener('click', function() { window.tool._clearData(); });
+  document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+  document.getElementById('th-ro').addEventListener('click', function() { window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'SALT OKUNUR' : 'DÜZENLEME', 'info'); });
+  document.getElementById('th-dump').addEventListener('click', function() { window.tool._dump(); window.tool.notify('DB konsola yazıldı (F12)', 'info'); });
+});
+</script>
+</body>
+</html>
