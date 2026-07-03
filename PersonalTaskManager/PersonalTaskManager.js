@@ -211,13 +211,34 @@
 
     tool.requestObjects("query", { mainObjectType: "taskSprints-uniconbaseapps" }, function (err, result) {
       if (err) { errs.push("Sprints: " + err); sprints = []; }
-      else { sprints = (result && result.objects) ? result.objects : []; }
+      else {
+        sprints = (result && result.objects) ? result.objects : [];
+        console.log("[PTM-LOAD] Sprints loaded:", sprints.length, "objects");
+        if (sprints.length > 0) {
+          console.log("[PTM-LOAD] Sprint sample:", JSON.stringify(sprints[0]).substring(0, 300));
+        }
+      }
       if (--pending === 0) finish();
     });
 
     tool.requestObjects("query", { mainObjectType: "taskItems-uniconbaseapps" }, function (err, result) {
       if (err) { errs.push("Tasks: " + err); tasks = []; }
-      else { tasks = (result && result.objects) ? result.objects : []; }
+      else {
+        tasks = (result && result.objects) ? result.objects : [];
+        console.log("[PTM-LOAD] Tasks loaded:", tasks.length, "objects");
+        if (tasks.length > 0) {
+          // Instance scoping diagnostic: log _parentObjectId distribution
+          var parentIds = {};
+          tasks.forEach(function (t) {
+            var pid = t._parentObjectId || "(none)";
+            parentIds[pid] = (parentIds[pid] || 0) + 1;
+          });
+          console.log("[PTM-LOAD] Tasks per _parentObjectId:", JSON.stringify(parentIds));
+          console.log("[PTM-LOAD] Note: instance-scoped types should only return tasks for the current CMS record.");
+          console.log("[PTM-LOAD] If you see multiple _parentObjectId values above, the CMS scope:'instance' filter is not working.");
+          console.log("[PTM-LOAD] Task sample:", JSON.stringify(tasks[0]).substring(0, 300));
+        }
+      }
       if (--pending === 0) finish();
     });
 
@@ -503,14 +524,17 @@
   var dragTaskId = null;
 
   function onDragStart(e) {
+    console.log("[PTM-DRAG] dragStart, readOnly=", readOnly);
     if (readOnly) { e.preventDefault(); return; }
     dragTaskId = this.getAttribute("data-task-id");
+    console.log("[PTM-DRAG] dragStart taskId=", dragTaskId);
     this.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", dragTaskId);
   }
 
   function onDragEnd(e) {
+    console.log("[PTM-DRAG] dragEnd");
     this.classList.remove("dragging");
     dragTaskId = null;
     $$(".ptm-column").forEach(function (col) { col.classList.remove("drag-over"); });
@@ -531,13 +555,16 @@
   }
 
   function onDrop(e) {
+    console.log("[PTM-DRAG] onDrop fired, dragTaskId=", dragTaskId, "readOnly=", readOnly);
     e.preventDefault();
     var col = this.closest(".ptm-column");
+    console.log("[PTM-DRAG] drop target column:", col ? col.getAttribute("data-status") : null);
     if (col) col.classList.remove("drag-over");
-    if (!dragTaskId || readOnly) return;
+    if (!dragTaskId || readOnly) { console.log("[PTM-DRAG] Aborting — no dragTaskId or readOnly"); return; }
 
     var newStatus = col ? col.getAttribute("data-status") : null;
-    if (!newStatus) return;
+    if (!newStatus) { console.log("[PTM-DRAG] No target status"); return; }
+    console.log("[PTM-DRAG] newStatus=", newStatus);
 
     // Check permission for staff
     if (!isManager && currentUser) {
@@ -549,6 +576,7 @@
         var d = getTaskData(t);
         if (d.assignedTo && currentUser && !matchUser({ id: d.assignedTo }, currentUser)) {
           notify("You can only move your own tasks.", "warning");
+          console.log("[PTM-DRAG] Permission denied");
           dragTaskId = null;
           return;
         }
@@ -562,12 +590,13 @@
     }
     if (existingTask) {
       var ed2 = getTaskData(existingTask);
-      if (ed2.status === newStatus) { dragTaskId = null; return; }
+      if (ed2.status === newStatus) { console.log("[PTM-DRAG] Same status, skipping"); dragTaskId = null; return; }
     }
 
     var completedAt = "";
     if (newStatus === "done") completedAt = new Date().toISOString();
 
+    console.log("[PTM-DRAG] Calling safeRequest update for task:", dragTaskId, "->", newStatus);
     safeRequest("update", {
       mainObjectType: "taskItems-uniconbaseapps",
       objectId: dragTaskId,
@@ -578,6 +607,7 @@
         }
       }
     }, function (err, result) {
+      console.log("[PTM-DRAG] safeRequest callback: err=", err, "result=", result);
       if (err) { notify("Failed to move task: " + err, "error"); return; }
       notify("Task moved to " + statusLabel(newStatus), "success");
       dragTaskId = null;
@@ -673,8 +703,11 @@
       el.onclick = function (e) {
         e.stopPropagation();
         var tid = el.getAttribute("data-del");
+        console.log("[PTM-DELETE-LIST] delete clicked for taskId=", tid);
         pendingConfirmAction = function () {
-          tool.requestObjects("delete", { mainObjectType: "taskItems-uniconbaseapps", objectId: tid }, function (err, result) {
+          console.log("[PTM-DELETE-LIST] pendingConfirmAction fired, calling safeRequest delete for:", tid);
+          safeRequest("delete", { mainObjectType: "taskItems-uniconbaseapps", objectId: tid }, function (err, result) {
+            console.log("[PTM-DELETE-LIST] safeRequest callback: err=", err, "result=", result);
             if (err) { notify("Failed to delete: " + err, "error"); logErr("listDelete error: " + err); return; }
             notify("Task deleted.", "info");
             reloadAll();
@@ -1074,7 +1107,7 @@
       var sprintTasks = getSprintTasks(editingSprintId);
 
       function doDeleteSprint() {
-        tool.requestObjects("delete", {
+        safeRequest("delete", {
           mainObjectType: "taskSprints-uniconbaseapps",
           objectId: editingSprintId
         }, function (err, result) {
@@ -1106,7 +1139,7 @@
         return { action: "delete", mainObjectType: "taskItems-uniconbaseapps", objectId: t.id || t._id };
       });
 
-      tool.requestObjects("batch", { operations: taskOps }, function (err, result) {
+      safeRequest("batch", { operations: taskOps }, function (err, result) {
         if (err) {
           notify("Failed to delete tasks: " + err, "error");
           logErr("deleteSprint batch tasks error: " + err);
@@ -1389,14 +1422,14 @@
     }
 
     if (editingTaskId) {
-      tool.requestObjects("update", {
+      safeRequest("update", {
         mainObjectType: "taskItems-uniconbaseapps",
         objectId: editingTaskId,
         name: title,
         productData: productData
       }, handleTaskResult);
     } else {
-      tool.requestObjects("create", {
+      safeRequest("create", {
         mainObjectType: "taskItems-uniconbaseapps",
         name: title,
         productData: productData
@@ -1405,12 +1438,15 @@
   }
 
   function deleteTask() {
-    if (!editingTaskId) return;
+    console.log("[PTM-DELETE] deleteTask() called, editingTaskId=", editingTaskId);
+    if (!editingTaskId) { console.log("[PTM-DELETE] No editingTaskId, returning"); return; }
     pendingConfirmAction = function () {
-      tool.requestObjects("delete", {
+      console.log("[PTM-DELETE] pendingConfirmAction fired, calling safeRequest delete for:", editingTaskId);
+      safeRequest("delete", {
         mainObjectType: "taskItems-uniconbaseapps",
         objectId: editingTaskId
       }, function (err, result) {
+        console.log("[PTM-DELETE] safeRequest callback: err=", err, "result=", result);
         if (err) { notify("Failed to delete task: " + err, "error"); logErr("deleteTask error: " + err); return; }
         notify("Task deleted.", "info");
         closeTaskModal();
@@ -1451,7 +1487,7 @@
     if (newStatus === "done" && !completedAt) completedAt = new Date().toISOString();
     if (newStatus !== "done") completedAt = "";
 
-    tool.requestObjects("update", {
+    safeRequest("update", {
       mainObjectType: "taskItems-uniconbaseapps",
       objectId: taskId,
       productData: {
@@ -1533,7 +1569,7 @@
 
       pendingConfirmAction = function () {
         function doDelete() {
-          tool.requestObjects("delete", {
+          safeRequest("delete", {
             mainObjectType: "taskSprints-uniconbaseapps",
             objectId: selectedSprintId
           }, function (err, result) {
@@ -1551,7 +1587,7 @@
         var taskOps = sprintTasks.map(function (t) {
           return { action: "delete", mainObjectType: "taskItems-uniconbaseapps", objectId: t.id || t._id };
         });
-        tool.requestObjects("batch", { operations: taskOps }, function (err, result) {
+        safeRequest("batch", { operations: taskOps }, function (err, result) {
           if (err) { notify("Failed to delete tasks: " + err, "error"); logErr("deleteSprintBar batch error: " + err); return; }
           doDelete();
         });
@@ -1594,8 +1630,11 @@
 
     // Confirm modal
     $("#ptmBtnConfirmYes").onclick = function () {
+      console.log("[PTM-CONFIRM] Yes clicked, pendingConfirmAction=", typeof pendingConfirmAction);
+      var action = pendingConfirmAction;   // capture BEFORE hideConfirm clears it
       hideConfirm();
-      if (pendingConfirmAction) { pendingConfirmAction(); pendingConfirmAction = null; }
+      if (action) { console.log("[PTM-CONFIRM] Executing pendingConfirmAction"); action(); }
+      else { console.log("[PTM-CONFIRM] No pendingConfirmAction set!"); }
     };
     $("#ptmBtnConfirmNo").onclick = hideConfirm;
     $("#ptmConfirmClose").onclick = hideConfirm;
@@ -1713,14 +1752,21 @@
 
     // Startup diagnostic: check requestObjects availability
     var hasObjCRUD = typeof tool.requestObjects === "function";
+    console.log("[PTM-INIT] tool.requestObjects is function:", hasObjCRUD);
     if (!hasObjCRUD) {
       logErr("tool.requestObjects is not a function — Object CRUD not available. Saves will fail.");
     } else {
-      var crudAllowed = tool.param("allowObjectCRUD", "");
+      // Use "yes" as default — matches the declared default in declareParams.
+      // tool.param returns the default when the param is empty/missing per v4 rules.
+      var crudAllowed = tool.param("allowObjectCRUD", "yes");
+      console.log("[PTM-INIT] allowObjectCRUD effective value:", JSON.stringify(crudAllowed));
       if (crudAllowed !== "yes") {
-        logErr("allowObjectCRUD is '" + crudAllowed + "' — set to 'yes' in CMS field settings to enable saves.");
+        logErr("allowObjectCRUD resolved to '" + crudAllowed + "' — ensure allowObjectCRUD is 'yes' in CMS html-tool field settings (Field Group Designer → html-tool → Settings).");
+      } else {
+        console.log("[PTM-INIT] allowObjectCRUD enabled — CRUD operations should work.");
       }
     }
+    console.log("[PTM-INIT] DOM check — ptmBtnDeleteTask:", !!$("#ptmBtnDeleteTask"), "ptmBtnConfirmYes:", !!$("#ptmBtnConfirmYes"), "ptmBtnAddTask:", !!$("#ptmBtnAddTask"));
 
     // Load permitted users FIRST (sync), then load data and render
     permittedUsers = tool.getPermittedUsers() || [];
@@ -1765,6 +1811,50 @@
 
     // Validate
     tool.reportValid(true, "");
+
+    // ── DEBUG: expose a direct write-test function on window ──
+    // Open CMS console (F12) and run:  ptmTestWrite()
+    // This bypasses safeRequest to show raw CMS bridge behavior.
+    window.ptmTestWrite = function () {
+      console.log("=== PTM WRITE TEST ===");
+      console.log("1. tool.requestObjects type:", typeof tool.requestObjects);
+      if (tasks.length > 0) {
+        var testTask = tasks[0];
+        var testId = testTask.id || testTask._id;
+        var d = getTaskData(testTask);
+        console.log("2. Using existing task:", testId, "status:", d.status);
+        console.log("3. Sending update (same-status no-op)...");
+        tool.requestObjects("update", {
+          mainObjectType: "taskItems-uniconbaseapps",
+          objectId: testId,
+          productData: { data_categoriesBased: { status: d.status || "todo" } }
+        }, function (err, result) {
+          console.log("4. UPDATE callback! err=", err, "result=", JSON.stringify(result));
+          if (err) { console.error("5. FAILED:", err); }
+          else { console.log("5. SUCCESS — writes work!"); }
+        });
+        console.log("   Waiting for callback... (if nothing after 15s, CMS bridge broken)");
+        setTimeout(function () {
+          console.log("   15s elapsed — if no callback above, CMS bridge is NOT processing writes.");
+        }, 15000);
+      } else {
+        console.log("2. No tasks — creating test task...");
+        tool.requestObjects("create", {
+          mainObjectType: "taskItems-uniconbaseapps",
+          name: "TEST-DELETE-ME",
+          productData: { data_categoriesBased: { title: "Test (safe to delete)", status: "todo", priority: "low", sprintId: selectedSprintId || "" } }
+        }, function (err, result) {
+          console.log("3. CREATE callback! err=", err, "result=", JSON.stringify(result));
+          if (err) { console.error("4. FAILED:", err); }
+          else { console.log("4. SUCCESS — writes work! id=", (result && result.object ? result.object.id : "?")); }
+        });
+        console.log("   Waiting...");
+        setTimeout(function () {
+          console.log("   15s — if no callback above, writes broken.");
+        }, 15000);
+      }
+    };
+    console.log("[PTM-INIT] Debug: type ptmTestWrite() in console to test writes directly.");
   });
 
 })();

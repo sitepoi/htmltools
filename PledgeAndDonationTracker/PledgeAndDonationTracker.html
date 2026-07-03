@@ -1,0 +1,452 @@
+<!-- External CDN: XLSX library for Excel file parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div class="app-shell">
+
+	<!-- ══ HEADER ══ -->
+	<header class="app-header">
+		<div class="header-shimmer"></div>
+		<div class="header-inner">
+			<div class="header-brand">
+				<div class="brand-logo">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round">
+						<rect x="2" y="3" width="20" height="14" rx="2" />
+						<path d="M8 21h8M12 17v4" />
+						<path d="M7 8h4M7 12h6" />
+					</svg>
+				</div>
+				<div>
+					<h1 class="brand-title">Pledge &amp; Donation Tracker</h1>
+					<p class="brand-sub">Import · Reconcile · Report</p>
+				</div>
+			</div>
+			<div class="header-actions">
+				<div class="status-pill" id="header-status" style="display:none">
+					<span class="status-dot"></span>
+					<span id="header-status-text">Report ready</span>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<main class="app-main">
+
+		<!-- ══ SAVED REPORT BANNER ══ -->
+		<div class="saved-banner" id="saved-banner" style="display:none">
+			<div class="saved-banner-inner">
+				<span class="saved-banner-icon">💾</span>
+				<div>
+					<div class="saved-banner-title">Showing saved report</div>
+					<div class="saved-banner-sub" id="saved-banner-sub">Generated previously — upload new files to
+						regenerate</div>
+				</div>
+				<button class="btn btn-outline btn-sm" onclick="toggleImportSection()">↑ Update Data</button>
+			</div>
+		</div>
+
+		<!-- ══ IMPORT SECTION ══ -->
+		<div id="import-section">
+			<div class="step-header">
+				<div class="step-badge">1</div>
+				<div class="step-title">Import your data files</div>
+				<div class="step-desc">Upload QuickBooks export + optional cash payments and people list</div>
+			</div>
+
+			<div class="import-grid">
+				<!-- QB -->
+				<div class="import-card import-card--blue">
+					<div class="import-card-header">
+						<div class="import-icon import-icon-blue">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+								stroke-width="2">
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+								<polyline points="14 2 14 8 20 8" />
+								<line x1="16" y1="13" x2="8" y2="13" />
+								<line x1="16" y1="17" x2="8" y2="17" />
+							</svg>
+						</div>
+						<div>
+							<div class="import-card-title">QuickBooks Export <span class="required-tag">Required</span>
+							</div>
+							<div class="import-card-desc">Invoice List (.xlsx / .csv)</div>
+						</div>
+					</div>
+					<div class="drop-zone" id="qb-drop" onclick="document.getElementById('qb-file').click()">
+						<div class="drop-icon">📄</div>
+						<div class="drop-label" id="qb-label">Click or drag QB export here</div>
+						<div class="drop-sub">Excel or CSV · Invoices only</div>
+						<input type="file" id="qb-file" accept=".xlsx,.xls,.csv">
+					</div>
+					<div class="col-map" id="qb-map" style="display:none">
+						<div class="col-map-note success-note">✓ Invoice rows detected &amp; mapped automatically</div>
+					</div>
+				</div>
+
+				<!-- Cash -->
+				<div class="import-card import-card--green">
+					<div class="import-card-header">
+						<div class="import-icon import-icon-green">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+								stroke-width="2">
+								<rect x="2" y="5" width="20" height="14" rx="2" />
+								<line x1="2" y1="10" x2="22" y2="10" />
+							</svg>
+						</div>
+						<div>
+							<div class="import-card-title">Cash Payments <span class="optional-tag">Optional</span>
+							</div>
+							<div class="import-card-desc">Offline donations spreadsheet</div>
+						</div>
+					</div>
+					<div class="drop-zone" id="cash-drop" onclick="document.getElementById('cash-file').click()">
+						<div class="drop-icon">💵</div>
+						<div class="drop-label" id="cash-label">Click or drag cash sheet here</div>
+						<div class="drop-sub">Excel or CSV file</div>
+						<input type="file" id="cash-file" accept=".xlsx,.xls,.csv">
+					</div>
+					<div class="col-map" id="cash-map" style="display:none">
+						<label class="field-label">Donor / Name column</label>
+						<select class="field-select" id="cash-col-donor"></select>
+						<label class="field-label">Payment Date</label>
+						<select class="field-select" id="cash-col-date"></select>
+						<label class="field-label">Amount Paid (Income)</label>
+						<select class="field-select" id="cash-col-amount"></select>
+						<label class="field-label">Explanation / Note</label>
+						<select class="field-select" id="cash-col-note" onchange="refreshExplOptions()"></select>
+					</div>
+					<div id="cash-expl-filter" style="display:none;margin-top:10px">
+						<label class="field-label">Filter by Explanation <span class="field-hint">(only matching rows
+								count as payments)</span></label>
+						<select class="field-select" id="cash-col-expl-val">
+							<option value="">— All rows (no filter) —</option>
+						</select>
+					</div>
+				</div>
+
+				<!-- People -->
+				<div class="import-card import-card--purple">
+					<div class="import-card-header">
+						<div class="import-icon import-icon-purple">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+								stroke-width="2">
+								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+								<circle cx="9" cy="7" r="4" />
+								<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+							</svg>
+						</div>
+						<div>
+							<div class="import-card-title">People &amp; Groups <span
+									class="optional-tag">Optional</span></div>
+							<div class="import-card-desc">Assign donors to groups</div>
+						</div>
+					</div>
+					<div class="drop-zone" id="people-drop" onclick="document.getElementById('people-file').click()">
+						<div class="drop-icon">👥</div>
+						<div class="drop-label" id="people-label">Click or drag people list here</div>
+						<div class="drop-sub">Needs Name + Group columns</div>
+						<input type="file" id="people-file" accept=".xlsx,.xls,.csv">
+					</div>
+					<div class="col-map" id="people-map" style="display:none">
+						<label class="field-label">Name column</label>
+						<select class="field-select" id="people-col-name"></select>
+						<label class="field-label">Group column</label>
+						<select class="field-select" id="people-col-group"></select>
+						<label class="field-label">Phone (optional)</label>
+						<select class="field-select" id="people-col-phone"></select>
+					</div>
+				</div>
+			</div>
+
+			<!-- Step 2 CTA -->
+			<div class="step-header" style="margin-top:8px">
+				<div class="step-badge">2</div>
+				<div class="step-title">Generate the report</div>
+				<div class="step-desc">Combine all files and save results to the form</div>
+			</div>
+			<div class="cta-row">
+				<button class="btn btn-primary btn-lg" id="generate-btn" onclick="combine()">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+					</svg>
+					<span id="generate-btn-text">Combine &amp; Generate Report</span>
+				</button>
+				<button class="btn btn-ghost" onclick="loadSample()">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+						<polyline points="17 8 12 3 7 8" />
+						<line x1="12" y1="3" x2="12" y2="15" />
+					</svg>
+					Load Sample Data
+				</button>
+			</div>
+		</div>
+
+		<!-- ══ NOTICE ══ -->
+		<div class="notice" id="notice"></div>
+
+		<!-- ══ MISMATCH WARNING PANEL ══ -->
+		<div class="warn-panel" id="warn-panel" style="display:none">
+			<div class="warn-panel-header" onclick="toggleWarnPanel()">
+				<div class="warn-header-left">
+					<div class="warn-icon">⚠</div>
+					<div>
+						<div class="warn-title">Name Mismatch Issues Detected</div>
+						<div class="warn-subtitle">Fix these in your source files, then re-import</div>
+					</div>
+					<div class="warn-badge" id="warn-count">0</div>
+				</div>
+				<button class="warn-toggle-btn" id="warn-toggle-label">Show ▾</button>
+			</div>
+			<div class="warn-panel-body" id="warn-panel-body" style="display:none">
+				<p class="warn-intro">These names could not be matched across your files. Check for typos, different
+					spellings, or extra spaces. Tick each item as you fix it, then re-import.</p>
+				<div id="warn-list"></div>
+			</div>
+		</div>
+
+		<!-- ══ STATS ROW ══ -->
+		<div class="stats-row" id="stats-row" style="display:none">
+			<div class="stat-card stat-blue">
+				<div class="stat-icon-bubble stat-bubble-blue">👤</div>
+				<div class="stat-body">
+					<div class="stat-label">Total Donors</div>
+					<div class="stat-value" id="s-donors">0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-indigo">
+				<div class="stat-icon-bubble stat-bubble-indigo">🏘</div>
+				<div class="stat-body">
+					<div class="stat-label">Groups</div>
+					<div class="stat-value" id="s-groups">0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-slate">
+				<div class="stat-icon-bubble stat-bubble-slate">📋</div>
+				<div class="stat-body">
+					<div class="stat-label">Total Pledged</div>
+					<div class="stat-value stat-money" id="s-pledged">$0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-green">
+				<div class="stat-icon-bubble stat-bubble-green">✅</div>
+				<div class="stat-body">
+					<div class="stat-label">Total Paid</div>
+					<div class="stat-value stat-money" id="s-paid">$0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-amber">
+				<div class="stat-icon-bubble stat-bubble-amber">⏳</div>
+				<div class="stat-body">
+					<div class="stat-label">Outstanding</div>
+					<div class="stat-value stat-money" id="s-balance">$0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-teal">
+				<div class="stat-icon-bubble stat-bubble-teal">🎯</div>
+				<div class="stat-body">
+					<div class="stat-label">Fully Paid</div>
+					<div class="stat-value" id="s-full">0</div>
+				</div>
+			</div>
+			<div class="stat-card stat-red">
+				<div class="stat-icon-bubble stat-bubble-red">🔴</div>
+				<div class="stat-body">
+					<div class="stat-label">Unpaid</div>
+					<div class="stat-value" id="s-unpaid">0</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- ══ REPORT SECTION ══ -->
+		<div id="report-section" style="display:none">
+			<div class="tabs-bar">
+				<div class="tabs">
+					<button class="tab-btn active" onclick="switchTab('flat')">📋 Full List</button>
+					<button class="tab-btn" onclick="switchTab('group')">🗂 By Group</button>
+					<button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
+					<button class="tab-btn" onclick="switchTab('cards')">🪪 Donor Cards</button>
+					<button class="tab-btn" id="tab-btn-nopledge-list" onclick="switchTab('nopledge-list')"
+						style="display:none">🔔 No Pledge — List</button>
+					<button class="tab-btn" id="tab-btn-nopledge-group" onclick="switchTab('nopledge-group')"
+						style="display:none">🔔 No Pledge — Groups</button>
+				</div>
+			</div>
+
+			<!-- FLAT LIST -->
+			<div class="tab-panel active" id="tab-flat">
+				<div class="action-bar">
+					<div class="search-wrap">
+						<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input class="search-box" type="text" id="search" placeholder="Search donor or invoice…"
+							oninput="renderFlat()">
+					</div>
+					<select class="filter-select" id="filter-status" onchange="renderFlat()">
+						<option value="">All statuses</option>
+						<option value="paid">Fully paid</option>
+						<option value="partial">Partial</option>
+						<option value="unpaid">Unpaid</option>
+					</select>
+					<select class="filter-select" id="filter-group" onchange="renderFlat()">
+						<option value="">All groups</option>
+					</select>
+					<button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
+					<button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
+				</div>
+				<div class="table-card">
+					<table>
+						<thead>
+							<tr>
+								<th style="width:32px"></th>
+								<th onclick="sortBy('donor')" class="sortable">Donor</th>
+								<th onclick="sortBy('group')" class="sortable">Group</th>
+								<th onclick="sortBy('invoice')" class="sortable">Invoice #</th>
+								<th onclick="sortBy('date')" class="sortable">Date</th>
+								<th onclick="sortBy('pledged')" class="sortable">Pledged</th>
+								<th onclick="sortBy('paid')" class="sortable">Paid</th>
+								<th onclick="sortBy('balance')" class="sortable">Balance</th>
+								<th>Progress</th>
+								<th onclick="sortBy('status')" class="sortable">Status</th>
+							</tr>
+						</thead>
+						<tbody id="report-body"></tbody>
+					</table>
+				</div>
+				<div class="row-count" id="row-count"></div>
+			</div>
+
+			<!-- BY GROUP -->
+			<div class="tab-panel" id="tab-group">
+				<div class="action-bar">
+					<div class="search-wrap">
+						<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input class="search-box" type="text" id="group-search" placeholder="Search donor…"
+							oninput="renderGroupView()">
+					</div>
+					<select class="filter-select" id="group-filter-status" onchange="renderGroupView()">
+						<option value="">All statuses</option>
+						<option value="paid">Fully paid</option>
+						<option value="partial">Partial</option>
+						<option value="unpaid">Unpaid</option>
+					</select>
+					<button class="btn btn-outline btn-sm" onclick="expandAll()">Expand All</button>
+					<button class="btn btn-outline btn-sm" onclick="collapseAll()">Collapse All</button>
+				</div>
+				<div id="group-view"></div>
+			</div>
+
+			<!-- SUMMARY -->
+			<div class="tab-panel" id="tab-summary">
+				<div class="action-bar">
+					<button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Export Excel</button>
+					<button class="btn btn-outline btn-sm" onclick="exportGroupImages()">🖼 Group Images</button>
+				</div>
+				<div class="table-card">
+					<table class="summary-table">
+						<thead>
+							<tr>
+								<th>Group</th>
+								<th>Donors</th>
+								<th>Pledged</th>
+								<th>Paid</th>
+								<th>Balance</th>
+								<th>% Collected</th>
+								<th>Fully Paid</th>
+								<th>Unpaid</th>
+							</tr>
+						</thead>
+						<tbody id="summary-body"></tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- DONOR CARDS -->
+			<div class="tab-panel" id="tab-cards">
+				<div class="action-bar">
+					<div class="search-wrap">
+						<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input class="search-box" type="text" id="cards-search" placeholder="Search donor…"
+							oninput="renderCards()">
+					</div>
+					<select class="filter-select" id="cards-filter-group" onchange="renderCards()">
+						<option value="">All groups</option>
+					</select>
+					<select class="filter-select" id="cards-filter-status" onchange="renderCards()">
+						<option value="">All statuses</option>
+						<option value="paid">Fully paid</option>
+						<option value="partial">Partial</option>
+						<option value="unpaid">Unpaid</option>
+					</select>
+				</div>
+				<div class="cards-grid" id="cards-grid"></div>
+			</div>
+
+			<!-- NO PLEDGE LIST -->
+			<div class="tab-panel" id="tab-nopledge-list">
+				<div class="alert-banner alert-warning">⚠ These people are in your Groups file but have <strong>no
+						QuickBooks invoice</strong> — they haven't made a pledge yet.</div>
+				<div class="action-bar">
+					<div class="search-wrap">
+						<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input class="search-box" type="text" id="nopledge-search" placeholder="Search name…"
+							oninput="renderNoPledgeList()">
+					</div>
+					<select class="filter-select" id="nopledge-filter-group" onchange="renderNoPledgeList()">
+						<option value="">All groups</option>
+					</select>
+				</div>
+				<div class="table-card">
+					<table>
+						<thead>
+							<tr>
+								<th onclick="npSortBy('name')" class="sortable">Name</th>
+								<th onclick="npSortBy('group')" class="sortable">Group</th>
+								<th>Phone</th>
+							</tr>
+						</thead>
+						<tbody id="nopledge-body"></tbody>
+					</table>
+				</div>
+				<div class="row-count" id="nopledge-count"></div>
+			</div>
+
+			<!-- NO PLEDGE BY GROUP -->
+			<div class="tab-panel" id="tab-nopledge-group">
+				<div class="alert-banner alert-warning">⚠ These people are in your Groups file but have <strong>no
+						QuickBooks invoice</strong> — they haven't made a pledge yet.</div>
+				<div class="action-bar">
+					<div class="search-wrap">
+						<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2">
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</svg>
+						<input class="search-box" type="text" id="nopledge-group-search" placeholder="Search name…"
+							oninput="renderNoPledgeGroup()">
+					</div>
+					<button class="btn btn-outline btn-sm" onclick="npExpandAll()">Expand All</button>
+					<button class="btn btn-outline btn-sm" onclick="npCollapseAll()">Collapse All</button>
+				</div>
+				<div id="nopledge-group-view"></div>
+			</div>
+
+		</div>
+	</main>
+</div>
