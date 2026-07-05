@@ -133,6 +133,8 @@ function createTabGroup(group) {
     if (drawer) {
       var innerEl = drawer.querySelector('.drawer-inner');
       html = innerEl ? innerEl.innerHTML : drawer.innerHTML;
+      /* Store on card for PDF export */
+      card.setAttribute('data-drawer-content', encodeURIComponent(html));
       drawer.parentNode.removeChild(drawer);
     }
     return html;
@@ -381,16 +383,7 @@ function exportDecisionsPdf() {
   Object.keys(labels).forEach(function(k) {
     html += '<h3>' + labels[k] + '</h3><p>' + (decisions[k] || '(Henüz karar verilmedi)') + '</p>';
   });
-  if (typeof tool.requestExportPdf === 'function') {
-    tool.requestExportPdf({ html: html, filename: 'kararlar' }, function(err, file) {
-      if (!err && file && file.url) window.open(file.url, '_blank');
-      else tool.notify('PDF oluşturulamadı', 'error');
-    });
-  } else {
-    var w = window.open('', '_blank');
-    w.document.write('<html><head><meta charset="UTF-8"><title>Kararlar</title></head><body>' + html + '</body></html>');
-    w.document.close();
-  }
+  openExportWindow(html, 'kararlar');
 }
 
 function saveDecision(key, value) {
@@ -449,16 +442,113 @@ function exportReportPdf() {
     if (p.notes) html += '<li>Not: ' + escHtml(p.notes) + '</li>';
     html += '</ul>';
   });
+  openExportWindow(html, 'partner-raporu');
+}
+
+/* ── Full Presentation Export ── */
+function showExportOptions() {
+  /* Simple confirm-style: two buttons */
+  var overlay = document.createElement('div');
+  overlay.className = 'config-drawer-overlay open';
+  overlay.id = 'export-overlay';
+
+  var popup = document.createElement('div');
+  popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1001;background:var(--surface);border-radius:var(--radius-md);padding:28px 32px;box-shadow:0 8px 32px rgba(0,0,0,0.25);text-align:center;max-width:400px;width:90%';
+  popup.innerHTML = '<h3 style="font-size:20px;margin-bottom:8px">📄 Sunumu Dışa Aktar</h3><p style="font-size:15px;color:var(--text-secondary);margin-bottom:20px">Hangi formatta aktarmak istersiniz?</p>' +
+    '<button type="button" id="export-collapsed" style="display:block;width:100%;padding:12px;margin-bottom:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:15px;cursor:pointer;font-family:var(--font)">📋 <strong>Detaylar Kapalı</strong><br><span style="font-size:13px;color:var(--text-muted)">Sadece kart başlıkları, özet görünüm</span></button>' +
+    '<button type="button" id="export-expanded" style="display:block;width:100%;padding:12px;margin-bottom:10px;border:1px solid var(--primary);border-radius:8px;background:var(--primary-light);font-size:15px;cursor:pointer;font-family:var(--font)">📖 <strong>Detaylar Açık</strong><br><span style="font-size:13px;color:var(--text-muted)">Tüm kart içerikleri ve açıklamalar</span></button>' +
+    '<button type="button" id="export-cancel" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:13px;font-family:var(--font);margin-top:6px">İptal</button>';
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
+
+  function cleanup() { overlay.remove(); popup.remove(); }
+
+  overlay.addEventListener('click', cleanup);
+  popup.querySelector('#export-cancel').addEventListener('click', function(e) { e.stopPropagation(); cleanup(); });
+  popup.querySelector('#export-collapsed').addEventListener('click', function(e) { e.stopPropagation(); cleanup(); exportPresentationPdf(false); });
+  popup.querySelector('#export-expanded').addEventListener('click', function(e) { e.stopPropagation(); cleanup(); exportPresentationPdf(true); });
+}
+
+function openExportWindow(html, filename) {
   if (typeof tool.requestExportPdf === 'function') {
-    tool.requestExportPdf({ html: html, filename: 'partner-raporu' }, function(err, file) {
-      if (!err && file && file.url) window.open(file.url, '_blank');
-      else tool.notify('PDF oluşturulamadı: ' + (err || 'bilinmeyen hata'), 'error');
+    tool.requestExportPdf({ html: html, filename: filename, landscape: true }, function(err, file) {
+      if (!err && file && file.url && file.url !== '#' && file.url.length > 2) {
+        window.open(file.url, '_blank');
+      } else {
+        /* Fallback: open HTML in new window for print-to-PDF */
+        openFallbackWindow(html);
+      }
     });
   } else {
-    var w = window.open('', '_blank');
-    w.document.write('<html><head><meta charset="UTF-8"><title>Partner Raporu</title></head><body>' + html + '</body></html>');
-    w.document.close();
+    openFallbackWindow(html);
   }
+}
+
+function openFallbackWindow(html) {
+  var w = window.open('', '_blank');
+  if (!w) { tool.notify('Lütfen pop-up engelleyiciyi devre dışı bırakın', 'warning'); return; }
+  w.document.write('<html><head><meta charset="UTF-8"><title>Future Bridge Academy</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0}.slide-card{border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px;margin-bottom:8px;background:#fff;page-break-inside:avoid}.page-break{page-break-after:always}</style></head><body>' + html + '<script>window.onload=function(){window.print();}</script></body></html>');
+  w.document.close();
+}
+
+function exportPresentationPdf(includeDetails) {
+  var slides = qsa('.slide');
+  var html = '<div style="font-family:Arial,sans-serif;color:#111;max-width:1100px;margin:0 auto;padding:20px">';
+  html += '<h1 style="text-align:center;font-size:24px;margin-bottom:4px">🎓 Future Bridge Academy</h1>';
+  html += '<p style="text-align:center;color:#666;font-size:13px;margin-bottom:20px">Eğitim Programı Sunumu — ' + new Date().toLocaleDateString('tr-TR') + '</p>';
+
+  slides.forEach(function(slide, idx) {
+    var hero = slide.querySelector('.pres-hero');
+    var title = hero ? hero.querySelector('.pres-title') : null;
+    var sub = hero ? hero.querySelector('.pres-sub') : null;
+    var icon = hero ? hero.querySelector('.pres-icon') : null;
+
+    html += '<div class="slide-card">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">';
+    html += '<span style="background:#4f46e5;color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;flex-shrink:0">' + (idx + 1) + '</span>';
+    if (icon) html += '<span style="font-size:20px">' + icon.textContent + '</span>';
+    if (title) html += '<strong style="font-size:15px">' + title.textContent + '</strong>';
+    html += '</div>';
+    if (sub) html += '<p style="font-size:11px;color:#666;margin:0 0 8px 0">' + sub.textContent + '</p>';
+
+    var cardFronts = slide.querySelectorAll('.pres-card-front');
+    if (cardFronts.length > 0) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+      cardFronts.forEach(function(front) {
+        var cIcon = front.querySelector('.pres-card-icon');
+        var cTitle = front.querySelector('.pres-card-title');
+        var cDesc = front.querySelector('.pres-card-desc');
+        html += '<div style="flex:1 1 160px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;text-align:center">';
+        if (cIcon) html += '<div style="font-size:20px;margin-bottom:3px">' + cIcon.textContent + '</div>';
+        if (cTitle) html += '<strong style="font-size:11px">' + cTitle.textContent + '</strong>';
+        if (cDesc && includeDetails) html += '<p style="font-size:10px;color:#666;margin:3px 0 0">' + cDesc.textContent + '</p>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    if (includeDetails) {
+      slide.querySelectorAll('.pres-card[data-drawer-content]').forEach(function(card) {
+        try {
+          var content = decodeURIComponent(card.getAttribute('data-drawer-content'));
+          var cTitle = card.querySelector('.pres-card-title');
+          html += '<div style="margin-top:6px;padding:6px 10px;background:#f3f4f6;border-radius:6px;font-size:10px;line-height:1.4">';
+          if (cTitle) html += '<strong>' + cTitle.textContent + ':</strong> ';
+          html += content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 250);
+          html += '</div>';
+        } catch(e) {}
+      });
+    }
+
+    html += '</div>';
+    if ((idx + 1) % 3 === 0 && idx < slides.length - 1) {
+      html += '<div class="page-break"></div>';
+    }
+  });
+
+  html += '</div>';
+  openExportWindow(html, 'future-bridge-academy-sunum');
 }
 
 /* ── Progress ── */
@@ -504,6 +594,10 @@ function bindEvents() {
   /* Topbar config button */
   var cfgBtn = el('btn-config-top');
   if (cfgBtn) cfgBtn.addEventListener('click', function() { openConfigDrawer(); });
+
+  /* Topbar export button */
+  var expBtn = el('btn-export-pres');
+  if (expBtn) expBtn.addEventListener('click', showExportOptions);
 
   /* Sidebar nav */
   qsa('.nav-item').forEach(function(item) {
