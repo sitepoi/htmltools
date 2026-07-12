@@ -107,12 +107,12 @@ function ul(arr) { return '<ul class="detail-list">' + arr.map(li).join('') + '<
 var H = '';
 H += '<div id="app">' +
 '<aside class="sidebar" id="sidebar">' +
-'<div class="sidebar-brand"><div class="brand-logo">🎓</div><div class="brand-name">Eğitim Programı</div><div class="brand-sub">UNICONHUB</div></div>' +
+'<div class="sidebar-brand"><div class="brand-logo">🎓</div><div class="brand-name">Future Bridge Academy</div><div class="brand-sub">Eğitim Programı</div></div>' +
 '<nav class="slide-nav" id="slide-nav">' +
 '<div class="nav-item active" data-slide="0"><span class="nav-num">00</span>Genel Bakış</div>' +
 '<div class="nav-group-label">Organizasyon</div>' +
-'<div class="nav-item" data-slide="1"><span class="nav-num">01</span>Şubeler & Temsilciler</div>' +
-'<div class="nav-item" data-slide="2"><span class="nav-num">02</span>WhatsApp Grup Sistemi</div>' +
+'<div class="nav-item" data-slide="1"><span class="nav-num">01</span>Şube & Partner Yapılanması</div>' +
+'<div class="nav-item" data-slide="2"><span class="nav-num">02</span>İletişim Kanalları</div>' +
 '<div class="nav-group-label">Akademik Programlar</div>' +
 '<div class="nav-item" data-slide="3"><span class="nav-num">03</span>IB & AP Hazırlık</div>' +
 '<div class="nav-item" data-slide="4"><span class="nav-num">04</span>CEMC Deneme Sınavları</div>' +
@@ -123,7 +123,7 @@ H += '<div id="app">' +
 '<div class="nav-item" data-slide="8"><span class="nav-num">08</span>Burs Semineri</div>' +
 '<div class="nav-item" data-slide="9"><span class="nav-num">09</span>Üniversite & Kariyer</div>' +
 '<div class="nav-item" data-slide="10"><span class="nav-num">10</span>Makale Yarışmaları</div>' +
-'<div class="nav-item" data-slide="11"><span class="nav-num">11</span>Drone Pilot Kulübü</div>' +
+'<div class="nav-item" data-slide="11"><span class="nav-num">11</span>Sertifika & Lisans</div>' +
 '<div class="nav-group-label">Eğitim Modeli</div>' +
 '<div class="nav-item" data-slide="12"><span class="nav-num">12</span>Müfredat Bazlı Takip</div>' +
 '<div class="nav-item" data-slide="13"><span class="nav-num">13</span>Mentor Sistemi</div>' +
@@ -132,43 +132,53 @@ H += '<div id="app">' +
 '<div class="nav-item" data-slide="15"><span class="nav-num">15</span>Başarılı Öğrenciler</div>' +
 '<div class="nav-item" data-slide="16"><span class="nav-num">16</span>TRADES & College</div>' +
 '<div class="nav-item" data-slide="17"><span class="nav-num">17</span>Finansman Modeli</div>' +
+'<div class="nav-group-label">Kararlar & Raporlar</div>' +
+'<div class="nav-item" data-slide="18"><span class="nav-num">18</span>Karar Bekleyen Konular</div>' +
+'<div class="nav-item" data-slide="19"><span class="nav-num">19</span>Partner Şehir Raporu</div>' +
+'<div class="nav-item" data-slide="20"><span class="nav-num">20</span>Yazılım Modüllerimiz</div>' +
 '</nav></aside>' +
 '<main class="main">' +
-'<div class="topbar"><button class="btn-menu" id="btn-menu" title="Menü">☰</button><div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div><span class="progress-text" id="progress-text">1 / 18</span><div class="topbar-actions"><span class="readonly-badge" id="readonly-badge" style="display:none">👁 Salt Okunur</span></div></div>' +
+'<div class="topbar"><button class="btn-menu" id="btn-menu" title="Menü">☰</button><div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div><span class="progress-text" id="progress-text">1 / 21</span><button class="btn-config" id="btn-config-top" title="Veri Girişi">⚙️ Veri Girişi</button><button class="btn-config" id="btn-export-pres" title="Sunumu PDF olarak dışa aktar">📄 Dışa Aktar</button><div class="topbar-actions"><span class="readonly-badge" id="readonly-badge" style="display:none">👁 Salt Okunur</span></div></div>' +
 '<div class="slide-container" id="slide-container">';
 
 /* 0 */
 H += '<section class="slide active" data-slide="0">' +
-'<div class="pres-hero"><div class="pres-icon">🎓</div><h1 class="pres-title">Kapsamlı Eğitim Programı</h1><p class="pres-sub">Akademik başarı, kariyer gelişimi ve kişisel beceriler için çok yönlü eğitim ekosistemi</p><div class="pres-stats"><div class="pres-stat"><span class="pres-stat-num">17</span><span class="pres-stat-label">Program Bileşeni</span></div><div class="pres-stat"><span class="pres-stat-num">8</span><span class="pres-stat-label">Sınıf Seviyesi</span></div><div class="pres-stat"><span class="pres-stat-num">∞</span><span class="pres-stat-label">Potansiyel Öğrenci</span></div></div></div>' +
+'<div class="pres-hero"><div class="pres-icon">🎓</div><h1 class="pres-title">Future Bridge Academy</h1><p class="pres-sub">Grade 5–12 arası öğrencilere akademik destek, sınav hazırlığı, üniversite ve kariyer rehberliği sunan kapsamlı eğitim programı</p></div>' +
 '<div class="pres-cards">' +
-card('','🏛️','Organizasyon','Şubeler, temsilciler ve WhatsApp grup sistemi ile yapılandırılmış iletişim ağı',ul(['Farklı şehirlerde <strong>şubeler</strong> ve her şubeye bağlı <strong>temsilciler</strong>','Her şehirde en az bir temsilci görevlendirilmesi','Şehir temsilcisinin yerel okullarla irtibat kurması','Şubeler arası koordinasyon için düzenli toplantılar','Yerel etkinliklerin şehir bazlı planlanması','İki katmanlı WhatsApp grup sistemi ile organize iletişim'])) +
+card('','🏛️','Organizasyon & Standartlar','Şube yapılanması, WhatsApp iletişim kuralları, yazılım kullanımı ve partner sorumlulukları',ul(['Her şehrimizde bir temsilcimiz var — birlikte büyüyoruz','WhatsApp üzerinden yapılandırılmış iki katmanlı iletişim altyapısı','Society bağlantıları ile sürekli genişleyen veli ağı','Kendi yazılımlarımızla veriye dayalı öğrenci takibi','Aylık koordinasyon toplantıları ile uyum içinde çalışma'])) +
 card('','📚','Akademik','IB/AP hazırlık, CEMC sınavları, online dersler ve müfredat bazlı kişisel takip',ul(['<strong>IB & AP Hazırlık:</strong> Uluslararası programlara yönelik kurslar ve özel WhatsApp grubu','<strong>CEMC Deneme Sınavları:</strong> Waterloo Üniversitesi sınavlarına aylık hazırlık','<strong>CEMC Matematik Kampı:</strong> Sınav öncesi tam gün yoğun kamp (Grade 7-10)','<strong>Online Matematik Dersleri:</strong> Her grade için haftalık canlı dersler','<strong>Müfredat Bazlı Takip:</strong> Cohort ve okul derslerine paralel birebir eğitim'])) +
-card('','🚀','Kariyer','Burs seminerleri, üniversite & kariyer sunumları, makale yarışmaları, drone pilot lisansı',ul(['<strong>Burs Semineri:</strong> Aylık online — başvurulabilecek bursların listesi ve anlatımı','<strong>Üniversite & Kariyer:</strong> 8 farklı meslek grubunda profesyonellerden sunumlar','<strong>Makale Yarışmaları:</strong> Her ay yazma becerilerini geliştiren yarışmalara katılım','<strong>Drone Pilot Kulübü:</strong> Kanada\'da drone lisansı için eğitim ve topluluk'])) +
-card('','🤝','Topluluk','Mentor sistemi, başarılı öğrenci sunumları, TRADES & College programları',ul(['<strong>Mentor Sistemi:</strong> Birebir akademik takip sağlayan gönüllü/ücretli mentor ağı','<strong>Başarılı Öğrenciler:</strong> Rol model öğrencilerin ilham verici başarı hikayeleri','<strong>TRADES Programı:</strong> Üniversite dışı mesleki kariyer için mentorluk ve rehberlik','<strong>College Programı:</strong> BCIT, JIBC gibi okullardan direk meslek edinme desteği','<strong>Yıllık Takvim:</strong> Tüm faaliyetlerin filtrelenebilir merkezi takvimi'])) +
-'</div><div class="pres-footer-note">🔄 Öncelikli Model: Charity faaliyeti ve ücretsiz. Sürdürülebilirlik için grant desteği ve ücretli seçenekler tartışılacak.</div></section>';
+card('','🚀','Kariyer','Burs seminerleri, üniversite & kariyer sunumları, sertifika programları, TRADES & College rehberliği',ul(['<strong>Burs Semineri:</strong> Aylık online — başvurulabilecek bursların listesi ve anlatımı','<strong>Üniversite & Kariyer:</strong> Ulaşabildiğimiz her meslekten profesyonellerle sunumlar','<strong>Makale Yarışmaları:</strong> Her ay yazma becerilerini geliştiren yarışmalara katılım','<strong>Sertifika Programları:</strong> Drone lisansı, AI ve teknoloji sertifikaları','<strong>TRADES Programı:</strong> Üniversite dışı mesleki kariyer için mentorluk ve rehberlik','<strong>College Programı:</strong> BCIT, JIBC gibi okullardan direk meslek edinme desteği'])) +
+card('','🤝','Topluluk','Mentor sistemi, başarılı öğrenci sunumları ve yıllık takvim',ul(['<strong>Mentor Sistemi:</strong> Birebir akademik takip sağlayan gönüllü/ücretli mentor ağı','<strong>Başarılı Öğrenciler:</strong> Rol model öğrencilerin ilham verici başarı hikayeleri','<strong>Yıllık Takvim:</strong> Tüm faaliyetlerin filtrelenebilir merkezi takvimi'])) +
+'</div></section>';
 
 /* 1 */
 H += '<section class="slide" data-slide="1">' +
-'<div class="pres-hero"><div class="pres-icon">🏙️</div><h2 class="pres-title">Şubeler & Temsilciler</h2><p class="pres-sub">Farklı şehirlerde yapılandırılmış yerel organizasyon ağı</p></div>' +
+'<div class="pres-hero"><div class="pres-icon">🏙️</div><h2 class="pres-title">Şube Yapılanması & Partner Sorumlulukları</h2><p class="pres-sub">Her şehirde standardize operasyon, yazılım kullanımı ve büyüme beklentileri</p></div>' +
 '<div class="pres-cards">' +
-card('','🏢','Şehir Bazlı Yapılanma','Her şehirde bir şube ve bağlı temsilciler ile yerel koordinasyon','<p>Her şehirde bir <strong>şube</strong> ve bu şubeye bağlı <strong>temsilciler</strong> bulunacaktır.</p>'+ul(['Her şehirde en az bir temsilci görevlendirilmesi','Şehir temsilcisinin yerel okullarla irtibat kurması','Şubeler arası koordinasyon için düzenli toplantılar','Yerel etkinliklerin şehir bazlı planlanması','Her temsilci kendi şehrindeki WhatsApp gruplarını yönetir'])) +
-card('','📋','Temsilci Görevleri','Yerel okullarla irtibat, etkinlik organizasyonu ve şehir içi iletişim',ul(['Bulunduğu şehirdeki veli WhatsApp grubunun yöneticiliği','Yerel okullarla iletişim ve işbirliği geliştirme','CEMC deneme sınavları ve matematik kamplarının yerel organizasyonu','Yeni öğrenci ve velilere ulaşma, kayıt sürecini yönetme','Merkez ofise düzenli raporlama','Şehirdeki etkinliklerin fotoğraf/video ile belgelenmesi'])) +
+card('','🏢','Operasyon Standartları','Standardize şube yapısı ve her partnerden beklenen asgari operasyon','<p>Her şehrimizde <strong>bir temsilcimizin olması</strong> gereklidir.</p>'+ul(['Her şehrimizde en az bir temsilcimizin bulunması','Aylık koordinasyon toplantılarına katılım önemle tavsiye edilir','Her etkinlik fotoğraf/video ile belgelenmeli ve gruplarda paylaşılmalı','Tüm WhatsApp mesajları kurallara uygun olmalı (bkz. Mesaj Kuralları)','Etkinlikler şehir bazlı planlanıp merkezle koordine edilmeli'])) +
+card('','📋','Partner Görev & Sorumlulukları','Yazılım kullanımı, WhatsApp büyütme, etkinlik yönetimi ve veri takibi','<p>Partnerlerden beklenen <strong>temel sorumluluklar:</strong></p>'+ul(['Veli WhatsApp grubunun aktif yöneticiliği (günlük takip)','Grubu büyütmek için <strong>society bağlantılarını aktif kullanma</strong>','CEMC deneme sınavları ve kampların yerel organizasyonu','Verilen yazılımlar ile <strong>düzenli veri girişi ve öğrenci takibi</strong>','Yeni öğrenci/veli kayıtlarının sisteme zamanında girilmesi','Toplanan verilerin planlama ve raporlamada kullanılabilmesi'])) +
+'</div>' +
+'<div class="whatsapp-stats-wrap" id="partner-table-wrap"></div>' +
+'</section>';
+'</div></section>';
 '</div></section>';
 
 /* 2 */
 H += '<section class="slide" data-slide="2">' +
-'<div class="pres-hero"><div class="pres-icon">💬</div><h2 class="pres-title">WhatsApp Grup Sistemi</h2><p class="pres-sub">İki katmanlı WhatsApp grubu yapısı ile etkili ve düzenli iletişim</p></div>' +
+'<div class="pres-hero"><div class="pres-icon">💬</div><h2 class="pres-title">İletişim Kanalları</h2><p class="pres-sub">WhatsApp grupları, WhatsApp Channel, web sitesi, email ve sosyal medya — tüm iletişim altyapımız</p></div>' +
 '<div class="pres-cards">' +
-card('','👨‍👩‍👧‍👦','Veli WhatsApp Grubu','Her şehir için tek toplu veli grubu — tüm duyurular buradan','<p>Her şehir için <strong>tek bir toplu veli WhatsApp grubu</strong> oluşturulacak.</p>'+ul(['Şehir bazlı — her şehir için bir grup','Tüm duyurular ve genel bilgilendirmeler buradan','Veli katılımı zorunludur','Etkinlik fotoğrafları bu grupta paylaşılır','Burs, sınav, kamp duyurularının ilk paylaşım noktası'])) +
+card('','👨‍👩‍👧‍👦','Veli WhatsApp Grubu','Her şehir için tek toplu veli grubu — society bağlantıları ile sürekli büyütme','<div class="emphasis-banner"><strong>📡 İletişim Kanallarımız:</strong> WhatsApp grupları (ana kanal), <strong>WhatsApp Channel</strong> (İngilizce), <strong>web sitesi</strong>, deneme sınav sonuçları için <strong>email</strong>. Sosyal medya hesaplarımız alındı, henüz aktif kullanıma geçmedik.</div><p>Her şehir için <strong>tek bir toplu veli WhatsApp grubu</strong>:</p>'+ul(['Şehir bazlı — her şehir için bir grup','Tüm duyuru ve bilgilendirmelerin <strong>tek ve birincil</strong> kanalı','Veli katılımı hedeflenmektedir','<strong>Society bağlantıları</strong> kullanılarak grubun sürekli büyütülmesi','Etkinlik fotoğrafları bu grupta paylaşılır','Burs, sınav, kamp duyurularının ilk paylaşım noktası'])) +
 card('','🎒','Grade WhatsApp Grupları','Grade 5\'ten 12\'ye her sınıf seviyesi için ayrı öğrenci grubu','<p>Her sınıf seviyesi için ayrı WhatsApp grubu:</p><div class="grade-grid-big"><span>Grade 5</span><span>Grade 6</span><span>Grade 7</span><span>Grade 8</span><span>Grade 9</span><span>Grade 10</span><span>Grade 11</span><span>Grade 12</span></div>'+ul(['Her grade için özel içerik ve duyurular','Online ders hatırlatmaları grade gruplarında','Ödev ve kaynak paylaşımları bu gruplardan','Öğrenciler arası etkileşim ve dayanışma'])) +
-card('accent','📏','Mesaj Kuralları','Profesyonel iletişim standartları ve grup yönetim prensipleri','<div class="rule-block"><strong>✅ Bizim Mesajlarımız:</strong> Tüm mesajlar yazım kalitesi, format ve içerik olarak düzenli ve profesyonel olacak.</div><div class="rule-block"><strong>🚫 Veli Mesajları:</strong> Konu dışı mesajlara izin verilmeyecek. Admin ilgisiz mesajı silip nedenini bildirecek.</div><div class="rule-block"><strong>📌 Grup Yönetimi:</strong> Her grubun en az bir admini olacak. Adminler düzenli olarak kuralları hatırlatacak.</div>') +
-'</div></section>';
+card('accent','📢','Etkinlikler → Grup Büyümesi','WhatsApp gruplarını büyütmenin en etkili yolu: etkinlikler ve sunumlar','<div class="emphasis-banner accent"><strong>💡 En iyi örnek — Burs Sunumları:</strong> Toronto grubunun <strong>%90\'ını</strong> burs sunumları sırasında verilen linkler oluşturdu. Her sunumda ~30 kişi eklendi.</div>'+ul(['<strong>Burs sunumları</strong> — en yüksek katılım sağlayan etkinlik','<strong>Veli bilgilendirme sunumları</strong> — programın ilk tanıtımını ve katılımı başlattı','<strong>Öğrenci tanıtım sunumları</strong> — öğrencilerin ilgisini çekti','Makale yarışması grubu da bu sunumlar sırasında oluştu','Drone kulübü grubu da bu sunumlar sırasında oluştu','<strong>Sonuç:</strong> Etkinlikler olmadan WhatsApp büyümesi olmaz'])) +
+card('','📏','Mesaj Kuralları','Profesyonel iletişim standartları ve grup yönetim prensipleri','<div class="rule-block"><strong>✅ Bizim Mesajlarımız:</strong> Tüm mesajlar yazım kalitesi, format ve içerik olarak düzenli ve profesyonel olacak.</div><div class="rule-block"><strong>🚫 Veli Mesajları:</strong> Konu dışı mesajlara izin verilmez. Admin ilgisiz mesajı nazikçe silip nedenini bildirir.</div><div class="rule-block"><strong>📌 Grup Yönetimi:</strong> Her grubun en az bir admini bulunur. Adminler düzenli olarak kuralları hatırlatır.</div>') +
+'</div>' +
+'</section>';
 
 /* 3 */
 H += '<section class="slide" data-slide="3">' +
 '<div class="pres-hero"><div class="pres-icon">🌍</div><h2 class="pres-title">IB & AP Hazırlık Programları</h2><p class="pres-sub">Uluslararası programlara yönelik kapsamlı hazırlık ve kurs desteği</p></div>' +
 '<div class="pres-cards">' +
-card('','🎯','IB Programı Desteği','IB müfredatına uygun kurslar, özel WhatsApp grubu ve sınav hazırlığı','<p>IB programına girmiş öğrenciler için özel <strong>IB WhatsApp grubu</strong> oluşturulacak.</p>'+ul(['IB müfredatına uygun ders kursları','IB sınavlarına yönelik hazırlık çalışmaları','IB öğrencileri arası deneyim paylaşımı','Extended Essay ve TOK desteği','CAS rehberliği'])) +
+card('','🎯','IB Programı Desteği','IB müfredatına uygun kurslar, özel WhatsApp grubu ve sınav hazırlığı','<p>IB programına girmiş öğrenciler için özel <strong>IB WhatsApp grubu</strong> oluşturuyoruz.</p>'+ul(['IB müfredatına uygun ders kursları','IB sınavlarına yönelik hazırlık çalışmaları','IB öğrencileri arası deneyim paylaşımı','Extended Essay ve TOK desteği','CAS rehberliği'])) +
 card('accent','📢','Büyüme Stratejisi','IB öğrenci ağını genişletme ve organik erişim planı','<p>Herkesten tanıdıkları <strong>IB okuyan veya eski IB öğrencilerini</strong> gruba eklemesini istiyoruz.</p>'+ul(['Kurs satabileceğimiz potansiyel öğrenci havuzu genişler','IB deneyimi olan öğrenciler mentor olarak katkı sağlar','Ağızdan ağıza büyüme ile organik erişim artar','Mezun IB öğrencilerinin başarı hikayeleri yeni öğrencilere ilham verir'])) +
 card('','📐','AP Programı','AP Calculus, Physics, Chemistry derslerinde destek ve hazırlık','<p>AP sınavlarına hazırlanan öğrenciler için benzer yapı kurulacak.</p>'+ul(['AP Calculus AB/BC hazırlık kursları','AP Physics 1/2/C hazırlık kursları','AP Chemistry hazırlık kursları','AP sınav stratejileri ve deneme sınavları','AP kredi transferi konusunda rehberlik'])) +
 '</div></section>';
@@ -193,7 +203,7 @@ card('','🧮','Kamp İçeriği','Sınav stratejileri, pratik çözüm teknikler
 H += '<section class="slide" data-slide="6">' +
 '<div class="pres-hero"><div class="pres-icon">📋</div><h2 class="pres-title">Kayıt & Sınav Süreci</h2><p class="pres-sub">CEMC deneme sınavları için uçtan uca kayıt, sınav ve sonuç yönetimi</p></div>' +
 '<div class="pres-cards">' +
-card('','📝','1. Kayıt Aşaması','Paket hazırlık, form dağıtımı, email ve WhatsApp duyuruları',ul(['<strong>Kayıt Paketi:</strong> Form, kayıt sayfası, broşür ve WhatsApp mesajları paket halinde hazırlanıp gönderilecek','<strong>Kayıt Formu:</strong> Adres dahil tüm bilgilerin düzenli toplanması','<strong>Tanıtım:</strong> WhatsApp gruplarında birkaç defa paylaşım ve hatırlatma','<strong>Kayıt Emaili:</strong> Sistemden kayıtlı tüm öğrencilere email — kolaylaştırıcı özellik eklenecek','<strong>Hatırlatma Mesajları:</strong> Standart WhatsApp formatında','<strong>Öğrenci Kayıtları:</strong> Sisteme kayıt ve bilgi güncellemesi'])) +
+card('','📝','1. Kayıt Aşaması','Paket hazırlık, form dağıtımı, email ve WhatsApp duyuruları','<div class="emphasis-banner"><strong>📦 Vancouver örneği:</strong> Vancouver gönüllü ekibi CEMC deneme sınavı için broşür ve kayıt formu hazırladı. Bu materyaller <strong>tüm şehirlerde sistematik olarak kullanılacak</strong> ve kayıt süreci standart hale getirilecek.</div>'+ul(['<strong>Kayıt Paketi:</strong> Form, kayıt sayfası, broşür ve WhatsApp mesajları paket halinde hazırlanıp tüm şehirlere gönderilecek','<strong>Kayıt Formu:</strong> Adres dahil tüm bilgilerin düzenli toplanması','<strong>Tanıtım:</strong> WhatsApp gruplarında birkaç defa paylaşım ve hatırlatma','<strong>Kayıt Emaili:</strong> Sistemden kayıtlı tüm öğrencilere email — kolaylaştırıcı özellik eklenecek','<strong>Hatırlatma Mesajları:</strong> Standart WhatsApp formatında','<strong>Öğrenci Kayıtları:</strong> Sisteme kayıt ve bilgi güncellemesi'])) +
 card('','🧪','2. Sınav Aşaması','Son hatırlatma, fotoğraf çekimi ve gruplarda paylaşım',ul(['<strong>Son Hatırlatma Emaili:</strong> Sınavdan bir gece önce kayıtlılara','<strong>Fotoğraf & Video:</strong> Sınıfın arkadan çekilmiş görüntüleri<ul><li>Şehir veli WhatsApp grubunda</li><li>School Advisory Group WhatsApp grubunda</li></ul>','<strong>Yoklama:</strong> Sınav günü katılım takibi'])) +
 card('accent','📊','3. Sınav Sonrası','Sonuç girişi, email gönderimi ve veri güncelleme',ul(['<strong>Yeni Öğrenci Kaydı:</strong> Sistemde kaydı olmayanların eklenmesi','<strong>Sınavların Okunması:</strong> Sonuçların öğrenci kaydı altına girilmesi','<strong>Sonuç Emaili:</strong> Veli ve öğrenci emaillerine gönderim','<strong>Email Güncellemeleri:</strong> Hatalı emaillerin takibi ve düzeltilmesi'])) +
 '</div></section>';
@@ -203,8 +213,8 @@ H += '<section class="slide" data-slide="7">' +
 '<div class="pres-hero"><div class="pres-icon">💻</div><h2 class="pres-title">Online Matematik Dersleri</h2><p class="pres-sub">Her grade için haftalık online dersler ile sürekli akademik destek</p></div>' +
 '<div class="pres-cards">' +
 card('','📅','Planlama & Takvim','Ders takvimi, öğretmen zümreleri ve haftalık düzen',ul(['<strong>Takvim Planı:</strong> Her grade için haftalık bir ders','<strong>Paylaşım:</strong> Haftalık takvim WhatsApp gruplarında','<strong>Zümre:</strong> 2 haftada bir öğretmen koordinasyon toplantısı','<strong>Grade 10:</strong> Ömer abi zümreleri yapacak'])) +
-card('','🎥','Ders Akışı','Öncesi hatırlatmalar, Zoom/Teams oturumu ve sonrası ödevler','<p><strong>Ders Öncesi:</strong></p>'+ul(['15-30 dk önce standart hatırlatma mesajı','Ders başladığında "ders başladı" mesajı'])+'<p><strong>Ders Sonrası:</strong></p>'+ul(['Mümkünse IXL üzerinden ödev','Değilse PDF/döküman grade gruplarında','Ödev takibi: bitiren işaretler veya IXL takip'])) +
-card('accent','⚙️','Teknik & Kalite','Platform gereksinimleri, öğretmen yetkinliği ve standartlar',ul(['<strong>Platform:</strong> Zoom veya Teams','<strong>Ücretli Yazılım:</strong> Süresiz, 45 dk free ile ders yapılmayacak','<strong>Kolay Giriş:</strong> Login istemeyecek','<strong>Öğretmen Yetkinliği:</strong> Platform aracını iyi kullanacak'])) +
+card('','🎥','Ders Akışı','Öncesi hatırlatmalar, Zoom/Teams oturumu ve sonrası ödevler','<p><strong>Ders Öncesi:</strong></p>'+ul(['15-30 dk önce standart hatırlatma mesajı','Ders başladığında "ders başladı" mesajı'])+'<p><strong>Ders Sonrası:</strong></p>'+ul(['Kendi müfredatımız üzerinden ödev','PDF/döküman grade gruplarında','Ödev takibi: mentor tarafından düzenli kontrol'])) +
+card('accent','⚙️','Teknik & Kalite','Platform gereksinimleri, öğretmen yetkinliği ve standartlar',ul(['<strong>Platform:</strong> Zoom veya Teams','<strong>Ücretli Yazılım:</strong> Süresiz lisans kullanıyoruz, 45 dk free ile ders yapmıyoruz','<strong>Kolay Giriş:</strong> Login gerektirmeyen platform tercih edilir','<strong>Öğretmen Yetkinliği:</strong> Platform aracını iyi kullanabilmeli'])) +
 '</div></section>';
 
 /* 8 */
@@ -220,7 +230,7 @@ H += '<section class="slide" data-slide="9">' +
 '<div class="pres-hero"><div class="pres-icon">🚀</div><h2 class="pres-title">Üniversite & Kariyer Seminerleri</h2><p class="pres-sub">Profesyonellerden ve üniversite öğrencilerinden ilham verici sunumlar</p></div>' +
 '<div class="pres-cards">' +
 card('','🎯','Hedef Kitle & Format','Grade 10\'dan 30 yaşa — kariyer yolu ve meslek tanıtımı','<p>Grade 10\'dan 30 yaşa kadar herkes. Meslekte aktif profesyoneller veya bölüme girmiş öğrenciler tecrübelerini paylaşacak.</p>'+ul(['Nasıl o mesleğe ulaşıldığı','Mesleğin günlük özellikleri ve zorlukları','Kariyer yol haritası ve tavsiyeler','Soru-cevap bölümü','Her seminer 45-60 dakika'])) +
-card('','🏥','8 Hedef Meslek Grubu','Medicine, Engineering, Law, Data/AI ve daha fazlası','<p>Bu mesleklerin uzmanlarını bulup sunum yaptırmamız gerekiyor:</p><div class="career-grid-detail"><div class="career-item-detail"><span>🩺</span> Medicine</div><div class="career-item-detail"><span>🏥</span> Nursing</div><div class="career-item-detail"><span>💻</span> Software Engineering</div><div class="career-item-detail"><span>🏗️</span> Engineering</div><div class="career-item-detail"><span>📊</span> CPA / Accounting</div><div class="career-item-detail"><span>🔧</span> Skilled Trades</div><div class="career-item-detail"><span>⚖️</span> Law</div><div class="career-item-detail"><span>🤖</span> Data / AI</div></div>') +
+card('','🏥','Örnek Meslek Grupları','Bunlar sadece örnektir — ulaşabildiğimiz her meslekten profesyonel getirip sunum yaptırmalıyız','<p><strong>Hedef:</strong> Bulabildiğimiz her meslekten profesyoneli getirip öğrencilere tanıtmak. Aşağıdakiler sadece örnek:</p><div class="career-grid-detail"><div class="career-item-detail"><span>🩺</span> Medicine</div><div class="career-item-detail"><span>🏥</span> Nursing</div><div class="career-item-detail"><span>💻</span> Software Engineering</div><div class="career-item-detail"><span>🏗️</span> Engineering</div><div class="career-item-detail"><span>📊</span> CPA / Accounting</div><div class="career-item-detail"><span>🔧</span> Skilled Trades</div><div class="career-item-detail"><span>⚖️</span> Law</div><div class="career-item-detail"><span>🤖</span> Data / AI</div></div><p style="margin-top:12px"><strong>➕ ve ulaşabildiğimiz tüm diğer meslekler...</strong></p>') +
 '</div></section>';
 
 /* 10 */
@@ -233,9 +243,10 @@ card('accent','💡','Geliştirme Fikirleri','Workshop\'lar, teşvikler ve Grade
 
 /* 11 */
 H += '<section class="slide" data-slide="11">' +
-'<div class="pres-hero"><div class="pres-icon">🚁</div><h2 class="pres-title">Drone Pilot License Kulübü</h2><p class="pres-sub">Kanada\'da drone uçurma lisansı için eğitim, topluluk ve mesleki fırsatlar</p></div>' +
+'<div class="pres-hero"><div class="pres-icon">🚁</div><h2 class="pres-title">Sertifika & Lisans Programları</h2><p class="pres-sub">Drone pilot lisansı, AI sertifikaları ve benzeri mesleki yeterlilik programları</p></div>' +
 '<div class="pres-cards">' +
-card('','🎯','Kulüp Amacı & Vizyon','Hobi ve geleceğin mesleği — Transport Canada lisansına hazırlık','<p>Kanada\'da drone uçurma lisansı almaları için bir kulüp:</p>'+ul(['İyi bir <strong>hobi</strong> edinme fırsatı','Geleceğe dair bir <strong>meslek</strong> (fotoğrafçılık, haritalama, tarım, inşaat, denetim)','Drone teknolojisi büyüyen bir sektör','Transport Canada lisanslama sürecine hazırlık','Temel ve ileri drone pilotluğu eğitimleri','Güvenlik ve yasal düzenlemeler'])) +
+card('','🚁','Drone Pilot License','Aktif program — Transport Canada lisansına hazırlık ve mesleki fırsatlar','<div class="emphasis-banner accent"><strong>✅ Aktif Program:</strong> Kanada\'da drone uçurma lisansı için eğitim ve topluluk halihazırda devam ediyor.</div>'+ul(['İyi bir <strong>hobi</strong> edinme fırsatı','Geleceğe dair bir <strong>meslek</strong> (fotoğrafçılık, haritalama, tarım, inşaat, denetim)','Transport Canada lisanslama sürecine hazırlık','Temel ve ileri drone pilotluğu eğitimleri'])) +
+card('accent','🤖','AI & Teknoloji Sertifikaları','Yapay zeka ve geleceğin teknolojilerinde sertifika programları','<p>Drone programı gibi <strong>lisans ve sertifika kazandıran</strong> programlar yapılmalı:</p>'+ul(['<strong>AI Sertifika Programları:</strong> Yapay zeka alanında tanınan sertifikalar','<strong>Yazılım & Teknoloji:</strong> AWS, Azure, Google Cloud gibi bulut sertifikaları','<strong>Veri Bilimi:</strong> Veri analizi ve makine öğrenmesi sertifikaları','<strong>Siber Güvenlik:</strong> Güvenlik sertifikaları ve eğitimleri','Öğrencilere erken yaşta profesyonel yeterlilik kazandırma'])) +
 '</div></section>';
 
 /* 12 */
@@ -243,16 +254,18 @@ H += '<section class="slide" data-slide="12">' +
 '<div class="pres-hero"><div class="pres-icon">📚</div><h2 class="pres-title">Müfredat Bazlı Kişisel Takip</h2><p class="pres-sub">Cohort ve okul derslerine paralel birebir eğitim — en kapsamlı bileşen</p></div>' +
 '<div class="pres-cards">' +
 card('','👥','Cohort Bazlı Eğitim','Uzun müfredatlı, adım adım mentor takipli grup eğitimi','<p>Harici konularda (örn. drone) uzun müfredatlı içerikler. Öğrenciler cohort\'lar halinde kaydolur, mentorler adım adım içerik gönderir ve takip eder.</p>'+ul(['Yapılandırılmış müfredat ve içerik paketleri','Cohort dinamiği ve akran desteği','Mentor tarafından düzenli içerik gönderimi','Her adımda çalışma takibi ve geri bildirim','Program sonunda sınav ve sonuç takibi'])) +
-card('','🏫','Okul Derslerine Paralel','Dönem boyu okul müfredatıyla senkronize, birebir takip','<p>Örn. Math 9 alan bir öğrenci — dönem boyunca:</p>'+ul(['Dersine paralel içerikler gönderilir','Okul derslerinin yüksek olması takip edilir','Gönderilen dersleri çalışması sağlanır','Eğitimi bitirmesi takip edilir','Birebir ilgi ile kişiselleştirilmiş öğrenme'])) +
+card('','🏫','Okul Derslerine Paralel','Dönemlik kayıt, sadece o dönem ders alanlara mentor ve içerik desteği','<p><strong>Sistem:</strong> Her dönem başında kayıt. Mentorler <strong>sadece o dönem okulda o dersi alan</strong> öğrencilere içerik gönderir (ilk öncelik Matematik ve İngilizce).</p>'+ul(['Her dönem başı kayıt — sadece kayıtlı öğrencilere mentor ve içerik','Mentor o dönem dersi alan öğrencinin <strong>okul notunu yükseltmeye</strong> odaklanır','O dönem ders almayan kayıt olabilir ama zorlanmaz','Düzenli takip ile başarıyı tatması ve notların yükselmesi hedeflenir','Kendi müfredatımız ve içeriklerimiz kullanılır'])) +
 card('accent','🔥','Motivasyon Sistemi','Liderlik tablosu, rozetler ve cohort içi rekabet','<p>Bu sistem <strong>birebir ilgi</strong> ile çalışır. Öğrencinin diğerlerinden haberdar olup heyecan duyması için:</p>'+ul(['Liderlik tablosu (leaderboard)','Rozet ve başarı sistemi','Cohort içi rekabet ve işbirliği','İlerleme grafikleri ve görsel geri bildirim','Haftalık "öne çıkan öğrenci" duyuruları'])) +
 '</div></section>';
 
 /* 13 */
 H += '<section class="slide" data-slide="13">' +
-'<div class="pres-hero"><div class="pres-icon">🧑‍🏫</div><h2 class="pres-title">Mentor Sistemi</h2><p class="pres-sub">Her öğrenciye birebir akademik takip sağlayan gönüllü ve ücretli mentor ağı</p></div>' +
+'<div class="pres-hero"><div class="pres-icon">🧑‍🏫</div><h2 class="pres-title">Mentor & Gönüllü Sistemi</h2><p class="pres-sub">AI destekli içerik hazırlama, gönüllü ağı ve sürdürülebilir mentorluk modeli</p></div>' +
 '<div class="pres-cards">' +
-card('','📋','Mentor Görevleri','Haftalık ders takibi, içerik gönderimi, ödev kontrolü, veli iletişimi',ul(['Öğrencinin okul derslerinin haftalık takibi','Müfredat paralelinde içerik gönderimi','Ödev ve çalışma takibi','Öğrenci gelişim raporlaması','Veli ile düzenli iletişim'])) +
-card('accent','💼','Mentor Modeli','Gönüllü/ücretli seçenekleri, seviye bazlı ücretlendirme',ul(['Mentorler bize <strong>kayıt olmalı</strong>','<strong>Gönüllü</strong> veya <strong>ücretli</strong> olabilir','Hangi level\'dan itibaren ücretli? — tartışılacak','Mentor eğitimi ve sertifikasyon programı','Mentor-öğrenci eşleştirme sistemi','Mentor performans değerlendirmesi'])) +
+card('','📋','Mentor Görevleri','Haftalık ders takibi, AI içerik gönderimi, ödev kontrolü, veli iletişimi',ul(['Öğrencinin okul derslerinin haftalık takibi','Müfredat paralelinde AI ile hazırlanmış içerik gönderimi','Ödev ve çalışma takibi','Öğrenci gelişim raporlaması','Veli ile düzenli iletişim'])) +
+card('accent','🤖','AI Destekli İçerik','Mentorler için yapay zeka ile ders takip içerikleri ve çalışma materyalleri','<div class="emphasis-banner accent"><strong>🧠 AI İçerik Üretimi:</strong> Mentorlerin öğrencilere göndereceği ders takip içerikleri, çalışma programları ve materyaller <strong>yapay zeka ile hazırlanmaktadır.</strong> Bu sayede mentorler içerik hazırlama yükünden kurtulur, asıl işlerine odaklanır.</div>'+ul(['AI ile kişiselleştirilmiş çalışma planları','Her öğrenci seviyesine uygun otomatik içerik','Mentorlere içerik hazırlama ve görev paylaşımı desteği','AI araçlarının mentorler tarafından kullanımı için eğitim'])) +
+card('','🤝','Gönüllü İhtiyaçları','Her şehirden müfredat ve burs araştırması için gönüllüler','<div class="emphasis-banner"><strong>🎯 Hedef:</strong> Gönüllü sayısını artırmak sadece iş paylaşımı için değil, topluluk büyüklüğünü ve etki alanımızı genişletmek içindir.</div>'+ul(['<strong>Her şehirden müfredat gönüllüleri:</strong> Müfredat üzerinde çalışacak, içerik hazırlayacak gönüllüler','<strong>Her şehirden burs gönüllüleri:</strong> Burs araştırması yapacak, sunum hazırlayıp sunacak gönüllüler','<strong>Online Eğitim Koordinatörü:</strong> Ana işi online eğitim olan, öğretmenlerle zümre yapacak bir sorumlu','Gönüllü sayısının artırılması — temel hedeflerimizden biri','Gönüllülere eğitim ve sertifika programı'])) +
+card('','💼','Mentorluk Modeli','Charity kapsamında ücretsiz, harici olarak profesyonel ücretli hizmet','<p>İki kanallı mentorluk modeli:</p>'+ul(['<strong>Charity Kanalı:</strong> Öğrencilere ücretsiz mentorluk desteği','<strong>Profesyonel Kanal:</strong> Dışarıya tamamen profesyonel ve ücretli mentorluk hizmeti olarak sunulması','Bu model charity sürdürülebilirliği için gelir oluşturur','Mentorler gönüllü veya ücretli olarak iki kanalda da görev alabilir'])) +
 '</div></section>';
 
 /* 14 */
@@ -279,11 +292,46 @@ card('','🏛️','College Programı','BCIT, JIBC gibi okullardan direk meslek e
 
 /* 17 */
 H += '<section class="slide" data-slide="17">' +
-'<div class="pres-hero"><div class="pres-icon">⚖️</div><h2 class="pres-title">Finansman & Sürdürülebilirlik</h2><p class="pres-sub">Charity temelli modelden sürdürülebilir yapıya geçiş stratejisi</p></div>' +
+'<div class="pres-hero"><div class="pres-icon">⚖️</div><h2 class="pres-title">Finansman & Sürdürülebilirlik</h2><p class="pres-sub">Charity temelli modelden sürdürülebilir yapıya geçiş — karar bekleyen konular</p></div>' +
 '<div class="pres-cards">' +
 card('','❤️','Öncelik: Charity','Tüm faaliyetler öncelikle ücretsiz ve toplum hizmeti odaklı',ul(['Topluma hizmet ve eğitimde fırsat eşitliği temel amaç','Gönüllü mentor ve eğitmen desteği ile maliyet minimizasyonu','Topluluk kaynaklarının verimli kullanımı'])) +
-card('','💰','Ücretli Hizmet','Ölçeklenebilirlik için bazı hizmetlerin ücretlendirilmesi','<p>İnsanların daha iyi emek verebilmesi, ölçeklenebilme ve sürdürülebilirlik için:</p>'+ul(['Hangi hizmetler ücretli olacak? — tartışılmalı','Hangi level\'dan itibaren ücret alınacak?','Premium birebir mentorluk paketleri','Özel kurs ve sertifika programları'])) +
+card('','💰','Ücretli Hizmet','Ölçeklenebilirlik için bazı hizmetlerin ücretlendirilmesi','<p>İnsanların daha iyi emek verebilmesi, ölçeklenebilme ve sürdürülebilirlik için:</p>'+ul(['Hangi hizmetler ücretli olacak?','Hangi seviyeden itibaren ücret alınacak?','Premium birebir mentorluk paketleri','Özel kurs ve sertifika programları'])) +
 card('accent','📝','Grant & Karma Model','Grant başvuruları ve gönüllü/ücretli karma mentor sistemi',ul(['Ücretler grant bulunursa oradan karşılanabilir','Grant yazımı ve başvuru süreci ayrı çalışma konusu','<strong>Karma Model:</strong> Temel hizmetler ücretsiz, premium ücretli/grant destekli','Gönüllü + ücretli mentor karma sistemi','Sponsorluk ve kurumsal destek arayışları'])) +
+'</div></section>';
+
+/* 18 — Karar Bekleyen Konular */
+H += '<section class="slide" data-slide="18">' +
+'<div class="pres-hero"><div class="pres-icon">📋</div><h2 class="pres-title">Karar Bekleyen Konular</h2><p class="pres-sub">Her konu tek tek tartışılıp karara bağlanmalı — yazılan kararlar otomatik kaydedilir</p></div>' +
+'<div class="decisions-section" id="decisions-section">' +
+'<div class="decision-item"><label>💰 Hangi hizmetler ücretli olacak, hangileri ücretsiz kalacak?</label><textarea data-decision="pricing" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>📊 Hangi seviyeden (grade) itibaren ücret alınacak?</label><textarea data-decision="priceLevel" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>📝 Grant başvurularını kim yapacak, hangi grantlere başvurulacak?</label><textarea data-decision="grants" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>🤝 Karma model (ücretsiz + ücretli) nasıl yapılandırılacak?</label><textarea data-decision="mixedModel" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>💼 Mentorlar için gönüllü/ücretli dengesi nasıl olacak?</label><textarea data-decision="mentorModel" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>🏢 Sponsorluk ve kurumsal destek stratejisi ne olacak?</label><textarea data-decision="sponsorship" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>👩‍🏫 Ders anlatacak öğretmenler ücretli mi, gönüllü mü olacak? Şehirden şehire farklı mı?</label><textarea data-decision="teacherPay" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>🎓 Mentorluk sistemi iki kanallı (charity + profesyonel ücretli) olarak uygulansın mı?</label><textarea data-decision="mentorChannels" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div class="decision-item"><label>🤝 Gönüllü talepleri: Online eğitim koordinatörü, müfredat gönüllüleri, burs gönüllüleri — kimler, nasıl görevlendirilecek?</label><textarea data-decision="volunteerRoles" rows="2" placeholder="Kararı buraya yazın..."></textarea></div>' +
+'<div style="margin-top:16px;text-align:right"><button type="button" class="btn-config" id="btn-export-pdf" style="font-size:14px;padding:8px 18px">📄 PDF Olarak Dışa Aktar</button></div>' +
+'</div></section>';
+
+/* 19 — Partner Şehir Raporu */
+H += '<section class="slide" data-slide="19">' +
+'<div class="pres-hero"><div class="pres-icon">📊</div><h2 class="pres-title">Partner Şehir Durum Raporu</h2><p class="pres-sub">Tüm şehirlerin güncel durumu — veri girişinden otomatik oluşturulur</p></div>' +
+'<div id="partner-report-wrap" class="whatsapp-stats-wrap"></div>' +
+'</section>';
+
+/* 20 — Yazılım Modüllerimiz */
+H += '<section class="slide" data-slide="20">' +
+'<div class="pres-hero"><div class="pres-icon">💻</div><h2 class="pres-title">Yazılım Modüllerimiz</h2><p class="pres-sub">Operasyonu yürütmek için geliştirdiğimiz ve kullandığımız yazılım altyapısı</p></div>' +
+'<div class="pres-cards">' +
+card('','📝','Toplantı Notları','Ekip toplantılarının kaydı, kararların takibi ve paylaşımı',ul(['Toplantı kararlarının dijital kaydı','Geçmiş toplantılara erişim ve arama','Kararların takibi ve hatırlatmalar'])) +
+card('','📊','Sınav & Öğrenci Takip','Deneme sınav sonuçları ve öğrenci gelişim takip yazılımı','<div class="emphasis-banner"><strong>🌐 Her şehir için ayrı instance:</strong> Şehirler birbirinden bağımsız kendi verilerini yönetir, merkez ofis tüm verilere erişebilir.</div>'+ul(['Deneme sınavı sonuçlarının kaydı ve analizi','Öğrenci bazlı gelişim grafikleri','Email ile sonuçların otomatik gönderimi','Her şehir için ayrı veri alanı'])) +
+card('','📁','Doküman Saklama','Deneme sınavları, içerikler ve tüm dokümanların merkezi depolaması',ul(['Deneme sınavı soru ve cevapları','Müfredat içerikleri ve çalışma dokümanları','Burs sunumları ve kayıt formları','Her şehirden erişilebilir merkezi depo'])) +
+card('accent','▶️','YouTube Kanalı','Müfredat çalışma içeriklerinin video formatında sunulduğu kanal',ul(['Ders anlatım videoları','Konu tekrarı ve sınav hazırlık videoları','Öğrencilerin kendi hızında çalışabilmesi','Tüm grade seviyeleri için içerik'])) +
+card('','💰','Burs Yazılımı','Burs araştırma, listeleme ve öğrencilere ulaştırma modülü',ul(['Güncel bursların listelenmesi ve filtrelenmesi','Son başvuru tarihlerinin takibi','Öğrenci bazlı uygunluk eşleştirmesi'])) +
+card('','📚','Müfredat & İçerik','Kendi müfredatımızın ve içeriklerimizin yönetildiği modül',ul(['Müfredat dokümanlarının hazırlanması ve versiyonlanması','İçeriklerin grade ve konu bazlı kategorilenmesi','Mentorlere içerik atama ve gönderim takibi'])) +
+card('accent','📋','Partner Takip','Partner şehirlerin durumunu ve ilerlemesini takip eden modül',ul(['Her şehrin tamamladığı adımların görsel takibi','Eksik adımların tespiti ve hatırlatmalar','Merkez ofis için toplu durum raporu'])) +
 '</div></section>';
 
 H += '</div>' +
@@ -291,7 +339,7 @@ H += '</div>' +
 '</main></div>';
 
 document.getElementById('app-container').innerHTML = H;
-document.getElementById('th-status').textContent = 'Hazır ✓ (18 slayt, inline drawer)';
+document.getElementById('th-status').textContent = 'Hazır ✓ (21 slayt)';
 })();
 </script>
 
