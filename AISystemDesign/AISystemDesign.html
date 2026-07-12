@@ -20,6 +20,7 @@
   <button class="ai-tab" data-tab="architecture">🏗️ Architecture</button>
   <button class="ai-tab" data-tab="memory">🧠 Memory System</button>
   <button class="ai-tab" data-tab="gpu">💻 GPU Guide</button>
+  <button class="ai-tab" data-tab="privacy">🔒 Privacy Gateway</button>
   <button class="ai-tab" data-tab="deepseek">🖥️ Run DeepSeek</button>
   <button class="ai-tab" data-tab="tokencost">📊 Token Costs</button>
   <button class="ai-tab" data-tab="configure">⚙️ Configure</button>
@@ -866,6 +867,327 @@ AI: [Generates personalized memo with:
   </div>
 </section>
 
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PRIVACY GATEWAY VIEW -->
+<!-- ════════════════════════════════════════════════════════ -->
+<section class="ai-view" id="view-privacy">
+  <div class="ai-view-header">
+    <div>
+      <div class="ai-view-title">🔒 Two-Step AI Pipeline — Privacy Gateway</div>
+      <div class="ai-view-sub">Local anonymization → Cloud DeepSeek V4 Pro. Full privacy with cloud intelligence. Production-ready proposal.</div>
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🔀 Privacy Gateway Architecture</span></div>
+    <div class="ai-diagram-wrap" id="privacy-diagram-svg"></div>
+  </div>
+
+  <!-- How It Works -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🔧 How It Works — Step by Step</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:12px;line-height:1.7;padding:8px 0">
+      <div style="background:var(--ai-local-bg);border:1px solid var(--ai-success);border-radius:8px;padding:14px">
+        <strong style="color:var(--ai-local)">1️⃣ User Types Sensitive Query</strong><br>
+        "Draft an audit memo for <strong style="color:#dc2626">ABC Manufacturing Inc.</strong> regarding their <strong style="color:#dc2626">$50M revenue recognition issue</strong>..."<br><br>
+        This query contains confidential: client name, revenue figures, specific findings. <strong>Cannot send to cloud as-is.</strong>
+      </div>
+      <div style="background:#ecfdf5;border:1px solid #059669;border-radius:8px;padding:14px">
+        <strong style="color:#059669">2️⃣ Local LLM Anonymizes (DGX Spark / Mac Mini)</strong><br>
+        Small local model (Phi-4 Mini 3.8B or similar) rewrites the query, stripping all confidential identifiers:<br><br>
+        <em>"Draft an audit memo for <strong style="color:#059669">[Client A]</strong> regarding their <strong style="color:#059669">[Revenue Issue B]</strong>..."</em><br><br>
+        ✅ Names, figures, locations replaced with placeholders. The <strong>mapping table</strong> is stored locally.
+      </div>
+      <div style="background:#ede9fe;border:1px solid #7c3aed;border-radius:8px;padding:14px">
+        <strong style="color:#7c3aed">3️⃣ Anonymized Query → DeepSeek V4 Pro (Cloud)</strong><br>
+        The cleaned query is sent to DeepSeek V4 Pro API. The model processes it with full intelligence — but sees NO confidential data.<br><br>
+        Cost: ~$0.20 per 1M tokens. Response in ~2-5 seconds. Full cloud intelligence, zero privacy risk.
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #10b981;border-radius:8px;padding:14px">
+        <strong style="color:#10b981">4️⃣ Response Re-Identified (Optional)</strong><br>
+        The cloud response comes back with placeholders. The local system replaces them with real values using the stored mapping table.<br><br>
+        <em>"Draft an audit memo for <strong style="color:#059669">ABC Manufacturing Inc.</strong> regarding their <strong style="color:#059669">$50M revenue recognition issue</strong>..."</em><br><br>
+        User sees the final, re-identified answer. <strong>Confidential data never left the building.</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Selection -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🖥️ Local Device Options — Anonymization Layer</span></div>
+    <div style="overflow-x:auto">
+      <table class="ai-compare-table" style="font-size:12px;width:100%">
+        <thead><tr>
+          <th>Device</th><th>Specs</th><th>Model for Anonymization</th><th>VRAM Needed</th><th>Speed</th><th>Cost</th><th>Best For</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:#f0fdf4">
+            <td><strong>Mac Mini M4 Pro ⭐</strong></td>
+            <td>24 GB unified · 20-core GPU</td>
+            <td>Phi-4 Mini 3.8B or Llama 3.2 3B</td>
+            <td>~3 GB</td>
+            <td>~130 tok/s</td>
+            <td>$1,400–2,400</td>
+            <td>Silent, low power, always-on</td>
+          </tr>
+          <tr style="background:#fef3c7">
+            <td><strong>NVIDIA DGX Spark</strong></td>
+            <td>GB10 · 128 GB unified · NVLink</td>
+            <td>Phi-4 Medium 14B or Llama 4 (quant)</td>
+            <td>~10 GB</td>
+            <td>~90 tok/s</td>
+            <td>$3,999</td>
+            <td>Higher quality anonymization</td>
+          </tr>
+          <tr>
+            <td><strong>RTX 5070 Workstation</strong></td>
+            <td>16 GB VRAM · 32 GB RAM</td>
+            <td>Phi-4 Medium 14B</td>
+            <td>~10 GB</td>
+            <td>~90 tok/s</td>
+            <td>$1,500–2,000</td>
+            <td>Budget NVIDIA option</td>
+          </tr>
+          <tr>
+            <td><strong>Any laptop (integrated GPU)</strong></td>
+            <td>4-8 GB shared RAM</td>
+            <td>Phi-4 Mini 3.8B (4-bit)</td>
+            <td>~3 GB</td>
+            <td>~80 tok/s</td>
+            <td>$500+</td>
+            <td>Minimum viable · PoC only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="ai-rec-highlight" style="margin-top:12px">
+      <strong>💡 Recommended:</strong> <strong>Mac Mini M4 Pro (24 GB, $2,000)</strong> — silent, always-on, runs Phi-4 Mini for anonymization at 130 tok/s (near-instant for short queries). DGX Spark if you want higher quality anonymization with a larger model (Phi-4 Medium 14B). Neither device needs to be powerful — anonymization is a simple rewrite task, not deep reasoning.
+    </div>
+  </div>
+
+  <!-- Model Selection -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🤖 Anonymization Model — What to Run Locally</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px;line-height:1.7;padding:8px 0">
+      <div>
+        <strong style="color:#7c3aed">🔹 Option A: Small Model + Prompt Engineering (Recommended)</strong><br><br>
+        <strong>Model:</strong> Phi-4 Mini 3.8B (4 GB VRAM)<br>
+        <strong>Method:</strong> System prompt instructs the model to anonymize:<br><br>
+        <em style="font-size:11px">"You are a data sanitization filter. Replace ALL confidential information with placeholders: [CLIENT_NAME], [REVENUE], [LOCATION], [DATE], [PERSON_NAME]. For numbers, replace with [FIGURE_X]. Preserve the question structure and intent. Output ONLY the sanitized text."</em><br><br>
+        <strong>Pros:</strong> Simple, works with any model. No training needed.<br>
+        <strong>Cons:</strong> May miss some PII on complex inputs.
+      </div>
+      <div>
+        <strong style="color:#059669">🔹 Option B: Fine-Tuned Model (Production)</strong><br><br>
+        <strong>Model:</strong> Phi-4 Medium 14B, fine-tuned on 5,000 sanitized examples<br>
+        <strong>Training data:</strong> Create 5,000 pairs of (original query → anonymized query) covering PKF-specific patterns: client names, revenue figures, audit findings, tax IDs, addresses<br><br>
+        <strong>Pros:</strong> Near-perfect PII detection. Handles edge cases. Consistent output format.<br>
+        <strong>Cons:</strong> Requires 2-4 weeks for data preparation + fine-tuning. Needs DGX Spark or RTX 5080+.
+      </div>
+    </div>
+    <div style="background:#fef3c7;border-radius:8px;padding:12px;font-size:11px;line-height:1.6;margin-top:8px">
+      <strong>💡 Start with Option A for PoC (2 days setup).</strong> If the simple prompt-based anonymization is insufficient (misses >5% of PII), invest in Option B. The mapping table and re-identification logic is the same for both.
+    </div>
+  </div>
+
+  <!-- Implementation -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🛠️ Implementation — Three Approaches Compared</span></div>
+
+    <!-- Quick Comparison Table -->
+    <div style="overflow-x:auto;margin-bottom:16px">
+      <table class="ai-compare-table" style="font-size:11.5px;width:100%">
+        <thead><tr>
+          <th></th>
+          <th style="background:#f0fdf4">🔧 Option A<br>Full Custom Chat App</th>
+          <th style="background:#ede9fe">🔀 Option B<br>API-Only + Open WebUI</th>
+          <th style="background:#fef3c7">🧩 Option C<br>Open WebUI Pipeline Plugin</th>
+        </tr></thead>
+        <tbody>
+          <tr><td><strong>What you build</strong></td>
+            <td>Complete chat UI + anonymization pipeline — everything</td>
+            <td>Only the anonymization API route — Open WebUI provides the chat UI</td>
+            <td>Only a plugin script — Open WebUI handles everything else</td></tr>
+          <tr><td><strong>Chat Interface</strong></td>
+            <td>✅ Full custom — your design, your UX</td>
+            <td>✅ Open WebUI provides it (polished, multi-model, conversation history)</td>
+            <td>✅ Open WebUI provides it</td></tr>
+          <tr><td><strong>Conversation History</strong></td>
+            <td>🔨 You build it (Prisma + PostgreSQL)</td>
+            <td>✅ Built-in (Open WebUI uses its own DB)</td>
+            <td>✅ Built-in</td></tr>
+          <tr><td><strong>Multi-User / Auth</strong></td>
+            <td>🔨 You build it (NextAuth.js, 1-2 days)</td>
+            <td>✅ Built-in (OAuth, RBAC, API keys)</td>
+            <td>✅ Built-in</td></tr>
+          <tr><td><strong>File Upload</strong></td>
+            <td>🔨 You build it (1 day)</td>
+            <td>✅ Built-in</td>
+            <td>✅ Built-in</td></tr>
+          <tr><td><strong>Streaming</strong></td>
+            <td>🔨 Vercel AI SDK (1 day integration)</td>
+            <td>✅ Built-in + your API streams to it</td>
+            <td>✅ Built-in</td></tr>
+          <tr><td><strong>Anonymization Pipeline</strong></td>
+            <td>🔨 You build it (~300 lines TS)</td>
+            <td>🔨 You build it as a standalone API (~300 lines TS)</td>
+            <td>🔨 You build it as a plugin (~200 lines Python)</td></tr>
+          <tr><td><strong>Tech Stack</strong></td>
+            <td>Next.js 15 · TypeScript · Prisma · AI SDK</td>
+            <td>Next.js API route + Open WebUI (SvelteKit/Python)</td>
+            <td>Python plugin + Open WebUI (SvelteKit/Python)</td></tr>
+          <tr><td><strong>Lines of Code</strong></td>
+            <td>~2,000 TSX + ~300 TS pipeline</td>
+            <td>~300 TS pipeline + Open WebUI config</td>
+            <td>~200 Python plugin + Open WebUI config</td></tr>
+          <tr style="background:#f0fdf4"><td><strong>Timeline</strong></td>
+            <td><strong>3-5 weeks</strong> (MVP → production)</td>
+            <td><strong>2-3 weeks</strong> (API + Open WebUI setup)</td>
+            <td><strong>1-2 weeks</strong> (plugin + Open WebUI setup)</td></tr>
+          <tr><td><strong>Maintenance Burden</strong></td>
+            <td>🔴 High — you own every feature forever</td>
+            <td>🟡 Medium — you maintain the API; Open WebUI updates are upstream</td>
+            <td>🟢 Low — you maintain only the plugin; UI updates are automatic</td></tr>
+          <tr><td><strong>PKF Branding / White-Label</strong></td>
+            <td>✅ Full control — PKF colors, logo, custom UX</td>
+            <td>⚠️ Limited — Open WebUI supports branding but not deep customization</td>
+            <td>⚠️ Limited — same as Option B</td></tr>
+          <tr><td><strong>Audit Trail Customization</strong></td>
+            <td>✅ Full control — log every anonymization step in your DB</td>
+            <td>✅ Full control — your API logs all pipeline steps</td>
+            <td>⚠️ Partial — plugin logs exist but harder to surface in UI</td></tr>
+          <tr><td><strong>GDPR / Compliance</strong></td>
+            <td>✅ Full control over data flow & storage</td>
+            <td>⚠️ Two systems to audit (your API + Open WebUI)</td>
+            <td>⚠️ Two systems to audit</td></tr>
+          <tr><td><strong>Vendor Lock-in Risk</strong></td>
+            <td>🟢 None — you own the code</td>
+            <td>🟡 Medium — if Open WebUI stagnates, you still have your API</td>
+            <td>🔴 Medium-High — plugin API may change with Open WebUI versions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Detailed Breakdown -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;font-size:12.5px;line-height:1.7">
+      <div style="background:#f0fdf4;border:1px solid #10b981;border-radius:10px;padding:14px">
+        <strong style="color:#059669;font-size:14px">🔧 Option A: Full Custom Chat App</strong><br><br>
+        <strong>Build a complete ChatGPT-like app in Next.js.</strong><br><br>
+        <strong>Architecture:</strong><br>
+        • <code>app/chat/page.tsx</code> — Chat UI with conversation sidebar<br>
+        • <code>app/api/chat/route.ts</code> — Anonymization pipeline API route<br>
+        • <code>prisma/schema.prisma</code> — Conversations, messages, mapping tables<br>
+        • NextAuth.js — PKF Azure AD / Entra ID SSO<br>
+        • Vercel AI SDK — Streaming responses to the UI<br><br>
+        <strong>✅ Pros:</strong><br>
+        • Full PKF branding — exact UX your team needs<br>
+        • Single codebase — one Next.js app, one deployment<br>
+        • Complete audit trail — every anonymization logged in your DB<br>
+        • No dependency on third-party chat UIs<br>
+        • Your team's existing Next.js skills — zero new platform<br><br>
+        <strong>❌ Cons:</strong><br>
+        • ~2,300 lines of code to write & maintain<br>
+        • You own everything — bugs, features, updates<br>
+        • Chat UI is commodity work (sidebar, message bubbles, etc.) — reinventing wheels<br>
+        • 3-5 weeks before production-ready<br><br>
+        <strong>📋 Best for:</strong> Teams that need full branding control, custom audit workflows, or plan to add PKF-specific features long-term.
+      </div>
+
+      <div style="background:#ede9fe;border:1px solid #7c3aed;border-radius:10px;padding:14px">
+        <strong style="color:#7c3aed;font-size:14px">🔀 Option B: API-Only + Open WebUI ⭐</strong><br><br>
+        <strong>Build only the anonymization pipeline as a Next.js API route. Use Open WebUI as the chat front-end.</strong><br><br>
+        <strong>Architecture:</strong><br>
+        • Your API: <code>POST /api/anonymized-chat</code> runs the 7-step pipeline<br>
+        • Open WebUI: Pointed at your API as a custom "OpenAI-compatible" endpoint<br>
+        • Open WebUI handles: chat UI, conversations, auth, file upload, model switching<br>
+        • Your API handles: anonymization, DeepSeek call, re-identification, audit logging<br><br>
+        <strong>✅ Pros:</strong><br>
+        • Fastest path to a polished chat experience<br>
+        • Open WebUI is mature — conversation branching, RAG, tool use, multi-model<br>
+        • You focus only on the privacy pipeline (~300 lines)<br>
+        • Open WebUI updates bring new features for free<br>
+        • Can migrate to Option A later — your API is reusable<br><br>
+        <strong>❌ Cons:</strong><br>
+        • Two systems to deploy & monitor (your API + Open WebUI)<br>
+        • Open WebUI is Python/SvelteKit — different stack from your Next.js<br>
+        • Limited PKF branding (logo + colors only)<br>
+        • Users see Open WebUI UX, not your design<br>
+        • Need to ensure the OpenAI-compatible API contract stays aligned<br><br>
+        <strong>📋 Best for:</strong> Teams that want a ready-made chat experience and only care about the anonymization logic — not the UI.
+      </div>
+
+      <div style="background:#fef3c7;border:1px solid #d97706;border-radius:10px;padding:14px">
+        <strong style="color:#b45309;font-size:14px">🧩 Option C: Pipeline Plugin Only</strong><br><br>
+        <strong>Write only an anonymization filter as an Open WebUI Pipeline Plugin. No separate backend.</strong><br><br>
+        <strong>Architecture:</strong><br>
+        • Open WebUI Pipeline Plugin system — filters run before/after model calls<br>
+        • Your plugin: <code>anonymize_filter.py</code> (~200 lines) hooks into the pipeline<br>
+        • Inlet filter: intercepts user message → calls local Ollama → replaces PII → passes to cloud model<br>
+        • Outlet filter: receives cloud response → re-identifies → passes to user<br>
+        • All within Open WebUI — no separate API server<br><br>
+        <strong>✅ Pros:</strong><br>
+        • Fastest to deploy — ~200 lines of Python, 1-2 weeks<br>
+        • Zero new infrastructure — Open WebUI runs everything<br>
+        • Pipeline plugins are a supported API — cleaner than forking code<br>
+        • Automatic UI integration — filter status visible in Open WebUI<br><br>
+        <strong>❌ Cons:</strong><br>
+        • Python only (Open WebUI plugin API is Python)<br>
+        • Less control — mapping table storage, audit log format limited by plugin API<br>
+        • Plugin API versioning risk — may break on Open WebUI major updates<br>
+        • Harder to add custom features later (e.g., approval workflows)<br>
+        • Debugging pipeline plugins is harder than debugging your own API<br><br>
+        <strong>📋 Best for:</strong> Rapid PoC. Teams that want to validate the two-step anonymization concept in 1-2 weeks with minimal investment.
+      </div>
+    </div>
+
+    <div class="ai-rec-highlight" style="margin-top:14px">
+      <strong>🏗️ Recommendation:</strong> <strong>Start with Option B (API-Only + Open WebUI)</strong> — it gives you the best balance. You write ~300 lines of TypeScript for the anonymization pipeline (your team's stack), and Open WebUI provides a polished, production-ready chat experience with conversation history, auth, file upload, and multi-model support — all features you'd spend weeks building yourself. Your API is fully reusable — if you later outgrow Open WebUI, you can build Option A's custom UI on top of the same API with zero pipeline changes. For a quick PoC, try <strong>Option C</strong> first (1 week), then graduate to Option B for production. <strong>Skip LibreChat entirely</strong> — it has no pipeline/plugin API, so any customization requires fragile core rewrites.
+    </div>
+  </div>
+
+  <!-- Cost Breakdown -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">💰 Cost Breakdown — Monthly & One-Time</span></div>
+    <div style="overflow-x:auto">
+      <table class="ai-compare-table" style="font-size:12px;width:100%">
+        <thead><tr><th>Component</th><th>One-Time Cost</th><th>Monthly Cost</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Mac Mini M4 Pro</strong> (local anonymization)</td><td>$2,000</td><td>$15 (electricity)</td><td>Amortized over 3 years: $56/mo</td></tr>
+          <tr><td><strong>DeepSeek V4 Pro API</strong> (cloud intelligence)</td><td>$0</td><td>~$20–200</td><td>Depends on query volume. 100K queries/mo ≈ $20.</td></tr>
+          <tr><td><strong>Custom Next.js App</strong> (development)</td><td>$0 (in-house) or $8,000 (contract)</td><td>$0</td><td>1 week for MVP, 2-3 weeks for production</td></tr>
+          <tr style="background:#f0fdf4"><td><strong>TOTAL (Recommended)</strong></td><td><strong>$2,000</strong></td><td><strong>$71–250/mo</strong></td><td>Mac Mini + DeepSeek API + in-house dev</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Security and Compliance -->
+  <div class="ai-card" style="margin-bottom:16px">
+    <div class="ai-card-header"><span class="ai-card-title">🔐 Security & Compliance Notes</span></div>
+    <div style="font-size:13px;line-height:1.7;padding:8px 0">
+      <strong>✅ What NEVER leaves your network:</strong> Client names, revenue figures, personal data, audit findings, tax IDs, addresses, document references.<br>
+      <strong>✅ What goes to DeepSeek Cloud:</strong> Generic placeholders like [Client_A], [Revenue_Issue_B], [Location_C]. Zero semantic link to real entities.<br>
+      <strong>✅ Mapping table:</strong> Stored locally (SQLite or Redis). Encrypted at rest. Never transmitted.<br>
+      <strong>⚠️ DeepSeek API data policy:</strong> Review DeepSeek's data processing terms. For maximum compliance, use their API with data processing agreements. Consider if their servers are in acceptable jurisdictions.<br>
+      <strong>✅ Audit trail:</strong> Log every query: original → anonymized → cloud response → re-identified. Immutable audit log for compliance reviews.<br>
+      <strong>✅ GDPR / ISO 27001:</strong> This architecture supports both — anonymized data is not personal data under GDPR. Local processing keeps sensitive data within your control boundary.
+    </div>
+  </div>
+
+  <!-- Implementation Roadmap -->
+  <div class="ai-card">
+    <div class="ai-card-header"><span class="ai-card-title">🚀 Implementation Roadmap — 4 Weeks to Production</span></div>
+    <div style="font-size:13px;line-height:1.8;padding:8px 0">
+      <strong>Week 1:</strong> Set up Mac Mini M4 Pro (or DGX Spark). Install Ollama + Phi-4 Mini. Test anonymization quality with 100 sample PKF queries. Refine the anonymization prompt until PII detection >95%.<br>
+      <strong>Week 2:</strong> Build the Next.js API route (<code style="font-size:11px">app/api/chat/route.ts</code>): receive query → local Ollama anonymize → DeepSeek API → re-identify → stream response. Add Prisma + SQLite for mapping table persistence. Test end-to-end with 500 queries.<br>
+      <strong>Week 3:</strong> Add audit logging. Build simple web UI (or integrate with existing PKF intranet). Add user authentication. Test with 5 pilot users from audit team.<br>
+      <strong>Week 4:</strong> Security review: verify no PII leaks in network traces, logs, or error messages. Load test: can the Mac Mini handle 10 concurrent anonymization requests? Deploy to pilot (10-15 users).<br>
+      <strong>Month 2:</strong> Evaluate Option B (fine-tuned model) if prompt-based anonymization misses edge cases. Consider Open WebUI with Pipeline Plugin if you need a ready-made chat UI — it's far easier to customize than LibreChat for this use case.
+    </div>
+  </div>
+</section>
 
 <!-- 2. CONFIGURE VIEW -->
 <!-- ════════════════════════════════════════════════════════ -->

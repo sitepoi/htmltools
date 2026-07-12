@@ -963,7 +963,146 @@ body {
 	color: var(--c-slate);
 }
 
-/* ══ TABS ══════════════════════════════════════ */
+/* ══ TOP-LEVEL TAB BAR ═══════════════════════════ */
+.top-tabs-bar {
+	background: var(--c-surface);
+	border: 1px solid var(--c-border);
+	border-radius: var(--radius-lg);
+	padding: 0 6px;
+	margin-bottom: 20px;
+	box-shadow: var(--c-shadow);
+	overflow-x: auto;
+	overflow-y: hidden;
+	height: 48px;
+	display: flex;
+	align-items: stretch;
+}
+
+.top-tabs-bar::-webkit-scrollbar { height: 2px; }
+.top-tabs-bar::-webkit-scrollbar-thumb { background: var(--c-border2); border-radius: 2px; }
+
+.top-tab-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 100%;
+	padding: 0 16px;
+	font-size: 12px;
+	font-weight: 700;
+	cursor: pointer;
+	border: none;
+	background: none;
+	color: var(--c-text3);
+	border-bottom: 3px solid transparent;
+	transition: all 0.15s cubic-bezier(.4, 0, .2, 1);
+	white-space: nowrap;
+	border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+	line-height: 1;
+	flex-shrink: 0;
+	letter-spacing: -0.1px;
+}
+
+.top-tab-btn:hover {
+	color: var(--c-text2);
+	background: var(--c-surface2);
+}
+
+.top-tab-btn.active {
+	color: var(--c-blue);
+	border-bottom-color: var(--c-blue);
+	background: linear-gradient(180deg, rgba(29, 78, 216, 0.06) 0%, rgba(29, 78, 216, 0.02) 100%);
+	font-weight: 800;
+}
+
+.top-tab-icon {
+	font-size: 15px;
+	line-height: 1;
+}
+
+.top-tab-badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 20px;
+	height: 18px;
+	padding: 0 6px;
+	border-radius: 10px;
+	font-size: 10px;
+	font-weight: 800;
+	background: var(--c-blue-bg);
+	color: var(--c-blue);
+}
+
+.top-tab-badge-warn {
+	background: var(--c-amber-bg);
+	color: var(--c-amber);
+}
+
+/* ══ TOP-LEVEL TAB PANELS ══════════════════════════ */
+.top-tab-panel {
+	display: none;
+}
+
+.top-tab-panel.active {
+	display: block;
+}
+
+/* ══ REPORT TABS WRAPPER ═══════════════════════════ */
+.report-tabs-wrap {
+	margin-top: 0;
+}
+
+.report-tabs-wrap .tabs-bar {
+	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* ══ INVOICE LIST ══════════════════════════════════ */
+.invoice-amount {
+	font-weight: 700;
+	color: var(--c-text);
+}
+
+.invoice-balance {
+	font-weight: 700;
+}
+
+.invoice-balance.positive { color: var(--c-amber); }
+.invoice-balance.zero { color: var(--c-green); }
+
+/* ══ URL INPUT ═══════════════════════════════════ */
+.url-row {
+	margin-top: 4px;
+}
+
+.url-toggle {
+	font-size: 11px;
+	color: var(--c-text3);
+	cursor: pointer;
+	font-weight: 600;
+	transition: color 0.15s;
+	user-select: none;
+}
+
+.url-toggle:hover {
+	color: var(--c-blue);
+}
+
+.url-input-wrap {
+	display: flex;
+	gap: 8px;
+	margin-top: 6px;
+	align-items: center;
+}
+
+.url-input-wrap .field-select {
+	flex: 1;
+}
+
+.url-input-wrap .btn {
+	flex-shrink: 0;
+}
+
+/* ══ TABS (report sub-tabs) ═════════════════════════ */
 .tabs-bar {
 	background: var(--c-surface);
 	border: 1px solid var(--c-border);
@@ -1363,8 +1502,6 @@ tbody td {
 	padding: 12px 14px;
 }
 
-.summary-group-row {}
-
 .summary-group-row td {
 	font-size: 13px;
 	font-weight: 600;
@@ -1519,6 +1656,88 @@ tbody td {
 	color: var(--c-text3);
 }
 
+/* ══ MANAGEMENT SECTIONS ═══════════════════════════ */
+.mgmt-section {
+	background: var(--c-surface);
+	border: 1px solid var(--c-border);
+	border-radius: var(--radius-lg);
+	margin-bottom: 20px;
+	overflow: hidden;
+	box-shadow: var(--c-shadow);
+}
+
+.mgmt-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 20px;
+	background: linear-gradient(135deg, var(--c-surface2), var(--c-surface3));
+	border-bottom: 1px solid var(--c-border);
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.mgmt-header-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.mgmt-icon {
+	width: 36px;
+	height: 36px;
+	border-radius: var(--radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	flex-shrink: 0;
+}
+
+.mgmt-icon-people {
+	background: linear-gradient(135deg, var(--c-purple-bg), #ede9fe);
+	box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+}
+
+.mgmt-icon-cash {
+	background: linear-gradient(135deg, var(--c-green-bg), #dcfce7);
+	box-shadow: 0 2px 8px rgba(21, 128, 61, 0.15);
+}
+
+.mgmt-title {
+	font-size: 14px;
+	font-weight: 800;
+	color: var(--c-text);
+	letter-spacing: -0.2px;
+}
+
+.mgmt-subtitle {
+	font-size: 11px;
+	color: var(--c-text3);
+	margin-top: 2px;
+}
+
+.mgmt-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.mgmt-cell {
+	display: block;
+}
+
+.mgmt-section .table-card {
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
+}
+
+.mgmt-section .row-count {
+	padding: 8px 20px 14px;
+}
+
 @media print {
 
 	.app-header,
@@ -1526,7 +1745,8 @@ tbody td {
 	.cta-row,
 	.action-bar,
 	.tabs-bar,
-	.saved-banner {
+	.saved-banner,
+	.mgmt-section {
 		display: none !important;
 	}
 

@@ -83,6 +83,20 @@ tool.getUser()               → { id, name, email, roles, locale } or null if
 tool.onUserChange(cb)        → cb(user) — fires when the session user changes.
                                user is null when logged out.
 
+── Permitted users (object-level access list) ─────────
+tool.getPermittedUsers()     → [{ id, name, email, roles }] — all users who
+                               have permission to view/edit the parent CMS
+                               object this tool is placed on. Useful for
+                               assignee pickers, task assignment, team lists,
+                               approval workflows, etc.
+                               Returns empty array [] if no permissions data
+                               is available or the object has no ACL.
+                               Sorted alphabetically by name.
+tool.onPermittedUsersChange(cb)
+                            → cb(users) — fires when the permitted users list
+                               changes (e.g. an admin updates object
+                               permissions). users is the full updated array.
+
 ── Validation ─────────────────────────────────────────
 tool.reportValid(bool, msg)  → false blocks form save and shows `msg` as an
                                error below the tool.
@@ -111,12 +125,66 @@ tool.declareParams([{name, label, type, default, hint}])
                     type: 'text'|'number'|'toggle'|'select',
                     default: 'default value', hint: 'Help text' }
 
+── Missing parameter reporting (★ RECOMMENDED) ────────
+tool.reportMissingParams(missing, message)
+    → tell the parent CMS app that required parameters are NOT configured.
+      The CMS will show a warning banner with a "Configure" button that
+      opens a dynamic form so the admin can fill in the missing values
+      and apply them directly to the field settings.
+
+      • missing — array of { name, label, type, default, hint, reason }
+        Each entry describes ONE parameter the tool needs.  `name` must
+        match a key declared via tool.declareParams().  `reason` is a
+        short sentence explaining WHY the tool needs this param (e.g.
+        "Must point to the CMS object type that holds vehicle records").
+      • message — string (optional), a human-readable summary shown at
+        the top of the warning banner.  Example:
+        "This tool needs 3 parameters configured before it can work."
+
+      ALWAYS call tool.reportMissingParams() inside tool.onReady() after
+      checking tool.param() for each required key.  The CMS will:
+        1. Show an amber warning banner above the tool iframe
+        2. List all missing parameters with their labels and hints
+        3. Provide a "Configure Parameters" button
+        4. Open a dynamic form pre-filled with defaults from declareParams()
+        5. Let the admin fill in the values and apply them directly
+        6. Reload the tool with the new parameter values
+
+      Example (inside tool.onReady):
+        var missing = []
+        var vType = tool.param('vehiclesTypeId')
+        var sType = tool.param('staffTypeId')
+        if (!vType) missing.push({
+          name: 'vehiclesTypeId', label: 'Vehicles Type ID',
+          type: 'text', default: 'vehicles-uniconbaseapps',
+          hint: 'CMS object type for vehicle records',
+          reason: 'Cannot load vehicle data without a type ID'
+        })
+        if (!sType) missing.push({
+          name: 'staffTypeId', label: 'Staff Type ID',
+          type: 'text', default: 'staff-uniconbaseapps',
+          hint: 'CMS object type for staff records',
+          reason: 'Cannot load staff data without a type ID'
+        })
+        if (missing.length) {
+          tool.reportMissingParams(missing,
+            'Tool parameters must be configured before this tool can display data.')
+        }
+
+      The parent CMS also automatically detects missing params by comparing
+      tool.declareParams() declarations against the configured
+      settings.toolParams — even without an explicit reportMissingParams call.
+      However, calling reportMissingParams() explicitly gives the admin a
+      much clearer error message and lets you mark params as truly required
+      (as opposed to optional ones with sensible defaults).
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ASYNC CMS CHANNELS  (require toolParams opt-in)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 These methods allow the tool to request services from the CMS parent window.
-Each requires the corresponding allow*: 'yes' setting in the tool's toolParams.
+Each requires the corresponding allow*: 'yes' setting configured by the admin
+on the html-tool field in the Field Group Designer.
 Without it, the callback receives an error message instead.
 All are asynchronous — use the callback, never the return value.
 
@@ -345,32 +413,31 @@ Each CMS object returned by query/get/create has this structure:
         ...
       }
     },
+    _parentObjectId,               // parent CMS record ID (for 'instance' scope)
     permissions: { ... },         // access control (automatic)
     created, updated              // ISO timestamp strings
   }
 
 ── Authorization ─────────────────────────────────────────────────────────────
-The tool must declare which types it can access in its toolParams:
+The CMS admin must configure two settings on the html-tool field:
 
-  toolParams: {
-    allowObjectCRUD: 'yes',
-    allowedObjectTypes: [
-      { mainObjectType: 'products',        role: 'editor' },
-      { mainObjectType: 'warehouses',      role: 'viewer' },
-      { mainObjectType: 'inventoryCounts', role: 'editor' },
-      { mainObjectType: 'invoices',        role: 'editor' }
-    ]
-  }
+  settings.allowObjectCRUD: 'yes'           ← enables tool.requestObjects()
+  settings.allowedObjectTypes: [            ← which CMS types the tool can access
+    { mainObjectType: 'taskSprints-uniconbaseapps', role: 'editor', scope: 'shared' },
+    { mainObjectType: 'taskItems-uniconbaseapps',   role: 'editor', scope: 'instance' },
+  ]
 
   • 'viewer' role — only query and get are allowed; write operations blocked
   • 'editor' role — all actions including create, update, delete, batch
+  • scope: 'shared' (default) — data visible across ALL instances of this tool
+  • scope: 'instance' — data isolated to the specific CMS record. Query
+    auto-filters by the parent object; get/update/delete verify ownership.
+    All created objects are automatically stamped with _parentObjectId.
   • mainObjectType can be any string — types do NOT need to be pre-registered
     in CMS settings. The bridge auto-creates a default folder on first use.
-  • Store-installed apps (with _applicationStore suffix) work identically to
-    regular types — no special handling needed.
   • All operations go through CMS permissions automatically. You don't need
     to manage permissions yourself.
-  • Data is stored in om_objects / om_private_objects and is visible in the
+  • Data is stored in om_private_objects and is visible in the
     standard ObjectManager UI if the type is registered in CMS Settings.
 
 ── Examples ──────────────────────────────────────────────────────────────────
@@ -459,22 +526,62 @@ The tool must declare which types it can access in its toolParams:
 NAMING METHODOLOGY (CRITICAL)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Use EXISTING mainObjectType values from the catalog above whenever possible.
-   The catalog lists every type already configured in this tenant.
-2. Use EXACT field IDs from the catalog — never guess them. A wrong field ID
-   means data won't appear in the standard ObjectManager UI.
-3. New types: use descriptive, lowercase, camelCase names.
-   Document new types in toolParams.allowedObjectTypes so the admin can see
-   what your tool needs.
-4. Store-installed apps (with _applicationStore suffix) work like any other
-   type — no special handling required in requestObjects calls.
-5. Prefer reusing existing types — only create new ones when no existing type
-   matches your need. Creating unnecessary duplicate types creates confusion.
-6. NEVER guess field IDs. If the catalog doesn't list fields for a type,
-   ask the user what field IDs to use, or define reasonable names and
-   document them clearly.
-7. New types auto-create a default folder on first use. You don't need to
-   set up folders manually.
+── NAMESPACE CONVENTION ───────────────────────────────────────────────────────
+
+  SHARED (default):      <typeName>-<developerSubdomain>
+      e.g. taskSprints-uniconbaseapps, taskItems-uniconbaseapps
+      Accessible to ALL tools and apps published by this developer.
+      Use this when multiple apps need to share the same data.
+
+  ISOLATED:              <toolId>.<typeName>-<developerSubdomain>
+      e.g. ptm.taskSprints-uniconbaseapps
+      Private to one specific tool. The toolId prefix (dot-separated) 
+      prevents accidental cross-tool access. Use this when data must
+      stay isolated — e.g. internal tool state, draft-only data.
+
+  • The developer subdomain is ALWAYS required (matches app-store convention).
+  • The dot separates the isolation prefix from the type name.
+  • Never use bare names like 'products' or 'tasks' — they pollute
+    the global namespace and will collide with other developers.
+
+── GRADUATION PATH ────────────────────────────────────────────────────────────
+
+  When a tool-created type matures and needs a dedicated management UI:
+
+  1. Register it in CMS Settings (App Designer) under the SAME name.
+     e.g. register taskSprints-uniconbaseapps as-is — no rename needed.
+  2. Define its field groups and fields.
+  3. Existing data persists — the type name doesn't change.
+  4. It now appears in ObjectManager, reporting, and the catalog.
+
+  Shared types can graduate without migration.
+  Isolated types (toolId prefixed) should stay isolated — if you later
+  want to share, migrate data to a shared type name first.
+
+── DISCOVERY ──────────────────────────────────────────────────────────────────
+
+  To see all types created by html-tools (including unregistered ones):
+  • Open App Designer → "Unregistered Types" panel
+    This lists every mainObjectType found in om_objectTypes that isn't
+    yet registered in CMS Settings, with a one-click Register button.
+  • Or query directly: check om_objectTypes_<tenant> collection —
+    each document's mainObjectType field tells you which type it belongs to.
+
+── RULES ──────────────────────────────────────────────────────────────────────
+
+1. ALWAYS namespace new types: <typeName>-<developerSubdomain>.
+   Add <toolId>. prefix for isolated types.
+2. Use EXISTING mainObjectType values from the catalog above whenever possible.
+3. Use EXACT field IDs from the catalog — never guess them.
+4. Document new types in settings.allowedObjectTypes so the admin can
+   audit which tools own which types.
+5. Prefer reusing existing shared types from your developer namespace.
+6. New types auto-create a default folder on first use via _ensureObjectFolder.
+7. Default folder is named "Default" in om_objectTypes_<tenant> — this is
+   what makes the type discoverable in the Unregistered Types panel.
+8. Use scope: 'shared' for data shared across instances (e.g. sprints,
+   shared definitions). Use scope: 'instance' for data private per
+   CMS record (e.g. tasks, private notes, user-specific items).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 MANDATORY JS BOILERPLATE
@@ -504,6 +611,10 @@ HARD RULES
 ✗  No fetch to external URLs (sandboxed: allow-scripts, allow-forms, allow-downloads)
 ✗  No alert(), confirm(), or prompt()
 ✗  No raw postMessage calls — always use the tool.* SDK
+✓  Always call tool.declareParams() for EVERY param your tool reads
+✓  Always call tool.reportMissingParams() inside tool.onReady() if required
+   params are missing — this triggers a warning banner in the CMS UI so
+   the admin can fix the configuration without digging through JSON.
 ✓  External CDN <script> tags ARE allowed inside the HTML field
    (e.g. Chart.js, Sortable, DataTables, SheetJS, etc.)
 ✓  Values can be any JSON type — save objects/arrays freely with tool.setValue()

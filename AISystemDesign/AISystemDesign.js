@@ -467,6 +467,7 @@ function switchTab(tabName) {
   if (tabName === 'architecture') { renderArchitectureDiagram(); updateFlowLabel(); }
   if (tabName === 'memory') renderMemoryView();
   if (tabName === 'gpu') {}
+  if (tabName === 'privacy') renderPrivacyView();
   if (tabName === 'deepseek') {}
   if (tabName === 'tokencost') {} // Static content — no dynamic render needed
   if (tabName === 'configure') syncConfigToUI();
@@ -2204,5 +2205,65 @@ function copyPlan() {
     document.body.appendChild(ta); ta.select();
     try { document.execCommand('copy'); tool.notify('Plan copied!','success'); } catch(e) { tool.notify('Copy failed','error'); }
     document.body.removeChild(ta);
+  }
+}
+
+// ── Privacy Gateway Tab ──
+function renderPrivacyView() {
+  var el = document.getElementById('privacy-diagram-svg');
+  if (!el) return;
+  if (typeof mermaid === 'undefined') { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ai-text-muted)">⏳ Loading Mermaid diagram…</div>'; return; }
+
+  var diagram = [
+    'flowchart TD',
+    '  S1["<b>STEP 1</b> 👤<br/>User submits confidential query<br/><i>Client names · Revenue figures · PII</i>"]',
+    '  S2["<b>STEP 2</b> 🖥️<br/>Local LLM detects & anonymizes PII<br/><i>Phi-4 Mini 3.8B on Mac Mini M4 Pro · ~130 tok/s</i>"]',
+    '  S3["<b>STEP 3</b> 🗄️<br/>Mapping table stored locally<br/><i>[Client_A] → ABC Manufacturing · SQLite encrypted</i>"]',
+    '  S4["<b>STEP 4</b> 📤<br/>Sanitized query sent to cloud<br/><i>TLS 1.3 · Only placeholders · No real PII in transit</i>"]',
+    '  S5["<b>STEP 5</b> ☁️<br/>DeepSeek V4 Pro processes query<br/><i>MoE 685B · 128K context · $0.14/M input tok</i>"]',
+    '  S6["<b>STEP 6</b> 📥<br/>Cloud response returned with placeholders<br/><i>DeepSeek never saw any real confidential data</i>"]',
+    '  S7["<b>STEP 7</b> 🔄<br/>Re-identify response locally<br/><i>Replace [Client_A] → ABC Manufacturing via mapping table</i>"]',
+    '  S8["<b>STEP 8</b> ✅<br/>User receives final answer<br/><i>Confidential data NEVER left the building</i>"]',
+    '',
+    '  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8',
+    '',
+    '  %% Color legend: Blue = User · Green = Local/On-Prem · Amber = Mapping · Purple = Cloud',
+    '  style S1 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f',
+    '  style S2 fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#064e3b',
+    '  style S3 fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f',
+    '  style S4 fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3b0764',
+    '  style S5 fill:#c7d2fe,stroke:#4f46e5,stroke-width:3px,color:#1e1b4b',
+    '  style S6 fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#3b0764',
+    '  style S7 fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#064e3b',
+    '  style S8 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f'
+  ].join('\n');
+
+  el.innerHTML = '<div class="mermaid">' + diagram + '</div>';
+  try {
+    // Use compact font for the privacy diagram
+    mermaid.initialize({
+      startOnLoad: false, theme: 'base', securityLevel: 'loose',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      themeVariables: {
+        fontSize: '11px', primaryColor: '#ede9fe', primaryTextColor: '#3730a3',
+        primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#e0f2fe',
+        tertiaryColor: '#f0fdf4', clusterBkg: '#f8fafc', clusterBorder: '#e2e8f0',
+        edgeLabelBackground: '#f8fafc', titleColor: '#1e1b4b'
+      }
+    });
+    mermaid.init(undefined, el.querySelector('.mermaid'));
+    // Restore default font size for other diagrams
+    mermaid.initialize({
+      startOnLoad: false, theme: 'base', securityLevel: 'loose',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      themeVariables: {
+        fontSize: '13px', primaryColor: '#ede9fe', primaryTextColor: '#3730a3',
+        primaryBorderColor: '#7c3aed', lineColor: '#64748b', secondaryColor: '#e0f2fe',
+        tertiaryColor: '#f0fdf4', clusterBkg: '#f8fafc', clusterBorder: '#e2e8f0',
+        edgeLabelBackground: '#f8fafc', titleColor: '#1e1b4b'
+      }
+    });
+  } catch(e) {
+    el.innerHTML = '<div style="padding:20px;color:#dc2626">⚠️ Mermaid render error: ' + esc(String(e)) + '</div>';
   }
 }

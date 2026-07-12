@@ -26,11 +26,404 @@ let npSortCol = 'name', npSortDir = 1;
 const UNASSIGNED = 'Unassigned';
 const QB_COLS = { transactionType: 'Transaction type', donor: 'Name', invoice: '#', date: 'Date', amount: 'Amount', balance: 'Open balance' };
 
-// ── Toggle import section ─────────────────────────────────
-function toggleImportSection() {
-	var sec = document.getElementById('import-section');
-	sec.style.display = sec.style.display === 'none' ? 'block' : 'none';
+// ── CMS STORAGE ────────────────────────────────────────
+const PEOPLE_TYPE = 'pledgePeople-uniconbaseapps';
+const CASH_TYPE = 'pledgeCashPayments-uniconbaseapps';
+const MASTER_ID = 'master-list';
+let _cmsAvailable = false;
+let _cmsBusy = false;
+let _pendingCashFile = null;
+let _sourceUrls = { qb: '', cash: '', people: '' };
+let _urlFetchBusy = false;
+
+function _cmsGet(type, cb) {
+	tool.requestObjects('get', { mainObjectType: type, objectId: MASTER_ID }, function (err, result) {
+		if (err) { _cmsAvailable = false; cb(err, null); return; }
+		_cmsAvailable = true;
+		var obj = result && result.object;
+		var records = obj && obj.productData && obj.productData.data_categoriesBased && obj.productData.data_categoriesBased.records;
+		cb(null, Array.isArray(records) ? records : []);
+	});
+}
+
+function _cmsSave(type, records, cb) {
+	if (_cmsBusy) { if (cb) cb('busy'); return; }
+	_cmsBusy = true;
+	var payload = { productData: { data_categoriesBased: { records: records } } };
+	tool.requestObjects('get', { mainObjectType: type, objectId: MASTER_ID }, function (err, result) {
+		if (err || !result || !result.object) {
+			tool.requestObjects('create', {
+				mainObjectType: type, objectId: MASTER_ID,
+				name: type === PEOPLE_TYPE ? 'People & Groups Master List' : 'Cash Payments Master List',
+				productData: { data_categoriesBased: { records: records } }
+			}, function (e2, r2) {
+				_cmsBusy = false;
+				if (e2) { _cmsAvailable = false; if (cb) cb(e2); return; }
+				_cmsAvailable = true;
+				if (cb) cb(null);
+			});
+			return;
+		}
+		_cmsAvailable = true;
+		tool.requestObjects('update', {
+			mainObjectType: type, objectId: MASTER_ID, productData: payload.productData
+		}, function (e2) {
+			_cmsBusy = false;
+			if (e2) { _cmsAvailable = false; if (cb) cb(e2); return; }
+			if (cb) cb(null);
+		});
+	});
+}
+
+function loadStoredPeople(cb) { _cmsGet(PEOPLE_TYPE, function (err, records) { if (err) { peopleData = []; if (cb) cb(err); return; } peopleData = records; refreshPeopleCard(); renderPeopleManager(); if (cb) cb(null); }); }
+function loadStoredCash(cb) { _cmsGet(CASH_TYPE, function (err, records) { if (err) { cashData = []; if (cb) cb(err); return; } cashData = records; refreshCashCard(); renderCashManager(); if (cb) cb(null); }); }
+function saveStoredPeople(cb) { _cmsSave(PEOPLE_TYPE, peopleData, function (err) { if (!err) refreshPeopleCard(); if (cb) cb(err); }); }
+function saveStoredCash(cb) { _cmsSave(CASH_TYPE, cashData, function (err) { if (!err) refreshCashCard(); if (cb) cb(err); }); }
+
+// ── PEOPLE MANAGEMENT UI ───────────────────────────────
+function refreshPeopleCard() {
+	var label = document.getElementById('people-label');
+	if (!label) return;
+	if (_cmsAvailable && peopleData.length) {
+		label.textContent = '\u2713 ' + peopleData.length + ' people stored in CMS';
+	} else if (_cmsAvailable) {
+		label.textContent = 'No people stored yet — add manually or import from file';
+	} else {
+		label.textContent = 'Upload an Excel/CSV file with Name, Group, and Phone columns';
+	}
+	updateTabBadges();
+}
+
+function refreshCashCard() {
+	var label = document.getElementById('cash-label');
+	if (!label) return;
+	if (_cmsAvailable && cashData.length) {
+		label.textContent = '\u2713 ' + cashData.length + ' payments stored in CMS';
+	} else if (_cmsAvailable) {
+		label.textContent = 'No payments stored yet — add manually or import from file';
+	} else {
+		label.textContent = 'Upload an Excel/CSV file with payment records';
+	}
+	updateTabBadges();
+}
+
+// ── UPDATE ALL TAB BADGES ───────────────────────────────
+function updateTabBadges() {
+	var ib = document.getElementById('invoice-tab-count');
+	if (ib) { ib.textContent = qbData.length; ib.style.display = qbData.length ? '' : 'none'; }
+	var cb = document.getElementById('cash-tab-count');
+	if (cb) { cb.textContent = cashData.length; cb.style.display = cashData.length ? '' : 'none'; }
+	var pb = document.getElementById('people-tab-count');
+	if (pb) { pb.textContent = peopleData.length; pb.style.display = peopleData.length ? '' : 'none'; }
+}
+
+function renderPeopleManager() {
+	var tbody = document.getElementById('people-mgmt-body');
+	var countEl = document.getElementById('people-mgmt-count');
+	if (!tbody) return;
+	tbody.innerHTML = '';
+	if (!peopleData.length) {
+		tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state" style="padding:24px"><div class="e-icon">\ud83d\udc65</div><h3>No people stored</h3><p>Add people manually or import from a file.</p></div></td></tr>';
+		if (countEl) countEl.textContent = '';
+		return;
+	}
+	var sorted = peopleData.slice().sort(function (a, b) { return (a.group || '').localeCompare(b.group || '') || (a.name || '').localeCompare(b.name || ''); });
+	sorted.forEach(function (p, i) {
+		var tr = document.createElement('tr');
+		tr.id = 'prow-' + i;
+		tr.innerHTML =
+			'<td><span class="mgmt-cell" id="pcell-name-' + i + '">' + esc(p.name || '') + '</span></td>' +
+			'<td><span class="mgmt-cell" id="pcell-group-' + i + '">' + esc(p.group || '') + '</span></td>' +
+			'<td><span class="mgmt-cell" id="pcell-phone-' + i + '">' + esc(p.phone || '') + '</span></td>' +
+			'<td><button class="btn btn-outline btn-sm" onclick="editPerson(' + i + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deletePerson(' + i + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
+		tbody.appendChild(tr);
+	});
+	if (countEl) countEl.textContent = peopleData.length + ' people stored';
+}
+
+function addPersonRow() {
+	var name = prompt('Enter full name:');
+	if (!name || !name.trim()) return;
+	var group = prompt('Enter group name (or leave blank):') || '';
+	var phone = prompt('Enter phone (or leave blank):') || '';
+	peopleData.push({ name: name.trim(), group: group.trim(), phone: phone.trim() });
+	renderPeopleManager();
+	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person added \u2713', 'success'); });
 	scheduleResize();
+}
+
+function editPerson(idx) {
+	var p = peopleData[idx];
+	var name = prompt('Edit name:', p.name || '');
+	if (name === null) return;
+	var group = prompt('Edit group:', p.group || '');
+	if (group === null) return;
+	var phone = prompt('Edit phone:', p.phone || '');
+	if (phone === null) return;
+	p.name = name.trim();
+	p.group = group.trim();
+	p.phone = phone.trim();
+	renderPeopleManager();
+	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person updated \u2713', 'success'); });
+	scheduleResize();
+}
+
+function deletePerson(idx) {
+	var p = peopleData[idx];
+	if (!confirm('Delete "' + (p.name || 'this person') + '"?')) return;
+	peopleData.splice(idx, 1);
+	renderPeopleManager();
+	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person deleted \u2713', 'success'); });
+	scheduleResize();
+}
+
+function importPeopleFile() {
+	document.getElementById('people-file').click();
+}
+
+// ── CASH MANAGEMENT UI ─────────────────────────────────
+function renderCashManager() {
+	var tbody = document.getElementById('cash-mgmt-body');
+	var countEl = document.getElementById('cash-mgmt-count');
+	if (!tbody) return;
+	tbody.innerHTML = '';
+	if (!cashData.length) {
+		tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state" style="padding:24px"><div class="e-icon">\ud83d\udcb5</div><h3>No payments stored</h3><p>Add payments manually or import from a file.</p></div></td></tr>';
+		if (countEl) countEl.textContent = '';
+		return;
+	}
+	var sorted = cashData.slice().sort(function (a, b) { return (a.donorName || '').localeCompare(b.donorName || '') || (a.date || '').localeCompare(b.date || ''); });
+	sorted.forEach(function (c, i) {
+		var tr = document.createElement('tr');
+		tr.id = 'crow-' + i;
+		tr.innerHTML =
+			'<td><span class="mgmt-cell" id="ccell-donor-' + i + '">' + esc(c.donorName || '') + '</span></td>' +
+			'<td><span class="mgmt-cell" id="ccell-date-' + i + '">' + esc(c.date || '') + '</span></td>' +
+			'<td style="font-weight:700;color:var(--c-green)"><span class="mgmt-cell" id="ccell-amount-' + i + '">' + fmt(c.amount || 0) + '</span></td>' +
+			'<td><span class="mgmt-cell" id="ccell-note-' + i + '">' + esc(c.note || '') + '</span></td>' +
+			'<td><button class="btn btn-outline btn-sm" onclick="editCash(' + i + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deleteCash(' + i + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
+		tbody.appendChild(tr);
+	});
+	if (countEl) countEl.textContent = cashData.length + ' payments stored';
+}
+
+function addCashRow() {
+	var donor = prompt('Enter donor name:');
+	if (!donor || !donor.trim()) return;
+	var date = prompt('Enter payment date (e.g. 2024-01-15):') || '';
+	var amt = parseFloat(prompt('Enter amount:') || '0');
+	if (isNaN(amt) || amt <= 0) { tool.notify('Invalid amount', 'warning'); return; }
+	var note = prompt('Enter note (or leave blank):') || '';
+	cashData.push({ donorName: donor.trim(), date: date.trim(), amount: amt, note: note.trim() });
+	renderCashManager();
+	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment added \u2713', 'success'); });
+	scheduleResize();
+}
+
+function editCash(idx) {
+	var c = cashData[idx];
+	var donor = prompt('Edit donor name:', c.donorName || '');
+	if (donor === null) return;
+	var date = prompt('Edit date:', c.date || '');
+	if (date === null) return;
+	var amt = parseFloat(prompt('Edit amount:', c.amount || 0));
+	if (isNaN(amt)) return;
+	var note = prompt('Edit note:', c.note || '');
+	if (note === null) return;
+	c.donorName = donor.trim();
+	c.date = date.trim();
+	c.amount = amt;
+	c.note = note.trim();
+	renderCashManager();
+	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment updated \u2713', 'success'); });
+	scheduleResize();
+}
+
+function deleteCash(idx) {
+	var c = cashData[idx];
+	if (!confirm('Delete payment from "' + (c.donorName || 'unknown') + '" for ' + fmt(c.amount || 0) + '?')) return;
+	cashData.splice(idx, 1);
+	renderCashManager();
+	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment deleted \u2713', 'success'); });
+	scheduleResize();
+}
+
+function importCashFile() {
+	document.getElementById('cash-file').click();
+}
+
+// ── TOP-LEVEL TAB SWITCHING ─────────────────────────────
+function switchTopTab(name) {
+	document.querySelectorAll('.top-tab-btn').forEach(function (b) {
+		b.classList.toggle('active', b.getAttribute('data-tab') === name);
+	});
+	document.querySelectorAll('.top-tab-panel').forEach(function (p) {
+		p.classList.toggle('active', p.id === 'top-tab-' + name);
+	});
+	if (name === 'cash') { renderCashManager(); }
+	if (name === 'people') { renderPeopleManager(); }
+	if (name === 'invoices') { renderInvoiceList(); }
+	scheduleResize();
+}
+
+// ── INVOICE LIST RENDERING ──────────────────────────────
+function renderInvoiceList() {
+	var tbody = document.getElementById('invoice-body');
+	var countEl = document.getElementById('invoice-count');
+	if (!tbody) return;
+	var search = normalize((document.getElementById('invoice-search') || {}).value || '');
+	var rows = qbData.filter(function (r) {
+		if (!search) return true;
+		var donor = String(r[QB_COLS.donor] || '');
+		var inv = String(r[QB_COLS.invoice] || '');
+		return normalize(donor).includes(search) || normalize(inv).includes(search);
+	});
+	tbody.innerHTML = '';
+	if (!rows.length) {
+		tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state" style="padding:32px"><div class="e-icon">📄</div><h3>' + (qbData.length ? 'No matching invoices' : 'No invoices loaded') + '</h3><p>' + (qbData.length ? 'Try a different search term.' : 'Upload a QuickBooks Invoice List export file above.') + '</p></div></td></tr>';
+		if (countEl) countEl.textContent = qbData.length ? qbData.length + ' invoices (' + rows.length + ' shown)' : '';
+		return;
+	}
+	rows.forEach(function (row) {
+		var tr = document.createElement('tr');
+		var amt = parseFloat(String(row[QB_COLS.amount] || '').replace(/[^0-9.]/g, '')) || 0;
+		var bal = parseFloat(String(row[QB_COLS.balance] || '').replace(/[^0-9.]/g, '')) || 0;
+		var balClass = bal <= 0 ? 'zero' : 'positive';
+		tr.innerHTML =
+			'<td><span class="badge" style="background:var(--c-blue-bg);color:var(--c-blue);border:1px solid var(--c-blue-mid)">' + esc(String(row[QB_COLS.transactionType] || 'Invoice')) + '</span></td>' +
+			'<td><span class="donor-name">' + esc(String(row[QB_COLS.donor] || '')) + '</span></td>' +
+			'<td><span class="invoice-no">' + esc(String(row[QB_COLS.invoice] || '')) + '</span></td>' +
+			'<td style="font-size:12px;color:var(--c-text2)">' + esc(String(row[QB_COLS.date] || '')) + '</td>' +
+			'<td class="invoice-amount">' + fmt(amt) + '</td>' +
+			'<td class="invoice-balance ' + balClass + '">' + fmt(bal) + '</td>';
+		tbody.appendChild(tr);
+	});
+	if (countEl) countEl.textContent = qbData.length + ' invoice rows (' + rows.length + ' shown)';
+	var badge = document.getElementById('invoice-tab-count');
+	if (badge) {
+		badge.textContent = qbData.length;
+		badge.style.display = qbData.length ? '' : 'none';
+	}
+}
+
+// ── URL INPUT TOGGLE ───────────────────────────────────
+function toggleUrlInput(type) {
+	var wrap = document.getElementById(type + '-url-wrap');
+	if (!wrap) return;
+	var show = wrap.style.display === 'none';
+	wrap.style.display = show ? 'flex' : 'none';
+	if (show && _sourceUrls[type]) {
+		document.getElementById(type + '-url').value = _sourceUrls[type];
+	}
+}
+
+// ── SAVE SOURCE URLS TO TOOL VALUE ────────────────────
+function saveSourceUrls() {
+	var qb = document.getElementById('qb-url');
+	var cash = document.getElementById('cash-url');
+	var people = document.getElementById('people-url');
+	_sourceUrls.qb = qb ? qb.value.trim() : '';
+	_sourceUrls.cash = cash ? cash.value.trim() : '';
+	_sourceUrls.people = people ? people.value.trim() : '';
+	_persistSourceUrls();
+}
+
+function _persistSourceUrls() {
+	if (_isSaving) return;
+	var hasUrl = _sourceUrls.qb || _sourceUrls.cash || _sourceUrls.people;
+	if (!hasUrl) return;
+	var val = tool.getValue() || {};
+	val.sourceUrls = { qb: _sourceUrls.qb, cash: _sourceUrls.cash, people: _sourceUrls.people };
+	_isSaving = true;
+	tool.setValue(val);
+	setTimeout(function () { _isSaving = false; }, 200);
+}
+
+// ── FETCH FILE FROM URL ───────────────────────────────
+function fetchUrlFile(type) {
+	var urlInput = document.getElementById(type + '-url');
+	var url = urlInput ? urlInput.value.trim() : '';
+	if (!url) { tool.notify('Please enter a URL first', 'warning'); return; }
+	if (_urlFetchBusy) { tool.notify('A fetch is already in progress', 'warning'); return; }
+	_urlFetchBusy = true;
+	saveSourceUrls();
+	tool.notify('Fetching ' + type + ' file from URL…', 'info');
+
+	tool.requestFileContent(url, function (err, content) {
+		_urlFetchBusy = false;
+		if (err) { tool.notify('Fetch failed: ' + err, 'error'); return; }
+		if (!content) { tool.notify('No content returned from URL', 'warning'); return; }
+		try {
+			var wb = XLSX.read(content, { type: 'string', cellDates: true });
+			var ws = wb.Sheets[wb.SheetNames[0]];
+			var raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+			var headerRowIdx = 0;
+			if (type === 'qb') {
+				for (var i = 0; i < Math.min(raw.length, 15); i++) {
+					var rowStr = raw[i].map(function (c) { return String(c).toLowerCase(); }).join('|');
+					if (rowStr.includes('transaction type') || rowStr.includes('transaction_type')) { headerRowIdx = i; break; }
+				}
+			} else {
+				for (var i = 0; i < Math.min(raw.length, 15); i++) {
+					var cells = raw[i].map(function (c) { return String(c).toLowerCase().trim(); });
+					if (cells.includes('name') && (cells.includes('date') || cells.includes('income') || cells.includes('explanation') || cells.includes('group'))) { headerRowIdx = i; break; }
+				}
+			}
+			var headers = raw[headerRowIdx].map(function (h) { return String(h).trim(); });
+			var rows = [];
+			for (var i = headerRowIdx + 1; i < raw.length; i++) {
+				var rowArr = raw[i];
+				if (rowArr.every(function (c) { return c === '' || c === null || c === undefined; })) continue;
+				var obj = {};
+				headers.forEach(function (h, j) { obj[h] = rowArr[j] !== undefined ? rowArr[j] : ''; });
+				rows.push(obj);
+			}
+			if (!rows.length) { tool.notify('No data rows found in ' + type + ' file', 'warning'); return; }
+
+			if (type === 'qb') {
+				onQBLoad(rows);
+			} else if (type === 'cash') {
+				_pendingCashFile = rows;
+				document.getElementById('cash-map').style.display = 'block';
+				var cols = Object.keys(rows[0]);
+				populateSelect('cash-col-donor', cols, ['name', 'donor', 'customer', 'payer']);
+				populateSelect('cash-col-date', cols, ['date', 'paid', 'payment']);
+				populateSelect('cash-col-amount', cols, ['income', 'amount', 'paid', 'cash', 'payment']);
+				populateSelect('cash-col-note', cols, ['explanation', 'note', 'description', 'memo', 'comment']);
+				var importBtn = document.getElementById('cash-import-to-cms-btn');
+				if (importBtn) importBtn.style.display = '';
+				document.getElementById('cash-label').textContent = '\u26a1 ' + rows.length + ' rows from URL — map columns & save';
+			} else if (type === 'people') {
+				onPeopleLoad(rows);
+			}
+			tool.notify('Fetched ' + rows.length + ' rows from ' + type + ' URL \u2713', 'success');
+		} catch (e) {
+			tool.notify('Parse error: ' + e.message, 'error');
+		}
+	});
+}
+
+// ── RESTORE SOURCE URLS FROM SAVED VALUE ──────────────
+function _restoreSourceUrls(val) {
+	if (val && val.sourceUrls) {
+		_sourceUrls.qb = val.sourceUrls.qb || '';
+		_sourceUrls.cash = val.sourceUrls.cash || '';
+		_sourceUrls.people = val.sourceUrls.people || '';
+		var qbEl = document.getElementById('qb-url');
+		var cashEl = document.getElementById('cash-url');
+		var peopleEl = document.getElementById('people-url');
+		if (qbEl) qbEl.value = _sourceUrls.qb;
+		if (cashEl) cashEl.value = _sourceUrls.cash;
+		if (peopleEl) peopleEl.value = _sourceUrls.people;
+		if (_sourceUrls.qb) { document.getElementById('qb-url-wrap').style.display = 'flex'; }
+		if (_sourceUrls.cash) { document.getElementById('cash-url-wrap').style.display = 'flex'; }
+		if (_sourceUrls.people) { document.getElementById('people-url-wrap').style.display = 'flex'; }
+	}
+}
+
+// ── Toggle import section (kept for backward compat) ─────
+function toggleImportSection() {
+	switchTopTab('invoices');
 }
 
 // ── Restore saved report from CMS value ───────────────────
@@ -92,7 +485,8 @@ function restoreFromValue(val) {
 	updateStats();
 	populateGroupFilters();
 	document.getElementById('stats-row').style.display = 'grid';
-	document.getElementById('report-section').style.display = 'block';
+	document.getElementById('report-content').style.display = 'block';
+	document.getElementById('no-report-state').style.display = 'none';
 
 	// ── FIX: Show/hide No-Pledge tabs based on restored data ─
 	var hasUnpledged = unpledged.length > 0;
@@ -123,7 +517,9 @@ function restoreFromValue(val) {
 function setupDrop(dropId, fileId, onLoad) {
 	var drop = document.getElementById(dropId);
 	var file = document.getElementById(fileId);
+	if (!drop || !file) return;
 	file.onchange = function (e) { handleFile(e.target.files[0], dropId, onLoad); };
+	drop.onclick = function () { if (_cmsAvailable && (dropId === 'cash-drop' || dropId === 'people-drop')) return; file.click(); };
 	drop.ondragover = function (e) { e.preventDefault(); drop.classList.add('drag-over'); };
 	drop.ondragleave = function () { drop.classList.remove('drag-over'); };
 	drop.ondrop = function (e) { e.preventDefault(); drop.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0], dropId, onLoad); };
@@ -195,13 +591,15 @@ function onQBLoad(rows) {
 	} else {
 		labelEl.textContent = '\u2713 QB export (' + kept + ' invoice rows of ' + total + ' total)';
 	}
+	renderInvoiceList();
+	updateTabBadges();
 }
 
 function onCashLoad(rows) {
 	var cols = Object.keys(rows[0]);
 	var nameColGuess = cols.find(function (c) { return c.toLowerCase().trim() === 'name'; }) ||
 		cols.find(function (c) { return ['name', 'donor', 'customer', 'payer'].some(function (p) { return c.toLowerCase().includes(p); }); }) || '';
-	cashData = nameColGuess ? rows.filter(function (r) { return String(r[nameColGuess] || '').trim() !== ''; }) : rows;
+	var rawCash = nameColGuess ? rows.filter(function (r) { return String(r[nameColGuess] || '').trim() !== ''; }) : rows;
 	document.getElementById('cash-map').style.display = 'block';
 	populateSelect('cash-col-donor', cols, ['name', 'donor', 'customer', 'payer']);
 	populateSelect('cash-col-date', cols, ['date', 'paid', 'payment']);
@@ -213,7 +611,7 @@ function onCashLoad(rows) {
 	if (noteColGuess) {
 		var unique = [];
 		var seen = {};
-		cashData.forEach(function (r) { var v = String(r[noteColGuess] || '').trim(); if (v && !seen[v]) { seen[v] = true; unique.push(v); } });
+		rawCash.forEach(function (r) { var v = String(r[noteColGuess] || '').trim(); if (v && !seen[v]) { seen[v] = true; unique.push(v); } });
 		unique.sort();
 		unique.forEach(function (val) {
 			var o = document.createElement('option');
@@ -223,22 +621,139 @@ function onCashLoad(rows) {
 		});
 	}
 	document.getElementById('cash-expl-filter').style.display = 'block';
-	var labelEl = document.getElementById('cash-label');
-	var kept = cashData.length, total = rows.length;
-	labelEl.textContent = labelEl.textContent.replace(/\(\d+ rows\)/, '(' + kept + ' rows' + (kept < total ? ' of ' + total + ' total' : '') + ')');
+
+	if (_cmsAvailable) {
+		_pendingCashFile = rawCash;
+		var importBtn = document.getElementById('cash-import-to-cms-btn');
+		if (importBtn) importBtn.style.display = '';
+		var labelEl = document.getElementById('cash-label');
+		var kept = rawCash.length, total = rows.length;
+		if (labelEl) labelEl.textContent = '\u26a1 ' + kept + ' rows loaded — map columns & click "Save to Stored"';
+	} else {
+		cashData = rawCash;
+		var labelEl2 = document.getElementById('cash-label');
+		var kept2 = rawCash.length, total2 = rows.length;
+		if (labelEl2) labelEl2.textContent = '\u2713 ' + kept2 + ' rows' + (kept2 < total2 ? ' of ' + total2 + ' total' : '') + ' (temp)';
+	}
+}
+
+function saveCashImportToCMS() {
+	if (!_cmsAvailable) { tool.notify('CMS storage not available', 'warning'); return; }
+	if (!_pendingCashFile || !_pendingCashFile.length) { tool.notify('No file data to import. Upload a cash file first.', 'warning'); return; }
+	var cashDonorC = document.getElementById('cash-col-donor').value;
+	var cashAmC = document.getElementById('cash-col-amount').value;
+	var cashDateC = document.getElementById('cash-col-date').value;
+	var cashNoteC = document.getElementById('cash-col-note').value;
+	var explSel = document.getElementById('cash-col-expl-val');
+	var cashExplFilter = explSel ? explSel.value.trim() : '';
+
+	var filteredCash = _pendingCashFile.filter(function (row) {
+		if (!cashExplFilter) return true;
+		var expl = String(row[cashNoteC] || '').trim();
+		return expl.toLowerCase() === cashExplFilter.toLowerCase();
+	});
+
+	var imported = filteredCash.map(function (r) {
+		return {
+			donorName: cashDonorC ? String(r[cashDonorC] || '').trim() : '',
+			date: cashDateC ? String(r[cashDateC] || '').trim() : '',
+			amount: cashAmC ? (parseFloat(String(r[cashAmC]).replace(/[^0-9.]/g, '')) || 0) : 0,
+			note: cashNoteC ? String(r[cashNoteC] || '').trim() : ''
+		};
+	}).filter(function (r) { return r.donorName !== '' && r.amount > 0; });
+
+	if (!imported.length) { tool.notify('No valid payment rows to import', 'warning'); return; }
+
+	var existingKeys = {};
+	cashData.forEach(function (c) { existingKeys[normalize(c.donorName) + '|' + c.date + '|' + c.amount] = true; });
+	var added = 0;
+	imported.forEach(function (r) {
+		var dedup = normalize(r.donorName) + '|' + r.date + '|' + r.amount;
+		if (!existingKeys[dedup]) {
+			cashData.push(r);
+			existingKeys[dedup] = true;
+			added++;
+		}
+	});
+
+	saveStoredCash(function (err) {
+		if (!err) {
+			tool.notify('Imported ' + added + ' new payments to CMS \u2713', 'success');
+			_pendingCashFile = null;
+			document.getElementById('cash-import-to-cms-btn').style.display = 'none';
+			document.getElementById('cash-label').textContent = '\u2713 ' + cashData.length + ' payments stored in CMS';
+		} else {
+			tool.notify('Import failed: ' + err, 'error');
+		}
+	});
+	renderCashManager();
+	refreshCashCard();
+	scheduleResize();
 }
 
 function onPeopleLoad(rows) {
-	peopleData = rows;
 	var cols = Object.keys(rows[0]);
 	document.getElementById('people-map').style.display = 'block';
 	populateSelect('people-col-name', cols, ['name', 'donor', 'person', 'full']);
 	populateSelect('people-col-group', cols, ['group', 'location', 'team', 'category', 'class']);
 	populateSelect('people-col-phone', cols, ['phone', 'mobile', 'tel', 'cell']);
+
+	if (_cmsAvailable) {
+		var nameCol = document.getElementById('people-col-name').value || cols.find(function (c) { return c.toLowerCase().trim() === 'name'; }) || '';
+		var groupCol = document.getElementById('people-col-group').value || '';
+		var phoneCol = document.getElementById('people-col-phone').value || '';
+		var imported = rows.map(function (r) {
+			return {
+				name: String(r[nameCol] || '').trim(),
+				group: groupCol ? String(r[groupCol] || '').trim() : '',
+				phone: phoneCol ? String(r[phoneCol] || '').trim() : ''
+			};
+		}).filter(function (r) { return r.name !== ''; });
+		if (imported.length) {
+			var existingKeys = {};
+			peopleData.forEach(function (p) { existingKeys[normalize(p.name)] = true; });
+			var added = 0;
+			imported.forEach(function (r) {
+				if (!existingKeys[normalize(r.name)]) {
+					peopleData.push(r);
+					existingKeys[normalize(r.name)] = true;
+					added++;
+				}
+			});
+			saveStoredPeople(function (err) {
+				if (!err) tool.notify('Imported ' + added + ' new people to CMS \u2713', 'success');
+				else tool.notify('Import failed: ' + err, 'error');
+			});
+			renderPeopleManager();
+			refreshPeopleCard();
+		}
+	} else {
+		peopleData = rows;
+		var labelEl = document.getElementById('people-label');
+		if (labelEl) labelEl.textContent = '\u2713 ' + rows.length + ' rows (temp — CMS storage not available)';
+	}
 }
 
 // ── CMS SDK ENTRY POINT ───────────────────────────────────
 tool.onReady(function (val, fields) {
+	// Declare output schema
+	tool.declareOutput({
+		type: 'object',
+		properties: {
+			generatedAt: { type: 'string' },
+			summary: { type: 'object' },
+			records: { type: 'array' },
+			unpledgedRecords: { type: 'array' }
+		}
+	});
+
+	// Declare params
+	tool.declareParams([
+		{ name: 'allowObjectCRUD', label: 'Allow CMS Object CRUD', type: 'toggle', default: 'yes', hint: 'Enable CMS object storage for people & cash lists' },
+		{ name: 'allowFileContent', label: 'Allow File Content Extraction', type: 'toggle', default: 'yes', hint: 'Enable fetching files from URLs (for source file URLs)' },
+		{ name: 'allowExportPdf', label: 'Allow PDF Export', type: 'toggle', default: 'yes', hint: 'Enable PDF export via CMS' }
+	]);
+
 	setupDrop('qb-drop', 'qb-file', onQBLoad);
 	setupDrop('cash-drop', 'cash-file', onCashLoad);
 	setupDrop('people-drop', 'people-file', onPeopleLoad);
@@ -253,14 +768,36 @@ tool.onReady(function (val, fields) {
 	if (tool.isReadOnly()) lockUI(true);
 	tool.onReadonlyChange(function (ro) { lockUI(ro); });
 
-	restoreFromValue(val);
+	// Restore saved source URLs
+	_restoreSourceUrls(val);
+
+	// Try to load stored data from CMS
+	_cmsAvailable = true;
+	loadStoredPeople(function (err) {
+		if (err) { _cmsAvailable = false; console.log('CMS people load failed, file-only mode'); }
+		loadStoredCash(function (err2) {
+			if (err2) { _cmsAvailable = false; console.log('CMS cash load failed, file-only mode'); }
+			// Now restore saved report
+			var restored = restoreFromValue(val);
+			if (restored) {
+				switchTopTab('reports');
+			} else {
+				switchTopTab('invoices');
+			}
+			updateTabBadges();
+
+			// Auto-fetch QB URL if present and no QB data loaded
+			if (_sourceUrls.qb && !qbData.length) {
+				setTimeout(function () { fetchUrlFile('qb'); }, 500);
+			}
+			scheduleResize();
+		});
+	});
 
 	tool.onValueChange(function (newVal) {
 		if (_isSaving) return;
 		restoreFromValue(newVal);
 	});
-
-	scheduleResize();
 });
 
 function refreshExplOptions() {
@@ -310,41 +847,66 @@ function combine() {
 	if (btn) btn.disabled = true;
 	if (btnText) btnText.textContent = 'Generating\u2026';
 
+	// Build group map from peopleData (standardized fields when CMS, column-mapped when file-only)
 	groupMap = {};
 	if (peopleData.length) {
-		var nameCol = v('people-col-name'), groupCol = v('people-col-group'), phoneCol = v('people-col-phone');
-		peopleData.forEach(function (row) {
-			var key = normalize(row[nameCol] || '');
-			if (!key) return;
-			var grp = String(row[groupCol] || '').trim() || UNASSIGNED;
-			var phone = phoneCol ? String(row[phoneCol] || '').trim() : '';
-			groupMap[key] = { group: grp, phone: phone };
-		});
+		var useStandardPeople = _cmsAvailable || (peopleData[0] && peopleData[0].hasOwnProperty('name') && peopleData[0].hasOwnProperty('group'));
+		if (useStandardPeople) {
+			peopleData.forEach(function (row) {
+				var key = normalize(row.name || '');
+				if (!key) return;
+				var grp = String(row.group || '').trim() || UNASSIGNED;
+				var phone = String(row.phone || '').trim();
+				groupMap[key] = { group: grp, phone: phone };
+			});
+		} else {
+			var nameCol = v('people-col-name'), groupCol = v('people-col-group'), phoneCol = v('people-col-phone');
+			peopleData.forEach(function (row) {
+				var key = normalize(row[nameCol] || '');
+				if (!key) return;
+				var grp = String(row[groupCol] || '').trim() || UNASSIGNED;
+				var phone = phoneCol ? String(row[phoneCol] || '').trim() : '';
+				groupMap[key] = { group: grp, phone: phone };
+			});
+		}
 	}
 
-	var cashDonorC = v('cash-col-donor'), cashAmC = v('cash-col-amount'),
-		cashDateC = v('cash-col-date'), cashNoteC = v('cash-col-note');
-	var explSel = document.getElementById('cash-col-expl-val');
-	var cashExplFilter = explSel ? explSel.value.trim() : '';
-
-	var filteredCash = cashData.filter(function (row) {
-		if (!cashExplFilter) return true;
-		var expl = String(row[cashNoteC] || '').trim();
-		return expl.toLowerCase() === cashExplFilter.toLowerCase();
-	});
-
+	// Build cash payment map from cashData (standardized fields when CMS, column-mapped when file-only)
+	var useStandardCash = _cmsAvailable || (cashData[0] && cashData[0].hasOwnProperty('donorName'));
 	var cashPayMap = {};
-	filteredCash.forEach(function (row) {
-		if (!cashDonorC || !cashAmC) return;
-		var key = normalize(row[cashDonorC]);
-		if (!key) return;
-		if (!cashPayMap[key]) cashPayMap[key] = [];
-		cashPayMap[key].push({
-			date: cashDateC ? String(row[cashDateC] || '') : '',
-			amount: parseFloat(String(row[cashAmC]).replace(/[^0-9.]/g, '')) || 0,
-			note: cashNoteC ? String(row[cashNoteC] || '') : ''
+	if (useStandardCash) {
+		cashData.forEach(function (row) {
+			var key = normalize(row.donorName || '');
+			if (!key) return;
+			if (!cashPayMap[key]) cashPayMap[key] = [];
+			cashPayMap[key].push({
+				date: String(row.date || ''),
+				amount: Number(row.amount) || 0,
+				note: String(row.note || '')
+			});
 		});
-	});
+	} else {
+		var cashDonorC = v('cash-col-donor'), cashAmC = v('cash-col-amount'),
+			cashDateC = v('cash-col-date'), cashNoteC = v('cash-col-note');
+		var explSel = document.getElementById('cash-col-expl-val');
+		var cashExplFilter = explSel ? explSel.value.trim() : '';
+		var filteredCash = cashData.filter(function (row) {
+			if (!cashExplFilter) return true;
+			var expl = String(row[cashNoteC] || '').trim();
+			return expl.toLowerCase() === cashExplFilter.toLowerCase();
+		});
+		filteredCash.forEach(function (row) {
+			if (!cashDonorC || !cashAmC) return;
+			var key = normalize(row[cashDonorC]);
+			if (!key) return;
+			if (!cashPayMap[key]) cashPayMap[key] = [];
+			cashPayMap[key].push({
+				date: cashDateC ? String(row[cashDateC] || '') : '',
+				amount: parseFloat(String(row[cashAmC]).replace(/[^0-9.]/g, '')) || 0,
+				note: cashNoteC ? String(row[cashNoteC] || '') : ''
+			});
+		});
+	}
 
 	combined = qbData.map(function (row) {
 		var donor = String(row[QB_COLS.donor] || '').trim();
@@ -382,17 +944,29 @@ function combine() {
 	var qbKeys = new Set(combined.map(function (r) { return r.key; }));
 	unpledged = [];
 	if (peopleData.length) {
-		var ncol = v('people-col-name');
-		var gcol = v('people-col-group');
-		var pcol = v('people-col-phone');
-		peopleData.forEach(function (row) {
-			var orig = String(row[ncol] || '').trim();
-			var key = normalize(orig);
-			if (!key || qbKeys.has(key)) return;
-			var grp = String(row[gcol] || '').trim() || UNASSIGNED;
-			var phone = pcol ? String(row[pcol] || '').trim() : '';
-			unpledged.push({ name: orig, key: key, group: grp, phone: phone });
-		});
+		var useStdP = _cmsAvailable || (peopleData[0] && peopleData[0].hasOwnProperty('name') && peopleData[0].hasOwnProperty('group'));
+		if (useStdP) {
+			peopleData.forEach(function (row) {
+				var orig = String(row.name || '').trim();
+				var key = normalize(orig);
+				if (!key || qbKeys.has(key)) return;
+				var grp = String(row.group || '').trim() || UNASSIGNED;
+				var phone = String(row.phone || '').trim();
+				unpledged.push({ name: orig, key: key, group: grp, phone: phone });
+			});
+		} else {
+			var ncol = v('people-col-name');
+			var gcol = v('people-col-group');
+			var pcol = v('people-col-phone');
+			peopleData.forEach(function (row) {
+				var orig = String(row[ncol] || '').trim();
+				var key = normalize(orig);
+				if (!key || qbKeys.has(key)) return;
+				var grp = String(row[gcol] || '').trim() || UNASSIGNED;
+				var phone = pcol ? String(row[pcol] || '').trim() : '';
+				unpledged.push({ name: orig, key: key, group: grp, phone: phone });
+			});
+		}
 	}
 
 	var totalPledged = combined.reduce(function (s, r) { return s + r.pledged; }, 0);
@@ -402,6 +976,7 @@ function combine() {
 	// ── FIX: Include unpledgedRecords in saved payload ────────
 	var reportPayload = {
 		generatedAt: new Date().toISOString(),
+		sourceUrls: { qb: _sourceUrls.qb, cash: _sourceUrls.cash, people: _sourceUrls.people },
 		summary: {
 			donors: new Set(combined.map(function (r) { return r.key; })).size,
 			groups: new Set(combined.map(function (r) { return r.group; })).size,
@@ -440,7 +1015,8 @@ function combine() {
 	}
 
 	document.getElementById('saved-banner').style.display = 'none';
-	document.getElementById('import-section').style.display = 'none';
+	document.getElementById('no-report-state').style.display = 'none';
+	document.getElementById('report-content').style.display = 'block';
 
 	// ── MISMATCH DETECTION ────────────────────────────────────
 	var qbNames = {}, cashNames = {}, peopleOrig = {};
@@ -449,20 +1025,46 @@ function combine() {
 		var key = normalize(orig);
 		if (key) qbNames[key] = orig;
 	});
-	if (cashDonorC) {
-		filteredCash.forEach(function (row) {
-			var orig = String(row[cashDonorC] || '').trim();
+	// Cash names for mismatch detection
+	var useStdC = _cmsAvailable || (cashData[0] && cashData[0].hasOwnProperty('donorName'));
+	if (useStdC) {
+		cashData.forEach(function (row) {
+			var orig = String(row.donorName || '').trim();
 			var key = normalize(orig);
 			if (key) cashNames[key] = orig;
 		});
+	} else {
+		var cashDonorC2 = v('cash-col-donor'), cashNoteC2 = v('cash-col-note');
+		var explSel2 = document.getElementById('cash-col-expl-val');
+		var cashExplFilter2 = explSel2 ? explSel2.value.trim() : '';
+		var filteredCash2 = cashData.filter(function (row) {
+			if (!cashExplFilter2) return true;
+			return String(row[cashNoteC2] || '').trim().toLowerCase() === cashExplFilter2.toLowerCase();
+		});
+		if (cashDonorC2) {
+			filteredCash2.forEach(function (row) {
+				var orig = String(row[cashDonorC2] || '').trim();
+				var key = normalize(orig);
+				if (key) cashNames[key] = orig;
+			});
+		}
 	}
 	if (peopleData.length) {
-		var nameColP = v('people-col-name');
-		peopleData.forEach(function (row) {
-			var orig = String(row[nameColP] || '').trim();
-			var key = normalize(orig);
-			if (key) peopleOrig[key] = orig;
-		});
+		var useStdP2 = _cmsAvailable || (peopleData[0] && peopleData[0].hasOwnProperty('name') && peopleData[0].hasOwnProperty('group'));
+		if (useStdP2) {
+			peopleData.forEach(function (row) {
+				var orig = String(row.name || '').trim();
+				var key = normalize(orig);
+				if (key) peopleOrig[key] = orig;
+			});
+		} else {
+			var nameColP = v('people-col-name');
+			peopleData.forEach(function (row) {
+				var orig = String(row[nameColP] || '').trim();
+				var key = normalize(orig);
+				if (key) peopleOrig[key] = orig;
+			});
+		}
 	}
 	var peopleKeys = new Set(Object.keys(peopleOrig));
 	function isCaseOnly(a, b) { return a.toLowerCase() === b.toLowerCase() && a !== b; }
@@ -524,7 +1126,8 @@ function combine() {
 	updateStats();
 	populateGroupFilters();
 	document.getElementById('stats-row').style.display = 'grid';
-	document.getElementById('report-section').style.display = 'block';
+	document.getElementById('report-content').style.display = 'block';
+	document.getElementById('no-report-state').style.display = 'none';
 	document.getElementById('notice').style.display = 'none';
 
 	renderFlat();
@@ -533,6 +1136,8 @@ function combine() {
 	renderCards();
 	if (hasUnpledged) { renderNoPledgeList(); renderNoPledgeGroup(); }
 
+	updateTabBadges();
+	switchTopTab('reports');
 	scheduleResize();
 }
 
@@ -995,9 +1600,17 @@ var warnData = [], warnSortCol = 'priority', warnSortDir = 1;
 function renderWarnings(mismatches) {
 	warnData = mismatches;
 	var panel = document.getElementById('warn-panel'), countEl = document.getElementById('warn-count');
-	if (!mismatches.length) { panel.style.display = 'none'; return; }
-	panel.style.display = 'block';
-	countEl.textContent = mismatches.length + ' issue' + (mismatches.length !== 1 ? 's' : '');
+	var tabBtn = document.getElementById('top-tab-mismatches');
+	var tabCount = document.getElementById('mismatch-tab-count');
+	if (!mismatches.length) {
+		if (panel) panel.style.display = 'none';
+		if (tabBtn) tabBtn.style.display = 'none';
+		return;
+	}
+	if (panel) panel.style.display = 'block';
+	if (tabBtn) tabBtn.style.display = '';
+	if (tabCount) tabCount.textContent = mismatches.length;
+	if (countEl) countEl.textContent = mismatches.length + ' issue' + (mismatches.length !== 1 ? 's' : '');
 	document.getElementById('warn-panel-body').style.display = 'block';
 	document.getElementById('warn-toggle-label').textContent = 'Hide \u25b4';
 	renderWarnTable();
@@ -1045,34 +1658,54 @@ function showNotice(msg) { var n = document.getElementById('notice'); n.textCont
 // ── SAMPLE DATA ───────────────────────────────────────────
 function loadSample() {
 	qbData = [{ 'Transaction type': 'Invoice', Name: 'Smith, John', '#': 'INV-1001', Date: '2024-01-15', Amount: 5000, 'Open balance': 5000 }, { 'Transaction type': 'Invoice', Name: 'Cohen, Rachel', '#': 'INV-1002', Date: '2024-01-20', Amount: 3000, 'Open balance': 3000 }, { 'Transaction type': 'Invoice', Name: 'Goldberg, David', '#': 'INV-1003', Date: '2024-02-01', Amount: 10000, 'Open balance': 8000 }, { 'Transaction type': 'Invoice', Name: 'Levy, Sarah', '#': 'INV-1004', Date: '2024-02-10', Amount: 2500, 'Open balance': 2500 }, { 'Transaction type': 'Invoice', Name: 'Miller, Robert', '#': 'INV-1005', Date: '2024-03-01', Amount: 7500, 'Open balance': 7500 }, { 'Transaction type': 'Invoice', Name: 'Davis, Emily', '#': 'INV-1006', Date: '2024-03-15', Amount: 1200, 'Open balance': 1200 }, { 'Transaction type': 'Invoice', Name: 'Brown, Michael', '#': 'INV-1007', Date: '2024-03-20', Amount: 4000, 'Open balance': 4000 }, { 'Transaction type': 'Invoice', Name: 'Wilson, Lisa', '#': 'INV-1008', Date: '2024-03-25', Amount: 6000, 'Open balance': 6000 }];
-	cashData = [{ Name: 'Smith, John', Date: '2024-03-10', Income: 2500, Explanation: 'Donation 26' }, { Name: 'Smith, John', Date: '2024-05-01', Income: 2500, Explanation: 'Donation 26' }, { Name: 'COHEN, RACHEL', Date: '2024-04-15', Income: 1500, Explanation: 'Donation 26' }, { Name: 'Goldberg, David', Date: '2024-02-20', Income: 2000, Explanation: 'Donation 26' }, { Name: 'Davis, Emily', Date: '2024-04-01', Income: 1200, Explanation: 'Donation 26' }, { Name: 'Brown, Michael', Date: '2024-02-15', Expense: 50, Explanation: 'Winter camp table cloth' }, { Name: 'Wilson, Lisa', Date: '2024-03-01', Expense: 30, Explanation: 'Office supplies' }, { Name: 'Thompson, Alice', Date: '2024-04-10', Income: 500, Explanation: 'Donation 26' }];
-	peopleData = [{ Name: 'Smith, John', Group: 'North Side', Phone: '555-0101' }, { Name: 'Cohen, Rachel', Group: 'North Side', Phone: '555-0102' }, { Name: 'Green, Nancy', Group: 'North Side', Phone: '555-0103' }, { Name: 'Harris, Paul', Group: 'North Side', Phone: '555-0104' }, { Name: 'Goldberg, David', Group: 'Downtown', Phone: '555-0201' }, { Name: 'Levy, Sarah', Group: 'Downtown', Phone: '555-0202' }, { Name: 'Klein, Peter', Group: 'Downtown', Phone: '555-0203' }, { Name: 'Miller, Robert', Group: 'East End', Phone: '555-0301' }, { Name: 'Davis, Emily', Group: 'East End', Phone: '555-0302' }, { Name: 'Torres, Maria', Group: 'East End', Phone: '555-0303' }, { Name: 'Brown, Michael', Group: '', Phone: '555-0401' }, { Name: 'Wilson, Lisa', Group: '', Phone: '555-0402' }, { Name: 'Adams, Carol', Group: '', Phone: '555-0403' }];
-	['qb-drop', 'cash-drop', 'people-drop'].forEach(function (id) { document.getElementById(id).classList.add('loaded'); });
+
+	if (_cmsAvailable) {
+		// Use standardized format for CMS storage
+		peopleData = [{ name: 'Smith, John', group: 'North Side', phone: '555-0101' }, { name: 'Cohen, Rachel', group: 'North Side', phone: '555-0102' }, { name: 'Green, Nancy', group: 'North Side', phone: '555-0103' }, { name: 'Harris, Paul', group: 'North Side', phone: '555-0104' }, { name: 'Goldberg, David', group: 'Downtown', phone: '555-0201' }, { name: 'Levy, Sarah', group: 'Downtown', phone: '555-0202' }, { name: 'Klein, Peter', group: 'Downtown', phone: '555-0203' }, { name: 'Miller, Robert', group: 'East End', phone: '555-0301' }, { name: 'Davis, Emily', group: 'East End', phone: '555-0302' }, { name: 'Torres, Maria', group: 'East End', phone: '555-0303' }, { name: 'Brown, Michael', group: '', phone: '555-0401' }, { name: 'Wilson, Lisa', group: '', phone: '555-0402' }, { name: 'Adams, Carol', group: '', phone: '555-0403' }];
+		cashData = [{ donorName: 'Smith, John', date: '2024-03-10', amount: 2500, note: 'Donation 26' }, { donorName: 'Smith, John', date: '2024-05-01', amount: 2500, note: 'Donation 26' }, { donorName: 'Cohen, Rachel', date: '2024-04-15', amount: 1500, note: 'Donation 26' }, { donorName: 'Goldberg, David', date: '2024-02-20', amount: 2000, note: 'Donation 26' }, { donorName: 'Davis, Emily', date: '2024-04-01', amount: 1200, note: 'Donation 26' }];
+		saveStoredPeople();
+		saveStoredCash();
+		renderPeopleManager();
+		renderCashManager();
+		refreshPeopleCard();
+		refreshCashCard();
+	} else {
+		// Fallback: use file-based format with column mapping
+		cashData = [{ Name: 'Smith, John', Date: '2024-03-10', Income: 2500, Explanation: 'Donation 26' }, { Name: 'Smith, John', Date: '2024-05-01', Income: 2500, Explanation: 'Donation 26' }, { Name: 'COHEN, RACHEL', Date: '2024-04-15', Income: 1500, Explanation: 'Donation 26' }, { Name: 'Goldberg, David', Date: '2024-02-20', Income: 2000, Explanation: 'Donation 26' }, { Name: 'Davis, Emily', Date: '2024-04-01', Income: 1200, Explanation: 'Donation 26' }, { Name: 'Brown, Michael', Date: '2024-02-15', Expense: 50, Explanation: 'Winter camp table cloth' }, { Name: 'Wilson, Lisa', Date: '2024-03-01', Expense: 30, Explanation: 'Office supplies' }, { Name: 'Thompson, Alice', Date: '2024-04-10', Income: 500, Explanation: 'Donation 26' }];
+		peopleData = [{ Name: 'Smith, John', Group: 'North Side', Phone: '555-0101' }, { Name: 'Cohen, Rachel', Group: 'North Side', Phone: '555-0102' }, { Name: 'Green, Nancy', Group: 'North Side', Phone: '555-0103' }, { Name: 'Harris, Paul', Group: 'North Side', Phone: '555-0104' }, { Name: 'Goldberg, David', Group: 'Downtown', Phone: '555-0201' }, { Name: 'Levy, Sarah', Group: 'Downtown', Phone: '555-0202' }, { Name: 'Klein, Peter', Group: 'Downtown', Phone: '555-0203' }, { Name: 'Miller, Robert', Group: 'East End', Phone: '555-0301' }, { Name: 'Davis, Emily', Group: 'East End', Phone: '555-0302' }, { Name: 'Torres, Maria', Group: 'East End', Phone: '555-0303' }, { Name: 'Brown, Michael', Group: '', Phone: '555-0401' }, { Name: 'Wilson, Lisa', Group: '', Phone: '555-0402' }, { Name: 'Adams, Carol', Group: '', Phone: '555-0403' }];
+		['qb-drop', 'cash-drop', 'people-drop'].forEach(function (id) { document.getElementById(id).classList.add('loaded'); });
+		document.getElementById('qb-label').textContent = '\u2713 sample-invoices.xlsx (8 invoice rows)';
+		document.getElementById('cash-label').textContent = '\u2713 sample-cash.xlsx (8 rows)';
+		document.getElementById('people-label').textContent = '\u2713 sample-people.xlsx (13 rows)';
+		document.getElementById('qb-map').style.display = 'block';
+		document.getElementById('cash-map').style.display = 'block';
+		var cashCols = Object.keys(cashData[0]);
+		['cash-col-donor', 'cash-col-date', 'cash-col-amount', 'cash-col-note'].forEach(function (id) {
+			var sel = document.getElementById(id); sel.innerHTML = '';
+			cashCols.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+		});
+		document.getElementById('cash-col-donor').value = 'Name';
+		document.getElementById('cash-col-date').value = 'Date';
+		document.getElementById('cash-col-amount').value = 'Income';
+		document.getElementById('cash-col-note').value = 'Explanation';
+		refreshExplOptions();
+		document.getElementById('cash-col-expl-val').value = 'Donation 26';
+		document.getElementById('cash-expl-filter').style.display = 'block';
+		document.getElementById('people-map').style.display = 'block';
+		var peopleCols = Object.keys(peopleData[0]);
+		['people-col-name', 'people-col-group', 'people-col-phone'].forEach(function (id) {
+			var sel = document.getElementById(id); sel.innerHTML = '';
+			peopleCols.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+		});
+		document.getElementById('people-col-name').value = 'Name';
+		document.getElementById('people-col-group').value = 'Group';
+		document.getElementById('people-col-phone').value = 'Phone';
+	}
+
+	document.getElementById('qb-drop').classList.add('loaded');
 	document.getElementById('qb-label').textContent = '\u2713 sample-invoices.xlsx (8 invoice rows)';
-	document.getElementById('cash-label').textContent = '\u2713 sample-cash.xlsx (8 rows)';
-	document.getElementById('people-label').textContent = '\u2713 sample-people.xlsx (13 rows)';
 	document.getElementById('qb-map').style.display = 'block';
-	document.getElementById('cash-map').style.display = 'block';
-	var cashCols = Object.keys(cashData[0]);
-	['cash-col-donor', 'cash-col-date', 'cash-col-amount', 'cash-col-note'].forEach(function (id) {
-		var sel = document.getElementById(id); sel.innerHTML = '';
-		cashCols.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
-	});
-	document.getElementById('cash-col-donor').value = 'Name';
-	document.getElementById('cash-col-date').value = 'Date';
-	document.getElementById('cash-col-amount').value = 'Income';
-	document.getElementById('cash-col-note').value = 'Explanation';
-	refreshExplOptions();
-	document.getElementById('cash-col-expl-val').value = 'Donation 26';
-	document.getElementById('cash-expl-filter').style.display = 'block';
-	document.getElementById('people-map').style.display = 'block';
-	var peopleCols = Object.keys(peopleData[0]);
-	['people-col-name', 'people-col-group', 'people-col-phone'].forEach(function (id) {
-		var sel = document.getElementById(id); sel.innerHTML = '';
-		peopleCols.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
-	});
-	document.getElementById('people-col-name').value = 'Name';
-	document.getElementById('people-col-group').value = 'Group';
-	document.getElementById('people-col-phone').value = 'Phone';
+	renderInvoiceList();
+	updateTabBadges();
 	combine();
 }

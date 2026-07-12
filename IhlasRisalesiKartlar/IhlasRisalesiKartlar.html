@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İhlâs Risalesi – Bilgi Kartları • 21. Lem‘a</title>
+    <style>
+        :root {
+            --bg: #faf8f2;
+            --card-bg: #fffef9;
+            --card-border: #c8b898;
+            --card-accent: #8b6914;
+            --card-alt-accent: #5a3e1b;
+            --card-number-bg: #4a3520;
+            --card-number-fg: #f0e6c8;
+            --text: #2c2416;
+            --text-light: #5c4e34;
+            --title-color: #6b3a1f;
+            --dua-bg: #f7f3e8;
+            --diamond: #b8943e;
+            --separator: #d4c4a0;
+            --quran: #1a5c3a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #e8e0d0;
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0 40px;
+        }
+
+        /* ── HERO / COVER ──────────────────────────── */
+        .cover {
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 8px;
+            max-width: 800px;
+            width: 94%;
+            padding: 36px 32px 28px;
+            text-align: center;
+            margin-bottom: 32px;
+            page-break-after: always;
+            box-shadow: 0 2px 16px rgba(0,0,0,.08);
+        }
+        .cover .ornament {
+            font-size: 32px;
+            color: var(--diamond);
+            letter-spacing: 6px;
+            margin-bottom: 8px;
+        }
+        .cover h1 {
+            font-size: 26px;
+            color: var(--title-color);
+            margin: 6px 0 2px;
+            letter-spacing: 1px;
+        }
+        .cover .subtitle {
+            font-size: 15px;
+            color: var(--text-light);
+            margin-bottom: 14px;
+        }
+        .cover .bismillah {
+            font-family: 'Traditional Arabic', 'Scheherazade New', 'Amiri', serif;
+            font-size: 28px;
+            color: var(--quran);
+            margin: 12px 0;
+            direction: rtl;
+            line-height: 1.8;
+        }
+        .cover .desc {
+            font-size: 14px;
+            color: var(--text-light);
+            max-width: 600px;
+            margin: 0 auto 10px;
+            line-height: 1.6;
+        }
+        .cover .count {
+            font-size: 13px;
+            color: var(--card-accent);
+            font-weight: 600;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+        .cover .border-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--diamond);
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        .cover .border-row hr {
+            flex: 1;
+            border: none;
+            border-top: 1px solid var(--separator);
+        }
+
+        /* ── ACTIONS BAR ───────────────────────────── */
+        .actions {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+        .actions button {
+            background: var(--card-number-bg);
+            color: var(--card-number-fg);
+            border: none;
+            padding: 10px 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: .5px;
+            transition: background .2s;
+        }
+        .actions button:hover { background: #5e4428; }
+        .actions button.secondary {
+            background: #fff;
+            color: var(--card-number-bg);
+            border: 1.5px solid var(--card-number-bg);
+        }
+        .actions button.secondary:hover { background: #f5efe0; }
+
+        /* ── CARDS GRID ───────────────────────────── */
+        .cards-container {
+            max-width: 840px;
+            width: 96%;
+        }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* ── SINGLE CARD ──────────────────────────── */
+        .card {
+            background: var(--card-bg);
+            border: 1.5px solid var(--card-border);
+            border-radius: 6px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            box-shadow: 0 1px 6px rgba(0,0,0,.05);
+            transition: box-shadow .2s;
+            min-height: 160px;
+        }
+        .card:hover { box-shadow: 0 3px 14px rgba(0,0,0,.12); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px 8px;
+            border-bottom: 1px dotted var(--separator);
+        }
+        .card-num {
+            background: var(--card-number-bg);
+            color: var(--card-number-fg);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--title-color);
+            line-height: 1.3;
+            letter-spacing: .3px;
+        }
+
+        .card-body {
+            padding: 12px 14px;
+            flex: 1;
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: var(--text);
+            text-align: justify;
+        }
+        .card-body .arabic {
+            font-family: 'Traditional Arabic', 'Scheherazade New', 'Amiri', serif;
+            font-size: 15px;
+            color: var(--quran);
+            direction: rtl;
+            display: block;
+            margin: 4px 0;
+            line-height: 1.7;
+        }
+        .card-body .highlight {
+            color: var(--card-accent);
+            font-weight: 600;
+        }
+        .card-body em { color: var(--card-alt-accent); }
+
+        .card-footer {
+            padding: 6px 14px 8px;
+            font-size: 10px;
+            color: var(--text-light);
+            text-align: right;
+            border-top: 1px dotted var(--separator);
+            font-style: italic;
+            letter-spacing: .3px;
+        }
+
+        /* ── DUA CARD (last card – special) ────────── */
+        .card.dua-card {
+            grid-column: 1 / -1;
+            background: var(--dua-bg);
+            border: 2px solid var(--diamond);
+            text-align: center;
+        }
+        .card.dua-card .card-body {
+            font-size: 15px;
+            text-align: center;
+            line-height: 2;
+        }
+        .card.dua-card .card-body .arabic {
+            font-size: 20px;
+            color: var(--card-alt-accent);
+            margin: 6px 0;
+        }
+
+        /* ── PRINT ─────────────────────────────────── */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .actions { display: none; }
+            .cover {
+                box-shadow: none;
+                page-break-after: always;
+                margin-bottom: 0;
+            }
+            .cards-container { max-width: 100%; width: 100%; }
+            .cards-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid #bbb;
+                min-height: auto;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .card:hover { box-shadow: none; }
+            @page {
+                size: A4;
+                margin: 8mm 6mm;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .card { min-height: auto; }
+            .cover { padding: 20px 16px; }
+            .cover h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════ COVER ═══════════ -->
+<div class="cover">
+    <div class="ornament">◆ ◇ ◆</div>
+    <h1>İHLÂS RİSALESİ</h1>
+    <div class="subtitle">Yirmi Birinci Lem‘a · Bilgi Kartları</div>
+    <div class="border-row"><hr><span>﴿</span><hr></div>
+    <div class="bismillah">
+        بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيمِ
+    </div>
+    <p class="desc">
+        Bu risale, lâakal on beş günde bir def‘a okunmalıdır.<br>
+        İhlâs hakkında en mühim düsturları ihtiva eden bu eser,<br>
+        Risâle-i Nûr Külliyatı'nın Lemeât bölümünde yer alır.
+    </p>
+    <div class="border-row"><hr><span>﴿</span><hr></div>
+    <p class="count">30 BİLGİ KARTI</p>
+    <p style="font-size:11px;color:var(--text-light);margin-top:4px;">Her kart, risalenin orijinal metninden alınmıştır.</p>
+</div>
+
+<!-- ═══════════ ACTIONS ═══════════ -->
+<div class="actions">
+    <button onclick="window.print()" title="Yazıcıdan çıktı alın">🖨️ Yazdır</button>
+    <button class="secondary" onclick="toggleCutLines()" title="Kesim çizgilerini göster/gizle">✂️ Kesim Çizgileri</button>
+</div>
+
+<!-- ═══════════ 30 CARDS ═══════════ -->
+<div class="cards-container">
+<div class="cards-grid">
+
+<!-- ── CARD 01 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">1</div>
+        <div class="card-title">İhlâsın Dokuz Hasleti</div>
+    </div>
+    <div class="card-body">
+        Bu dünyada, hususan uhrevî hizmetlerde<br>
+        <span class="highlight">en mühim bir esâs,</span><br>
+        <span class="highlight">en büyük bir kuvvet,</span><br>
+        <span class="highlight">en makbûl bir şefâatçi,</span><br>
+        <span class="highlight">en metîn bir nokta-i istinâd,</span><br>
+        <span class="highlight">en kısa bir tarîk-i hakîkat,</span><br>
+        <span class="highlight">en makbûl bir duâ-yı ma‘nevî,</span><br>
+        <span class="highlight">en kerâmetli bir vesîle-i makāsıd,</span><br>
+        <span class="highlight">en yüksek bir haslet,</span><br>
+        <span class="highlight">en sâfî bir ubûdiyet,</span><br>
+        <em>ihlâstır.</em>
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 02 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">2</div>
+        <div class="card-title">Zamanın Dehşeti ve Vazifemiz</div>
+    </div>
+    <div class="card-body">
+        Madem bu müdhiş zamanda ve dehşetli düşmanlar mukābilinde ve şiddetli tazyîkāt karşısında ve savletli bid‘alar ve dalâletler içerisinde, bizler gayet az ve zaîf ve fakîr ve kuvvetsiz olduğumuz halde, gayet ağır ve büyük ve umûmî ve kudsî bir <span class="highlight">vazîfe-i îmâniye ve hizmet-i Kur’âniye</span>, omuzumuza ihsân-ı İlâhî tarafından konulmuştur.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 03 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">3</div>
+        <div class="card-title">İhlâsı Kazanmaya Mecburuz</div>
+    </div>
+    <div class="card-body">
+        Elbette herkesten ziyade bütün kuvvetimizle <span class="highlight">ihlâsı kazanmaya mecbur ve mükellefiz.</span> Ve ihlâsın sırrını kendimizde yerleştirmek için, gayet derecede muhtacız. Yoksa hem şimdiye kadar kazandığımız hizmet-i kudsiye kısmen zâyi‘ olur, devam etmez; hem şiddetli mes’ûl oluruz.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 04 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">4</div>
+        <div class="card-title">İhlâsı Kırmanın Vebali</div>
+    </div>
+    <div class="card-body">
+        <span class="arabic">وَلَا تَشْتَرُوا بِاٰيَات۪ي ثَمَنًا قَل۪يلًا</span>
+        Âyetindeki şiddetli tehdîdkârâne nehy-i İlâhîye mazhar olup, saadet-i ebediye zararına ma‘nâsız, lüzûmsuz, zararlı, kederli, hodfurûşâne, sakîl, riyâkârâne bazı hissiyât-ı süfliyenin hatırı için <span class="highlight">ihlâsı kırmakla</span>; hem bu hizmetteki umum kardeşlerimizin hukukuna tecâvüz, hem hizmet-i Kur’âniyenin hürmetine taarruz etmiş oluruz.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 05 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">5</div>
+        <div class="card-title">Şeytanlara Karşı İhlâs</div>
+    </div>
+    <div class="card-body">
+        Mühim ve büyük bir umûr-u hayriyenin çok muzır mâni‘leri olur. Şeytanlar, o hizmetin hâdimleriyle çok uğraşırlar. Bu mâni‘lere ve bu şeytanlara karşı, <span class="highlight">ihlâs kuvvetine dayanmak gerektir.</span> İhlâsı kıracak esbâbdan; yılandan, akrebden çekindiğiniz gibi çekininiz!
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 06 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">6</div>
+        <div class="card-title">Nefs-i Emmâreye Güvenilmez</div>
+    </div>
+    <div class="card-body">
+        Hazret-i Yûsuf Aleyhisselâm:<br>
+        <span class="arabic">اِنَّ النَّفْسَ لَاَمَّارَةٌ بِالسُّٓوءِ اِلَّا مَا رَحِمَ رَبّ۪ي</span>
+        demesiyle, nefs-i emmâreye i‘timâd edilmez. <span class="highlight">Enâniyet ve nefs-i emmâre, sizi aldatmasın.</span> İhlâsı kazanmak ve muhâfaza etmek ve mâni‘leri def‘ etmek için, gelecek düsturlar rehberiniz olsun.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 07 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">7</div>
+        <div class="card-title">Birinci Düstur: Rızâ-yı İlâhî</div>
+    </div>
+    <div class="card-body">
+        <span class="highlight">Amelinizde rızâ-yı İlâhî olmalı.</span> Eğer o râzı olsa, bütün dünya küsse, ehemmiyeti yok. Eğer o kabûl etse, bütün halk reddetse, te’sîri yok. Onun için, bu hizmette doğrudan doğruya; yalnız, <span class="highlight">Cenâb-ı Hakk’ın rızâsını esâs maksad yapmak</span> gerektir.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 08 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">8</div>
+        <div class="card-title">Allah Razı Olursa…</div>
+    </div>
+    <div class="card-body">
+        O râzı olduktan ve kabûl ettikten sonra, isterse ve hikmeti iktizâ ederse, sizler istemek talebinde olmadığınız halde, <span class="highlight">halklara da kabûl ettirir, onları da râzı eder.</span> Bu hizmette doğrudan doğruya; yalnız, Cenâb-ı Hakk'ın rızâsını esâs maksad yapmak gerektir.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 09 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">9</div>
+        <div class="card-title">İkinci Düstur: Tenkit Etmemek</div>
+    </div>
+    <div class="card-body">
+        Bu hizmet-i Kur’âniyede bulunan kardeşlerinizi <span class="highlight">tenkîd etmemek</span> ve onların üstünde fazîlet furûşluk nev‘inden gıbta damarını tahrîk etmemektir. Çünki nasıl, insanın bir eli, diğer eline rekābet etmez; bir gözü, bir gözünü tenkîd etmez; dili, kulağına i‘tirâz etmez; kalb, ruhun ayıbını görmez.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 10 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">10</div>
+        <div class="card-title">Vücud-u İnsan Misali</div>
+    </div>
+    <div class="card-body">
+        Nasıl, insanın bir eli, diğer eline rekābet etmez; bir gözü, bir gözünü tenkîd etmez; dili, kulağına i‘tirâz etmez; kalb, ruhun ayıbını görmez, belki <span class="highlight">birbirinin noksânını ikmâl eder, kusurunu örter, ihtiyacına yardım eder,</span> vazîfesine muâvenet eder. Yoksa, o vücûd-u insânın hayatı söner, ruhu kaçar, cismi de dağılır.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 11 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">11</div>
+        <div class="card-title">Fabrika Çarkları Misali</div>
+    </div>
+    <div class="card-body">
+        Nasıl ki bir fabrikanın çarkları, birbiriyle rekābetkârâne uğraşmaz, birbirinin önüne tekaddüm edip tahakküm etmez, birbirinin kusurunu görerek tenkîd edip sa‘ye şevkini kırıp atâlete uğratmaz. Belki bütün isti‘dâdlarıyla, birbirinin hareketini umûmî maksada tevcîh etmek için <span class="highlight">yardım ederler, hakîkî bir tesânüd ve bir ittifâkla</span> gaye-i hilkatlerine yürürler.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 12 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">12</div>
+        <div class="card-title">Şahs-ı Ma‘nevî ve Sefîne</div>
+    </div>
+    <div class="card-body">
+        Sizler ve bizler, öyle bir <span class="highlight">insân-ı kâmil ismine lâyık bir şahs-ı ma‘nevînin a‘zâlarıyız.</span> Ve hayât-ı ebediye içindeki saadet-i ebediyeyi netice veren bir fabrikanın çarkları hükmündeyiz. Ve <span class="highlight">sâhil-i selâmet olan Dârü's-Selâm'a</span> ümmet-i Muhammediyeyi (asm) çıkaran bir sefîne-i Rabbâniyede çalışan hademeleriz.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 13 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">13</div>
+        <div class="card-title">Sırr-ı İhlâs: 1111 Kuvveti</div>
+    </div>
+    <div class="card-body">
+        Elbette dört ferdden, <span class="highlight">bin yüz on bir (1111)</span> kuvvet-i ma‘neviyeyi te’mîn eden <span class="highlight">sırr-ı ihlâsı</span> kazanmakla, tesânüd ve ittihâd-ı hakîkîye muhtacız ve mecburuz. Evet, üç elif ittihâd etmezse, üç kıymeti var. Eğer sırr-ı adediyet ile ittihâd etse, yüz on bir (111) kıymet alır.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 14 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">14</div>
+        <div class="card-title">4444 Sırrı ve İttihad</div>
+    </div>
+    <div class="card-body">
+        Dört kerre dört ayrı ayrı olsa, on altı kıymeti var. Eğer sırr-ı uhuvvet ve ittihâd-ı maksad ve ittifâk-ı vazîfe ile tevâfuk edip bir çizgi üstünde omuz omuza verseler, o vakit <span class="highlight">dört bin dört yüz kırk dört (4444)</span> kuvvetinde ve kıymetinde olduğu gibi; hakîkî sırr-ı ihlâs ile, on altı fedâkâr kardeşlerin kıymet ve kuvve-i ma‘neviyesi dört binden geçtiğine, pek çok vukûât-ı târîhiye şehâdet ediyor.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 15 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">15</div>
+        <div class="card-title">Hakîkî İttifakın Sırrı</div>
+    </div>
+    <div class="card-body">
+        Hakîkî ve samîmî bir ittifâkta her bir ferd, sâir kardeşlerinin gözüyle de bakabilir ve kulaklarıyla da işitebilir. Güya on hakîkî müttehid adamın her biri, <span class="highlight">yirmi gözle bakıyor, on akıl ile düşünüyor, yirmi kulakla işitiyor, yirmi el ile çalışıyor</span> bir tarzda ma‘nevî kıymeti ve kuvvetleri vardır.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 16 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">16</div>
+        <div class="card-title">Ölüme Karşı Siper</div>
+    </div>
+    <div class="card-body">
+        Sırr-ı ihlâs ile samîmî tesânüd ve ittihâd, hadsiz menfaate medâr olduğu gibi; <span class="highlight">korkulara, hatta ölüme karşı da en mühim bir siper ve bir nokta-i istinâddır.</span> Çünki ölüm gelse, bir ruhu alır. Sırr-ı uhuvvet-i hakîkiye ile rızâ-yı İlâhî yolunda, âhirete müteallik işlerde, kardeşleri adedince ruhları olduğundan biri ölse, diğer ruhlarım sağ kalsınlar.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 17 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">17</div>
+        <div class="card-title">Ölümü Gülerek Karşılamak</div>
+    </div>
+    <div class="card-body">
+        "Diğer ruhlarım sağ kalsınlar; zîrâ o ruhlar, her vakit sevabları bana kazandırmakla ma‘nevî bir hayatı idâme ettiklerinden, <span class="highlight">ben ölmüyorum.</span>" diyerek, ölümü gülerek karşılar. Ve "<span class="highlight">O ruhlar vâsıtasıyla sevab cihetinde yaşıyorum; yalnız günah cihetinde ölüyorum.</span>" der, rahatla yatar.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 18 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">18</div>
+        <div class="card-title">Üçüncü Düstur: Kuvvet Hakta</div>
+    </div>
+    <div class="card-body">
+        <span class="highlight">Bütün kuvvetinizi ihlâsta ve hakta bilmelisiniz.</span> Evet, kuvvet haktadır ve ihlâstadır. Haksızların kuvveti dahi, haksızlıkları içinde gösterdikleri ihlâs ve samîmiyet yüzünden kuvvet kazanıyorlar. Evet, <span class="highlight">kuvvet hakta ve ihlâsta olduğuna bir delil, şu hizmetimizdir.</span>
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 19 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">19</div>
+        <div class="card-title">Üstadın İtirafı</div>
+    </div>
+    <div class="card-body">
+        Hem i‘tirâf ediyorum ki, <span class="highlight">samîmî ihlâsınızla, şân ve şeref perdesi altında nefsimi okşayan riyâdan, beni bir derece kurtardınız.</span> İnşâallâh tam ihlâsa muvaffak olursunuz, beni de tam ihlâsa sokarsınız. Bu hizmetimizde bir parça ihlâs, bu da‘vâyı isbat eder ve kendi kendine delil olur.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 20 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">20</div>
+        <div class="card-title">Hz. Ali ve Gavs-ı A‘zam'ın Teveccühü</div>
+    </div>
+    <div class="card-body">
+        Hazret-i Alî Radıyallâhü Anh o mu‘cizevârî kerâmetiyle; ve Hazret-i Gavs-ı A‘zam, o hârika kerâmet-i gaybiyesiyle, sizlere bu <span class="highlight">sırr-ı ihlâsa binâen iltifât ediyorlar</span> ve himâyetkârâne tesellî verip, hizmetinizi ma‘nen alkışlıyorlar. Evet, hiç şübhe etmeyiniz ki, onların bu teveccühleri, ihlâsa binâen gelir.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 21 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">21</div>
+        <div class="card-title">İhlâsı Kıranlara Tokat</div>
+    </div>
+    <div class="card-body">
+        Eğer bilerek bu ihlâsı kırsanız, <span class="highlight">onların tokadını yersiniz.</span> Onuncu Lem‘a'daki şefkat tokatlarını tahattur ediniz. Böyle ma‘nevî kahramanları arkanızda zahîr, başınızda üstâd bulmak isterseniz,<br>
+        <span class="arabic">وَيُؤْثِرُونَ عَلٰٓي اَنْفُسِهِمْ</span>
+        sırrıyla <span class="highlight">ihlâs-ı tâmmı</span> kazanınız.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 22 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">22</div>
+        <div class="card-title">Kardeşlerini Nefsine Tercîh Et</div>
+    </div>
+    <div class="card-body">
+        Kardeşlerinizin nefislerini nefsinize; <span class="highlight">şerefte, makamda, teveccühte, hatta menfaat-i maddiye gibi nefsin hoşuna giden şeylerde tercîh ediniz.</span> Hatta en latîf ve güzel bir hakîkat-i îmâniyeyi muhtaç bir mü'mine bildirmek ki; en ma'sûmâne, zararsız bir menfaattir. Mümkünse, nefsinize bir hodgâmlık gelmemek için, istemeyen bir arkadaşla yaptırması hoşunuza gitsin.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 23 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">23</div>
+        <div class="card-title">Dördüncü Düstur: Fenâ fil'İhvân</div>
+    </div>
+    <div class="card-body">
+        Kardeşlerinizin meziyetlerini şahıslarınızda ve fazîletlerini kendinizde tasavvur edip, <span class="highlight">onların şerefleriyle şâkirâne iftihâr etmektir.</span> Bizim mesleğimizde <span class="highlight">"fenâ fil'ihvân"</span> sûretinde güzel bir düsturdur. Kardeşler arasında buna <em>'tefânî'</em> denilir. Yani, birbirinde fânî olmaktır. Yani, kendi hissiyât-ı nefsâniyesini unutup, kardeşlerinin meziyât ve hissiyâtıyla fikren yaşamaktır.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 24 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">24</div>
+        <div class="card-title">Mesleğimiz Uhuvvettir</div>
+    </div>
+    <div class="card-body">
+        Zâten mesleğimizin esâsı <span class="highlight">uhuvvettir.</span> Peder ile evlâd, şeyh ile mürîd mâbeynindeki vâsıta değildir. Belki hakîkî kardeşlik vâsıtalarıdır. Olsa olsa bir üstâdlık ortaya girer. Mesleğimiz <span class="highlight">'halîliye'</span> olduğu için, meşrebimiz <span class="highlight">'hıllet'tir.</span> Hıllet ise, en yakın dost ve en fedâkâr arkadaş ve en güzel takdir edici yoldaş ve en civânmerd kardeş olmak iktizâ eder.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 25 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">25</div>
+        <div class="card-title">Hılletin Esası: Samîmî İhlâs</div>
+    </div>
+    <div class="card-body">
+        Bu hılletin üssül'esâsı, <span class="highlight">samîmî ihlâstır.</span> Samîmî ihlâsı kıran adam, bu hılletin en yüksek kulesinin başından sukût eder. Gayet derin bir çukura düşmek ihtimâli var. Ortada tutunacak yer bulamaz. <span class="highlight">Cadde-i kübrâ-yı Kur'âniye</span> olan şu mesleğimizden şimdi ayrılanlar, bize düşman olan dinsizlik kuvvetine bilmeyerek yardım etmek ihtimâli var.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 26 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">26</div>
+        <div class="card-title">Râbıta-i Mevt</div>
+    </div>
+    <div class="card-body">
+        İhlâsı kazanmanın ve muhâfaza etmenin en müessir sebeblerinden birisi, <span class="highlight">"râbıta-i mevt"</span> tir. Evet, ihlâsı zedeleyen ve riyâya ve dünyaya sevk eden, tûl-ü emel olduğu gibi; riyâdan nefret veren ve ihlâsı kazandıran, râbıta-i mevttir. Yani, <span class="highlight">ölümünü düşünüp, dünyanın fânî olduğunu mülâhaza edip, nefsin desîselerinden kurtulmaktır.</span>
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 27 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">27</div>
+        <div class="card-title">Ölümü Çok Zikrediniz</div>
+    </div>
+    <div class="card-body">
+        Hadîste:<br>
+        <span class="arabic">اَكْثِرُوا ذِكْرَ هَادِمِ اللَّذَّاتِ</span>
+        Yani, <span class="highlight">"Lezzetleri tahrîb edip acılaştıran ölümü çok zikrediniz!"</span> diye, bu râbıtayı ders veriyor. Bu kısa ömür ağacının başındaki tek meyvesi olan kendi cenazesine bakabilir. Onunla; yalnız kendi mevtini gördüğü gibi, bir parça öbür tarafa gitse, asrının ölümünü de görür; daha bir parça öbür tarafa gitse, dünyanın ölümünü de müşâhede eder, ihlâs-ı etemme yol açar.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 28 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">28</div>
+        <div class="card-title">Huzur ve İhlâs</div>
+    </div>
+    <div class="card-body">
+        Îmân-ı tahkîkînin kuvvetiyle ve ma‘rifet-i Sânii netice veren masnûâttaki tefekkür-ü îmânîden gelen lemeât ile, bir nevi‘ huzûr kazanıp, <span class="highlight">Hâlik-ı Rahîm'in hazır ve nâzır olduğunu düşünüp, ondan başkasının teveccühünü aramayarak;</span> huzûrunda başkalarına bakmak ve başkalarından meded aramak, o huzûrun edebine muhâlif olduğunu düşünmekle o riyâdan kurtulup ihlâsı kazanır.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 29 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">29</div>
+        <div class="card-title">Maddî Menfaat Rekabeti</div>
+    </div>
+    <div class="card-body">
+        <span class="highlight">Menfaat-i maddiye cihetinden gelen rekābet, yavaş yavaş ihlâsı kırar.</span> Hem netice-i hizmeti de zedeler. Hem o maddî menfaati de kaçırır. Bu muâvenet ve menfaat istenilmez, belki verilir. Hem kalben arzu edip muntazır kalmakla, lisân-ı hâl ile de istenilmez. Belki ummadığı bir halde verilir. Yoksa ihlâsı zedelenir.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- ── CARD 30 ─────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-num">30</div>
+        <div class="card-title">Hubb-u Cah: Şirk-i Hafî</div>
+    </div>
+    <div class="card-body">
+        <span class="highlight">Hubb-u câhtan gelen şöhretperestlik</span> sâikasıyla, şân ve şeref perdesi altında teveccüh-ü âmmeyi kazanmak ve nazar-ı dikkati kendine celb etmekle enâniyeti okşamak ve nefs-i emmâreye bir makam vermektir ki; en mühim bir maraz-ı rûhî olduğu gibi, <span class="highlight">'şirk-i hafî'</span> ta‘bîr edilen riyâkârlığa ve hodfurûşluğa kapı açar, ihlâsı zedeler.
+    </div>
+    <div class="card-footer">İhlâs Risalesi · 21. Lem‘a</div>
+</div>
+
+<!-- The dua is included on the cover page. 30 cards total. -->
+
+</div><!-- /cards-grid -->
+</div><!-- /cards-container -->
+
+<script>
+    function toggleCutLines() {
+        document.querySelectorAll('.card').forEach(c => c.classList.toggle('show-cut'));
+    }
+</script>
+
+</body>
+</html>
