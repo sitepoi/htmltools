@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payroll Employee Collector - Test Harness</title>
+<link rel="stylesheet" href="PayrollEmployeeCollector.css">
+<style>
+body { padding-top: 34px !important; margin: 0; }
+#app { min-height: calc(100vh - 34px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-toggle-ro { background: #d97706; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS - Payroll Employee Collector</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-toggle-ro" id="th-ro">Toggle Read-Only</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  var STORAGE_KEY = 'payroll_employee_collector_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false, _user = { id: 'emp-test', name: 'Jordan Taylor', email: 'jordan@example.org', roles: ['staff'], locale: 'en-CA' };
+  var _fields = {}, _value = null;
+  var _permittedUsers = [
+    { id: 'emp-test', name: 'Jordan Taylor', email: 'jordan@example.org', roles: ['staff'] },
+    { id: 'hr-maria', name: 'Maria Rodriguez', email: 'maria@example.org', roles: ['hr', 'admin'] },
+    { id: 'finance-ali', name: 'Ali Khan', email: 'ali@example.org', roles: ['finance'] },
+    { id: 'mgr-david', name: 'David Chen', email: 'david@example.org', roles: ['manager'] }
+  ];
+  var _mockUploadCount = 0;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, v) { _fields[id] = v; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var testParams = {
+        companyName: "Acme Corporation",
+        developerSubdomain: "uniconhub",
+        sinLabel: "SIN",
+        documentTemplates: [
+          { name: "Direct Deposit Form / Void Cheque", templateUrl: "#", accept: ".pdf,.jpg,.jpeg,.png", required: true, category: "Banking" },
+          { name: "TD1 - Federal", templateUrl: "#", accept: ".pdf", required: true, category: "Tax Forms" },
+          { name: "TD1 - BC", templateUrl: "#", accept: ".pdf", required: true, category: "Tax Forms" },
+          { name: "Youth Training Acknowledgement Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+          { name: "Confidentiality Agreement", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+          { name: "Employee Information Sheet", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+          { name: "Consent Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+          { name: "Media Release Form", templateUrl: "#", accept: ".pdf", required: false, category: "HR Forms" }
+        ],
+        customFields: "Dietary Restrictions|text|e.g. vegetarian, halal, none|,Needs Parking Pass|toggle|Parking required|,Office Location|select|Vancouver;Toronto;Montreal;Remote|required"
+      };
+      var v = testParams[name];
+      if (v !== undefined && v !== null && v !== "") return v;
+      try { var p = (new URLSearchParams(window.location.search)).get(name); return p !== null && p !== '' ? p : fallback; } catch(e) { return fallback; }
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = v;
+      document.getElementById('th-status').textContent = v ? 'READ-ONLY' : 'EDIT MODE';
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+    },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return _permittedUsers; },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    reportMissingParams: function() {},
+    onReady: function(cb) { load(); document.getElementById('th-status').textContent = _readOnly ? 'READ-ONLY' : 'EDIT MODE'; cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('PayrollEmployeeCollector DB:', JSON.parse(JSON.stringify(_value || {}))); },
+
+    requestUpload: function(accept, callback) {
+      _mockUploadCount++;
+      setTimeout(function() {
+        callback(null, { name: 'uploaded-doc-' + _mockUploadCount + '.pdf', url: 'https://storage.example.com/mock/doc-' + _mockUploadCount + '.pdf', size: 245760, type: 'application/pdf' });
+      }, 150);
+    },
+    requestObjects: function(action, params, callback) {
+      if (action === 'query') callback(null, { objects: [] });
+      else if (action === 'get') callback(null, { object: null });
+      else if (action === 'create') callback(null, { object: { id: 'mock-' + Date.now(), name: params.name } });
+      else if (action === 'update') callback(null, { ok: true });
+      else if (action === 'delete') callback(null, { ok: true });
+      else callback('Unknown action: ' + action, null);
+    },
+    requestAI: function(prompt, context, callback) { setTimeout(function() { callback(null, 'AI response'); }, 100); },
+    requestFileContent: function(url, callback) { setTimeout(function() { callback(null, 'Extracted content'); }, 100); },
+    requestExportPdf: function(options, callback) { setTimeout(function() { callback(null, { name: 'export.html', url: '#', size: 1234, type: 'text/html' }); }, 100); },
+    requestSendEmail: function(options, callback) { setTimeout(function() { callback(null, { ok: true }); }, 100); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML body */
+var EMBEDDED_HTML = '<!-- ═══════════════════════════════════════════════════════════════════════\
+   Payroll Employee Collector — HTML Body\
+   HR & Finance data + document collection tool for payroll onboarding.\
+   One instance per employee.\
+   ═══════════════════════════════════════════════════════════════════════ -->\
+<div class="pec">\
+  <div class="pec-wrap">\
+\
+    <!-- ── Header ── -->\
+    <header class="pec-header">\
+      <div class="pec-brand">\
+        <span class="pec-badge" id="pec-companyBadge">\
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="15" x2="15" y2="15"/></svg>\
+          <span id="pec-companyName">Payroll Onboarding</span>\
+        </span>\
+        <h1>Employee <span class="pec-thin">Payroll Data</span> Collector</h1>\
+      </div>\
+      <div class="pec-header-msg">\
+        <p>Please complete all sections below. Your information is used solely for payroll and HR purposes. Fields marked <span class="pec-required-star">*</span> are required.</p>\
+      </div>\
+      <div class="pec-progress" id="pec-progressBar">\
+        <div class="pec-progress-track">\
+          <div class="pec-progress-fill" id="pec-progressFill" style="width:0%"></div>\
+        </div>\
+        <span class="pec-progress-label" id="pec-progressLabel">0% complete</span>\
+      </div>\
+      <!-- Status banner -->\
+      <div class="pec-status-banner" id="pec-statusBanner" style="display:none">\
+        <span class="pec-status-icon" id="pec-statusIcon"></span>\
+        <span class="pec-status-text" id="pec-statusText"></span>\
+      </div>\
+    </header>\
+\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <!-- SECTION 1: Personal Information -->\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <section class="pec-section" id="sec-personal">\
+      <h2 class="pec-section-title">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>\
+        Personal Information\
+      </h2>\
+      <div class="pec-grid pec-grid-2">\
+        <div class="pec-field">\
+          <label for="pec-fullName">Full Legal Name <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-fullName" placeholder="As it appears on your government ID">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-sin">SIN / SSN <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-sin" placeholder="XXX-XXX-XXX" maxlength="14" autocomplete="off">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-dob">Date of Birth <span class="pec-required-star">*</span></label>\
+          <input type="date" id="pec-dob">\
+        </div>\
+      </div>\
+      <div class="pec-photo-id-upload">\
+        <p class="pec-section-hint">Upload a clear photo of your government-issued ID to verify your full legal name.</p>\
+        <button class="pec-btn pec-btn-outline pec-btn-sm" id="pec-uploadPhotoId">\
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>\
+          Upload Photo ID <span class="pec-required-star">*</span>\
+        </button>\
+        <span class="pec-photo-id-status" id="pec-photoIdStatus"></span>\
+      </div>\
+    </section>\
+\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <!-- SECTION 2: Contact Information -->\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <section class="pec-section" id="sec-contact">\
+      <h2 class="pec-section-title">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>\
+        Contact Information\
+      </h2>\
+      <div class="pec-grid pec-grid-2">\
+        <div class="pec-field pec-span-2">\
+          <label for="pec-address">Street Address <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-address" placeholder="123 Main Street, Apt 4B">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-city">City <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-city" placeholder="City">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-province">Province / State <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-province" placeholder="e.g. ON, BC, QC">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-postalCode">Postal / ZIP Code <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-postalCode" placeholder="A1A 1A1">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-country">Country <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-country" value="Canada" placeholder="Country">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-phone">Phone Number <span class="pec-required-star">*</span></label>\
+          <input type="tel" id="pec-phone" placeholder="(555) 555-5555">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-email">Email Address <span class="pec-required-star">*</span></label>\
+          <input type="email" id="pec-email" placeholder="you@example.com">\
+        </div>\
+      </div>\
+      <h3 class="pec-subtitle">Emergency Contact</h3>\
+      <div class="pec-grid pec-grid-2">\
+        <div class="pec-field">\
+          <label for="pec-emergencyContact">Emergency Contact Name <span class="pec-required-star">*</span></label>\
+          <input type="text" id="pec-emergencyContact" placeholder="Full name of emergency contact">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-emergencyPhone">Emergency Contact Phone <span class="pec-required-star">*</span></label>\
+          <input type="tel" id="pec-emergencyPhone" placeholder="(555) 555-5555">\
+        </div>\
+      </div>\
+    </section>\
+\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <!-- SECTION 3: Banking & Payment -->\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <section class="pec-section" id="sec-banking">\
+      <h2 class="pec-section-title">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="22" height="18" rx="2"/><line x1="6" y1="8" x2="6" y2="8.01"/><line x1="10" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="10" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="6" y2="16.01"/><line x1="10" y1="16" x2="14" y2="16"/></svg>\
+        Banking &amp; Direct Deposit\
+      </h2>\
+      <p class="pec-section-hint">For payroll direct deposit. You can attach a void cheque below instead of filling this manually.</p>\
+      <div class="pec-grid pec-grid-2">\
+        <div class="pec-field pec-span-2">\
+          <label for="pec-bankName">Bank / Financial Institution Name</label>\
+          <input type="text" id="pec-bankName" placeholder="e.g. TD Canada Trust, RBC, Scotiabank">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-transitNumber">Transit / Branch Number (5 digits)</label>\
+          <input type="text" id="pec-transitNumber" placeholder="12345" maxlength="5" inputmode="numeric" pattern="[0-9]*">\
+        </div>\
+        <div class="pec-field">\
+          <label for="pec-institutionNumber">Institution Number (3 digits)</label>\
+          <input type="text" id="pec-institutionNumber" placeholder="001" maxlength="3" inputmode="numeric" pattern="[0-9]*">\
+        </div>\
+        <div class="pec-field pec-span-2">\
+          <label for="pec-accountNumber">Account Number</label>\
+          <input type="text" id="pec-accountNumber" placeholder="Your bank account number" autocomplete="off">\
+        </div>\
+      </div>\
+    </section>\
+\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <!-- SECTION 4: Documents & Forms -->\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <section class="pec-section" id="sec-documents">\
+      <h2 class="pec-section-title">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>\
+        Documents &amp; Forms\
+      </h2>\
+      <p class="pec-section-hint">Download each blank form, fill it out, sign it, and upload the completed version. Required forms are marked <span class="pec-required-star">*</span>.</p>\
+      <div class="pec-doc-templates" id="pec-docTemplates">\
+        <p class="pec-empty-msg">Loading document templates…</p>\
+      </div>\
+\
+      <!-- Person-specific agreements (uploaded by HR) -->\
+      <div class="pec-agreement-group" style="margin-top:18px">\
+        <h3 class="pec-subtitle">Your Personal Agreements <span class="pec-section-badge">Assigned to You</span></h3>\
+        <div class="pec-agreement-list" id="pec-personalAgreements">\
+          <p class="pec-empty-msg">No person-specific agreements assigned yet.</p>\
+        </div>\
+        <button class="pec-btn pec-btn-outline pec-btn-sm" id="pec-uploadPersonalAgreement">\
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>\
+          Upload Signed Personal Agreement\
+        </button>\
+      </div>\
+\
+      <!-- Other ad-hoc documents -->\
+      <div class="pec-agreement-group">\
+        <h3 class="pec-subtitle">Other Documents</h3>\
+        <div class="pec-doc-list" id="pec-otherDocs">\
+          <p class="pec-empty-msg">No additional documents uploaded.</p>\
+        </div>\
+        <button class="pec-btn pec-btn-outline pec-btn-sm" id="pec-uploadOtherDoc">\
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>\
+          Upload Other Document\
+        </button>\
+      </div>\
+    </section>\
+\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <!-- SECTION 5: Additional Information (from params) -->\
+    <!-- ═══════════════════════════════════════════════════════════════ -->\
+    <section class="pec-section" id="sec-customFields" style="display:none">\
+      <h2 class="pec-section-title">\
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>\
+        Additional Information\
+      </h2>\
+      <div class="pec-grid pec-grid-2" id="pec-customFieldsGrid"></div>\
+    </section>\
+\
+    <!-- Footer -->\
+    <div class="pec-foot">\
+      <span class="pec-foot-meta pec-autosave-note">💾 Changes are saved automatically as you type.</span>\
+      <span class="pec-foot-meta" id="pec-savedAt"></span>\
+      <span class="pec-foot-meta" id="pec-employeeIdent"></span>\
+    </div>\
+\
+  </div><!-- /pec-wrap -->\
+</div><!-- /pec -->';
+</script>
+
+<script src="PayrollEmployeeCollector.js"></script>
+
+<script>
+/* Harness wiring */
+(function() {
+  var container = document.getElementById('app-container');
+  container.innerHTML = EMBEDDED_HTML;
+
+  window.tool._sampleData = {
+    personal: { fullName: "Jordan Taylor", sin: "123-456-789", dob: "1995-04-15" },
+    contact: { address: "456 Oak Avenue, Unit 302", city: "Vancouver", province: "BC", postalCode: "V6B 1A1", country: "Canada", phone: "604-555-0199", email: "jordan@example.org", emergencyContact: "Casey Taylor", emergencyPhone: "604-555-0188" },
+    banking: { bankName: "TD Canada Trust", transitNumber: "12345", institutionNumber: "004", accountNumber: "9876543210" },
+    documents: { photoId: null, templateDocs: {}, personalAgreements: [], otherDocs: [] },
+    customFields: {}
+  };
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(window.tool._sampleData);
+  });
+
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+
+  document.getElementById('th-ro').addEventListener('click', function() {
+    window.tool._toggleReadOnly();
+    window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info');
+  });
+})();
+</script>
+</body>
+</html>

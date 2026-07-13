@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bloom & Learn Manager — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="BloomLearnManager.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Bloom &amp; Learn Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">📊 Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<!-- TOOL HTML MARKUP INLINED DIRECTLY (no fetch needed) -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🌱</div>
+      <div class="brand-name">Bloom &amp; Learn</div>
+      <div class="brand-sub">Math Content Team Manager</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" data-page="workers"><span class="nav-icon">👥</span>Team<span class="nav-badge" id="nav-workers-count">10</span></div>
+      <div class="nav-item" data-page="tasks"><span class="nav-icon">📝</span>Task Board<span class="nav-badge" id="nav-tasks-pending">0</span></div>
+      <div class="nav-item" data-page="learn"><span class="nav-icon">🎓</span>Learn Zone<span class="nav-badge" id="nav-learn-new">0</span></div>
+      <div class="nav-item" data-page="review"><span class="nav-icon">⭐</span>Peer Review<span class="nav-badge" id="nav-review-queue">0</span></div>
+      <div class="nav-item" data-page="leaderboard"><span class="nav-icon">🏆</span>Leaderboard</div>
+      <div class="nav-item" data-page="prompts"><span class="nav-icon">💡</span>Prompt Lab<span class="nav-badge" id="nav-prompts-count">0</span></div>
+      <div class="nav-item" data-page="presentations"><span class="nav-icon">🎤</span>Presentations<span class="nav-badge" id="nav-pres-count">0</span></div>
+      <div class="nav-item" data-page="apps"><span class="nav-icon">🛠️</span>App Builder<span class="nav-badge" id="nav-apps-count">0</span></div>
+      <div class="nav-item" data-page="books"><span class="nav-icon">📚</span>Book Builder<span class="nav-badge" id="nav-books-count">0</span></div>
+      <div class="nav-item" data-page="portfolio"><span class="nav-icon">🎓</span>My Portfolio</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item nav-guide" data-page="onboarding"><span class="nav-icon">📖</span>How It Works</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="daily-theme" id="sidebar-theme">
+        <div class="theme-icon" id="theme-day-icon">🎯</div>
+        <div class="theme-label" id="theme-day-label">Precision Day</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard" class="section active">
+      <div class="page-header">
+        <div class="page-title">🌱 Bloom &amp; Learn Dashboard</div>
+        <div class="page-sub" id="dash-date">Loading...</div>
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔥 Team Streak</span></div>
+          <div class="card-body" id="dash-streak"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🎯 Today's Challenge</span></div>
+          <div class="card-body" id="dash-challenge"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Recent Activity Feed</span></div>
+        <div class="card-body" id="dash-feed"></div>
+      </div>
+    </section>
+
+    <!-- TEAM / WORKERS -->
+    <section id="sec-workers" class="section">
+      <div class="page-header">
+        <div class="page-title">👥 Team Members</div>
+        <div class="page-sub">10 workers — 2-month learning journey</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-worker">+ Add Worker</button>
+        <button class="btn btn-outline" id="btn-sort-xp">Sort by XP</button>
+        <button class="btn btn-outline" id="btn-sort-name">Sort by Name</button>
+      </div>
+      <div class="workers-grid" id="workers-grid"></div>
+    </section>
+
+    <!-- TASK BOARD -->
+    <section id="sec-tasks" class="section">
+      <div class="page-header">
+        <div class="page-title">📝 Task Board</div>
+        <div class="page-sub">Subject assignments &amp; quality gate tracking</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-task">+ Add Subject</button>
+        <select class="form-input form-inline" id="filter-worker"><option value="">All Workers</option></select>
+        <select class="form-input form-inline" id="filter-status">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="done">Done (Ready for Review)</option>
+          <option value="needs-fix">🔧 Needs Fixes</option>
+          <option value="fixes-submitted">✅ Fixes Submitted</option>
+          <option value="reviewed">Reviewed</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="tasks-table">
+          <thead>
+            <tr>
+              <th>Subject</th><th>Grade</th><th>Assigned To</th><th>Status</th>
+              <th>Quality</th><th>Gates Passed</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tasks-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LEARN ZONE -->
+    <section id="sec-learn" class="section">
+      <div class="page-header">
+        <div class="page-title">🎓 Learn Zone</div>
+        <div class="page-sub">Micro-learning during AI wait time — earn XP while you wait! <span id="learn-my-progress" style="color:var(--primary);font-weight:600;"></span></div>
+      </div>
+      <div class="toolbar" id="learn-manager-toolbar" style="display:none;">
+        <button class="btn btn-primary btn-sm" id="btn-add-learning-card">+ Add Card</button>
+        <button class="btn btn-outline btn-sm" id="btn-reset-learning">Reset My Progress</button>
+      </div>
+      <div class="learn-tabs">
+        <button class="learn-tab active" data-learn="pedagogy">📚 Math Pedagogy</button>
+        <button class="learn-tab" data-learn="prompt-drills">🔧 Prompt Drills</button>
+        <button class="learn-tab" data-learn="math-games">🧩 Math Games</button>
+        <button class="learn-tab" data-learn="explain">💬 Explain It Simply</button>
+      </div>
+      <div class="learn-content" id="learn-content"></div>
+    </section>
+
+    <!-- PEER REVIEW -->
+    <section id="sec-review" class="section">
+      <div class="page-header">
+        <div class="page-title">⭐ Peer Review</div>
+        <div class="page-sub">Quality gates: Accuracy → Clarity → Visual → Engagement</div>
+      </div>
+      <div class="review-queue" id="review-queue"></div>
+      <div class="card" id="review-detail-card" style="display:none">
+        <div class="card-header"><span class="card-title" id="review-detail-title">Reviewing: —</span></div>
+        <div class="card-body" id="review-detail-body"></div>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="sec-leaderboard" class="section">
+      <div class="page-header">
+        <div class="page-title">🏆 Leaderboard</div>
+        <div class="page-sub">Friendly competition — celebrate growth!</div>
+      </div>
+      <div class="lb-tabs">
+        <button class="lb-tab active" data-lb="xp">⭐ XP Ranking</button>
+        <button class="lb-tab" data-lb="quality">💎 Quality Score</button>
+        <button class="lb-tab" data-lb="badges">🎖️ Badges Earned</button>
+        <button class="lb-tab" data-lb="reviews">🔍 Reviews Done</button>
+      </div>
+      <div class="lb-content" id="lb-content"></div>
+    </section>
+
+    <!-- PROMPT LAB -->
+    <section id="sec-prompts" class="section">
+      <div class="page-header">
+        <div class="page-title">💡 Prompt Lab</div>
+        <div class="page-sub">Build the Team Prompt Library — rate, remix, improve</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-prompt">+ New Prompt</button>
+        <select class="form-input form-inline" id="filter-prompt-category">
+          <option value="">All Categories</option>
+          <option value="explanation">Explanation</option>
+          <option value="story">Story-Based</option>
+          <option value="visual">Visual/Diagram</option>
+          <option value="practice">Practice Problems</option>
+          <option value="assessment">Assessment</option>
+        </select>
+      </div>
+      <div class="prompts-grid" id="prompts-grid"></div>
+    </section>
+
+    <!-- PRESENTATIONS -->
+    <section id="sec-presentations" class="section">
+      <div class="page-header"><div class="page-title">🎤 AI Concept Presentations</div><div class="page-sub">Each team member presents one AI concept — learn by teaching!</div></div>
+      <div class="toolbar"><button class="btn btn-primary" id="btn-add-presentation">+ Schedule Presentation</button><select class="form-input form-inline" id="filter-pres-worker"><option value="">All Presenters</option></select></div>
+      <div class="pres-calendar" id="pres-calendar"></div>
+    </section>
+
+    <!-- APP BUILDER -->
+    <section id="sec-apps" class="section">
+      <div class="page-header"><div class="page-title">🛠️ App Builder</div><div class="page-sub">Vibe-coding projects — build real HTML tools while learning the basics</div></div>
+      <div class="toolbar"><button class="btn btn-primary" id="btn-add-app">+ New App Project</button><select class="form-input form-inline" id="filter-app-status"><option value="">All Status</option><option value="planning">Planning</option><option value="building">Building</option><option value="testing">Testing</option><option value="deployed">Deployed</option></select></div>
+      <div class="apps-grid" id="apps-grid"></div>
+    </section>
+
+    <!-- BOOK BUILDER -->
+    <section id="sec-books" class="section">
+      <div class="page-header"><div class="page-title">📚 Book Builder</div><div class="page-sub">Compile grade-level documents into publishable books</div></div>
+      <div class="toolbar"><button class="btn btn-primary" id="btn-add-book">+ New Book Project</button></div>
+      <div class="books-grid" id="books-grid"></div>
+    </section>
+
+    <!-- ONBOARDING -->
+    <section id="sec-onboarding" class="section">
+      <div class="page-header"><div class="page-title">📖 How Bloom &amp; Learn Works</div><div class="page-sub">Your step-by-step guide to the 2-month learning journey</div></div>
+      <div id="onboarding-content"></div>
+    </section>
+
+    <!-- MY PORTFOLIO -->
+    <section id="sec-portfolio" class="section">
+      <div class="page-header"><div class="page-title">🎓 My Portfolio</div><div class="page-sub">Your personal showcase — best work, skills, and achievements</div></div>
+      <div class="toolbar"><select class="form-input form-inline" id="filter-portfolio-worker"><option value="">Select Worker</option></select></div>
+      <div id="portfolio-content"></div>
+    </section>
+  </main>
+
+  <!-- MODAL OVERLAY -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none">
+    <div class="modal" id="modal-box"></div>
+  </div>
+</div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'bloom_learn_manager_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user || { id: 'u1', name: 'Can Öztürk', email: 'can@example.com', roles: ['worker'], locale: 'en' }; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('BloomLearn DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+})();
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); }
+});
+
+/* ── Sample Data ── */
+document.getElementById('th-load-sample').addEventListener('click', function() {
+  var sample = {
+    workers: [
+      { id: 'w1', name: 'Ayşe Yılmaz', avatar: '👩‍🔬', xp: 340, badges: ['firstFlight', 'scholar', 'eagleEye'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w2', name: 'Mehmet Demir', avatar: '👨‍💻', xp: 520, badges: ['firstFlight', 'promptWizard', 'speedDemon'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w3', name: 'Zeynep Kaya', avatar: '👩‍🎓', xp: 180, badges: ['firstFlight'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w4', name: 'Can Öztürk', avatar: '👨‍🏫', xp: 750, badges: ['firstFlight', 'qualityChampion', 'mentor', 'promptWizard', 'presenterPro'], joined: '2026-07-01T09:00:00Z', skills: {}, email: 'can@example.com', reflection: 'This week I learned how to design prompts that produce much better structured math content.' },
+      { id: 'w5', name: 'Elif Şahin', avatar: '👩‍💻', xp: 290, badges: ['firstFlight', 'scholar'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w6', name: 'Burak Aydın', avatar: '👨‍🔬', xp: 1050, badges: ['firstFlight', 'eagleEye', 'qualityChampion', 'reviewerPro', 'streakMaster', 'appBuilder'], joined: '2026-07-01T09:00:00Z', skills: {}, reflection: 'Building the Math Formula Cheat Sheet app was the highlight of my week. I never thought I could code anything, but vibe-coding with AI made it possible. Excited to present on Prompt Engineering next!' },
+      { id: 'w7', name: 'Selin Arslan', avatar: '👩‍🏫', xp: 420, badges: ['firstFlight', 'promptWizard', 'scholar'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w8', name: 'Emre Çelik', avatar: '👨‍🎓', xp: 80, badges: [], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w9', name: 'Deniz Koç', avatar: '👩‍🔧', xp: 610, badges: ['firstFlight', 'speedDemon', 'eagleEye', 'mathWhiz'], joined: '2026-07-01T09:00:00Z', skills: {} },
+      { id: 'w10', name: 'Mert Güneş', avatar: '👨‍🚀', xp: 230, badges: ['firstFlight', 'scholar'], joined: '2026-07-01T09:00:00Z', skills: {} }
+    ],
+    subjects: [
+      { id: 's1', topic: 'Quadratic Equations', grade: '9', assignedTo: 'w4', status: 'reviewed', qualityScore: 5, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true},{gate:'visual',passed:true},{gate:'engagement',passed:true}], createdAt: '2026-07-02T10:00:00Z' },
+      { id: 's2', topic: 'Linear Functions', grade: '8', assignedTo: 'w6', status: 'reviewed', qualityScore: 5, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true},{gate:'visual',passed:true},{gate:'engagement',passed:true}], createdAt: '2026-07-02T11:00:00Z' },
+      { id: 's3', topic: 'Fractions Basics', grade: '5', assignedTo: 'w1', status: 'reviewed', qualityScore: 4, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true},{gate:'visual',passed:true},{gate:'engagement',passed:false}], createdAt: '2026-07-03T09:00:00Z' },
+      { id: 's4', topic: 'Trigonometry Intro', grade: '10', assignedTo: 'w9', status: 'reviewed', qualityScore: 4, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true},{gate:'visual',passed:true},{gate:'engagement',passed:true}], createdAt: '2026-07-03T10:00:00Z' },
+      { id: 's5', topic: 'Probability Basics', grade: '7', assignedTo: 'w2', status: 'reviewed', qualityScore: 3, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true},{gate:'visual',passed:false},{gate:'engagement',passed:false}], createdAt: '2026-07-04T09:00:00Z' },
+      { id: 's6', topic: 'Exponents & Powers', grade: '8', assignedTo: 'w7', status: 'done', qualityScore: null, gates: [], createdAt: '2026-07-05T10:00:00Z' },
+      { id: 's7', topic: 'Geometry: Triangles', grade: '9', assignedTo: 'w5', status: 'done', qualityScore: null, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true}], createdAt: '2026-07-05T11:00:00Z' },
+      { id: 's8', topic: 'Percentage Problems', grade: '6', assignedTo: 'w3', status: 'in-progress', qualityScore: null, gates: [], createdAt: '2026-07-06T09:00:00Z' },
+      { id: 's9', topic: 'Algebraic Expressions', grade: '7', assignedTo: 'w8', status: 'in-progress', qualityScore: null, gates: [], createdAt: '2026-07-06T10:00:00Z' },
+      { id: 's10', topic: 'Statistics: Mean & Median', grade: '8', assignedTo: 'w10', status: 'pending', qualityScore: null, gates: [], createdAt: '2026-07-06T11:00:00Z' },
+      { id: 's11', topic: 'Coordinate Geometry', grade: '9', assignedTo: 'w4', status: 'pending', qualityScore: null, gates: [], createdAt: '2026-07-06T12:00:00Z' },
+      { id: 's12', topic: 'Ratio & Proportion', grade: '6', assignedTo: 'w1', status: 'pending', qualityScore: null, gates: [], createdAt: '2026-07-06T13:00:00Z' },
+      { id: 's13', topic: 'Polynomials Basics', grade: '9', assignedTo: 'w4', status: 'needs-fix', qualityScore: null, gates: [{gate:'accuracy',passed:true},{gate:'clarity',passed:true}], reviewCycle: 1, reviewFindings: [{id:'f1',gate:'visual',severity:'high',description:'No diagrams for polynomial multiplication. Add area models and visual examples.',status:'open',foundBy:'w6',foundAt:'2026-07-11T10:00:00Z'},{id:'f2',gate:'engagement',severity:'medium',description:'The intro is too dry. Add a real-world hook like calculating areas of gardens.',status:'open',foundBy:'w6',foundAt:'2026-07-11T10:00:00Z'},{id:'f3',gate:'clarity',severity:'low',description:'Consider adding a summary box after each section.',status:'fixed',foundBy:'w6',foundAt:'2026-07-11T10:00:00Z',fixedAt:'2026-07-11T15:00:00Z'}], createdAt: '2026-07-10T09:00:00Z' }
+    ],
+    reviews: [
+      { id: 'r1', subjectId: 's1', reviewerId: 'w6', qualityScore: 5, notes: 'Excellent explanations and visuals.', createdAt: '2026-07-02T14:00:00Z' },
+      { id: 'r2', subjectId: 's2', reviewerId: 'w9', qualityScore: 5, notes: 'Perfect! Real-world examples really help.', createdAt: '2026-07-02T15:00:00Z' },
+      { id: 'r3', subjectId: 's3', reviewerId: 'w4', qualityScore: 4, notes: 'Good content. Could use more interactive elements.', createdAt: '2026-07-03T14:00:00Z' },
+      { id: 'r4', subjectId: 's4', reviewerId: 'w2', qualityScore: 4, notes: 'Strong explanations. Add more practice problems.', createdAt: '2026-07-03T15:00:00Z' },
+      { id: 'r5', subjectId: 's5', reviewerId: 'w6', qualityScore: 3, notes: 'Math is correct but needs more visuals.', createdAt: '2026-07-04T14:00:00Z' }
+    ],
+    prompts: [
+      { id: 'p1', name: 'Grade 9 Algebra Explainer', category: 'explanation', template: 'Create a comprehensive math lesson on [TOPIC] for Grade [GRADE]. Include: 1) A real-world hook, 2) Step-by-step explanation, 3) Visual diagrams, 4) 5 practice problems, 5) Common mistakes.', createdBy: 'w4', rating: 5, createdAt: '2026-07-02T09:00:00Z' },
+      { id: 'p2', name: 'Story-Based Math Intro', category: 'story', template: 'Write a short engaging story (200 words) that introduces [TOPIC] to Grade [GRADE] students. End with a "what would you do?" question.', createdBy: 'w7', rating: 4, createdAt: '2026-07-03T09:00:00Z' },
+      { id: 'p3', name: 'Math Assessment Generator', category: 'assessment', template: 'Create a 10-question assessment on [TOPIC] for Grade [GRADE]. Include: 3 multiple choice, 3 short answer, 2 word problems, 2 challenge problems. Provide answer key.', createdBy: 'w2', rating: 4, createdAt: '2026-07-04T09:00:00Z' }
+    ],
+    activityFeed: [
+      { icon: '📝', text: 'New subject added: Coordinate Geometry', time: '2026-07-06T12:00:00Z' },
+      { icon: '📝', text: 'New subject added: Ratio & Proportion', time: '2026-07-06T13:00:00Z' },
+      { icon: '✅', text: 'Burak Aydın completed: Statistics (+25 XP)', time: '2026-07-06T11:00:00Z' },
+      { icon: '▶️', text: 'Started working on: Algebraic Expressions', time: '2026-07-06T10:00:00Z' },
+      { icon: '⭐', text: 'Peer review submitted for: Probability Basics (3/5)', time: '2026-07-04T14:00:00Z' },
+      { icon: '🎓', text: 'Learning completed: The Power of What If? (+5 XP)', time: '2026-07-04T10:00:00Z' },
+      { icon: '🎖️', text: 'Burak Aydın earned badge: Streak Master!', time: '2026-07-04T09:00:00Z' },
+      { icon: '💡', text: 'New prompt added: Math Assessment Generator', time: '2026-07-04T09:00:00Z' }
+    ],
+    completedLearning: [
+      { learningId: 'p1', category: 'pedagogy', workerId: 'self', completedAt: '2026-07-02T10:00:00Z' },
+      { learningId: 'p2', category: 'pedagogy', workerId: 'self', completedAt: '2026-07-02T10:30:00Z' },
+      { learningId: 'p3', category: 'pedagogy', workerId: 'self', completedAt: '2026-07-03T09:00:00Z' },
+      { learningId: 'd1', category: 'prompt-drills', workerId: 'self', completedAt: '2026-07-03T11:00:00Z' },
+      { learningId: 'g1', category: 'math-games', workerId: 'self', completedAt: '2026-07-04T09:30:00Z' }
+    ],
+    dailyChallenge: {
+      date: new Date().toISOString().slice(0, 10),
+      id: 'dc6',
+      title: 'Creative Genius',
+      desc: 'Create a "One Topic, Three Ways" set for any math topic. +60 XP!',
+      xpBonus: 60,
+      completedBy: []
+    },
+    teamStreak: 6,
+    lastActiveDate: new Date().toISOString().slice(0, 10),
+    presentations: [
+      { id: 'pr1', workerId: 'w4', topic: 'How LLMs Actually Work (Tokens & Temperature)', scheduledDate: '2026-07-14', status: 'done', scores: { clarity: 5, usefulness: 4, delivery: 5, visuals: 4 }, createdAt: '2026-07-10T09:00:00Z' },
+      { id: 'pr2', workerId: 'w6', topic: 'Prompt Engineering: Specificity & Constraints', scheduledDate: '2026-07-16', status: 'upcoming', scores: null, createdAt: '2026-07-10T10:00:00Z' },
+      { id: 'pr3', workerId: 'w9', topic: 'AI Hallucinations — Why & How to Catch Them', scheduledDate: '2026-07-18', status: 'upcoming', scores: null, createdAt: '2026-07-10T11:00:00Z' }
+    ],
+    appProjects: [
+      { id: 'a1', name: 'Math Formula Cheat Sheet', description: 'Searchable formula library by grade & topic', workerId: 'w2', difficulty: 'easy', status: 'deployed', deployedUrl: null, createdAt: '2026-07-05T09:00:00Z' },
+      { id: 'a2', name: 'Grade Calculator', description: 'Weighted averages and final exam predictor', workerId: 'w7', difficulty: 'easy', status: 'building', deployedUrl: null, createdAt: '2026-07-06T10:00:00Z' },
+      { id: 'a3', name: 'Peer Review Checklist Tool', description: 'Digital version of quality gates', workerId: 'w1', difficulty: 'easy', status: 'planning', deployedUrl: null, createdAt: '2026-07-08T09:00:00Z' }
+    ],
+    bookProjects: [
+      { id: 'b1', grade: '8', editorId: 'w6', topics: [{name:'Linear Functions',status:'done'},{name:'Systems of Equations',status:'done'},{name:'Exponents & Roots',status:'done'},{name:'Scientific Notation',status:'in-progress'},{name:'Pythagorean Theorem',status:'missing'},{name:'Transformations',status:'missing'},{name:'Scatter Plots',status:'missing'},{name:'Two-Way Tables',status:'missing'},{name:'Angle Relationships',status:'missing'},{name:'Irrational Numbers',status:'missing'}], status: 'draft', createdAt: '2026-07-08T10:00:00Z' },
+      { id: 'b2', grade: '9', editorId: 'w4', topics: [{name:'Quadratic Equations',status:'done'},{name:'Functions Deep Dive',status:'in-progress'},{name:'Polynomials',status:'missing'},{name:'Factoring',status:'missing'},{name:'Trigonometry Intro',status:'missing'},{name:'Coordinate Geometry',status:'missing'},{name:'Complex Numbers',status:'missing'},{name:'Sequences & Series',status:'missing'},{name:'Probability: Compound Events',status:'missing'},{name:'Data Analysis',status:'missing'}], status: 'draft', createdAt: '2026-07-09T09:00:00Z' }
+    ],
+    bossBattles: [],
+    mysteryAssignments: []
+  };
+  window.tool._loadSampleData(sample);
+});
+
+document.getElementById('th-clear').addEventListener('click', function() {
+  if (confirm('Clear ALL data? This cannot be undone.')) { window.tool._clearData(); }
+});
+
+document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+</script>
+
+<!-- Load the tool JS via regular script tag (works with file:// protocol) -->
+<script src="BloomLearnManager.js"></script>
+</body>
+</html>

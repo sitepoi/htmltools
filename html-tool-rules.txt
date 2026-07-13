@@ -114,16 +114,76 @@ tool.resize()                → call after any DOM change that affects the ifra
                                height. Also auto-fires via ResizeObserver on the
                                body element — but call it explicitly after
                                significant layout shifts.
+tool.openUrl(url)            → open a URL in a new browser tab via the parent
+                               CMS window.  Use this instead of window.open()
+                               or <a target="_blank"> to avoid sandbox popup
+                               blocking.  The parent context is not sandboxed
+                               so the URL opens reliably.
 
 ── Schema declaration (optional) ──────────────────────
 tool.declareOutput(jsonSchema)
     → declare the JSON shape of the value this tool saves.
       Helps the CMS designer understand your tool's data format.
-tool.declareParams([{name, label, type, default, hint}])
+tool.declareParams([{name, label, type, default, hint, severity}])
     → declare which tool.param() keys the admin should configure.
       Each entry: { name: 'paramKey', label: 'Display Label',
                     type: 'text'|'number'|'toggle'|'select',
-                    default: 'default value', hint: 'Help text' }
+                    default: 'default value', hint: 'Help text',
+                    severity: 'mandatory'|'goodToHave'|'optional' }  
+
+── Parameter severity levels ─────────────────────────  
+Each declared param can specify a `severity` field that controls how the CMS
+notifies the admin about unconfigured parameters:
+
+  severity: 'mandatory'
+    → Shows a RED/AMBER WARNING BANNER above the iframe (blocking).
+    → Banner text: "This tool requires configuration. X mandatory parameter(s) missing."
+    → "Configure" button opens the param form.
+    → The tool likely won't function without these.
+
+  severity: 'goodToHave'
+    → Shows a SUBTLE INFO BAR below the iframe (non-blocking).
+    → The bar has a ℹ️ icon + text: "X optional parameter(s) available".
+    → Clicking the bar expands a tooltip listing each param with hints
+      and instructions on where to configure them.
+    → ONLY visible to developer, admin, and owner roles (not regular users).
+    → Does NOT block form save or show as a warning.
+
+  severity: 'optional' or no severity field (default)
+    → No warning, no bar, no indicator.  Completely silent.
+    → The param is documented for discovery but not expected to be configured.
+
+BACKWARD COMPATIBILITY: If a param entry has no "severity" field, it is treated
+as "optional" — no warning is shown.  To make a param required, explicitly set
+severity: 'mandatory'.
+
+Example declaration with severity:
+  tool.declareParams([
+    {
+      name: 'documentTemplates',
+      label: 'Document Templates',
+      type: 'text',
+      default: '',
+      severity: 'mandatory',
+      hint: 'Comma-separated pipe-delimited list. Format: Name|templateUrl|accept|required|Category.'
+    },
+    {
+      name: 'sinLabel',
+      label: 'SIN Label',
+      type: 'text',
+      default: 'SIN / SSN',
+      severity: 'optional',
+      hint: "Override label for the SIN field. Defaults to 'SIN / SSN'."
+    },
+    {
+      name: 'showDebugPanel',
+      label: 'Show Debug Panel',
+      type: 'toggle',
+      default: 'no',
+      severity: 'goodToHave',
+      hint: 'Enable to show a developer debug panel in the tool UI.'
+    }
+  ])
 
 ── Missing parameter reporting (★ RECOMMENDED) ────────
 tool.reportMissingParams(missing, message)
@@ -132,11 +192,14 @@ tool.reportMissingParams(missing, message)
       opens a dynamic form so the admin can fill in the missing values
       and apply them directly to the field settings.
 
-      • missing — array of { name, label, type, default, hint, reason }
+      • missing — array of { name, label, type, default, hint, reason, severity? }
         Each entry describes ONE parameter the tool needs.  `name` must
         match a key declared via tool.declareParams().  `reason` is a
         short sentence explaining WHY the tool needs this param (e.g.
         "Must point to the CMS object type that holds vehicle records").
+        `severity` is optional — if omitted, the CMS treats the param as
+        'optional' (silent, no indicator).  To trigger a warning, explicitly
+        set severity: 'mandatory' on the entry.
       • message — string (optional), a human-readable summary shown at
         the top of the warning banner.  Example:
         "This tool needs 3 parameters configured before it can work."
@@ -158,13 +221,15 @@ tool.reportMissingParams(missing, message)
           name: 'vehiclesTypeId', label: 'Vehicles Type ID',
           type: 'text', default: 'vehicles-uniconbaseapps',
           hint: 'CMS object type for vehicle records',
-          reason: 'Cannot load vehicle data without a type ID'
+          reason: 'Cannot load vehicle data without a type ID',
+          severity: 'mandatory'
         })
         if (!sType) missing.push({
           name: 'staffTypeId', label: 'Staff Type ID',
           type: 'text', default: 'staff-uniconbaseapps',
           hint: 'CMS object type for staff records',
-          reason: 'Cannot load staff data without a type ID'
+          reason: 'Cannot load staff data without a type ID',
+          severity: 'mandatory'
         })
         if (missing.length) {
           tool.reportMissingParams(missing,
@@ -177,6 +242,12 @@ tool.reportMissingParams(missing, message)
       However, calling reportMissingParams() explicitly gives the admin a
       much clearer error message and lets you mark params as truly required
       (as opposed to optional ones with sensible defaults).
+
+      The CMS respects the `severity` field on each declaration:
+        • mandatory     → warning banner above the iframe (same as before)
+        • goodToHave    → subtle info bar below the iframe (dev/admin/owner only)
+        • optional      → silent (no indicator)
+        • no severity   → treated as 'optional' (silent) for backward compat.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ASYNC CMS CHANNELS  (require toolParams opt-in)
@@ -260,7 +331,7 @@ Example:
     parseAndDisplay(text)
   })
 
-── PDF Export ─────────────────────────────────────────  ★ NEW
+── PDF Export ───────────────────────────────────────── 
 tool.requestExportPdf(options, callback)
 
 Generates a printable HTML document from the provided content, uploads it to
@@ -290,15 +361,15 @@ Example:
   }, (err, file) => {
     if (err) { tool.notify('Export failed: ' + err, 'error'); return }
     tool.notify('Report exported: ' + file.url, 'success')
-    window.open(file.url, '_blank')  // user prints from here
+    tool.openUrl(file.url)  // user prints from here
   })
 
   // Export current tool DOM content:
   tool.requestExportPdf({ filename: 'data-export' }, (err, file) => {
-    if (!err) window.open(file.url, '_blank')
+    if (!err) tool.openUrl(file.url)
   })
 
-── Send Email ─────────────────────────────────────────  ★ NEW
+── Send Email ─────────────────────────────────────────  
 tool.requestSendEmail(options, callback)
 
 Sends an email through the CMS email system (AWS SES / nodemailer). The body
@@ -439,6 +510,65 @@ The CMS admin must configure two settings on the html-tool field:
     to manage permissions yourself.
   • Data is stored in om_private_objects and is visible in the
     standard ObjectManager UI if the type is registered in CMS Settings.
+
+── Tenant-level parameter overrides ──────────────────────────────────────────
+  For connected tools (from Application Store or My Tools), the tool's
+  built-in toolParams serve as remote defaults.  Tenants can override
+  individual parameters without modifying the upstream definition by
+  setting settings.localToolParams in the Field Group Designer:
+
+    settings.toolParams      = { "currency": "USD", "max": 100 }    ← remote
+    settings.localToolParams = { "currency": "EUR" }                ← tenant override
+
+  Effective params at runtime: { "currency": "EUR", "max": 100 }
+  Local overrides always win.  This is the same pattern as
+  TenantProfileCustomizer for cmsObjectType remote apps.
+
+  • Use settings.toolParams for the tool's default configuration
+    (set at install time from the tool source).
+  • Use settings.localToolParams for tenant-specific overrides
+    (e.g. pointing to a different CMS object type, changing currency).
+  • When the tool source is updated, the remote toolParams may change,
+    but localToolParams always take precedence for the keys they define.
+  • Leave localToolParams empty to use remote defaults as-is.
+
+── Connected tool settings locking ───────────────────────────────────────────
+  When a tool is connected (connectionMode: 'connected-app-store' or
+  'connected-my-tools'), the Field Group Designer shows two sub-tabs:
+
+    ✏️ Local Properties   — editable settings under tenant control
+    🔒 Remote (source)    — read-only display of remote-managed settings
+
+  🔒 Remote-managed (read-only, shown for reference):
+    connectionMode    — the tool IS connected, cannot switch to standalone
+    connectedToolId   — identifies the source tool
+    htmlCode          — fetched live from the tool source at render time
+    cssCode           — fetched live from the tool source at render time
+    jsCode            — fetched live from the tool source at render time
+    toolUrl           — external URL, if set by the tool source
+    toolParams        — remote defaults; use localToolParams to override
+
+  ✏️ Tenant-controlled (editable, saved with field group):
+    localToolParams   — overrides specific remote toolParams keys
+    displayMode       — inline / popup / drawer / toolbar-strip
+    height, autoHeight, stripHeight
+    triggerLabel, triggerWidth
+    showJsonOutput, showEventLog
+    validationEnabled
+    allowObjectCRUD, allowedObjectTypes
+    outputSchema
+
+  At runtime, only code fields (htmlCode, cssCode, jsCode, toolUrl) are
+  fetched from the remote source.  All other settings — display, sizing,
+  validation, CRUD config — are under full tenant control and saved in
+  the field group definition.  Changing height or displayMode for a
+  connected tool works correctly and is NOT overridden by the remote.
+
+  Parameter overrides follow the merge pattern:
+    mergedToolParams = { ...remoteToolParams, ...localToolParams }
+
+  Local wins where both define the same key.  Leave localToolParams
+  empty to use the remote defaults as-is.
 
 ── Examples ──────────────────────────────────────────────────────────────────
 
@@ -608,7 +738,7 @@ HARD RULES
 ✗  No <script>, <style>, <html>, <head>, <body>, <!DOCTYPE> tags in any field
 ✗  No DOMContentLoaded or window.onload — use tool.onReady instead
 ✗  No localStorage or sessionStorage
-✗  No fetch to external URLs (sandboxed: allow-scripts, allow-forms, allow-downloads)
+✗  No fetch to external URLs (sandboxed: allow-scripts, allow-forms, allow-downloads, allow-popups)
 ✗  No alert(), confirm(), or prompt()
 ✗  No raw postMessage calls — always use the tool.* SDK
 ✓  Always call tool.declareParams() for EVERY param your tool reads

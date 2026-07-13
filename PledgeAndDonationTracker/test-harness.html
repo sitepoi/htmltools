@@ -182,7 +182,12 @@ body { padding-top: 28px !important; margin: 0; }
         .catch(function(e) { cb('Fetch error: ' + e.message + '. Use a local server or a CORS-enabled URL.', null); });
     },
     onReady: function(cb) { load(); cmsLoad(); cb(_value, _fields); },
-    _loadSample: function() { localStorage.removeItem(STORAGE_KEY); _cmsStore = {}; cmsSave(); _value = null; location.reload(); },
+    _loadSample: function() {
+      localStorage.removeItem(STORAGE_KEY);
+      _cmsStore = {}; cmsSave(); _value = null;
+      if (typeof loadSample === 'function') { loadSample(); }
+      else { location.reload(); }
+    },
     _clearAll: function() { localStorage.removeItem(STORAGE_KEY); _cmsStore = {}; cmsSave(); _value = null; location.reload(); },
     _toggleRO: function() { this._setReadOnly(!_readOnly); },
     _dumpReport: function() { console.log('Report:', JSON.parse(JSON.stringify(_value))); },

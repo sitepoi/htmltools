@@ -1,0 +1,238 @@
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🌱</div>
+      <div class="brand-name">Bloom &amp; Learn</div>
+      <div class="brand-sub">Math Content Team Manager</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" data-page="workers"><span class="nav-icon">👥</span>Team<span class="nav-badge" id="nav-workers-count">10</span></div>
+      <div class="nav-item" data-page="tasks"><span class="nav-icon">📝</span>Task Board<span class="nav-badge" id="nav-tasks-pending">0</span></div>
+      <div class="nav-item" data-page="learn"><span class="nav-icon">🎓</span>Learn Zone<span class="nav-badge" id="nav-learn-new">0</span></div>
+      <div class="nav-item" data-page="review"><span class="nav-icon">⭐</span>Peer Review<span class="nav-badge" id="nav-review-queue">0</span></div>
+      <div class="nav-item" data-page="leaderboard"><span class="nav-icon">🏆</span>Leaderboard</div>
+      <div class="nav-item" data-page="prompts"><span class="nav-icon">💡</span>Prompt Lab<span class="nav-badge" id="nav-prompts-count">0</span></div>
+      <div class="nav-item nav-new" data-page="presentations"><span class="nav-icon">🎤</span>Presentations<span class="nav-badge" id="nav-pres-count">0</span></div>
+      <div class="nav-item nav-new" data-page="apps"><span class="nav-icon">🛠️</span>App Builder<span class="nav-badge" id="nav-apps-count">0</span></div>
+      <div class="nav-item nav-new" data-page="books"><span class="nav-icon">📚</span>Book Builder<span class="nav-badge" id="nav-books-count">0</span></div>
+      <div class="nav-item nav-new" data-page="portfolio"><span class="nav-icon">🎓</span>My Portfolio</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item nav-guide" data-page="onboarding"><span class="nav-icon">📖</span>How It Works</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="daily-theme" id="sidebar-theme">
+        <div class="theme-icon" id="theme-day-icon">🎯</div>
+        <div class="theme-label" id="theme-day-label">Precision Day</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <section id="sec-dashboard" class="section active">
+      <div class="page-header">
+        <div class="page-title">🌱 Bloom &amp; Learn Dashboard</div>
+        <div class="page-sub" id="dash-date">Loading...</div>
+      </div>
+      <div class="stats-row" id="dash-stats"></div>
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔥 Team Streak</span></div>
+          <div class="card-body" id="dash-streak"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">🎯 Today's Challenge</span></div>
+          <div class="card-body" id="dash-challenge"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📋 Recent Activity Feed</span></div>
+        <div class="card-body" id="dash-feed"></div>
+      </div>
+    </section>
+
+    <!-- TEAM / WORKERS -->
+    <section id="sec-workers" class="section">
+      <div class="page-header">
+        <div class="page-title">👥 Team Members</div>
+        <div class="page-sub">10 workers — 2-month learning journey</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-worker">+ Add Worker</button>
+        <button class="btn btn-outline" id="btn-sort-xp">Sort by XP</button>
+        <button class="btn btn-outline" id="btn-sort-name">Sort by Name</button>
+      </div>
+      <div class="workers-grid" id="workers-grid"></div>
+    </section>
+
+    <!-- TASK BOARD -->
+    <section id="sec-tasks" class="section">
+      <div class="page-header">
+        <div class="page-title">📝 Task Board</div>
+        <div class="page-sub">Subject assignments &amp; quality gate tracking</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-task">+ Add Subject</button>
+        <select class="form-input form-inline" id="filter-worker"><option value="">All Workers</option></select>
+        <select class="form-input form-inline" id="filter-status">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="in-progress">In Progress</option>
+          <option value="done">Done (Ready for Review)</option>
+          <option value="needs-fix">🔧 Needs Fixes</option>
+          <option value="fixes-submitted">✅ Fixes Submitted</option>
+          <option value="reviewed">Reviewed</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table" id="tasks-table">
+          <thead>
+            <tr>
+              <th>Subject</th><th>Grade</th><th>Assigned To</th><th>Status</th>
+              <th>Quality</th><th>Gates Passed</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tasks-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LEARN ZONE -->
+    <section id="sec-learn" class="section">
+      <div class="page-header">
+        <div class="page-title">🎓 Learn Zone</div>
+        <div class="page-sub">Micro-learning during AI wait time — earn XP while you wait! <span id="learn-my-progress" style="color:var(--primary);font-weight:600;"></span></div>
+      </div>
+      <div class="toolbar" id="learn-manager-toolbar" style="display:none;">
+        <button class="btn btn-primary btn-sm" id="btn-add-learning-card">+ Add Card</button>
+        <button class="btn btn-outline btn-sm" id="btn-reset-learning">Reset My Progress</button>
+      </div>
+      <div class="learn-tabs">
+        <button class="learn-tab active" data-learn="pedagogy">📚 Math Pedagogy</button>
+        <button class="learn-tab" data-learn="prompt-drills">🔧 Prompt Drills</button>
+        <button class="learn-tab" data-learn="math-games">🧩 Math Games</button>
+        <button class="learn-tab" data-learn="explain">💬 Explain It Simply</button>
+      </div>
+      <div class="learn-content" id="learn-content"></div>
+    </section>
+
+    <!-- PEER REVIEW -->
+    <section id="sec-review" class="section">
+      <div class="page-header">
+        <div class="page-title">⭐ Peer Review</div>
+        <div class="page-sub">Quality gates: Accuracy → Clarity → Visual → Engagement</div>
+      </div>
+      <div class="review-queue" id="review-queue"></div>
+      <div class="card" id="review-detail-card" style="display:none">
+        <div class="card-header"><span class="card-title" id="review-detail-title">Reviewing: —</span></div>
+        <div class="card-body" id="review-detail-body"></div>
+      </div>
+    </section>
+
+    <!-- LEADERBOARD -->
+    <section id="sec-leaderboard" class="section">
+      <div class="page-header">
+        <div class="page-title">🏆 Leaderboard</div>
+        <div class="page-sub">Friendly competition — celebrate growth!</div>
+      </div>
+      <div class="lb-tabs">
+        <button class="lb-tab active" data-lb="xp">⭐ XP Ranking</button>
+        <button class="lb-tab" data-lb="quality">💎 Quality Score</button>
+        <button class="lb-tab" data-lb="badges">🎖️ Badges Earned</button>
+        <button class="lb-tab" data-lb="reviews">🔍 Reviews Done</button>
+      </div>
+      <div class="lb-content" id="lb-content"></div>
+    </section>
+
+    <!-- PROMPT LAB -->
+    <section id="sec-prompts" class="section">
+      <div class="page-header">
+        <div class="page-title">💡 Prompt Lab</div>
+        <div class="page-sub">Build the Team Prompt Library — rate, remix, improve</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-prompt">+ New Prompt</button>
+        <select class="form-input form-inline" id="filter-prompt-category">
+          <option value="">All Categories</option>
+          <option value="explanation">Explanation</option>
+          <option value="story">Story-Based</option>
+          <option value="visual">Visual/Diagram</option>
+          <option value="practice">Practice Problems</option>
+          <option value="assessment">Assessment</option>
+        </select>
+      </div>
+      <div class="prompts-grid" id="prompts-grid"></div>
+    </section>
+
+    <!-- PRESENTATIONS -->
+    <section id="sec-presentations" class="section">
+      <div class="page-header">
+        <div class="page-title">🎤 AI Concept Presentations</div>
+        <div class="page-sub">Each team member presents one AI concept — learn by teaching!</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-presentation">+ Schedule Presentation</button>
+        <select class="form-input form-inline" id="filter-pres-worker"><option value="">All Presenters</option></select>
+      </div>
+      <div class="pres-calendar" id="pres-calendar"></div>
+    </section>
+
+    <!-- APP BUILDER -->
+    <section id="sec-apps" class="section">
+      <div class="page-header">
+        <div class="page-title">🛠️ App Builder</div>
+        <div class="page-sub">Vibe-coding projects — build real HTML tools while learning the basics</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-app">+ New App Project</button>
+        <select class="form-input form-inline" id="filter-app-status">
+          <option value="">All Status</option>
+          <option value="planning">Planning</option>
+          <option value="building">Building</option>
+          <option value="testing">Testing</option>
+          <option value="deployed">Deployed</option>
+        </select>
+      </div>
+      <div class="apps-grid" id="apps-grid"></div>
+    </section>
+
+    <!-- BOOK BUILDER -->
+    <section id="sec-books" class="section">
+      <div class="page-header">
+        <div class="page-title">📚 Book Builder</div>
+        <div class="page-sub">Compile grade-level documents into publishable books</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="btn-add-book">+ New Book Project</button>
+      </div>
+      <div class="books-grid" id="books-grid"></div>
+    </section>
+
+    <!-- ONBOARDING / HOW IT WORKS -->
+    <section id="sec-onboarding" class="section">
+      <div class="page-header">
+        <div class="page-title">📖 How Bloom &amp; Learn Works</div>
+        <div class="page-sub">Your step-by-step guide to the 2-month learning journey</div>
+      </div>
+      <div id="onboarding-content"></div>
+    </section>
+
+    <!-- MY PORTFOLIO -->
+    <section id="sec-portfolio" class="section">
+      <div class="page-header">
+        <div class="page-title">🎓 My Portfolio</div>
+        <div class="page-sub">Your personal showcase — best work, skills, and achievements</div>
+      </div>
+      <div class="toolbar">
+        <select class="form-input form-inline" id="filter-portfolio-worker"><option value="">Select Worker</option></select>
+      </div>
+      <div id="portfolio-content"></div>
+    </section>
+  </main>
+
+  <!-- MODAL OVERLAY -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none">
+    <div class="modal" id="modal-box"></div>
+  </div>
+</div>
