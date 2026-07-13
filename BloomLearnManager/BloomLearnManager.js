@@ -55,16 +55,26 @@ var DAY_THEMES = [
 ];
 
 var AI_PRESENTATION_TOPICS = [
-  'How LLMs Actually Work (Tokens & Temperature)',
-  'Prompt Engineering: Specificity & Constraints',
-  'Few-Shot vs Zero-Shot Prompting',
-  'AI Hallucinations — Why & How to Catch Them',
-  'Chain-of-Thought Prompting for Math',
-  'Using AI for Content Structuring & Outlines',
-  'AI for Error Detection in Math Content',
-  'Comparing AI Models for Education (Claude vs GPT vs Gemini)',
-  'Ethics of AI in Education',
-  'The Future: AI Tutors & Personalized Learning'
+  // ── CATEGORY A: Understanding AI (How It Actually Works) ──
+  'What Happens Inside an AI When You Press Enter? — Tokens, probabilities, and why AI is not "thinking"',
+  'Why Does the Same Prompt Give Different Answers? — Temperature, randomness, and how to control AI output',
+  'The AI Doesn\'t "Know" Math — How LLMs fake reasoning and why verification is YOUR job',
+  'Context Window: The AI\'s Short-Term Memory — Why long documents confuse AI and how to work around it',
+  'Training Data: Where AI\'s "Knowledge" Comes From — What\'s in the training data, what\'s missing, and why it matters for Turkish/math content',
+
+  // ── CATEGORY B: Better Prompting (Skills That Level Up Their Work) ──
+  'The Anatomy of a Great Prompt — Role, context, constraints, format, examples: the 5 ingredients',
+  'Show, Don\'t Just Tell — How giving AI an example output transforms quality (few-shot prompting)',
+  'Breaking Big Tasks into Small Steps — Chain-of-thought and why "think step by step" actually works',
+  'When AI Gets Stuck on Math — Common math errors AI makes and how to design prompts that reduce them',
+  'Your Prompt is a Contract — How to write constraints that AI actually follows (and why it sometimes doesn\'t)',
+
+  // ── CATEGORY C: Working Smarter (Beyond Basic Prompting) ──
+  'AI as Your Editor, Not Your Replacement — How to review, improve, and polish AI-generated content',
+  'Building Your Personal Prompt Library — How to save, test, and improve your best prompts over time',
+  'Spotting AI Hallucinations in Educational Content — Real examples, detection tricks, and prevention strategies',
+  'How to Compare AI Models for Your Task — Claude vs ChatGPT vs Gemini: strengths, weaknesses, and when to use each',
+  'The Future of Your Job — What AI means for education careers and how to stay valuable in an AI world'
 ];
 
 var APP_PROJECT_IDEAS = [
@@ -164,6 +174,8 @@ var editingSubjectId = null;
 var editingPromptId = null;
 var reviewingSubjectId = null;
 var editingLearningCardId = null;
+var currentPresTab = 'calendar';
+var currentAppTab = 'projects';
 
 /* ── User / Worker Resolution ── */
 function resolveCurrentWorker() {
@@ -1455,6 +1467,16 @@ function deletePrompt(id) {
 /* ── Presentations ── */
 function renderPresentations() {
   updateStreak();
+  // Toggle sub-tab visibility
+  el('pres-calendar').style.display = currentPresTab === 'calendar' ? '' : 'none';
+  el('pres-calendar-toolbar').style.display = currentPresTab === 'calendar' ? '' : 'none';
+  el('pres-catalog').style.display = currentPresTab === 'catalog' ? '' : 'none';
+
+  if (currentPresTab === 'catalog') {
+    renderPresCatalog();
+    return;
+  }
+
   var filterW = el('filter-pres-worker');
   var currentVal = filterW.value;
   filterW.innerHTML = '<option value="">All Presenters</option>' +
@@ -1579,9 +1601,78 @@ function deletePresentation(id) {
   persist(); renderPresentations(); updateNavBadges();
 }
 
+/* ── Presentation Topic Catalog ── */
+function renderPresCatalog() {
+  var takenTopics = DB.presentations.map(function(p) { return p.topic; });
+  var html = '';
+
+  // Group A: Understanding AI
+  var catATopics = AI_PRESENTATION_TOPICS.slice(0, 5);
+  var catBTopics = AI_PRESENTATION_TOPICS.slice(5, 10);
+  var catCTopics = AI_PRESENTATION_TOPICS.slice(10, 15);
+
+  var categories = [
+    { id: 'A', label: '🧠 Category A: Understanding AI — How It Actually Works', topics: catATopics, desc: 'Demystify the black box. These topics explain what is really happening inside AI.' },
+    { id: 'B', label: '✍️ Category B: Better Prompting — Skills That Level Up Your Work', topics: catBTopics, desc: 'Immediately practical. Every topic teaches a technique you can use the same day.' },
+    { id: 'C', label: '🚀 Category C: Working Smarter — Beyond Basic Prompting', topics: catCTopics, desc: 'Strategic thinking about AI — not just using it, but mastering it.' }
+  ];
+
+  var globalIdx = 0;
+  categories.forEach(function(cat) {
+    html += '<div class="pres-cat-section">';
+    html += '<div class="pres-cat-header"><span class="pch-icon">' + cat.label.charAt(0) + '</span>' + cat.label + '</div>';
+    html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">' + cat.desc + '</div>';
+    cat.topics.forEach(function(topic) {
+      globalIdx++;
+      var isTaken = takenTopics.indexOf(topic) !== -1;
+      var takenBy = '';
+      if (isTaken) {
+        var pres = DB.presentations.find(function(p) { return p.topic === topic; });
+        if (pres) {
+          var w = DB.workers.find(function(ww) { return ww.id === pres.workerId; });
+          takenBy = w ? w.name : 'Someone';
+        }
+      }
+      html += '<div class="pres-topic-card" onclick="quickSchedulePres(\'' + esc(topic.replace(/'/g, "\\'")) + '\')">' +
+        '<div class="ptc-num">' + globalIdx + '</div>' +
+        '<div class="ptc-info">' +
+          '<div class="ptc-title">' + esc(topic.split(' — ')[0]) + '</div>' +
+          '<div class="ptc-sub">' + esc(topic.split(' — ')[1] || '') + '</div>' +
+        '</div>' +
+        '<span class="ptc-status ' + (isTaken ? 'ptc-taken' : 'ptc-free') + '">' + (isTaken ? '📌 ' + takenBy : '✅ Available') + '</span>' +
+      '</div>';
+    });
+    html += '</div>';
+  });
+
+  el('pres-catalog').innerHTML = html;
+}
+
+function quickSchedulePres(topic) {
+  editPresentation(null);
+  setTimeout(function() {
+    var sel = el('modal-pres-topic');
+    if (sel) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === topic) { sel.value = topic; break; }
+      }
+    }
+  }, 100);
+}
+
 /* ── App Builder ── */
 function renderApps() {
   updateStreak();
+  // Toggle sub-tab visibility
+  el('apps-grid').style.display = currentAppTab === 'projects' ? '' : 'none';
+  el('apps-projects-toolbar').style.display = currentAppTab === 'projects' ? '' : 'none';
+  el('apps-catalog').style.display = currentAppTab === 'catalog' ? '' : 'none';
+
+  if (currentAppTab === 'catalog') {
+    renderAppCatalog();
+    return;
+  }
+
   var filterS = el('filter-app-status').value;
   var filtered = DB.appProjects.filter(function(a) {
     if (filterS && a.status !== filterS) return false;
@@ -1691,6 +1782,47 @@ function deleteApp(id) {
   if (!a || !confirm('Delete app project "' + a.name + '"?')) return;
   DB.appProjects = DB.appProjects.filter(function(aa) { return aa.id !== id; });
   persist(); renderApps(); updateNavBadges();
+}
+
+/* ── App Idea Catalog ── */
+function renderAppCatalog() {
+  var builtApps = DB.appProjects.map(function(a) { return a.name; });
+  var html = '<div class="idea-grid">';
+
+  APP_PROJECT_IDEAS.forEach(function(idea, idx) {
+    var isBuilt = builtApps.indexOf(idea.name) !== -1;
+    var diffClass = 'diff-' + idea.diff;
+    html += '<div class="idea-card" onclick="quickCreateApp(\'' + esc(idea.name.replace(/'/g, "\\'")) + '\')">' +
+      '<div class="ic-icon">' + idea.icon + '</div>' +
+      '<div class="ic-info">' +
+        '<div class="ic-name">' + (idx + 1) + '. ' + esc(idea.name) + '</div>' +
+        '<div class="ic-desc">' + esc(idea.desc) + '</div>' +
+        '<div class="ic-meta">' +
+          '<span class="ic-difficulty ' + diffClass + '">' + idea.diff + '</span>' +
+          (isBuilt ? '<span style="font-size:10px;color:var(--success);font-weight:600;">✅ Built</span>' : '<span style="font-size:10px;color:var(--text-secondary);">Available</span>') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '</div>';
+  html += '<div class="card" style="margin-top:16px;text-align:center;padding:20px;border:1px dashed var(--border);">' +
+    '<div style="font-size:11px;color:var(--text-secondary);">💡 Don\'t see what you want? Click <strong>+ New App Project</strong> in the Projects tab and choose <strong>"✏️ Custom Idea..."</strong> to create your own.</div>' +
+  '</div>';
+
+  el('apps-catalog').innerHTML = html;
+}
+
+function quickCreateApp(name) {
+  editApp(null);
+  setTimeout(function() {
+    var sel = el('modal-app-idea');
+    if (sel) {
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === name) { sel.value = name; onAppIdeaChange(); break; }
+      }
+    }
+  }, 100);
 }
 
 /* ── Book Builder ── */
@@ -2152,6 +2284,26 @@ document.addEventListener('click', function(e) {
     qsa('.lb-tab').forEach(function(t) { t.classList.remove('active'); });
     lbTab.classList.add('active');
     renderLeaderboard();
+    return;
+  }
+
+  // Sub-tabs (presentations & apps)
+  var subTab = e.target.closest('.sub-tab');
+  if (subTab) {
+    var presTab = subTab.getAttribute('data-pres-tab');
+    var appTab = subTab.getAttribute('data-app-tab');
+    if (presTab) {
+      currentPresTab = presTab;
+      qsa('#pres-subtabs .sub-tab').forEach(function(t) { t.classList.remove('active'); });
+      subTab.classList.add('active');
+      renderPresentations();
+    }
+    if (appTab) {
+      currentAppTab = appTab;
+      qsa('#apps-subtabs .sub-tab').forEach(function(t) { t.classList.remove('active'); });
+      subTab.classList.add('active');
+      renderApps();
+    }
     return;
   }
 });

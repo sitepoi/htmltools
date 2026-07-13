@@ -53,7 +53,8 @@
       personal: {
         fullName: "",
         sin: "",
-        dob: ""
+        dob: "",
+        startDate: ""
       },
       contact: {
         address: "",
@@ -193,6 +194,7 @@
     DB.personal.fullName = val("#pec-fullName");
     DB.personal.sin = val("#pec-sin");
     DB.personal.dob = val("#pec-dob");
+    DB.personal.startDate = val("#pec-startDate");
 
     DB.contact.address = val("#pec-address");
     DB.contact.city = val("#pec-city");
@@ -232,6 +234,7 @@
     setVal("#pec-fullName", DB.personal.fullName);
     setVal("#pec-sin", DB.personal.sin);
     setVal("#pec-dob", DB.personal.dob);
+    setVal("#pec-startDate", DB.personal.startDate);
 
     setVal("#pec-address", DB.contact.address);
     setVal("#pec-city", DB.contact.city);
@@ -311,11 +314,12 @@
     var total = 0;
     var done = 0;
 
-    // Personal info: 3 critical fields + photo ID
-    total += 4;
+    // Personal info: 4 critical fields + photo ID
+    total += 5;
     if (DB.personal.fullName.trim()) done++;
     if (DB.personal.sin.trim()) done++;
     if (DB.personal.dob) done++;
+    if (DB.personal.startDate) done++;
     if (DB.documents.photoId && DB.documents.photoId.url) done++;
 
     // Contact: 5 critical
@@ -376,6 +380,7 @@
     if (!DB.personal.fullName.trim()) missing.push("Full Legal Name");
     if (!DB.personal.sin.trim()) missing.push(getSINLabel());
     if (!DB.personal.dob) missing.push("Date of Birth");
+    if (!DB.personal.startDate) missing.push("Start Date");
     if (!DB.documents.photoId || !DB.documents.photoId.url) missing.push("Photo ID (government-issued)");
     if (!DB.contact.address.trim()) missing.push("Street Address");
     if (!DB.contact.city.trim()) missing.push("City");
@@ -486,7 +491,7 @@
         html += '</div>';
         if (!readOnly) {
           html += '<div class="pec-template-actions">';
-          html += '<button class="pec-template-btn download" data-open-url="' + esc(dt.templateUrl || "#") + '">Download</button>';
+          html += '<button class="pec-template-link download" data-open-url="' + esc(dt.templateUrl || "#") + '">📄 Download empty template</button>';
           if (isUploaded) {
             html += '<button class="pec-template-btn view" data-open-url="' + esc(uploadedDoc.url) + '">View</button>';
             html += '<button class="pec-template-btn remove" data-remove-template="' + esc(dt.id) + '">✕</button>';

@@ -207,15 +207,19 @@ body { padding-top: 28px !important; margin: 0; }
     <!-- PRESENTATIONS -->
     <section id="sec-presentations" class="section">
       <div class="page-header"><div class="page-title">🎤 AI Concept Presentations</div><div class="page-sub">Each team member presents one AI concept — learn by teaching!</div></div>
-      <div class="toolbar"><button class="btn btn-primary" id="btn-add-presentation">+ Schedule Presentation</button><select class="form-input form-inline" id="filter-pres-worker"><option value="">All Presenters</option></select></div>
+      <div class="sub-tabs" id="pres-subtabs"><button class="sub-tab active" data-pres-tab="calendar">📅 Calendar</button><button class="sub-tab" data-pres-tab="catalog">📋 Topic Catalog (15)</button></div>
+      <div class="toolbar" id="pres-calendar-toolbar"><button class="btn btn-primary" id="btn-add-presentation">+ Schedule Presentation</button><select class="form-input form-inline" id="filter-pres-worker"><option value="">All Presenters</option></select></div>
       <div class="pres-calendar" id="pres-calendar"></div>
+      <div class="topic-catalog" id="pres-catalog" style="display:none;"></div>
     </section>
 
     <!-- APP BUILDER -->
     <section id="sec-apps" class="section">
       <div class="page-header"><div class="page-title">🛠️ App Builder</div><div class="page-sub">Vibe-coding projects — build real HTML tools while learning the basics</div></div>
-      <div class="toolbar"><button class="btn btn-primary" id="btn-add-app">+ New App Project</button><select class="form-input form-inline" id="filter-app-status"><option value="">All Status</option><option value="planning">Planning</option><option value="building">Building</option><option value="testing">Testing</option><option value="deployed">Deployed</option></select></div>
+      <div class="sub-tabs" id="apps-subtabs"><button class="sub-tab active" data-app-tab="projects">🛠️ Projects</button><button class="sub-tab" data-app-tab="catalog">💡 Idea Catalog (35)</button></div>
+      <div class="toolbar" id="apps-projects-toolbar"><button class="btn btn-primary" id="btn-add-app">+ New App Project</button><select class="form-input form-inline" id="filter-app-status"><option value="">All Status</option><option value="planning">Planning</option><option value="building">Building</option><option value="testing">Testing</option><option value="deployed">Deployed</option></select></div>
       <div class="apps-grid" id="apps-grid"></div>
+      <div class="topic-catalog" id="apps-catalog" style="display:none;"></div>
     </section>
 
     <!-- BOOK BUILDER -->
@@ -373,9 +377,9 @@ document.getElementById('th-load-sample').addEventListener('click', function() {
     teamStreak: 6,
     lastActiveDate: new Date().toISOString().slice(0, 10),
     presentations: [
-      { id: 'pr1', workerId: 'w4', topic: 'How LLMs Actually Work (Tokens & Temperature)', scheduledDate: '2026-07-14', status: 'done', scores: { clarity: 5, usefulness: 4, delivery: 5, visuals: 4 }, createdAt: '2026-07-10T09:00:00Z' },
-      { id: 'pr2', workerId: 'w6', topic: 'Prompt Engineering: Specificity & Constraints', scheduledDate: '2026-07-16', status: 'upcoming', scores: null, createdAt: '2026-07-10T10:00:00Z' },
-      { id: 'pr3', workerId: 'w9', topic: 'AI Hallucinations — Why & How to Catch Them', scheduledDate: '2026-07-18', status: 'upcoming', scores: null, createdAt: '2026-07-10T11:00:00Z' }
+      { id: 'pr1', workerId: 'w4', topic: 'The Anatomy of a Great Prompt — Role, context, constraints, format, examples: the 5 ingredients', scheduledDate: '2026-07-14', status: 'done', scores: { clarity: 5, usefulness: 4, delivery: 5, visuals: 4 }, createdAt: '2026-07-10T09:00:00Z' },
+      { id: 'pr2', workerId: 'w6', topic: 'Why Does the Same Prompt Give Different Answers? — Temperature, randomness, and how to control AI output', scheduledDate: '2026-07-16', status: 'upcoming', scores: null, createdAt: '2026-07-10T10:00:00Z' },
+      { id: 'pr3', workerId: 'w9', topic: 'Spotting AI Hallucinations in Educational Content — Real examples, detection tricks, and prevention strategies', scheduledDate: '2026-07-18', status: 'upcoming', scores: null, createdAt: '2026-07-10T11:00:00Z' }
     ],
     appProjects: [
       { id: 'a1', name: 'Math Formula Cheat Sheet', description: 'Searchable formula library by grade & topic', workerId: 'w2', difficulty: 'easy', status: 'deployed', deployedUrl: null, createdAt: '2026-07-05T09:00:00Z' },

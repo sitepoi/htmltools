@@ -607,6 +607,57 @@ textarea.form-input { min-height: 80px; resize: vertical; }
 .portfolio-stat .ps-val { font-size: 24px; font-weight: 800; }
 .portfolio-stat .ps-lbl { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
 
+/* ── Sub-Tabs (within sections) ── */
+.sub-tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 2px solid var(--border); padding-bottom: 0; }
+.sub-tab {
+  padding: 8px 18px; border: none; background: transparent; cursor: pointer;
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: var(--transition); font-family: inherit;
+}
+.sub-tab:hover { color: var(--text); }
+.sub-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* ── Topic Catalog ── */
+.topic-catalog { display: flex; flex-direction: column; gap: 14px; }
+.topic-cat-group { margin-bottom: 8px; }
+.topic-cat-title {
+  font-size: 13px; font-weight: 700; color: var(--accent);
+  padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.topic-item {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 6px;
+  display: flex; align-items: flex-start; gap: 12px;
+  transition: var(--transition); cursor: pointer;
+}
+.topic-item:hover { box-shadow: var(--shadow-md); border-color: var(--primary); }
+.topic-item .ti-num {
+  min-width: 28px; height: 28px; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12px;
+}
+.topic-item .ti-info { flex: 1; }
+.topic-item .ti-title { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.topic-item .ti-sub { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+
+/* ── Idea Catalog (App Builder) ── */
+.idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.idea-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow);
+  transition: var(--transition); cursor: pointer; display: flex; gap: 14px; align-items: flex-start;
+}
+.idea-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--primary); }
+.idea-card .ic-icon { font-size: 28px; min-width: 36px; text-align: center; }
+.idea-card .ic-info { flex: 1; }
+.idea-card .ic-name { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+.idea-card .ic-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 6px; }
+.idea-card .ic-meta { display: flex; gap: 8px; align-items: center; }
+.idea-card .ic-difficulty { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; text-transform: uppercase; }
+
 /* ── Persona Cards ── */
 .persona-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .persona-card {

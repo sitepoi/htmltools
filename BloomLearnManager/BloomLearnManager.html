@@ -171,11 +171,16 @@
         <div class="page-title">🎤 AI Concept Presentations</div>
         <div class="page-sub">Each team member presents one AI concept — learn by teaching!</div>
       </div>
-      <div class="toolbar">
+      <div class="sub-tabs" id="pres-subtabs">
+        <button class="sub-tab active" data-pres-tab="calendar">📅 Calendar</button>
+        <button class="sub-tab" data-pres-tab="catalog">📋 Topic Catalog (15)</button>
+      </div>
+      <div class="toolbar" id="pres-calendar-toolbar">
         <button class="btn btn-primary" id="btn-add-presentation">+ Schedule Presentation</button>
         <select class="form-input form-inline" id="filter-pres-worker"><option value="">All Presenters</option></select>
       </div>
       <div class="pres-calendar" id="pres-calendar"></div>
+      <div class="topic-catalog" id="pres-catalog" style="display:none;"></div>
     </section>
 
     <!-- APP BUILDER -->
@@ -184,7 +189,11 @@
         <div class="page-title">🛠️ App Builder</div>
         <div class="page-sub">Vibe-coding projects — build real HTML tools while learning the basics</div>
       </div>
-      <div class="toolbar">
+      <div class="sub-tabs" id="apps-subtabs">
+        <button class="sub-tab active" data-app-tab="projects">🛠️ Projects</button>
+        <button class="sub-tab" data-app-tab="catalog">💡 Idea Catalog (35)</button>
+      </div>
+      <div class="toolbar" id="apps-projects-toolbar">
         <button class="btn btn-primary" id="btn-add-app">+ New App Project</button>
         <select class="form-input form-inline" id="filter-app-status">
           <option value="">All Status</option>
@@ -195,6 +204,7 @@
         </select>
       </div>
       <div class="apps-grid" id="apps-grid"></div>
+      <div class="topic-catalog" id="apps-catalog" style="display:none;"></div>
     </section>
 
     <!-- BOOK BUILDER -->

@@ -177,7 +177,7 @@ body { padding-top: 34px !important; margin: 0; }
   container.innerHTML = EMBEDDED_HTML;
 
   window.tool._sampleData = {
-    personal: { fullName: "Jordan Taylor", sin: "123-456-789", dob: "1995-04-15" },
+    personal: { fullName: "Jordan Taylor", sin: "123-456-789", dob: "1995-04-15", startDate: "2026-07-01" },
     contact: { address: "456 Oak Avenue, Unit 302", city: "Vancouver", province: "BC", postalCode: "V6B 1A1", country: "Canada", phone: "604-555-0199", email: "jordan@example.org", emergencyContact: "Casey Taylor", emergencyPhone: "604-555-0188" },
     banking: { bankName: "TD Canada Trust", transitNumber: "12345", institutionNumber: "004", accountNumber: "9876543210" },
     documents: { photoId: null, templateDocs: {}, personalAgreements: [], otherDocs: [] },
