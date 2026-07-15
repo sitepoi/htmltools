@@ -1606,22 +1606,21 @@ function renderPresCatalog() {
   var takenTopics = DB.presentations.map(function(p) { return p.topic; });
   var html = '';
 
-  // Group A: Understanding AI
   var catATopics = AI_PRESENTATION_TOPICS.slice(0, 5);
   var catBTopics = AI_PRESENTATION_TOPICS.slice(5, 10);
   var catCTopics = AI_PRESENTATION_TOPICS.slice(10, 15);
 
   var categories = [
-    { id: 'A', label: '🧠 Category A: Understanding AI — How It Actually Works', topics: catATopics, desc: 'Demystify the black box. These topics explain what is really happening inside AI.' },
-    { id: 'B', label: '✍️ Category B: Better Prompting — Skills That Level Up Your Work', topics: catBTopics, desc: 'Immediately practical. Every topic teaches a technique you can use the same day.' },
-    { id: 'C', label: '🚀 Category C: Working Smarter — Beyond Basic Prompting', topics: catCTopics, desc: 'Strategic thinking about AI — not just using it, but mastering it.' }
+    { id: 'A', icon: '🧠', label: 'Category A: Understanding AI — How It Actually Works', topics: catATopics, desc: 'Demystify the black box. Understand what really happens inside AI so you can control it better.' },
+    { id: 'B', icon: '✍️', label: 'Category B: Better Prompting — Skills That Level Up Your Work', topics: catBTopics, desc: 'Immediately practical techniques. Every topic teaches something you can use the same day.' },
+    { id: 'C', icon: '🚀', label: 'Category C: Working Smarter — Beyond Basic Prompting', topics: catCTopics, desc: 'Strategic thinking about AI. Not just using it — mastering it.' }
   ];
 
   var globalIdx = 0;
   categories.forEach(function(cat) {
     html += '<div class="pres-cat-section">';
-    html += '<div class="pres-cat-header"><span class="pch-icon">' + cat.label.charAt(0) + '</span>' + cat.label + '</div>';
-    html += '<div style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">' + cat.desc + '</div>';
+    html += '<div class="pres-cat-header">' + cat.icon + ' ' + cat.label + '</div>';
+    html += '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">' + cat.desc + '</div>';
     cat.topics.forEach(function(topic) {
       globalIdx++;
       var isTaken = takenTopics.indexOf(topic) !== -1;
@@ -1633,13 +1632,21 @@ function renderPresCatalog() {
           takenBy = w ? w.name : 'Someone';
         }
       }
-      html += '<div class="pres-topic-card" onclick="quickSchedulePres(\'' + esc(topic.replace(/'/g, "\\'")) + '\')">' +
+      var titlePart = topic.split(' — ')[0];
+      var subPart = topic.split(' — ')[1] || '';
+
+      html += '<div class="pres-topic-card">' +
         '<div class="ptc-num">' + globalIdx + '</div>' +
         '<div class="ptc-info">' +
-          '<div class="ptc-title">' + esc(topic.split(' — ')[0]) + '</div>' +
-          '<div class="ptc-sub">' + esc(topic.split(' — ')[1] || '') + '</div>' +
+          '<div class="ptc-title">' + esc(titlePart) + '</div>' +
+          '<div class="ptc-sub">' + esc(subPart) + '</div>' +
         '</div>' +
-        '<span class="ptc-status ' + (isTaken ? 'ptc-taken' : 'ptc-free') + '">' + (isTaken ? '📌 ' + takenBy : '✅ Available') + '</span>' +
+        '<div class="ptc-actions">' +
+          '<span class="ptc-status ' + (isTaken ? 'ptc-taken' : 'ptc-free') + '">' + (isTaken ? '📌 ' + takenBy : '✅ Available') + '</span>' +
+          (isTaken
+            ? '<button class="ptc-schedule-btn" disabled title="Already taken by ' + esc(takenBy) + '">Taken</button>'
+            : '<button class="ptc-schedule-btn" onclick="quickSchedulePres(\'' + esc(topic.replace(/'/g, "\\'")) + '\')">+ Schedule This</button>') +
+        '</div>' +
       '</div>';
     });
     html += '</div>';

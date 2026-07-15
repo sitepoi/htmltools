@@ -80,6 +80,16 @@ body { padding-top: 28px !important; margin: 0; }
     resize: function() {},
     declareOutput: function() {},
     declareParams: function() {},
+    reportMissingParams: function(missing, msg) { console.log('[reportMissingParams]', msg, missing); },
+    openUrl: function(url) { window.open(url, '_blank'); },
+    requestExportPdf: function(opts, cb) { cb('CMS PDF export not available in test harness', null); },
+    requestUpload: function(accept, cb) { cb('Upload not available in test harness (requires CMS)', null); },
+    requestFileContent: function(url, cb) { cb('File content extraction not available in test harness', null); },
+    requestAI: function(prompt, context, cb) { cb('AI not available in test harness', null); },
+    requestSendEmail: function(opts, cb) { cb('Email not available in test harness', null); },
+    requestObjects: function(action, params, cb) { cb('CRUD not available in test harness', null); },
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function(cb) { },
     onReady: function(cb) { load(); cb(_value, _fields); },
     _loadSampleData: function(data) { save(data); window.location.reload(); },
     _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
@@ -101,6 +111,7 @@ const EMBEDDED_HTML = `<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css"
 <div class="toolbar no-print" id="toolbar">
 	<div class="brand">Employment Agreement <span class="status-badge draft" id="statusBadge">DRAFT</span></div>
 	<div class="tool-actions">
+		<button onclick="uploadLogo()" title="Upload a logo image to the CMS">&#128247; Logo</button>
 		<button onclick="fillDemo()">&#128203; Fill Demo</button>
 		<button onclick="clearAll()">&#10005; Clear All</button>
 		<button onclick="pasteJSON()">&#128203; Paste JSON</button>
@@ -258,6 +269,7 @@ var SAMPLE_DATA = {
   empSignDate: "2026-06-15",
   eeSignName: "Jane Doe",
   eeSignDate: "2026-07-01",
+  _logoUrl: "",
   _compPeriod: "annually",
   rt_roleOverview: "<p>The <strong>Director of Community Programs</strong> is a key leadership role responsible for developing, implementing, and overseeing all community-based programs and services delivered by CentreCanada. This position ensures that programs align with the organization's mission, meet community needs, and comply with all regulatory and funding requirements.</p>",
   rt_probationNote: "<p>The first <strong>3 months</strong> of employment shall constitute a probationary period. During this period, either Party may terminate this Agreement by providing <strong>1 week</strong> of written notice. Upon successful completion of employment, the Employee shall be confirmed in writing.</p>",

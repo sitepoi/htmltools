@@ -29,6 +29,53 @@ var COMPANY_DEFAULTS = {
 	companyProvince: COMPANY.province
 };
 
+/* ── Declare tool parameters for CMS admin configuration ── */
+try {
+	tool.declareParams([
+		{ name: 'companyName', label: 'Company Name', type: 'text', default: 'CentreCanada Newcomer Services Society', severity: 'mandatory', hint: 'Legal name of the organization as it should appear on agreements' },
+		{ name: 'companyAddress', label: 'Company Address', type: 'text', default: '93 6th Street, New Westminster, BC', severity: 'mandatory', hint: 'Main business address' },
+		{ name: 'regLabel', label: 'Registration Label', type: 'text', default: 'CRA #', severity: 'optional', hint: 'Label for the registration number field (e.g. CRA #, BN #, Registration #)' },
+		{ name: 'regNumber', label: 'Registration Number', type: 'text', default: '76991 3880 RR0001', severity: 'optional', hint: 'Charity or business registration number' },
+		{ name: 'website', label: 'Website', type: 'text', default: 'centrecanada.org', severity: 'optional', hint: 'Company website URL (without https://)' },
+		{ name: 'logoPath', label: 'Logo Image URL', type: 'text', default: '', severity: 'goodToHave', hint: 'URL to the company logo image. Upload a logo using the \'Upload Logo\' button in the toolbar, then copy the URL here. Also used as the watermark/filigree background.' },
+		{ name: 'province', label: 'Province / Territory', type: 'text', default: 'British Columbia', severity: 'mandatory', hint: 'Province or territory whose employment standards govern this agreement' },
+		{ name: 'provinceCode', label: 'Province Code', type: 'text', default: 'BC', severity: 'optional', hint: 'Two-letter province/territory code (e.g. BC, ON, AB, QC)' },
+		{ name: 'typeLabel', label: 'Organization Type', type: 'text', default: 'Registered Canadian Charity', severity: 'optional', hint: 'e.g. Registered Canadian Charity, Incorporated Business, Non-Profit Society' }
+	]);
+} catch (e) { console.log('declareParams not available'); }
+
+/* ── Declare output schema ── */
+try {
+	tool.declareOutput({
+		type: 'object',
+		description: 'Employment agreement data including all fillable fields, rich text content, signatures (base64 PNG), and compensation period',
+		properties: {
+			agreementDate: { type: 'string', description: 'ISO date of agreement execution' },
+			docRef: { type: 'string', description: 'Internal document reference number' },
+			companyName: { type: 'string' }, companyAddress: { type: 'string' },
+			companyRegLabel: { type: 'string' }, companyRegNumber: { type: 'string' },
+			companyWebsite: { type: 'string' }, companyTypeLabel: { type: 'string' },
+			companyProvince: { type: 'string' },
+			employeeName: { type: 'string' }, employeeAddress: { type: 'string' }, employeeCity: { type: 'string' },
+			positionTitle: { type: 'string' }, employmentType: { type: 'string' }, reportsTo: { type: 'string' },
+			startDate: { type: 'string' }, probationMonths: { type: 'string' },
+			workLocation: { type: 'string' }, travelReqs: { type: 'string' },
+			salaryAmount: { type: 'string' }, compDetails: { type: 'string' }, payFrequency: { type: 'string' },
+			salaryReview: { type: 'string' }, expensePolicy: { type: 'string' },
+			empSignName: { type: 'string' }, empSignTitle: { type: 'string' }, empSignDate: { type: 'string' },
+			eeSignName: { type: 'string' }, eeSignDate: { type: 'string' },
+			_compPeriod: { type: 'string', enum: ['hourly','weekly','biweekly','monthly','annually'] },
+			_signatures: { type: 'object', description: 'Base64-encoded PNG signatures keyed by canvas element ID (sigEmployer, sigEmployee, initialsEmployer, initialsEmployee)' },
+			rt_roleOverview: { type: 'string', description: 'Rich text HTML for role overview' },
+			rt_probationNote: { type: 'string' }, rt_dutiesBlock: { type: 'string' },
+			rt_locationHoursBlock: { type: 'string' }, rt_benefitsBlock: { type: 'string' },
+			rt_vacationBlock: { type: 'string' }, rt_confidentialityBlock: { type: 'string' },
+			rt_policiesBlock: { type: 'string' }, rt_terminationBlock: { type: 'string' },
+			rt_generalBlock: { type: 'string' }
+		}
+	});
+} catch (e) { console.log('declareOutput not available'); }
+
 /* ═══════════════════════════════════════════════
    AGREEMENT DATA — All content lives here
    ═══════════════════════════════════════════════ */
@@ -159,9 +206,11 @@ function renderDocument() {
 	_rendering = true;
 	var page = document.getElementById('agreementPage');
 	var C = COMPANY, m = AGREEMENT.meta;
+	// Logo: per-document upload > JSON paste > tool param
+	var logoUrl = fieldValues._logoUrl || fieldValues.logoPath || C.logoPath;
 	var html = '<div class="watermark-layer"></div>';
 	html += '<div class="doc-header">';
-	html += '<img class="logo-img" src="' + C.logoPath + '" alt="Logo" onerror="this.style.display=\'none\'" onload="this.style.display=\'block\'">';
+	html += '<img class="logo-img" src="' + logoUrl + '" alt="Logo" onerror="this.style.display=\'none\'" onload="this.style.display=\'block\'">';
 	html += '<div class="org-name">' + inputHTML('companyName', 'text', { placeholder: 'Company Name', hint: 'Legal name of the organization', wide: true }) + '</div>';
 	html += '<div class="org-sub">' + inputHTML('companyTypeLabel', 'text', { placeholder: 'Registered Canadian Charity', hint: 'e.g. Registered Canadian Charity, Incorporated Business' }) + ' &bull; ' + inputHTML('companyRegLabel', 'text', { placeholder: 'CRA #' }) + inputHTML('companyRegNumber', 'text', { placeholder: 'Registration Number', hint: 'CRA charity number or business registration number' }) + '</div>';
 	html += '<div class="org-sub">' + inputHTML('companyAddress', 'text', { placeholder: 'Address', hint: 'Main business address', wide: true }) + ' &bull; ' + inputHTML('companyWebsite', 'text', { placeholder: 'website.com', hint: 'Company website URL' }) + '</div>';
@@ -228,12 +277,17 @@ function renderDocument() {
 
 	// Summary
 	html += '<div class="page-break-before" style="page-break-before:always"></div><section id="sec-summary"><h2>Agreement Summary</h2><table class="detail-table summary-table">';
-	AGREEMENT.summaryFields.forEach(function (f) { var val = fieldValues[f.source] || ''; if (f.prefix) val = f.prefix + val; if (f.suffix) val = val + f.suffix; html += '<tr><td>' + f.label + '</td><td class="sum-val" data-source="' + f.source + '" data-prefix="' + (f.prefix || '') + '" data-suffix="' + (f.suffix || '') + '">' + val + '</td></tr>'; });
+	AGREEMENT.summaryFields.forEach(function (f) { var val = fieldValues[f.source] || ''; if (f.prefix) val = f.prefix + val; if (f.suffix) val = val + f.suffix; if (f.source === 'salaryAmount' && val) val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year'); html += '<tr><td>' + f.label + '</td><td class="sum-val" data-source="' + f.source + '" data-prefix="' + (f.prefix || '') + '" data-suffix="' + (f.suffix || '') + '">' + val + '</td></tr>'; });
 	html += '</table></section>';
 
 	html += '<div class="doc-footer"><p>' + C.name + ' &bull; ' + C.regLabel + ' ' + C.regNumber + '</p><p>' + C.address + ' &bull; ' + C.website + '</p></div>';
 	html += '<div class="initials-line"><span class="initials-box">Employer Initials: <div class="initials-pad-wrap"><canvas id="initialsEmployer" width="200" height="60"></canvas><button class="initials-clear no-print" onclick="clearSignature(\'initialsEmployer\')">Clear</button></div></span><span class="initials-box">Employee Initials: <div class="initials-pad-wrap"><canvas id="initialsEmployee" width="200" height="60"></canvas><button class="initials-clear no-print" onclick="clearSignature(\'initialsEmployee\')">Clear</button></div></span></div>';
 	page.innerHTML = html;
+	// Dynamically update watermark background to use the configured logo
+	var wm = page.querySelector('.watermark-layer');
+	if (wm && logoUrl && logoUrl !== './logo.png') {
+		wm.style.backgroundImage = 'url(' + logoUrl + ')';
+	}
 	updateSummary();
 	updateFieldHints();
 	if (!_suppressResize) safeResize();
@@ -252,6 +306,7 @@ function updateSummary() {
 		var src = td.dataset.source, val = fieldValues[src] || '';
 		if (td.dataset.prefix) val = td.dataset.prefix + val;
 		if (td.dataset.suffix) val = val + td.dataset.suffix;
+		if (src === 'salaryAmount' && val) val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year');
 		td.textContent = val;
 	});
 }
@@ -294,7 +349,32 @@ function openDrawer(el) {
 function closeDrawer() { document.getElementById('drawerBackdrop').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); if (activeRichTextEl) { activeRichTextEl.classList.remove('editing'); activeRichTextEl = null; } }
 
 /* ── Compensation ──────────────────────────── */
-function setCompPeriod(period) { compPeriod = period; var labels = { hourly: '/ hour', weekly: '/ week', biweekly: '/ bi-week', monthly: '/ month', annually: '/ year' }; var el = document.querySelector('.comp-period-label'); if (el) el.textContent = labels[period] || '/ year'; document.querySelectorAll('.comp-selector button').forEach(function (b) { b.classList.remove('active'); }); var t = document.querySelector('.comp-selector button[onclick*="' + period + '"]'); if (t) t.classList.add('active'); saveAll(); }
+// Conversion multipliers TO annual from each period
+var PERIOD_TO_ANNUAL = { hourly: 2080, weekly: 52, biweekly: 26, monthly: 12, annually: 1 };
+var PERIOD_LABELS = { hourly: '/ hour', weekly: '/ week', biweekly: '/ bi-week', monthly: '/ month', annually: '/ year' };
+
+function setCompPeriod(period) {
+	// Convert current salary to the new period before switching
+	var curSalary = parseFloat(fieldValues.salaryAmount || '0');
+	if (curSalary > 0 && compPeriod !== period) {
+		// Step 1: convert current amount → annual equivalent
+		var annual = curSalary * (PERIOD_TO_ANNUAL[compPeriod] || 1);
+		// Step 2: convert annual → new period amount
+		var toMultiplier = PERIOD_TO_ANNUAL[period] || 1;
+		var newSalary = toMultiplier === 0 ? annual : Math.round(annual / toMultiplier);
+		fieldValues.salaryAmount = String(newSalary);
+		// Update the displayed input value
+		var inp = document.querySelector('.doc-input[data-key="salaryAmount"]');
+		if (inp) inp.value = newSalary;
+	}
+	compPeriod = period;
+	var el = document.querySelector('.comp-period-label');
+	if (el) el.textContent = PERIOD_LABELS[period] || '/ year';
+	document.querySelectorAll('.comp-selector button').forEach(function (b) { b.classList.remove('active'); });
+	var t = document.querySelector('.comp-selector button[onclick*="' + period + '"]');
+	if (t) t.classList.add('active');
+	saveAll();
+}
 
 /* ── Signatures ────────────────────────────── */
 function clearSignature(canvasId) { var c = document.getElementById(canvasId); if (!c) return; c.getContext('2d').clearRect(0, 0, c.width, c.height); saveAll(); notify('Signature cleared.', 'info'); }
@@ -312,7 +392,9 @@ function loadAll(data) {
 
 	fieldValues = newData;
 	if (!data || Object.keys(data).length === 0) { Object.keys(COMPANY_DEFAULTS).forEach(function (k) { if (!fieldValues[k]) fieldValues[k] = COMPANY_DEFAULTS[k]; }); }
-	if (data && data._compPeriod) { compPeriod = data._compPeriod; } else if (data && data.payFrequency) { var pf = data.payFrequency.toLowerCase(); compPeriod = pf.indexOf('month') >= 0 ? 'monthly' : pf.indexOf('week') >= 0 && pf.indexOf('bi') >= 0 ? 'biweekly' : pf.indexOf('week') >= 0 ? 'weekly' : pf.indexOf('hour') >= 0 ? 'hourly' : 'annually'; }
+	// Only use explicit _compPeriod from data; never infer from payFrequency
+	// (payFrequency is how often paid, not what period the salary number represents)
+	if (data && data._compPeriod) { compPeriod = data._compPeriod; }
 	_suppressResize = true;
 	renderDocument();
 	_suppressResize = false;
@@ -345,7 +427,38 @@ function fillDemo() { showConfirm('Fill Demo Data', 'This will overwrite all cur
 function clearAll() { showConfirm('Clear All Data', 'This will permanently delete all entered data, signatures, and content. This cannot be undone. Are you sure?', function () { fieldValues = {}; renderDocument(); clearSignature('sigEmployer'); clearSignature('sigEmployee'); clearSignature('initialsEmployer'); clearSignature('initialsEmployee'); tool.setValue(null); setTimeout(function () { initSignaturePad('sigEmployer'); initSignaturePad('sigEmployee'); initSignaturePad('initialsEmployer'); initSignaturePad('initialsEmployee'); updateStatusBadge(); bindEvents(); }, 150); notify('All data cleared.', 'warning'); }); }
 
 /* ── PDF Export ────────────────────────────── */
-function exportToPDF() { var wasHigh = highlightsOn; if (wasHigh) toggleHighlights(); var overlay = document.getElementById('exportOverlay'); overlay.classList.add('active'); setTimeout(function () { overlay.classList.remove('active'); window.print(); setTimeout(function () { if (wasHigh) toggleHighlights(); }, 600); }, 150); }
+function exportToPDF() {
+	var wasHigh = highlightsOn;
+	if (wasHigh) toggleHighlights();
+	var overlay = document.getElementById('exportOverlay');
+
+	// Try CMS PDF export first (creates HTML file in CMS storage, then user prints)
+	if (typeof tool !== 'undefined' && tool.requestExportPdf) {
+		overlay.classList.add('active');
+		var fname = 'employment-agreement-' + (fieldValues.employeeName || 'draft').replace(/\s+/g, '-').toLowerCase();
+		tool.requestExportPdf({ filename: fname }, function (err, file) {
+			overlay.classList.remove('active');
+			if (wasHigh) toggleHighlights();
+			if (err) {
+				notify('CMS PDF export unavailable — opening browser print dialog instead.', 'warning');
+				overlay.classList.add('active');
+				setTimeout(function () { overlay.classList.remove('active'); window.print(); }, 150);
+			} else {
+				notify('Agreement exported! Opening in a new tab for printing.', 'success');
+				if (tool.openUrl) tool.openUrl(file.url);
+				else window.open(file.url, '_blank');
+			}
+		});
+	} else {
+		// Fallback: browser print dialog directly
+		overlay.classList.add('active');
+		setTimeout(function () {
+			overlay.classList.remove('active');
+			window.print();
+			setTimeout(function () { if (wasHigh) toggleHighlights(); }, 600);
+		}, 150);
+	}
+}
 
 function notify(msg, sev) { if (typeof tool !== 'undefined' && tool.notify) tool.notify(msg, sev); else console.log('[' + (sev || 'info') + '] ' + msg); }
 
@@ -356,6 +469,28 @@ function bindEvents() { if (eventsBound) return; eventsBound = true; document.ad
 try {
 	tool.onReady(function (val, fields) {
 		try {
+			// Report missing mandatory parameters to CMS admin
+			var missing = [];
+			var mandatoryParams = [
+				{ name: 'companyName', label: 'Company Name', hint: 'Legal name of the organization' },
+				{ name: 'companyAddress', label: 'Company Address', hint: 'Main business address' },
+				{ name: 'province', label: 'Province / Territory', hint: 'Province whose employment laws govern this agreement' }
+			];
+			mandatoryParams.forEach(function (p) {
+				var v = tool.param(p.name, '');
+				if (!v) {
+					missing.push({
+						name: p.name, label: p.label, type: 'text',
+						hint: p.hint,
+						reason: 'Required for generating valid employment agreements with correct organization details and governing law.',
+						severity: 'mandatory'
+					});
+				}
+			});
+			if (missing.length > 0) {
+				try { tool.reportMissingParams(missing, 'This tool needs company parameters configured before agreements can be generated. Click "Configure" below to set them.'); } catch (e) {}
+			}
+
 			var data = val;
 			if (!data || Object.keys(data).length === 0) {
 				if (window._pendingJSON) { data = window._pendingJSON; delete window._pendingJSON; }
@@ -373,7 +508,7 @@ try {
 	document.getElementById('agreementPage').innerHTML = '<div style=\"padding:40px;color:red;font-family:sans-serif;\"><h2>Init Error</h2><pre>' + e.message + '</pre></div>';
 }
 
-window.fillDemo = fillDemo; window.clearAll = clearAll; window.toggleHighlights = toggleHighlights; window.exportToPDF = exportToPDF; window.clearSignature = clearSignature; window.closeDrawer = closeDrawer; window.applyDrawerContent = applyDrawerContent; window.setCompPeriod = setCompPeriod; window.openDrawer = openDrawer; window.showHelp = showHelp; window.pasteJSON = pasteJSON; window.applyPastedJSON = applyPastedJSON;
+window.fillDemo = fillDemo; window.clearAll = clearAll; window.toggleHighlights = toggleHighlights; window.exportToPDF = exportToPDF; window.clearSignature = clearSignature; window.closeDrawer = closeDrawer; window.applyDrawerContent = applyDrawerContent; window.setCompPeriod = setCompPeriod; window.openDrawer = openDrawer; window.showHelp = showHelp; window.pasteJSON = pasteJSON; window.applyPastedJSON = applyPastedJSON; window.uploadLogo = uploadLogo;
 
 /* ── Paste JSON ────────────────────────────── */
 function pasteJSON() {
@@ -386,8 +521,21 @@ function applyPastedJSON() {
 	try {
 		var data = JSON.parse(raw);
 		fieldValues = data;
+
+		// Override COMPANY (tool params) with values from pasted JSON
+		// JSON values take priority over admin-configured tool parameters
+		if (data.logoPath) COMPANY.logoPath = data.logoPath;
+		if (data.companyName) COMPANY.name = data.companyName;
+		if (data.companyAddress) COMPANY.address = data.companyAddress;
+		if (data.companyRegLabel) COMPANY.regLabel = data.companyRegLabel;
+		if (data.companyRegNumber) COMPANY.regNumber = data.companyRegNumber;
+		if (data.companyWebsite) COMPANY.website = data.companyWebsite;
+		if (data.companyProvince) COMPANY.province = data.companyProvince;
+		if (data.companyProvinceCode) COMPANY.provinceCode = data.companyProvinceCode;
+		if (data.companyTypeLabel) COMPANY.typeLabel = data.companyTypeLabel;
+
+		// Only use explicit _compPeriod from data; never infer from payFrequency
 		if (data._compPeriod) compPeriod = data._compPeriod;
-		else if (data.payFrequency) { var pf = data.payFrequency.toLowerCase(); compPeriod = pf.indexOf('month') >= 0 ? 'monthly' : pf.indexOf('week') >= 0 && pf.indexOf('bi') >= 0 ? 'biweekly' : pf.indexOf('week') >= 0 ? 'weekly' : pf.indexOf('hour') >= 0 ? 'hourly' : 'annually'; }
 		renderDocument();
 		setTimeout(function () {
 			initSignaturePad('sigEmployer'); initSignaturePad('sigEmployee');
@@ -403,10 +551,37 @@ function applyPastedJSON() {
 		}, 150);
 		document.getElementById('pasteOverlay').classList.remove('open');
 		document.getElementById('pasteTextarea').value = '';
-		notify('JSON applied successfully.', 'success');
+		notify('JSON applied successfully. Company fields and logo overridden from JSON.', 'success');
 	} catch (e) {
 		notify('Invalid JSON: ' + e.message, 'error');
 	}
+}
+
+/* ── Logo Upload ───────────────────────────── */
+function uploadLogo() {
+	if (typeof tool === 'undefined' || !tool.requestUpload) {
+		notify('Logo upload is only available inside the CMS. Use the logoPath parameter to set a logo URL.', 'warning');
+		return;
+	}
+	tool.requestUpload('image/*', function (err, file) {
+		if (err) { notify('Upload failed: ' + err, 'error'); return; }
+		// Show logo immediately on the page
+		var logoImg = document.querySelector('.logo-img');
+		if (logoImg) { logoImg.src = file.url; logoImg.style.display = 'block'; }
+		// Copy URL to clipboard for easy param configuration
+		var copied = false;
+		if (navigator.clipboard && navigator.clipboard.writeText) {
+			navigator.clipboard.writeText(file.url).then(function () { copied = true; })
+				.catch(function () {});
+		}
+		var msg = 'Logo uploaded! URL: ' + file.url;
+		if (copied) msg += ' (copied to clipboard)';
+		msg += ' — Paste this into the logoPath parameter in the CMS Tool Settings panel.';
+		notify(msg, 'success');
+		// Also save in field values so it persists with the document
+		fieldValues._logoUrl = file.url;
+		saveAll();
+	});
 }
 
 // Check for auto-loaded JSON from file
