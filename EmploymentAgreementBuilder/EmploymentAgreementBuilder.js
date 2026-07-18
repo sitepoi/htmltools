@@ -178,7 +178,7 @@ var AGREEMENT = {
 /* ═══════════════════════════════════════════════
    RENDER ENGINE + INTERACTIONS
    ═══════════════════════════════════════════════ */
-var quill = null, activeRichTextEl = null, highlightsOn = true, readOnly = false, compPeriod = 'annually', fieldValues = {}, eventsBound = false, _rendering = false, _resizeTimer = 0, _suppressResize = false;
+var quill = null, activeRichTextEl = null, highlightsOn = true, readOnly = false, compPeriod = 'annually', fieldValues = {}, eventsBound = false, _rendering = false, _resizeTimer = 0, _suppressResize = false, _suppressReload = false;
 
 /* ── Build an input field ──────────────────── */
 function inputHTML(key, type, opts) {
@@ -277,7 +277,7 @@ function renderDocument() {
 
 	// Summary
 	html += '<div class="page-break-before" style="page-break-before:always"></div><section id="sec-summary"><h2>Agreement Summary</h2><table class="detail-table summary-table">';
-	AGREEMENT.summaryFields.forEach(function (f) { var val = fieldValues[f.source] || ''; if (f.prefix) val = f.prefix + val; if (f.suffix) val = val + f.suffix; if (f.source === 'salaryAmount' && val) val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year'); html += '<tr><td>' + f.label + '</td><td class="sum-val" data-source="' + f.source + '" data-prefix="' + (f.prefix || '') + '" data-suffix="' + (f.suffix || '') + '">' + val + '</td></tr>'; });
+	AGREEMENT.summaryFields.forEach(function (f) { var val = fieldValues[f.source] || ''; if (f.prefix) val = f.prefix + val; if (f.suffix) val = val + f.suffix; if (f.source === 'salaryAmount' && val) { if (shouldAnnualize()) { var numSalary = parseFloat(fieldValues.salaryAmount || '0'); var annual = Math.round(numSalary * (PERIOD_TO_ANNUAL[compPeriod] || 1)); val = '$' + annual.toLocaleString('en-US') + ' CAD / year'; } else { val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year'); } } html += '<tr><td>' + f.label + '</td><td class="sum-val" data-source="' + f.source + '" data-prefix="' + (f.prefix || '') + '" data-suffix="' + (f.suffix || '') + '">' + val + '</td></tr>'; });
 	html += '</table></section>';
 
 	html += '<div class="doc-footer"><p>' + C.name + ' &bull; ' + C.regLabel + ' ' + C.regNumber + '</p><p>' + C.address + ' &bull; ' + C.website + '</p></div>';
@@ -306,7 +306,15 @@ function updateSummary() {
 		var src = td.dataset.source, val = fieldValues[src] || '';
 		if (td.dataset.prefix) val = td.dataset.prefix + val;
 		if (td.dataset.suffix) val = val + td.dataset.suffix;
-		if (src === 'salaryAmount' && val) val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year');
+		if (src === 'salaryAmount' && val) {
+			if (shouldAnnualize()) {
+				var numSalary = parseFloat(fieldValues.salaryAmount || '0');
+				var annual = Math.round(numSalary * (PERIOD_TO_ANNUAL[compPeriod] || 1));
+				val = '$' + annual.toLocaleString('en-US') + ' CAD / year';
+			} else {
+				val = val + ' ' + (PERIOD_LABELS[compPeriod] || '/ year');
+			}
+		}
 		td.textContent = val;
 	});
 }
@@ -348,6 +356,20 @@ function openDrawer(el) {
 }
 function closeDrawer() { document.getElementById('drawerBackdrop').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); if (activeRichTextEl) { activeRichTextEl.classList.remove('editing'); activeRichTextEl = null; } }
 
+/* ── Helper: should we annualize salary in summary? ── */
+function shouldAnnualize() {
+	var et = (fieldValues.employmentType || '').toLowerCase();
+	// Only full-time permanent roles get annualized — part-time hours vary too much
+	if (et.indexOf('full-time') === -1 && et.indexOf('full time') === -1) return false;
+	if (et.indexOf('permanent') === -1) return false;
+	// Exclude any type that contradicts permanent or full-time
+	var exclusions = ['contract', 'temporary', 'fixed-term', 'casual', 'intern', 'volunteer', 'freelance', 'part-time', 'part time'];
+	for (var i = 0; i < exclusions.length; i++) {
+		if (et.indexOf(exclusions[i]) !== -1) return false;
+	}
+	return true;
+}
+
 /* ── Compensation ──────────────────────────── */
 // Conversion multipliers TO annual from each period
 var PERIOD_TO_ANNUAL = { hourly: 2080, weekly: 52, biweekly: 26, monthly: 12, annually: 1 };
@@ -382,6 +404,10 @@ function isCanvasEmpty(canvas) { if (!canvas || canvas.width === 0 || canvas.hei
 
 /* ── Save / Load ───────────────────────────── */
 function loadAll(data) {
+	// Suppress re-render if this is an echo from our own saveAll() call
+	// Prevents the contenteditable blur/flicker loop during fast typing
+	if (_suppressReload) return;
+
 	// Skip if data is identical (prevents resize → onValueChange → render loop)
 	var newData = data || {};
 	var curCopy = JSON.parse(JSON.stringify(fieldValues || {}));
@@ -398,7 +424,7 @@ function loadAll(data) {
 	_suppressResize = true;
 	renderDocument();
 	_suppressResize = false;
-	setTimeout(function () { initSignaturePad('sigEmployer'); initSignaturePad('sigEmployee'); initSignaturePad('initialsEmployer'); initSignaturePad('initialsEmployee'); if (data && data._signatures) { Object.keys(data._signatures).forEach(function (id) { var c = document.getElementById(id); if (c) { var img = new Image(); img.onload = function () { c.getContext('2d').drawImage(img, 0, 0); }; img.src = data._signatures[id]; } }); } if (compPeriod) setCompPeriod(compPeriod); updateStatusBadge(); bindEvents(); }, 150);
+	setTimeout(function () { initSignaturePad('sigEmployer'); initSignaturePad('sigEmployee'); initSignaturePad('initialsEmployer'); initSignaturePad('initialsEmployee'); if (data && data._signatures) { Object.keys(data._signatures).forEach(function (id) { var c = document.getElementById(id); if (c) { var img = new Image(); img.onload = function () { var ctx = c.getContext('2d'); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(img, 0, 0, c.width, c.height); ctx.restore(); }; img.src = data._signatures[id]; } }); } if (compPeriod) setCompPeriod(compPeriod); updateStatusBadge(); bindEvents(); }, 150);
 }
 
 // Also need to restore contenteditable doc-input values after render
@@ -408,7 +434,7 @@ function loadAll(data) {
 function updateStatusBadge() { var badge = document.getElementById('statusBadge'); if (!badge) return; var inputs = document.querySelectorAll('.doc-input[data-key]'); var inlines = document.querySelectorAll('.tpl-inline[data-key]'); var rts = document.querySelectorAll('.tpl-richtext[data-key]'); var filled = 0, total = 0; inputs.forEach(function (el) { total++; var v = el.value !== undefined ? el.value : el.innerText.trim(); if (v) filled++; }); inlines.forEach(function (el) { total++; if (el.innerText.trim()) filled++; }); rts.forEach(function (el) { total++; if (el.innerHTML.trim() && el.innerHTML.indexOf('Click this block') === -1) filled++; }); if (filled === 0) { badge.textContent = 'DRAFT'; badge.className = 'status-badge draft'; } else if (filled < total) { badge.textContent = filled + '/' + total; badge.className = 'status-badge progress'; } else { badge.textContent = 'READY'; badge.className = 'status-badge ready'; } }
 
 /* ── Save ──────────────────────────────────── */
-function saveAll() { fieldValues = {}; document.querySelectorAll('.doc-input').forEach(function (el) { if (el.dataset.key) { fieldValues[el.dataset.key] = el.value !== undefined ? el.value : el.innerText.trim(); } }); document.querySelectorAll('.tpl-inline[data-key]').forEach(function (el) { fieldValues[el.dataset.key] = el.innerText.trim(); }); document.querySelectorAll('.tpl-richtext[data-key]').forEach(function (el) { fieldValues['rt_' + el.dataset.key] = el.innerHTML; }); fieldValues._compPeriod = compPeriod; var sigs = {}; var empC = document.getElementById('sigEmployer'); var eeC = document.getElementById('sigEmployee'); var iEC = document.getElementById('initialsEmployer'); var iEEC = document.getElementById('initialsEmployee'); if (empC && !isCanvasEmpty(empC)) sigs.sigEmployer = empC.toDataURL('image/png'); if (eeC && !isCanvasEmpty(eeC)) sigs.sigEmployee = eeC.toDataURL('image/png'); if (iEC && !isCanvasEmpty(iEC)) sigs.initialsEmployer = iEC.toDataURL('image/png'); if (iEEC && !isCanvasEmpty(iEEC)) sigs.initialsEmployee = iEEC.toDataURL('image/png'); fieldValues._signatures = sigs; tool.setValue(fieldValues); updateStatusBadge(); updateSummary(); updateFieldHints(); }
+function saveAll() { fieldValues = {}; document.querySelectorAll('.doc-input').forEach(function (el) { if (el.dataset.key) { fieldValues[el.dataset.key] = el.value !== undefined ? el.value : el.innerText.trim(); } }); document.querySelectorAll('.tpl-inline[data-key]').forEach(function (el) { fieldValues[el.dataset.key] = el.innerText.trim(); }); document.querySelectorAll('.tpl-richtext[data-key]').forEach(function (el) { fieldValues['rt_' + el.dataset.key] = el.innerHTML; }); fieldValues._compPeriod = compPeriod; var sigs = {}; var empC = document.getElementById('sigEmployer'); var eeC = document.getElementById('sigEmployee'); var iEC = document.getElementById('initialsEmployer'); var iEEC = document.getElementById('initialsEmployee'); if (empC && !isCanvasEmpty(empC)) sigs.sigEmployer = empC.toDataURL('image/png'); if (eeC && !isCanvasEmpty(eeC)) sigs.sigEmployee = eeC.toDataURL('image/png'); if (iEC && !isCanvasEmpty(iEC)) sigs.initialsEmployer = iEC.toDataURL('image/png'); if (iEEC && !isCanvasEmpty(iEEC)) sigs.initialsEmployee = iEEC.toDataURL('image/png'); fieldValues._signatures = sigs; _suppressReload = true; tool.setValue(fieldValues); updateStatusBadge(); updateSummary(); updateFieldHints(); setTimeout(function () { _suppressReload = false; }, 600); }
 
 /* ── Signature Pad Init ────────────────────── */
 function initSignaturePad(canvasId) { var canvas = document.getElementById(canvasId); if (!canvas) return; var ctx = canvas.getContext('2d'), drawing = false; var rect = canvas.getBoundingClientRect(); if (rect.width === 0 || rect.height === 0) return; canvas.width = rect.width * 2; canvas.height = rect.height * 2; ctx.scale(2, 2); ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; function gp(e) { var r = canvas.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top }; } function start(e) { if (readOnly) return; e.preventDefault(); drawing = true; var p = gp(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); } function move(e) { if (!drawing) return; e.preventDefault(); var p = gp(e); ctx.lineTo(p.x, p.y); ctx.stroke(); } function stop() { drawing = false; saveAll(); } canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', stop); canvas.addEventListener('mouseleave', stop); canvas.addEventListener('touchstart', start, { passive: false }); canvas.addEventListener('touchmove', move, { passive: false }); canvas.addEventListener('touchend', stop); }
@@ -432,31 +458,65 @@ function exportToPDF() {
 	if (wasHigh) toggleHighlights();
 	var overlay = document.getElementById('exportOverlay');
 
-	// Try CMS PDF export first (creates HTML file in CMS storage, then user prints)
+	// CMS sandbox blocks window.print() — must use CMS export channel
 	if (typeof tool !== 'undefined' && tool.requestExportPdf) {
 		overlay.classList.add('active');
 		var fname = 'employment-agreement-' + (fieldValues.employeeName || 'draft').replace(/\s+/g, '-').toLowerCase();
-		tool.requestExportPdf({ filename: fname }, function (err, file) {
+
+		// Clone the page and convert signature canvases to images
+		// (outerHTML captures <canvas> tags but not the pixel data drawn on them)
+		var pageEl = document.getElementById('agreementPage');
+		var clone = pageEl ? pageEl.cloneNode(true) : null;
+		if (clone) {
+			var canvases = clone.querySelectorAll('canvas');
+			for (var ci = 0; ci < canvases.length; ci++) {
+				var origCanvas = document.getElementById(canvases[ci].id);
+				if (origCanvas && !isCanvasEmpty(origCanvas)) {
+					var img = document.createElement('img');
+					img.src = origCanvas.toDataURL('image/png');
+					img.style.cssText = 'display:block;width:100%;height:96px;border:1.5px solid #999;border-radius:4px;';
+					if (canvases[ci].id.indexOf('initials') !== -1) {
+						img.style.cssText = 'display:block;width:200px;height:60px;border:1px solid #e5e2d9;border-radius:4px;';
+					}
+					canvases[ci].parentNode.replaceChild(img, canvases[ci]);
+				}
+			}
+		}
+		var pageHTML = clone ? clone.outerHTML : '<p>No agreement content</p>';
+
+		// Collect all accessible stylesheet CSS
+		var cssText = '';
+		try {
+			var sheets = document.styleSheets;
+			for (var i = 0; i < sheets.length; i++) {
+				try {
+					var rules = sheets[i].cssRules || sheets[i].rules;
+					if (rules) { for (var j = 0; j < rules.length; j++) { cssText += rules[j].cssText + '\n'; } }
+				} catch (e) { /* cross-origin sheet, skip */ }
+			}
+		} catch (e) {}
+
+		var fullHTML = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n';
+		fullHTML += '<title>Employment Agreement</title>\n';
+		fullHTML += '<style>\n' + cssText + '\n</style>\n';
+		fullHTML += '<style>\nbody{background:#fff;padding:40px;font-family:Georgia,serif;color:#1f2937;line-height:1.7;}\n';
+		fullHTML += '@media print{body{padding:0;}}\n</style>\n';
+		fullHTML += '</head>\n<body>\n' + pageHTML + '\n</body>\n</html>';
+
+		tool.requestExportPdf({ html: fullHTML, filename: fname }, function (err, file) {
 			overlay.classList.remove('active');
 			if (wasHigh) toggleHighlights();
 			if (err) {
-				notify('CMS PDF export unavailable — opening browser print dialog instead.', 'warning');
-				overlay.classList.add('active');
-				setTimeout(function () { overlay.classList.remove('active'); window.print(); }, 150);
+				notify('Export failed: ' + err + '. Ensure allowExportPdf is set to "yes" in the tool field settings.', 'error');
 			} else {
-				notify('Agreement exported! Opening in a new tab for printing.', 'success');
+				notify('Agreement exported! Opening in a new tab — use Ctrl+P there to print.', 'success');
 				if (tool.openUrl) tool.openUrl(file.url);
 				else window.open(file.url, '_blank');
 			}
 		});
 	} else {
-		// Fallback: browser print dialog directly
-		overlay.classList.add('active');
-		setTimeout(function () {
-			overlay.classList.remove('active');
-			window.print();
-			setTimeout(function () { if (wasHigh) toggleHighlights(); }, 600);
-		}, 150);
+		notify('Print/export is not available. The CMS admin must enable allowExportPdf in the tool field settings.', 'error');
+		if (wasHigh) toggleHighlights();
 	}
 }
 
@@ -542,7 +602,7 @@ function applyPastedJSON() {
 			if (data._signatures) {
 				Object.keys(data._signatures).forEach(function (id) {
 					var c = document.getElementById(id);
-					if (c) { var img = new Image(); img.onload = function () { c.getContext('2d').drawImage(img, 0, 0); }; img.src = data._signatures[id]; }
+					if (c) { var img = new Image(); img.onload = function () { var ctx = c.getContext('2d'); ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(img, 0, 0, c.width, c.height); ctx.restore(); }; img.src = data._signatures[id]; }
 				});
 			}
 			if (compPeriod) setCompPeriod(compPeriod);
