@@ -1,0 +1,534 @@
+<!-- CDN Dependencies -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<!-- ===== TAB NAVIGATION ===== -->
+<nav class="main-tabs" id="main-tabs">
+  <button type="button" class="main-tab active" data-tab="general">📋 General</button>
+  <button type="button" class="main-tab" data-tab="services">⚙️ Services</button>
+  <button type="button" class="main-tab" data-tab="taxpay">💰 Tax & Pay</button>
+  <button type="button" class="main-tab" data-tab="zones">🗺️ Zones</button>
+  <button type="button" class="main-tab" data-tab="menu">🍽️ Menu</button>
+  <button type="button" class="main-tab" data-tab="alerts">🔔 Alerts</button>
+  <button type="button" class="main-tab" data-tab="devices">📱 Devices</button>
+</nav>
+
+<!-- ===================================================================== -->
+<!-- TAB 1: GENERAL INFO -->
+<!-- ===================================================================== -->
+<section class="tab-panel active" data-tab="general">
+  <div class="tab-scroll">
+
+    <!-- Basic Info -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">🏪</span> Restaurant Information</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Restaurant Name *</label>
+            <input type="text" class="form-input" id="gen-restaurant-name" data-path="general_info.restaurant_name" placeholder="e.g. The Golden Fork">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Name</label>
+            <input type="text" class="form-input" id="gen-brand-name" data-path="general_info.brand_name" placeholder="e.g. Golden Fork Group">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cuisine Types</label>
+          <div class="cuisine-grid" id="gen-cuisine-grid"></div>
+          <div class="cuisine-custom-row">
+            <input type="text" class="form-input form-input-sm" id="gen-cuisine-custom" placeholder="+ Add custom cuisine type (press Enter)">
+            <button type="button" class="btn btn-sm btn-outline" id="gen-add-cuisine-btn">Add</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Logo Image</label>
+            <div class="logo-upload-row">
+              <input type="text" class="form-input" id="gen-logo-url" data-path="general_info.logo_url" placeholder="Upload logo →">
+              <button type="button" class="btn btn-sm btn-outline" id="gen-logo-upload-btn">📷 Upload</button>
+            </div>
+            <div class="logo-preview" id="gen-logo-preview"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Website URL</label>
+            <input type="url" class="form-input" id="gen-website" data-path="general_info.website_url" placeholder="https://www.example.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <div class="phone-input-row">
+              <input type="tel" class="form-input" id="gen-phone" data-path="general_info.phone" placeholder="+1 (555) 000-0000">
+              <button type="button" class="btn btn-sm btn-ghost btn-icon" id="gen-phone-add-btn" title="Add another phone">+</button>
+            </div>
+            <div class="additional-phones" id="gen-additional-phones"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="gen-email" data-path="general_info.email" placeholder="contact@restaurant.com">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Address & Location -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📍</span> Address &amp; Location</div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Street Address</label>
+          <input type="text" class="form-input" id="gen-address-street" data-path="general_info.address.street" placeholder="123 Main Street, Suite 400">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" class="form-input" id="gen-address-city" data-path="general_info.address.city" placeholder="City">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ZIP / Postal Code</label>
+            <input type="text" class="form-input" id="gen-address-zip" data-path="general_info.address.zip" placeholder="ZIP">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <select class="form-input" id="gen-address-country" data-path="general_info.address.country"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">State / Province</label>
+            <div id="gen-address-state-container"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Time Zone</label>
+            <select class="form-input" id="gen-timezone" data-path="general_info.timezone"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Coordinates</label>
+            <div class="coord-row">
+              <input type="number" class="form-input" id="gen-coord-lat" data-path="general_info.coordinates.lat" step="any" placeholder="Lat (40.7128)">
+              <input type="number" class="form-input" id="gen-coord-lng" data-path="general_info.coordinates.lng" step="any" placeholder="Lng (-74.006)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legal Data -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">⚖️</span> Legal Information</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Legal Entity Name</label>
+            <input type="text" class="form-input" id="gen-legal-entity" data-path="general_info.legal.entity_name" placeholder="e.g. Golden Fork LLC">
+          </div>
+          <div class="form-group">
+            <label class="form-label">VAT / TAX Number</label>
+            <input type="text" class="form-input" id="gen-legal-vat" data-path="general_info.legal.vat_tax_number" placeholder="Tax ID">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Legal Entity Type</label>
+            <select class="form-input" id="gen-legal-type" data-path="general_info.legal.entity_type">
+              <option value="">Not specified</option>
+              <option value="sole_proprietorship">Sole Proprietorship</option>
+              <option value="partnership">Partnership</option>
+              <option value="llc">LLC</option>
+              <option value="corporation">Corporation (Inc)</option>
+              <option value="non_profit">Non-Profit</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Status</label>
+            <select class="form-input" id="gen-legal-status" data-path="general_info.legal.account_status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+              <option value="Pending Activation">Pending Activation</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+          </div>
+        </div>
+        <div class="legal-advanced-toggle">
+          <button type="button" class="btn btn-sm btn-ghost" id="gen-legal-advanced-btn">
+            <span class="toggle-arrow">▶</span> Advanced Legal Fields
+          </button>
+          <span class="legal-jurisdiction-hint" id="gen-legal-jurisdiction-hint"></span>
+        </div>
+        <div class="legal-advanced-fields" id="gen-legal-advanced" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Registration Number</label>
+              <input type="text" class="form-input" id="gen-legal-regnum" data-path="general_info.legal.registration_number" placeholder="Company registration #">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data Protection Officer</label>
+              <input type="text" class="form-input" id="gen-legal-dpo" data-path="general_info.legal.dpo_name" placeholder="DPO name (required in EU/UK)">
+            </div>
+          </div>
+          <div class="legal-address-section">
+            <div class="legal-address-header">
+              <span class="form-label" style="margin-bottom:0;">Registered Legal Address</span>
+              <button type="button" class="btn btn-xs btn-ghost" id="gen-legal-copy-addr" title="Copy from restaurant address">📋 Copy from Restaurant</button>
+            </div>
+            <div class="form-row" style="margin-top:10px;">
+              <div class="form-group">
+                <label class="form-label">Street</label>
+                <input type="text" class="form-input form-input-sm" id="gen-legal-addr-street" data-path="general_info.legal.legal_address.street" placeholder="Street address">
+              </div>
+              <div class="form-group">
+                <label class="form-label">City</label>
+                <input type="text" class="form-input form-input-sm" id="gen-legal-addr-city" data-path="general_info.legal.legal_address.city" placeholder="City">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">State / Province</label>
+                <input type="text" class="form-input form-input-sm" id="gen-legal-addr-state" data-path="general_info.legal.legal_address.state" placeholder="State">
+              </div>
+              <div class="form-group">
+                <label class="form-label">ZIP / Postal Code</label>
+                <input type="text" class="form-input form-input-sm" id="gen-legal-addr-zip" data-path="general_info.legal.legal_address.zip" placeholder="ZIP">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Country</label>
+              <input type="text" class="form-input form-input-sm" id="gen-legal-addr-country" data-path="general_info.legal.legal_address.country" placeholder="Country">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 2: SERVICE SETTINGS -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="services">
+  <div class="tab-scroll">
+
+    <!-- Service Toggles -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">⚙️</span> Service Toggles</div>
+      <div class="card-body">
+        <div class="toggle-row">
+          <div class="toggle-info"><span class="toggle-label">Pickup Enabled</span><span class="toggle-desc">Allow customers to place pickup orders</span></div>
+          <label class="switch"><input type="checkbox" id="svc-pickup" data-path="service_settings.service_toggles.pickup_enabled"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><span class="toggle-label">Delivery Enabled</span><span class="toggle-desc">Allow customers to place delivery orders</span></div>
+          <label class="switch"><input type="checkbox" id="svc-delivery" data-path="service_settings.service_toggles.delivery_enabled"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><span class="toggle-label">On-Premise Dining</span><span class="toggle-desc">Enable in-restaurant ordering &amp; dining</span></div>
+          <label class="switch"><input type="checkbox" id="svc-onpremise" data-path="service_settings.service_toggles.on_premise_enabled"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row sub-toggle" id="svc-anon-row">
+          <div class="toggle-info"><span class="toggle-label">↳ Anonymous Ordering</span><span class="toggle-desc">Allow orders without account registration</span></div>
+          <label class="switch"><input type="checkbox" id="svc-anon" data-path="service_settings.service_toggles.anonymous_ordering_allowed"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><span class="toggle-label">Table Reservation</span><span class="toggle-desc">Enable table booking &amp; reservation management</span></div>
+          <label class="switch"><input type="checkbox" id="svc-reservation" data-path="service_settings.service_toggles.table_reservation_enabled"><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opening Hours -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-icon">🕐</span> Opening Hours
+        <span class="card-header-hint">Click a day to edit its hours</span>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div class="hours-table-wrap" id="svc-hours-table"></div>
+      </div>
+    </div>
+
+    <!-- Scheduled Orders -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📅</span> Scheduled Orders</div>
+      <div class="card-body">
+        <div class="toggle-row">
+          <div class="toggle-info"><span class="toggle-label">Enable Scheduled Orders</span><span class="toggle-desc">Allow customers to schedule orders in advance</span></div>
+          <label class="switch"><input type="checkbox" id="svc-sched-enabled" data-path="service_settings.scheduled_orders.enabled"><span class="slider"></span></label>
+        </div>
+        <div id="svc-sched-conditional" class="conditional-block">
+          <fieldset class="settings-group"><legend>Pickup Advance Settings</legend>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Min Advance (min)</label><input type="number" class="form-input" id="svc-pickup-min" data-path="service_settings.scheduled_orders.pickup_min_advance" min="0" value="30"></div>
+              <div class="form-group"><label class="form-label">Max Advance (min)</label><input type="number" class="form-input" id="svc-pickup-max" data-path="service_settings.scheduled_orders.pickup_max_advance" min="0" value="1440"></div>
+            </div>
+          </fieldset>
+          <fieldset class="settings-group"><legend>Delivery Advance Settings</legend>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Min Advance (min)</label><input type="number" class="form-input" id="svc-deliv-min" data-path="service_settings.scheduled_orders.delivery_min_advance" min="0" value="45"></div>
+              <div class="form-group"><label class="form-label">Max Advance (min)</label><input type="number" class="form-input" id="svc-deliv-max" data-path="service_settings.scheduled_orders.delivery_max_advance" min="0" value="1440"></div>
+            </div>
+          </fieldset>
+          <div class="form-group"><label class="form-label">Time Slot Interval</label>
+            <select class="form-input" id="svc-slot-interval" data-path="service_settings.scheduled_orders.time_slot_interval">
+              <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservation Settings -->
+    <div class="card" id="svc-reservation-card">
+      <div class="card-header"><span class="card-icon">🍽️</span> Reservation Settings</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Minimum Guests</label><input type="number" class="form-input" id="svc-res-min-guests" data-path="service_settings.reservation_settings.min_guests" min="1" placeholder="1" value="1"></div>
+          <div class="form-group"><label class="form-label">Maximum Guests</label><input type="number" class="form-input" id="svc-res-max-guests" data-path="service_settings.reservation_settings.max_guests" min="1" placeholder="10" value="10"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Minimum Advance (minutes)</label><input type="number" class="form-input" id="svc-res-min-adv" data-path="service_settings.reservation_settings.min_advance_minutes" min="0" placeholder="60" value="60"></div>
+          <div class="form-group"><label class="form-label">Maximum Advance (days)</label><input type="number" class="form-input" id="svc-res-max-adv" data-path="service_settings.reservation_settings.max_advance_days" min="1" placeholder="30" value="30"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Hold Table If Late (minutes)</label><input type="number" class="form-input" id="svc-res-late" data-path="service_settings.reservation_settings.late_hold_minutes" min="0" placeholder="15" value="15"></div>
+        <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Allow Pre-Order with Booking</span><span class="toggle-desc">Guests can order food when reserving a table</span></div><label class="switch"><input type="checkbox" id="svc-res-preorder" data-path="service_settings.reservation_settings.pre_order_enabled"><span class="slider"></span></label></div>
+        <div class="toggle-row"><div class="toggle-info"><span class="toggle-label">Deposit Required</span><span class="toggle-desc">Require a deposit to confirm the reservation</span></div><label class="switch"><input type="checkbox" id="svc-res-deposit" data-path="service_settings.reservation_settings.deposit_enabled"><span class="slider"></span></label></div>
+        <div class="form-group" id="svc-res-deposit-row" style="display:none;"><label class="form-label">Deposit Amount ($)</label><input type="number" class="form-input" id="svc-res-deposit-amt" data-path="service_settings.reservation_settings.deposit_amount" min="0" step="0.01" value="0"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 3: TAX & PAYMENTS -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="taxpay">
+  <div class="tab-scroll">
+
+    <!-- Taxation & Currency -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">💰</span> Taxation &amp; Currency</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Currency</label>
+            <select class="form-input" id="tax-currency" data-path="taxation_currency.currency">
+              <option value="USD">USD - US Dollar ($)</option><option value="EUR">EUR - Euro (€)</option><option value="GBP">GBP - British Pound (£)</option><option value="TRY">TRY - Turkish Lira (₺)</option><option value="AED">AED - UAE Dirham</option><option value="SAR">SAR - Saudi Riyal</option><option value="CAD">CAD - Canadian Dollar</option><option value="AUD">AUD - Australian Dollar</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Tax Name</label><input type="text" class="form-input" id="tax-name" data-path="taxation_currency.tax_name" placeholder="e.g. VAT" value="Tax"></div>
+        </div>
+        <fieldset class="settings-group"><legend>Tax Mode</legend>
+          <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="tax_mode" value="exclusive" data-path="taxation_currency.tax_mode" checked> Exclusive (added at checkout)</label>
+            <label class="radio-label"><input type="radio" name="tax_mode" value="inclusive" data-path="taxation_currency.tax_mode"> Inclusive (included in price)</label>
+          </div>
+        </fieldset>
+        <fieldset class="settings-group"><legend>Tax Categories</legend>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Pickup %</th><th>Delivery %</th><th>In-Restaurant %</th><th>0%</th><th></th></tr></thead><tbody id="tax-cat-tbody"></tbody></table></div>
+          <button type="button" class="btn btn-outline btn-sm" id="tax-add-cat">+ Add Category</button>
+        </fieldset>
+        <div class="form-group"><label class="form-label">Delivery Fee Tax Rate (%)</label><input type="number" class="form-input" id="tax-deliv-fee-rate" data-path="taxation_currency.delivery_fee_tax_rate" min="0" max="100" step="0.01" value="0"></div>
+      </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">💳</span> Payment Methods</div>
+      <div class="card-body">
+        <div class="payment-grid">
+          <div class="payment-header-row"><div class="payment-method-label"></div><div class="payment-col-header">Delivery</div><div class="payment-col-header">Pickup</div></div>
+          <div class="payment-row"><div class="payment-method-label">💵 Cash</div><label class="switch"><input type="checkbox" id="pay-cash-deliv" data-path="payment_methods.cash_delivery" checked><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-cash-pickup" data-path="payment_methods.cash_pickup" checked><span class="slider"></span></label></div>
+          <div class="payment-row"><div class="payment-method-label">💳 Card</div><label class="switch"><input type="checkbox" id="pay-card-deliv" data-path="payment_methods.card_delivery" checked><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-card-pickup" data-path="payment_methods.card_pickup" checked><span class="slider"></span></label></div>
+          <div class="payment-row"><div class="payment-method-label">📞 Call for Card</div><label class="switch"><input type="checkbox" id="pay-call-deliv" data-path="payment_methods.call_for_card_delivery"><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-call-pickup" data-path="payment_methods.call_for_card_pickup"><span class="slider"></span></label></div>
+        </div>
+        <div class="toggle-row" style="margin-top:16px;"><span class="toggle-label">Online Payment Gateway</span><label class="switch"><input type="checkbox" id="pay-online" data-path="payment_methods.online_payment"><span class="slider"></span></label></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 4: DELIVERY ZONES -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="zones">
+  <div class="zones-layout">
+    <div class="zones-map-side">
+      <div id="delivery-map"></div>
+      <div class="map-toolbar">
+        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-polygon">▭ Polygon</button>
+        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-circle">⊙ Circle</button>
+        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-rectangle">▬ Rectangle</button>
+        <button type="button" class="btn btn-sm btn-outline" id="zone-edit-layers">✎ Edit</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="zone-clear-drawing">✕ Clear</button>
+      </div>
+    </div>
+    <div class="zones-list-side">
+      <h4 class="panel-title">Delivery Zones</h4>
+      <div id="zones-list"></div>
+      <div class="zone-form" id="zone-form" style="display:none;">
+        <div class="form-group"><label class="form-label">Zone Name</label><input type="text" class="form-input" id="zone-name" placeholder="e.g. Downtown"></div>
+        <div class="form-group"><label class="form-label">Color</label><input type="color" class="form-input" id="zone-color" value="#4f46e5"></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Min Order ($)</label><input type="number" class="form-input" id="zone-min-order" min="0" step="0.01" value="0"></div><div class="form-group"><label class="form-label">Delivery Fee ($)</label><input type="number" class="form-input" id="zone-fee" min="0" step="0.01" value="0"></div></div>
+        <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="zone-save-btn">Save Zone</button><button type="button" class="btn btn-ghost btn-sm" id="zone-cancel-btn">Cancel</button></div>
+      </div>
+      <button type="button" class="btn btn-outline btn-sm btn-full" id="zone-add-btn">+ New Zone From Drawing</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 5: MENU -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="menu">
+  <div class="menu-layout" id="menu-layout">
+    <!-- Left Panel -->
+    <aside class="left-panel" id="left-panel">
+      <div class="panel-tabs">
+        <button type="button" class="panel-tab active" data-panel-tab="categories">📂 Categories</button>
+        <button type="button" class="panel-tab" data-panel-tab="modifier-groups">🧩 Modifiers</button>
+      </div>
+      <div class="panel-content active" data-panel-content="categories">
+        <div class="panel-header"><span class="panel-label">Categories</span><button type="button" class="btn btn-sm btn-primary" id="menu-add-cat">+ Add</button></div>
+        <div class="category-list" id="menu-cat-list"></div>
+        <div class="category-form" id="menu-cat-form" style="display:none;">
+          <input type="text" class="form-input form-input-sm" id="menu-cat-name" placeholder="Category name">
+          <div class="form-actions-row"><button type="button" class="btn btn-sm btn-primary" id="menu-cat-save">Save</button><button type="button" class="btn btn-sm btn-ghost" id="menu-cat-cancel">Cancel</button></div>
+        </div>
+      </div>
+      <div class="panel-content" data-panel-content="modifier-groups">
+        <div class="panel-header"><span class="panel-label">Modifier Groups</span><button type="button" class="btn btn-sm btn-primary" id="menu-mg-add">+ Add</button></div>
+        <div class="modgroup-list" id="menu-mg-list"></div>
+        <div class="modgroup-form" id="menu-mg-form" style="display:none;">
+          <div class="form-group"><label class="form-label">Group Name</label><input type="text" class="form-input form-input-sm" id="menu-mg-name" placeholder="e.g. Toppings"></div>
+          <div class="form-group"><label class="form-label">Selection Type</label><select class="form-input form-input-sm" id="menu-mg-type"><option value="single">Single Select</option><option value="multi">Multi Select</option></select></div>
+          <label class="checkbox-label"><input type="checkbox" id="menu-mg-required"> Required</label>
+          <div class="form-label" style="margin-top:8px;">Options</div>
+          <div class="modgroup-options" id="menu-mg-options"></div>
+          <button type="button" class="btn btn-sm btn-outline" id="menu-mg-add-opt">+ Add Option</button>
+          <div class="form-actions-row"><button type="button" class="btn btn-sm btn-primary" id="menu-mg-save">Save Group</button><button type="button" class="btn btn-sm btn-ghost" id="menu-mg-cancel">Cancel</button></div>
+        </div>
+      </div>
+    </aside>
+    <!-- Center Panel -->
+    <main class="center-panel" id="center-panel">
+      <div class="center-toolbar">
+        <div class="search-wrap"><svg class="search-icon" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="text" class="form-input search-input" id="menu-search" placeholder="Search items..."></div>
+        <select class="form-input sort-select" id="menu-sort"><option value="name_asc">Name A-Z</option><option value="name_desc">Name Z-A</option><option value="price_asc">Price: Low-High</option><option value="price_desc">Price: High-Low</option></select>
+      </div>
+      <div class="filter-chips" id="menu-filter-chips">
+        <button type="button" class="chip" data-filter="vegetarian">🥬 Vegetarian</button>
+        <button type="button" class="chip" data-filter="vegan">🌱 Vegan</button>
+        <button type="button" class="chip" data-filter="gluten_free">🌾 Gluten-Free</button>
+        <button type="button" class="chip" data-filter="available">🟢 Available</button>
+      </div>
+      <div class="bulk-bar" id="menu-bulk-bar" style="display:none;">
+        <span id="menu-bulk-count">0 selected</span>
+        <select class="form-input form-input-sm" id="menu-bulk-cat" style="width:auto;"><option value="">Move to...</option></select>
+        <button type="button" class="btn btn-sm btn-outline" id="menu-bulk-move">Move</button>
+        <button type="button" class="btn btn-sm btn-outline" id="menu-bulk-toggle">Toggle Avail</button>
+        <button type="button" class="btn btn-sm btn-danger" id="menu-bulk-delete">Delete</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-bulk-clear">Clear</button>
+      </div>
+      <div class="items-grid" id="menu-items-grid"><div class="empty-state">Select a category to view items</div></div>
+    </main>
+    <!-- Right Drawer -->
+    <aside class="right-panel" id="menu-drawer" style="display:none;">
+      <div class="drawer-header"><h3 id="menu-drawer-title">New Item</h3><button type="button" class="btn btn-sm btn-ghost" id="menu-drawer-close">✕</button></div>
+      <div class="drawer-body">
+        <div class="form-group"><label class="form-label">Item Name *</label><input type="text" class="form-input" id="menu-item-name"></div>
+        <div class="form-group"><label class="form-label">Slug</label><input type="text" class="form-input" id="menu-item-slug"></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="menu-item-desc" rows="2"></textarea></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Price *</label><input type="number" class="form-input" id="menu-item-price" min="0" step="0.01"></div><div class="form-group"><label class="form-label">Sale Price</label><input type="number" class="form-input" id="menu-item-sale" min="0" step="0.01"></div></div>
+        <div class="form-group"><label class="form-label">Primary Photo</label><div class="photo-upload"><div class="photo-preview" id="menu-photo-preview">🍽️</div><button type="button" class="upload-btn" id="menu-photo-upload-btn">📷 Upload Photo</button></div></div>
+        <div class="form-group"><label class="form-label">Photo Gallery</label><div class="photo-pool" id="menu-photo-pool"></div><button type="button" class="upload-btn upload-btn-sm" id="menu-gallery-upload-btn">+ Upload Photos</button></div>
+        <div class="form-group"><label class="form-label">Allergens</label><div class="chip-picker" id="menu-allergen-picker"></div></div>
+        <div class="form-group"><label class="form-label">Dietary</label>
+          <div class="toggle-row"><span>Vegetarian</span><label class="switch"><input type="checkbox" id="menu-item-veg"><span class="slider"></span></label></div>
+          <div class="toggle-row"><span>Vegan</span><label class="switch"><input type="checkbox" id="menu-item-vegan"><span class="slider"></span></label></div>
+          <div class="toggle-row"><span>Gluten Free</span><label class="switch"><input type="checkbox" id="menu-item-gf"><span class="slider"></span></label></div>
+        </div>
+        <div class="form-group"><label class="form-label">Spice Level: <span id="menu-spice-label">Not Spicy</span></label><input type="range" class="spice-slider" id="menu-item-spice" min="0" max="5" value="0" step="1"><div class="spice-labels"><span>Not Spicy</span><span>Mild</span><span>Medium</span><span>Hot</span><span>Very Hot</span><span>Extra Hot</span></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Calories</label><input type="number" class="form-input" id="menu-item-cal" min="0"></div><div class="form-group"><label class="form-label">Prep Time (min)</label><input type="number" class="form-input" id="menu-item-prep" min="0"></div></div>
+        <div class="form-group"><label class="form-label">Tags</label><div class="chip-picker" id="menu-tag-picker"></div></div>
+        <div class="form-group"><label class="form-label">Modifier Groups</label><div class="checkbox-list" id="menu-mg-checkboxes"></div></div>
+        <div class="toggle-row"><span>Available</span><label class="switch"><input type="checkbox" id="menu-item-avail" checked><span class="slider"></span></label></div>
+      </div>
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-delete" style="color:#ef4444;margin-right:auto;">🗑 Delete</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="menu-item-save">Save Item</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 6: ALERTS & SOCIAL -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="alerts">
+  <div class="tab-scroll">
+
+    <!-- Alert Settings -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">🔔</span> Alert Settings</div>
+      <div class="card-body">
+        <div class="toggle-row"><span class="toggle-label">Failed Push Alert</span><label class="switch"><input type="checkbox" id="alt-failed-push" data-path="alert_settings.failed_push_alert"><span class="slider"></span></label></div>
+        <div class="form-group"><label class="form-label">Alert Sound</label>
+          <select class="form-input" id="alt-sound" data-path="alert_settings.sound">
+            <option value="default">Default Chime</option><option value="bell">Bell Ring</option><option value="ding">Ding</option><option value="buzz">Buzz</option><option value="silent">Silent</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Supervisor Phone</label><input type="tel" class="form-input" id="alt-phone" data-path="alert_settings.supervisor_phone" placeholder="+1 (555) 000-0000"></div>
+      </div>
+    </div>
+
+    <!-- Social & Smart Links -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">🔗</span> Social &amp; Smart Links</div>
+      <div class="card-body">
+        <div class="form-group"><label class="form-label">Facebook Page URL</label><input type="url" class="form-input" id="soc-facebook" data-path="social_links.facebook_url" placeholder="https://facebook.com/your-restaurant"></div>
+        <div class="form-group"><label class="form-label">Smart Menu Link</label><input type="text" class="form-input" id="soc-smart-menu" data-path="social_links.smart_menu_link" readonly placeholder="Generated automatically"><span class="field-hint">Read-only — system generated</span></div>
+        <div class="toggle-row"><span class="toggle-label">Website Integration</span><label class="switch"><input type="checkbox" id="soc-website" data-path="social_links.website_enabled"><span class="slider"></span></label></div>
+        <div class="form-group" id="soc-domain-row" style="display:none;"><label class="form-label">Website Domain</label><input type="text" class="form-input" id="soc-domain" data-path="social_links.website_domain" placeholder="example.com"></div>
+        <div class="toggle-row"><span class="toggle-label">iOS App Enabled</span><label class="switch"><input type="checkbox" id="soc-ios" data-path="social_links.ios_app_enabled"><span class="slider"></span></label></div>
+        <div class="toggle-row"><span class="toggle-label">Android App Enabled</span><label class="switch"><input type="checkbox" id="soc-android" data-path="social_links.android_app_enabled"><span class="slider"></span></label></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================================================================== -->
+<!-- TAB 7: DEVICES -->
+<!-- ===================================================================== -->
+<section class="tab-panel" data-tab="devices">
+  <div class="tab-scroll">
+    <div class="card">
+      <div class="card-header"><span class="card-icon">📱</span> Device Connections</div>
+      <div class="card-body">
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Platform</th><th>OS</th><th>Device ID</th><th>App Version</th><th>Last Check</th><th></th></tr></thead><tbody id="dev-tbody"><tr class="empty-row"><td colspan="6">No devices connected yet</td></tr></tbody></table></div>
+        <button type="button" class="btn btn-primary btn-sm" id="dev-connect-btn" style="margin-top:8px;">+ Connect New Device</button>
+        <div class="device-connect-panel" id="dev-connect-panel" style="display:none;">
+          <h4>Connect New Device</h4>
+          <div class="form-group"><label class="form-label">Platform</label><select class="form-input" id="dev-new-platform"><option value="pos">POS Terminal</option><option value="tablet">Tablet</option><option value="kds">Kitchen Display (KDS)</option><option value="printer">Receipt Printer</option><option value="other">Other</option></select></div>
+          <div class="form-group"><label class="form-label">Device ID / Serial</label><input type="text" class="form-input" id="dev-new-id" placeholder="Enter device serial or ID"></div>
+          <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="dev-confirm-connect">Connect</button><button type="button" class="btn btn-ghost btn-sm" id="dev-cancel-connect">Cancel</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Save Bar -->
+<div class="save-bar" id="save-bar">
+  <span class="save-status" id="save-status">All changes saved</span>
+  <button type="button" class="btn btn-primary btn-sm" id="save-all-btn">Save All</button>
+</div>
