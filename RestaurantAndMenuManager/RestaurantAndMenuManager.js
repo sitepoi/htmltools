@@ -42,6 +42,9 @@ var DEFAULTS = {
     reservation_settings: {
       min_guests: 1, max_guests: 10, min_advance_minutes: 60, max_advance_days: 30,
       late_hold_minutes: 15, pre_order_enabled: false, deposit_enabled: false, deposit_amount: 0
+    },
+    on_premise_settings: {
+      min_advance_value: 30, min_advance_unit: 'minutes', max_advance_days: 7
     }
   },
   taxation_currency: {
@@ -49,10 +52,26 @@ var DEFAULTS = {
     tax_categories: [], delivery_fee_tax_rate: 0
   },
   payment_methods: {
-    cash_delivery: true, cash_pickup: true, card_delivery: true, card_pickup: true,
-    call_for_card_delivery: false, call_for_card_pickup: false, online_payment: false
+    cash_delivery: true, cash_pickup: true, cash_on_premise: true, cash_reservation: false,
+    card_delivery: true, card_pickup: true, card_on_premise: true, card_reservation: false,
+    call_for_card_delivery: false, call_for_card_pickup: false, call_for_card_on_premise: false, call_for_card_reservation: false,
+    interac_delivery: false, interac_pickup: false, interac_on_premise: false, interac_reservation: false,
+    online_payment: false
   },
-  delivery_zones: { type: 'FeatureCollection', features: [] },
+  delivery_zones: { zones: [] },
+  delivery_form_settings: {
+    address_fields: {
+      street: { enabled: true, required: true },
+      city: { enabled: true, required: true },
+      postal_code: { enabled: true, required: true },
+      block: { enabled: false, required: false },
+      intercom: { enabled: false, required: false },
+      parking_info: { enabled: false, required: false },
+      additional_info: { enabled: false, required: false }
+    },
+    custom_fields: [],
+    accept_orders_outside_zone: false
+  },
   menu: { categories: [], items: [], modifier_groups: [] },
   alert_settings: { failed_push_alert: false, sound: 'default', supervisor_phone: '' },
   social_links: {
@@ -177,11 +196,15 @@ var data = {};
 var activeTab = 'general';
 var editingDayIndex = -1;
 var selectedCategoryId = null;
+var editingCategoryId = null;
 var editingItemId = null;
 var editingModGroupId = null;
-var selectedItemIds = [];
-var activeFilter = null;
+var _expandedModGroups = {}; /* Track which groups are expanded */
 var _tempPhotos = []; /* URLs of photos uploaded for a new item before it is saved */
+var _newItemDraft = null; /* In-memory draft for new item so pickers work before save */
+var _drawerOpen = false; /* Guard to prevent accidental drawer closes */
+var highlightedModGroupId = null; /* Track which modifier group is highlighted in right panel */
+var _modFilterIds = []; /* Modifier group IDs used to filter the product list */
 
 /* ---- Delivery Zones State ---- */
 var zoneMap = null;
@@ -239,24 +262,15 @@ function setNested(obj, path, value) {
 var saveTimeout = null;
 function scheduleSave() {
   clearTimeout(saveTimeout);
-  var s = document.getElementById('save-status');
-  if (s) { s.textContent = 'Unsaved changes...'; s.classList.add('unsaved'); }
   saveTimeout = setTimeout(function() {
     tool.setValue(JSON.parse(JSON.stringify(data)));
-    var st = document.getElementById('save-status');
-    if (st) { st.textContent = 'All changes saved'; st.classList.remove('unsaved'); }
   }, 500);
 }
 
-function saveNow() {
-  clearTimeout(saveTimeout);
-  tool.setValue(JSON.parse(JSON.stringify(data)));
-  var s = document.getElementById('save-status');
-  if (s) { s.textContent = 'All changes saved'; s.classList.remove('unsaved'); }
-  tool.notify('All settings saved successfully', 'success');
-}
+  /* Save All */
+  var saveAllBtn = document.getElementById('save-all-btn');
+  if (saveAllBtn) saveAllBtn.remove(); /* Remove legacy button */
 
-/* ===== TAB NAVIGATION ===== */
 function switchTab(tabName) {
   activeTab = tabName;
   document.querySelectorAll('.main-tab').forEach(function(t) { t.classList.remove('active'); });
@@ -266,8 +280,27 @@ function switchTab(tabName) {
   if (tabBtn) tabBtn.classList.add('active');
   if (panel) panel.classList.add('active');
 
-  /* Invalidate map size when switching to zones tab */
-  if (tabName === 'zones' && zoneMap) {
+  /* Invalidate map size when switching to delivery tab */
+  if (tabName === 'delivery' && zoneMap) {
+    setTimeout(function() { zoneMap.invalidateSize(); }, 100);
+  }
+  tool.resize();
+}
+
+function switchSubTab(parentTab, subTabName) {
+  var panel = document.querySelector('.tab-panel[data-tab="' + parentTab + '"]');
+  if (!panel) return;
+  /* Update sub-tab buttons */
+  panel.querySelectorAll('.sub-tab').forEach(function(st) { st.classList.remove('active'); });
+  var activeBtn = panel.querySelector('.sub-tab[data-subtab="' + subTabName + '"]');
+  if (activeBtn) activeBtn.classList.add('active');
+  /* Show/hide sub-tab panels */
+  panel.querySelectorAll('.subtab-panel').forEach(function(sp) { sp.classList.remove('active'); });
+  var activePanel = panel.querySelector('.subtab-panel[data-subtab="' + subTabName + '"]');
+  if (activePanel) activePanel.classList.add('active');
+
+  /* Invalidate map when switching to zones sub-tab */
+  if (subTabName === 'delivery-zones' && zoneMap) {
     setTimeout(function() { zoneMap.invalidateSize(); }, 100);
   }
   tool.resize();
@@ -280,8 +313,6 @@ function lockUI(ro) {
     if (ro) { el.setAttribute('disabled', 'disabled'); el.style.pointerEvents = 'none'; }
     else { el.removeAttribute('disabled'); el.style.pointerEvents = ''; }
   });
-  var sb = document.getElementById('save-bar');
-  if (sb) sb.style.display = ro ? 'none' : '';
 }
 
 /* ===== CONDITIONAL DISPLAYS (ALL TABS) ===== */
@@ -306,19 +337,24 @@ function handleConditionalDisplays() {
   var depRow = document.getElementById('svc-res-deposit-row');
   if (depToggle && depRow) depRow.style.display = depToggle.checked ? '' : 'none';
 
+  /* Services: on-premise dining card */
+  var onPremToggle = document.getElementById('svc-onpremise');
+  var onPremCard = document.getElementById('svc-onpremise-card');
+  if (onPremToggle && onPremCard) onPremCard.style.display = onPremToggle.checked ? '' : 'none';
+
   /* Social: website domain */
   var webToggle = document.getElementById('soc-website');
   var webRow = document.getElementById('soc-domain-row');
   if (webToggle && webRow) webRow.style.display = webToggle.checked ? '' : 'none';
 
-  /* Zones tab: only visible when delivery is enabled */
+  /* Delivery tab: only visible when delivery is enabled */
   var delivToggle = document.getElementById('svc-delivery');
-  var zonesTab = document.querySelector('.main-tab[data-tab="zones"]');
-  if (delivToggle && zonesTab) {
-    var showZones = delivToggle.checked;
-    zonesTab.style.display = showZones ? '' : 'none';
-    /* If zones tab was active and is now hidden, switch to general */
-    if (!showZones && activeTab === 'zones') {
+  var deliveryTab = document.querySelector('.main-tab[data-tab="delivery"]');
+  if (delivToggle && deliveryTab) {
+    var showDelivery = delivToggle.checked;
+    deliveryTab.style.display = showDelivery ? '' : 'none';
+    /* If delivery tab was active and is now hidden, switch to general */
+    if (!showDelivery && activeTab === 'delivery') {
       switchTab('general');
     }
   }
@@ -331,7 +367,7 @@ function renderGeneralInfo() {
   /* Populate all data-path inputs */
   document.querySelectorAll('[data-path]').forEach(function(el) {
     if (el.closest('.tab-panel[data-tab="menu"]')) return; /* Skip menu */
-    if (el.closest('.tab-panel[data-tab="zones"]')) return; /* Skip zones */
+    if (el.closest('.tab-panel[data-tab="delivery"]')) return; /* Skip delivery */
     var val = getNested(data, el.dataset.path);
     if (val === undefined) return;
     if (el.type === 'checkbox') {
@@ -884,38 +920,37 @@ function renderZonesList() {
   if (!container) return;
   container.innerHTML = '';
 
-  var features = (data.delivery_zones && data.delivery_zones.features) ? data.delivery_zones.features : [];
-  if (features.length === 0) {
-    container.innerHTML = '<div class="empty-state">No zones defined yet.<br>Draw a shape on the map, then click <strong>+ New Zone From Drawing</strong>.</div>';
+  var zones = data.delivery_zones.zones || [];
+  if (zones.length === 0) {
+    container.innerHTML = '<div class="empty-state">No zones defined yet.<br>Click <strong>+ Add Zone</strong> to create one.</div>';
     return;
   }
 
-  features.forEach(function(feature, idx) {
-    var props = feature.properties || {};
+  zones.forEach(function(zone, idx) {
     var card = document.createElement('div');
     card.className = 'zone-card' + (zoneEditingIndex === idx ? ' selected' : '');
     card.dataset.zoneIndex = idx;
 
     var swatch = document.createElement('div');
     swatch.className = 'zone-card-color';
-    swatch.style.backgroundColor = props.color || '#4f46e5';
+    swatch.style.backgroundColor = zone.color || '#4f46e5';
 
     var info = document.createElement('div');
     info.className = 'zone-card-info';
+    var shapeCount = (zone.shapes && zone.shapes.length) ? zone.shapes.length : 0;
+    var shapeLabel = shapeCount === 1 ? '1 shape' : shapeCount + ' shapes';
     info.innerHTML =
-      '<div class="zone-card-name">' + esc(props.name || 'Zone ' + (idx + 1)) + '</div>' +
-      '<div class="zone-card-meta">Min: $' + (props.min_order || 0) + ' &middot; Fee: $' + (props.fee || 0) + '</div>';
+      '<div class="zone-card-name">' + esc(zone.name || 'Zone ' + (idx + 1)) + '</div>' +
+      '<div class="zone-card-meta">' + shapeLabel + ' &middot; Min: $' + (zone.min_order || 0) + ' &middot; Fee: $' + (zone.fee || 0) + '</div>';
 
     var actions = document.createElement('div');
     actions.className = 'zone-card-actions';
     actions.innerHTML =
       '<button title="Edit" class="edit-btn">✎</button>' +
-      '<button title="Zoom to" class="zoom-btn">⊕</button>' +
-      '<button title="Delete" class="delete-btn">✕</button>';
+      '<button title="Zoom to" class="zoom-btn">⊕</button>';
 
     actions.querySelector('.edit-btn').addEventListener('click', function(e) { e.stopPropagation(); editZone(idx); });
     actions.querySelector('.zoom-btn').addEventListener('click', function(e) { e.stopPropagation(); zoomToZone(idx); });
-    actions.querySelector('.delete-btn').addEventListener('click', function(e) { e.stopPropagation(); deleteZone(idx); });
     card.addEventListener('click', function() { selectZone(idx); });
 
     card.appendChild(swatch);
@@ -926,9 +961,13 @@ function renderZonesList() {
 }
 
 function zoomToZone(idx) {
-  if (!zoneMap || idx < 0 || idx >= (data.delivery_zones.features || []).length) return;
-  var layer = findLayerByZoneFeature(data.delivery_zones.features[idx]);
-  if (layer) zoneMap.fitBounds(layer.getBounds(), { padding: [30, 30] });
+  if (!zoneMap) return;
+  var zones = data.delivery_zones.zones || [];
+  if (idx < 0 || idx >= zones.length) return;
+  var layers = findLayersByZoneIndex(idx);
+  if (layers.length === 0) return;
+  var group = new L.FeatureGroup(layers);
+  zoneMap.fitBounds(group.getBounds(), { padding: [30, 30] });
 }
 
 function selectZone(idx) {
@@ -939,10 +978,11 @@ function selectZone(idx) {
 
 function highlightZone(idx) {
   if (!zoneMap || !zoneDrawnItems) return;
+  var zones = data.delivery_zones.zones || [];
   zoneDrawnItems.eachLayer(function(layer) {
     var zi = layer._zoneIndex;
-    if (zi !== undefined && zi >= 0 && zi < (data.delivery_zones.features || []).length) {
-      var color = data.delivery_zones.features[zi].properties.color || '#4f46e5';
+    if (zi !== undefined && zi >= 0 && zi < zones.length) {
+      var color = zones[zi].color || '#4f46e5';
       layer.setStyle({
         color: color, fillColor: color,
         fillOpacity: zi === idx ? 0.35 : 0.15,
@@ -953,29 +993,47 @@ function highlightZone(idx) {
   });
 }
 
-function findLayerByZoneFeature(feature) {
-  var found = null;
-  if (!zoneDrawnItems) return null;
+function findLayersByZoneIndex(idx) {
+  var result = [];
+  if (!zoneDrawnItems) return result;
   zoneDrawnItems.eachLayer(function(layer) {
-    if (layer._zoneIndex !== undefined && layer._zoneIndex >= 0 && layer._zoneIndex < (data.delivery_zones.features || []).length) {
-      if (data.delivery_zones.features[layer._zoneIndex] === feature) found = layer;
-    }
+    if (layer._zoneIndex === idx) result.push(layer);
   });
-  return found;
+  return result;
 }
 
 function editZone(idx) {
   zoneEditingIndex = idx;
-  var feature = data.delivery_zones.features[idx];
-  if (!feature) return;
-  var props = feature.properties || {};
+  var zones = data.delivery_zones.zones || [];
+  var zone = zones[idx];
+  if (!zone) return;
 
-  document.getElementById('zone-name').value = props.name || '';
-  document.getElementById('zone-color').value = props.color || '#4f46e5';
-  document.getElementById('zone-min-order').value = props.min_order || 0;
-  document.getElementById('zone-fee').value = props.fee || 0;
+  document.getElementById('zone-form-title').textContent = 'Edit Delivery Zone';
+  document.getElementById('zone-name').value = zone.name || '';
+  document.getElementById('zone-color').value = zone.color || '#4f46e5';
+  var swatch = document.getElementById('zone-color-swatch');
+  var hexEl = document.getElementById('zone-color-hex');
+  if (swatch) swatch.style.background = zone.color || '#4f46e5';
+  if (hexEl) hexEl.textContent = zone.color || '#4f46e5';
+  document.getElementById('zone-min-order').value = zone.min_order || 0;
+  document.getElementById('zone-fee').value = zone.fee || 0;
   document.getElementById('zone-form').style.display = '';
-  document.getElementById('zone-add-btn').style.display = 'none';
+
+  /* Show delete button */
+  var deleteFormBtn = document.getElementById('zone-delete-form-btn');
+  if (deleteFormBtn) deleteFormBtn.style.display = '';
+
+  /* Show shapes section and render */
+  document.getElementById('zone-shapes-section').style.display = '';
+  renderZoneShapesList();
+
+  /* Remove any orphan drawings */
+  removeOrphanDrawings();
+
+  /* Activate polygon tool for adding more shapes */
+  document.querySelectorAll('.zone-draw-btn').forEach(function(b) { b.classList.remove('active'); });
+  var polyBtn = document.querySelector('.zone-draw-btn[data-shape="polygon"]');
+  if (polyBtn) polyBtn.classList.add('active');
 
   highlightZone(idx);
   zoomToZone(idx);
@@ -983,14 +1041,175 @@ function editZone(idx) {
   tool.resize();
 }
 
-function deleteZone(idx) {
-  if (idx < 0 || idx >= (data.delivery_zones.features || []).length) return;
-  data.delivery_zones.features.splice(idx, 1);
+function renderZoneShapesList() {
+  var container = document.getElementById('zone-shapes-list');
+  var countEl = document.getElementById('zone-shapes-count');
+  if (!container) return;
+  container.innerHTML = '';
 
+  var zones = data.delivery_zones.zones || [];
+  if (zoneEditingIndex < 0 || zoneEditingIndex >= zones.length) { container.innerHTML = ''; if (countEl) countEl.textContent = ''; return; }
+
+  var shapes = zones[zoneEditingIndex].shapes || [];
+  if (countEl) countEl.textContent = shapes.length > 0 ? '(' + shapes.length + ')' : '';
+
+  if (shapes.length === 0) {
+    container.innerHTML = '<div class="zone-shapes-empty">No shapes yet. Draw on the map and save.</div>';
+    return;
+  }
+
+  var table = document.createElement('table');
+  table.className = 'zone-shape-table';
+  table.innerHTML =
+    '<thead><tr><th class="shape-type-cell">Type</th><th class="shape-desc-cell">Shape</th><th class="shape-meta-cell">Details</th><th class="shape-action-cell"></th></tr></thead>';
+  var tbody = document.createElement('tbody');
+
+  shapes.forEach(function(shape, shapeIdx) {
+    var tr = document.createElement('tr');
+
+    /* Type cell with SVG icon */
+    var tdType = document.createElement('td');
+    tdType.className = 'shape-type-cell';
+    var iconSpan = document.createElement('span');
+
+    var shapeDesc = '';
+    var metaText = '';
+
+    if (shape.type === 'Polygon') {
+      iconSpan.className = 'shape-icon polygon';
+      iconSpan.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="8,1 15,5 13,12 3,12 1,5"/></svg>';
+      var coords = (shape.coordinates && shape.coordinates[0]) ? shape.coordinates[0] : [];
+      shapeDesc = 'Polygon';
+      metaText = coords.length + ' vertices';
+    } else if (shape.type === 'Circle') {
+      iconSpan.className = 'shape-icon circle';
+      iconSpan.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/></svg>';
+      var r = shape.radius || 0;
+      shapeDesc = 'Circle';
+      metaText = r >= 1000 ? (r / 1000).toFixed(1) + ' km radius' : Math.round(r) + ' m radius';
+    } else {
+      /* Rectangle or other */
+      iconSpan.className = 'shape-icon rectangle';
+      iconSpan.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/></svg>';
+      var coords2 = (shape.coordinates && shape.coordinates[0]) ? shape.coordinates[0] : [];
+      shapeDesc = shape.type === 'MultiPolygon' ? 'Multi-Poly' : (shape.type || 'Shape');
+      metaText = coords2.length > 0 ? coords2.length + ' vertices' : '';
+    }
+
+    tdType.appendChild(iconSpan);
+
+    /* Description cell */
+    var tdDesc = document.createElement('td');
+    tdDesc.className = 'shape-desc-cell';
+    tdDesc.textContent = shapeDesc;
+
+    /* Meta cell */
+    var tdMeta = document.createElement('td');
+    tdMeta.className = 'shape-meta-cell';
+    tdMeta.textContent = metaText;
+
+    /* Action cell */
+    var tdAction = document.createElement('td');
+    tdAction.className = 'shape-action-cell';
+    var delBtn = document.createElement('button');
+    delBtn.className = 'shape-delete-btn';
+    delBtn.title = 'Remove this shape';
+    delBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M5.333 4V2.667a1.333 1.333 0 011.334-1.334h2.666a1.333 1.333 0 011.334 1.334V4m2 0v9.333a1.333 1.333 0 01-1.334 1.334H4.667a1.333 1.333 0 01-1.334-1.334V4h9.334z"/></svg>';
+    delBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      confirmRemoveShape(zoneEditingIndex, shapeIdx, shapeDesc + ' · ' + metaText);
+    });
+    tdAction.appendChild(delBtn);
+
+    tr.appendChild(tdType);
+    tr.appendChild(tdDesc);
+    tr.appendChild(tdMeta);
+    tr.appendChild(tdAction);
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+/* ---- Shape delete with confirmation ---- */
+var shapeDeleteZoneIdx = -1;
+var shapeDeleteShapeIdx = -1;
+
+function confirmRemoveShape(zoneIdx, shapeIdx, desc) {
+  shapeDeleteZoneIdx = zoneIdx;
+  shapeDeleteShapeIdx = shapeIdx;
+  document.getElementById('shape-delete-modal-desc').textContent = desc;
+  document.getElementById('shape-delete-modal').style.display = 'flex';
+}
+
+function removeShapeConfirmed() {
+  document.getElementById('shape-delete-modal').style.display = 'none';
+  var zoneIdx = shapeDeleteZoneIdx;
+  var shapeIdx = shapeDeleteShapeIdx;
+  shapeDeleteZoneIdx = -1;
+  shapeDeleteShapeIdx = -1;
+  if (zoneIdx < 0 || shapeIdx < 0) return;
+
+  var zones = data.delivery_zones.zones || [];
+  if (zoneIdx >= zones.length) return;
+  var zone = zones[zoneIdx];
+  if (!zone.shapes || shapeIdx >= zone.shapes.length) return;
+
+  /* Remove from data */
+  zone.shapes.splice(shapeIdx, 1);
+
+  /* Remove corresponding Leaflet layers (may be multiple for complex shapes) */
   if (zoneDrawnItems) {
-    var toRemove = null;
-    zoneDrawnItems.eachLayer(function(layer) { if (layer._zoneIndex === idx) toRemove = layer; });
-    if (toRemove) zoneDrawnItems.removeLayer(toRemove);
+    var toRemove = [];
+    zoneDrawnItems.eachLayer(function(layer) {
+      if (layer._zoneIndex === zoneIdx && layer._shapeIndex === shapeIdx) toRemove.push(layer);
+    });
+    toRemove.forEach(function(l) { zoneDrawnItems.removeLayer(l); });
+  }
+
+  /* Re-index remaining shape layers for this zone */
+  reindexShapeLayers(zoneIdx);
+
+  renderZoneShapesList();
+  scheduleSave();
+  tool.notify('Shape removed', 'info');
+}
+
+function cancelShapeDelete() {
+  document.getElementById('shape-delete-modal').style.display = 'none';
+  shapeDeleteZoneIdx = -1;
+  shapeDeleteShapeIdx = -1;
+}
+
+function reindexShapeLayers(zoneIdx) {
+  if (!zoneDrawnItems) return;
+  var si = 0;
+  zoneDrawnItems.eachLayer(function(layer) {
+    if (layer._zoneIndex === zoneIdx) { layer._shapeIndex = si; si++; }
+  });
+}
+
+function confirmDeleteZone() {
+  var zones = data.delivery_zones.zones || [];
+  if (zoneEditingIndex < 0 || zoneEditingIndex >= zones.length) return;
+  var zoneName = zones[zoneEditingIndex].name || 'Zone ' + (zoneEditingIndex + 1);
+  document.getElementById('zone-delete-modal-name').textContent = '"' + zoneName + '"';
+  document.getElementById('zone-delete-modal').style.display = 'flex';
+}
+
+function deleteZoneConfirmed() {
+  var idx = zoneEditingIndex;
+  document.getElementById('zone-delete-modal').style.display = 'none';
+  var zones = data.delivery_zones.zones || [];
+  if (idx < 0 || idx >= zones.length) return;
+  zones.splice(idx, 1);
+
+  /* Remove ALL layers for this zone */
+  if (zoneDrawnItems) {
+    var toRemove = [];
+    zoneDrawnItems.eachLayer(function(layer) { if (layer._zoneIndex === idx) toRemove.push(layer); });
+    toRemove.forEach(function(layer) { zoneDrawnItems.removeLayer(layer); });
   }
   reindexZoneLayers();
   zoneEditingIndex = -1;
@@ -1000,31 +1219,53 @@ function deleteZone(idx) {
   tool.notify('Zone deleted', 'info');
 }
 
+function cancelZoneDelete() {
+  document.getElementById('zone-delete-modal').style.display = 'none';
+}
+
 function saveZone() {
   var name = document.getElementById('zone-name').value.trim();
   if (!name) { tool.notify('Zone name is required', 'warning'); return; }
   var color = document.getElementById('zone-color').value;
   var minOrder = parseFloat(document.getElementById('zone-min-order').value) || 0;
   var fee = parseFloat(document.getElementById('zone-fee').value) || 0;
+  var zones = data.delivery_zones.zones || [];
 
-  if (!data.delivery_zones.features) data.delivery_zones.features = [];
+  if (zoneEditingIndex >= 0 && zoneEditingIndex < zones.length) {
+    /* Update existing zone properties */
+    var zone = zones[zoneEditingIndex];
+    zone.name = name; zone.color = color; zone.min_order = minOrder; zone.fee = fee;
 
-  if (zoneEditingIndex >= 0 && zoneEditingIndex < data.delivery_zones.features.length) {
-    data.delivery_zones.features[zoneEditingIndex].properties = { name: name, color: color, min_order: minOrder, fee: fee };
+    /* Collect new unsaved drawings and add them as shapes to THIS zone */
+    var newShapes = extractUnsavedShapes();
+    if (newShapes && newShapes.length > 0) {
+      if (!zone.shapes) zone.shapes = [];
+      newShapes.forEach(function(geom) {
+        zone.shapes.push(geom);
+      });
+      /* Assign _zoneIndex and _shapeIndex to the consumed layers */
+      markUnsavedLayersAsOwned(zoneEditingIndex, zone.shapes.length - newShapes.length);
+    }
+
+    /* Update layer styles */
     if (zoneDrawnItems) {
       zoneDrawnItems.eachLayer(function(layer) {
         if (layer._zoneIndex === zoneEditingIndex) layer.setStyle({ color: color, fillColor: color });
       });
     }
-    tool.notify('Zone updated', 'success');
+    tool.notify('Zone updated' + (newShapes && newShapes.length ? ' with ' + newShapes.length + ' new shape(s)' : ''), 'success');
   } else {
-    var newFeature = extractFromDrawnLayers(name, color, minOrder, fee);
-    if (!newFeature) { tool.notify('Draw a shape on the map first, then try again', 'warning'); return; }
-    data.delivery_zones.features.push(newFeature);
-    reindexZoneLayers();
-    tool.notify('Zone created', 'success');
+    /* Create new zone from unsaved drawings */
+    var newShapes = extractUnsavedShapes();
+    if (!newShapes || newShapes.length === 0) { tool.notify('Draw at least one shape on the map first', 'warning'); return; }
+    var newZone = { id: uid(), name: name, color: color, min_order: minOrder, fee: fee, shapes: newShapes };
+    zones.push(newZone);
+    var newIdx = zones.length - 1;
+    markUnsavedLayersAsOwned(newIdx, 0);
+    tool.notify('Zone created with ' + newShapes.length + ' shape(s)', 'success');
   }
 
+  data.delivery_zones.zones = zones;
   zoneEditingIndex = -1;
   clearZoneForm();
   renderZonesList();
@@ -1032,16 +1273,30 @@ function saveZone() {
   scheduleSave();
 }
 
-function extractFromDrawnLayers(name, color, minOrder, fee) {
+/* Extract geometries from all unsaved (orphan) drawn layers */
+function extractUnsavedShapes() {
   if (!zoneDrawnItems) return null;
-  var candidate = null;
+  var shapes = [];
   zoneDrawnItems.eachLayer(function(layer) {
-    if (layer._zoneIndex === undefined) candidate = layer;
+    if (layer._zoneIndex === undefined) {
+      var geom = zoneLayerToGeoJSON(layer);
+      if (geom) shapes.push(geom);
+    }
   });
-  if (!candidate) return null;
-  var geometry = zoneLayerToGeoJSON(candidate);
-  if (!geometry) return null;
-  return { type: 'Feature', properties: { name: name, color: color, min_order: minOrder, fee: fee }, geometry: geometry };
+  return shapes.length > 0 ? shapes : null;
+}
+
+/* Mark unsaved layers as belonging to a zone, assigning _zoneIndex and _shapeIndex */
+function markUnsavedLayersAsOwned(zoneIdx, startShapeIdx) {
+  if (!zoneDrawnItems) return;
+  var si = startShapeIdx;
+  zoneDrawnItems.eachLayer(function(layer) {
+    if (layer._zoneIndex === undefined) {
+      layer._zoneIndex = zoneIdx;
+      layer._shapeIndex = si;
+      si++;
+    }
+  });
 }
 
 function zoneLayerToGeoJSON(layer) {
@@ -1059,7 +1314,7 @@ function zoneLayerToGeoJSON(layer) {
   }
   if (layer instanceof L.Circle) {
     var center = layer.getLatLng();
-    return { type: 'Point', coordinates: [center.lng, center.lat], radius: layer.getRadius() };
+    return { type: 'Circle', center: [center.lng, center.lat], radius: layer.getRadius() };
   }
   return null;
 }
@@ -1083,13 +1338,25 @@ function zoneLatlngsToCoords(latlngs) {
   return [];
 }
 
+function removeOrphanDrawings() {
+  if (!zoneDrawnItems) return;
+  var toRemove = [];
+  zoneDrawnItems.eachLayer(function(layer) { if (layer._zoneIndex === undefined) toRemove.push(layer); });
+  toRemove.forEach(function(l) { zoneDrawnItems.removeLayer(l); });
+}
+
 function clearZoneForm() {
   document.getElementById('zone-form').style.display = 'none';
-  document.getElementById('zone-add-btn').style.display = '';
   document.getElementById('zone-name').value = '';
   document.getElementById('zone-min-order').value = '0';
   document.getElementById('zone-fee').value = '0';
+  var deleteFormBtn = document.getElementById('zone-delete-form-btn');
+  if (deleteFormBtn) deleteFormBtn.style.display = 'none';
+  document.getElementById('zone-shapes-section').style.display = 'none';
+  document.getElementById('zone-shapes-list').innerHTML = '';
   zoneEditingIndex = -1;
+  deactivateZoneDraw();
+  removeOrphanDrawings();
   highlightZone(-1);
   renderZonesList();
   tool.resize();
@@ -1097,8 +1364,51 @@ function clearZoneForm() {
 
 function reindexZoneLayers() {
   if (!zoneDrawnItems) return;
-  var idx = 0;
-  zoneDrawnItems.eachLayer(function(layer) { layer._zoneIndex = idx; idx++; });
+  /* Rebuild _zoneIndex and _shapeIndex based on zone data order */
+  var zones = data.delivery_zones.zones || [];
+  /* Reset ALL layers to unowned first */
+  zoneDrawnItems.eachLayer(function(layer) { layer._zoneIndex = undefined; layer._shapeIndex = undefined; });
+  /* Re-assign based on matching shapes */
+  zones.forEach(function(zone, zi) {
+    var shapes = zone.shapes || [];
+    shapes.forEach(function(shape, si) {
+      var match = findLayerByGeometry(shape);
+      if (match) { match._zoneIndex = zi; match._shapeIndex = si; }
+    });
+  });
+}
+
+function findLayerByGeometry(geom) {
+  var found = null;
+  if (!zoneDrawnItems) return null;
+  zoneDrawnItems.eachLayer(function(layer) {
+    if (found) return;
+    if (layer._zoneIndex !== undefined) return; /* already claimed */
+    var layerGeom = zoneLayerToGeoJSON(layer);
+    if (layerGeom && geometriesMatch(layerGeom, geom)) found = layer;
+  });
+  return found;
+}
+
+function geometriesMatch(a, b) {
+  if (a.type !== b.type) return false;
+  if (a.type === 'Circle' || (a.type === 'Point' && a.radius)) {
+    var ca = a.center || a.coordinates;
+    var cb = b.center || b.coordinates;
+    if (!ca || !cb || ca.length !== 2 || cb.length !== 2) return false;
+    return Math.abs(ca[0] - cb[0]) < 0.000001 && Math.abs(ca[1] - cb[1]) < 0.000001 && Math.abs((a.radius || 0) - (b.radius || 0)) < 1;
+  }
+  /* For polygons, compare coordinate count and first point */
+  var coordsA = a.coordinates;
+  var coordsB = b.coordinates;
+  if (!coordsA || !coordsB) return false;
+  if (coordsA.length !== coordsB.length) return false;
+  if (coordsA[0] && coordsB[0] && coordsA[0].length !== coordsB[0].length) return false;
+  /* Quick check: first vertex match */
+  if (coordsA[0] && coordsA[0][0] && coordsB[0] && coordsB[0][0]) {
+    return Math.abs(coordsA[0][0][0] - coordsB[0][0][0]) < 0.000001 && Math.abs(coordsA[0][0][1] - coordsB[0][0][1]) < 0.000001;
+  }
+  return false;
 }
 
 /* ---- Zone Map ---- */
@@ -1118,9 +1428,16 @@ function initZoneMap() {
   zoneMap.on(L.Draw.Event.CREATED, function(event) {
     var layer = event.layer;
     layer._zoneIndex = undefined;
+    layer._shapeIndex = undefined;
     zoneDrawnItems.addLayer(layer);
     deactivateZoneDraw();
-    layer.setStyle({ color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.15, weight: 2 });
+    /* Use editing zone's color if available, otherwise default */
+    var drawColor = '#4f46e5';
+    var zones = data.delivery_zones.zones || [];
+    if (zoneEditingIndex >= 0 && zoneEditingIndex < zones.length) {
+      drawColor = zones[zoneEditingIndex].color || '#4f46e5';
+    }
+    layer.setStyle({ color: drawColor, fillColor: drawColor, fillOpacity: 0.15, weight: 2 });
   });
 
   zoneMap.on(L.Draw.Event.EDITED, function() { syncAllZoneLayers(); scheduleSave(); });
@@ -1132,21 +1449,24 @@ function initZoneMap() {
 function loadZonesOnMap() {
   if (!zoneMap || !zoneDrawnItems) return;
   zoneDrawnItems.clearLayers();
-  var features = (data.delivery_zones && data.delivery_zones.features) ? data.delivery_zones.features : [];
-  features.forEach(function(feature, idx) {
-    var layer = zoneGeoJSONToLayer(feature);
-    if (layer) {
-      layer._zoneIndex = idx;
-      var color = feature.properties.color || '#4f46e5';
-      layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.15, weight: 2 });
-      zoneDrawnItems.addLayer(layer);
-    }
+  var zones = data.delivery_zones.zones || [];
+  zones.forEach(function(zone, zi) {
+    var shapes = zone.shapes || [];
+    shapes.forEach(function(shape, si) {
+      var layer = zoneGeoJSONToLayer(shape);
+      if (layer) {
+        layer._zoneIndex = zi;
+        layer._shapeIndex = si;
+        var color = zone.color || '#4f46e5';
+        layer.setStyle({ color: color, fillColor: color, fillOpacity: 0.15, weight: 2 });
+        zoneDrawnItems.addLayer(layer);
+      }
+    });
   });
 }
 
-function zoneGeoJSONToLayer(feature) {
-  if (!feature || !feature.geometry) return null;
-  var geom = feature.geometry;
+function zoneGeoJSONToLayer(geom) {
+  if (!geom) return null;
   try {
     if (geom.type === 'Polygon') {
       var coords = geom.coordinates[0];
@@ -1157,37 +1477,46 @@ function zoneGeoJSONToLayer(feature) {
       var all = geom.coordinates.map(function(ring) { return ring.map(function(c) { return [c[1], c[0]]; }); });
       return L.polygon(all);
     }
-    if (geom.type === 'Point' && geom.radius) {
-      return L.circle([geom.coordinates[1], geom.coordinates[0]], { radius: geom.radius });
+    if (geom.type === 'Circle' || (geom.type === 'Point' && geom.radius)) {
+      var center = geom.center || geom.coordinates;
+      return L.circle([center[1], center[0]], { radius: geom.radius || 500 });
     }
   } catch(e) {}
   return null;
 }
 
 function syncAllZoneLayers() {
-  var newFeatures = [];
+  /* Rebuild zones data from current map layers */
   if (!zoneDrawnItems) return;
+  var zones = data.delivery_zones.zones || [];
+  var zoneMap2 = {}; /* index → { zone, shapes } */
   zoneDrawnItems.eachLayer(function(layer) {
+    var zi = layer._zoneIndex;
+    if (zi === undefined) return;
+    if (zi < 0 || zi >= zones.length) return;
     var geom = zoneLayerToGeoJSON(layer);
     if (!geom) return;
-    var idx = layer._zoneIndex;
-    var features = data.delivery_zones.features || [];
-    var props = { name: '', color: '#4f46e5', min_order: 0, fee: 0 };
-    if (idx !== undefined && idx >= 0 && idx < features.length) props = features[idx].properties || props;
-    newFeatures.push({ type: 'Feature', properties: props, geometry: geom });
+    if (!zoneMap2[zi]) zoneMap2[zi] = { zone: zones[zi], shapes: [] };
+    zoneMap2[zi].shapes.push(geom);
   });
-  data.delivery_zones.features = newFeatures;
-  reindexZoneLayers();
+  /* Update zones shapes from the collected data */
+  Object.keys(zoneMap2).forEach(function(key) {
+    var zi = parseInt(key);
+    zones[zi].shapes = zoneMap2[zi].shapes;
+  });
 }
 
 function activateZoneDraw(type) {
   deactivateZoneDraw();
   if (!zoneMap) return;
-  var options = {
-    polygon: { shapeOptions: { color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.15, weight: 2 } },
-    rectangle: { shapeOptions: { color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.15, weight: 2 } },
-    circle: { shapeOptions: { color: '#4f46e5', fillColor: '#4f46e5', fillOpacity: 0.15, weight: 2 } }
-  };
+  /* Use editing zone's color if available */
+  var drawColor = '#4f46e5';
+  var zones = data.delivery_zones.zones || [];
+  if (zoneEditingIndex >= 0 && zoneEditingIndex < zones.length) {
+    drawColor = zones[zoneEditingIndex].color || '#4f46e5';
+  }
+  var shapeOpts = { color: drawColor, fillColor: drawColor, fillOpacity: 0.15, weight: 2 };
+  var options = { polygon: { shapeOptions: shapeOpts }, rectangle: { shapeOptions: shapeOpts }, circle: { shapeOptions: shapeOpts } };
   if (type === 'polygon') zoneDrawControl = new L.Draw.Polygon(zoneMap, options.polygon);
   else if (type === 'rectangle') zoneDrawControl = new L.Draw.Rectangle(zoneMap, options.rectangle);
   else if (type === 'circle') zoneDrawControl = new L.Draw.Circle(zoneMap, options.circle);
@@ -1201,15 +1530,158 @@ function deactivateZoneDraw() {
 }
 
 function updateZoneToolButtons() {
-  ['zone-draw-polygon', 'zone-draw-circle', 'zone-draw-rectangle'].forEach(function(id) {
-    var btn = document.getElementById(id);
-    if (btn) btn.classList.remove('active-tool');
+  document.querySelectorAll('.zone-draw-btn').forEach(function(btn) {
+    btn.classList.remove('active');
   });
   if (zoneActiveTool) {
-    var activeId = 'zone-draw-' + zoneActiveTool;
-    var activeBtn = document.getElementById(activeId);
-    if (activeBtn) activeBtn.classList.add('active-tool');
+    var activeBtn = document.querySelector('.zone-draw-btn[data-shape="' + zoneActiveTool + '"]');
+    if (activeBtn) activeBtn.classList.add('active');
   }
+}
+
+/* ===================================================================== */
+/* DELIVERY FORM SETTINGS */
+/* ===================================================================== */
+var ADDRESS_FIELD_LABELS = {
+  street: 'Street Address',
+  city: 'City',
+  postal_code: 'Postal / ZIP Code',
+  block: 'Block / Neighborhood',
+  intercom: 'Intercom / Buzzer Number',
+  parking_info: 'Parking Information',
+  additional_info: 'Additional Information / Notes'
+};
+
+function renderDeliveryFormSettings() {
+  var settings = data.delivery_form_settings;
+  if (!settings) return;
+
+  /* Outside zone toggle */
+  var outsideToggle = document.getElementById('delivery-outside-zone');
+  if (outsideToggle) outsideToggle.checked = !!settings.accept_orders_outside_zone;
+
+  /* Address fields */
+  renderDeliveryAddressFields();
+
+  /* Custom fields */
+  renderDeliveryCustomFields();
+}
+
+function renderDeliveryAddressFields() {
+  var container = document.getElementById('delivery-address-fields');
+  if (!container) return;
+  container.innerHTML = '';
+
+  var settings = data.delivery_form_settings;
+  if (!settings || !settings.address_fields) return;
+
+  var fields = settings.address_fields;
+  Object.keys(ADDRESS_FIELD_LABELS).forEach(function(key) {
+    var field = fields[key] || { enabled: false, required: false };
+    var row = document.createElement('div');
+    row.className = 'delivery-field-row';
+
+    var nameEl = document.createElement('span');
+    nameEl.className = 'delivery-field-name';
+    nameEl.textContent = ADDRESS_FIELD_LABELS[key];
+    row.appendChild(nameEl);
+
+    var toggles = document.createElement('div');
+    toggles.className = 'delivery-field-toggles';
+
+    /* Enabled/Disabled tag */
+    var enabledTag = document.createElement('span');
+    enabledTag.className = 'delivery-field-tag ' + (field.enabled ? 'enabled' : 'disabled');
+    enabledTag.textContent = field.enabled ? 'ON' : 'OFF';
+    enabledTag.addEventListener('click', function() {
+      field.enabled = !field.enabled;
+      if (!field.enabled) field.required = false;
+      scheduleSave();
+      renderDeliveryAddressFields();
+    });
+    toggles.appendChild(enabledTag);
+
+    /* Required/Optional tag (only when enabled) */
+    if (field.enabled) {
+      var reqTag = document.createElement('span');
+      reqTag.className = 'delivery-field-tag ' + (field.required ? 'required' : 'optional');
+      reqTag.textContent = field.required ? 'Required' : 'Optional';
+      reqTag.addEventListener('click', function() {
+        field.required = !field.required;
+        scheduleSave();
+        renderDeliveryAddressFields();
+      });
+      toggles.appendChild(reqTag);
+    }
+
+    row.appendChild(toggles);
+    container.appendChild(row);
+  });
+}
+
+function renderDeliveryCustomFields() {
+  var container = document.getElementById('delivery-custom-fields-list');
+  if (!container) return;
+
+  var settings = data.delivery_form_settings;
+  if (!settings) return;
+  var customFields = settings.custom_fields || [];
+  container.innerHTML = '';
+
+  customFields.forEach(function(cf, idx) {
+    var row = document.createElement('div');
+    row.className = 'delivery-custom-field-row';
+
+    var label = document.createElement('span');
+    label.className = 'cf-label';
+    label.textContent = cf.label;
+    row.appendChild(label);
+
+    /* Required toggle */
+    var reqBtn = document.createElement('button');
+    reqBtn.className = 'cf-required-btn ' + (cf.required ? 'is-req' : 'not-req');
+    reqBtn.textContent = cf.required ? 'Required' : 'Optional';
+    reqBtn.addEventListener('click', function() {
+      cf.required = !cf.required;
+      scheduleSave();
+      renderDeliveryCustomFields();
+    });
+    row.appendChild(reqBtn);
+
+    /* Remove button */
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'cf-remove-btn';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove field';
+    removeBtn.addEventListener('click', function() {
+      customFields.splice(idx, 1);
+      scheduleSave();
+      renderDeliveryCustomFields();
+    });
+    row.appendChild(removeBtn);
+
+    container.appendChild(row);
+  });
+}
+
+function addDeliveryCustomField() {
+  var input = document.getElementById('delivery-custom-field-input');
+  if (!input) return;
+  var label = input.value.trim();
+  if (!label) return;
+
+  var settings = data.delivery_form_settings;
+  if (!settings) return;
+  if (!settings.custom_fields) settings.custom_fields = [];
+
+  /* Prevent duplicates */
+  var exists = settings.custom_fields.some(function(cf) { return cf.label.toLowerCase() === label.toLowerCase(); });
+  if (exists) { tool.notify('This field already exists', 'warning'); return; }
+
+  settings.custom_fields.push({ label: label, required: false });
+  input.value = '';
+  scheduleSave();
+  renderDeliveryCustomFields();
 }
 
 /* ===================================================================== */
@@ -1222,17 +1694,42 @@ function renderCategories() {
   var categories = data.menu.categories || [];
 
   categories.forEach(function(cat) {
+    /* Migrate old visible boolean to new visibility_mode */
+    if (cat.visibility_mode === undefined) {
+      cat.visibility_mode = (cat.visible !== false) ? 'show' : 'hide';
+    }
     var itemCount = (data.menu.items || []).filter(function(i) { return i.category_id === cat.id; }).length;
     var el = document.createElement('div');
     el.className = 'category-item' + (selectedCategoryId === cat.id ? ' active' : '');
     el.dataset.catId = cat.id;
+    /* Visibility badge based on mode */
+    var visIcon, visLabel, visClass, visTitle;
+    if (cat.visibility_mode === 'hide') {
+      visIcon = '○'; visLabel = 'Hidden'; visClass = 'cat-vis-hidden';
+      visTitle = 'Hidden';
+      if (cat.hide_until_date) visTitle += ' until ' + cat.hide_until_date.replace('T', ' ');
+    } else if (cat.visibility_mode === 'scheduled') {
+      visIcon = '◐'; visLabel = 'Scheduled'; visClass = 'cat-vis-scheduled';
+      visTitle = 'Scheduled: ';
+      if (cat.schedule_type === 'time_windows' && cat.schedule_time_windows) {
+        visTitle += cat.schedule_time_windows.map(function(w) {
+          var days = ['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+          return (w.days||[]).map(function(d) { return days[d]; }).join(',') + ' ' + (w.start_time||'') + '-' + (w.end_time||'');
+        }).join('; ');
+      } else if (cat.schedule_type === 'date_range') {
+        visTitle += (cat.schedule_from||'?') + ' to ' + (cat.schedule_until||'?');
+      }
+    } else {
+      visIcon = '●'; visLabel = 'Visible'; visClass = 'cat-vis-visible';
+      visTitle = 'Always visible';
+    }
     el.innerHTML =
       '<span class="drag-handle">⋮⋮</span>' +
       '<span class="cat-name">' + esc(cat.name) + '</span>' +
+      '<span class="cat-vis-badge ' + visClass + '" title="' + esc(visTitle) + '">' + visIcon + '</span>' +
       '<span class="cat-count">' + itemCount + '</span>' +
       '<span class="cat-actions">' +
         '<button class="cat-edit-btn" title="Edit">✎</button>' +
-        '<button class="cat-delete-btn" title="Delete">✕</button>' +
       '</span>';
 
     el.addEventListener('click', function(e) {
@@ -1240,7 +1737,6 @@ function renderCategories() {
       selectCategory(cat.id);
     });
     el.querySelector('.cat-edit-btn').addEventListener('click', function(e) { e.stopPropagation(); editCategory(cat.id); });
-    el.querySelector('.cat-delete-btn').addEventListener('click', function(e) { e.stopPropagation(); deleteCategory(cat.id); });
     list.appendChild(el);
   });
 
@@ -1255,19 +1751,10 @@ function renderCategories() {
     });
   }
 
-  /* Update bulk category dropdown */
-  var bulkSelect = document.getElementById('menu-bulk-cat');
-  if (bulkSelect) {
-    var currentVal = bulkSelect.value;
-    bulkSelect.innerHTML = '<option value="">Move to...</option>';
-    categories.forEach(function(c) { bulkSelect.innerHTML += '<option value="' + c.id + '">' + esc(c.name) + '</option>'; });
-    bulkSelect.value = currentVal;
-  }
 }
 
 function selectCategory(catId) {
   selectedCategoryId = catId;
-  selectedItemIds = [];
   editingItemId = null;
   closeDrawer();
   renderCategories();
@@ -1275,146 +1762,724 @@ function selectCategory(catId) {
 }
 
 function addCategory() {
-  var form = document.getElementById('menu-cat-form');
-  var input = document.getElementById('menu-cat-name');
-  form.style.display = '';
-  input.value = '';
-  input.focus();
-}
-
-function saveCategory() {
-  var input = document.getElementById('menu-cat-name');
-  var name = input.value.trim();
-  if (!name) { tool.notify('Category name required', 'warning'); return; }
-  data.menu.categories.push({ id: uid(), name: name });
-  document.getElementById('menu-cat-form').style.display = 'none';
-  input.value = '';
-  renderCategories();
-  scheduleSave();
-  tool.notify('Category added', 'success');
+  editingCategoryId = null;
+  var title = document.getElementById('menu-cat-modal-title'); if (title) title.textContent = 'New Category';
+  var nameEl = document.getElementById('menu-cat-name'); if (nameEl) nameEl.value = '';
+  var descEl = document.getElementById('menu-cat-desc'); if (descEl) descEl.value = '';
+  var modal = document.getElementById('menu-cat-modal'); if (modal) modal.style.display = 'flex';
+  var visMode = document.getElementById('menu-cat-vis-mode'); if (visMode) visMode.value = 'show';
+  resetCatVisOptions();
+  var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.style.display = 'none';
+  var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.style.display = 'none';
+  updateCatCharCounts();
+  if (nameEl) nameEl.focus();
 }
 
 function editCategory(catId) {
   var cat = data.menu.categories.find(function(c) { return c.id === catId; });
   if (!cat) return;
-  var form = document.getElementById('menu-cat-form');
-  var input = document.getElementById('menu-cat-name');
-  form.style.display = '';
-  input.value = cat.name;
-  input.dataset.editCatId = catId;
-  input.focus();
+  editingCategoryId = catId;
+  var title = document.getElementById('menu-cat-modal-title'); if (title) title.textContent = 'Edit Category';
+  var nameEl = document.getElementById('menu-cat-name'); if (nameEl) nameEl.value = cat.name || '';
+  var descEl = document.getElementById('menu-cat-desc'); if (descEl) descEl.value = cat.description || '';
+  var modal = document.getElementById('menu-cat-modal'); if (modal) modal.style.display = 'flex';
+  /* Populate visibility */
+  var visMode = document.getElementById('menu-cat-vis-mode'); if (visMode) visMode.value = cat.visibility_mode || 'show';
+  var hideUntil = document.getElementById('menu-cat-hide-until'); if (hideUntil) hideUntil.value = cat.hide_until_date || '';
+  var schedType = document.getElementById('menu-cat-schedule-type'); if (schedType) schedType.value = cat.schedule_type || 'time_windows';
+  var schedFrom = document.getElementById('menu-cat-sched-from'); if (schedFrom) schedFrom.value = cat.schedule_from || '';
+  var schedUntil = document.getElementById('menu-cat-sched-until'); if (schedUntil) schedUntil.value = cat.schedule_until || '';
+  applyCatVisMode();
+  renderCatTimeWindows(cat);
+  var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.style.display = '';
+  var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.style.display = '';
+  updateCatCharCounts();
+  if (nameEl) nameEl.focus();
 }
 
-function saveCategoryEdit() {
-  var input = document.getElementById('menu-cat-name');
-  var name = input.value.trim();
-  var catId = input.dataset.editCatId;
-  if (!name || !catId) return;
-  var cat = data.menu.categories.find(function(c) { return c.id === catId; });
-  if (cat) cat.name = name;
-  document.getElementById('menu-cat-form').style.display = 'none';
-  input.value = '';
-  delete input.dataset.editCatId;
+function resetCatVisOptions() {
+  var hideOpts = document.getElementById('cat-hide-options'); if (hideOpts) hideOpts.style.display = 'none';
+  var schedOpts = document.getElementById('cat-schedule-options'); if (schedOpts) schedOpts.style.display = 'none';
+}
+
+function applyCatVisMode() {
+  resetCatVisOptions();
+  var modeEl = document.getElementById('menu-cat-vis-mode');
+  if (!modeEl) return;
+  var mode = modeEl.value;
+  if (mode === 'hide') {
+    var hideOpts = document.getElementById('cat-hide-options'); if (hideOpts) hideOpts.style.display = '';
+    var checkedRadio = document.querySelector('input[name="cat-hide-type"]:checked');
+    var untilRow = document.getElementById('cat-hide-until-row');
+    if (untilRow) untilRow.style.display = (checkedRadio && checkedRadio.value === 'until_date') ? '' : 'none';
+  } else if (mode === 'scheduled') {
+    var schedOpts = document.getElementById('cat-schedule-options'); if (schedOpts) schedOpts.style.display = '';
+    var schedType = document.getElementById('menu-cat-schedule-type');
+    var winDiv = document.getElementById('cat-schedule-windows');
+    var dateDiv = document.getElementById('cat-schedule-dates');
+    if (schedType && winDiv && dateDiv) {
+      var isWindows = schedType.value === 'time_windows';
+      winDiv.style.display = isWindows ? '' : 'none';
+      dateDiv.style.display = isWindows ? 'none' : '';
+    }
+  }
+}
+
+function renderCatTimeWindows(cat) {
+  var container = document.getElementById('cat-schedule-windows');
+  if (!container) return;
+  var windows = (cat && cat.schedule_time_windows && cat.schedule_time_windows.length > 0)
+    ? cat.schedule_time_windows
+    : [{ days: [1,2,3,4,5], start_time: '09:00', end_time: '17:00' }];
+  container.innerHTML = '';
+  windows.forEach(function(win, wi) {
+    var row = document.createElement('div');
+    row.className = 'cat-time-window-row';
+    var daysChecked = function(d) { return (win.days||[]).indexOf(d) !== -1 ? ' checked' : ''; };
+    row.innerHTML =
+      '<div class="day-pills">' +
+        ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(label, d) {
+          var isChecked = (win.days||[]).indexOf(d+1) !== -1;
+          return '<button type="button" class="day-pill' + (isChecked ? ' active' : '') + '" data-day="' + (d+1) + '">' + label + '</button>';
+        }).join('') +
+      '</div>' +
+      '<input type="time" class="form-input form-input-sm cat-tw-start" value="' + (win.start_time||'09:00') + '" style="width:110px;">' +
+      '<span style="color:var(--slate-400);font-size:var(--text-xs);">to</span>' +
+      '<input type="time" class="form-input form-input-sm cat-tw-end" value="' + (win.end_time||'17:00') + '" style="width:110px;">' +
+      (wi > 0 ? '<button type="button" class="btn btn-xs btn-ghost cat-tw-remove" style="color:#ef4444;" title="Remove this time window">✕</button>' : '');
+    /* Wire up day-pill toggles */
+    row.querySelectorAll('.day-pill').forEach(function(pill) {
+      pill.addEventListener('click', function() { this.classList.toggle('active'); });
+    });
+    /* Wire up remove button */
+    var removeBtn = row.querySelector('.cat-tw-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function() {
+        windows.splice(wi, 1);
+        var fakeCat = { schedule_time_windows: windows };
+        renderCatTimeWindows(fakeCat);
+      });
+    }
+    container.appendChild(row);
+  });
+  var addBtn = document.createElement('button');
+  addBtn.type = 'button'; addBtn.className = 'btn btn-xs btn-outline';
+  addBtn.textContent = '+ Add time window'; addBtn.style.marginTop = '4px';
+  addBtn.addEventListener('click', function() {
+    windows.push({ days: [1,2,3,4,5], start_time: '09:00', end_time: '17:00' });
+    var fakeCat = { schedule_time_windows: windows };
+    renderCatTimeWindows(fakeCat);
+  });
+  container.appendChild(addBtn);
+}
+
+function collectCatTimeWindows() {
+  var rows = document.querySelectorAll('#cat-schedule-windows .cat-time-window-row');
+  var windows = [];
+  rows.forEach(function(row) {
+    var days = [];
+    row.querySelectorAll('.day-pill.active').forEach(function(pill) { days.push(parseInt(pill.dataset.day)); });
+    var start = row.querySelector('.cat-tw-start'); var end = row.querySelector('.cat-tw-end');
+    if (days.length > 0) {
+      windows.push({ days: days, start_time: start ? start.value : '09:00', end_time: end ? end.value : '17:00' });
+    }
+  });
+  return windows;
+}
+
+/* ---- Item Visibility Helpers (parallel to category ones) ---- */
+function applyItemVisMode() {
+  resetItemVisOptions();
+  var modeEl = document.getElementById('menu-item-vis-mode');
+  if (!modeEl) return;
+  var mode = modeEl.value;
+  if (mode === 'hide') {
+    var hideOpts = document.getElementById('item-hide-options'); if (hideOpts) hideOpts.style.display = '';
+    var checkedRadio = document.querySelector('input[name="item-hide-type"]:checked');
+    var untilRow = document.getElementById('item-hide-until-row');
+    if (untilRow) untilRow.style.display = (checkedRadio && checkedRadio.value === 'until_date') ? '' : 'none';
+  } else if (mode === 'scheduled') {
+    var schedOpts = document.getElementById('item-schedule-options'); if (schedOpts) schedOpts.style.display = '';
+    var schedType = document.getElementById('menu-item-schedule-type');
+    var winDiv = document.getElementById('item-schedule-windows');
+    var dateDiv = document.getElementById('item-schedule-dates');
+    if (schedType && winDiv && dateDiv) {
+      var isWindows = schedType.value === 'time_windows';
+      winDiv.style.display = isWindows ? '' : 'none';
+      dateDiv.style.display = isWindows ? 'none' : '';
+    }
+  }
+}
+
+function resetItemVisOptions() {
+  var hideOpts = document.getElementById('item-hide-options'); if (hideOpts) hideOpts.style.display = 'none';
+  var schedOpts = document.getElementById('item-schedule-options'); if (schedOpts) schedOpts.style.display = 'none';
+}
+
+function renderItemTimeWindows(item) {
+  var container = document.getElementById('item-schedule-windows');
+  if (!container) return;
+  var windows = (item && item.schedule_time_windows && item.schedule_time_windows.length > 0)
+    ? item.schedule_time_windows
+    : [{ days: [1,2,3,4,5], start_time: '09:00', end_time: '17:00' }];
+  container.innerHTML = '';
+  windows.forEach(function(win, wi) {
+    var row = document.createElement('div');
+    row.className = 'cat-time-window-row';
+    row.innerHTML =
+      '<div class="day-pills">' +
+        ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(label, d) {
+          var isChecked = (win.days||[]).indexOf(d+1) !== -1;
+          return '<button type="button" class="day-pill' + (isChecked ? ' active' : '') + '" data-day="' + (d+1) + '">' + label + '</button>';
+        }).join('') +
+      '</div>' +
+      '<input type="time" class="form-input form-input-sm cat-tw-start" value="' + (win.start_time||'09:00') + '" style="width:110px;">' +
+      '<span style="color:var(--slate-400);font-size:var(--text-xs);">to</span>' +
+      '<input type="time" class="form-input form-input-sm cat-tw-end" value="' + (win.end_time||'17:00') + '" style="width:110px;">' +
+      (wi > 0 ? '<button type="button" class="btn btn-xs btn-ghost cat-tw-remove" style="color:#ef4444;" title="Remove this time window">✕</button>' : '');
+    row.querySelectorAll('.day-pill').forEach(function(pill) {
+      pill.addEventListener('click', function() { this.classList.toggle('active'); });
+    });
+    var removeBtn = row.querySelector('.cat-tw-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function() {
+        windows.splice(wi, 1);
+        var fake = { schedule_time_windows: windows };
+        renderItemTimeWindows(fake);
+      });
+    }
+    container.appendChild(row);
+  });
+  var addBtn = document.createElement('button');
+  addBtn.type = 'button'; addBtn.className = 'btn btn-xs btn-outline';
+  addBtn.textContent = '+ Add time window'; addBtn.style.marginTop = '4px';
+  addBtn.addEventListener('click', function() {
+    windows.push({ days: [1,2,3,4,5], start_time: '09:00', end_time: '17:00' });
+    renderItemTimeWindows({ schedule_time_windows: windows });
+  });
+  container.appendChild(addBtn);
+}
+
+function collectItemTimeWindows() {
+  var rows = document.querySelectorAll('#item-schedule-windows .cat-time-window-row');
+  var windows = [];
+  rows.forEach(function(row) {
+    var days = [];
+    row.querySelectorAll('.day-pill.active').forEach(function(pill) { days.push(parseInt(pill.dataset.day)); });
+    var start = row.querySelector('.cat-tw-start'); var end = row.querySelector('.cat-tw-end');
+    if (days.length > 0) {
+      windows.push({ days: days, start_time: start ? start.value : '09:00', end_time: end ? end.value : '17:00' });
+    }
+  });
+  return windows;
+}
+
+function collectItemVisibility() {
+  var visData = { visibility_mode: document.getElementById('menu-item-vis-mode').value };
+  if (visData.visibility_mode === 'hide') {
+    var hideType = document.querySelector('input[name="item-hide-type"]:checked');
+    if (hideType && hideType.value === 'until_date') {
+      visData.hide_until_date = document.getElementById('menu-item-hide-until').value || null;
+    }
+  } else if (visData.visibility_mode === 'scheduled') {
+    visData.schedule_type = document.getElementById('menu-item-schedule-type').value;
+    if (visData.schedule_type === 'time_windows') {
+      visData.schedule_time_windows = collectItemTimeWindows();
+    } else {
+      visData.schedule_from = document.getElementById('menu-item-sched-from').value || null;
+      visData.schedule_until = document.getElementById('menu-item-sched-until').value || null;
+    }
+  }
+  return visData;
+}
+
+/* ---- Item Channel Availability ---- */
+function getEnabledChannels() {
+  var channels = [];
+  var toggles = (data.service_settings && data.service_settings.service_toggles) ? data.service_settings.service_toggles : {};
+  if (toggles.pickup_enabled) channels.push({ id: 'pickup', label: 'Pickup' });
+  if (toggles.delivery_enabled) channels.push({ id: 'delivery', label: 'Delivery' });
+  if (toggles.on_premise_enabled) channels.push({ id: 'on_premise', label: 'In-Premise' });
+  return channels;
+}
+
+function renderItemChannels(selectedChannels) {
+  var container = document.getElementById('menu-item-channels');
+  if (!container) return;
+  container.innerHTML = '';
+  var channels = getEnabledChannels();
+  if (channels.length === 0) { container.innerHTML = '<span style="font-size:11px;color:var(--slate-400);">No service channels enabled — check Services tab</span>'; return; }
+  selectedChannels = selectedChannels || [];
+  channels.forEach(function(ch) {
+    var isActive = selectedChannels.indexOf(ch.id) !== -1;
+    var pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'channel-pill' + (isActive ? ' active' : '');
+    pill.textContent = ch.label;
+    pill.dataset.channel = ch.id;
+    pill.addEventListener('click', function() {
+      this.classList.toggle('active');
+    });
+    container.appendChild(pill);
+  });
+}
+
+function collectItemChannels() {
+  var pills = document.querySelectorAll('#menu-item-channels .channel-pill.active');
+  var channels = [];
+  pills.forEach(function(p) { channels.push(p.dataset.channel); });
+  return channels;
+}
+
+/* ---- Item Out-of-Stock options ---- */
+function applyItemOosOptions() {
+  var statusEl = document.getElementById('menu-item-avail-status');
+  var oosOpts = document.getElementById('item-oos-options');
+  if (!statusEl || !oosOpts) return;
+  oosOpts.style.display = statusEl.value === 'out_of_stock' ? '' : 'none';
+  if (statusEl.value === 'out_of_stock') {
+    var checkedRadio = document.querySelector('input[name="item-oos-type"]:checked');
+    var dateRow = document.getElementById('item-oos-date-row');
+    if (dateRow) dateRow.style.display = (checkedRadio && checkedRadio.value === 'date') ? '' : 'none';
+  }
+}
+
+function resetItemOosOptions() {
+  var oosOpts = document.getElementById('item-oos-options'); if (oosOpts) oosOpts.style.display = 'none';
+  var dateRow = document.getElementById('item-oos-date-row'); if (dateRow) dateRow.style.display = 'none';
+  var oosUntil = document.getElementById('menu-item-oos-until'); if (oosUntil) oosUntil.value = '';
+}
+
+function collectItemOosData() {
+  var statusEl = document.getElementById('menu-item-avail-status');
+  if (!statusEl || statusEl.value !== 'out_of_stock') return null;
+  var oosType = document.querySelector('input[name="item-oos-type"]:checked');
+  var type = oosType ? oosType.value : 'tomorrow';
+  var until = null;
+  if (type === 'tomorrow') {
+    var t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0, 0, 0, 0);
+    until = t.toISOString();
+  } else if (type === 'date') {
+    until = document.getElementById('menu-item-oos-until').value || null;
+    if (until) until = new Date(until).toISOString();
+  }
+  return { oos_type: type, oos_until: until };
+}
+
+function updateCatCharCounts() {
+  var nameEl = document.getElementById('menu-cat-name');
+  var descEl = document.getElementById('menu-cat-desc');
+  var nameCount = document.getElementById('cat-name-count');
+  var descCount = document.getElementById('cat-desc-count');
+  if (nameEl && nameCount) nameCount.textContent = (nameEl.value || '').length + '/80';
+  if (descEl && descCount) descCount.textContent = (descEl.value || '').length + '/200';
+}
+
+function saveCategory() {
+  var nameEl = document.getElementById('menu-cat-name');
+  var descEl = document.getElementById('menu-cat-desc');
+  if (!nameEl) return;
+  var name = nameEl.value.trim();
+  if (!name) { tool.notify('Category name is required', 'warning'); return; }
+  if (name.length > 80) { tool.notify('Category name must be 80 characters or fewer', 'warning'); return; }
+  var desc = descEl ? (descEl.value || '').trim() : '';
+  if (desc.length > 200) { tool.notify('Description must be 200 characters or fewer', 'warning'); return; }
+
+  /* Collect visibility settings */
+  var visData = {
+    visibility_mode: document.getElementById('menu-cat-vis-mode').value
+  };
+  if (visData.visibility_mode === 'hide') {
+    var hideType = document.querySelector('input[name="cat-hide-type"]:checked');
+    if (hideType && hideType.value === 'until_date') {
+      visData.hide_until_date = document.getElementById('menu-cat-hide-until').value || null;
+    }
+  } else if (visData.visibility_mode === 'scheduled') {
+    visData.schedule_type = document.getElementById('menu-cat-schedule-type').value;
+    if (visData.schedule_type === 'time_windows') {
+      visData.schedule_time_windows = collectCatTimeWindows();
+    } else {
+      visData.schedule_from = document.getElementById('menu-cat-sched-from').value || null;
+      visData.schedule_until = document.getElementById('menu-cat-sched-until').value || null;
+    }
+  }
+
+  var catData = {
+    name: name, description: desc,
+    visibility_mode: visData.visibility_mode,
+    hide_until_date: visData.hide_until_date || null,
+    schedule_type: visData.schedule_type || null,
+    schedule_time_windows: visData.schedule_time_windows || null,
+    schedule_from: visData.schedule_from || null,
+    schedule_until: visData.schedule_until || null
+  };
+
+  if (editingCategoryId) {
+    var cat = data.menu.categories.find(function(c) { return c.id === editingCategoryId; });
+    if (cat) { Object.assign(cat, catData); }
+    editingCategoryId = null;
+  } else {
+    catData.id = uid();
+    data.menu.categories.push(catData);
+  }
+  closeCategoryForm();
   renderCategories();
   scheduleSave();
+  tool.notify(editingCategoryId ? 'Category updated' : 'Category added', 'success');
 }
 
-function deleteCategory(catId) {
-  data.menu.categories = data.menu.categories.filter(function(c) { return c.id !== catId; });
-  (data.menu.items || []).forEach(function(item) { if (item.category_id === catId) item.category_id = null; });
-  if (selectedCategoryId === catId) selectedCategoryId = null;
+function closeCategoryForm() {
+  var modal = document.getElementById('menu-cat-modal'); if (modal) modal.style.display = 'none';
+  var nameEl = document.getElementById('menu-cat-name'); if (nameEl) nameEl.value = '';
+  var descEl = document.getElementById('menu-cat-desc'); if (descEl) descEl.value = '';
+  var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.style.display = 'none';
+  var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.style.display = 'none';
+  editingCategoryId = null;
+}
+
+function duplicateCategory() {
+  if (!editingCategoryId) return;
+  var cat = data.menu.categories.find(function(c) { return c.id === editingCategoryId; });
+  if (!cat) return;
+  /* Append " (Copy)" but respect 80-char limit */
+  var baseName = (cat.name || 'Category') + ' (Copy)';
+  if (baseName.length > 80) baseName = baseName.substring(0, 77) + '...';
+  /* Ensure unique name */
+  var name = baseName;
+  var counter = 1;
+  while (data.menu.categories.some(function(c) { return c.name === name; })) {
+    counter++;
+    name = baseName.replace(/ \(Copy\)/, '') + ' (Copy ' + counter + ')';
+    if (name.length > 80) name = name.substring(0, 80);
+  }
+  var newCat = { id: uid(), name: name, description: cat.description || '', visible: cat.visible !== false };
+  data.menu.categories.push(newCat);
+  renderCategories();
+  scheduleSave();
+  tool.notify('Category duplicated', 'success');
+}
+
+/* Category delete with confirmation */
+var catDeleteId = null;
+
+function confirmDeleteCategory() {
+  if (!editingCategoryId) return;
+  var cat = data.menu.categories.find(function(c) { return c.id === editingCategoryId; });
+  if (!cat) return;
+  /* Prevent deletion if category has items */
+  var itemCount = (data.menu.items || []).filter(function(i) { return i.category_id === editingCategoryId; }).length;
+  if (itemCount > 0) {
+    tool.notify('Cannot delete category with ' + itemCount + ' item(s). Move or delete them first.', 'warning');
+    return;
+  }
+  catDeleteId = editingCategoryId;
+  var nameEl = document.getElementById('cat-delete-modal-name'); if (nameEl) nameEl.textContent = '"' + (cat.name || 'Unnamed') + '"';
+  var modal = document.getElementById('cat-delete-modal'); if (modal) modal.style.display = 'flex';
+}
+
+function deleteCategoryConfirmed() {
+  var modal = document.getElementById('cat-delete-modal'); if (modal) modal.style.display = 'none';
+  if (!catDeleteId) return;
+  data.menu.categories = (data.menu.categories || []).filter(function(c) { return c.id !== catDeleteId; });
+  /* Unlink items from deleted category */
+  (data.menu.items || []).forEach(function(item) {
+    if (item.category_id === catDeleteId) item.category_id = '';
+  });
+  var deletedId = catDeleteId;
+  catDeleteId = null;
+  editingCategoryId = null;
+  if (selectedCategoryId === deletedId) { selectedCategoryId = null; }
+  closeCategoryForm();
   renderCategories();
   renderItems();
   scheduleSave();
+  tool.notify('Category deleted', 'info');
+}
+
+function cancelCategoryDelete() {
+  var modal = document.getElementById('cat-delete-modal'); if (modal) modal.style.display = 'none';
+  catDeleteId = null;
 }
 
 /* ---- Modifier Groups ---- */
+function getModGroupById(id) {
+  return (data.menu.modifier_groups || []).find(function(g) { return g.id === id; });
+}
+
+/* ---- Hybrid Modifier Assignment Helpers ---- */
+/* Resolve a modifier group ID from an assignment (string or object) */
+function resolveModGroupId(assignment) {
+  if (typeof assignment === 'string') return assignment;
+  return assignment && assignment.group_id ? assignment.group_id : null;
+}
+
+/* Get all modifier group IDs from an array of mixed assignments */
+function getModGroupIds(assignments) {
+  if (!assignments) return [];
+  return assignments.map(function(a) { return resolveModGroupId(a); }).filter(Boolean);
+}
+
+/* Get the override object for an assignment, or null if it's a plain string */
+function getModOverride(assignments, groupId) {
+  if (!assignments) return null;
+  for (var i = 0; i < assignments.length; i++) {
+    var id = resolveModGroupId(assignments[i]);
+    if (id === groupId && typeof assignments[i] === 'object') return assignments[i];
+  }
+  return null;
+}
+
+/* Read a property from an assignment with fallback to group definition */
+function getModProp(assignments, groupId, prop, defaultVal) {
+  if (defaultVal === undefined) defaultVal = false;
+  var override = getModOverride(assignments, groupId);
+  if (override && override[prop] !== undefined) return override[prop];
+  var mg = getModGroupById(groupId);
+  if (mg && mg[prop] !== undefined) return mg[prop];
+  return defaultVal;
+}
+
+/* Set an override property on an assignment (converts string to object if needed) */
+function setModOverride(assignments, groupId, prop, value) {
+  if (!assignments) return;
+  for (var i = 0; i < assignments.length; i++) {
+    var id = resolveModGroupId(assignments[i]);
+    if (id === groupId) {
+      if (typeof assignments[i] === 'string') {
+        assignments[i] = { group_id: groupId };
+      }
+      assignments[i][prop] = value;
+      return;
+    }
+  }
+}
+
+/* Remove modifier group from assignments by group ID */
+function removeModFromAssignments(assignments, groupId) {
+  if (!assignments) return;
+  for (var i = assignments.length - 1; i >= 0; i--) {
+    if (resolveModGroupId(assignments[i]) === groupId) {
+      assignments.splice(i, 1);
+    }
+  }
+}
+
+/* Check if a modifier group ID exists in the assignments */
+function hasModGroup(assignments, groupId) {
+  if (!assignments) return false;
+  return getModGroupIds(assignments).indexOf(groupId) !== -1;
+}
+
+function focusModGroup(mgId) {
+  highlightedModGroupId = mgId;
+  /* Switch left panel to Modifiers tab */
+  switchLeftTab('modifiers');
+  renderModGroups();
+  /* Scroll to the highlighted group after render */
+  setTimeout(function() {
+    var el = document.querySelector('.modgroup-item[data-mg-id="' + mgId + '"]');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 50);
+}
+
+function switchLeftTab(tabName) {
+  document.querySelectorAll('.panel-tab').forEach(function(t) {
+    t.classList.toggle('active', t.dataset.leftTab === tabName);
+  });
+  document.querySelectorAll('.panel-content').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'left-tab-' + tabName);
+  });
+  if (tabName === 'modifiers') renderModGroups();
+  if (tabName === 'categories') renderCategories();
+  tool.resize();
+}
+
+function getModGroupUsage(mgId) {
+  var result = [];
+  (data.menu.items || []).forEach(function(item) {
+    /* Check item-level assignment */
+    if ((item.modifier_group_ids || []).indexOf(mgId) !== -1) {
+      result.push({ itemName: item.item_name || 'Untitled', sizeLabel: null });
+    }
+    /* Check size-level assignment */
+    (item.sizes || []).forEach(function(sz) {
+      if ((sz.modifier_group_ids || []).indexOf(mgId) !== -1) {
+        result.push({ itemName: item.item_name || 'Untitled', sizeLabel: sz.label });
+      }
+    });
+  });
+  return result;
+}
+
 function renderModGroups() {
   var list = document.getElementById('menu-mg-list');
   if (!list) return;
   list.innerHTML = '';
   (data.menu.modifier_groups || []).forEach(function(mg) {
+    var hasOpts = mg.options && mg.options.length > 0;
+    /* Track expand state: default collapsed unless previously expanded */
+    if (_expandedModGroups[mg.id] === undefined) _expandedModGroups[mg.id] = false;
+    var isExpanded = _expandedModGroups[mg.id] || highlightedModGroupId === mg.id;
+
+    /* Group row */
     var el = document.createElement('div');
-    el.className = 'modgroup-item' + (editingModGroupId === mg.id ? ' active' : '');
+    el.className = 'modgroup-item' + (editingModGroupId === mg.id ? ' active' : '') + (highlightedModGroupId === mg.id ? ' highlighted' : '');
     el.dataset.mgId = mg.id;
     el.innerHTML =
+      '<span class="mg-expand">' + (isExpanded ? '▼' : '▶') + '</span>' +
       '<span class="mg-name">' + esc(mg.group_name) + '</span>' +
-      '<span class="mg-meta">' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + (mg.is_required ? ' · Req' : '') + '</span>' +
-      '<span class="mg-actions"><button class="mg-edit-btn" title="Edit">✎</button><button class="mg-delete-btn" title="Delete">✕</button></span>';
-    el.addEventListener('click', function(e) { if (e.target.closest('.mg-actions')) return; editModGroup(mg.id); });
+      '<span class="mg-meta">' + (hasOpts ? mg.options.length + '' : '0') + ' · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + (mg.allow_duplicates ? ' · Dup' : '') + (mg.is_required ? ' · Req' : '') + '</span>' +
+      '<span class="mg-actions"><button class="mg-edit-btn" title="Edit">✎</button></span>';
+
+    el.querySelector('.mg-expand').addEventListener('click', function(e) {
+      e.stopPropagation();
+      highlightedModGroupId = null;
+      _expandedModGroups[mg.id] = !_expandedModGroups[mg.id];
+      renderModGroups();
+    });
+    el.addEventListener('click', function(e) {
+      if (e.target.closest('.mg-actions') || e.target.closest('.mg-expand')) return;
+      highlightedModGroupId = null;
+      _expandedModGroups[mg.id] = !_expandedModGroups[mg.id];
+      renderModGroups();
+    });
+    /* Filter checkbox — visible on hover, stays when checked */
+    var filterCb = document.createElement('input');
+    filterCb.type = 'checkbox';
+    filterCb.className = 'mg-filter-cb';
+    filterCb.title = 'Filter products by this modifier group';
+    filterCb.checked = _modFilterIds.indexOf(mg.id) !== -1;
+    filterCb.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (this.checked) { if (_modFilterIds.indexOf(mg.id) === -1) _modFilterIds.push(mg.id); }
+      else { _modFilterIds = _modFilterIds.filter(function(id) { return id !== mg.id; }); }
+      renderModGroups();
+      renderItems();
+    });
+    el.querySelector('.mg-expand').insertAdjacentElement('afterend', filterCb);
+
     el.querySelector('.mg-edit-btn').addEventListener('click', function(e) { e.stopPropagation(); editModGroup(mg.id); });
-    el.querySelector('.mg-delete-btn').addEventListener('click', function(e) { e.stopPropagation(); deleteModGroup(mg.id); });
     list.appendChild(el);
+
+    /* Sub-list (always rendered so Add button is available even for empty groups) */
+    var subList = document.createElement('div');
+    subList.className = 'mg-sub-list';
+    subList.style.display = isExpanded ? '' : 'none';
+
+    /* Existing options */
+    (mg.options || []).forEach(function(opt, idx) {
+      var optRow = document.createElement('div');
+      optRow.className = 'mg-sub-row';
+      var priceStr = (opt.price_adjustment && opt.price_adjustment !== 0) ? ((opt.price_adjustment > 0 ? '+' : '') + '$' + opt.price_adjustment.toFixed(2)) : '';
+      optRow.innerHTML =
+        '<span class="mg-sub-name">' + esc(opt.option_name || '(unnamed)') + '</span>' +
+        (opt.is_default ? '<span class="mg-sub-default">★ Default</span>' : '') +
+        (opt.is_available === false ? '<span style="color:var(--slate-300);font-size:10px;">Hidden</span>' : '') +
+        '<span class="mg-sub-price">' + priceStr + '</span>' +
+        '<button class="mg-sub-edit" title="Edit">✎</button>';
+      optRow.querySelector('.mg-sub-edit').addEventListener('click', function(e) {
+        e.stopPropagation();
+        editModOption(mg.id, idx);
+      });
+      subList.appendChild(optRow);
+    });
+
+    /* Add Option button (always visible) */
+    var addBtn = document.createElement('button');
+    addBtn.className = 'mg-sub-add-btn';
+    addBtn.textContent = '+ Add Option';
+    addBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      addModOption(mg.id);
+    });
+    subList.appendChild(addBtn);
+    list.appendChild(subList);
+
+    /* ---- Usage: show where this modifier group is used ---- */
+    var usage = getModGroupUsage(mg.id);
+    if (usage.length > 0) {
+      var usageToggle = document.createElement('div');
+      usageToggle.className = 'mg-usage-toggle';
+      usageToggle.textContent = '▸ Used in ' + usage.length + ' product(s)';
+      usageToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var ul = this.nextElementSibling;
+        var isOpen = ul.classList.toggle('open');
+        this.textContent = (isOpen ? '▾' : '▸') + ' Used in ' + usage.length + ' product(s)';
+      });
+      list.appendChild(usageToggle);
+
+      var usageList = document.createElement('div');
+      usageList.className = 'mg-usage-list';
+      usage.forEach(function(u) {
+        var line = document.createElement('span');
+        line.innerHTML = '<span class="mg-usage-item-name">' + esc(u.itemName) + '</span>' + (u.sizeLabel ? '<span class="mg-usage-size">→ ' + esc(u.sizeLabel) + '</span>' : '');
+        usageList.appendChild(line);
+      });
+      list.appendChild(usageList);
+    }
   });
 }
 
 function addModGroup() {
   editingModGroupId = null;
-  var form = document.getElementById('menu-mg-form');
+  document.getElementById('menu-mg-modal-title').textContent = 'New Modifier Group';
   document.getElementById('menu-mg-name').value = '';
-  document.getElementById('menu-mg-type').value = 'multi';
+  document.getElementById('menu-mg-multi').checked = true;
+  document.getElementById('menu-mg-allow-duplicates').checked = false;
   document.getElementById('menu-mg-required').checked = false;
-  document.getElementById('menu-mg-options').innerHTML = '';
-  form.style.display = '';
-  renderModGroups();
-  tool.resize();
+  document.getElementById('menu-mg-delete-btn').style.display = 'none';
+  document.getElementById('menu-mg-modal').style.display = 'flex';
+  document.getElementById('menu-mg-name').focus();
 }
 
 function editModGroup(mgId) {
   var mg = data.menu.modifier_groups.find(function(g) { return g.id === mgId; });
   if (!mg) return;
   editingModGroupId = mgId;
-  var form = document.getElementById('menu-mg-form');
+  document.getElementById('menu-mg-modal-title').textContent = 'Edit Modifier Group';
   document.getElementById('menu-mg-name').value = mg.group_name;
-  document.getElementById('menu-mg-type').value = mg.selection_type;
+  document.getElementById('menu-mg-multi').checked = mg.selection_type !== 'single';
+  document.getElementById('menu-mg-allow-duplicates').checked = !!mg.allow_duplicates;
   document.getElementById('menu-mg-required').checked = !!mg.is_required;
-  renderModGroupOptions(mg);
-  form.style.display = '';
+  document.getElementById('menu-mg-delete-btn').style.display = '';
+  document.getElementById('menu-mg-modal').style.display = 'flex';
+  document.getElementById('menu-mg-name').focus();
+}
+
+function closeModGroupModal() {
+  document.getElementById('menu-mg-modal').style.display = 'none';
+  editingModGroupId = null;
   renderModGroups();
-  tool.resize();
 }
 
-function renderModGroupOptions(mg) {
-  var container = document.getElementById('menu-mg-options');
-  if (!container) return;
-  container.innerHTML = '';
-  (mg.options || []).forEach(function(opt, idx) {
-    var row = document.createElement('div');
-    row.className = 'modgroup-option-row';
-    row.dataset.optIdx = idx;
-    row.innerHTML =
-      '<span class="drag-handle">⋮⋮</span>' +
-      '<input type="text" class="form-input form-input-sm" value="' + esc(opt.option_name) + '" placeholder="Option name" data-opt-field="name">' +
-      '<input type="number" class="form-input form-input-sm" value="' + (opt.price_adjustment || 0) + '" step="0.01" placeholder="+/- $" data-opt-field="price">' +
-      '<label style="font-size:10px;"><input type="radio" name="mg-default-opt" value="' + idx + '" ' + (opt.is_default ? 'checked' : '') + '> Default</label>' +
-      '<label style="font-size:10px;"><input type="checkbox" ' + (opt.is_available !== false ? 'checked' : '') + ' data-opt-field="avail"> Avail</label>' +
-      '<button type="button" class="opt-delete-btn">✕</button>';
-    row.querySelector('[data-opt-field="name"]').addEventListener('input', function() { mg.options[idx].option_name = this.value; });
-    row.querySelector('[data-opt-field="price"]').addEventListener('input', function() { mg.options[idx].price_adjustment = parseFloat(this.value) || 0; });
-    row.querySelector('[data-opt-field="avail"]').addEventListener('change', function() { mg.options[idx].is_available = this.checked; });
-    row.querySelector('input[type="radio"]').addEventListener('change', function() { mg.options.forEach(function(o, i) { o.is_default = (i === idx); }); });
-    row.querySelector('.opt-delete-btn').addEventListener('click', function() { mg.options.splice(idx, 1); renderModGroupOptions(mg); });
-    container.appendChild(row);
-  });
-  if (typeof Sortable !== 'undefined') {
-    Sortable.create(container, {
-      handle: '.drag-handle', animation: 150,
-      onEnd: function() {
-        var newOrder = [].map.call(container.querySelectorAll('.modgroup-option-row'), function(r) { return parseInt(r.dataset.optIdx); });
-        mg.options = newOrder.map(function(i) { return mg.options[i]; });
-        renderModGroupOptions(mg);
-      }
-    });
-  }
-}
-
-function addModOption() {
+function confirmDeleteModGroup() {
   if (!editingModGroupId) return;
   var mg = data.menu.modifier_groups.find(function(g) { return g.id === editingModGroupId; });
   if (!mg) return;
-  if (!mg.options) mg.options = [];
-  mg.options.push({ id: uid(), option_name: '', price_adjustment: 0, is_default: false, is_available: true });
-  renderModGroupOptions(mg);
+  document.getElementById('mg-delete-modal-name').textContent = '"' + (mg.group_name || 'Unnamed') + '"';
+  document.getElementById('mg-delete-modal').style.display = 'flex';
+}
+
+function deleteModGroupConfirmed() {
+  document.getElementById('mg-delete-modal').style.display = 'none';
+  if (!editingModGroupId) return;
+  var mgId = editingModGroupId;
+  data.menu.modifier_groups = data.menu.modifier_groups.filter(function(g) { return g.id !== mgId; });
+  (data.menu.items || []).forEach(function(item) {
+    if (item.modifier_group_ids) item.modifier_group_ids = item.modifier_group_ids.filter(function(id) { return id !== mgId; });
+  });
+  editingModGroupId = null;
+  document.getElementById('menu-mg-modal').style.display = 'none';
+  document.getElementById('menu-mg-options-panel').style.display = 'none';
+  renderModGroups();
+  renderModGroupCheckboxes();
+  scheduleSave();
+  tool.notify('Group deleted', 'info');
+}
+
+function cancelDeleteModGroup() {
+  document.getElementById('mg-delete-modal').style.display = 'none';
 }
 
 function saveModGroup() {
@@ -1423,7 +2488,8 @@ function saveModGroup() {
   var mgData = {
     id: editingModGroupId || uid(),
     group_name: name,
-    selection_type: document.getElementById('menu-mg-type').value,
+    selection_type: document.getElementById('menu-mg-multi').checked ? 'multi' : 'single',
+    allow_duplicates: document.getElementById('menu-mg-allow-duplicates').checked,
     is_required: document.getElementById('menu-mg-required').checked,
     options: []
   };
@@ -1434,49 +2500,254 @@ function saveModGroup() {
     data.menu.modifier_groups.push(mgData);
   }
   editingModGroupId = null;
-  document.getElementById('menu-mg-form').style.display = 'none';
+  document.getElementById('menu-mg-modal').style.display = 'none';
   renderModGroups();
   renderModGroupCheckboxes();
   scheduleSave();
-  tool.notify('Modifier group saved', 'success');
+  tool.notify('Group saved', 'success');
 }
 
-function deleteModGroup(mgId) {
-  data.menu.modifier_groups = data.menu.modifier_groups.filter(function(g) { return g.id !== mgId; });
-  (data.menu.items || []).forEach(function(item) {
-    if (item.modifier_group_ids) item.modifier_group_ids = item.modifier_group_ids.filter(function(id) { return id !== mgId; });
-  });
-  editingModGroupId = null;
-  document.getElementById('menu-mg-form').style.display = 'none';
+/* ---- Modifier Options ---- */
+var _editingOptGroupId = null;
+var _editingOptIdx = -1;
+
+function addModOption(mgId) {
+  _editingOptGroupId = mgId;
+  _editingOptIdx = -1;
+  document.getElementById('menu-mg-opt-modal-title').textContent = 'Add Option';
+  document.getElementById('menu-mg-opt-name').value = '';
+  document.getElementById('menu-mg-opt-price').value = '0';
+  document.getElementById('menu-mg-opt-default').checked = false;
+  document.getElementById('menu-mg-opt-delete-btn').style.display = 'none';
+  document.getElementById('menu-mg-opt-modal').style.display = 'flex';
+  document.getElementById('menu-mg-opt-name').focus();
+}
+
+function editModOption(mgId, optIdx) {
+  var mg = data.menu.modifier_groups.find(function(g) { return g.id === mgId; });
+  if (!mg || !mg.options || optIdx < 0 || optIdx >= mg.options.length) return;
+  var opt = mg.options[optIdx];
+  _editingOptGroupId = mgId;
+  _editingOptIdx = optIdx;
+  document.getElementById('menu-mg-opt-modal-title').textContent = 'Edit Option';
+  document.getElementById('menu-mg-opt-name').value = opt.option_name || '';
+  document.getElementById('menu-mg-opt-price').value = opt.price_adjustment || 0;
+  document.getElementById('menu-mg-opt-default').checked = !!opt.is_default;
+  document.getElementById('menu-mg-opt-delete-btn').style.display = '';
+  document.getElementById('menu-mg-opt-modal').style.display = 'flex';
+  document.getElementById('menu-mg-opt-name').focus();
+}
+
+function closeModOptionModal() {
+  document.getElementById('menu-mg-opt-modal').style.display = 'none';
+  _editingOptGroupId = null;
+  _editingOptIdx = -1;
+}
+
+function saveModOption() {
+  if (!_editingOptGroupId) return;
+  var mg = data.menu.modifier_groups.find(function(g) { return g.id === _editingOptGroupId; });
+  if (!mg) return;
+  var name = document.getElementById('menu-mg-opt-name').value.trim();
+  if (!name) { tool.notify('Option name required', 'warning'); return; }
+  var price = parseFloat(document.getElementById('menu-mg-opt-price').value) || 0;
+  var isDefault = document.getElementById('menu-mg-opt-default').checked;
+
+  if (_editingOptIdx >= 0) {
+    /* Update existing */
+    var opt = mg.options[_editingOptIdx];
+    if (opt) { opt.option_name = name; opt.price_adjustment = price; opt.is_default = isDefault; }
+  } else {
+    /* Add new */
+    if (!mg.options) mg.options = [];
+    mg.options.push({ id: uid(), option_name: name, price_adjustment: price, is_default: isDefault, is_available: true });
+  }
+  closeModOptionModal();
   renderModGroups();
-  renderModGroupCheckboxes();
   scheduleSave();
+  tool.notify(_editingOptIdx >= 0 ? 'Option updated' : 'Option added', 'success');
+}
+
+function confirmDeleteModOption() {
+  if (!_editingOptGroupId || _editingOptIdx < 0) return;
+  var mg = data.menu.modifier_groups.find(function(g) { return g.id === _editingOptGroupId; });
+  if (!mg || !mg.options) return;
+  var opt = mg.options[_editingOptIdx];
+  if (!opt) return;
+  document.getElementById('mg-opt-delete-modal-name').textContent = '"' + (opt.option_name || 'Unnamed') + '"';
+  document.getElementById('mg-opt-delete-modal').style.display = 'flex';
+}
+
+function deleteModOptionConfirmed() {
+  document.getElementById('mg-opt-delete-modal').style.display = 'none';
+  if (!_editingOptGroupId || _editingOptIdx < 0) return;
+  var mg = data.menu.modifier_groups.find(function(g) { return g.id === _editingOptGroupId; });
+  if (mg && mg.options) { mg.options.splice(_editingOptIdx, 1); }
+  closeModOptionModal();
+  renderModGroups();
+  scheduleSave();
+  tool.notify('Option deleted', 'info');
+}
+
+function cancelDeleteModOption() {
+  document.getElementById('mg-opt-delete-modal').style.display = 'none';
+}
+
+/* ---- Reusable Modifier Chip Picker ---- */
+function renderModChipPicker(containerId, getSelectedIds, onIdsChanged, getOverridesTarget) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  container.className = 'mod-picker';
+
+  var selectedIds = getSelectedIds();
+  if (!Array.isArray(selectedIds)) selectedIds = [];
+
+  /* Render selected chips */
+  selectedIds.forEach(function(mgId) {
+    var mg = getModGroupById(mgId);
+    if (!mg) return;
+    var chip = document.createElement('span');
+    chip.className = 'mod-picker-chip';
+    var optCount = (mg.options && mg.options.length) ? mg.options.length : 0;
+    var hasOverrides = !!getOverridesTarget;
+    chip.innerHTML = esc(mg.group_name) + ' <small>(' + optCount + ')</small>' +
+      (hasOverrides ? '<span class="mod-picker-chip-settings" title="Override settings for this assignment">⚙</span>' : '') +
+      '<span class="mod-picker-chip-remove">✕</span>';
+    chip.querySelector('.mod-picker-chip-remove').addEventListener('click', function(e) {
+      e.stopPropagation();
+      var newIds = getSelectedIds().filter(function(id) { return id !== mgId; });
+      onIdsChanged(newIds);
+      renderModChipPicker(containerId, getSelectedIds, onIdsChanged, getOverridesTarget);
+    });
+    /* ⚙ opens inline override mini-form */
+    if (hasOverrides) {
+      chip.querySelector('.mod-picker-chip-settings').addEventListener('click', function(e) {
+        e.stopPropagation();
+        showModOverrideForm(chip, mgId, getOverridesTarget);
+      });
+    }
+    container.appendChild(chip);
+  });
+
+  /* Dropdown trigger */
+  var trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'mod-picker-trigger';
+  trigger.textContent = selectedIds.length === 0 ? '+ Add modifiers' : '+ Add more';
+  trigger.addEventListener('click', function(e) {
+    e.stopPropagation();
+    /* Toggle dropdown */
+    var existing = container.querySelector('.mod-picker-dropdown');
+    if (existing) { existing.remove(); return; }
+    /* Close any other open dropdowns */
+    document.querySelectorAll('.mod-picker-dropdown').forEach(function(d) { d.remove(); });
+    showModPickerDropdown(container, getSelectedIds, onIdsChanged, function() { renderModChipPicker(containerId, getSelectedIds, onIdsChanged, getOverridesTarget); }, getOverridesTarget);
+  });
+  container.appendChild(trigger);
+}
+
+function showModPickerDropdown(container, getSelectedIds, onIdsChanged, onClose, getOverridesTarget) {
+  var selectedIds = getSelectedIds();
+  var dropdown = document.createElement('div');
+  dropdown.className = 'mod-picker-dropdown';
+
+  (data.menu.modifier_groups || []).forEach(function(mg) {
+    var checked = selectedIds.indexOf(mg.id) !== -1;
+    var row = document.createElement('div');
+    row.className = 'mod-picker-option' + (checked ? ' checked' : '');
+    var optCount = (mg.options && mg.options.length) ? mg.options.length : 0;
+    row.innerHTML = '<span class="mod-picker-option-name">' + esc(mg.group_name) + '</span><span class="mod-picker-option-meta">' + optCount + ' opt · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + '</span>';
+    row.addEventListener('click', function() {
+      var ids = getSelectedIds();
+      if (checked) {
+        ids = ids.filter(function(id) { return id !== mg.id; });
+      } else {
+        if (ids.indexOf(mg.id) === -1) ids = ids.concat([mg.id]);
+      }
+      onIdsChanged(ids);
+      dropdown.remove();
+      onClose();
+    });
+    dropdown.appendChild(row);
+  });
+
+  if ((data.menu.modifier_groups || []).length === 0) {
+    dropdown.innerHTML = '<div class="mod-picker-empty">No modifier groups yet — create one in the right panel</div>';
+  }
+
+  container.appendChild(dropdown);
+
+  /* Close dropdown on outside click */
+  setTimeout(function() {
+    document.addEventListener('click', function closeHandler(e) {
+      if (!dropdown.parentNode) { document.removeEventListener('click', closeHandler); return; }
+      if (!dropdown.contains(e.target) && e.target !== container.querySelector('.mod-picker-trigger')) {
+        dropdown.remove();
+        document.removeEventListener('click', closeHandler);
+      }
+    });
+  }, 10);
 }
 
 function renderModGroupCheckboxes() {
-  var container = document.getElementById('menu-mg-checkboxes');
-  if (!container) return;
-  var item = getEditingItem();
-  var selectedIds = item ? (item.modifier_group_ids || []) : [];
-  container.innerHTML = '';
-  (data.menu.modifier_groups || []).forEach(function(mg) {
-    var label = document.createElement('label');
-    var cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.value = mg.id;
-    cb.checked = selectedIds.indexOf(mg.id) !== -1;
-    cb.addEventListener('change', function() {
+  renderModChipPicker('menu-mg-checkboxes',
+    function() { var it = getEditingItem(); return it ? (it.modifier_group_ids || []) : []; },
+    function(newIds) {
       var it = getEditingItem();
-      if (!it) return;
-      if (!it.modifier_group_ids) it.modifier_group_ids = [];
-      if (this.checked) { if (it.modifier_group_ids.indexOf(mg.id) === -1) it.modifier_group_ids.push(mg.id); }
-      else { it.modifier_group_ids = it.modifier_group_ids.filter(function(id) { return id !== mg.id; }); }
-      scheduleSave();
+      if (it) { it.modifier_group_ids = newIds; }
+    },
+    function() { return getEditingItem(); } /* overrides target */
+  );
+}
+
+/* ---- Override form for modifier assignment ---- */
+function showModOverrideForm(chipEl, mgId, getOverridesTarget) {
+  /* Remove any existing override popup */
+  var existing = document.querySelector('.mod-override-popup');
+  if (existing) existing.remove();
+
+  var target = getOverridesTarget();
+  if (!target) return;
+  var mg = getModGroupById(mgId);
+  if (!mg) return;
+
+  if (!target.modifier_group_overrides) target.modifier_group_overrides = {};
+  if (!target.modifier_group_overrides[mgId]) target.modifier_group_overrides[mgId] = {};
+
+  var ov = target.modifier_group_overrides[mgId];
+  var isReq = ov.is_required !== undefined ? ov.is_required : (mg.is_required || false);
+  var isDup = ov.allow_duplicates !== undefined ? ov.allow_duplicates : (mg.allow_duplicates || false);
+
+  var popup = document.createElement('div');
+  popup.className = 'mod-override-popup';
+  popup.innerHTML =
+    '<div class="mod-override-title">' + esc(mg.group_name) + ' — overrides</div>' +
+    '<label class="mod-override-row"><input type="checkbox" class="mod-override-req"' + (isReq ? ' checked' : '') + '> Required</label>' +
+    '<label class="mod-override-row"><input type="checkbox" class="mod-override-dup"' + (isDup ? ' checked' : '') + '> Allow duplicates</label>' +
+    '<button type="button" class="mod-override-close">Done</button>';
+
+  popup.querySelector('.mod-override-req').addEventListener('change', function() { ov.is_required = this.checked; scheduleSave(); });
+  popup.querySelector('.mod-override-dup').addEventListener('change', function() { ov.allow_duplicates = this.checked; scheduleSave(); });
+  popup.querySelector('.mod-override-close').addEventListener('click', function() { popup.remove(); });
+
+  /* Position near the chip */
+  var rect = chipEl.getBoundingClientRect();
+  popup.style.position = 'fixed';
+  popup.style.top = (rect.bottom + 4) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - 230) + 'px';
+  document.body.appendChild(popup);
+
+  /* Click outside to close */
+  setTimeout(function() {
+    document.addEventListener('click', function closeHandler(e) {
+      if (!popup.parentNode) { document.removeEventListener('click', closeHandler); return; }
+      if (!popup.contains(e.target) && e.target !== chipEl.querySelector('.mod-picker-chip-settings')) {
+        popup.remove();
+        document.removeEventListener('click', closeHandler);
+      }
     });
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode(' ' + mg.group_name + ' (' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + ')'));
-    container.appendChild(label);
-  });
+  }, 10);
 }
 
 /* ---- Items Grid ---- */
@@ -1491,10 +2762,23 @@ function renderItems() {
   var query = (document.getElementById('menu-search').value || '').toLowerCase();
   if (query) items = items.filter(function(i) { return (i.item_name || '').toLowerCase().indexOf(query) !== -1; });
 
-  if (activeFilter === 'vegetarian') items = items.filter(function(i) { return i.is_vegetarian; });
-  if (activeFilter === 'vegan') items = items.filter(function(i) { return i.is_vegan; });
-  if (activeFilter === 'gluten_free') items = items.filter(function(i) { return i.is_gluten_free; });
-  if (activeFilter === 'available') items = items.filter(function(i) { return i.is_available !== false; });
+  var showAvailableOnly = document.getElementById('menu-filter-avail');
+  if (showAvailableOnly && showAvailableOnly.checked) items = items.filter(function(i) {
+    /* Migrate old is_available to visibility_mode */
+    if (i.visibility_mode === undefined) i.visibility_mode = (i.is_available !== false) ? 'show' : 'hide';
+    return i.visibility_mode !== 'hide';
+  });
+
+  /* Filter by selected modifier groups (union / OR) */
+  if (_modFilterIds.length > 0) {
+    items = items.filter(function(item) {
+      var itemMods = item.modifier_group_ids || [];
+      var sizeMods = [];
+      (item.sizes || []).forEach(function(sz) { sizeMods = sizeMods.concat(sz.modifier_group_ids || []); });
+      var allMods = itemMods.concat(sizeMods);
+      return _modFilterIds.some(function(mgId) { return allMods.indexOf(mgId) !== -1; });
+    });
+  }
 
   var sortBy = document.getElementById('menu-sort').value;
   if (sortBy === 'name_asc') items.sort(function(a, b) { return (a.item_name || '').localeCompare(b.item_name || ''); });
@@ -1504,66 +2788,259 @@ function renderItems() {
 
   if (items.length === 0) { grid.innerHTML = '<div class="empty-state">No items found</div>'; return; }
 
+  var list = document.createElement('div');
+  list.className = 'item-list';
+
+  var modifierGroups = data.menu.modifier_groups || [];
+
+  /* Build chip HTML for a list of modifier group IDs */
+  function buildModChipsHtml(mgIds, cssClass, prefix) {
+    var html = '';
+    (mgIds || []).forEach(function(mgId) {
+      var mg = getModGroupById(mgId);
+      if (!mg) return;
+      var optCount = (mg.options && mg.options.length) ? mg.options.length : 0;
+      html += '<span class="mod-chip ' + (cssClass || '') + '" data-mg-id="' + mgId + '" title="' + esc(mg.group_name) + ' · ' + optCount + ' options">' + (prefix || '') + esc(mg.group_name) + ' <small>(' + optCount + ')</small><span class="mod-chip-inline-settings">⚙</span></span>';
+    });
+    return html;
+  }
+
   items.forEach(function(item) {
-    var card = document.createElement('div');
-    card.className = 'item-card' + (selectedItemIds.indexOf(item.id) !== -1 ? ' selected' : '');
-    card.dataset.itemId = item.id;
+    var hasMods = item.modifier_group_ids && item.modifier_group_ids.length > 0;
+    var hasSizes = item.sizes && item.sizes.length > 0;
 
-    var photoHtml = item.primary_photo_url ? '<img src="' + item.primary_photo_url + '" alt="">' : '🍽️';
-    var badges = '';
-    if (item.is_vegetarian) badges += '<span class="badge badge-veg">V</span>';
-    if (item.is_vegan) badges += '<span class="badge badge-vegan">VG</span>';
-    if (item.is_gluten_free) badges += '<span class="badge badge-gf">GF</span>';
-    if (item.tags && item.tags.length > 0) badges += '<span class="badge badge-tag">' + esc(item.tags[0]) + '</span>';
+    /* ---- Group wrapper ---- */
+    var group = document.createElement('div');
+    group.className = 'item-group' + (editingItemId === item.id ? ' editing' : '');
 
-    var priceDisplay = '$' + (item.price || 0).toFixed(2);
-    var saleDisplay = item.sale_price ? '<span class="card-sale">$' + item.sale_price.toFixed(2) + '</span>' : '';
-    var descSnippet = item.description ? '<div class="card-description">' + esc(item.description) + '</div>' : '';
+    /* ---- Main row ---- */
+    var row = document.createElement('div');
+    row.className = 'item-row' + (hasMods ? ' has-mods' : '') + (hasSizes ? ' has-sizes' : '');
+    row.dataset.itemId = item.id;
+    row.draggable = true;
 
-    card.innerHTML =
-      '<div class="card-photo"><div class="card-check">✓</div>' + photoHtml + '</div>' +
-      '<div class="card-body">' +
-        '<div class="card-name">' + esc(item.item_name || 'Untitled') + '</div>' +
-        descSnippet +
-        '<div class="card-pricing"><span class="card-price">' + priceDisplay + '</span>' + saleDisplay + '</div>' +
-        '<div class="card-badges">' + badges + '</div>' +
+    var expandBtn = (hasMods || hasSizes) ? '<span class="item-expand">▶</span>' : '<span class="item-expand item-expand-empty"></span>';
+    var thumbUrl = item.primary_photo_url || (item.photos && item.photos.length > 0 ? item.photos[0] : null);
+    var photoHtml = thumbUrl
+      ? '<div class="item-thumb" style="background-image:url(' + esc(thumbUrl) + ')"></div>'
+      : '<div class="item-thumb item-thumb-placeholder">🍽️</div>';
+
+    /* Price hidden when sizes exist — pricing is per-size */
+    var priceDisplay = hasSizes ? '' : '<span class="item-price">$' + (item.price || 0).toFixed(2) + '</span>';
+    var modChipsHtml = hasMods ? '<span class="item-mod-chips">' + buildModChipsHtml(item.modifier_group_ids, '', '') + '</span>' : '';
+
+    /* Visibility badge — same system as categories */
+    if (item.visibility_mode === undefined) item.visibility_mode = (item.is_available !== false) ? 'show' : 'hide';
+    var itemVisIcon, itemVisLabel, itemVisClass, itemVisTitle;
+    if (item.visibility_mode === 'hide') {
+      itemVisIcon = '○'; itemVisLabel = 'Hidden'; itemVisClass = 'cat-vis-hidden';
+      itemVisTitle = 'Hidden';
+      if (item.hide_until_date) itemVisTitle += ' until ' + item.hide_until_date.replace('T', ' ');
+    } else if (item.visibility_mode === 'scheduled') {
+      itemVisIcon = '◐'; itemVisLabel = 'Scheduled'; itemVisClass = 'cat-vis-scheduled';
+      itemVisTitle = 'Scheduled';
+      if (item.schedule_type === 'time_windows' && item.schedule_time_windows) {
+        itemVisTitle += ': ' + item.schedule_time_windows.map(function(w) {
+          var days = ['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+          return (w.days||[]).map(function(d) { return days[d]; }).join(',') + ' ' + (w.start_time||'') + '-' + (w.end_time||'');
+        }).join('; ');
+      } else if (item.schedule_type === 'date_range') {
+        itemVisTitle += ': ' + (item.schedule_from||'?') + ' to ' + (item.schedule_until||'?');
+      }
+    } else {
+      itemVisIcon = '●'; itemVisLabel = 'Visible'; itemVisClass = 'cat-vis-visible';
+      itemVisTitle = 'Always visible';
+    }
+    var visBadge = '<span class="cat-vis-badge item-vis-badge ' + itemVisClass + '" title="' + esc(itemVisTitle) + '">' + itemVisIcon + '</span>';
+
+    /* OOS (out-of-stock) badge */
+    var oosBadge = '';
+    if (item.availability === 'out_of_stock') {
+      var oosTitle = 'Out of Stock';
+      if (item.oos_type === 'tomorrow') oosTitle += ' — until tomorrow';
+      else if (item.oos_type === 'date' && item.oos_until) oosTitle += ' — until ' + item.oos_until.replace('T', ' ').slice(0, 16);
+      else if (item.oos_type === 'undetermined') oosTitle += ' — undetermined';
+      oosBadge = '<span class="oos-badge" title="' + esc(oosTitle) + '">OOS</span>';
+    }
+
+    row.innerHTML =
+      expandBtn +
+      photoHtml +
+      '<div class="item-body">' +
+        '<div class="item-name">' + esc(item.item_name || 'Untitled') + visBadge + oosBadge + '</div>' +
+        '<div class="item-meta">' +
+          modChipsHtml +
+          priceDisplay +
+        '</div>' +
       '</div>' +
-      '<div class="card-footer"><span>' + (item.calories ? item.calories + ' cal' : '') + '</span><span class="availability-dot ' + (item.is_available !== false ? 'on' : 'off') + '"></span></div>';
+      '<div class="item-actions">' +
+        '<button class="item-add-size-btn" title="Add Size">📏</button>' +
+      '</div>';
 
-    card.addEventListener('click', function(e) {
-      if (e.ctrlKey || e.metaKey) { toggleItemSelection(item.id); return; }
+    /* Expand toggle — traverse siblings within group */
+    if (hasMods || hasSizes) {
+      row.querySelector('.item-expand').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var next = row.nextElementSibling;
+        while (next && (next.classList.contains('item-sub-list') || next.classList.contains('item-size-row'))) {
+          var isOpen = next.style.display !== 'none';
+          next.style.display = isOpen ? 'none' : '';
+          next = next.nextElementSibling;
+        }
+        row.querySelector('.item-expand').textContent = row.querySelector('.item-expand').textContent === '▶' ? '▼' : '▶';
+      });
+    }
+
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.item-expand') || e.target.closest('.item-add-size-btn') || e.target.closest('.mod-chip')) return;
       openItemDrawer(item.id);
     });
-    grid.appendChild(card);
+
+    /* Add-size button on item row → opens add-size modal */
+    row.querySelector('.item-add-size-btn').addEventListener('click', function(e) {
+      e.stopPropagation();
+      openAddSizeModal(item);
+    });
+
+    row.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', item.id);
+      e.dataTransfer.effectAllowed = 'move';
+      row.classList.add('dragging');
+    });
+    row.addEventListener('dragend', function() {
+      row.classList.remove('dragging');
+      var catList = document.getElementById('menu-cat-list');
+      if (catList) catList.querySelectorAll('.category-item').forEach(function(el) { el.classList.remove('drag-over'); });
+    });
+
+    group.appendChild(row);
+
+    /* ---- Size sub-rows ---- */
+    if (hasSizes) {
+      item.sizes.forEach(function(sz, idx) {
+        var szRow = document.createElement('div');
+        szRow.className = 'item-size-row';
+        szRow.dataset.sizeId = sz.id;
+        /* Deduplicate: inherited chips exclude groups also owned by the size */
+        var ownIds = sz.modifier_group_ids || [];
+        var inheritedIds = (item.modifier_group_ids || []).filter(function(id) { return ownIds.indexOf(id) === -1; });
+        var inheritedChips = buildModChipsHtml(inheritedIds, 'mod-chip-inherited', '↳ ');
+        var ownChips = buildModChipsHtml(ownIds, 'mod-chip-own', '');
+        var hasAnyChips = inheritedChips || ownChips;
+        var displayMods = hasAnyChips ? '<span class="size-chips">' + inheritedChips + ownChips + '</span>' : '';
+        szRow.innerHTML =
+          '<span class="size-label">' + esc(sz.label) + '</span>' +
+          '<span class="size-price">$' + (sz.price || 0).toFixed(2) + '</span>' +
+          displayMods;
+        /* Click on size row → open size edit modal */
+        szRow.addEventListener('click', function(e) {
+          if (e.target.closest('.mod-chip')) return;
+          editItemSize(item, idx);
+        });
+        group.appendChild(szRow);
+      });
+    }
+
+    /* ---- Sub-rows: modifier options ---- */
+    if (hasMods) {
+      var subList = document.createElement('div');
+      subList.className = 'item-sub-list';
+      subList.style.display = 'none';
+
+      item.modifier_group_ids.forEach(function(mgId) {
+        var mg = modifierGroups.find(function(g) { return g.id === mgId; });
+        if (!mg) return;
+        var mgHeader = document.createElement('div');
+        mgHeader.className = 'item-sub-header';
+        mgHeader.textContent = mg.group_name + ' (' + (mg.selection_type === 'single' ? 'Pick one' : 'Pick any') + ')';
+        subList.appendChild(mgHeader);
+
+        (mg.options || []).forEach(function(opt) {
+          var optRow = document.createElement('div');
+          optRow.className = 'item-sub-row';
+          var priceStr = (opt.price && opt.price > 0) ? ' +$' + opt.price.toFixed(2) : '';
+          optRow.innerHTML = '<span class="item-sub-name">└ ' + esc(opt.name) + '</span><span class="item-sub-price">' + priceStr + '</span>';
+          subList.appendChild(optRow);
+        });
+      });
+
+      group.appendChild(subList);
+    }
+
+    list.appendChild(group);
   });
-  updateBulkBar();
-}
 
-function toggleItemSelection(itemId) {
-  var idx = selectedItemIds.indexOf(itemId);
-  if (idx === -1) selectedItemIds.push(itemId); else selectedItemIds.splice(idx, 1);
-  renderItems();
-}
+  /* Event delegation: mod-chip clicks → focus modifier group, ⚙ → override popup */
+  list.addEventListener('click', function(e) {
+    var settingsIcon = e.target.closest('.mod-chip-inline-settings');
+    if (settingsIcon) {
+      e.stopPropagation();
+      var chip = settingsIcon.closest('.mod-chip');
+      var mgId = chip ? chip.dataset.mgId : null;
+      if (!mgId) return;
+      /* Determine the override target: size or item */
+      var sizeRow = chip.closest('.item-size-row');
+      if (sizeRow) {
+        var itemRow = sizeRow.previousElementSibling;
+        while (itemRow && !itemRow.classList.contains('item-row')) itemRow = itemRow.previousElementSibling;
+        if (itemRow) {
+          var itemId = itemRow.dataset.itemId;
+          var it = data.menu.items.find(function(i) { return i.id === itemId; });
+          if (it) {
+            var sizeId = sizeRow.dataset.sizeId;
+            var sz = (it.sizes || []).find(function(s) { return s.id === sizeId; });
+            if (sz) { showModOverrideForm(settingsIcon, mgId, function() { return sz; }); return; }
+          }
+        }
+      }
+      /* Fallback: item-level override */
+      var itemRow2 = chip.closest('.item-row');
+      if (itemRow2) {
+        var itemId2 = itemRow2.dataset.itemId;
+        var it2 = data.menu.items.find(function(i) { return i.id === itemId2; });
+        if (it2) { showModOverrideForm(settingsIcon, mgId, function() { return it2; }); return; }
+      }
+      return;
+    }
+    var chip = e.target.closest('.mod-chip');
+    if (!chip) return;
+    e.stopPropagation();
+    var mgId = chip.dataset.mgId;
+    if (mgId) focusModGroup(mgId);
+  });
 
-function updateBulkBar() {
-  var bar = document.getElementById('menu-bulk-bar');
-  var count = document.getElementById('menu-bulk-count');
-  if (bar) bar.style.display = selectedItemIds.length > 0 ? '' : 'none';
-  if (count) count.textContent = selectedItemIds.length + ' selected';
+  grid.appendChild(list);
 }
-
-function clearSelection() { selectedItemIds = []; renderItems(); }
 
 /* ---- Item Drawer ---- */
 function openItemDrawer(itemId) {
+  _drawerOpen = true;
   editingItemId = itemId;
   var item = data.menu.items.find(function(i) { return i.id === itemId; });
   var panel = document.getElementById('menu-drawer');
   var title = document.getElementById('menu-drawer-title');
   if (panel) panel.style.display = '';
   if (title) title.textContent = item ? 'Edit Item' : 'New Item';
+  renderItems(); /* Update highlight on selected row */
+
+  /* Reset advanced settings to collapsed */
+  var advBody = document.getElementById('advanced-body');
+  var advToggle = document.getElementById('advanced-toggle');
+  if (advBody) { advBody.classList.remove('open'); }
+  if (advToggle) { advToggle.classList.remove('open'); }
+
+  /* Populate category dropdown */
+  var catSelect = document.getElementById('menu-item-category');
+  if (catSelect) {
+    catSelect.innerHTML = '<option value="">-- Select Category --</option>';
+    (data.menu.categories || []).forEach(function(c) {
+      catSelect.innerHTML += '<option value="' + c.id + '">' + esc(c.name) + '</option>';
+    });
+    catSelect.value = item ? (item.category_id || '') : (selectedCategoryId || '');
+  }
 
   if (item) {
+    _newItemDraft = null;
     document.getElementById('menu-item-name').value = item.item_name || '';
     document.getElementById('menu-item-slug').value = item.slug || '';
     document.getElementById('menu-item-desc').value = item.description || '';
@@ -1576,25 +3053,51 @@ function openItemDrawer(itemId) {
     document.getElementById('menu-spice-label').textContent = SPICE_NAMES[item.spice_level || 0];
     document.getElementById('menu-item-cal').value = item.calories || '';
     document.getElementById('menu-item-prep').value = item.prep_time_minutes || '';
-    document.getElementById('menu-item-avail').checked = item.is_available !== false;
+    /* Populate visibility */
+    var visModeEl = document.getElementById('menu-item-vis-mode'); if (visModeEl) visModeEl.value = item.visibility_mode || 'show';
+    var hideUntilEl = document.getElementById('menu-item-hide-until'); if (hideUntilEl) hideUntilEl.value = item.hide_until_date || '';
+    var schedTypeEl = document.getElementById('menu-item-schedule-type'); if (schedTypeEl) schedTypeEl.value = item.schedule_type || 'time_windows';
+    var schedFromEl = document.getElementById('menu-item-sched-from'); if (schedFromEl) schedFromEl.value = item.schedule_from || '';
+    var schedUntilEl = document.getElementById('menu-item-sched-until'); if (schedUntilEl) schedUntilEl.value = item.schedule_until || '';
+    applyItemVisMode();
+    renderItemTimeWindows(item);
+    /* Availability */
+    var availStatus = document.getElementById('menu-item-avail-status'); if (availStatus) availStatus.value = item.availability || 'available';
+    if (item.oos_type) {
+      var oosRadio = document.querySelector('input[name="item-oos-type"][value="' + item.oos_type + '"]');
+      if (oosRadio) oosRadio.checked = true;
+      if (item.oos_until && item.oos_type === 'date') {
+        var oosUntil = document.getElementById('menu-item-oos-until'); if (oosUntil) oosUntil.value = item.oos_until.slice(0, 16);
+      }
+    }
+    applyItemOosOptions();
+    renderItemChannels(item.show_on_channels || []);
     document.getElementById('menu-item-delete').style.display = '';
-    renderPrimaryPhoto(item);
+    renderItemSizes(item);
     renderPhotoPool(item);
     renderAllergenPicker(item);
     renderTagPicker(item);
     renderModGroupCheckboxes();
   } else {
+    /* Create in-memory draft so pickers can modify it before save */
+    _newItemDraft = {
+      id: null, allergens: [], tags: [], modifier_group_ids: [],
+      is_vegetarian: false, is_vegan: false, is_gluten_free: false,
+      spice_level: 0, is_available: true, photos: [], sizes: []
+    };
+    _tempPhotos = [];
     clearItemForm();
+    renderItemSizes(null);
     document.getElementById('menu-item-delete').style.display = 'none';
-    renderAllergenPicker(null);
-    renderTagPicker(null);
+    renderAllergenPicker(_newItemDraft);
+    renderTagPicker(_newItemDraft);
     renderModGroupCheckboxes();
   }
   tool.resize();
 }
 
 function getEditingItem() {
-  if (!editingItemId) return null;
+  if (!editingItemId) return _newItemDraft;
   return data.menu.items.find(function(i) { return i.id === editingItemId; }) || null;
 }
 
@@ -1611,16 +3114,195 @@ function clearItemForm() {
   document.getElementById('menu-spice-label').textContent = 'Not Spicy';
   document.getElementById('menu-item-cal').value = '';
   document.getElementById('menu-item-prep').value = '';
-  document.getElementById('menu-item-avail').checked = true;
-  document.getElementById('menu-photo-preview').innerHTML = '🍽️';
+  /* Reset visibility to default */
+  var visModeEl = document.getElementById('menu-item-vis-mode'); if (visModeEl) visModeEl.value = 'show';
+  resetItemVisOptions();
+  /* Reset availability */
+  var availEl = document.getElementById('menu-item-avail-status'); if (availEl) availEl.value = 'available';
+  resetItemOosOptions();
+  renderItemChannels([]);
   document.getElementById('menu-photo-pool').innerHTML = '';
   document.getElementById('menu-item-delete').style.display = 'none';
   _tempPhotos = [];
+  _newItemDraft = null;
+}
+
+/* ---- Item Sizes ---- */
+function renderItemSizes(item) {
+  var container = document.getElementById('menu-item-sizes-list');
+  if (!container) return;
+  container.innerHTML = '';
+  var sizes = item ? (item.sizes || []) : (_newItemDraft ? (_newItemDraft.sizes || []) : []);
+  var priceRow = document.getElementById('menu-item-price').closest('.form-row');
+  if (sizes.length > 0) {
+    if (priceRow) priceRow.style.display = 'none';
+  } else {
+    if (priceRow) priceRow.style.display = '';
+  }
+  var MAX_VISIBLE_MODS = 2; /* Show at most 2 modifier chips, rest as "+N more" */
+  sizes.forEach(function(sz, idx) {
+    var chip = document.createElement('span');
+    chip.className = 'size-chip';
+    chip.style.cursor = 'pointer';
+    chip.title = 'Click to edit';
+
+    var target = item || _newItemDraft;
+    var allModIds = sz.modifier_group_ids || [];
+    var visibleIds = allModIds.slice(0, MAX_VISIBLE_MODS);
+    var hiddenCount = allModIds.length - MAX_VISIBLE_MODS;
+
+    /* Build visible modifier chips */
+    var modChipsHtml = '';
+    visibleIds.forEach(function(mgId) {
+      var mg = getModGroupById(mgId);
+      if (!mg) return;
+      var optCount = (mg.options && mg.options.length) ? mg.options.length : 0;
+      modChipsHtml += '<span class="mod-chip mod-chip-own mod-chip-xs" data-mg-id="' + mgId + '">' + esc(mg.group_name) + ' (' + optCount + ')<span class="mod-chip-inline-settings">⚙</span></span>';
+    });
+    if (hiddenCount > 0) {
+      modChipsHtml += '<span class="mod-chip-more" title="' + hiddenCount + ' more modifier group(s) — click to edit">+' + hiddenCount + ' more</span>';
+    }
+
+    chip.innerHTML = '<span class="size-chip-label">' + esc(sz.label) + '</span>' +
+      '<span class="size-chip-price">$' + (sz.price || 0).toFixed(2) + '</span>' +
+      (modChipsHtml ? '<span class="size-chip-mods">' + modChipsHtml + '</span>' : '') +
+      '<span class="size-chip-remove" data-idx="' + idx + '">✕</span>';
+
+    /* Click chip → edit size */
+    chip.addEventListener('click', function(e) {
+      if (e.target.classList.contains('size-chip-remove') || e.target.closest('.mod-chip') || e.target.closest('.mod-chip-inline-settings') || e.target.closest('.mod-chip-more')) return;
+      editItemSize(item || _newItemDraft, idx);
+    });
+
+    /* ✕ remove */
+    chip.querySelector('.size-chip-remove').addEventListener('click', function(e) {
+      e.stopPropagation();
+      var t = item || _newItemDraft;
+      if (t && t.sizes) t.sizes.splice(idx, 1);
+      renderItemSizes(item || _newItemDraft);
+    });
+
+    container.appendChild(chip);
+  });
+}
+
+var _editingSizeItem = null;
+var _editingSizeIdx = -1;
+var _addingSizeTarget = null; /* Item we're adding a new size to */
+var _tempNewSizeModIds = []; /* Modifier IDs for the size being added */
+
+/* Open modal to ADD a new size to an item */
+function openAddSizeModal(item) {
+  _addingSizeTarget = item || _newItemDraft;
+  _editingSizeItem = null;
+  _editingSizeIdx = -1;
+  _tempNewSizeModIds = [];
+  document.getElementById('menu-size-modal-title').textContent = 'Add Size';
+  document.getElementById('menu-size-label').value = '';
+  document.getElementById('menu-size-price').value = '';
+  document.getElementById('menu-size-delete-btn').style.display = 'none';
+  /* Render modifier picker for the new size (no overrides in add mode) */
+  renderModChipPicker('menu-size-mg-checkboxes',
+    function() { return _tempNewSizeModIds; },
+    function(newIds) { _tempNewSizeModIds = newIds; }
+  );
+  document.getElementById('menu-size-modal').style.display = 'flex';
+}
+
+/* Open modal to EDIT an existing size */
+function editItemSize(item, idx) {
+  _addingSizeTarget = null;
+  _editingSizeItem = item;
+  _editingSizeIdx = idx;
+  var sz = item.sizes[idx];
+  document.getElementById('menu-size-modal-title').textContent = 'Edit Size: ' + sz.label;
+  document.getElementById('menu-size-label').value = sz.label;
+  document.getElementById('menu-size-price').value = sz.price || 0;
+  document.getElementById('menu-size-delete-btn').style.display = '';
+  renderSizeModCheckboxes(sz);
+  document.getElementById('menu-size-modal').style.display = 'flex';
+}
+
+function renderSizeModCheckboxes(sz) {
+  if (!sz) return;
+  /* Ensure modifier_group_ids exists on the size object */
+  if (!sz.modifier_group_ids) sz.modifier_group_ids = [];
+  renderModChipPicker('menu-size-mg-checkboxes',
+    function() { return sz.modifier_group_ids; },
+    function(newIds) { sz.modifier_group_ids = newIds; },
+    function() { return sz; } /* overrides target is the size object */
+  );
+}
+
+function saveItemSize() {
+  var label = document.getElementById('menu-size-label').value.trim();
+  var price = parseFloat(document.getElementById('menu-size-price').value) || 0;
+  if (!label) { tool.notify('Enter a size label', 'warning'); return; }
+
+  if (_addingSizeTarget) {
+    /* Add mode */
+    if (!_addingSizeTarget.sizes) _addingSizeTarget.sizes = [];
+    _addingSizeTarget.sizes.push({ id: uid(), label: label, price: price, modifier_group_ids: _tempNewSizeModIds.slice() });
+    var t = _addingSizeTarget;
+    closeSizeModal();
+    renderItemSizes(t);
+    renderItems();
+    scheduleSave();
+    tool.notify('Size added', 'success');
+  } else if (_editingSizeItem && _editingSizeIdx >= 0) {
+    /* Edit mode */
+    var sz = _editingSizeItem.sizes[_editingSizeIdx];
+    sz.label = label;
+    sz.price = price;
+    var targetItem = _editingSizeItem;
+    closeSizeModal();
+    renderItemSizes(targetItem);
+    renderItems();
+    scheduleSave();
+    tool.notify('Size updated', 'success');
+  }
+}
+
+function closeSizeModal() {
+  document.getElementById('menu-size-modal').style.display = 'none';
+  _editingSizeItem = null;
+  _editingSizeIdx = -1;
+  _addingSizeTarget = null;
+  _tempNewSizeModIds = [];
+}
+
+/* Show confirmation before deleting a size */
+function confirmDeleteItemSize() {
+  if (!_editingSizeItem || _editingSizeIdx < 0) return;
+  var sz = _editingSizeItem.sizes[_editingSizeIdx];
+  document.getElementById('size-delete-modal-name').textContent = '"' + sz.label + '"';
+  document.getElementById('size-delete-modal').style.display = 'flex';
+}
+
+function deleteItemSizeConfirmed() {
+  document.getElementById('size-delete-modal').style.display = 'none';
+  if (!_editingSizeItem || _editingSizeIdx < 0) return;
+  _editingSizeItem.sizes.splice(_editingSizeIdx, 1);
+  var targetItem = _editingSizeItem;
+  closeSizeModal();
+  renderItemSizes(targetItem);
+  renderItems();
+  scheduleSave();
+  tool.notify('Size deleted', 'info');
+}
+
+function cancelDeleteItemSize() {
+  document.getElementById('size-delete-modal').style.display = 'none';
 }
 
 function closeDrawer() {
+  if (!_drawerOpen) return; /* Safety: prevent accidental close */
+  _drawerOpen = false;
   document.getElementById('menu-drawer').style.display = 'none';
   editingItemId = null;
+  _newItemDraft = null;
+  _tempPhotos = [];
+  renderItems();
   tool.resize();
 }
 
@@ -1671,99 +3353,117 @@ function renderTagPicker(item) {
   });
 }
 
-/* ---- Photos ---- */
-function renderPrimaryPhoto(item) {
-  var preview = document.getElementById('menu-photo-preview');
-  if (!preview) return;
-  if (item && item.primary_photo_url) preview.innerHTML = '<img src="' + item.primary_photo_url + '" alt="">';
-  else preview.innerHTML = '🍽️';
+/* ---- Photos (unified gallery with primary selection) ---- */
+function getPhotoArray(item) {
+  if (item) return (item.photos || []);
+  return _tempPhotos;
 }
 
-function renderPhotoPoolForTemp() {
-  var pool = document.getElementById('menu-photo-pool');
-  if (!pool) return;
-  pool.innerHTML = '';
-  _tempPhotos.forEach(function(url, idx) {
-    var el = document.createElement('div');
-    el.className = 'photo-pool-item' + (idx === 0 ? ' primary' : '');
-    el.innerHTML = '<img src="' + url + '" alt=""><span class="pool-delete">✕</span>';
-    el.querySelector('.pool-delete').addEventListener('click', function(e) {
-      e.stopPropagation();
-      _tempPhotos.splice(idx, 1);
-      if (idx === 0 && _tempPhotos.length > 0) {
-        document.getElementById('menu-photo-preview').innerHTML = '<img src="' + _tempPhotos[0] + '" alt="">';
-      } else if (_tempPhotos.length === 0) {
-        document.getElementById('menu-photo-preview').innerHTML = '🍽️';
-      }
-      renderPhotoPoolForTemp();
-    });
-    pool.appendChild(el);
-  });
+function setPhotoArray(item, arr) {
+  if (item) { item.photos = arr; }
+  else { _tempPhotos = arr; }
+}
+
+function getPrimaryPhoto(item) {
+  if (item) return item.primary_photo_url || null;
+  return _tempPhotos.length > 0 ? _tempPhotos[0] : null;
+}
+
+function setPrimaryPhoto(item, url) {
+  if (item) { item.primary_photo_url = url; }
 }
 
 function renderPhotoPool(item) {
   var pool = document.getElementById('menu-photo-pool');
   if (!pool) return;
   pool.innerHTML = '';
-  if (!item || !item.photos || item.photos.length === 0) return;
-  item.photos.forEach(function(photoUrl, idx) {
+  var photos = getPhotoArray(item);
+  if (photos.length === 0) return;
+  var primary = getPrimaryPhoto(item);
+  photos.forEach(function(url, idx) {
     var el = document.createElement('div');
-    el.className = 'photo-pool-item' + (photoUrl === item.primary_photo_url ? ' primary' : '');
-    el.innerHTML = '<img src="' + photoUrl + '" alt=""><span class="pool-delete">✕</span>';
-    el.addEventListener('click', function(e) {
-      if (e.target.classList.contains('pool-delete')) return;
-      item.primary_photo_url = photoUrl;
-      renderPrimaryPhoto(item);
-      renderPhotoPool(item);
-      scheduleSave();
+    el.className = 'photo-pool-item' + (url === primary || (idx === 0 && !primary) ? ' primary' : '');
+    el.draggable = true;
+    var isPrimary = (url === primary || (idx === 0 && !primary));
+    el.innerHTML = '<img src="' + url + '" alt="">' +
+      (isPrimary ? '<span class="pool-primary-badge" title="Primary photo — shown in listings">★</span><span class="pool-primary-label">Primary</span>' : '') +
+      '<span class="pool-set-primary" title="Set as primary">★</span>' +
+      '<span class="pool-delete" title="Remove">✕</span>';
+
+    /* Click "set primary" overlay to set as primary */
+    if (!isPrimary && item) {
+      el.querySelector('.pool-set-primary').addEventListener('click', function(e) {
+        e.stopPropagation();
+        item.primary_photo_url = url;
+        renderPhotoPool(item);
+        scheduleSave();
+      });
+    }
+
+    /* Right-click context menu to set as primary */
+    el.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      if (item) {
+        item.primary_photo_url = url;
+        renderPhotoPool(item);
+        scheduleSave();
+        tool.notify('Set as primary photo', 'success');
+      }
     });
+
+    /* Delete photo */
     el.querySelector('.pool-delete').addEventListener('click', function(e) {
       e.stopPropagation();
-      var it = getEditingItem();
-      if (!it) return;
-      it.photos.splice(idx, 1);
-      if (it.primary_photo_url === photoUrl) it.primary_photo_url = it.photos.length > 0 ? it.photos[0] : null;
-      renderPrimaryPhoto(it);
-      renderPhotoPool(it);
-      scheduleSave();
+      var arr = getPhotoArray(item);
+      arr.splice(idx, 1);
+      if (item) {
+        if (item.primary_photo_url === url) item.primary_photo_url = arr.length > 0 ? arr[0] : null;
+        scheduleSave();
+      }
+      if (arr.length === 0) setPrimaryPhoto(item, null);
+      renderPhotoPool(item);
+      renderItems();
     });
+
+    /* Drag to reorder */
+    el.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', String(idx));
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', function() { el.classList.remove('dragging'); });
+    el.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    el.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      if (isNaN(fromIdx) || fromIdx === idx) return;
+      var arr = getPhotoArray(item);
+      var moved = arr.splice(fromIdx, 1)[0];
+      arr.splice(idx, 0, moved);
+      if (item) scheduleSave();
+      renderPhotoPool(item);
+    });
+
     pool.appendChild(el);
   });
 }
 
-function handlePrimaryPhoto() {
-  tool.requestUpload('image/*', function(err, file) {
-    if (err || !file) { if (err) tool.notify('Upload failed: ' + err, 'error'); return; }
-    var url = file.url;
-    var item = getEditingItem();
-    if (!item) {
-      _tempPhotos = [url];
-      document.getElementById('menu-photo-preview').innerHTML = '<img src="' + url + '" alt="">';
-      return;
-    }
-    item.primary_photo_url = url;
-    if (!item.photos) item.photos = [];
-    if (item.photos.indexOf(url) === -1) item.photos.push(url);
-    renderPrimaryPhoto(item);
-    renderPhotoPool(item);
-    scheduleSave();
-  });
-}
-
-function handleGalleryPhotos() {
+function handlePhotoUpload() {
   var item = getEditingItem();
   tool.requestUpload('image/*', function(err, file) {
     if (err || !file) { if (err) tool.notify('Upload failed: ' + err, 'error'); return; }
     var url = file.url;
     if (!item) {
+      /* New item: add to temp photos */
       _tempPhotos.push(url);
-      renderPhotoPoolForTemp();
+      renderPhotoPool(null);
       return;
     }
+    /* Existing item */
     if (!item.photos) item.photos = [];
     if (item.photos.indexOf(url) === -1) item.photos.push(url);
-    if (!item.primary_photo_url) { item.primary_photo_url = url; renderPrimaryPhoto(item); }
+    if (!item.primary_photo_url) item.primary_photo_url = url;
     renderPhotoPool(item);
+    renderItems();
     scheduleSave();
   });
 }
@@ -1775,26 +3475,75 @@ function saveItem() {
   if (!name) { tool.notify('Item name is required', 'warning'); return; }
   if (isNaN(price) || price < 0) { tool.notify('Valid price is required', 'warning'); return; }
 
-  if (!editingItemId) {
-    var primaryUrl = _tempPhotos.length > 0 ? _tempPhotos[0] : null;
+  var catSelect = document.getElementById('menu-item-category');
+  var categoryId = catSelect ? (catSelect.value || null) : (selectedCategoryId || null);
+
+  if (editingItemId) {
+    /* Update existing item */
+    var item = data.menu.items.find(function(i) { return i.id === editingItemId; });
+    if (item) {
+      item.category_id = categoryId;
+      item.item_name = name; item.slug = slugify(name);
+      item.description = document.getElementById('menu-item-desc').value;
+      item.price = price; item.sale_price = parseFloat(document.getElementById('menu-item-sale').value) || null;
+      item.is_vegetarian = document.getElementById('menu-item-veg').checked;
+      item.is_vegan = document.getElementById('menu-item-vegan').checked;
+      item.is_gluten_free = document.getElementById('menu-item-gf').checked;
+      item.spice_level = parseInt(document.getElementById('menu-item-spice').value);
+      item.calories = parseInt(document.getElementById('menu-item-cal').value) || null;
+      item.prep_time_minutes = parseInt(document.getElementById('menu-item-prep').value) || null;
+      /* Visibility */
+      var itemVis = collectItemVisibility();
+      item.visibility_mode = itemVis.visibility_mode;
+      item.hide_until_date = itemVis.hide_until_date || null;
+      item.schedule_type = itemVis.schedule_type || null;
+      item.schedule_time_windows = itemVis.schedule_time_windows || null;
+      item.schedule_from = itemVis.schedule_from || null;
+      item.schedule_until = itemVis.schedule_until || null;
+      /* Availability */
+      item.availability = document.getElementById('menu-item-avail-status').value;
+      item.show_on_channels = collectItemChannels();
+      var oosData = collectItemOosData();
+      if (oosData) { item.oos_type = oosData.oos_type; item.oos_until = oosData.oos_until; }
+      else { item.oos_type = null; item.oos_until = null; }
+      /* Sizes are already in item.sizes (modified by renderItemSizes/addItemSize) */
+    }
+  } else {
+    /* Build new item from form + draft picker data */
+    var primaryUrl = _tempPhotos.length > 0 ? _tempPhotos[0] : (_newItemDraft && _newItemDraft.photos ? _newItemDraft.photos[0] : null);
+    var draft = _newItemDraft || {};
+    var itemVis = collectItemVisibility();
     var newItem = {
-      id: uid(), category_id: selectedCategoryId || null,
+      id: uid(), category_id: categoryId,
       item_name: name, slug: slugify(name),
       description: document.getElementById('menu-item-desc').value,
       price: price, sale_price: parseFloat(document.getElementById('menu-item-sale').value) || null,
       primary_photo_url: primaryUrl,
-      photos: _tempPhotos.slice(),
-      allergens: [], is_vegetarian: document.getElementById('menu-item-veg').checked,
+      photos: _tempPhotos.length > 0 ? _tempPhotos.slice() : (draft.photos || []),
+      allergens: draft.allergens || [],
+      is_vegetarian: document.getElementById('menu-item-veg').checked,
       is_vegan: document.getElementById('menu-item-vegan').checked,
       is_gluten_free: document.getElementById('menu-item-gf').checked,
       spice_level: parseInt(document.getElementById('menu-item-spice').value),
       calories: parseInt(document.getElementById('menu-item-cal').value) || null,
       prep_time_minutes: parseInt(document.getElementById('menu-item-prep').value) || null,
-      tags: [], modifier_group_ids: [],
-      is_available: document.getElementById('menu-item-avail').checked
+      tags: draft.tags || [],
+      modifier_group_ids: draft.modifier_group_ids || [],
+      sizes: draft.sizes || [],
+      visibility_mode: itemVis.visibility_mode,
+      hide_until_date: itemVis.hide_until_date || null,
+      schedule_type: itemVis.schedule_type || null,
+      schedule_time_windows: itemVis.schedule_time_windows || null,
+      schedule_from: itemVis.schedule_from || null,
+      schedule_until: itemVis.schedule_until || null,
+      availability: document.getElementById('menu-item-avail-status').value,
+      show_on_channels: collectItemChannels()
     };
+    var oosData = collectItemOosData();
+    if (oosData) { newItem.oos_type = oosData.oos_type; newItem.oos_until = oosData.oos_until; }
     data.menu.items.push(newItem);
     editingItemId = newItem.id;
+    _newItemDraft = null;
     _tempPhotos = [];
   }
   closeDrawer();
@@ -1814,40 +3563,143 @@ function deleteItem() {
   tool.notify('Item deleted', 'info');
 }
 
-/* ---- Bulk Actions ---- */
-function bulkMove() {
-  var targetCatId = document.getElementById('menu-bulk-cat').value;
-  if (!targetCatId || selectedItemIds.length === 0) return;
-  selectedItemIds.forEach(function(id) {
-    var item = data.menu.items.find(function(i) { return i.id === id; });
-    if (item) item.category_id = targetCatId;
-  });
-  clearSelection();
+/* ---- Copy / Paste Item ---- */
+var _copiedItem = null;
+
+function copyItem() {
+  var item = getEditingItem();
+  if (!item) { tool.notify('No item to copy', 'warning'); return; }
+  _copiedItem = JSON.parse(JSON.stringify(item));
+  /* Clear ID so paste creates a new one */
+  delete _copiedItem.id;
+  delete _copiedItem.slug;
+  tool.notify('Item "' + (item.item_name || 'Untitled') + '" copied to clipboard', 'success');
+}
+
+function pasteItem() {
+  if (!_copiedItem) { tool.notify('Nothing to paste. Copy an item first.', 'warning'); return; }
+  var catSelect = document.getElementById('menu-item-category');
+  var targetCat = catSelect ? (catSelect.value || selectedCategoryId || null) : (selectedCategoryId || null);
+  var newItem = JSON.parse(JSON.stringify(_copiedItem));
+  newItem.id = uid();
+  newItem.category_id = targetCat;
+  newItem.slug = slugify(newItem.item_name || 'item');
+  /* Ensure unique name */
+  var base = newItem.item_name || 'Copied Item';
+  var nameTry = base;
+  var counter = 1;
+  while (data.menu.items.some(function(i) { return i.item_name === nameTry; })) {
+    counter++;
+    nameTry = base + ' (' + counter + ')';
+  }
+  newItem.item_name = nameTry;
+  data.menu.items.push(newItem);
+  editingItemId = newItem.id;
+  /* Refresh drawer with pasted item */
+  openItemDrawer(newItem.id);
   renderItems();
   renderCategories();
   scheduleSave();
-  tool.notify('Items moved', 'success');
+  tool.notify('Item pasted', 'success');
 }
 
-function bulkToggleAvailable() {
-  selectedItemIds.forEach(function(id) {
-    var item = data.menu.items.find(function(i) { return i.id === id; });
-    if (item) item.is_available = !item.is_available;
+/* ---- Drag & Drop: items to categories ---- */
+function initCategoryDropTargets() {
+  var catList = document.getElementById('menu-cat-list');
+  if (!catList) return;
+
+  catList.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    var catEl = e.target.closest('.category-item');
+    catList.querySelectorAll('.category-item').forEach(function(el) { el.classList.remove('drag-over'); });
+    if (catEl) catEl.classList.add('drag-over');
   });
-  clearSelection();
-  renderItems();
-  scheduleSave();
-  tool.notify('Items toggled', 'success');
+  catList.addEventListener('dragleave', function(e) {
+    var catEl = e.target.closest('.category-item');
+    if (catEl) catEl.classList.remove('drag-over');
+  });
+  catList.addEventListener('drop', function(e) {
+    e.preventDefault();
+    var catEl = e.target.closest('.category-item');
+    catList.querySelectorAll('.category-item').forEach(function(el) { el.classList.remove('drag-over'); });
+    if (!catEl) return;
+    var itemId = e.dataTransfer.getData('text/plain');
+    var targetCatId = catEl.dataset.catId;
+    if (!itemId || !targetCatId) return;
+    var item = data.menu.items.find(function(i) { return i.id === itemId; });
+    if (item) {
+      item.category_id = targetCatId;
+      renderItems();
+      renderCategories();
+      scheduleSave();
+      tool.notify('Item moved to category', 'success');
+    }
+  });
 }
 
-function bulkDelete() {
-  data.menu.items = data.menu.items.filter(function(i) { return selectedItemIds.indexOf(i.id) === -1; });
-  clearSelection();
-  renderItems();
-  renderCategories();
-  scheduleSave();
-  tool.notify('Items deleted', 'info');
+/* ---- Drag & Drop: modifiers to items ---- */
+function initModifierDragDrop() {
+  /* Make modifier group items draggable */
+  document.addEventListener('dragstart', function(e) {
+    var mgEl = e.target.closest('.modgroup-item');
+    if (mgEl) {
+      e.dataTransfer.setData('application/x-modgroup', mgEl.dataset.mgId);
+      e.dataTransfer.effectAllowed = 'link';
+    }
+  });
+
+  /* Item rows AND size rows accept modifier drops */
+  var grid = document.getElementById('menu-items-grid');
+  if (grid) {
+    grid.addEventListener('dragover', function(e) {
+      var row = e.target.closest('.item-row') || e.target.closest('.item-size-row');
+      if (!row || e.dataTransfer.types.indexOf('application/x-modgroup') === -1) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'link';
+    });
+    grid.addEventListener('drop', function(e) {
+      var row = e.target.closest('.item-row');
+      var sizeRow = e.target.closest('.item-size-row');
+      if (!row && !sizeRow) return;
+      var mgId = e.dataTransfer.getData('application/x-modgroup');
+      if (!mgId) return;
+      e.preventDefault();
+
+      if (sizeRow) {
+        /* Drop on a size row — add modifier group to that size */
+        var sizeId = sizeRow.dataset.sizeId;
+        var itemId = sizeRow.closest('.item-row')?.dataset.itemId;
+        if (!itemId || !sizeId) return;
+        var item = data.menu.items.find(function(i) { return i.id === itemId; });
+        if (!item || !item.sizes) return;
+        var size = item.sizes.find(function(s) { return s.id === sizeId; });
+        if (!size) return;
+        if (!size.modifier_group_ids) size.modifier_group_ids = [];
+        if (size.modifier_group_ids.indexOf(mgId) === -1) {
+          size.modifier_group_ids.push(mgId);
+          renderItems();
+          scheduleSave();
+          tool.notify('Modifier added to size', 'success');
+        }
+      } else if (row) {
+        /* Drop on main item row */
+        var itemId = row.dataset.itemId;
+        var item = data.menu.items.find(function(i) { return i.id === itemId; });
+        if (!item) return;
+        if (!item.modifier_group_ids) item.modifier_group_ids = [];
+        if (item.modifier_group_ids.indexOf(mgId) === -1) {
+          item.modifier_group_ids.push(mgId);
+          renderItems();
+          scheduleSave();
+          tool.notify('Modifier added to item', 'success');
+        }
+      }
+    });
+  }
 }
+
+
 
 /* ===================================================================== */
 /* INIT EVENT DELEGATION */
@@ -1858,9 +3710,14 @@ function initAllEvents() {
     tab.addEventListener('click', function() { switchTab(tab.dataset.tab); });
   });
 
+  /* Sub-tab Navigation (Delivery) */
+  document.querySelectorAll('#delivery-subtabs .sub-tab').forEach(function(st) {
+    st.addEventListener('click', function() { switchSubTab('delivery', st.dataset.subtab); });
+  });
+
   /* General Info: data-path inputs */
   document.querySelectorAll('[data-path]').forEach(function(el) {
-    if (el.closest('[data-tab="menu"]') || el.closest('[data-tab="zones"]')) return;
+    if (el.closest('[data-tab="menu"]') || el.closest('[data-tab="delivery"]')) return;
     if (el.type === 'checkbox') {
       el.addEventListener('change', function() {
         setNested(data, el.dataset.path, el.checked);
@@ -1985,41 +3842,83 @@ function initAllEvents() {
     tool.resize();
   });
 
-  /* Zones */
-  document.getElementById('zone-draw-polygon').addEventListener('click', function() {
-    if (zoneActiveTool === 'polygon') deactivateZoneDraw(); else activateZoneDraw('polygon');
-  });
-  document.getElementById('zone-draw-circle').addEventListener('click', function() {
-    if (zoneActiveTool === 'circle') deactivateZoneDraw(); else activateZoneDraw('circle');
-  });
-  document.getElementById('zone-draw-rectangle').addEventListener('click', function() {
-    if (zoneActiveTool === 'rectangle') deactivateZoneDraw(); else activateZoneDraw('rectangle');
-  });
-  document.getElementById('zone-clear-drawing').addEventListener('click', function() {
-    deactivateZoneDraw();
-    if (!zoneDrawnItems) return;
-    var toRemove = [];
-    zoneDrawnItems.eachLayer(function(layer) { if (layer._zoneIndex === undefined) toRemove.push(layer); });
-    toRemove.forEach(function(l) { zoneDrawnItems.removeLayer(l); });
-  });
-  document.getElementById('zone-edit-layers').addEventListener('click', function() {
-    deactivateZoneDraw();
-    if (!zoneDrawnItems || zoneDrawnItems.getLayers().length === 0) return;
-    new L.EditToolbar.Edit(zoneMap, { featureGroup: zoneDrawnItems }).enable();
-    document.getElementById('zone-edit-layers').classList.add('active-tool');
-  });
+  /* Zones: add button */
   document.getElementById('zone-add-btn').addEventListener('click', function() {
     zoneEditingIndex = -1;
+    document.getElementById('zone-form-title').textContent = 'New Delivery Zone';
     document.getElementById('zone-name').value = '';
     document.getElementById('zone-min-order').value = '0';
     document.getElementById('zone-fee').value = '0';
     document.getElementById('zone-color').value = '#4f46e5';
+    var swatch = document.getElementById('zone-color-swatch');
+    var hexEl = document.getElementById('zone-color-hex');
+    if (swatch) swatch.style.background = '#4f46e5';
+    if (hexEl) hexEl.textContent = '#4f46e5';
     document.getElementById('zone-form').style.display = '';
-    document.getElementById('zone-add-btn').style.display = 'none';
+    /* Hide delete button when adding new zone */
+    var deleteFormBtn = document.getElementById('zone-delete-form-btn');
+    if (deleteFormBtn) deleteFormBtn.style.display = 'none';
+    /* Hide shapes section when adding new zone */
+    document.getElementById('zone-shapes-section').style.display = 'none';
+    document.getElementById('zone-shapes-list').innerHTML = '';
+    /* Remove any orphan drawings from previous cancelled sessions */
+    removeOrphanDrawings();
+    /* Activate polygon drawing by default */
+    activateZoneDraw('polygon');
+    /* Highlight the polygon button */
+    document.querySelectorAll('.zone-draw-btn').forEach(function(b) { b.classList.remove('active'); });
+    var polyBtn = document.querySelector('.zone-draw-btn[data-shape="polygon"]');
+    if (polyBtn) polyBtn.classList.add('active');
+    renderZonesList();
     tool.resize();
   });
   document.getElementById('zone-save-btn').addEventListener('click', saveZone);
   document.getElementById('zone-cancel-btn').addEventListener('click', clearZoneForm);
+  document.getElementById('zone-delete-form-btn').addEventListener('click', confirmDeleteZone);
+  document.getElementById('zone-delete-confirm-btn').addEventListener('click', deleteZoneConfirmed);
+  document.getElementById('zone-delete-cancel-btn').addEventListener('click', cancelZoneDelete);
+
+  /* Shape delete modal */
+  document.getElementById('shape-delete-confirm-btn').addEventListener('click', removeShapeConfirmed);
+  document.getElementById('shape-delete-cancel-btn').addEventListener('click', cancelShapeDelete);
+
+  /* Delivery settings */
+  document.getElementById('delivery-outside-zone').addEventListener('change', function() {
+    data.delivery_form_settings.accept_orders_outside_zone = this.checked;
+    scheduleSave();
+  });
+  document.getElementById('delivery-custom-field-add-btn').addEventListener('click', addDeliveryCustomField);
+  document.getElementById('delivery-custom-field-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addDeliveryCustomField(); }
+  });
+
+  /* Zones: embedded draw tool buttons */
+  document.querySelectorAll('.zone-draw-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var shape = btn.dataset.shape;
+      document.querySelectorAll('.zone-draw-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      activateZoneDraw(shape);
+    });
+  });
+  document.querySelector('.zone-draw-clear').addEventListener('click', function() {
+    deactivateZoneDraw();
+    removeOrphanDrawings();
+  });
+
+  /* Zones: color picker sync */
+  var zoneColorInput = document.getElementById('zone-color');
+  var zoneColorSwatch = document.getElementById('zone-color-swatch');
+  var zoneColorHex = document.getElementById('zone-color-hex');
+  if (zoneColorInput && zoneColorSwatch) {
+    zoneColorInput.addEventListener('input', function() {
+      zoneColorSwatch.style.background = this.value;
+      if (zoneColorHex) zoneColorHex.textContent = this.value;
+    });
+    zoneColorSwatch.addEventListener('click', function() {
+      zoneColorInput.click();
+    });
+  }
 
   /* Menu: Panel Tabs */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {
@@ -2035,58 +3934,124 @@ function initAllEvents() {
 
   /* Menu: Categories */
   document.getElementById('menu-add-cat').addEventListener('click', addCategory);
-  document.getElementById('menu-cat-save').addEventListener('click', function() {
-    var input = document.getElementById('menu-cat-name');
-    if (input.dataset.editCatId) saveCategoryEdit(); else saveCategory();
-  });
-  document.getElementById('menu-cat-cancel').addEventListener('click', function() {
-    var input = document.getElementById('menu-cat-name');
-    document.getElementById('menu-cat-form').style.display = 'none';
-    input.value = '';
-    delete input.dataset.editCatId;
-  });
+  var catSaveBtn = document.getElementById('menu-cat-save'); if (catSaveBtn) catSaveBtn.addEventListener('click', saveCategory);
+  var catCancelBtn = document.getElementById('menu-cat-cancel'); if (catCancelBtn) catCancelBtn.addEventListener('click', closeCategoryForm);
   document.getElementById('menu-cat-name').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      if (this.dataset.editCatId) saveCategoryEdit(); else saveCategory();
-    }
+    if (e.key === 'Enter') { e.preventDefault(); saveCategory(); }
   });
+  document.getElementById('menu-cat-name').addEventListener('input', updateCatCharCounts);
+  document.getElementById('menu-cat-desc').addEventListener('input', updateCatCharCounts);
+  var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.addEventListener('click', duplicateCategory);
+  var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.addEventListener('click', confirmDeleteCategory);
+  /* Category delete modal */
+  var catDelConfirm = document.getElementById('cat-delete-confirm-btn'); if (catDelConfirm) catDelConfirm.addEventListener('click', deleteCategoryConfirmed);
+  var catDelCancel = document.getElementById('cat-delete-cancel-btn'); if (catDelCancel) catDelCancel.addEventListener('click', cancelCategoryDelete);
+
+  /* Category visibility mode listeners */
+  var catVisMode = document.getElementById('menu-cat-vis-mode');
+  if (catVisMode) catVisMode.addEventListener('change', applyCatVisMode);
+  var catHideRadios = document.querySelectorAll('input[name="cat-hide-type"]');
+  catHideRadios.forEach(function(r) { r.addEventListener('change', applyCatVisMode); });
+  var catSchedType = document.getElementById('menu-cat-schedule-type');
+  if (catSchedType) catSchedType.addEventListener('change', applyCatVisMode);
+
+  /* Menu: Items */
+  document.getElementById('menu-add-item-btn').addEventListener('click', function() { openItemDrawer(null); });
 
   /* Menu: Modifier Groups */
   document.getElementById('menu-mg-add').addEventListener('click', addModGroup);
   document.getElementById('menu-mg-save').addEventListener('click', saveModGroup);
-  document.getElementById('menu-mg-cancel').addEventListener('click', function() {
-    editingModGroupId = null;
-    document.getElementById('menu-mg-form').style.display = 'none';
-    renderModGroups();
+  document.getElementById('menu-mg-cancel').addEventListener('click', closeModGroupModal);
+  document.getElementById('menu-mg-delete-btn').addEventListener('click', confirmDeleteModGroup);
+  document.getElementById('mg-delete-confirm-btn').addEventListener('click', deleteModGroupConfirmed);
+  document.getElementById('mg-delete-cancel-btn').addEventListener('click', cancelDeleteModGroup);
+  document.getElementById('menu-mg-opt-save').addEventListener('click', saveModOption);
+  document.getElementById('menu-mg-opt-cancel').addEventListener('click', closeModOptionModal);
+  document.getElementById('menu-mg-opt-delete-btn').addEventListener('click', confirmDeleteModOption);
+  document.getElementById('mg-opt-delete-confirm-btn').addEventListener('click', deleteModOptionConfirmed);
+  document.getElementById('mg-opt-delete-cancel-btn').addEventListener('click', cancelDeleteModOption);
+
+  /* Left panel tab switching */
+  document.querySelectorAll('.panel-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      switchLeftTab(tab.dataset.leftTab);
+    });
   });
-  document.getElementById('menu-mg-add-opt').addEventListener('click', addModOption);
 
   /* Menu: Search & Sort */
   document.getElementById('menu-search').addEventListener('input', function() { renderItems(); });
   document.getElementById('menu-sort').addEventListener('change', function() { renderItems(); });
 
-  /* Menu: Filter Chips */
-  document.querySelectorAll('#menu-filter-chips .chip').forEach(function(chip) {
-    chip.addEventListener('click', function() {
-      if (activeFilter === chip.dataset.filter) { activeFilter = null; }
-      else { activeFilter = chip.dataset.filter; }
-      document.querySelectorAll('#menu-filter-chips .chip').forEach(function(c) { c.classList.remove('active'); });
-      if (activeFilter) chip.classList.add('active');
-      renderItems();
-    });
-  });
+  /* Menu: Availability filter toggle */
+  var availCb = document.getElementById('menu-filter-avail');
+  if (availCb) availCb.addEventListener('change', function() { renderItems(); });
 
   /* Menu: Drawer */
   document.getElementById('menu-drawer-close').addEventListener('click', closeDrawer);
   document.getElementById('menu-item-cancel').addEventListener('click', closeDrawer);
   document.getElementById('menu-item-save').addEventListener('click', saveItem);
   document.getElementById('menu-item-delete').addEventListener('click', deleteItem);
+  document.getElementById('menu-item-copy').addEventListener('click', copyItem);
+  document.getElementById('menu-item-paste').addEventListener('click', pasteItem);
+  document.getElementById('menu-item-size-add-btn').addEventListener('click', function() {
+    var item = getEditingItem();
+    openAddSizeModal(item || _newItemDraft);
+  });
 
-  /* Menu: Bulk */
-  document.getElementById('menu-bulk-move').addEventListener('click', bulkMove);
-  document.getElementById('menu-bulk-toggle').addEventListener('click', bulkToggleAvailable);
-  document.getElementById('menu-bulk-delete').addEventListener('click', bulkDelete);
-  document.getElementById('menu-bulk-clear').addEventListener('click', clearSelection);
+  /* Item visibility mode listeners */
+  var itemVisMode = document.getElementById('menu-item-vis-mode');
+  if (itemVisMode) itemVisMode.addEventListener('change', applyItemVisMode);
+  var itemHideRadios = document.querySelectorAll('input[name="item-hide-type"]');
+  itemHideRadios.forEach(function(r) { r.addEventListener('change', applyItemVisMode); });
+  var itemSchedType = document.getElementById('menu-item-schedule-type');
+  if (itemSchedType) itemSchedType.addEventListener('change', applyItemVisMode);
+
+  /* Item OOS (out-of-stock) listeners */
+  var itemAvailStatus = document.getElementById('menu-item-avail-status');
+  if (itemAvailStatus) itemAvailStatus.addEventListener('change', applyItemOosOptions);
+  var itemOosRadios = document.querySelectorAll('input[name="item-oos-type"]');
+  itemOosRadios.forEach(function(r) { r.addEventListener('change', applyItemOosOptions); });
+
+  /* Drawer size chips: ⚙ icon delegation → override popup */
+  var sizesList = document.getElementById('menu-item-sizes-list');
+  if (sizesList) {
+    sizesList.addEventListener('click', function(e) {
+      var settingsIcon = e.target.closest('.mod-chip-inline-settings');
+      if (!settingsIcon) return;
+      e.stopPropagation();
+      var chip = settingsIcon.closest('.mod-chip');
+      var mgId = chip ? chip.dataset.mgId : null;
+      if (!mgId) return;
+      var sizeChip = chip.closest('.size-chip');
+      if (!sizeChip) return;
+      /* Find the size index and item/draft */
+      var allChips = sizesList.querySelectorAll('.size-chip');
+      var idx = Array.prototype.indexOf.call(allChips, sizeChip);
+      if (idx < 0) return;
+      var item = getEditingItem();
+      var target = item || _newItemDraft;
+      if (!target || !target.sizes || idx >= target.sizes.length) return;
+      var sz = target.sizes[idx];
+      showModOverrideForm(settingsIcon, mgId, function() { return sz; });
+    });
+  }
+
+  /* Advanced settings toggle */
+  document.getElementById('advanced-toggle').addEventListener('click', function() {
+    var body = document.getElementById('advanced-body');
+    var toggle = document.getElementById('advanced-toggle');
+    var isOpen = body.classList.toggle('open');
+    toggle.classList.toggle('open', isOpen);
+  });
+
+  /* Size edit modal */
+  document.getElementById('menu-size-save').addEventListener('click', saveItemSize);
+  document.getElementById('menu-size-cancel').addEventListener('click', closeSizeModal);
+  document.getElementById('menu-size-delete-btn').addEventListener('click', confirmDeleteItemSize);
+
+  /* Size delete confirmation modal */
+  document.getElementById('size-delete-confirm-btn').addEventListener('click', deleteItemSizeConfirmed);
+  document.getElementById('size-delete-cancel-btn').addEventListener('click', cancelDeleteItemSize);
 
   /* Menu: Double-click to create item */
   document.getElementById('menu-items-grid').addEventListener('dblclick', function() {
@@ -2097,15 +4062,9 @@ function initAllEvents() {
   /* Menu: Drawer live inputs */
   initDrawerInputs();
 
-  /* Menu: Photo uploads via CMS */
-  var primaryPhotoBtn = document.getElementById('menu-photo-upload-btn');
-  if (primaryPhotoBtn) primaryPhotoBtn.addEventListener('click', handlePrimaryPhoto);
-  var galleryPhotoBtn = document.getElementById('menu-gallery-upload-btn');
-  if (galleryPhotoBtn) galleryPhotoBtn.addEventListener('click', handleGalleryPhotos);
-
-  /* Save All */
-  var saveAllBtn = document.getElementById('save-all-btn');
-  if (saveAllBtn) saveAllBtn.addEventListener('click', saveNow);
+  /* Menu: Photo upload via CMS */
+  var photoBtn = document.getElementById('menu-photo-upload-btn');
+  if (photoBtn) photoBtn.addEventListener('click', handlePhotoUpload);
 }
 
 function initDrawerInputs() {
@@ -2175,6 +4134,12 @@ function initDrawerInputs() {
 /* MAIN RENDER & BOOT */
 /* ===================================================================== */
 function render(value) {
+  /* Preserve drawer state across re-renders */
+  var wasDrawerOpen = _drawerOpen;
+  var savedEditingItemId = editingItemId;
+  var savedDraft = _newItemDraft;
+  var savedPhotos = _tempPhotos.slice();
+
   var incoming = value;
   if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) incoming = {};
   data = deepMerge(DEFAULTS, incoming);
@@ -2216,23 +4181,63 @@ function render(value) {
     if (!rs.min_advance_minutes) rs.min_advance_minutes = DEFAULTS.service_settings.reservation_settings.min_advance_minutes;
     if (!rs.max_advance_days) rs.max_advance_days = DEFAULTS.service_settings.reservation_settings.max_advance_days;
   }
+  if (!data.service_settings.on_premise_settings) data.service_settings.on_premise_settings = DEFAULTS.service_settings.on_premise_settings;
   if (!data.taxation_currency.tax_categories) data.taxation_currency.tax_categories = [];
   if (!data.menu.categories) data.menu.categories = [];
   if (!data.menu.items) data.menu.items = [];
   if (!data.menu.modifier_groups) data.menu.modifier_groups = [];
-  if (!data.delivery_zones) data.delivery_zones = { type: 'FeatureCollection', features: [] };
-  if (!data.delivery_zones.features) data.delivery_zones.features = [];
+  if (!data.delivery_zones) data.delivery_zones = { zones: [] };
+  /* Migrate old FeatureCollection format → new zones array */
+  if (data.delivery_zones.features && !data.delivery_zones.zones) {
+    var zonesMap = {};
+    data.delivery_zones.features.forEach(function(f) {
+      var p = f.properties || {};
+      var key = (p.name || '') + '|' + (p.color || '') + '|' + (p.min_order || 0) + '|' + (p.fee || 0);
+      if (!zonesMap[key]) {
+        zonesMap[key] = { id: uid(), name: p.name || '', color: p.color || '#4f46e5', min_order: p.min_order || 0, fee: p.fee || 0, shapes: [] };
+      }
+      /* Extract geometry, handle Circle stored as Point+radius */
+      if (f.geometry) {
+        if (f.geometry.type === 'Point' && f.geometry.radius) {
+          zonesMap[key].shapes.push({ type: 'Circle', center: f.geometry.coordinates, radius: f.geometry.radius });
+        } else {
+          zonesMap[key].shapes.push(f.geometry);
+        }
+      }
+    });
+    data.delivery_zones = { zones: Object.values(zonesMap) };
+    delete data.delivery_zones.features;
+  }
+  if (!data.delivery_zones.zones) data.delivery_zones.zones = [];
+  if (!data.delivery_form_settings) data.delivery_form_settings = DEFAULTS.delivery_form_settings;
+  if (!data.delivery_form_settings.address_fields) data.delivery_form_settings.address_fields = DEFAULTS.delivery_form_settings.address_fields;
+  if (!data.delivery_form_settings.custom_fields) data.delivery_form_settings.custom_fields = [];
+  if (data.delivery_form_settings.accept_orders_outside_zone === undefined) data.delivery_form_settings.accept_orders_outside_zone = false;
   if (!data.device_connections) data.device_connections = [];
 
   /* Render all sections */
   renderGeneralInfo();
   renderCategories();
   renderItems();
+  initCategoryDropTargets();
+  initModifierDragDrop();
   renderModGroups();
   renderZonesList();
   if (zoneMap && zoneDrawnItems) loadZonesOnMap();
-  closeDrawer();
+  renderDeliveryFormSettings();
+  /* Only close drawer if it wasn't already open (preserve during auto-save re-renders) */
+  if (!wasDrawerOpen) closeDrawer();
   tool.resize();
+
+  /* Restore drawer state after re-render */
+  if (wasDrawerOpen) {
+    _drawerOpen = true;
+    editingItemId = savedEditingItemId;
+    _newItemDraft = savedDraft;
+    _tempPhotos = savedPhotos;
+    var panel = document.getElementById('menu-drawer');
+    if (panel) panel.style.display = '';
+  }
 }
 
 /* ===== BOOT ===== */
@@ -2255,7 +4260,7 @@ tool.onReady(function(val) {
   /* Resize observer for zone map */
   if (window.ResizeObserver) {
     new ResizeObserver(function() {
-      if (zoneMap && activeTab === 'zones') zoneMap.invalidateSize();
+      if (zoneMap && activeTab === 'delivery') zoneMap.invalidateSize();
     }).observe(document.body);
   }
 });

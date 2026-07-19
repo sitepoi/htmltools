@@ -1,0 +1,488 @@
+{
+  "menu": {
+    "categories": [
+      {
+        "id": "cat_appetizers",
+        "name": "Appetizers",
+        "description": "Starters and small plates to share",
+        "visibility_mode": "show"
+      },
+      {
+        "id": "cat_mains",
+        "name": "Main Courses",
+        "description": "Hearty entrees and signature dishes",
+        "visibility_mode": "show"
+      },
+      {
+        "id": "cat_lunch",
+        "name": "Lunch Specials",
+        "description": "Weekday lunch menu — limited availability",
+        "visibility_mode": "scheduled",
+        "schedule_type": "time_windows",
+        "schedule_time_windows": [
+          { "days": [1, 2, 3, 4, 5], "start_time": "11:00", "end_time": "14:00" }
+        ]
+      },
+      {
+        "id": "cat_seasonal",
+        "name": "Seasonal Menu",
+        "description": "Holiday specials available for a limited time",
+        "visibility_mode": "scheduled",
+        "schedule_type": "date_range",
+        "schedule_from": "2026-12-01T00:00",
+        "schedule_until": "2026-12-31T23:59"
+      },
+      {
+        "id": "cat_desserts",
+        "name": "Desserts",
+        "description": "Sweet treats and after-dinner delights",
+        "visibility_mode": "show"
+      },
+      {
+        "id": "cat_drinks",
+        "name": "Beverages",
+        "description": "Hot and cold drinks, cocktails & more",
+        "visibility_mode": "show"
+      },
+      {
+        "id": "cat_hidden",
+        "name": "Staff Meals",
+        "description": "Internal menu — not for customers",
+        "visibility_mode": "hide"
+      }
+    ],
+    "items": [
+      {
+        "id": "item_bruschetta",
+        "category_id": "cat_appetizers",
+        "item_name": "Classic Bruschetta",
+        "slug": "classic-bruschetta",
+        "description": "Toasted ciabatta with fresh tomatoes, basil, garlic, and extra virgin olive oil",
+        "price": 9.50,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 320,
+        "prep_time_minutes": 10,
+        "tags": ["popular", "fresh"],
+        "modifier_group_ids": ["mg_extras"],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_calamari",
+        "category_id": "cat_appetizers",
+        "item_name": "Crispy Calamari",
+        "slug": "crispy-calamari",
+        "description": "Lightly battered squid rings served with marinara and lemon aioli",
+        "price": 13.00,
+        "sale_price": 10.50,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "seafood"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 1,
+        "calories": 450,
+        "prep_time_minutes": 12,
+        "tags": ["bestseller"],
+        "modifier_group_ids": ["mg_sauces"],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_margherita",
+        "category_id": "cat_mains",
+        "item_name": "Margherita Pizza",
+        "slug": "margherita-pizza",
+        "description": "San Marzano tomato sauce, fresh mozzarella, basil on a thin crust",
+        "price": null,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": null,
+        "prep_time_minutes": 15,
+        "tags": ["classic", "wood-fired"],
+        "modifier_group_ids": ["mg_crust", "mg_toppings"],
+        "modifier_group_overrides": {
+          "mg_crust": { "is_required": true }
+        },
+        "sizes": [
+          {
+            "id": "sz_marg_small",
+            "label": "Small (10\")",
+            "price": 12.00,
+            "modifier_group_ids": ["mg_crust"]
+          },
+          {
+            "id": "sz_marg_medium",
+            "label": "Medium (12\")",
+            "price": 16.00,
+            "modifier_group_ids": ["mg_crust", "mg_toppings"]
+          },
+          {
+            "id": "sz_marg_large",
+            "label": "Large (14\")",
+            "price": 20.00,
+            "modifier_group_ids": ["mg_crust", "mg_toppings", "mg_extras"]
+          }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_pepperoni",
+        "category_id": "cat_mains",
+        "item_name": "Pepperoni Pizza",
+        "slug": "pepperoni-pizza",
+        "description": "Classic pepperoni with mozzarella and our signature tomato sauce",
+        "price": null,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 1,
+        "calories": null,
+        "prep_time_minutes": 15,
+        "tags": ["bestseller", "classic"],
+        "modifier_group_ids": ["mg_crust", "mg_toppings"],
+        "modifier_group_overrides": {},
+        "sizes": [
+          {
+            "id": "sz_pep_small",
+            "label": "Small (10\")",
+            "price": 14.00,
+            "modifier_group_ids": []
+          },
+          {
+            "id": "sz_pep_large",
+            "label": "Large (14\")",
+            "price": 22.00,
+            "modifier_group_ids": ["mg_toppings"]
+          }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_grilled_salmon",
+        "category_id": "cat_mains",
+        "item_name": "Grilled Atlantic Salmon",
+        "slug": "grilled-atlantic-salmon",
+        "description": "Pan-seared salmon fillet with lemon butter, seasonal vegetables, and wild rice",
+        "price": 26.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["fish", "dairy"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": true,
+        "spice_level": 0,
+        "calories": 580,
+        "prep_time_minutes": 20,
+        "tags": ["healthy", "signature"],
+        "modifier_group_ids": ["mg_sides", "mg_sauces"],
+        "modifier_group_overrides": {
+          "mg_sides": { "is_required": true }
+        },
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["delivery", "on_premise"]
+      },
+      {
+        "id": "item_lunch_wrap",
+        "category_id": "cat_lunch",
+        "item_name": "Chicken Caesar Wrap",
+        "slug": "chicken-caesar-wrap",
+        "description": "Grilled chicken, romaine, parmesan, and caesar dressing in a flour tortilla. Served with fries.",
+        "price": 11.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 620,
+        "prep_time_minutes": 8,
+        "tags": ["lunch", "quick"],
+        "modifier_group_ids": [],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "out_of_stock",
+        "oos_type": "tomorrow",
+        "oos_until": "2026-07-20T00:00:00.000Z",
+        "show_on_channels": ["pickup", "delivery"]
+      },
+      {
+        "id": "item_tiramisu",
+        "category_id": "cat_desserts",
+        "item_name": "Tiramisu",
+        "slug": "tiramisu",
+        "description": "Layers of espresso-soaked ladyfingers with mascarpone cream, dusted with cocoa",
+        "price": 9.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy", "eggs"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 380,
+        "prep_time_minutes": 5,
+        "tags": ["popular", "homemade"],
+        "modifier_group_ids": [],
+        "modifier_group_overrides": {},
+        "sizes": [
+          {
+            "id": "sz_tir_regular",
+            "label": "Regular",
+            "price": 9.00,
+            "modifier_group_ids": []
+          },
+          {
+            "id": "sz_tir_large",
+            "label": "Large",
+            "price": 14.00,
+            "modifier_group_ids": []
+          }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_cheesecake",
+        "category_id": "cat_desserts",
+        "item_name": "New York Cheesecake",
+        "slug": "new-york-cheesecake",
+        "description": "Creamy cheesecake on a graham cracker crust, served with berry compote",
+        "price": 10.50,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten", "dairy", "eggs"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 450,
+        "prep_time_minutes": 5,
+        "tags": [],
+        "modifier_group_ids": ["mg_extras"],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "out_of_stock",
+        "oos_type": "undetermined",
+        "oos_until": null,
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_latte",
+        "category_id": "cat_drinks",
+        "item_name": "Caffè Latte",
+        "slug": "caffe-latte",
+        "description": "Double espresso with steamed milk and a light foam layer",
+        "price": null,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["dairy"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": true,
+        "spice_level": 0,
+        "calories": null,
+        "prep_time_minutes": 4,
+        "tags": ["coffee"],
+        "modifier_group_ids": ["mg_milk_options"],
+        "modifier_group_overrides": {},
+        "sizes": [
+          {
+            "id": "sz_latte_small",
+            "label": "Small",
+            "price": 3.50,
+            "modifier_group_ids": []
+          },
+          {
+            "id": "sz_latte_medium",
+            "label": "Medium",
+            "price": 4.50,
+            "modifier_group_ids": []
+          },
+          {
+            "id": "sz_latte_large",
+            "label": "Large",
+            "price": 5.50,
+            "modifier_group_ids": ["mg_milk_options"]
+          }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "on_premise"]
+      },
+      {
+        "id": "item_staff_meal",
+        "category_id": "cat_hidden",
+        "item_name": "Staff Meal — Pasta",
+        "slug": "staff-meal-pasta",
+        "description": "Daily pasta special for staff",
+        "price": 0.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["gluten"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 700,
+        "prep_time_minutes": 15,
+        "tags": ["staff"],
+        "modifier_group_ids": [],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "hide",
+        "availability": "available",
+        "show_on_channels": ["on_premise"]
+      },
+      {
+        "id": "item_holiday_roast",
+        "category_id": "cat_seasonal",
+        "item_name": "Holiday Prime Rib Roast",
+        "slug": "holiday-prime-rib-roast",
+        "description": "Slow-roasted prime rib with au jus, horseradish cream, roasted potatoes, and seasonal vegetables",
+        "price": 34.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": [],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": true,
+        "spice_level": 0,
+        "calories": 850,
+        "prep_time_minutes": 30,
+        "tags": ["holiday", "signature", "limited"],
+        "modifier_group_ids": ["mg_sides", "mg_sauces"],
+        "modifier_group_overrides": {
+          "mg_sides": { "is_required": true }
+        },
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["delivery", "on_premise"]
+      }
+    ],
+    "modifier_groups": [
+      {
+        "id": "mg_crust",
+        "group_name": "Crust Type",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": true,
+        "options": [
+          { "id": "opt_crust_thin", "option_name": "Thin Crust", "price_adjustment": 0, "is_default": true, "is_available": true },
+          { "id": "opt_crust_thick", "option_name": "Thick Crust", "price_adjustment": 0, "is_default": false, "is_available": true },
+          { "id": "opt_crust_gf", "option_name": "Gluten-Free Crust", "price_adjustment": 3.00, "is_default": false, "is_available": true }
+        ]
+      },
+      {
+        "id": "mg_toppings",
+        "group_name": "Extra Toppings",
+        "selection_type": "multi",
+        "allow_duplicates": true,
+        "is_required": false,
+        "options": [
+          { "id": "opt_top_pepperoni", "option_name": "Pepperoni", "price_adjustment": 2.00, "is_default": false, "is_available": true },
+          { "id": "opt_top_mushrooms", "option_name": "Mushrooms", "price_adjustment": 1.50, "is_default": false, "is_available": true },
+          { "id": "opt_top_olives", "option_name": "Black Olives", "price_adjustment": 1.50, "is_default": false, "is_available": true },
+          { "id": "opt_top_onions", "option_name": "Red Onions", "price_adjustment": 1.00, "is_default": false, "is_available": true },
+          { "id": "opt_top_bacon", "option_name": "Bacon", "price_adjustment": 2.50, "is_default": false, "is_available": true },
+          { "id": "opt_top_cheese", "option_name": "Extra Cheese", "price_adjustment": 2.00, "is_default": false, "is_available": true },
+          { "id": "opt_top_arugula", "option_name": "Fresh Arugula", "price_adjustment": 2.00, "is_default": false, "is_available": true }
+        ]
+      },
+      {
+        "id": "mg_sauces",
+        "group_name": "Choice of Sauce",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": false,
+        "options": [
+          { "id": "opt_sauce_marinara", "option_name": "Marinara", "price_adjustment": 0, "is_default": true, "is_available": true },
+          { "id": "opt_sauce_ranch", "option_name": "Ranch", "price_adjustment": 0, "is_default": false, "is_available": true },
+          { "id": "opt_sauce_bbq", "option_name": "BBQ", "price_adjustment": 0, "is_default": false, "is_available": true },
+          { "id": "opt_sauce_spicy", "option_name": "Spicy Chili", "price_adjustment": 0.50, "is_default": false, "is_available": true }
+        ]
+      },
+      {
+        "id": "mg_sides",
+        "group_name": "Side Dish",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": false,
+        "options": [
+          { "id": "opt_side_fries", "option_name": "French Fries", "price_adjustment": 0, "is_default": true, "is_available": true },
+          { "id": "opt_side_salad", "option_name": "Side Salad", "price_adjustment": 0, "is_default": false, "is_available": true },
+          { "id": "opt_side_rice", "option_name": "Wild Rice", "price_adjustment": 0, "is_default": false, "is_available": true },
+          { "id": "opt_side_veg", "option_name": "Grilled Vegetables", "price_adjustment": 2.00, "is_default": false, "is_available": true },
+          { "id": "opt_side_mash", "option_name": "Mashed Potatoes", "price_adjustment": 1.00, "is_default": false, "is_available": true }
+        ]
+      },
+      {
+        "id": "mg_extras",
+        "group_name": "Add-Ons",
+        "selection_type": "multi",
+        "allow_duplicates": true,
+        "is_required": false,
+        "options": [
+          { "id": "opt_extra_cheese", "option_name": "Extra Parmesan", "price_adjustment": 1.50, "is_default": false, "is_available": true },
+          { "id": "opt_extra_bread", "option_name": "Garlic Bread", "price_adjustment": 3.00, "is_default": false, "is_available": true },
+          { "id": "opt_extra_bacon", "option_name": "Crispy Bacon Bits", "price_adjustment": 2.00, "is_default": false, "is_available": true }
+        ]
+      },
+      {
+        "id": "mg_milk_options",
+        "group_name": "Milk Alternatives",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": false,
+        "options": [
+          { "id": "opt_milk_whole", "option_name": "Whole Milk", "price_adjustment": 0, "is_default": true, "is_available": true },
+          { "id": "opt_milk_oat", "option_name": "Oat Milk", "price_adjustment": 0.75, "is_default": false, "is_available": true },
+          { "id": "opt_milk_almond", "option_name": "Almond Milk", "price_adjustment": 0.75, "is_default": false, "is_available": true },
+          { "id": "opt_milk_soy", "option_name": "Soy Milk", "price_adjustment": 0.50, "is_default": false, "is_available": true }
+        ]
+      }
+    ]
+  }
+}

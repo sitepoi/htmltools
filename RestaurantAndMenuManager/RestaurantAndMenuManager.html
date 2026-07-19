@@ -10,7 +10,7 @@
   <button type="button" class="main-tab active" data-tab="general">📋 General</button>
   <button type="button" class="main-tab" data-tab="services">⚙️ Services</button>
   <button type="button" class="main-tab" data-tab="taxpay">💰 Tax & Pay</button>
-  <button type="button" class="main-tab" data-tab="zones">🗺️ Zones</button>
+  <button type="button" class="main-tab" data-tab="delivery">🚚 Delivery</button>
   <button type="button" class="main-tab" data-tab="menu">🍽️ Menu</button>
   <button type="button" class="main-tab" data-tab="alerts">🔔 Alerts</button>
   <button type="button" class="main-tab" data-tab="devices">📱 Devices</button>
@@ -274,12 +274,12 @@
               <div class="form-group"><label class="form-label">Min Advance (min)</label><input type="number" class="form-input" id="svc-deliv-min" data-path="service_settings.scheduled_orders.delivery_min_advance" min="0" value="45"></div>
               <div class="form-group"><label class="form-label">Max Advance (min)</label><input type="number" class="form-input" id="svc-deliv-max" data-path="service_settings.scheduled_orders.delivery_max_advance" min="0" value="1440"></div>
             </div>
+            <div class="form-group" style="margin-top:12px;"><label class="form-label">Time Slot Interval</label>
+              <select class="form-input" id="svc-slot-interval" data-path="service_settings.scheduled_orders.time_slot_interval">
+                <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="45">45 minutes</option><option value="60">1 hour</option><option value="90">1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option><option value="300">5 hours</option><option value="360">6 hours</option>
+              </select>
+            </div>
           </fieldset>
-          <div class="form-group"><label class="form-label">Time Slot Interval</label>
-            <select class="form-input" id="svc-slot-interval" data-path="service_settings.scheduled_orders.time_slot_interval">
-              <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option>
-            </select>
-          </div>
         </div>
       </div>
     </div>
@@ -303,6 +303,28 @@
       </div>
     </div>
 
+    <!-- On-Premise Dining Settings -->
+    <div class="card" id="svc-onpremise-card">
+      <div class="card-header"><span class="card-icon">🍴</span> On-Premise Dining Settings</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Minimum Advance</label>
+            <div class="unit-input-row">
+              <input type="number" class="form-input" id="svc-op-min-val" data-path="service_settings.on_premise_settings.min_advance_value" min="0" placeholder="30" value="30">
+              <select class="form-input" id="svc-op-min-unit" data-path="service_settings.on_premise_settings.min_advance_unit" style="width:120px;">
+                <option value="minutes">Minutes</option><option value="hours">Hours</option><option value="days">Days</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maximum Advance (days)</label>
+            <input type="number" class="form-input" id="svc-op-max-days" data-path="service_settings.on_premise_settings.max_advance_days" min="1" placeholder="7" value="7">
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -312,18 +334,11 @@
 <section class="tab-panel" data-tab="taxpay">
   <div class="tab-scroll">
 
-    <!-- Taxation & Currency -->
+    <!-- Taxation -->
     <div class="card">
-      <div class="card-header"><span class="card-icon">💰</span> Taxation &amp; Currency</div>
+      <div class="card-header"><span class="card-icon">💰</span> Taxation</div>
       <div class="card-body">
-        <div class="form-row">
-          <div class="form-group"><label class="form-label">Currency</label>
-            <select class="form-input" id="tax-currency" data-path="taxation_currency.currency">
-              <option value="USD">USD - US Dollar ($)</option><option value="EUR">EUR - Euro (€)</option><option value="GBP">GBP - British Pound (£)</option><option value="TRY">TRY - Turkish Lira (₺)</option><option value="AED">AED - UAE Dirham</option><option value="SAR">SAR - Saudi Riyal</option><option value="CAD">CAD - Canadian Dollar</option><option value="AUD">AUD - Australian Dollar</option>
-            </select>
-          </div>
-          <div class="form-group"><label class="form-label">Tax Name</label><input type="text" class="form-input" id="tax-name" data-path="taxation_currency.tax_name" placeholder="e.g. VAT" value="Tax"></div>
-        </div>
+        <div class="form-group"><label class="form-label">Tax Name</label><input type="text" class="form-input" id="tax-name" data-path="taxation_currency.tax_name" placeholder="e.g. VAT, Sales Tax, GST" value="Tax"></div>
         <fieldset class="settings-group"><legend>Tax Mode</legend>
           <div class="radio-row">
             <label class="radio-label"><input type="radio" name="tax_mode" value="exclusive" data-path="taxation_currency.tax_mode" checked> Exclusive (added at checkout)</label>
@@ -341,14 +356,57 @@
     <!-- Payment Methods -->
     <div class="card">
       <div class="card-header"><span class="card-icon">💳</span> Payment Methods</div>
-      <div class="card-body">
+      <div class="card-body" style="padding:12px 28px 20px;">
         <div class="payment-grid">
-          <div class="payment-header-row"><div class="payment-method-label"></div><div class="payment-col-header">Delivery</div><div class="payment-col-header">Pickup</div></div>
-          <div class="payment-row"><div class="payment-method-label">💵 Cash</div><label class="switch"><input type="checkbox" id="pay-cash-deliv" data-path="payment_methods.cash_delivery" checked><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-cash-pickup" data-path="payment_methods.cash_pickup" checked><span class="slider"></span></label></div>
-          <div class="payment-row"><div class="payment-method-label">💳 Card</div><label class="switch"><input type="checkbox" id="pay-card-deliv" data-path="payment_methods.card_delivery" checked><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-card-pickup" data-path="payment_methods.card_pickup" checked><span class="slider"></span></label></div>
-          <div class="payment-row"><div class="payment-method-label">📞 Call for Card</div><label class="switch"><input type="checkbox" id="pay-call-deliv" data-path="payment_methods.call_for_card_delivery"><span class="slider"></span></label><label class="switch"><input type="checkbox" id="pay-call-pickup" data-path="payment_methods.call_for_card_pickup"><span class="slider"></span></label></div>
+          <div class="payment-header-row">
+            <div class="payment-method-label"></div>
+            <div class="payment-col-header">Delivery</div>
+            <div class="payment-col-header">Pickup</div>
+            <div class="payment-col-header">On-Premise</div>
+            <div class="payment-col-header">Reservation</div>
+          </div>
+          <div class="payment-row">
+            <div class="payment-method-label">💵 Cash</div>
+            <label class="switch"><input type="checkbox" id="pay-cash-deliv" data-path="payment_methods.cash_delivery" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-cash-pickup" data-path="payment_methods.cash_pickup" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-cash-onprem" data-path="payment_methods.cash_on_premise" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-cash-reserve" data-path="payment_methods.cash_reservation"><span class="slider"></span></label>
+          </div>
+          <div class="payment-row">
+            <div class="payment-method-label">💳 Card</div>
+            <label class="switch"><input type="checkbox" id="pay-card-deliv" data-path="payment_methods.card_delivery" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-card-pickup" data-path="payment_methods.card_pickup" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-card-onprem" data-path="payment_methods.card_on_premise" checked><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-card-reserve" data-path="payment_methods.card_reservation"><span class="slider"></span></label>
+          </div>
+          <div class="payment-row">
+            <div class="payment-method-label">📞 Call for Card</div>
+            <label class="switch"><input type="checkbox" id="pay-call-deliv" data-path="payment_methods.call_for_card_delivery"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-call-pickup" data-path="payment_methods.call_for_card_pickup"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-call-onprem" data-path="payment_methods.call_for_card_on_premise"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-call-reserve" data-path="payment_methods.call_for_card_reservation"><span class="slider"></span></label>
+          </div>
+          <div class="payment-row">
+            <div class="payment-method-label">🏦 Interac E-Transfer</div>
+            <label class="switch"><input type="checkbox" id="pay-interac-deliv" data-path="payment_methods.interac_delivery"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-interac-pickup" data-path="payment_methods.interac_pickup"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-interac-onprem" data-path="payment_methods.interac_on_premise"><span class="slider"></span></label>
+            <label class="switch"><input type="checkbox" id="pay-interac-reserve" data-path="payment_methods.interac_reservation"><span class="slider"></span></label>
+          </div>
         </div>
-        <div class="toggle-row" style="margin-top:16px;"><span class="toggle-label">Online Payment Gateway</span><label class="switch"><input type="checkbox" id="pay-online" data-path="payment_methods.online_payment"><span class="slider"></span></label></div>
+        <div class="toggle-row" style="margin-top:18px; padding-top:14px; border-top:1px solid var(--slate-100);"><span class="toggle-label">Online Payment Gateway</span><span class="toggle-desc">Integrated online payment processing</span><label class="switch"><input type="checkbox" id="pay-online" data-path="payment_methods.online_payment"><span class="slider"></span></label></div>
+      </div>
+    </div>
+
+    <!-- Currency -->
+    <div class="card">
+      <div class="card-header"><span class="card-icon">💱</span> Currency</div>
+      <div class="card-body">
+        <div class="form-group">
+          <select class="form-input" id="tax-currency" data-path="taxation_currency.currency">
+            <option value="USD">USD - US Dollar ($)</option><option value="EUR">EUR - Euro (€)</option><option value="GBP">GBP - British Pound (£)</option><option value="TRY">TRY - Turkish Lira (₺)</option><option value="AED">AED - UAE Dirham</option><option value="SAR">SAR - Saudi Riyal</option><option value="CAD">CAD - Canadian Dollar</option><option value="AUD">AUD - Australian Dollar</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -356,30 +414,117 @@
 </section>
 
 <!-- ===================================================================== -->
-<!-- TAB 4: DELIVERY ZONES -->
+<!-- TAB 4: DELIVERY -->
 <!-- ===================================================================== -->
-<section class="tab-panel" data-tab="zones">
-  <div class="zones-layout">
-    <div class="zones-map-side">
-      <div id="delivery-map"></div>
-      <div class="map-toolbar">
-        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-polygon">▭ Polygon</button>
-        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-circle">⊙ Circle</button>
-        <button type="button" class="btn btn-sm btn-outline" id="zone-draw-rectangle">▬ Rectangle</button>
-        <button type="button" class="btn btn-sm btn-outline" id="zone-edit-layers">✎ Edit</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="zone-clear-drawing">✕ Clear</button>
+<section class="tab-panel" data-tab="delivery">
+
+  <!-- Sub-tab navigation -->
+  <nav class="sub-tabs" id="delivery-subtabs">
+    <button type="button" class="sub-tab active" data-subtab="delivery-zones">🗺️ Zones</button>
+    <button type="button" class="sub-tab" data-subtab="delivery-settings">⚙️ Settings</button>
+  </nav>
+
+  <!-- SUB-TAB: Zones (Map + List) -->
+  <div class="subtab-panel active" data-subtab="delivery-zones">
+    <div class="zones-layout">
+      <div class="zones-map-side">
+        <div id="delivery-map"></div>
+      </div>
+      <div class="zones-list-side">
+        <div class="zones-list-header">
+          <h4 class="panel-title">Delivery Zones</h4>
+          <button type="button" class="btn btn-sm btn-primary" id="zone-add-btn">+ Add Zone</button>
+        </div>
+        <div id="zones-list"></div>
+        <div class="zone-form" id="zone-form" style="display:none;">
+          <div class="zone-form-title" id="zone-form-title">New Delivery Zone</div>
+          <div class="form-group"><label class="form-label">Zone Name</label><input type="text" class="form-input" id="zone-name" placeholder="e.g. Downtown"></div>
+          <div class="form-group"><label class="form-label">Color</label><div class="color-picker-row"><input type="color" class="form-input color-input-hidden" id="zone-color" value="#4f46e5"><div class="color-swatch" id="zone-color-swatch" style="background:#4f46e5;"></div><span class="color-hex" id="zone-color-hex">#4f46e5</span></div></div>
+          <div class="form-row"><div class="form-group"><label class="form-label">Min Order ($)</label><input type="number" class="form-input" id="zone-min-order" min="0" step="0.01" value="0"></div><div class="form-group"><label class="form-label">Delivery Fee ($)</label><input type="number" class="form-input" id="zone-fee" min="0" step="0.01" value="0"></div></div>
+          <div class="zone-draw-tools">
+            <span class="zone-draw-label">Draw zone boundary on the map:</span>
+            <div class="zone-draw-buttons">
+              <button type="button" class="btn btn-sm btn-outline zone-draw-btn active" data-shape="polygon"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="8,1 15,5 13,12 3,12 1,5"/></svg> Polygon</button>
+              <button type="button" class="btn btn-sm btn-outline zone-draw-btn" data-shape="circle"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/></svg> Circle</button>
+              <button type="button" class="btn btn-sm btn-outline zone-draw-btn" data-shape="rectangle"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/></svg> Rectangle</button>
+              <button type="button" class="btn btn-sm btn-ghost zone-draw-clear">✕ Clear</button>
+            </div>
+          </div>
+          <div class="zone-shapes-section" id="zone-shapes-section" style="display:none;">
+            <label class="form-label">Zone Shapes <span class="zone-shapes-count" id="zone-shapes-count"></span></label>
+            <div class="zone-shapes-list" id="zone-shapes-list"></div>
+          </div>
+          <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="zone-save-btn">Save Zone</button><button type="button" class="btn btn-ghost btn-sm" id="zone-cancel-btn">Cancel</button><button type="button" class="btn btn-danger btn-sm zone-delete-form-btn" id="zone-delete-form-btn" style="display:none;">🗑 Delete Zone</button></div>
+        </div>
       </div>
     </div>
-    <div class="zones-list-side">
-      <h4 class="panel-title">Delivery Zones</h4>
-      <div id="zones-list"></div>
-      <div class="zone-form" id="zone-form" style="display:none;">
-        <div class="form-group"><label class="form-label">Zone Name</label><input type="text" class="form-input" id="zone-name" placeholder="e.g. Downtown"></div>
-        <div class="form-group"><label class="form-label">Color</label><input type="color" class="form-input" id="zone-color" value="#4f46e5"></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Min Order ($)</label><input type="number" class="form-input" id="zone-min-order" min="0" step="0.01" value="0"></div><div class="form-group"><label class="form-label">Delivery Fee ($)</label><input type="number" class="form-input" id="zone-fee" min="0" step="0.01" value="0"></div></div>
-        <div class="form-actions"><button type="button" class="btn btn-primary btn-sm" id="zone-save-btn">Save Zone</button><button type="button" class="btn btn-ghost btn-sm" id="zone-cancel-btn">Cancel</button></div>
+  </div>
+
+  <!-- SUB-TAB: Settings -->
+  <div class="subtab-panel" data-subtab="delivery-settings">
+    <div class="tab-scroll">
+    <div class="settings-container">
+
+      <!-- Accept orders outside zone -->
+      <div class="card">
+        <div class="card-header"><span class="card-icon">🌐</span> Order Coverage</div>
+        <div class="card-body">
+          <div class="toggle-row">
+            <div class="toggle-info"><span class="toggle-label">Accept orders outside delivery area</span><span class="toggle-desc">Allow customers to place orders even if their address falls outside any defined zone</span></div>
+            <label class="switch"><input type="checkbox" id="delivery-outside-zone"><span class="slider"></span></label>
+          </div>
+        </div>
       </div>
-      <button type="button" class="btn btn-outline btn-sm btn-full" id="zone-add-btn">+ New Zone From Drawing</button>
+
+      <!-- Address Form Fields -->
+      <div class="card">
+        <div class="card-header"><span class="card-icon">📋</span> Address Form Fields</div>
+        <div class="card-body">
+          <p class="card-hint">Configure which fields appear on the customer delivery address form and whether they are required.</p>
+          <div class="delivery-fields-table" id="delivery-address-fields"></div>
+        </div>
+      </div>
+
+      <!-- Custom Fields -->
+      <div class="card">
+        <div class="card-header"><span class="card-icon">✚</span> Custom Fields</div>
+        <div class="card-body">
+          <p class="card-hint">Add extra fields to collect from customers (e.g. gate code, floor number, delivery instructions).</p>
+          <div id="delivery-custom-fields-list"></div>
+          <div class="delivery-custom-add-row">
+            <input type="text" class="form-input form-input-sm" id="delivery-custom-field-input" placeholder="Field label (e.g. Gate Code)">
+            <button type="button" class="btn btn-sm btn-outline" id="delivery-custom-field-add-btn">+ Add</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    </div>
+  </div>
+
+  <!-- Zone Delete Confirmation Modal -->
+  <div class="modal-overlay" id="zone-delete-modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-icon">⚠️</div>
+      <div class="modal-title">Delete Delivery Zone?</div>
+      <div class="modal-body">You are about to permanently delete <strong id="zone-delete-modal-name">this zone</strong>. All associated map shapes will be removed. This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="zone-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="zone-delete-confirm-btn">Yes, Delete Zone</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shape Delete Confirmation Modal -->
+  <div class="modal-overlay" id="shape-delete-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-icon">🗑️</div>
+      <div class="modal-title">Remove Shape?</div>
+      <div class="modal-body">This will remove the <strong id="shape-delete-modal-desc">shape</strong> from the zone. The zone itself will be kept.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="shape-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="shape-delete-confirm-btn">Remove Shape</button>
+      </div>
     </div>
   </div>
 </section>
@@ -392,50 +537,25 @@
     <!-- Left Panel -->
     <aside class="left-panel" id="left-panel">
       <div class="panel-tabs">
-        <button type="button" class="panel-tab active" data-panel-tab="categories">📂 Categories</button>
-        <button type="button" class="panel-tab" data-panel-tab="modifier-groups">🧩 Modifiers</button>
+        <button type="button" class="panel-tab active" data-left-tab="categories">📁 Categories</button>
+        <button type="button" class="panel-tab" data-left-tab="modifiers">🧩 Modifiers</button>
       </div>
-      <div class="panel-content active" data-panel-content="categories">
+      <div class="panel-content active" id="left-tab-categories">
         <div class="panel-header"><span class="panel-label">Categories</span><button type="button" class="btn btn-sm btn-primary" id="menu-add-cat">+ Add</button></div>
         <div class="category-list" id="menu-cat-list"></div>
-        <div class="category-form" id="menu-cat-form" style="display:none;">
-          <input type="text" class="form-input form-input-sm" id="menu-cat-name" placeholder="Category name">
-          <div class="form-actions-row"><button type="button" class="btn btn-sm btn-primary" id="menu-cat-save">Save</button><button type="button" class="btn btn-sm btn-ghost" id="menu-cat-cancel">Cancel</button></div>
-        </div>
       </div>
-      <div class="panel-content" data-panel-content="modifier-groups">
+      <div class="panel-content" id="left-tab-modifiers">
         <div class="panel-header"><span class="panel-label">Modifier Groups</span><button type="button" class="btn btn-sm btn-primary" id="menu-mg-add">+ Add</button></div>
         <div class="modgroup-list" id="menu-mg-list"></div>
-        <div class="modgroup-form" id="menu-mg-form" style="display:none;">
-          <div class="form-group"><label class="form-label">Group Name</label><input type="text" class="form-input form-input-sm" id="menu-mg-name" placeholder="e.g. Toppings"></div>
-          <div class="form-group"><label class="form-label">Selection Type</label><select class="form-input form-input-sm" id="menu-mg-type"><option value="single">Single Select</option><option value="multi">Multi Select</option></select></div>
-          <label class="checkbox-label"><input type="checkbox" id="menu-mg-required"> Required</label>
-          <div class="form-label" style="margin-top:8px;">Options</div>
-          <div class="modgroup-options" id="menu-mg-options"></div>
-          <button type="button" class="btn btn-sm btn-outline" id="menu-mg-add-opt">+ Add Option</button>
-          <div class="form-actions-row"><button type="button" class="btn btn-sm btn-primary" id="menu-mg-save">Save Group</button><button type="button" class="btn btn-sm btn-ghost" id="menu-mg-cancel">Cancel</button></div>
-        </div>
       </div>
     </aside>
     <!-- Center Panel -->
     <main class="center-panel" id="center-panel">
       <div class="center-toolbar">
         <div class="search-wrap"><svg class="search-icon" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input type="text" class="form-input search-input" id="menu-search" placeholder="Search items..."></div>
+        <label class="avail-toggle"><input type="checkbox" id="menu-filter-avail" checked> Available only</label>
         <select class="form-input sort-select" id="menu-sort"><option value="name_asc">Name A-Z</option><option value="name_desc">Name Z-A</option><option value="price_asc">Price: Low-High</option><option value="price_desc">Price: High-Low</option></select>
-      </div>
-      <div class="filter-chips" id="menu-filter-chips">
-        <button type="button" class="chip" data-filter="vegetarian">🥬 Vegetarian</button>
-        <button type="button" class="chip" data-filter="vegan">🌱 Vegan</button>
-        <button type="button" class="chip" data-filter="gluten_free">🌾 Gluten-Free</button>
-        <button type="button" class="chip" data-filter="available">🟢 Available</button>
-      </div>
-      <div class="bulk-bar" id="menu-bulk-bar" style="display:none;">
-        <span id="menu-bulk-count">0 selected</span>
-        <select class="form-input form-input-sm" id="menu-bulk-cat" style="width:auto;"><option value="">Move to...</option></select>
-        <button type="button" class="btn btn-sm btn-outline" id="menu-bulk-move">Move</button>
-        <button type="button" class="btn btn-sm btn-outline" id="menu-bulk-toggle">Toggle Avail</button>
-        <button type="button" class="btn btn-sm btn-danger" id="menu-bulk-delete">Delete</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="menu-bulk-clear">Clear</button>
+        <button type="button" class="btn btn-sm btn-primary" id="menu-add-item-btn">+ Add Item</button>
       </div>
       <div class="items-grid" id="menu-items-grid"><div class="empty-state">Select a category to view items</div></div>
     </main>
@@ -444,31 +564,275 @@
       <div class="drawer-header"><h3 id="menu-drawer-title">New Item</h3><button type="button" class="btn btn-sm btn-ghost" id="menu-drawer-close">✕</button></div>
       <div class="drawer-body">
         <div class="form-group"><label class="form-label">Item Name *</label><input type="text" class="form-input" id="menu-item-name"></div>
-        <div class="form-group"><label class="form-label">Slug</label><input type="text" class="form-input" id="menu-item-slug"></div>
         <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="menu-item-desc" rows="2"></textarea></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Price *</label><input type="number" class="form-input" id="menu-item-price" min="0" step="0.01"></div><div class="form-group"><label class="form-label">Sale Price</label><input type="number" class="form-input" id="menu-item-sale" min="0" step="0.01"></div></div>
-        <div class="form-group"><label class="form-label">Primary Photo</label><div class="photo-upload"><div class="photo-preview" id="menu-photo-preview">🍽️</div><button type="button" class="upload-btn" id="menu-photo-upload-btn">📷 Upload Photo</button></div></div>
-        <div class="form-group"><label class="form-label">Photo Gallery</label><div class="photo-pool" id="menu-photo-pool"></div><button type="button" class="upload-btn upload-btn-sm" id="menu-gallery-upload-btn">+ Upload Photos</button></div>
-        <div class="form-group"><label class="form-label">Allergens</label><div class="chip-picker" id="menu-allergen-picker"></div></div>
-        <div class="form-group"><label class="form-label">Dietary</label>
-          <div class="toggle-row"><span>Vegetarian</span><label class="switch"><input type="checkbox" id="menu-item-veg"><span class="slider"></span></label></div>
-          <div class="toggle-row"><span>Vegan</span><label class="switch"><input type="checkbox" id="menu-item-vegan"><span class="slider"></span></label></div>
-          <div class="toggle-row"><span>Gluten Free</span><label class="switch"><input type="checkbox" id="menu-item-gf"><span class="slider"></span></label></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Price * <span class="form-hint" id="menu-item-price-hint"></span></label><input type="number" class="form-input" id="menu-item-price" min="0" step="0.01"></div><div class="form-group"><label class="form-label">Sale Price</label><input type="number" class="form-input" id="menu-item-sale" min="0" step="0.01"></div></div>
+        <div class="form-group">
+          <label class="form-label">Sizes <span class="form-hint">(e.g. Small, Medium, Large — leave empty if single-size)</span></label>
+          <div id="menu-item-sizes-list"></div>
+          <button type="button" class="btn btn-sm btn-outline" id="menu-item-size-add-btn" style="margin-top:4px;">+ Add Size</button>
         </div>
-        <div class="form-group"><label class="form-label">Spice Level: <span id="menu-spice-label">Not Spicy</span></label><input type="range" class="spice-slider" id="menu-item-spice" min="0" max="5" value="0" step="1"><div class="spice-labels"><span>Not Spicy</span><span>Mild</span><span>Medium</span><span>Hot</span><span>Very Hot</span><span>Extra Hot</span></div></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">Calories</label><input type="number" class="form-input" id="menu-item-cal" min="0"></div><div class="form-group"><label class="form-label">Prep Time (min)</label><input type="number" class="form-input" id="menu-item-prep" min="0"></div></div>
-        <div class="form-group"><label class="form-label">Tags</label><div class="chip-picker" id="menu-tag-picker"></div></div>
-        <div class="form-group"><label class="form-label">Modifier Groups</label><div class="checkbox-list" id="menu-mg-checkboxes"></div></div>
-        <div class="toggle-row"><span>Available</span><label class="switch"><input type="checkbox" id="menu-item-avail" checked><span class="slider"></span></label></div>
+        <div class="form-group">
+          <label class="form-label">Photos <span class="form-hint form-hint-inline">— First is primary · Click to set primary · Drag to reorder</span></label>
+          <div class="photo-pool" id="menu-photo-pool"></div>
+          <button type="button" class="upload-btn upload-btn-sm" id="menu-photo-upload-btn" style="margin-top:6px;">📷 Upload Photos</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Visibility</label>
+          <select class="form-input" id="menu-item-vis-mode">
+            <option value="show">Show — always visible</option>
+            <option value="scheduled">Scheduled — show during specific times</option>
+            <option value="hide">Hide — not visible</option>
+          </select>
+        </div>
+        <div class="cat-vis-options" id="item-hide-options" style="display:none;">
+          <label class="form-label form-label-sm">When hidden:</label>
+          <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="item-hide-type" value="permanent" checked> Hide permanently</label>
+            <label class="radio-label"><input type="radio" name="item-hide-type" value="until_date"> Hide until…</label>
+          </div>
+          <div id="item-hide-until-row" style="display:none;margin-top:6px;">
+            <input type="datetime-local" class="form-input" id="menu-item-hide-until">
+          </div>
+        </div>
+        <div class="cat-vis-options" id="item-schedule-options" style="display:none;">
+          <label class="form-label form-label-sm">Schedule type:</label>
+          <select class="form-input" id="menu-item-schedule-type">
+            <option value="time_windows">Recurring time windows</option>
+            <option value="date_range">Specific date range</option>
+          </select>
+          <div id="item-schedule-windows" style="margin-top:8px;"></div>
+          <div id="item-schedule-dates" style="display:none;margin-top:8px;">
+            <div class="form-group"><label class="form-label form-label-sm">From</label><input type="datetime-local" class="form-input" id="menu-item-sched-from"></div>
+            <div class="form-group"><label class="form-label form-label-sm">Until</label><input type="datetime-local" class="form-input" id="menu-item-sched-until"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Availability</label>
+          <select class="form-input" id="menu-item-avail-status">
+            <option value="available">Available</option>
+            <option value="out_of_stock">Out of Stock</option>
+          </select>
+        </div>
+        <div class="cat-vis-options" id="item-oos-options" style="display:none;">
+          <label class="form-label form-label-sm">Out of stock until:</label>
+          <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="item-oos-type" value="tomorrow" checked> Tomorrow</label>
+            <label class="radio-label"><input type="radio" name="item-oos-type" value="date"> Specific date & time</label>
+            <label class="radio-label"><input type="radio" name="item-oos-type" value="undetermined"> Undetermined</label>
+          </div>
+          <div id="item-oos-date-row" style="display:none;margin-top:6px;">
+            <input type="datetime-local" class="form-input" id="menu-item-oos-until">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Show on channels</label>
+          <div class="channel-pills" id="menu-item-channels"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Modifier Groups</label><div id="menu-mg-checkboxes"></div></div>
+        <div class="advanced-toggle" id="advanced-toggle"><span class="adv-arrow">▶</span> Advanced Settings</div>
+        <div class="advanced-body" id="advanced-body">
+          <div class="form-group"><label class="form-label">Category</label><select class="form-input" id="menu-item-category"><option value="">-- Select Category --</option></select></div>
+          <div class="form-group"><label class="form-label">Slug</label><input type="text" class="form-input" id="menu-item-slug"></div>
+          <div class="form-group"><label class="form-label">Allergens</label><div class="chip-picker" id="menu-allergen-picker"></div></div>
+          <div class="form-group"><label class="form-label">Dietary</label>
+            <div class="toggle-row"><span>Vegetarian</span><label class="switch"><input type="checkbox" id="menu-item-veg"><span class="slider"></span></label></div>
+            <div class="toggle-row"><span>Vegan</span><label class="switch"><input type="checkbox" id="menu-item-vegan"><span class="slider"></span></label></div>
+            <div class="toggle-row"><span>Gluten Free</span><label class="switch"><input type="checkbox" id="menu-item-gf"><span class="slider"></span></label></div>
+          </div>
+          <div class="form-group"><label class="form-label">Spice Level: <span id="menu-spice-label">Not Spicy</span></label><input type="range" class="spice-slider" id="menu-item-spice" min="0" max="5" value="0" step="1"><div class="spice-labels"><span>Not Spicy</span><span>Mild</span><span>Medium</span><span>Hot</span><span>Very Hot</span><span>Extra Hot</span></div></div>
+          <div class="form-row"><div class="form-group"><label class="form-label">Calories</label><input type="number" class="form-input" id="menu-item-cal" min="0"></div><div class="form-group"><label class="form-label">Prep Time (min)</label><input type="number" class="form-input" id="menu-item-prep" min="0"></div></div>
+          <div class="form-group"><label class="form-label">Tags</label><div class="chip-picker" id="menu-tag-picker"></div></div>
+        </div>
       </div>
       <div class="drawer-footer">
-        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-delete" style="color:#ef4444;margin-right:auto;">🗑 Delete</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-copy" title="Copy item JSON">📋 Copy</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-paste" title="Paste copied item">📄 Paste</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="menu-item-delete" style="color:#ef4444;">🗑 Delete</button>
         <button type="button" class="btn btn-ghost btn-sm" id="menu-item-cancel">Cancel</button>
         <button type="button" class="btn btn-primary btn-sm" id="menu-item-save">Save Item</button>
       </div>
     </aside>
+
   </div>
+
+  <!-- Modifier Option Add/Edit Modal -->
+  <div class="modal-overlay" id="menu-mg-opt-modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-title" id="menu-mg-opt-modal-title">Add Option</div>
+      <div class="form-group"><label class="form-label">Option Name</label><input type="text" class="form-input" id="menu-mg-opt-name" placeholder="e.g. Extra Cheese"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Price Adjustment ($)</label><input type="number" class="form-input" id="menu-mg-opt-price" step="0.01" value="0" placeholder="0.00"></div>
+      </div>
+      <div class="toggle-row modal-toggle-row">
+        <div class="toggle-info"><span class="toggle-label">Default selection</span><span class="toggle-desc">This option will be pre-selected for customers when they view the item</span></div>
+        <label class="switch"><input type="checkbox" id="menu-mg-opt-default"><span class="slider"></span></label>
+      </div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn-sm btn-danger-outline" id="menu-mg-opt-delete-btn" style="display:none;">🗑 Delete</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-mg-opt-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-mg-opt-save">Save Option</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size Edit Modal -->
+  <div class="modal-overlay" id="menu-size-modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-title" id="menu-size-modal-title">Edit Size</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Label</label><input type="text" class="form-input" id="menu-size-label" placeholder="e.g. Small"></div>
+        <div class="form-group"><label class="form-label">Price ($)</label><input type="number" class="form-input" id="menu-size-price" min="0" step="0.01" value="0"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Modifiers for this size</label><div id="menu-size-mg-checkboxes"></div></div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn-xs btn-ghost" id="menu-size-delete-btn" style="color:#ef4444;font-size:11px;">🗑</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-size-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-size-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size Delete Confirmation Modal -->
+  <div class="modal-overlay" id="size-delete-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-icon">🗑️</div>
+      <div class="modal-title">Delete Size?</div>
+      <div class="modal-body">This will permanently delete <strong id="size-delete-modal-name">this size</strong>. This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="size-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="size-delete-confirm-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modifier Option Delete Confirmation Modal -->
+  <div class="modal-overlay" id="mg-opt-delete-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-icon">🗑️</div>
+      <div class="modal-title">Delete Option?</div>
+      <div class="modal-body">This will permanently delete <strong id="mg-opt-delete-modal-name">this option</strong>. This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="mg-opt-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="mg-opt-delete-confirm-btn">Delete Option</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modifier Group Modal -->
+  <div class="modal-overlay" id="menu-mg-modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-title" id="menu-mg-modal-title">New Modifier Group</div>
+      <div class="form-group"><label class="form-label">Group Name</label><input type="text" class="form-input" id="menu-mg-name" placeholder="e.g. Toppings"></div>
+      <div class="toggle-row modal-toggle-row">
+        <div class="toggle-info"><span class="toggle-label">Multiple selections (Pick Any)</span><span class="toggle-desc">When ON, customers can pick multiple options from this group. When OFF, only one option can be selected.</span></div>
+        <label class="switch"><input type="checkbox" id="menu-mg-multi" checked><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row modal-toggle-row">
+        <div class="toggle-info"><span class="toggle-label">Allow duplicate choices</span><span class="toggle-desc">When ON, the same option can be added multiple times (e.g. double cheese). When OFF, each option can only be selected once.</span></div>
+        <label class="switch"><input type="checkbox" id="menu-mg-allow-duplicates"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row modal-toggle-row">
+        <div class="toggle-info"><span class="toggle-label">Required</span><span class="toggle-desc">Customers must make a selection before adding the item to cart</span></div>
+        <label class="switch"><input type="checkbox" id="menu-mg-required"><span class="slider"></span></label>
+      </div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn-sm btn-danger-outline" id="menu-mg-delete-btn" style="display:none;">🗑 Delete</button>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-mg-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-mg-save">Save Group</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modifier Group Delete Confirmation Modal -->
+  <div class="modal-overlay" id="mg-delete-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-icon">🗑️</div>
+      <div class="modal-title">Delete Modifier Group?</div>
+      <div class="modal-body">This will permanently delete <strong id="mg-delete-modal-name">this group</strong> and all its options. Items using this group will lose the association. This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="mg-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="mg-delete-confirm-btn">Delete Group</button>
+      </div>
+    </div>
+  </div>
+
 </section>
+
+  <!-- Category Form Modal -->
+  <div class="modal-overlay" id="menu-cat-modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-title" id="menu-cat-modal-title">New Category</div>
+      <div class="form-group">
+        <label class="form-label">Name <span class="char-count" id="cat-name-count">0/80</span></label>
+        <input type="text" class="form-input" id="menu-cat-name" placeholder="Category name" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description <span class="char-count" id="cat-desc-count">0/200</span></label>
+        <textarea class="form-input form-textarea" id="menu-cat-desc" placeholder="Brief description of this category" maxlength="200" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Visibility</label>
+        <select class="form-input" id="menu-cat-vis-mode">
+          <option value="show">Show — always visible</option>
+          <option value="scheduled">Scheduled — show during specific times</option>
+          <option value="hide">Hide — not visible</option>
+        </select>
+      </div>
+      <!-- Hide options -->
+      <div class="cat-vis-options" id="cat-hide-options" style="display:none;">
+        <label class="form-label form-label-sm">When hidden:</label>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="cat-hide-type" value="permanent" checked> Hide permanently</label>
+          <label class="radio-label"><input type="radio" name="cat-hide-type" value="until_date"> Hide until…</label>
+        </div>
+        <div id="cat-hide-until-row" style="display:none;margin-top:6px;">
+          <input type="datetime-local" class="form-input" id="menu-cat-hide-until">
+        </div>
+      </div>
+      <!-- Scheduled options -->
+      <div class="cat-vis-options" id="cat-schedule-options" style="display:none;">
+        <label class="form-label form-label-sm">Schedule type:</label>
+        <select class="form-input" id="menu-cat-schedule-type">
+          <option value="time_windows">Recurring time windows</option>
+          <option value="date_range">Specific date range</option>
+        </select>
+        <div id="cat-schedule-windows" style="margin-top:8px;"></div>
+        <div id="cat-schedule-dates" style="display:none;margin-top:8px;">
+          <div class="form-group"><label class="form-label form-label-sm">From</label><input type="datetime-local" class="form-input" id="menu-cat-sched-from"></div>
+          <div class="form-group"><label class="form-label form-label-sm">Until</label><input type="datetime-local" class="form-input" id="menu-cat-sched-until"></div>
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content: space-between;">
+        <div style="display:flex;gap:4px;">
+          <button type="button" class="btn btn-xs btn-ghost" id="menu-cat-duplicate" style="display:none;" title="Duplicate this category">📋</button>
+          <button type="button" class="btn btn-xs btn-ghost" id="menu-cat-delete-btn" style="display:none;color:#ef4444;" title="Delete this category">🗑</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" id="menu-cat-cancel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" id="menu-cat-save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Delete Confirmation Modal -->
+  <div class="modal-overlay" id="cat-delete-modal" style="display:none;">
+    <div class="modal-dialog modal-dialog-sm">
+      <div class="modal-icon">🗑️</div>
+      <div class="modal-title">Delete Category?</div>
+      <div class="modal-body">This will permanently delete <strong id="cat-delete-modal-name">this category</strong> and remove it from all associated items. This action cannot be undone.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="cat-delete-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-danger btn-sm" id="cat-delete-confirm-btn">Delete Category</button>
+      </div>
+    </div>
+  </div>
 
 <!-- ===================================================================== -->
 <!-- TAB 6: ALERTS & SOCIAL -->
@@ -526,9 +890,3 @@
     </div>
   </div>
 </section>
-
-<!-- Save Bar -->
-<div class="save-bar" id="save-bar">
-  <span class="save-status" id="save-status">All changes saved</span>
-  <button type="button" class="btn btn-primary btn-sm" id="save-all-btn">Save All</button>
-</div>
