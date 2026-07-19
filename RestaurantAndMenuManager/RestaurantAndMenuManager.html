@@ -651,6 +651,20 @@
           </div>
           <div class="form-group"><label class="form-label">Tags</label><div class="chip-picker" id="menu-tag-picker"></div></div>
           <div class="form-group">
+            <label class="form-label">Special Instructions</label>
+            <div class="toggle-row modal-toggle-row">
+              <div class="toggle-info"><span class="toggle-label">Show internal name on kitchen tickets</span><span class="toggle-desc">When ON, the kitchen display will show the internal name instead of the customer-facing name</span></div>
+              <label class="switch"><input type="checkbox" id="menu-item-internal-name-toggle"><span class="slider"></span></label>
+            </div>
+            <div id="item-internal-name-row" style="display:none;margin-top:8px;">
+              <input type="text" class="form-input" id="menu-item-internal-name" placeholder="e.g. CHIX-WRAP">
+            </div>
+            <div class="toggle-row modal-toggle-row" style="margin-top:8px;">
+              <div class="toggle-info"><span class="toggle-label">Hide special instructions input</span><span class="toggle-desc">When ON, customers will not see the special instructions field when ordering this item</span></div>
+              <label class="switch"><input type="checkbox" id="menu-item-hide-instructions"><span class="slider"></span></label>
+            </div>
+          </div>
+          <div class="form-group">
             <label class="form-label">Tax Category</label>
             <select class="form-input" id="menu-item-tax-cat">
               <option value="">-- None (inherit from category) --</option>
@@ -703,6 +717,16 @@
         <label class="form-label">Option Photo</label>
         <div class="single-photo-area" id="menu-mg-opt-photo-area"></div>
         <button type="button" class="upload-btn upload-btn-sm" id="menu-mg-opt-photo-upload-btn" style="margin-top:6px;">📷 Upload Photo</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Special Instructions</label>
+        <div class="toggle-row modal-toggle-row">
+          <div class="toggle-info"><span class="toggle-label">Show internal name on kitchen tickets</span><span class="toggle-desc">When ON, the kitchen display will show the internal name instead of the customer-facing name</span></div>
+          <label class="switch"><input type="checkbox" id="menu-mg-opt-internal-name-toggle"><span class="slider"></span></label>
+        </div>
+        <div id="mg-opt-internal-name-row" style="display:none;margin-top:8px;">
+          <input type="text" class="form-input" id="menu-mg-opt-internal-name" placeholder="e.g. XTRA-CHZ">
+        </div>
       </div>
       <div class="modal-actions" style="justify-content:space-between;">
         <button type="button" class="btn btn-sm btn-danger-outline" id="menu-mg-opt-delete-btn" style="display:none;">🗑 Delete</button>

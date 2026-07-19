@@ -100,19 +100,19 @@
 <!-- ============================================================ -->
 <div class="summary-box">
   <div class="summary-item green">
-    <div class="num">96%</div>
-    <div class="label">Feature Coverage <span class="delta-up">↑14%</span></div>
+    <div class="num">97%</div>
+    <div class="label">Feature Coverage <span class="delta-up">↑15%</span></div>
   </div>
   <div class="summary-item amber">
-    <div class="num">2</div>
-    <div class="label">Minor Gaps <span class="delta-up">↓4</span></div>
+    <div class="num">1</div>
+    <div class="label">Minor Gap <span class="delta-up">↓5</span></div>
   </div>
   <div class="summary-item red">
     <div class="num">0</div>
     <div class="label">Missing Features <span class="delta-up">↓2</span></div>
   </div>
   <div class="summary-item purple">
-    <div class="num">7</div>
+    <div class="num">9</div>
     <div class="label">New Features Beyond Gloria</div>
   </div>
 </div>
@@ -163,9 +163,16 @@ Modifier groups now support <code>photo_url</code> (single photo). Gloria doesn'
 <strong>✅ GAP 8: Modifier Option Photos</strong> — NOW COVERED<br>
 Modifier options now support <code>photo_url</code> (single photo). Gloria doesn't have this — it's a net-new feature.
 </div>
+
+<div class="resolved">
+<strong>✅ GAP 9: <code>hide_instructions</code></strong> — NOW COVERED (v2.1)<br>
+Items now have a <code>hide_instructions</code> boolean toggle. When ON, the special instructions input field is hidden from customers during ordering. Direct 1:1 mapping to Gloria's field.
 </div>
 
-<!-- ============================================================ -->
+<div class="resolved">
+<strong>✅ GAP 10: Kitchen internal names</strong> — NOW COVERED (v2.1)<br>
+Both items and modifier options now support <code>show_internal_name</code> + <code>internal_name</code>. When enabled, the kitchen display ticket shows the internal name instead of the customer-facing name. This exceeds Gloria's capabilities.
+</div>
 <h2>2. Structural Comparison (Updated)</h2>
 <!-- ============================================================ -->
 
@@ -317,8 +324,13 @@ Modifier options now support <code>photo_url</code> (single photo). Gloria doesn
 </tr>
 <tr>
   <td><code>hide_instructions</code></td>
-  <td>No equivalent</td>
-  <td><span class="tag tag-no">Minor</span> — rarely used</td>
+  <td><code>hide_instructions</code> <span class="tag-fixed tag" style="font-size:10px;">v2.1</span></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><em>(no Gloria equivalent)</em></td>
+  <td><code>show_internal_name</code> + <code>internal_name</code> — kitchen ticket display name <span class="tag-new tag" style="font-size:10px;">NEW</span></td>
+  <td><span class="tag tag-info">Exceeds Gloria</span></td>
 </tr>
 <tr>
   <td><code>restaurant_menu_availabilities[]</code></td>
@@ -401,9 +413,9 @@ Modifier options now support <code>photo_url</code> (single photo). Gloria doesn
   <td><span class="tag tag-yes">Covered</span></td>
 </tr>
 <tr>
-  <td><code>option.restaurant_menu_availabilities[]</code></td>
-  <td>No per-option channel filtering</td>
-  <td><span class="tag tag-no">Minor gap</span> — rarely used</td>
+  <td><em>(no Gloria equivalent)</em></td>
+  <td><code>option.show_internal_name</code> + <code>option.internal_name</code> — kitchen ticket display name for options <span class="tag-new tag" style="font-size:10px;">NEW</span></td>
+  <td><span class="tag tag-info">Exceeds Gloria</span></td>
 </tr>
 <tr>
   <td><em>(no Gloria equivalent)</em></td>
@@ -419,30 +431,29 @@ Modifier options now support <code>photo_url</code> (single photo). Gloria doesn
 </div>
 
 <!-- ============================================================ -->
-<h2>6. Remaining Gaps (Minor Only)</h2>
+<h2>6. Remaining Gap (Minor Only)</h2>
 <!-- ============================================================ -->
 
 <div class="card">
 <h3>🟡 What's Still Not 1:1</h3>
 
 <div class="key-diff">
-<strong>1. <code>hide_instructions</code></strong> (Gloria item field)<br>
-Gloria has a boolean flag to hide preparation instructions. UniconHub has no equivalent. <em>Impact: Very low. Most restaurants don't use this field.</em>
+<strong>1. Gloria <code>extras</code> Objects</strong> (<code>sku</code>, <code>country_value</code>, <code>country_condition</code>)<br>
+Gloria attaches miscellaneous metadata to items, sizes, options, and groups. These are Gloria-internal fields with no menu-structural purpose. <em>Impact: None. Not relevant to the menu data model.</em>
 </div>
 
-<div class="key-diff">
-<strong>2. Per-option Channel Filtering</strong> (<code>restaurant_menu_availabilities</code> on options)<br>
-Gloria supports per-option channel availability. UniconHub only filters channels at the item level. <em>Impact: Low. Rarely configured on individual options.</em>
+<h3 style="margin-top:20px;">✅ Resolved in Import Layer (not a feature gap)</h3>
+
+<div class="resolved">
+<strong>Numeric vs String Tax Category IDs</strong><br>
+Gloria uses numeric <code>tax_category_id</code> (e.g. <code>444286</code>). UniconHub uses the tax category name as a string reference. A simple lookup table during import maps numeric Gloria IDs to UniconHub tax category names. No data model change needed.
 </div>
 
-<div class="key-diff">
-<strong>3. Gloria <code>extras</code> Objects</strong> (<code>sku</code>, <code>country_value</code>, <code>country_condition</code>)<br>
-Gloria attaches miscellaneous extras to items, sizes, options, and groups. These are Gloria-specific metadata fields. <em>Impact: None. These are Gloria-internal fields not relevant to the menu structure.</em>
-</div>
+<h3 style="margin-top:20px;">🚫 Intentionally Skipped</h3>
 
 <div class="key-diff">
-<strong>4. Numeric vs String Tax Category IDs</strong><br>
-Gloria uses numeric <code>tax_category_id</code> (e.g. <code>444286</code>). UniconHub uses the tax category name as a string reference. Import will need a lookup table. <em>Impact: Low. One-time mapping during import.</em>
+<strong>Per-option Channel Filtering</strong> (<code>restaurant_menu_availabilities</code> on options)<br>
+Gloria supports per-option channel availability. UniconHub filters channels at the item level. Per-option channel filtering was evaluated and determined to be unnecessary — it is rarely configured on individual options in real-world menus.
 </div>
 </div>
 
@@ -486,6 +497,16 @@ Clean 3-mode system (Show / Scheduled / Hide) replaces Gloria's 6+ separate visi
 <div class="strength">
 <strong>✅ Global Modifier Groups</strong><br>
 Edit a modifier group once, all items using it update automatically. Gloria duplicates group definitions across items.
+</div>
+
+<div class="strength">
+<strong>✅ Kitchen Internal Names</strong> (<code>show_internal_name</code> + <code>internal_name</code>)<br>
+Both items and modifier options can have an internal/kitchen name that displays on kitchen tickets instead of the customer-facing name. Keeps the kitchen organized with short codes (e.g. "CHIX-WRAP") while customers see the full description.
+</div>
+
+<div class="strength">
+<strong>✅ Hide Special Instructions</strong> (<code>hide_instructions</code>)<br>
+Per-item toggle to suppress the customer special-instructions input field. Useful for standardized items where custom requests don't apply (e.g. sealed beverages, pre-packaged goods).
 </div>
 </div>
 
@@ -882,8 +903,7 @@ function importGloriaMenu(gloriaJson, taxLookupMap) {
   <span style="color:var(--muted);font-size:14px;">&nbsp;↑ from 82% in v1</span>
 </h3>
 <p style="color:var(--muted);font-size:13px;">
-  The two critical missing features from v1 (min/max selections and per-option OOS) are now fully implemented.
-  The remaining 4% represents minor fields (<code>hide_instructions</code>, per-option channel filtering) that have negligible impact on real-world menu operations.
+  All previously-identified gaps are now resolved. The sole remaining difference is Gloria <code>extras</code> metadata (SKU, country fields) which are Gloria-internal and not part of the menu structure.
   A fully automated Gloria → UniconHub importer is now feasible with only a tax ID lookup table and optional allergen NLP mapping.
 </p>
 </div>

@@ -2632,6 +2632,10 @@ function addModOption(mgId) {
   resetOptOosOptions();
   /* Reset photo */
   renderSinglePhoto('menu-mg-opt-photo-area', null, null);
+  /* Reset special instructions */
+  document.getElementById('menu-mg-opt-internal-name-toggle').checked = false;
+  document.getElementById('menu-mg-opt-internal-name').value = '';
+  document.getElementById('mg-opt-internal-name-row').style.display = 'none';
   document.getElementById('menu-mg-opt-modal').style.display = 'flex';
   document.getElementById('menu-mg-opt-name').focus();
 }
@@ -2660,6 +2664,10 @@ function editModOption(mgId, optIdx) {
   /* Photo */
   _tempOptPhoto = opt.photo_url || null;
   renderSinglePhoto('menu-mg-opt-photo-area', _tempOptPhoto, function() { _tempOptPhoto = null; renderSinglePhoto('menu-mg-opt-photo-area', null, null); });
+  /* Special instructions */
+  document.getElementById('menu-mg-opt-internal-name-toggle').checked = !!opt.show_internal_name;
+  document.getElementById('menu-mg-opt-internal-name').value = opt.internal_name || '';
+  document.getElementById('mg-opt-internal-name-row').style.display = opt.show_internal_name ? '' : 'none';
   document.getElementById('menu-mg-opt-modal').style.display = 'flex';
   document.getElementById('menu-mg-opt-name').focus();
 }
@@ -2682,7 +2690,7 @@ function saveModOption() {
   var availability = document.getElementById('menu-mg-opt-avail') ? document.getElementById('menu-mg-opt-avail').value : 'available';
   var oosData = collectOptOosData();
 
-  var optData = { option_name: name, price_adjustment: price, is_default: isDefault, availability: availability, photo_url: _tempOptPhoto || null };
+  var optData = { option_name: name, price_adjustment: price, is_default: isDefault, availability: availability, photo_url: _tempOptPhoto || null, show_internal_name: document.getElementById('menu-mg-opt-internal-name-toggle').checked, internal_name: document.getElementById('menu-mg-opt-internal-name-toggle').checked ? document.getElementById('menu-mg-opt-internal-name').value.trim() : '' };
   _tempOptPhoto = null;
   if (availability === 'out_of_stock') {
     optData.oos_type = oosData.type;
@@ -3218,13 +3226,19 @@ function openItemDrawer(itemId) {
     document.getElementById('menu-item-ingredients').value = item.ingredients || '';
     document.getElementById('menu-item-additives').value = item.additives || '';
     renderNutritionTable(item);
+    /* Special instructions */
+    document.getElementById('menu-item-internal-name-toggle').checked = !!item.show_internal_name;
+    document.getElementById('menu-item-internal-name').value = item.internal_name || '';
+    document.getElementById('item-internal-name-row').style.display = item.show_internal_name ? '' : 'none';
+    document.getElementById('menu-item-hide-instructions').checked = !!item.hide_instructions;
   } else {
     /* Create in-memory draft so pickers can modify it before save */
     _newItemDraft = {
       id: null, allergens: [], dietary_marks: [], tags: [], modifier_group_ids: [],
       is_vegetarian: false, is_vegan: false, is_gluten_free: false,
       spice_level: 0, is_available: true, photos: [], sizes: [],
-      ingredients: '', additives: '', nutrition: [], nutrition_per: 'serving'
+      ingredients: '', additives: '', nutrition: [], nutrition_per: 'serving',
+      show_internal_name: false, internal_name: '', hide_instructions: false
     };
     _tempPhotos = [];
     clearItemForm();
@@ -3258,6 +3272,11 @@ function clearItemForm() {
   document.getElementById('menu-item-prep').value = '';
   document.getElementById('menu-item-ingredients').value = '';
   document.getElementById('menu-item-additives').value = '';
+  /* Reset special instructions */
+  document.getElementById('menu-item-internal-name-toggle').checked = false;
+  document.getElementById('menu-item-internal-name').value = '';
+  document.getElementById('item-internal-name-row').style.display = 'none';
+  document.getElementById('menu-item-hide-instructions').checked = false;
   /* Reset visibility to default */
   var visModeEl = document.getElementById('menu-item-vis-mode'); if (visModeEl) visModeEl.value = 'show';
   resetItemVisOptions();
@@ -3863,6 +3882,10 @@ function saveItem() {
       var nutData = collectNutritionData();
       item.nutrition_per = nutData.nutrition_per;
       item.nutrition = nutData.nutrition;
+      /* Special instructions */
+      item.show_internal_name = document.getElementById('menu-item-internal-name-toggle').checked;
+      item.internal_name = item.show_internal_name ? document.getElementById('menu-item-internal-name').value.trim() : '';
+      item.hide_instructions = document.getElementById('menu-item-hide-instructions').checked;
       /* Visibility */
       var itemVis = collectItemVisibility();
       item.visibility_mode = itemVis.visibility_mode;
@@ -3915,7 +3938,10 @@ function saveItem() {
       schedule_until: itemVis.schedule_until || null,
       availability: document.getElementById('menu-item-avail-status').value,
       show_on_channels: collectItemChannels(),
-      tax_category_id: document.getElementById('menu-item-tax-cat') ? (document.getElementById('menu-item-tax-cat').value || null) : null
+      tax_category_id: document.getElementById('menu-item-tax-cat') ? (document.getElementById('menu-item-tax-cat').value || null) : null,
+      show_internal_name: document.getElementById('menu-item-internal-name-toggle').checked,
+      internal_name: document.getElementById('menu-item-internal-name-toggle').checked ? document.getElementById('menu-item-internal-name').value.trim() : '',
+      hide_instructions: document.getElementById('menu-item-hide-instructions').checked
     };
     var oosData = collectItemOosData();
     if (oosData) { newItem.oos_type = oosData.oos_type; newItem.oos_until = oosData.oos_until; }
@@ -4374,6 +4400,17 @@ function initAllEvents() {
       function() { return _tempOptPhoto; },
       function(url) { _tempOptPhoto = url; }
     );
+  });
+  /* Modifier option internal name toggle */
+  var optInternalToggle = document.getElementById('menu-mg-opt-internal-name-toggle');
+  if (optInternalToggle) optInternalToggle.addEventListener('change', function() {
+    document.getElementById('mg-opt-internal-name-row').style.display = this.checked ? '' : 'none';
+  });
+
+  /* ---- Item internal name toggle & hide instructions ---- */
+  var itemInternalToggle = document.getElementById('menu-item-internal-name-toggle');
+  if (itemInternalToggle) itemInternalToggle.addEventListener('change', function() {
+    document.getElementById('item-internal-name-row').style.display = this.checked ? '' : 'none';
   });
 
   /* Left panel tab switching */
