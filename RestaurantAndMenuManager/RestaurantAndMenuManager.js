@@ -189,8 +189,20 @@ var TIMEZONES = [
 ];
 
 var ALLERGENS = ['Gluten', 'Dairy', 'Nuts', 'Soy', 'Eggs', 'Shellfish', 'Sulfites', 'Sesame', 'Mustard', 'Celery'];
+var DIETARY_MARKS = ['Hot', 'Vegan', 'Vegetarian', 'Gluten Free', 'Halal', 'Dairy Free', 'Raw', 'Nut Free'];
 var TAGS = ['Popular', 'New', 'Chef Special', 'Spicy', 'Bestseller', 'Limited', 'Seasonal'];
 var SPICE_NAMES = ['Not Spicy', 'Mild', 'Medium', 'Hot', 'Very Hot', 'Extra Hot'];
+var NUTRITION_NUTRIENTS = [
+  { name: 'Total Calories', unit: 'kcal' },
+  { name: 'Carbohydrate', unit: 'g' },
+  { name: 'Total Fat', unit: 'g' },
+  { name: 'Protein', unit: 'g' },
+  { name: 'Sugar', unit: 'g' },
+  { name: 'Salt', unit: 'g' },
+  { name: 'Saturated Fat', unit: 'g' },
+  { name: 'Fiber', unit: 'g' },
+  { name: 'Sodium', unit: 'mg' }
+];
 
 var data = {};
 var activeTab = 'general';
@@ -201,6 +213,9 @@ var editingItemId = null;
 var editingModGroupId = null;
 var _expandedModGroups = {}; /* Track which groups are expanded */
 var _tempPhotos = []; /* URLs of photos uploaded for a new item before it is saved */
+var _tempCatPhotos = []; /* URLs of photos uploaded for a new category before it is saved */
+var _tempMgPhoto = null; /* URL of photo uploaded for a modifier group being edited */
+var _tempOptPhoto = null; /* URL of photo uploaded for a modifier option being edited */
 var _newItemDraft = null; /* In-memory draft for new item so pickers work before save */
 var _drawerOpen = false; /* Guard to prevent accidental drawer closes */
 var highlightedModGroupId = null; /* Track which modifier group is highlighted in right panel */
@@ -858,6 +873,17 @@ function addTaxCategory() {
   renderTaxCategories();
   scheduleSave();
   tool.resize();
+}
+
+/* Populate a <select> element with tax category options */
+function populateTaxCategorySelect(selectId, selectedId) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  var cats = data.taxation_currency.tax_categories || [];
+  sel.innerHTML = '<option value="">-- None (default tax) --</option>';
+  cats.forEach(function(cat) {
+    sel.innerHTML += '<option value="' + (cat.name || '') + '"' + (selectedId === cat.name ? ' selected' : '') + '>' + esc(cat.name || '(unnamed)') + '</option>';
+  });
 }
 
 /* ===================================================================== */
@@ -1763,12 +1789,15 @@ function selectCategory(catId) {
 
 function addCategory() {
   editingCategoryId = null;
+  _tempCatPhotos = [];
   var title = document.getElementById('menu-cat-modal-title'); if (title) title.textContent = 'New Category';
   var nameEl = document.getElementById('menu-cat-name'); if (nameEl) nameEl.value = '';
   var descEl = document.getElementById('menu-cat-desc'); if (descEl) descEl.value = '';
   var modal = document.getElementById('menu-cat-modal'); if (modal) modal.style.display = 'flex';
   var visMode = document.getElementById('menu-cat-vis-mode'); if (visMode) visMode.value = 'show';
   resetCatVisOptions();
+  renderCatPhotoPool(null);
+  populateTaxCategorySelect('menu-cat-tax-cat', '');
   var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.style.display = 'none';
   var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.style.display = 'none';
   updateCatCharCounts();
@@ -1791,6 +1820,11 @@ function editCategory(catId) {
   var schedUntil = document.getElementById('menu-cat-sched-until'); if (schedUntil) schedUntil.value = cat.schedule_until || '';
   applyCatVisMode();
   renderCatTimeWindows(cat);
+  /* Photos */
+  _tempCatPhotos = [];
+  renderCatPhotoPool(cat);
+  /* Tax category */
+  populateTaxCategorySelect('menu-cat-tax-cat', cat.tax_category_id || '');
   var dupBtn = document.getElementById('menu-cat-duplicate'); if (dupBtn) dupBtn.style.display = '';
   var delBtn = document.getElementById('menu-cat-delete-btn'); if (delBtn) delBtn.style.display = '';
   updateCatCharCounts();
@@ -2066,6 +2100,50 @@ function collectItemOosData() {
   return { oos_type: type, oos_until: until };
 }
 
+/* ---- Modifier Option Out-of-Stock helpers ---- */
+function applyOptOosOptions() {
+  var availEl = document.getElementById('menu-mg-opt-avail');
+  var oosOpts = document.getElementById('opt-oos-options');
+  if (!availEl || !oosOpts) return;
+  oosOpts.style.display = availEl.value === 'out_of_stock' ? '' : 'none';
+  if (availEl.value === 'out_of_stock') {
+    var checkedRadio = document.querySelector('input[name="opt-oos-type"]:checked');
+    var dateRow = document.getElementById('opt-oos-date-row');
+    if (dateRow) dateRow.style.display = (checkedRadio && checkedRadio.value === 'date') ? '' : 'none';
+  }
+}
+
+function resetOptOosOptions() {
+  var oosOpts = document.getElementById('opt-oos-options'); if (oosOpts) oosOpts.style.display = 'none';
+  var dateRow = document.getElementById('opt-oos-date-row'); if (dateRow) dateRow.style.display = 'none';
+  var oosUntil = document.getElementById('menu-mg-opt-oos-until'); if (oosUntil) oosUntil.value = '';
+}
+
+function collectOptOosData() {
+  var availEl = document.getElementById('menu-mg-opt-avail');
+  if (!availEl || availEl.value !== 'out_of_stock') return { type: null, until: null };
+  var oosType = document.querySelector('input[name="opt-oos-type"]:checked');
+  var type = oosType ? oosType.value : 'tomorrow';
+  var until = null;
+  if (type === 'tomorrow') {
+    var t = new Date(); t.setDate(t.getDate() + 1); t.setHours(0, 0, 0, 0);
+    until = t.toISOString();
+  } else if (type === 'date') {
+    until = document.getElementById('menu-mg-opt-oos-until') ? (document.getElementById('menu-mg-opt-oos-until').value || null) : null;
+    if (until) until = new Date(until).toISOString();
+  }
+  return { type: type, until: until };
+}
+
+function optOosTooltip(opt) {
+  if (opt.availability !== 'out_of_stock') return '';
+  var until = opt.oos_until;
+  if (!until) return 'Out of stock';
+  if (opt.oos_type === 'tomorrow') return 'OOS until tomorrow';
+  if (opt.oos_type === 'date') return 'OOS until ' + new Date(until).toLocaleString();
+  return 'OOS for undetermined time';
+}
+
 function updateCatCharCounts() {
   var nameEl = document.getElementById('menu-cat-name');
   var descEl = document.getElementById('menu-cat-desc');
@@ -2111,17 +2189,29 @@ function saveCategory() {
     schedule_type: visData.schedule_type || null,
     schedule_time_windows: visData.schedule_time_windows || null,
     schedule_from: visData.schedule_from || null,
-    schedule_until: visData.schedule_until || null
+    schedule_until: visData.schedule_until || null,
+    tax_category_id: document.getElementById('menu-cat-tax-cat') ? (document.getElementById('menu-cat-tax-cat').value || null) : null
   };
 
   if (editingCategoryId) {
     var cat = data.menu.categories.find(function(c) { return c.id === editingCategoryId; });
-    if (cat) { Object.assign(cat, catData); }
+    if (cat) {
+      /* Preserve photos if editing (they are modified in-place by renderCatPhotoPool) */
+      /* For new categories, use temp photos */
+      if (!cat.photos || cat.photos.length === 0) {
+        cat.photos = _tempCatPhotos.slice();
+        if (cat.photos.length > 0 && !cat.primary_photo_url) cat.primary_photo_url = cat.photos[0];
+      }
+      Object.assign(cat, catData);
+    }
     editingCategoryId = null;
   } else {
     catData.id = uid();
+    catData.photos = _tempCatPhotos.slice();
+    catData.primary_photo_url = catData.photos.length > 0 ? catData.photos[0] : null;
     data.menu.categories.push(catData);
   }
+  _tempCatPhotos = [];
   closeCategoryForm();
   renderCategories();
   scheduleSave();
@@ -2328,7 +2418,7 @@ function renderModGroups() {
     el.innerHTML =
       '<span class="mg-expand">' + (isExpanded ? '▼' : '▶') + '</span>' +
       '<span class="mg-name">' + esc(mg.group_name) + '</span>' +
-      '<span class="mg-meta">' + (hasOpts ? mg.options.length + '' : '0') + ' · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + (mg.allow_duplicates ? ' · Dup' : '') + (mg.is_required ? ' · Req' : '') + '</span>' +
+      '<span class="mg-meta">' + (hasOpts ? mg.options.length + '' : '0') + ' · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + (mg.allow_duplicates ? ' · Dup' : '') + (mg.is_required ? ' · Req' : '') + (mg.force_min > 0 ? ' · Min:' + mg.force_min : '') + (mg.force_max > 0 ? ' · Max:' + mg.force_max : '') + '</span>' +
       '<span class="mg-actions"><button class="mg-edit-btn" title="Edit">✎</button></span>';
 
     el.querySelector('.mg-expand').addEventListener('click', function(e) {
@@ -2375,6 +2465,7 @@ function renderModGroups() {
         '<span class="mg-sub-name">' + esc(opt.option_name || '(unnamed)') + '</span>' +
         (opt.is_default ? '<span class="mg-sub-default">★ Default</span>' : '') +
         (opt.is_available === false ? '<span style="color:var(--slate-300);font-size:10px;">Hidden</span>' : '') +
+        (opt.availability === 'out_of_stock' ? '<span class="oos-badge opt-oos-badge" title="' + esc(optOosTooltip(opt)) + '">OOS</span>' : '') +
         '<span class="mg-sub-price">' + priceStr + '</span>' +
         '<button class="mg-sub-edit" title="Edit">✎</button>';
       optRow.querySelector('.mg-sub-edit').addEventListener('click', function(e) {
@@ -2423,11 +2514,16 @@ function renderModGroups() {
 
 function addModGroup() {
   editingModGroupId = null;
+  _tempMgPhoto = null;
   document.getElementById('menu-mg-modal-title').textContent = 'New Modifier Group';
   document.getElementById('menu-mg-name').value = '';
   document.getElementById('menu-mg-multi').checked = true;
   document.getElementById('menu-mg-allow-duplicates').checked = false;
   document.getElementById('menu-mg-required').checked = false;
+  document.getElementById('menu-mg-force-min').value = '0';
+  document.getElementById('menu-mg-force-max').value = '0';
+  populateTaxCategorySelect('menu-mg-tax-cat', '');
+  renderSinglePhoto('menu-mg-photo-area', null, null);
   document.getElementById('menu-mg-delete-btn').style.display = 'none';
   document.getElementById('menu-mg-modal').style.display = 'flex';
   document.getElementById('menu-mg-name').focus();
@@ -2442,6 +2538,12 @@ function editModGroup(mgId) {
   document.getElementById('menu-mg-multi').checked = mg.selection_type !== 'single';
   document.getElementById('menu-mg-allow-duplicates').checked = !!mg.allow_duplicates;
   document.getElementById('menu-mg-required').checked = !!mg.is_required;
+  document.getElementById('menu-mg-force-min').value = mg.force_min || 0;
+  document.getElementById('menu-mg-force-max').value = mg.force_max || 0;
+  populateTaxCategorySelect('menu-mg-tax-cat', mg.tax_category_id || '');
+  /* Photo */
+  _tempMgPhoto = mg.photo_url || null;
+  renderSinglePhoto('menu-mg-photo-area', _tempMgPhoto, function() { _tempMgPhoto = null; renderSinglePhoto('menu-mg-photo-area', null, null); });
   document.getElementById('menu-mg-delete-btn').style.display = '';
   document.getElementById('menu-mg-modal').style.display = 'flex';
   document.getElementById('menu-mg-name').focus();
@@ -2491,8 +2593,13 @@ function saveModGroup() {
     selection_type: document.getElementById('menu-mg-multi').checked ? 'multi' : 'single',
     allow_duplicates: document.getElementById('menu-mg-allow-duplicates').checked,
     is_required: document.getElementById('menu-mg-required').checked,
+    force_min: parseInt(document.getElementById('menu-mg-force-min').value) || 0,
+    force_max: parseInt(document.getElementById('menu-mg-force-max').value) || 0,
+    tax_category_id: document.getElementById('menu-mg-tax-cat') ? (document.getElementById('menu-mg-tax-cat').value || null) : null,
+    photo_url: _tempMgPhoto || null,
     options: []
   };
+  _tempMgPhoto = null;
   if (editingModGroupId) {
     var existing = data.menu.modifier_groups.find(function(g) { return g.id === editingModGroupId; });
     if (existing) { mgData.options = existing.options || []; Object.assign(existing, mgData); }
@@ -2514,11 +2621,17 @@ var _editingOptIdx = -1;
 function addModOption(mgId) {
   _editingOptGroupId = mgId;
   _editingOptIdx = -1;
+  _tempOptPhoto = null;
   document.getElementById('menu-mg-opt-modal-title').textContent = 'Add Option';
   document.getElementById('menu-mg-opt-name').value = '';
   document.getElementById('menu-mg-opt-price').value = '0';
   document.getElementById('menu-mg-opt-default').checked = false;
   document.getElementById('menu-mg-opt-delete-btn').style.display = 'none';
+  /* Reset availability */
+  var availEl = document.getElementById('menu-mg-opt-avail'); if (availEl) availEl.value = 'available';
+  resetOptOosOptions();
+  /* Reset photo */
+  renderSinglePhoto('menu-mg-opt-photo-area', null, null);
   document.getElementById('menu-mg-opt-modal').style.display = 'flex';
   document.getElementById('menu-mg-opt-name').focus();
 }
@@ -2534,6 +2647,19 @@ function editModOption(mgId, optIdx) {
   document.getElementById('menu-mg-opt-price').value = opt.price_adjustment || 0;
   document.getElementById('menu-mg-opt-default').checked = !!opt.is_default;
   document.getElementById('menu-mg-opt-delete-btn').style.display = '';
+  /* Populate availability */
+  var availEl = document.getElementById('menu-mg-opt-avail'); if (availEl) availEl.value = opt.availability || 'available';
+  if (opt.oos_type) {
+    var oosRadio = document.querySelector('input[name="opt-oos-type"][value="' + opt.oos_type + '"]');
+    if (oosRadio) oosRadio.checked = true;
+    if (opt.oos_until && opt.oos_type === 'date') {
+      var oosEl = document.getElementById('menu-mg-opt-oos-until'); if (oosEl) oosEl.value = opt.oos_until.slice(0, 16);
+    }
+  }
+  applyOptOosOptions();
+  /* Photo */
+  _tempOptPhoto = opt.photo_url || null;
+  renderSinglePhoto('menu-mg-opt-photo-area', _tempOptPhoto, function() { _tempOptPhoto = null; renderSinglePhoto('menu-mg-opt-photo-area', null, null); });
   document.getElementById('menu-mg-opt-modal').style.display = 'flex';
   document.getElementById('menu-mg-opt-name').focus();
 }
@@ -2552,15 +2678,25 @@ function saveModOption() {
   if (!name) { tool.notify('Option name required', 'warning'); return; }
   var price = parseFloat(document.getElementById('menu-mg-opt-price').value) || 0;
   var isDefault = document.getElementById('menu-mg-opt-default').checked;
+  /* Collect availability */
+  var availability = document.getElementById('menu-mg-opt-avail') ? document.getElementById('menu-mg-opt-avail').value : 'available';
+  var oosData = collectOptOosData();
+
+  var optData = { option_name: name, price_adjustment: price, is_default: isDefault, availability: availability, photo_url: _tempOptPhoto || null };
+  _tempOptPhoto = null;
+  if (availability === 'out_of_stock') {
+    optData.oos_type = oosData.type;
+    if (oosData.type === 'date' && oosData.until) optData.oos_until = oosData.until;
+  }
 
   if (_editingOptIdx >= 0) {
-    /* Update existing */
     var opt = mg.options[_editingOptIdx];
-    if (opt) { opt.option_name = name; opt.price_adjustment = price; opt.is_default = isDefault; }
+    if (opt) { Object.keys(optData).forEach(function(k) { opt[k] = optData[k]; }); }
   } else {
-    /* Add new */
     if (!mg.options) mg.options = [];
-    mg.options.push({ id: uid(), option_name: name, price_adjustment: price, is_default: isDefault, is_available: true });
+    optData.id = uid();
+    optData.is_available = true;
+    mg.options.push(optData);
   }
   closeModOptionModal();
   renderModGroups();
@@ -3046,9 +3182,6 @@ function openItemDrawer(itemId) {
     document.getElementById('menu-item-desc').value = item.description || '';
     document.getElementById('menu-item-price').value = item.price || '';
     document.getElementById('menu-item-sale').value = item.sale_price || '';
-    document.getElementById('menu-item-veg').checked = !!item.is_vegetarian;
-    document.getElementById('menu-item-vegan').checked = !!item.is_vegan;
-    document.getElementById('menu-item-gf').checked = !!item.is_gluten_free;
     document.getElementById('menu-item-spice').value = item.spice_level || 0;
     document.getElementById('menu-spice-label').textContent = SPICE_NAMES[item.spice_level || 0];
     document.getElementById('menu-item-cal').value = item.calories || '';
@@ -3076,22 +3209,34 @@ function openItemDrawer(itemId) {
     renderItemSizes(item);
     renderPhotoPool(item);
     renderAllergenPicker(item);
+    renderDietaryPicker(item);
     renderTagPicker(item);
     renderModGroupCheckboxes();
+    /* Tax category */
+    populateTaxCategorySelect('menu-item-tax-cat', item.tax_category_id || '');
+    /* Ingredients, additives, nutrition */
+    document.getElementById('menu-item-ingredients').value = item.ingredients || '';
+    document.getElementById('menu-item-additives').value = item.additives || '';
+    renderNutritionTable(item);
   } else {
     /* Create in-memory draft so pickers can modify it before save */
     _newItemDraft = {
-      id: null, allergens: [], tags: [], modifier_group_ids: [],
+      id: null, allergens: [], dietary_marks: [], tags: [], modifier_group_ids: [],
       is_vegetarian: false, is_vegan: false, is_gluten_free: false,
-      spice_level: 0, is_available: true, photos: [], sizes: []
+      spice_level: 0, is_available: true, photos: [], sizes: [],
+      ingredients: '', additives: '', nutrition: [], nutrition_per: 'serving'
     };
     _tempPhotos = [];
     clearItemForm();
     renderItemSizes(null);
     document.getElementById('menu-item-delete').style.display = 'none';
     renderAllergenPicker(_newItemDraft);
+    renderDietaryPicker(_newItemDraft);
     renderTagPicker(_newItemDraft);
     renderModGroupCheckboxes();
+    /* Tax category — reset for new item */
+    populateTaxCategorySelect('menu-item-tax-cat', '');
+    renderNutritionTable(_newItemDraft);
   }
   tool.resize();
 }
@@ -3107,13 +3252,12 @@ function clearItemForm() {
   document.getElementById('menu-item-desc').value = '';
   document.getElementById('menu-item-price').value = '';
   document.getElementById('menu-item-sale').value = '';
-  document.getElementById('menu-item-veg').checked = false;
-  document.getElementById('menu-item-vegan').checked = false;
-  document.getElementById('menu-item-gf').checked = false;
   document.getElementById('menu-item-spice').value = 0;
   document.getElementById('menu-spice-label').textContent = 'Not Spicy';
   document.getElementById('menu-item-cal').value = '';
   document.getElementById('menu-item-prep').value = '';
+  document.getElementById('menu-item-ingredients').value = '';
+  document.getElementById('menu-item-additives').value = '';
   /* Reset visibility to default */
   var visModeEl = document.getElementById('menu-item-vis-mode'); if (visModeEl) visModeEl.value = 'show';
   resetItemVisOptions();
@@ -3312,6 +3456,7 @@ function renderAllergenPicker(item) {
   if (!container) return;
   container.innerHTML = '';
   var selected = item ? (item.allergens || []) : [];
+  /* Show standard allergen chips */
   ALLERGENS.forEach(function(a) {
     var chip = document.createElement('button');
     chip.type = 'button';
@@ -3328,6 +3473,115 @@ function renderAllergenPicker(item) {
     });
     container.appendChild(chip);
   });
+  /* Show custom (non-standard) allergen chips */
+  selected.forEach(function(a) {
+    if (ALLERGENS.indexOf(a) !== -1) return; /* Already rendered above */
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip active custom-chip';
+    chip.innerHTML = a + ' <span style="font-size:10px;opacity:0.7;">✕</span>';
+    chip.addEventListener('click', function() {
+      var it = getEditingItem();
+      if (!it) return;
+      if (!it.allergens) it.allergens = [];
+      var idx = it.allergens.indexOf(a);
+      if (idx !== -1) it.allergens.splice(idx, 1);
+      renderAllergenPicker(it);
+      scheduleSave();
+    });
+    container.appendChild(chip);
+  });
+  /* Clear the custom input */
+  var customInput = document.getElementById('menu-allergen-custom');
+  if (customInput) customInput.value = '';
+}
+
+/* ---- Dietary Marks (chip picker) ---- */
+function renderDietaryPicker(item) {
+  var container = document.getElementById('menu-dietary-picker');
+  if (!container) return;
+  container.innerHTML = '';
+  var selected = item ? (item.dietary_marks || []) : [];
+  /* Migrate old boolean flags to new dietary_marks on first render */
+  if (item && (!item.dietary_marks || item.dietary_marks.length === 0)) {
+    if (item.is_vegetarian && selected.indexOf('Vegetarian') === -1) selected.push('Vegetarian');
+    if (item.is_vegan && selected.indexOf('Vegan') === -1) selected.push('Vegan');
+    if (item.is_gluten_free && selected.indexOf('Gluten Free') === -1) selected.push('Gluten Free');
+    item.dietary_marks = selected;
+  }
+  DIETARY_MARKS.forEach(function(m) {
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip' + (selected.indexOf(m) !== -1 ? ' active' : '');
+    chip.textContent = m;
+    chip.addEventListener('click', function() {
+      var it = getEditingItem();
+      if (!it) return;
+      if (!it.dietary_marks) it.dietary_marks = [];
+      var idx = it.dietary_marks.indexOf(m);
+      if (idx === -1) it.dietary_marks.push(m); else it.dietary_marks.splice(idx, 1);
+      renderDietaryPicker(it);
+      scheduleSave();
+    });
+    container.appendChild(chip);
+  });
+}
+
+/* ---- Nutrition Table ---- */
+function renderNutritionTable(item) {
+  var wrap = document.getElementById('menu-nutrition-table');
+  if (!wrap) return;
+  var nutrition = (item && item.nutrition) ? item.nutrition : [];
+  var nutritionPer = (item && item.nutrition_per) ? item.nutrition_per : 'serving';
+  var perEl = document.getElementById('menu-item-nutrition-per');
+  if (perEl) perEl.value = nutritionPer;
+
+  var sizes = (item && item.sizes) ? item.sizes : [];
+  var hasSizes = sizes.length > 0;
+
+  var html = '<table class="nutrition-table"><thead><tr><th>Nutrient</th>';
+  if (hasSizes) {
+    html += '<th>Default</th>';
+    sizes.forEach(function(s) { html += '<th>' + esc(s.label || s.size_name || '?') + '</th>'; });
+  } else {
+    html += '<th>Value</th>';
+  }
+  html += '</tr></thead><tbody>';
+
+  NUTRITION_NUTRIENTS.forEach(function(nut) {
+    var nutData = nutrition.find(function(n) { return n.name === nut.name; }) || { name: nut.name, value: '', unit: nut.unit, size_values: {} };
+    html += '<tr><td>' + nut.name + ' <span class="nutrient-unit">(' + nut.unit + ')</span></td>';
+    if (hasSizes) {
+      html += '<td><input type="text" class="nutrient-val" data-nutrient="' + nut.name + '" data-size="" value="' + esc(String(nutData.value || '')) + '" placeholder="-"></td>';
+      sizes.forEach(function(s) {
+        var sv = (nutData.size_values && nutData.size_values[s.id]) ? nutData.size_values[s.id] : '';
+        html += '<td><input type="text" class="nutrient-val" data-nutrient="' + nut.name + '" data-size="' + s.id + '" value="' + esc(String(sv)) + '" placeholder="-"></td>';
+      });
+    } else {
+      html += '<td><input type="text" class="nutrient-val" data-nutrient="' + nut.name + '" data-size="" value="' + esc(String(nutData.value || '')) + '" placeholder="-"></td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+function collectNutritionData() {
+  var nutrition = [];
+  var nutritionPer = document.getElementById('menu-item-nutrition-per') ? document.getElementById('menu-item-nutrition-per').value : 'serving';
+  NUTRITION_NUTRIENTS.forEach(function(nut) {
+    var nd = { name: nut.name, unit: nut.unit, value: '', size_values: {} };
+    var inputs = document.querySelectorAll('.nutrient-val[data-nutrient="' + nut.name + '"]');
+    inputs.forEach(function(inp) {
+      var sizeId = inp.dataset.size || '';
+      var val = inp.value.trim();
+      if (sizeId === '') { nd.value = val; }
+      else { nd.size_values[sizeId] = val; }
+    });
+    nutrition.push(nd);
+  });
+  return { nutrition_per: nutritionPer, nutrition: nutrition };
 }
 
 function renderTagPicker(item) {
@@ -3468,6 +3722,114 @@ function handlePhotoUpload() {
   });
 }
 
+/* ---- Category Photo Pool (like items but separate state) ---- */
+function getCatPhotoArray(cat) {
+  if (cat) return (cat.photos || []);
+  return _tempCatPhotos;
+}
+
+function getCatPrimaryPhoto(cat) {
+  if (cat) return cat.primary_photo_url || null;
+  return _tempCatPhotos.length > 0 ? _tempCatPhotos[0] : null;
+}
+
+function renderCatPhotoPool(cat) {
+  var pool = document.getElementById('menu-cat-photo-pool');
+  if (!pool) return;
+  pool.innerHTML = '';
+  var photos = getCatPhotoArray(cat);
+  if (photos.length === 0) return;
+  var primary = getCatPrimaryPhoto(cat);
+  photos.forEach(function(url, idx) {
+    var el = document.createElement('div');
+    el.className = 'photo-pool-item' + (url === primary || (idx === 0 && !primary) ? ' primary' : '');
+    el.draggable = true;
+    var isPrimary = (url === primary || (idx === 0 && !primary));
+    el.innerHTML = '<img src="' + url + '" alt="">' +
+      (isPrimary ? '<span class="pool-primary-badge" title="Primary photo">★</span><span class="pool-primary-label">Primary</span>' : '') +
+      '<span class="pool-set-primary" title="Set as primary">★</span>' +
+      '<span class="pool-delete" title="Remove">✕</span>';
+
+    if (!isPrimary && cat) {
+      el.querySelector('.pool-set-primary').addEventListener('click', function(e) {
+        e.stopPropagation();
+        cat.primary_photo_url = url;
+        renderCatPhotoPool(cat);
+        scheduleSave();
+      });
+    }
+    el.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      if (cat) { cat.primary_photo_url = url; renderCatPhotoPool(cat); scheduleSave(); tool.notify('Set as primary photo', 'success'); }
+    });
+    el.querySelector('.pool-delete').addEventListener('click', function(e) {
+      e.stopPropagation();
+      var arr = getCatPhotoArray(cat);
+      arr.splice(idx, 1);
+      if (cat) { if (cat.primary_photo_url === url) cat.primary_photo_url = arr.length > 0 ? arr[0] : null; scheduleSave(); }
+      renderCatPhotoPool(cat);
+    });
+    /* Drag to reorder */
+    el.addEventListener('dragstart', function(e) { e.dataTransfer.setData('text/plain', String(idx)); el.classList.add('dragging'); });
+    el.addEventListener('dragend', function() { el.classList.remove('dragging'); });
+    el.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+    el.addEventListener('drop', function(e) {
+      e.preventDefault();
+      var fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+      if (isNaN(fromIdx) || fromIdx === idx) return;
+      var arr = getCatPhotoArray(cat);
+      var moved = arr.splice(fromIdx, 1)[0];
+      arr.splice(idx, 0, moved);
+      if (cat) scheduleSave();
+      renderCatPhotoPool(cat);
+    });
+    pool.appendChild(el);
+  });
+}
+
+function handleCatPhotoUpload() {
+  var cat = editingCategoryId ? data.menu.categories.find(function(c) { return c.id === editingCategoryId; }) : null;
+  tool.requestUpload('image/*', function(err, file) {
+    if (err || !file) { if (err) tool.notify('Upload failed: ' + err, 'error'); return; }
+    var url = file.url;
+    if (!cat) {
+      _tempCatPhotos.push(url);
+      renderCatPhotoPool(null);
+      return;
+    }
+    if (!cat.photos) cat.photos = [];
+    if (cat.photos.indexOf(url) === -1) cat.photos.push(url);
+    if (!cat.primary_photo_url) cat.primary_photo_url = url;
+    renderCatPhotoPool(cat);
+    scheduleSave();
+  });
+}
+
+/* ---- Single Photo Helpers (modifier group & option) ---- */
+function renderSinglePhoto(areaId, photoUrl, onRemove) {
+  var area = document.getElementById(areaId);
+  if (!area) return;
+  area.innerHTML = '';
+  if (!photoUrl) return;
+  var el = document.createElement('div');
+  el.className = 'single-photo-thumb';
+  el.innerHTML = '<img src="' + photoUrl + '" alt=""><span class="single-photo-remove" title="Remove photo">✕</span>';
+  el.querySelector('.single-photo-remove').addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (onRemove) onRemove();
+  });
+  area.appendChild(el);
+}
+
+function handleSinglePhotoUpload(requestUploadFn, areaId, getPhotoFn, setPhotoFn) {
+  tool.requestUpload('image/*', function(err, file) {
+    if (err || !file) { if (err) tool.notify('Upload failed: ' + err, 'error'); return; }
+    setPhotoFn(file.url);
+    renderSinglePhoto(areaId, getPhotoFn(), function() { setPhotoFn(null); renderSinglePhoto(areaId, null, null); scheduleSave(); });
+    scheduleSave();
+  });
+}
+
 /* ---- Save / Delete Item ---- */
 function saveItem() {
   var name = document.getElementById('menu-item-name').value.trim();
@@ -3486,12 +3848,21 @@ function saveItem() {
       item.item_name = name; item.slug = slugify(name);
       item.description = document.getElementById('menu-item-desc').value;
       item.price = price; item.sale_price = parseFloat(document.getElementById('menu-item-sale').value) || null;
-      item.is_vegetarian = document.getElementById('menu-item-veg').checked;
-      item.is_vegan = document.getElementById('menu-item-vegan').checked;
-      item.is_gluten_free = document.getElementById('menu-item-gf').checked;
+      /* Dietary marks (from chip picker, also set legacy booleans) */
+      var dmarks = item.dietary_marks || [];
+      item.is_vegetarian = dmarks.indexOf('Vegetarian') !== -1;
+      item.is_vegan = dmarks.indexOf('Vegan') !== -1;
+      item.is_gluten_free = dmarks.indexOf('Gluten Free') !== -1;
       item.spice_level = parseInt(document.getElementById('menu-item-spice').value);
       item.calories = parseInt(document.getElementById('menu-item-cal').value) || null;
       item.prep_time_minutes = parseInt(document.getElementById('menu-item-prep').value) || null;
+      /* Ingredients & additives */
+      item.ingredients = document.getElementById('menu-item-ingredients').value;
+      item.additives = document.getElementById('menu-item-additives').value;
+      /* Nutrition */
+      var nutData = collectNutritionData();
+      item.nutrition_per = nutData.nutrition_per;
+      item.nutrition = nutData.nutrition;
       /* Visibility */
       var itemVis = collectItemVisibility();
       item.visibility_mode = itemVis.visibility_mode;
@@ -3503,6 +3874,7 @@ function saveItem() {
       /* Availability */
       item.availability = document.getElementById('menu-item-avail-status').value;
       item.show_on_channels = collectItemChannels();
+      item.tax_category_id = document.getElementById('menu-item-tax-cat') ? (document.getElementById('menu-item-tax-cat').value || null) : null;
       var oosData = collectItemOosData();
       if (oosData) { item.oos_type = oosData.oos_type; item.oos_until = oosData.oos_until; }
       else { item.oos_type = null; item.oos_until = null; }
@@ -3521,12 +3893,17 @@ function saveItem() {
       primary_photo_url: primaryUrl,
       photos: _tempPhotos.length > 0 ? _tempPhotos.slice() : (draft.photos || []),
       allergens: draft.allergens || [],
-      is_vegetarian: document.getElementById('menu-item-veg').checked,
-      is_vegan: document.getElementById('menu-item-vegan').checked,
-      is_gluten_free: document.getElementById('menu-item-gf').checked,
+      dietary_marks: draft.dietary_marks || [],
+      is_vegetarian: (draft.dietary_marks || []).indexOf('Vegetarian') !== -1,
+      is_vegan: (draft.dietary_marks || []).indexOf('Vegan') !== -1,
+      is_gluten_free: (draft.dietary_marks || []).indexOf('Gluten Free') !== -1,
       spice_level: parseInt(document.getElementById('menu-item-spice').value),
       calories: parseInt(document.getElementById('menu-item-cal').value) || null,
       prep_time_minutes: parseInt(document.getElementById('menu-item-prep').value) || null,
+      ingredients: document.getElementById('menu-item-ingredients').value,
+      additives: document.getElementById('menu-item-additives').value,
+      nutrition_per: (draft.nutrition_per) || 'serving',
+      nutrition: (draft.nutrition && draft.nutrition.length > 0) ? draft.nutrition : [],
       tags: draft.tags || [],
       modifier_group_ids: draft.modifier_group_ids || [],
       sizes: draft.sizes || [],
@@ -3537,7 +3914,8 @@ function saveItem() {
       schedule_from: itemVis.schedule_from || null,
       schedule_until: itemVis.schedule_until || null,
       availability: document.getElementById('menu-item-avail-status').value,
-      show_on_channels: collectItemChannels()
+      show_on_channels: collectItemChannels(),
+      tax_category_id: document.getElementById('menu-item-tax-cat') ? (document.getElementById('menu-item-tax-cat').value || null) : null
     };
     var oosData = collectItemOosData();
     if (oosData) { newItem.oos_type = oosData.oos_type; newItem.oos_until = oosData.oos_until; }
@@ -3954,6 +4332,9 @@ function initAllEvents() {
   catHideRadios.forEach(function(r) { r.addEventListener('change', applyCatVisMode); });
   var catSchedType = document.getElementById('menu-cat-schedule-type');
   if (catSchedType) catSchedType.addEventListener('change', applyCatVisMode);
+  /* Category photo upload */
+  var catPhotoBtn = document.getElementById('menu-cat-photo-upload-btn');
+  if (catPhotoBtn) catPhotoBtn.addEventListener('click', handleCatPhotoUpload);
 
   /* Menu: Items */
   document.getElementById('menu-add-item-btn').addEventListener('click', function() { openItemDrawer(null); });
@@ -3965,11 +4346,35 @@ function initAllEvents() {
   document.getElementById('menu-mg-delete-btn').addEventListener('click', confirmDeleteModGroup);
   document.getElementById('mg-delete-confirm-btn').addEventListener('click', deleteModGroupConfirmed);
   document.getElementById('mg-delete-cancel-btn').addEventListener('click', cancelDeleteModGroup);
+  /* Modifier group photo upload */
+  var mgPhotoBtn = document.getElementById('menu-mg-photo-upload-btn');
+  if (mgPhotoBtn) mgPhotoBtn.addEventListener('click', function() {
+    handleSinglePhotoUpload(
+      tool.requestUpload, 'menu-mg-photo-area',
+      function() { return _tempMgPhoto; },
+      function(url) { _tempMgPhoto = url; }
+    );
+  });
   document.getElementById('menu-mg-opt-save').addEventListener('click', saveModOption);
   document.getElementById('menu-mg-opt-cancel').addEventListener('click', closeModOptionModal);
   document.getElementById('menu-mg-opt-delete-btn').addEventListener('click', confirmDeleteModOption);
   document.getElementById('mg-opt-delete-confirm-btn').addEventListener('click', deleteModOptionConfirmed);
   document.getElementById('mg-opt-delete-cancel-btn').addEventListener('click', cancelDeleteModOption);
+  /* Modifier option availability toggle */
+  var optAvailEl = document.getElementById('menu-mg-opt-avail');
+  if (optAvailEl) optAvailEl.addEventListener('change', applyOptOosOptions);
+  document.querySelectorAll('input[name="opt-oos-type"]').forEach(function(r) {
+    r.addEventListener('change', applyOptOosOptions);
+  });
+  /* Modifier option photo upload */
+  var optPhotoBtn = document.getElementById('menu-mg-opt-photo-upload-btn');
+  if (optPhotoBtn) optPhotoBtn.addEventListener('click', function() {
+    handleSinglePhotoUpload(
+      tool.requestUpload, 'menu-mg-opt-photo-area',
+      function() { return _tempOptPhoto; },
+      function(url) { _tempOptPhoto = url; }
+    );
+  });
 
   /* Left panel tab switching */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {
@@ -4101,17 +4506,7 @@ function initDrawerInputs() {
     });
   });
 
-  ['menu-item-veg', 'menu-item-vegan', 'menu-item-gf'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    var prop = id.replace('menu-item-', '').replace(/-/g, '_');
-    el.addEventListener('change', function() {
-      var item = getEditingItem();
-      if (!item) return;
-      item[prop] = el.checked;
-      scheduleSave();
-    });
-  });
+  /* Dietary marks are now chip-based — no legacy toggles; handled by renderDietaryPicker */
 
   var availEl = document.getElementById('menu-item-avail');
   if (availEl) availEl.addEventListener('change', function() {
@@ -4128,6 +4523,44 @@ function initDrawerInputs() {
     var item = getEditingItem();
     if (item) { item.spice_level = val; scheduleSave(); }
   });
+
+  /* Custom allergen input: Enter to add */
+  var allergenCustom = document.getElementById('menu-allergen-custom');
+  if (allergenCustom) allergenCustom.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var val = this.value.trim();
+      if (!val) return;
+      var it = getEditingItem();
+      if (!it) return;
+      if (!it.allergens) it.allergens = [];
+      if (it.allergens.indexOf(val) === -1) it.allergens.push(val);
+      renderAllergenPicker(it);
+      scheduleSave();
+    }
+  });
+
+  /* Nutrition per-select: re-render table */
+  var nutPerEl = document.getElementById('menu-item-nutrition-per');
+  if (nutPerEl) nutPerEl.addEventListener('change', function() {
+    var it = getEditingItem();
+    if (it) { it.nutrition_per = this.value; scheduleSave(); }
+    renderNutritionTable(it);
+  });
+
+  /* Nutrition value inputs: save on blur */
+  var nutTable = document.getElementById('menu-nutrition-table');
+  if (nutTable) nutTable.addEventListener('blur', function(e) {
+    if (e.target.classList.contains('nutrient-val')) {
+      var it = getEditingItem();
+      if (!it) return;
+      /* Collect all nutrition data */
+      var nutData = collectNutritionData();
+      it.nutrition_per = nutData.nutrition_per;
+      it.nutrition = nutData.nutrition;
+      scheduleSave();
+    }
+  }, true);
 }
 
 /* ===================================================================== */

@@ -405,11 +405,15 @@ body { padding: 0 !important; margin: 0 !important; }
         <div class="advanced-body" id="advanced-body">
           <div class="form-group"><label class="form-label">Category</label><select class="form-input" id="menu-item-category"><option value="">-- Select Category --</option></select></div>
           <div class="form-group"><label class="form-label">Slug</label><input type="text" class="form-input" id="menu-item-slug"></div>
-          <div class="form-group"><label class="form-label">Allergens</label><div class="chip-picker" id="menu-allergen-picker"></div></div>
-          <div class="form-group"><label class="form-label">Dietary</label><div class="toggle-row"><span>Vegetarian</span><label class="switch"><input type="checkbox" id="menu-item-veg"><span class="slider"></span></label></div><div class="toggle-row"><span>Vegan</span><label class="switch"><input type="checkbox" id="menu-item-vegan"><span class="slider"></span></label></div><div class="toggle-row"><span>Gluten Free</span><label class="switch"><input type="checkbox" id="menu-item-gf"><span class="slider"></span></label></div></div>
+          <div class="form-group"><label class="form-label">Allergens  <span class="form-hint">— click to toggle, type to add custom</span></label><div class="chip-picker" id="menu-allergen-picker"></div><input type="text" class="form-input custom-chip-input" id="menu-allergen-custom" placeholder="+ Add custom allergen…" style="margin-top:4px;"></div>
+          <div class="form-group"><label class="form-label">Dietary Marks</label><div class="chip-picker" id="menu-dietary-picker"></div></div>
           <div class="form-group"><label class="form-label">Spice Level: <span id="menu-spice-label">Not Spicy</span></label><input type="range" class="spice-slider" id="menu-item-spice" min="0" max="5" value="0" step="1"><div class="spice-labels"><span>Not Spicy</span><span>Mild</span><span>Medium</span><span>Hot</span><span>Very Hot</span><span>Extra Hot</span></div></div>
           <div class="form-row"><div class="form-group"><label class="form-label">Calories</label><input type="number" class="form-input" id="menu-item-cal" min="0"></div><div class="form-group"><label class="form-label">Prep Time (min)</label><input type="number" class="form-input" id="menu-item-prep" min="0"></div></div>
+          <div class="form-group"><label class="form-label">Ingredients</label><textarea class="form-input form-textarea" id="menu-item-ingredients" rows="3" placeholder="List all ingredients, one per line"></textarea></div>
+          <div class="form-group"><label class="form-label">Additives</label><textarea class="form-input form-textarea" id="menu-item-additives" rows="2" placeholder="List all additives (e.g. preservatives, colorants)"></textarea></div>
+          <div class="form-group"><label class="form-label">Nutritional Values</label><select class="form-input nutrition-per-select" id="menu-item-nutrition-per"><option value="serving">Per Serving</option><option value="100g">Per 100g</option></select><div class="nutrition-table-wrap" id="menu-nutrition-table"></div></div>
           <div class="form-group"><label class="form-label">Tags</label><div class="chip-picker" id="menu-tag-picker"></div></div>
+          <div class="form-group"><label class="form-label">Tax Category</label><select class="form-input" id="menu-item-tax-cat"><option value="">-- None (inherit from category) --</option></select></div>
         </div>
       </div>
       <div class="drawer-footer">
@@ -428,7 +432,29 @@ body { padding: 0 !important; margin: 0 !important; }
     <div class="modal-dialog"><div class="modal-title" id="menu-mg-opt-modal-title">Add Option</div>
       <div class="form-group"><label class="form-label">Option Name</label><input type="text" class="form-input" id="menu-mg-opt-name" placeholder="e.g. Extra Cheese"></div>
       <div class="form-row"><div class="form-group"><label class="form-label">Price Adjustment ($)</label><input type="number" class="form-input" id="menu-mg-opt-price" step="0.01" value="0" placeholder="0.00"></div></div>
-      <div class="toggle-row modal-toggle-row"><div class="toggle-info"><span class="toggle-label">Default selection</span><span class="toggle-desc">This option will be pre-selected for customers when they view the item</span></div><label class="switch"><input type="checkbox" id="menu-mg-opt-default"><span class="slider"></span></label></div>
+      <div class="toggle-row modal-toggle-row">
+        <div class="toggle-info"><span class="toggle-label">Default selection</span><span class="toggle-desc">This option will be pre-selected for customers when they view the item</span></div>
+        <label class="switch"><input type="checkbox" id="menu-mg-opt-default"><span class="slider"></span></label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Availability</label>
+        <select class="form-input" id="menu-mg-opt-avail">
+          <option value="available">Available</option>
+          <option value="out_of_stock">Out of Stock</option>
+        </select>
+      </div>
+      <div class="cat-vis-options" id="opt-oos-options" style="display:none;">
+        <label class="form-label form-label-sm">Out of stock until:</label>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="opt-oos-type" value="tomorrow" checked> Tomorrow</label>
+          <label class="radio-label"><input type="radio" name="opt-oos-type" value="date"> Specific date & time</label>
+          <label class="radio-label"><input type="radio" name="opt-oos-type" value="undetermined"> Undetermined</label>
+        </div>
+        <div id="opt-oos-date-row" style="display:none;margin-top:6px;">
+          <input type="datetime-local" class="form-input" id="menu-mg-opt-oos-until">
+        </div>
+      </div>
+      <div class="form-group" id="mg-opt-photo-group"><label class="form-label">Option Photo</label><div class="single-photo-area" id="menu-mg-opt-photo-area"></div><button type="button" class="upload-btn upload-btn-sm" id="menu-mg-opt-photo-upload-btn" style="margin-top:6px;">📷 Upload Photo</button></div>
       <div class="modal-actions" style="justify-content:space-between;"><button type="button" class="btn btn-sm btn-danger-outline" id="menu-mg-opt-delete-btn" style="display:none;">🗑 Delete</button><div style="display:flex;gap:8px;"><button type="button" class="btn btn-sm btn-ghost" id="menu-mg-opt-cancel">Cancel</button><button type="button" class="btn btn-sm btn-primary" id="menu-mg-opt-save">Save Option</button></div></div>
     </div>
   </div>
@@ -459,6 +485,9 @@ body { padding: 0 !important; margin: 0 !important; }
       <div class="toggle-row modal-toggle-row"><div class="toggle-info"><span class="toggle-label">Multiple selections (Pick Any)</span><span class="toggle-desc">When ON, customers can pick multiple options from this group. When OFF, only one option can be selected.</span></div><label class="switch"><input type="checkbox" id="menu-mg-multi" checked><span class="slider"></span></label></div>
       <div class="toggle-row modal-toggle-row"><div class="toggle-info"><span class="toggle-label">Allow duplicate choices</span><span class="toggle-desc">When ON, the same option can be added multiple times (e.g. double cheese). When OFF, each option can only be selected once.</span></div><label class="switch"><input type="checkbox" id="menu-mg-allow-duplicates"><span class="slider"></span></label></div>
       <div class="toggle-row modal-toggle-row"><div class="toggle-info"><span class="toggle-label">Required</span><span class="toggle-desc">Customers must make a selection before adding to cart</span></div><label class="switch"><input type="checkbox" id="menu-mg-required"><span class="slider"></span></label></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Force Min <span class="form-hint">(at least)</span></label><input type="number" class="form-input" id="menu-mg-force-min" min="0" value="0" placeholder="0"></div><div class="form-group"><label class="form-label">Force Max <span class="form-hint">(0 = unlimited)</span></label><input type="number" class="form-input" id="menu-mg-force-max" min="0" value="0" placeholder="0"></div></div>
+      <div class="form-group"><label class="form-label">Tax Category</label><select class="form-input" id="menu-mg-tax-cat"><option value="">-- None (default tax) --</option></select></div>
+      <div class="form-group" id="mg-photo-group"><label class="form-label">Photo</label><div class="single-photo-area" id="menu-mg-photo-area"></div><button type="button" class="upload-btn upload-btn-sm" id="menu-mg-photo-upload-btn" style="margin-top:6px;">📷 Upload Photo</button></div>
       <div class="modal-actions" style="justify-content:space-between;"><button type="button" class="btn btn-sm btn-danger-outline" id="menu-mg-delete-btn" style="display:none;">🗑 Delete</button><div style="display:flex;gap:8px;"><button type="button" class="btn btn-sm btn-ghost" id="menu-mg-cancel">Cancel</button><button type="button" class="btn btn-sm btn-primary" id="menu-mg-save">Save Group</button></div></div>
     </div>
   </div>
@@ -510,6 +539,13 @@ body { padding: 0 !important; margin: 0 !important; }
           <div class="form-group"><label class="form-label form-label-sm">Until</label><input type="datetime-local" class="form-input" id="menu-cat-sched-until"></div>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Photos <span class="form-hint form-hint-inline">— First is primary · Click ★ to set primary · Drag to reorder</span></label>
+        <div class="photo-pool" id="menu-cat-photo-pool"></div>
+        <button type="button" class="upload-btn upload-btn-sm" id="menu-cat-photo-upload-btn" style="margin-top:6px;">📷 Upload Photos</button>
+      </div>
+      <div class="form-group"><label class="form-label">Tax Category</label><select class="form-input" id="menu-cat-tax-cat"><option value="">-- None (default tax) --</option></select></div>
+      <hr class="modal-sep">
       <div class="modal-actions" style="justify-content: space-between;">
         <div style="display:flex;gap:8px;">
           <button type="button" class="btn btn-xs btn-ghost" id="menu-cat-duplicate" style="display:none;" title="Duplicate this category">📋</button>

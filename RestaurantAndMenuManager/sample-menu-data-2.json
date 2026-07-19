@@ -1,0 +1,587 @@
+{
+  "_version": "2.0",
+  "_description": "Sample menu data showcasing ALL UniconHub Restaurant & Menu Manager v2 features",
+  "menu": {
+    "categories": [
+      {
+        "id": "cat_appetizers",
+        "name": "Appetizers",
+        "description": "Starters and small plates to share",
+        "visibility_mode": "show",
+        "photos": [
+          "https://images.unsplash.com/photo-1541524326526-0ceb8b35b0f9?w=400",
+          "https://images.unsplash.com/photo-1604908920556-8a73e72b1e0e?w=400"
+        ],
+        "primary_photo_url": "https://images.unsplash.com/photo-1541524326526-0ceb8b35b0f9?w=400",
+        "tax_category_id": "Standard"
+      },
+      {
+        "id": "cat_mains",
+        "name": "Main Courses",
+        "description": "Hearty entrees and signature dishes",
+        "visibility_mode": "show",
+        "photos": [
+          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400"
+        ],
+        "primary_photo_url": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400",
+        "tax_category_id": "Standard"
+      },
+      {
+        "id": "cat_lunch",
+        "name": "Lunch Specials",
+        "description": "Weekday lunch menu — limited availability",
+        "visibility_mode": "scheduled",
+        "schedule_type": "time_windows",
+        "schedule_time_windows": [
+          { "days": [1, 2, 3, 4, 5], "start_time": "11:00", "end_time": "14:00" }
+        ],
+        "tax_category_id": "Reduced"
+      },
+      {
+        "id": "cat_seasonal",
+        "name": "Seasonal Menu",
+        "description": "Holiday specials available for a limited time",
+        "visibility_mode": "scheduled",
+        "schedule_type": "date_range",
+        "schedule_from": "2026-12-01T00:00",
+        "schedule_until": "2026-12-31T23:59",
+        "photos": [],
+        "primary_photo_url": null,
+        "tax_category_id": "Standard"
+      },
+      {
+        "id": "cat_desserts",
+        "name": "Desserts",
+        "description": "Sweet treats and after-dinner delights",
+        "visibility_mode": "show",
+        "photos": [],
+        "primary_photo_url": null
+      },
+      {
+        "id": "cat_drinks",
+        "name": "Beverages",
+        "description": "Hot and cold drinks, cocktails & more",
+        "visibility_mode": "show",
+        "photos": [],
+        "primary_photo_url": null
+      },
+      {
+        "id": "cat_hidden",
+        "name": "Staff Meals",
+        "description": "Internal menu — not for customers",
+        "visibility_mode": "hide",
+        "photos": [],
+        "primary_photo_url": null
+      }
+    ],
+    "items": [
+      {
+        "id": "item_bruschetta",
+        "category_id": "cat_appetizers",
+        "item_name": "Classic Bruschetta",
+        "slug": "classic-bruschetta",
+        "description": "Toasted ciabatta with fresh tomatoes, basil, garlic, and extra virgin olive oil",
+        "price": 9.50,
+        "sale_price": null,
+        "primary_photo_url": "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=400",
+        "photos": [
+          "https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?w=400",
+          "https://images.unsplash.com/photo-1594231875695-e54c0e8d8b1a?w=400"
+        ],
+        "allergens": ["Gluten", "Dairy"],
+        "dietary_marks": ["Vegetarian"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 320,
+        "prep_time_minutes": 10,
+        "ingredients": "Ciabatta bread\nFresh Roma tomatoes\nFresh basil leaves\nGarlic cloves\nExtra virgin olive oil\nBalsamic vinegar\nSea salt\nBlack pepper",
+        "additives": "",
+        "nutrition_per": "serving",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "320", "size_values": {} },
+          { "name": "Carbohydrate", "unit": "g", "value": "42", "size_values": {} },
+          { "name": "Total Fat", "unit": "g", "value": "14", "size_values": {} },
+          { "name": "Protein", "unit": "g", "value": "8", "size_values": {} },
+          { "name": "Sugar", "unit": "g", "value": "6", "size_values": {} },
+          { "name": "Salt", "unit": "g", "value": "1.2", "size_values": {} },
+          { "name": "Saturated Fat", "unit": "g", "value": "2.5", "size_values": {} },
+          { "name": "Fiber", "unit": "g", "value": "3", "size_values": {} },
+          { "name": "Sodium", "unit": "mg", "value": "480", "size_values": {} }
+        ],
+        "tags": ["Popular", "Fresh"],
+        "modifier_group_ids": ["mg_extras"],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"],
+        "tax_category_id": "Standard"
+      },
+      {
+        "id": "item_margherita",
+        "category_id": "cat_mains",
+        "item_name": "Margherita Pizza",
+        "slug": "margherita-pizza",
+        "description": "San Marzano tomato sauce, fresh mozzarella, basil on a thin crust",
+        "price": null,
+        "sale_price": null,
+        "primary_photo_url": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400",
+        "photos": [
+          "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400"
+        ],
+        "allergens": ["Gluten", "Dairy"],
+        "dietary_marks": ["Vegetarian", "Hot"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 1,
+        "calories": null,
+        "prep_time_minutes": 15,
+        "ingredients": "San Marzano tomato sauce\nFresh mozzarella Fior di Latte\nFresh basil\nTipo '00' flour\nExtra virgin olive oil\nSea salt\nFresh yeast",
+        "additives": "",
+        "nutrition_per": "serving",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "", "size_values": { "sz_marg_small": "680", "sz_marg_medium": "880", "sz_marg_large": "1100" } },
+          { "name": "Carbohydrate", "unit": "g", "value": "", "size_values": { "sz_marg_small": "82", "sz_marg_medium": "104", "sz_marg_large": "130" } },
+          { "name": "Total Fat", "unit": "g", "value": "", "size_values": { "sz_marg_small": "24", "sz_marg_medium": "32", "sz_marg_large": "40" } },
+          { "name": "Protein", "unit": "g", "value": "", "size_values": { "sz_marg_small": "28", "sz_marg_medium": "36", "sz_marg_large": "45" } },
+          { "name": "Sugar", "unit": "g", "value": "", "size_values": { "sz_marg_small": "8", "sz_marg_medium": "10", "sz_marg_large": "12" } },
+          { "name": "Salt", "unit": "g", "value": "", "size_values": { "sz_marg_small": "2.8", "sz_marg_medium": "3.5", "sz_marg_large": "4.4" } },
+          { "name": "Saturated Fat", "unit": "g", "value": "", "size_values": { "sz_marg_small": "12", "sz_marg_medium": "16", "sz_marg_large": "20" } },
+          { "name": "Fiber", "unit": "g", "value": "", "size_values": { "sz_marg_small": "3", "sz_marg_medium": "4", "sz_marg_large": "5" } },
+          { "name": "Sodium", "unit": "mg", "value": "", "size_values": { "sz_marg_small": "1120", "sz_marg_medium": "1400", "sz_marg_large": "1760" } }
+        ],
+        "tags": ["Classic", "Wood-Fired"],
+        "modifier_group_ids": ["mg_crust", "mg_toppings"],
+        "modifier_group_overrides": {
+          "mg_crust": { "is_required": true }
+        },
+        "sizes": [
+          { "id": "sz_marg_small", "label": "Small (10\")", "price": 12.00, "modifier_group_ids": ["mg_crust"] },
+          { "id": "sz_marg_medium", "label": "Medium (12\")", "price": 16.00, "modifier_group_ids": ["mg_crust", "mg_toppings"] },
+          { "id": "sz_marg_large", "label": "Large (14\")", "price": 20.00, "modifier_group_ids": ["mg_crust", "mg_toppings", "mg_extras"] }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"],
+        "tax_category_id": "Standard"
+      },
+      {
+        "id": "item_vegan_bowl",
+        "category_id": "cat_mains",
+        "item_name": "Rainbow Buddha Bowl",
+        "slug": "rainbow-buddha-bowl",
+        "description": "Quinoa, roasted sweet potato, avocado, edamame, pickled red cabbage, and tahini dressing",
+        "price": 16.50,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["Soy", "Sesame"],
+        "dietary_marks": ["Vegan", "Gluten Free", "Dairy Free", "Nut Free", "Raw"],
+        "is_vegetarian": true,
+        "is_vegan": true,
+        "is_gluten_free": true,
+        "spice_level": 0,
+        "calories": 480,
+        "prep_time_minutes": 12,
+        "ingredients": "Cooked quinoa\nRoasted sweet potato cubes\nSliced avocado\nSteamed edamame\nPickled red cabbage\nShredded carrot\nTahini\nLemon juice\nMaple syrup\nSesame seeds",
+        "additives": "",
+        "nutrition_per": "serving",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "480", "size_values": {} },
+          { "name": "Carbohydrate", "unit": "g", "value": "58", "size_values": {} },
+          { "name": "Total Fat", "unit": "g", "value": "22", "size_values": {} },
+          { "name": "Protein", "unit": "g", "value": "16", "size_values": {} },
+          { "name": "Sugar", "unit": "g", "value": "12", "size_values": {} },
+          { "name": "Salt", "unit": "g", "value": "0.9", "size_values": {} },
+          { "name": "Saturated Fat", "unit": "g", "value": "3", "size_values": {} },
+          { "name": "Fiber", "unit": "g", "value": "14", "size_values": {} },
+          { "name": "Sodium", "unit": "mg", "value": "360", "size_values": {} }
+        ],
+        "tags": ["Healthy", "New"],
+        "modifier_group_ids": ["mg_extras"],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"],
+        "tax_category_id": null
+      },
+      {
+        "id": "item_lunch_wrap",
+        "category_id": "cat_lunch",
+        "item_name": "Chicken Caesar Wrap",
+        "slug": "chicken-caesar-wrap",
+        "description": "Grilled chicken, romaine, parmesan, and caesar dressing in a flour tortilla. Served with fries.",
+        "price": 11.00,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["Gluten", "Dairy", "Eggs"],
+        "dietary_marks": [],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": 620,
+        "prep_time_minutes": 8,
+        "ingredients": "Flour tortilla\nGrilled chicken breast\nRomaine lettuce\nParmesan cheese\nCaesar dressing\nFrench fries",
+        "additives": "Sodium benzoate (in dressing)",
+        "nutrition_per": "serving",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "620", "size_values": {} },
+          { "name": "Carbohydrate", "unit": "g", "value": "48", "size_values": {} },
+          { "name": "Total Fat", "unit": "g", "value": "32", "size_values": {} },
+          { "name": "Protein", "unit": "g", "value": "36", "size_values": {} },
+          { "name": "Sugar", "unit": "g", "value": "4", "size_values": {} },
+          { "name": "Salt", "unit": "g", "value": "2.4", "size_values": {} },
+          { "name": "Saturated Fat", "unit": "g", "value": "8", "size_values": {} },
+          { "name": "Fiber", "unit": "g", "value": "3", "size_values": {} },
+          { "name": "Sodium", "unit": "mg", "value": "960", "size_values": {} }
+        ],
+        "tags": ["Lunch", "Quick"],
+        "modifier_group_ids": [],
+        "modifier_group_overrides": {},
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "out_of_stock",
+        "oos_type": "tomorrow",
+        "oos_until": "2026-07-20T00:00:00.000Z",
+        "show_on_channels": ["pickup", "delivery"],
+        "tax_category_id": "Reduced"
+      },
+      {
+        "id": "item_tiramisu",
+        "category_id": "cat_desserts",
+        "item_name": "Tiramisu",
+        "slug": "tiramisu",
+        "description": "Layers of espresso-soaked ladyfingers with mascarpone cream, dusted with cocoa",
+        "price": null,
+        "sale_price": null,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["Gluten", "Dairy", "Eggs"],
+        "dietary_marks": ["Vegetarian"],
+        "is_vegetarian": true,
+        "is_vegan": false,
+        "is_gluten_free": false,
+        "spice_level": 0,
+        "calories": null,
+        "prep_time_minutes": 5,
+        "ingredients": "Mascarpone cheese\nEggs\nSugar\nEspresso coffee\nLadyfinger biscuits\nCocoa powder\nMarsala wine",
+        "additives": "",
+        "nutrition_per": "100g",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "", "size_values": { "sz_tir_regular": "270", "sz_tir_large": "470" } },
+          { "name": "Carbohydrate", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "28", "sz_tir_large": "48" } },
+          { "name": "Total Fat", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "16", "sz_tir_large": "28" } },
+          { "name": "Protein", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "6", "sz_tir_large": "10" } },
+          { "name": "Sugar", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "22", "sz_tir_large": "38" } },
+          { "name": "Salt", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "0.2", "sz_tir_large": "0.3" } },
+          { "name": "Saturated Fat", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "10", "sz_tir_large": "17" } },
+          { "name": "Fiber", "unit": "g", "value": "", "size_values": { "sz_tir_regular": "1", "sz_tir_large": "2" } },
+          { "name": "Sodium", "unit": "mg", "value": "", "size_values": { "sz_tir_regular": "80", "sz_tir_large": "120" } }
+        ],
+        "tags": ["Popular", "Homemade"],
+        "modifier_group_ids": [],
+        "modifier_group_overrides": {},
+        "sizes": [
+          { "id": "sz_tir_regular", "label": "Regular", "price": 9.00, "modifier_group_ids": [] },
+          { "id": "sz_tir_large", "label": "Large", "price": 14.00, "modifier_group_ids": [] }
+        ],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["pickup", "delivery", "on_premise"]
+      },
+      {
+        "id": "item_holiday_roast",
+        "category_id": "cat_seasonal",
+        "item_name": "Holiday Prime Rib Roast",
+        "slug": "holiday-prime-rib-roast",
+        "description": "Slow-roasted prime rib with au jus, horseradish cream, roasted potatoes, and seasonal vegetables",
+        "price": 34.00,
+        "sale_price": 29.00,
+        "primary_photo_url": null,
+        "photos": [],
+        "allergens": ["Dairy"],
+        "dietary_marks": ["Gluten Free", "Halal"],
+        "is_vegetarian": false,
+        "is_vegan": false,
+        "is_gluten_free": true,
+        "spice_level": 0,
+        "calories": 850,
+        "prep_time_minutes": 30,
+        "ingredients": "Prime rib beef\nBeef stock\nHorseradish\nSour cream\nYukon Gold potatoes\nSeasonal vegetables\nButter\nFresh rosemary\nFresh thyme\nGarlic",
+        "additives": "",
+        "nutrition_per": "serving",
+        "nutrition": [
+          { "name": "Total Calories", "unit": "kcal", "value": "850", "size_values": {} },
+          { "name": "Carbohydrate", "unit": "g", "value": "35", "size_values": {} },
+          { "name": "Total Fat", "unit": "g", "value": "52", "size_values": {} },
+          { "name": "Protein", "unit": "g", "value": "62", "size_values": {} },
+          { "name": "Sugar", "unit": "g", "value": "6", "size_values": {} },
+          { "name": "Salt", "unit": "g", "value": "3.2", "size_values": {} },
+          { "name": "Saturated Fat", "unit": "g", "value": "22", "size_values": {} },
+          { "name": "Fiber", "unit": "g", "value": "5", "size_values": {} },
+          { "name": "Sodium", "unit": "mg", "value": "1280", "size_values": {} }
+        ],
+        "tags": ["Holiday", "Signature", "Limited"],
+        "modifier_group_ids": ["mg_sides", "mg_sauces"],
+        "modifier_group_overrides": {
+          "mg_sides": { "is_required": true }
+        },
+        "sizes": [],
+        "visibility_mode": "show",
+        "availability": "available",
+        "show_on_channels": ["delivery", "on_premise"],
+        "tax_category_id": "Standard"
+      }
+    ],
+    "modifier_groups": [
+      {
+        "id": "mg_crust",
+        "group_name": "Crust Type",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": true,
+        "force_min": 1,
+        "force_max": 1,
+        "tax_category_id": null,
+        "photo_url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=200",
+        "options": [
+          {
+            "id": "opt_crust_thin",
+            "option_name": "Thin Crust",
+            "price_adjustment": 0,
+            "is_default": true,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_crust_thick",
+            "option_name": "Thick Crust",
+            "price_adjustment": 0,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_crust_gf",
+            "option_name": "Gluten-Free Crust",
+            "price_adjustment": 3.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "out_of_stock",
+            "oos_type": "undetermined",
+            "oos_until": null,
+            "photo_url": null
+          }
+        ]
+      },
+      {
+        "id": "mg_toppings",
+        "group_name": "Extra Toppings",
+        "selection_type": "multi",
+        "allow_duplicates": true,
+        "is_required": false,
+        "force_min": 0,
+        "force_max": 5,
+        "tax_category_id": "Standard",
+        "photo_url": null,
+        "options": [
+          {
+            "id": "opt_top_pepperoni",
+            "option_name": "Pepperoni",
+            "price_adjustment": 2.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": "https://images.unsplash.com/photo-1628294895950-8f2e3c9b6b1c?w=100"
+          },
+          {
+            "id": "opt_top_mushrooms",
+            "option_name": "Mushrooms",
+            "price_adjustment": 1.50,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_top_olives",
+            "option_name": "Black Olives",
+            "price_adjustment": 1.50,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_top_onions",
+            "option_name": "Red Onions",
+            "price_adjustment": 1.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_top_artichoke",
+            "option_name": "Artichoke Hearts",
+            "price_adjustment": 2.50,
+            "is_default": false,
+            "is_available": true,
+            "availability": "out_of_stock",
+            "oos_type": "date",
+            "oos_until": "2026-07-22T12:00:00.000Z",
+            "photo_url": null
+          },
+          {
+            "id": "opt_top_cheese",
+            "option_name": "Extra Cheese",
+            "price_adjustment": 2.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          }
+        ]
+      },
+      {
+        "id": "mg_sauces",
+        "group_name": "Choice of Sauce",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": false,
+        "force_min": 0,
+        "force_max": 1,
+        "tax_category_id": null,
+        "photo_url": null,
+        "options": [
+          {
+            "id": "opt_sauce_marinara",
+            "option_name": "Marinara",
+            "price_adjustment": 0,
+            "is_default": true,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_sauce_ranch",
+            "option_name": "Ranch",
+            "price_adjustment": 0,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_sauce_bbq",
+            "option_name": "BBQ",
+            "price_adjustment": 0,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_sauce_truffle",
+            "option_name": "Truffle Aioli",
+            "price_adjustment": 2.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "out_of_stock",
+            "oos_type": "tomorrow",
+            "oos_until": "2026-07-20T00:00:00.000Z",
+            "photo_url": "https://images.unsplash.com/photo-1600891964599-dcd1dd9a2f6a?w=100"
+          }
+        ]
+      },
+      {
+        "id": "mg_sides",
+        "group_name": "Side Dish",
+        "selection_type": "single",
+        "allow_duplicates": false,
+        "is_required": false,
+        "force_min": 1,
+        "force_max": 2,
+        "tax_category_id": null,
+        "photo_url": null,
+        "options": [
+          {
+            "id": "opt_side_fries",
+            "option_name": "French Fries",
+            "price_adjustment": 0,
+            "is_default": true,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_side_salad",
+            "option_name": "Side Salad",
+            "price_adjustment": 0,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_side_rice",
+            "option_name": "Wild Rice Pilaf",
+            "price_adjustment": 0,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          }
+        ]
+      },
+      {
+        "id": "mg_extras",
+        "group_name": "Add-Ons",
+        "selection_type": "multi",
+        "allow_duplicates": true,
+        "is_required": false,
+        "force_min": 0,
+        "force_max": 0,
+        "tax_category_id": "Standard",
+        "photo_url": null,
+        "options": [
+          {
+            "id": "opt_extra_cheese",
+            "option_name": "Extra Parmesan",
+            "price_adjustment": 1.50,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_extra_bread",
+            "option_name": "Garlic Bread",
+            "price_adjustment": 3.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          },
+          {
+            "id": "opt_extra_custom",
+            "option_name": "Chef's Daily Special Add-On",
+            "price_adjustment": 4.00,
+            "is_default": false,
+            "is_available": true,
+            "availability": "available",
+            "photo_url": null
+          }
+        ]
+      }
+    ]
+  }
+}

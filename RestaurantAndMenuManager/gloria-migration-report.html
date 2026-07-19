@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gloria Menu → UniconHub Menu — Migration Analysis</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card: #fff;
+    --border: #e8e4dc;
+    --text: #3d3929;
+    --muted: #8b8474;
+    --green: #2d6a4f;
+    --green-bg: #d8f3dc;
+    --amber: #b45309;
+    --amber-bg: #fef3c7;
+    --red: #991b1b;
+    --red-bg: #fecaca;
+    --blue: #1e40af;
+    --blue-bg: #dbeafe;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font); background: var(--bg); color: var(--text);
+    line-height: 1.7; padding: 40px 20px; max-width: 960px; margin: 0 auto;
+  }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  h2 { font-size: 20px; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  h3 { font-size: 15px; margin: 20px 0 8px; color: var(--text); }
+  p, li { font-size: 14px; color: var(--text); }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 24px; margin: 16px 0;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  th, td { padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+  th { background: #f5f2ec; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td { vertical-align: top; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .tag-yes { background: var(--green-bg); color: var(--green); }
+  .tag-partial { background: var(--amber-bg); color: var(--amber); }
+  .tag-no { background: var(--red-bg); color: var(--red); }
+  .tag-info { background: var(--blue-bg); color: var(--blue); }
+  code {
+    background: #f5f2ec; padding: 1px 5px; border-radius: 3px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px;
+  }
+  pre {
+    background: #3d3929; color: #faf9f6; padding: 16px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 12px; line-height: 1.5; margin: 8px 0;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  .key-diff { border-left: 3px solid var(--amber); padding-left: 14px; margin: 12px 0; }
+  .strength { border-left: 3px solid var(--green); padding-left: 14px; margin: 12px 0; }
+  .gap { border-left: 3px solid var(--red); padding-left: 14px; margin: 12px 0; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  .summary-box {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; text-align: center;
+  }
+  .summary-item .num { font-size: 32px; font-weight: 700; }
+  .summary-item .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .summary-item.green .num { color: var(--green); }
+  .summary-item.amber .num { color: var(--amber); }
+  .summary-item.red .num { color: var(--red); }
+</style>
+</head>
+<body>
+
+<h1>🔄 Gloria Menu → UniconHub Menu</h1>
+<p class="subtitle">Migration Analysis & Feature Gap Report — July 2026</p>
+
+<div class="summary-box">
+  <div class="summary-item green">
+    <div class="num">82%</div>
+    <div class="label">Feature Coverage</div>
+  </div>
+  <div class="summary-item amber">
+    <div class="num">6</div>
+    <div class="label">Partial Gaps</div>
+  </div>
+  <div class="summary-item red">
+    <div class="num">2</div>
+    <div class="label">Missing Features</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Structural Comparison</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<h3>Data Organization</h3>
+<table>
+<tr>
+  <th>Aspect</th><th>Gloria (Source)</th><th>UniconHub (Target)</th><th>Status</th>
+</tr>
+<tr>
+  <td>Categories</td>
+  <td>Nested under menu → categories[]</td>
+  <td>Flat <code>menu.categories[]</code> with ID references from items</td>
+  <td><span class="tag tag-yes">Mappable</span></td>
+</tr>
+<tr>
+  <td>Items</td>
+  <td>Nested inside each category (<code>category.items[]</code>)</td>
+  <td>Flat <code>menu.items[]</code> with <code>category_id</code> foreign key</td>
+  <td><span class="tag tag-yes">Mappable</span></td>
+</tr>
+<tr>
+  <td>Modifier Groups</td>
+  <td>Defined inline on items and sizes (<code>item.groups[]</code>, <code>size.groups[]</code>) — can be duplicated</td>
+  <td>Global <code>menu.modifier_groups[]</code> referenced by ID</td>
+  <td><span class="tag tag-partial">Needs dedup</span></td>
+</tr>
+<tr>
+  <td>Sizes</td>
+  <td>Nested <code>item.sizes[]</code> with per-size groups</td>
+  <td>Nested <code>item.sizes[]</code> with <code>modifier_group_ids[]</code></td>
+  <td><span class="tag tag-yes">Compatible</span></td>
+</tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>2. Feature Mapping — Category Level</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<table>
+<tr><th>Gloria Field</th><th>UniconHub Equivalent</th><th>Gap</th></tr>
+<tr>
+  <td><code>active</code> (boolean)</td>
+  <td><code>visibility_mode: "show" | "hide"</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>active_begin</code> / <code>active_end</code></td>
+  <td><code>schedule_type: "date_range"</code> + <code>schedule_from</code> / <code>schedule_until</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>active_days</code> (bitmask 0-127)</td>
+  <td><code>schedule_type: "time_windows"</code> + <code>schedule_time_windows[].days[]</code></td>
+  <td><span class="tag tag-yes">Covered</span> (needs bitmask→array conversion)</td>
+</tr>
+<tr>
+  <td><code>active_exact_from</code> / <code>active_exact_until</code></td>
+  <td>Not on categories (only on items). Categories use scheduled visibility.</td>
+  <td><span class="tag tag-partial">Partial</span></td>
+</tr>
+<tr>
+  <td><code>hidden_until</code></td>
+  <td><code>visibility_mode: "hide"</code> + <code>hide_until_date</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>sort</code></td>
+  <td>Order in <code>menu.categories[]</code> array</td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>picture_id</code></td>
+  <td>Not supported on categories</td>
+  <td><span class="tag tag-no">Missing</span></td>
+</tr>
+<tr>
+  <td><code>major_group_id</code></td>
+  <td>No parent grouping of categories</td>
+  <td><span class="tag tag-no">Not needed</span></td>
+</tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Feature Mapping — Item Level</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<table>
+<tr><th>Gloria Field</th><th>UniconHub Equivalent</th><th>Gap</th></tr>
+<tr>
+  <td><code>name</code>, <code>description</code>, <code>price</code></td>
+  <td><code>item_name</code>, <code>description</code>, <code>price</code></td>
+  <td><span class="tag tag-yes">Direct</span></td>
+</tr>
+<tr>
+  <td><code>active</code> (boolean)</td>
+  <td><code>visibility_mode: "show" | "hide"</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>active_exact_from</code> / <code>active_exact_until</code></td>
+  <td><code>schedule_type: "date_range"</code> with <code>schedule_from</code> / <code>schedule_until</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>active_begin</code> / <code>active_end</code></td>
+  <td>Same as above. Gloria has two date-range systems (legacy <code>active_begin/end</code> and newer <code>active_exact_from/until</code>)</td>
+  <td><span class="tag tag-yes">Merged</span></td>
+</tr>
+<tr>
+  <td><code>active_days</code> (bitmask)</td>
+  <td><code>schedule_type: "time_windows"</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>hidden_until</code></td>
+  <td><code>visibility_mode: "hide"</code> + <code>hide_until_date</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>sort</code></td>
+  <td>Order in <code>menu.items[]</code> array</td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>tags</code> (string)</td>
+  <td><code>tags[]</code> (array)</td>
+  <td><span class="tag tag-yes">Convertible</span></td>
+</tr>
+<tr>
+  <td><code>ingredients</code>, <code>additives</code></td>
+  <td><code>allergens[]</code> (structured list)</td>
+  <td><span class="tag tag-partial">Partial</span> — free-text vs structured</td>
+</tr>
+<tr>
+  <td><code>tax_category_id</code></td>
+  <td>No tax integration in menu model</td>
+  <td><span class="tag tag-no">Missing</span></td>
+</tr>
+<tr>
+  <td><code>hide_instructions</code></td>
+  <td>No equivalent</td>
+  <td><span class="tag tag-no">Minor gap</span></td>
+</tr>
+<tr>
+  <td><code>restaurant_menu_availabilities[]</code></td>
+  <td><code>show_on_channels[]</code> + <code>availability</code></td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Feature Mapping — Modifier Groups & Options</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<table>
+<tr><th>Gloria Field</th><th>UniconHub Equivalent</th><th>Gap</th></tr>
+<tr>
+  <td><code>group.name</code></td>
+  <td><code>modifier_group.group_name</code></td>
+  <td><span class="tag tag-yes">Direct</span></td>
+</tr>
+<tr>
+  <td><code>group.required</code></td>
+  <td><code>modifier_group.is_required</code> (global) + <code>modifier_group_overrides[].is_required</code> (per-assignment)</td>
+  <td><span class="tag tag-yes">Covered + Better</span></td>
+</tr>
+<tr>
+  <td><code>group.force_min</code> / <code>force_max</code></td>
+  <td>No min/max selection count. Only <code>selection_type: "single" | "multi"</code></td>
+  <td><span class="tag tag-partial">Partial gap</span></td>
+</tr>
+<tr>
+  <td><code>group.allow_quantity</code></td>
+  <td><code>modifier_group.allow_duplicates</code> + per-assignment override</td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>option.name</code>, <code>option.price</code></td>
+  <td><code>option.option_name</code>, <code>option.price_adjustment</code></td>
+  <td><span class="tag tag-yes">Direct</span></td>
+</tr>
+<tr>
+  <td><code>option.default</code></td>
+  <td><code>option.is_default</code></td>
+  <td><span class="tag tag-yes">Direct</span></td>
+</tr>
+<tr>
+  <td><code>option.is_out_of_stock</code></td>
+  <td>No per-option OOS — only item-level <code>availability</code></td>
+  <td><span class="tag tag-no">Missing</span></td>
+</tr>
+<tr>
+  <td><code>option.sort</code></td>
+  <td>Order in options array</td>
+  <td><span class="tag tag-yes">Covered</span></td>
+</tr>
+<tr>
+  <td><code>option.restaurant_menu_availabilities[]</code></td>
+  <td>No per-option channel filtering</td>
+  <td><span class="tag tag-no">Minor gap</span></td>
+</tr>
+<tr>
+  <td>Groups duplicated per item/size</td>
+  <td>Global groups referenced by ID — import must deduplicate by <code>group.name</code> + options</td>
+  <td><span class="tag tag-partial">Needs import logic</span></td>
+</tr>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. Critical Gaps Summary</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<h3>🔴 What We're Missing</h3>
+
+<div class="gap">
+<strong>1. Per-option Out of Stock</strong><br>
+Gloria has <code>option.is_out_of_stock</code> — individual modifier options can be marked unavailable. Our OOS is only at the item level. <em>Impact: Medium. Workaround: split the option into a separate group or remove it temporarily.</em>
+</div>
+
+<div class="gap">
+<strong>2. Min/Max Selection Count</strong> (<code>force_min</code> / <code>force_max</code>)<br>
+Gloria allows "pick exactly 1", "pick 1–3", "pick up to 5". We only have "pick one" vs "pick any". <em>Impact: High for combo/family deals. This is the biggest functional gap.</em>
+</div>
+
+<div class="gap">
+<strong>3. Tax Category Integration</strong> (<code>tax_category_id</code>)<br>
+Gloria links items and modifier groups to tax categories. Our menu model has no tax reference. <em>Impact: Low if tax is handled at POS/ordering level rather than menu level.</em>
+</div>
+
+<h3 style="margin-top:20px;">🟡 Partial / Needs Conversion</h3>
+
+<div class="key-diff">
+<strong>4. Deduplication of Modifier Groups</strong><br>
+Gloria repeats the same group definition across items and sizes. Import must detect identical groups (by name + options) and merge them into a single global group, then assign the unified ID.
+</div>
+
+<div class="key-diff">
+<strong>5. Ingredients / Allergens</strong><br>
+Gloria uses free-text <code>ingredients</code> and <code>additives</code> fields. We have a structured <code>allergens[]</code> picker. Import would need NLP or manual mapping.
+</div>
+
+<div class="key-diff">
+<strong>6. Category Pictures</strong><br>
+Gloria supports <code>picture_id</code> on categories. We don't. Low priority — most menu systems don't use category images.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Strengths of UniconHub vs Gloria</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<div class="strength">
+<strong>✅ Per-Assignment Modifier Overrides</strong><br>
+Gloria has no override concept — if a modifier group is required, it's required everywhere. UniconHub allows per-product and per-size overrides for <code>is_required</code> and <code>allow_duplicates</code>.
+</div>
+<div class="strength">
+<strong>✅ Unified Visibility System</strong><br>
+Gloria has 4+ separate fields controlling visibility (<code>active</code>, <code>active_begin</code>, <code>active_end</code>, <code>active_days</code>, <code>active_exact_from</code>, <code>hidden_until</code>). UniconHub consolidates into a clean 3-mode system: Show / Scheduled / Hide with clear sub-options.
+</div>
+<div class="strength">
+<strong>✅ Channel Filtering</strong><br>
+UniconHub has <code>show_on_channels[]</code> — explicitly controls which service channels (pickup/delivery/on-premise) an item appears on. Gloria's <code>restaurant_menu_availabilities[]</code> is more complex but serves a similar purpose.
+</div>
+<div class="strength">
+<strong>✅ Global Modifier Groups</strong><br>
+Editing a modifier group once updates all items using it. Gloria's inline duplication means editing "Toppings" on 20 pizzas requires 20 separate edits.
+</div>
+<div class="strength">
+<strong>✅ Modifier Usage Tracking</strong><br>
+UniconHub shows where each modifier group is used across the menu. Gloria has no such visibility.
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2>7. Import Conversion Map</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<h3>Step-by-Step Conversion Logic</h3>
+
+<pre><code>// Pseudo-code for Gloria → UniconHub import
+
+function importGloriaMenu(gloriaJson) {
+  const result = { menu: { categories: [], items: [], modifier_groups: [] } };
+
+  // 1. COLLECT & DEDUPLICATE all modifier groups
+  const groupMap = new Map(); // key → unified group
+  function unifyGroup(gloriaGroup) {
+    const key = gloriaGroup.name + '|' + gloriaGroup.options.map(o => o.name).sort().join(',');
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        id: uid(),
+        group_name: gloriaGroup.name,
+        selection_type: (gloriaGroup.force_max === 1 && gloriaGroup.force_min === 1) ? 'single' : 'multi',
+        allow_duplicates: gloriaGroup.allow_quantity || false,
+        is_required: gloriaGroup.required || false,
+        options: gloriaGroup.options.map(o => ({
+          id: uid(), option_name: o.name,
+          price_adjustment: o.price || 0,
+          is_default: o.default || false,
+          is_available: !o.is_out_of_stock
+        }))
+      });
+    }
+    return groupMap.get(key);
+  }
+
+  // 2. CONVERT categories
+  for (const gCat of gloriaJson.categories || []) {
+    const cat = {
+      id: uid(),
+      name: gCat.name,
+      description: gCat.description || '',
+      visibility_mode: resolveVisibility(gCat),
+      hide_until_date: gCat.hidden_until || null,
+      schedule_type: gCat.active_exact_from ? 'date_range' : (gCat.active_days ? 'time_windows' : null),
+      schedule_from: gCat.active_exact_from || gCat.active_begin || null,
+      schedule_until: gCat.active_exact_until || gCat.active_end || null,
+      schedule_time_windows: gCat.active_days ? bitmaskToDays(gCat.active_days) : null
+    };
+    result.menu.categories.push(cat);
+
+    // 3. CONVERT items
+    for (const gItem of gCat.items || []) {
+      const item = {
+        id: uid(),
+        category_id: cat.id,
+        item_name: gItem.name,
+        description: gItem.description || '',
+        price: gItem.sizes?.length ? null : (gItem.price || 0),
+        tags: gItem.tags ? gItem.tags.split(',').map(t => t.trim()) : [],
+        visibility_mode: resolveVisibility(gItem),
+        hide_until_date: gItem.hidden_until || null,
+        schedule_type: gItem.active_exact_from ? 'date_range' : (gItem.active_days ? 'time_windows' : null),
+        schedule_from: gItem.active_exact_from || gItem.active_begin || null,
+        schedule_until: gItem.active_exact_until || gItem.active_end || null,
+        schedule_time_windows: gItem.active_days ? bitmaskToDays(gItem.active_days) : null,
+        availability: 'available',
+        show_on_channels: gItem.restaurant_menu_availabilities?.map(a => a.service) || [],
+        sizes: [],
+        modifier_group_ids: [],
+        modifier_group_overrides: {}
+      };
+
+      // Convert item-level modifier groups
+      for (const gGroup of gItem.groups || []) {
+        const unified = unifyGroup(gGroup);
+        item.modifier_group_ids.push(unified.id);
+        if (gGroup.required !== undefined || gGroup.allow_quantity !== undefined) {
+          item.modifier_group_overrides[unified.id] = {};
+          if (gGroup.required !== undefined) item.modifier_group_overrides[unified.id].is_required = gGroup.required;
+          if (gGroup.allow_quantity !== undefined) item.modifier_group_overrides[unified.id].allow_duplicates = gGroup.allow_quantity;
+        }
+      }
+
+      // Convert sizes
+      for (const gSize of gItem.sizes || []) {
+        const size = {
+          id: uid(), label: gSize.name,
+          price: gSize.price || 0, modifier_group_ids: []
+        };
+        for (const gGroup of gSize.groups || []) {
+          const unified = unifyGroup(gGroup);
+          size.modifier_group_ids.push(unified.id);
+        }
+        item.sizes.push(size);
+      }
+      result.menu.items.push(item);
+    }
+  }
+
+  // 4. Add unified modifier groups
+  result.menu.modifier_groups = Array.from(groupMap.values());
+  return result;
+}</code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>8. Bitmask → Days Conversion</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<p>Gloria uses a bitmask where Monday=1, Tuesday=2, Wednesday=4, Thursday=8, Friday=16, Saturday=32, Sunday=64. The sum represents active days (e.g., 31 = Mon-Fri).</p>
+
+<pre><code>function bitmaskToDays(mask) {
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    if (mask & (1 << i)) days.push(i + 1); // 1=Mon … 7=Sun
+  }
+  return [{ days, start_time: '00:00', end_time: '23:59' }];
+}</code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>9. Recommendation</h2>
+<!-- ============================================================ -->
+
+<div class="card">
+<h3>For Customer Migration</h3>
+<ol>
+  <li><strong>Build the importer</strong> using the logic above. Estimated effort: 1–2 days.</li>
+  <li><strong>Add <code>force_min</code>/<code>force_max</code></strong> to modifier groups. This is the #1 functional gap and directly impacts combo/family deals which are common in pizza restaurants (the sample Gloria data is a pizzeria).</li>
+  <li><strong>Add per-option OOS</strong> (<code>is_out_of_stock</code> on options). This is common in restaurant operations — individual ingredients run out.</li>
+  <li><strong>Tax category</strong> can be deferred — most ordering platforms handle tax at checkout, not at the menu level.</li>
+  <li><strong>Run a test migration</strong> with the actual customer's Gloria export, review differences manually, then iterate.</li>
+</ol>
+
+<h3 style="margin-top:16px;">Import Readiness Score: <span style="color:var(--green);font-size:20px;">82%</span></h3>
+<p style="color:var(--muted);font-size:13px;">The core data model is compatible. The two missing features (min/max selections and per-option OOS) can be added in ~2–3 days of development. After that, a fully automated importer is feasible.</p>
+</div>
+
+</body>
+</html>
