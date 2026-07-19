@@ -273,6 +273,293 @@ function setNested(obj, path, value) {
   target[last] = value;
 }
 
+/* ===================================================================== */
+/* GLORIA JSON IMPORT */
+/* ===================================================================== */
+
+/* Resolve Gloria's multi-field visibility into UniconHub's 3-mode system */
+function resolveGloriaVisibility(obj) {
+  if (obj.active === false || obj.active === 'false') {
+    return 'hide';
+  }
+  if (obj.active_exact_from || obj.active_exact_until || obj.active_begin || obj.active_end) {
+    return 'scheduled';
+  }
+  if (obj.active_days && obj.active_days > 0) {
+    return 'scheduled';
+  }
+  return 'show';
+}
+
+/* Convert Gloria bitmask (Mon=1, Tue=2, Wed=4, Thu=8, Fri=16, Sat=32, Sun=64) to day arrays */
+function gloriaBitmaskToDays(mask) {
+  if (!mask || mask === 0) return null;
+  var days = [];
+  for (var i = 0; i < 7; i++) {
+    if (mask & (1 << i)) days.push(i + 1); /* 1=Mon … 7=Sun */
+  }
+  if (days.length === 0) return null;
+  return [{ days: days, start_time: '00:00', end_time: '23:59' }];
+}
+
+/* Parse tax ID mapping from textarea (e.g. "444286=Standard") */
+function parseGloriaTaxMap(raw) {
+  var map = {};
+  if (!raw || !raw.trim()) return map;
+  raw.split('\n').forEach(function(line) {
+    var parts = line.split('=');
+    if (parts.length === 2) {
+      var id = parts[0].trim();
+      var name = parts[1].trim();
+      if (id && name) map[id] = name;
+    }
+  });
+  return map;
+}
+
+/* Slugify helper for import */
+function importSlugify(str) {
+  return (str || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item';
+}
+
+/* Main import function */
+function importGloriaMenu() {
+  var rawJson = document.getElementById('gloria-import-json').value.trim();
+  var rawTaxMap = document.getElementById('gloria-tax-map').value;
+  var resultsEl = document.getElementById('gloria-import-results');
+
+  if (!rawJson) {
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = '<div style="color:#dc2626;font-size:13px;">⚠️ Please paste Gloria JSON first.</div>';
+    return;
+  }
+
+  var gloriaData;
+  try { gloriaData = JSON.parse(rawJson); } catch (e) {
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = '<div style="color:#dc2626;font-size:13px;">❌ Invalid JSON: ' + e.message + '</div>';
+    return;
+  }
+
+  if (!gloriaData.categories || !Array.isArray(gloriaData.categories)) {
+    resultsEl.style.display = '';
+    resultsEl.innerHTML = '<div style="color:#dc2626;font-size:13px;">❌ JSON must contain a "categories" array.</div>';
+    return;
+  }
+
+  var taxMap = parseGloriaTaxMap(rawTaxMap);
+
+  var stats = { categories: 0, items: 0, modifier_groups: 0, options: 0, sizes: 0 };
+  var groupMap = {}; /* key → unified UniconHub group */
+
+  /* Helper: deduplicate & convert a Gloria group to UniconHub */
+  function unifyGroup(gGroup) {
+    var optNames = (gGroup.options || []).map(function(o) { return o.name; }).sort().join('|');
+    var key = (gGroup.name || '') + '|||' + optNames;
+    if (groupMap[key]) return groupMap[key];
+
+    var mg = {
+      id: uid(),
+      group_name: gGroup.name || 'Unnamed Group',
+      selection_type: (gGroup.force_max === 1 && gGroup.force_min === 1) ? 'single' : 'multi',
+      allow_duplicates: !!gGroup.allow_quantity,
+      is_required: !!gGroup.required,
+      force_min: gGroup.force_min || 0,
+      force_max: gGroup.force_max || 0,
+      tax_category_id: taxMap[gGroup.tax_category_id] || null,
+      photo_url: null,
+      options: (gGroup.options || []).map(function(o) {
+        stats.options++;
+        return {
+          id: uid(),
+          option_name: o.name || 'Unnamed',
+          price_adjustment: o.price || 0,
+          is_default: !!o.default,
+          is_available: true,
+          availability: o.is_out_of_stock ? 'out_of_stock' : 'available',
+          oos_type: o.is_out_of_stock ? 'undetermined' : null,
+          oos_until: null,
+          photo_url: null,
+          show_internal_name: false,
+          internal_name: ''
+        };
+      })
+    };
+    groupMap[key] = mg;
+    stats.modifier_groups++;
+    return mg;
+  }
+
+  /* Convert each Gloria category */
+  (gloriaData.categories || []).forEach(function(gCat) {
+    var catId = uid();
+    var visMode = resolveGloriaVisibility(gCat);
+    var schedType = null;
+    var schedFrom = null, schedUntil = null;
+    if (gCat.active_exact_from || gCat.active_exact_until) {
+      schedType = 'date_range';
+      schedFrom = gCat.active_exact_from || null;
+      schedUntil = gCat.active_exact_until || null;
+    } else if (gCat.active_begin || gCat.active_end) {
+      schedType = 'date_range';
+      schedFrom = gCat.active_begin || null;
+      schedUntil = gCat.active_end || null;
+    }
+
+    var cat = {
+      id: catId,
+      name: gCat.name || 'Unnamed Category',
+      description: gCat.description || '',
+      visibility_mode: visMode,
+      hide_until_date: gCat.hidden_until || null,
+      schedule_type: schedType,
+      schedule_from: schedFrom,
+      schedule_until: schedUntil,
+      schedule_time_windows: gloriaBitmaskToDays(gCat.active_days),
+      photos: [],
+      primary_photo_url: null,
+      tax_category_id: null
+    };
+    data.menu.categories.push(cat);
+    stats.categories++;
+
+    /* Convert items inside this category */
+    (gCat.items || []).forEach(function(gItem) {
+      var itemVis = resolveGloriaVisibility(gItem);
+      var itemSchedType = null;
+      var itemSchedFrom = null, itemSchedUntil = null;
+      if (gItem.active_exact_from || gItem.active_exact_until) {
+        itemSchedType = 'date_range';
+        itemSchedFrom = gItem.active_exact_from || null;
+        itemSchedUntil = gItem.active_exact_until || null;
+      } else if (gItem.active_begin || gItem.active_end) {
+        itemSchedType = 'date_range';
+        itemSchedFrom = gItem.active_begin || null;
+        itemSchedUntil = gItem.active_end || null;
+      }
+
+      /* Collect channels from restaurant_menu_availabilities */
+      var channels = [];
+      (gItem.restaurant_menu_availabilities || []).forEach(function(a) {
+        if (a.service && channels.indexOf(a.service) === -1) channels.push(a.service);
+      });
+      if (channels.length === 0) channels = ['pickup', 'delivery', 'on_premise'];
+
+      var hasSizes = (gItem.sizes && gItem.sizes.length > 0);
+
+      var item = {
+        id: uid(),
+        category_id: catId,
+        item_name: gItem.name || 'Unnamed Item',
+        slug: importSlugify(gItem.name),
+        description: gItem.description || '',
+        price: hasSizes ? null : (gItem.price || 0),
+        sale_price: null,
+        primary_photo_url: null,
+        photos: [],
+        allergens: [],
+        dietary_marks: [],
+        is_vegetarian: false,
+        is_vegan: false,
+        is_gluten_free: false,
+        spice_level: 0,
+        calories: null,
+        prep_time_minutes: null,
+        ingredients: gItem.ingredients || '',
+        additives: gItem.additives || '',
+        nutrition_per: 'serving',
+        nutrition: [],
+        tags: gItem.tags ? gItem.tags.split(',').map(function(t) { return t.trim(); }) : [],
+        modifier_group_ids: [],
+        modifier_group_overrides: {},
+        sizes: [],
+        visibility_mode: itemVis,
+        hide_until_date: gItem.hidden_until || null,
+        schedule_type: itemSchedType,
+        schedule_time_windows: gloriaBitmaskToDays(gItem.active_days),
+        schedule_from: itemSchedFrom,
+        schedule_until: itemSchedUntil,
+        availability: 'available',
+        show_on_channels: channels,
+        tax_category_id: taxMap[gItem.tax_category_id] || null,
+        show_internal_name: false,
+        internal_name: '',
+        hide_instructions: !!gItem.hide_instructions
+      };
+
+      /* Collect item-level modifier groups */
+      var seenGroupIds = {};
+      (gItem.groups || []).forEach(function(gGroup) {
+        var unified = unifyGroup(gGroup);
+        if (seenGroupIds[unified.id]) return;
+        seenGroupIds[unified.id] = true;
+        item.modifier_group_ids.push(unified.id);
+        if (gGroup.required !== undefined || gGroup.allow_quantity !== undefined) {
+          item.modifier_group_overrides[unified.id] = {};
+          if (gGroup.required !== undefined) item.modifier_group_overrides[unified.id].is_required = !!gGroup.required;
+          if (gGroup.allow_quantity !== undefined) item.modifier_group_overrides[unified.id].allow_duplicates = !!gGroup.allow_quantity;
+        }
+      });
+
+      /* Convert sizes */
+      (gItem.sizes || []).forEach(function(gSize) {
+        var size = {
+          id: uid(),
+          label: gSize.name || 'Size',
+          price: gSize.price || 0,
+          modifier_group_ids: []
+        };
+        (gSize.groups || []).forEach(function(gGroup) {
+          var unified = unifyGroup(gGroup);
+          if (size.modifier_group_ids.indexOf(unified.id) === -1) {
+            size.modifier_group_ids.push(unified.id);
+          }
+        });
+        item.sizes.push(size);
+        stats.sizes++;
+      });
+
+      data.menu.items.push(item);
+      stats.items++;
+    });
+  });
+
+  /* Add all unified modifier groups */
+  Object.keys(groupMap).forEach(function(key) {
+    var alreadyExists = data.menu.modifier_groups.some(function(mg) { return mg.id === groupMap[key].id; });
+    if (!alreadyExists) data.menu.modifier_groups.push(groupMap[key]);
+  });
+
+  /* Close modal and refresh UI */
+  document.getElementById('gloria-import-modal').style.display = 'none';
+  document.getElementById('gloria-import-json').value = '';
+
+  renderCategories();
+  renderModGroups();
+  renderItems();
+  renderModGroupCheckboxes();
+  scheduleSave();
+
+  tool.notify(
+    '✅ Imported: ' + stats.categories + ' categories, ' + stats.items + ' items, ' +
+    stats.sizes + ' sizes, ' + stats.modifier_groups + ' modifier groups, ' + stats.options + ' options',
+    'success'
+  );
+}
+
+/* ---- Gloria Import Modal handlers ---- */
+function openGloriaImportModal() {
+  document.getElementById('gloria-import-json').value = '';
+  document.getElementById('gloria-tax-map').value = '';
+  document.getElementById('gloria-import-results').style.display = 'none';
+  document.getElementById('gloria-import-modal').style.display = 'flex';
+  document.getElementById('gloria-import-json').focus();
+}
+
+function closeGloriaImportModal() {
+  document.getElementById('gloria-import-modal').style.display = 'none';
+}
+
 /* ===== SAVE ===== */
 var saveTimeout = null;
 function scheduleSave() {
@@ -2411,15 +2698,31 @@ function renderModGroups() {
     if (_expandedModGroups[mg.id] === undefined) _expandedModGroups[mg.id] = false;
     var isExpanded = _expandedModGroups[mg.id] || highlightedModGroupId === mg.id;
 
-    /* Group row */
+    /* Group row — two-line layout: name on top, metadata below */
     var el = document.createElement('div');
     el.className = 'modgroup-item' + (editingModGroupId === mg.id ? ' active' : '') + (highlightedModGroupId === mg.id ? ' highlighted' : '');
     el.dataset.mgId = mg.id;
-    el.innerHTML =
+
+    /* Top row: expand, filter, name, actions */
+    var topRow = document.createElement('div');
+    topRow.className = 'mg-row-top';
+    topRow.innerHTML =
       '<span class="mg-expand">' + (isExpanded ? '▼' : '▶') + '</span>' +
       '<span class="mg-name">' + esc(mg.group_name) + '</span>' +
-      '<span class="mg-meta">' + (hasOpts ? mg.options.length + '' : '0') + ' · ' + (mg.selection_type === 'single' ? 'Single' : 'Multi') + (mg.allow_duplicates ? ' · Dup' : '') + (mg.is_required ? ' · Req' : '') + (mg.force_min > 0 ? ' · Min:' + mg.force_min : '') + (mg.force_max > 0 ? ' · Max:' + mg.force_max : '') + '</span>' +
       '<span class="mg-actions"><button class="mg-edit-btn" title="Edit">✎</button></span>';
+    el.appendChild(topRow);
+
+    /* Bottom row: metadata */
+    var bottomRow = document.createElement('div');
+    bottomRow.className = 'mg-row-bottom';
+    bottomRow.innerHTML =
+      '<span class="mg-meta">' + (hasOpts ? mg.options.length + ' options' : '0 options') + ' · ' +
+      (mg.selection_type === 'single' ? 'Single' : 'Multi') +
+      (mg.allow_duplicates ? ' · Dup' : '') +
+      (mg.is_required ? ' · Req' : '') +
+      (mg.force_min > 0 ? ' · Min ' + mg.force_min : '') +
+      (mg.force_max > 0 ? ' · Max ' + mg.force_max : '') + '</span>';
+    el.appendChild(bottomRow);
 
     el.querySelector('.mg-expand').addEventListener('click', function(e) {
       e.stopPropagation();
@@ -4323,6 +4626,12 @@ function initAllEvents() {
       zoneColorInput.click();
     });
   }
+
+  /* Gloria Import */
+  var gloriaImportBtn = document.getElementById('menu-import-gloria-btn');
+  if (gloriaImportBtn) gloriaImportBtn.addEventListener('click', openGloriaImportModal);
+  document.getElementById('gloria-import-run').addEventListener('click', importGloriaMenu);
+  document.getElementById('gloria-import-cancel').addEventListener('click', closeGloriaImportModal);
 
   /* Menu: Panel Tabs */
   document.querySelectorAll('.panel-tab').forEach(function(tab) {

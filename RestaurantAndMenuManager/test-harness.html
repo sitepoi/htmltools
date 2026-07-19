@@ -383,6 +383,7 @@ body { padding: 0 !important; margin: 0 !important; }
         <label class="avail-toggle"><input type="checkbox" id="menu-filter-avail" checked> Available only</label>
         <select class="form-input sort-select" id="menu-sort"><option value="name_asc">Name A-Z</option><option value="name_desc">Name Z-A</option><option value="price_asc">Price: Low-High</option><option value="price_desc">Price: High-Low</option></select>
         <button type="button" class="btn btn-sm btn-primary" id="menu-add-item-btn">+ Add Item</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="menu-import-gloria-btn" title="Import menu from Gloria JSON">📥 Import Gloria</button>
       </div>
       <div class="items-grid" id="menu-items-grid"><div class="empty-state">Select a category to view items</div></div>
     </main>
@@ -558,6 +559,17 @@ body { padding: 0 !important; margin: 0 !important; }
           <button type="button" class="btn btn-sm btn-primary" id="menu-cat-save">Save</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Gloria Import Modal -->
+  <div class="modal-overlay" id="gloria-import-modal" style="display:none;">
+    <div class="modal-dialog" style="max-width:600px;">
+      <div class="modal-title">📥 Import from Gloria</div>
+      <div class="form-group"><label class="form-label">Paste Gloria Menu JSON</label><textarea class="form-input form-textarea" id="gloria-import-json" rows="14" placeholder='Paste the full Gloria menu JSON here. It should include a "categories" array with nested items, sizes, and groups.'></textarea></div>
+      <div class="form-group"><label class="form-label">Tax Category ID Mapping <span class="form-hint">— Gloria numeric ID → UniconHub tax name (optional)</span></label><textarea class="form-input form-textarea" id="gloria-tax-map" rows="3" placeholder='One per line: 444286=Standard&#10;123456=Reduced&#10;Leave empty to skip tax mapping'></textarea></div>
+      <div id="gloria-import-results" style="display:none;margin-top:8px;"></div>
+      <div class="modal-actions" style="justify-content:space-between;"><button type="button" class="btn btn-sm btn-ghost" id="gloria-import-cancel">Cancel</button><button type="button" class="btn btn-sm btn-primary" id="gloria-import-run">🔄 Convert &amp; Import</button></div>
     </div>
   </div>
 
