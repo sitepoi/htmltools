@@ -1,0 +1,405 @@
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<!-- ── Navigation ── -->
+<nav class="spm-nav" id="spmNav">
+  <div class="spm-nav-brand">
+    <i class="fa-solid fa-id-card-clip"></i>
+    <span>Staff Permit Manager</span>
+  </div>
+  <div class="spm-nav-tabs" id="navTabs">
+    <button class="spm-nav-tab active" data-view="dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+    <button class="spm-nav-tab" data-view="mySchedule"><i class="fa-solid fa-calendar-days"></i> My Schedule</button>
+    <button class="spm-nav-tab spm-nav-tab-employee" data-view="newRequest"><i class="fa-solid fa-file-pen"></i> New Request</button>
+    <button class="spm-nav-tab" data-view="requestHistory"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+    <button class="spm-nav-tab" data-view="outOfOffice"><i class="fa-solid fa-location-dot"></i> Out of Office</button>
+    <button class="spm-nav-tab spm-nav-tab-supervisor" data-view="reviewQueue" style="display:none"><i class="fa-solid fa-clipboard-check"></i> Review</button>
+    <button class="spm-nav-tab spm-nav-tab-admin" data-view="adminConsole" style="display:none"><i class="fa-solid fa-shield-halved"></i> Admin</button>
+    <button class="spm-nav-tab" data-view="policyCenter"><i class="fa-solid fa-file-signature"></i> Policies</button>
+    <button class="spm-nav-tab" data-view="reports"><i class="fa-solid fa-chart-bar"></i> Reports</button>
+  </div>
+  <div class="spm-nav-user" id="navUser">
+    <span id="navUserName"></span>
+    <span class="spm-role-badge" id="navRoleBadge"></span>
+  </div>
+</nav>
+
+<!-- ── Dashboard View ── -->
+<div class="spm-view active" id="view-dashboard">
+  <div class="spm-dash-grid">
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-clock"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statPending">0</div>
+        <div class="spm-stat-label">Pending Requests</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statApproved">0</div>
+        <div class="spm-stat-label">Approved This Month</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statDenied">0</div>
+        <div class="spm-stat-label">Denied This Month</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statEscalated">0</div>
+        <div class="spm-stat-label">Escalated</div>
+      </div>
+    </div>
+  </div>
+  <div class="spm-card" id="dashQuickActions">
+    <h3 class="spm-card-title"><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+    <div class="spm-quick-actions">
+      <button class="spm-btn spm-btn-primary" onclick="switchView('newRequest')"><i class="fa-solid fa-plus"></i> Submit New Request</button>
+      <button class="spm-btn spm-btn-outline" onclick="switchView('mySchedule')"><i class="fa-solid fa-calendar-days"></i> View My Schedule</button>
+      <button class="spm-btn spm-btn-outline" onclick="switchView('policyCenter')"><i class="fa-solid fa-file-signature"></i> Review Policies</button>
+    </div>
+  </div>
+  <div class="spm-card" id="dashRecentActivity">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-ul"></i> Recent Activity</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Decision</th><th>Actions</th></tr></thead>
+        <tbody id="dashRecentTbody"><tr><td colspan="5" class="spm-empty">No recent activity</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── My Schedule View ── -->
+<div class="spm-view" id="view-mySchedule">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-calendar-days"></i> My Regular Schedule</h3>
+    <div class="spm-schedule-display" id="scheduleDisplay">
+      <p class="spm-empty">No schedule configured. Contact your supervisor or administrator.</p>
+    </div>
+  </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-calendar-check"></i> Approved Exceptions (This Month)</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Original</th><th>Approved</th><th>Payment</th></tr></thead>
+        <tbody id="scheduleExceptionsTbody"><tr><td colspan="5" class="spm-empty">No approved exceptions this month</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-location-dot"></i> Upcoming Out of Office Days</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Program / Location</th><th>Duration</th><th>Status</th><th>Payment</th></tr></thead>
+        <tbody id="scheduleOooTbody"><tr><td colspan="5" class="spm-empty">No upcoming out-of-office days</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Request View ── -->
+<div class="spm-view" id="view-newRequest">
+  <div class="spm-card spm-form-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-file-pen"></i> Submit Permission Request</h3>
+    <div class="spm-form-notice">
+      <i class="fa-solid fa-circle-info"></i>
+      <span><strong>⚠️ Important:</strong> This request applies <strong>ONLY to the specific date</strong> you select below. It does NOT change your regular schedule for any other day. Each date requires its own separate request. Approval of this request means nothing for any other day.</span>
+    </div>
+
+    <div class="spm-form-group">
+      <label class="spm-label">Request Type <span class="spm-required">*</span></label>
+      <select class="spm-select" id="reqType">
+        <option value="">— Select Request Type —</option>
+        <option value="lateArrival">Late Arrival</option>
+        <option value="earlyDeparture">Early Departure</option>
+        <option value="absenceFullDay">Absence – Full Day</option>
+        <option value="absencePartialDay">Absence – Partial Day</option>
+        <option value="scheduleAdjustment">Schedule Adjustment</option>
+        <option value="emergency">Emergency Situation</option>
+        <option value="medicalAppointment">Medical Appointment</option>
+        <option value="familyResponsibility">Family Responsibility</option>
+        <option value="outOfOfficeWork">🏕️ Out of Office Work</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="spm-form-row">
+      <div class="spm-form-group">
+        <label class="spm-label">Requested Date <span class="spm-required">*</span></label>
+        <input type="date" class="spm-input" id="reqDate">
+        <div style="font-size:11px;color:var(--spm-danger);margin-top:4px"><i class="fa-solid fa-exclamation-triangle"></i> This change applies <strong>only to this date</strong>. It does not affect any other day.</div>
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label">Reason <span class="spm-required">*</span></label>
+        <select class="spm-select" id="reqReason">
+          <option value="">— Select Reason —</option>
+          <option value="medical">Medical Appointment</option>
+          <option value="family">Family Obligation</option>
+          <option value="transportation">Transportation Issue</option>
+          <option value="emergency">Emergency</option>
+          <option value="personal">Personal Appointment</option>
+          <option value="religious">Religious Obligation</option>
+          <option value="school">School Obligation</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── Out of Office specific fields ── -->
+    <div id="oooFields" style="display:none">
+      <div class="spm-form-group">
+        <label class="spm-label">Program / Location <span class="spm-required">*</span></label>
+        <input type="text" class="spm-input" id="oooLocation" placeholder="e.g. Summer Day Camp at Central Park, Community Centre visit, Field trip location...">
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label">Duration <span class="spm-required">*</span></label>
+        <select class="spm-select" id="oooDuration">
+          <option value="">— Select Duration —</option>
+          <option value="fullDay">Full Day (regular hours, off-site)</option>
+          <option value="halfDay">Half Day (morning or afternoon)</option>
+          <option value="custom">Custom Hours (specify below)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="spm-form-group" id="currentScheduleGroup">
+      <label class="spm-label">Current Schedule</label>
+      <div class="spm-schedule-readonly" id="currentScheduleDisplay">
+        <span class="spm-muted">Loading your schedule...</span>
+      </div>
+    </div>
+
+    <div class="spm-form-row" id="requestedTimeRow">
+      <div class="spm-form-group">
+        <label class="spm-label" id="timeRowLabel1">Requested Start Time <span class="spm-required">*</span></label>
+        <input type="time" class="spm-input" id="reqStartTime">
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label" id="timeRowLabel2">Requested End Time <span class="spm-required">*</span></label>
+        <input type="time" class="spm-input" id="reqEndTime">
+      </div>
+    </div>
+
+    <div class="spm-form-group">
+      <label class="spm-label" id="reqExplanationLabel">Additional Explanation</label>
+      <textarea class="spm-textarea" id="reqExplanation" rows="3" placeholder="Provide any additional details to help your supervisor understand your situation..."></textarea>
+    </div>
+
+    <!-- ── Standard Confirmations (time-off requests) ── -->
+    <div class="spm-confirmation-box" id="standardConfirmBox">
+      <h4><i class="fa-solid fa-check-double"></i> Important Confirmations</h4>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I understand this request is <strong>for this specific date only</strong> and does not apply to any other day.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that approval is required <strong>before</strong> the change occurs.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that approved time away from work may be <strong>unpaid</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I understand that my <strong>regular schedule remains unchanged</strong> for all other days.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that <strong>repeated requests</strong> may trigger additional review.</label>
+    </div>
+
+    <!-- ── OOO Confirmations (out-of-office work declarations) ── -->
+    <div class="spm-confirmation-box spm-ooo-confirm" id="oooConfirmBox" style="display:none">
+      <h4><i class="fa-solid fa-check-double"></i> Out of Office Work Declarations</h4>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I confirm that I <strong>will be working</strong> at the specified off-site location on this date.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that <strong>supervisor approval is required</strong> for these hours to be paid.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that <strong>unapproved out-of-office days will be unpaid</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I confirm that the program/location details above are <strong>accurate</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that I must <strong>notify my supervisor of any changes</strong> to the off-site schedule.</label>
+    </div>
+
+    <div class="spm-approval-note" id="standardApprovalNote">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div>
+        <strong>Reminder:</strong> This is a <strong>single-day exception request</strong>. It only affects the specific date selected above. Your regular schedule continues unchanged for every other day. Working extra hours on another day does not replace or offset missed hours on this day unless separately approved.
+      </div>
+    </div>
+
+    <div class="spm-approval-note" id="oooApprovalNote" style="display:none">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>
+        <strong>About Out of Office Work:</strong> This declaration documents that you will perform your work duties at an external location. <strong>Supervisor approval is required for payment.</strong> Unapproved off-site work will be treated as unpaid absence. Your regular schedule hours apply — you are still expected to work your full hours.
+      </div>
+    </div>
+
+    <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="submitRequest()" id="btnSubmitRequest">
+      <i class="fa-solid fa-paper-plane"></i> Submit Request
+    </button>
+    <div class="spm-form-error" id="submitError" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ── Request History View ── -->
+<div class="spm-view" id="view-requestHistory">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-clock-rotate-left"></i> My Request History</h3>
+    <div class="spm-filter-bar">
+      <select class="spm-select spm-select-sm" id="historyFilter">
+        <option value="all">All Requests</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="denied">Denied</option>
+        <option value="escalated">Escalated</option>
+      </select>
+    </div>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Decision</th><th>Details</th></tr></thead>
+        <tbody id="historyTbody"><tr><td colspan="6" class="spm-empty">No requests found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Out of Office View ── -->
+<div class="spm-view" id="view-outOfOffice">
+  <div class="spm-dash-grid" style="margin-bottom:20px">
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#e0f2fe;color:#0369a1"><i class="fa-solid fa-location-dot"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatTotal">0</div>
+        <div class="spm-stat-label">Total OOO Declarations</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatApproved">0</div>
+        <div class="spm-stat-label">Approved OOO Days</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-clock"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatPending">0</div>
+        <div class="spm-stat-label">Pending Approval</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat" id="oooStatUnpaidWarn" style="display:none">
+      <div class="spm-stat-icon" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatUnpaid">0</div>
+        <div class="spm-stat-label">Unpaid OOO Days ⚠️</div>
+      </div>
+    </div>
+  </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-check"></i> Out of Office History</h3>
+    <div class="spm-approval-note">
+      <i class="fa-solid fa-circle-info"></i>
+      <div><strong>How it works:</strong> Declare out-of-office work days here. Your supervisor reviews and approves them. <strong>Approved OOO days are paid as regular work.</strong> Unapproved days are unpaid. This ensures proper documentation for payroll and grant reporting.</div>
+    </div>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Program / Location</th><th>Duration</th><th>Reason</th><th>Status</th><th>Payment</th><th>Details</th></tr></thead>
+        <tbody id="oooHistoryTbody"><tr><td colspan="7" class="spm-empty">No out-of-office declarations found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Review Queue View (Supervisor) ── -->
+<div class="spm-view" id="view-reviewQueue">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-clipboard-check"></i> Pending Review Queue</h3>
+    <div id="reviewList"></div>
+  </div>
+</div>
+
+<!-- ── Admin Console View ── -->
+<div class="spm-view" id="view-adminConsole">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-shield-halved"></i> Supervisor Consistency Dashboard</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Supervisor</th><th>Total</th><th>Approved</th><th>Denied</th><th>Rate</th><th>Avg Time</th><th>Status</th></tr></thead>
+        <tbody id="adminConsistencyTbody"><tr><td colspan="7" class="spm-empty">No data available</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="spm-card" id="adminAllRequests">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-check"></i> All Requests</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Employee</th><th>Date</th><th>Type</th><th>Status</th><th>Supervisor</th><th>Actions</th></tr></thead>
+        <tbody id="adminAllTbody"><tr><td colspan="6" class="spm-empty">No requests found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="spm-card" id="adminFlaggedSection" style="display:none">
+    <h3 class="spm-card-title"><i class="fa-solid fa-flag"></i> Flagged Items</h3>
+    <div id="adminFlaggedList"></div>
+  </div>
+</div>
+
+<!-- ── Policy Center View ── -->
+<div class="spm-view" id="view-policyCenter">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-file-signature"></i> Policy Acceptance</h3>
+    <div id="policyContent">
+      <div class="spm-policy-section">
+        <h4><i class="fa-solid fa-user-graduate"></i> Employee Attendance Policy</h4>
+        <div class="spm-policy-text">
+          <p><strong>Schedule Expectations:</strong> Employees are expected to follow their assigned work schedule. Your regular schedule defines your working days, start time, and end time.</p>
+          <p><strong>Punctuality:</strong> Arrive on time for every scheduled shift. Late arrivals must be communicated to your supervisor as early as possible.</p>
+          <p><strong>Communication:</strong> Any schedule changes must be requested through the formal permission system before the change occurs. Verbal approvals are not valid.</p>
+          <p><strong>Permission Process:</strong> Submit a request through this system. Your supervisor will review and provide a formal decision. You will be notified of the outcome.</p>
+          <p><strong>Unpaid Approved Absence:</strong> Time away from work that is approved but not worked is generally unpaid unless your supervisor explicitly approves paid status.</p>
+          <p><strong>No Guaranteed Make-Up Hours:</strong> Working additional hours outside your regular schedule to "make up" for missed time is not automatically permitted and requires separate approval.</p>
+          <p><strong>Repeated Requests:</strong> Frequent schedule change requests may trigger additional review to ensure fairness and operational consistency.</p>
+          <p><strong>Educational Sessions:</strong> Required training and educational sessions cannot be missed without explicit administrator approval.</p>
+        </div>
+      </div>
+      <div class="spm-policy-section spm-policy-supervisor" id="policySupervisorSection" style="display:none">
+        <h4><i class="fa-solid fa-user-tie"></i> Supervisor Management Policy</h4>
+        <div class="spm-policy-text">
+          <p><strong>Consistency Requirement:</strong> All employees must be treated fairly and consistently. Apply the same standards to every team member.</p>
+          <p><strong>Documentation Requirement:</strong> Every decision must be documented with reasons. No informal or verbal exceptions.</p>
+          <p><strong>Fair Treatment:</strong> Do not create different rules for different employees. All schedule exceptions follow the same process.</p>
+          <p><strong>No Unofficial Exceptions:</strong> All schedule changes must go through this formal system. Side agreements are not permitted.</p>
+          <p><strong>Escalation Requirements:</strong> Escalate when: an employee has more than 3 requests in 30 days, requests affect educational sessions, or a pattern of repeated late arrivals emerges.</p>
+          <p><strong>Payment Decisions:</strong> Clearly indicate whether approved time is paid or unpaid. Default is unpaid for time not worked.</p>
+        </div>
+      </div>
+      <div id="policyAcceptanceStatus" class="spm-policy-status"></div>
+      <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="acceptPolicy('employee')" id="btnAcceptEmployeePolicy">
+        <i class="fa-solid fa-check"></i> I Have Read and Accept the Employee Attendance Policy
+      </button>
+      <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="acceptPolicy('supervisor')" id="btnAcceptSupervisorPolicy" style="display:none">
+        <i class="fa-solid fa-check"></i> I Have Read and Accept the Supervisor Management Policy
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reports View ── -->
+<div class="spm-view" id="view-reports">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-chart-bar"></i> Reports</h3>
+    <div class="spm-report-tabs">
+      <button class="spm-btn spm-btn-outline active" data-report="attendance" onclick="showReport('attendance')">Attendance Report</button>
+      <button class="spm-btn spm-btn-outline" data-report="payroll" onclick="showReport('payroll')">Payroll Report</button>
+      <button class="spm-btn spm-btn-outline" data-report="grant" onclick="showReport('grant')">CSJ Grant Support</button>
+    </div>
+    <div class="spm-report-content" id="reportContent">
+      <p class="spm-empty">Select a report type above to generate.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Detail Modal ── -->
+<div class="spm-modal-overlay" id="detailModal" style="display:none">
+  <div class="spm-modal">
+    <div class="spm-modal-header">
+      <h3 id="detailModalTitle">Request Details</h3>
+      <button class="spm-modal-close" onclick="closeModal('detailModal')">&times;</button>
+    </div>
+    <div class="spm-modal-body" id="detailModalBody"></div>
+    <div class="spm-modal-footer" id="detailModalFooter"></div>
+  </div>
+</div>
+
+<!-- ── Toast Container ── -->
+<div class="spm-toast-container" id="toastContainer"></div>

@@ -1,3 +1,223 @@
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">🛠️</div>
+      <div class="header-title">
+        <h1>VibeCoding HTML App Builder</h1>
+        <span class="header-sub">Agentic • AI-Powered • Chat-Driven</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Tool Configuration">⚙️ Config</button>
+      <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
+      <button class="btn btn-sm btn-ghost" id="btn-rules" title="View html-tool-rules">📜 Rules</button>
+      <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Content (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel (always visible) -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-panel-header">
+        <span class="chat-panel-title">💬 Chat</span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">👋</div>
+          <h3>Welcome to VibeCoding</h3>
+          <p>Configure your tool using the <b>⚙️ Config</b> button above, then ask me to generate it.</p>
+          <p class="chat-examples">
+            <span>Quick start:</span>
+            <code>"Build an invoice manager with dashboard"</code>
+            <code>"Create a task tracker with kanban board"</code>
+            <code>"Make an employee onboarding form"</code>
+          </p>
+        </div>
+      </div>
+      <div class="chat-attachment" id="chat-attachment" style="display:none">
+        <span class="attach-icon">📎</span>
+        <span class="attach-name" id="attach-name"></span>
+        <span class="attach-size" id="attach-size"></span>
+        <button class="attach-remove" id="attach-remove" title="Remove attachment">✕</button>
+        <span class="attach-status" id="attach-status"></span>
+      </div>
+      <div class="chat-input-area">
+        <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a file (design mockup, spec doc, etc.)">📎</button>
+        <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+        <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Content Panel (Code tabs + Config tab) -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="html">📄 HTML</button>
+        <button class="ctab" data-tab="css">🎨 CSS</button>
+        <button class="ctab" data-tab="js">⚡ JavaScript</button>
+        <button class="ctab" data-tab="preview">👁️ Preview</button>
+        <button class="ctab" data-tab="console">🪲 Console</button>
+        <button class="ctab ctab-config" data-tab="config" id="tab-config">⚙️ Config</button>
+        <div class="content-actions">
+          <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-all" title="Copy All Three Blocks">📋 All</button>
+          <button class="btn btn-sm btn-ghost" id="btn-download" title="Download as files">💾</button>
+        </div>
+      </div>
+
+      <div class="content-editors">
+        <!-- HTML Editor -->
+        <div class="content-editor active" id="editor-html">
+          <div class="code-lines" id="html-lines"></div>
+          <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here..." spellcheck="false"></textarea>
+        </div>
+        <!-- CSS Editor -->
+        <div class="content-editor" id="editor-css">
+          <div class="code-lines" id="css-lines"></div>
+          <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here..." spellcheck="false"></textarea>
+        </div>
+        <!-- JS Editor -->
+        <div class="content-editor" id="editor-js">
+          <div class="code-lines" id="js-lines"></div>
+          <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here..." spellcheck="false"></textarea>
+        </div>
+        <!-- Preview -->
+        <div class="content-editor" id="editor-preview">
+          <div class="preview-frame-wrap">
+            <iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads allow-popups"></iframe>
+          </div>
+          <div class="preview-empty" id="preview-empty">
+            <div class="empty-icon">👁️</div>
+            <p>Generate code first to see a live preview</p>
+          </div>
+        </div>
+        <!-- Config Tab (the wizard, now as a content tab) -->
+        <div class="content-editor" id="editor-console">
+          <div class="console-output" id="console-output">
+            <div class="console-empty">🪲 Console output from preview will appear here.<br>Click buttons in the Preview tab and watch for logs.</div>
+          </div>
+          <div class="console-actions">
+            <button class="btn btn-sm btn-ghost" id="btn-console-clear">🗑️ Clear</button>
+            <span class="console-count" id="console-count">0 entries</span>
+          </div>
+        </div>
+        <div class="content-editor" id="editor-config">
+          <div class="config-scroll">
+            <div class="config-header">
+              <h2>⚙️ Tool Configuration</h2>
+              <p>Define your tool's purpose, data model, features, and design. Changes take effect on next generation.</p>
+            </div>
+
+            <div class="config-section">
+              <h3>🎯 What tool are you building?</h3>
+              <div class="form-group">
+                <label class="form-label">Tool Name <span class="req">*</span></label>
+                <input type="text" id="f-tool-name" class="form-input" placeholder="e.g. Invoice Manager, Task Tracker...">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Short Description <span class="req">*</span></label>
+                <textarea id="f-tool-desc" class="form-input form-textarea" rows="2" placeholder="A one-line summary..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Detailed Requirements</label>
+                <textarea id="f-tool-requirements" class="form-input form-textarea" rows="4" placeholder="Describe in detail what the tool should do. Include who will use it, what problem it solves, key workflows, and business rules."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Target Audience</label>
+                <select id="f-audience" class="form-input">
+                  <option value="admin">Administrators / Back-office</option>
+                  <option value="employee">Employees / Staff</option>
+                  <option value="manager">Managers / Supervisors</option>
+                  <option value="customer">Customers / External Users</option>
+                  <option value="general">General / All Users</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3>🗄️ Data Model</h3>
+              <div class="form-group">
+                <label class="form-label">Data Storage Approach</label>
+                <div class="radio-group">
+                  <label class="radio-item"><input type="radio" name="storage" value="value" checked> <span>Use <code>tool.setValue()</code> only (single-object storage)</span></label>
+                  <label class="radio-item"><input type="radio" name="storage" value="crud"> <span>Use <code>tool.requestObjects()</code> CRUD (multi-object database)</span></label>
+                  <label class="radio-item"><input type="radio" name="storage" value="both"> <span>Both — settings in value + records via CRUD</span></label>
+                </div>
+              </div>
+              <div id="crud-section" style="display:none">
+                <div class="form-group">
+                  <label class="form-label">CMS Object Types (one per line)</label>
+                  <textarea id="f-cms-types" class="form-input form-textarea" rows="3" placeholder="Format: typeName-uniconbaseapps | Human Name | scope:shared|instance"></textarea>
+                  <span class="form-hint">Use <b>shared</b> for cross-instance data, <b>instance</b> for per-record data.</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Key Fields (one per line)</label>
+                  <textarea id="f-cms-fields" class="form-input form-textarea" rows="4" placeholder="Format: fieldId | type | Label | [options]"></textarea>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sibling fields from parent form?</label>
+                <select id="f-sibling-fields" class="form-input">
+                  <option value="no">No — tool is self-contained</option>
+                  <option value="yes">Yes — read/write sibling form fields</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3>⚡ SDK Features</h3>
+              <div class="feature-grid">
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="ai" checked><div class="feat-icon">🤖</div><div class="feat-name">AI Prompt Relay</div><div class="feat-desc">tool.requestAI()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="upload"><div class="feat-icon">📤</div><div class="feat-name">File Upload</div><div class="feat-desc">tool.requestUpload()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="fileContent"><div class="feat-icon">📄</div><div class="feat-name">File Extraction</div><div class="feat-desc">tool.requestFileContent()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="exportPdf"><div class="feat-icon">🖨️</div><div class="feat-name">PDF Export</div><div class="feat-desc">tool.requestExportPdf()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="sendEmail"><div class="feat-icon">✉️</div><div class="feat-name">Send Email</div><div class="feat-desc">tool.requestSendEmail()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="crud"><div class="feat-icon">🗄️</div><div class="feat-name">Object CRUD</div><div class="feat-desc">tool.requestObjects()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="user"><div class="feat-icon">👤</div><div class="feat-name">User Context</div><div class="feat-desc">tool.getUser()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="params"><div class="feat-icon">⚙️</div><div class="feat-name">Admin Params</div><div class="feat-desc">tool.param()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="notifications"><div class="feat-icon">🔔</div><div class="feat-name">Notifications</div><div class="feat-desc">tool.notify()</div></label>
+                <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="validation"><div class="feat-icon">✅</div><div class="feat-name">Validation</div><div class="feat-desc">tool.reportValid()</div></label>
+              </div>
+              <div class="form-group" style="margin-top:12px">
+                <label class="form-label">Additional feature notes</label>
+                <textarea id="f-feature-notes" class="form-input form-textarea" rows="2" placeholder="Any specific integration details..."></textarea>
+              </div>
+            </div>
+
+            <div class="config-actions">
+              <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Tool (HTML + CSS + JS)</button>
+              <p class="gen-hint">Or just type what you want in the <b>💬 Chat</b> on the left — the AI understands natural language.</p>
+            </div>
+            <div id="gen-status" class="gen-status" style="display:none">
+              <div class="gen-status-icon">⏳</div>
+              <div class="gen-status-text" id="gen-status-text">Generating...</div>
+              <div class="progress-bar"><div class="progress-fill" id="gen-progress"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden></div>
+  <div class="modal" id="modal-history" style="display:none">
+    <div class="modal-header"><h3>📋 Generation History</h3><button class="btn-close" id="btn-close-history">✕</button></div>
+    <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Build your first tool!</div></div>
+  </div>
+
+  <!-- Rules Modal -->
+  <div class="modal" id="modal-rules" style="display:none">
+    <div class="modal-header"><h3>📜 HTML Tool Rules Reference</h3><button class="btn-close" id="btn-close-rules">✕</button></div>
+    <div class="modal-body rules-body" id="rules-body"><div class="rules-loading">Loading rules...</div></div>
+  </div>
+
+  <!-- EMBEDDED FULL HTML-TOOL-RULES (verbatim, 773 lines) -->
+  <script type="text/plain" id="html-rules-source" style="display:none">
 You are building a custom interactive tool for the Uniconhub CMS html-tool system.
 The tool runs inside a sandboxed iframe. Your output must be exactly THREE separate
 code blocks, labeled and ordered as shown:
@@ -287,47 +507,6 @@ Example:
       if (err) { tool.notify('AI error: ' + err, 'warning') }
       if (response) showSummary(response)
     })
-
-── AI Streaming Relay (★ Live token-by-token) ─────────
-tool.requestAIStream(prompt, context, callbacks)
-
-Sends a prompt to the CMS AI service and receives tokens in real-time as the
-AI generates them — exactly like Copilot Chat.  Use this for "thinking bubble"
-UIs, live typewriter effects, or progressive rendering.
-
-  • prompt    — string, the main prompt/question to send
-  • context   — string (optional), supporting background information
-  • callbacks — object with optional handlers:
-      onToken(token)       — called for EACH text chunk as it arrives from the AI.
-                              `token` is a short string (typically a few chars to
-                              a few words).  Append it to your streaming display.
-      onComplete(fullText) — called when the stream finishes successfully.
-                              `fullText` is the complete accumulated response.
-      onError(error)       — called on failure.  `error` is a string describing
-                              the problem (network error, timeout, permission denied).
-
-Limits: Same prompt limits as requestAI (100K chars, 60s timeout).
-        No concurrency queue — each call is independent.
-        The CMS parent sends ai-stream-start first, then ai-stream-token for each
-        chunk, then ai-stream-end on completion, or ai-stream-error on failure.
-Requires: allowAi: 'yes' in toolParams.
-
-Example (live typewriter in a thinking bubble):
-  tool.requestAIStream('Generate a project summary', projectContext, {
-    onToken: function(token) {
-      // Append each token to a live-display element
-      var el = document.getElementById('stream-output')
-      el.textContent += token
-      el.scrollTop = el.scrollHeight
-    },
-    onComplete: function(fullText) {
-      tool.notify('AI response complete', 'success')
-      processResponse(fullText)
-    },
-    onError: function(err) {
-      tool.notify('AI stream error: ' + err, 'error')
-    }
-  })
 
 ── File Upload ────────────────────────────────────────
 tool.requestUpload(accept, callback)
@@ -813,3 +992,8 @@ HARD RULES
    PDF via browser Print → Save as PDF. Use attachments: [] in
    requestSendEmail to attach exported files to emails.
 ✓  Always produce complete, functional code — no placeholders, no TODO comments.
+</script>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+</div>

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StaffPermitManagement — Test Harness</title>
+<link rel="stylesheet" href="StaffPermitManagement.css">
+<style>
+body { padding-top: 32px !important; margin: 0; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 5px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #63b3ed; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3182ce; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-sample { background: #d97706; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+#th-bar select { font-family: system-ui; font-size: 10px; padding: 2px 6px; border-radius: 3px; border: 1px solid #5a6070; background: #2d3139; color: #fff; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS</strong><span class="sep">|</span>
+  <label>Role:</label>
+  <select id="th-role">
+    <option value="employee">Employee</option>
+    <option value="supervisor">Supervisor</option>
+    <option value="admin">Administrator</option>
+  </select>
+  <span class="sep">|</span>
+  <button class="btn-sample" id="th-sample">📋 Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear Data</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle ReadOnly</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+   MOCK TOOL SDK — runs directly on the page (no iframe)
+   ═══════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  var STORAGE_KEY = 'staff_permit_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _fields = {}, _value = null;
+  var _storage = {};
+
+  var _user = { id: 'user-employee-001', name: 'Jane Employee', email: 'employee@example.com', roles: ['employee'], locale: 'en-CA' };
+
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { var parsed = JSON.parse(raw); _storage = parsed._storage || {}; _value = parsed._value || null; }
+  } catch(e) { _storage = {}; _value = null; }
+
+  function persist() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ _storage: _storage, _value: _value })); } catch(e) {}
+  }
+
+  var ROLE_USERS = {
+    employee:   { id: 'user-employee-001',   name: 'Jane Employee',    email: 'employee@example.com',    roles: ['employee'] },
+    supervisor: { id: 'user-supervisor-001', name: 'Sarah Supervisor',  email: 'supervisor@example.com',  roles: ['supervisor','employee'] },
+    admin:      { id: 'user-admin-001',      name: 'Alex Admin',        email: 'admin@example.com',       roles: ['admin','supervisor','employee'] }
+  };
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; persist(); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var defaults = {
+        adminRoles: 'admin',
+        supervisorRoles: 'editor',
+        defaultScheduleStart: '10:00',
+        defaultScheduleEnd: '17:30',
+        defaultWorkDays: 'Monday,Tuesday,Wednesday,Thursday,Friday',
+        escalationThreshold: '3',
+        supervisorVarianceThreshold: '20',
+        hourlyRate: '17.40'
+      };
+      if (fallback !== undefined) return fallback;
+      return defaults[name] !== undefined ? defaults[name] : '';
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3182ce', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity]||'#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    reportMissingParams: function(missing, msg) { console.log('[reportMissingParams]', msg, missing); },
+    openUrl: function(url) { window.open(url, '_blank'); },
+    requestExportPdf: function(opts, cb) { cb('PDF export not available in test harness', null); },
+    requestUpload: function(accept, cb) { cb('Upload not available in test harness', null); },
+    requestFileContent: function(url, cb) { cb('File content not available in test harness', null); },
+    requestAI: function(prompt, context, cb) { cb('AI not available in test harness', null); },
+    requestSendEmail: function(opts, cb) { cb('Email not available in test harness', null); },
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function(cb) {},
+    onReady: function(cb) { setTimeout(function() { cb(_value, _fields); }, 20); },
+
+    requestObjects: function(action, params, cb) {
+      var type = params.mainObjectType;
+      if (!_storage[type]) _storage[type] = [];
+      var coll = _storage[type];
+
+      if (action === 'query') {
+        setTimeout(function() { cb(null, { objects: coll.slice() }); }, 100);
+      } else if (action === 'get') {
+        var obj = coll.filter(function(o) { return o.id === params.objectId || o._id === params.objectId; })[0] || null;
+        setTimeout(function() { cb(null, { object: obj }); }, 50);
+      } else if (action === 'create') {
+        var newObj = {
+          id: 'obj-' + Date.now() + '-' + Math.random().toString(36).substr(2,6),
+          _id: 'obj-' + Date.now() + '-' + Math.random().toString(36).substr(2,6),
+          name: params.name || 'Untitled',
+          cmsObjectType: type,
+          typeId: params.typeId || 'default',
+          productData: params.productData || { data_categoriesBased: {} },
+          created: new Date().toISOString(),
+          updated: new Date().toISOString()
+        };
+        coll.push(newObj);
+        persist();
+        setTimeout(function() { cb(null, { object: newObj }); }, 100);
+      } else if (action === 'update') {
+        for (var i = 0; i < coll.length; i++) {
+          if (coll[i].id === params.objectId || coll[i]._id === params.objectId) {
+            if (params.productData && params.productData.data_categoriesBased) {
+              var existing = coll[i].productData.data_categoriesBased || {};
+              var updates = params.productData.data_categoriesBased;
+              for (var k in updates) { existing[k] = updates[k]; }
+              coll[i].productData.data_categoriesBased = existing;
+            }
+            if (params.name) coll[i].name = params.name;
+            coll[i].updated = new Date().toISOString();
+            break;
+          }
+        }
+        persist();
+        setTimeout(function() { cb(null, { ok: true }); }, 80);
+      } else if (action === 'delete') {
+        _storage[type] = coll.filter(function(o) { return o.id !== params.objectId && o._id !== params.objectId; });
+        persist();
+        setTimeout(function() { cb(null, { ok: true }); }, 80);
+      } else if (action === 'batch') {
+        cb('Batch not implemented in test harness', null);
+      } else {
+        cb('Unknown action: ' + action, null);
+      }
+    },
+
+    _switchRole: function(roleKey) {
+      _user = ROLE_USERS[roleKey] || ROLE_USERS.employee;
+      listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+      tool.notify('Switched to: ' + _user.name + ' (' + roleKey + ')', 'info');
+    },
+    _toggleReadOnly: function() {
+      _readOnly = !_readOnly;
+      listeners.readonlyChange.forEach(function(cb) { try { cb(_readOnly); } catch(e) {} });
+      tool.notify(_readOnly ? 'READ-ONLY mode' : 'EDIT mode', 'info');
+    },
+    _clearData: function() { _storage = {}; _value = null; localStorage.removeItem(STORAGE_KEY); },
+    _dump: function() { console.log('Storage:', JSON.parse(JSON.stringify(_storage))); console.log('Value:', JSON.parse(JSON.stringify(_value))); },
+    _getStorage: function() { return _storage; },
+    _addSampleData: function() {
+      var REQ = 'staffPermitRequests-uniconbaseapps';
+      var EMP = 'staffPermitEmployees-uniconbaseapps';
+      if (!_storage[REQ]) _storage[REQ] = [];
+      if (!_storage[EMP]) _storage[EMP] = [];
+      _storage[EMP].push(
+        { id: 'emp-001', _id: 'emp-001', name: 'Jane Employee', cmsObjectType: EMP, typeId: 'default', productData: { data_categoriesBased: { userId: 'user-employee-001', email: 'employee@example.com', startTime: '09:00', endTime: '16:30', workDays: ['Monday','Tuesday','Wednesday','Thursday','Friday'], team: 'Youth Program A', supervisor: 'Sarah Supervisor', period: 'Summer 2026' } }, created: '2026-06-01T00:00:00Z', updated: '2026-06-01T00:00:00Z' },
+        { id: 'emp-002', _id: 'emp-002', name: 'John Worker', cmsObjectType: EMP, typeId: 'default', productData: { data_categoriesBased: { userId: 'user-employee-002', email: 'john@example.com', startTime: '09:00', endTime: '16:30', workDays: ['Monday','Tuesday','Wednesday','Thursday','Friday'], team: 'Youth Program A', supervisor: 'Sarah Supervisor', period: 'Summer 2026' } }, created: '2026-06-01T00:00:00Z', updated: '2026-06-01T00:00:00Z' }
+      );
+      _storage[REQ].push(
+        { id: 'req-001', _id: 'req-001', name: 'Jane - Late Arrival - 2026-07-15', cmsObjectType: REQ, typeId: 'default', productData: { data_categoriesBased: { requestType: 'lateArrival', requestDate: '2026-07-15', reason: 'medical', explanation: 'Doctor appointment at 8 AM', status: 'approved', employeeId: 'user-employee-001', employeeName: 'Jane Employee', employeeEmail: 'employee@example.com', employeeTeam: 'Youth Program A', employeeSupervisor: 'Sarah Supervisor', originalStart: '09:00', originalEnd: '16:30', requestedStart: '11:00', requestedEnd: '16:30', decision: 'Approved', decisionComment: 'Approved for medical appointment. Please provide doctor note.', paymentTreatment: 'unpaid', scheduleChange: 'no', reviewedBy: 'Sarah Supervisor', reviewedAt: '2026-07-14T10:00:00Z' } }, created: '2026-07-14T08:00:00Z', updated: '2026-07-14T10:00:00Z' },
+        { id: 'req-002', _id: 'req-002', name: 'John - Absence - 2026-07-18', cmsObjectType: REQ, typeId: 'default', productData: { data_categoriesBased: { requestType: 'absenceFullDay', requestDate: '2026-07-18', reason: 'family', explanation: 'Family obligation', status: 'pending', employeeId: 'user-employee-002', employeeName: 'John Worker', employeeEmail: 'john@example.com', employeeTeam: 'Youth Program A', employeeSupervisor: 'Sarah Supervisor', originalStart: '09:00', originalEnd: '16:30', requestedStart: '', requestedEnd: '', decision: '', decisionComment: '', paymentTreatment: '', scheduleChange: 'no', reviewedBy: '', reviewedAt: '' } }, created: '2026-07-18T07:00:00Z', updated: '2026-07-18T07:00:00Z' },
+        { id: 'req-003', _id: 'req-003', name: 'Jane - Early Departure - 2026-07-20', cmsObjectType: REQ, typeId: 'default', productData: { data_categoriesBased: { requestType: 'earlyDeparture', requestDate: '2026-07-20', reason: 'personal', explanation: 'Personal appointment at 3 PM', status: 'denied', employeeId: 'user-employee-001', employeeName: 'Jane Employee', employeeEmail: 'employee@example.com', employeeTeam: 'Youth Program A', employeeSupervisor: 'Sarah Supervisor', originalStart: '09:00', originalEnd: '16:30', requestedStart: '09:00', requestedEnd: '14:30', decision: 'Denied', decisionComment: 'Operational needs require full staffing.', denialReason: 'Operational requirements', paymentTreatment: '', scheduleChange: 'no', reviewedBy: 'Sarah Supervisor', reviewedAt: '2026-07-19T14:00:00Z' } }, created: '2026-07-19T09:00:00Z', updated: '2026-07-19T14:00:00Z' }
+      );
+      persist();
+      tool.notify('Sample data loaded! 2 employees, 3 requests.', 'success');
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('State dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+   EMBEDDED HTML — No fetch() needed, works with file://
+   ═══════════════════════════════════════════════════════ -->
+<script>
+const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<!-- ── Navigation ── -->
+<nav class="spm-nav" id="spmNav">
+  <div class="spm-nav-brand">
+    <i class="fa-solid fa-id-card-clip"></i>
+    <span>Staff Permit Manager</span>
+  </div>
+  <div class="spm-nav-tabs" id="navTabs">
+    <button class="spm-nav-tab active" data-view="dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+    <button class="spm-nav-tab" data-view="mySchedule"><i class="fa-solid fa-calendar-days"></i> My Schedule</button>
+    <button class="spm-nav-tab" data-view="newRequest"><i class="fa-solid fa-file-pen"></i> New Request</button>
+    <button class="spm-nav-tab" data-view="requestHistory"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+    <button class="spm-nav-tab spm-nav-tab-supervisor" data-view="reviewQueue" style="display:none"><i class="fa-solid fa-clipboard-check"></i> Review</button>
+    <button class="spm-nav-tab spm-nav-tab-admin" data-view="adminConsole" style="display:none"><i class="fa-solid fa-shield-halved"></i> Admin</button>
+    <button class="spm-nav-tab" data-view="policyCenter"><i class="fa-solid fa-file-signature"></i> Policies</button>
+    <button class="spm-nav-tab" data-view="reports"><i class="fa-solid fa-chart-bar"></i> Reports</button>
+  </div>
+  <div class="spm-nav-user" id="navUser">
+    <span id="navUserName"></span>
+    <span class="spm-role-badge" id="navRoleBadge"></span>
+  </div>
+</nav>
+
+<!-- ── Dashboard View ── -->
+<div class="spm-view active" id="view-dashboard">
+  <div class="spm-dash-grid">
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-clock"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statPending">0</div>
+        <div class="spm-stat-label">Pending Requests</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statApproved">0</div>
+        <div class="spm-stat-label">Approved This Month</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statDenied">0</div>
+        <div class="spm-stat-label">Denied This Month</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="statEscalated">0</div>
+        <div class="spm-stat-label">Escalated</div>
+      </div>
+    </div>
+  </div>
+  <div class="spm-card" id="dashQuickActions">
+    <h3 class="spm-card-title"><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+    <div class="spm-quick-actions">
+      <button class="spm-btn spm-btn-primary" onclick="switchView('newRequest')"><i class="fa-solid fa-plus"></i> Submit New Request</button>
+      <button class="spm-btn spm-btn-outline" onclick="switchView('mySchedule')"><i class="fa-solid fa-calendar-days"></i> View My Schedule</button>
+      <button class="spm-btn spm-btn-outline" onclick="switchView('policyCenter')"><i class="fa-solid fa-file-signature"></i> Review Policies</button>
+    </div>
+  </div>
+  <div class="spm-card" id="dashRecentActivity">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-ul"></i> Recent Activity</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Status</th><th>Decision</th><th>Actions</th></tr></thead>
+        <tbody id="dashRecentTbody"><tr><td colspan="5" class="spm-empty">No recent activity</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── My Schedule View ── -->
+<div class="spm-view" id="view-mySchedule">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-calendar-days"></i> My Regular Schedule</h3>
+    <div class="spm-schedule-display" id="scheduleDisplay">
+      <p class="spm-empty">No schedule configured. Contact your supervisor or administrator.</p>
+    </div>
+  </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-calendar-check"></i> Approved Exceptions (This Month)</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Original</th><th>Approved</th><th>Payment</th></tr></thead>
+        <tbody id="scheduleExceptionsTbody"><tr><td colspan="5" class="spm-empty">No approved exceptions this month</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Request View ── -->
+<div class="spm-view" id="view-newRequest">
+  <div class="spm-card spm-form-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-file-pen"></i> Submit Permission Request</h3>
+    <div class="spm-form-notice">
+      <i class="fa-solid fa-circle-info"></i>
+      <span>All schedule changes must be requested <strong>before</strong> the change occurs. This is a one-time exception request — it does not change your regular schedule.</span>
+    </div>
+
+    <div class="spm-form-group">
+      <label class="spm-label">Request Type <span class="spm-required">*</span></label>
+      <select class="spm-select" id="reqType">
+        <option value="">— Select Request Type —</option>
+        <option value="lateArrival">Late Arrival</option>
+        <option value="earlyDeparture">Early Departure</option>
+        <option value="absenceFullDay">Absence – Full Day</option>
+        <option value="absencePartialDay">Absence – Partial Day</option>
+        <option value="scheduleAdjustment">Schedule Adjustment</option>
+        <option value="emergency">Emergency Situation</option>
+        <option value="medicalAppointment">Medical Appointment</option>
+        <option value="familyResponsibility">Family Responsibility</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <div class="spm-form-row">
+      <div class="spm-form-group">
+        <label class="spm-label">Requested Date <span class="spm-required">*</span></label>
+        <input type="date" class="spm-input" id="reqDate">
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label">Reason <span class="spm-required">*</span></label>
+        <select class="spm-select" id="reqReason">
+          <option value="">— Select Reason —</option>
+          <option value="medical">Medical Appointment</option>
+          <option value="family">Family Obligation</option>
+          <option value="transportation">Transportation Issue</option>
+          <option value="emergency">Emergency</option>
+          <option value="personal">Personal Appointment</option>
+          <option value="religious">Religious Obligation</option>
+          <option value="school">School Obligation</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="spm-form-group" id="currentScheduleGroup">
+      <label class="spm-label">Current Schedule</label>
+      <div class="spm-schedule-readonly" id="currentScheduleDisplay">
+        <span class="spm-muted">Loading your schedule...</span>
+      </div>
+    </div>
+
+    <div class="spm-form-row" id="requestedTimeRow">
+      <div class="spm-form-group">
+        <label class="spm-label">Requested Start Time <span class="spm-required">*</span></label>
+        <input type="time" class="spm-input" id="reqStartTime">
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label">Requested End Time <span class="spm-required">*</span></label>
+        <input type="time" class="spm-input" id="reqEndTime">
+      </div>
+    </div>
+
+    <div class="spm-form-group">
+      <label class="spm-label">Additional Explanation</label>
+      <textarea class="spm-textarea" id="reqExplanation" rows="3" placeholder="Provide any additional details to help your supervisor understand your situation..."></textarea>
+    </div>
+
+    <div class="spm-confirmation-box">
+      <h4><i class="fa-solid fa-check-double"></i> Important Confirmations</h4>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I understand that approval is required <strong>before</strong> changing my schedule.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that approved time away from work may be <strong>unpaid</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that working additional hours later is <strong>not automatically approved</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I understand that my <strong>regular schedule remains unchanged</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that <strong>repeated requests</strong> may not be approved.</label>
+    </div>
+
+    <div class="spm-approval-note">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div>
+        <strong>Reminder:</strong> Employees are expected to follow their assigned schedule. Additional hours after regular work time are not automatically accepted as replacement for missed scheduled hours.
+      </div>
+    </div>
+
+    <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="submitRequest()" id="btnSubmitRequest">
+      <i class="fa-solid fa-paper-plane"></i> Submit Request
+    </button>
+    <div class="spm-form-error" id="submitError" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ── Request History View ── -->
+<div class="spm-view" id="view-requestHistory">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-clock-rotate-left"></i> My Request History</h3>
+    <div class="spm-filter-bar">
+      <select class="spm-select spm-select-sm" id="historyFilter">
+        <option value="all">All Requests</option>
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="denied">Denied</option>
+        <option value="escalated">Escalated</option>
+      </select>
+    </div>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Decision</th><th>Details</th></tr></thead>
+        <tbody id="historyTbody"><tr><td colspan="6" class="spm-empty">No requests found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Review Queue View (Supervisor) ── -->
+<div class="spm-view" id="view-reviewQueue">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-clipboard-check"></i> Pending Review Queue</h3>
+    <div id="reviewList"></div>
+  </div>
+</div>
+
+<!-- ── Admin Console View ── -->
+<div class="spm-view" id="view-adminConsole">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-shield-halved"></i> Supervisor Consistency Dashboard</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Supervisor</th><th>Total</th><th>Approved</th><th>Denied</th><th>Rate</th><th>Avg Time</th><th>Status</th></tr></thead>
+        <tbody id="adminConsistencyTbody"><tr><td colspan="7" class="spm-empty">No data available</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="spm-card" id="adminAllRequests">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-check"></i> All Requests</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Employee</th><th>Date</th><th>Type</th><th>Status</th><th>Supervisor</th><th>Actions</th></tr></thead>
+        <tbody id="adminAllTbody"><tr><td colspan="6" class="spm-empty">No requests found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="spm-card" id="adminFlaggedSection" style="display:none">
+    <h3 class="spm-card-title"><i class="fa-solid fa-flag"></i> Flagged Items</h3>
+    <div id="adminFlaggedList"></div>
+  </div>
+</div>
+
+<!-- ── Policy Center View ── -->
+<div class="spm-view" id="view-policyCenter">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-file-signature"></i> Policy Acceptance</h3>
+    <div id="policyContent">
+      <div class="spm-policy-section">
+        <h4><i class="fa-solid fa-user-graduate"></i> Employee Attendance Policy</h4>
+        <div class="spm-policy-text">
+          <p><strong>Schedule Expectations:</strong> Employees are expected to follow their assigned work schedule. Your regular schedule defines your working days, start time, and end time.</p>
+          <p><strong>Punctuality:</strong> Arrive on time for every scheduled shift. Late arrivals must be communicated to your supervisor as early as possible.</p>
+          <p><strong>Communication:</strong> Any schedule changes must be requested through the formal permission system before the change occurs. Verbal approvals are not valid.</p>
+          <p><strong>Permission Process:</strong> Submit a request through this system. Your supervisor will review and provide a formal decision. You will be notified of the outcome.</p>
+          <p><strong>Unpaid Approved Absence:</strong> Time away from work that is approved but not worked is generally unpaid unless your supervisor explicitly approves paid status.</p>
+          <p><strong>No Guaranteed Make-Up Hours:</strong> Working additional hours outside your regular schedule to "make up" for missed time is not automatically permitted and requires separate approval.</p>
+          <p><strong>Repeated Requests:</strong> Frequent schedule change requests may trigger additional review to ensure fairness and operational consistency.</p>
+          <p><strong>Educational Sessions:</strong> Required training and educational sessions cannot be missed without explicit administrator approval.</p>
+        </div>
+      </div>
+      <div class="spm-policy-section spm-policy-supervisor" id="policySupervisorSection" style="display:none">
+        <h4><i class="fa-solid fa-user-tie"></i> Supervisor Management Policy</h4>
+        <div class="spm-policy-text">
+          <p><strong>Consistency Requirement:</strong> All employees must be treated fairly and consistently. Apply the same standards to every team member.</p>
+          <p><strong>Documentation Requirement:</strong> Every decision must be documented with reasons. No informal or verbal exceptions.</p>
+          <p><strong>Fair Treatment:</strong> Do not create different rules for different employees. All schedule exceptions follow the same process.</p>
+          <p><strong>No Unofficial Exceptions:</strong> All schedule changes must go through this formal system. Side agreements are not permitted.</p>
+          <p><strong>Escalation Requirements:</strong> Escalate when: an employee has more than 3 requests in 30 days, requests affect educational sessions, or a pattern of repeated late arrivals emerges.</p>
+          <p><strong>Payment Decisions:</strong> Clearly indicate whether approved time is paid or unpaid. Default is unpaid for time not worked.</p>
+        </div>
+      </div>
+      <div id="policyAcceptanceStatus" class="spm-policy-status"></div>
+      <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="acceptPolicy('employee')" id="btnAcceptEmployeePolicy">
+        <i class="fa-solid fa-check"></i> I Have Read and Accept the Employee Attendance Policy
+      </button>
+      <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="acceptPolicy('supervisor')" id="btnAcceptSupervisorPolicy" style="display:none">
+        <i class="fa-solid fa-check"></i> I Have Read and Accept the Supervisor Management Policy
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reports View ── -->
+<div class="spm-view" id="view-reports">
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-chart-bar"></i> Reports</h3>
+    <div class="spm-report-tabs">
+      <button class="spm-btn spm-btn-outline active" data-report="attendance" onclick="showReport('attendance')">Attendance Report</button>
+      <button class="spm-btn spm-btn-outline" data-report="payroll" onclick="showReport('payroll')">Payroll Report</button>
+      <button class="spm-btn spm-btn-outline" data-report="grant" onclick="showReport('grant')">CSJ Grant Support</button>
+    </div>
+    <div class="spm-report-content" id="reportContent">
+      <p class="spm-empty">Select a report type above to generate.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── Detail Modal ── -->
+<div class="spm-modal-overlay" id="detailModal" style="display:none">
+  <div class="spm-modal">
+    <div class="spm-modal-header">
+      <h3 id="detailModalTitle">Request Details</h3>
+      <button class="spm-modal-close" onclick="closeModal('detailModal')">&times;</button>
+    </div>
+    <div class="spm-modal-body" id="detailModalBody"></div>
+    <div class="spm-modal-footer" id="detailModalFooter"></div>
+  </div>
+</div>
+
+<!-- ── Toast Container ── -->
+<div class="spm-toast-container" id="toastContainer"></div>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   INITIALIZATION — try loading real HTML first (HTTP),
+   fall back to EMBEDDED_HTML (file://). JS null guards
+   prevent crashes with stale embedded HTML.
+   ═══════════════════════════════════════════════════════ */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function injectAndLoadJS(html) {
+    container.innerHTML = html;
+    // Load JS component — DOM must exist first
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'StaffPermitManagement.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  // Load HTML: use fetch when on HTTP, embedded fallback on file://
+  var isFileProtocol = window.location.protocol === 'file:';
+  status.textContent = isFileProtocol ? 'file:// mode — using embedded HTML' : 'Loading HTML...';
+
+  if (!isFileProtocol) {
+    fetch('StaffPermitManagement.html')
+      .then(function(r) { return r.text(); })
+      .then(function(html) { injectAndLoadJS(html); })
+      .catch(function() { injectAndLoadJS(EMBEDDED_HTML); });
+  } else {
+    injectAndLoadJS(EMBEDDED_HTML);
+  }
+
+  // Harness controls
+  document.getElementById('th-role').addEventListener('change', function() {
+    window.tool._switchRole(this.value);
+  });
+  document.getElementById('th-sample').addEventListener('click', function() {
+    window.tool._addSampleData();
+    location.reload();
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear all data? This cannot be undone.')) {
+      window.tool._clearData();
+      location.reload();
+    }
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    location.reload();
+  });
+})();
+</script>
+
+</body>
+</html>

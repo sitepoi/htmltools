@@ -1,3 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VibeCoding HTML App Builder — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="VibeCodingHTMLAppBuilder.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — VibeCoding HTML App Builder</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Config</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<!-- TOOL HTML INLINED -->
+<div id="app">
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">🛠️</div>
+      <div class="header-title">
+        <h1>VibeCoding HTML App Builder</h1>
+        <span class="header-sub">Agentic • AI-Powered • Chat-Driven</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Tool Configuration">⚙️ Config</button>
+      <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
+      <button class="btn btn-sm btn-ghost" id="btn-rules" title="View html-tool-rules">📜 Rules</button>
+      <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
+    </div>
+  </header>
+  <div class="main-layout">
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-panel-header"><span class="chat-panel-title">💬 Chat</span><span class="chat-panel-badge" id="chat-msg-count">0</span></div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome"><div class="chat-welcome-icon">👋</div><h3>Welcome to VibeCoding</h3><p>Configure your tool using the <b>⚙️ Config</b> button above, then ask me to generate it.</p><p class="chat-examples"><span>Quick start:</span><code>"Build an invoice manager with dashboard"</code><code>"Create a task tracker with kanban board"</code><code>"Make an employee onboarding form"</code></p></div>
+      </div>
+      <div class="chat-attachment" id="chat-attachment" style="display:none">
+        <span class="attach-icon">📎</span>
+        <span class="attach-name" id="attach-name"></span>
+        <span class="attach-size" id="attach-size"></span>
+        <button class="attach-remove" id="attach-remove" title="Remove attachment">✕</button>
+        <span class="attach-status" id="attach-status"></span>
+      </div>
+      <div class="chat-input-area">
+        <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a file (design mockup, spec doc, etc.)">📎</button>
+        <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+        <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+      </div>
+    </aside>
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="html">📄 HTML</button>
+        <button class="ctab" data-tab="css">🎨 CSS</button>
+        <button class="ctab" data-tab="js">⚡ JavaScript</button>
+        <button class="ctab" data-tab="preview">👁️ Preview</button>
+        <button class="ctab ctab-config" data-tab="config" id="tab-config">⚙️ Config</button>
+        <div class="content-actions">
+          <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-all" title="Copy All">📋 All</button>
+          <button class="btn btn-sm btn-ghost" id="btn-download" title="Download">💾</button>
+        </div>
+      </div>
+      <div class="content-editors">
+        <div class="content-editor active" id="editor-html"><div class="code-lines" id="html-lines"></div><textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here..." spellcheck="false"></textarea></div>
+        <div class="content-editor" id="editor-css"><div class="code-lines" id="css-lines"></div><textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here..." spellcheck="false"></textarea></div>
+        <div class="content-editor" id="editor-js"><div class="code-lines" id="js-lines"></div><textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here..." spellcheck="false"></textarea></div>
+        <div class="content-editor" id="editor-preview"><div class="preview-frame-wrap"><iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads allow-popups"></iframe></div><div class="preview-empty" id="preview-empty"><div class="empty-icon">👁️</div><p>Generate code first to see a live preview</p></div></div>
+        <div class="content-editor" id="editor-config"><div class="config-scroll">
+          <div class="config-header"><h2>⚙️ Tool Configuration</h2><p>Define your tool's purpose, data model, features, and design.</p></div>
+          <div class="config-section"><h3>🎯 Purpose</h3>
+            <div class="form-group"><label class="form-label">Tool Name <span class="req">*</span></label><input type="text" id="f-tool-name" class="form-input" placeholder="e.g. Invoice Manager..."></div>
+            <div class="form-group"><label class="form-label">Short Description</label><textarea id="f-tool-desc" class="form-input form-textarea" rows="2" placeholder="A one-line summary..."></textarea></div>
+            <div class="form-group"><label class="form-label">Detailed Requirements</label><textarea id="f-tool-requirements" class="form-input form-textarea" rows="4" placeholder="Describe in detail what the tool should do..."></textarea></div>
+            <div class="form-group"><label class="form-label">Target Audience</label><select id="f-audience" class="form-input"><option value="admin">Administrators</option><option value="employee">Employees</option><option value="manager">Managers</option><option value="customer">Customers</option><option value="general">General</option></select></div>
+          </div>
+          <div class="config-section"><h3>🗄️ Data Model</h3>
+            <div class="form-group"><label class="form-label">Storage</label><div class="radio-group"><label class="radio-item"><input type="radio" name="storage" value="value" checked> <span>tool.setValue() only</span></label><label class="radio-item"><input type="radio" name="storage" value="crud"> <span>tool.requestObjects() CRUD</span></label><label class="radio-item"><input type="radio" name="storage" value="both"> <span>Both</span></label></div></div>
+            <div id="crud-section" style="display:none"><div class="form-group"><label class="form-label">CMS Types</label><textarea id="f-cms-types" class="form-input form-textarea" rows="2" placeholder="typeName-uniconbaseapps | Name | shared"></textarea></div><div class="form-group"><label class="form-label">Fields</label><textarea id="f-cms-fields" class="form-input form-textarea" rows="3" placeholder="fieldId | type | Label"></textarea></div></div>
+            <div class="form-group"><label class="form-label">Sibling fields?</label><select id="f-sibling-fields" class="form-input"><option value="no">No</option><option value="yes">Yes</option></select></div>
+          </div>
+          <div class="config-section"><h3>⚡ SDK Features</h3>
+            <div class="feature-grid">
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="ai" checked><div class="feat-icon">🤖</div><div class="feat-name">AI Relay</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="upload"><div class="feat-icon">📤</div><div class="feat-name">Upload</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="fileContent"><div class="feat-icon">📄</div><div class="feat-name">File Extract</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="exportPdf"><div class="feat-icon">🖨️</div><div class="feat-name">PDF Export</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="sendEmail"><div class="feat-icon">✉️</div><div class="feat-name">Email</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="crud"><div class="feat-icon">🗄️</div><div class="feat-name">CRUD</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="user"><div class="feat-icon">👤</div><div class="feat-name">User</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="params"><div class="feat-icon">⚙️</div><div class="feat-name">Params</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="notifications"><div class="feat-icon">🔔</div><div class="feat-name">Notify</div></label>
+              <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="validation"><div class="feat-icon">✅</div><div class="feat-name">Validate</div></label>
+            </div>
+          </div>
+          <div class="config-actions"><button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Tool</button><p class="gen-hint">Or type in <b>💬 Chat</b> on the left.</p></div>
+          <div id="gen-status" class="gen-status" style="display:none"><div class="gen-status-icon">⏳</div><div class="gen-status-text" id="gen-status-text">Generating...</div><div class="progress-bar"><div class="progress-fill" id="gen-progress"></div></div></div>
+        </div></div>
+      </div>
+    </main>
+  </div>
+  <div class="modal-backdrop" id="modal-backdrop" hidden></div>
+  <div class="modal" id="modal-history" style="display:none"><div class="modal-header"><h3>📋 History</h3><button class="btn-close" id="btn-close-history">✕</button></div><div class="modal-body" id="history-list"><div class="empty-state">No generations yet.</div></div></div>
+  <div class="modal" id="modal-rules" style="display:none"><div class="modal-header"><h3>📜 Rules</h3><button class="btn-close" id="btn-close-rules">✕</button></div><div class="modal-body rules-body" id="rules-body"></div></div>
+  <!-- EMBEDDED FULL HTML-TOOL-RULES (verbatim, 773 lines) -->
+  <script type="text/plain" id="html-rules-source" style="display:none">
 You are building a custom interactive tool for the Uniconhub CMS html-tool system.
 The tool runs inside a sandboxed iframe. Your output must be exactly THREE separate
 code blocks, labeled and ordered as shown:
@@ -287,47 +418,6 @@ Example:
       if (err) { tool.notify('AI error: ' + err, 'warning') }
       if (response) showSummary(response)
     })
-
-── AI Streaming Relay (★ Live token-by-token) ─────────
-tool.requestAIStream(prompt, context, callbacks)
-
-Sends a prompt to the CMS AI service and receives tokens in real-time as the
-AI generates them — exactly like Copilot Chat.  Use this for "thinking bubble"
-UIs, live typewriter effects, or progressive rendering.
-
-  • prompt    — string, the main prompt/question to send
-  • context   — string (optional), supporting background information
-  • callbacks — object with optional handlers:
-      onToken(token)       — called for EACH text chunk as it arrives from the AI.
-                              `token` is a short string (typically a few chars to
-                              a few words).  Append it to your streaming display.
-      onComplete(fullText) — called when the stream finishes successfully.
-                              `fullText` is the complete accumulated response.
-      onError(error)       — called on failure.  `error` is a string describing
-                              the problem (network error, timeout, permission denied).
-
-Limits: Same prompt limits as requestAI (100K chars, 60s timeout).
-        No concurrency queue — each call is independent.
-        The CMS parent sends ai-stream-start first, then ai-stream-token for each
-        chunk, then ai-stream-end on completion, or ai-stream-error on failure.
-Requires: allowAi: 'yes' in toolParams.
-
-Example (live typewriter in a thinking bubble):
-  tool.requestAIStream('Generate a project summary', projectContext, {
-    onToken: function(token) {
-      // Append each token to a live-display element
-      var el = document.getElementById('stream-output')
-      el.textContent += token
-      el.scrollTop = el.scrollHeight
-    },
-    onComplete: function(fullText) {
-      tool.notify('AI response complete', 'success')
-      processResponse(fullText)
-    },
-    onError: function(err) {
-      tool.notify('AI stream error: ' + err, 'error')
-    }
-  })
 
 ── File Upload ────────────────────────────────────────
 tool.requestUpload(accept, callback)
@@ -813,3 +903,110 @@ HARD RULES
    PDF via browser Print → Save as PDF. Use attachments: [] in
    requestSendEmail to attach exported files to emails.
 ✓  Always produce complete, functional code — no placeholders, no TODO comments.
+</script>
+
+  <div class="toast-container" id="toast-container"></div>
+</div>
+
+<!-- MOCK SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'vibecoding_app_builder_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch(e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch(e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch(e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, _fields); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return _fields; },
+    setField: function(id, val) { _fields[id] = val; fire('fieldsChange', _fields); },
+    setFields: function(obj) { Object.assign(_fields, obj); fire('fieldsChange', _fields); },
+    watchField: function() {},
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, def) { return def; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) { console.log('NOTIFY [' + (sev||'info') + ']:', msg); },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    declareOutput: function(s) { console.log('declareOutput:', s); },
+    declareParams: function(p) { console.log('declareParams:', p); },
+    reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function(prompt, context, callback) {
+      console.log('AI REQUEST — prompt length:', prompt.length);
+      setTimeout(function() { callback(null, generateMockResponse(prompt)); }, 1200);
+    },
+    requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'test.pdf', url: 'https://example.com/test.pdf', size: 1024, type: 'application/pdf' }); }, 500); },
+    requestObjects: function(action, params, cb) {
+      if (action === 'query') setTimeout(function() { cb(null, { objects: [] }); }, 300);
+      else if (action === 'get') setTimeout(function() { cb(null, { object: null }); }, 300);
+      else if (action === 'create') setTimeout(function() { cb(null, { object: { id: 'n-' + Date.now().toString(36), name: params.name, productData: params.productData } }); }, 300);
+      else setTimeout(function() { cb(null, { ok: true }); }, 300);
+    },
+    requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename||'export')+'.html', url: 'https://example.com/export.html', size: 2048, type: 'text/html' }); }, 500); },
+    requestSendEmail: function(opts, cb) { setTimeout(function() { cb(null, { ok: true }); }, 500); },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock content from ' + url); }, 500); }
+  };
+
+  function generateMockResponse(prompt) {
+    var isChat = prompt.indexOf('USER REQUEST') !== -1;
+    if (isChat) {
+      var userReq = (prompt.substring(prompt.indexOf('USER REQUEST') + 14) || '').split('\n')[0].trim().substring(0, 200);
+      return 'Got it! Here\'s the updated tool with your requested change:\n\n[HTML]\n<div id="app">\n  <header class="app-header">\n    <h1>Refined Tool</h1>\n    <p>Updated per: "' + userReq + '"</p>\n  </header>\n  <main class="main-content">\n    <section class="card"><h2>Updated Section</h2><p>This has been refined based on your chat request.</p></section>\n    <section class="card"><h2>Data</h2><table class="data-table"><thead><tr><th>#</th><th>Name</th><th>Status</th></tr></thead><tbody id="table-body"><tr><td colspan="3" class="empty">No data yet</td></tr></tbody></table><button class="btn btn-primary" id="btn-add">+ Add</button></section>\n  </main>\n</div>\n\n[CSS]\n:root { --bg: #f8fafc; --text: #0f172a; --accent: #0d9488; --border: #e2e8f0; --radius: 8px; }\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }\n#app { max-width: 900px; margin: 0 auto; padding: 24px; }\n.app-header { text-align: center; margin-bottom: 24px; }\n.card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }\n.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }\n.data-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border); }\n.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }\n.data-table .empty { text-align: center; color: #94a3b8; padding: 20px; }\n.btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }\n.btn-primary { background: var(--accent); color: #fff; }\n\n[JS]\nvar DB = { items: [] };\nfunction el(id) { return document.getElementById(id); }\nfunction qsa(sel) { return document.querySelectorAll(sel); }\nfunction persist() { tool.setValue(DB); }\nfunction renderTable() {\n  var tbody = el("table-body"); if (!tbody) return;\n  if (!DB.items.length) { tbody.innerHTML = \'<tr><td colspan="3" class="empty">No data yet</td></tr>\'; return; }\n  tbody.innerHTML = DB.items.map(function(item, i) { return "<tr><td>" + (i+1) + "</td><td>" + item.name + "</td><td>" + item.status + "</td></tr>"; }).join("");\n}\ntool.onReady(function(val) {\n  if (val && val.items) DB = val;\n  renderTable();\n  el("btn-add").onclick = function() {\n    var name = prompt("Item name:");\n    if (name) { DB.items.push({ name: name, status: "active" }); renderTable(); persist(); }\n  };\n  if (tool.isReadOnly()) document.body.classList.add("readonly");\n  tool.resize();\n});\ntool.onValueChange(function(v) { if (v && v.items) { DB = v; renderTable(); } });\ntool.onReadonlyChange(function(ro) { document.body.classList.toggle("readonly", ro); });';
+    }
+    // Full generation
+    return '[HTML]\n<div id="app">\n  <header class="app-header"><h1>Generated Tool</h1><p>Mock-generated — replace with real AI.</p></header>\n  <main class="main-content">\n    <section class="card"><h2>Welcome</h2><p>Your tool content here.</p></section>\n  </main>\n</div>\n\n[CSS]\n:root { --bg: #f8fafc; --text: #0f172a; --accent: #0d9488; --border: #e2e8f0; --radius: 8px; }\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }\n#app { max-width: 800px; margin: 0 auto; padding: 24px; }\n.app-header { text-align: center; margin-bottom: 24px; }\n.card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }\n\n[JS]\nvar DB = {};\nfunction persist() { tool.setValue(DB); }\ntool.onReady(function(val) { if (val) DB = val; if (tool.isReadOnly()) document.body.classList.add("readonly"); tool.resize(); });\ntool.onValueChange(function(v) { if (v) DB = v; });\ntool.onReadonlyChange(function(ro) { document.body.classList.toggle("readonly", ro); });';
+  }
+
+  window._toolMock = {
+    setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); updateStatus(); },
+    setUser: function(u) { _user = u; fire('userChange', u); },
+    setFields: function(f) { Object.assign(_fields, f); fire('fieldsChange', _fields); },
+    getValue: function() { return _value; },
+    clear: function() { _value = null; save(); fire('valueChange', null); location.reload(); }
+  };
+  function updateStatus() { var st = document.getElementById('th-status'); if (st) st.textContent = _readOnly ? 'READ-ONLY' : 'Ready'; }
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="VibeCodingHTMLAppBuilder.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function() {
+  var thStatus = document.getElementById('th-status');
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool.setValue({
+      toolName: 'Invoice Manager', toolDesc: 'Create, track, and manage invoices',
+      requirements: 'Build an invoice management system with dashboard, CRUD, and PDF export.',
+      audience: 'admin', storage: 'crud',
+      cmsTypes: 'invoices-uniconbaseapps | Invoices | shared',
+      cmsFields: 'invoiceNumber | text | Invoice #\ncustomerName | text | Customer\nstatus | select | Status | draft,sent,paid\ntotalAmount | number | Total',
+      siblingFields: 'no',
+      features: ['ai', 'exportPdf', 'sendEmail', 'crud', 'user', 'notifications', 'validation'],
+      layout: 'dashboard', colorScheme: 'blue', themeSupport: 'both',
+      generated: { html: '', css: '', js: '' }, history: [], chatMessages: [], _theme: 'light'
+    });
+    if (thStatus) thStatus.textContent = 'Sample loaded! Open ⚙️ Config tab → Generate, or chat on the left.';
+  };
+  document.getElementById('th-clear').onclick = function() { if (confirm('Clear all?')) window._toolMock.clear(); };
+  document.getElementById('th-reload').onclick = function() { location.reload(); };
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); var m = window._toolMock; if (m) m.setReadOnly(!document.body.classList.contains('readonly')); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); console.log('=== DB ==='); console.log(JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2)); }
+  });
+})();
+</script>
+</body>
+</html>
