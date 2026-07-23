@@ -79,7 +79,9 @@ tool.declareParams([
   { name: 'defaultWorkDays', label: 'Default Work Days', type: 'text', default: 'Monday,Tuesday,Wednesday,Thursday,Friday', severity: 'goodToHave', hint: 'Comma-separated list of work days' },
   { name: 'escalationThreshold', label: 'Escalation Threshold', type: 'number', default: '3', severity: 'goodToHave', hint: 'Number of requests in 30 days that triggers auto-escalation' },
   { name: 'supervisorVarianceThreshold', label: 'Supervisor Variance Threshold', type: 'number', default: '20', severity: 'goodToHave', hint: 'Percentage point difference between supervisors that triggers a flag' },
-  { name: 'hourlyRate', label: 'Hourly Rate (CAD)', type: 'text', default: '17.40', severity: 'goodToHave', hint: 'Hourly wage rate used for payroll estimates. Default: 17.40' }
+  { name: 'hourlyRate', label: 'Hourly Rate (CAD)', type: 'text', default: '17.40', severity: 'goodToHave', hint: 'Hourly wage rate used for payroll estimates. Default: 17.40' },
+  { name: 'csjMinHours', label: 'CSJ Minimum Weekly Hours', type: 'number', default: '30', severity: 'mandatory', hint: 'Canada Summer Jobs minimum weekly hours for funding eligibility. Default: 30. Weeks below this threshold risk non-reimbursement.' },
+  { name: 'csjMaxHours', label: 'CSJ Maximum Weekly Hours', type: 'number', default: '40', severity: 'goodToHave', hint: 'CSJ maximum weekly hours. Default: 40.' }
 ]);
 
 tool.declareOutput({
@@ -510,6 +512,29 @@ function renderDashboard() {
     var supReqs = APP.allRequests;
     el('statPending').textContent = supReqs.filter(function(r) { return getRequestData(r).status === REQUEST_STATUS.PENDING; }).length;
   }
+
+  // CSJ Compliance — current week hours
+  var weekStart = getWeekStart();
+  var payable = getWeeklyPayableHours(weekStart);
+  var scheduled = getWeeklyScheduledHours();
+  var unpaid = getWeeklyUnpaidHours(weekStart);
+  var csjMin = getCSJMinHours();
+  var csjStatus = getCSJStatus(payable);
+
+  var csjEl = el('csjStatHours');
+  if (csjEl) csjEl.textContent = payable.toFixed(1) + 'h';
+  var csjStatusEl = el('csjStatStatus');
+  if (csjStatusEl) csjStatusEl.innerHTML = getCSJStatusLabel(csjStatus);
+  var csjSchedEl = el('csjStatScheduled');
+  if (csjSchedEl) csjSchedEl.textContent = scheduled.toFixed(1) + 'h';
+
+  // Color the CSJ stat card based on status
+  var csjCard = el('csjStatCard');
+  if (csjCard) {
+    if (csjStatus === 'danger') csjCard.style.borderLeft = '4px solid #dc2626';
+    else if (csjStatus === 'warning') csjCard.style.borderLeft = '4px solid #d97706';
+    else csjCard.style.borderLeft = '4px solid #16a34a';
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -664,6 +689,7 @@ function renderNewRequest() {
   safeChecked('confirm3', false);
   safeChecked('confirm4', false);
   safeChecked('confirm5', false);
+  safeChecked('confirm6', false);
   hide(el('submitError'));
   hide(el('oooFields'));
   hide(el('oooConfirmBox'));
@@ -802,11 +828,12 @@ function submitRequest() {
     el('confirm2').checked,
     el('confirm3').checked,
     el('confirm4').checked,
-    el('confirm5').checked
+    el('confirm5').checked,
+    el('confirm6') ? el('confirm6').checked : true
   ];
   var allChecked = confirmations.every(function(c) { return c; });
   if (!allChecked) {
-    showError('Please check ALL confirmation boxes before submitting.');
+    showError('Please check ALL confirmation boxes before submitting, including the CSJ Funding Rules acknowledgment.');
     return;
   }
 
@@ -835,6 +862,36 @@ function submitRequest() {
     oooDuration = oooDurEl ? oooDurEl.value : '';
     if (!oooLocation) { showError('Please enter the program name or off-site location.'); return; }
     if (!oooDuration) { showError('Please select the duration (full day, half day, or custom hours).'); return; }
+  }
+
+  // CSJ Compliance check — warn if this request risks dropping the week below 30h
+  var csjWarning = '';
+  if (reqType !== 'outOfOfficeWork') {
+    var reqWeekStart = getWeekStart(reqDate);
+    var currentUnpaid = getWeeklyUnpaidHours(reqWeekStart);
+    // Estimate the unpaid hours this new request would add (if approved as unpaid)
+    var estNewUnpaid = 0;
+    if (reqType === 'absenceFullDay') {
+      estNewUnpaid = getDailyScheduledHours();
+    } else if (reqType === 'lateArrival' && startTime) {
+      var origStart = sched ? sched.startTime : '';
+      estNewUnpaid = calcHours(origStart, startTime);
+    } else if (reqType === 'earlyDeparture' && endTime) {
+      var origEnd = sched ? sched.endTime : '';
+      estNewUnpaid = calcHours(endTime, origEnd);
+    } else if (reqType === 'absencePartialDay' && startTime && endTime) {
+      var oS = sched ? sched.startTime : '';
+      var oE = sched ? sched.endTime : '';
+      estNewUnpaid = calcHours(oS, oE) - calcHours(startTime, endTime);
+    }
+    var projectedPayable = getWeeklyScheduledHours() - currentUnpaid - estNewUnpaid;
+    var csjMin = getCSJMinHours();
+    if (projectedPayable < csjMin) {
+      csjWarning = '\n\n⚠️ CSJ FUNDING WARNING: If this request is approved as unpaid, your payable hours for the week of ' +
+        fmtDate(reqWeekStart) + ' would drop to approximately ' + projectedPayable.toFixed(1) +
+        'h — below the CSJ minimum of ' + csjMin + 'h. This may make that week\'s wages INELIGIBLE for Canada Summer Jobs reimbursement. ' +
+        'Consider whether same-week hour adjustments are possible. Contact your supervisor or administrator if you have questions.';
+    }
   }
 
   // Prevent retroactive requests (allow same day)
@@ -909,6 +966,9 @@ function submitRequest() {
       ? 'Out-of-office work declaration submitted! Your supervisor will review and approve it for payment.'
       : 'Request submitted successfully! Your supervisor will review it.';
     toast(msg, 'success');
+    if (csjWarning) {
+      setTimeout(function() { toast(csjWarning, 'warning'); }, 1500);
+    }
     loadAllData(function() { switchView('requestHistory'); });
   });
 }
@@ -1651,6 +1711,7 @@ function showReport(type) {
     case 'attendance': renderAttendanceReport(container, reqs); break;
     case 'payroll': renderPayrollReport(container, reqs); break;
     case 'grant': renderGrantReport(container, reqs); break;
+    case 'csj': renderCSJReport(container, reqs); break;
   }
 }
 
@@ -1851,6 +1912,160 @@ function calcHours(start, end) {
   var eM = parseInt(eParts[1], 10) || 0;
   var diff = (eH + eM / 60) - (sH + sM / 60);
   return Math.max(0, diff);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CSJ COMPLIANCE HELPERS — Canada Summer Jobs Rules
+   ═══════════════════════════════════════════════════════ */
+function getCSJMinHours() {
+  return parseFloat(tool.param('csjMinHours', '30')) || 30;
+}
+function getCSJMaxHours() {
+  return parseFloat(tool.param('csjMaxHours', '40')) || 40;
+}
+
+function getWeekStart(dateStr) {
+  var d = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+  var day = d.getDay();
+  var diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  var monday = new Date(d.setDate(diff));
+  return monday.toISOString().split('T')[0];
+}
+
+function getWeekEnd(weekStart) {
+  var d = new Date(weekStart + 'T00:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().split('T')[0];
+}
+
+function getDailyScheduledHours() {
+  var sched = getScheduleForUser();
+  if (!sched || !sched.startTime || !sched.endTime) return 7;
+  return calcHours(sched.startTime, sched.endTime);
+}
+
+function getWorkDaysPerWeek() {
+  var sched = getScheduleForUser();
+  if (!sched || !sched.workDays) return 5;
+  var days = Array.isArray(sched.workDays) ? sched.workDays : sched.workDays.split(',').map(function(d) { return d.trim(); });
+  return days.length || 5;
+}
+
+function getWeeklyScheduledHours() {
+  return getDailyScheduledHours() * getWorkDaysPerWeek();
+}
+
+function getWeeklyUnpaidHours(weekStart) {
+  var weekEnd = getWeekEnd(weekStart);
+  var total = 0;
+  var reqs = (APP.role === 'admin' || APP.role === 'supervisor') ? APP.allRequests : APP.requests;
+  reqs.forEach(function(r) {
+    var d = getRequestData(r);
+    if (d.requestDate < weekStart || d.requestDate > weekEnd) return;
+    if (d.status !== REQUEST_STATUS.APPROVED && d.status !== REQUEST_STATUS.CONDITIONS) return;
+    if (d.paymentTreatment !== 'unpaid') return;
+    if (d.requestType === 'absenceFullDay') {
+      total += getDailyScheduledHours();
+    } else if (d.requestType === 'lateArrival' && d.requestedStart && d.originalStart) {
+      total += calcHours(d.originalStart, d.requestedStart);
+    } else if (d.requestType === 'earlyDeparture' && d.requestedEnd && d.originalEnd) {
+      total += calcHours(d.requestedEnd, d.originalEnd);
+    } else if (d.requestType === 'absencePartialDay' && d.requestedStart && d.requestedEnd && d.originalStart && d.originalEnd) {
+      total += calcHours(d.originalStart, d.originalEnd) - calcHours(d.requestedStart, d.requestedEnd);
+    }
+  });
+  return total;
+}
+
+function getWeeklyPayableHours(weekStart) {
+  return getWeeklyScheduledHours() - getWeeklyUnpaidHours(weekStart);
+}
+
+function getCSJStatus(payableHours) {
+  var min = getCSJMinHours();
+  if (payableHours >= min) return 'safe';
+  if (payableHours >= min - 2) return 'warning';
+  return 'danger';
+}
+
+function getCSJStatusLabel(status) {
+  if (status === 'safe') return '<span style="color:#16a34a;font-weight:600"><i class="fa-solid fa-circle-check"></i> CSJ Compliant</span>';
+  if (status === 'warning') return '<span style="color:#d97706;font-weight:600"><i class="fa-solid fa-triangle-exclamation"></i> Approaching CSJ Limit</span>';
+  return '<span style="color:#dc2626;font-weight:600"><i class="fa-solid fa-circle-xmark"></i> Below CSJ Minimum</span>';
+}
+
+/* ═══════════════════════════════════════════════════════
+   CSJ COMPLIANCE REPORT — Weekly Hours Audit
+   ═══════════════════════════════════════════════════════ */
+function renderCSJReport(container, reqs) {
+  var csjMin = getCSJMinHours();
+  var csjMax = getCSJMaxHours();
+  var dailyHours = getDailyScheduledHours();
+  var workDays = getWorkDaysPerWeek();
+  var weeklyScheduled = dailyHours * workDays;
+
+  var weeks = {};
+  reqs.forEach(function(r) {
+    var d = getRequestData(r);
+    if (!d.requestDate) return;
+    var ws = getWeekStart(d.requestDate);
+    if (!weeks[ws]) weeks[ws] = { start: ws, end: getWeekEnd(ws), unpaid: 0, ooo: 0 };
+    if (d.status === REQUEST_STATUS.APPROVED || d.status === REQUEST_STATUS.CONDITIONS) {
+      if (d.paymentTreatment === 'unpaid') {
+        var hrs = 0;
+        if (d.requestType === 'absenceFullDay') hrs = dailyHours;
+        else if (d.requestType === 'lateArrival' && d.requestedStart && d.originalStart) hrs = calcHours(d.originalStart, d.requestedStart);
+        else if (d.requestType === 'earlyDeparture' && d.requestedEnd && d.originalEnd) hrs = calcHours(d.requestedEnd, d.originalEnd);
+        weeks[ws].unpaid += hrs;
+      }
+      if (d.isOutOfOffice === 'yes' && d.paymentTreatment === 'paid') {
+        var oooHrs = d.oooDuration === 'fullDay' ? dailyHours : d.oooDuration === 'halfDay' ? dailyHours / 2 : calcHours(d.requestedStart, d.requestedEnd);
+        weeks[ws].ooo += oooHrs;
+      }
+    }
+  });
+
+  var weekList = Object.keys(weeks).sort();
+  if (weekList.length === 0) {
+    container.innerHTML = '<p class="spm-empty">No data available for CSJ Compliance report. Submit and approve requests to see weekly hour tracking.</p>';
+    return;
+  }
+
+  var safeWeeks = 0, warnWeeks = 0, dangerWeeks = 0;
+  weekList.forEach(function(ws) {
+    var payable = weeklyScheduled - weeks[ws].unpaid;
+    var status = getCSJStatus(payable);
+    if (status === 'safe') safeWeeks++;
+    else if (status === 'warning') warnWeeks++;
+    else dangerWeeks++;
+  });
+
+  var html = '<div class="spm-report-summary">';
+  html += '<div class="spm-report-summary-item"><div class="r-val">' + weekList.length + '</div><div class="r-lbl">Weeks Tracked</div></div>';
+  html += '<div class="spm-report-summary-item"><div class="r-val" style="color:#16a34a">' + safeWeeks + '</div><div class="r-lbl">CSJ Compliant</div></div>';
+  html += '<div class="spm-report-summary-item"><div class="r-val" style="color:#d97706">' + warnWeeks + '</div><div class="r-lbl">Near Limit</div></div>';
+  html += '<div class="spm-report-summary-item"><div class="r-val" style="color:#dc2626">' + dangerWeeks + '</div><div class="r-lbl">Below Minimum</div></div>';
+  html += '</div>';
+
+  html += '<div class="spm-approval-note" style="margin-bottom:16px"><i class="fa-solid fa-circle-info"></i><div><strong>CSJ Rules:</strong> Canada Summer Jobs requires <strong>' + csjMin + '–' + csjMax + ' hours per week</strong>, evaluated <strong>per individual week</strong> (not cumulative across the program). Weeks below ' + csjMin + 'h may be <strong>ineligible for wage reimbursement</strong>. Your regular schedule is <strong>' + weeklyScheduled.toFixed(1) + 'h/week</strong> (' + dailyHours.toFixed(1) + 'h × ' + workDays + ' days). Making up hours in a different week does not fix a shortfall in the week where it occurred.</div></div>';
+
+  html += '<table class="spm-report-table"><thead><tr><th>Week Starting</th><th>Ending</th><th>Scheduled</th><th>Unpaid</th><th>OOO Hrs</th><th>Payable</th><th>CSJ Status</th></tr></thead><tbody>';
+  weekList.forEach(function(ws) {
+    var w = weeks[ws];
+    var payable = weeklyScheduled - w.unpaid;
+    var status = getCSJStatus(payable);
+    var sc = status === 'safe' ? '#16a34a' : status === 'warning' ? '#d97706' : '#dc2626';
+    var si = status === 'safe' ? '✅' : status === 'warning' ? '⚠️' : '❌';
+    var st = status === 'safe' ? 'Compliant' : status === 'warning' ? 'Near Limit' : 'BELOW MINIMUM';
+    html += '<tr><td><strong>' + fmtDate(ws) + '</strong></td><td>' + fmtDate(w.end) + '</td><td>' + weeklyScheduled.toFixed(1) + 'h</td><td style="color:#dc2626">' + (w.unpaid > 0 ? '-' + w.unpaid.toFixed(1) + 'h' : '0h') + '</td><td style="color:#0369a1">' + (w.ooo > 0 ? w.ooo.toFixed(1) + 'h' : '—') + '</td><td><strong style="color:' + sc + '">' + payable.toFixed(1) + 'h</strong></td><td><span style="color:' + sc + ';font-weight:600">' + si + ' ' + st + '</span></td></tr>';
+  });
+  html += '</tbody></table>';
+
+  if (dangerWeeks > 0) {
+    html += '<div class="spm-approval-note" style="background:#fee2e2;border-color:#fca5a5;color:#991b1b;margin-top:16px"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>⚠️ CSJ Funding Risk:</strong> ' + dangerWeeks + ' week(s) fall below the ' + csjMin + 'h CSJ minimum. These weeks may be <strong>ineligible for Canada Summer Jobs reimbursement</strong>. ESDC evaluates each week individually. If shortfalls become a pattern, this could jeopardize funding for the entire placement. Contact your CSJ program officer for guidance.</div></div>';
+  }
+
+  container.innerHTML = html;
 }
 
 /* ═══════════════════════════════════════════════════════

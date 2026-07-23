@@ -212,7 +212,8 @@ body { padding-top: 32px !important; margin: 0; }
    EMBEDDED HTML — No fetch() needed, works with file://
    ═══════════════════════════════════════════════════════ -->
 <script>
-const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+const EMBEDDED_HTML = `<!-- ══ AUTO-SYNCED from StaffPermitManagement.html ══ -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
 <!-- ── Navigation ── -->
 <nav class="spm-nav" id="spmNav">
@@ -223,8 +224,9 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
   <div class="spm-nav-tabs" id="navTabs">
     <button class="spm-nav-tab active" data-view="dashboard"><i class="fa-solid fa-gauge"></i> Dashboard</button>
     <button class="spm-nav-tab" data-view="mySchedule"><i class="fa-solid fa-calendar-days"></i> My Schedule</button>
-    <button class="spm-nav-tab" data-view="newRequest"><i class="fa-solid fa-file-pen"></i> New Request</button>
+    <button class="spm-nav-tab spm-nav-tab-employee" data-view="newRequest"><i class="fa-solid fa-file-pen"></i> New Request</button>
     <button class="spm-nav-tab" data-view="requestHistory"><i class="fa-solid fa-clock-rotate-left"></i> History</button>
+    <button class="spm-nav-tab" data-view="outOfOffice"><i class="fa-solid fa-location-dot"></i> Out of Office</button>
     <button class="spm-nav-tab spm-nav-tab-supervisor" data-view="reviewQueue" style="display:none"><i class="fa-solid fa-clipboard-check"></i> Review</button>
     <button class="spm-nav-tab spm-nav-tab-admin" data-view="adminConsole" style="display:none"><i class="fa-solid fa-shield-halved"></i> Admin</button>
     <button class="spm-nav-tab" data-view="policyCenter"><i class="fa-solid fa-file-signature"></i> Policies</button>
@@ -268,6 +270,14 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
       </div>
     </div>
   </div>
+  <div class="spm-card spm-dash-stat" id="csjStatCard" style="border-left:4px solid #16a34a">
+    <div class="spm-stat-icon" style="background:#ecfdf5;color:#059669"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+    <div class="spm-stat-body">
+      <div class="spm-stat-value" id="csjStatHours">—</div>
+      <div class="spm-stat-label">Payable Hours This Week (CSJ min: <span id="csjStatScheduled">—</span>)</div>
+      <div id="csjStatStatus" style="font-size:11px;margin-top:2px"></div>
+    </div>
+  </div>
   <div class="spm-card" id="dashQuickActions">
     <h3 class="spm-card-title"><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
     <div class="spm-quick-actions">
@@ -304,6 +314,15 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
       </table>
     </div>
   </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-location-dot"></i> Upcoming Out of Office Days</h3>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Program / Location</th><th>Duration</th><th>Status</th><th>Payment</th></tr></thead>
+        <tbody id="scheduleOooTbody"><tr><td colspan="5" class="spm-empty">No upcoming out-of-office days</td></tr></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ── New Request View ── -->
@@ -312,9 +331,8 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
     <h3 class="spm-card-title"><i class="fa-solid fa-file-pen"></i> Submit Permission Request</h3>
     <div class="spm-form-notice">
       <i class="fa-solid fa-circle-info"></i>
-      <span>All schedule changes must be requested <strong>before</strong> the change occurs. This is a one-time exception request — it does not change your regular schedule.</span>
+      <span><strong>⚠️ Important:</strong> This request applies <strong>ONLY to the specific date</strong> you select below. It does NOT change your regular schedule for any other day. Each date requires its own separate request. Approval of this request means nothing for any other day.</span>
     </div>
-
     <div class="spm-form-group">
       <label class="spm-label">Request Type <span class="spm-required">*</span></label>
       <select class="spm-select" id="reqType">
@@ -327,14 +345,15 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
         <option value="emergency">Emergency Situation</option>
         <option value="medicalAppointment">Medical Appointment</option>
         <option value="familyResponsibility">Family Responsibility</option>
+        <option value="outOfOfficeWork">🏕️ Out of Office Work</option>
         <option value="other">Other</option>
       </select>
     </div>
-
     <div class="spm-form-row">
       <div class="spm-form-group">
         <label class="spm-label">Requested Date <span class="spm-required">*</span></label>
         <input type="date" class="spm-input" id="reqDate">
+        <div style="font-size:11px;color:var(--spm-danger);margin-top:4px"><i class="fa-solid fa-exclamation-triangle"></i> This change applies <strong>only to this date</strong>. It does not affect any other day.</div>
       </div>
       <div class="spm-form-group">
         <label class="spm-label">Reason <span class="spm-required">*</span></label>
@@ -351,46 +370,67 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
         </select>
       </div>
     </div>
-
+    <div id="oooFields" style="display:none">
+      <div class="spm-form-group">
+        <label class="spm-label">Program / Location <span class="spm-required">*</span></label>
+        <input type="text" class="spm-input" id="oooLocation" placeholder="e.g. Summer Day Camp at Central Park, Community Centre visit, Field trip location...">
+      </div>
+      <div class="spm-form-group">
+        <label class="spm-label">Duration <span class="spm-required">*</span></label>
+        <select class="spm-select" id="oooDuration">
+          <option value="">— Select Duration —</option>
+          <option value="fullDay">Full Day (regular hours, off-site)</option>
+          <option value="halfDay">Half Day (morning or afternoon)</option>
+          <option value="custom">Custom Hours (specify below)</option>
+        </select>
+      </div>
+    </div>
     <div class="spm-form-group" id="currentScheduleGroup">
       <label class="spm-label">Current Schedule</label>
       <div class="spm-schedule-readonly" id="currentScheduleDisplay">
         <span class="spm-muted">Loading your schedule...</span>
       </div>
     </div>
-
     <div class="spm-form-row" id="requestedTimeRow">
       <div class="spm-form-group">
-        <label class="spm-label">Requested Start Time <span class="spm-required">*</span></label>
+        <label class="spm-label" id="timeRowLabel1">Requested Start Time <span class="spm-required">*</span></label>
         <input type="time" class="spm-input" id="reqStartTime">
       </div>
       <div class="spm-form-group">
-        <label class="spm-label">Requested End Time <span class="spm-required">*</span></label>
+        <label class="spm-label" id="timeRowLabel2">Requested End Time <span class="spm-required">*</span></label>
         <input type="time" class="spm-input" id="reqEndTime">
       </div>
     </div>
-
     <div class="spm-form-group">
-      <label class="spm-label">Additional Explanation</label>
+      <label class="spm-label" id="reqExplanationLabel">Additional Explanation</label>
       <textarea class="spm-textarea" id="reqExplanation" rows="3" placeholder="Provide any additional details to help your supervisor understand your situation..."></textarea>
     </div>
-
-    <div class="spm-confirmation-box">
+    <div class="spm-confirmation-box" id="standardConfirmBox">
       <h4><i class="fa-solid fa-check-double"></i> Important Confirmations</h4>
-      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I understand that approval is required <strong>before</strong> changing my schedule.</label>
-      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that approved time away from work may be <strong>unpaid</strong>.</label>
-      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that working additional hours later is <strong>not automatically approved</strong>.</label>
-      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I understand that my <strong>regular schedule remains unchanged</strong>.</label>
-      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that <strong>repeated requests</strong> may not be approved.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I understand this request is <strong>for this specific date only</strong> and does not apply to any other day.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that approval is required <strong>before</strong> the change occurs.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that approved time away from work may be <strong>unpaid</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I understand that my <strong>regular schedule remains unchanged</strong> for all other days.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that <strong>repeated requests</strong> may trigger additional review.</label>
+      <label class="spm-checkbox spm-checkbox-csj"><input type="checkbox" id="confirm6"> <span><strong>⚠️ CSJ FUNDING — Canada Summer Jobs Rules</strong><br>I understand that CSJ requires <strong>30–40 hours per week</strong>, evaluated <strong>each individual week</strong> (not cumulatively). If my payable hours drop below 30 in any week, that week's wages may be <strong>ineligible for reimbursement</strong>. Making up hours in a different week <strong>does not fix</strong> the shortfall. Repeated short weeks may result in <strong>termination of employment</strong>.</span></label>
     </div>
-
-    <div class="spm-approval-note">
+    <div class="spm-confirmation-box spm-ooo-confirm" id="oooConfirmBox" style="display:none">
+      <h4><i class="fa-solid fa-check-double"></i> Out of Office Work Declarations</h4>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm1"> I confirm that I <strong>will be working</strong> at the specified off-site location on this date.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm2"> I understand that <strong>supervisor approval is required</strong> for these hours to be paid.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm3"> I understand that <strong>unapproved out-of-office days will be unpaid</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm4"> I confirm that the program/location details above are <strong>accurate</strong>.</label>
+      <label class="spm-checkbox"><input type="checkbox" id="confirm5"> I understand that I must <strong>notify my supervisor of any changes</strong> to the off-site schedule.</label>
+      <label class="spm-checkbox spm-checkbox-csj"><input type="checkbox" id="confirm6"> <span><strong>⚠️ CSJ FUNDING — Canada Summer Jobs Rules</strong><br>I understand that CSJ requires <strong>30–40 hours per week</strong>, evaluated weekly. Unapproved OOO days are <strong>unpaid</strong> and may cause my week to fall below the CSJ minimum, risking <strong>reimbursement ineligibility</strong> and potential <strong>termination</strong>.</span></label>
+    </div>
+    <div class="spm-approval-note" id="standardApprovalNote">
       <i class="fa-solid fa-circle-exclamation"></i>
-      <div>
-        <strong>Reminder:</strong> Employees are expected to follow their assigned schedule. Additional hours after regular work time are not automatically accepted as replacement for missed scheduled hours.
-      </div>
+      <div><strong>Reminder:</strong> This is a <strong>single-day exception request</strong>. It only affects the specific date selected above. Your regular schedule continues unchanged for every other day. Working extra hours on another day does not replace or offset missed hours on this day unless separately approved.</div>
     </div>
-
+    <div class="spm-approval-note" id="oooApprovalNote" style="display:none">
+      <i class="fa-solid fa-circle-info"></i>
+      <div><strong>About Out of Office Work:</strong> This declaration documents that you will perform your work duties at an external location. <strong>Supervisor approval is required for payment.</strong> Unapproved off-site work will be treated as unpaid absence. Your regular schedule hours apply — you are still expected to work your full hours.</div>
+    </div>
     <button class="spm-btn spm-btn-primary spm-btn-lg" onclick="submitRequest()" id="btnSubmitRequest">
       <i class="fa-solid fa-paper-plane"></i> Submit Request
     </button>
@@ -415,6 +455,53 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
       <table class="spm-table">
         <thead><tr><th>Date</th><th>Type</th><th>Reason</th><th>Status</th><th>Decision</th><th>Details</th></tr></thead>
         <tbody id="historyTbody"><tr><td colspan="6" class="spm-empty">No requests found</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Out of Office View ── -->
+<div class="spm-view" id="view-outOfOffice">
+  <div class="spm-dash-grid" style="margin-bottom:20px">
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#e0f2fe;color:#0369a1"><i class="fa-solid fa-location-dot"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatTotal">0</div>
+        <div class="spm-stat-label">Total OOO Declarations</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#dcfce7;color:#16a34a"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatApproved">0</div>
+        <div class="spm-stat-label">Approved OOO Days</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat">
+      <div class="spm-stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-clock"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatPending">0</div>
+        <div class="spm-stat-label">Pending Approval</div>
+      </div>
+    </div>
+    <div class="spm-card spm-dash-stat" id="oooStatUnpaidWarn" style="display:none">
+      <div class="spm-stat-icon" style="background:#fee2e2;color:#dc2626"><i class="fa-solid fa-circle-xmark"></i></div>
+      <div class="spm-stat-body">
+        <div class="spm-stat-value" id="oooStatUnpaid">0</div>
+        <div class="spm-stat-label">Unpaid OOO Days ⚠️</div>
+      </div>
+    </div>
+  </div>
+  <div class="spm-card">
+    <h3 class="spm-card-title"><i class="fa-solid fa-list-check"></i> Out of Office History</h3>
+    <div class="spm-approval-note">
+      <i class="fa-solid fa-circle-info"></i>
+      <div><strong>How it works:</strong> Declare out-of-office work days here. Your supervisor reviews and approves them. <strong>Approved OOO days are paid as regular work.</strong> Unapproved days are unpaid. This ensures proper documentation for payroll and grant reporting.</div>
+    </div>
+    <div class="spm-table-wrap">
+      <table class="spm-table">
+        <thead><tr><th>Date</th><th>Program / Location</th><th>Duration</th><th>Reason</th><th>Status</th><th>Payment</th><th>Details</th></tr></thead>
+        <tbody id="oooHistoryTbody"><tr><td colspan="7" class="spm-empty">No out-of-office declarations found</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -470,6 +557,7 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
           <p><strong>No Guaranteed Make-Up Hours:</strong> Working additional hours outside your regular schedule to "make up" for missed time is not automatically permitted and requires separate approval.</p>
           <p><strong>Repeated Requests:</strong> Frequent schedule change requests may trigger additional review to ensure fairness and operational consistency.</p>
           <p><strong>Educational Sessions:</strong> Required training and educational sessions cannot be missed without explicit administrator approval.</p>
+          <p><strong>CSJ Funding Rules:</strong> Canada Summer Jobs funding requires <strong>30–40 hours of work per week</strong>, evaluated <strong>each individual week</strong> (not cumulatively). If your payable hours for any week drop below 30, that week's wages may be <strong>ineligible for CSJ reimbursement</strong>. Making up hours in a different week does not fix the shortfall. Repeated short weeks may jeopardize funding for the entire placement and could result in <strong>termination of employment</strong>. If you anticipate difficulty meeting the 30-hour weekly minimum, speak with your supervisor immediately.</p>
         </div>
       </div>
       <div class="spm-policy-section spm-policy-supervisor" id="policySupervisorSection" style="display:none">
@@ -502,6 +590,7 @@ const EMBEDDED_HTML = `<link href="https://cdnjs.cloudflare.com/ajax/libs/font-a
       <button class="spm-btn spm-btn-outline active" data-report="attendance" onclick="showReport('attendance')">Attendance Report</button>
       <button class="spm-btn spm-btn-outline" data-report="payroll" onclick="showReport('payroll')">Payroll Report</button>
       <button class="spm-btn spm-btn-outline" data-report="grant" onclick="showReport('grant')">CSJ Grant Support</button>
+      <button class="spm-btn spm-btn-outline" data-report="csj" onclick="showReport('csj')">CSJ Compliance</button>
     </div>
     <div class="spm-report-content" id="reportContent">
       <p class="spm-empty">Select a report type above to generate.</p>
