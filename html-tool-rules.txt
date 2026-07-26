@@ -271,14 +271,18 @@ Sends a prompt to the CMS AI service and returns the response text.
       error        — null on success; string describing the problem on failure.
                      On truncation: error contains a warning but response is
                      still returned. Example: "Prompt was truncated from
-                     150,000 to 100,000 characters."
+                     150,000 to 1,200,000 characters."
                      Always check response even when error is non-null.
       responseText — the AI's text response, or null on complete failure
 
-Limits: 60 second timeout per request.
-        3 concurrent requests maximum (additional requests are queued).
-        100K character prompt limit (prompts exceeding this are truncated;
-        check the error param for a truncation notice).
+Limits: 120 second timeout per request.
+        1 concurrent requests maximum (additional requests are queued).
+        Dynamic prompt limit based on the AI model's context window
+        (e.g. ~2.4M chars for DeepSeek V4 Pro, ~307K for GPT-5 Nano).
+        Prompts exceeding the model limit are truncated; check the error
+        param for a truncation notice.
+        The AI Gateway is called directly from the browser via a JWT token
+        (no server-side proxy bottleneck).
 Requires: allowAi: 'yes' in toolParams.
 
 Example:
@@ -306,7 +310,7 @@ UIs, live typewriter effects, or progressive rendering.
       onError(error)       — called on failure.  `error` is a string describing
                               the problem (network error, timeout, permission denied).
 
-Limits: Same prompt limits as requestAI (100K chars, 60s timeout).
+Limits: Same dynamic model-aware prompt limit and timeout as requestAI.
         No concurrency queue — each call is independent.
         The CMS parent sends ai-stream-start first, then ai-stream-token for each
         chunk, then ai-stream-end on completion, or ai-stream-error on failure.
@@ -797,9 +801,9 @@ HARD RULES
    configures this. Without it, the callback fires with an error —
    handle this gracefully in your code.
 ✓  All request* methods are asynchronous. Use callbacks, not return values.
-✓  tool.requestAI: max 3 concurrent requests, 60s timeout, 100K char prompt
-   limit. Prompts exceeding the limit are truncated; check the error param
-   for a truncation notice.
+✓  tool.requestAI: 1 concurrent request, 120s timeout, dynamic model-aware
+   prompt limit (~2.4M chars for DeepSeek V4 Pro). Prompts exceeding the
+   model's context window are truncated; check the error param for notice.
 ✓  tool.requestObjects: max 500 operations per batch. Avoid batching
    operations that would exceed 10 MB total (Firestore writeBatch limit).
 ✓  Batch operations are ATOMIC — if one fails, the entire batch is rolled

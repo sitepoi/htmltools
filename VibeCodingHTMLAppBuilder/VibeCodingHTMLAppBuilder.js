@@ -26,6 +26,60 @@ var DB = {
 var isReadOnly = false;
 var currentTab = 'html';
 var attachedFile = null; // { name, url, size, type, extractedText }
+var interviewMode = false; // Guided interview mode — AI asks step-by-step questions
+var _currentTemplate = null; // Currently viewed template in modal
+
+/* ── Template Store — 8 detailed pre-written prompts ── */
+var TEMPLATES = [
+  {
+    id: 'invoice-manager', icon: '📊', category: 'Finance',
+    title: 'Invoice Manager',
+    desc: 'Create, track, and manage invoices with payment status, customer records, and PDF export.',
+    prompt: 'I need a complete Invoice Management System for our organization.\n\n**Core Features:**\n- Create invoices with auto-generated invoice numbers (e.g. INV-001, INV-002)\n- Track invoice status: Draft → Sent → Paid → Overdue → Cancelled\n- Add line items with description, quantity, unit price, and auto-calculated total\n- Associate invoices with customers (name, email, phone, address)\n- Calculate subtotal, tax (configurable rate), and grand total automatically\n- Track due dates with visual overdue warnings (red highlight)\n- Full CRUD — create, view, edit, delete invoices\n\n**Views:**\n- Dashboard: total outstanding, paid this month, overdue count, recent invoices list\n- Invoice list: search, filter by status, sort by date or amount\n- Invoice detail: all line items, customer info, payment history\n- Create/Edit form with add/remove line items\n\n**Extra Features:**\n- Export invoice as PDF (print-friendly layout)\n- Send invoice directly to customer via email\n- Duplicate an existing invoice as new draft\n- Record payment with date, amount, and payment method\n\n**Data to Track:**\n- Invoice: number, customerName, customerEmail, issueDate, dueDate, lineItems (array), subtotal, taxRate, taxAmount, total, status, notes, paymentDate, paymentMethod\n- Dashboard counts and totals derived from invoice data\n\n**Users:** Finance team and office administrators\n**Style:** Professional, clean blue theme with light/dark mode support. Responsive layout.'
+  },
+  {
+    id: 'task-tracker', icon: '✅', category: 'Projects',
+    title: 'Task Tracker',
+    desc: 'Kanban-style task board with columns, priorities, due dates, and team assignments.',
+    prompt: 'I need a Task & Project Tracking tool for my team.\n\n**Core Features:**\n- Kanban board with columns: Backlog → To Do → In Progress → Review → Done\n- Each task has: title, description, priority (Low/Medium/High/Critical), due date, assignee\n- Drag tasks between columns (or use status dropdown)\n- Color-code by priority — red for critical, orange for high, blue for medium, gray for low\n- Task counter badges on each column header\n\n**Views:**\n- Board view: kanban columns side by side\n- List view: sortable table with all tasks\n- Task detail modal: full info, edit, delete, add notes\n- Quick-add form at the top of each column\n\n**Features:**\n- Filter by assignee, priority, or status\n- Search tasks by title or description\n- Due date warnings — overdue tasks highlighted in red\n- Assign tasks to team members (from permitted users list)\n- Task creation date and last modified timestamp\n\n**Data:**\n- Task: title, description, priority, status, assigneeName, assigneeId, dueDate, createdAt, updatedAt, notes\n\n**Users:** Team members, project managers\n**Style:** Clean, modern, light/dark themes. Board view should feel like Trello.'
+  },
+  {
+    id: 'employee-directory', icon: '👥', category: 'HR',
+    title: 'Employee Directory',
+    desc: 'Searchable staff directory with contact info, department, role, and profile cards.',
+    prompt: 'I need an Employee & Staff Directory for our organization.\n\n**Core Features:**\n- Directory listing with profile cards showing name, role, department, email, phone, photo (initials fallback)\n- Search by name, department, role, or any keyword\n- Filter by department or role\n- Sort by name, department, or join date\n- Click card to expand full profile details\n\n**Profile Details:**\n- Full name, job title, department, email, phone extension, office location\n- Manager name, direct reports count\n- Skills/tags, certifications\n- Join date, employee ID\n- Emergency contact (visible only on expanded view)\n\n**Features:**\n- Grid and list view toggle\n- Quick contact — click email to copy, click phone to copy\n- Export directory as CSV\n- Department summary stats (headcount per department)\n- Add/edit/remove employees (CRUD)\n\n**Data:**\n- Employee: firstName, lastName, title, department, email, phone, location, managerName, skills (array), certifications (array), joinDate, employeeId, emergencyContact, emergencyPhone\n\n**Users:** All staff, HR department\n**Style:** Professional, warm, accessible. Large readable cards with good contrast.'
+  },
+  {
+    id: 'expense-reporter', icon: '💰', category: 'Finance',
+    title: 'Expense Reporter',
+    desc: 'Submit, track, and approve expense reports with receipt upload and budget tracking.',
+    prompt: 'I need an Expense Report & Reimbursement tool.\n\n**Core Features:**\n- Create expense reports with date, category, description, amount, and receipt upload\n- Expense categories: Travel, Meals, Office Supplies, Software, Training, Other\n- Submit reports for approval workflow: Draft → Submitted → Approved → Rejected → Reimbursed\n- Approver can approve or reject with comments\n- Track reimbursement status and payment date\n\n**Views:**\n- My Expenses: list of user\'s own expense reports\n- Pending Approval: reports waiting for review (for managers)\n- All Expenses: full list with filters (for admins)\n- Summary dashboard: total submitted, approved, reimbursed this month\n\n**Features:**\n- Attach receipt files (PDF, image) via upload\n- Budget limit warnings per category\n- Email notification when report status changes\n- Export report as PDF for accounting\n- Multi-currency support with configurable rate\n\n**Data:**\n- Expense: date, category, description, amount, currency, receiptUrl, receiptName, status, submitterName, approverName, approverComment, submittedAt, approvedAt, reimbursedAt\n\n**Users:** All employees (submit), Managers (approve), Finance (audit)\n**Style:** Clean form-based, professional, with clear status indicators.'
+  },
+  {
+    id: 'inventory-manager', icon: '📦', category: 'Operations',
+    title: 'Inventory Manager',
+    desc: 'Track stock levels, manage products, set reorder alerts, and log inventory movements.',
+    prompt: 'I need an Inventory & Stock Management tool.\n\n**Core Features:**\n- Product catalog with SKU, name, description, category, unit price, cost price\n- Track current stock quantity per product\n- Low stock alerts — highlight when quantity falls below reorder threshold\n- Log inventory movements: Stock In (purchase), Stock Out (sale/use), Adjustment, Return\n- Each movement records date, quantity change, reason, and user\n\n**Views:**\n- Dashboard: total products, low stock count, total inventory value, recent movements\n- Product list: searchable, filterable, with stock status indicators\n- Product detail: full info, stock history log, quick adjust buttons\n- Movement log: full audit trail with filters\n\n**Features:**\n- Barcode/SKU search\n- Bulk stock adjustment\n- Export inventory report as CSV\n- Stock value calculation (quantity × cost price)\n- Category management\n- Expiry date tracking for perishable items\n\n**Data:**\n- Product: sku, name, description, category, unitPrice, costPrice, quantity, reorderLevel, expiryDate, location\n- Movement: productId, sku, type (in/out/adjust/return), quantity, reason, userName, timestamp\n\n**Users:** Warehouse staff, operations managers\n**Style:** Industrial, data-dense, with clear red/yellow/green stock indicators.'
+  },
+  {
+    id: 'event-scheduler', icon: '📅', category: 'Planning',
+    title: 'Event Scheduler',
+    desc: 'Schedule meetings, track attendees, manage room bookings, and send reminders.',
+    prompt: 'I need an Event & Meeting Scheduling tool.\n\n**Core Features:**\n- Calendar view showing all events (month, week, and list views)\n- Create events with title, date, start time, end time, location, description, organizer\n- Add attendees from permitted users list\n- Room/location booking with conflict detection\n- Recurring events: daily, weekly, bi-weekly, monthly\n\n**Views:**\n- Calendar: monthly grid with event dots, click to see day details\n- List: all upcoming events sorted by date\n- Day detail: all events for selected day with time slots\n- Event detail: full info, attendee list, edit, delete, send reminder\n\n**Features:**\n- Email reminders to attendees (configurable: 1 hour, 1 day, 1 week before)\n- Event type badges: Meeting, Training, Workshop, Social, Other\n- RSVP tracking: Accepted, Declined, Tentative\n- Export calendar as PDF for printing\n- Color coding by event type\n\n**Data:**\n- Event: title, type, date, startTime, endTime, location, description, organizer, attendees (array), recurring (boolean), recurrencePattern, reminderSent\n\n**Users:** All staff\n**Style:** Clean calendar aesthetic, professional, with subtle color accents per event type.'
+  },
+  {
+    id: 'customer-crm', icon: '🤝', category: 'Sales',
+    title: 'Customer CRM',
+    desc: 'Manage customer contacts, track interactions, log notes, and monitor deal pipeline.',
+    prompt: 'I need a Customer Relationship Management (CRM) tool.\n\n**Core Features:**\n- Customer/Contact database with company name, contact person, email, phone, address\n- Track interactions: calls, emails, meetings — each with date, type, summary, and follow-up date\n- Deal/Opportunity pipeline: stages from Lead → Qualified → Proposal → Negotiation → Won/Lost\n- Add notes and tags to each contact\n- Set follow-up reminders with due dates\n\n**Views:**\n- Dashboard: total contacts, active deals, deals by stage (pipeline chart), upcoming follow-ups\n- Contact list: searchable, filterable by company, status, tags\n- Contact detail: full info, interaction history, deals, notes\n- Pipeline view: deals grouped by stage (kanban-style)\n- Follow-ups: list of overdue and upcoming reminders\n\n**Features:**\n- Quick-add contact from minimal info (just name + company)\n- Deal value tracking with expected close date\n- Export contacts as CSV\n- Tag system for categorizing contacts (e.g. VIP, Newsletter, Prospect)\n- Activity timeline on each contact\n\n**Data:**\n- Contact: companyName, contactName, email, phone, address, status (Active/Inactive/Lead), tags (array), notes (array), createdAt\n- Deal: contactId, title, value, stage, expectedCloseDate, probability, notes\n- Interaction: contactId, type (Call/Email/Meeting), date, summary, followUpDate\n\n**Users:** Sales team, account managers\n**Style:** Professional, data-rich, with green for Won deals and red for Lost.'
+  },
+  {
+    id: 'training-tracker', icon: '🎓', category: 'HR',
+    title: 'Training Tracker',
+    desc: 'Track employee training completion, certifications, course catalog, and expiry alerts.',
+    prompt: 'I need a Training & Certification Tracking tool.\n\n**Core Features:**\n- Course catalog with course name, description, category, duration, provider\n- Assign courses to employees with due dates\n- Track completion status: Not Started, In Progress, Completed, Expired\n- Certification tracking with issue date and expiry date\n- Auto-flag expiring certifications (30, 60, 90 day warnings)\n\n**Views:**\n- Dashboard: total courses, completion rate, expiring certifications, recent completions\n- Course list: searchable catalog with completion stats\n- Employee training record: all courses assigned, completed, and certifications\n- Expiry report: certifications expiring within selected timeframe\n- My Training: current employee\'s assigned and completed courses\n\n**Features:**\n- Upload training materials (PDF, links) per course\n- Record training hours per employee\n- Bulk assign course to multiple employees\n- Export training report as PDF per employee\n- Certification renewal workflow with reminders\n\n**Data:**\n- Course: name, description, category, durationHours, provider, materialsUrl\n- Enrollment: employeeName, employeeId, courseId, status, assignedDate, completedDate, hoursCompleted, certificateUrl\n- Certification: employeeName, employeeId, certName, issuingBody, issueDate, expiryDate, certNumber\n\n**Users:** HR, managers, all employees (view own records)\n**Style:** Educational/academic feel, clean progress indicators, green for complete, amber for in-progress.'
+  }
+];
 
 /* ── Full HTML Tool Rules (loaded from embedded DOM element) ── */
 var htmlRulesText = ''; // populated in onReady from #html-rules-source
@@ -58,6 +112,12 @@ function updateDeveloperUI() {
   // Hide individual copy buttons for non-developers
   qsa('#btn-copy-html, #btn-copy-css, #btn-copy-js').forEach(function(b) {
     b.style.display = 'none';
+  });
+  // Hide Rules button for non-developers (too technical)
+  var rulesBtn = el('btn-rules'); if (rulesBtn) rulesBtn.style.display = dev ? '' : 'none';
+  // Hide technical Config sections for non-developers
+  qsa('.config-tech-section').forEach(function(s) {
+    s.style.display = dev ? '' : 'none';
   });
   // If currently on a code tab but not a developer, switch to preview
   if (!dev && (currentTab === 'html' || currentTab === 'css' || currentTab === 'js')) {
@@ -102,10 +162,13 @@ function restoreFormData() {
 /* ── Code Display ── */
 function displayCode(part, code) {
   var ta = el('code-' + part); var linesEl = el(part + '-lines');
-  if (ta) { ta.value = code || ''; var lc = (code || '').split('\n').length; if (linesEl) { var n = ''; for (var i = 1; i <= lc; i++) n += '<div>' + i + '</div>'; linesEl.innerHTML = n; } }
+  console.warn('[VIBECODING:DISPLAY] displayCode(' + part + ') — element:', !!ta, '| code length:', (code||'').length);
+  if (ta) { ta.value = code || ''; console.warn('[VIBECODING:DISPLAY]   → textarea.value set, now:', ta.value.length, 'chars'); var lc = (code || '').split('\n').length; if (linesEl) { var n = ''; for (var i = 1; i <= lc; i++) n += '<div>' + i + '</div>'; linesEl.innerHTML = n; } }
   if (ta && linesEl) ta.onscroll = function() { linesEl.scrollTop = ta.scrollTop; };
 }
 function displayAllCode(g) {
+  console.warn('[VIBECODING:DISPLAY] Writing code — HTML:', (g.html||'').length, 'chars | CSS:', (g.css||'').length, 'chars | JS:', (g.js||'').length, 'chars');
+  console.warn('[VIBECODING:DISPLAY] Elements — code-html:', !!el('code-html'), 'code-css:', !!el('code-css'), 'code-js:', !!el('code-js'));
   displayCode('html', g.html || ''); displayCode('css', g.css || ''); displayCode('js', g.js || '');
   updatePreview();
   updateChatBadge();
@@ -120,8 +183,6 @@ function updatePreview() {
   if (!html.trim() && !css.trim() && !js.trim()) { if (fw) fw.classList.remove('has-content'); if (pe) pe.style.display = ''; return; }
   if (fw) fw.classList.add('has-content'); if (pe) pe.style.display = 'none';
   if (frame) {
-    // Build a complete document with mock tool SDK injected before the generated JS
-    // This lets buttons, forms, and interactions work in the preview
     var previewDoc = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>Preview</title>\n<style>\n@keyframes slideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }\n/* ── Generated CSS ── */\n' + css + '\n</style>\n</head>\n<body>\n' +
     '<!-- ── Generated HTML ── -->\n' + html + '\n' +
     '<!-- ── Mock tool SDK for preview ── -->\n<script>\n' +
@@ -221,6 +282,7 @@ function updatePreview() {
     'window.onerror = function(m) { _postLog("error", ["Preview:", m]); return true; };\n' +
     '<\/script>\n' +
     '<!-- ── Generated JS ── -->\n<script>\n' + js + '\n<\/script>\n</body>\n</html>';
+    console.warn('[VIBECODING:PREVIEW] Setting iframe srcdoc — html:', html.length, 'chars | css:', css.length, 'chars | js:', js.length, 'chars | total doc:', previewDoc.length, 'chars');
     frame.srcdoc = previewDoc;
   }
 }
@@ -293,7 +355,7 @@ function parseGeneratedCode(text) {
 /* ── Build Prompts ── */
 function buildFullPrompt() {
   collectFormData();
-  return [
+  var parts = [
     'You are building an HTML tool for the UniconHub CMS html-tool system (sandboxed iframe, window.tool SDK).',
     'Tool Name: ' + (DB.toolName || 'Untitled'), 'Description: ' + (DB.toolDesc || ''),
     'Audience: ' + DB.audience, 'Storage: ' + DB.storage,
@@ -301,8 +363,9 @@ function buildFullPrompt() {
     'CMS Types: ' + (DB.cmsTypes || '(none)'), 'Fields: ' + (DB.cmsFields || '(none)'),
     'Features: ' + DB.features.join(', '), 'Layout: ' + DB.layout,
     'Color: ' + DB.colorScheme, 'Theme: ' + DB.themeSupport,
-    'Style notes: ' + (DB.styleNotes || '(none)'),
-    '', htmlRulesText, '',
+    'Style notes: ' + (DB.styleNotes || '(none)')
+  ];
+  var suffix = [
     'Generate COMPLETE tool as THREE blocks: [HTML], [CSS], [JS].',
     '[HTML]: body markup only — no html/head/style/script/body/DOCTYPE tags. CDN scripts allowed.',
     '[CSS]: stylesheet rules only — no <style> tag. CSS variables, theming, responsive.',
@@ -321,11 +384,35 @@ function buildFullPrompt() {
     '  All event handlers (onclick, onchange, onsubmit, etc.) must reference defined functions.',
     '  All functions called in tool.onReady() must exist in the JS block.',
     'Complete, functional code. No placeholders, no TODO comments. Output ONLY the three blocks.'
-  ].join('\n');
+  ];
+  // Always use full rules — model has ~2.4M char context window
+  parts.push('', htmlRulesText, '');
+  return parts.concat(suffix).join('\n');
 }
 
 function buildChatPrompt(userMsg) {
-  var hasCode = (DB.generated.html || DB.generated.css || DB.generated.js);
+  var hasCode = !!(DB.generated.html || DB.generated.css || DB.generated.js);
+
+  // ── Interview Mode: AI acts as business analyst ──
+  if (interviewMode && !hasCode) {
+    console.warn('[VIBECODING:BUILD-PROMPT] Interview mode — using analyst persona');
+    var parts = [buildInterviewSystemPrompt()];
+    parts.push('');
+    parts.push('=== CONVERSATION HISTORY ===');
+    for (var i = 0; i < DB.chatMessages.length; i++) {
+      var m = DB.chatMessages[i];
+      parts.push((m.role === 'user' ? 'USER' : 'AI') + ': ' + m.text);
+    }
+    parts.push('');
+    parts.push('Continue the interview. Ask the next question. If enough info gathered (4+ answers), summarize and offer to generate code.');
+    parts.push('');
+    parts.push('=== HTML TOOL RULES (for when you generate code) ===');
+    parts.push(htmlRulesText);
+    parts.push('');
+    parts.push('If user confirms they want code generated, output [HTML]/[CSS]/[JS] blocks following ALL rules above.');
+    return parts.join('\n');
+  }
+
   var parts = ['You are helping build/refine an HTML tool for UniconHub CMS (sandboxed iframe, window.tool SDK).'];
 
   // Include attached file content if present
@@ -370,10 +457,15 @@ function buildChatPrompt(userMsg) {
     parts.push('=== USER REQUEST (treat as requirements) ===');
     parts.push(userMsg);
     parts.push('');
+    parts.push('IMPORTANT — If the request is vague or missing key details, ask 1-2 clarifying questions BEFORE generating code.');
+    parts.push('Format questions with clickable options like: [[opt1]] First option');
+    parts.push('Only generate code when you have a clear picture of what to build.');
+    parts.push('');
     parts.push('Generate a COMPLETE tool from scratch. Output ALL THREE blocks [HTML]/[CSS]/[JS].');
     parts.push('Follow all html-tool rules below.');
   }
 
+  // Always include full rules — model has ~2.4M char context window, no need to condense
   parts.push(''); parts.push(htmlRulesText);
   parts.push('');
   parts.push('CRITICAL JS RULES — ES5 ONLY (the sandbox does NOT support ES6+):');
@@ -381,10 +473,113 @@ function buildChatPrompt(userMsg) {
   parts.push('  ALWAYS use: var, function() {}, string concatenation (+), for(var i=0;...), Object.assign().');
   parts.push('  EVERY onclick/event handler in HTML MUST reference a function DEFINED in JS. No dangling function calls.');
   parts.push('');
-  parts.push('IMPORTANT: Always output ALL THREE blocks when providing code. If the user is just chatting, answer naturally.');
-  parts.push('Format: [HTML] ... [CSS] ... [JS] ...');
+  parts.push('IMPORTANT: Always output ALL THREE blocks when providing code. If you are asking a question, use [[option_id]] format for clickable choices.');
+  parts.push('Format for code: [HTML] ... [CSS] ... [JS] ...');
 
   return parts.join('\n');
+}
+
+/* ── Last-Resort Minimal Prompt — stripped to bare essentials ── */
+function buildMinimalPrompt(userMsg) {
+  return [
+    'Build/refine an HTML tool for UniconHub CMS (sandboxed iframe, window.tool SDK).',
+    'Output THREE blocks: [HTML] (body markup only), [CSS] (no <style> tag), [JS] (no <script> tag, use tool.onReady).',
+    'ES5 ONLY: var, function(){}, string concat with +, for(var i;;) loops.',
+    'No localStorage, fetch, alert, prompt, raw postMessage. No DOMContentLoaded.',
+    'tool.setValue/getValue for persistence. tool.isReadOnly() for view mode. tool.resize() after DOM changes.',
+    'tool.notify(msg, severity) for user feedback.',
+    '',
+    '=== USER REQUEST ===',
+    userMsg,
+    '',
+    'Generate COMPLETE [HTML]/[CSS]/[JS] blocks. No placeholders, no TODOs.',
+    'If request is vague, ask clarifying questions with [[option_id]] Format.'
+  ].join('\n');
+}
+
+/* ── Condensed Rules (~5K chars) for when prompt exceeds CMS 20K limit ── */
+function getCondensedRules() {
+  return [
+    'You are building an HTML tool for UniconHub CMS (sandboxed iframe, window.tool SDK).',
+    '',
+    '--- OUTPUT FORMAT (MANDATORY) ---',
+    '[HTML] ...body markup only, no html/head/style/script/body/DOCTYPE tags...',
+    '[CSS]  ...stylesheet rules only, no <style> tag...',
+    '[JS]   ...JavaScript only, no <script> tag...',
+    'Output ALL THREE blocks. Never merge them. Never add explanation between blocks.',
+    '',
+    '--- ENTRY POINT ---',
+    'Use tool.onReady(cb) as the single entry point. Never use DOMContentLoaded or window.onload.',
+    '',
+    '── KEY SDK METHODS (window.tool) ──',
+    'tool.getValue() → current saved value (any JSON)',
+    'tool.setValue(data) → save value, triggers onValueChange',
+    'tool.onValueChange(cb) → cb(newValue)',
+    'tool.isReadOnly() → true when form is view-only',
+    'tool.onReadonlyChange(cb) → cb(bool), lock/unlock UI',
+    'tool.resize() → call after DOM changes that affect height',
+    'tool.notify(msg, severity) → show toast: "info"|"success"|"warning"|"error"',
+    'tool.param(name, default) → read admin-configured parameter',
+    'tool.getUser() → {id, name, email, roles, locale} or null',
+    'tool.getPermittedUsers() → [{id, name, email, roles}] for assignee pickers',
+    'tool.reportValid(bool, msg) → false blocks form save, shows msg',
+    'tool.openUrl(url) → open URL in new tab (use instead of window.open)',
+    'tool.declareParams([{name,label,type,default,hint,severity}]) → declare configurable params',
+    'tool.reportMissingParams(missing, msg) → trigger CMS warning banner for unconfigured params',
+    'tool.getFields() → {fieldId: value} snapshot of sibling fields',
+    'tool.setField(id, value) → write to sibling field',
+    'tool.onFieldsChange(cb) → cb(allFields) when sibling fields change',
+    '',
+    '── AI PROMPT RELAY ──',
+    'tool.requestAI(prompt, context, callback) → callback(err, responseText)',
+    '  Requires allowAi: "yes" in toolParams. 60s timeout. 100K char limit.',
+    '',
+    '── FILE UPLOAD ──',
+    'tool.requestUpload(accept, callback) → callback(err, {name, url, size, type})',
+    '  Requires allowUpload: "yes".',
+    '',
+    '── FILE CONTENT EXTRACTION ──',
+    'tool.requestFileContent(url, callback) → callback(err, textContent)',
+    '  Requires allowFileContent: "yes".',
+    '',
+    '── PDF EXPORT ──',
+    'tool.requestExportPdf({html?, filename?, landscape?}, callback) → callback(err, {name,url,size,type})',
+    '  Requires allowExportPdf: "yes".',
+    '',
+    '── SEND EMAIL ──',
+    'tool.requestSendEmail({to, subject, htmlBody, title?, attachments?}, callback) → callback(err, {ok:true})',
+    '  Requires allowSendEmail: "yes". Attachments: [{filename, url}].',
+    '',
+    '── OBJECT CRUD (Multi-Type CMS Database) ──',
+    'tool.requestObjects(action, params, callback) — CRUD across CMS object types.',
+    '  Actions: query({mainObjectType, typeId?}) → {objects:[...]}',
+    '           get({mainObjectType, objectId}) → {object:{...}}',
+    '           create({mainObjectType, typeId?, name, productData:{data_categoriesBased:{...}}}) → {object:{...}}',
+    '           update({mainObjectType, objectId, productData:{...}, name?}) → {ok:true}',
+    '           delete({mainObjectType, objectId}) → {ok:true}',
+    '           batch({operations:[{action, mainObjectType, ...}]}) → {ok:true, results:[...]} (max 500 ops)',
+    '  Requires allowObjectCRUD: "yes" + allowedObjectTypes config.',
+    '  Namespace types: <typeName>-<developerSubdomain> (shared) or <toolId>.<typeName>-<developerSubdomain> (isolated).',
+    '',
+    '── HARD RULES ──',
+    'NO <script>, <style>, <html>, <head>, <body>, <!DOCTYPE> tags in any block.',
+    'NO DOMContentLoaded or window.onload — use tool.onReady.',
+    'NO localStorage or sessionStorage.',
+    'NO fetch to external URLs (sandbox blocks it).',
+    'NO alert(), confirm(), or prompt().',
+    'NO raw postMessage — always use tool.* SDK.',
+    'CDN <script> tags ARE allowed in the HTML block (Chart.js, Sortable, etc.).',
+    'Values can be any JSON type — save objects/arrays with tool.setValue().',
+    'All request* methods are async — use callbacks, not return values.',
+    'Always produce complete, functional code — no placeholders, no TODO comments.',
+    '',
+    '── ES5 ONLY (CRITICAL) ──',
+    'var only (never let/const). function(){} (never =>).',
+    'String concatenation with + (never `backticks`).',
+    'for(var i=0;...) loops (never for...of).',
+    'No spread (...), destructuring, default params, Map, Set, Promise, async/await, class.',
+    'Every onclick handler MUST reference a function DEFINED in the JS block.'
+  ].join('\n');
 }
 
 /* ── File Upload ── */
@@ -435,12 +630,281 @@ function formatFileSize(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
-/* ── Chat ── */
+/* ── Template Gallery ── */
+function renderTemplateGallery(container) {
+  if (!container) return;
+  // Show first 6 templates in the welcome area (rest in modal)
+  var shown = TEMPLATES.slice(0, 6);
+  var html = '';
+  for (var i = 0; i < shown.length; i++) {
+    var t = shown[i];
+    html += '<div class="template-card" data-tpl-id="' + t.id + '" onclick="openTemplateModal(\'' + t.id + '\')">' +
+      '<div class="template-card-icon">' + t.icon + '</div>' +
+      '<div class="template-card-category">' + esc(t.category) + '</div>' +
+      '<div class="template-card-title">' + esc(t.title) + '</div>' +
+      '<div class="template-card-desc">' + esc(t.desc) + '</div>' +
+      '<div class="template-card-action">View & Customize →</div>' +
+    '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function openTemplateModal(tplId) {
+  var t = null;
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    if (TEMPLATES[i].id === tplId) { t = TEMPLATES[i]; break; }
+  }
+  if (!t) return;
+  _currentTemplate = t;
+  el('tpl-icon').textContent = t.icon;
+  el('tpl-title').textContent = t.title;
+  el('tpl-desc').textContent = t.desc;
+  el('tpl-modal-title').textContent = t.icon + ' ' + t.title;
+  // Restore prompt textarea (in case modal was showing template list)
+  var ta = el('tpl-prompt-text');
+  if (ta) { ta.style.display = ''; ta.value = t.prompt; }
+  // Restore prompt label
+  var area = qs('#modal-template .template-prompt-area');
+  if (area) {
+    area.innerHTML = '<div class="template-prompt-label">✏️ Customize this prompt — edit any part, then send to AI:</div>' +
+      '<textarea id="tpl-prompt-text" class="template-prompt-text" spellcheck="false">' + esc(t.prompt) + '</textarea>';
+  }
+  // Show action buttons
+  var actions = qs('#modal-template .template-modal-actions');
+  if (actions) actions.style.display = '';
+  // Re-bind buttons (since innerHTML was replaced)
+  var btnReset = el('btn-tpl-reset'); if (btnReset) btnReset.onclick = resetTemplatePrompt;
+  var btnUse = el('btn-tpl-use'); if (btnUse) btnUse.onclick = useTemplatePrompt;
+  openModal('modal-template');
+}
+
+function closeTemplateModal() {
+  _currentTemplate = null;
+  closeAllModals();
+}
+
+function resetTemplatePrompt() {
+  if (_currentTemplate && el('tpl-prompt-text')) {
+    el('tpl-prompt-text').value = _currentTemplate.prompt;
+    showToast('Prompt reset to original.', 'info');
+  }
+}
+
+function useTemplatePrompt() {
+  var promptText = el('tpl-prompt-text') ? el('tpl-prompt-text').value.trim() : '';
+  if (!promptText) { showToast('Prompt is empty.', 'warning'); return; }
+  console.warn('[VIBECODING] Template prompt used — length:', promptText.length, 'template:', _currentTemplate ? _currentTemplate.title : 'none');
+  closeAllModals();
+  // Put the prompt in the chat input and send it
+  var inp = el('chat-input');
+  if (inp) {
+    inp.value = promptText;
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+  }
+  // Auto-send
+  sendChatMessage();
+}
+
+/* ── Interview / Guided Mode ── */
+function toggleInterviewMode() {
+  interviewMode = !interviewMode;
+  console.warn('[VIBECODING] Interview mode toggled:', interviewMode ? 'ON' : 'OFF');
+  var btn = el('btn-guided-mode');
+  if (btn) {
+    if (interviewMode) { btn.classList.add('active'); btn.textContent = '🪄 Guided: ON'; }
+    else { btn.classList.remove('active'); btn.textContent = '🪄 Guided'; }
+  }
+  // Update placeholder
+  var inp = el('chat-input');
+  if (inp) {
+    inp.placeholder = interviewMode
+      ? 'Answer the AI\'s question or describe your tool... (Enter to send)'
+      : 'Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)';
+  }
+  var msg = interviewMode
+    ? '🪄 **Guided Mode active.** The AI will interview you step by step to understand your needs. Just answer each question — or type freely.'
+    : '📝 **Guided Mode off.** Back to free-form chat.';
+  addChatMessage('ai', msg);
+  tool.resize();
+}
+
+function buildInterviewSystemPrompt() {
+  return [
+    'YOU ARE A BUSINESS ANALYST INTERVIEWING THE USER to understand their tool requirements.',
+    'Your job is to ask CLEAR, SIMPLE questions — one at a time — to gather all the details needed.',
+    '',
+    'RULES:',
+    '1. Ask exactly ONE question per response. Keep it short and friendly.',
+    '2. After each question, provide 2-5 multiple choice options the user can click.',
+    '3. Format each option on its own line like this: [[option_id]] Brief option text',
+    '   Example: [[people]] Staff & Personnel',
+    '            [[tasks]] Tasks & Projects',
+    '            [[other]] Something else',
+    '4. Do NOT generate code until you have gathered enough information (at least 4-5 answers).',
+    '5. When you have enough, say "I have enough to build your tool. Here\'s a summary:" then list what you understood, then ask "Shall I generate the code now?"',
+    '6. If the user says yes/generate/go ahead, THEN output the [HTML]/[CSS]/[JS] blocks.',
+    '7. If the user asks a question or gives extra info, adapt and continue the interview.',
+    '8. Be conversational and encouraging. Use plain language — the user is NOT a developer.',
+    '',
+    'INTERVIEW FLOW (start here):',
+    'Q1: "What kind of tool would you like me to build?" (present category options)',
+    'Q2: Based on their answer, ask about the main things they need to track or manage.',
+    'Q3: Ask who will use the tool and how many people.',
+    'Q4: Ask about specific features — do they need search? export? email? notifications?',
+    'Q5: Ask about visual style preferences — professional? colorful? minimal? dark mode?',
+    'Then summarize and offer to generate.',
+    '',
+    'If at any point the user provides a detailed description instead of picking options,',
+    'skip the remaining interview questions and generate the tool directly.'
+  ].join('\n');
+}
+
+function parseAndRenderOptions(text) {
+  // Check if text contains interview options like [[option_id]] Option text
+  var lines = text.split('\n');
+  var options = [];
+  var textLines = [];
+  for (var i = 0; i < lines.length; i++) {
+    var match = lines[i].match(/^\[\[([a-zA-Z0-9_-]+)\]\]\s+(.+)/);
+    if (match) {
+      options.push({ id: match[1], text: match[2].trim() });
+    } else {
+      textLines.push(lines[i]);
+    }
+  }
+  // Build HTML: text part + option buttons
+  var html = textLines.join('\n');
+  if (options.length > 0) {
+    html += '<div class="chat-options">';
+    for (var j = 0; j < options.length; j++) {
+      var opt = options[j];
+      html += '<button class="chat-option-btn" data-opt-id="' + esc(opt.id) + '" data-opt-text="' + esc(opt.text) + '" onclick="handleOptionClick(this)">' +
+        '<span class="opt-num">' + (j + 1) + '</span>' + esc(opt.text) + '</button>';
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+function handleOptionClick(btn) {
+  var optId = btn.getAttribute('data-opt-id');
+  var optText = btn.getAttribute('data-opt-text');
+  console.warn('[VIBECODING] Option clicked — id:', optId, 'text:', optText);
+  // Disable all option buttons in this group
+  var parent = btn.parentNode;
+  if (parent) {
+    var allBtns = parent.querySelectorAll('.chat-option-btn');
+    for (var i = 0; i < allBtns.length; i++) {
+      allBtns[i].classList.add('chat-option-used');
+      allBtns[i].disabled = true;
+    }
+  }
+  // Send the selected option as the user's response
+  var inp = el('chat-input');
+  if (inp) {
+    inp.value = optText;
+    inp.style.height = 'auto';
+  }
+  sendChatMessage();
+}
+
+function isInterviewQuestion(text) {
+  // Detect if the AI response is an interview question (has [[options]])
+  return /\[\[[a-zA-Z0-9_-]+\]\]/.test(text);
+}
+
+/* ── Deep AI Pipeline Diagnostics (quiet — uncomment to re-enable) ── */
+function diagAI() { /* disabled for clean console */ }
+
+function diagPromptStats() { /* quiet */ }
+
+function diagResponse() { /* quiet */ }
+
+/* ── Request Correlation ID ── */
+var _reqIdCounter = 0;
+var _currentReqId = '';
+function nextReqId() { _reqIdCounter++; return 'REQ-' + _reqIdCounter + '-' + Date.now().toString(36); }
+
+/* ── Manual AI Ping Test (run from console: diagPing()) ── */
+function diagPing() {
+  var reqId = nextReqId();
+  var testPrompt = 'Reply with exactly: PONG ' + reqId;
+  console.warn('[VIBECODING:PING:' + reqId + '] ══════ AI PING TEST ══════');
+  console.warn('[VIBECODING:PING:' + reqId + '] Sending test prompt: "' + testPrompt + '"');
+  console.warn('[VIBECODING:PING:' + reqId + '] promptSize=' + testPrompt.length + 'chars');
+  
+  var pingStart = Date.now();
+  
+  // Test streaming first
+  if (typeof tool.requestAIStream === 'function') {
+    console.warn('[VIBECODING:PING:' + reqId + '] Trying STREAMING...');
+    var streamResponse = '';
+    tool.requestAIStream(testPrompt, '', {
+      onToken: function(t) { streamResponse += t; },
+      onComplete: function() {
+        var elapsed = Date.now() - pingStart;
+        console.warn('[VIBECODING:PING:' + reqId + '] STREAM complete in ' + elapsed + 'ms — response: "' + streamResponse + '" (' + streamResponse.length + ' chars)');
+        if (!streamResponse.trim()) {
+          console.warn('[VIBECODING:PING:' + reqId + '] STREAM returned EMPTY — trying batch fallback...');
+          diagPingBatch(reqId, testPrompt, pingStart);
+        }
+      },
+      onError: function(err) {
+        var elapsed = Date.now() - pingStart;
+        console.warn('[VIBECODING:PING:' + reqId + '] STREAM ERROR in ' + elapsed + 'ms: ' + err);
+        console.warn('[VIBECODING:PING:' + reqId + '] Trying batch fallback...');
+        diagPingBatch(reqId, testPrompt, pingStart);
+      }
+    });
+  } else {
+    console.warn('[VIBECODING:PING:' + reqId + '] requestAIStream NOT available — using batch only');
+    diagPingBatch(reqId, testPrompt, pingStart);
+  }
+}
+
+function diagPingBatch(reqId, testPrompt, pingStart) {
+  console.warn('[VIBECODING:PING:' + reqId + '] Trying BATCH requestAI...');
+  tool.requestAI(testPrompt, '', function(err, response) {
+    var elapsed = Date.now() - pingStart;
+    if (response) {
+      console.warn('[VIBECODING:PING:' + reqId + '] BATCH complete in ' + elapsed + 'ms — response: "' + response + '" (' + response.length + ' chars)');
+    } else if (err) {
+      console.warn('[VIBECODING:PING:' + reqId + '] BATCH ERROR in ' + elapsed + 'ms: ' + err);
+    } else {
+      console.warn('[VIBECODING:PING:' + reqId + '] BATCH returned NULL/EMPTY in ' + elapsed + 'ms — AI bridge appears DOWN');
+    }
+    console.warn('[VIBECODING:PING:' + reqId + '] ══════ PING TEST COMPLETE ══════');
+  });
+}
+
+/* ── CMS-Side Diagnostic Hooks (add these to your CMS code) ──
+   Copy these console.warn calls into your CMS parent-window code
+   at each layer of the AI pipeline to trace exactly where it breaks.
+
+   LAYER 1 — html-tool iframe bridge (receives postMessage from tool):
+     console.warn('[CMS:BRIDGE] Received AI request from iframe — promptLen=' + prompt.length + ' chars, stream=' + isStream);
+
+   LAYER 2 — AI gateway/router (forwards to model endpoint):
+     console.warn('[CMS:GATEWAY] Forwarding to AI model — model=' + modelName + ', promptLen=' + prompt.length + ', stream=' + isStream);
+
+   LAYER 3 — AI model response (raw response from model API):
+     console.warn('[CMS:MODEL] Raw response received — status=' + status + ', bodyLen=' + body.length + ', first100chars=' + body.substring(0,100));
+
+   LAYER 4 — Response sent back to iframe:
+     console.warn('[CMS:BRIDGE] Sending AI response to iframe — responseLen=' + response.length + ', stream=' + isStream);
+
+   LAYER 5 — Error path:
+     console.warn('[CMS:BRIDGE] AI request FAILED — error=' + errorMsg + ', stack=' + errorStack);
+────────────────────────────────────────── */
 function sendChatMessage() {
   var input = el('chat-input'); if (!input) return;
   var msg = input.value.trim();
   if (!msg && !attachedFile) return;
   if (!msg) msg = 'Please analyze the attached file and suggest a tool design based on it.';
+
+  var reqId = nextReqId();
+  _currentReqId = reqId;
 
   // Build user message text including attachment info for chat display
   var displayMsg = msg;
@@ -453,64 +917,305 @@ function sendChatMessage() {
   var hasCode = !!(DB.generated.html || DB.generated.css || DB.generated.js);
   var prompt = buildChatPrompt(msg);
 
+  // ── Clean console logging: what we send ──
+  console.warn('[VIBECODING:SEND] ══════ REQUEST ══════');
+  console.warn('[VIBECODING:SEND] Prompt:', prompt.length.toLocaleString(), 'chars | hasCode:', hasCode, '| interview:', interviewMode, '| attachment:', !!attachedFile);
+  console.warn('[VIBECODING:SEND:FULL]', prompt);
+  console.warn('[VIBECODING:SEND] ═══════════════════════');
+
+  updateConnStatus('busy');
+  setAiTimeout(prompt.length);
+  _aiCallActive = true;
+
   // Use streaming if available, fall back to batch
   if (typeof tool.requestAIStream === 'function') {
     showThinkingBubble('AI is generating', true);
     var fullResponse = '';
+    var streamStart = Date.now();
 
-    tool.requestAIStream(prompt, '', {
-      onToken: function(token) {
-        fullResponse += token;
-        if (_streamCallback) _streamCallback(token);
-      },
-      onComplete: function() {
-        hideThinkingBubble();
-        processAIResponse(fullResponse, hasCode);
-        clearAttachment();
-        tool.resize();
-      },
-      onError: function(err) {
-        hideThinkingBubble();
-        addChatMessage('ai', '⚠️ Stream error: ' + err);
-        clearAttachment();
-        tool.resize();
-      }
-    });
-  } else {
-    // Fallback: batch requestAI — no streaming available
-    showThinkingBubble('AI is generating', false);
-    tool.requestAI(prompt, '', function(err, response) {
+    try {
+      tool.requestAIStream(prompt, '', {
+        onToken: function(token) {
+          fullResponse += token;
+          if (_streamCallback) _streamCallback(token);
+        },
+        onComplete: function() {
+          var elapsed = Date.now() - streamStart;
+          console.warn('[VIBECODING:RECEIVE] ══════ RESPONSE ══════');
+          console.warn('[VIBECODING:RECEIVE] Stream complete —', fullResponse.length.toLocaleString(), 'chars | elapsed:', elapsed, 'ms');
+          console.warn('[VIBECODING:RECEIVE:FULL]', fullResponse);
+          console.warn('[VIBECODING:RECEIVE] ═══════════════════════');
+          _aiCallActive = false;
+          clearAiTimeout();
+          if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
+            hideThinkingBubble();
+            updateConnStatus('ok');
+            processAIResponse(fullResponse, hasCode);
+            clearAttachment();
+            tool.resize();
+          } else {
+            // Stream returned empty or just quotes — auto-retry with batch requestAI (may handle large prompts better)
+            console.warn('[VIBECODING:RETRY] ⚠️ Streaming returned empty — auto-falling back to batch requestAI...');
+            console.warn('[VIBECODING:RETRY]   Prompt size:', prompt.length, 'chars,', Math.round(prompt.length / 4), 'est tokens');
+            updateConnStatus('busy');
+            setAiTimeout(prompt.length);
+            _aiCallActive = true;
+            try {
+              tool.requestAI(prompt, '', function(err2, response2) {
+                var elapsed2 = Date.now() - streamStart;
+                console.warn('[VIBECODING:RECEIVE] Retry batch —', (response2||'').length, 'chars | err:', err2 || 'none', '| elapsed:', elapsed2, 'ms');
+                _aiCallActive = false;
+                clearAiTimeout();
+                hideThinkingBubble();
+                if (response2 && response2.trim() && response2.length > 10) {
+                  updateConnStatus('ok');
+                  processAIResponse(response2, hasCode);
+                } else if (err2) {
+                  updateConnStatus('error');
+                  addChatMessage('ai', '⚠️ **AI Error (retry):** ' + err2 + '\n\n🔧 The CMS AI service returned an error on retry. Check allowAi configuration.', true);
+                } else {
+                  // Both stream and batch failed — try last-resort minimal prompt
+                  console.warn('[VIBECODING:LAST-RESORT] 🔴 Both stream AND batch retry returned empty — trying minimal prompt...');
+                  var minimalPrompt = buildMinimalPrompt(msg);
+                  console.warn('[VIBECODING:LAST-RESORT] Minimal prompt size:', minimalPrompt.length, 'chars');
+                  updateConnStatus('busy');
+                  setAiTimeout(minimalPrompt.length);
+                  _aiCallActive = true;
+                  tool.requestAI(minimalPrompt, '', function(err3, response3) {
+                    _aiCallActive = false;
+                    clearAiTimeout();
+                    hideThinkingBubble();
+                    if (response3 && response3.trim() && response3.length > 10) {
+                      console.warn('[VIBECODING:LAST-RESORT] ✅ Minimal prompt succeeded! Response:', response3.length, 'chars');
+                      updateConnStatus('ok');
+                      processAIResponse(response3, hasCode);
+                    } else {
+                      updateConnStatus('error');
+                      console.warn('[VIBECODING:LAST-RESORT] 🔴 Even minimal prompt failed — AI service is likely DOWN');
+                      addChatMessage('ai', '⚠️ **AI service appears to be unavailable.**\n\nAll three attempts failed:\n• Streaming: returned empty\n• Batch with full prompt: returned empty\n• Batch with minimal prompt (~' + minimalPrompt.length + ' chars): also failed\n\n🔧 The CMS AI service may be down. Contact your CMS administrator to verify the AI gateway configuration.', true);
+                    }
+                    clearAttachment();
+                    tool.resize();
+                  });
+                }
+                clearAttachment();
+                tool.resize();
+              });
+            } catch(e2) {
+              console.warn('[VIBECODING:RETRY-EXC] 🔴 Retry requestAI THREW EXCEPTION');
+              console.warn('  Error:', e2.message || e2);
+              console.warn('  Stack:', (e2.stack || '(no stack)').substring(0, 300));
+              _aiCallActive = false;
+              clearAiTimeout();
+              hideThinkingBubble();
+              updateConnStatus('error');
+              addChatMessage('ai', '⚠️ **AI retry failed:** ' + (e2.message || 'Unknown') + '\n\n🔧 The AI service may not be available.', true);
+              clearAttachment();
+              tool.resize();
+            }
+          }
+        },
+        onError: function(err) {
+          var elapsed = Date.now() - streamStart;
+          console.warn('[VIBECODING:RECEIVE] Stream ERROR —', err, '| elapsed:', elapsed, 'ms');
+          _aiCallActive = false;
+          clearAiTimeout();
+          hideThinkingBubble();
+          updateConnStatus('error');
+          addChatMessage('ai', '⚠️ **AI Stream Error:** ' + (err || 'Unknown stream failure') + '\n\n🔧 Check that allowAi is set to "yes" in field settings.', true);
+          clearAttachment();
+          tool.resize();
+        }
+      });
+    } catch(e) {
+      console.warn('[VIBECODING:STREAM-EXC] 🔴 requestAIStream THREW EXCEPTION — SDK may be broken');
+      console.warn('  Error:', e.message || e);
+      console.warn('  Error type:', typeof e);
+      console.warn('  Stack:', (e.stack || '(no stack)').substring(0, 300));
+      _aiCallActive = false;
+      clearAiTimeout();
       hideThinkingBubble();
-      if (response) {
-        processAIResponse(response, hasCode);
-      } else if (err) {
-        addChatMessage('ai', '⚠️ Error: ' + err);
-      } else {
-        addChatMessage('ai', '⚠️ No response. Make sure allowAi is enabled.');
-      }
+      updateConnStatus('error');
+      addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error') + '\n\n🔧 The AI service may not be configured. Ask your CMS admin to verify allowAi is enabled.', true);
       clearAttachment();
       tool.resize();
-    });
+    }
+  } else {
+    showThinkingBubble('AI is generating', false);
+    var batchStart = Date.now();
+    try {
+      tool.requestAI(prompt, '', function(err, response) {
+        var elapsed = Date.now() - batchStart;
+        console.warn('[VIBECODING:RECEIVE] Batch complete —', (response||'').length, 'chars | err:', err || 'none', '| elapsed:', elapsed, 'ms');
+        if (response && response.length > 10) console.warn('[VIBECODING:RECEIVE:FULL]', response);
+        _aiCallActive = false;
+        clearAiTimeout();
+        hideThinkingBubble();
+        if (response && response.trim() && response.length > 10) {
+          updateConnStatus('ok');
+          processAIResponse(response, hasCode);
+        } else if (err) {
+          updateConnStatus('error');
+          addChatMessage('ai', '⚠️ **AI Error:** ' + err + '\n\n🔧 The CMS AI service returned an error. Check that allowAi is enabled and the AI service is configured.', true);
+        } else {
+          updateConnStatus('error');
+          console.warn('[VIBECODING] requestAI returned NULL response with no error — possible causes: allowAi not enabled, AI service not configured, or request blocked');
+          addChatMessage('ai', '⚠️ **No AI response received.**\n\nPossible causes:\n• allowAi not set to "yes" in field settings\n• AI service not configured for this tenant\n• The request was blocked or timed out\n\n🔧 Ask your CMS admin to verify the AI configuration.', true);
+        }
+        clearAttachment();
+        tool.resize();
+      });
+    } catch(e) {
+      console.warn('[VIBECODING:BATCH-EXC] 🔴 requestAI THREW EXCEPTION — SDK may be broken');
+      console.warn('  Error:', e.message || e);
+      console.warn('  Stack:', (e.stack || '(no stack)').substring(0, 300));
+      _aiCallActive = false;
+      clearAiTimeout();
+      hideThinkingBubble();
+      updateConnStatus('error');
+      addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error') + '\n\n🔧 The AI service may not be available. Verify allowAi is set to "yes".', true);
+      clearAttachment();
+      tool.resize();
+    }
   }
+}
+
+/* ── Line Diff — compare old vs new code, return change stats ── */
+function computeLineDiff(oldCode, newCode, label) {
+  var oldRaw = (oldCode || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var newRaw = (newCode || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  var oldLines = oldRaw.split('\n');
+  var newLines = newRaw.split('\n');
+
+  console.warn('[VIBECODING:DIFF] ' + label + ' — old:', oldRaw.length, 'chars,', oldLines.length, 'lines | new:', newRaw.length, 'chars,', newLines.length, 'lines');
+
+  // Build a set of trimmed lines for quick lookup
+  var oldSet = {};
+  var oldNonEmpty = 0;
+  for (var i = 0; i < oldLines.length; i++) {
+    var trimmed = oldLines[i].trim();
+    if (trimmed) { oldSet[trimmed] = (oldSet[trimmed] || 0) + 1; oldNonEmpty++; }
+  }
+  var newSet = {};
+  var newNonEmpty = 0;
+  for (var j = 0; j < newLines.length; j++) {
+    var t = newLines[j].trim();
+    if (t) { newSet[t] = (newSet[t] || 0) + 1; newNonEmpty++; }
+  }
+
+  console.warn('[VIBECODING:DIFF] ' + label + ' — non-empty lines: old=' + oldNonEmpty + ' new=' + newNonEmpty + ' unique-old=' + Object.keys(oldSet).length + ' unique-new=' + Object.keys(newSet).length);
+
+  // Count lines in new that don't appear in old (or appear fewer times)
+  var addedKeys = Object.keys(newSet);
+  var trulyNew = 0;
+  for (var k = 0; k < addedKeys.length; k++) {
+    var key = addedKeys[k];
+    var newCount = newSet[key] || 0;
+    var oldCount = oldSet[key] || 0;
+    if (newCount > oldCount) trulyNew += (newCount - oldCount);
+  }
+
+  // Count lines in old that don't appear in new (or appear fewer times)
+  var removedKeys = Object.keys(oldSet);
+  var trulyRemoved = 0;
+  for (var m = 0; m < removedKeys.length; m++) {
+    var rKey = removedKeys[m];
+    var oCount = oldSet[rKey] || 0;
+    var nCount = newSet[rKey] || 0;
+    if (oCount > nCount) trulyRemoved += (oCount - nCount);
+  }
+
+  console.warn('[VIBECODING:DIFF] ' + label + ' — trulyNew=' + trulyNew + ' trulyRemoved=' + trulyRemoved + ' oldLines=' + oldLines.length + ' newLines=' + newLines.length);
+
+  var parts = [];
+  if (trulyNew > 0) parts.push('+' + trulyNew + ' added');
+  if (trulyRemoved > 0) parts.push('−' + trulyRemoved + ' removed');
+  if (parts.length === 0 && oldLines.length !== newLines.length) {
+    parts.push('restructured');
+  }
+
+  return {
+    label: label,
+    oldCount: oldLines.length,
+    newCount: newLines.length,
+    added: trulyNew,
+    removed: trulyRemoved,
+    changed: trulyNew > 0 || trulyRemoved > 0 || oldLines.length !== newLines.length,
+    summary: parts.length > 0 ? parts.join(', ') : 'unchanged'
+  };
 }
 
 /* ── Process AI Response (shared by stream & batch) ── */
 function processAIResponse(response, hasCode) {
+  var isInterview = isInterviewQuestion(response);
+  console.warn('[VIBECODING:PROCESS] Response:', response.length, 'chars | hasCode:', hasCode, '| isInterview:', isInterview);
+  // Check if this is an interview question (has clickable [[options]])
+  if (isInterviewQuestion(response)) {
+    console.warn('[VIBECODING:PROCESS] Response is interview question — rendering option buttons');
+    // Render as chat message with option buttons — handled in renderChatMessages
+    addChatMessage('ai', response);
+    return;
+  }
+
   var generated = parseGeneratedCode(response);
+  console.warn('[VIBECODING:PARSE] HTML:', (generated.html||'').length, 'chars | CSS:', (generated.css||'').length, 'chars | JS:', (generated.js||'').length, 'chars');
+  
+  // Guard: if response is very short and has no code blocks, treat as empty/junk
+  if (!generated.html && !generated.css && !generated.js && response.trim().length < 20) {
+    console.warn('[VIBECODING:PROCESS] Response too short (' + response.trim().length + ' chars) with no code blocks — treating as empty');
+    addChatMessage('ai', '⚠️ **AI returned an empty or invalid response.**\n\nRaw: ' + JSON.stringify(response) + '\n\n🔧 The AI model may be misconfigured. Try again or check the AI gateway logs.', true);
+    return;
+  }
+
   if (generated.html || generated.css || generated.js) {
+    console.warn('[VIBECODING:APPLY] About to apply code — html:', (generated.html||'').length, 'css:', (generated.css||'').length, 'js:', (generated.js||'').length);
+    // Got code! Turn off interview mode if it was on
+    if (interviewMode) {
+      interviewMode = false;
+      var btn = el('btn-guided-mode');
+      if (btn) { btn.classList.remove('active'); btn.textContent = '🪄 Guided'; }
+    }
+
+    // Snapshot old code for diff BEFORE replacing
+    var oldHtml = hasCode ? (DB.generated.html || '') : '';
+    var oldCss = hasCode ? (DB.generated.css || '') : '';
+    var oldJs = hasCode ? (DB.generated.js || '') : '';
+
     if (generated.html) DB.generated.html = generated.html;
     if (generated.css) DB.generated.css = generated.css;
     if (generated.js) DB.generated.js = generated.js;
+    console.warn('[VIBECODING:APPLY] DB.generated now — html:', DB.generated.html.length, 'css:', DB.generated.css.length, 'js:', DB.generated.js.length);
+    console.warn('[VIBECODING:APPLY] Calling displayAllCode...');
     displayAllCode(DB.generated);
 
     if (!hasCode) addToHistory(DB.generated);
 
     var summary = extractSummary(response);
-    addChatMessage('ai', summary + '\n\n✅ *Code updated — running auto-review...*');
+
+    // Build diff summary if we had existing code
+    var diffMsg = '';
+    if (hasCode) {
+      var dHtml = computeLineDiff(oldHtml, DB.generated.html, 'HTML');
+      var dCss = computeLineDiff(oldCss, DB.generated.css, 'CSS');
+      var dJs = computeLineDiff(oldJs, DB.generated.js, 'JS');
+      var diffParts = [];
+      if (dHtml.changed) diffParts.push('📄 HTML: ' + dHtml.summary + ' (' + dHtml.oldCount + '→' + dHtml.newCount + ' ln)');
+      if (dCss.changed) diffParts.push('🎨 CSS: ' + dCss.summary + ' (' + dCss.oldCount + '→' + dCss.newCount + ' ln)');
+      if (dJs.changed) diffParts.push('⚙️ JS: ' + dJs.summary + ' (' + dJs.oldCount + '→' + dJs.newCount + ' ln)');
+      if (diffParts.length > 0) {
+        diffMsg = '\n\n📊 **Changes:**\n' + diffParts.join('\n');
+      } else {
+        diffMsg = '\n\n📊 **Changes:** (no significant line changes detected)';
+      }
+    }
+
+    addChatMessage('ai', summary + diffMsg + '\n\n✅ *Code updated.*');
     persist();
 
     if (!hasCode) switchTab('preview');
-    runAutoReview();
+    // Auto-review disabled — was doubling request time and Gateway batch path is broken.
+    // To re-enable, call runAutoReview() manually from console.
+    // runAutoReview();
   } else {
     addChatMessage('ai', response);
   }
@@ -547,31 +1252,56 @@ function runAutoReview() {
     'Be strict about the rules. Fix even minor issues. Output format if fixing: [HTML]...[CSS]...[JS]'
   ].join('\n');
 
-  showThinkingBubble('AI is reviewing code', false);
+  console.warn('[VIBECODING] runAutoReview — reviewPrompt length:', reviewPrompt.length);
+  showThinkingBubble('AI is reviewing code', true);
 
-  tool.requestAI(reviewPrompt, '', function(err, response) {
-    hideThinkingBubble();
-    if (response) {
-      var fixed = parseGeneratedCode(response);
-      if (fixed.html || fixed.css || fixed.js) {
-        // Review found issues — apply fixes
-        if (fixed.html) DB.generated.html = fixed.html;
-        if (fixed.css) DB.generated.css = fixed.css;
-        if (fixed.js) DB.generated.js = fixed.js;
-        displayAllCode(DB.generated);
-        addChatMessage('ai', '🔍 **Auto-review:** Found and fixed issues for rule compliance. Code updated.');
-        persist();
-      } else if (response.indexOf('REVIEW PASSED') !== -1 || response.indexOf('no issues') !== -1) {
-        addChatMessage('ai', '🔍 **Auto-review:** ✅ All rule checks passed. Code is ready.');
-      } else {
-        addChatMessage('ai', '🔍 **Auto-review:** ' + response.substring(0, 300));
+  // Prefer streaming — batch path in AI Gateway returns errorMessage type
+  if (typeof tool.requestAIStream === 'function') {
+    var reviewText = '';
+    tool.requestAIStream(reviewPrompt, '', {
+      onToken: function(t) { reviewText += t; if (_streamCallback) _streamCallback(t); },
+      onComplete: function() {
+        hideThinkingBubble();
+        console.warn('[VIBECODING] runAutoReview stream complete —', reviewText.length, 'chars');
+        applyReviewFixes(reviewText);
+        tool.resize();
+      },
+      onError: function(err) {
+        hideThinkingBubble();
+        console.warn('[VIBECODING] runAutoReview stream error —', err);
+        addChatMessage('ai', '🔍 **Auto-review:** Skipped (stream error). Code from first pass is in place.');
+        tool.resize();
       }
-    } else {
-      // Review failed silently — code from first pass is still in place
-      addChatMessage('ai', '🔍 **Auto-review:** Skipped (AI unavailable). Code from first pass is in place.');
-    }
-    tool.resize();
-  });
+    });
+  } else {
+    // Fallback: batch (may not work if Gateway batch path is broken)
+    tool.requestAI(reviewPrompt, '', function(err, response) {
+      console.warn('[VIBECODING] runAutoReview batch callback — err:', err || 'null', 'response:', response ? (response.length + ' chars') : 'NULL');
+      hideThinkingBubble();
+      if (response && response.length > 10) {
+        applyReviewFixes(response);
+      } else {
+        addChatMessage('ai', '🔍 **Auto-review:** Skipped (batch response empty). Code from first pass is in place.');
+      }
+      tool.resize();
+    });
+  }
+}
+
+function applyReviewFixes(response) {
+  var fixed = parseGeneratedCode(response);
+  if (fixed.html || fixed.css || fixed.js) {
+    if (fixed.html) DB.generated.html = fixed.html;
+    if (fixed.css) DB.generated.css = fixed.css;
+    if (fixed.js) DB.generated.js = fixed.js;
+    displayAllCode(DB.generated);
+    addChatMessage('ai', '🔍 **Auto-review:** Found and fixed issues for rule compliance. Code updated.');
+    persist();
+  } else if (response.indexOf('REVIEW PASSED') !== -1 || response.indexOf('no issues') !== -1) {
+    addChatMessage('ai', '🔍 **Auto-review:** ✅ All rule checks passed. Code is ready.');
+  } else {
+    addChatMessage('ai', '🔍 **Auto-review:** ' + response.substring(0, 300));
+  }
 }
 
 function extractSummary(text) {
@@ -580,9 +1310,9 @@ function extractSummary(text) {
   return cleaned || 'Here are the updated files:';
 }
 
-function addChatMessage(role, text) {
+function addChatMessage(role, text, isError) {
   if (!Array.isArray(DB.chatMessages)) DB.chatMessages = [];
-  DB.chatMessages.push({ role: role, text: text, time: new Date().toISOString() });
+  DB.chatMessages.push({ role: role, text: text, time: new Date().toISOString(), isError: !!isError });
   if (DB.chatMessages.length > 100) DB.chatMessages = DB.chatMessages.slice(-100);
   renderChatMessages();
   updateChatBadge();
@@ -611,6 +1341,7 @@ function showThinkingBubble(label, hasStreaming) {
       '<span class="chat-thinking-text" id="think-label">' + esc(label || 'AI is thinking') + '</span>' +
       '<span class="think-time" id="think-time">0:00</span>' +
       '<span class="think-toggle" id="think-toggle">▶</span>' +
+      '<button class="think-cancel" id="think-cancel" title="Cancel this request" style="display:none">✕</button>' +
     '</div>' +
     '<div class="think-body" id="think-body" style="display:none">' +
       bodyContent +
@@ -651,22 +1382,86 @@ function showThinkingBubble(label, hasStreaming) {
     _streamCallback = null;
   }
 
-  // Animate dots + elapsed timer
+  // Show cancel button after 5 seconds
+  var cancelBtn = bubble.querySelector('#think-cancel');
+  if (cancelBtn) {
+    setTimeout(function() {
+      if (_thinkingMsgEl === bubble && cancelBtn) cancelBtn.style.display = '';
+    }, 5000);
+    cancelBtn.onclick = function(e) {
+      e.stopPropagation();
+      cancelAiRequest();
+    };
+  }
+
+  // Animate dots + elapsed timer with warnings at 15s and 30s
   var dots = 0;
   _thinkingTimer = setInterval(function() {
     dots = (dots + 1) % 4;
     var lbl = bubble.querySelector('#think-label');
-    if (lbl) lbl.textContent = (label || 'AI is thinking') + Array(dots + 1).join('.');
     var elapsed = Math.floor((Date.now() - _thinkingStartTime) / 1000);
     var mins = Math.floor(elapsed / 60);
     var secs = elapsed % 60;
+    var timeStr = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    if (lbl) {
+      if (elapsed > 30) lbl.textContent = '⚠ Still waiting (' + timeStr + ') — AI may be unavailable';
+      else if (elapsed > 15) lbl.textContent = 'Waiting for AI response... ' + timeStr;
+      else lbl.textContent = (label || 'AI is thinking') + Array(dots + 1).join('.');
+    }
     var timeEl = bubble.querySelector('#think-time');
-    if (timeEl) timeEl.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+    if (timeEl) timeEl.textContent = timeStr;
   }, 500);
 }
 
 var _streamCallback = null;
 var _consoleEntries = [];
+var _aiTimeoutId = null;
+var _connStatus = 'ok'; // ok | busy | error
+var _aiCallActive = false; // true while waiting for AI callback
+
+function updateConnStatus(status) {
+  if (status !== _connStatus) console.warn('[VIBECODING:CONN] Status: ' + _connStatus + ' → ' + status);
+  _connStatus = status;
+  var dot = el('chat-conn-status');
+  if (dot) { dot.className = 'chat-status-dot ' + status; dot.title = status === 'ok' ? 'Ready' : status === 'busy' ? 'AI working...' : 'Error — check console'; }
+}
+
+function setAiTimeout(promptLen) {
+  clearAiTimeout();
+  _aiTimeoutId = setTimeout(function() {
+    console.warn('[VIBECODING:TIMEOUT] 🔴 AI request timed out after 120 seconds');
+    console.warn('  promptChars:', promptLen, 'estTokens:', Math.round(promptLen / 4));
+    console.warn('  _aiCallActive was:', _aiCallActive);
+    console.warn('  _connStatus was:', _connStatus);
+    console.warn('  Likely cause: AI Gateway never called back — check JWT token and Gateway connectivity');
+    _aiCallActive = false;
+    hideThinkingBubble();
+    var errMsg = '⏰ **AI request timed out after 120 seconds.**\n\n' +
+      'Possible causes:\n' +
+      '• The AI Gateway or model is overloaded\n' +
+      '• Prompt too large? (' + promptLen.toLocaleString() + ' chars — dynamic limit based on model)\n' +
+      '• Network issue between browser and AI Gateway\n' +
+      '• allowAi parameter not set to "yes"\n\n' +
+      '🔧 Try sending again or simplifying your request.';
+    addChatMessage('ai', errMsg, true);
+    updateConnStatus('error');
+    tool.resize();
+  }, 125000); // 120s AI timeout + 5s buffer
+}
+
+function clearAiTimeout() {
+  if (_aiTimeoutId) { clearTimeout(_aiTimeoutId); _aiTimeoutId = null; }
+}
+
+function cancelAiRequest() {
+  console.warn('[VIBECODING] Request CANCELLED by user');
+  _aiCallActive = false;
+  clearAiTimeout();
+  hideThinkingBubble();
+  updateConnStatus('error');
+  addChatMessage('ai', '⏹ **Request cancelled.** You can try again or check your AI configuration.', true);
+  tool.resize();
+}
 
 /* ── Console capture from preview iframe ── */
 function initConsoleCapture() {
@@ -739,19 +1534,63 @@ function hideThinkingBubble() {
 function renderChatMessages() {
   var container = el('chat-messages'); if (!container) return;
   if (!DB.chatMessages || !DB.chatMessages.length) {
-    container.innerHTML = '<div class="chat-welcome"><div class="chat-welcome-icon">👋</div><h3>Welcome to VibeCoding</h3><p>Configure your tool using the <b>⚙️ Config</b> button above, then ask me to generate it.</p><p class="chat-examples"><span>Quick start:</span><code>"Build an invoice manager with dashboard"</code><code>"Create a task tracker with kanban board"</code><code>"Make an employee onboarding form"</code></p></div>';
+    container.innerHTML = '<div class="chat-welcome">' +
+      '<div class="chat-welcome-icon">👋</div>' +
+      '<h3>Welcome to VibeCoding</h3>' +
+      '<p>Pick a template below, or just <b>describe what you need</b> in the chat — the AI will build it for you.</p>' +
+      '<div class="template-gallery" id="template-gallery"></div>' +
+      '<div class="template-view-all"><button id="btn-view-all-templates">View all 8 templates →</button></div>' +
+      '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — the AI will ask you questions step by step.</p>' +
+    '</div>';
+    // Render template cards into the gallery
+    var gal = container.querySelector('#template-gallery');
+    if (gal) renderTemplateGallery(gal);
+    // Bind view-all button
+    var vaBtn = container.querySelector('#btn-view-all-templates');
+    if (vaBtn) vaBtn.onclick = function() {
+      // Show all templates list in the modal
+      _currentTemplate = null;
+      openModal('modal-template');
+    };
     return;
   }
   var html = '';
   for (var i = 0; i < DB.chatMessages.length; i++) {
     var m = DB.chatMessages[i];
     var timeStr = ''; try { timeStr = new Date(m.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
-    var cls = m.role === 'user' ? 'chat-msg-user' : 'chat-msg-ai';
-    var label = m.role === 'user' ? 'YOU' : 'AI';
+    var cls = m.role === 'user' ? 'chat-msg-user' : (m.isError ? 'chat-msg-ai chat-msg-err' : 'chat-msg-ai');
+    var label = m.role === 'user' ? 'YOU' : (m.isError ? '⚠ ERROR' : 'AI');
     var text = esc(m.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[HTML\]/gi, '<b>[HTML]</b>').replace(/\[CSS\]/gi, '<b>[CSS]</b>').replace(/\[JS\]/gi, '<b>[JS]</b>').replace(/\n/g, '<br>');
     html += '<div class="chat-msg ' + cls + '"><div class="chat-msg-label">' + label + '</div><div>' + text + '</div><div class="chat-msg-time">' + timeStr + '</div></div>';
   }
   container.innerHTML = html;
+
+  // Post-process: find AI messages with [[options]] and render clickable buttons
+  var aiMsgs = container.querySelectorAll('.chat-msg-ai');
+  for (var j = 0; j < aiMsgs.length; j++) {
+    var msgEl = aiMsgs[j];
+    var rawText = msgEl.querySelector('div:nth-child(2)');
+    if (rawText) {
+      var innerHTML = rawText.innerHTML;
+      // Check if message has [[option_id]] patterns
+      if (/\[\[[a-zA-Z0-9_-]+\]\]/.test(innerHTML)) {
+        // Replace <br> back to \n for parsing, then render options
+        var plainText = innerHTML.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
+        var rendered = parseAndRenderOptions(plainText);
+        // Convert back: escape, process bold, convert newlines
+        var escaped = esc(rendered).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        // But parseAndRenderOptions already returns HTML — we need to use it directly
+        // Actually, let's rebuild: split on the options part
+        var optIdx = rendered.indexOf('<div class="chat-options">');
+        if (optIdx !== -1) {
+          var beforeOpts = rendered.substring(0, optIdx);
+          var optsHtml = rendered.substring(optIdx);
+          rawText.innerHTML = esc(beforeOpts).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>') + optsHtml;
+        }
+      }
+    }
+  }
+
   container.scrollTop = container.scrollHeight;
 }
 
@@ -762,36 +1601,80 @@ function updateChatBadge() {
 /* ── Full Generation (from Config tab button) ── */
 function runFullGeneration() {
   collectFormData(); persist();
+  var reqId = nextReqId();
+  _currentReqId = reqId;
+  console.warn('[VIBECODING:' + reqId + '] ══════ FULL GENERATION ══════');
   var prompt = buildFullPrompt();
   var hasChat = DB.chatMessages && DB.chatMessages.length > 0;
+  // ── Clean console logging: what we send ──
+  console.warn('[VIBECODING:SEND] ══════ FULL GEN ══════');
+  console.warn('[VIBECODING:SEND] Prompt:', prompt.length.toLocaleString(), 'chars | toolName:', DB.toolName || '(none)');
+  console.warn('[VIBECODING:SEND:FULL]', prompt);
+  console.warn('[VIBECODING:SEND] ═══════════════════════');
+  updateConnStatus('busy');
+  setAiTimeout(prompt.length);
+  _aiCallActive = true;
 
   if (typeof tool.requestAIStream === 'function') {
     var fullResponse = '';
     showThinkingBubble('AI is generating full tool', true);
 
-    tool.requestAIStream(prompt, '', {
-      onToken: function(token) {
-        fullResponse += token;
-        if (_streamCallback) _streamCallback(token);
-      },
-      onComplete: function() {
-        hideThinkingBubble();
-        finishFullGeneration(fullResponse, hasChat);
-      },
-      onError: function(err) {
-        hideThinkingBubble();
-        showToast('Generation failed: ' + err, 'error');
-      }
-    });
+    try {
+      tool.requestAIStream(prompt, '', {
+        onToken: function(token) {
+          fullResponse += token;
+          if (_streamCallback) _streamCallback(token);
+        },
+        onComplete: function() {
+          _aiCallActive = false;
+          clearAiTimeout();
+          hideThinkingBubble();
+          if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
+            console.warn('[VIBECODING:RECEIVE] Full gen stream —', fullResponse.length.toLocaleString(), 'chars');
+            console.warn('[VIBECODING:RECEIVE:FULL]', fullResponse);
+            updateConnStatus('ok');
+            finishFullGeneration(fullResponse, hasChat);
+          } else {
+            updateConnStatus('error');
+            console.warn('[VIBECODING] Full gen stream returned EMPTY response');
+            showToast('AI returned empty response. Try reducing requirements or check AI config.', 'error');
+          }
+        },
+        onError: function(err) {
+          _aiCallActive = false;
+          clearAiTimeout();
+          hideThinkingBubble();
+          updateConnStatus('error');
+          showToast('Generation failed: ' + err, 'error');
+        }
+      });
+    } catch(e) {
+      _aiCallActive = false;
+      clearAiTimeout();
+      hideThinkingBubble();
+      updateConnStatus('error');
+      showToast('AI call failed: ' + (e.message || 'Unknown'), 'error');
+    }
   } else {
     showThinkingBubble('AI is generating full tool', false);
-    tool.requestAI(prompt, '', function(err, response) {
+    try {
+      tool.requestAI(prompt, '', function(err, response) {
+        _aiCallActive = false;
+        clearAiTimeout();
+        hideThinkingBubble();
+        if (response && response.trim() && response.length > 10) {
+          updateConnStatus('ok');
+          finishFullGeneration(response, hasChat);
+        } else if (err) { updateConnStatus('error'); showToast('Generation failed: ' + err, 'error'); }
+        else { updateConnStatus('error'); showToast('No AI response. Check allowAi.', 'error'); }
+      });
+    } catch(e) {
+      _aiCallActive = false;
+      clearAiTimeout();
       hideThinkingBubble();
-      if (response) {
-        finishFullGeneration(response, hasChat);
-      } else if (err) { showToast('Generation failed: ' + err, 'error'); }
-      else { showToast('No AI response. Check allowAi.', 'error'); }
-    });
+      updateConnStatus('error');
+      showToast('AI call failed: ' + (e.message || 'Unknown'), 'error');
+    }
   }
 }
 
@@ -804,7 +1687,7 @@ function finishFullGeneration(response, hasChat) {
   persist();
   showToast('Tool generated! Preview it on the right.', 'success');
   switchTab('preview');
-  runAutoReview();
+  // Auto-review disabled — was doubling request time
 }
 
 /* ── History ── */
@@ -825,7 +1708,47 @@ function renderHistory() {
 }
 
 /* ── Modals ── */
-function openModal(id) { el('modal-backdrop').hidden = false; qsa('.modal').forEach(function(m) { m.style.display = 'none'; }); var m = el(id); if (m) m.style.display = 'flex'; if (id === 'modal-history') renderHistory(); if (id === 'modal-rules') { var rb = el('rules-body'); if (rb) rb.innerHTML = '<pre style="white-space:pre-wrap;font-size:10px;line-height:1.6;color:var(--text2)">' + esc(htmlRulesText) + '</pre>'; } }
+function openModal(id) {
+  // Block rules modal for non-developers
+  if (id === 'modal-rules' && !isDeveloper()) {
+    showToast('The Rules reference is only available to developers.', 'info');
+    return;
+  }
+  el('modal-backdrop').hidden = false; qsa('.modal').forEach(function(m) { m.style.display = 'none'; }); var m = el(id); if (m) m.style.display = 'flex'; if (id === 'modal-history') renderHistory(); if (id === 'modal-rules') { var rb = el('rules-body'); if (rb) rb.innerHTML = '<pre style="white-space:pre-wrap;font-size:10px;line-height:1.6;color:var(--text2)">' + esc(htmlRulesText) + '</pre>'; }
+  // Template modal: show all templates as a quick-switch list
+  if (id === 'modal-template' && !_currentTemplate) {
+    // Opening without a specific template — show the list
+    renderTemplateListInModal();
+  }
+}
+
+function renderTemplateListInModal() {
+  // Show all 8 templates as a selectable list in the template modal
+  el('tpl-modal-title').textContent = '📋 All Templates';
+  el('tpl-icon').textContent = '📋';
+  el('tpl-title').textContent = 'Choose a Template';
+  el('tpl-desc').textContent = 'Click any template to view and customize its detailed prompt.';
+  var listHtml = '<div style="display:flex;flex-direction:column;gap:6px">';
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    var t = TEMPLATES[i];
+    listHtml += '<div class="template-card" style="flex-direction:row;align-items:center;gap:10px;padding:10px" onclick="openTemplateModal(\'' + t.id + '\')">' +
+      '<span style="font-size:24px">' + t.icon + '</span>' +
+      '<div style="flex:1"><div style="font-size:12px;font-weight:700">' + esc(t.title) + '</div>' +
+      '<div style="font-size:10px;color:var(--text2)">' + esc(t.desc) + '</div></div>' +
+      '<span style="font-size:10px;font-weight:600;color:var(--accent)">Select →</span>' +
+    '</div>';
+  }
+  listHtml += '</div>';
+  el('tpl-prompt-text').style.display = 'none';
+  var area = qs('#modal-template .template-prompt-area');
+  if (area) {
+    var labelEl = area.querySelector('.template-prompt-label');
+    area.innerHTML = (labelEl ? labelEl.outerHTML : '') + listHtml;
+  }
+  // Hide reset/use buttons since no prompt is selected
+  var actions = qs('#modal-template .template-modal-actions');
+  if (actions) actions.style.display = 'none';
+}
 function closeAllModals() { el('modal-backdrop').hidden = true; qsa('.modal').forEach(function(m) { m.style.display = 'none'; }); }
 
 /* ── Render ── */
@@ -875,9 +1798,18 @@ function bindEvents() {
   var chatInput = el('chat-input');
   if (chatInput) {
     chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
-    chatInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px'; });
+    chatInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 160) + 'px'; });
   }
-  qsa('.chat-examples code').forEach(function(c) { c.onclick = function() { var inp = el('chat-input'); if (inp) { inp.value = this.textContent.replace(/^"|"$/g, ''); inp.focus(); inp.dispatchEvent(new Event('input')); } }; });
+
+  // Guided / Interview mode toggle
+  var btnGuided = el('btn-guided-mode'); if (btnGuided) btnGuided.onclick = toggleInterviewMode;
+
+  // Template modal buttons
+  var btnTplClose = el('btn-close-template'); if (btnTplClose) btnTplClose.onclick = closeTemplateModal;
+  var btnTplReset = el('btn-tpl-reset'); if (btnTplReset) btnTplReset.onclick = resetTemplatePrompt;
+  var btnTplUse = el('btn-tpl-use'); if (btnTplUse) btnTplUse.onclick = useTemplatePrompt;
+
+  // Old chat-examples are gone — no need to bind them
 
   // Storage radio change
   qsa('input[name="storage"]').forEach(function(r) { r.onchange = function() { var cs = el('crud-section'); if (cs) cs.style.display = (this.value === 'crud' || this.value === 'both') ? '' : 'none'; collectFormData(); persist(); }; });
@@ -920,6 +1852,12 @@ tool.onReady(function(val, fields) {
   render(val);
   bindEvents();
   initConsoleCapture();
+
+  // ── Startup info ──
+  console.warn('[VIBECODING:INIT] Stream:', typeof tool.requestAIStream === 'function' ? 'YES' : 'NO', '| Batch:', typeof tool.requestAI === 'function' ? 'YES' : 'NO', '| User:', (tool.getUser()||{}).name || 'anon', '| Dev:', isDeveloper(), '| RO:', tool.isReadOnly());
+  console.warn('[VIBECODING:INIT] Rules:', htmlRulesText.length, 'chars | HasCode:', !!(DB.generated.html || DB.generated.css || DB.generated.js));
+
+  updateConnStatus('ok');
   if (tool.isReadOnly()) lockUI(true);
   updateDeveloperUI();
 

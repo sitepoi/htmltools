@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Blinds Concierge — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="AIBlindsConsultation.css">
+<style>
+  body { padding-top: 32px !important; margin: 0; }
+  #app { min-height: calc(100vh - 32px); }
+  #th-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #1a1815; color: #e8e4dd; font-family: system-ui;
+    font-size: 11px; padding: 5px 14px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  #th-bar strong { color: #d4995d; letter-spacing: 0.5px; }
+  #th-bar .sep { color: #5c554a; }
+  #th-bar button {
+    border: none; padding: 4px 12px; border-radius: 4px;
+    cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600;
+    transition: opacity .15s;
+  }
+  #th-bar button:hover { opacity: 0.85; }
+  #th-bar .btn-load { background: #b8753e; color: #fff; }
+  #th-bar .btn-clear { background: #c53030; color: #fff; }
+  #th-bar .btn-reload { background: #2d8a56; color: #fff; }
+  #th-bar .btn-dump { background: #6b46c1; color: #fff; }
+  #th-bar .hint { color: #9c9488; font-size: 10px; }
+  @keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — AI Blinds Concierge</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">📊 Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">🗑️ Clear All</button>
+  <button class="btn-reload" id="th-reload">🔄 Reload</button>
+  <button class="btn-dump" id="th-dump">🐛 Dump DB</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">✏️ Edit Mode</span>
+</div>
+
+<!-- Inline the HTML content directly so no fetch is needed -->
+<div id="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🪟</div>
+      <div class="brand-name">AI Blinds Concierge</div>
+      <div class="brand-sub">Smart Window Fashion Consultation</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-page="welcome"><span class="nav-icon">🏠</span>Welcome</div>
+      <div class="nav-item" data-page="room"><span class="nav-icon">📐</span>Room Assessment</div>
+      <div class="nav-item" data-page="needs"><span class="nav-icon">🎯</span>Needs Analysis</div>
+      <div class="nav-item" data-page="recommend"><span class="nav-icon">🤖</span>AI Recommendations</div>
+      <div class="nav-item" data-page="customize"><span class="nav-icon">🎨</span>Customize</div>
+      <div class="nav-item" data-page="quote"><span class="nav-icon">📋</span>Quote &amp; Order</div>
+      <div class="nav-sep"></div>
+      <div class="nav-item" data-page="history"><span class="nav-icon">📁</span>Consultation History</div>
+      <div class="nav-item" data-page="catalog"><span class="nav-icon">📦</span>Product Catalog</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="ai-status" id="ai-status">
+        <span class="ai-dot"></span> AI Engine Ready
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section id="sec-welcome" class="section active">
+      <div class="hero-banner">
+        <div class="hero-content">
+          <h1 class="hero-title">Discover Your Perfect<br>Window Treatment</h1>
+          <p class="hero-sub">AI-powered consultation to match blinds &amp; shades to your exact needs — style, budget, and lifestyle.</p>
+          <div class="hero-features">
+            <div class="hero-feat"><span>🤖</span> AI Smart Matching</div>
+            <div class="hero-feat"><span>📐</span> Precision Measurement Guide</div>
+            <div class="hero-feat"><span>🎨</span> Color &amp; Material Advisor</div>
+            <div class="hero-feat"><span>💰</span> Instant Price Estimation</div>
+          </div>
+          <button class="btn btn-primary btn-lg" id="btn-start-consultation">🚀 Start Your Free Consultation</button>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-window-frame">
+            <div class="hero-window-glass">
+              <div class="hero-blind-slat" style="top:0%"></div>
+              <div class="hero-blind-slat" style="top:12%"></div>
+              <div class="hero-blind-slat" style="top:24%"></div>
+              <div class="hero-blind-slat" style="top:36%"></div>
+              <div class="hero-blind-slat" style="top:48%"></div>
+              <div class="hero-blind-slat" style="top:60%"></div>
+              <div class="hero-blind-slat" style="top:72%"></div>
+              <div class="hero-blind-slat" style="top:84%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="quick-start-cards">
+        <div class="qsc-card" data-quick="light-control"><div class="qsc-icon">☀️</div><div class="qsc-title">Light Control</div><div class="qsc-desc">Blackout, filtering, or sheer — find your perfect light level</div></div>
+        <div class="qsc-card" data-quick="privacy"><div class="qsc-icon">🔒</div><div class="qsc-title">Privacy First</div><div class="qsc-desc">Top-down/bottom-up &amp; privacy solutions for street-facing rooms</div></div>
+        <div class="qsc-card" data-quick="energy"><div class="qsc-icon">⚡</div><div class="qsc-title">Energy Savings</div><div class="qsc-desc">Cellular shades that cut heating &amp; cooling costs up to 40%</div></div>
+        <div class="qsc-card" data-quick="smart-home"><div class="qsc-icon">🏠</div><div class="qsc-title">Smart Home</div><div class="qsc-desc">Motorized blinds with app, voice &amp; schedule control</div></div>
+      </div>
+    </section>
+
+    <section id="sec-room" class="section">
+      <div class="page-header"><div class="page-title">📐 Room &amp; Window Assessment</div><div class="page-sub">Tell us about your space so we can make precise recommendations</div></div>
+      <div class="wizard-progress" id="wizard-progress">
+        <div class="wp-step done" data-wp="welcome"><div class="wp-dot">1</div><span>Welcome</span></div><div class="wp-line done"></div>
+        <div class="wp-step active" data-wp="room"><div class="wp-dot">2</div><span>Room</span></div><div class="wp-line"></div>
+        <div class="wp-step" data-wp="needs"><div class="wp-dot">3</div><span>Needs</span></div><div class="wp-line"></div>
+        <div class="wp-step" data-wp="recommend"><div class="wp-dot">4</div><span>AI Match</span></div><div class="wp-line"></div>
+        <div class="wp-step" data-wp="customize"><div class="wp-dot">5</div><span>Customize</span></div><div class="wp-line"></div>
+        <div class="wp-step" data-wp="quote"><div class="wp-dot">6</div><span>Quote</span></div>
+      </div>
+      <div class="card"><div class="card-header"><span class="card-title">🏠 Room Details</span></div><div class="card-body"><div class="form-row"><div class="form-field"><label class="form-label">Room Type <span class="req">*</span></label><select id="room-type" class="form-input"><option value="">— Select Room —</option><option value="living-room">Living Room</option><option value="bedroom">Bedroom</option><option value="kitchen">Kitchen</option><option value="bathroom">Bathroom</option><option value="home-office">Home Office</option><option value="dining-room">Dining Room</option><option value="nursery">Nursery / Kids Room</option><option value="basement">Basement</option><option value="sunroom">Sunroom / Conservatory</option><option value="commercial">Commercial / Office</option></select></div><div class="form-field"><label class="form-label">Room Size</label><select id="room-size" class="form-input"><option value="small">Small (under 120 sq ft)</option><option value="medium" selected>Medium (120–250 sq ft)</option><option value="large">Large (250–500 sq ft)</option><option value="xlarge">Extra Large (500+ sq ft)</option></select></div></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">🪟 Windows</span><button class="btn btn-outline btn-sm" id="btn-add-window">+ Add Window</button></div><div class="card-body" id="windows-container"><div class="empty-state" id="windows-empty">No windows added yet. Click "+ Add Window" to get started.</div></div></div>
+      <div class="toolbar" style="margin-top:16px"><button class="btn btn-outline" id="btn-room-back">← Back</button><button class="btn btn-primary" id="btn-room-next">Next: Needs Analysis →</button></div>
+    </section>
+
+    <section id="sec-needs" class="section">
+      <div class="page-header"><div class="page-title">🎯 Needs Analysis</div><div class="page-sub">Help us understand your priorities so our AI can match the perfect solution</div></div>
+      <div class="card"><div class="card-header"><span class="card-title">☀️ Light Control Priority</span></div><div class="card-body"><div class="needs-options" id="light-priority"><label class="need-option" data-value="blackout"><input type="radio" name="light-priority" value="blackout"><div class="need-icon">🌑</div><div class="need-label">Blackout</div><div class="need-desc">Complete darkness — ideal for bedrooms, media rooms, nurseries</div></label><label class="need-option" data-value="room-darkening"><input type="radio" name="light-priority" value="room-darkening"><div class="need-icon">🌙</div><div class="need-label">Room Darkening</div><div class="need-desc">Significantly dims light — good for bedrooms &amp; home theaters</div></label><label class="need-option" data-value="light-filtering"><input type="radio" name="light-priority" value="light-filtering" checked><div class="need-icon">🌤️</div><div class="need-label">Light Filtering</div><div class="need-desc">Soft diffused light — great for living rooms &amp; kitchens</div></label><label class="need-option" data-value="sheer"><input type="radio" name="light-priority" value="sheer"><div class="need-icon">☁️</div><div class="need-label">Sheer</div><div class="need-desc">Maximum natural light with UV protection — sunrooms &amp; dining areas</div></label></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">🔒 Privacy Level</span></div><div class="card-body"><div class="needs-options" id="privacy-level"><label class="need-option" data-value="maximum"><input type="radio" name="privacy-level" value="maximum"><div class="need-icon">🔐</div><div class="need-label">Maximum</div><div class="need-desc">Street-level, bathroom, bedroom — complete privacy day &amp; night</div></label><label class="need-option" data-value="moderate"><input type="radio" name="privacy-level" value="moderate" checked><div class="need-icon">🛡️</div><div class="need-label">Moderate</div><div class="need-desc">Living areas — privacy at night, light during the day</div></label><label class="need-option" data-value="minimal"><input type="radio" name="privacy-level" value="minimal"><div class="need-icon">👁️</div><div class="need-label">Minimal</div><div class="need-desc">Upper floors, rural areas — views matter more than privacy</div></label></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">⚡ Additional Priorities</span></div><div class="card-body"><div class="checkbox-group"><label class="check-option"><input type="checkbox" id="need-energy"> <span>🔋 Energy Efficiency</span> — Insulating cellular shades to reduce bills</label><label class="check-option"><input type="checkbox" id="need-moisture"> <span>💧 Moisture Resistant</span> — For bathrooms, kitchens, laundry rooms</label><label class="check-option"><input type="checkbox" id="need-motorized"> <span>🔌 Motorized / Smart</span> — App, voice, or remote controlled</label><label class="check-option"><input type="checkbox" id="need-child-safe"> <span>👶 Child &amp; Pet Safe</span> — Cordless designs for safety</label><label class="check-option"><input type="checkbox" id="need-uv"> <span>☀️ UV Protection</span> — Protect furniture, floors &amp; artwork from fading</label><label class="check-option"><input type="checkbox" id="need-noise"> <span>🔇 Noise Reduction</span> — Cellular or heavy fabric for sound dampening</label><label class="check-option"><input type="checkbox" id="need-easy-clean"> <span>🧹 Easy Clean</span> — Low-maintenance materials for busy households</label></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">🎨 Style Preference</span></div><div class="card-body"><div class="needs-options" id="style-preference"><label class="need-option" data-value="modern"><input type="radio" name="style-preference" value="modern"><div class="need-icon">🏢</div><div class="need-label">Modern / Minimalist</div><div class="need-desc">Clean lines, neutral tones, roller &amp; panel blinds</div></label><label class="need-option" data-value="traditional"><input type="radio" name="style-preference" value="traditional" checked><div class="need-icon">🏡</div><div class="need-label">Traditional / Classic</div><div class="need-desc">Wood blinds, Roman shades, warm rich fabrics</div></label><label class="need-option" data-value="transitional"><input type="radio" name="style-preference" value="transitional"><div class="need-icon">🏘️</div><div class="need-label">Transitional</div><div class="need-desc">Blend of classic warmth &amp; modern simplicity</div></label><label class="need-option" data-value="eclectic"><input type="radio" name="style-preference" value="eclectic"><div class="need-icon">🎪</div><div class="need-label">Eclectic / Bold</div><div class="need-desc">Patterned fabrics, statement colors, unique textures</div></label></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">💰 Budget Range (per window)</span></div><div class="card-body"><div class="needs-options" id="budget-range"><label class="need-option" data-value="economy"><input type="radio" name="budget-range" value="economy"><div class="need-icon">💵</div><div class="need-label">Economy</div><div class="need-desc">$30–$80 / window — Basic vinyl, aluminum, ready-made</div></label><label class="need-option" data-value="mid-range"><input type="radio" name="budget-range" value="mid-range" checked><div class="need-icon">💶</div><div class="need-label">Mid-Range</div><div class="need-desc">$80–$200 / window — Faux wood, cellular, quality roller</div></label><label class="need-option" data-value="premium"><input type="radio" name="budget-range" value="premium"><div class="need-icon">💎</div><div class="need-label">Premium</div><div class="need-desc">$200–$500 / window — Real wood, motorized, designer fabrics</div></label><label class="need-option" data-value="luxury"><input type="radio" name="budget-range" value="luxury"><div class="need-icon">👑</div><div class="need-label">Luxury</div><div class="need-desc">$500+ / window — Custom, automated, premium materials</div></label></div></div></div>
+      <div class="toolbar" style="margin-top:16px"><button class="btn btn-outline" id="btn-needs-back">← Back</button><button class="btn btn-primary" id="btn-needs-next">🤖 Get AI Recommendations →</button></div>
+    </section>
+
+    <section id="sec-recommend" class="section">
+      <div class="page-header"><div class="page-title">🤖 AI-Powered Recommendations</div><div class="page-sub">Our AI engine has analyzed your needs and matched the best products</div></div>
+      <div class="ai-thinking" id="ai-thinking" style="display:none"><div class="ai-thinking-content"><div class="ai-thinking-dots"><span></span><span></span><span></span></div><div class="ai-thinking-text" id="ai-thinking-text">Analyzing your room requirements...</div></div></div>
+      <div id="recommendations-container"><div class="empty-state" id="recommend-empty">Click "Get AI Recommendations" on the Needs Analysis page to generate personalized matches.</div></div>
+      <div class="ai-chat-panel" id="ai-chat-panel"><div class="ai-chat-header"><span>💬 AI Consultation Chat</span><button class="btn btn-sm btn-outline" id="btn-clear-chat">Clear</button></div><div class="ai-chat-messages" id="ai-chat-messages"><div class="ai-msg ai-msg-bot"><div class="ai-msg-avatar">🤖</div><div class="ai-msg-text">Hi! I'm your blinds &amp; shades AI consultant. Ask me anything about window treatments, or click "Get AI Recommendations" for personalized suggestions based on your needs.</div></div></div><div class="ai-chat-input-row"><input type="text" class="form-input ai-chat-input" id="ai-chat-input" placeholder="Ask about blinds, shades, colors, materials..."><button class="btn btn-primary btn-sm" id="btn-ai-send">Send</button></div></div>
+      <div class="toolbar" style="margin-top:16px"><button class="btn btn-outline" id="btn-recommend-back">← Back</button><button class="btn btn-primary" id="btn-recommend-next">Next: Customize →</button></div>
+    </section>
+
+    <section id="sec-customize" class="section">
+      <div class="page-header"><div class="page-title">🎨 Customize Your Selection</div><div class="page-sub">Fine-tune colors, materials, and options for each recommended product</div></div>
+      <div id="customize-container"><div class="empty-state">No products selected yet. Go back to AI Recommendations and select your favorites.</div></div>
+      <div class="toolbar" style="margin-top:16px"><button class="btn btn-outline" id="btn-customize-back">← Back</button><button class="btn btn-primary" id="btn-customize-next">Next: Generate Quote →</button></div>
+    </section>
+
+    <section id="sec-quote" class="section">
+      <div class="page-header"><div class="page-title">📋 Your Quote &amp; Order Summary</div><div class="page-sub">Review your selections and get an estimated price breakdown</div></div>
+      <div class="card"><div class="card-header"><span class="card-title">👤 Contact Information</span></div><div class="card-body"><div class="form-row"><div class="form-field"><label class="form-label">Full Name <span class="req">*</span></label><input type="text" id="quote-name" class="form-input" placeholder="Your name"></div><div class="form-field"><label class="form-label">Email <span class="req">*</span></label><input type="email" id="quote-email" class="form-input" placeholder="your@email.com"></div><div class="form-field"><label class="form-label">Phone</label><input type="tel" id="quote-phone" class="form-input" placeholder="(555) 123-4567"></div></div></div></div>
+      <div class="card" style="margin-top:16px"><div class="card-header"><span class="card-title">🛒 Selected Products</span></div><div class="card-body" id="quote-items-container"><div class="empty-state">No products in your quote. Go back and add some!</div></div></div>
+      <div class="card quote-summary-card" style="margin-top:16px" id="quote-summary-card"><div class="card-header"><span class="card-title">💰 Price Summary</span></div><div class="card-body"><div class="quote-summary" id="quote-summary"></div></div></div>
+      <div class="toolbar" style="margin-top:16px"><button class="btn btn-outline" id="btn-quote-back">← Back</button><button class="btn btn-outline" id="btn-quote-email">📧 Email Quote</button><button class="btn btn-outline" id="btn-quote-print">🖨️ Print / PDF</button><button class="btn btn-primary" id="btn-quote-save">💾 Save Consultation</button></div>
+    </section>
+
+    <section id="sec-history" class="section">
+      <div class="page-header"><div class="page-title">📁 Consultation History</div><div class="page-sub">Review and reload your saved consultations</div></div>
+      <div id="history-container"><div class="empty-state">No saved consultations yet. Complete a consultation and save it to see it here.</div></div>
+    </section>
+
+    <section id="sec-catalog" class="section">
+      <div class="page-header"><div class="page-title">📦 Product Catalog</div><div class="page-sub">Browse our full range of blinds &amp; shades</div></div>
+      <div class="toolbar"><input type="text" class="form-input" id="catalog-search" placeholder="🔍 Search products..." style="max-width:300px"><select class="form-input form-inline" id="catalog-filter"><option value="">All Categories</option><option value="roller">Roller Shades</option><option value="venetian">Venetian Blinds</option><option value="vertical">Vertical Blinds</option><option value="roman">Roman Shades</option><option value="cellular">Cellular / Honeycomb</option><option value="zebra">Zebra / Transition</option><option value="panel">Panel Track</option><option value="motorized">Motorized / Smart</option><option value="outdoor">Outdoor Shades</option></select></div>
+      <div class="catalog-grid" id="catalog-grid"></div>
+    </section>
+  </main>
+
+  <div class="modal-overlay" id="modal-overlay" style="display:none"><div class="modal" id="modal-content"></div></div>
+  <div class="toast-container" id="toast-container"></div>
+</div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  'use strict';
+
+  var STORAGE_KEY = 'ai_blinds_consultation_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'test-user-1', name: 'Sarah Homeowner', email: 'sarah@example.com', roles: ['owner'], locale: 'en-US' };
+  var _fields = {};
+  var _value = null;
+  var _permittedUsers = [
+    { id: 'test-user-1', name: 'Sarah Homeowner', email: 'sarah@example.com', roles: ['owner'] },
+    { id: 'test-user-2', name: 'Mike Contractor', email: 'mike@example.com', roles: ['editor'] },
+    { id: 'test-user-3', name: 'Lisa Designer', email: 'lisa@example.com', roles: ['viewer'] }
+  ];
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch (e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch (e) {} }
+
+  function getMockAIResponse(prompt) {
+    var q = prompt.toLowerCase();
+    if (q.indexOf('blackout') >= 0 || q.indexOf('bedroom') >= 0 || q.indexOf('dark') >= 0)
+      return 'For bedrooms requiring complete darkness, I strongly recommend **Cellular Blackout Shades** for their superior light-blocking (99%+) AND energy-saving insulation. The honeycomb design traps air, keeping your bedroom warmer in winter and cooler in summer — potentially cutting energy costs by 30-40%. For a sleeker, more modern look, **Blackout Roller Shades** are an excellent alternative with a smaller stack when raised. Both are available in cordless options for safety.';
+    if (q.indexOf('energy') >= 0 || q.indexOf('insulation') >= 0)
+      return '**Cellular (Honeycomb) Shades** are the champions of energy efficiency. Their unique honeycomb air pockets create an insulating barrier that can reduce heat loss by up to 40% in winter and block up to 60% of solar heat gain in summer. For maximum efficiency, choose a double-cell design (two layers of honeycomb). They typically pay for themselves within 2-3 years through energy savings!';
+    if (q.indexOf('bathroom') >= 0 || q.indexOf('kitchen') >= 0 || q.indexOf('moisture') >= 0)
+      return 'For moisture-prone areas, **Faux Wood Venetian Blinds** are your best bet. Unlike real wood, they won\'t warp, crack, or mildew in humidity. They\'re also incredibly easy to clean — just wipe with a damp cloth. **PVC Roller Shades** are another great option for a more minimalist aesthetic. Both offer excellent privacy control for street-facing bathrooms.';
+    if (q.indexOf('smart') >= 0 || q.indexOf('motor') >= 0)
+      return 'Our **Smart Motorized Shades** integrate seamlessly with Alexa, Google Home, Apple HomeKit, and IFTTT. You can set schedules (raise at sunrise, lower at sunset), control by voice, or use the app from anywhere in the world. Battery-powered options last 6-12 months on a single charge, or you can hardwire them for a permanent solution. Perfect for hard-to-reach windows, skylights, or the ultimate smart home setup!';
+    if (q.indexOf('style') >= 0 || q.indexOf('design') >= 0 || q.indexOf('modern') >= 0)
+      return 'For a modern, minimalist aesthetic, **Roller Shades** in neutral tones are the go-to choice — they disappear when raised and provide a clean, architectural look when lowered. For traditional homes, **Roman Shades** in linen or cotton blends add warmth and softness with their elegant fabric folds. **Wood Venetian Blinds** bridge the gap beautifully with their timeless appeal. Consider your room\'s overall color palette and existing furniture style when choosing!';
+    return 'Based on your needs, I\'d suggest exploring our range of **Cellular Shades** for energy efficiency, **Faux Wood Blinds** for durability and moisture resistance, and **Roller Shades** for a clean, modern aesthetic. For personalized recommendations, complete the Needs Analysis and click "Get AI Recommendations" — I\'ll match the top 6 products to your exact specifications!';
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch (e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(function(f) { if (f[id] !== undefined) cb(f[id], f); }); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch (e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return _permittedUsers.slice(); },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function(missing, msg) { if (missing.length) console.warn('[Missing Params]', msg, missing); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#2b6cb0', success: '#2d8a56', warning: '#c2780a', error: '#c53030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:8px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = (severity === 'error' ? '❌ ' : severity === 'warning' ? '⚠️ ' : severity === 'success' ? '✅ ' : 'ℹ️ ') + message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    declareOutput: function(schema) { console.log('[declareOutput]', schema); },
+    declareParams: function(params) { console.log('[declareParams]', params); },
+    requestAI: function(prompt, context, callback) {
+      console.log('[AI Request]', prompt.slice(0, 80) + '...');
+      setTimeout(function() { callback(null, getMockAIResponse(prompt)); }, 800 + Math.random() * 1200);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      console.log('[AI Stream]', prompt.slice(0, 80) + '...');
+      var response = getMockAIResponse(prompt);
+      var words = response.split(' ');
+      var i = 0;
+      var interval = setInterval(function() {
+        if (i < words.length) { callbacks.onToken(words[i] + ' '); i++; }
+        else { clearInterval(interval); callbacks.onComplete(response); }
+      }, 40);
+    },
+    requestUpload: function(accept, callback) {
+      setTimeout(function() { callback(null, { name: 'sample-document.pdf', url: 'https://example.com/sample.pdf', size: 102400, type: 'application/pdf' }); }, 500);
+    },
+    requestFileContent: function(url, callback) {
+      setTimeout(function() { callback(null, 'Mock extracted text content from file.'); }, 500);
+    },
+    requestExportPdf: function(options, callback) {
+      setTimeout(function() { callback(null, { name: (options.filename || 'export') + '.html', url: '#', size: 2048, type: 'text/html' }); }, 500);
+    },
+    requestSendEmail: function(options, callback) {
+      setTimeout(function() { console.log('[Email Sent]', options); callback(null, { ok: true }); }, 500);
+    },
+    requestObjects: function(action, params, callback) {
+      setTimeout(function() {
+        if (action === 'query') callback(null, { objects: [] });
+        else if (action === 'create') callback(null, { object: { id: 'mock-' + Date.now(), name: params.name } });
+        else callback(null, { ok: true });
+      }, 300);
+    },
+    onReady: function(cb) {
+      load();
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function() { cb(_value, _fields); });
+      else cb(_value, _fields);
+    },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _reload: function() { window.location.reload(); },
+    _toggleReadOnly: function() {
+      this._setReadOnly(!_readOnly);
+      var status = document.getElementById('th-status');
+      if (status) status.textContent = _readOnly ? '🔒 Read-Only' : '✏️ Edit Mode';
+    },
+    _dump: function() { console.log('AIBlindsConsultation DB:', JSON.parse(JSON.stringify(_value || {}))); }
+  };
+})();
+</script>
+<script src="AIBlindsConsultation.js"></script>
+
+<script>
+/* ── Test Harness Controls ── */
+(function() {
+  var thBar = document.getElementById('th-bar');
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    var sampleData = {
+      currentStep: 'welcome',
+      room: { type: 'living-room', size: 'medium' },
+      windows: [
+        { name: 'Front Bay Window', width: '72', height: '60', direction: 'south', mountType: 'inside', windowType: 'bay', prefs: { _preset: 'living' } },
+        { name: 'Side Window Left', width: '36', height: '48', direction: 'west', mountType: 'inside', windowType: 'standard', prefs: { _preset: 'energy' } },
+        { name: 'Side Window Right', width: '36', height: '48', direction: 'west', mountType: 'inside', windowType: 'standard', prefs: { _preset: 'room_default' } }
+      ],
+      needs: { lightPriority: 'light-filtering', privacyLevel: 'moderate', energy: true, moisture: false, motorized: false, childSafe: true, uv: true, noise: false, easyClean: true, style: 'transitional', budget: 'mid-range' },
+      recommendations: [],
+      selectedProducts: [
+        { productId: 'cellular-light-filtering', color: '#d4c8b0', material: 'Polyester Honeycomb', mountType: 'inside', quantity: 2, motorized: false, notes: '' },
+        { productId: 'zebra-shade', color: '#e8ddd0', material: 'Polyester', mountType: 'inside', quantity: 1, motorized: false, notes: 'Bay window needs special sizing' }
+      ],
+      quote: { name: 'Sarah Homeowner', email: 'sarah@example.com', phone: '(555) 123-4567' },
+      chatMessages: [
+        { role: 'bot', text: "Hi! I'm your blinds & shades AI consultant. Ask me anything about window treatments, or click \"Get AI Recommendations\" for personalized suggestions based on your needs.", time: Date.now() - 60000 }
+      ],
+      consultations: [],
+      _theme: 'light'
+    };
+    window.tool._loadSampleData(sampleData);
+  });
+
+  document.getElementById('th-clear').addEventListener('click', function() {
+    if (confirm('Clear all saved data? This cannot be undone.')) {
+      window.tool._clearData();
+    }
+  });
+
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.tool._reload();
+  });
+
+  document.getElementById('th-dump').addEventListener('click', function() {
+    window.tool._dump();
+    window.tool.notify('DB dumped to browser console (F12)', 'info');
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+      window.tool._toggleReadOnly();
+      window.tool.notify(
+        window.tool.isReadOnly() ? '🔒 READ-ONLY MODE — UI locked' : '✏️ EDIT MODE — UI unlocked',
+        'info'
+      );
+    }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      window.tool._dump();
+      window.tool.notify('DB dumped to console → F12 to view', 'info');
+    }
+  });
+
+  console.log('🧪 AI Blinds Concierge Test Harness Ready');
+  console.log('  Ctrl+Shift+R = Toggle Read-Only');
+  console.log('  Ctrl+Shift+D = Dump DB');
+  console.log('  "Load Sample Data" button = pre-populate a consultation');
+})();
+</script>
+
+</body>
+</html>

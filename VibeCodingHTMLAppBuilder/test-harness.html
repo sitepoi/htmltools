@@ -54,9 +54,9 @@ body { padding-top: 28px !important; margin: 0; }
   </header>
   <div class="main-layout">
     <aside class="chat-panel" id="chat-panel">
-      <div class="chat-panel-header"><span class="chat-panel-title">💬 Chat</span><span class="chat-panel-badge" id="chat-msg-count">0</span></div>
+      <div class="chat-panel-header"><span class="chat-panel-title">💬 Chat</span><span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span><span class="chat-panel-badge" id="chat-msg-count">0</span></div>
       <div class="chat-messages" id="chat-messages">
-        <div class="chat-welcome"><div class="chat-welcome-icon">👋</div><h3>Welcome to VibeCoding</h3><p>Configure your tool using the <b>⚙️ Config</b> button above, then ask me to generate it.</p><p class="chat-examples"><span>Quick start:</span><code>"Build an invoice manager with dashboard"</code><code>"Create a task tracker with kanban board"</code><code>"Make an employee onboarding form"</code></p></div>
+        <div class="chat-welcome"><div class="chat-welcome-icon">👋</div><h3>Welcome to VibeCoding</h3><p>Pick a template below, or just <b>describe what you need</b> in the chat — the AI will build it for you.</p><div class="template-gallery" id="template-gallery"></div><div class="template-view-all"><button id="btn-view-all-templates">View all 8 templates →</button></div><p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — the AI will ask you questions step by step.</p></div>
       </div>
       <div class="chat-attachment" id="chat-attachment" style="display:none">
         <span class="attach-icon">📎</span>
@@ -66,9 +66,14 @@ body { padding-top: 28px !important; margin: 0; }
         <span class="attach-status" id="attach-status"></span>
       </div>
       <div class="chat-input-area">
-        <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a file (design mockup, spec doc, etc.)">📎</button>
-        <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
-        <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+        <div class="chat-input-toolbar">
+          <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a file (design mockup, spec doc, etc.)">📎 Attach</button>
+          <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI asks you step-by-step questions">🪄 Guided</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+        </div>
       </div>
     </aside>
     <main class="content-panel" id="content-panel">
@@ -90,7 +95,7 @@ body { padding-top: 28px !important; margin: 0; }
         <div class="content-editor active" id="editor-html"><div class="code-lines" id="html-lines"></div><textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here..." spellcheck="false"></textarea></div>
         <div class="content-editor" id="editor-css"><div class="code-lines" id="css-lines"></div><textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here..." spellcheck="false"></textarea></div>
         <div class="content-editor" id="editor-js"><div class="code-lines" id="js-lines"></div><textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here..." spellcheck="false"></textarea></div>
-        <div class="content-editor" id="editor-preview"><div class="preview-frame-wrap"><iframe id="preview-frame" class="preview-frame" sandbox="allow-same-origin allow-scripts allow-forms allow-downloads allow-popups"></iframe></div><div class="preview-empty" id="preview-empty"><div class="empty-icon">👁️</div><p>Generate code first to see a live preview</p></div></div>
+        <div class="content-editor" id="editor-preview"><div class="preview-frame-wrap"><iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups"></iframe></div><div class="preview-empty" id="preview-empty"><div class="empty-icon">👁️</div><p>Generate code first to see a live preview</p></div></div>
         <div class="content-editor" id="editor-config"><div class="config-scroll">
           <div class="config-header"><h2>⚙️ Tool Configuration</h2><p>Define your tool's purpose, data model, features, and design.</p></div>
           <div class="config-section"><h3>🎯 Purpose</h3>
@@ -99,12 +104,12 @@ body { padding-top: 28px !important; margin: 0; }
             <div class="form-group"><label class="form-label">Detailed Requirements</label><textarea id="f-tool-requirements" class="form-input form-textarea" rows="4" placeholder="Describe in detail what the tool should do..."></textarea></div>
             <div class="form-group"><label class="form-label">Target Audience</label><select id="f-audience" class="form-input"><option value="admin">Administrators</option><option value="employee">Employees</option><option value="manager">Managers</option><option value="customer">Customers</option><option value="general">General</option></select></div>
           </div>
-          <div class="config-section"><h3>🗄️ Data Model</h3>
+          <div class="config-section config-tech-section"><h3>🗄️ Data Model</h3>
             <div class="form-group"><label class="form-label">Storage</label><div class="radio-group"><label class="radio-item"><input type="radio" name="storage" value="value" checked> <span>tool.setValue() only</span></label><label class="radio-item"><input type="radio" name="storage" value="crud"> <span>tool.requestObjects() CRUD</span></label><label class="radio-item"><input type="radio" name="storage" value="both"> <span>Both</span></label></div></div>
             <div id="crud-section" style="display:none"><div class="form-group"><label class="form-label">CMS Types</label><textarea id="f-cms-types" class="form-input form-textarea" rows="2" placeholder="typeName-uniconbaseapps | Name | shared"></textarea></div><div class="form-group"><label class="form-label">Fields</label><textarea id="f-cms-fields" class="form-input form-textarea" rows="3" placeholder="fieldId | type | Label"></textarea></div></div>
             <div class="form-group"><label class="form-label">Sibling fields?</label><select id="f-sibling-fields" class="form-input"><option value="no">No</option><option value="yes">Yes</option></select></div>
           </div>
-          <div class="config-section"><h3>⚡ SDK Features</h3>
+          <div class="config-section config-tech-section"><h3>⚡ SDK Features</h3>
             <div class="feature-grid">
               <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="ai" checked><div class="feat-icon">🤖</div><div class="feat-name">AI Relay</div></label>
               <label class="feature-card"><input type="checkbox" class="feat-check" data-feat="upload"><div class="feat-icon">📤</div><div class="feat-name">Upload</div></label>
@@ -127,6 +132,8 @@ body { padding-top: 28px !important; margin: 0; }
   <div class="modal-backdrop" id="modal-backdrop" hidden></div>
   <div class="modal" id="modal-history" style="display:none"><div class="modal-header"><h3>📋 History</h3><button class="btn-close" id="btn-close-history">✕</button></div><div class="modal-body" id="history-list"><div class="empty-state">No generations yet.</div></div></div>
   <div class="modal" id="modal-rules" style="display:none"><div class="modal-header"><h3>📜 Rules</h3><button class="btn-close" id="btn-close-rules">✕</button></div><div class="modal-body rules-body" id="rules-body"></div></div>
+  <!-- Template Detail Modal -->
+  <div class="modal" id="modal-template" style="display:none"><div class="modal-header"><h3 id="tpl-modal-title">📋 Template</h3><button class="btn-close" id="btn-close-template">✕</button></div><div class="template-modal-body"><div class="template-modal-info"><span class="tmi-icon" id="tpl-icon">📊</span><div class="tmi-meta"><div class="tmi-title" id="tpl-title">Template Name</div><div class="tmi-desc" id="tpl-desc">Description</div></div></div><div class="template-prompt-area"><div class="template-prompt-label">✏️ Customize this prompt — edit any part, then send to AI:</div><textarea id="tpl-prompt-text" class="template-prompt-text" spellcheck="false"></textarea></div><div class="template-modal-actions"><button class="btn btn-ghost" id="btn-tpl-reset">↺ Reset to Original</button><button class="btn btn-primary" id="btn-tpl-use">🚀 Send to AI</button></div></div></div>
   <!-- EMBEDDED FULL HTML-TOOL-RULES (verbatim, 773 lines) -->
   <script type="text/plain" id="html-rules-source" style="display:none">
 You are building a custom interactive tool for the Uniconhub CMS html-tool system.
