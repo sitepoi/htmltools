@@ -1,4 +1,6 @@
 <div id="app">
+  <!-- DIFF LIBRARY CDN — loaded before all other scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
@@ -24,6 +26,13 @@
         <span class="chat-panel-title">💬 Chat</span>
         <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
         <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+      <!-- SESSION LIST (collapsible) -->
+      <div class="session-list-wrap" id="session-list-wrap">
+        <div class="session-list" id="session-list">
+          <div class="session-empty">Loading chats...</div>
+        </div>
       </div>
       <div class="chat-messages" id="chat-messages">
         <div class="chat-welcome">

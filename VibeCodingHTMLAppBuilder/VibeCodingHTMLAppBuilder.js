@@ -17,10 +17,11 @@ var DB = {
   storage: 'value', cmsTypes: '', cmsFields: '', siblingFields: 'no',
   features: ['ai'], featureNotes: '',
   layout: 'single-page', colorScheme: 'blue', themeSupport: 'light-only', styleNotes: '',
-  generated: { html: '', css: '', js: '' },
+  code: { html: '', css: '', js: '' },
   history: [],
-  chatMessages: [],
-  _theme: 'light'
+  chatMessages: [],  // legacy — migrated to CRUD sessions on first load
+  _theme: 'light',
+  activeSessionId: ''  // CRUD session ID — empty until first session created
 };
 
 var isReadOnly = false;
@@ -28,6 +29,12 @@ var currentTab = 'html';
 var attachedFile = null; // { name, url, size, type, extractedText }
 var interviewMode = false; // Guided interview mode — AI asks step-by-step questions
 var _currentTemplate = null; // Currently viewed template in modal
+
+/* ── Session State ── */
+var _sessions = [];           // cached session objects from CRUD
+var _activeSessionId = '';    // mirrors DB.activeSessionId
+var _sessionsLoaded = false;  // true after first loadSessions completes
+var SESSION_TYPE = 'aiChatSessions-uniconbaseapps';
 
 /* ── Template Store — 8 detailed pre-written prompts ── */
 var TEMPLATES = [
@@ -85,7 +92,193 @@ var TEMPLATES = [
 var htmlRulesText = ''; // populated in onReady from #html-rules-source
 
 /* ── Persistence ── */
-function persist() { tool.setValue(DB); tool.resize(); }
+function persist() {
+  tool.setValue(DB);
+  // Also save current session to CRUD (debounced — saves happen frequently)
+  if (_activeSessionId) saveCurrentSession();
+  tool.resize();
+}
+
+/* ── Session CRUD (aiChatSessions-uniconbaseapps) ── */
+function loadSessions(callback) {
+  tool.requestObjects('query', { mainObjectType: SESSION_TYPE }, function(err, result) {
+    if (err) { console.warn('[VIBECODING:SESSION] Query error:', err); _sessions = []; }
+    else { _sessions = (result && result.objects) ? result.objects : []; }
+    _sessionsLoaded = true;
+    console.warn('[VIBECODING:SESSION] Loaded', _sessions.length, 'sessions');
+    if (callback) callback(_sessions);
+  });
+}
+
+function createSession(callback) {
+  var user = tool.getUser() || {};
+  tool.requestObjects('create', {
+    mainObjectType: SESSION_TYPE,
+    name: 'New Chat',
+    productData: {
+      data_categoriesBased: {
+        messages: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: { userId: user.id || 'anon', userName: user.name || 'Anonymous' }
+      }
+    }
+  }, function(err, result) {
+    if (err) { console.warn('[VIBECODING:SESSION] Create error:', err); if (callback) callback(null); return; }
+    var session = result.object;
+    _sessions.unshift(session);
+    console.warn('[VIBECODING:SESSION] Created session:', session.id);
+    if (callback) callback(session);
+  });
+}
+
+function saveCurrentSession(callback) {
+  if (!_activeSessionId) { if (callback) callback(null); return; }
+  // Find session in cache
+  var session = null;
+  for (var i = 0; i < _sessions.length; i++) {
+    if (_sessions[i].id === _activeSessionId) { session = _sessions[i]; break; }
+  }
+  if (!session) { if (callback) callback(null); return; }
+
+  // Get messages from the session's productData
+  var pd = session.productData || {};
+  var dcb = pd.data_categoriesBased || {};
+  var messages = dcb.messages || [];
+
+  tool.requestObjects('update', {
+    mainObjectType: SESSION_TYPE,
+    objectId: _activeSessionId,
+    productData: {
+      data_categoriesBased: {
+        messages: messages,
+        updatedAt: new Date().toISOString()
+      }
+    }
+  }, function(err, result) {
+    if (err) console.warn('[VIBECODING:SESSION] Save error:', err);
+    if (callback) callback(err ? null : result);
+  });
+}
+
+function deleteSession(sessionId, callback) {
+  tool.requestObjects('delete', { mainObjectType: SESSION_TYPE, objectId: sessionId }, function(err, result) {
+    if (err) { console.warn('[VIBECODING:SESSION] Delete error:', err); if (callback) callback(false); return; }
+    // Remove from cache
+    for (var i = 0; i < _sessions.length; i++) {
+      if (_sessions[i].id === sessionId) { _sessions.splice(i, 1); break; }
+    }
+    console.warn('[VIBECODING:SESSION] Deleted session:', sessionId);
+    if (callback) callback(true);
+  });
+}
+
+function switchSession(sessionId) {
+  if (sessionId === _activeSessionId) return;
+  // Save current session first
+  if (_activeSessionId) saveCurrentSession();
+
+  _activeSessionId = sessionId;
+  DB.activeSessionId = sessionId;
+  persist();
+
+  // Find session and load its messages
+  var session = null;
+  for (var i = 0; i < _sessions.length; i++) {
+    if (_sessions[i].id === sessionId) { session = _sessions[i]; break; }
+  }
+  if (session) {
+    var pd = session.productData || {};
+    var dcb = pd.data_categoriesBased || {};
+    DB.chatMessages = dcb.messages || [];
+  } else {
+    DB.chatMessages = [];
+  }
+  renderChatMessages();
+  renderSessionList();
+  console.warn('[VIBECODING:SESSION] Switched to session:', sessionId, '| messages:', DB.chatMessages.length);
+}
+
+function autoTitleSession() {
+  // Set session name from first user message
+  if (!_activeSessionId) return;
+  var session = null;
+  for (var i = 0; i < _sessions.length; i++) {
+    if (_sessions[i].id === _activeSessionId) { session = _sessions[i]; break; }
+  }
+  if (!session) return;
+  var pd = session.productData || {};
+  var dcb = pd.data_categoriesBased || {};
+  var messages = dcb.messages || [];
+  // Find first user message
+  for (var j = 0; j < messages.length; j++) {
+    if (messages[j].role === 'user' && messages[j].text) {
+      var title = messages[j].text.replace(/\n/g, ' ').substring(0, 60);
+      if (title.length >= 60) title += '...';
+      // Update session name
+      tool.requestObjects('update', {
+        mainObjectType: SESSION_TYPE,
+        objectId: _activeSessionId,
+        name: title
+      }, function() {});
+      session.name = title;
+      renderSessionList();
+      break;
+    }
+  }
+}
+
+/* ── Time formatting helper ── */
+function formatTimeAgo(isoTime) {
+  if (!isoTime) return '';
+  var now = Date.now();
+  var then;
+  try { then = new Date(isoTime).getTime(); } catch(e) { return ''; }
+  var diff = Math.max(0, Math.floor((now - then) / 1000)); // seconds
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  try { return new Date(isoTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); } catch(e) { return ''; }
+}
+
+/* ── Render Session List Sidebar ── */
+function renderSessionList() {
+  var list = el('session-list');
+  if (!list) return;
+  if (!_sessions || !_sessions.length) {
+    list.innerHTML = '<div class="session-empty">No chats yet.<br>Send a message to start.</div>';
+    return;
+  }
+  var html = '';
+  // Sort by updatedAt descending
+  var sorted = _sessions.slice().sort(function(a, b) {
+    var pdA = (a.productData && a.productData.data_categoriesBased) ? a.productData.data_categoriesBased : {};
+    var pdB = (b.productData && b.productData.data_categoriesBased) ? b.productData.data_categoriesBased : {};
+    var ta = pdA.updatedAt || a.updated || '';
+    var tb = pdB.updatedAt || b.updated || '';
+    if (ta > tb) return -1;
+    if (ta < tb) return 1;
+    return 0;
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var s = sorted[i];
+    var pd = (s.productData && s.productData.data_categoriesBased) ? s.productData.data_categoriesBased : {};
+    var name = s.name || 'New Chat';
+    var timeAgo = formatTimeAgo(pd.updatedAt || s.updated || '');
+    var isActive = s.id === _activeSessionId;
+    var activeClass = isActive ? ' session-active' : '';
+    html += '<div class="session-item' + activeClass + '" data-sid="' + s.id + '" onclick="switchSession(\'' + s.id + '\')">' +
+      '<span class="session-dot">' + (isActive ? '●' : '○') + '</span>' +
+      '<div class="session-info">' +
+        '<div class="session-name">' + esc(name) + '</div>' +
+        '<div class="session-time">' + timeAgo + '</div>' +
+      '</div>' +
+      '<button class="session-delete" data-sid="' + s.id + '" title="Delete chat" onclick="event.stopPropagation();deleteSession(\'' + s.id + '\', function(ok){ if(ok){ if(_activeSessionId===\'' + s.id + '\'){ _activeSessionId=\'\';DB.activeSessionId=\'\';DB.chatMessages=[];persist();renderChatMessages(); } renderSessionList(); }})">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
 function applyTheme(t) { DB._theme = t; document.documentElement.setAttribute('data-theme', t); var b = el('btn-theme'); if (b) b.textContent = t === 'dark' ? '☀️' : '🌓'; }
 function toggleTheme() { applyTheme(DB._theme === 'dark' ? 'light' : 'dark'); persist(); }
 function showToast(msg, sev) { tool.notify(msg, sev || 'info'); }
@@ -166,10 +359,10 @@ function displayCode(part, code) {
   if (ta) { ta.value = code || ''; console.warn('[VIBECODING:DISPLAY]   → textarea.value set, now:', ta.value.length, 'chars'); var lc = (code || '').split('\n').length; if (linesEl) { var n = ''; for (var i = 1; i <= lc; i++) n += '<div>' + i + '</div>'; linesEl.innerHTML = n; } }
   if (ta && linesEl) ta.onscroll = function() { linesEl.scrollTop = ta.scrollTop; };
 }
-function displayAllCode(g) {
-  console.warn('[VIBECODING:DISPLAY] Writing code — HTML:', (g.html||'').length, 'chars | CSS:', (g.css||'').length, 'chars | JS:', (g.js||'').length, 'chars');
+function displayAllCode(c) {
+  console.warn('[VIBECODING:DISPLAY] Writing code — HTML:', (c.html||'').length, 'chars | CSS:', (c.css||'').length, 'chars | JS:', (c.js||'').length, 'chars');
   console.warn('[VIBECODING:DISPLAY] Elements — code-html:', !!el('code-html'), 'code-css:', !!el('code-css'), 'code-js:', !!el('code-js'));
-  displayCode('html', g.html || ''); displayCode('css', g.css || ''); displayCode('js', g.js || '');
+  displayCode('html', c.html || ''); displayCode('css', c.css || ''); displayCode('js', c.js || '');
   updatePreview();
   updateChatBadge();
 }
@@ -391,7 +584,7 @@ function buildFullPrompt() {
 }
 
 function buildChatPrompt(userMsg) {
-  var hasCode = !!(DB.generated.html || DB.generated.css || DB.generated.js);
+  var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
 
   // ── Interview Mode: AI acts as business analyst ──
   if (interviewMode && !hasCode) {
@@ -437,9 +630,9 @@ function buildChatPrompt(userMsg) {
 
   if (hasCode) {
     parts.push('=== CURRENT CODE ===');
-    parts.push('[HTML]\n' + (DB.generated.html || '(empty)'));
-    parts.push('[CSS]\n' + (DB.generated.css || '(empty)'));
-    parts.push('[JS]\n' + (DB.generated.js || '(empty)'));
+    parts.push('[HTML]\n' + (DB.code.html || '(empty)'));
+    parts.push('[CSS]\n' + (DB.code.css || '(empty)'));
+    parts.push('[JS]\n' + (DB.code.js || '(empty)'));
     parts.push('');
     parts.push('=== USER REQUEST ===');
     parts.push(userMsg);
@@ -914,7 +1107,20 @@ function sendChatMessage() {
   addChatMessage('user', displayMsg);
   input.value = ''; input.style.height = 'auto';
 
-  var hasCode = !!(DB.generated.html || DB.generated.css || DB.generated.js);
+  // Ensure a session exists — create one if this is the first message
+  if (!_activeSessionId && _sessionsLoaded) {
+    console.warn('[VIBECODING:SESSION] No active session — creating one...');
+    createSession(function(newSession) {
+      if (newSession) {
+        _activeSessionId = newSession.id;
+        DB.activeSessionId = newSession.id;
+        persist();
+        renderSessionList();
+      }
+    });
+  }
+
+  var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   var prompt = buildChatPrompt(msg);
 
   // ── Clean console logging: what we send ──
@@ -1080,69 +1286,124 @@ function sendChatMessage() {
   }
 }
 
-/* ── Line Diff — compare old vs new code, return change stats ── */
-function computeLineDiff(oldCode, newCode, label) {
-  var oldRaw = (oldCode || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  var newRaw = (newCode || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  var oldLines = oldRaw.split('\n');
-  var newLines = newRaw.split('\n');
-
-  console.warn('[VIBECODING:DIFF] ' + label + ' — old:', oldRaw.length, 'chars,', oldLines.length, 'lines | new:', newRaw.length, 'chars,', newLines.length, 'lines');
-
-  // Build a set of trimmed lines for quick lookup
-  var oldSet = {};
-  var oldNonEmpty = 0;
-  for (var i = 0; i < oldLines.length; i++) {
-    var trimmed = oldLines[i].trim();
-    if (trimmed) { oldSet[trimmed] = (oldSet[trimmed] || 0) + 1; oldNonEmpty++; }
-  }
-  var newSet = {};
-  var newNonEmpty = 0;
-  for (var j = 0; j < newLines.length; j++) {
-    var t = newLines[j].trim();
-    if (t) { newSet[t] = (newSet[t] || 0) + 1; newNonEmpty++; }
+/* ── Visual Line Diff — uses jsdiff library (CDN) for proper LCS-based diffs ── */
+function computeUnifiedDiff(oldCode, newCode) {
+  // Use the diff library loaded via CDN — returns array of Change objects
+  if (typeof diff === 'undefined' || !diff.diffLines) {
+    // Fallback: simple line-by-line comparison if CDN didn't load
+    console.warn('[VIBECODING:DIFF] diff library not loaded — using fallback');
+    var oldLines = (oldCode || '').split('\n');
+    var newLines = (newCode || '').split('\n');
+    var result = [];
+    var max = Math.max(oldLines.length, newLines.length);
+    for (var i = 0; i < max; i++) {
+      var ol = i < oldLines.length ? oldLines[i] : null;
+      var nl = i < newLines.length ? newLines[i] : null;
+      if (ol === nl) result.push({ type: 'same', text: ol || '' });
+      else if (ol === null && nl !== null) result.push({ type: 'add', text: nl });
+      else if (nl === null && ol !== null) result.push({ type: 'remove', text: ol });
+      else { result.push({ type: 'remove', text: ol }); result.push({ type: 'add', text: nl }); }
+    }
+    return result;
   }
 
-  console.warn('[VIBECODING:DIFF] ' + label + ' — non-empty lines: old=' + oldNonEmpty + ' new=' + newNonEmpty + ' unique-old=' + Object.keys(oldSet).length + ' unique-new=' + Object.keys(newSet).length);
+  var changes = diff.diffLines(oldCode || '', newCode || '');
+  var result = [];
 
-  // Count lines in new that don't appear in old (or appear fewer times)
-  var addedKeys = Object.keys(newSet);
-  var trulyNew = 0;
-  for (var k = 0; k < addedKeys.length; k++) {
-    var key = addedKeys[k];
-    var newCount = newSet[key] || 0;
-    var oldCount = oldSet[key] || 0;
-    if (newCount > oldCount) trulyNew += (newCount - oldCount);
+  for (var i = 0; i < changes.length; i++) {
+    var change = changes[i];
+    var lines = change.value.replace(/\n$/, '').split('\n');
+    var type;
+    if (change.added) type = 'add';
+    else if (change.removed) type = 'remove';
+    else type = 'same';
+
+    for (var j = 0; j < lines.length; j++) {
+      if (lines[j] !== '' || j < lines.length - 1 || change.value === '\n') {
+        result.push({ type: type, text: lines[j] });
+      }
+    }
   }
 
-  // Count lines in old that don't appear in new (or appear fewer times)
-  var removedKeys = Object.keys(oldSet);
-  var trulyRemoved = 0;
-  for (var m = 0; m < removedKeys.length; m++) {
-    var rKey = removedKeys[m];
-    var oCount = oldSet[rKey] || 0;
-    var nCount = newSet[rKey] || 0;
-    if (oCount > nCount) trulyRemoved += (oCount - nCount);
+  return result;
+}
+
+/* ── Build tabbed diff HTML for the three code blocks ── */
+function buildDiffTabs(diffs) {
+  // diffs: { html: [...], css: [...], js: [...], stats: { html:{added,removed}, css:{added,removed}, js:{added,removed} } }
+  var tabs = [
+    { id: 'html', icon: '📄', label: 'HTML', diff: diffs.html, added: diffs.stats.html.added, removed: diffs.stats.html.removed },
+    { id: 'css', icon: '🎨', label: 'CSS', diff: diffs.css, added: diffs.stats.css.added, removed: diffs.stats.css.removed },
+    { id: 'js', icon: '⚙️', label: 'JS', diff: diffs.js, added: diffs.stats.js.added, removed: diffs.stats.js.removed }
+  ];
+
+  var html = '<div class="chat-diff-tabs" data-diff-id="' + diffs._id + '">';
+  
+  // Tab header buttons
+  html += '<div class="chat-diff-tab-header">';
+  for (var i = 0; i < tabs.length; i++) {
+    var t = tabs[i];
+    var stat = '';
+    if (t.added > 0) stat += ' +' + t.added;
+    if (t.removed > 0) stat += ' −' + t.removed;
+    if (!stat) stat = ' unchanged';
+    var activeClass = i === 0 ? ' active' : '';
+    html += '<button class="diff-tab-btn' + activeClass + '" data-diff-tab="' + t.id + '" data-diff-id="' + diffs._id + '">' + t.icon + ' ' + t.label + '<br><small style="font-weight:400;font-size:9px">' + stat + '</small></button>';
+  }
+  html += '</div>';
+
+  // Tab body panels
+  for (var j = 0; j < tabs.length; j++) {
+    var tb = tabs[j];
+    var activePanel = j === 0 ? ' active' : '';
+    html += '<div class="chat-diff-tab-body' + activePanel + '" data-diff-panel="' + tb.id + '" data-diff-id="' + diffs._id + '">';
+    
+    if (!tb.diff || !tb.diff.length) {
+      html += '<div class="chat-diff-line diff-same">(no changes)</div>';
+    } else {
+      for (var k = 0; k < tb.diff.length; k++) {
+        var line = tb.diff[k];
+        var cls = 'chat-diff-line diff-' + line.type;
+        var prefix = line.type === 'add' ? '+ ' : (line.type === 'remove' ? '− ' : '  ');
+        html += '<div class="' + cls + '">' + prefix + esc(line.text) + '</div>';
+      }
+    }
+    
+    html += '</div>';
   }
 
-  console.warn('[VIBECODING:DIFF] ' + label + ' — trulyNew=' + trulyNew + ' trulyRemoved=' + trulyRemoved + ' oldLines=' + oldLines.length + ' newLines=' + newLines.length);
+  html += '</div>';
+  return html;
+}
 
-  var parts = [];
-  if (trulyNew > 0) parts.push('+' + trulyNew + ' added');
-  if (trulyRemoved > 0) parts.push('−' + trulyRemoved + ' removed');
-  if (parts.length === 0 && oldLines.length !== newLines.length) {
-    parts.push('restructured');
+/* ── Global diff click handler (delegated from renderChatMessages) ── */
+function handleDiffTabClick(btn) {
+  var tabId = btn.getAttribute('data-diff-tab');
+  var diffId = btn.getAttribute('data-diff-id');
+  
+  // Deactivate all tab buttons in this diff group
+  var header = btn.parentNode;
+  if (header) {
+    var allBtns = header.querySelectorAll('.diff-tab-btn');
+    for (var i = 0; i < allBtns.length; i++) {
+      allBtns[i].classList.remove('active');
+    }
   }
+  btn.classList.add('active');
 
-  return {
-    label: label,
-    oldCount: oldLines.length,
-    newCount: newLines.length,
-    added: trulyNew,
-    removed: trulyRemoved,
-    changed: trulyNew > 0 || trulyRemoved > 0 || oldLines.length !== newLines.length,
-    summary: parts.length > 0 ? parts.join(', ') : 'unchanged'
-  };
+  // Find all panels in this diff group and show only the matching one
+  var container = btn.closest('.chat-diff-tabs');
+  if (container) {
+    var panels = container.querySelectorAll('.chat-diff-tab-body');
+    for (var j = 0; j < panels.length; j++) {
+      var p = panels[j];
+      if (p.getAttribute('data-diff-panel') === tabId && p.getAttribute('data-diff-id') === diffId) {
+        p.classList.add('active');
+      } else {
+        p.classList.remove('active');
+      }
+    }
+  }
 }
 
 /* ── Process AI Response (shared by stream & batch) ── */
@@ -1157,18 +1418,18 @@ function processAIResponse(response, hasCode) {
     return;
   }
 
-  var generated = parseGeneratedCode(response);
-  console.warn('[VIBECODING:PARSE] HTML:', (generated.html||'').length, 'chars | CSS:', (generated.css||'').length, 'chars | JS:', (generated.js||'').length, 'chars');
+  var parsed = parseGeneratedCode(response);
+  console.warn('[VIBECODING:PARSE] HTML:', (parsed.html||'').length, 'chars | CSS:', (parsed.css||'').length, 'chars | JS:', (parsed.js||'').length, 'chars');
   
   // Guard: if response is very short and has no code blocks, treat as empty/junk
-  if (!generated.html && !generated.css && !generated.js && response.trim().length < 20) {
+  if (!parsed.html && !parsed.css && !parsed.js && response.trim().length < 20) {
     console.warn('[VIBECODING:PROCESS] Response too short (' + response.trim().length + ' chars) with no code blocks — treating as empty');
     addChatMessage('ai', '⚠️ **AI returned an empty or invalid response.**\n\nRaw: ' + JSON.stringify(response) + '\n\n🔧 The AI model may be misconfigured. Try again or check the AI gateway logs.', true);
     return;
   }
 
-  if (generated.html || generated.css || generated.js) {
-    console.warn('[VIBECODING:APPLY] About to apply code — html:', (generated.html||'').length, 'css:', (generated.css||'').length, 'js:', (generated.js||'').length);
+  if (parsed.html || parsed.css || parsed.js) {
+    console.warn('[VIBECODING:APPLY] About to apply code — html:', (parsed.html||'').length, 'css:', (parsed.css||'').length, 'js:', (parsed.js||'').length);
     // Got code! Turn off interview mode if it was on
     if (interviewMode) {
       interviewMode = false;
@@ -1177,39 +1438,67 @@ function processAIResponse(response, hasCode) {
     }
 
     // Snapshot old code for diff BEFORE replacing
-    var oldHtml = hasCode ? (DB.generated.html || '') : '';
-    var oldCss = hasCode ? (DB.generated.css || '') : '';
-    var oldJs = hasCode ? (DB.generated.js || '') : '';
+    var oldHtml = hasCode ? (DB.code.html || '') : '';
+    var oldCss = hasCode ? (DB.code.css || '') : '';
+    var oldJs = hasCode ? (DB.code.js || '') : '';
 
-    if (generated.html) DB.generated.html = generated.html;
-    if (generated.css) DB.generated.css = generated.css;
-    if (generated.js) DB.generated.js = generated.js;
-    console.warn('[VIBECODING:APPLY] DB.generated now — html:', DB.generated.html.length, 'css:', DB.generated.css.length, 'js:', DB.generated.js.length);
+    if (parsed.html) DB.code.html = parsed.html;
+    if (parsed.css) DB.code.css = parsed.css;
+    if (parsed.js) DB.code.js = parsed.js;
+    console.warn('[VIBECODING:APPLY] DB.code now — html:', DB.code.html.length, 'css:', DB.code.css.length, 'js:', DB.code.js.length);
     console.warn('[VIBECODING:APPLY] Calling displayAllCode...');
-    displayAllCode(DB.generated);
+    displayAllCode(DB.code);
 
-    if (!hasCode) addToHistory(DB.generated);
+    if (!hasCode) addToHistory(DB.code);
 
     var summary = extractSummary(response);
 
-    // Build diff summary if we had existing code
-    var diffMsg = '';
-    if (hasCode) {
-      var dHtml = computeLineDiff(oldHtml, DB.generated.html, 'HTML');
-      var dCss = computeLineDiff(oldCss, DB.generated.css, 'CSS');
-      var dJs = computeLineDiff(oldJs, DB.generated.js, 'JS');
-      var diffParts = [];
-      if (dHtml.changed) diffParts.push('📄 HTML: ' + dHtml.summary + ' (' + dHtml.oldCount + '→' + dHtml.newCount + ' ln)');
-      if (dCss.changed) diffParts.push('🎨 CSS: ' + dCss.summary + ' (' + dCss.oldCount + '→' + dCss.newCount + ' ln)');
-      if (dJs.changed) diffParts.push('⚙️ JS: ' + dJs.summary + ' (' + dJs.oldCount + '→' + dJs.newCount + ' ln)');
-      if (diffParts.length > 0) {
-        diffMsg = '\n\n📊 **Changes:**\n' + diffParts.join('\n');
+    // Build tabbed visual diff — DEVELOPERS ONLY (technical feature)
+    var diffHtml = '';
+    if (hasCode && isDeveloper()) {
+      var dHtml = computeUnifiedDiff(oldHtml, DB.code.html);
+      var dCss = computeUnifiedDiff(oldCss, DB.code.css);
+      var dJs = computeUnifiedDiff(oldJs, DB.code.js);
+
+      // Count stats
+      var countStats = function(diff) {
+        var a = 0, r = 0;
+        for (var di = 0; di < diff.length; di++) {
+          if (diff[di].type === 'add') a++;
+          else if (diff[di].type === 'remove') r++;
+        }
+        return { added: a, removed: r };
+      };
+
+      var diffData = {
+        _id: 'd' + Date.now().toString(36),
+        html: dHtml, css: dCss, js: dJs,
+        stats: {
+          html: countStats(dHtml),
+          css: countStats(dCss),
+          js: countStats(dJs)
+        }
+      };
+
+      // Only show tabs if there are actual changes
+      var totalChanges = diffData.stats.html.added + diffData.stats.html.removed +
+                         diffData.stats.css.added + diffData.stats.css.removed +
+                         diffData.stats.js.added + diffData.stats.js.removed;
+      if (totalChanges > 0) {
+        diffHtml = buildDiffTabs(diffData);
       } else {
-        diffMsg = '\n\n📊 **Changes:** (no significant line changes detected)';
+        diffHtml = '<p style="font-size:11px;color:var(--text3);margin-top:6px">📊 <b>Changes:</b> (no significant line changes detected)</p>';
+      }
+    } else if (hasCode && !isDeveloper()) {
+      // Non-developer: simple text summary only, no diff tabs
+      var oldTotal = (oldHtml||'').length + (oldCss||'').length + (oldJs||'').length;
+      var newTotal = DB.code.html.length + DB.code.css.length + DB.code.js.length;
+      if (oldTotal !== newTotal) {
+        diffHtml = '<p style="font-size:11px;color:var(--text3);margin-top:6px">📊 <b>Code updated</b> — see Preview tab for changes.</p>';
       }
     }
 
-    addChatMessage('ai', summary + diffMsg + '\n\n✅ *Code updated.*');
+    addChatMessage('ai', summary + '\n\n✅ *Code updated.*', false, diffHtml);
     persist();
 
     if (!hasCode) switchTab('preview');
@@ -1239,13 +1528,13 @@ function runAutoReview() {
     '',
     '=== CURRENT CODE (review this) ===',
     '[HTML]',
-    DB.generated.html || '(empty)',
+    DB.code.html || '(empty)',
     '',
     '[CSS]',
-    DB.generated.css || '(empty)',
+    DB.code.css || '(empty)',
     '',
     '[JS]',
-    DB.generated.js || '(empty)',
+    DB.code.js || '(empty)',
     '',
     'If you find ANY issues, output the CORRECTED three blocks. If everything is already perfect,',
     'respond with "✅ REVIEW PASSED — no issues found." and do NOT output code blocks.',
@@ -1291,10 +1580,10 @@ function runAutoReview() {
 function applyReviewFixes(response) {
   var fixed = parseGeneratedCode(response);
   if (fixed.html || fixed.css || fixed.js) {
-    if (fixed.html) DB.generated.html = fixed.html;
-    if (fixed.css) DB.generated.css = fixed.css;
-    if (fixed.js) DB.generated.js = fixed.js;
-    displayAllCode(DB.generated);
+    if (fixed.html) DB.code.html = fixed.html;
+    if (fixed.css) DB.code.css = fixed.css;
+    if (fixed.js) DB.code.js = fixed.js;
+    displayAllCode(DB.code);
     addChatMessage('ai', '🔍 **Auto-review:** Found and fixed issues for rule compliance. Code updated.');
     persist();
   } else if (response.indexOf('REVIEW PASSED') !== -1 || response.indexOf('no issues') !== -1) {
@@ -1305,17 +1594,49 @@ function applyReviewFixes(response) {
 }
 
 function extractSummary(text) {
-  var cleaned = text.replace(/\[HTML\][\s\S]*?(\[CSS\]|\[JS\]|$)/gi, '').replace(/\[CSS\][\s\S]*?(\[JS\]|$)/gi, '').replace(/\[JS\][\s\S]*$/gi, '').replace(/```[\s\S]*?```/g, '').trim();
-  if (cleaned.length > 400) cleaned = cleaned.substring(0, 400) + '...';
+  // Strip the three code blocks (greedy this time — grab everything from [HTML] to end of [JS])
+  var cleaned = text
+    .replace(/\[HTML\][\s\S]*?\[CSS\]/gi, '')
+    .replace(/\[CSS\][\s\S]*?\[JS\]/gi, '')
+    .replace(/\[JS\][\s\S]*$/gi, '')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  // Show up to 3000 chars of the AI's commentary — the bubble scrolls now
+  if (cleaned.length > 3000) cleaned = cleaned.substring(0, 3000) + '...';
   return cleaned || 'Here are the updated files:';
 }
 
-function addChatMessage(role, text, isError) {
+function addChatMessage(role, text, isError, diffHtml) {
   if (!Array.isArray(DB.chatMessages)) DB.chatMessages = [];
-  DB.chatMessages.push({ role: role, text: text, time: new Date().toISOString(), isError: !!isError });
-  if (DB.chatMessages.length > 100) DB.chatMessages = DB.chatMessages.slice(-100);
+  var user = tool.getUser() || {};
+  DB.chatMessages.push({
+    role: role, text: text, time: new Date().toISOString(), isError: !!isError,
+    userId: role === 'ai' ? 'ai' : (user.id || 'anon'),
+    userName: role === 'ai' ? 'AI Assistant' : (user.name || 'Anonymous'),
+    diffHtml: diffHtml || ''
+  });
+  if (DB.chatMessages.length > 500) DB.chatMessages = DB.chatMessages.slice(-500);
   renderChatMessages();
   updateChatBadge();
+  renderSessionList(); // update session list timestamps
+
+  // Sync to CRUD session cache
+  if (_activeSessionId) {
+    for (var i = 0; i < _sessions.length; i++) {
+      if (_sessions[i].id === _activeSessionId) {
+        var pd = _sessions[i].productData || {};
+        var dcb = pd.data_categoriesBased || {};
+        dcb.messages = DB.chatMessages.slice();
+        dcb.updatedAt = new Date().toISOString();
+        pd.data_categoriesBased = dcb;
+        _sessions[i].productData = pd;
+        break;
+      }
+    }
+    // Auto-title on first user message
+    if (role === 'user' && DB.chatMessages.length === 2) autoTitleSession();
+  }
 }
 
 var _thinkingTimer = null;
@@ -1561,9 +1882,16 @@ function renderChatMessages() {
     var cls = m.role === 'user' ? 'chat-msg-user' : (m.isError ? 'chat-msg-ai chat-msg-err' : 'chat-msg-ai');
     var label = m.role === 'user' ? 'YOU' : (m.isError ? '⚠ ERROR' : 'AI');
     var text = esc(m.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[HTML\]/gi, '<b>[HTML]</b>').replace(/\[CSS\]/gi, '<b>[CSS]</b>').replace(/\[JS\]/gi, '<b>[JS]</b>').replace(/\n/g, '<br>');
-    html += '<div class="chat-msg ' + cls + '"><div class="chat-msg-label">' + label + '</div><div>' + text + '</div><div class="chat-msg-time">' + timeStr + '</div></div>';
+    var diffBlock = m.diffHtml || '';
+    html += '<div class="chat-msg ' + cls + '"><div class="chat-msg-label">' + label + '</div><div>' + text + '</div>' + diffBlock + '<div class="chat-msg-time">' + timeStr + '</div></div>';
   }
   container.innerHTML = html;
+
+  // Bind diff tab button clicks (delegated)
+  var diffBtns = container.querySelectorAll('.diff-tab-btn');
+  for (var db = 0; db < diffBtns.length; db++) {
+    diffBtns[db].onclick = function() { handleDiffTabClick(this); };
+  }
 
   // Post-process: find AI messages with [[options]] and render clickable buttons
   var aiMsgs = container.querySelectorAll('.chat-msg-ai');
@@ -1679,8 +2007,8 @@ function runFullGeneration() {
 }
 
 function finishFullGeneration(response, hasChat) {
-  var generated = parseGeneratedCode(response);
-  DB.generated = generated; displayAllCode(generated); addToHistory(generated);
+  var parsed = parseGeneratedCode(response);
+  DB.code = parsed; displayAllCode(parsed); addToHistory(parsed);
   if (!hasChat) {
     addChatMessage('ai', '✅ **' + (DB.toolName || 'Your tool') + '** generated! I\'ve created HTML, CSS, and JS following html-tool-rules. Type below to refine it — "add dark mode", "make the table sortable", etc.');
   }
@@ -1691,8 +2019,8 @@ function finishFullGeneration(response, hasChat) {
 }
 
 /* ── History ── */
-function addToHistory(generated) {
-  var entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), toolName: DB.toolName || 'Untitled', toolDesc: DB.toolDesc || '', date: new Date().toISOString(), generated: { html: generated.html || '', css: generated.css || '', js: generated.js || '' }, config: { storage: DB.storage, features: DB.features.slice(), layout: DB.layout, colorScheme: DB.colorScheme } };
+function addToHistory(parsed) {
+  var entry = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), toolName: DB.toolName || 'Untitled', toolDesc: DB.toolDesc || '', date: new Date().toISOString(), code: { html: parsed.html || '', css: parsed.css || '', js: parsed.js || '' }, config: { storage: DB.storage, features: DB.features.slice(), layout: DB.layout, colorScheme: DB.colorScheme } };
   DB.history.unshift(entry); if (DB.history.length > 20) DB.history = DB.history.slice(0, 20);
 }
 
@@ -1703,7 +2031,7 @@ function renderHistory() {
     var d = new Date(h.date); var ds = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     return '<div class="history-item"><div class="history-item-header"><span class="history-item-name">' + esc(h.toolName) + '</span><span class="history-item-date">' + ds + '</span></div><div class="history-item-desc">' + esc(h.toolDesc || '') + '</div><div class="history-item-actions"><button class="btn btn-sm btn-outline hist-load" data-idx="' + i + '">📂 Load</button><button class="btn btn-sm btn-ghost hist-delete" data-idx="' + i + '">🗑️</button></div></div>';
   }).join('');
-  qsa('.hist-load').forEach(function(b) { b.onclick = function() { var e = DB.history[parseInt(this.dataset.idx)]; if (e) { DB.generated = e.generated; displayAllCode(e.generated); closeAllModals(); switchTab('html'); showToast('Loaded: ' + e.toolName, 'info'); persist(); } }; });
+  qsa('.hist-load').forEach(function(b) { b.onclick = function() { var e = DB.history[parseInt(this.dataset.idx)]; if (e) { DB.code = e.code; displayAllCode(e.code); closeAllModals(); switchTab('html'); showToast('Loaded: ' + e.toolName, 'info'); persist(); } }; });
   qsa('.hist-delete').forEach(function(b) { b.onclick = function(ev) { ev.stopPropagation(); DB.history.splice(parseInt(this.dataset.idx), 1); renderHistory(); persist(); }; });
 }
 
@@ -1754,15 +2082,15 @@ function closeAllModals() { el('modal-backdrop').hidden = true; qsa('.modal').fo
 /* ── Render ── */
 function render(val) {
   if (val && typeof val === 'object' && !Array.isArray(val)) {
-    DB = Object.assign({ toolName: '', toolDesc: '', requirements: '', audience: 'admin', storage: 'value', cmsTypes: '', cmsFields: '', siblingFields: 'no', features: ['ai'], featureNotes: '', layout: 'single-page', colorScheme: 'blue', themeSupport: 'light-only', styleNotes: '', generated: { html: '', css: '', js: '' }, history: [], chatMessages: [], _theme: 'light' }, val);
-    if (!DB.generated || typeof DB.generated !== 'object') DB.generated = { html: '', css: '', js: '' };
+    DB = Object.assign({ toolName: '', toolDesc: '', requirements: '', audience: 'admin', storage: 'value', cmsTypes: '', cmsFields: '', siblingFields: 'no', features: ['ai'], featureNotes: '', layout: 'single-page', colorScheme: 'blue', themeSupport: 'light-only', styleNotes: '', code: { html: '', css: '', js: '' }, history: [], chatMessages: [], _theme: 'light' }, val);
+    if (!DB.code || typeof DB.code !== 'object') DB.code = { html: '', css: '', js: '' };
     if (!Array.isArray(DB.history)) DB.history = [];
     if (!Array.isArray(DB.features)) DB.features = ['ai'];
     if (!Array.isArray(DB.chatMessages)) DB.chatMessages = [];
   }
   if (DB._theme) applyTheme(DB._theme);
   restoreFormData();
-  displayAllCode(DB.generated);
+  displayAllCode(DB.code);
   renderChatMessages();
 }
 
@@ -1795,6 +2123,21 @@ function bindEvents() {
 
   // Chat
   var btnSend = el('btn-chat-send'); if (btnSend) btnSend.onclick = sendChatMessage;
+  var btnNewSession = el('btn-new-session'); if (btnNewSession) btnNewSession.onclick = function() {
+    createSession(function(session) {
+      if (session) {
+        // Save current session, switch to new
+        if (_activeSessionId) saveCurrentSession();
+        _activeSessionId = session.id;
+        DB.activeSessionId = session.id;
+        DB.chatMessages = [];
+        persist();
+        renderChatMessages();
+        renderSessionList();
+        showToast('New chat created', 'info');
+      }
+    });
+  };
   var chatInput = el('chat-input');
   if (chatInput) {
     chatInput.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
@@ -1831,7 +2174,7 @@ tool.onReady(function(val, fields) {
   var rulesSource = el('html-rules-source');
   if (rulesSource) htmlRulesText = rulesSource.textContent || '';
 
-  tool.declareOutput({ type: 'object', description: 'VibeCoding HTML App Builder — project config and generated code', properties: { toolName: { type: 'string' }, generated: { type: 'object', properties: { html: { type: 'string' }, css: { type: 'string' }, js: { type: 'string' } } }, chatMessages: { type: 'array' }, history: { type: 'array' } } });
+  tool.declareOutput({ type: 'object', description: 'VibeCoding HTML App Builder — project config and generated code', properties: { toolName: { type: 'string' }, code: { type: 'object', properties: { html: { type: 'string' }, css: { type: 'string' }, js: { type: 'string' } } }, chatMessages: { type: 'array' }, history: { type: 'array' } } });
   tool.declareParams([
     { name: 'allowAi', label: 'Enable AI Prompt Relay', type: 'toggle', default: 'yes', severity: 'mandatory', hint: 'Required for AI code generation.' },
     { name: 'allowUpload', label: 'Enable File Upload', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Lets users upload design files, mockups, or spec docs to share with the AI.' },
@@ -1853,16 +2196,63 @@ tool.onReady(function(val, fields) {
   bindEvents();
   initConsoleCapture();
 
+  // ── Load sessions & auto-migrate legacy data ──
+  loadSessions(function(sessions) {
+    // Auto-migration: if we have legacy chatMessages but no activeSessionId
+    var hasLegacyChat = DB.chatMessages && DB.chatMessages.length > 0;
+    var hasActiveSession = DB.activeSessionId && DB.activeSessionId.length > 0;
+
+    if (hasLegacyChat && !hasActiveSession) {
+      console.warn('[VIBECODING:MIGRATE] Legacy chat detected — migrating to CRUD session...');
+      createSession(function(newSession) {
+        if (newSession) {
+          // Copy legacy messages into the new session
+          var legacy = DB.chatMessages.slice();
+          // Update session with legacy messages
+          tool.requestObjects('update', {
+            mainObjectType: SESSION_TYPE,
+            objectId: newSession.id,
+            productData: { data_categoriesBased: { messages: legacy, updatedAt: new Date().toISOString() } }
+          }, function() {
+            _activeSessionId = newSession.id;
+            DB.activeSessionId = newSession.id;
+            // Clear legacy from DB value (will be saved on next persist)
+            DB.chatMessages = [];
+            persist();
+            // Update cache
+            for (var i = 0; i < _sessions.length; i++) {
+              if (_sessions[i].id === newSession.id) {
+                var pd = _sessions[i].productData || {};
+                var dcb = pd.data_categoriesBased || {};
+                dcb.messages = legacy;
+                pd.data_categoriesBased = dcb;
+                _sessions[i].productData = pd;
+                break;
+              }
+            }
+            renderSessionList();
+            console.warn('[VIBECODING:MIGRATE] Migration complete —', legacy.length, 'messages moved');
+          });
+        }
+      });
+    } else if (hasActiveSession) {
+      // Restore active session
+      _activeSessionId = DB.activeSessionId;
+      switchSession(_activeSessionId);
+    }
+    renderSessionList();
+  });
+
   // ── Startup info ──
   console.warn('[VIBECODING:INIT] Stream:', typeof tool.requestAIStream === 'function' ? 'YES' : 'NO', '| Batch:', typeof tool.requestAI === 'function' ? 'YES' : 'NO', '| User:', (tool.getUser()||{}).name || 'anon', '| Dev:', isDeveloper(), '| RO:', tool.isReadOnly());
-  console.warn('[VIBECODING:INIT] Rules:', htmlRulesText.length, 'chars | HasCode:', !!(DB.generated.html || DB.generated.css || DB.generated.js));
+  console.warn('[VIBECODING:INIT] Rules:', htmlRulesText.length, 'chars | HasCode:', !!(DB.code.html || DB.code.css || DB.code.js));
 
   updateConnStatus('ok');
   if (tool.isReadOnly()) lockUI(true);
   updateDeveloperUI();
 
   // Initial UI: show config if no code generated yet
-  var hasCode = !!(DB.generated.html || DB.generated.css || DB.generated.js);
+  var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   if (!hasCode) switchTab('config');
   else if (isDeveloper()) switchTab('html');
   else switchTab('preview');
