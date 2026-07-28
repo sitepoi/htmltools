@@ -1,5 +1,5 @@
 /* ============================================================
-   Payroll Employee Collector — JS
+   Employee Data Collection — JS
    HR & Finance data + document collection for payroll onboarding.
    Uniconhub CMS html-tool. Entry point: tool.onReady
    ============================================================ */
@@ -139,7 +139,7 @@
     { name: "Youth Training Acknowledgement Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
     { name: "Confidentiality Agreement", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
     { name: "Employee Information Sheet", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
-    { name: "Consent Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+    { name: "Canada Summer Jobs - Employee Consent Form (EMP5616)", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
     { name: "Media Release Form", templateUrl: "#", accept: ".pdf", required: false, category: "HR Forms" }
   ];
 
@@ -276,7 +276,7 @@
 
     // Company name
     var cnEl = $("#pec-companyName");
-    if (cnEl) cnEl.textContent = getCompanyName() + " — Payroll Onboarding";
+    if (cnEl) cnEl.textContent = getCompanyName() + " — Employee Data Collection";
 
     // Employee ident (from user info)
     updateEmployeeIdent();

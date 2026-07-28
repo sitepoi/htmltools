@@ -698,6 +698,133 @@ The CMS admin must configure two settings on the html-tool field:
   })
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AI CHAT SESSIONS — STANDARD CMS OBJECT TYPE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Any html-tool that implements AI-powered chat MUST use the CMS object type
+`ai-chat-sessions-uniconbaseapps` to persist conversation history. This ensures
+all AI conversations across all tools are stored in a single, queryable type
+that the admin can audit centrally via Object Manager.
+
+── WHY ───────────────────────────────────────────────────────────────────────
+  • tool.setValue() is stored in a single Firestore document (1MB limit).
+    Chat history grows unbounded and WILL exceed this limit.
+  • tool.requestObjects() stores each chat session as a separate document.
+    Each session can hold thousands of messages without hitting limits.
+  • Using a SHARED type name means ALL tools contribute to the same pool,
+    enabling cross-tool search, audit, and analytics.
+
+── TYPE NAME ─────────────────────────────────────────────────────────────────
+  mainObjectType: 'ai-chat-sessions-uniconbaseapps'
+  scope: 'instance' (each CMS record's chats are private to that record)
+
+── SESSION OBJECT SHAPE ──────────────────────────────────────────────────────
+  Each session document has:
+    • name       — auto-generated from the first user message (truncated to 60 chars)
+    • productData.data_categoriesBased:
+        • messages    — array of message objects (see below)
+        • createdAt   — ISO 8601 timestamp (set on create)
+        • updatedAt   — ISO 8601 timestamp (updated on every message)
+        • createdBy   — { userId, userName } from tool.getUser()
+
+── MESSAGE OBJECT — MANDATORY FIELDS ─────────────────────────────────────────
+  Every message in the messages array MUST include these fields:
+
+    {
+      role:      'user' | 'ai',          // who sent it
+      text:      'message content',       // plain text
+      time:      '2026-07-26T12:34:56Z', // ISO 8601
+      userId:    'usr_abc123',            // from tool.getUser().id
+      userName:  'John Doe'               // from tool.getUser().name
+    }
+
+  These fields are REQUIRED for every message. They enable:
+    • Audit trails (who asked what, when)
+    • Central browsing (admin can see all chats with user identities)
+    • Cross-tool compatibility (any tool can read any chat)
+
+── MESSAGE OBJECT — OPTIONAL TOOL-SPECIFIC FIELDS ────────────────────────────
+  Each tool MAY add custom fields to message objects as needed. Examples:
+
+    • diffHtml      (string)  — VibeCoding: rendered diff tabs HTML
+    • attachmentUrl (string)  — Document writer: link to generated file
+    • metadata      (object)  — Any JSON-serializable tool data
+    • isError       (boolean) — Whether this was an error response
+    • options       (array)   — Interview mode: clickable option buttons shown
+
+  Rules for optional fields:
+    1. Field names SHOULD be descriptive and use camelCase
+    2. Values MUST be JSON-serializable (strings, numbers, booleans, arrays, objects)
+    3. Do NOT store large binary data — use tool.requestUpload() and store the URL
+    4. Other tools reading this session SHOULD ignore unknown optional fields
+    5. The mandatory fields above MUST always be present
+
+── CRUD OPERATIONS ───────────────────────────────────────────────────────────
+
+  CREATE a new session:
+    tool.requestObjects('create', {
+      mainObjectType: 'ai-chat-sessions-uniconbaseapps',
+      name: 'Chat about Invoice Manager',
+      productData: {
+        data_categoriesBased: {
+          messages: [
+            { role:'user', text:'Build an invoice app', time:..., userId:..., userName:... },
+            { role:'ai',   text:'Sure! Here is the code...', time:..., userId:'ai', userName:'AI' }
+          ],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: { userId: tool.getUser().id, userName: tool.getUser().name }
+        }
+      }
+    }, callback)
+
+  QUERY all sessions for this CMS record (instance scope auto-filters):
+    tool.requestObjects('query', {
+      mainObjectType: 'ai-chat-sessions-uniconbaseapps'
+    }, callback)
+    // Returns { objects: [...] } — sort by updatedAt descending client-side
+
+  UPDATE a session (append a new message):
+    tool.requestObjects('update', {
+      mainObjectType: 'ai-chat-sessions-uniconbaseapps',
+      objectId: existingSession.id,
+      productData: {
+        data_categoriesBased: {
+          messages: existingSession.productData.data_categoriesBased.messages.concat([newMessage]),
+          updatedAt: new Date().toISOString()
+        }
+      }
+    }, callback)
+
+  DELETE a session:
+    tool.requestObjects('delete', {
+      mainObjectType: 'ai-chat-sessions-uniconbaseapps',
+      objectId: sessionId
+    }, callback)
+
+── AUTHORIZATION ─────────────────────────────────────────────────────────────
+  The admin must add this to the html-tool field's settings.allowedObjectTypes:
+    {
+      mainObjectType: 'ai-chat-sessions-uniconbaseapps',
+      role: 'editor',
+      scope: 'instance'
+    }
+
+  Without this, tool.requestObjects() calls for this type will fail.
+  The tool MUST call tool.reportMissingParams() if the type is not authorized.
+
+── BEST PRACTICES ────────────────────────────────────────────────────────────
+  1. Keep the tool's OWN data (code, config, state) in tool.setValue() —
+     do NOT duplicate it into chat sessions.
+  2. Each chat session stores ONLY conversation messages.
+  3. When building AI prompts, inject current tool state (from tool.getValue())
+     as RAG context — do not rely on historical chat data for tool state.
+  4. Limit messages per session to ~500 by auto-creating a new session when
+     the current one gets too long (prevents any single document from
+     approaching the 1MB Firestore limit).
+  5. For AI messages, use userId: 'ai' and userName: 'AI Assistant'.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NAMING METHODOLOGY (CRITICAL)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

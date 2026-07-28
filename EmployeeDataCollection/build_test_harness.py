@@ -4,7 +4,7 @@ import os
 DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Read the HTML body content
-with open(os.path.join(DIR, "PayrollEmployeeCollector.html"), "r", encoding="utf-8") as f:
+with open(os.path.join(DIR, "EmployeeDataCollection.html"), "r", encoding="utf-8") as f:
     html_content = f.read().strip()
 
 # Escape for JS single-quoted string with backslash line continuations
@@ -22,7 +22,7 @@ harness = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Payroll Employee Collector - Test Harness</title>
-<link rel="stylesheet" href="PayrollEmployeeCollector.css">
+<link rel="stylesheet" href="EmployeeDataCollection.css">
 <style>
 body { padding-top: 34px !important; margin: 0; }
 #app { min-height: calc(100vh - 34px); }
@@ -39,7 +39,7 @@ body { padding-top: 34px !important; margin: 0; }
 </head>
 <body>
 <div id="th-bar">
-  <strong>TEST HARNESS - Payroll Employee Collector</strong><span class="sep">|</span>
+  <strong>TEST HARNESS - Canada Summer Jobs - Employee Data Collection</strong><span class="sep">|</span>
   <button class="btn-load" id="th-load-sample">Load Sample Data</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>
@@ -96,7 +96,7 @@ body { padding-top: 34px !important; margin: 0; }
           { name: "Youth Training Acknowledgement Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
           { name: "Confidentiality Agreement", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
           { name: "Employee Information Sheet", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
-          { name: "Consent Form", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
+          { name: "Canada Summer Jobs - Employee Consent Form (EMP5616)", templateUrl: "#", accept: ".pdf", required: true, category: "HR Forms" },
           { name: "Media Release Form", templateUrl: "#", accept: ".pdf", required: false, category: "HR Forms" }
         ],
         customFields: "Dietary Restrictions|text|e.g. vegetarian, halal, none|,Needs Parking Pass|toggle|Parking required|,Office Location|select|Vancouver;Toronto;Montreal;Remote|required"
@@ -168,7 +168,7 @@ body { padding-top: 34px !important; margin: 0; }
 """ + embedded + """
 </script>
 
-<script src="PayrollEmployeeCollector.js"></script>
+<script src="EmployeeDataCollection.js"></script>
 
 <script>
 /* Harness wiring */

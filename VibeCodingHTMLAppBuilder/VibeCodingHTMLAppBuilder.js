@@ -34,7 +34,7 @@ var _currentTemplate = null; // Currently viewed template in modal
 var _sessions = [];           // cached session objects from CRUD
 var _activeSessionId = '';    // mirrors DB.activeSessionId
 var _sessionsLoaded = false;  // true after first loadSessions completes
-var SESSION_TYPE = 'aiChatSessions-uniconbaseapps';
+var SESSION_TYPE = 'ai-chat-sessions-uniconbaseapps';
 
 /* ── Template Store — 8 detailed pre-written prompts ── */
 var TEMPLATES = [
@@ -99,7 +99,7 @@ function persist() {
   tool.resize();
 }
 
-/* ── Session CRUD (aiChatSessions-uniconbaseapps) ── */
+/* ── Session CRUD (ai-chat-sessions-uniconbaseapps) ── */
 function loadSessions(callback) {
   tool.requestObjects('query', { mainObjectType: SESSION_TYPE }, function(err, result) {
     if (err) { console.warn('[VIBECODING:SESSION] Query error:', err); _sessions = []; }
@@ -2204,34 +2204,34 @@ tool.onReady(function(val, fields) {
 
     if (hasLegacyChat && !hasActiveSession) {
       console.warn('[VIBECODING:MIGRATE] Legacy chat detected — migrating to CRUD session...');
+      // Snapshot legacy and clear IMMEDIATELY to prevent duplicate migration
+      var legacyMessages = DB.chatMessages.slice();
+      DB.chatMessages = [];
+      persist();
+
       createSession(function(newSession) {
         if (newSession) {
-          // Copy legacy messages into the new session
-          var legacy = DB.chatMessages.slice();
-          // Update session with legacy messages
           tool.requestObjects('update', {
             mainObjectType: SESSION_TYPE,
             objectId: newSession.id,
-            productData: { data_categoriesBased: { messages: legacy, updatedAt: new Date().toISOString() } }
+            productData: { data_categoriesBased: { messages: legacyMessages, updatedAt: new Date().toISOString() } }
           }, function() {
             _activeSessionId = newSession.id;
             DB.activeSessionId = newSession.id;
-            // Clear legacy from DB value (will be saved on next persist)
-            DB.chatMessages = [];
             persist();
             // Update cache
             for (var i = 0; i < _sessions.length; i++) {
               if (_sessions[i].id === newSession.id) {
                 var pd = _sessions[i].productData || {};
                 var dcb = pd.data_categoriesBased || {};
-                dcb.messages = legacy;
+                dcb.messages = legacyMessages;
                 pd.data_categoriesBased = dcb;
                 _sessions[i].productData = pd;
                 break;
               }
             }
             renderSessionList();
-            console.warn('[VIBECODING:MIGRATE] Migration complete —', legacy.length, 'messages moved');
+            console.warn('[VIBECODING:MIGRATE] Migration complete —', legacyMessages.length, 'messages moved');
           });
         }
       });
