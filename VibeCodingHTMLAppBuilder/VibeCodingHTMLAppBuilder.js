@@ -36,6 +36,85 @@ var _activeSessionId = '';    // mirrors DB.activeSessionId
 var _sessionsLoaded = false;  // true after first loadSessions completes
 var SESSION_TYPE = 'ai-chat-sessions-uniconbaseapps';
 
+/* ── Instance ID Resolution ──
+   Each tool instance needs a stable, unique identifier so that chat sessions
+   are isolated per CMS record AND per tool field instance within that record.
+
+   Priority order for building the instance ID:
+   1. Parent CMS record ID (from URL param, tool.param, or fields)
+   2. A random suffix (unique per tool field instance, stored in DB)
+
+   Result: "rec_<parentRecordId>_<randomSuffix>" or "inst_<random>" as fallback.
+────────────────────────────────────────── */
+function _resolveInstanceId() {
+  // Already resolved with a stable ID that includes a parent record reference?
+  if (DB._instanceId && DB._instanceId.length > 20) return DB._instanceId;
+
+  var parentRecordId = '';
+
+  // Source 1: URL query parameter (CMS may pass ?objectId=xxx or ?recordId=xxx)
+  try {
+    var qs = window.location.search || '';
+    var m1 = qs.match(/[?&]objectId=([^&?#]+)/);
+    var m2 = qs.match(/[?&]recordId=([^&?#]+)/);
+    if (m1) parentRecordId = decodeURIComponent(m1[1]);
+    else if (m2) parentRecordId = decodeURIComponent(m2[1]);
+  } catch(e) { /* sandbox may block location access */ }
+
+  // Source 2: tool.param('objectId') or tool.param('recordId')
+  if (!parentRecordId) {
+    try {
+      var pid = tool.param('objectId', '');
+      if (pid) parentRecordId = String(pid);
+    } catch(e) {}
+  }
+  if (!parentRecordId) {
+    try {
+      var rid = tool.param('recordId', '');
+      if (rid) parentRecordId = String(rid);
+    } catch(e) {}
+  }
+
+  // Source 3: sibling fields may contain _id or id of the parent record
+  if (!parentRecordId) {
+    try {
+      var fields = tool.getFields();
+      if (fields) {
+        if (fields._id) parentRecordId = String(fields._id);
+        else if (fields.id) parentRecordId = String(fields.id);
+      }
+    } catch(e) {}
+  }
+
+  // Source 4: captured from _parentObjectId on a previously created session
+  if (!parentRecordId && DB._parentRecordId) {
+    parentRecordId = DB._parentRecordId;
+  }
+
+  // Build or rebuild the instance ID
+  var randomSuffix = '';
+  if (DB._instanceId && DB._instanceId.indexOf('_') !== -1) {
+    // Extract existing random suffix if present
+    var parts = DB._instanceId.split('_');
+    if (parts.length >= 2) randomSuffix = parts[parts.length - 1];
+  }
+  if (!randomSuffix) {
+    randomSuffix = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  if (parentRecordId) {
+    DB._instanceId = 'rec_' + parentRecordId + '_' + randomSuffix;
+  } else {
+    DB._instanceId = 'inst_' + randomSuffix;
+  }
+
+  console.warn('[VIBECODING:INSTANCE] Resolved ID:', DB._instanceId,
+    '| parentRecord:', parentRecordId || '(unknown)',
+    '| URL:', (window.location.search || '(none)').substring(0, 80));
+  persist();
+  return DB._instanceId;
+}
+
 /* ── Template Store — 8 detailed pre-written prompts ── */
 var TEMPLATES = [
   {
@@ -103,7 +182,45 @@ function persist() {
 function loadSessions(callback) {
   tool.requestObjects('query', { mainObjectType: SESSION_TYPE }, function(err, result) {
     if (err) { console.warn('[VIBECODING:SESSION] Query error:', err); _sessions = []; }
-    else { _sessions = (result && result.objects) ? result.objects : []; }
+    else {
+      var all = (result && result.objects) ? result.objects : [];
+      var myId = _resolveInstanceId();
+      var myParentId = DB._parentRecordId;
+      // Strict filter: only show sessions with matching _toolInstanceId.
+      // Legacy sessions (no _toolInstanceId) on the SAME parent record are auto-migrated.
+      _sessions = [];
+      var needsStamp = [];
+      for (var i = 0; i < all.length; i++) {
+        var obj = all[i];
+        var pd = obj.productData || {};
+        var dcb = pd.data_categoriesBased || {};
+        var objInstId = dcb._toolInstanceId;
+        if (objInstId === myId) {
+          _sessions.push(obj);
+        } else if (!objInstId && myParentId && obj._parentObjectId === myParentId) {
+          // Legacy session on OUR parent record — auto-stamp and include
+          needsStamp.push(obj);
+          _sessions.push(obj);
+        }
+        // else: other instance's session — excluded
+      }
+      // Stamp legacy sessions asynchronously
+      if (needsStamp.length > 0) {
+        console.warn('[VIBECODING:SESSION] Stamping ' + needsStamp.length + ' legacy sessions with instance ID');
+        for (var s = 0; s < needsStamp.length; s++) {
+          (function(session) {
+            tool.requestObjects('update', {
+              mainObjectType: SESSION_TYPE,
+              objectId: session.id,
+              productData: { data_categoriesBased: { _toolInstanceId: myId } }
+            }, function() {});
+          })(needsStamp[s]);
+        }
+      }
+      if (all.length !== _sessions.length) {
+        console.warn('[VIBECODING:SESSION] Filtered — showing ' + _sessions.length + ' of ' + all.length + ' total (instance: ' + myId + ')');
+      }
+    }
     _sessionsLoaded = true;
     console.warn('[VIBECODING:SESSION] Loaded', _sessions.length, 'sessions');
     if (callback) callback(_sessions);
@@ -112,6 +229,7 @@ function loadSessions(callback) {
 
 function createSession(callback) {
   var user = tool.getUser() || {};
+  var instId = _resolveInstanceId();
   tool.requestObjects('create', {
     mainObjectType: SESSION_TYPE,
     name: 'New Chat',
@@ -120,12 +238,20 @@ function createSession(callback) {
         messages: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: { userId: user.id || 'anon', userName: user.name || 'Anonymous' }
+        createdBy: { userId: user.id || 'anon', userName: user.name || 'Anonymous' },
+        _toolInstanceId: instId
       }
     }
   }, function(err, result) {
     if (err) { console.warn('[VIBECODING:SESSION] Create error:', err); if (callback) callback(null); return; }
     var session = result.object;
+    // Capture _parentObjectId from the CMS response (set by CMS when scope='instance')
+    if (session._parentObjectId && !DB._parentRecordId) {
+      DB._parentRecordId = session._parentObjectId;
+      console.warn('[VIBECODING:SESSION] Captured parent record ID:', session._parentObjectId);
+      // Re-resolve to incorporate the parent ID into our instance identifier
+      _resolveInstanceId();
+    }
     _sessions.unshift(session);
     console.warn('[VIBECODING:SESSION] Created session:', session.id);
     if (callback) callback(session);
@@ -246,6 +372,9 @@ function formatTimeAgo(isoTime) {
 function renderSessionList() {
   var list = el('session-list');
   if (!list) return;
+  // Update toggle count label
+  var countLabel = el('session-count-label');
+  if (countLabel) countLabel.textContent = '(' + (_sessions ? _sessions.length : 0) + ')';
   if (!_sessions || !_sessions.length) {
     list.innerHTML = '<div class="session-empty">No chats yet.<br>Send a message to start.</div>';
     return;
@@ -268,16 +397,48 @@ function renderSessionList() {
     var timeAgo = formatTimeAgo(pd.updatedAt || s.updated || '');
     var isActive = s.id === _activeSessionId;
     var activeClass = isActive ? ' session-active' : '';
-    html += '<div class="session-item' + activeClass + '" data-sid="' + s.id + '" onclick="switchSession(\'' + s.id + '\')">' +
+    // Use data-sid for event delegation instead of inline onclick
+    html += '<div class="session-item' + activeClass + '" data-sid="' + esc(s.id) + '">' +
       '<span class="session-dot">' + (isActive ? '●' : '○') + '</span>' +
       '<div class="session-info">' +
         '<div class="session-name">' + esc(name) + '</div>' +
         '<div class="session-time">' + timeAgo + '</div>' +
       '</div>' +
-      '<button class="session-delete" data-sid="' + s.id + '" title="Delete chat" onclick="event.stopPropagation();deleteSession(\'' + s.id + '\', function(ok){ if(ok){ if(_activeSessionId===\'' + s.id + '\'){ _activeSessionId=\'\';DB.activeSessionId=\'\';DB.chatMessages=[];persist();renderChatMessages(); } renderSessionList(); }})">✕</button>' +
+      '<button class="session-delete" data-sid="' + esc(s.id) + '" title="Delete chat">✕</button>' +
     '</div>';
   }
   list.innerHTML = html;
+
+  // Event delegation for session clicks
+  var items = list.querySelectorAll('.session-item');
+  for (var j = 0; j < items.length; j++) {
+    items[j].onclick = function() {
+      var sid = this.getAttribute('data-sid');
+      if (sid) switchSession(sid);
+    };
+    // Delete button handler
+    var delBtn = items[j].querySelector('.session-delete');
+    if (delBtn) {
+      delBtn.onclick = function(e) {
+        e.stopPropagation();
+        var sid = this.getAttribute('data-sid');
+        if (sid) {
+          deleteSession(sid, function(ok) {
+            if (ok) {
+              if (_activeSessionId === sid) {
+                _activeSessionId = '';
+                DB.activeSessionId = '';
+                DB.chatMessages = [];
+                persist();
+                renderChatMessages();
+              }
+              renderSessionList();
+            }
+          });
+        }
+      };
+    }
+  }
 }
 function applyTheme(t) { DB._theme = t; document.documentElement.setAttribute('data-theme', t); var b = el('btn-theme'); if (b) b.textContent = t === 'dark' ? '☀️' : '🌓'; }
 function toggleTheme() { applyTheme(DB._theme === 'dark' ? 'light' : 'dark'); persist(); }
@@ -1092,6 +1253,8 @@ function diagPingBatch(reqId, testPrompt, pingStart) {
 ────────────────────────────────────────── */
 function sendChatMessage() {
   var input = el('chat-input'); if (!input) return;
+  // Guard: prevent sending while AI is already processing
+  if (_aiCallActive) { showToast('AI is already generating. Wait or press Stop.', 'warning'); return; }
   var msg = input.value.trim();
   if (!msg && !attachedFile) return;
   if (!msg) msg = 'Please analyze the attached file and suggest a tool design based on it.';
@@ -1142,8 +1305,15 @@ function sendChatMessage() {
     try {
       tool.requestAIStream(prompt, '', {
         onToken: function(token) {
+          // First token → create visible streaming message bubble in chat
+          if (!_streamingMsgEl) {
+            hideThinkingBubble();
+            _beginStreamingMessage();
+            console.warn('[VIBECODING:STREAM] 🔵 First token! Len:', token.length, 'Preview:', token.substring(0, 60));
+          }
           fullResponse += token;
-          if (_streamCallback) _streamCallback(token);
+          setAiTimeout(prompt.length); // keepalive — reset timer on every token
+          _appendStreamingToken(token);
         },
         onComplete: function() {
           var elapsed = Date.now() - streamStart;
@@ -1153,12 +1323,9 @@ function sendChatMessage() {
           console.warn('[VIBECODING:RECEIVE] ═══════════════════════');
           _aiCallActive = false;
           clearAiTimeout();
+          hideThinkingBubble();
           if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
-            hideThinkingBubble();
-            updateConnStatus('ok');
-            processAIResponse(fullResponse, hasCode);
-            clearAttachment();
-            tool.resize();
+            _finalizeStreamingMessage(fullResponse, hasCode);
           } else {
             // Stream returned empty or just quotes — auto-retry with batch requestAI (may handle large prompts better)
             console.warn('[VIBECODING:RETRY] ⚠️ Streaming returned empty — auto-falling back to batch requestAI...');
@@ -1174,8 +1341,7 @@ function sendChatMessage() {
                 clearAiTimeout();
                 hideThinkingBubble();
                 if (response2 && response2.trim() && response2.length > 10) {
-                  updateConnStatus('ok');
-                  processAIResponse(response2, hasCode);
+                  _finalizeStreamingMessage(response2, hasCode);
                 } else if (err2) {
                   updateConnStatus('error');
                   addChatMessage('ai', '⚠️ **AI Error (retry):** ' + err2 + '\n\n🔧 The CMS AI service returned an error on retry. Check allowAi configuration.', true);
@@ -1193,8 +1359,7 @@ function sendChatMessage() {
                     hideThinkingBubble();
                     if (response3 && response3.trim() && response3.length > 10) {
                       console.warn('[VIBECODING:LAST-RESORT] ✅ Minimal prompt succeeded! Response:', response3.length, 'chars');
-                      updateConnStatus('ok');
-                      processAIResponse(response3, hasCode);
+                      _finalizeStreamingMessage(response3, hasCode);
                     } else {
                       updateConnStatus('error');
                       console.warn('[VIBECODING:LAST-RESORT] 🔴 Even minimal prompt failed — AI service is likely DOWN');
@@ -1213,6 +1378,7 @@ function sendChatMessage() {
               console.warn('  Stack:', (e2.stack || '(no stack)').substring(0, 300));
               _aiCallActive = false;
               clearAiTimeout();
+              _setAiUIActive(false);
               hideThinkingBubble();
               updateConnStatus('error');
               addChatMessage('ai', '⚠️ **AI retry failed:** ' + (e2.message || 'Unknown') + '\n\n🔧 The AI service may not be available.', true);
@@ -1634,8 +1800,14 @@ function addChatMessage(role, text, isError, diffHtml) {
         break;
       }
     }
-    // Auto-title on first user message
-    if (role === 'user' && DB.chatMessages.length === 2) autoTitleSession();
+    // Auto-title on first user message (count user messages, not total)
+    if (role === 'user') {
+      var userMsgCount = 0;
+      for (var mi = 0; mi < DB.chatMessages.length; mi++) {
+        if (DB.chatMessages[mi].role === 'user') userMsgCount++;
+      }
+      if (userMsgCount === 1) autoTitleSession();
+    }
   }
 }
 
@@ -1739,6 +1911,178 @@ var _consoleEntries = [];
 var _aiTimeoutId = null;
 var _connStatus = 'ok'; // ok | busy | error
 var _aiCallActive = false; // true while waiting for AI callback
+var _initialized = false;   // guard against CMS re-injecting HTML multiple times
+
+/* ── Live Streaming Message State ── */
+var _streamingMsgEl = null;   // DOM element reference for fast text append
+var _streamingMsgIdx = -1;    // index of the streaming message in DB.chatMessages
+var _streamCurrentTab = 'text'; // which tab is currently receiving tokens: text|html|css|js
+var _streamTabEls = {};        // { text: <pre>, html: <pre>, css: <pre>, js: <pre> }
+var _streamBuf = '';           // small buffer for detecting code-block boundaries
+
+function _buildStreamingTabs(bubble) {
+  // Replace the bubble's content with a tabbed code viewer
+  bubble.innerHTML =
+    '<div class="chat-msg-label">AI</div>' +
+    '<div class="chat-stream-tabs">' +
+      '<div class="stream-tab-header">' +
+        '<button class="stream-tab-btn active" data-stab="text">💬</button>' +
+        '<button class="stream-tab-btn" data-stab="html">📄 HTML</button>' +
+        '<button class="stream-tab-btn" data-stab="css">🎨 CSS</button>' +
+        '<button class="stream-tab-btn" data-stab="js">⚙️ JS</button>' +
+      '</div>' +
+      '<div class="stream-tab-panel active" data-stab-panel="text"><pre class="stream-pre"></pre></div>' +
+      '<div class="stream-tab-panel" data-stab-panel="html"><pre class="stream-pre"></pre></div>' +
+      '<div class="stream-tab-panel" data-stab-panel="css"><pre class="stream-pre"></pre></div>' +
+      '<div class="stream-tab-panel" data-stab-panel="js"><pre class="stream-pre"></pre></div>' +
+    '</div>' +
+    '<div class="chat-msg-time">' + new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'}) + '</div>';
+
+  // Capture pre elements for each tab
+  var panels = bubble.querySelectorAll('.stream-tab-panel');
+  for (var p = 0; p < panels.length; p++) {
+    var panelId = panels[p].getAttribute('data-stab-panel');
+    var pre = panels[p].querySelector('.stream-pre');
+    if (panelId && pre) _streamTabEls[panelId] = pre;
+  }
+
+  // Wire tab button clicks
+  var btns = bubble.querySelectorAll('.stream-tab-btn');
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].onclick = function() {
+      var tabId = this.getAttribute('data-stab');
+      // Deactivate all
+      var allBtns = bubble.querySelectorAll('.stream-tab-btn');
+      var allPanels = bubble.querySelectorAll('.stream-tab-panel');
+      for (var ab = 0; ab < allBtns.length; ab++) allBtns[ab].classList.remove('active');
+      for (var ap = 0; ap < allPanels.length; ap++) allPanels[ap].classList.remove('active');
+      // Activate selected
+      this.classList.add('active');
+      var panel = bubble.querySelector('.stream-tab-panel[data-stab-panel="' + tabId + '"]');
+      if (panel) { panel.classList.add('active'); panel.querySelector('.stream-pre').scrollTop = panel.querySelector('.stream-pre').scrollHeight; }
+    };
+  }
+
+  _streamingMsgEl = bubble;
+  _streamCurrentTab = 'text';
+  _streamBuf = '';
+}
+
+function _beginStreamingMessage() {
+  _streamingMsgIdx = DB.chatMessages.length;
+  DB.chatMessages.push({
+    role: 'ai', text: '', time: new Date().toISOString(), isError: false,
+    userId: 'ai', userName: 'AI Assistant', diffHtml: ''
+  });
+  renderChatMessages();
+  updateChatBadge();
+  // Find the new bubble and build tab structure inside it
+  var container = el('chat-messages');
+  if (container) {
+    var bubbles = container.querySelectorAll('.chat-msg-ai');
+    var bubble = bubbles[bubbles.length - 1];
+    if (bubble) {
+      _buildStreamingTabs(bubble);
+    }
+  }
+  console.warn('[VIBECODING:STREAM] 🟢 Streaming msg with tabs — idx:', _streamingMsgIdx);
+}
+
+function _appendStreamingToken(token) {
+  if (_streamingMsgIdx < 0) return;
+  // Update DB state
+  if (_streamingMsgIdx < DB.chatMessages.length) {
+    DB.chatMessages[_streamingMsgIdx].text += token;
+  }
+  // Re-acquire DOM reference if stale
+  if (_streamingMsgEl && !_streamingMsgEl.parentNode) {
+    _streamingMsgEl = null;
+    _streamTabEls = {};
+  }
+  if (!_streamingMsgEl) {
+    var container = el('chat-messages');
+    if (container) {
+      var bubbles = container.querySelectorAll('.chat-msg-ai');
+      if (bubbles.length > 0) {
+        var bubble = bubbles[bubbles.length - 1];
+        // Check if bubble has tab structure
+        var existingTabs = bubble.querySelector('.chat-stream-tabs');
+        if (existingTabs) {
+          _streamingMsgEl = bubble;
+          var panels = bubble.querySelectorAll('.stream-tab-panel');
+          for (var p = 0; p < panels.length; p++) {
+            var panelId = panels[p].getAttribute('data-stab-panel');
+            var pre = panels[p].querySelector('.stream-pre');
+            if (panelId && pre) _streamTabEls[panelId] = pre;
+          }
+        } else {
+          // Rebuild tabs
+          _buildStreamingTabs(bubble);
+        }
+      }
+    }
+  }
+
+  // Detect code-block boundaries in the token stream
+  _streamBuf += token;
+  var newTab = _streamCurrentTab;
+  if (_streamBuf.indexOf('[HTML]') !== -1) newTab = 'html';
+  else if (_streamBuf.indexOf('[CSS]') !== -1) newTab = 'css';
+  else if (_streamBuf.indexOf('[JS]') !== -1) newTab = 'js';
+
+  if (newTab !== _streamCurrentTab) {
+    // Switch active tab
+    _streamCurrentTab = newTab;
+    _streamBuf = ''; // reset buffer
+    if (_streamingMsgEl) {
+      // Update tab button highlighting
+      var allBtns = _streamingMsgEl.querySelectorAll('.stream-tab-btn');
+      var allPanels = _streamingMsgEl.querySelectorAll('.stream-tab-panel');
+      for (var ab = 0; ab < allBtns.length; ab++) allBtns[ab].classList.remove('active');
+      for (var ap = 0; ap < allPanels.length; ap++) allPanels[ap].classList.remove('active');
+      var activeBtn = _streamingMsgEl.querySelector('.stream-tab-btn[data-stab="' + _streamCurrentTab + '"]');
+      var activePanel = _streamingMsgEl.querySelector('.stream-tab-panel[data-stab-panel="' + _streamCurrentTab + '"]');
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activePanel) activePanel.classList.add('active');
+    }
+  }
+
+  // Append token to the active tab's pre element (skip the marker line itself)
+  var targetPre = _streamTabEls[_streamCurrentTab];
+  if (targetPre) {
+    // Strip the marker from the first token in a new section
+    var displayText = token;
+    if (_streamCurrentTab !== 'text' && _streamBuf === token) {
+      // This is the first token after switching — clean up marker artifacts
+      displayText = token.replace(/^\[HTML\]\s*/i, '').replace(/^\[CSS\]\s*/i, '').replace(/^\[JS\]\s*/i, '');
+    }
+    targetPre.textContent += displayText;
+    targetPre.scrollTop = targetPre.scrollHeight;
+  }
+
+  // Auto-scroll chat to bottom
+  var chatContainer = el('chat-messages');
+  if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function _finalizeStreamingMessage(fullText, hasCode) {
+  console.warn('[VIBECODING:STREAM] 🟢 Finalizing — fullText:', fullText.length, 'chars | hasCode:', hasCode);
+  // Remove the placeholder streaming message — processAIResponse will add the final version
+  if (_streamingMsgIdx >= 0 && _streamingMsgIdx < DB.chatMessages.length) {
+    DB.chatMessages.splice(_streamingMsgIdx, 1);
+  }
+  _streamingMsgEl = null;
+  _streamingMsgIdx = -1;
+  _streamTabEls = {};
+  _streamCurrentTab = 'text';
+  _streamBuf = '';
+  _setAiUIActive(false);
+  // Now process the full response normally (adds the proper final message)
+  updateConnStatus('ok');
+  processAIResponse(fullText, hasCode);
+  clearAttachment();
+  tool.resize();
+}
 
 function updateConnStatus(status) {
   if (status !== _connStatus) console.warn('[VIBECODING:CONN] Status: ' + _connStatus + ' → ' + status);
@@ -1747,17 +2091,28 @@ function updateConnStatus(status) {
   if (dot) { dot.className = 'chat-status-dot ' + status; dot.title = status === 'ok' ? 'Ready' : status === 'busy' ? 'AI working...' : 'Error — check console'; }
 }
 
+/* Toggle AI-active UI state: disable send button + input, show/hide stop button */
+function _setAiUIActive(active) {
+  var sendBtn = el('btn-chat-send');
+  var stopBtn = el('btn-chat-stop');
+  var input = el('chat-input');
+  if (sendBtn) { sendBtn.disabled = active; sendBtn.style.opacity = active ? '0.4' : ''; }
+  if (stopBtn) stopBtn.style.display = active ? '' : 'none';
+  if (input) { input.disabled = active; input.style.opacity = active ? '0.5' : ''; }
+}
+
 function setAiTimeout(promptLen) {
   clearAiTimeout();
   _aiTimeoutId = setTimeout(function() {
-    console.warn('[VIBECODING:TIMEOUT] 🔴 AI request timed out after 120 seconds');
+    console.warn('[VIBECODING:TIMEOUT] 🔴 AI request timed out after 600 seconds');
     console.warn('  promptChars:', promptLen, 'estTokens:', Math.round(promptLen / 4));
     console.warn('  _aiCallActive was:', _aiCallActive);
     console.warn('  _connStatus was:', _connStatus);
     console.warn('  Likely cause: AI Gateway never called back — check JWT token and Gateway connectivity');
     _aiCallActive = false;
     hideThinkingBubble();
-    var errMsg = '⏰ **AI request timed out after 120 seconds.**\n\n' +
+    _setAiUIActive(false);
+    var errMsg = '⏰ **AI request timed out after 600 seconds.**\n\n' +
       'Possible causes:\n' +
       '• The AI Gateway or model is overloaded\n' +
       '• Prompt too large? (' + promptLen.toLocaleString() + ' chars — dynamic limit based on model)\n' +
@@ -1767,7 +2122,7 @@ function setAiTimeout(promptLen) {
     addChatMessage('ai', errMsg, true);
     updateConnStatus('error');
     tool.resize();
-  }, 125000); // 120s AI timeout + 5s buffer
+  }, 605000); // 600s AI timeout + 5s buffer
 }
 
 function clearAiTimeout() {
@@ -1778,6 +2133,7 @@ function cancelAiRequest() {
   console.warn('[VIBECODING] Request CANCELLED by user');
   _aiCallActive = false;
   clearAiTimeout();
+  _setAiUIActive(false);
   hideThinkingBubble();
   updateConnStatus('error');
   addChatMessage('ai', '⏹ **Request cancelled.** You can try again or check your AI configuration.', true);
@@ -1854,6 +2210,8 @@ function hideThinkingBubble() {
 
 function renderChatMessages() {
   var container = el('chat-messages'); if (!container) return;
+  // Preserve the thinking bubble if AI is currently streaming
+  var thinkingEl = document.getElementById('thinking-bubble');
   if (!DB.chatMessages || !DB.chatMessages.length) {
     container.innerHTML = '<div class="chat-welcome">' +
       '<div class="chat-welcome-icon">👋</div>' +
@@ -1950,8 +2308,14 @@ function runFullGeneration() {
     try {
       tool.requestAIStream(prompt, '', {
         onToken: function(token) {
+          if (!_streamingMsgEl) {
+            hideThinkingBubble();
+            _beginStreamingMessage();
+            console.warn('[VIBECODING:STREAM] 🔵 [FullGen] First token! Len:', token.length);
+          }
           fullResponse += token;
-          if (_streamCallback) _streamCallback(token);
+          setAiTimeout(prompt.length);
+          _appendStreamingToken(token);
         },
         onComplete: function() {
           _aiCallActive = false;
@@ -1960,8 +2324,7 @@ function runFullGeneration() {
           if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
             console.warn('[VIBECODING:RECEIVE] Full gen stream —', fullResponse.length.toLocaleString(), 'chars');
             console.warn('[VIBECODING:RECEIVE:FULL]', fullResponse);
-            updateConnStatus('ok');
-            finishFullGeneration(fullResponse, hasChat);
+            _finalizeStreamingMessage(fullResponse, hasChat);
           } else {
             updateConnStatus('error');
             console.warn('[VIBECODING] Full gen stream returned EMPTY response');
@@ -2123,6 +2486,20 @@ function bindEvents() {
 
   // Chat
   var btnSend = el('btn-chat-send'); if (btnSend) btnSend.onclick = sendChatMessage;
+  var btnStop = el('btn-chat-stop'); if (btnStop) btnStop.onclick = cancelAiRequest;
+
+  // Session list toggle (drawer)
+  var sessionToggle = el('session-list-toggle');
+  if (sessionToggle) {
+    sessionToggle.onclick = function() {
+      var wrap = el('session-list-wrap');
+      var arrow = el('session-toggle-arrow');
+      if (!wrap) return;
+      var collapsed = wrap.classList.toggle('collapsed');
+      if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
+    };
+  }
+
   var btnNewSession = el('btn-new-session'); if (btnNewSession) btnNewSession.onclick = function() {
     createSession(function(session) {
       if (session) {
@@ -2170,6 +2547,10 @@ function bindEvents() {
 
 /* ── Entry Point ── */
 tool.onReady(function(val, fields) {
+  // Guard: prevent double-initialization when CMS re-injects HTML on resize
+  if (_initialized) { console.warn('[VIBECODING:INIT] Already initialized — skipping duplicate setup'); return; }
+  _initialized = true;
+
   // Load full html-tool-rules from embedded DOM element (verbatim, 773 lines)
   var rulesSource = el('html-rules-source');
   if (rulesSource) htmlRulesText = rulesSource.textContent || '';
@@ -2193,6 +2574,8 @@ tool.onReady(function(val, fields) {
   }
 
   render(val);
+  // Resolve stable instance ID for session isolation (tries parent record ID first)
+  _resolveInstanceId();
   bindEvents();
   initConsoleCapture();
 
@@ -2214,7 +2597,7 @@ tool.onReady(function(val, fields) {
           tool.requestObjects('update', {
             mainObjectType: SESSION_TYPE,
             objectId: newSession.id,
-            productData: { data_categoriesBased: { messages: legacyMessages, updatedAt: new Date().toISOString() } }
+            productData: { data_categoriesBased: { messages: legacyMessages, updatedAt: new Date().toISOString(), _toolInstanceId: _resolveInstanceId() } }
           }, function() {
             _activeSessionId = newSession.id;
             DB.activeSessionId = newSession.id;

@@ -28,6 +28,11 @@
         <span class="chat-panel-badge" id="chat-msg-count">0</span>
         <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
       </div>
+      <!-- SESSION LIST TOGGLE -->
+      <div class="session-list-toggle" id="session-list-toggle" title="Click to show/hide chat history">
+        <span>📋 Chat History <span class="toggle-count" id="session-count-label">(0)</span></span>
+        <span class="toggle-arrow" id="session-toggle-arrow">▼</span>
+      </div>
       <!-- SESSION LIST (collapsible) -->
       <div class="session-list-wrap" id="session-list-wrap">
         <div class="session-list" id="session-list">
@@ -59,6 +64,7 @@
         <div class="chat-input-row">
           <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your tool or ask for changes... (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
           <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none;background:var(--danger);color:#fff;border-color:var(--danger);padding:8px 12px;font-size:13px;flex-shrink:0;align-self:flex-end">⏹</button>
         </div>
       </div>
     </aside>
