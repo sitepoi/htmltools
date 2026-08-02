@@ -21,13 +21,16 @@ var DB = {
   history: [],
   chatMessages: [],  // legacy — migrated to CRUD sessions on first load
   _theme: 'light',
-  activeSessionId: ''  // CRUD session ID — empty until first session created
+  activeSessionId: '',  // CRUD session ID — empty until first session created
+  version: '1.0.0'      // Semantic version of the generated tool
 };
 
 var isReadOnly = false;
 var currentTab = 'html';
 var attachedFile = null; // { name, url, size, type, extractedText }
 var interviewMode = false; // Guided interview mode — AI asks step-by-step questions
+var _lastPersistedSnapshot = ''; // tracks any manual changes (code + config) for PATCH bump
+var _aiJustUpdated = false;      // flag to avoid double-bumping on AI updates
 var _currentTemplate = null; // Currently viewed template in modal
 
 /* ── Session State ── */
@@ -172,10 +175,118 @@ var htmlRulesText = ''; // populated in onReady from #html-rules-source
 
 /* ── Persistence ── */
 function persist() {
+  // Auto-bump PATCH if anything changed manually since last persist and AI didn't just update
+  if (!_aiJustUpdated) {
+    var curSnapshot = _dbSnapshot();
+    if (_lastPersistedSnapshot && curSnapshot !== _lastPersistedSnapshot) {
+      _bumpVersion('patch');
+    }
+    _lastPersistedSnapshot = curSnapshot;
+  }
+  _aiJustUpdated = false;
+
   tool.setValue(DB);
   // Also save current session to CRUD (debounced — saves happen frequently)
   if (_activeSessionId) saveCurrentSession();
   tool.resize();
+}
+
+/* ── Compute a snapshot of all mutable state for change detection ── */
+function _dbSnapshot() {
+  return [
+    DB.toolName, DB.toolDesc, DB.requirements, DB.audience,
+    DB.storage, DB.cmsTypes, DB.cmsFields, DB.siblingFields,
+    DB.features.join(','), DB.featureNotes,
+    DB.layout, DB.colorScheme, DB.themeSupport, DB.styleNotes,
+    DB.code.html, DB.code.css, DB.code.js
+  ].join('|');
+}
+
+/* ── Semantic Version Bump ──
+   level: 'major' (1.0.0→2.0.0), 'minor' (1.0.0→1.1.0), 'patch' (1.0.0→1.0.1)
+   Never decrements. AI updates → minor. Manual edits → patch.
+────────────────────────────────────────── */
+function _bumpVersion(level) {
+  if (!DB.version) DB.version = '1.0.0';
+  var parts = DB.version.split('.');
+  var maj = parseInt(parts[0], 10) || 0;
+  var min = parseInt(parts[1], 10) || 0;
+  var pat = parseInt(parts[2], 10) || 0;
+
+  if (level === 'major') { maj += 1; min = 0; pat = 0; }
+  else if (level === 'minor') { min += 1; pat = 0; }
+  else { pat += 1; } // patch
+
+  DB.version = maj + '.' + min + '.' + pat;
+  _renderVersion();
+  console.warn('[VIBECODING:VERSION] Bumped ' + level + ' → ' + DB.version);
+}
+
+/* ── Render version badge in header ── */
+function _renderVersion() {
+  var el = document.getElementById('tool-version');
+  if (el) el.textContent = 'v' + (DB.version || '1.0.0');
+}
+
+/* ── Manual version edit (click to edit, only allow increment) ── */
+function _onVersionClick() {
+  var display = document.getElementById('tool-version');
+  if (!display) return;
+
+  var currentVer = DB.version || '1.0.0';
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'version-input';
+  input.value = currentVer;
+  input.style.cssText = 'width:62px;font-size:10px;font-weight:700;text-align:center;padding:1px 3px;border:1px solid var(--accent);border-radius:4px;background:var(--bg2);color:var(--text);font-family:var(--font-mono);';
+
+  display.parentNode.replaceChild(input, display);
+  input.focus();
+  input.select();
+
+  var save = function() {
+    var newVer = input.value.trim();
+    // Validate semver format
+    if (!/^\d+\.\d+\.\d+$/.test(newVer)) {
+      showToast('Version must be like 1.0.0', 'warning');
+      newVer = currentVer;
+    } else {
+      // Only allow increment (or equal)
+      var np = newVer.split('.');
+      var cp = currentVer.split('.');
+      var nMajor = parseInt(np[0], 10), nMinor = parseInt(np[1], 10), nPatch = parseInt(np[2], 10);
+      var cMajor = parseInt(cp[0], 10), cMinor = parseInt(cp[1], 10), cPatch = parseInt(cp[2], 10);
+      var isHigher = false;
+      if (nMajor > cMajor) isHigher = true;
+      else if (nMajor === cMajor && nMinor > cMinor) isHigher = true;
+      else if (nMajor === cMajor && nMinor === cMinor && nPatch >= cPatch) isHigher = true;
+
+      if (!isHigher) {
+        showToast('Version must be ≥ ' + currentVer + ' (no downgrade)', 'warning');
+        newVer = currentVer;
+      }
+    }
+    DB.version = newVer;
+    persist();
+    _renderVersion();
+    // Replace input back with display span
+    var newDisplay = document.createElement('span');
+    newDisplay.id = 'tool-version';
+    newDisplay.className = 'version-badge';
+    newDisplay.textContent = 'v' + newVer;
+    newDisplay.title = 'Click to change version (increment only)';
+    newDisplay.onclick = _onVersionClick;
+    if (input.parentNode) input.parentNode.replaceChild(newDisplay, input);
+  };
+
+  input.onblur = save;
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Escape') {
+      input.value = currentVer;
+      input.blur();
+    }
+  };
 }
 
 /* ── Session CRUD (ai-chat-sessions-uniconbaseapps) ── */
@@ -326,32 +437,117 @@ function switchSession(sessionId) {
 }
 
 function autoTitleSession() {
-  // Set session name from first user message
+  // Set a meaningful session name — prefers toolName, then first substantial user message.
+  // Only updates if the current name is still the default "New Chat".
   if (!_activeSessionId) return;
   var session = null;
   for (var i = 0; i < _sessions.length; i++) {
     if (_sessions[i].id === _activeSessionId) { session = _sessions[i]; break; }
   }
   if (!session) return;
+
+  // Don't overwrite a user-renamed session (skip if name is not "New Chat")
+  var curName = session.name || '';
+  if (curName && curName !== 'New Chat') return;
+
   var pd = session.productData || {};
   var dcb = pd.data_categoriesBased || {};
   var messages = dcb.messages || [];
-  // Find first user message
-  for (var j = 0; j < messages.length; j++) {
-    if (messages[j].role === 'user' && messages[j].text) {
-      var title = messages[j].text.replace(/\n/g, ' ').substring(0, 60);
-      if (title.length >= 60) title += '...';
-      // Update session name
-      tool.requestObjects('update', {
-        mainObjectType: SESSION_TYPE,
-        objectId: _activeSessionId,
-        name: title
-      }, function() {});
-      session.name = title;
-      renderSessionList();
-      break;
+
+  var bestTitle = '';
+
+  // Priority 1: DB.toolName if it was set by the AI generating code
+  if (DB.toolName && DB.toolName.length > 1) {
+    bestTitle = DB.toolName.substring(0, 60);
+  }
+
+  // Priority 2: first substantial user message (> 15 chars, not just greetings)
+  if (!bestTitle) {
+    for (var j = 0; j < messages.length; j++) {
+      if (messages[j].role === 'user' && messages[j].text) {
+        var txt = messages[j].text.replace(/\n/g, ' ').trim();
+        if (txt.length > 15) { bestTitle = txt.substring(0, 60); break; }
+      }
     }
   }
+
+  // Priority 3: any first user message
+  if (!bestTitle) {
+    for (var k = 0; k < messages.length; k++) {
+      if (messages[k].role === 'user' && messages[k].text) {
+        bestTitle = messages[k].text.replace(/\n/g, ' ').substring(0, 60);
+        break;
+      }
+    }
+  }
+
+  if (!bestTitle) return;
+  if (bestTitle.length >= 60) bestTitle += '...';
+
+  // Update session name via CRUD
+  tool.requestObjects('update', {
+    mainObjectType: SESSION_TYPE,
+    objectId: _activeSessionId,
+    name: bestTitle
+  }, function() {});
+  session.name = bestTitle;
+  renderSessionList();
+}
+
+/* ── Inline Rename Session ── */
+function startRenameSession(sessionId) {
+  // Find the session name element and replace with an input
+  var list = el('session-list');
+  if (!list) return;
+  var nameEl = list.querySelector('.session-name[data-sid="' + sessionId + '"]');
+  if (!nameEl) return;
+
+  var session = null;
+  for (var i = 0; i < _sessions.length; i++) {
+    if (_sessions[i].id === sessionId) { session = _sessions[i]; break; }
+  }
+  if (!session) return;
+
+  var currentName = session.name || 'New Chat';
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'session-name-input';
+  input.value = currentName;
+  input.setAttribute('data-sid', sessionId);
+  input.style.cssText = 'font-size:11px;font-weight:600;color:var(--text);background:var(--bg2);border:1px solid var(--accent);border-radius:4px;padding:2px 5px;width:100%;font-family:var(--font);';
+
+  nameEl.parentNode.replaceChild(input, nameEl);
+  input.focus();
+  input.select();
+
+  var saveRename = function() {
+    var newName = input.value.trim();
+    if (!newName) newName = 'New Chat';
+    if (newName.length > 80) newName = newName.substring(0, 80);
+
+    // Update session in CRUD
+    tool.requestObjects('update', {
+      mainObjectType: SESSION_TYPE,
+      objectId: sessionId,
+      name: newName
+    }, function() {
+      // Update cache
+      for (var i = 0; i < _sessions.length; i++) {
+        if (_sessions[i].id === sessionId) { _sessions[i].name = newName; break; }
+      }
+      if (session) session.name = newName;
+      renderSessionList();
+    });
+  };
+
+  input.onblur = saveRename;
+  input.onkeydown = function(e) {
+    if (e.key === 'Enter') { input.blur(); }
+    if (e.key === 'Escape') {
+      input.value = currentName;
+      input.blur();
+    }
+  };
 }
 
 /* ── Time formatting helper ── */
@@ -401,9 +597,10 @@ function renderSessionList() {
     html += '<div class="session-item' + activeClass + '" data-sid="' + esc(s.id) + '">' +
       '<span class="session-dot">' + (isActive ? '●' : '○') + '</span>' +
       '<div class="session-info">' +
-        '<div class="session-name">' + esc(name) + '</div>' +
+        '<div class="session-name" data-sid="' + esc(s.id) + '" title="Double-click to rename">' + esc(name) + '</div>' +
         '<div class="session-time">' + timeAgo + '</div>' +
       '</div>' +
+      '<button class="session-rename" data-sid="' + esc(s.id) + '" title="Rename chat">✎</button>' +
       '<button class="session-delete" data-sid="' + esc(s.id) + '" title="Delete chat">✕</button>' +
     '</div>';
   }
@@ -436,6 +633,24 @@ function renderSessionList() {
             }
           });
         }
+      };
+    }
+    // Rename button handler
+    var renameBtn = items[j].querySelector('.session-rename');
+    if (renameBtn) {
+      renameBtn.onclick = function(e) {
+        e.stopPropagation();
+        var sid = this.getAttribute('data-sid');
+        if (sid) startRenameSession(sid);
+      };
+    }
+    // Double-click on session name to rename
+    var nameEl = items[j].querySelector('.session-name');
+    if (nameEl) {
+      nameEl.ondblclick = function(e) {
+        e.stopPropagation();
+        var sid = this.getAttribute('data-sid');
+        if (sid) startRenameSession(sid);
       };
     }
   }
@@ -652,10 +867,25 @@ function switchTab(tab) {
   qsa('.content-editor').forEach(function(e) { e.classList.remove('active'); });
   var tb = qs('.ctab[data-tab="' + tab + '"]'); if (tb) tb.classList.add('active');
   var ed = el('editor-' + tab); if (ed) ed.classList.add('active');
+
+  // Show code action buttons (copy) only when a code tab is active
+  var isCodeTab = (tab === 'html' || tab === 'css' || tab === 'js');
+  var actions = el('content-actions');
+  if (actions) actions.style.display = isCodeTab ? '' : 'none';
+
+  // Show only the relevant copy button for the active code tab
   qsa('#btn-copy-html, #btn-copy-css, #btn-copy-js').forEach(function(b) { b.style.display = 'none'; });
   if (tab === 'html') { var b = el('btn-copy-html'); if (b) b.style.display = ''; }
   else if (tab === 'css') { var b = el('btn-copy-css'); if (b) b.style.display = ''; }
   else if (tab === 'js') { var b = el('btn-copy-js'); if (b) b.style.display = ''; }
+
+  // Highlight the header Config button only when config tab is active
+  var cfgBtn = el('btn-config');
+  if (cfgBtn) {
+    if (tab === 'config') cfgBtn.classList.add('header-btn-active');
+    else cfgBtn.classList.remove('header-btn-active');
+  }
+
   if (tab === 'preview') updatePreview();
   if (tab === 'console') renderConsole();
   if (tab === 'config') { collectFormData(); restoreFormData(); }
@@ -668,7 +898,52 @@ function copyToClipboard(text, label) {
   else { fallbackCopy(text, label); }
 }
 function fallbackCopy(text, label) { var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast((label||'Code')+' copied!', 'success'); } catch(e) { showToast('Copy failed', 'error'); } document.body.removeChild(ta); }
-function copyCurrentTab() { var ta = el('code-' + currentTab); if (ta && ta.value.trim()) copyToClipboard(ta.value, currentTab.toUpperCase()); else showToast('No code to copy.', 'warning'); }
+function copyCurrentTab() {
+  var ta = el('code-' + currentTab);
+  if (!ta || !ta.value.trim()) { showToast('No code to copy.', 'warning'); return; }
+  var text = ta.value;
+  // Find the active copy button
+  var btnId = 'btn-copy-' + currentTab;
+  var btn = el(btnId);
+  // Copy to clipboard
+  var copied = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      _flashCopyButton(btn, btnId);
+    }).catch(function() {
+      fallbackCopyAnimated(text, btn, btnId);
+    });
+  } else {
+    fallbackCopyAnimated(text, btn, btnId);
+  }
+}
+
+var _copyFlashTimer = null;
+function _flashCopyButton(btn, btnId) {
+  if (!btn) return;
+  if (_copyFlashTimer) clearTimeout(_copyFlashTimer);
+  var originalHTML = btn.innerHTML;
+  btn.innerHTML = '✅ Copied!';
+  btn.style.color = '#16a34a';
+  btn.style.fontWeight = '700';
+  _copyFlashTimer = setTimeout(function() {
+    btn.innerHTML = originalHTML;
+    btn.style.color = '';
+    btn.style.fontWeight = '';
+    _copyFlashTimer = null;
+  }, 1800);
+}
+
+function fallbackCopyAnimated(text, btn, btnId) {
+  var ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+  document.body.appendChild(ta); ta.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta);
+  if (ok) _flashCopyButton(btn, btnId);
+  else showToast('Copy failed', 'error');
+}
 function copyAllBlocks() {
   var h = el('code-html') ? el('code-html').value.trim() : '', c = el('code-css') ? el('code-css').value.trim() : '', j = el('code-js') ? el('code-js').value.trim() : '';
   if (!h && !c && !j) { showToast('No code yet.', 'warning'); return; }
@@ -683,27 +958,71 @@ function downloadFiles() {
   showToast('Files downloaded!', 'success');
 }
 
-/* ── Parse AI Response ── */
+/* ── Parse AI Response ──
+   Handles BOTH marker styles:
+     A) [HTML] ... [CSS] ... [JS]  (preferred, our prompts ask for this)
+     B) ```html ... ```  ```css ... ```  ```js ... ```  (markdown code fences)
+   Also handles mixed output and stray explanatory text between blocks.
+────────────────────────────────────────── */
 function parseGeneratedCode(text) {
   var r = { html: '', css: '', js: '' };
-  var hm = text.match(/\[HTML\]\s*([\s\S]*?)(?=\[CSS\]|$)/i);
+
+  // ── Pass 1: Try [HTML] / [CSS] / [JS] markers ──
+  var hm = text.match(/\[HTML\]\s*([\s\S]*?)(?=\[CSS\]|\[JS\]|$)/i);
   var cm = text.match(/\[CSS\]\s*([\s\S]*?)(?=\[JS\]|$)/i);
   var jm = text.match(/\[JS\]\s*([\s\S]*?)$/i);
-  if (hm) r.html = hm[1].trim(); if (cm) r.css = cm[1].trim(); if (jm) r.js = jm[1].trim();
-  if (!r.html && !r.css && !r.js) {
-    var blocks = text.match(/```(?:html)?\s*([\s\S]*?)```/g);
-    if (blocks) blocks.forEach(function(b) {
-      var content = b.replace(/```(?:\w+)?\s*/, '').replace(/```\s*$/, '').trim();
-      var lang = b.match(/```(\w+)/); var l = lang ? lang[1].toLowerCase() : '';
-      if (l === 'html' || (!l && !r.html)) r.html = content;
-      else if (l === 'css') r.css = content;
-      else if (l === 'js' || l === 'javascript') r.js = content;
-    });
+
+  if (hm) r.html = hm[1].trim();
+  if (cm) r.css = cm[1].trim();
+  if (jm) r.js = jm[1].trim();
+
+  // ── Pass 2: If markers didn't capture all blocks, try markdown fences ──
+  if (!r.html || !r.css || !r.js) {
+    // Find ALL markdown code fences with their language tags
+    var fencePattern = /```(\w*)\s*\n([\s\S]*?)```/g;
+    var fenceMatch;
+    while ((fenceMatch = fencePattern.exec(text)) !== null) {
+      var lang = (fenceMatch[1] || '').toLowerCase();
+      var content = fenceMatch[2].trim();
+
+      // Map language to target block
+      if (lang === 'html' && !r.html) {
+        r.html = content;
+      } else if (lang === 'css' && !r.css) {
+        r.css = content;
+      } else if ((lang === 'js' || lang === 'javascript') && !r.js) {
+        r.js = content;
+      } else if (!lang) {
+        // Untagged fence — assign to first empty block
+        if (!r.html) r.html = content;
+        else if (!r.css) r.css = content;
+        else if (!r.js) r.js = content;
+      }
+    }
   }
-  r.html = r.html.replace(/^```html\s*/, '').replace(/```\s*$/, '').trim();
-  r.css = r.css.replace(/^```css\s*/, '').replace(/```\s*$/, '').trim();
-  r.js = r.js.replace(/^```(?:js|javascript)\s*/, '').replace(/```\s*$/, '').trim();
+
+  // ── Cleanup: strip any remaining markdown fence artifacts ──
+  r.html = _cleanFenceArtifacts(r.html, 'html');
+  r.css = _cleanFenceArtifacts(r.css, 'css');
+  r.js = _cleanFenceArtifacts(r.js, 'js');
+
+  // ── Diagnostics ──
+  console.warn('[VIBECODING:PARSE] Results — HTML:', r.html.length, 'chars | CSS:', r.css.length, 'chars | JS:', r.js.length, 'chars');
+  if (!r.html && !r.css && !r.js) {
+    console.warn('[VIBECODING:PARSE] ⚠️ No code blocks found in response. Raw (first 500):', text.substring(0, 500));
+  }
+
   return r;
+}
+
+function _cleanFenceArtifacts(code, lang) {
+  if (!code) return '';
+  // Strip leading ```lang or ```
+  code = code.replace(new RegExp('^```' + lang + '\\s*\\n?', 'i'), '');
+  code = code.replace(/^```\s*\n?/, '');
+  // Strip trailing ```
+  code = code.replace(/\n?```\s*$/, '');
+  return code.trim();
 }
 
 /* ── Build Prompts ── */
@@ -1574,6 +1893,11 @@ function handleDiffTabClick(btn) {
 
 /* ── Process AI Response (shared by stream & batch) ── */
 function processAIResponse(response, hasCode) {
+  // ── Diagnostic: log raw response for debugging parse issues ──
+  console.warn('[VIBECODING:PROCESS] ─── RAW AI RESPONSE (' + response.length + ' chars) ───');
+  console.warn('[VIBECODING:PROCESS:RAW]', response);
+  console.warn('[VIBECODING:PROCESS] ─── END RAW ───');
+
   var isInterview = isInterviewQuestion(response);
   console.warn('[VIBECODING:PROCESS] Response:', response.length, 'chars | hasCode:', hasCode, '| isInterview:', isInterview);
   // Check if this is an interview question (has clickable [[options]])
@@ -1614,6 +1938,10 @@ function processAIResponse(response, hasCode) {
     console.warn('[VIBECODING:APPLY] DB.code now — html:', DB.code.html.length, 'css:', DB.code.css.length, 'js:', DB.code.js.length);
     console.warn('[VIBECODING:APPLY] Calling displayAllCode...');
     displayAllCode(DB.code);
+
+    // AI updated the code → bump MINOR version
+    _aiJustUpdated = true;
+    _bumpVersion('minor');
 
     if (!hasCode) addToHistory(DB.code);
 
@@ -1750,6 +2078,9 @@ function applyReviewFixes(response) {
     if (fixed.css) DB.code.css = fixed.css;
     if (fixed.js) DB.code.js = fixed.js;
     displayAllCode(DB.code);
+    // AI auto-review fixed code → bump MINOR
+    _aiJustUpdated = true;
+    _bumpVersion('minor');
     addChatMessage('ai', '🔍 **Auto-review:** Found and fixed issues for rule compliance. Code updated.');
     persist();
   } else if (response.indexOf('REVIEW PASSED') !== -1 || response.indexOf('no issues') !== -1) {
@@ -1760,12 +2091,20 @@ function applyReviewFixes(response) {
 }
 
 function extractSummary(text) {
-  // Strip the three code blocks (greedy this time — grab everything from [HTML] to end of [JS])
+  // Strip all code blocks (both marker styles) to leave only the AI's commentary
   var cleaned = text
+    // Remove [HTML]... to ... markers (greedy, spans across blocks)
     .replace(/\[HTML\][\s\S]*?\[CSS\]/gi, '')
     .replace(/\[CSS\][\s\S]*?\[JS\]/gi, '')
     .replace(/\[JS\][\s\S]*$/gi, '')
-    .replace(/```[\s\S]*?```/g, '')
+    // Also handle when only one or two markers are present
+    .replace(/\[HTML\][\s\S]*$/gi, '')
+    .replace(/\[CSS\][\s\S]*$/gi, '')
+    // Remove markdown code fences with optional language tags (greedy across lines)
+    .replace(/```[\w]*\s*\n[\s\S]*?\n```/g, '')
+    // Remove any stray ``` that remain
+    .replace(/```/g, '')
+    // Normalize whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   // Show up to 3000 chars of the AI's commentary — the bubble scrolls now
@@ -1800,13 +2139,17 @@ function addChatMessage(role, text, isError, diffHtml) {
         break;
       }
     }
-    // Auto-title on first user message (count user messages, not total)
+    // Auto-title: try on 1st user msg, and after every 3rd user msg (in case earlier ones were generic)
     if (role === 'user') {
       var userMsgCount = 0;
       for (var mi = 0; mi < DB.chatMessages.length; mi++) {
         if (DB.chatMessages[mi].role === 'user') userMsgCount++;
       }
-      if (userMsgCount === 1) autoTitleSession();
+      if (userMsgCount === 1 || userMsgCount % 3 === 0) autoTitleSession();
+    }
+    // Also auto-title when AI responds (toolName may have been inferred from code generation)
+    if (role === 'ai' && !isError) {
+      autoTitleSession();
     }
   }
 }
@@ -2372,6 +2715,9 @@ function runFullGeneration() {
 function finishFullGeneration(response, hasChat) {
   var parsed = parseGeneratedCode(response);
   DB.code = parsed; displayAllCode(parsed); addToHistory(parsed);
+  // Initial generation or full regeneration → bump MINOR
+  _aiJustUpdated = true;
+  _bumpVersion('minor');
   if (!hasChat) {
     addChatMessage('ai', '✅ **' + (DB.toolName || 'Your tool') + '** generated! I\'ve created HTML, CSS, and JS following html-tool-rules. Type below to refine it — "add dark mode", "make the table sortable", etc.');
   }
@@ -2445,16 +2791,20 @@ function closeAllModals() { el('modal-backdrop').hidden = true; qsa('.modal').fo
 /* ── Render ── */
 function render(val) {
   if (val && typeof val === 'object' && !Array.isArray(val)) {
-    DB = Object.assign({ toolName: '', toolDesc: '', requirements: '', audience: 'admin', storage: 'value', cmsTypes: '', cmsFields: '', siblingFields: 'no', features: ['ai'], featureNotes: '', layout: 'single-page', colorScheme: 'blue', themeSupport: 'light-only', styleNotes: '', code: { html: '', css: '', js: '' }, history: [], chatMessages: [], _theme: 'light' }, val);
+    DB = Object.assign({ toolName: '', toolDesc: '', requirements: '', audience: 'admin', storage: 'value', cmsTypes: '', cmsFields: '', siblingFields: 'no', features: ['ai'], featureNotes: '', layout: 'single-page', colorScheme: 'blue', themeSupport: 'light-only', styleNotes: '', code: { html: '', css: '', js: '' }, history: [], chatMessages: [], _theme: 'light', version: '1.0.0' }, val);
     if (!DB.code || typeof DB.code !== 'object') DB.code = { html: '', css: '', js: '' };
     if (!Array.isArray(DB.history)) DB.history = [];
     if (!Array.isArray(DB.features)) DB.features = ['ai'];
     if (!Array.isArray(DB.chatMessages)) DB.chatMessages = [];
+    if (!DB.version || typeof DB.version !== 'string') DB.version = '1.0.0';
   }
   if (DB._theme) applyTheme(DB._theme);
   restoreFormData();
   displayAllCode(DB.code);
   renderChatMessages();
+  _renderVersion();
+  // Initialize code hash for change tracking
+  _lastPersistedSnapshot = _dbSnapshot();
 }
 
 function syncFields() {}
@@ -2474,8 +2824,10 @@ function bindEvents() {
   el('btn-copy-html').onclick = function() { copyCurrentTab(); };
   el('btn-copy-css').onclick = function() { copyCurrentTab(); };
   el('btn-copy-js').onclick = function() { copyCurrentTab(); };
-  el('btn-copy-all').onclick = copyAllBlocks;
   el('btn-download').onclick = downloadFiles;
+
+  // Version badge click → manual edit
+  var verBadge = el('tool-version'); if (verBadge) verBadge.onclick = _onVersionClick;
 
   // Console
   var btnConsoleClear = el('btn-console-clear'); if (btnConsoleClear) btnConsoleClear.onclick = clearConsole;
@@ -2634,14 +2986,10 @@ tool.onReady(function(val, fields) {
   if (tool.isReadOnly()) lockUI(true);
   updateDeveloperUI();
 
-  // Initial UI: show config if no code generated yet
+  // Initial UI: show config if no code generated yet, otherwise preview
   var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   if (!hasCode) switchTab('config');
-  else if (isDeveloper()) switchTab('html');
   else switchTab('preview');
-
-  qsa('#btn-copy-html, #btn-copy-css, #btn-copy-js').forEach(function(b) { b.style.display = 'none'; });
-  if (isDeveloper()) { var bHtml = el('btn-copy-html'); if (bHtml) bHtml.style.display = ''; }
 
   tool.resize();
 });
