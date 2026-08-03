@@ -886,7 +886,10 @@ function switchTab(tab) {
     else cfgBtn.classList.remove('header-btn-active');
   }
 
-  if (tab === 'preview') updatePreview();
+  if (tab === 'preview') {
+    // Re-set srcdoc to prevent blank iframe after display:none toggle
+    updatePreview();
+  }
   if (tab === 'console') renderConsole();
   if (tab === 'config') { collectFormData(); restoreFormData(); }
   tool.resize();
@@ -1006,6 +1009,12 @@ function parseGeneratedCode(text) {
   r.css = _cleanFenceArtifacts(r.css, 'css');
   r.js = _cleanFenceArtifacts(r.js, 'js');
 
+  // ── Strip trailing markdown content from code blocks ──
+  // (AI may append markdown tables, headers, or suggestion lists after the code)
+  r.html = _stripTrailingMarkdown(r.html);
+  r.css = _stripTrailingMarkdown(r.css);
+  r.js = _stripTrailingMarkdown(r.js);
+
   // ── Diagnostics ──
   console.warn('[VIBECODING:PARSE] Results — HTML:', r.html.length, 'chars | CSS:', r.css.length, 'chars | JS:', r.js.length, 'chars');
   if (!r.html && !r.css && !r.js) {
@@ -1023,6 +1032,50 @@ function _cleanFenceArtifacts(code, lang) {
   // Strip trailing ```
   code = code.replace(/\n?```\s*$/, '');
   return code.trim();
+}
+
+/* ── Strip trailing markdown that AI may have appended after the code block ── */
+function _stripTrailingMarkdown(code) {
+  if (!code) return '';
+  // Find the last line that looks like actual code (not markdown)
+  var lines = code.split('\n');
+  // Walk backwards from the end, removing markdown lines
+  var cutIdx = lines.length;
+  for (var i = lines.length - 1; i >= 0; i--) {
+    var line = lines[i].trim();
+    // Skip empty lines
+    if (!line) continue;
+    // Stop at lines that look like actual code
+    var isCode =
+      /^[\s{}()[\];=<>!+\-*\/&|^~?:.%]/.test(line) ||  // starts with code chars
+      /^(var |function |if |for |while |return |else |try |catch |switch |case |break |continue|new |this\.|document\.|window\.|console\.|tool\.)/.test(line) ||
+      /^(class=|id=|style=|href=|src=|type=|name=|value=|placeholder=|onclick=|onchange=|onsubmit=)/.test(line) ||
+      /^(<\/?[a-zA-Z])/.test(line) ||  // HTML tags
+      /^[.#@]/.test(line) ||  // CSS selectors
+      /^\s*\/\//.test(line) ||  // JS comments
+      /^\s*\/\*/.test(line);    // CSS/JS block comments
+    if (isCode) { cutIdx = i + 1; break; }
+    // Markdown patterns to strip:
+    // - Headers: ###, ##, #
+    // - Tables: | ... |
+    // - Divider: ---, ***
+    // - Bold: **text**
+    // - Lists: - item, * item, 1. item
+    // - Suggestions: [[suggest_...]]
+    var isMarkdown =
+      /^#{1,6}\s/.test(line) ||
+      /^\|.*\|$/.test(line) ||
+      /^[-*_]{3,}$/.test(line) ||
+      /^\*\*.*\*\*$/.test(line) ||
+      /^[-*+]\s/.test(line) ||
+      /^\d+\.\s/.test(line) ||
+      /^\[\[suggest_/.test(line) ||
+      /^[📊✅🏷️📄🗑⏰✨]/.test(line);  // emoji headers
+    // If not clearly code and not clearly markdown, stop (keep it)
+    if (!isMarkdown) { cutIdx = i + 1; break; }
+  }
+  if (cutIdx >= lines.length) return code.trim();
+  return lines.slice(0, cutIdx).join('\n').trim();
 }
 
 /* ── Build Prompts ── */
@@ -1148,6 +1201,13 @@ function buildChatPrompt(userMsg) {
   parts.push('');
   parts.push('IMPORTANT: Always output ALL THREE blocks when providing code. If you are asking a question, use [[option_id]] format for clickable choices.');
   parts.push('Format for code: [HTML] ... [CSS] ... [JS] ...');
+  parts.push('');
+  parts.push('NEXT-STEP SUGGESTIONS: After providing code, include 3-5 suggested next steps the user might want.');
+  parts.push('Format each suggestion on its own line like: [[suggest_feature_id]] Brief description of the suggestion');
+  parts.push('  Example: [[suggest_darkmode]] Add dark mode toggle');
+  parts.push('           [[suggest_search]] Add search/filter functionality');
+  parts.push('           [[suggest_export]] Add CSV export');
+  parts.push('Place these AFTER the [JS] block. Keep them short and action-oriented.');
 
   return parts.join('\n');
 }
@@ -1464,7 +1524,23 @@ function handleOptionClick(btn) {
   var optId = btn.getAttribute('data-opt-id');
   var optText = btn.getAttribute('data-opt-text');
   console.warn('[VIBECODING] Option clicked — id:', optId, 'text:', optText);
-  // Disable all option buttons in this group
+
+  // ── Suggestion buttons: accumulate in chat input, don't send immediately ──
+  if (optId && optId.indexOf('suggest_') === 0) {
+    var inp = el('chat-input');
+    if (!inp) return;
+    // Mark button as selected (toggle style, keep enabled for unselect)
+    if (btn.classList.contains('chat-suggest-selected')) {
+      btn.classList.remove('chat-suggest-selected');
+    } else {
+      btn.classList.add('chat-suggest-selected');
+    }
+    // Rebuild the chat input from all selected suggestions
+    _rebuildSuggestInput();
+    return;
+  }
+
+  // ── Interview options: send immediately (existing behavior) ──
   var parent = btn.parentNode;
   if (parent) {
     var allBtns = parent.querySelectorAll('.chat-option-btn');
@@ -1473,18 +1549,53 @@ function handleOptionClick(btn) {
       allBtns[i].disabled = true;
     }
   }
-  // Send the selected option as the user's response
-  var inp = el('chat-input');
-  if (inp) {
-    inp.value = optText;
-    inp.style.height = 'auto';
+  var inp2 = el('chat-input');
+  if (inp2) {
+    inp2.value = optText;
+    inp2.style.height = 'auto';
   }
   sendChatMessage();
 }
 
+/* ── Rebuild chat input from all selected suggestion buttons ── */
+function _rebuildSuggestInput() {
+  var inp = el('chat-input');
+  if (!inp) return;
+  var allSuggestBtns = document.querySelectorAll('.chat-option-btn.chat-suggest-selected');
+  var lines = [];
+  var num = 1;
+  for (var i = 0; i < allSuggestBtns.length; i++) {
+    var txt = allSuggestBtns[i].getAttribute('data-opt-text');
+    if (txt) {
+      lines.push(num + '- ' + txt);
+      num++;
+    }
+  }
+  // Preserve any user-typed text that isn't a numbered suggestion
+  var currentVal = inp.value || '';
+  // Remove existing numbered lines, keep free text
+  var freeText = currentVal.replace(/^\d+-\s+.+$/gm, '').replace(/\n{2,}/g, '\n').trim();
+  if (freeText && lines.length > 0) {
+    inp.value = freeText + '\n\n' + lines.join('\n');
+  } else if (lines.length > 0) {
+    inp.value = lines.join('\n');
+  } else {
+    inp.value = freeText;
+  }
+  inp.style.height = 'auto';
+  inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+  inp.focus();
+}
+
 function isInterviewQuestion(text) {
   // Detect if the AI response is an interview question (has [[options]])
-  return /\[\[[a-zA-Z0-9_-]+\]\]/.test(text);
+  // Exclude [[suggest_...]] patterns which are next-step suggestions, not interview options
+  return /\[\[(?!suggest_)[a-zA-Z0-9_-]+\]\]/.test(text);
+}
+
+/* ── Detect next-step suggestion buttons [[suggest_...]] ── */
+function hasSuggestions(text) {
+  return /\[\[suggest_[a-zA-Z0-9_-]+\]\]/.test(text);
 }
 
 /* ── Deep AI Pipeline Diagnostics (quiet — uncomment to re-enable) ── */
@@ -1617,15 +1728,18 @@ function sendChatMessage() {
 
   // Use streaming if available, fall back to batch
   if (typeof tool.requestAIStream === 'function') {
-    showThinkingBubble('AI is generating', true);
+    showThinkingBubble('Processing request…', true);
     var fullResponse = '';
     var streamStart = Date.now();
 
     try {
       tool.requestAIStream(prompt, '', {
         onToken: function(token) {
-          // First token → create visible streaming message bubble in chat
+          // First token → switch label and create visible streaming message bubble
           if (!_streamingMsgEl) {
+            // Update thinking label to show streaming has started
+            var thinkLabel = document.getElementById('think-label');
+            if (thinkLabel) thinkLabel.textContent = 'AI is generating…';
             hideThinkingBubble();
             _beginStreamingMessage();
             console.warn('[VIBECODING:STREAM] 🔵 First token! Len:', token.length, 'Preview:', token.substring(0, 60));
@@ -2091,6 +2205,14 @@ function applyReviewFixes(response) {
 }
 
 function extractSummary(text) {
+  // Snag suggestion lines BEFORE stripping code blocks (they live after [JS])
+  var suggestLines = [];
+  var suggestRe = /^\[\[suggest_[a-zA-Z0-9_-]+\]\]\s+.+$/gm;
+  var sm;
+  while ((sm = suggestRe.exec(text)) !== null) {
+    suggestLines.push(sm[0]);
+  }
+
   // Strip all code blocks (both marker styles) to leave only the AI's commentary
   var cleaned = text
     // Remove [HTML]... to ... markers (greedy, spans across blocks)
@@ -2104,9 +2226,18 @@ function extractSummary(text) {
     .replace(/```[\w]*\s*\n[\s\S]*?\n```/g, '')
     // Remove any stray ``` that remain
     .replace(/```/g, '')
+    // Remove suggestion lines from the summary body (they'll be re-appended)
+    .replace(/^\[\[suggest_[a-zA-Z0-9_-]+\]\]\s+.+$/gm, '')
     // Normalize whitespace
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // Append suggestions at the end
+  if (suggestLines.length > 0) {
+    if (cleaned) cleaned += '\n\n';
+    cleaned += suggestLines.join('\n');
+  }
+
   // Show up to 3000 chars of the AI's commentary — the bubble scrolls now
   if (cleaned.length > 3000) cleaned = cleaned.substring(0, 3000) + '...';
   return cleaned || 'Here are the updated files:';
@@ -2366,12 +2497,36 @@ function _appendStreamingToken(token) {
     }
   }
 
-  // Detect code-block boundaries in the token stream
+  // Detect code-block boundaries in the token stream.
+  // Handles BOTH marker styles:
+  //   A) [HTML] / [CSS] / [JS]   (our preferred format)
+  //   B) ```html / ```css / ```js / ```javascript  (markdown code fences)
+  // Also detects closing ``` to switch back to text tab.
   _streamBuf += token;
   var newTab = _streamCurrentTab;
-  if (_streamBuf.indexOf('[HTML]') !== -1) newTab = 'html';
-  else if (_streamBuf.indexOf('[CSS]') !== -1) newTab = 'css';
-  else if (_streamBuf.indexOf('[JS]') !== -1) newTab = 'js';
+  var fenceDetected = ''; // 'open-html', 'open-css', 'open-js', 'close'
+
+  // Check for [HTML] / [CSS] / [JS] markers
+  if (_streamBuf.indexOf('[HTML]') !== -1) { newTab = 'html'; fenceDetected = 'open-html'; }
+  else if (_streamBuf.indexOf('[CSS]') !== -1) { newTab = 'css'; fenceDetected = 'open-css'; }
+  else if (_streamBuf.indexOf('[JS]') !== -1) { newTab = 'js'; fenceDetected = 'open-js'; }
+
+  // Check for markdown code fences
+  if (!fenceDetected) {
+    var mdMatch = _streamBuf.match(/```(html|css|js|javascript)\s*\n/i);
+    if (mdMatch) {
+      var mdLang = mdMatch[1].toLowerCase();
+      if (mdLang === 'html') { newTab = 'html'; fenceDetected = 'open-html'; }
+      else if (mdLang === 'css') { newTab = 'css'; fenceDetected = 'open-css'; }
+      else { newTab = 'js'; fenceDetected = 'open-js'; }
+    }
+  }
+
+  // Check for closing markdown fence (```) when inside a code tab
+  if (!fenceDetected && _streamCurrentTab !== 'text' && /\n```\s*$/.test(_streamBuf)) {
+    newTab = 'text';
+    fenceDetected = 'close';
+  }
 
   if (newTab !== _streamCurrentTab) {
     // Switch active tab
@@ -2390,22 +2545,37 @@ function _appendStreamingToken(token) {
     }
   }
 
-  // Append token to the active tab's pre element (skip the marker line itself)
+  // Append token to the active tab's pre element (skip fence/marker syntax)
   var targetPre = _streamTabEls[_streamCurrentTab];
   if (targetPre) {
-    // Strip the marker from the first token in a new section
     var displayText = token;
-    if (_streamCurrentTab !== 'text' && _streamBuf === token) {
-      // This is the first token after switching — clean up marker artifacts
-      displayText = token.replace(/^\[HTML\]\s*/i, '').replace(/^\[CSS\]\s*/i, '').replace(/^\[JS\]\s*/i, '');
+    // Strip opening fences/markers from the first token after switching to a code tab
+    if (fenceDetected.indexOf('open-') === 0 && _streamBuf === '') {
+      displayText = token
+        .replace(/^\[HTML\]\s*/i, '')
+        .replace(/^\[CSS\]\s*/i, '')
+        .replace(/^\[JS\]\s*/i, '')
+        .replace(/^```(?:html|css|js|javascript)?\s*\n?/i, '');
     }
-    targetPre.textContent += displayText;
-    targetPre.scrollTop = targetPre.scrollHeight;
+    // Strip closing ``` from token when switching back to text
+    if (fenceDetected === 'close') {
+      displayText = token.replace(/```\s*$/g, '');
+    }
+    // Skip empty display text (the fence line itself)
+    if (displayText) {
+      targetPre.textContent += displayText;
+      targetPre.scrollTop = targetPre.scrollHeight;
+    }
   }
 
-  // Auto-scroll chat to bottom
+  // Auto-scroll chat to bottom — but only if user hasn't scrolled up
   var chatContainer = el('chat-messages');
-  if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+  if (chatContainer) {
+    var distFromBottom = chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight;
+    if (distFromBottom < 80) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }
 }
 
 function _finalizeStreamingMessage(fullText, hasCode) {
@@ -2535,7 +2705,10 @@ function appendStreamToken(token) {
     stream.textContent += token;
     _thinkingMsgEl.scrollTop = _thinkingMsgEl.scrollHeight;
     var container = el('chat-messages');
-    if (container) container.scrollTop = container.scrollHeight;
+    if (container) {
+      var dist = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (dist < 80) container.scrollTop = container.scrollHeight;
+    }
   }
 }
 
