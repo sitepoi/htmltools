@@ -1,0 +1,145 @@
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-icon" id="btn-back" title="Back to sections" style="display:none">←</button>
+      <h1 class="app-title" id="app-title">📚 Self-Paced Learning</h1>
+    </div>
+    <div class="header-right">
+      <span class="role-badge" id="role-badge"></span>
+      <button class="btn btn-sm btn-outline" id="btn-manager-toggle" style="display:none">⚙️ Manage</button>
+    </div>
+  </header>
+
+  <!-- PROGRESS BAR -->
+  <div class="progress-bar-wrap" id="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+    <span class="progress-bar-text" id="progress-bar-text">0% Complete</span>
+  </div>
+
+  <!-- SECTION LIST VIEW -->
+  <div id="view-list" class="view">
+    <div class="toolbar">
+      <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
+      <select class="filter-select" id="filter-status">
+        <option value="all">All Sections</option>
+        <option value="not_started">Not Started</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="section-grid" id="section-grid">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">No sections available yet</div>
+        <div class="empty-desc">A manager needs to add curriculum sections first.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION DETAIL VIEW -->
+  <div id="view-detail" class="view" style="display:none">
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <span class="detail-badge" id="detail-badge"></span>
+      </div>
+      <div class="detail-meta">
+        <span id="detail-estimated"></span>
+        <span id="detail-status-label"></span>
+      </div>
+      <div class="detail-content" id="detail-content"></div>
+      
+      <!-- QUIZ SECTION -->
+      <div class="quiz-section" id="quiz-section" style="display:none">
+        <h3 class="quiz-title">📝 Knowledge Check</h3>
+        <div id="quiz-questions"></div>
+        <button class="btn btn-primary" id="btn-submit-quiz">Submit Answers</button>
+        <div class="quiz-result" id="quiz-result" style="display:none"></div>
+      </div>
+
+      <!-- NAVIGATION -->
+      <div class="detail-nav">
+        <button class="btn btn-outline" id="btn-prev-section" disabled>← Previous</button>
+        <div class="detail-nav-center">
+          <button class="btn btn-success" id="btn-mark-complete">✓ Mark Complete</button>
+          <button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">📖 Mark In Progress</button>
+        </div>
+        <button class="btn btn-outline" id="btn-next-section" disabled>Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANAGER PANEL -->
+  <div id="view-manager" class="view" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-add-section">+ Add New Section</button>
+      <span class="toolbar-info" id="manager-section-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Est. Minutes</th>
+            <th>Has Quiz</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="manager-table-body"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="manager-empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No sections created yet</div>
+      <div class="empty-desc">Click "+ Add New Section" to create your first curriculum section.</div>
+    </div>
+  </div>
+
+  <!-- SECTION EDITOR MODAL -->
+  <div class="modal-overlay" id="modal-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add New Section</h3>
+        <button class="btn-icon modal-close" id="btn-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Section Title <span class="required">*</span></label>
+          <input class="form-input" id="edit-title" placeholder="e.g. Introduction to Fractions">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Order #</label>
+            <input class="form-input" type="number" id="edit-order" placeholder="1" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Minutes</label>
+            <input class="form-input" type="number" id="edit-minutes" placeholder="15" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Content (HTML) <span class="required">*</span></label>
+          <textarea class="form-textarea" id="edit-content" rows="10" placeholder="<h2>Lesson Title</h2><p>Your curriculum content here...</p>"></textarea>
+          <span class="form-hint">You can use HTML tags for formatting: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;strong&gt;, etc.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quiz Questions (JSON, optional)</label>
+          <textarea class="form-textarea" id="edit-quiz" rows="6" placeholder='[{"question":"What is 1/2 + 1/4?","options":["1/4","3/4","1/2","2/4"],"answer":1}]'></textarea>
+          <span class="form-hint">Array of {question, options: [], answer: index}. Leave empty for no quiz.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-modal-save">Save Section</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOADING SPINNER -->
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+</div>

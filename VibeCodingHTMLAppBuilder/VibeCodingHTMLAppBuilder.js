@@ -1017,18 +1017,26 @@ function _cleanFenceArtifacts(code, lang) {
   return code.trim();
 }
 
-/* ── Strip trailing markdown that AI may have appended after the code block ── */
+/* ── Strip trailing non-code content that AI may have appended after the code block ──
+   Walks backwards from the end of the code. Any line that does NOT look like
+   actual code is stripped. This handles:
+     • Markdown (headers, tables, dividers, bold, lists)
+     • Plain-English summaries (AI's citizen-developer explanation)
+     • Suggestion lines ([[suggest_xxx]])
+     • Emoji headers
+   Only stops when it finds a line that matches real code patterns.
+────────────────────────────────────────── */
 function _stripTrailingMarkdown(code) {
   if (!code) return '';
-  // Find the last line that looks like actual code (not markdown)
   var lines = code.split('\n');
-  // Walk backwards from the end, removing markdown lines
   var cutIdx = lines.length;
   for (var i = lines.length - 1; i >= 0; i--) {
     var line = lines[i].trim();
     // Skip empty lines
     if (!line) continue;
-    // Stop at lines that look like actual code
+    // Explicitly skip suggestion markers — they start with [ but are not code
+    if (/^\[\[suggest_/.test(line)) continue;
+    // Does this line look like actual code?
     var isCode =
       /^[\s{}()[\];=<>!+\-*\/&|^~?:.%]/.test(line) ||  // starts with code chars
       /^(var |function |if |for |while |return |else |try |catch |switch |case |break |continue|new |this\.|document\.|window\.|console\.|tool\.)/.test(line) ||
@@ -1036,26 +1044,11 @@ function _stripTrailingMarkdown(code) {
       /^(<\/?[a-zA-Z])/.test(line) ||  // HTML tags
       /^[.#@]/.test(line) ||  // CSS selectors
       /^\s*\/\//.test(line) ||  // JS comments
-      /^\s*\/\*/.test(line);    // CSS/JS block comments
+      /^\s*\/\*/.test(line) ||  // CSS/JS block comments
+      /^[a-zA-Z_$][\w.]*\s*[=(]/.test(line) ||  // variable assignment or function call (no colon — false-positives on "Summary:", "Note:", etc.)
+      /^(['"`])/.test(line);    // string literals at start of line
     if (isCode) { cutIdx = i + 1; break; }
-    // Markdown patterns to strip:
-    // - Headers: ###, ##, #
-    // - Tables: | ... |
-    // - Divider: ---, ***
-    // - Bold: **text**
-    // - Lists: - item, * item, 1. item
-    // - Suggestions: [[suggest_...]]
-    var isMarkdown =
-      /^#{1,6}\s/.test(line) ||
-      /^\|.*\|$/.test(line) ||
-      /^[-*_]{3,}$/.test(line) ||
-      /^\*\*.*\*\*$/.test(line) ||
-      /^[-*+]\s/.test(line) ||
-      /^\d+\.\s/.test(line) ||
-      /^\[\[suggest_/.test(line) ||
-      /^[📊✅🏷️📄🗑⏰✨]/.test(line);  // emoji headers
-    // If not clearly code and not clearly markdown, stop (keep it)
-    if (!isMarkdown) { cutIdx = i + 1; break; }
+    // Not code — strip it (summary, markdown, suggestions, emoji, etc.)
   }
   if (cutIdx >= lines.length) return code.trim();
   return lines.slice(0, cutIdx).join('\n').trim();
@@ -1185,9 +1178,23 @@ function buildChatPrompt(userMsg) {
   parts.push('Format for code: [HTML] ... [CSS] ... [JS] ...');
   parts.push('');
   parts.push('╔══════════════════════════════════════════════════════════════╗');
+  parts.push('║  REQUIRED — PLAIN-LANGUAGE SUMMARY AFTER EVERY CODE RESPONSE║');
+  parts.push('╚══════════════════════════════════════════════════════════════╝');
+  parts.push('After the [JS] block, you MUST write a short, plain-language summary (2-5 sentences)');
+  parts.push('explaining what you changed or built. This is for a NON-TECHNICAL person —');
+  parts.push('NO code terms (no "refactored the event handler", no "added CSS grid", no "bound onclick").');
+  parts.push('Use everyday words a regular office worker would understand. Examples:');
+  parts.push('  GOOD: "Added a search bar at the top so you can find items by name."');
+  parts.push('  GOOD: "The form now checks that all required fields are filled before saving."');
+  parts.push('  GOOD: "Added a dashboard showing total records, active items, and overdue items."');
+  parts.push('  BAD:  "Added input validation with regex patterns and tool.notify() error handling."');
+  parts.push('  BAD:  "Implemented CSS flexbox layout with responsive media queries."');
+  parts.push('Write the summary BEFORE the suggestion lines. End with a blank line.');
+  parts.push('');
+  parts.push('╔══════════════════════════════════════════════════════════════╗');
   parts.push('║  REQUIRED — NEXT-STEP SUGGESTIONS AFTER EVERY CODE RESPONSE ║');
   parts.push('╚══════════════════════════════════════════════════════════════╝');
-  parts.push('After EVERY code response, you MUST include 3-5 actionable next-step suggestions.');
+  parts.push('After the summary, you MUST include 3-5 actionable next-step suggestions.');
   parts.push('Format EACH suggestion on its OWN LINE starting with [[suggest_...]]:');
   parts.push('  [[suggest_feature_id]] Brief, action-oriented description');
   parts.push('  Example: [[suggest_darkmode]] Add dark mode toggle');
@@ -1195,7 +1202,7 @@ function buildChatPrompt(userMsg) {
   parts.push('           [[suggest_export]] Add CSV export');
   parts.push('           [[suggest_responsive]] Improve mobile responsiveness');
   parts.push('           [[suggest_undo]] Add undo/redo with confirmation dialogs');
-  parts.push('Place these lines AFTER the [JS] block. Each line must start with [[suggest_.');
+  parts.push('Each line must start with [[suggest_.');
   parts.push('This is NOT optional — suggestions are critical for the user experience.');
   parts.push('');
 
@@ -1509,7 +1516,9 @@ function parseAndRenderOptions(text) {
     }
     for (var j = 0; j < options.length; j++) {
       var opt = options[j];
-      html += '<button class="chat-option-btn' + (isSuggestion ? ' chat-suggest-btn' : '') + '" data-opt-id="' + esc(opt.id) + '" data-opt-text="' + esc(opt.text) + '" onclick="handleOptionClick(this)">' +
+      // For suggestions, look up the detailed prompt; fall back to the short title
+      var detailText = isSuggestion ? _getSuggestDetail(opt.id, opt.text) : opt.text;
+      html += '<button class="chat-option-btn' + (isSuggestion ? ' chat-suggest-btn' : '') + '" data-opt-id="' + esc(opt.id) + '" data-opt-text="' + esc(opt.text) + '" data-opt-detail="' + esc(detailText) + '" onclick="handleOptionClick(this)">' +
         (isSuggestion ? '<span class="opt-check">☐</span>' : '<span class="opt-num">' + (j + 1) + '</span>') + esc(opt.text) + '</button>';
     }
     if (isSuggestion) {
@@ -1574,7 +1583,10 @@ function _rebuildSuggestInput() {
   var lines = [];
   var num = 1;
   for (var i = 0; i < allSuggestBtns.length; i++) {
-    var txt = allSuggestBtns[i].getAttribute('data-opt-text');
+    // Use the detailed prompt (data-opt-detail), fall back to short title (data-opt-text)
+    var detail = allSuggestBtns[i].getAttribute('data-opt-detail');
+    var title = allSuggestBtns[i].getAttribute('data-opt-text');
+    var txt = detail || title || '';
     if (txt) {
       lines.push(num + '- ' + txt);
       num++;
@@ -1750,6 +1762,7 @@ function sendChatMessage() {
   updateConnStatus('busy');
   setAiTimeout(prompt.length);
   _aiCallActive = true;
+  _setAiUIActive(true);
   // Reset dev panel for new request
   _showDevPanel();
 
@@ -2229,6 +2242,90 @@ function applyReviewFixes(response) {
   }
 }
 
+/* ── Suggestion Detail Prompts ──
+   Each suggestion ID maps to a short display title AND a detailed prompt
+   that gets added to the chat input when the user clicks a suggestion button.
+   The detailed prompt gives the AI more context for a better result.
+────────────────────────────────────────── */
+var SUGGEST_DETAILS = {
+  suggest_validation: {
+    title: 'Add input validation & error messages',
+    detail: 'Please add input validation throughout the tool. For every form field, validate that required fields are not empty, email fields contain valid emails, numbers are within reasonable ranges, and dates are valid. Show clear error messages next to each invalid field in red text. Disable the submit/save button until all validation passes. Use tool.notify() for summary errors.'
+  },
+  suggest_search: {
+    title: 'Add search/filter functionality',
+    detail: 'Please add a search bar and filter capabilities to this tool. Add a text search input at the top that filters the list/table in real-time as the user types (filter by name, description, or any relevant text fields). Add dropdown filters for key categories (status, type, date range, etc.). Show a "No results found" message when filters return empty. Make sure filtering works together with sorting.'
+  },
+  suggest_export: {
+    title: 'Add CSV or PDF export',
+    detail: 'Please add data export functionality. Add an "Export" button that provides options to export the current data as CSV (for spreadsheets) or as a print-friendly PDF layout. For CSV: generate proper comma-separated values with a header row and trigger a download. For PDF: use a printable layout that formats the data neatly with the tool name as the title. Show a tool.notify() success message after export.'
+  },
+  suggest_darkmode: {
+    title: 'Add dark mode toggle',
+    detail: 'Please add a dark mode / light mode toggle to this tool. Add a toggle button (sun/moon icon) in the header. Define CSS variables for both themes using [data-theme="dark"] and [data-theme="light"] selectors. Save the user\'s preference using tool.setValue() so it persists across sessions. Apply smooth transitions on color changes. Make sure all text, backgrounds, borders, and shadows adapt properly in both modes.'
+  },
+  suggest_sort: {
+    title: 'Add sortable columns / drag-to-reorder',
+    detail: 'Please add sorting and reordering capabilities. Make table column headers clickable to sort ascending/descending with a visual arrow indicator. Support sorting by text, numbers, and dates. If the layout uses cards, add drag-and-drop reordering with visual feedback during the drag. Save the sort order and custom ordering via tool.setValue().'
+  },
+  suggest_print: {
+    title: 'Add print-friendly layout',
+    detail: 'Please add a print-friendly layout with a "Print" button. Add a @media print CSS block that hides navigation, buttons, and shadows, adjusts font sizes for paper, and ensures tables fit the page width. Show the tool name and date in the print header. Use page-break-inside: avoid on table rows and cards. The print layout should look professional and clean.'
+  },
+  suggest_responsive: {
+    title: 'Improve mobile/tablet responsiveness',
+    detail: 'Please improve the responsive design for mobile phones and tablets. Add CSS media queries at breakpoints 768px (tablet) and 480px (mobile). On small screens: stack columns vertically, make tables horizontally scrollable or switch to card layout, increase touch targets to at least 44px, reduce font sizes slightly, and ensure modals and forms are full-width. Test that all buttons and inputs are easily tappable on mobile.'
+  },
+  suggest_undo: {
+    title: 'Add undo/redo or confirmation dialogs',
+    detail: 'Please add undo capability and confirmation dialogs for destructive actions. Before any delete, clear, or reset action, show a confirmation dialog with a clear warning message and Cancel/Confirm buttons. Track the last 10 actions in an undo stack and show an "Undo" button or toast after each action. Use tool.notify() to show what was undone. Disable undo when the stack is empty.'
+  },
+  suggest_autosave: {
+    title: 'Add auto-save / draft persistence',
+    detail: 'Please add auto-save functionality. Save form data automatically to tool.setValue() after the user stops typing for 1.5 seconds (debounce). Show a small "Saving..." / "Saved" indicator near the save button or in the header. When the tool loads, restore any auto-saved draft. If there is unsaved data and the user tries to leave or reset, show a confirmation warning.'
+  },
+  suggest_dashboard: {
+    title: 'Add summary dashboard or stats view',
+    detail: 'Please add a dashboard or summary statistics view. Show key metrics at the top: total count, active items, completed items, overdue items, etc. Use card-style stat boxes with large numbers and labels. Add simple visual indicators like progress bars, color coding (green/yellow/red), or percentage complete. The dashboard should update automatically when the underlying data changes.'
+  },
+  suggest_import: {
+    title: 'Add bulk import from file',
+    detail: 'Please add bulk data import functionality. Add an "Import" button that uses tool.requestUpload() to accept CSV or JSON files. Parse the uploaded file content (use tool.requestFileContent() for extraction) and validate each row before adding. Show a preview of the first 5 rows before confirming the import. Report how many records were imported and any errors via tool.notify(). Support merging with existing data or replacing all data.'
+  },
+  suggest_notify: {
+    title: 'Add in-app notifications or reminders',
+    detail: 'Please add a notification/reminder system. Show a notification bell icon with an unread count badge. Track events like approaching due dates, status changes, or assigned tasks. Display notifications in a dropdown panel when the bell is clicked. Mark notifications as read when viewed. Optionally allow setting custom reminders with a date and note. Save notification state via tool.setValue().'
+  },
+  suggest_roles: {
+    title: 'Add user roles & permissions',
+    detail: 'Please add role-based access control. Define roles like Admin, Editor, and Viewer using tool.getUser() and tool.getPermittedUsers(). Admins can create, edit, and delete all records. Editors can create and edit but not delete. Viewers can only view (respect tool.isReadOnly()). Show/hide action buttons based on the user\'s role. Display the current user\'s role and name in the header. When in read-only mode, disable all inputs and hide save/delete buttons.'
+  },
+  suggest_history: {
+    title: 'Add change history / audit log',
+    detail: 'Please add a change history or audit log. Track every create, edit, and delete action with timestamp, user name (from tool.getUser()), action type, and a brief description of what changed. Display the history in a timeline or table view, sorted newest first. Add a "View History" button on each record. Allow filtering the log by action type or date range. Store history entries alongside the main data using tool.setValue().'
+  },
+  suggest_reports: {
+    title: 'Add report generation',
+    detail: 'Please add report generation capabilities. Create a "Reports" section or tab that lets users generate summary reports. Include options for date range filtering, grouping by category/status/type, and showing totals and averages. Display results in a formatted table with subtotals. Add a "Print Report" button that opens a print-friendly view. Optionally allow exporting the report as CSV.'
+  },
+  suggest_calendar: {
+    title: 'Add calendar / date-picker view',
+    detail: 'Please add a calendar view for date-based data. Show a monthly calendar grid with event/item dots on dates that have entries. Allow clicking a date to see all items for that day in a side panel or popup. Include month navigation (prev/next arrows) and a "Today" button. Highlight the current date. Add a date-picker input for forms that shows a mini calendar dropdown instead of requiring manual date typing.'
+  },
+  suggest_form: {
+    title: 'Add more form fields for richer data entry',
+    detail: 'Please enhance the data entry forms with additional fields. Add fields like: description/notes textarea, tags or categories (multi-select or comma-separated), file attachments (using tool.requestUpload()), status dropdown, priority level selector, assigned person (from tool.getPermittedUsers()), and custom date fields. Organize fields into logical sections with clear labels. Show character counts on textareas. Mark required fields with an asterisk.'
+  }
+};
+
+/* ── Look up detailed prompt for a suggest ID (AI-generated or fallback) ── */
+function _getSuggestDetail(optId, optText) {
+  var entry = SUGGEST_DETAILS[optId];
+  if (entry && entry.detail) return entry.detail;
+  // No pre-defined detail — build one from the short title
+  return 'Please ' + optText.charAt(0).toLowerCase() + optText.substring(1) + '. Implement this feature completely with proper error handling, user feedback via tool.notify(), and persistence via tool.setValue().';
+}
+
 /* ── Generate fallback suggestion lines when AI doesn't include them ── */
 function _generateFallbackSuggestions() {
   var all = [
@@ -2287,24 +2384,45 @@ function extractSummary(text) {
     suggestLines.push(sm[0]);
   }
 
-  // Strip all code blocks (both marker styles) to leave only the AI's commentary
-  var cleaned = text
-    // Remove [HTML]... to ... markers (greedy, spans across blocks)
-    .replace(/\[HTML\][\s\S]*?\[CSS\]/gi, '')
-    .replace(/\[CSS\][\s\S]*?\[JS\]/gi, '')
-    .replace(/\[JS\][\s\S]*$/gi, '')
-    // Also handle when only one or two markers are present
-    .replace(/\[HTML\][\s\S]*$/gi, '')
-    .replace(/\[CSS\][\s\S]*$/gi, '')
-    // Remove markdown code fences with optional language tags (greedy across lines)
-    .replace(/```[\w]*\s*\n[\s\S]*?\n```/g, '')
-    // Remove any stray ``` that remain
-    .replace(/```/g, '')
-    // Remove suggestion lines from the summary body (they'll be re-appended)
-    .replace(/^\[\[suggest_[a-zA-Z0-9_-]+\]\]\s+.+$/gm, '')
-    // Normalize whitespace
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  // ── Line-by-line state machine to strip code blocks ──
+  // More robust than regex — won't leak CSS when markers appear out of order,
+  // when code contains marker-like strings, or when AI mixes fence styles.
+  var lines = text.split('\n');
+  var result = [];
+  var inCodeBlock = false;   // true when inside [HTML]/[CSS]/[JS] or ``` fence
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    var trimmed = line.trim();
+
+    // Detect marker-style block starts: [HTML], [CSS], [JS] (case-insensitive)
+    if (/^\[HTML\]/i.test(trimmed) || /^\[CSS\]/i.test(trimmed) || /^\[JS\]/i.test(trimmed)) {
+      inCodeBlock = true;
+      continue;
+    }
+
+    // Detect markdown fence starts: ```html, ```css, ```js, ```javascript
+    if (/^```(html|css|js|javascript)/i.test(trimmed)) {
+      inCodeBlock = true;
+      continue;
+    }
+
+    // Detect markdown fence end: ```  (only when inside a code block)
+    if (trimmed === '```' && inCodeBlock) {
+      inCodeBlock = false;
+      continue;
+    }
+
+    // Skip suggestion lines from the summary body (re-appended later)
+    if (/^\[\[suggest_[a-zA-Z0-9_-]+\]\]/.test(trimmed)) continue;
+
+    // Keep lines that are NOT inside a code block
+    if (!inCodeBlock) {
+      result.push(line);
+    }
+  }
+
+  var cleaned = result.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
   // Append suggestions at the end
   if (suggestLines.length > 0) {
@@ -2582,35 +2700,78 @@ function _appendStreamingToken(token) {
   _streamBuf += token;
   var newTab = _streamCurrentTab;
   var fenceDetected = ''; // 'open-html', 'open-css', 'open-js', 'close'
+  var splitIdx = -1;       // index in token where the marker starts (-1 = no split needed)
 
-  // Check for [HTML] / [CSS] / [JS] markers
-  if (_streamBuf.indexOf('[HTML]') !== -1) { newTab = 'html'; fenceDetected = 'open-html'; }
-  else if (_streamBuf.indexOf('[CSS]') !== -1) { newTab = 'css'; fenceDetected = 'open-css'; }
-  else if (_streamBuf.indexOf('[JS]') !== -1) { newTab = 'js'; fenceDetected = 'open-js'; }
+  // Check for [HTML] / [CSS] / [JS] markers in the buffer
+  var hIdx = _streamBuf.indexOf('[HTML]');
+  var cIdx = _streamBuf.indexOf('[CSS]');
+  var jIdx = _streamBuf.indexOf('[JS]');
+  // Find the earliest marker that appears in the buffer
+  var earliestMarker = '';
+  var earliestIdx = Infinity;
+  if (hIdx !== -1 && hIdx < earliestIdx) { earliestIdx = hIdx; earliestMarker = 'html'; }
+  if (cIdx !== -1 && cIdx < earliestIdx) { earliestIdx = cIdx; earliestMarker = 'css'; }
+  if (jIdx !== -1 && jIdx < earliestIdx) { earliestIdx = jIdx; earliestMarker = 'js'; }
 
-  // Check for markdown code fences
+  if (earliestMarker && earliestMarker !== _streamCurrentTab) {
+    newTab = earliestMarker;
+    fenceDetected = 'open-' + earliestMarker;
+    // Calculate where in the *token* the marker starts (token is the last piece of _streamBuf)
+    var tokenStartInBuf = _streamBuf.length - token.length;
+    splitIdx = earliestIdx - tokenStartInBuf;
+    if (splitIdx < 0) splitIdx = 0; // marker was in earlier buffer content, split at start
+  }
+
+  // Check for markdown code fences (only if no marker-style boundary found)
   if (!fenceDetected) {
     var mdMatch = _streamBuf.match(/```(html|css|js|javascript)\s*\n/i);
     if (mdMatch) {
       var mdLang = mdMatch[1].toLowerCase();
-      if (mdLang === 'html') { newTab = 'html'; fenceDetected = 'open-html'; }
-      else if (mdLang === 'css') { newTab = 'css'; fenceDetected = 'open-css'; }
-      else { newTab = 'js'; fenceDetected = 'open-js'; }
+      var targetTab = mdLang === 'html' ? 'html' : (mdLang === 'css' ? 'css' : 'js');
+      if (targetTab !== _streamCurrentTab) {
+        newTab = targetTab;
+        fenceDetected = 'open-' + targetTab;
+        var mdStartInBuf = mdMatch.index;
+        var tokenStartInBuf2 = _streamBuf.length - token.length;
+        splitIdx = mdStartInBuf - tokenStartInBuf2;
+        if (splitIdx < 0) splitIdx = 0;
+      }
     }
   }
 
   // Check for closing markdown fence (```) when inside a code tab
-  if (!fenceDetected && _streamCurrentTab !== 'text' && /\n```\s*$/.test(_streamBuf)) {
-    newTab = 'text';
-    fenceDetected = 'close';
+  if (!fenceDetected && _streamCurrentTab !== 'text') {
+    var closeMatch = _streamBuf.match(/\n```\s*$/);
+    if (closeMatch) {
+      newTab = 'text';
+      fenceDetected = 'close';
+      var closeStartInBuf = closeMatch.index + 1; // after the \n
+      var tokenStartInBuf3 = _streamBuf.length - token.length;
+      splitIdx = closeStartInBuf - tokenStartInBuf3;
+      if (splitIdx < 0) splitIdx = 0;
+    }
   }
 
-  if (newTab !== _streamCurrentTab) {
+  // ── Route token (possibly split at marker boundary) ──
+  if (newTab !== _streamCurrentTab && splitIdx >= 0) {
+    // Split the token: part before marker → old tab, part from marker → new tab
+    var beforeMarker = token.substring(0, splitIdx);
+    var fromMarker = token.substring(splitIdx);
+
+    // Flush the "before" part to the current tab
+    if (beforeMarker) {
+      var oldPre = _streamTabEls[_streamCurrentTab];
+      if (oldPre) {
+        oldPre.textContent += beforeMarker;
+        var oldDist = oldPre.scrollHeight - oldPre.scrollTop - oldPre.clientHeight;
+        if (oldDist < 60) oldPre.scrollTop = oldPre.scrollHeight;
+      }
+    }
+
     // Switch active tab
     _streamCurrentTab = newTab;
     _streamBuf = ''; // reset buffer
     if (_streamingMsgEl) {
-      // Update tab button highlighting
       var allBtns = _streamingMsgEl.querySelectorAll('.stream-tab-btn');
       var allPanels = _streamingMsgEl.querySelectorAll('.stream-tab-panel');
       for (var ab = 0; ab < allBtns.length; ab++) allBtns[ab].classList.remove('active');
@@ -2620,28 +2781,56 @@ function _appendStreamingToken(token) {
       if (activeBtn) activeBtn.classList.add('active');
       if (activePanel) activePanel.classList.add('active');
     }
-  }
 
-  // Append token to the active tab's pre element (skip fence/marker syntax)
-  var targetPre = _streamTabEls[_streamCurrentTab];
-  if (targetPre) {
-    var displayText = token;
-    // Strip opening fences/markers from the first token after switching to a code tab
-    if (fenceDetected.indexOf('open-') === 0 && _streamBuf === '') {
-      displayText = token
-        .replace(/^\[HTML\]\s*/i, '')
-        .replace(/^\[CSS\]\s*/i, '')
-        .replace(/^\[JS\]\s*/i, '')
-        .replace(/^```(?:html|css|js|javascript)?\s*\n?/i, '');
-    }
-    // Strip closing ``` from token when switching back to text
-    if (fenceDetected === 'close') {
-      displayText = token.replace(/```\s*$/g, '');
-    }
-    // Skip empty display text (the fence line itself)
+    // Route the "from marker" part to the new tab (strip the marker/fence syntax)
+    var displayText = fromMarker
+      .replace(/^\[HTML\]\s*/i, '')
+      .replace(/^\[CSS\]\s*/i, '')
+      .replace(/^\[JS\]\s*/i, '')
+      .replace(/^```(?:html|css|js|javascript)?\s*\n?/i, '')
+      .replace(/```\s*$/g, '');
+
     if (displayText) {
-      targetPre.textContent += displayText;
-      // Sticky-bottom: only auto-scroll if user hasn't scrolled up manually
+      var newPre = _streamTabEls[_streamCurrentTab];
+      if (newPre) {
+        newPre.textContent += displayText;
+        var newDist = newPre.scrollHeight - newPre.scrollTop - newPre.clientHeight;
+        if (newDist < 60) newPre.scrollTop = newPre.scrollHeight;
+      }
+    }
+  } else if (newTab !== _streamCurrentTab) {
+    // Tab switch with no split (marker was entirely in earlier buffer content)
+    _streamCurrentTab = newTab;
+    _streamBuf = ''; // reset buffer
+    if (_streamingMsgEl) {
+      var allBtns2 = _streamingMsgEl.querySelectorAll('.stream-tab-btn');
+      var allPanels2 = _streamingMsgEl.querySelectorAll('.stream-tab-panel');
+      for (var ab2 = 0; ab2 < allBtns2.length; ab2++) allBtns2[ab2].classList.remove('active');
+      for (var ap2 = 0; ap2 < allPanels2.length; ap2++) allPanels2[ap2].classList.remove('active');
+      var activeBtn2 = _streamingMsgEl.querySelector('.stream-tab-btn[data-stab="' + _streamCurrentTab + '"]');
+      var activePanel2 = _streamingMsgEl.querySelector('.stream-tab-panel[data-stab-panel="' + _streamCurrentTab + '"]');
+      if (activeBtn2) activeBtn2.classList.add('active');
+      if (activePanel2) activePanel2.classList.add('active');
+    }
+    // Route the full token to the new tab (strip any marker prefix)
+    var displayText2 = token
+      .replace(/^\[HTML\]\s*/i, '')
+      .replace(/^\[CSS\]\s*/i, '')
+      .replace(/^\[JS\]\s*/i, '')
+      .replace(/^```(?:html|css|js|javascript)?\s*\n?/i, '');
+    if (displayText2) {
+      var newPre2 = _streamTabEls[_streamCurrentTab];
+      if (newPre2) {
+        newPre2.textContent += displayText2;
+        var newDist2 = newPre2.scrollHeight - newPre2.scrollTop - newPre2.clientHeight;
+        if (newDist2 < 60) newPre2.scrollTop = newPre2.scrollHeight;
+      }
+    }
+  } else {
+    // No tab switch — append normally to current tab
+    var targetPre = _streamTabEls[_streamCurrentTab];
+    if (targetPre) {
+      targetPre.textContent += token;
       var preDist = targetPre.scrollHeight - targetPre.scrollTop - targetPre.clientHeight;
       if (preDist < 60) {
         targetPre.scrollTop = targetPre.scrollHeight;
@@ -2917,9 +3106,42 @@ function renderChatMessages() {
     var timeStr = ''; try { timeStr = new Date(m.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); } catch(e) {}
     var cls = m.role === 'user' ? 'chat-msg-user' : (m.isError ? 'chat-msg-ai chat-msg-err' : 'chat-msg-ai');
     var label = m.role === 'user' ? 'YOU' : (m.isError ? '⚠ ERROR' : 'AI');
-    var text = esc(m.text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[HTML\]/gi, '<b>[HTML]</b>').replace(/\[CSS\]/gi, '<b>[CSS]</b>').replace(/\[JS\]/gi, '<b>[JS]</b>').replace(/\n/g, '<br>');
+
+    /* Extract suggestions from text — render them AFTER code tabs (diffBlock) */
+    var rawText = m.text || '';
+    var suggestLines = [];
+    var cleanedText = rawText.replace(/^\[\[suggest_[a-zA-Z0-9_-]+\]\]\s*.+$/gm, function(match) {
+      suggestLines.push(match); return '';
+    }).replace(/\n{3,}/g, '\n\n').trim();
+    if (!cleanedText) cleanedText = rawText.trim();
+
+    var text = esc(cleanedText).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\[HTML\]/gi, '<b>[HTML]</b>').replace(/\[CSS\]/gi, '<b>[CSS]</b>').replace(/\[JS\]/gi, '<b>[JS]</b>').replace(/\n/g, '<br>');
     var diffBlock = m.diffHtml || '';
-    html += '<div class="chat-msg ' + cls + '"><div class="chat-msg-label">' + label + '</div><div>' + text + '</div>' + diffBlock + '<div class="chat-msg-time">' + timeStr + '</div></div>';
+
+    /* Build suggestions HTML (rendered AFTER code tabs) */
+    var suggestHtml = '';
+    if (suggestLines.length > 0) {
+      suggestHtml += '<div class="chat-suggestions"><div class="chat-suggestions-label">💡 Next steps — click to select:</div>';
+      for (var si = 0; si < suggestLines.length; si++) {
+        var line = suggestLines[si];
+        // Parse: [[suggest_xxx]] Title text
+        var idMatch = line.match(/^\[\[(suggest_[a-zA-Z0-9_-]+)\]\]\s*(.+)/);
+        if (idMatch) {
+          var sugId = idMatch[1];
+          var sugTitle = idMatch[2].trim();
+          var sugDetail = _getSuggestDetail(sugId, sugTitle);
+          suggestHtml += '<button class="chat-option-btn chat-suggest-btn" data-opt-id="' + esc(sugId) + '" data-opt-text="' + esc(sugTitle) + '" data-opt-detail="' + esc(sugDetail) + '" onclick="handleOptionClick(this)">' +
+            '<span class="opt-check">☐</span>' + esc(sugTitle) + '</button>';
+        } else {
+          // Fallback: could not parse ID, show as plain text
+          var sl = line.replace(/^\[\[suggest_[a-zA-Z0-9_-]+\]\]\s*/, '');
+          suggestHtml += '<div class="chat-suggestion-item">' + esc(sl) + '</div>';
+        }
+      }
+      suggestHtml += '</div>';
+    }
+
+    html += '<div class="chat-msg ' + cls + '"><div class="chat-msg-label">' + label + '</div><div>' + text + '</div>' + diffBlock + suggestHtml + '<div class="chat-msg-time">' + timeStr + '</div></div>';
   }
   container.innerHTML = html;
 
@@ -2978,6 +3200,7 @@ function runFullGeneration() {
   updateConnStatus('busy');
   setAiTimeout(prompt.length);
   _aiCallActive = true;
+  _setAiUIActive(true);
 
   if (typeof tool.requestAIStream === 'function') {
     var fullResponse = '';

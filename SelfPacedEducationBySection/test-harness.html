@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Paced Education — Test Harness</title>
+<link rel="stylesheet" href="SelfPacedEducationBySection.css">
+<style>
+body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-manager { background: #7c3aed; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+#th-bar select { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid #475569; background: #1e293b; color: #e6edf5; font-family: system-ui; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Self-Paced Education</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">📚 Load Sample Sections</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <button class="btn-manager" id="th-toggle-manager">👤 Toggle Manager</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump State to Console</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+M = Toggle Manager Role</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<!-- TOOL HTML MARKUP INLINED -->
+<div id="app">
+  <header class="app-header">
+    <div class="header-left">
+      <button class="btn-icon" id="btn-back" title="Back to sections" style="display:none">←</button>
+      <h1 class="app-title" id="app-title">📚 Self-Paced Learning</h1>
+    </div>
+    <div class="header-right">
+      <span class="role-badge" id="role-badge"></span>
+      <button class="btn btn-sm btn-outline" id="btn-manager-toggle" style="display:none">⚙️ Manage</button>
+    </div>
+  </header>
+
+  <div class="progress-bar-wrap" id="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+    <span class="progress-bar-text" id="progress-bar-text">0% Complete</span>
+  </div>
+
+  <div id="view-list" class="view">
+    <div class="toolbar">
+      <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
+      <select class="filter-select" id="filter-status">
+        <option value="all">All Sections</option>
+        <option value="not_started">Not Started</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div class="section-grid" id="section-grid">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">No sections available yet</div>
+        <div class="empty-desc">A manager needs to add curriculum sections first.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-detail" class="view" style="display:none">
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <span class="detail-badge" id="detail-badge"></span>
+      </div>
+      <div class="detail-meta">
+        <span id="detail-estimated"></span>
+        <span id="detail-status-label"></span>
+      </div>
+      <div class="detail-content" id="detail-content"></div>
+      <div class="quiz-section" id="quiz-section" style="display:none">
+        <h3 class="quiz-title">📝 Knowledge Check</h3>
+        <div id="quiz-questions"></div>
+        <button class="btn btn-primary" id="btn-submit-quiz">Submit Answers</button>
+        <div class="quiz-result" id="quiz-result" style="display:none"></div>
+      </div>
+      <div class="detail-nav">
+        <button class="btn btn-outline" id="btn-prev-section" disabled>← Previous</button>
+        <div class="detail-nav-center">
+          <button class="btn btn-success" id="btn-mark-complete">✓ Mark Complete</button>
+          <button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">📖 Mark In Progress</button>
+        </div>
+        <button class="btn btn-outline" id="btn-next-section" disabled>Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-manager" class="view" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="btn-add-section">+ Add New Section</button>
+      <span class="toolbar-info" id="manager-section-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>Title</th><th>Est. Minutes</th><th>Has Quiz</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="manager-table-body"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="manager-empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">No sections created yet</div>
+      <div class="empty-desc">Click "+ Add New Section" to create your first curriculum section.</div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">Add New Section</h3>
+        <button class="btn-icon modal-close" id="btn-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Section Title <span class="required">*</span></label>
+          <input class="form-input" id="edit-title" placeholder="e.g. Introduction to Fractions">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Order #</label>
+            <input class="form-input" type="number" id="edit-order" placeholder="1" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Est. Minutes</label>
+            <input class="form-input" type="number" id="edit-minutes" placeholder="15" min="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Content (HTML) <span class="required">*</span></label>
+          <textarea class="form-textarea" id="edit-content" rows="10" placeholder="<h2>Lesson Title</h2><p>Your curriculum content here...</p>"></textarea>
+          <span class="form-hint">You can use HTML tags for formatting: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;strong&gt;, etc.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quiz Questions (JSON, optional)</label>
+          <textarea class="form-textarea" id="edit-quiz" rows="6" placeholder='[{"question":"What is 1/2 + 1/4?","options":["1/4","3/4","1/2","2/4"],"answer":1}]'></textarea>
+          <span class="form-hint">Array of {question, options: [], answer: index}. Leave empty for no quiz.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btn-modal-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-modal-save">Save Section</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+</div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY_VALUE = 'selfpaced_test_value';
+  var STORAGE_KEY_SECTIONS = 'selfpaced_test_sections';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+  var _managerMode = true; // default to manager for testing
+
+  function loadValue() {
+    try { var raw = localStorage.getItem(STORAGE_KEY_VALUE); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function saveValue(v) { _value = v; try { localStorage.setItem(STORAGE_KEY_VALUE, JSON.stringify(v)); } catch(e) {} }
+
+  function loadSections() {
+    try { var raw = localStorage.getItem(STORAGE_KEY_SECTIONS); return raw ? JSON.parse(raw) : []; }
+    catch(e) { return []; }
+  }
+  function saveSections(arr) { try { localStorage.setItem(STORAGE_KEY_SECTIONS, JSON.stringify(arr)); } catch(e) {} }
+
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  window.tool = {
+    // Value
+    getValue: function() { return _value; },
+    setValue: function(data) { saveValue(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+
+    // Fields
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+
+    // Params (can override via URL: ?managerRole=admin&sectionsTypeId=test)
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : (fallback !== undefined ? fallback : '');
+    },
+
+    // Read-only
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+
+    // User
+    getUser: function() {
+      if (_user) return _user;
+      return _managerMode
+        ? { id: 'u-admin', name: 'Admin User', email: 'admin@example.com', roles: ['admin', 'manager'], locale: 'en' }
+        : { id: 'u-learner', name: 'Can Öztürk', email: 'can@example.com', roles: ['worker'], locale: 'en' };
+    },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+
+    // Permitted users
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+
+    // Validation
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+
+    // Notifications
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+
+    // Layout
+    resize: function() { console.log('[tool.resize]'); },
+
+    // URL opener
+    openUrl: function(url) { window.open(url, '_blank'); },
+
+    // Schema declarations (no-op in test)
+    declareOutput: function() {},
+    declareParams: function() {},
+    reportMissingParams: function() {},
+
+    /* ── Mock requestObjects (localStorage-backed CRUD) ── */
+    requestObjects: function(action, params, callback) {
+      var sections = loadSections();
+      var err = null, result = null;
+
+      switch (action) {
+        case 'query':
+          result = { objects: sections.slice() };
+          break;
+
+        case 'get':
+          var found = null;
+          for (var i = 0; i < sections.length; i++) {
+            if (sections[i].id === params.objectId) { found = sections[i]; break; }
+          }
+          result = { object: found || null };
+          break;
+
+        case 'create':
+          var newSection = {
+            id: genId(),
+            _id: genId(),
+            contentId: genId(),
+            name: params.name || 'Untitled',
+            slug: (params.name || 'untitled').toLowerCase().replace(/\s+/g, '-'),
+            cmsObjectType: params.mainObjectType || 'selfPacedSections-uniconbaseapps',
+            productData: params.productData || { data_categoriesBased: {} },
+            created: new Date().toISOString(),
+            updated: new Date().toISOString()
+          };
+          sections.push(newSection);
+          saveSections(sections);
+          result = { object: newSection };
+          break;
+
+        case 'update':
+          for (var j = 0; j < sections.length; j++) {
+            if (sections[j].id === params.objectId) {
+              if (params.name !== undefined) sections[j].name = params.name;
+              if (params.productData) {
+                if (!sections[j].productData) sections[j].productData = {};
+                if (params.productData.data_categoriesBased) {
+                  if (!sections[j].productData.data_categoriesBased) sections[j].productData.data_categoriesBased = {};
+                  Object.assign(sections[j].productData.data_categoriesBased, params.productData.data_categoriesBased);
+                }
+              }
+              sections[j].updated = new Date().toISOString();
+              break;
+            }
+          }
+          saveSections(sections);
+          result = { ok: true };
+          break;
+
+        case 'delete':
+          sections = sections.filter(function(s) { return s.id !== params.objectId; });
+          saveSections(sections);
+          result = { ok: true };
+          break;
+
+        case 'batch':
+          // Simplified batch: process sequentially
+          result = { ok: true, results: [] };
+          break;
+
+        default:
+          err = 'Unknown action: ' + action;
+      }
+
+      // Simulate async
+      setTimeout(function() { callback(err, result); }, 50);
+    },
+
+    // Request methods stubs (not used by this tool, but available)
+    requestAI: function(prompt, context, cb) { cb('AI not available in test harness', null); },
+    requestAIStream: function(prompt, context, callbacks) {
+      if (callbacks && callbacks.onError) callbacks.onError('AI streaming not available in test harness');
+    },
+    requestUpload: function(accept, cb) { cb('Upload not available in test harness', null); },
+    requestFileContent: function(url, cb) { cb('File content extraction not available in test harness', null); },
+    requestExportPdf: function(opts, cb) { cb('PDF export not available in test harness', null); },
+    requestSendEmail: function(opts, cb) { cb('Email not available in test harness', null); },
+
+    // Entry point
+    onReady: function(cb) { loadValue(); cb(_value, _fields); },
+
+    // Test harness helpers
+    _loadSampleData: function() {
+      // Clear existing
+      localStorage.removeItem(STORAGE_KEY_VALUE);
+      localStorage.removeItem(STORAGE_KEY_SECTIONS);
+
+      // Create sample sections
+      var sampleSections = [
+        {
+          id: 'sec-001', _id: 'sec-001', contentId: 'c-001',
+          name: 'Introduction to Fractions',
+          slug: 'introduction-to-fractions',
+          cmsObjectType: 'selfPacedSections-uniconbaseapps',
+          productData: { data_categoriesBased: {
+            title: 'Introduction to Fractions',
+            order: 1,
+            estimatedMinutes: 20,
+            content: '<h2>What Are Fractions?</h2><p>A <strong>fraction</strong> represents a part of a whole. It is written as one number over another, like this: <strong>½</strong>.</p><h3>Parts of a Fraction</h3><ul><li><strong>Numerator</strong> (top number) — how many parts we have</li><li><strong>Denominator</strong> (bottom number) — how many equal parts the whole is divided into</li></ul><h3>Examples</h3><p>If you cut a pizza into 8 equal slices and eat 3, you\'ve eaten <strong>3/8</strong> of the pizza.</p><blockquote>💡 <strong>Key Insight:</strong> The denominator tells you the "size" of each piece — bigger denominator = smaller pieces!</blockquote><h3>Types of Fractions</h3><ul><li><strong>Proper fraction:</strong> numerator &lt; denominator (e.g., 3/4)</li><li><strong>Improper fraction:</strong> numerator ≥ denominator (e.g., 5/3)</li><li><strong>Mixed number:</strong> whole number + fraction (e.g., 1½)</li></ul>',
+            quiz: [
+              { question: 'In the fraction 3/4, what is the numerator?', options: ['3', '4', '7', '1'], answer: 0 },
+              { question: 'If a pizza is cut into 6 slices and you eat 2, what fraction did you eat?', options: ['2/6', '6/2', '4/6', '1/3'], answer: 0 },
+              { question: 'Which is an improper fraction?', options: ['1/2', '3/4', '5/3', '2/5'], answer: 2 }
+            ]
+          }},
+          created: '2026-07-01T10:00:00Z', updated: '2026-07-01T10:00:00Z'
+        },
+        {
+          id: 'sec-002', _id: 'sec-002', contentId: 'c-002',
+          name: 'Adding and Subtracting Fractions',
+          slug: 'adding-and-subtracting-fractions',
+          cmsObjectType: 'selfPacedSections-uniconbaseapps',
+          productData: { data_categoriesBased: {
+            title: 'Adding and Subtracting Fractions',
+            order: 2,
+            estimatedMinutes: 25,
+            content: '<h2>Adding &amp; Subtracting Fractions</h2><h3>Same Denominator</h3><p>When fractions have the <strong>same denominator</strong>, simply add or subtract the numerators and keep the denominator.</p><p><strong>Example:</strong> 2/7 + 3/7 = <strong>5/7</strong></p><h3>Different Denominators</h3><p>When denominators are different, you must find a <strong>common denominator</strong> first:</p><ol><li>Find the Least Common Multiple (LCM) of the denominators</li><li>Convert each fraction to an equivalent fraction with the LCM as denominator</li><li>Add or subtract the numerators</li><li>Simplify if possible</li></ol><p><strong>Example:</strong> 1/3 + 1/4 = 4/12 + 3/12 = <strong>7/12</strong></p><blockquote>💡 <strong>Pro Tip:</strong> Always check if your answer can be simplified! Divide numerator and denominator by their greatest common factor.</blockquote>',
+            quiz: [
+              { question: 'What is 2/5 + 1/5?', options: ['3/10', '3/5', '2/10', '1/5'], answer: 1 },
+              { question: 'What is the LCM of 3 and 4?', options: ['7', '1', '12', '24'], answer: 2 },
+              { question: 'What is 3/4 - 1/4?', options: ['2/4', '1/2', '2/0', 'Both A and B'], answer: 3 }
+            ]
+          }},
+          created: '2026-07-01T11:00:00Z', updated: '2026-07-01T11:00:00Z'
+        },
+        {
+          id: 'sec-003', _id: 'sec-003', contentId: 'c-003',
+          name: 'Multiplying Fractions',
+          slug: 'multiplying-fractions',
+          cmsObjectType: 'selfPacedSections-uniconbaseapps',
+          productData: { data_categoriesBased: {
+            title: 'Multiplying Fractions',
+            order: 3,
+            estimatedMinutes: 20,
+            content: '<h2>Multiplying Fractions</h2><p>Multiplying fractions is actually <strong>easier</strong> than adding them!</p><h3>The Rule</h3><p><strong>Multiply the numerators, multiply the denominators:</strong></p><p style="font-size:18px;text-align:center;padding:12px;background:#eef2ff;border-radius:8px;">a/b × c/d = <strong>(a×c) / (b×d)</strong></p><h3>Example</h3><p>2/3 × 4/5 = (2×4) / (3×5) = <strong>8/15</strong></p><h3>Multiplying with Whole Numbers</h3><p>Convert the whole number to a fraction: 3 = 3/1</p><p>3 × 2/5 = 3/1 × 2/5 = 6/5 = <strong>1⅕</strong></p><blockquote>💡 <strong>Shortcut:</strong> Cancel common factors BEFORE multiplying to keep numbers small. This is called "cross-canceling."</blockquote>',
+            quiz: [
+              { question: 'What is 1/2 × 3/4?', options: ['3/8', '4/6', '3/6', '1/8'], answer: 0 },
+              { question: 'What is 2 × 3/5?', options: ['5/5', '6/5', '3/10', '5/3'], answer: 1 }
+            ]
+          }},
+          created: '2026-07-02T09:00:00Z', updated: '2026-07-02T09:00:00Z'
+        },
+        {
+          id: 'sec-004', _id: 'sec-004', contentId: 'c-004',
+          name: 'Dividing Fractions',
+          slug: 'dividing-fractions',
+          cmsObjectType: 'selfPacedSections-uniconbaseapps',
+          productData: { data_categoriesBased: {
+            title: 'Dividing Fractions',
+            order: 4,
+            estimatedMinutes: 25,
+            content: '<h2>Dividing Fractions</h2><h3>The Golden Rule: Keep-Change-Flip</h3><p>To divide by a fraction, <strong>multiply by its reciprocal</strong>:</p><ol><li><strong>Keep</strong> the first fraction as-is</li><li><strong>Change</strong> ÷ to ×</li><li><strong>Flip</strong> the second fraction (use its reciprocal)</li></ol><p style="font-size:18px;text-align:center;padding:12px;background:#fef3c7;border-radius:8px;">a/b ÷ c/d = a/b × d/c = <strong>(a×d) / (b×c)</strong></p><h3>Example</h3><p>2/3 ÷ 4/5 = 2/3 × 5/4 = 10/12 = <strong>5/6</strong></p><h3>Why Does This Work?</h3><p>Division is the inverse of multiplication. Dividing by 2 is the same as multiplying by 1/2. Dividing by 3/4 is the same as multiplying by 4/3!</p><blockquote>💡 <strong>Remember:</strong> Never flip the FIRST fraction — only flip the one you\'re dividing BY.</blockquote>',
+            quiz: [
+              { question: 'What is 3/4 ÷ 1/2?', options: ['3/8', '6/4', '3/2', 'Both B and C'], answer: 3 },
+              { question: 'What is the reciprocal of 5/8?', options: ['5/8', '8/5', '5/8', '8/8'], answer: 1 }
+            ]
+          }},
+          created: '2026-07-02T10:00:00Z', updated: '2026-07-02T10:00:00Z'
+        },
+        {
+          id: 'sec-005', _id: 'sec-005', contentId: 'c-005',
+          name: 'Fractions Review & Real-World Applications',
+          slug: 'fractions-review-and-real-world-applications',
+          cmsObjectType: 'selfPacedSections-uniconbaseapps',
+          productData: { data_categoriesBased: {
+            title: 'Fractions Review & Real-World Applications',
+            order: 5,
+            estimatedMinutes: 30,
+            content: '<h2>Fractions in the Real World</h2><h3>Quick Review</h3><ul><li><strong>Add/Subtract:</strong> Need common denominator → add numerators</li><li><strong>Multiply:</strong> Numerators × Numerators, Denominators × Denominators</li><li><strong>Divide:</strong> Keep-Change-Flip → Multiply by reciprocal</li></ul><h3>Real-World Applications</h3><p><strong>Cooking:</strong> "This recipe serves 4 but I need to serve 6. I need 6/4 = 1½ times each ingredient."</p><p><strong>Shopping:</strong> "This shirt is 1/3 off. Original price: $45. Discount: 1/3 × 45 = $15. Sale price: $30."</p><p><strong>Construction:</strong> "I need to cut this 8-foot board into pieces that are each 3/4 foot long. 8 ÷ 3/4 = 8 × 4/3 = 32/3 ≈ 10 pieces."</p><p><strong>Sports:</strong> "A baseball player got hits in 1/4 of at-bats. Out of 36 at-bats, that\'s 36 × 1/4 = 9 hits."</p><blockquote>🎯 <strong>You\'ve completed the Fractions series!</strong> Practice these concepts daily and they\'ll become second nature.</blockquote>',
+            quiz: null
+          }},
+          created: '2026-07-03T09:00:00Z', updated: '2026-07-03T09:00:00Z'
+        }
+      ];
+      saveSections(sampleSections);
+      // Clear progress
+      saveValue(null);
+      window.location.reload();
+    },
+
+    _clearData: function() {
+      localStorage.removeItem(STORAGE_KEY_VALUE);
+      localStorage.removeItem(STORAGE_KEY_SECTIONS);
+      window.location.reload();
+    },
+
+    _toggleReadOnly: function() {
+      this._setReadOnly(!_readOnly);
+    },
+
+    _toggleManager: function() {
+      _managerMode = !_managerMode;
+      // Reload to re-trigger onReady with new user
+      window.location.reload();
+    },
+
+    _isManagerMode: function() { return _managerMode; },
+
+    _dump: function() {
+      console.log('=== Self-Paced Education State ===');
+      console.log('Sections:', JSON.parse(JSON.stringify(loadSections())));
+      console.log('Progress (tool value):', JSON.parse(JSON.stringify(_value)));
+      console.log('Read-only:', _readOnly);
+      console.log('Manager mode:', _managerMode);
+      console.log('==================================');
+    }
+  };
+})();
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'M') { e.preventDefault(); window.tool._toggleManager(); }
+});
+
+/* ── Test harness buttons ── */
+document.getElementById('th-load-sample').addEventListener('click', function() {
+  if (confirm('Load 5 sample fraction curriculum sections? This will replace existing data.')) {
+    window.tool._loadSampleData();
+  }
+});
+
+document.getElementById('th-clear').addEventListener('click', function() {
+  if (confirm('Clear ALL data (sections + progress)? This cannot be undone.')) {
+    window.tool._clearData();
+  }
+});
+
+document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+
+document.getElementById('th-toggle-manager').addEventListener('click', function() {
+  window.tool._toggleManager();
+});
+
+// Update status bar
+(function updateStatus() {
+  var status = document.getElementById('th-status');
+  if (status) {
+    var parts = [];
+    parts.push(window.tool._isManagerMode() ? '👤 Manager' : '👤 Learner');
+    parts.push(window.tool.isReadOnly() ? '🔒 Read-Only' : '✏️ Editable');
+    status.textContent = parts.join(' | ');
+  }
+})();
+</script>
+
+<script src="SelfPacedEducationBySection.js"></script>
+</body>
+</html>
