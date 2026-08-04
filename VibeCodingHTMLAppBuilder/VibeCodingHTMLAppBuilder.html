@@ -24,33 +24,60 @@
   <div class="main-layout">
     <!-- LEFT: Chat Panel (always visible) -->
     <aside class="chat-panel" id="chat-panel">
-      <div class="chat-panel-header">
-        <span class="chat-panel-title">💬 Chat</span>
+      <!-- TAB BAR — replaces old header + session toggle -->
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab chat-tab-dev" data-chat-tab="response" style="display:none">📥 Response</button>
+        <button class="chat-tab chat-tab-dev" data-chat-tab="prompt" style="display:none">📤 Prompt</button>
+        <button class="chat-tab" data-chat-tab="history">📋 History</button>
         <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
         <span class="chat-panel-badge" id="chat-msg-count">0</span>
         <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
       </div>
-      <!-- SESSION LIST TOGGLE -->
-      <div class="session-list-toggle" id="session-list-toggle" title="Click to show/hide chat history">
-        <span>📋 Chat History <span class="toggle-count" id="session-count-label">(0)</span></span>
-        <span class="toggle-arrow" id="session-toggle-arrow">▼</span>
-      </div>
-      <!-- SESSION LIST (collapsible) -->
-      <div class="session-list-wrap" id="session-list-wrap">
-        <div class="session-list" id="session-list">
-          <div class="session-empty">Loading chats...</div>
+
+      <!-- TAB CONTENT AREA -->
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">👋</div>
+              <h3>Welcome to VibeCoding</h3>
+              <p>Pick a template below, or just <b>describe what you need</b> in the chat — the AI will build it for you.</p>
+              <div class="template-gallery" id="template-gallery"></div>
+              <div class="template-view-all"><button id="btn-view-all-templates">View all 8 templates →</button></div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — the AI will ask you questions step by step.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Raw Response (developer only) -->
+        <div class="chat-tab-panel" data-chat-panel="response">
+          <div class="dev-raw-panel-inline">
+            <div class="dev-raw-header">
+              <span class="dev-raw-title">🔧 Raw AI Response</span>
+              <span class="dev-raw-status" id="dev-raw-status"></span>
+            </div>
+            <pre class="dev-raw-content" id="dev-raw-content"></pre>
+          </div>
+        </div>
+        <!-- Tab: Raw Prompt (developer only) -->
+        <div class="chat-tab-panel" data-chat-panel="prompt">
+          <div class="dev-raw-panel-inline">
+            <div class="dev-raw-header">
+              <span class="dev-raw-title">📤 Raw AI Prompt</span>
+              <span class="dev-raw-status" id="dev-prompt-status"></span>
+            </div>
+            <pre class="dev-raw-content" id="dev-prompt-content"></pre>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats...</div>
+          </div>
         </div>
       </div>
-      <div class="chat-messages" id="chat-messages">
-        <div class="chat-welcome">
-          <div class="chat-welcome-icon">👋</div>
-          <h3>Welcome to VibeCoding</h3>
-          <p>Pick a template below, or just <b>describe what you need</b> in the chat — the AI will build it for you.</p>
-          <div class="template-gallery" id="template-gallery"></div>
-          <div class="template-view-all"><button id="btn-view-all-templates">View all 8 templates →</button></div>
-          <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — the AI will ask you questions step by step.</p>
-        </div>
-      </div>
+
       <div class="chat-attachment" id="chat-attachment" style="display:none">
         <span class="attach-icon">📎</span>
         <span class="attach-name" id="attach-name"></span>

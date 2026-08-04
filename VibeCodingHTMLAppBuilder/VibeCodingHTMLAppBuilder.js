@@ -111,9 +111,6 @@ function _resolveInstanceId() {
     DB._instanceId = 'inst_' + randomSuffix;
   }
 
-  console.warn('[VIBECODING:INSTANCE] Resolved ID:', DB._instanceId,
-    '| parentRecord:', parentRecordId || '(unknown)',
-    '| URL:', (window.location.search || '(none)').substring(0, 80));
   persist();
   return DB._instanceId;
 }
@@ -219,7 +216,6 @@ function _bumpVersion(level) {
 
   DB.version = maj + '.' + min + '.' + pat;
   _renderVersion();
-  console.warn('[VIBECODING:VERSION] Bumped ' + level + ' → ' + DB.version);
 }
 
 /* ── Render version badge in header ── */
@@ -317,7 +313,6 @@ function loadSessions(callback) {
       }
       // Stamp legacy sessions asynchronously
       if (needsStamp.length > 0) {
-        console.warn('[VIBECODING:SESSION] Stamping ' + needsStamp.length + ' legacy sessions with instance ID');
         for (var s = 0; s < needsStamp.length; s++) {
           (function(session) {
             tool.requestObjects('update', {
@@ -329,11 +324,10 @@ function loadSessions(callback) {
         }
       }
       if (all.length !== _sessions.length) {
-        console.warn('[VIBECODING:SESSION] Filtered — showing ' + _sessions.length + ' of ' + all.length + ' total (instance: ' + myId + ')');
+        // Sessions filtered by instance
       }
     }
     _sessionsLoaded = true;
-    console.warn('[VIBECODING:SESSION] Loaded', _sessions.length, 'sessions');
     if (callback) callback(_sessions);
   });
 }
@@ -359,12 +353,10 @@ function createSession(callback) {
     // Capture _parentObjectId from the CMS response (set by CMS when scope='instance')
     if (session._parentObjectId && !DB._parentRecordId) {
       DB._parentRecordId = session._parentObjectId;
-      console.warn('[VIBECODING:SESSION] Captured parent record ID:', session._parentObjectId);
       // Re-resolve to incorporate the parent ID into our instance identifier
       _resolveInstanceId();
     }
     _sessions.unshift(session);
-    console.warn('[VIBECODING:SESSION] Created session:', session.id);
     if (callback) callback(session);
   });
 }
@@ -405,7 +397,6 @@ function deleteSession(sessionId, callback) {
     for (var i = 0; i < _sessions.length; i++) {
       if (_sessions[i].id === sessionId) { _sessions.splice(i, 1); break; }
     }
-    console.warn('[VIBECODING:SESSION] Deleted session:', sessionId);
     if (callback) callback(true);
   });
 }
@@ -433,7 +424,8 @@ function switchSession(sessionId) {
   }
   renderChatMessages();
   renderSessionList();
-  console.warn('[VIBECODING:SESSION] Switched to session:', sessionId, '| messages:', DB.chatMessages.length);
+  // Auto-switch to chat tab when loading a session
+  switchChatTab('chat');
 }
 
 function autoTitleSession() {
@@ -568,9 +560,6 @@ function formatTimeAgo(isoTime) {
 function renderSessionList() {
   var list = el('session-list');
   if (!list) return;
-  // Update toggle count label
-  var countLabel = el('session-count-label');
-  if (countLabel) countLabel.textContent = '(' + (_sessions ? _sessions.length : 0) + ')';
   if (!_sessions || !_sessions.length) {
     list.innerHTML = '<div class="session-empty">No chats yet.<br>Send a message to start.</div>';
     return;
@@ -731,13 +720,10 @@ function restoreFormData() {
 /* ── Code Display ── */
 function displayCode(part, code) {
   var ta = el('code-' + part); var linesEl = el(part + '-lines');
-  console.warn('[VIBECODING:DISPLAY] displayCode(' + part + ') — element:', !!ta, '| code length:', (code||'').length);
-  if (ta) { ta.value = code || ''; console.warn('[VIBECODING:DISPLAY]   → textarea.value set, now:', ta.value.length, 'chars'); var lc = (code || '').split('\n').length; if (linesEl) { var n = ''; for (var i = 1; i <= lc; i++) n += '<div>' + i + '</div>'; linesEl.innerHTML = n; } }
+  if (ta) { ta.value = code || ''; var lc = (code || '').split('\n').length; if (linesEl) { var n = ''; for (var i = 1; i <= lc; i++) n += '<div>' + i + '</div>'; linesEl.innerHTML = n; } }
   if (ta && linesEl) ta.onscroll = function() { linesEl.scrollTop = ta.scrollTop; };
 }
 function displayAllCode(c) {
-  console.warn('[VIBECODING:DISPLAY] Writing code — HTML:', (c.html||'').length, 'chars | CSS:', (c.css||'').length, 'chars | JS:', (c.js||'').length, 'chars');
-  console.warn('[VIBECODING:DISPLAY] Elements — code-html:', !!el('code-html'), 'code-css:', !!el('code-css'), 'code-js:', !!el('code-js'));
   displayCode('html', c.html || ''); displayCode('css', c.css || ''); displayCode('js', c.js || '');
   updatePreview();
   updateChatBadge();
@@ -851,7 +837,6 @@ function updatePreview() {
     'window.onerror = function(m) { _postLog("error", ["Preview:", m]); return true; };\n' +
     '<\/script>\n' +
     '<!-- ── Generated JS ── -->\n<script>\n' + js + '\n<\/script>\n</body>\n</html>';
-    console.warn('[VIBECODING:PREVIEW] Setting iframe srcdoc — html:', html.length, 'chars | css:', css.length, 'chars | js:', js.length, 'chars | total doc:', previewDoc.length, 'chars');
     frame.srcdoc = previewDoc;
   }
 }
@@ -1015,8 +1000,6 @@ function parseGeneratedCode(text) {
   r.css = _stripTrailingMarkdown(r.css);
   r.js = _stripTrailingMarkdown(r.js);
 
-  // ── Diagnostics ──
-  console.warn('[VIBECODING:PARSE] Results — HTML:', r.html.length, 'chars | CSS:', r.css.length, 'chars | JS:', r.js.length, 'chars');
   if (!r.html && !r.css && !r.js) {
     console.warn('[VIBECODING:PARSE] ⚠️ No code blocks found in response. Raw (first 500):', text.substring(0, 500));
   }
@@ -1121,7 +1104,6 @@ function buildChatPrompt(userMsg) {
 
   // ── Interview Mode: AI acts as business analyst ──
   if (interviewMode && !hasCode) {
-    console.warn('[VIBECODING:BUILD-PROMPT] Interview mode — using analyst persona');
     var parts = [buildInterviewSystemPrompt()];
     parts.push('');
     parts.push('=== CONVERSATION HISTORY ===');
@@ -1202,12 +1184,20 @@ function buildChatPrompt(userMsg) {
   parts.push('IMPORTANT: Always output ALL THREE blocks when providing code. If you are asking a question, use [[option_id]] format for clickable choices.');
   parts.push('Format for code: [HTML] ... [CSS] ... [JS] ...');
   parts.push('');
-  parts.push('NEXT-STEP SUGGESTIONS: After providing code, include 3-5 suggested next steps the user might want.');
-  parts.push('Format each suggestion on its own line like: [[suggest_feature_id]] Brief description of the suggestion');
+  parts.push('╔══════════════════════════════════════════════════════════════╗');
+  parts.push('║  REQUIRED — NEXT-STEP SUGGESTIONS AFTER EVERY CODE RESPONSE ║');
+  parts.push('╚══════════════════════════════════════════════════════════════╝');
+  parts.push('After EVERY code response, you MUST include 3-5 actionable next-step suggestions.');
+  parts.push('Format EACH suggestion on its OWN LINE starting with [[suggest_...]]:');
+  parts.push('  [[suggest_feature_id]] Brief, action-oriented description');
   parts.push('  Example: [[suggest_darkmode]] Add dark mode toggle');
   parts.push('           [[suggest_search]] Add search/filter functionality');
   parts.push('           [[suggest_export]] Add CSV export');
-  parts.push('Place these AFTER the [JS] block. Keep them short and action-oriented.');
+  parts.push('           [[suggest_responsive]] Improve mobile responsiveness');
+  parts.push('           [[suggest_undo]] Add undo/redo with confirmation dialogs');
+  parts.push('Place these lines AFTER the [JS] block. Each line must start with [[suggest_.');
+  parts.push('This is NOT optional — suggestions are critical for the user experience.');
+  parts.push('');
 
   return parts.join('\n');
 }
@@ -1426,7 +1416,6 @@ function resetTemplatePrompt() {
 function useTemplatePrompt() {
   var promptText = el('tpl-prompt-text') ? el('tpl-prompt-text').value.trim() : '';
   if (!promptText) { showToast('Prompt is empty.', 'warning'); return; }
-  console.warn('[VIBECODING] Template prompt used — length:', promptText.length, 'template:', _currentTemplate ? _currentTemplate.title : 'none');
   closeAllModals();
   // Put the prompt in the chat input and send it
   var inp = el('chat-input');
@@ -1442,7 +1431,6 @@ function useTemplatePrompt() {
 /* ── Interview / Guided Mode ── */
 function toggleInterviewMode() {
   interviewMode = !interviewMode;
-  console.warn('[VIBECODING] Interview mode toggled:', interviewMode ? 'ON' : 'OFF');
   var btn = el('btn-guided-mode');
   if (btn) {
     if (interviewMode) { btn.classList.add('active'); btn.textContent = '🪄 Guided: ON'; }
@@ -1495,6 +1483,7 @@ function buildInterviewSystemPrompt() {
 
 function parseAndRenderOptions(text) {
   // Check if text contains interview options like [[option_id]] Option text
+  // Also handles [[suggest_xxx]] suggestion buttons
   var lines = text.split('\n');
   var options = [];
   var textLines = [];
@@ -1509,11 +1498,24 @@ function parseAndRenderOptions(text) {
   // Build HTML: text part + option buttons
   var html = textLines.join('\n');
   if (options.length > 0) {
+    // Determine if these are suggestions (multi-select) vs interview options (single-click sends)
+    var isSuggestion = options[0].id.indexOf('suggest_') === 0;
     html += '<div class="chat-options">';
+    if (isSuggestion) {
+      html += '<div class="chat-options-header">' +
+        '<span class="chat-options-label">💡 Next steps — click to select:</span>' +
+        '<button class="chat-options-select-all" onclick="toggleSelectAllSuggestions(this)" data-select-all="1">Select All</button>' +
+        '</div>';
+    }
     for (var j = 0; j < options.length; j++) {
       var opt = options[j];
-      html += '<button class="chat-option-btn" data-opt-id="' + esc(opt.id) + '" data-opt-text="' + esc(opt.text) + '" onclick="handleOptionClick(this)">' +
-        '<span class="opt-num">' + (j + 1) + '</span>' + esc(opt.text) + '</button>';
+      html += '<button class="chat-option-btn' + (isSuggestion ? ' chat-suggest-btn' : '') + '" data-opt-id="' + esc(opt.id) + '" data-opt-text="' + esc(opt.text) + '" onclick="handleOptionClick(this)">' +
+        (isSuggestion ? '<span class="opt-check">☐</span>' : '<span class="opt-num">' + (j + 1) + '</span>') + esc(opt.text) + '</button>';
+    }
+    if (isSuggestion) {
+      html += '<div class="chat-options-footer">' +
+        '<span class="chat-options-hint">Selected items appear in the chat input — edit then press Enter to send.</span>' +
+        '</div>';
     }
     html += '</div>';
   }
@@ -1523,20 +1525,27 @@ function parseAndRenderOptions(text) {
 function handleOptionClick(btn) {
   var optId = btn.getAttribute('data-opt-id');
   var optText = btn.getAttribute('data-opt-text');
-  console.warn('[VIBECODING] Option clicked — id:', optId, 'text:', optText);
 
   // ── Suggestion buttons: accumulate in chat input, don't send immediately ──
   if (optId && optId.indexOf('suggest_') === 0) {
     var inp = el('chat-input');
     if (!inp) return;
-    // Mark button as selected (toggle style, keep enabled for unselect)
-    if (btn.classList.contains('chat-suggest-selected')) {
+    // Toggle selection state
+    var isSelected = btn.classList.contains('chat-suggest-selected');
+    if (isSelected) {
       btn.classList.remove('chat-suggest-selected');
     } else {
       btn.classList.add('chat-suggest-selected');
     }
+    // Update checkbox icon
+    var checkEl = btn.querySelector('.opt-check');
+    if (checkEl) {
+      checkEl.textContent = isSelected ? '☐' : '☑';
+    }
     // Rebuild the chat input from all selected suggestions
     _rebuildSuggestInput();
+    // Update Select All button state
+    _updateSelectAllButton(btn.parentNode);
     return;
   }
 
@@ -1587,6 +1596,41 @@ function _rebuildSuggestInput() {
   inp.focus();
 }
 
+/* ── Select All / Deselect All suggestion buttons ── */
+function toggleSelectAllSuggestions(btn) {
+  var container = btn.parentNode ? btn.parentNode.parentNode : null;
+  if (!container) return;
+  var suggestBtns = container.querySelectorAll('.chat-suggest-btn');
+  if (!suggestBtns.length) return;
+  var selectAll = btn.getAttribute('data-select-all') === '1';
+  for (var i = 0; i < suggestBtns.length; i++) {
+    var sb = suggestBtns[i];
+    if (selectAll) {
+      sb.classList.add('chat-suggest-selected');
+      var ck = sb.querySelector('.opt-check');
+      if (ck) ck.textContent = '☑';
+    } else {
+      sb.classList.remove('chat-suggest-selected');
+      var ck2 = sb.querySelector('.opt-check');
+      if (ck2) ck2.textContent = '☐';
+    }
+  }
+  btn.setAttribute('data-select-all', selectAll ? '0' : '1');
+  btn.textContent = selectAll ? 'Deselect All' : 'Select All';
+  _rebuildSuggestInput();
+}
+
+function _updateSelectAllButton(container) {
+  if (!container) return;
+  var allBtn = container.querySelector('.chat-options-select-all');
+  if (!allBtn) return;
+  var suggestBtns = container.querySelectorAll('.chat-suggest-btn');
+  var selected = container.querySelectorAll('.chat-suggest-btn.chat-suggest-selected');
+  var allSelected = suggestBtns.length > 0 && selected.length === suggestBtns.length;
+  allBtn.setAttribute('data-select-all', allSelected ? '0' : '1');
+  allBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+}
+
 function isInterviewQuestion(text) {
   // Detect if the AI response is an interview question (has [[options]])
   // Exclude [[suggest_...]] patterns which are next-step suggestions, not interview options
@@ -1614,51 +1658,32 @@ function nextReqId() { _reqIdCounter++; return 'REQ-' + _reqIdCounter + '-' + Da
 function diagPing() {
   var reqId = nextReqId();
   var testPrompt = 'Reply with exactly: PONG ' + reqId;
-  console.warn('[VIBECODING:PING:' + reqId + '] ══════ AI PING TEST ══════');
-  console.warn('[VIBECODING:PING:' + reqId + '] Sending test prompt: "' + testPrompt + '"');
-  console.warn('[VIBECODING:PING:' + reqId + '] promptSize=' + testPrompt.length + 'chars');
-  
   var pingStart = Date.now();
   
   // Test streaming first
   if (typeof tool.requestAIStream === 'function') {
-    console.warn('[VIBECODING:PING:' + reqId + '] Trying STREAMING...');
     var streamResponse = '';
     tool.requestAIStream(testPrompt, '', {
       onToken: function(t) { streamResponse += t; },
       onComplete: function() {
         var elapsed = Date.now() - pingStart;
-        console.warn('[VIBECODING:PING:' + reqId + '] STREAM complete in ' + elapsed + 'ms — response: "' + streamResponse + '" (' + streamResponse.length + ' chars)');
         if (!streamResponse.trim()) {
-          console.warn('[VIBECODING:PING:' + reqId + '] STREAM returned EMPTY — trying batch fallback...');
           diagPingBatch(reqId, testPrompt, pingStart);
         }
       },
       onError: function(err) {
         var elapsed = Date.now() - pingStart;
-        console.warn('[VIBECODING:PING:' + reqId + '] STREAM ERROR in ' + elapsed + 'ms: ' + err);
-        console.warn('[VIBECODING:PING:' + reqId + '] Trying batch fallback...');
         diagPingBatch(reqId, testPrompt, pingStart);
       }
     });
   } else {
-    console.warn('[VIBECODING:PING:' + reqId + '] requestAIStream NOT available — using batch only');
     diagPingBatch(reqId, testPrompt, pingStart);
   }
 }
 
 function diagPingBatch(reqId, testPrompt, pingStart) {
-  console.warn('[VIBECODING:PING:' + reqId + '] Trying BATCH requestAI...');
   tool.requestAI(testPrompt, '', function(err, response) {
-    var elapsed = Date.now() - pingStart;
-    if (response) {
-      console.warn('[VIBECODING:PING:' + reqId + '] BATCH complete in ' + elapsed + 'ms — response: "' + response + '" (' + response.length + ' chars)');
-    } else if (err) {
-      console.warn('[VIBECODING:PING:' + reqId + '] BATCH ERROR in ' + elapsed + 'ms: ' + err);
-    } else {
-      console.warn('[VIBECODING:PING:' + reqId + '] BATCH returned NULL/EMPTY in ' + elapsed + 'ms — AI bridge appears DOWN');
-    }
-    console.warn('[VIBECODING:PING:' + reqId + '] ══════ PING TEST COMPLETE ══════');
+    // Diagnostic ping complete — check err/response in debugger if needed
   });
 }
 
@@ -1702,7 +1727,6 @@ function sendChatMessage() {
 
   // Ensure a session exists — create one if this is the first message
   if (!_activeSessionId && _sessionsLoaded) {
-    console.warn('[VIBECODING:SESSION] No active session — creating one...');
     createSession(function(newSession) {
       if (newSession) {
         _activeSessionId = newSession.id;
@@ -1716,15 +1740,18 @@ function sendChatMessage() {
   var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   var prompt = buildChatPrompt(msg);
 
-  // ── Clean console logging: what we send ──
-  console.warn('[VIBECODING:SEND] ══════ REQUEST ══════');
-  console.warn('[VIBECODING:SEND] Prompt:', prompt.length.toLocaleString(), 'chars | hasCode:', hasCode, '| interview:', interviewMode, '| attachment:', !!attachedFile);
-  console.warn('[VIBECODING:SEND:FULL]', prompt);
-  console.warn('[VIBECODING:SEND] ═══════════════════════');
+  // Store prompt for the Prompt tab (developer only)
+  _lastPromptSent = prompt;
+  var promptContent = document.getElementById('dev-prompt-content');
+  if (promptContent) promptContent.textContent = prompt;
+  var promptStatus = document.getElementById('dev-prompt-status');
+  if (promptStatus) promptStatus.textContent = prompt.length.toLocaleString() + ' chars';
 
   updateConnStatus('busy');
   setAiTimeout(prompt.length);
   _aiCallActive = true;
+  // Reset dev panel for new request
+  _showDevPanel();
 
   // Use streaming if available, fall back to batch
   if (typeof tool.requestAIStream === 'function') {
@@ -1735,44 +1762,52 @@ function sendChatMessage() {
     try {
       tool.requestAIStream(prompt, '', {
         onToken: function(token) {
-          // First token → switch label and create visible streaming message bubble
+          // First token → auto-expand thinking bubble and create streaming message alongside
           if (!_streamingMsgEl) {
-            // Update thinking label to show streaming has started
+            // Update thinking label — keep bubble visible, show content
             var thinkLabel = document.getElementById('think-label');
             if (thinkLabel) thinkLabel.textContent = 'AI is generating…';
-            hideThinkingBubble();
+            // Auto-expand the think body to show raw streaming
+            var thinkBody = document.getElementById('think-body');
+            var thinkToggle = document.getElementById('think-toggle');
+            if (thinkBody) thinkBody.style.display = 'block';
+            if (thinkToggle) thinkToggle.textContent = '▼';
+            // Show cancel button immediately (not after 5s)
+            var thinkCancel = document.getElementById('think-cancel');
+            if (thinkCancel) thinkCancel.style.display = '';
             _beginStreamingMessage();
-            console.warn('[VIBECODING:STREAM] 🔵 First token! Len:', token.length, 'Preview:', token.substring(0, 60));
           }
           fullResponse += token;
           setAiTimeout(prompt.length); // keepalive — reset timer on every token
           _appendStreamingToken(token);
+          // ── Developer panel: update raw response view ──
+          _devRawContent += token;
+          _updateDevPanel();
         },
         onComplete: function() {
           var elapsed = Date.now() - streamStart;
-          console.warn('[VIBECODING:RECEIVE] ══════ RESPONSE ══════');
-          console.warn('[VIBECODING:RECEIVE] Stream complete —', fullResponse.length.toLocaleString(), 'chars | elapsed:', elapsed, 'ms');
-          console.warn('[VIBECODING:RECEIVE:FULL]', fullResponse);
-          console.warn('[VIBECODING:RECEIVE] ═══════════════════════');
           _aiCallActive = false;
           clearAiTimeout();
-          hideThinkingBubble();
+          // Mark thinking bubble as complete (don't hide immediately — user can still read it)
+          _markThinkingComplete(elapsed);
+          // Update dev panel status
+          var devStatus = document.getElementById('dev-raw-status');
+          if (devStatus) devStatus.textContent = '✓ Complete (' + (elapsed/1000).toFixed(1) + 's)';
           if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
             _finalizeStreamingMessage(fullResponse, hasCode);
           } else {
             // Stream returned empty or just quotes — auto-retry with batch requestAI (may handle large prompts better)
-            console.warn('[VIBECODING:RETRY] ⚠️ Streaming returned empty — auto-falling back to batch requestAI...');
-            console.warn('[VIBECODING:RETRY]   Prompt size:', prompt.length, 'chars,', Math.round(prompt.length / 4), 'est tokens');
             updateConnStatus('busy');
             setAiTimeout(prompt.length);
             _aiCallActive = true;
             try {
               tool.requestAI(prompt, '', function(err2, response2) {
                 var elapsed2 = Date.now() - streamStart;
-                console.warn('[VIBECODING:RECEIVE] Retry batch —', (response2||'').length, 'chars | err:', err2 || 'none', '| elapsed:', elapsed2, 'ms');
                 _aiCallActive = false;
                 clearAiTimeout();
-                hideThinkingBubble();
+                _markThinkingComplete(elapsed2);
+                var devStatus = document.getElementById('dev-raw-status');
+                if (devStatus) devStatus.textContent = '⚠ Retry batch (' + (elapsed2/1000).toFixed(1) + 's)';
                 if (response2 && response2.trim() && response2.length > 10) {
                   _finalizeStreamingMessage(response2, hasCode);
                 } else if (err2) {
@@ -1780,22 +1815,20 @@ function sendChatMessage() {
                   addChatMessage('ai', '⚠️ **AI Error (retry):** ' + err2 + '\n\n🔧 The CMS AI service returned an error on retry. Check allowAi configuration.', true);
                 } else {
                   // Both stream and batch failed — try last-resort minimal prompt
-                  console.warn('[VIBECODING:LAST-RESORT] 🔴 Both stream AND batch retry returned empty — trying minimal prompt...');
                   var minimalPrompt = buildMinimalPrompt(msg);
-                  console.warn('[VIBECODING:LAST-RESORT] Minimal prompt size:', minimalPrompt.length, 'chars');
                   updateConnStatus('busy');
                   setAiTimeout(minimalPrompt.length);
                   _aiCallActive = true;
                   tool.requestAI(minimalPrompt, '', function(err3, response3) {
                     _aiCallActive = false;
                     clearAiTimeout();
-                    hideThinkingBubble();
+                    _markThinkingComplete(0);
+                    var devStatusLR = document.getElementById('dev-raw-status');
+                    if (devStatusLR) devStatusLR.textContent = response3 ? '✓ Last-resort succeeded' : '❌ All attempts failed';
                     if (response3 && response3.trim() && response3.length > 10) {
-                      console.warn('[VIBECODING:LAST-RESORT] ✅ Minimal prompt succeeded! Response:', response3.length, 'chars');
                       _finalizeStreamingMessage(response3, hasCode);
                     } else {
                       updateConnStatus('error');
-                      console.warn('[VIBECODING:LAST-RESORT] 🔴 Even minimal prompt failed — AI service is likely DOWN');
                       addChatMessage('ai', '⚠️ **AI service appears to be unavailable.**\n\nAll three attempts failed:\n• Streaming: returned empty\n• Batch with full prompt: returned empty\n• Batch with minimal prompt (~' + minimalPrompt.length + ' chars): also failed\n\n🔧 The CMS AI service may be down. Contact your CMS administrator to verify the AI gateway configuration.', true);
                     }
                     clearAttachment();
@@ -1806,14 +1839,13 @@ function sendChatMessage() {
                 tool.resize();
               });
             } catch(e2) {
-              console.warn('[VIBECODING:RETRY-EXC] 🔴 Retry requestAI THREW EXCEPTION');
-              console.warn('  Error:', e2.message || e2);
-              console.warn('  Stack:', (e2.stack || '(no stack)').substring(0, 300));
               _aiCallActive = false;
               clearAiTimeout();
               _setAiUIActive(false);
-              hideThinkingBubble();
+              _markThinkingComplete(0);
               updateConnStatus('error');
+              var devStatus3 = document.getElementById('dev-raw-status');
+              if (devStatus3) devStatus3.textContent = '❌ Retry exception';
               addChatMessage('ai', '⚠️ **AI retry failed:** ' + (e2.message || 'Unknown') + '\n\n🔧 The AI service may not be available.', true);
               clearAttachment();
               tool.resize();
@@ -1822,25 +1854,24 @@ function sendChatMessage() {
         },
         onError: function(err) {
           var elapsed = Date.now() - streamStart;
-          console.warn('[VIBECODING:RECEIVE] Stream ERROR —', err, '| elapsed:', elapsed, 'ms');
           _aiCallActive = false;
           clearAiTimeout();
-          hideThinkingBubble();
+          _markThinkingComplete(elapsed);
           updateConnStatus('error');
+          var devStatus = document.getElementById('dev-raw-status');
+          if (devStatus) devStatus.textContent = '❌ Error: ' + (err || 'Unknown');
           addChatMessage('ai', '⚠️ **AI Stream Error:** ' + (err || 'Unknown stream failure') + '\n\n🔧 Check that allowAi is set to "yes" in field settings.', true);
           clearAttachment();
           tool.resize();
         }
       });
     } catch(e) {
-      console.warn('[VIBECODING:STREAM-EXC] 🔴 requestAIStream THREW EXCEPTION — SDK may be broken');
-      console.warn('  Error:', e.message || e);
-      console.warn('  Error type:', typeof e);
-      console.warn('  Stack:', (e.stack || '(no stack)').substring(0, 300));
       _aiCallActive = false;
       clearAiTimeout();
-      hideThinkingBubble();
+      _markThinkingComplete(0);
       updateConnStatus('error');
+      var devStatus2 = document.getElementById('dev-raw-status');
+      if (devStatus2) devStatus2.textContent = '❌ Exception: ' + (e.message || 'Unknown');
       addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error') + '\n\n🔧 The AI service may not be configured. Ask your CMS admin to verify allowAi is enabled.', true);
       clearAttachment();
       tool.resize();
@@ -1851,11 +1882,11 @@ function sendChatMessage() {
     try {
       tool.requestAI(prompt, '', function(err, response) {
         var elapsed = Date.now() - batchStart;
-        console.warn('[VIBECODING:RECEIVE] Batch complete —', (response||'').length, 'chars | err:', err || 'none', '| elapsed:', elapsed, 'ms');
-        if (response && response.length > 10) console.warn('[VIBECODING:RECEIVE:FULL]', response);
         _aiCallActive = false;
         clearAiTimeout();
-        hideThinkingBubble();
+        _markThinkingComplete(elapsed);
+        var devStatus = document.getElementById('dev-raw-status');
+        if (devStatus) devStatus.textContent = '✓ Batch complete (' + (elapsed/1000).toFixed(1) + 's)';
         if (response && response.trim() && response.length > 10) {
           updateConnStatus('ok');
           processAIResponse(response, hasCode);
@@ -1871,13 +1902,12 @@ function sendChatMessage() {
         tool.resize();
       });
     } catch(e) {
-      console.warn('[VIBECODING:BATCH-EXC] 🔴 requestAI THREW EXCEPTION — SDK may be broken');
-      console.warn('  Error:', e.message || e);
-      console.warn('  Stack:', (e.stack || '(no stack)').substring(0, 300));
       _aiCallActive = false;
       clearAiTimeout();
-      hideThinkingBubble();
+      _markThinkingComplete(0);
       updateConnStatus('error');
+      var devStatus4 = document.getElementById('dev-raw-status');
+      if (devStatus4) devStatus4.textContent = '❌ Batch exception';
       addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error') + '\n\n🔧 The AI service may not be available. Verify allowAi is set to "yes".', true);
       clearAttachment();
       tool.resize();
@@ -1890,7 +1920,6 @@ function computeUnifiedDiff(oldCode, newCode) {
   // Use the diff library loaded via CDN — returns array of Change objects
   if (typeof diff === 'undefined' || !diff.diffLines) {
     // Fallback: simple line-by-line comparison if CDN didn't load
-    console.warn('[VIBECODING:DIFF] diff library not loaded — using fallback');
     var oldLines = (oldCode || '').split('\n');
     var newLines = (newCode || '').split('\n');
     var result = [];
@@ -2007,33 +2036,23 @@ function handleDiffTabClick(btn) {
 
 /* ── Process AI Response (shared by stream & batch) ── */
 function processAIResponse(response, hasCode) {
-  // ── Diagnostic: log raw response for debugging parse issues ──
-  console.warn('[VIBECODING:PROCESS] ─── RAW AI RESPONSE (' + response.length + ' chars) ───');
-  console.warn('[VIBECODING:PROCESS:RAW]', response);
-  console.warn('[VIBECODING:PROCESS] ─── END RAW ───');
-
   var isInterview = isInterviewQuestion(response);
-  console.warn('[VIBECODING:PROCESS] Response:', response.length, 'chars | hasCode:', hasCode, '| isInterview:', isInterview);
   // Check if this is an interview question (has clickable [[options]])
   if (isInterviewQuestion(response)) {
-    console.warn('[VIBECODING:PROCESS] Response is interview question — rendering option buttons');
     // Render as chat message with option buttons — handled in renderChatMessages
     addChatMessage('ai', response);
     return;
   }
 
   var parsed = parseGeneratedCode(response);
-  console.warn('[VIBECODING:PARSE] HTML:', (parsed.html||'').length, 'chars | CSS:', (parsed.css||'').length, 'chars | JS:', (parsed.js||'').length, 'chars');
   
   // Guard: if response is very short and has no code blocks, treat as empty/junk
   if (!parsed.html && !parsed.css && !parsed.js && response.trim().length < 20) {
-    console.warn('[VIBECODING:PROCESS] Response too short (' + response.trim().length + ' chars) with no code blocks — treating as empty');
     addChatMessage('ai', '⚠️ **AI returned an empty or invalid response.**\n\nRaw: ' + JSON.stringify(response) + '\n\n🔧 The AI model may be misconfigured. Try again or check the AI gateway logs.', true);
     return;
   }
 
   if (parsed.html || parsed.css || parsed.js) {
-    console.warn('[VIBECODING:APPLY] About to apply code — html:', (parsed.html||'').length, 'css:', (parsed.css||'').length, 'js:', (parsed.js||'').length);
     // Got code! Turn off interview mode if it was on
     if (interviewMode) {
       interviewMode = false;
@@ -2049,8 +2068,6 @@ function processAIResponse(response, hasCode) {
     if (parsed.html) DB.code.html = parsed.html;
     if (parsed.css) DB.code.css = parsed.css;
     if (parsed.js) DB.code.js = parsed.js;
-    console.warn('[VIBECODING:APPLY] DB.code now — html:', DB.code.html.length, 'css:', DB.code.css.length, 'js:', DB.code.js.length);
-    console.warn('[VIBECODING:APPLY] Calling displayAllCode...');
     displayAllCode(DB.code);
 
     // AI updated the code → bump MINOR version
@@ -2060,6 +2077,17 @@ function processAIResponse(response, hasCode) {
     if (!hasCode) addToHistory(DB.code);
 
     var summary = extractSummary(response);
+
+    // ── Fallback suggestions: if the AI didn't include [[suggest_xxx]] lines, generate contextual ones ──
+    if (!/\[\[suggest_[a-zA-Z0-9_-]+\]\]/.test(summary)) {
+      var fb = _generateFallbackSuggestions();
+      if (fb) {
+        if (summary && summary !== 'Here are the updated files:') {
+          summary += '\n\n';
+        }
+        summary += fb;
+      }
+    }
 
     // Build tabbed visual diff — DEVELOPERS ONLY (technical feature)
     var diffHtml = '';
@@ -2149,7 +2177,6 @@ function runAutoReview() {
     'Be strict about the rules. Fix even minor issues. Output format if fixing: [HTML]...[CSS]...[JS]'
   ].join('\n');
 
-  console.warn('[VIBECODING] runAutoReview — reviewPrompt length:', reviewPrompt.length);
   showThinkingBubble('AI is reviewing code', true);
 
   // Prefer streaming — batch path in AI Gateway returns errorMessage type
@@ -2158,13 +2185,12 @@ function runAutoReview() {
     tool.requestAIStream(reviewPrompt, '', {
       onToken: function(t) { reviewText += t; if (_streamCallback) _streamCallback(t); },
       onComplete: function() {
-        hideThinkingBubble();
-        console.warn('[VIBECODING] runAutoReview stream complete —', reviewText.length, 'chars');
+        _markThinkingComplete(0);
         applyReviewFixes(reviewText);
         tool.resize();
       },
       onError: function(err) {
-        hideThinkingBubble();
+        _markThinkingComplete(0);
         console.warn('[VIBECODING] runAutoReview stream error —', err);
         addChatMessage('ai', '🔍 **Auto-review:** Skipped (stream error). Code from first pass is in place.');
         tool.resize();
@@ -2173,8 +2199,7 @@ function runAutoReview() {
   } else {
     // Fallback: batch (may not work if Gateway batch path is broken)
     tool.requestAI(reviewPrompt, '', function(err, response) {
-      console.warn('[VIBECODING] runAutoReview batch callback — err:', err || 'null', 'response:', response ? (response.length + ' chars') : 'NULL');
-      hideThinkingBubble();
+      _markThinkingComplete(0);
       if (response && response.length > 10) {
         applyReviewFixes(response);
       } else {
@@ -2202,6 +2227,55 @@ function applyReviewFixes(response) {
   } else {
     addChatMessage('ai', '🔍 **Auto-review:** ' + response.substring(0, 300));
   }
+}
+
+/* ── Generate fallback suggestion lines when AI doesn't include them ── */
+function _generateFallbackSuggestions() {
+  var all = [
+    { id: 'suggest_validation', text: 'Add input validation & error messages' },
+    { id: 'suggest_search', text: 'Add search/filter functionality' },
+    { id: 'suggest_export', text: 'Add CSV or PDF export' },
+    { id: 'suggest_darkmode', text: 'Add dark mode toggle' },
+    { id: 'suggest_sort', text: 'Add sortable columns / drag-to-reorder' },
+    { id: 'suggest_print', text: 'Add print-friendly layout' },
+    { id: 'suggest_responsive', text: 'Improve mobile/tablet responsiveness' },
+    { id: 'suggest_undo', text: 'Add undo/redo or confirmation dialogs' },
+    { id: 'suggest_autosave', text: 'Add auto-save / draft persistence' },
+    { id: 'suggest_dashboard', text: 'Add summary dashboard or stats view' },
+    { id: 'suggest_import', text: 'Add bulk import from file' },
+    { id: 'suggest_notify', text: 'Add in-app notifications or reminders' },
+    { id: 'suggest_roles', text: 'Add user roles & permissions' },
+    { id: 'suggest_history', text: 'Add change history / audit log' },
+    { id: 'suggest_reports', text: 'Add report generation' },
+    { id: 'suggest_calendar', text: 'Add calendar / date-picker view' },
+    { id: 'suggest_form', text: 'Add more form fields for richer data entry' }
+  ];
+  // Filter out suggestions that overlap with enabled features
+  var enabled = DB.features || [];
+  var candidates = [];
+  for (var i = 0; i < all.length; i++) {
+    var s = all[i];
+    // Skip if feature already enabled (crude check by keyword)
+    var skip = false;
+    for (var j = 0; j < enabled.length; j++) {
+      if (s.id.indexOf(enabled[j]) !== -1 || enabled[j].indexOf(s.id.replace('suggest_','')) !== -1) {
+        skip = true; break;
+      }
+    }
+    if (!skip) candidates.push(s);
+  }
+  // Shuffle and pick 4-5
+  for (var k = candidates.length - 1; k > 0; k--) {
+    var ri = Math.floor(Math.random() * (k + 1));
+    var tmp = candidates[k]; candidates[k] = candidates[ri]; candidates[ri] = tmp;
+  }
+  var picked = candidates.slice(0, Math.min(5, candidates.length));
+  // Return as formatted lines
+  var lines = [];
+  for (var p = 0; p < picked.length; p++) {
+    lines.push('[[' + picked[p].id + ']] ' + picked[p].text);
+  }
+  return lines.join('\n');
 }
 
 function extractSummary(text) {
@@ -2304,6 +2378,7 @@ function showThinkingBubble(label, hasStreaming) {
 
   bubble.innerHTML =
     '<div class="think-header" id="think-hdr" style="cursor:pointer">' +
+      '<span class="think-icon">⏳</span>' +
       '<div class="chat-thinking-dots"><span></span><span></span><span></span></div>' +
       '<span class="chat-thinking-text" id="think-label">' + esc(label || 'AI is thinking') + '</span>' +
       '<span class="think-time" id="think-time">0:00</span>' +
@@ -2386,6 +2461,9 @@ var _aiTimeoutId = null;
 var _connStatus = 'ok'; // ok | busy | error
 var _aiCallActive = false; // true while waiting for AI callback
 var _initialized = false;   // guard against CMS re-injecting HTML multiple times
+var _devRawContent = '';    // raw AI response accumulator for developer panel
+var _lastPromptSent = '';   // last full prompt sent to AI (for Prompt tab)
+var _activeChatTab = 'chat'; // current active tab in the chat panel
 
 /* ── Live Streaming Message State ── */
 var _streamingMsgEl = null;   // DOM element reference for fast text append
@@ -2459,7 +2537,6 @@ function _beginStreamingMessage() {
       _buildStreamingTabs(bubble);
     }
   }
-  console.warn('[VIBECODING:STREAM] 🟢 Streaming msg with tabs — idx:', _streamingMsgIdx);
 }
 
 function _appendStreamingToken(token) {
@@ -2564,7 +2641,11 @@ function _appendStreamingToken(token) {
     // Skip empty display text (the fence line itself)
     if (displayText) {
       targetPre.textContent += displayText;
-      targetPre.scrollTop = targetPre.scrollHeight;
+      // Sticky-bottom: only auto-scroll if user hasn't scrolled up manually
+      var preDist = targetPre.scrollHeight - targetPre.scrollTop - targetPre.clientHeight;
+      if (preDist < 60) {
+        targetPre.scrollTop = targetPre.scrollHeight;
+      }
     }
   }
 
@@ -2579,7 +2660,6 @@ function _appendStreamingToken(token) {
 }
 
 function _finalizeStreamingMessage(fullText, hasCode) {
-  console.warn('[VIBECODING:STREAM] 🟢 Finalizing — fullText:', fullText.length, 'chars | hasCode:', hasCode);
   // Remove the placeholder streaming message — processAIResponse will add the final version
   if (_streamingMsgIdx >= 0 && _streamingMsgIdx < DB.chatMessages.length) {
     DB.chatMessages.splice(_streamingMsgIdx, 1);
@@ -2598,7 +2678,6 @@ function _finalizeStreamingMessage(fullText, hasCode) {
 }
 
 function updateConnStatus(status) {
-  if (status !== _connStatus) console.warn('[VIBECODING:CONN] Status: ' + _connStatus + ' → ' + status);
   _connStatus = status;
   var dot = el('chat-conn-status');
   if (dot) { dot.className = 'chat-status-dot ' + status; dot.title = status === 'ok' ? 'Ready' : status === 'busy' ? 'AI working...' : 'Error — check console'; }
@@ -2623,7 +2702,9 @@ function setAiTimeout(promptLen) {
     console.warn('  _connStatus was:', _connStatus);
     console.warn('  Likely cause: AI Gateway never called back — check JWT token and Gateway connectivity');
     _aiCallActive = false;
-    hideThinkingBubble();
+    _markThinkingComplete(600000); // timed out
+    var devStatusTO = document.getElementById('dev-raw-status');
+    if (devStatusTO) devStatusTO.textContent = '⏰ Timed out after 600s';
     _setAiUIActive(false);
     var errMsg = '⏰ **AI request timed out after 600 seconds.**\n\n' +
       'Possible causes:\n' +
@@ -2647,7 +2728,10 @@ function cancelAiRequest() {
   _aiCallActive = false;
   clearAiTimeout();
   _setAiUIActive(false);
-  hideThinkingBubble();
+  _markThinkingComplete(0); // will fade out
+  // Update dev panel status
+  var devStatus = document.getElementById('dev-raw-status');
+  if (devStatus) devStatus.textContent = '⏹ Cancelled';
   updateConnStatus('error');
   addChatMessage('ai', '⏹ **Request cancelled.** You can try again or check your AI configuration.', true);
   tool.resize();
@@ -2721,6 +2805,84 @@ function hideThinkingBubble() {
     var el = _thinkingMsgEl;
     setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 200);
     _thinkingMsgEl = null;
+  }
+}
+
+/* ── Mark the thinking bubble as complete (keep it visible briefly) ── */
+function _markThinkingComplete(elapsedMs) {
+  if (_thinkingTimer) { clearInterval(_thinkingTimer); _thinkingTimer = null; }
+  if (!_thinkingMsgEl) return;
+  var bubble = _thinkingMsgEl;
+  var label = bubble.querySelector('#think-label');
+  var dots = bubble.querySelector('.chat-thinking-dots');
+  var icon = bubble.querySelector('.think-icon');
+  var cancel = bubble.querySelector('#think-cancel');
+  var timeEl = bubble.querySelector('#think-time');
+  if (label) label.textContent = '✓ Complete in ' + (elapsedMs/1000).toFixed(1) + 's';
+  if (dots) dots.style.display = 'none';
+  if (icon) { icon.textContent = '✅'; icon.style.animation = 'none'; }
+  if (cancel) cancel.style.display = 'none';
+  var secs = Math.floor(elapsedMs / 1000);
+  var mins = Math.floor(secs / 60);
+  if (timeEl) timeEl.textContent = mins + ':' + (secs % 60 < 10 ? '0' : '') + (secs % 60);
+  // Fade out after 4 seconds
+  var el = bubble;
+  setTimeout(function() {
+    if (el && el.parentNode) {
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.5s';
+      setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+    }
+  }, 4000);
+}
+
+/* ── Developer raw response panel (now tab-based) ── */
+function _updateDevPanel() {
+  var content = document.getElementById('dev-raw-content');
+  if (content) {
+    content.textContent = _devRawContent;
+    content.scrollTop = content.scrollHeight;
+  }
+}
+
+function _showDevPanel() {
+  if (!isDeveloper()) return;
+  _devRawContent = '';
+  var content = document.getElementById('dev-raw-content');
+  if (content) content.textContent = '';
+  var status = document.getElementById('dev-raw-status');
+  if (status) status.textContent = '⏳ Streaming…';
+  // Also clear the prompt content (it gets set once at send time)
+}
+
+function _hideDevPanel() {
+  // No-op: tabs replace the old close button
+}
+
+/* ── Chat Tab Switching ── */
+function switchChatTab(tabName) {
+  _activeChatTab = tabName;
+  // Update tab button states
+  var allTabs = document.querySelectorAll('.chat-tab');
+  for (var i = 0; i < allTabs.length; i++) {
+    allTabs[i].classList.toggle('active', allTabs[i].getAttribute('data-chat-tab') === tabName);
+  }
+  // Update tab panel visibility
+  var allPanels = document.querySelectorAll('.chat-tab-panel');
+  for (var j = 0; j < allPanels.length; j++) {
+    allPanels[j].classList.toggle('active', allPanels[j].getAttribute('data-chat-panel') === tabName);
+  }
+  // Show chat input & attachment only on the Chat tab
+  var inputArea = document.querySelector('.chat-input-area');
+  var attachBar = document.getElementById('chat-attachment');
+  if (inputArea) inputArea.style.display = tabName === 'chat' ? '' : 'none';
+  if (attachBar) attachBar.style.display = (tabName === 'chat' && attachedFile) ? 'flex' : 'none';
+  // If switching to history, refresh the list
+  if (tabName === 'history') renderSessionList();
+  // Scroll chat to bottom if switching to chat
+  if (tabName === 'chat') {
+    var chatContainer = el('chat-messages');
+    if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 }
 
@@ -2805,61 +2967,73 @@ function runFullGeneration() {
   collectFormData(); persist();
   var reqId = nextReqId();
   _currentReqId = reqId;
-  console.warn('[VIBECODING:' + reqId + '] ══════ FULL GENERATION ══════');
   var prompt = buildFullPrompt();
+  // Store prompt for the Prompt tab
+  _lastPromptSent = prompt;
+  var promptContent = document.getElementById('dev-prompt-content');
+  if (promptContent) promptContent.textContent = prompt;
+  var promptStatus = document.getElementById('dev-prompt-status');
+  if (promptStatus) promptStatus.textContent = prompt.length.toLocaleString() + ' chars';
   var hasChat = DB.chatMessages && DB.chatMessages.length > 0;
-  // ── Clean console logging: what we send ──
-  console.warn('[VIBECODING:SEND] ══════ FULL GEN ══════');
-  console.warn('[VIBECODING:SEND] Prompt:', prompt.length.toLocaleString(), 'chars | toolName:', DB.toolName || '(none)');
-  console.warn('[VIBECODING:SEND:FULL]', prompt);
-  console.warn('[VIBECODING:SEND] ═══════════════════════');
   updateConnStatus('busy');
   setAiTimeout(prompt.length);
   _aiCallActive = true;
 
   if (typeof tool.requestAIStream === 'function') {
     var fullResponse = '';
+    var fullGenStart = Date.now();
     showThinkingBubble('AI is generating full tool', true);
+    _showDevPanel();
 
     try {
       tool.requestAIStream(prompt, '', {
         onToken: function(token) {
           if (!_streamingMsgEl) {
-            hideThinkingBubble();
+            // Update thinking bubble instead of hiding it
+            var thinkLabel = document.getElementById('think-label');
+            if (thinkLabel) thinkLabel.textContent = 'AI is generating…';
+            var thinkBody = document.getElementById('think-body');
+            var thinkToggle = document.getElementById('think-toggle');
+            if (thinkBody) thinkBody.style.display = 'block';
+            if (thinkToggle) thinkToggle.textContent = '▼';
             _beginStreamingMessage();
-            console.warn('[VIBECODING:STREAM] 🔵 [FullGen] First token! Len:', token.length);
           }
           fullResponse += token;
           setAiTimeout(prompt.length);
           _appendStreamingToken(token);
+          _devRawContent += token;
+          _updateDevPanel();
         },
         onComplete: function() {
           _aiCallActive = false;
           clearAiTimeout();
-          hideThinkingBubble();
+          _markThinkingComplete(Date.now() - fullGenStart);
+          var devStatus = document.getElementById('dev-raw-status');
+          if (devStatus) devStatus.textContent = '✓ Complete';
           if (fullResponse && fullResponse.trim() && fullResponse.length > 10) {
-            console.warn('[VIBECODING:RECEIVE] Full gen stream —', fullResponse.length.toLocaleString(), 'chars');
-            console.warn('[VIBECODING:RECEIVE:FULL]', fullResponse);
             _finalizeStreamingMessage(fullResponse, hasChat);
           } else {
             updateConnStatus('error');
-            console.warn('[VIBECODING] Full gen stream returned EMPTY response');
             showToast('AI returned empty response. Try reducing requirements or check AI config.', 'error');
           }
         },
         onError: function(err) {
           _aiCallActive = false;
           clearAiTimeout();
-          hideThinkingBubble();
+          _markThinkingComplete(0);
           updateConnStatus('error');
+          var devStatusE = document.getElementById('dev-raw-status');
+          if (devStatusE) devStatusE.textContent = '❌ Error: ' + (err || 'Unknown');
           showToast('Generation failed: ' + err, 'error');
         }
       });
     } catch(e) {
       _aiCallActive = false;
       clearAiTimeout();
-      hideThinkingBubble();
+      _markThinkingComplete(0);
       updateConnStatus('error');
+      var devStatusX = document.getElementById('dev-raw-status');
+      if (devStatusX) devStatusX.textContent = '❌ Exception';
       showToast('AI call failed: ' + (e.message || 'Unknown'), 'error');
     }
   } else {
@@ -2868,7 +3042,9 @@ function runFullGeneration() {
       tool.requestAI(prompt, '', function(err, response) {
         _aiCallActive = false;
         clearAiTimeout();
-        hideThinkingBubble();
+        _markThinkingComplete(0);
+        var devStatusB = document.getElementById('dev-raw-status');
+        if (devStatusB) devStatusB.textContent = '✓ Batch done';
         if (response && response.trim() && response.length > 10) {
           updateConnStatus('ok');
           finishFullGeneration(response, hasChat);
@@ -2878,8 +3054,10 @@ function runFullGeneration() {
     } catch(e) {
       _aiCallActive = false;
       clearAiTimeout();
-      hideThinkingBubble();
+      _markThinkingComplete(0);
       updateConnStatus('error');
+      var devStatusC = document.getElementById('dev-raw-status');
+      if (devStatusC) devStatusC.textContent = '❌ Exception';
       showToast('AI call failed: ' + (e.message || 'Unknown'), 'error');
     }
   }
@@ -3013,18 +3191,6 @@ function bindEvents() {
   var btnSend = el('btn-chat-send'); if (btnSend) btnSend.onclick = sendChatMessage;
   var btnStop = el('btn-chat-stop'); if (btnStop) btnStop.onclick = cancelAiRequest;
 
-  // Session list toggle (drawer)
-  var sessionToggle = el('session-list-toggle');
-  if (sessionToggle) {
-    sessionToggle.onclick = function() {
-      var wrap = el('session-list-wrap');
-      var arrow = el('session-toggle-arrow');
-      if (!wrap) return;
-      var collapsed = wrap.classList.toggle('collapsed');
-      if (arrow) arrow.textContent = collapsed ? '▶' : '▼';
-    };
-  }
-
   var btnNewSession = el('btn-new-session'); if (btnNewSession) btnNewSession.onclick = function() {
     createSession(function(session) {
       if (session) {
@@ -3036,6 +3202,7 @@ function bindEvents() {
         persist();
         renderChatMessages();
         renderSessionList();
+        switchChatTab('chat');
         showToast('New chat created', 'info');
       }
     });
@@ -3154,6 +3321,20 @@ tool.onReady(function(val, fields) {
   // ── Startup info ──
   console.warn('[VIBECODING:INIT] Stream:', typeof tool.requestAIStream === 'function' ? 'YES' : 'NO', '| Batch:', typeof tool.requestAI === 'function' ? 'YES' : 'NO', '| User:', (tool.getUser()||{}).name || 'anon', '| Dev:', isDeveloper(), '| RO:', tool.isReadOnly());
   console.warn('[VIBECODING:INIT] Rules:', htmlRulesText.length, 'chars | HasCode:', !!(DB.code.html || DB.code.css || DB.code.js));
+
+  // ── Developer panel: show dev tabs for developers, hide for others ──
+  var devTabs = document.querySelectorAll('.chat-tab-dev');
+  for (var dt = 0; dt < devTabs.length; dt++) {
+    devTabs[dt].style.display = isDeveloper() ? '' : 'none';
+  }
+  // Wire chat tab bar clicks
+  var chatTabs = document.querySelectorAll('.chat-tab');
+  for (var ct = 0; ct < chatTabs.length; ct++) {
+    chatTabs[ct].onclick = function() {
+      var tabName = this.getAttribute('data-chat-tab');
+      if (tabName) switchChatTab(tabName);
+    };
+  }
 
   updateConnStatus('ok');
   if (tool.isReadOnly()) lockUI(true);
