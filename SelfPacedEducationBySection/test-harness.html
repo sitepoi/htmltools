@@ -24,7 +24,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 <body>
 <div id="th-bar">
   <strong>TEST HARNESS — Self-Paced Education</strong><span class="sep">|</span>
-  <button class="btn-load" id="th-load-sample">📚 Load Sample Sections</button>
+  <button class="btn-load" id="th-load-sample">📚 Load Sample Data</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>
   <span class="sep">|</span>
@@ -32,7 +32,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
   <span class="sep">|</span>
   <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
   <span class="sep">|</span>
-  <span class="hint">Ctrl+Shift+D = Dump State to Console</span>
+  <span class="hint">Ctrl+Shift+D = Dump State</span>
   <span class="sep">|</span>
   <span class="hint">Ctrl+Shift+M = Toggle Manager Role</span>
   <span class="sep">|</span>
@@ -43,7 +43,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 <div id="app">
   <header class="app-header">
     <div class="header-left">
-      <button class="btn-icon" id="btn-back" title="Back to sections" style="display:none">←</button>
+      <button class="btn-icon" id="btn-back" title="Back" style="display:none">←</button>
       <h1 class="app-title" id="app-title">📚 Self-Paced Learning</h1>
     </div>
     <div class="header-right">
@@ -57,7 +57,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     <span class="progress-bar-text" id="progress-bar-text">0% Complete</span>
   </div>
 
-  <div id="view-list" class="view">
+  <div id="view-sections" class="view">
     <div class="toolbar">
       <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
       <select class="filter-select" id="filter-status">
@@ -67,8 +67,8 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
         <option value="completed">Completed</option>
       </select>
     </div>
-    <div class="section-grid" id="section-grid">
-      <div class="empty-state" id="empty-state">
+    <div class="section-grid" id="section-group-grid">
+      <div class="empty-state" id="sections-empty">
         <div class="empty-icon">📖</div>
         <div class="empty-title">No sections available yet</div>
         <div class="empty-desc">A manager needs to add curriculum sections first.</div>
@@ -76,47 +76,59 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     </div>
   </div>
 
-  <div id="view-detail" class="view" style="display:none">
+  <div id="view-lessons" class="view" style="display:none">
+    <div class="section-info-bar" id="section-info-bar">
+      <span class="section-info-title" id="section-info-title"></span>
+      <span class="section-info-progress" id="section-info-progress"></span>
+    </div>
+    <div class="lesson-list" id="lesson-list">
+      <div class="empty-state" id="lessons-empty">
+        <div class="empty-icon">📝</div>
+        <div class="empty-title">No lessons in this section</div>
+        <div class="empty-desc">A manager needs to add lessons to this section.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-lesson-detail" class="view" style="display:none">
     <div class="detail-card">
       <div class="detail-header">
         <h2 class="detail-title" id="detail-title"></h2>
         <span class="detail-badge" id="detail-badge"></span>
       </div>
+      <div class="detail-breadcrumb" id="detail-breadcrumb"></div>
       <div class="detail-meta">
         <span id="detail-estimated"></span>
         <span id="detail-status-label"></span>
       </div>
-      <div class="detail-content" id="detail-content"></div>
-      <div class="quiz-section" id="quiz-section" style="display:none">
-        <h3 class="quiz-title">📝 Knowledge Check</h3>
-        <div id="quiz-questions"></div>
-        <button class="btn btn-primary" id="btn-submit-quiz">Submit Answers</button>
-        <div class="quiz-result" id="quiz-result" style="display:none"></div>
+      <!-- STEP-BY-STEP STUDY FLOW -->
+      <div class="study-flow" id="study-flow">
+        <!-- Steps are rendered dynamically by JS -->
       </div>
-      <div class="detail-nav">
-        <button class="btn btn-outline" id="btn-prev-section" disabled>← Previous</button>
+
+      <!-- SOURCE LINKS (below the flow) -->
+      <div class="source-links-area" id="source-links-area" style="display:none">
+        <h3 class="source-links-title">📎 Additional Resources</h3>
+        <ul class="source-links-list" id="source-links-list"></ul>
+      </div>
+
+      <!-- NAVIGATION -->
+        <button class="btn btn-outline" id="btn-prev-lesson" disabled>← Previous</button>
         <div class="detail-nav-center">
           <button class="btn btn-success" id="btn-mark-complete">✓ Mark Complete</button>
           <button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">📖 Mark In Progress</button>
         </div>
-        <button class="btn btn-outline" id="btn-next-section" disabled>Next →</button>
+        <button class="btn btn-outline" id="btn-next-lesson" disabled>Next →</button>
       </div>
     </div>
   </div>
 
   <div id="view-manager" class="view" style="display:none">
     <div class="toolbar">
-      <button class="btn btn-primary" id="btn-add-section">+ Add New Section</button>
+      <button class="btn btn-primary" id="btn-add-section-group">+ Add New Section</button>
       <span class="toolbar-info" id="manager-section-count"></span>
     </div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead>
-          <tr><th>#</th><th>Title</th><th>Est. Minutes</th><th>Has Quiz</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="manager-table-body"></tbody>
-      </table>
-    </div>
+    <div class="manager-sections" id="manager-sections-list"></div>
     <div class="empty-state" id="manager-empty">
       <div class="empty-icon">📋</div>
       <div class="empty-title">No sections created yet</div>
@@ -131,34 +143,185 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
         <button class="btn-icon modal-close" id="btn-modal-close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label class="form-label">Section Title <span class="required">*</span></label>
-          <input class="form-input" id="edit-title" placeholder="e.g. Introduction to Fractions">
-        </div>
-        <div class="form-row">
+        <div id="modal-section-fields">
+          <div class="form-group">
+            <label class="form-label">Section Title <span class="required">*</span></label>
+            <input class="form-input" id="edit-section-title" placeholder="e.g. Fractions Basics">
+          </div>
           <div class="form-group">
             <label class="form-label">Order #</label>
-            <input class="form-input" type="number" id="edit-order" placeholder="1" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Est. Minutes</label>
-            <input class="form-input" type="number" id="edit-minutes" placeholder="15" min="1">
+            <input class="form-input" type="number" id="edit-section-order" placeholder="1" min="1">
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Content (HTML) <span class="required">*</span></label>
-          <textarea class="form-textarea" id="edit-content" rows="10" placeholder="<h2>Lesson Title</h2><p>Your curriculum content here...</p>"></textarea>
-          <span class="form-hint">You can use HTML tags for formatting: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;strong&gt;, etc.</span>
+        <div id="modal-lessons-area" style="display:none">
+          <div class="lessons-editor-header">
+            <span id="lessons-editor-count">0 lessons</span>
+            <button class="btn btn-sm btn-primary" id="btn-add-lesson">+ Add Lesson</button>
+          </div>
+          <div class="lessons-editor-list" id="lessons-editor-list"></div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Quiz Questions (JSON, optional)</label>
-          <textarea class="form-textarea" id="edit-quiz" rows="6" placeholder='[{"question":"What is 1/2 + 1/4?","options":["1/4","3/4","1/2","2/4"],"answer":1}]'></textarea>
-          <span class="form-hint">Array of {question, options: [], answer: index}. Leave empty for no quiz.</span>
-        </div>
+
+        <div class="lesson-editor-panel" id="lesson-editor-panel" style="display:none">
+            <h4 class="lesson-editor-heading" id="lesson-editor-heading">Add Lesson</h4>
+            <div class="form-group">
+              <label class="form-label">Lesson Title <span class="required">*</span></label>
+              <input class="form-input" id="edit-lesson-title" placeholder="e.g. Introduction to Fractions">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Order #</label>
+                <input class="form-input" type="number" id="edit-lesson-order" placeholder="1" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Est. Minutes</label>
+                <input class="form-input" type="number" id="edit-lesson-minutes" placeholder="15" min="1">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🎬 YouTube Video URLs</label>
+              <div class="managed-list-header">
+                <span id="youtube-editor-count">0 video(s)</span>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-add-youtube">+ Add Video</button>
+              </div>
+              <div class="managed-list-items" id="youtube-editor-list"></div>
+              <div class="managed-editor-panel" id="youtube-editor-panel" style="display:none">
+                <h4 class="managed-editor-heading" id="youtube-editor-heading">Add YouTube Video</h4>
+                <div class="form-group">
+                  <label class="form-label">YouTube URL <span class="required">*</span></label>
+                  <input class="form-input" id="edit-youtube-item-url" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                <div class="managed-editor-actions">
+                  <button type="button" class="btn btn-outline" id="btn-youtube-editor-cancel">Cancel</button>
+                  <button type="button" class="btn btn-primary" id="btn-youtube-editor-save">Save Video</button>
+                </div>
+              </div>
+              <span class="form-hint">Add one or more YouTube videos. Students will watch these first in the study flow.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">📊 Presentation (PDF)</label>
+              <input class="form-input" id="edit-presentation-pdf-url" placeholder="https://example.com/presentation.pdf">
+              <span class="form-hint">Upload or link to the lesson presentation slides.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">📖 Study Document (PDF)</label>
+              <input class="form-input" id="edit-study-doc-pdf-url" placeholder="https://example.com/study-guide.pdf">
+              <span class="form-hint">Main study material — reading notes, textbook chapters, or handouts.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">📝 Worksheet (PDF)</label>
+              <div class="form-input-row">
+                <input class="form-input" id="edit-worksheet-pdf-url" placeholder="https://example.com/worksheet.pdf">
+                <button type="button" class="btn btn-sm btn-outline" id="btn-generate-quiz-from-pdf" title="Read PDF and generate quiz questions via AI">🤖 Generate Questions</button>
+              </div>
+              <span class="form-hint">Practice worksheet. Click "Generate Questions" to auto-create quiz questions from this PDF using AI.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">🔑 Answer Key (PDF)</label>
+              <input class="form-input" id="edit-answer-key-pdf-url" placeholder="https://example.com/answer-key.pdf">
+              <span class="form-hint">Answer key for the worksheet — shown after the worksheet step.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Content (HTML)</label>
+              <div class="html-editor-wrap">
+                <div class="html-editor-toolbar" id="html-editor-toolbar">
+                  <button type="button" class="html-tb-btn" data-cmd="bold" title="Bold"><strong>B</strong></button>
+                  <button type="button" class="html-tb-btn" data-cmd="italic" title="Italic"><em>I</em></button>
+                  <button type="button" class="html-tb-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+                  <span class="html-tb-sep"></span>
+                  <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="h2" title="Heading 2">H2</button>
+                  <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="h3" title="Heading 3">H3</button>
+                  <span class="html-tb-sep"></span>
+                  <button type="button" class="html-tb-btn" data-cmd="insertUnorderedList" title="Bullet List">•≡</button>
+                  <button type="button" class="html-tb-btn" data-cmd="insertOrderedList" title="Numbered List">1≡</button>
+                  <span class="html-tb-sep"></span>
+                  <button type="button" class="html-tb-btn" data-cmd="formatBlock" data-val="blockquote" title="Blockquote">❝</button>
+                  <button type="button" class="html-tb-btn" data-cmd="createlink" title="Insert Link">🔗</button>
+                </div>
+                <div class="html-editor-content" id="html-editor-content" contenteditable="true" placeholder="Start typing your lesson content..."></div>
+              </div>
+              <span class="form-hint">Use the toolbar to format text. Supports headings, lists, bold, italic, links, and blockquotes.</span>
+            </div>
+
+            <!-- SOURCE LINKS MANAGED EDITOR -->
+            <div class="form-group">
+              <label class="form-label">Additional Source Links</label>
+              <div class="managed-list-header">
+                <span id="source-links-editor-count">0 link(s)</span>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-add-source-link">+ Add Link</button>
+              </div>
+              <div class="managed-list-items" id="source-links-editor-list"></div>
+              <div class="managed-editor-panel" id="source-link-editor-panel" style="display:none">
+                <h4 class="managed-editor-heading" id="source-link-editor-heading">Add Source Link</h4>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Label <span class="required">*</span></label>
+                    <input class="form-input" id="edit-source-link-label" placeholder="e.g. Khan Academy">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">URL <span class="required">*</span></label>
+                    <input class="form-input" id="edit-source-link-url" placeholder="https://...">
+                  </div>
+                </div>
+                <div class="managed-editor-actions">
+                  <button type="button" class="btn btn-outline" id="btn-source-link-editor-cancel">Cancel</button>
+                  <button type="button" class="btn btn-primary" id="btn-source-link-editor-save">Save Link</button>
+                </div>
+              </div>
+              <span class="form-hint">Add reference links that appear as Additional Resources below the lesson content.</span>
+            </div>
+
+            <!-- QUIZ QUESTIONS MANAGED EDITOR -->
+            <div class="form-group">
+              <label class="form-label">Quiz Questions</label>
+              <div class="managed-list-header">
+                <span id="quiz-editor-count">0 question(s)</span>
+                <button type="button" class="btn btn-sm btn-primary" id="btn-add-quiz-question">+ Add Question</button>
+              </div>
+              <div class="managed-list-items" id="quiz-editor-list"></div>
+              <div class="managed-editor-panel" id="quiz-question-editor-panel" style="display:none">
+                <h4 class="managed-editor-heading" id="quiz-editor-heading">Add Question</h4>
+                <div class="form-group">
+                  <label class="form-label">Question Text <span class="required">*</span></label>
+                  <input class="form-input" id="edit-quiz-question-text" placeholder="e.g. What is 1/2 + 1/4?">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Options</label>
+                  <div id="quiz-options-editor-container"></div>
+                  <button type="button" class="btn btn-sm btn-outline" id="btn-add-quiz-option" style="margin-top:6px">+ Add Option</button>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Correct Answer (0-based index)</label>
+                  <input class="form-input" type="number" id="edit-quiz-answer" placeholder="0" min="0" value="0">
+                  <span class="form-hint">Enter the index of the correct option (0 = first option, 1 = second, etc.).</span>
+                </div>
+                <div class="managed-editor-actions">
+                  <button type="button" class="btn btn-outline" id="btn-quiz-editor-cancel">Cancel</button>
+                  <button type="button" class="btn btn-primary" id="btn-quiz-editor-save">Save Question</button>
+                </div>
+              </div>
+              <span class="form-hint">Add multiple-choice quiz questions. Students must answer all before marking the lesson complete.</span>
+            </div>
+            <div class="lesson-editor-actions">
+              <button class="btn btn-outline" id="btn-lesson-editor-cancel">Cancel</button>
+              <button class="btn btn-primary" id="btn-lesson-editor-save">Save Lesson</button>
+            </div>
+          </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" id="btn-modal-cancel">Cancel</button>
         <button class="btn btn-primary" id="btn-modal-save">Save Section</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lesson-editor-backdrop" id="sub-modal-backdrop"></div>
+
+  <div class="confirm-overlay" id="confirm-overlay" style="display:none">
+    <div class="confirm-box">
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Yes, Delete</button>
       </div>
     </div>
   </div>
@@ -172,11 +335,11 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 <script>
 /* ── Mock tool SDK ── */
 (function() {
-  var STORAGE_KEY_VALUE = 'selfpaced_test_value';
-  var STORAGE_KEY_SECTIONS = 'selfpaced_test_sections';
+  var STORAGE_KEY_VALUE = 'selfpaced_test_value_v2';
+  var STORAGE_KEY_SECTIONS = 'selfpaced_test_sections_v2';
   var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
   var _readOnly = false, _user = null, _fields = {}, _value = null;
-  var _managerMode = true; // default to manager for testing
+  var _managerMode = true;
 
   function loadValue() {
     try { var raw = localStorage.getItem(STORAGE_KEY_VALUE); _value = raw ? JSON.parse(raw) : null; }
@@ -193,30 +356,25 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
   function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
   window.tool = {
-    // Value
     getValue: function() { return _value; },
     setValue: function(data) { saveValue(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
     onValueChange: function(cb) { listeners.valueChange.push(cb); },
 
-    // Fields
     getFields: function() { return Object.assign({}, _fields); },
     setField: function(id, value) { _fields[id] = value; },
     setFields: function(obj) { Object.assign(_fields, obj); },
     watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
     onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
 
-    // Params (can override via URL: ?managerRole=admin&sectionsTypeId=test)
     param: function(name, fallback) {
       var p = (new URLSearchParams(window.location.search)).get(name);
       return p !== null && p !== '' ? p : (fallback !== undefined ? fallback : '');
     },
 
-    // Read-only
     isReadOnly: function() { return _readOnly; },
     onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
     _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
 
-    // User
     getUser: function() {
       if (_user) return _user;
       return _managerMode
@@ -225,14 +383,11 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     },
     onUserChange: function(cb) { listeners.userChange.push(cb); },
 
-    // Permitted users
     getPermittedUsers: function() { return []; },
     onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
 
-    // Validation
     reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
 
-    // Notifications
     notify: function(message, severity) {
       severity = severity || 'info';
       var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
@@ -243,18 +398,13 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
       setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
     },
 
-    // Layout
     resize: function() { console.log('[tool.resize]'); },
-
-    // URL opener
     openUrl: function(url) { window.open(url, '_blank'); },
 
-    // Schema declarations (no-op in test)
     declareOutput: function() {},
     declareParams: function() {},
     reportMissingParams: function() {},
 
-    /* ── Mock requestObjects (localStorage-backed CRUD) ── */
     requestObjects: function(action, params, callback) {
       var sections = loadSections();
       var err = null, result = null;
@@ -263,7 +413,6 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
         case 'query':
           result = { objects: sections.slice() };
           break;
-
         case 'get':
           var found = null;
           for (var i = 0; i < sections.length; i++) {
@@ -271,7 +420,6 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
           }
           result = { object: found || null };
           break;
-
         case 'create':
           var newSection = {
             id: genId(),
@@ -288,7 +436,6 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
           saveSections(sections);
           result = { object: newSection };
           break;
-
         case 'update':
           for (var j = 0; j < sections.length; j++) {
             if (sections[j].id === params.objectId) {
@@ -307,27 +454,20 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
           saveSections(sections);
           result = { ok: true };
           break;
-
         case 'delete':
           sections = sections.filter(function(s) { return s.id !== params.objectId; });
           saveSections(sections);
           result = { ok: true };
           break;
-
         case 'batch':
-          // Simplified batch: process sequentially
           result = { ok: true, results: [] };
           break;
-
         default:
           err = 'Unknown action: ' + action;
       }
-
-      // Simulate async
       setTimeout(function() { callback(err, result); }, 50);
     },
 
-    // Request methods stubs (not used by this tool, but available)
     requestAI: function(prompt, context, cb) { cb('AI not available in test harness', null); },
     requestAIStream: function(prompt, context, callbacks) {
       if (callbacks && callbacks.onError) callbacks.onError('AI streaming not available in test harness');
@@ -337,104 +477,142 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     requestExportPdf: function(opts, cb) { cb('PDF export not available in test harness', null); },
     requestSendEmail: function(opts, cb) { cb('Email not available in test harness', null); },
 
-    // Entry point
     onReady: function(cb) { loadValue(); cb(_value, _fields); },
 
-    // Test harness helpers
     _loadSampleData: function() {
-      // Clear existing
       localStorage.removeItem(STORAGE_KEY_VALUE);
       localStorage.removeItem(STORAGE_KEY_SECTIONS);
 
-      // Create sample sections
       var sampleSections = [
         {
-          id: 'sec-001', _id: 'sec-001', contentId: 'c-001',
-          name: 'Introduction to Fractions',
-          slug: 'introduction-to-fractions',
+          id: 'sec-fractions',
+          _id: 'sec-fractions',
+          contentId: 'c-fractions',
+          name: 'Fractions Basics',
+          slug: 'fractions-basics',
           cmsObjectType: 'selfPacedSections-uniconbaseapps',
           productData: { data_categoriesBased: {
-            title: 'Introduction to Fractions',
+            title: 'Fractions Basics',
             order: 1,
-            estimatedMinutes: 20,
-            content: '<h2>What Are Fractions?</h2><p>A <strong>fraction</strong> represents a part of a whole. It is written as one number over another, like this: <strong>½</strong>.</p><h3>Parts of a Fraction</h3><ul><li><strong>Numerator</strong> (top number) — how many parts we have</li><li><strong>Denominator</strong> (bottom number) — how many equal parts the whole is divided into</li></ul><h3>Examples</h3><p>If you cut a pizza into 8 equal slices and eat 3, you\'ve eaten <strong>3/8</strong> of the pizza.</p><blockquote>💡 <strong>Key Insight:</strong> The denominator tells you the "size" of each piece — bigger denominator = smaller pieces!</blockquote><h3>Types of Fractions</h3><ul><li><strong>Proper fraction:</strong> numerator &lt; denominator (e.g., 3/4)</li><li><strong>Improper fraction:</strong> numerator ≥ denominator (e.g., 5/3)</li><li><strong>Mixed number:</strong> whole number + fraction (e.g., 1½)</li></ul>',
-            quiz: [
-              { question: 'In the fraction 3/4, what is the numerator?', options: ['3', '4', '7', '1'], answer: 0 },
-              { question: 'If a pizza is cut into 6 slices and you eat 2, what fraction did you eat?', options: ['2/6', '6/2', '4/6', '1/3'], answer: 0 },
-              { question: 'Which is an improper fraction?', options: ['1/2', '3/4', '5/3', '2/5'], answer: 2 }
+            lessons: [
+              {
+                id: 'les-intro',
+                title: 'Introduction to Fractions',
+                order: 1,
+                estimatedMinutes: 20,
+                youtubeUrls: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
+                presentationPdfUrls: null,
+                studyDocPdfUrls: null,
+                worksheetPdfUrls: null,
+                answerKeyPdfUrls: null,
+                sourceUrls: [
+                  { label: 'Khan Academy - Fractions Intro', url: 'https://www.khanacademy.org/math/arithmetic/fraction-arithmetic' }
+                ],
+                content: '<h2>What Are Fractions?</h2><p>A <strong>fraction</strong> represents a part of a whole. It is written as one number over another, like this: <strong>½</strong>.</p><h3>Parts of a Fraction</h3><ul><li><strong>Numerator</strong> (top number) — how many parts we have</li><li><strong>Denominator</strong> (bottom number) — how many equal parts the whole is divided into</li></ul><h3>Examples</h3><p>If you cut a pizza into 8 equal slices and eat 3, you\'ve eaten <strong>3/8</strong> of the pizza.</p><blockquote>💡 <strong>Key Insight:</strong> The denominator tells you the "size" of each piece — bigger denominator = smaller pieces!</blockquote>',
+                quiz: [
+                  { question: 'In the fraction 3/4, what is the numerator?', options: ['3', '4', '7', '1'], answer: 0 },
+                  { question: 'If a pizza is cut into 6 slices and you eat 2, what fraction did you eat?', options: ['2/6', '6/2', '4/6', '1/3'], answer: 0 }
+                ]
+              },
+              {
+                id: 'les-add-sub',
+                title: 'Adding and Subtracting Fractions',
+                order: 2,
+                estimatedMinutes: 25,
+                youtubeUrls: ['https://www.youtube.com/watch?v=5juto-5z8Y'],
+                presentationPdfUrls: null,
+                studyDocPdfUrls: null,
+                worksheetPdfUrls: null,
+                answerKeyPdfUrls: null,
+                sourceUrls: null,
+                content: '<h2>Adding &amp; Subtracting Fractions</h2><h3>Same Denominator</h3><p>When fractions have the <strong>same denominator</strong>, simply add or subtract the numerators and keep the denominator.</p><p><strong>Example:</strong> 2/7 + 3/7 = <strong>5/7</strong></p><h3>Different Denominators</h3><p>When denominators are different, you must find a <strong>common denominator</strong> first:</p><ol><li>Find the Least Common Multiple (LCM) of the denominators</li><li>Convert each fraction to an equivalent fraction with the LCM as denominator</li><li>Add or subtract the numerators</li><li>Simplify if possible</li></ol><p><strong>Example:</strong> 1/3 + 1/4 = 4/12 + 3/12 = <strong>7/12</strong></p>',
+                quiz: [
+                  { question: 'What is 2/5 + 1/5?', options: ['3/10', '3/5', '2/10', '1/5'], answer: 1 },
+                  { question: 'What is 3/4 - 1/4?', options: ['2/4', '1/2', '2/0', 'Both A and B'], answer: 3 }
+                ]
+              }
             ]
           }},
           created: '2026-07-01T10:00:00Z', updated: '2026-07-01T10:00:00Z'
         },
         {
-          id: 'sec-002', _id: 'sec-002', contentId: 'c-002',
-          name: 'Adding and Subtracting Fractions',
-          slug: 'adding-and-subtracting-fractions',
+          id: 'sec-mult-div',
+          _id: 'sec-mult-div',
+          contentId: 'c-mult-div',
+          name: 'Multiplying & Dividing Fractions',
+          slug: 'multiplying-and-dividing-fractions',
           cmsObjectType: 'selfPacedSections-uniconbaseapps',
           productData: { data_categoriesBased: {
-            title: 'Adding and Subtracting Fractions',
+            title: 'Multiplying & Dividing Fractions',
             order: 2,
-            estimatedMinutes: 25,
-            content: '<h2>Adding &amp; Subtracting Fractions</h2><h3>Same Denominator</h3><p>When fractions have the <strong>same denominator</strong>, simply add or subtract the numerators and keep the denominator.</p><p><strong>Example:</strong> 2/7 + 3/7 = <strong>5/7</strong></p><h3>Different Denominators</h3><p>When denominators are different, you must find a <strong>common denominator</strong> first:</p><ol><li>Find the Least Common Multiple (LCM) of the denominators</li><li>Convert each fraction to an equivalent fraction with the LCM as denominator</li><li>Add or subtract the numerators</li><li>Simplify if possible</li></ol><p><strong>Example:</strong> 1/3 + 1/4 = 4/12 + 3/12 = <strong>7/12</strong></p><blockquote>💡 <strong>Pro Tip:</strong> Always check if your answer can be simplified! Divide numerator and denominator by their greatest common factor.</blockquote>',
-            quiz: [
-              { question: 'What is 2/5 + 1/5?', options: ['3/10', '3/5', '2/10', '1/5'], answer: 1 },
-              { question: 'What is the LCM of 3 and 4?', options: ['7', '1', '12', '24'], answer: 2 },
-              { question: 'What is 3/4 - 1/4?', options: ['2/4', '1/2', '2/0', 'Both A and B'], answer: 3 }
-            ]
-          }},
-          created: '2026-07-01T11:00:00Z', updated: '2026-07-01T11:00:00Z'
-        },
-        {
-          id: 'sec-003', _id: 'sec-003', contentId: 'c-003',
-          name: 'Multiplying Fractions',
-          slug: 'multiplying-fractions',
-          cmsObjectType: 'selfPacedSections-uniconbaseapps',
-          productData: { data_categoriesBased: {
-            title: 'Multiplying Fractions',
-            order: 3,
-            estimatedMinutes: 20,
-            content: '<h2>Multiplying Fractions</h2><p>Multiplying fractions is actually <strong>easier</strong> than adding them!</p><h3>The Rule</h3><p><strong>Multiply the numerators, multiply the denominators:</strong></p><p style="font-size:18px;text-align:center;padding:12px;background:#eef2ff;border-radius:8px;">a/b × c/d = <strong>(a×c) / (b×d)</strong></p><h3>Example</h3><p>2/3 × 4/5 = (2×4) / (3×5) = <strong>8/15</strong></p><h3>Multiplying with Whole Numbers</h3><p>Convert the whole number to a fraction: 3 = 3/1</p><p>3 × 2/5 = 3/1 × 2/5 = 6/5 = <strong>1⅕</strong></p><blockquote>💡 <strong>Shortcut:</strong> Cancel common factors BEFORE multiplying to keep numbers small. This is called "cross-canceling."</blockquote>',
-            quiz: [
-              { question: 'What is 1/2 × 3/4?', options: ['3/8', '4/6', '3/6', '1/8'], answer: 0 },
-              { question: 'What is 2 × 3/5?', options: ['5/5', '6/5', '3/10', '5/3'], answer: 1 }
+            lessons: [
+              {
+                id: 'les-mult',
+                title: 'Multiplying Fractions',
+                order: 1,
+                estimatedMinutes: 20,
+                youtubeUrls: null,
+                presentationPdfUrls: null,
+                studyDocPdfUrls: ['https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'],
+                worksheetPdfUrls: null,
+                answerKeyPdfUrls: null,
+                sourceUrls: [
+                  { label: 'Math is Fun - Multiplying Fractions', url: 'https://www.mathsisfun.com/fractions_multiplication.html' },
+                  { label: 'Practice Worksheet', url: 'https://www.k5learning.com/free-math-worksheets/fifth-grade-5/fractions-multiplication-division' }
+                ],
+                content: '<h2>Multiplying Fractions</h2><p>Multiplying fractions is actually <strong>easier</strong> than adding them!</p><h3>The Rule</h3><p><strong>Multiply the numerators, multiply the denominators:</strong></p><p style="font-size:18px;text-align:center;padding:12px;background:#eef2ff;border-radius:8px;">a/b × c/d = <strong>(a×c) / (b×d)</strong></p><h3>Example</h3><p>2/3 × 4/5 = (2×4) / (3×5) = <strong>8/15</strong></p><blockquote>💡 <strong>Shortcut:</strong> Cancel common factors BEFORE multiplying to keep numbers small. This is called "cross-canceling."</blockquote>',
+                quiz: [
+                  { question: 'What is 1/2 × 3/4?', options: ['3/8', '4/6', '3/6', '1/8'], answer: 0 },
+                  { question: 'What is 2 × 3/5?', options: ['5/5', '6/5', '3/10', '5/3'], answer: 1 }
+                ]
+              },
+              {
+                id: 'les-div',
+                title: 'Dividing Fractions',
+                order: 2,
+                estimatedMinutes: 25,
+                youtubeUrl: 'https://www.youtube.com/watch?v=4Ik42xKBNtA',
+                pdfUrl: null,
+                sourceUrls: null,
+                content: '<h2>Dividing Fractions</h2><h3>The Golden Rule: Keep-Change-Flip</h3><p>To divide by a fraction, <strong>multiply by its reciprocal</strong>:</p><ol><li><strong>Keep</strong> the first fraction as-is</li><li><strong>Change</strong> ÷ to ×</li><li><strong>Flip</strong> the second fraction (use its reciprocal)</li></ol><p style="font-size:18px;text-align:center;padding:12px;background:#fef3c7;border-radius:8px;">a/b ÷ c/d = a/b × d/c = <strong>(a×d) / (b×c)</strong></p><h3>Example</h3><p>2/3 ÷ 4/5 = 2/3 × 5/4 = 10/12 = <strong>5/6</strong></p>',
+                quiz: [
+                  { question: 'What is 3/4 ÷ 1/2?', options: ['3/8', '6/4', '3/2', 'Both B and C'], answer: 3 }
+                ]
+              }
             ]
           }},
           created: '2026-07-02T09:00:00Z', updated: '2026-07-02T09:00:00Z'
         },
         {
-          id: 'sec-004', _id: 'sec-004', contentId: 'c-004',
-          name: 'Dividing Fractions',
-          slug: 'dividing-fractions',
+          id: 'sec-review',
+          _id: 'sec-review',
+          contentId: 'c-review',
+          name: 'Review & Real-World Applications',
+          slug: 'review-and-real-world-applications',
           cmsObjectType: 'selfPacedSections-uniconbaseapps',
           productData: { data_categoriesBased: {
-            title: 'Dividing Fractions',
-            order: 4,
-            estimatedMinutes: 25,
-            content: '<h2>Dividing Fractions</h2><h3>The Golden Rule: Keep-Change-Flip</h3><p>To divide by a fraction, <strong>multiply by its reciprocal</strong>:</p><ol><li><strong>Keep</strong> the first fraction as-is</li><li><strong>Change</strong> ÷ to ×</li><li><strong>Flip</strong> the second fraction (use its reciprocal)</li></ol><p style="font-size:18px;text-align:center;padding:12px;background:#fef3c7;border-radius:8px;">a/b ÷ c/d = a/b × d/c = <strong>(a×d) / (b×c)</strong></p><h3>Example</h3><p>2/3 ÷ 4/5 = 2/3 × 5/4 = 10/12 = <strong>5/6</strong></p><h3>Why Does This Work?</h3><p>Division is the inverse of multiplication. Dividing by 2 is the same as multiplying by 1/2. Dividing by 3/4 is the same as multiplying by 4/3!</p><blockquote>💡 <strong>Remember:</strong> Never flip the FIRST fraction — only flip the one you\'re dividing BY.</blockquote>',
-            quiz: [
-              { question: 'What is 3/4 ÷ 1/2?', options: ['3/8', '6/4', '3/2', 'Both B and C'], answer: 3 },
-              { question: 'What is the reciprocal of 5/8?', options: ['5/8', '8/5', '5/8', '8/8'], answer: 1 }
+            title: 'Review & Real-World Applications',
+            order: 3,
+            lessons: [
+              {
+                id: 'les-review',
+                title: 'Fractions in the Real World',
+                order: 1,
+                estimatedMinutes: 30,
+                youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                pdfUrl: null,
+                sourceUrls: [
+                  { label: 'Real-World Fractions Examples', url: 'https://www.splashlearn.com/math-vocabulary/fractions/fraction' }
+                ],
+                content: '<h2>Fractions in the Real World</h2><h3>Quick Review</h3><ul><li><strong>Add/Subtract:</strong> Need common denominator → add numerators</li><li><strong>Multiply:</strong> Numerators × Numerators, Denominators × Denominators</li><li><strong>Divide:</strong> Keep-Change-Flip → Multiply by reciprocal</li></ul><h3>Real-World Applications</h3><p><strong>Cooking:</strong> "This recipe serves 4 but I need to serve 6. I need 6/4 = 1½ times each ingredient."</p><p><strong>Shopping:</strong> "This shirt is 1/3 off. Original price: $45. Discount: 1/3 × 45 = $15. Sale price: $30."</p><p><strong>Construction:</strong> "I need to cut this 8-foot board into pieces that are each 3/4 foot long. 8 ÷ 3/4 = 8 × 4/3 = 32/3 ≈ 10 pieces."</p><blockquote>🎯 <strong>You\'ve completed the Fractions series!</strong> Practice these concepts daily and they\'ll become second nature.</blockquote>',
+                quiz: null
+              }
             ]
-          }},
-          created: '2026-07-02T10:00:00Z', updated: '2026-07-02T10:00:00Z'
-        },
-        {
-          id: 'sec-005', _id: 'sec-005', contentId: 'c-005',
-          name: 'Fractions Review & Real-World Applications',
-          slug: 'fractions-review-and-real-world-applications',
-          cmsObjectType: 'selfPacedSections-uniconbaseapps',
-          productData: { data_categoriesBased: {
-            title: 'Fractions Review & Real-World Applications',
-            order: 5,
-            estimatedMinutes: 30,
-            content: '<h2>Fractions in the Real World</h2><h3>Quick Review</h3><ul><li><strong>Add/Subtract:</strong> Need common denominator → add numerators</li><li><strong>Multiply:</strong> Numerators × Numerators, Denominators × Denominators</li><li><strong>Divide:</strong> Keep-Change-Flip → Multiply by reciprocal</li></ul><h3>Real-World Applications</h3><p><strong>Cooking:</strong> "This recipe serves 4 but I need to serve 6. I need 6/4 = 1½ times each ingredient."</p><p><strong>Shopping:</strong> "This shirt is 1/3 off. Original price: $45. Discount: 1/3 × 45 = $15. Sale price: $30."</p><p><strong>Construction:</strong> "I need to cut this 8-foot board into pieces that are each 3/4 foot long. 8 ÷ 3/4 = 8 × 4/3 = 32/3 ≈ 10 pieces."</p><p><strong>Sports:</strong> "A baseball player got hits in 1/4 of at-bats. Out of 36 at-bats, that\'s 36 × 1/4 = 9 hits."</p><blockquote>🎯 <strong>You\'ve completed the Fractions series!</strong> Practice these concepts daily and they\'ll become second nature.</blockquote>',
-            quiz: null
           }},
           created: '2026-07-03T09:00:00Z', updated: '2026-07-03T09:00:00Z'
         }
       ];
       saveSections(sampleSections);
-      // Clear progress
       saveValue(null);
       window.location.reload();
     },
@@ -445,13 +623,10 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
       window.location.reload();
     },
 
-    _toggleReadOnly: function() {
-      this._setReadOnly(!_readOnly);
-    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
 
     _toggleManager: function() {
       _managerMode = !_managerMode;
-      // Reload to re-trigger onReady with new user
       window.location.reload();
     },
 
@@ -468,22 +643,20 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
   };
 })();
 
-/* ── Keyboard shortcuts ── */
 document.addEventListener('keydown', function(e) {
   if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
   if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); }
   if (e.ctrlKey && e.shiftKey && e.key === 'M') { e.preventDefault(); window.tool._toggleManager(); }
 });
 
-/* ── Test harness buttons ── */
 document.getElementById('th-load-sample').addEventListener('click', function() {
-  if (confirm('Load 5 sample fraction curriculum sections? This will replace existing data.')) {
+  if (confirm('Load sample data with 3 sections and 5 lessons? This will replace existing data.')) {
     window.tool._loadSampleData();
   }
 });
 
 document.getElementById('th-clear').addEventListener('click', function() {
-  if (confirm('Clear ALL data (sections + progress)? This cannot be undone.')) {
+  if (confirm('Clear ALL data? This cannot be undone.')) {
     window.tool._clearData();
   }
 });
@@ -494,7 +667,6 @@ document.getElementById('th-toggle-manager').addEventListener('click', function(
   window.tool._toggleManager();
 });
 
-// Update status bar
 (function updateStatus() {
   var status = document.getElementById('th-status');
   if (status) {
