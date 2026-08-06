@@ -185,9 +185,6 @@ function renderSections() {
   var filterStatus = el('filter-status').value;
   var sorted = getSortedSections();
 
-  console.warn('[SelfPaced] renderSections called. SECTIONS.length=' + SECTIONS.length + ', sorted.length=' + sorted.length);
-  console.warn('[SelfPaced] grid element =', grid, ', empty element =', empty);
-
   var filtered = sorted.filter(function(s) {
     var name = (s.title || '').toLowerCase();
     if (searchTerm && name.indexOf(searchTerm) === -1) return false;
@@ -377,10 +374,18 @@ function renderLessonDetail() {
         }
       } else if (step.type === 'pdfs') {
         for (var pj = 0; pj < step.pdfUrls.length; pj++) {
+          var pdfUrl = step.pdfUrls[pj];
           html += '<div class="study-embed">';
           if (step.pdfUrls.length > 1) html += '<div class="study-embed-label">' + esc(step.label) + ' ' + (pj+1) + ' of ' + step.pdfUrls.length + '</div>';
-          html += '<div class="embed-container pdf-container"><iframe src="' + esc(step.pdfUrls[pj]) + '#toolbar=1&navpanes=1" frameborder="0" allowfullscreen></iframe></div>';
-          html += '<a class="embed-download-link" href="' + esc(step.pdfUrls[pj]) + '" target="_blank" rel="noopener">📥 Download ' + esc(step.label) + '</a></div>';
+          html += '<div class="pdf-viewer-card">';
+          html += '<div class="pdf-viewer-toolbar"><span class="pdf-viewer-icon">📄</span><span class="pdf-viewer-name">' + esc(step.label) + '</span></div>';
+          html += '<div class="pdf-fallback">';
+          html += '<div class="pdf-fallback-icon">📄</div>';
+          html += '<div class="pdf-fallback-text">Document ready to view</div>';
+          html += '<div class="pdf-fallback-actions">';
+          html += '<a class="btn btn-primary btn-sm" href="' + esc(pdfUrl) + '" target="_blank" rel="noopener noreferrer">🔍 Open Document</a>';
+          html += '</div>';
+          html += '</div></div></div>';
         }
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
@@ -726,13 +731,7 @@ function loadCurriculum(callback) {
   var sourceId = CONFIG.curriculumSourceId;
   var fieldName = tool.param('builderFieldName', '');
 
-  console.warn('[SelfPaced] loadCurriculum called');
-  console.warn('[SelfPaced] curriculumSourceId =', JSON.stringify(sourceId));
-  console.warn('[SelfPaced] builderFieldName  =', JSON.stringify(fieldName));
-  console.warn('[SelfPaced] sectionsTypeId    =', JSON.stringify(SECTIONS_TYPE));
-
   if (!sourceId) {
-    console.warn('[SelfPaced] No curriculumSourceId configured');
     SECTIONS = [];
     if (callback) callback();
     renderCurrentView();
@@ -744,43 +743,30 @@ function loadCurriculum(callback) {
   showLoading(true);
 
   var queryParams = { mainObjectType: SECTIONS_TYPE };
-  console.warn('[SelfPaced] Calling requestObjects("query",', JSON.stringify(queryParams), ')');
 
-  // Query all objects of this type, then find by contentId (stable, admin-controlled)
   tool.requestObjects('query', queryParams, function(err, result) {
     showLoading(false);
-    console.warn('[SelfPaced] requestObjects callback fired');
-    console.warn('[SelfPaced] err   =', JSON.stringify(err));
-    console.warn('[SelfPaced] result=', JSON.stringify(result ? (result.objects ? '(has .objects, length='+result.objects.length+')' : '(no .objects)') : '(null/undefined)'));
-    console.warn('[SelfPaced] result (full) =', JSON.stringify(result));
 
     if (err) {
       tool.notify('Error loading curriculum: ' + JSON.stringify(err), 'error');
       SECTIONS = [];
     } else {
-      // Try multiple possible result shapes: { objects: [...] }, { items: [...] }, or plain array
       var objects = [];
       if (result) {
-        if (Array.isArray(result)) { objects = result; console.warn('[SelfPaced] result is a plain array, length=' + result.length); }
-        else if (Array.isArray(result.objects)) { objects = result.objects; console.warn('[SelfPaced] using result.objects, length=' + result.objects.length); }
-        else if (Array.isArray(result.items)) { objects = result.items; console.warn('[SelfPaced] using result.items, length=' + result.items.length); }
-        else if (Array.isArray(result.data)) { objects = result.data; console.warn('[SelfPaced] using result.data, length=' + result.data.length); }
-        else { console.warn('[SelfPaced] result is not an array and has no .objects/.items/.data arrays. Keys:', Object.keys(result)); }
+        if (Array.isArray(result)) { objects = result; }
+        else if (Array.isArray(result.objects)) { objects = result.objects; }
+        else if (Array.isArray(result.items)) { objects = result.items; }
+        else if (Array.isArray(result.data)) { objects = result.data; }
       }
 
-      // Diagnostic: show what we found
       var contentIdsFound = [];
       for (var k = 0; k < objects.length; k++) {
         var cid = objects[k].contentId || objects[k].id || '(no id)';
         contentIdsFound.push(cid);
       }
 
-      console.warn('[SelfPaced] objects extracted count =', objects.length);
-      console.warn('[SelfPaced] contentIds found =', JSON.stringify(contentIdsFound));
-      console.warn('[SelfPaced] looking for contentId =', JSON.stringify(sourceId));
-
       if (objects.length === 0) {
-        tool.notify('Query returned 0 objects of type "' + SECTIONS_TYPE + '". Check: 1) An object of this type exists, 2) The type ID matches exactly.', 'error');
+        tool.notify('Query returned 0 objects of type "' + SECTIONS_TYPE + '". Check the Curriculum Builder App ID matches.', 'error');
         SECTIONS = [];
       } else {
         var found = null;
@@ -791,14 +777,12 @@ function loadCurriculum(callback) {
           tool.notify('Found ' + objects.length + ' object(s) but none with contentId="' + sourceId + '". ContentIds found: ' + contentIdsFound.join(', '), 'error');
           SECTIONS = [];
         } else {
-          console.warn('[SelfPaced] Object found! Checking for sections at field "' + (fieldName || '(auto-search)') + '"');
           SECTIONS = findSectionsInObject(found, fieldName);
-          console.warn('[SelfPaced] SECTIONS extracted count =', SECTIONS.length);
           if (SECTIONS.length === 0) {
             if (fieldName) {
-              tool.notify('Object found but no sections at field "' + fieldName + '". Check that builderFieldName matches the field ID where the Builder is installed.', 'warning');
+              tool.notify('Object found but no sections at field "' + fieldName + '". Check builderFieldName.', 'warning');
             } else {
-              tool.notify('Object found but no sections data. Set <strong>builderFieldName</strong> to the field ID where the Curriculum Builder is installed.', 'warning');
+              tool.notify('Object found but no sections data. Set builderFieldName in Tool Parameters.', 'warning');
             }
           }
         }
@@ -1064,15 +1048,6 @@ tool.onReady(function(val, fields) {
     { name: 'curriculumBuilderAppId', label: 'Curriculum Builder App ID', type: 'text', default: 'curriculum-builder-uniconbaseapps', severity: 'goodToHave', hint: 'The CMS object type ID of the Curriculum Builder app. Used to query curriculum objects. Default works for most cases.' }
   ]);
 
-  // Dump ALL params for debugging
-  console.warn('[SelfPaced] === TOOL STARTUP ===');
-  console.warn('[SelfPaced] builderFieldName   =', JSON.stringify(tool.param('builderFieldName', '')));
-  console.warn('[SelfPaced] curriculumBuilderAppId =', JSON.stringify(tool.param('curriculumBuilderAppId', '')));
-  console.warn('[SelfPaced] val (onReady data) =', JSON.stringify(val));
-  console.warn('[SelfPaced] fields             =', JSON.stringify(fields));
-  console.warn('[SelfPaced] tool.getUser()     =', JSON.stringify(tool.getUser()));
-  console.warn('[SelfPaced] SECTIONS_TYPE      =', JSON.stringify(SECTIONS_TYPE));
-
   var stype = tool.param('curriculumBuilderAppId', 'curriculum-builder-uniconbaseapps');
   SECTIONS_TYPE = stype || 'curriculum-builder-uniconbaseapps';
 
@@ -1080,9 +1055,6 @@ tool.onReady(function(val, fields) {
   loadData(val);
   updateRoleBadge(tool.getUser());
   bindEvents();
-
-  console.warn('[SelfPaced] CONFIG.curriculumSourceId =', JSON.stringify(CONFIG.curriculumSourceId));
-  console.warn('[SelfPaced] isAdmin() =', isAdmin());
 
   tool.onValueChange(function(v) {
     loadData(v);
