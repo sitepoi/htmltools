@@ -10,13 +10,15 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
+var CONFIG = { curriculumSourceId: '' }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
-var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail'
+var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail' | 'setup'
 var currentSectionId = null;
 var currentLessonId = null;
 var quizAnswers = {};
 var quizSubmitted = false;
+var availableCurriculums = []; // Cached list of Builder objects for the setup picker
 
 /* ── Constants ── */
 var SECTIONS_TYPE = 'curriculum-builder-uniconbaseapps';
@@ -24,6 +26,18 @@ var MIN_PASS_SCORE = 60;
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 var STUDY_WAIT_MIN = 30;
+
+/* ── Role check ── */
+function isAdmin() {
+  var user = tool.getUser();
+  if (!user) return false;
+  var roles = user.roles || [];
+  for (var i = 0; i < roles.length; i++) {
+    var r = (roles[i] || '').toLowerCase();
+    if (r === 'admin' || r === 'developer' || r === 'owner') return true;
+  }
+  return false;
+}
 
 /* ── YouTube ID extraction ── */
 function extractYouTubeId(url) {
@@ -155,9 +169,9 @@ function getPrevLesson(sectionId, lessonId) {
   return null;
 }
 
-/* ── Persist progress ── */
+/* ── Persist progress (preserves config) ── */
 function saveProgress() {
-  tool.setValue({ progress: PROGRESS });
+  tool.setValue({ config: CONFIG, progress: PROGRESS });
 }
 
 /* ═══════════════════════════════════════════
@@ -339,28 +353,39 @@ function renderLessonDetail() {
     for (var si = 0; si < steps.length; si++) {
       var step = steps[si];
       var stepId = 'study-step-' + si;
+      var isLast = si === steps.length - 1;
       html += '<div class="study-step" id="' + stepId + '">';
+      // Connector line between steps
+      if (!isLast) html += '<div class="study-step-connector"></div>';
+      // Step header
       html += '<div class="study-step-header" onclick="toggleStudyStep(\'' + stepId + '\')">';
-      html += '<div class="study-step-num">' + step.num + '</div><div class="study-step-icon">' + step.icon + '</div><div class="study-step-title">' + esc(step.title) + '</div><div class="study-step-toggle">▼</div>';
-      html += '</div><div class="study-step-body">';
+      html += '<div class="study-step-badge">' + step.num + '</div>';
+      html += '<div class="study-step-info">';
+      html += '<div class="study-step-icon">' + step.icon + '</div>';
+      html += '<div class="study-step-title">' + esc(step.title) + '</div>';
+      html += '</div>';
+      html += '<div class="study-step-toggle">▼</div>';
+      html += '</div>';
+      // Step body
+      html += '<div class="study-step-body">';
 
       if (step.type === 'video') {
         for (var vj = 0; vj < step.videoIds.length; vj++) {
           html += '<div class="study-embed">';
-          if (step.videoIds.length > 1) html += '<div class="study-embed-label">Video ' + (vj+1) + ' of ' + step.videoIds.length + '</div>';
+          if (step.videoIds.length > 1) html += '<div class="study-embed-label">🎬 Video ' + (vj+1) + ' of ' + step.videoIds.length + '</div>';
           html += '<div class="embed-container youtube-container"><iframe src="https://www.youtube.com/embed/' + step.videoIds[vj] + '?modestbranding=1&rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div></div>';
         }
       } else if (step.type === 'pdfs') {
         for (var pj = 0; pj < step.pdfUrls.length; pj++) {
           html += '<div class="study-embed">';
           if (step.pdfUrls.length > 1) html += '<div class="study-embed-label">' + esc(step.label) + ' ' + (pj+1) + ' of ' + step.pdfUrls.length + '</div>';
-          html += '<div class="embed-container pdf-container"><iframe src="https://docs.google.com/viewer?url=' + encodeURIComponent(step.pdfUrls[pj]) + '&embedded=true" frameborder="0"></iframe></div>';
-          html += '<a class="embed-download-link" href="' + esc(step.pdfUrls[pj]) + '" target="_blank" rel="noopener">📎 Open ' + esc(step.label) + ' in new tab</a></div>';
+          html += '<div class="embed-container pdf-container"><iframe src="' + esc(step.pdfUrls[pj]) + '#toolbar=1&navpanes=1" frameborder="0" allowfullscreen></iframe></div>';
+          html += '<a class="embed-download-link" href="' + esc(step.pdfUrls[pj]) + '" target="_blank" rel="noopener">📥 Download ' + esc(step.label) + '</a></div>';
         }
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
       } else if (step.type === 'quiz') {
-        html += renderQuizInFlow(step.quizData, prog, currentSectionId, currentLessonId);
+        html += '<div class="study-quiz-wrap">' + renderQuizInFlow(step.quizData, prog, currentSectionId, currentLessonId) + '</div>';
       }
 
       html += '</div></div>';
@@ -698,7 +723,7 @@ function retryQuiz() {
    ═══════════════════════════════════════════ */
 
 function loadCurriculum(callback) {
-  var sourceId = tool.param('curriculumSourceId', '');
+  var sourceId = CONFIG.curriculumSourceId;
   var fieldName = tool.param('builderFieldName', '');
 
   console.warn('[SelfPaced] loadCurriculum called');
@@ -707,8 +732,11 @@ function loadCurriculum(callback) {
   console.warn('[SelfPaced] sectionsTypeId    =', JSON.stringify(SECTIONS_TYPE));
 
   if (!sourceId) {
-    console.warn('[SelfPaced] No curriculumSourceId — showing config required message');
-    el('app').innerHTML = '<div style="text-align:center;padding:60px 20px"><div class="empty-icon">⚠️</div><div class="empty-title">Configuration Required</div><div class="empty-desc">This tool needs a <strong>curriculumSourceId</strong> parameter. Set it to the <strong>contentId</strong> of the CMS object that has the Curriculum Builder.</div></div>';
+    console.warn('[SelfPaced] No curriculumSourceId configured');
+    SECTIONS = [];
+    if (callback) callback();
+    renderCurrentView();
+    updateProgressBar();
     tool.resize();
     return;
   }
@@ -836,7 +864,16 @@ function findSectionsInObject(obj, fieldName) {
   return [];
 }
 
-function loadProgress(val) {
+function loadData(val) {
+  // Load config (object-level, set by admin per object)
+  if (val && val.config && typeof val.config === 'object') {
+    CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
+  }
+  // Legacy: also check tool param for backward compat
+  if (!CONFIG.curriculumSourceId) {
+    CONFIG.curriculumSourceId = tool.param('curriculumSourceId', '');
+  }
+  // Load progress
   if (val && typeof val === 'object' && val.progress) {
     PROGRESS = val.progress;
   } else {
@@ -845,7 +882,8 @@ function loadProgress(val) {
 }
 
 function renderCurrentView() {
-  if (currentView === 'lesson-detail') renderLessonDetail();
+  if (currentView === 'setup') renderSetup();
+  else if (currentView === 'lesson-detail') renderLessonDetail();
   else if (currentView === 'lessons') renderLessons();
   else renderSections();
 }
@@ -872,6 +910,130 @@ function updateRoleBadge(user) {
 }
 
 /* ═══════════════════════════════════════════
+   SETUP: Admin picks curriculum per object
+   ═══════════════════════════════════════════ */
+
+/** Fetch all Builder objects to populate the curriculum picker */
+function fetchAvailableCurriculums(callback) {
+  showLoading(true);
+  tool.requestObjects('query', { mainObjectType: SECTIONS_TYPE }, function(err, result) {
+    showLoading(false);
+    if (err) {
+      availableCurriculums = [];
+    } else {
+      var objects = [];
+      if (result) {
+        if (Array.isArray(result)) objects = result;
+        else if (Array.isArray(result.objects)) objects = result.objects;
+      }
+      availableCurriculums = objects;
+    }
+    if (callback) callback();
+  });
+}
+
+/** Show the setup screen (only for admins) */
+function showSetup() {
+  currentView = 'setup';
+  el('view-sections').style.display = 'none';
+  el('view-lessons').style.display = 'none';
+  el('view-lesson-detail').style.display = 'none';
+  el('view-setup').style.display = '';
+  el('btn-back').style.display = 'none';
+  el('btn-change-course').style.display = 'none';
+  el('progress-bar-wrap').style.display = 'none';
+  el('app-title').textContent = '⚙️ Course Setup';
+
+  fetchAvailableCurriculums(function() {
+    renderSetup();
+  });
+}
+
+function renderSetup() {
+  var select = el('setup-curriculum-select');
+  var hint = el('setup-hint');
+
+  if (availableCurriculums.length === 0) {
+    select.innerHTML = '<option value="">-- No curriculums found --</option>';
+    hint.innerHTML = '⚠️ No curriculum objects found. Create one with the Curriculum Builder tool first.';
+    return;
+  }
+
+  var optionsHtml = '<option value="">-- Select a curriculum --</option>';
+  for (var i = 0; i < availableCurriculums.length; i++) {
+    var c = availableCurriculums[i];
+    var cid = c.contentId || c.id || '';
+    var name = c.name || cid || 'Unnamed';
+    var selected = (cid === CONFIG.curriculumSourceId) ? ' selected' : '';
+    optionsHtml += '<option value="' + esc(cid) + '"' + selected + '>' + esc(name) + ' (' + esc(cid) + ')</option>';
+  }
+  select.innerHTML = optionsHtml;
+
+  hint.innerHTML = isAdmin()
+    ? 'Select a curriculum and click Save. Only admins can change this later.'
+    : '🔒 Only admins can configure the curriculum. Please contact your administrator.';
+}
+
+/** Cancel setup and return to previous view */
+function cancelSetup() {
+  if (CONFIG.curriculumSourceId) {
+    // Curriculum already configured — go back to sections
+    el('view-setup').style.display = 'none';
+    el('view-sections').style.display = '';
+    el('progress-bar-wrap').style.display = '';
+    currentView = 'sections';
+    el('app-title').textContent = '📚 Self-Paced Learning';
+    updateAdminUI();
+    renderSections();
+    updateProgressBar();
+  }
+  tool.resize();
+}
+function saveSetupConfig() {
+  if (!isAdmin()) {
+    tool.notify('Only admins can configure the curriculum.', 'warning');
+    return;
+  }
+
+  var selectedId = el('setup-curriculum-select').value;
+
+  if (!selectedId) {
+    tool.notify('Please select a curriculum.', 'warning');
+    return;
+  }
+
+  CONFIG.curriculumSourceId = selectedId;
+  saveProgress();
+
+  tool.notify('Curriculum configured! Loading...', 'success');
+
+  // Hide setup, show sections view
+  el('view-setup').style.display = 'none';
+  el('progress-bar-wrap').style.display = '';
+  currentView = 'sections';
+
+  loadCurriculum(function() {
+    updateProgressBar();
+    renderSections();
+    updateAdminUI();
+    tool.resize();
+  });
+}
+
+/** Show/hide admin-only controls */
+function updateAdminUI() {
+  var changeBtn = el('btn-change-course');
+  if (changeBtn) {
+    changeBtn.style.display = (isAdmin() && CONFIG.curriculumSourceId) ? '' : 'none';
+  }
+  // Disable save button in setup if not admin
+  var saveBtn = el('btn-setup-save');
+  if (saveBtn && currentView === 'setup') {
+    saveBtn.disabled = !isAdmin();
+  }
+}
+
+/* ═══════════════════════════════════════════
    EVENT BINDINGS
    ═══════════════════════════════════════════ */
 
@@ -883,6 +1045,9 @@ function bindEvents() {
   el('btn-mark-inprogress').addEventListener('click', markInProgress);
   el('search-input').addEventListener('input', function() { renderSections(); });
   el('filter-status').addEventListener('change', function() { renderSections(); });
+  el('btn-setup-save').addEventListener('click', saveSetupConfig);
+  el('btn-setup-cancel').addEventListener('click', cancelSetup);
+  el('btn-change-course').addEventListener('click', function() { showSetup(); });
 }
 
 /* ═══════════════════════════════════════════
@@ -895,41 +1060,59 @@ tool.onReady(function(val, fields) {
   }, 12000);
 
   tool.declareParams([
-    { name: 'curriculumSourceId', label: 'Curriculum Source contentId', type: 'text', default: '', severity: 'mandatory', hint: 'Set to the contentId of the CMS object that has the Curriculum Builder tool. contentId is the stable, admin-controlled identifier.' },
-    { name: 'builderFieldName', label: 'Builder Field Name', type: 'text', default: '', severity: 'goodToHave', hint: 'The field ID of the Curriculum Builder tool inside the CMS object. This is the name you set when adding the tool to the object (e.g. "curriculumData").' },
-    { name: 'sectionsTypeId', label: 'Curriculum Type ID', type: 'text', default: 'curriculumBuilder-uniconbaseapps', severity: 'goodToHave', hint: 'CMS object type for curriculum. Default works for most cases.' }
+    { name: 'builderFieldName', label: 'Builder Field Name (default)', type: 'text', default: '', severity: 'goodToHave', hint: 'Default field ID of the Curriculum Builder tool inside CMS objects. Can be overridden per-object in setup.' },
+    { name: 'curriculumBuilderAppId', label: 'Curriculum Builder App ID', type: 'text', default: 'curriculum-builder-uniconbaseapps', severity: 'goodToHave', hint: 'The CMS object type ID of the Curriculum Builder app. Used to query curriculum objects. Default works for most cases.' }
   ]);
 
   // Dump ALL params for debugging
   console.warn('[SelfPaced] === TOOL STARTUP ===');
-  console.warn('[SelfPaced] curriculumSourceId =', JSON.stringify(tool.param('curriculumSourceId', '')));
   console.warn('[SelfPaced] builderFieldName   =', JSON.stringify(tool.param('builderFieldName', '')));
-  console.warn('[SelfPaced] sectionsTypeId     =', JSON.stringify(tool.param('sectionsTypeId', '')));
+  console.warn('[SelfPaced] curriculumBuilderAppId =', JSON.stringify(tool.param('curriculumBuilderAppId', '')));
   console.warn('[SelfPaced] val (onReady data) =', JSON.stringify(val));
   console.warn('[SelfPaced] fields             =', JSON.stringify(fields));
   console.warn('[SelfPaced] tool.getUser()     =', JSON.stringify(tool.getUser()));
   console.warn('[SelfPaced] SECTIONS_TYPE      =', JSON.stringify(SECTIONS_TYPE));
 
-  var sourceId = tool.param('curriculumSourceId', '');
-  if (!sourceId) {
-    tool.reportMissingParams([
-      { name: 'curriculumSourceId', label: 'Curriculum Source contentId', type: 'text', default: '', hint: 'Set to the contentId of the CMS object with the Curriculum Builder.', reason: 'Cannot load curriculum without a source contentId.', severity: 'mandatory' }
-    ], 'This tool requires the Curriculum Source ID to be configured. Copy it from the Curriculum Builder tool.');
-  }
+  var stype = tool.param('curriculumBuilderAppId', 'curriculum-builder-uniconbaseapps');
+  SECTIONS_TYPE = stype || 'curriculum-builder-uniconbaseapps';
 
-  var stype = tool.param('sectionsTypeId', 'curriculumBuilder-uniconbaseapps');
-  SECTIONS_TYPE = stype || 'curriculumBuilder-uniconbaseapps';
-
-  loadProgress(val);
+  // Load config from object data (set by admin via setup screen)
+  loadData(val);
   updateRoleBadge(tool.getUser());
   bindEvents();
 
-  tool.onValueChange(function(v) { loadProgress(v); renderCurrentView(); updateProgressBar(); });
-  tool.onUserChange(function() { updateRoleBadge(tool.getUser()); });
+  console.warn('[SelfPaced] CONFIG.curriculumSourceId =', JSON.stringify(CONFIG.curriculumSourceId));
+  console.warn('[SelfPaced] isAdmin() =', isAdmin());
 
-  loadCurriculum(function() {
-    updateProgressBar();
-    renderSections();
-    tool.resize();
+  tool.onValueChange(function(v) {
+    loadData(v);
+    // If config changed externally, reload curriculum
+    if (CONFIG.curriculumSourceId && currentView !== 'setup') {
+      loadCurriculum(function() {
+        updateProgressBar();
+        renderCurrentView();
+        tool.resize();
+      });
+    } else {
+      renderCurrentView();
+      updateProgressBar();
+    }
   });
+  tool.onUserChange(function() { updateRoleBadge(tool.getUser()); updateAdminUI(); });
+
+  // Decide what to show
+  if (!CONFIG.curriculumSourceId) {
+    // No curriculum configured — show setup (admins can pick, students see message)
+    showSetup();
+    updateAdminUI();
+    tool.resize();
+  } else {
+    // Curriculum is configured — load it
+    updateAdminUI();
+    loadCurriculum(function() {
+      updateProgressBar();
+      renderSections();
+      tool.resize();
+    });
+  }
 });

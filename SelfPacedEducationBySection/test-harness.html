@@ -58,9 +58,9 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 
 <script>
 (function() {
-  var STORAGE_CURRICULUM = 'student_test_curriculum_v1';
-  var STORAGE_PROGRESS = 'student_test_progress_v1';
-  var _user = { id: 'u-learner', name: 'Can Öztürk', email: 'can@example.com', roles: ['worker'] };
+  var STORAGE_DATA = 'student_test_data_v2';
+  // User with admin role to test setup screen; change to ['worker'] for student view
+  var _user = { id: 'u-admin', name: 'Can Öztürk (Admin)', email: 'can@example.com', roles: ['admin'] };
 
   // Default sample curriculum (simulates what setValue stores in productData)
   var SAMPLE_CURRICULUM = {
@@ -68,7 +68,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     contentId: 'cur-sample-1',
     name: 'Sample Curriculum',
     productData: { data_categoriesBased: {
-      fg_main: { toolData: { sections: [
+      toolData: { sections: [
       { id: 'sec-fractions', title: 'Fractions Basics', order: 1, lessons: [
         { id: 'les-intro', title: 'Introduction to Fractions', order: 1, estimatedMinutes: 20,
           youtubeUrls: ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
@@ -105,21 +105,28 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
           ]
         }
       ]}
-    ]}}}}
+    ]}}}
   };
 
-  function loadCurriculum() { try { return JSON.parse(localStorage.getItem(STORAGE_CURRICULUM)); } catch(e) { return null; } }
-  function loadProgress() { try { return JSON.parse(localStorage.getItem(STORAGE_PROGRESS)); } catch(e) { return null; } }
-  function saveProgress(v) { try { localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(v)); } catch(e) {} }
+  function loadData() { try { return JSON.parse(localStorage.getItem(STORAGE_DATA)); } catch(e) { return null; } }
+  function saveData(v) { try { localStorage.setItem(STORAGE_DATA, JSON.stringify(v)); } catch(e) {} }
+
+  // Pre-populate with default config so curriculum loads instantly (remove to test setup screen)
+  var DEFAULT_DATA = {
+    config: { curriculumSourceId: 'cur-sample-1', builderFieldName: 'toolData' },
+    progress: {}
+  };
+  if (!localStorage.getItem(STORAGE_DATA)) {
+    saveData(DEFAULT_DATA);
+  }
 
   window.tool = {
-    getValue: function() { return loadProgress(); },
-    setValue: function(data) { saveProgress(data); },
+    getValue: function() { return loadData(); },
+    setValue: function(data) { saveData(data); },
     onValueChange: function(cb) { this._onValChange = cb; },
     param: function(name, fallback) {
-      if (name === 'curriculumSourceId') return 'cur-sample-1';
       if (name === 'builderFieldName') return 'toolData';
-      if (name === 'sectionsTypeId') return 'curriculumBuilder-uniconbaseapps';
+      if (name === 'curriculumBuilderAppId') return 'curriculum-builder-uniconbaseapps';
       return (new URLSearchParams(window.location.search)).get(name) || fallback || '';
     },
     isReadOnly: function() { return false; },
@@ -140,23 +147,21 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     requestObjects: function(action, params, callback) {
       if (action === 'query') {
         // Return all curriculum objects so contentId filtering works
-        var curriculum = loadCurriculum() || SAMPLE_CURRICULUM;
-        setTimeout(function() { callback(null, { objects: [curriculum] }); }, 100);
+        setTimeout(function() { callback(null, { objects: [SAMPLE_CURRICULUM] }); }, 100);
       } else if (action === 'get' && params.objectId === 'cur-sample-1') {
-        var curriculum = loadCurriculum() || SAMPLE_CURRICULUM;
-        setTimeout(function() { callback(null, { object: curriculum }); }, 100);
+        setTimeout(function() { callback(null, { object: SAMPLE_CURRICULUM }); }, 100);
       } else {
         setTimeout(function() { callback('Not found', null); }, 100);
       }
     },
-    onReady: function(cb) { cb(loadProgress(), {}); },
+    onReady: function(cb) { cb(loadData(), {}); },
     _setValueChange: function(v) { if (this._onValChange) this._onValChange(v); },
     _loadSample: function() {
-      localStorage.setItem(STORAGE_CURRICULUM, JSON.stringify(SAMPLE_CURRICULUM));
-      localStorage.removeItem(STORAGE_PROGRESS);
+      localStorage.removeItem(STORAGE_DATA);
+      saveData(DEFAULT_DATA);
       window.location.reload();
     },
-    _clear: function() { localStorage.removeItem(STORAGE_PROGRESS); window.location.reload(); }
+    _clear: function() { localStorage.removeItem(STORAGE_DATA); window.location.reload(); }
   };
 })();
 
