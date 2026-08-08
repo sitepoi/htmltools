@@ -250,14 +250,15 @@ body {
   background: var(--surface);
 }
 .pdf-viewer-toolbar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 20px; background: #fafbfc;
-  border-bottom: 1px solid var(--border); flex-wrap: wrap;
-  position: sticky; top: 58px; z-index: 4;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; background: #fafbfc;
+  border-bottom: 1px solid var(--border); flex-wrap: nowrap;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
-.pdf-viewer-icon { font-size: 20px; flex-shrink: 0; }
-.pdf-viewer-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; min-width: 0; }
+.pdf-viewer-icon { font-size: 18px; flex-shrink: 0; }
+.pdf-viewer-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Spacer pushes page-nav and open-link to the right as a group */
+.pdf-viewer-toolbar .btn[data-open-url] { margin-left: auto; }
 .pdf-canvas-container {
   width: 100%; display: flex; flex-direction: column; align-items: center;
   gap: 12px; padding: 20px 0;
@@ -310,18 +311,34 @@ body {
 .pdf-page-nav-item:hover { background: var(--primary-bg); color: var(--primary); }
 .pdf-page-nav-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
 
+/* ── PDF Zoom Controls ── */
+.pdf-zoom-group {
+  display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0;
+}
+.pdf-zoom-btn {
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+  cursor: pointer; font-size: 13px; color: var(--text-muted); transition: all var(--transition);
+  font-family: inherit; line-height: 1; padding: 0;
+}
+.pdf-zoom-btn:hover { background: var(--surface-alt); color: var(--text); border-color: #cbd5e1; }
+.pdf-zoom-label {
+  font-size: 11px; font-weight: 600; color: var(--text-muted); min-width: 36px; text-align: center;
+  user-select: none; cursor: default; line-height: 1;
+}
+.pdf-zoom-sep {
+  width: 1px; height: 18px; background: var(--border); margin: 0 4px;
+}
+
 /* Quiz wrapper inside study flow */
 .study-quiz-wrap { margin-top: 8px; }
 .quiz-actions { margin-top: 18px; display: flex; gap: 10px; }
 
-/* ── Detail Navigation (sticky bottom bar) ── */
-.detail-nav {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px; border-top: 1px solid var(--border);
-  background: var(--surface); gap: 10px; position: sticky; bottom: 0;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+/* Nav buttons inside the Completion tab */
+.quiz-nav-actions {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 20px 0; flex-wrap: wrap;
 }
-.detail-nav-center { display: flex; gap: 10px; }
 
 /* ── Setup Screen ── */
 .setup-card {
@@ -482,7 +499,7 @@ body {
 .sg-timeline-item { position: relative; margin-bottom: 16px; }
 .sg-timeline-item::before { content: ''; position: absolute; left: -24px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--primary); }
 
-/* Interactive Q&A v3 — clickable options with radio buttons */
+/* Interactive Q&A v3 — clickable options with "Show Answer" button */
 .sg-quiz-section { margin: 28px 0; }
 .sg-quiz-item-v3 { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 12px; background: var(--surface); transition: all var(--transition); }
 .sg-quiz-item-v3:hover { border-color: var(--primary-light); }
@@ -492,10 +509,30 @@ body {
 .sg-q-opt { display: block; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; margin-bottom: 6px; background: #fafbfc; font-size: 14px; transition: all 0.15s ease; }
 .sg-q-opt:hover { border-color: var(--primary-light); background: var(--primary-bg); }
 .sg-q-radio:checked + .sg-q-opt { border-color: var(--primary); background: var(--primary-bg); font-weight: 600; box-shadow: 0 0 0 1px var(--primary); }
-.sg-q-feedback { display: none; margin-top: 12px; padding: 14px 16px; background: linear-gradient(135deg, #d1fae5, #ecfdf5); border: 1px solid #6ee7b7; border-radius: var(--radius-lg); animation: sgFadeSlide 0.3s ease; }
-.sg-q-correct:checked ~ .sg-q-feedback { display: block; }
+.sg-q-radio:disabled + .sg-q-opt { opacity: 0.6; cursor: not-allowed; }
+/* Show Answer button */
+.sg-show-answer-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 14px; padding: 8px 18px;
+  border: 1px solid var(--primary); border-radius: var(--radius);
+  background: var(--primary-bg); color: var(--primary);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+}
+.sg-show-answer-btn:hover:not(:disabled) { background: var(--primary); color: #fff; }
+.sg-show-answer-btn:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--border); background: var(--surface-alt); color: var(--text-muted); }
+/* Feedback — hidden by default (inline style), shown via JS */
+.sg-q-feedback {
+  display: none; margin-top: 14px; padding: 14px 16px;
+  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+  border: 1px solid #6ee7b7; border-radius: var(--radius-lg);
+  animation: sgFadeSlide 0.3s ease;
+}
 .sg-q-feedback .sg-answer-correct { font-size: 15px; margin-bottom: 6px; color: #065f46; }
 .sg-q-feedback .sg-answer-correct strong { color: var(--success); }
+.sg-q-feedback .sg-answer-wrong { font-size: 15px; margin-bottom: 6px; color: #991b1b; }
+.sg-q-feedback .sg-answer-wrong strong { color: var(--danger); }
 .sg-q-feedback .sg-explanation { font-size: 14px; color: var(--text-muted); line-height: 1.7; margin-top: 6px; }
 @keyframes sgFadeSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -562,7 +599,6 @@ body {
   .study-step-body .study-embed { padding: 0 24px; }
   .study-step-body .study-embed:last-child { padding-bottom: 24px; }
   .study-step-body .study-quiz-wrap { padding: 0 24px 24px; }
-  .pdf-viewer-toolbar { top: 116px; }
 }
 
 /* ── Mobile: accordion (tabs hidden) ── */

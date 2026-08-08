@@ -106,36 +106,105 @@ function renderPdfIntoContainer(containerId, url) {
       var totalPages = pdf.numPages;
       var safeId = containerId.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-      var renderPage = function(pageNum) {
-        return pdf.getPage(pageNum).then(function(page) {
-          var containerWidth = container.clientWidth || 760;
-          var baseViewport = page.getViewport({ scale: 1 });
-          var scale = Math.min(3.0, (containerWidth - 24) / baseViewport.width);
-          var viewport = page.getViewport({ scale: scale });
-          var canvas = document.createElement('canvas');
-          canvas.className = 'pdf-page-canvas';
-          canvas.id = 'pdf-page-' + safeId + '-' + pageNum;
-          canvas.setAttribute('data-page', pageNum);
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          container.appendChild(canvas);
-          var ctx = canvas.getContext('2d');
-          return page.render({ canvasContext: ctx, viewport: viewport }).promise;
-        });
-      };
-      var chain = Promise.resolve();
-      var renderNext = function(n) {
-        if (n > totalPages) {
-          tool.resize();
-          // Build page navigation in the toolbar
-          buildPdfPageNav(container, safeId, totalPages);
-          return;
+      // Store state for zoom re-rendering
+      container._pdfDoc = pdf;
+      container._pdfUrl = url;
+      container._pdfSafeId = safeId;
+      container._pdfTotalPages = totalPages;
+
+      /** Render all pages at the given zoom factor (1.0 = fit-width). Returns a Promise. */
+      function renderAllPages(zoomFactor) {
+        // Clear existing canvases
+        var existingCanvases = container.querySelectorAll('.pdf-page-canvas');
+        for (var ec = 0; ec < existingCanvases.length; ec++) {
+          existingCanvases[ec].remove();
         }
-        chain = chain
-          .then(function() { return renderPage(n); })
-          .then(function() { tool.resize(); renderNext(n + 1); });
-      };
-      renderNext(1);
+        container._pdfZoom = zoomFactor;
+        var containerWidth = container.clientWidth || 760;
+
+        function renderPage(pageNum) {
+          return pdf.getPage(pageNum).then(function(page) {
+            var baseViewport = page.getViewport({ scale: 1 });
+            var fitScale = Math.min(3.0, (containerWidth - 24) / baseViewport.width);
+            var scale = fitScale * zoomFactor;
+            var viewport = page.getViewport({ scale: scale });
+            var canvas = document.createElement('canvas');
+            canvas.className = 'pdf-page-canvas';
+            canvas.id = 'pdf-page-' + safeId + '-' + pageNum;
+            canvas.setAttribute('data-page', pageNum);
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            container.appendChild(canvas);
+            var ctx = canvas.getContext('2d');
+            return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+          });
+        }
+
+        // Sequential render, return promise that resolves when all pages are done
+        var promise = Promise.resolve();
+        for (var pn = 1; pn <= totalPages; pn++) {
+          (function(n) {
+            promise = promise
+              .then(function() { return renderPage(n); })
+              .then(function() { tool.resize(); });
+          })(pn);
+        }
+        return promise.then(function() {
+          buildPdfPageNav(container, safeId, totalPages);
+        });
+      }
+      container._renderAllPages = renderAllPages;
+
+      // Initial render at fit-width, then add zoom controls
+      return renderAllPages(1.0).then(function() {
+        var card = container.closest('.pdf-viewer-card');
+        if (!card) return;
+        var toolbar = card.querySelector('.pdf-viewer-toolbar');
+        if (!toolbar) return;
+        // Avoid duplicate zoom controls
+        if (toolbar.querySelector('.pdf-zoom-group')) return;
+
+        var zoomGroup = document.createElement('span');
+        zoomGroup.className = 'pdf-zoom-group';
+        zoomGroup.innerHTML =
+          '<span class="pdf-zoom-sep"></span>' +
+          '<button class="pdf-zoom-btn" title="Zoom Out" data-zoom-dir="-1">➖</button>' +
+          '<span class="pdf-zoom-label">100%</span>' +
+          '<button class="pdf-zoom-btn" title="Zoom In" data-zoom-dir="1">➕</button>' +
+          '<button class="pdf-zoom-btn pdf-zoom-fit" title="Fit Width">⊡</button>';
+
+        var openLink = toolbar.querySelector('[data-open-url]');
+        if (openLink) {
+          toolbar.insertBefore(zoomGroup, openLink);
+        } else {
+          toolbar.appendChild(zoomGroup);
+        }
+
+        // Wire zoom buttons
+        var zoomBtns = zoomGroup.querySelectorAll('[data-zoom-dir]');
+        var zoomLabel = zoomGroup.querySelector('.pdf-zoom-label');
+        var zoomFitBtn = zoomGroup.querySelector('.pdf-zoom-fit');
+        for (var zb = 0; zb < zoomBtns.length; zb++) {
+          (function(btn) {
+            btn.addEventListener('click', function(e) {
+              e.stopPropagation();
+              var dir = parseInt(btn.getAttribute('data-zoom-dir'));
+              var newZoom = Math.max(0.25, Math.min(3.0, container._pdfZoom + dir * 0.25));
+              renderAllPages(newZoom).then(function() {
+                if (zoomLabel) zoomLabel.textContent = Math.round(newZoom * 100) + '%';
+              });
+            });
+          })(zoomBtns[zb]);
+        }
+        if (zoomFitBtn) {
+          zoomFitBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            renderAllPages(1.0).then(function() {
+              if (zoomLabel) zoomLabel.textContent = '100%';
+            });
+          });
+        }
+      });
     })
     .catch(function(err) {
       console.error('PDF render error:', err);
@@ -164,6 +233,10 @@ function buildPdfPageNav(canvasContainer, safeId, totalPages) {
   if (!card) return;
   var toolbar = card.querySelector('.pdf-viewer-toolbar');
   if (!toolbar) return;
+
+  // Remove existing nav if re-building (e.g., after zoom change)
+  var existingNav = toolbar.querySelector('.pdf-page-nav');
+  if (existingNav) existingNav.remove();
 
   // Create the pages dropdown
   var navWrap = document.createElement('div');
@@ -608,6 +681,8 @@ function renderLessonDetail() {
   if (htmlCode && htmlCode.length > 20) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
   if (content && content !== '<br>' && content !== '<br>') { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Lesson Notes', type: 'html', html: content, hasContent: true }); }
   if (hasQuiz) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Knowledge Check', type: 'quiz', quizData: quizData, hasContent: true }); }
+  // Always add a nav step at the end with Previous/Next/Complete buttons
+  stepNum++; steps.push({ num: stepNum, icon: '✅', title: 'Complete Lesson', type: 'nav', hasContent: true });
 
   var flowEl = el('study-flow');
   var html = '';
@@ -683,6 +758,17 @@ function renderLessonDetail() {
         html += '<div class="detail-content">' + step.html + '</div>';
       } else if (step.type === 'quiz') {
         html += '<div class="study-quiz-wrap">' + renderQuizInFlow(step.quizData, prog, currentSectionId, currentLessonId) + '</div>';
+      } else if (step.type === 'nav') {
+        // Completion step — show message if no quiz, plus nav buttons
+        if (!hasQuiz) {
+          html += '<div style="text-align:center;padding:20px 0;color:var(--text-muted)">📭 There are no questions for this lesson.</div>';
+        }
+        html += '<div class="quiz-nav-actions">';
+        html += '<button class="btn btn-outline" id="btn-prev-lesson-inline"' + (!getPrevLesson(section.id, lesson.id) ? ' disabled' : '') + '>← Previous</button>';
+        html += '<button class="btn btn-success" id="btn-mark-complete-inline"' + (prog.status === 'completed' ? ' style="display:none"' : '') + '>✓ Mark Complete</button>';
+        html += '<button class="btn btn-outline" id="btn-mark-inprogress-inline"' + (prog.status !== 'completed' ? ' style="display:none"' : '') + '>📖 Mark In Progress</button>';
+        html += '<button class="btn btn-outline" id="btn-next-lesson-inline"' + (!getNextLesson(section.id, lesson.id) || (getNextLesson(section.id, lesson.id) && !isLessonAccessible(getNextLesson(section.id, lesson.id).sectionId, getNextLesson(section.id, lesson.id).lessonId)) ? ' disabled' : '') + '>Next →</button>';
+        html += '</div>';
       }
 
       html += '</div></div>';
@@ -715,6 +801,7 @@ function renderLessonDetail() {
     var allSteps = flowEl.querySelectorAll('.study-step');
     var expanded = false;
     if (prog.status === 'completed' && hasQuiz) {
+      // Open the quiz tab on completed lessons
       for (var es = 0; es < allSteps.length; es++) {
         if (steps[es] && steps[es].type === 'quiz') { allSteps[es].classList.add('expanded'); expanded = true; break; }
       }
@@ -727,14 +814,29 @@ function renderLessonDetail() {
       var tabBtns = tabBar.querySelectorAll('.study-tab-btn');
       var stepEls = flowEl.querySelectorAll('.study-step');
 
-      // Click a tab → show only that step's content
-      var activeStepIdx = 0;
+      // Click a tab → show only that step's content, preserving scroll per tab
+      var activeStepIdx = -1; // -1 so first activateTab(0) actually runs
+      var tabScrollPositions = {}; // remember scrollTop per tab
       function activateTab(idx) {
         if (activeStepIdx === idx) return;
-        // Hide previous, show new
-        if (stepEls[activeStepIdx]) stepEls[activeStepIdx].classList.remove('active-tab');
+        // Save scroll position of current tab
+        if (stepEls[activeStepIdx]) {
+          tabScrollPositions[activeStepIdx] = window.scrollY || document.documentElement.scrollTop;
+          stepEls[activeStepIdx].classList.remove('active-tab');
+        }
         activeStepIdx = idx;
-        if (stepEls[idx]) stepEls[idx].classList.add('active-tab');
+        if (stepEls[idx]) {
+          stepEls[idx].classList.add('active-tab');
+          // Restore scroll position for this tab
+          if (typeof tabScrollPositions[idx] === 'number') {
+            setTimeout(function() {
+              window.scrollTo(0, tabScrollPositions[idx]);
+            }, 50);
+          } else {
+            // First time opening this tab — scroll to top
+            window.scrollTo(0, 0);
+          }
+        }
         // Update tab styling
         for (var tb2 = 0; tb2 < tabBtns.length; tb2++) {
           tabBtns[tb2].classList.toggle('active', tb2 === idx);
@@ -751,6 +853,59 @@ function renderLessonDetail() {
     }
   }, 50);
 
+  // Wire up interactive quiz "Show Answer" buttons in AI-generated study guide HTML
+  setTimeout(function() {
+    var quizItems = document.querySelectorAll('.sg-quiz-item-v3');
+    for (var qi = 0; qi < quizItems.length; qi++) {
+      (function(item) {
+        var radios = item.querySelectorAll('.sg-q-radio');
+        var showBtn = item.querySelector('.sg-show-answer-btn');
+        var feedback = item.querySelector('.sg-q-feedback');
+        var correctMsg = feedback ? feedback.querySelector('.sg-answer-correct') : null;
+        var wrongMsg = feedback ? feedback.querySelector('.sg-answer-wrong') : null;
+        if (!showBtn || !feedback) return;
+
+        // Enable "Show Answer" button when any radio is selected
+        for (var ri = 0; ri < radios.length; ri++) {
+          radios[ri].addEventListener('change', function() {
+            if (showBtn) showBtn.disabled = false;
+          });
+        }
+
+        // Reveal feedback on button click
+        showBtn.addEventListener('click', function() {
+          var selectedIsCorrect = false;
+          for (var ri = 0; ri < radios.length; ri++) {
+            if (radios[ri].checked && radios[ri].classList.contains('sg-q-correct')) {
+              selectedIsCorrect = true;
+              break;
+            }
+          }
+          // Show feedback with correct/wrong message
+          feedback.style.display = 'block';
+          if (correctMsg) correctMsg.style.display = selectedIsCorrect ? '' : 'none';
+          if (wrongMsg) wrongMsg.style.display = selectedIsCorrect ? 'none' : '';
+          // Lock the quiz after reveal
+          showBtn.disabled = true;
+          for (var ri = 0; ri < radios.length; ri++) {
+            radios[ri].disabled = true;
+          }
+        });
+      })(quizItems[qi]);
+    }
+    tool.resize();
+  }, 150);
+
+  // Wire inline nav buttons (inside the Completion tab)
+  var prevBtn = el('btn-prev-lesson-inline');
+  var nextBtn = el('btn-next-lesson-inline');
+  var completeBtn = el('btn-mark-complete-inline');
+  var inprogressBtn = el('btn-mark-inprogress-inline');
+  if (prevBtn) prevBtn.addEventListener('click', function() { navigateLesson(-1); });
+  if (nextBtn) nextBtn.addEventListener('click', function() { navigateLesson(1); });
+  if (completeBtn) completeBtn.addEventListener('click', markComplete);
+  if (inprogressBtn) inprogressBtn.addEventListener('click', markInProgress);
+
   // Source links
   var sourcesArea = el('source-links-area');
   var sourcesList = el('source-links-list');
@@ -765,16 +920,6 @@ function renderLessonDetail() {
 
   var prevLesson = getPrevLesson(section.id, lesson.id);
   var nextLesson = getNextLesson(section.id, lesson.id);
-  el('btn-prev-lesson').disabled = !prevLesson;
-  el('btn-next-lesson').disabled = !nextLesson || (nextLesson && !isLessonAccessible(nextLesson.sectionId, nextLesson.lessonId));
-
-  if (prog.status === 'completed') {
-    el('btn-mark-complete').style.display = 'none';
-    el('btn-mark-inprogress').style.display = '';
-  } else {
-    el('btn-mark-complete').style.display = '';
-    el('btn-mark-inprogress').style.display = 'none';
-  }
 
   tool.resize();
 }
@@ -1364,10 +1509,6 @@ function updateAdminUI() {
 
 function bindEvents() {
   el('btn-back').addEventListener('click', handleBack);
-  el('btn-prev-lesson').addEventListener('click', function() { navigateLesson(-1); });
-  el('btn-next-lesson').addEventListener('click', function() { navigateLesson(1); });
-  el('btn-mark-complete').addEventListener('click', markComplete);
-  el('btn-mark-inprogress').addEventListener('click', markInProgress);
   el('search-input').addEventListener('input', function() { renderSections(); });
   el('filter-status').addEventListener('change', function() { renderSections(); });
   el('btn-setup-save').addEventListener('click', saveSetupConfig);

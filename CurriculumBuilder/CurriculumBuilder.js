@@ -1131,7 +1131,7 @@ function generateHtmlFromPdf() {
       '- <div class="sg-step"> for numbered step-by-step instructions with <span class="sg-step-num">\n' +
       '- Use <table class="sg-table"> for comparison data with <thead> and striped rows\n\n' +
       '🔷 INTERACTIVE QUIZ — USE THIS EXACT HTML STRUCTURE (do NOT reorder elements):\n' +
-      'For EVERY concept, create a clickable quiz. COPY THIS EXACT TEMPLATE — only change the text:\n\n' +
+      'For EVERY major concept, create a clickable self-check quiz item. COPY THIS EXACT TEMPLATE — only change the text:\n\n' +
       '<div class="sg-quiz-item-v3">\n' +
       '  <p class="sg-quiz-question-v3">❓ Question text?</p>\n' +
       '  <div class="sg-quiz-choices-v3">\n' +
@@ -1140,19 +1140,24 @@ function generateHtmlFromPdf() {
       '    <input type="radio" name="qN" id="qN-c" class="sg-q-radio"><label class="sg-q-opt" for="qN-c">C) Option three</label>\n' +
       '    <input type="radio" name="qN" id="qN-d" class="sg-q-radio"><label class="sg-q-opt" for="qN-d">D) Option four</label>\n' +
       '  </div>\n' +
-      '  <div class="sg-q-feedback">\n' +
+      '  <button class="sg-show-answer-btn" disabled>🔍 Show Answer</button>\n' +
+      '  <div class="sg-q-feedback" style="display:none">\n' +
       '    <p class="sg-answer-correct">🎉 <strong>Correct! B) Correct option</strong></p>\n' +
+      '    <p class="sg-answer-wrong" style="display:none">❌ <strong>Not quite.</strong> The correct answer is <strong>B) Correct option</strong>.</p>\n' +
       '    <p class="sg-explanation">💡 <strong>Explanation:</strong> Detailed step-by-step reasoning. Reference the source material. Explain WHY each wrong option is incorrect.</p>\n' +
       '  </div>\n' +
       '</div>\n\n' +
       '⚠️ ABSOLUTE RULES — follow exactly or the quiz will break:\n' +
       '1. Radio inputs MUST come BEFORE their labels (input+label pairs, not label wrapping input)\n' +
-      '2. The sg-q-feedback div MUST be the VERY LAST element inside sg-quiz-item-v3 (after choices div)\n' +
-      '3. ONLY the correct answer input gets class="sg-q-radio sg-q-correct" — wrong answers get class="sg-q-radio" only\n' +
-      '4. Every question needs a UNIQUE name (q1, q2, q3...) so groups are independent\n' +
-      '5. Every id must be unique too (q1-a, q1-b, q2-a, q2-b...)\n' +
-      '6. Each label must reference its input via for="..." matching the id\n' +
-      '7. Include 5-8 quiz items, each inside its own sg-quiz-item-v3, all wrapped in <div class="sg-quiz-section">\n\n' +
+      '2. The sg-show-answer-btn button MUST come between the choices div and sg-q-feedback div\n' +
+      '3. The sg-q-feedback div MUST be the VERY LAST element inside sg-quiz-item-v3, with style="display:none"\n' +
+      '4. ONLY the correct answer input gets class="sg-q-radio sg-q-correct" — wrong answers get class="sg-q-radio" only\n' +
+      '5. The sg-show-answer-btn MUST have the disabled attribute initially\n' +
+      '6. BOTH sg-answer-correct AND sg-answer-wrong paragraphs MUST be present inside sg-q-feedback — each with style="display:none" initially\n' +
+      '7. Every question needs a UNIQUE name (q1, q2, q3...) so radio groups are independent\n' +
+      '8. Every id must be unique too (q1-a, q1-b, q2-a, q2-b...)\n' +
+      '9. Each label must reference its input via for="..." matching the id\n' +
+      '10. Include 5-8 quiz items, each inside its own sg-quiz-item-v3, all wrapped in <div class="sg-quiz-section">\n\n' +
       '🔷 VISUAL ENHANCEMENTS (use these classes for professional look):\n' +
       '- <span class="sg-badge"> for inline labels/tags\n' +
       '- <div class="sg-card"> for grouped info boxes with <div class="sg-card-header"> and <div class="sg-card-body">\n' +
