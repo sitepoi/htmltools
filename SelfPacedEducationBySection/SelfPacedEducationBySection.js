@@ -39,6 +39,111 @@ function isAdmin() {
   return false;
 }
 
+/* ── URL Transform: Storage → Hosting proxy ── */
+function toHostingUrl(url) {
+  if (!url) return url;
+  // Firebase Storage URL → Firebase Hosting + Cloud Function proxy
+  // https://firebasestorage.googleapis.com/v0/b/PROJECTID.appspot.com/o/PATH?alt=media&token=X
+  // → https://PROJECTID.firebaseapp.com/files/PATH?alt=media&token=X
+  // The Cloud Function at /files/** reads from Storage server-side and returns
+  // the PDF with embed-friendly headers (no X-Frame-Options).
+  // NOTE: using .firebaseapp.com (not .web.app) — .web.app is frequently on
+  // ad-blocker/security blocklists since it's a common free-hosting domain.
+  return url.replace(
+    /https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/([^/]+?)(?:\.appspot\.com)?\/o\//,
+    'https://$1.firebaseapp.com/files/'
+  );
+}
+
+/* ── PDF.js: dynamic ES-module loader + canvas renderer (avoids nested iframes entirely) ── */
+// PDF.js v4+ ships ONLY as ES modules (pdf.mjs / pdf.worker.mjs) — there is no
+// legacy "pdf.min.js" global-script build anymore, so we must load it via a
+// dynamic import() rather than a <script src> tag (which 404s every time).
+// Try our own Firebase Hosting domain FIRST (proven reliable all session), then
+// fall back to the public CDN in case the self-hosted copy is missing/not deployed yet.
+var PDFJS_SOURCES = [
+  { base: 'https://websites-a0e13.firebaseapp.com/vendor/pdfjs/', lib: 'pdf.mjs', worker: 'pdf.worker.mjs' },
+  { base: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.7.76/', lib: 'pdf.min.mjs', worker: 'pdf.worker.min.mjs' }
+];
+var pdfJsLoadPromise = null;
+
+function loadModuleFrom(source) {
+  return import(/* webpackIgnore: true */ source.base + source.lib).then(function(mod) {
+    mod.GlobalWorkerOptions.workerSrc = source.base + source.worker;
+    window.pdfjsLib = mod;
+  });
+}
+
+function ensurePdfJsLoaded() {
+  if (window.pdfjsLib) return Promise.resolve();
+  if (pdfJsLoadPromise) return pdfJsLoadPromise;
+  pdfJsLoadPromise = PDFJS_SOURCES.reduce(function(chain, source) {
+    return chain.catch(function() { return loadModuleFrom(source); });
+  }, Promise.reject());
+  return pdfJsLoadPromise;
+}
+
+/** Fetches a PDF via fetch() (NOT an iframe navigation — avoids the sandboxed
+ *  nested-frame blocking seen on this CMS) and renders every page as a
+ *  <canvas> directly into the given container element. */
+function renderPdfIntoContainer(containerId, url) {
+  var container = el(containerId);
+  if (!container) return;
+  container.innerHTML = '<div class="pdf-canvas-loading">⏳ Loading PDF…</div>';
+
+  ensurePdfJsLoaded()
+    .then(function() {
+      return fetch(url).then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.arrayBuffer();
+      });
+    })
+    .then(function(buf) {
+      return window.pdfjsLib.getDocument({ data: buf }).promise;
+    })
+    .then(function(pdf) {
+      container.innerHTML = '';
+      var renderPage = function(pageNum) {
+        return pdf.getPage(pageNum).then(function(page) {
+          var containerWidth = container.clientWidth || 760;
+          var baseViewport = page.getViewport({ scale: 1 });
+          var scale = Math.min(2.5, containerWidth / baseViewport.width);
+          var viewport = page.getViewport({ scale: scale });
+          var canvas = document.createElement('canvas');
+          canvas.className = 'pdf-page-canvas';
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          container.appendChild(canvas);
+          var ctx = canvas.getContext('2d');
+          return page.render({ canvasContext: ctx, viewport: viewport }).promise;
+        });
+      };
+      var chain = Promise.resolve();
+      var renderNext = function(n) {
+        if (n > pdf.numPages) { tool.resize(); return; }
+        chain = chain
+          .then(function() { return renderPage(n); })
+          .then(function() { tool.resize(); renderNext(n + 1); });
+      };
+      renderNext(1);
+    })
+    .catch(function(err) {
+      console.error('PDF render error:', err);
+      container.innerHTML = '';
+      var errBox = document.createElement('div');
+      errBox.className = 'pdf-canvas-error';
+      var msg = document.createElement('div');
+      msg.textContent = '⚠️ Could not load PDF preview.';
+      var link = document.createElement('a');
+      link.textContent = '↗ Open PDF in New Tab';
+      link.addEventListener('click', function() { tool.openUrl(url); });
+      errBox.appendChild(msg);
+      errBox.appendChild(link);
+      container.appendChild(errBox);
+      tool.resize();
+    });
+}
+
 /* ── YouTube ID extraction ── */
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -342,6 +447,7 @@ function renderLessonDetail() {
 
   var flowEl = el('study-flow');
   var html = '';
+  window._pdfRenderQueue = [];
 
   if (steps.length === 0) {
     html = '<div class="study-flow-empty"><div class="empty-icon">📖</div><div class="empty-title">No study materials yet</div><div class="empty-desc">This lesson has no content. A manager needs to add materials.</div></div>';
@@ -374,18 +480,15 @@ function renderLessonDetail() {
         }
       } else if (step.type === 'pdfs') {
         for (var pj = 0; pj < step.pdfUrls.length; pj++) {
-          var pdfUrl = step.pdfUrls[pj];
+          var proxyUrl = toHostingUrl(step.pdfUrls[pj]);
+          var pdfName = step.label + (step.pdfUrls.length > 1 ? ' ' + (pj+1) + ' of ' + step.pdfUrls.length : '');
+          var canvasContainerId = 'pdf-canvas-' + si + '-' + pj;
           html += '<div class="study-embed">';
-          if (step.pdfUrls.length > 1) html += '<div class="study-embed-label">' + esc(step.label) + ' ' + (pj+1) + ' of ' + step.pdfUrls.length + '</div>';
           html += '<div class="pdf-viewer-card">';
-          html += '<div class="pdf-viewer-toolbar"><span class="pdf-viewer-icon">📄</span><span class="pdf-viewer-name">' + esc(step.label) + '</span></div>';
-          html += '<div class="pdf-fallback">';
-          html += '<div class="pdf-fallback-icon">📄</div>';
-          html += '<div class="pdf-fallback-text">Document ready to view</div>';
-          html += '<div class="pdf-fallback-actions">';
-          html += '<a class="btn btn-primary btn-sm" href="' + esc(pdfUrl) + '" target="_blank" rel="noopener noreferrer">🔍 Open Document</a>';
-          html += '</div>';
-          html += '</div></div></div>';
+          html += '<div class="pdf-viewer-toolbar"><span class="pdf-viewer-icon">📄</span><span class="pdf-viewer-name">' + esc(pdfName) + '</span><a class="btn btn-outline btn-sm" style="margin-left:auto" title="Open in new tab" data-open-url="' + esc(proxyUrl) + '">↗ Open in New Tab</a></div>';
+          html += '<div class="pdf-canvas-container" id="' + canvasContainerId + '"></div>';
+          html += '</div></div>';
+          window._pdfRenderQueue.push({ containerId: canvasContainerId, url: proxyUrl });
         }
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
@@ -398,6 +501,20 @@ function renderLessonDetail() {
     html += '</div>';
   }
   flowEl.innerHTML = html;
+
+  // Wire "Open in New Tab" links via tool.openUrl (reliable inside the sandboxed iframe)
+  var openLinks = flowEl.querySelectorAll('[data-open-url]');
+  for (var ol = 0; ol < openLinks.length; ol++) {
+    (function(linkEl) {
+      linkEl.addEventListener('click', function() { tool.openUrl(linkEl.getAttribute('data-open-url')); });
+    })(openLinks[ol]);
+  }
+
+  // Render queued PDFs as canvas pages (no iframes — avoids sandboxed nested-frame blocking)
+  var pdfQueue = window._pdfRenderQueue || [];
+  for (var pq = 0; pq < pdfQueue.length; pq++) {
+    renderPdfIntoContainer(pdfQueue[pq].containerId, pdfQueue[pq].url);
+  }
 
   setTimeout(function() {
     var allSteps = flowEl.querySelectorAll('.study-step');
