@@ -67,6 +67,7 @@
       <button class="lesson-tab active" data-lesson-tab="info">📋 Main Info</button>
       <button class="lesson-tab" data-lesson-tab="videos">🎬 Videos</button>
       <button class="lesson-tab" data-lesson-tab="documents">📄 Documents</button>
+      <button class="lesson-tab" data-lesson-tab="studyHtml">🌐 Study HTML</button>
       <button class="lesson-tab" data-lesson-tab="content">📝 Content</button>
       <button class="lesson-tab" data-lesson-tab="questions">❓ Questions</button>
     </div>
@@ -143,9 +144,31 @@
         <div class="managed-list-items" id="pdf-list-answerKey"></div>
         <span class="form-hint">Answer keys for worksheets. Shown after the worksheet step.</span>
       </div>
-      <div class="form-group" style="text-align:center;padding:4px 0">
-        <button type="button" class="btn btn-outline btn-generate-quiz" id="btn-generate-quiz-from-pdf" title="Read all PDFs and generate quiz questions via AI">🤖 Generate Quiz Questions from PDFs</button>
-        <div id="generate-quiz-info" style="display:none;padding:8px;font-size:12px;color:var(--text-muted);text-align:center;background:#fef3c7;border-radius:var(--radius);margin-top:4px">📭 No PDFs added. Add PDFs to Presentation, Study Documents, or Worksheets first.</div>
+      <div class="form-group">
+        <label class="form-label">🌐 HTML Documents</label>
+        <div class="managed-list-header">
+          <span id="pdf-count-htmlDoc">0 file(s)</span>
+          <button type="button" class="btn btn-sm btn-primary" data-add-pdf="htmlDoc">+ Add</button>
+        </div>
+        <div class="managed-list-items" id="pdf-list-htmlDoc"></div>
+        <span class="form-hint">Upload standalone HTML pages to display inline in the lesson (e.g. interactive content, charts, custom layouts).</span>
+      </div>
+    </div>
+    <div class="lesson-tab-panel" data-lesson-panel="studyHtml">
+      <div class="study-html-tabs">
+        <button class="study-html-tab active" data-html-tab="code">📝 Code</button>
+        <button class="study-html-tab" data-html-tab="preview">👁️ Preview</button>
+      </div>
+      <div class="study-html-panel active" data-html-panel="code">
+        <textarea class="form-input form-textarea" id="edit-html-code-v2" placeholder="<h2>Study Guide</h2><p>Paste or generate HTML content here...</p>" style="min-height:350px;font-family:monospace;font-size:13px;resize:vertical"></textarea>
+      </div>
+      <div class="study-html-panel" data-html-panel="preview">
+        <div class="study-html-preview-toolbar">
+          <button type="button" class="btn btn-outline btn-sm btn-generate-html" id="btn-generate-html-from-pdf-v2">🤖 AI Generate from PDFs</button>
+          <button type="button" class="btn btn-sm btn-outline" id="btn-refresh-preview" title="Refresh preview">🔄 Refresh</button>
+          <span id="generate-html-info-v2" style="display:none;font-size:12px;color:var(--text-muted);padding:4px 0">📭 Add PDFs first.</span>
+        </div>
+        <iframe class="study-html-preview-iframe" id="study-html-preview-iframe" sandbox="allow-scripts allow-same-origin" title="HTML Preview"></iframe>
       </div>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="content">

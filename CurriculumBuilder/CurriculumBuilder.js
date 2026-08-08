@@ -22,6 +22,8 @@ var editingPresentationPdfUrls = [];
 var editingStudyDocPdfUrls = [];
 var editingWorksheetPdfUrls = [];
 var editingAnswerKeyPdfUrls = [];
+var editingHtmlDocUrls = [];
+var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
 var editingQuizQuestionIdx = null;
 var editingQuizQuestionSetIdx = null;
 var editingSourceLinkIdx = null;
@@ -50,6 +52,18 @@ function normalizePdfArray(field) {
 
 function hasLessonVideo(les) {
   return les.youtubeUrls && Array.isArray(les.youtubeUrls) && les.youtubeUrls.length > 0;
+}
+
+/* ── URL Transform: Storage → Hosting proxy (same fix as the Student tool) ──
+   Firebase Storage download URLs aren't reliably readable cross-origin.
+   The Cloud Function at /files/** streams the file server-side with proper
+   CORS + content-type headers, so route reads through it instead. */
+function toHostingUrl(url) {
+  if (!url) return url;
+  return url.replace(
+    /https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/([^/]+?)(?:\.appspot\.com)?\/o\//,
+    'https://$1.firebaseapp.com/files/'
+  );
 }
 
 /* ── Sub-modal ── */
@@ -373,10 +387,14 @@ function startAddLesson() {
   editingYoutubeUrls = []; editingYoutubeIdx = null;
   renderYoutubeEditorList();
   hideSubModal('youtube-editor-panel');
-  editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = [];
+  editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey');
+  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  editingHtmlCode = '';
+  if (el('edit-html-code')) el('edit-html-code').value = '';
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
+  updateHtmlPreview();
   setHtmlContent('');
   editingSourceLinks = []; editingSourceLinkIdx = null;
   renderSourceLinksEditorList();
@@ -404,9 +422,14 @@ function editLesson(idx) {
   editingStudyDocPdfUrls = normalizePdfArray(les.studyDocPdfUrls);
   editingWorksheetPdfUrls = normalizePdfArray(les.worksheetPdfUrls);
   editingAnswerKeyPdfUrls = normalizePdfArray(les.answerKeyPdfUrls);
+  editingHtmlDocUrls = normalizePdfArray(les.htmlDocUrls);
   editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey');
+  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  editingHtmlCode = les.htmlCode || '';
+  if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
+  updateHtmlPreview();
   setHtmlContent(les.content || '');
   var srcVal = les.sourceUrls;
   if (srcVal && typeof srcVal === 'string') { try { srcVal = JSON.parse(srcVal); } catch(e) { srcVal = null; } }
@@ -431,6 +454,9 @@ function saveLessonFromEditor() {
   var content = getHtmlContent();
   var order = parseInt(el('edit-lesson-order').value) || editingLessons.length + 1;
   var minutes = parseInt(el('edit-lesson-minutes').value) || 0;
+  // Sync HTML code from textarea (v2 takes priority, fall back to v1)
+  if (el('edit-html-code-v2')) editingHtmlCode = el('edit-html-code-v2').value;
+  else if (el('edit-html-code')) editingHtmlCode = el('edit-html-code').value;
 
   var lessonData = {
     id: genId(),
@@ -443,6 +469,8 @@ function saveLessonFromEditor() {
     studyDocPdfUrls: editingStudyDocPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocPdfUrls)) : null,
     worksheetPdfUrls: editingWorksheetPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingWorksheetPdfUrls)) : null,
     answerKeyPdfUrls: editingAnswerKeyPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingAnswerKeyPdfUrls)) : null,
+    htmlDocUrls: editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null,
+    htmlCode: editingHtmlCode || null,
     sourceUrls: editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null,
     quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null
   };
@@ -495,10 +523,14 @@ function startAddLessonDirect(sectionIdx) {
   editingYoutubeUrls = []; editingYoutubeIdx = null;
   renderYoutubeEditorList();
   hideSubModal('youtube-editor-panel');
-  editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = [];
+  editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
   editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey');
+  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  editingHtmlCode = '';
+  if (el('edit-html-code')) el('edit-html-code').value = '';
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
+  updateHtmlPreview();
   setHtmlContent('');
   editingSourceLinks = []; editingSourceLinkIdx = null;
   renderSourceLinksEditorList();
@@ -527,9 +559,14 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   editingStudyDocPdfUrls = normalizePdfArray(les.studyDocPdfUrls);
   editingWorksheetPdfUrls = normalizePdfArray(les.worksheetPdfUrls);
   editingAnswerKeyPdfUrls = normalizePdfArray(les.answerKeyPdfUrls);
+  editingHtmlDocUrls = normalizePdfArray(les.htmlDocUrls);
   editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey');
+  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  editingHtmlCode = les.htmlCode || '';
+  if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
+  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
+  updateHtmlPreview();
   setHtmlContent(les.content || '');
   var srcVal = les.sourceUrls;
   if (srcVal && typeof srcVal === 'string') { try { srcVal = JSON.parse(srcVal); } catch(e) { srcVal = null; } }
@@ -574,7 +611,36 @@ function switchLessonEditorTab(tabName) {
   for (var j = 0; j < panels.length; j++) {
     panels[j].classList.toggle('active', panels[j].getAttribute('data-lesson-panel') === tabName);
   }
+  // Role-based: hide Code sub-tab in Study HTML for non-admin users
+  if (tabName === 'studyHtml') updateStudyHtmlTabRoles();
   tool.resize();
+}
+
+/** Hide Code sub-tab in Study HTML for non-admin/developer users */
+function updateStudyHtmlTabRoles() {
+  var codeTab = document.querySelector('.study-html-tab[data-html-tab="code"]');
+  if (!codeTab) return;
+  var user = tool.getUser();
+  var roles = (user && user.roles) ? user.roles.map(function(r) { return String(r).toLowerCase(); }) : [];
+  var isAdminDev = roles.indexOf('admin') !== -1 || roles.indexOf('developer') !== -1 || roles.indexOf('owner') !== -1;
+  if (isAdminDev) {
+    codeTab.style.display = '';
+  } else {
+    codeTab.style.display = 'none';
+    // Force Preview tab if Code is hidden but currently active
+    if (codeTab.classList.contains('active')) {
+      var previewTab = document.querySelector('.study-html-tab[data-html-tab="preview"]');
+      if (previewTab) {
+        codeTab.classList.remove('active');
+        previewTab.classList.add('active');
+        var panels = document.querySelectorAll('.study-html-panel');
+        for (var hp = 0; hp < panels.length; hp++) {
+          panels[hp].classList.toggle('active', panels[hp].getAttribute('data-html-panel') === 'preview');
+        }
+        updateHtmlPreview();
+      }
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -811,7 +877,8 @@ var PDF_LABELS = {
   presentation: { icon: '📊', label: 'Presentation Slides' },
   studyDoc: { icon: '📖', label: 'Study Documents' },
   worksheet: { icon: '📝', label: 'Worksheets' },
-  answerKey: { icon: '🔑', label: 'Answer Keys' }
+  answerKey: { icon: '🔑', label: 'Answer Keys' },
+  htmlDoc: { icon: '🌐', label: 'HTML Documents' }
 };
 
 function getPdfArray(type) {
@@ -819,6 +886,7 @@ function getPdfArray(type) {
   if (type === 'studyDoc') return editingStudyDocPdfUrls;
   if (type === 'worksheet') return editingWorksheetPdfUrls;
   if (type === 'answerKey') return editingAnswerKeyPdfUrls;
+  if (type === 'htmlDoc') return editingHtmlDocUrls;
   return [];
 }
 
@@ -853,6 +921,12 @@ function openPdfEditor(type, idx) {
   el('pdf-editor-heading').textContent = (idx !== null ? 'Edit' : 'Add') + ' ' + (info.label || 'PDF');
   var arr = getPdfArray(type);
   el('edit-pdf-item-url').value = idx !== null ? (arr[idx] || '') : '';
+  // Update label and button text based on type
+  var isHtml = type === 'htmlDoc';
+  var labelEl = document.querySelector('#pdf-editor-panel .form-label');
+  var btnEl = el('btn-pdf-editor-save');
+  if (labelEl) labelEl.innerHTML = (isHtml ? 'HTML Document URL' : 'PDF URL') + ' <span class="required">*</span>';
+  if (btnEl) btnEl.textContent = 'Save ' + (isHtml ? 'HTML Doc' : 'PDF');
 }
 
 function closePdfEditor() { hideSubModal('pdf-editor-panel'); editingPdfType = null; editingPdfIdx = null; }
@@ -860,7 +934,7 @@ function closePdfEditor() { hideSubModal('pdf-editor-panel'); editingPdfType = n
 function savePdfUrl() {
   var url = el('edit-pdf-item-url').value.trim();
   if (!url) { tool.notify('PDF URL is required.', 'warning'); return; }
-  var allTypes = ['presentation', 'studyDoc', 'worksheet', 'answerKey'];
+  var allTypes = ['presentation', 'studyDoc', 'worksheet', 'answerKey', 'htmlDoc'];
   for (var t = 0; t < allTypes.length; t++) {
     var checkArr = getPdfArray(allTypes[t]);
     for (var c = 0; c < checkArr.length; c++) {
@@ -919,33 +993,28 @@ function generateQuizFromPdf() {
   var combinedText = '';
   var remaining = allUrls.length;
 
-  function readNext(idx) {
-    if (idx >= allUrls.length) {
-      if (!combinedText || combinedText.length < 50) {
-        updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
-        tool.notify('Could not extract enough text from the PDFs.', 'warning');
-        return;
-      }
-      generateWithAI(combinedText);
-      return;
-    }
-    tool.requestFileContent(allUrls[idx], function(err, fileResult) {
-      remaining--;
-      if (!err && fileResult) {
-        var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
-        if (text && text.length > 50) {
-          combinedText += '\n\n--- Document ' + (idx+1) + ' ---\n\n' + text;
+  // Fire ALL PDF reads in parallel — each callback decrements the shared counter.
+  // When the last one completes (remaining === 0), we hand the combined text to AI.
+  for (var ri = 0; ri < allUrls.length; ri++) {
+    (function(idx) {
+      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+        remaining--;
+        if (!err && fileResult) {
+          var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
+          if (text && text.length > 50) {
+            combinedText += '\n\n--- Document ' + (idx+1) + ' ---\n\n' + text;
+          }
         }
-      }
-      if (remaining === 0) {
-        if (!combinedText || combinedText.length < 50) {
-          updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
-          tool.notify('Could not extract enough text from the PDFs.', 'warning');
-          return;
+        if (remaining === 0) {
+          if (!combinedText || combinedText.length < 50) {
+            updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
+            tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            return;
+          }
+          generateWithAI(combinedText);
         }
-        generateWithAI(combinedText);
-      }
-    });
+      });
+    })(ri);
   }
 
   function generateWithAI(text) {
@@ -992,8 +1061,220 @@ function generateQuizFromPdf() {
       }
     });
   }
+}
 
-  readNext(0);
+function generateHtmlFromPdf() {
+  var allUrls = [];
+  allUrls = allUrls.concat(editingPresentationPdfUrls);
+  allUrls = allUrls.concat(editingStudyDocPdfUrls);
+  allUrls = allUrls.concat(editingWorksheetPdfUrls);
+  allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+
+  if (allUrls.length === 0) {
+    tool.notify('No PDFs added yet. Add PDFs to Presentation, Study Documents, or Worksheets first.', 'warning');
+    var infoEl = el('generate-html-info-v2');
+    if (infoEl) { infoEl.style.display = ''; setTimeout(function() { infoEl.style.display = 'none'; }, 4000); }
+    return;
+  }
+
+  var genBtn = el('btn-generate-html-from-pdf-v2');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ Reading ' + allUrls.length + ' PDF(s)...'; }
+  tool.notify('Reading ' + allUrls.length + ' PDF(s) for HTML generation...', 'info');
+
+  var combinedText = '';
+  var remaining = allUrls.length;
+
+  for (var ri = 0; ri < allUrls.length; ri++) {
+    (function(idx) {
+      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+        remaining--;
+        if (!err && fileResult) {
+          var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
+          if (text && text.length > 50) {
+            combinedText += '\n\n--- Document ' + (idx+1) + ' ---\n\n' + text;
+          }
+        }
+        if (remaining === 0) {
+          if (!combinedText || combinedText.length < 50) {
+            if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
+            tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            return;
+          }
+          generateHtmlWithAI(combinedText);
+        }
+      });
+    })(ri);
+  }
+
+  function generateHtmlWithAI(text) {
+    var maxLen = 15000;
+    if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
+    if (genBtn) genBtn.textContent = '⏳ AI generating HTML...';
+
+    var prompt = 'You are an expert educational content designer creating an INTERACTIVE STUDY GUIDE. Based on the document content below, generate a beautiful, well-structured, highly interactive HTML study document. Return ONLY raw HTML — no markdown fences, no intro text.\n\n' +
+      '⭐ YOUR GOAL: Create a step-by-step learning experience that engages the student actively, not passively.\n\n' +
+      '🔷 OVERALL STRUCTURE (follow this order):\n' +
+      '1. <div class="study-guide"> wrapper\n' +
+      '2. <div class="sg-hero"> — eye-catching title + subtitle + estimated reading time\n' +
+      '3. <div class="sg-summary"> — Learning Objectives with animated bullet icons\n' +
+      '4. <section> blocks for each major topic, ordered logically from basics to advanced\n' +
+      '5. Between sections, include <div class="sg-divider"></div> for visual rhythm\n' +
+      '6. End with <div class="sg-summary sg-recap"> — Key Takeaways recap\n\n' +
+      '🔷 SECTION STYLING (use these exact classes):\n' +
+      '- <section> wraps each topic\n' +
+      '- <h2 class="sg-heading"> for section titles (purple, bold)\n' +
+      '- <h3 class="sg-subheading"> for sub-topics\n' +
+      '- <p> for paragraphs, <strong> for key terms, <em> for emphasis\n' +
+      '- <ul class="sg-list"> / <ol class="sg-list"> for lists\n' +
+      '- <blockquote class="sg-note"> for important tips, warnings, or key takeaways (amber left border)\n' +
+      '- <div class="sg-highlight"> for critical concepts that need emphasis (purple background)\n' +
+      '- <div class="sg-step"> for numbered step-by-step instructions with <span class="sg-step-num">\n' +
+      '- Use <table class="sg-table"> for comparison data with <thead> and striped rows\n\n' +
+      '🔷 INTERACTIVE QUIZ — USE THIS EXACT HTML STRUCTURE (do NOT reorder elements):\n' +
+      'For EVERY concept, create a clickable quiz. COPY THIS EXACT TEMPLATE — only change the text:\n\n' +
+      '<div class="sg-quiz-item-v3">\n' +
+      '  <p class="sg-quiz-question-v3">❓ Question text?</p>\n' +
+      '  <div class="sg-quiz-choices-v3">\n' +
+      '    <input type="radio" name="qN" id="qN-a" class="sg-q-radio"><label class="sg-q-opt" for="qN-a">A) Option one</label>\n' +
+      '    <input type="radio" name="qN" id="qN-b" class="sg-q-radio sg-q-correct"><label class="sg-q-opt" for="qN-b">B) Correct option</label>\n' +
+      '    <input type="radio" name="qN" id="qN-c" class="sg-q-radio"><label class="sg-q-opt" for="qN-c">C) Option three</label>\n' +
+      '    <input type="radio" name="qN" id="qN-d" class="sg-q-radio"><label class="sg-q-opt" for="qN-d">D) Option four</label>\n' +
+      '  </div>\n' +
+      '  <div class="sg-q-feedback">\n' +
+      '    <p class="sg-answer-correct">🎉 <strong>Correct! B) Correct option</strong></p>\n' +
+      '    <p class="sg-explanation">💡 <strong>Explanation:</strong> Detailed step-by-step reasoning. Reference the source material. Explain WHY each wrong option is incorrect.</p>\n' +
+      '  </div>\n' +
+      '</div>\n\n' +
+      '⚠️ ABSOLUTE RULES — follow exactly or the quiz will break:\n' +
+      '1. Radio inputs MUST come BEFORE their labels (input+label pairs, not label wrapping input)\n' +
+      '2. The sg-q-feedback div MUST be the VERY LAST element inside sg-quiz-item-v3 (after choices div)\n' +
+      '3. ONLY the correct answer input gets class="sg-q-radio sg-q-correct" — wrong answers get class="sg-q-radio" only\n' +
+      '4. Every question needs a UNIQUE name (q1, q2, q3...) so groups are independent\n' +
+      '5. Every id must be unique too (q1-a, q1-b, q2-a, q2-b...)\n' +
+      '6. Each label must reference its input via for="..." matching the id\n' +
+      '7. Include 5-8 quiz items, each inside its own sg-quiz-item-v3, all wrapped in <div class="sg-quiz-section">\n\n' +
+      '🔷 VISUAL ENHANCEMENTS (use these classes for professional look):\n' +
+      '- <span class="sg-badge"> for inline labels/tags\n' +
+      '- <div class="sg-card"> for grouped info boxes with <div class="sg-card-header"> and <div class="sg-card-body">\n' +
+      '- <div class="sg-timeline"> with <div class="sg-timeline-item"> for chronological/sequential content\n' +
+      '- <div class="sg-grid-2"> for side-by-side comparisons (2-column grid)\n' +
+      '- Use emoji icons strategically in headings (📌 🎯 ⚡ 🔍 💡 ⭐)\n\n' +
+      '🔷 COLOR PALETTE (use inline where helpful — the CMS provides matching CSS):\n' +
+      '- Primary/Accent: #4f46e5 (purple), #eef2ff (light purple bg)\n' +
+      '- Success: #059669 (green), #d1fae5 (light green bg)\n' +
+      '- Warning: #d97706 (amber), #fef3c7 (light amber bg)\n' +
+      '- Text: #1e293b (dark), #64748b (muted)\n' +
+      '- Backgrounds: #ffffff (white), #f8fafc (light gray), #fafbfe (blue-tinted)\n\n' +
+      '🔷 LENGTH & QUALITY:\n' +
+      '- Comprehensive: 1000-3000 words\n' +
+      '- Well-researched: derive ALL facts from the source material\n' +
+      '- Engaging tone: friendly but academic, like a knowledgeable tutor\n' +
+      '- Short paragraphs (2-4 sentences max) for readability\n' +
+      '- Use bullet points and numbered lists liberally for scannability\n\n' +
+      'Document content:\n"""\n' + text + '\n"""\n\nSTART YOUR RESPONSE WITH: <div class="study-guide">';
+
+    var fullResponse = '';
+    tool.requestAIStream(prompt, null, {
+      onToken: function(token) { fullResponse += token; },
+      onComplete: function() {
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
+        var html = fullResponse.trim();
+        html = html.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+        // Extract HTML content (between first < and last >)
+        var startIdx = html.indexOf('<');
+        var endIdx = html.lastIndexOf('>');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          html = html.substring(startIdx, endIdx + 1);
+        }
+        if (html.length < 20) {
+          tool.notify('AI generated too little content. Try again with more PDFs.', 'warning');
+          return;
+        }
+        editingHtmlCode = html;
+        if (el('edit-html-code')) el('edit-html-code').value = html;
+        if (el('edit-html-code-v2')) el('edit-html-code-v2').value = html;
+        updateHtmlPreview();
+        tool.notify('✅ Study HTML generated! Review it in the Study HTML tab, then save the lesson.', 'success');
+      },
+      onError: function(err) {
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
+        tool.notify('AI generation failed: ' + err, 'error');
+      }
+    });
+  }
+}
+
+/** Update the live HTML preview iframe from the code textarea */
+function updateHtmlPreview() {
+  var iframe = el('study-html-preview-iframe');
+  if (!iframe) return;
+  var code = '';
+  if (el('edit-html-code-v2')) code = el('edit-html-code-v2').value;
+  else if (el('edit-html-code')) code = el('edit-html-code').value;
+
+  // Base CSS that matches the SelfPacedLearn tool's study guide styles
+  var previewCss = '<style>'
+    + ':root{--primary:#4f46e5;--primary-light:#818cf8;--primary-dark:#3730a3;--primary-bg:#eef2ff;--success:#059669;--success-light:#d1fae5;--warning:#d97706;--warning-light:#fef3c7;--border:#e2e8f0;--text:#1e293b;--text-muted:#64748b;--radius:8px;--radius-lg:12px;--radius-xl:16px}'
+    + 'body{font-family:system-ui,sans-serif;font-size:15px;color:#1e293b;line-height:1.8;padding:20px;max-width:900px;margin:0 auto;-webkit-font-smoothing:antialiased}'
+    + '.study-guide{line-height:1.8;font-size:15px}'
+    + '.sg-hero{text-align:center;padding:32px 24px;background:linear-gradient(135deg,#eef2ff,#f0f4ff);border-radius:16px;margin-bottom:28px;border:1px solid #818cf8}'
+    + '.sg-hero h1{font-size:26px;font-weight:800;color:#3730a3;margin-bottom:8px}'
+    + '.sg-hero p{font-size:15px;color:#64748b;max-width:600px;margin:0 auto}'
+    + '.sg-heading{font-size:22px;font-weight:800;color:#3730a3;margin:32px 0 14px;padding-bottom:10px;border-bottom:2px solid #eef2ff}'
+    + '.sg-subheading{font-size:17px;font-weight:700;color:#1e293b;margin:22px 0 10px}'
+    + '.sg-summary{background:linear-gradient(135deg,#eef2ff,#f0f4ff);border:1px solid #818cf8;border-radius:12px;padding:22px 26px;margin-bottom:24px}'
+    + '.sg-summary h2{font-size:18px;font-weight:700;color:#3730a3;margin-bottom:10px}'
+    + '.sg-summary ul,.sg-summary ol{margin:0 0 0 20px}.sg-summary li{margin-bottom:7px}'
+    + '.sg-recap{background:linear-gradient(135deg,#fef3c7,#fef9e7);border-color:#fcd34d}.sg-recap h2{color:#92400e}'
+    + '.sg-note{border-left:4px solid #d97706;padding:14px 18px;margin:18px 0;background:#fef3c7;border-radius:0 8px 8px 0;color:#92400e}'
+    + '.sg-highlight{background:#eef2ff;border:1px solid #818cf8;border-radius:12px;padding:16px 20px;margin:16px 0}'
+    + '.sg-highlight strong{color:#3730a3}'
+    + '.sg-divider{height:1px;background:#e2e8f0;margin:28px 0}'
+    + '.sg-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#eef2ff;color:#4f46e5;margin:0 2px}'
+    + '.sg-list{margin:8px 0 12px 22px}.sg-list li{margin-bottom:6px}'
+    + '.sg-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}'
+    + '.sg-table th{text-align:left;padding:10px 14px;background:#f1f5f9;font-weight:600;border-bottom:2px solid #e2e8f0}'
+    + '.sg-table td{padding:10px 14px;border-bottom:1px solid #e2e8f0}'
+    + '.sg-table tr:nth-child(even) td{background:#fafbfc}'
+    + '.sg-step{display:flex;gap:14px;margin:14px 0;align-items:flex-start}'
+    + '.sg-step-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#4f46e5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}'
+    + '.sg-card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:14px 0;background:#fff}'
+    + '.sg-card-header{padding:12px 18px;background:#f1f5f9;font-weight:700;border-bottom:1px solid #e2e8f0}'
+    + '.sg-card-body{padding:16px 18px}'
+    + '.sg-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}'
+    + '.sg-timeline{position:relative;padding-left:28px;margin:14px 0}'
+    + '.sg-timeline::before{content:"";position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:#818cf8}'
+    + '.sg-timeline-item{position:relative;margin-bottom:16px}'
+    + '.sg-timeline-item::before{content:"";position:absolute;left:-24px;top:6px;width:10px;height:10px;border-radius:50%;background:#4f46e5;border:2px solid #fff;box-shadow:0 0 0 2px #4f46e5}'
+    /* Interactive Q&A v3 — clickable options with radio buttons */
+    + '.sg-quiz-section{margin:28px 0}'
+    + '.sg-quiz-item-v3{border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:12px;background:#fff}'
+    + '.sg-quiz-question-v3{font-weight:700;font-size:15px;margin-bottom:12px}'
+    + '.sg-quiz-choices-v3{position:relative}'
+    + '.sg-q-radio{position:absolute;opacity:0;pointer-events:none;width:0;height:0}'
+    + '.sg-q-opt{display:block;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#fafbfc;font-size:14px;transition:all 0.15s ease}'
+    + '.sg-q-opt:hover{border-color:#818cf8;background:#eef2ff}'
+    + '.sg-q-radio:checked+.sg-q-opt{border-color:#4f46e5;background:#eef2ff;font-weight:600;box-shadow:0 0 0 1px #4f46e5}'
+    + '.sg-q-feedback{display:none;margin-top:12px;padding:14px 16px;background:linear-gradient(135deg,#d1fae5,#ecfdf5);border:1px solid #6ee7b7;border-radius:12px;animation:sgFadeSlide 0.3s ease}'
+    + '.sg-q-correct:checked~.sg-q-feedback{display:block}'
+    + '.sg-q-feedback .sg-answer-correct{font-size:15px;margin-bottom:6px;color:#065f46}'
+    + '.sg-q-feedback .sg-explanation{font-size:14px;color:#64748b;line-height:1.7;margin-top:6px}'
+    + '@keyframes sgFadeSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}'
+    + '@media(max-width:600px){.sg-grid-2{grid-template-columns:1fr}.sg-hero{padding:20px 16px}.sg-hero h1{font-size:20px}}'
+    + '</style>';
+
+  if (!code || code.length < 10) {
+    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px">📝 Enter HTML code to see a live preview here</body>';
+  } else {
+    iframe.srcdoc = previewCss + code;
+  }
+}
+
+/** Debounced preview update on typing */
+var _htmlPreviewTimer = null;
+function onHtmlCodeInput() {
+  if (_htmlPreviewTimer) clearTimeout(_htmlPreviewTimer);
+  _htmlPreviewTimer = setTimeout(updateHtmlPreview, 400);
 }
 
 /* ═══════════════════════════════════════════
@@ -1078,9 +1359,37 @@ function bindEvents() {
     pdfAddBtns[pa].addEventListener('click', function() { openPdfEditor(this.getAttribute('data-add-pdf'), null); });
   }
 
-  el('btn-generate-quiz-from-pdf').addEventListener('click', generateQuizFromPdf);
+  var btnGenQuiz = el('btn-generate-quiz-from-pdf');
+  if (btnGenQuiz) btnGenQuiz.addEventListener('click', generateQuizFromPdf);
   var btnGen2 = el('btn-generate-quiz-from-pdf-2');
   if (btnGen2) btnGen2.addEventListener('click', generateQuizFromPdf);
+  var btnGenHtmlV2 = el('btn-generate-html-from-pdf-v2');
+  if (btnGenHtmlV2) btnGenHtmlV2.addEventListener('click', generateHtmlFromPdf);
+
+  // Study HTML sub-tabs (Code / Preview)
+  var htmlTabs = document.querySelector('.study-html-tabs');
+  if (htmlTabs) {
+    htmlTabs.addEventListener('click', function(e) {
+      var tab = e.target.closest('.study-html-tab');
+      if (!tab) return;
+      var tabName = tab.getAttribute('data-html-tab');
+      var allTabs = htmlTabs.querySelectorAll('.study-html-tab');
+      for (var ht = 0; ht < allTabs.length; ht++) allTabs[ht].classList.remove('active');
+      tab.classList.add('active');
+      var panels = document.querySelectorAll('.study-html-panel');
+      for (var hp = 0; hp < panels.length; hp++) {
+        panels[hp].classList.toggle('active', panels[hp].getAttribute('data-html-panel') === tabName);
+      }
+      // Auto-refresh preview when switching to Preview tab
+      if (tabName === 'preview') updateHtmlPreview();
+    });
+  }
+
+  // Live preview: input on code textarea triggers debounced preview update
+  var codeAreaV2 = el('edit-html-code-v2');
+  if (codeAreaV2) codeAreaV2.addEventListener('input', onHtmlCodeInput);
+  var refreshBtn = el('btn-refresh-preview');
+  if (refreshBtn) refreshBtn.addEventListener('click', updateHtmlPreview);
 
   el('btn-confirm-yes').addEventListener('click', function() { hideConfirm(); if (_confirmCallback) { var cb = _confirmCallback; _confirmCallback = null; cb(); } });
   el('btn-confirm-no').addEventListener('click', function() { hideConfirm(); });

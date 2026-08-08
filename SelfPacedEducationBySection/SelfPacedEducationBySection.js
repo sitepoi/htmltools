@@ -103,14 +103,19 @@ function renderPdfIntoContainer(containerId, url) {
     })
     .then(function(pdf) {
       container.innerHTML = '';
+      var totalPages = pdf.numPages;
+      var safeId = containerId.replace(/[^a-zA-Z0-9_-]/g, '_');
+
       var renderPage = function(pageNum) {
         return pdf.getPage(pageNum).then(function(page) {
           var containerWidth = container.clientWidth || 760;
           var baseViewport = page.getViewport({ scale: 1 });
-          var scale = Math.min(2.5, containerWidth / baseViewport.width);
+          var scale = Math.min(3.0, (containerWidth - 24) / baseViewport.width);
           var viewport = page.getViewport({ scale: scale });
           var canvas = document.createElement('canvas');
           canvas.className = 'pdf-page-canvas';
+          canvas.id = 'pdf-page-' + safeId + '-' + pageNum;
+          canvas.setAttribute('data-page', pageNum);
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           container.appendChild(canvas);
@@ -120,7 +125,12 @@ function renderPdfIntoContainer(containerId, url) {
       };
       var chain = Promise.resolve();
       var renderNext = function(n) {
-        if (n > pdf.numPages) { tool.resize(); return; }
+        if (n > totalPages) {
+          tool.resize();
+          // Build page navigation in the toolbar
+          buildPdfPageNav(container, safeId, totalPages);
+          return;
+        }
         chain = chain
           .then(function() { return renderPage(n); })
           .then(function() { tool.resize(); renderNext(n + 1); });
@@ -140,6 +150,156 @@ function renderPdfIntoContainer(containerId, url) {
       errBox.appendChild(msg);
       errBox.appendChild(link);
       container.appendChild(errBox);
+      tool.resize();
+    });
+}
+
+/** Build a page-navigation dropdown in the PDF toolbar.
+ *  On desktop it opens on hover; on mobile it's a click-to-toggle dropdown.
+ *  The trigger text auto-updates to show the current visible page as the user scrolls. */
+function buildPdfPageNav(canvasContainer, safeId, totalPages) {
+  if (totalPages <= 1) return; // no need for nav with single page
+  // Find the parent pdf-viewer-card and its toolbar
+  var card = canvasContainer.closest('.pdf-viewer-card');
+  if (!card) return;
+  var toolbar = card.querySelector('.pdf-viewer-toolbar');
+  if (!toolbar) return;
+
+  // Create the pages dropdown
+  var navWrap = document.createElement('div');
+  navWrap.className = 'pdf-page-nav';
+
+  var trigger = document.createElement('button');
+  trigger.className = 'btn btn-sm btn-outline pdf-page-nav-trigger';
+  trigger.innerHTML = '📄 <span class="pdf-page-nav-label">Page 1</span> of ' + totalPages + ' <span class="pdf-page-nav-arrow">▾</span>';
+
+  var dropdown = document.createElement('div');
+  dropdown.className = 'pdf-page-nav-dropdown';
+  var listHtml = '';
+  for (var p = 1; p <= totalPages; p++) {
+    listHtml += '<button class="pdf-page-nav-item" data-page="' + p + '" data-target="pdf-page-' + safeId + '-' + p + '">Page ' + p + '</button>';
+  }
+  dropdown.innerHTML = listHtml;
+
+  navWrap.appendChild(trigger);
+  navWrap.appendChild(dropdown);
+  toolbar.appendChild(navWrap);
+
+  // ── Scroll spy: update trigger label to current visible page ──
+  var labelEl = trigger.querySelector('.pdf-page-nav-label');
+  var currentPage = 1;
+
+  function updateTriggerText(pageNum) {
+    if (pageNum === currentPage) return;
+    currentPage = pageNum;
+    if (labelEl) labelEl.textContent = 'Page ' + pageNum;
+    // Also highlight the active item in the dropdown
+    var items = dropdown.querySelectorAll('.pdf-page-nav-item');
+    for (var i = 0; i < items.length; i++) {
+      items[i].classList.toggle('active', parseInt(items[i].getAttribute('data-page')) === pageNum);
+    }
+  }
+
+  // Use IntersectionObserver to detect which page is most visible
+  if (typeof IntersectionObserver !== 'undefined') {
+    var pageCanvases = [];
+    for (var cp = 1; cp <= totalPages; cp++) {
+      var c = document.getElementById('pdf-page-' + safeId + '-' + cp);
+      if (c) pageCanvases.push(c);
+    }
+    var visMap = {}; // pageNum → ratio
+    var observer = new IntersectionObserver(function(entries) {
+      for (var ei = 0; ei < entries.length; ei++) {
+        var e = entries[ei];
+        var pn = parseInt(e.target.getAttribute('data-page'));
+        if (!isNaN(pn)) visMap[pn] = e.intersectionRatio;
+      }
+      // Find page with highest intersection ratio
+      var bestPage = 1;
+      var bestRatio = 0;
+      var keys = Object.keys(visMap);
+      for (var ki = 0; ki < keys.length; ki++) {
+        var k = parseInt(keys[ki]);
+        if (visMap[k] > bestRatio) { bestRatio = visMap[k]; bestPage = k; }
+      }
+      if (bestRatio > 0) updateTriggerText(bestPage);
+    }, { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] });
+    for (var op = 0; op < pageCanvases.length; op++) {
+      observer.observe(pageCanvases[op]);
+    }
+  }
+
+  // ── Wire hover/click ──
+  var hideTimer = null;
+
+  function showDropdown() {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    navWrap.classList.add('open');
+  }
+  function hideDropdown() {
+    hideTimer = setTimeout(function() { navWrap.classList.remove('open'); }, 150);
+  }
+
+  // Desktop: hover to open
+  trigger.addEventListener('mouseenter', showDropdown);
+  navWrap.addEventListener('mouseenter', function() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } });
+  navWrap.addEventListener('mouseleave', hideDropdown);
+
+  // Mobile: click to toggle
+  trigger.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (navWrap.classList.contains('open')) {
+      navWrap.classList.remove('open');
+    } else {
+      showDropdown();
+    }
+  });
+
+  // Page items: click to scroll to that canvas
+  var items = dropdown.querySelectorAll('.pdf-page-nav-item');
+  for (var i = 0; i < items.length; i++) {
+    items[i].addEventListener('click', function(e) {
+      e.stopPropagation();
+      var pageNum = parseInt(this.getAttribute('data-page'));
+      var targetId = this.getAttribute('data-target');
+      var target = document.getElementById(targetId);
+      if (target) {
+        // Update the trigger text immediately for responsiveness
+        updateTriggerText(pageNum);
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var containerRect = canvasContainer.getBoundingClientRect();
+        var targetRect = target.getBoundingClientRect();
+        canvasContainer.scrollTop += targetRect.top - containerRect.top - 20;
+      }
+      navWrap.classList.remove('open');
+    });
+  }
+
+  // Close on outside click
+  document.addEventListener('click', function closeNav(e) {
+    if (!navWrap.contains(e.target)) navWrap.classList.remove('open');
+  });
+}
+
+/** Fetches an HTML document via the proxy URL and renders it inline. */
+function renderHtmlDocIntoContainer(containerId, url) {
+  var container = el(containerId);
+  if (!container) return;
+  fetch(url)
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(htmlText) {
+      // Strip out scripts for safety, then inject
+      var safeHtml = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      container.innerHTML = '<div class="detail-content">' + safeHtml + '</div>';
+      tool.resize();
+    })
+    .catch(function(err) {
+      console.error('HTML doc render error:', err);
+      container.innerHTML = '<div class="pdf-canvas-error"><div>⚠️ Could not load HTML document.</div><a onclick="tool.openUrl(\'' + url + '\')">↗ Open in New Tab</a></div>';
       tool.resize();
     });
 }
@@ -423,6 +583,7 @@ function renderLessonDetail() {
   var studyDocPdfs = normalizePdfArray(lesson.studyDocPdfUrls);
   var worksheetPdfs = normalizePdfArray(lesson.worksheetPdfUrls);
   var answerKeyPdfs = normalizePdfArray(lesson.answerKeyPdfUrls);
+  var htmlDocs = normalizePdfArray(lesson.htmlDocUrls);
   var content = lesson.content || '';
 
   var quizData = lesson.quiz;
@@ -442,6 +603,9 @@ function renderLessonDetail() {
   if (studyDocPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Read Study Document' + (studyDocPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: studyDocPdfs, label: 'Study Material', hasContent: true }); }
   if (worksheetPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Complete Worksheet' + (worksheetPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
   if (answerKeyPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Check Answer Key' + (answerKeyPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
+  if (htmlDocs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'HTML Document' + (htmlDocs.length > 1 ? 's' : ''), type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'HTML Doc', hasContent: true }); }
+  var htmlCode = lesson.htmlCode || '';
+  if (htmlCode && htmlCode.length > 20) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
   if (content && content !== '<br>' && content !== '<br>') { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Lesson Notes', type: 'html', html: content, hasContent: true }); }
   if (hasQuiz) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Knowledge Check', type: 'quiz', quizData: quizData, hasContent: true }); }
 
@@ -449,10 +613,20 @@ function renderLessonDetail() {
   var html = '';
   window._pdfRenderQueue = [];
 
+  // Build tab bar (shown on desktop, hidden on mobile)
+  var tabsHtml = '';
+  if (steps.length > 0) {
+    tabsHtml = '<div class="study-tabs"><div class="study-tabs-inner">';
+    for (var ti = 0; ti < steps.length; ti++) {
+      tabsHtml += '<button class="study-tab-btn" data-tab-step="' + ti + '"><span class="study-tab-badge">' + steps[ti].num + '</span>' + steps[ti].icon + ' ' + esc(steps[ti].title) + '</button>';
+    }
+    tabsHtml += '</div></div>';
+  }
+
   if (steps.length === 0) {
     html = '<div class="study-flow-empty"><div class="empty-icon">📖</div><div class="empty-title">No study materials yet</div><div class="empty-desc">This lesson has no content. A manager needs to add materials.</div></div>';
   } else {
-    html = '<div class="study-steps">';
+    html = tabsHtml + '<div class="study-steps">';
     for (var si = 0; si < steps.length; si++) {
       var step = steps[si];
       var stepId = 'study-step-' + si;
@@ -490,6 +664,21 @@ function renderLessonDetail() {
           html += '</div></div>';
           window._pdfRenderQueue.push({ containerId: canvasContainerId, url: proxyUrl });
         }
+      } else if (step.type === 'htmlDoc') {
+        for (var hj = 0; hj < step.htmlDocUrls.length; hj++) {
+          var htmlProxyUrl = toHostingUrl(step.htmlDocUrls[hj]);
+          var htmlDocName = step.label + (step.htmlDocUrls.length > 1 ? ' ' + (hj+1) + ' of ' + step.htmlDocUrls.length : '');
+          var htmlContainerId = 'html-doc-' + si + '-' + hj;
+          html += '<div class="study-embed">';
+          html += '<div class="pdf-viewer-card">';
+          html += '<div class="pdf-viewer-toolbar"><span class="pdf-viewer-icon">🌐</span><span class="pdf-viewer-name">' + esc(htmlDocName) + '</span><a class="btn btn-outline btn-sm" style="margin-left:auto" title="Open in new tab" data-open-url="' + esc(htmlProxyUrl) + '">↗ Open in New Tab</a></div>';
+          html += '<div class="html-doc-container" id="' + htmlContainerId + '"><div class="pdf-canvas-loading">⏳ Loading HTML document…</div></div>';
+          html += '</div></div>';
+          window._htmlDocRenderQueue = window._htmlDocRenderQueue || [];
+          window._htmlDocRenderQueue.push({ containerId: htmlContainerId, url: htmlProxyUrl });
+        }
+      } else if (step.type === 'htmlCode') {
+        html += '<div class="detail-content">' + step.htmlCode + '</div>';
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
       } else if (step.type === 'quiz') {
@@ -516,6 +705,12 @@ function renderLessonDetail() {
     renderPdfIntoContainer(pdfQueue[pq].containerId, pdfQueue[pq].url);
   }
 
+  // Render queued HTML documents inline
+  var htmlDocQueue = window._htmlDocRenderQueue || [];
+  for (var hq = 0; hq < htmlDocQueue.length; hq++) {
+    renderHtmlDocIntoContainer(htmlDocQueue[hq].containerId, htmlDocQueue[hq].url);
+  }
+
   setTimeout(function() {
     var allSteps = flowEl.querySelectorAll('.study-step');
     var expanded = false;
@@ -525,6 +720,35 @@ function renderLessonDetail() {
       }
     }
     if (!expanded && allSteps.length > 0) allSteps[0].classList.add('expanded');
+
+    // Wire tab bar (desktop)
+    var tabBar = flowEl.querySelector('.study-tabs');
+    if (tabBar && steps.length > 0) {
+      var tabBtns = tabBar.querySelectorAll('.study-tab-btn');
+      var stepEls = flowEl.querySelectorAll('.study-step');
+
+      // Click a tab → show only that step's content
+      var activeStepIdx = 0;
+      function activateTab(idx) {
+        if (activeStepIdx === idx) return;
+        // Hide previous, show new
+        if (stepEls[activeStepIdx]) stepEls[activeStepIdx].classList.remove('active-tab');
+        activeStepIdx = idx;
+        if (stepEls[idx]) stepEls[idx].classList.add('active-tab');
+        // Update tab styling
+        for (var tb2 = 0; tb2 < tabBtns.length; tb2++) {
+          tabBtns[tb2].classList.toggle('active', tb2 === idx);
+        }
+        tool.resize();
+      }
+      for (var tb = 0; tb < tabBtns.length; tb++) {
+        (function(btn, idx) {
+          btn.addEventListener('click', function() { activateTab(idx); });
+        })(tabBtns[tb], tb);
+      }
+      // Open first tab by default
+      activateTab(0);
+    }
   }, 50);
 
   // Source links

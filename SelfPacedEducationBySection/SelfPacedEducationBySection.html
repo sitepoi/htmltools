@@ -13,7 +13,9 @@
 
   <!-- PROGRESS BAR -->
   <div class="progress-bar-wrap" id="progress-bar-wrap">
-    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar-fill" style="width:0%"></div>
+    </div>
     <span class="progress-bar-text" id="progress-bar-text">0% Complete</span>
   </div>
 
@@ -72,29 +74,29 @@
 
   <!-- LESSON DETAIL VIEW -->
   <div id="view-lesson-detail" class="view" style="display:none">
-    <div class="detail-card">
+    <div class="detail-breadcrumb" id="detail-breadcrumb"></div>
+    <div class="detail-hero">
       <div class="detail-header">
         <h2 class="detail-title" id="detail-title"></h2>
         <span class="detail-badge" id="detail-badge"></span>
       </div>
-      <div class="detail-breadcrumb" id="detail-breadcrumb"></div>
       <div class="detail-meta">
         <span id="detail-estimated"></span>
         <span id="detail-status-label"></span>
       </div>
-      <div class="study-flow" id="study-flow"></div>
-      <div class="source-links-area" id="source-links-area" style="display:none">
-        <h3 class="source-links-title">📎 Additional Resources</h3>
-        <ul class="source-links-list" id="source-links-list"></ul>
+    </div>
+    <div class="study-flow" id="study-flow"></div>
+    <div class="source-links-area" id="source-links-area" style="display:none">
+      <h3 class="source-links-title">Additional Resources</h3>
+      <ul class="source-links-list" id="source-links-list"></ul>
+    </div>
+    <div class="detail-nav">
+      <button class="btn btn-outline" id="btn-prev-lesson" disabled>Previous</button>
+      <div class="detail-nav-center">
+        <button class="btn btn-success" id="btn-mark-complete">Mark Complete</button>
+        <button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">Mark In Progress</button>
       </div>
-      <div class="detail-nav">
-        <button class="btn btn-outline" id="btn-prev-lesson" disabled>← Previous</button>
-        <div class="detail-nav-center">
-          <button class="btn btn-success" id="btn-mark-complete">✓ Mark Complete</button>
-          <button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">📖 Mark In Progress</button>
-        </div>
-        <button class="btn btn-outline" id="btn-next-lesson" disabled>Next →</button>
-      </div>
+      <button class="btn btn-outline" id="btn-next-lesson" disabled>Next</button>
     </div>
   </div>
 
