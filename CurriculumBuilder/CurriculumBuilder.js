@@ -1457,7 +1457,7 @@ var STUDY_COMPONENTS = {
       return '<div style="border:2px solid #8b5cf6;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:6px">'+(d.icon||'💎')+'</div>'+
         '<div style="font-weight:700;color:#6d28d9;font-size:14px;margin-bottom:8px">'+esc(d.title||'Key Insight')+'</div>'+
-        '<p style="color:#475569;font-size:17px;font-weight:600;margin:0;line-height:1.7">'+esc(d.insight||d.body||'')+'</p>'++
+        '<p style="color:#475569;font-size:17px;font-weight:600;margin:0;line-height:1.7">'+esc(d.insight||d.body||'')+'</p>'+
         '</div>';
     }
   },
@@ -1633,9 +1633,9 @@ var STUDY_COMPONENTS = {
       return h;
     }
   },
-  // ── 93. match ── match pairs with reveal
+  // ── 93. match ── match pairs with reveal (right column auto-shuffled)
   'match': {
-    desc: 'Match pairs. title?, pairs:[{a, b}] or left:[], right:[] — mentally match then reveal.',
+    desc: 'Match pairs. title?, pairs:[{a, b}] or left:[], right:[] — mentally match then reveal. Right column is shuffled automatically.',
     render: function(d) {
       var pairs = d.pairs||[];
       // Support left/right format too
@@ -1644,14 +1644,24 @@ var STUDY_COMPONENTS = {
         for (var k=0;k<len;k++) pairs.push({a:d.left[k], b:d.right[k]});
       }
       if (!pairs.length) return '';
+      // Defensive: extract plain strings from nested objects the AI might generate
+      function toStr(v) {
+        if (typeof v==='string') return v;
+        if (v&&typeof v==='object') return v.text||v.label||v.name||v.desc||v.value||'';
+        return String(v||'');
+      }
+      for (var p=0;p<pairs.length;p++) { pairs[p].a=toStr(pairs[p].a); pairs[p].b=toStr(pairs[p].b); }
+      // Shuffle right column so pairs aren't obviously side-by-side
+      var rightShuffled = pairs.map(function(x){return x.b;});
+      for (var s=rightShuffled.length-1;s>0;s--) { var j=Math.floor(Math.random()*(s+1)); var tmp=rightShuffled[s]; rightShuffled[s]=rightShuffled[j]; rightShuffled[j]=tmp; }
       var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
       h += '<div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">🔗 '+esc(d.title||'Match the Pairs')+'</div>';
       h += '<div style="padding:14px 18px">';
-      h += '<p style="color:#64748b;font-size:13px;margin:0 0 12px">Try to match each item with its pair, then reveal to check:</p>';
+      h += '<p style="color:#64748b;font-size:13px;margin:0 0 12px">Mentally match each left item to its pair on the right, then reveal to check:</p>';
       h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
       for (var i=0;i<pairs.length;i++) {
-        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(pairs[i].a||'')+'</div>';
-        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(pairs[i].b||'')+'</div>';
+        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(pairs[i].a)+'</div>';
+        h += '<div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(rightShuffled[i])+'</div>';
       }
       h += '</div>';
       h += '<details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;list-style:none">✅ Reveal matches</summary>';
