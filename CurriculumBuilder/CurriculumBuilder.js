@@ -26,6 +26,7 @@ var editingHtmlDocUrls = [];
 var editingHiddenDocUrls = [];  // URLs hidden from student view
 var editingFlashcards = [];     // Flashcards (AI-generated from PDFs)
 var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
+var editingStudyHtmlData = null;   // JSON data: { components: [...] }
 var editingQuizQuestionIdx = null;
 var editingQuizQuestionSetIdx = null;
 var editingSourceLinkIdx = null;
@@ -36,6 +37,1399 @@ var editingPdfType = null;
 /* ── Constants ── */
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
+
+/* ═══════════════════════════════════════════
+   STUDY HTML COMPONENTS — Rich Block Library (75 block types)
+   AI composes them freely: {"components":[{type,data},...]}
+   ═══════════════════════════════════════════ */
+var STUDY_COMPONENTS = {
+  // ── 1. callout ── colored left-border alert box
+  'callout': {
+    desc: 'Colored alert box. variant: info|tip|key|warn. Each has icon + color.',
+    render: function(d) {
+      var colors = { info: ['#3b82f6','#eff6ff','ℹ️'], tip: ['#059669','#ecfdf5','💡'], key: ['#d97706','#fef3c7','🔑'], warn: ['#dc2626','#fee2e2','⚠️'] };
+      var c = colors[d.variant] || colors.info;
+      return '<div style="border-left:4px solid '+c[0]+';background:'+c[1]+';padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0">' +
+        '<div style="font-weight:700;color:'+c[0]+';margin-bottom:4px">'+c[2]+' ' + esc(d.title || '') + '</div>' +
+        '<p style="color:#1e293b;margin:0">'+esc(d.body || d.text || '')+'</p></div>';
+    }
+  },
+  // ── 2. html ── raw HTML block
+  'html': {
+    desc: 'Raw HTML content (scripts stripped)',
+    render: function(d) {
+      var safe = (d.html || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      return '<div class="detail-content">' + safe + '</div>';
+    }
+  },
+  // ── 3. image-block ── centered image with captions
+  'image-block': {
+    desc: 'Centered image with optional alt, caption, credit, maxHeight',
+    render: function(d) {
+      var h = '<div style="text-align:center;margin:20px 0">';
+      h += '<img src="'+esc(d.url)+'" alt="'+esc(d.alt||'')+'" style="max-width:100%;max-height:'+(d.maxHeight||400)+'px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">';
+      if (d.caption) h += '<p style="font-style:italic;color:#64748b;margin-top:8px">'+esc(d.caption)+'</p>';
+      if (d.credit) h += '<p style="font-size:11px;color:#94a3b8">'+esc(d.credit)+'</p>';
+      return h + '</div>';
+    }
+  },
+  // ── 4. intro-hero ── large gradient hero for section/lesson start
+  'intro-hero': {
+    desc: 'Large hero card. icon(emoji), heading, description, optional objectives array.',
+    render: function(d) {
+      var h = '<div class="sg-hero" style="padding:40px 24px">';
+      if (d.icon) h += '<div style="font-size:56px;margin-bottom:12px">'+esc(d.icon)+'</div>';
+      h += '<h1 style="font-family:Georgia,serif;font-size:28px;font-weight:800;color:#3730a3;margin-bottom:8px">'+esc(d.heading)+'</h1>';
+      h += '<p style="font-size:16px;color:#64748b;max-width:650px;margin:0 auto 16px">'+esc(d.description)+'</p>';
+      if (d.objectives && d.objectives.length) {
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">';
+        for (var i=0;i<d.objectives.length;i++) h += '<span style="display:inline-flex;align-items:center;gap:4px;background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">✅ '+esc(typeof d.objectives[i]==='string'?d.objectives[i]:d.objectives[i].text)+'</span>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 5. fact-grid ── responsive grid of label/value cards
+  'fact-grid': {
+    desc: 'Grid of label/value cards. cols: 2|3|4. items: [{label, value}].',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr','4':'1fr 1fr 1fr 1fr' };
+      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['2'])+';gap:12px;margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center">';
+        h += '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:4px">'+esc(it.label)+'</div>';
+        h += '<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1e293b">'+esc(it.value)+'</div>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 6. pros-cons ── side-by-side green/red panels
+  'pros-cons': {
+    desc: 'Side-by-side pros (green) and cons (red)',
+    render: function(d) {
+      var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0">';
+      h += '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px"><h3 style="color:#065f46;margin-bottom:8px">✅ '+esc(d.prosTitle||'Pros')+'</h3><ul style="list-style:none;padding:0">';
+      for (var i=0;i<(d.pros||[]).length;i++) h += '<li style="padding:4px 0;color:#065f46">➕ '+esc(d.pros[i])+'</li>';
+      h += '</ul></div>';
+      h += '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:16px"><h3 style="color:#991b1b;margin-bottom:8px">❌ '+esc(d.consTitle||'Cons')+'</h3><ul style="list-style:none;padding:0">';
+      for (var j=0;j<(d.cons||[]).length;j++) h += '<li style="padding:4px 0;color:#991b1b">➖ '+esc(d.cons[j])+'</li>';
+      h += '</ul></div></div>';
+      return h;
+    }
+  },
+  // ── 7. data-table ── styled header+body table
+  'data-table': {
+    desc: 'Styled table. columns:[{key,header}], rows:[{key:value}].',
+    render: function(d) {
+      var cols = d.columns || [];
+      var rows = d.rows || [];
+      if (!cols.length || !rows.length) return '';
+      var h = '<div style="overflow-x:auto;margin:16px 0"><table class="sg-table"><thead><tr>';
+      for (var c=0;c<cols.length;c++) h += '<th>'+esc(cols[c].header||cols[c])+'</th>';
+      h += '</tr></thead><tbody>';
+      for (var r=0;r<rows.length;r++) {
+        h += '<tr>';
+        for (var c2=0;c2<cols.length;c2++) h += '<td>'+esc(rows[r][cols[c2].key]||'')+'</td>';
+        h += '</tr>';
+      }
+      return h + '</tbody></table></div>';
+    }
+  },
+  // ── 8. key-numbers ── large centered stat numbers
+  'key-numbers': {
+    desc: 'Large centered stat numbers. items:[{value,unit,label}].',
+    render: function(d) {
+      var h = '<div style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center;margin:24px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        h += '<div style="text-align:center;min-width:120px"><div style="font-family:Georgia,serif;font-size:36px;font-weight:800;color:#4f46e5">'+esc(it.value);
+        if (it.unit) h += '<span style="font-size:18px;color:#818cf8">'+esc(it.unit)+'</span>';
+        h += '</div><div style="font-size:13px;color:#64748b;margin-top:4px">'+esc(it.label)+'</div></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 9. memory-box ── amber key-takeaways box with pin
+  'memory-box': {
+    desc: 'Amber key takeaways box. title, rows:[{key,value}].',
+    render: function(d) {
+      var h = '<div style="background:linear-gradient(135deg,#fef3c7,#fef9e7);border:1px solid #fcd34d;border-radius:12px;padding:20px 24px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:20px">📌</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Key Takeaways')+'</strong></div>';
+      for (var i=0;i<(d.rows||[]).length;i++) {
+        var r = d.rows[i];
+        h += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #fde68a"><strong style="color:#b45309">'+esc(r.key)+'</strong><span style="color:#64748b">'+esc(r.value)+'</span></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 10. definition-list ── term/definition with alternating bg
+  'definition-list': {
+    desc: 'Term/definition list. title, terms:[{term,definition}].',
+    render: function(d) {
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:10px;font-weight:700">📖 '+esc(d.title)+'</h3>';
+      for (var i=0;i<(d.terms||[]).length;i++) {
+        var t = d.terms[i];
+        var bg = i%2===0?'#f8fafc':'#fff';
+        h += '<div style="display:flex;gap:16px;padding:10px 14px;background:'+bg+';border-radius:6px"><strong style="min-width:140px;text-align:right;color:#4f46e5">'+esc(t.term)+'</strong><span style="color:#64748b">'+esc(t.definition)+'</span></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 11. stat-row ── horizontal emoji stat cards
+  'stat-row': {
+    desc: 'Horizontal stat cards. items:[{emoji,value,label}].',
+    render: function(d) {
+      var h = '<div style="display:flex;flex-wrap:wrap;gap:12px;margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        h += '<div style="flex:1;min-width:140px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center">';
+        if (it.emoji) h += '<div style="font-size:28px;margin-bottom:6px">'+esc(it.emoji)+'</div>';
+        h += '<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#1e293b">'+esc(it.value)+'</div>';
+        h += '<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+esc(it.label)+'</div></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 12. weight-bar ── visual range indicator with colored dots
+  'weight-bar': {
+    desc: 'Weight/range bars. segments:[{range,label,rule,color:green|blue|amber|red}].',
+    render: function(d) {
+      var dotColors = { green:'#059669', blue:'#3b82f6', amber:'#d97706', red:'#dc2626' };
+      var h = '<div style="margin:16px 0">';
+      for (var i=0;i<(d.segments||[]).length;i++) {
+        var s = d.segments[i];
+        var dc = dotColors[s.color] || '#3b82f6';
+        h += '<div style="display:flex;align-items:center;gap:10px;padding:8px 0">';
+        h += '<span style="width:12px;height:12px;border-radius:50%;background:'+dc+';flex-shrink:0"></span>';
+        h += '<strong style="min-width:80px;color:#1e293b">'+esc(s.range)+'</strong>';
+        h += '<span style="color:#64748b">'+esc(s.label)+'</span>';
+        if (s.rule) h += '<span style="font-size:11px;color:#94a3b8;margin-left:auto">'+esc(s.rule)+'</span>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 13. phase-flow ── vertical connected timeline
+  'phase-flow': {
+    desc: 'Vertical timeline. phases:[{name,description,emoji,color:green|blue|amber|red|purple}].',
+    render: function(d) {
+      var dotColors = { green:'#059669', blue:'#3b82f6', amber:'#d97706', red:'#dc2626', purple:'#7c3aed' };
+      var h = '<div style="position:relative;padding-left:40px;margin:20px 0">';
+      h += '<div style="position:absolute;left:17px;top:8px;bottom:8px;width:2px;background:#e2e8f0"></div>';
+      for (var i=0;i<(d.phases||[]).length;i++) {
+        var p = d.phases[i];
+        var dc = dotColors[p.color] || '#4f46e5';
+        h += '<div style="position:relative;margin-bottom:20px">';
+        h += '<div style="position:absolute;left:-28px;top:4px;width:24px;height:24px;border-radius:50%;background:'+dc+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;border:3px solid #fff;box-shadow:0 0 0 2px '+dc+'">'+(p.emoji||'●')+'</div>';
+        h += '<strong style="color:#1e293b">'+esc(p.name)+'</strong>';
+        h += '<p style="color:#64748b;margin:4px 0 0">'+esc(p.description)+'</p>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 14. icon-grid ── responsive emoji card grid
+  'icon-grid': {
+    desc: 'Emoji card grid. cols:2|3|4. items:[{emoji,name,subtitle,highlight:yes}].',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr','4':'1fr 1fr 1fr 1fr' };
+      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['3'])+';gap:12px;margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        var border = it.highlight==='yes' ? '2px solid #4f46e5' : '1px solid #e2e8f0';
+        h += '<div style="background:#fff;border:'+border+';border-radius:10px;padding:20px 12px;text-align:center">';
+        h += '<div style="font-size:32px;margin-bottom:8px">'+esc(it.emoji||'📌')+'</div>';
+        h += '<div style="font-weight:600;color:#1e293b">'+esc(it.name)+'</div>';
+        if (it.subtitle) h += '<div style="font-size:12px;color:#94a3b8;margin-top:4px">'+esc(it.subtitle)+'</div>';
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 15. card-grid ── expandable detail cards
+  'card-grid': {
+    desc: 'Expandable cards. cols:2|3. items:[{emoji,name,tag,tagColor,description,imageUrl,detail:{facts,pros,cons,note}}].',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr' };
+      var tagColors = { blue:'#3b82f6', green:'#059669', amber:'#d97706', purple:'#7c3aed', red:'#dc2626' };
+      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['2'])+';gap:14px;margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">';
+        if (it.imageUrl) h += '<img src="'+esc(it.imageUrl)+'" style="width:100%;height:140px;object-fit:cover" alt="">';
+        h += '<div style="padding:16px">';
+        if (it.emoji) h += '<div style="font-size:28px;margin-bottom:6px">'+esc(it.emoji)+'</div>';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><strong style="color:#1e293b">'+esc(it.name)+'</strong>';
+        if (it.tag) h += '<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:'+(tagColors[it.tagColor]||'#3b82f6')+';color:#fff">'+esc(it.tag)+'</span>';
+        h += '</div>';
+        if (it.description) h += '<p style="color:#64748b;font-size:13px;margin-bottom:10px">'+esc(it.description)+'</p>';
+        if (it.detail) {
+          h += '<details style="margin-top:8px"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px">📋 Show details</summary>';
+          h += '<div style="margin-top:10px;padding:12px;background:#f8fafc;border-radius:8px">';
+          var dt = it.detail;
+          if (dt.facts && dt.facts.length) {
+            h += '<table style="width:100%;font-size:12px;margin-bottom:10px">';
+            for (var f=0;f<dt.facts.length;f++) h += '<tr><td style="padding:4px 0;font-weight:600;color:#4f46e5">'+esc(dt.facts[f].label)+'</td><td style="color:#64748b">'+esc(dt.facts[f].value)+'</td></tr>';
+            h += '</table>';
+          }
+          if (dt.pros && dt.pros.length) { h += '<div style="color:#065f46;font-size:12px"><strong>✅ Pros:</strong><ul style="margin:4px 0 8px 16px">'; for (var pp=0;pp<dt.pros.length;pp++) h += '<li>'+esc(dt.pros[pp])+'</li>'; h += '</ul></div>'; }
+          if (dt.cons && dt.cons.length) { h += '<div style="color:#991b1b;font-size:12px"><strong>❌ Cons:</strong><ul style="margin:4px 0 8px 16px">'; for (var cc=0;cc<dt.cons.length;cc++) h += '<li>'+esc(dt.cons[cc])+'</li>'; h += '</ul></div>'; }
+          if (dt.note) h += STUDY_COMPONENTS.callout.render(dt.note);
+          h += '</div></details>';
+        }
+        h += '</div></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 16. scenario ── purple scenario box with hidden debrief
+  'scenario': {
+    desc: 'Purple scenario box. context, question, debrief (hidden behind Reveal button).',
+    render: function(d) {
+      var h = '<div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:12px;padding:20px;margin:16px 0">';
+      h += '<div style="font-weight:700;color:#6d28d9;margin-bottom:8px">🎬 Scenario</div>';
+      h += '<p style="color:#1e293b"><strong>Situation:</strong> '+esc(d.context||d.situation)+'</p>';
+      if (d.question) h += '<p style="color:#4f46e5;font-weight:600;margin-top:10px">❓ '+esc(d.question)+'</p>';
+      h += '<details style="margin-top:12px"><summary style="cursor:pointer;background:#7c3aed;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:600;font-size:13px;display:inline-block">👁️ Reveal Debrief</summary>';
+      h += '<div style="margin-top:12px;padding:14px;background:#fff;border-radius:8px;border:1px solid #c4b5fd">';
+      h += '<strong style="color:#6d28d9">💡 Debrief:</strong><p style="color:#64748b;margin-top:4px">'+esc(d.debrief||d.answer||d.explanation||'')+'</p>';
+      h += '</div></details></div>';
+      return h;
+    }
+  },
+  // ── 17. separator ── horizontal divider with optional label
+  'separator': {
+    desc: 'Divider line with optional centered label.',
+    render: function(d) {
+      if (d.label) {
+        return '<div style="display:flex;align-items:center;gap:12px;margin:24px 0"><div style="flex:1;height:1px;background:#e2e8f0"></div><span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;white-space:nowrap">'+esc(d.label)+'</span><div style="flex:1;height:1px;background:#e2e8f0"></div></div>';
+      }
+      return '<div class="sg-divider"></div>';
+    }
+  },
+  // ── 18. quiz ── interactive Q&A with radio buttons
+  'quiz': {
+    desc: 'Interactive quiz. items:[{question, options:[], correct:0, explanation}].',
+    render: function(d) {
+      var items = d.items || [];
+      if (!items.length) return '';
+      var h = '<div class="sg-quiz-section">';
+      for (var i = 0; i < items.length; i++) {
+        var q = items[i];
+        var qid = 'q-' + Date.now() + '-' + i;
+        h += '<div class="sg-quiz-item-v3"><div class="sg-quiz-question-v3">' + (i+1) + '. ' + esc(q.question || '') + '</div><div class="sg-quiz-choices-v3">';
+        for (var o = 0; o < (q.options || []).length; o++) {
+          var isCorrect = o === (q.correct || 0);
+          var cls = isCorrect ? ' sg-q-correct' : '';
+          h += '<input type="radio" class="sg-q-radio' + cls + '" name="' + qid + '" id="' + qid + '-' + o + '"><label class="sg-q-opt" for="' + qid + '-' + o + '">' + esc(q.options[o]) + '</label>';
+        }
+        h += '<div class="sg-q-feedback"><div class="sg-answer-correct">✅ ' + esc(q.options && q.options[q.correct || 0] ? q.options[q.correct || 0] : 'Correct answer') + '</div>';
+        if (q.explanation) h += '<div class="sg-explanation">' + esc(q.explanation) + '</div>';
+        h += '</div></div></div>';
+      }
+      return h + '</div>';
+    }
+  },
+  // ── 19. accordion ── collapsible sections
+  'accordion': {
+    desc: 'Collapsible sections. items:[{title, content, icon?, open?}].',
+    render: function(d) {
+      var h = '<div style="margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        h += '<details style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;overflow:hidden"'+(it.open?' open':'')+'>';
+        h += '<summary style="padding:12px 16px;background:#f8fafc;cursor:pointer;font-weight:600;color:#1e293b;user-select:none">'+(it.icon||'📂')+' '+esc(it.title)+'</summary>';
+        h += '<div style="padding:14px 16px;color:#475569;line-height:1.7">'+(it.content||it.body||'')+'</div>';
+        h += '</details>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 20. quote ── styled blockquote
+  'quote': {
+    desc: 'Styled quotation. text, attribution?, icon? (💬).',
+    render: function(d) {
+      var icon = d.icon||'💬';
+      return '<blockquote style="border-left:4px solid #818cf8;margin:20px 0;padding:16px 24px;background:linear-gradient(135deg,#eef2ff,#f8fafc);border-radius:0 12px 12px 0">'+
+        '<div style="font-size:24px;margin-bottom:8px">'+icon+'</div>'+
+        '<p style="margin:0;font-style:italic;color:#475569;font-size:15px">'+esc(d.text||d.quote||'')+'</p>'+
+        (d.attribution?'<footer style="margin-top:10px;font-style:normal;font-weight:600;color:#4f46e5;font-size:13px">— '+esc(d.attribution)+'</footer>':'')+
+        '</blockquote>';
+    }
+  },
+  // ── 21. comparison ── multi-dimension A vs B table
+  'comparison': {
+    desc: 'Side-by-side comparison. aLabel, bLabel, rows:[{dimension, a, b}].',
+    render: function(d) {
+      var h = '<div style="overflow-x:auto;margin:16px 0"><table style="width:100%;border-collapse:collapse;font-size:14px">';
+      h += '<thead><tr><th style="padding:10px 14px;background:#f1f5f9;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0;width:30%">Dimension</th>';
+      h += '<th style="padding:10px 14px;background:#eef2ff;text-align:left;font-weight:600;border-bottom:2px solid #818cf8;color:#4f46e5">'+esc(d.aLabel||'A')+'</th>';
+      h += '<th style="padding:10px 14px;background:#fef3c7;text-align:left;font-weight:600;border-bottom:2px solid #fcd34d;color:#92400e">'+esc(d.bLabel||'B')+'</th>';
+      h += '</tr></thead><tbody>';
+      for (var i=0;i<(d.rows||[]).length;i++) {
+        var r = d.rows[i];
+        var bg = i%2===0?'#fff':'#fafbfc';
+        h += '<tr><td style="padding:10px 14px;background:'+bg+';font-weight:600;color:#1e293b;border-bottom:1px solid #e2e8f0">'+esc(r.dimension||r.label||'')+'</td>';
+        h += '<td style="padding:10px 14px;background:'+bg+';color:#64748b;border-bottom:1px solid #e2e8f0">'+esc(r.a)+'</td>';
+        h += '<td style="padding:10px 14px;background:'+bg+';color:#64748b;border-bottom:1px solid #e2e8f0">'+esc(r.b)+'</td></tr>';
+      }
+      return h+'</tbody></table></div>';
+    }
+  },
+  // ── 22. timeline ── horizontal chronological timeline
+  'timeline': {
+    desc: 'Horizontal timeline. events:[{date, title, description?, icon?}].',
+    render: function(d) {
+      var h = '<div style="overflow-x:auto;margin:24px 0;padding:10px 0">';
+      h += '<div style="display:flex;gap:0;min-width:max-content">';
+      for (var i=0;i<(d.events||[]).length;i++) {
+        var ev = d.events[i];
+        var connColor = d.lineColor||'#e2e8f0';
+        var dotColor = d.dotColor||'#4f46e5';
+        h += '<div style="flex:1;min-width:160px;text-align:center;position:relative;padding:0 12px">';
+        if (i>0) h += '<div style="position:absolute;top:20px;right:50%;width:100%;height:2px;background:'+connColor+';z-index:0"></div>';
+        h += '<div style="position:relative;z-index:1;width:40px;height:40px;border-radius:50%;background:'+dotColor+';color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:8px;box-shadow:0 0 0 4px #eef2ff">'+(ev.icon||'●')+'</div>';
+        h += '<div style="font-size:11px;color:#94a3b8;margin-bottom:4px">'+esc(ev.date||'')+'</div>';
+        h += '<div style="font-weight:600;color:#1e293b;font-size:14px">'+esc(ev.title)+'</div>';
+        if (ev.description) h += '<div style="font-size:12px;color:#64748b;margin-top:4px">'+esc(ev.description)+'</div>';
+        h += '</div>';
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 23. worked-example ── problem → steps → solution
+  'worked-example': {
+    desc: 'Worked example. problem, steps:[], answer, note?.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #a7f3d0;border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:linear-gradient(135deg,#d1fae5,#ecfdf5);padding:14px 20px;font-weight:700;color:#065f46">✏️ Worked Example</div>';
+      h += '<div style="padding:20px">';
+      h += '<div style="margin-bottom:16px"><strong style="color:#1e293b">Problem:</strong> <span style="color:#64748b">'+esc(d.problem||'')+'</span></div>';
+      if (d.steps && d.steps.length) {
+        h += '<div style="margin-bottom:16px"><strong style="color:#1e293b">Solution Steps:</strong><ol style="margin:8px 0 0 18px;color:#64748b">';
+        for (var i=0;i<d.steps.length;i++) h += '<li style="margin-bottom:6px">'+esc(d.steps[i])+'</li>';
+        h += '</ol></div>';
+      }
+      h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px"><strong style="color:#065f46">✅ Answer:</strong> <span style="color:#047857">'+esc(d.answer||'')+'</span></div>';
+      if (d.note) h += '<div style="margin-top:12px;font-size:13px;color:#94a3b8">💡 '+esc(d.note)+'</div>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 24. steps ── numbered procedural steps
+  'steps': {
+    desc: 'Numbered procedure. title?, steps:[{title?, description, icon?}].',
+    render: function(d) {
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:16px;font-weight:700">📋 '+esc(d.title)+'</h3>';
+      for (var i=0;i<(d.steps||[]).length;i++) {
+        var s = d.steps[i];
+        h += '<div style="display:flex;gap:14px;margin-bottom:16px;align-items:flex-start">';
+        h += '<div style="flex-shrink:0;width:34px;height:34px;border-radius:50%;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">'+(i+1)+'</div>';
+        h += '<div><strong style="color:#1e293b">'+(s.icon?s.icon+' ':'')+esc(s.title||'Step '+(i+1))+'</strong>';
+        if (s.description) h += '<p style="color:#64748b;margin:4px 0 0;font-size:14px">'+esc(s.description)+'</p>';
+        h += '</div></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 25. summary-box ── TL;DR recap
+  'summary-box': {
+    desc: 'End-of-section recap. title?, points:[] (key takeaways), body?.',
+    render: function(d) {
+      var h = '<div style="background:linear-gradient(135deg,#fef3c7,#fff7ed);border:2px solid #fcd34d;border-radius:12px;padding:22px 24px;margin:24px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:22px">📝</span><strong style="color:#92400e;font-size:17px">'+esc(d.title||'Summary')+'</strong></div>';
+      if (d.body) h += '<p style="color:#64748b;margin:0 0 12px">'+esc(d.body)+'</p>';
+      if (d.points && d.points.length) {
+        h += '<ul style="margin:0;padding-left:20px">';
+        for (var i=0;i<d.points.length;i++) h += '<li style="color:#b45309;margin-bottom:6px">'+esc(d.points[i])+'</li>';
+        h += '</ul>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 26. video-embed ── YouTube/Vimeo iframe
+  'video-embed': {
+    desc: 'Embedded video. url (YouTube/Vimeo), title?, aspectRatio:16by9|4by3.',
+    render: function(d) {
+      var ratio = d.aspectRatio==='4by3'?'75%':'56.25%';
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<p style="font-weight:600;color:#1e293b;margin-bottom:8px">🎬 '+esc(d.title)+'</p>';
+      h += '<div style="position:relative;padding-bottom:'+ratio+';height:0;overflow:hidden;border-radius:10px">';
+      h += '<iframe src="'+esc(d.url)+'" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe>';
+      h += '</div></div>';
+      return h;
+    }
+  },
+  // ── 27. gallery ── image gallery grid
+  'gallery': {
+    desc: 'Image gallery. cols:2|3|4, images:[{url, caption?, alt?}].',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr','4':'1fr 1fr 1fr 1fr' };
+      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['3'])+';gap:12px;margin:16px 0">';
+      for (var i=0;i<(d.images||[]).length;i++) {
+        var img = d.images[i];
+        h += '<div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#fff">';
+        h += '<img src="'+esc(img.url||img.src)+'" alt="'+esc(img.alt||'')+'" style="width:100%;height:180px;object-fit:cover;display:block" loading="lazy">';
+        if (img.caption) h += '<div style="padding:8px 12px;font-size:12px;color:#64748b;text-align:center">'+esc(img.caption)+'</div>';
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 28. highlight-box ── prominent emphasis box
+  'highlight-box': {
+    desc: 'Prominent emphasis box. variant:idea|important|discover|challenge. title?, body.',
+    render: function(d) {
+      var themes = {
+        idea: ['💡','#eef2ff','#4f46e5','#818cf8'],
+        important: ['⭐','#fef3c7','#92400e','#fcd34d'],
+        discover: ['🔍','#f0fdf4','#065f46','#6ee7b7'],
+        challenge: ['🎯','#fee2e2','#991b1b','#fca5a5']
+      };
+      var t = themes[d.variant]||themes.idea;
+      return '<div style="background:'+t[1]+';border:2px solid '+t[3]+';border-radius:12px;padding:20px 22px;margin:18px 0">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">'+t[0]+'</span><strong style="color:'+t[2]+';font-size:16px">'+esc(d.title||'')+'</strong></div>'+
+        '<p style="color:#475569;margin:0;font-size:15px">'+esc(d.body||d.text||'')+'</p></div>';
+    }
+  },
+  // ── 29. resource-links ── external resource cards
+  'resource-links': {
+    desc: 'Resource link cards. title?, links:[{label, url, description?, type:video|article|book|tool|pdf}].',
+    render: function(d) {
+      var typeIcons = { video:'🎬', article:'📄', book:'📚', tool:'🔧', pdf:'📎' };
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:12px;font-weight:700">📖 '+esc(d.title)+'</h3>';
+      for (var i=0;i<(d.links||[]).length;i++) {
+        var lnk = d.links[i];
+        h += '<a href="'+esc(lnk.url)+'" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;margin-bottom:8px;background:#fff">';
+        h += '<span style="font-size:22px">'+(typeIcons[lnk.type]||'🔗')+'</span>';
+        h += '<div style="flex:1;min-width:0"><div style="font-weight:600;color:#1e293b">'+esc(lnk.label)+'</div>';
+        if (lnk.description) h += '<div style="font-size:12px;color:#94a3b8;margin-top:2px">'+esc(lnk.description)+'</div></div>';
+        h += '<span style="color:#818cf8;font-size:18px">↗</span></a>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 30. prerequisites ── before-you-begin box
+  'prerequisites': {
+    desc: 'Before-you-begin box. title?, body?, items:[].',
+    render: function(d) {
+      var h = '<div style="border:2px dashed #818cf8;border-radius:10px;padding:18px 22px;margin:16px 0;background:#fafbff">';
+      h += '<div style="font-weight:700;color:#4f46e5;margin-bottom:10px">📋 '+esc(d.title||'Before You Begin')+'</div>';
+      if (d.body) h += '<p style="color:#64748b;margin:0 0 10px;font-size:14px">'+esc(d.body)+'</p>';
+      if (d.items && d.items.length) {
+        h += '<ul style="margin:0;padding-left:20px">';
+        for (var i=0;i<d.items.length;i++) h += '<li style="color:#475569;margin-bottom:4px">'+esc(typeof d.items[i]==='string'?d.items[i]:d.items[i].text||d.items[i])+'</li>';
+        h += '</ul>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 31. checklist ── simple checkable list
+  'checklist': {
+    desc: 'Checkable list. title?, items:[{text, checked?}].',
+    render: function(d) {
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:10px;font-weight:700">✅ '+esc(d.title)+'</h3>';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        var chk = it.checked?' checked':'';
+        var txt = typeof it==='string'?it:(it.text||'');
+        h += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0"><input type="checkbox"'+chk+' style="margin-top:3px;accent-color:#4f46e5"><span style="color:#475569">'+esc(txt)+'</span></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 32. formula ── styled math/equation display
+  'formula': {
+    desc: 'Math/equation display. formula, caption?, variant:highlight|basic.',
+    render: function(d) {
+      var bg = d.variant==='highlight'?'background:linear-gradient(135deg,#eef2ff,#f0f4ff);border:1px solid #818cf8;':'background:#f8fafc;border:1px solid #e2e8f0;';
+      var h = '<div style="'+bg+'border-radius:10px;padding:20px;margin:16px 0;text-align:center">';
+      h += '<div style="font-family:Georgia,serif;font-size:20px;color:#1e293b;letter-spacing:1px">'+esc(d.formula||d.equation||'')+'</div>';
+      if (d.caption) h += '<div style="font-size:12px;color:#94a3b8;margin-top:8px">'+esc(d.caption)+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 33. flashcards-inline ── click-to-flip CSS cards
+  'flashcards-inline': {
+    desc: 'Click-to-flip flashcards embedded in content. cards:[{front, back}], cols:2|3.',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr' };
+      var cards = d.cards||d.items||[];
+      if (!cards.length) return '';
+      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['2'])+';gap:14px;margin:16px 0">';
+      for (var i=0;i<cards.length;i++) {
+        var cid = 'fc-inline-'+Date.now()+'-'+i;
+        var card = cards[i];
+        h += '<div class="fc-card-wrapper">';
+        h += '<input type="checkbox" class="fc-flip-check" id="'+cid+'" style="display:none">';
+        h += '<label class="fc-card-label" for="'+cid+'" style="display:block;cursor:pointer;perspective:600px;height:200px">';
+        h += '<div class="fc-card-inner" style="position:relative;width:100%;height:100%;transition:transform 0.5s;transform-style:preserve-3d">';
+        h += '<div class="fc-front" style="position:absolute;width:100%;height:100%;backface-visibility:hidden;background:linear-gradient(135deg,#eef2ff,#f0f4ff);border:2px solid #818cf8;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center">';
+        h += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">📖 TERM</div>';
+        h += '<div style="font-weight:700;color:#3730a3;font-size:15px">'+esc(card.front||card.q||card.term||'')+'</div>';
+        h += '<div style="font-size:10px;color:#94a3b8;margin-top:8px">👆 Click to reveal</div>';
+        h += '</div>';
+        h += '<div class="fc-back" style="position:absolute;width:100%;height:100%;backface-visibility:hidden;background:linear-gradient(135deg,#d1fae5,#ecfdf5);border:2px solid #6ee7b7;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;transform:rotateY(180deg)">';
+        h += '<div style="font-size:11px;color:#059669;margin-bottom:6px">💡 DEFINITION</div>';
+        h += '<div style="font-weight:600;color:#065f46;font-size:14px;line-height:1.5">'+esc(card.back||card.a||card.definition||'')+'</div>';
+        h += '</div></div></label></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 34. code-block ── syntax-highlighted code
+  'code-block': {
+    desc: 'Code block with language label. code, language?, filename?, highlightLines?',
+    render: function(d) {
+      var h = '<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e293b;color:#e2e8f0;font-size:12px">';
+      h += '<span>'+esc(d.language||d.filename||'Code')+'</span>';
+      if (d.filename) h += '<span style="color:#94a3b8">'+esc(d.filename)+'</span>';
+      h += '</div>';
+      h += '<pre style="margin:0;padding:16px 18px;background:#0f172a;color:#e2e8f0;font-family:\'Fira Code\',\'Cascadia Code\',\'Consolas\',monospace;font-size:13px;line-height:1.6;overflow-x:auto"><code>'+esc(d.code||d.text||'')+'</code></pre>';
+      return h+'</div>';
+    }
+  },
+  // ── 35. reflection-prompt ── pause-and-think box
+  'reflection-prompt': {
+    desc: 'Pause-and-reflect prompt. title?, questions:[], icon? (🤔).',
+    render: function(d) {
+      var h = '<div style="border:2px dashed #fbbf24;border-radius:12px;padding:20px 22px;margin:16px 0;background:linear-gradient(135deg,#fffbeb,#fef3c7)">';
+      h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:26px">'+(d.icon||'🤔')+'</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Pause & Reflect')+'</strong></div>';
+      if (d.questions && d.questions.length) {
+        h += '<ol style="margin:0;padding-left:20px">';
+        for (var i=0;i<d.questions.length;i++) h += '<li style="color:#b45309;margin-bottom:8px;font-weight:500">'+esc(typeof d.questions[i]==='string'?d.questions[i]:d.questions[i].text||d.questions[i])+'</li>';
+        h += '</ol>';
+      }
+      if (d.body) h += '<p style="color:#78716c;margin:10px 0 0;font-size:13px">'+esc(d.body)+'</p>';
+      return h+'</div>';
+    }
+  },
+  // ── 36. self-assessment ── 1-5 understanding scale
+  'self-assessment': {
+    desc: 'Understanding self-check. question?, labels?:[low,high].',
+    render: function(d) {
+      var qid = 'sa-'+Date.now();
+      var h = '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:16px 0;background:#fff">';
+      h += '<div style="font-weight:700;color:#1e293b;margin-bottom:14px">📊 '+esc(d.question||'How well do you understand this topic?')+'</div>';
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">';
+      for (var i=1;i<=5;i++) {
+        h += '<label style="cursor:pointer;text-align:center;flex:1">';
+        h += '<input type="radio" name="'+qid+'" value="'+i+'" style="display:none" class="sa-radio">';
+        h += '<div class="sa-star" style="font-size:28px;filter:grayscale(100%);opacity:0.4;transition:all 0.2s">⭐</div>';
+        h += '<div style="font-size:10px;color:#94a3b8;margin-top:4px">'+i+'</div></label>';
+      }
+      h += '</div>';
+      h += '<div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-top:4px"><span>'+esc(d.lowLabel||'Not yet')+'</span><span>'+esc(d.highLabel||'Got it!')+'</span></div>';
+      return h+'</div>';
+    }
+  },
+  // ── 37. common-mistake ── pitfall warning box
+  'common-mistake': {
+    desc: 'Common pitfall warning. title?, mistake, correct?, explanation?.',
+    render: function(d) {
+      var h = '<div style="border-left:4px solid #dc2626;background:linear-gradient(135deg,#fef2f2,#fee2e2);padding:16px 20px;margin:16px 0;border-radius:0 10px 10px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">⚠️</span><strong style="color:#991b1b">'+esc(d.title||'Common Mistake')+'</strong></div>';
+      h += '<p style="color:#7f1d1d;margin:0 0 8px"><strong>❌ Wrong:</strong> '+esc(d.mistake||'')+'</p>';
+      if (d.correct) h += '<p style="color:#065f46;margin:0 0 8px"><strong>✅ Correct:</strong> '+esc(d.correct)+'</p>';
+      if (d.explanation) h += '<p style="color:#475569;margin:0;font-size:13px">💡 '+esc(d.explanation)+'</p>';
+      return h+'</div>';
+    }
+  },
+  // ── 38. exam-hint ── exam focus tip box
+  'exam-hint': {
+    desc: 'Exam-focused tip. title?, tips:[], body?.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:10px;padding:18px 20px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">🎯</span><strong style="color:#6d28d9">'+esc(d.title||'Exam Focus')+'</strong></div>';
+      if (d.body) h += '<p style="color:#475569;margin:0 0 10px;font-size:14px">'+esc(d.body)+'</p>';
+      if (d.tips && d.tips.length) {
+        h += '<ul style="margin:0;padding-left:18px">';
+        for (var i=0;i<d.tips.length;i++) h += '<li style="color:#5b21b6;margin-bottom:4px">'+esc(d.tips[i])+'</li>';
+        h += '</ul>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 39. real-world ── real-world application box
+  'real-world': {
+    desc: 'Real-world application. title?, example, body?, icon? (🌍).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #059669;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:10px;padding:18px 20px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">'+(d.icon||'🌍')+'</span><strong style="color:#065f46">'+esc(d.title||'Real-World Application')+'</strong></div>';
+      h += '<p style="color:#064e3b;margin:0 0 8px;font-weight:500">'+esc(d.example||d.body||'')+'</p>';
+      if (d.body && d.example) h += '<p style="color:#475569;margin:0;font-size:13px">'+esc(d.body)+'</p>';
+      return h+'</div>';
+    }
+  },
+  // ── 40. study-tip ── learning strategy box
+  'study-tip': {
+    desc: 'Learning strategy tip. title?, tip, method?.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:10px;padding:18px 20px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">📚</span><strong style="color:#92400e">'+esc(d.title||'Study Smart')+'</strong></div>';
+      h += '<p style="color:#78350f;margin:0">'+esc(d.tip||d.body||'')+'</p>';
+      if (d.method) h += '<div style="margin-top:10px;padding:10px 14px;background:#fff;border-radius:6px;font-size:13px"><strong style="color:#4f46e5">🧠 '+esc(d.method)+'</strong></div>';
+      return h+'</div>';
+    }
+  },
+  // ── 41. swot ── 2×2 SWOT analysis grid
+  'swot': {
+    desc: 'SWOT analysis 2×2 grid. strengths:[], weaknesses:[], opportunities:[], threats:[].',
+    render: function(d) {
+      var cells = [
+        { title:'💪 Strengths', items:d.strengths||[], bg:'#ecfdf5', border:'#6ee7b7', color:'#065f46' },
+        { title:'⚠️ Weaknesses', items:d.weaknesses||[], bg:'#fef2f2', border:'#fca5a5', color:'#991b1b' },
+        { title:'🚀 Opportunities', items:d.opportunities||[], bg:'#eef2ff', border:'#818cf8', color:'#3730a3' },
+        { title:'🔥 Threats', items:d.threats||[], bg:'#fef3c7', border:'#fcd34d', color:'#92400e' }
+      ];
+      var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;margin:16px 0;border-radius:12px;overflow:hidden;border:2px solid #e2e8f0">';
+      for (var c=0;c<4;c++) {
+        var cell = cells[c];
+        h += '<div style="background:'+cell.bg+';padding:16px 18px">';
+        h += '<strong style="color:'+cell.color+';font-size:14px">'+cell.title+'</strong>';
+        if (cell.items.length) {
+          h += '<ul style="margin:8px 0 0 16px;font-size:13px">';
+          for (var i=0;i<cell.items.length;i++) h += '<li style="color:'+cell.color+';margin-bottom:3px">'+esc(cell.items[i])+'</li>';
+          h += '</ul>';
+        }
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 42. pyramid ── hierarchy triangle
+  'pyramid': {
+    desc: 'Hierarchy pyramid. levels:[{label, description?, color?}] (bottom to top).',
+    render: function(d) {
+      var colors = ['#3b82f6','#4f46e5','#7c3aed','#a855f7','#d946ef'];
+      var levels = d.levels||[];
+      if (!levels.length) return '';
+      var h = '<div style="margin:24px auto;max-width:500px">';
+      for (var i=levels.length-1;i>=0;i--) {
+        var lvl = levels[i];
+        var width = 50 + ((i+1)/levels.length)*50; // 50% to 100%
+        var bg = lvl.color||colors[i%colors.length];
+        h += '<div style="margin:0 auto;width:'+width+'%;background:'+bg+';color:#fff;text-align:center;padding:12px 10px;border-radius:6px;margin-bottom:4px;font-weight:600;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">';
+        h += esc(lvl.label||'');
+        if (lvl.description) h += '<div style="font-size:11px;opacity:0.85;font-weight:400;margin-top:2px">'+esc(lvl.description)+'</div>';
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 43. next-steps ── where-to-go-from-here
+  'next-steps': {
+    desc: 'Post-lesson guidance. title?, steps:[{label, description?, type:next|review|practice|explore}].',
+    render: function(d) {
+      var typeIcons = { next:'➡️', review:'🔄', practice:'✏️', explore:'🔍' };
+      var h = '<div style="border:2px solid #4f46e5;border-radius:12px;overflow:hidden;margin:20px 0">';
+      h += '<div style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:14px 20px;color:#fff;font-weight:700;font-size:16px">🚀 '+esc(d.title||'Next Steps')+'</div>';
+      h += '<div style="padding:16px 20px;background:#fff">';
+      for (var i=0;i<(d.steps||[]).length;i++) {
+        var s = d.steps[i];
+        h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">';
+        h += '<span style="font-size:22px">'+(typeIcons[s.type]||'➡️')+'</span>';
+        h += '<div><strong style="color:#1e293b">'+esc(s.label||'')+'</strong>';
+        if (s.description) h += '<div style="font-size:12px;color:#64748b;margin-top:2px">'+esc(s.description)+'</div></div>';
+        h += '</div>';
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 44. fill-blank ── fill-in-the-blank with answer reveal
+  'fill-blank': {
+    desc: 'Fill-in-the-blank with reveal. items:[{prompt, answer, hint?}].',
+    render: function(d) {
+      var h = '<div style="margin:16px 0">';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        var fid = 'fb-'+Date.now()+'-'+i;
+        h += '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;margin-bottom:10px;background:#fff">';
+        h += '<p style="color:#1e293b;margin:0 0 10px">'+(i+1)+'. '+esc(it.prompt||it.text||'')+'</p>';
+        h += '<div style="display:inline-block;border-bottom:2px dashed #4f46e5;min-width:120px;padding:4px 8px;color:#94a3b8;font-style:italic;margin-right:8px">your answer...</div>';
+        h += '<details style="display:inline-block"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;display:inline">👁️ Reveal</summary>';
+        h += '<span style="color:#059669;font-weight:700;font-size:15px;margin-left:6px">'+esc(it.answer||'')+'</span>';
+        if (it.hint) h += '<span style="color:#94a3b8;font-size:12px;margin-left:6px">('+esc(it.hint)+')</span>';
+        h += '</details></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 45. difficulty-meter ── difficulty badge indicator
+  'difficulty-meter': {
+    desc: 'Difficulty badge. level:beginner|intermediate|advanced|expert, label?.',
+    render: function(d) {
+      var levels = {
+        beginner: ['🟢','Beginner','#059669','#d1fae5'],
+        intermediate: ['🟡','Intermediate','#d97706','#fef3c7'],
+        advanced: ['🔴','Advanced','#dc2626','#fee2e2'],
+        expert: ['🟣','Expert','#7c3aed','#ede9fe']
+      };
+      var l = levels[d.level]||levels.beginner;
+      return '<div style="display:inline-flex;align-items:center;gap:8px;background:'+l[3]+';border:1px solid '+l[2]+';border-radius:20px;padding:6px 16px;margin:8px 0">'+
+        '<span style="font-size:14px">'+l[0]+'</span><span style="font-weight:700;color:'+l[2]+';font-size:13px">'+esc(d.label||l[1])+'</span></div>';
+    }
+  },
+  // ── 46. columns-2 ── two-column layout container
+  'columns-2': {
+    desc: 'Two-column container. left (HTML), right (HTML), leftWidth? (e.g. 60%), rightWidth?.',
+    render: function(d) {
+      var lw = d.leftWidth||'1fr';
+      var rw = d.rightWidth||'1fr';
+      var h = '<div style="display:grid;grid-template-columns:'+lw+' '+rw+';gap:20px;margin:16px 0">';
+      h += '<div>'+(d.left||'')+'</div>';
+      h += '<div>'+(d.right||'')+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 47. did-you-know ── fun fact box (all ages)
+  'did-you-know': {
+    desc: 'Fun fact box. fact, icon? (🦋 for kids, 💡 for general), source?.',
+    render: function(d) {
+      return '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fef9e7);border-radius:12px;padding:16px 20px;margin:16px 0">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:22px">'+(d.icon||'💡')+'</span><strong style="color:#92400e;font-size:15px">'+esc(d.title||'Did You Know?')+'</strong></div>'+
+        '<p style="color:#78350f;margin:0;font-size:15px;line-height:1.7">'+esc(d.fact||d.body||'')+'</p>'+
+        (d.source?'<div style="font-size:11px;color:#a8a29e;margin-top:6px">📖 '+esc(d.source)+'</div>':'')+
+        '</div>';
+    }
+  },
+  // ── 48. story-box ── narrative storytelling container
+  'story-box': {
+    desc: 'Story/narrative box. title?, story, moral?, character? (for kids: character name).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #c084fc;background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:10px 20px;color:#fff;font-weight:700;font-size:14px">📖 '+esc(d.title||'Story Time')+(d.character?' — with '+esc(d.character):'')+'</div>';
+      h += '<div style="padding:18px 20px">';
+      h += '<p style="color:#475569;margin:0;line-height:1.8;font-size:15px">'+esc(d.story||d.body||'')+'</p>';
+      if (d.moral) h += '<div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #c084fc"><strong style="color:#7c3aed">🌟 Moral:</strong> <span style="color:#6b21a8">'+esc(d.moral)+'</span></div>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 49. tip-jar ── collection of quick tips
+  'tip-jar': {
+    desc: 'Collection of quick tips. title?, tips:[], icon? (🫙).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:12px;padding:18px 20px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:24px">'+(d.icon||'🫙')+'</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Quick Tips')+'</strong></div>';
+      for (var i=0;i<(d.tips||[]).length;i++) {
+        var tip = d.tips[i];
+        h += '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #fde68a">';
+        h += '<span style="color:#f59e0b;font-weight:700;flex-shrink:0">'+(i+1)+'.</span>';
+        h += '<span style="color:#78350f">'+esc(typeof tip==='string'?tip:tip.text||tip)+'</span></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 50. try-it ── hands-on activity prompt
+  'try-it': {
+    desc: 'Try-it-yourself activity. title?, instruction, hint?, timeEstimate?.',
+    render: function(d) {
+      var h = '<div style="border:2px dashed #06b6d4;background:linear-gradient(135deg,#ecfeff,#cffafe);border-radius:12px;padding:20px;margin:16px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:24px">🧪</span><strong style="color:#0e7490;font-size:16px">'+esc(d.title||'Try It Yourself')+'</strong>';
+      if (d.timeEstimate) h += '<span style="font-size:11px;color:#0891b2;margin-left:auto">⏱️ ~'+esc(d.timeEstimate)+'</span>';
+      h += '</div>';
+      h += '<p style="color:#155e75;margin:0;font-size:15px;line-height:1.7">'+esc(d.instruction||d.body||'')+'</p>';
+      if (d.hint) h += '<details style="margin-top:12px"><summary style="cursor:pointer;color:#0891b2;font-weight:600;font-size:13px">💡 Need a hint?</summary><p style="color:#475569;margin:8px 0 0;font-size:14px">'+esc(d.hint)+'</p></details>';
+      return h+'</div>';
+    }
+  },
+  // ── 51. analogy ── "Think of it like..." bridge concept
+  'analogy': {
+    desc: 'Analogy bridge. concept, analogy, explanation?, icon? (🌉).',
+    render: function(d) {
+      return '<div style="border:2px solid #a78bfa;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:20px;margin:16px 0;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:8px">'+(d.icon||'🌉')+'</div>'+
+        '<div style="font-weight:700;color:#6d28d9;font-size:16px;margin-bottom:10px">Think of it like this...</div>'+
+        '<div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<span style="background:#fff;border:2px solid #7c3aed;border-radius:8px;padding:8px 16px;font-weight:700;color:#5b21b6">'+esc(d.concept||'')+'</span>'+
+        '<span style="font-size:20px;color:#a78bfa">≣</span>'+
+        '<span style="background:#fef3c7;border:2px solid #fcd34d;border-radius:8px;padding:8px 16px;font-weight:700;color:#92400e">'+esc(d.analogy||'')+'</span>'+
+        '</div>'+
+        (d.explanation?'<p style="color:#64748b;margin:0;font-size:14px">'+esc(d.explanation)+'</p>':'')+
+        '</div>';
+    }
+  },
+  // ── 52. before-after ── side-by-side transformation
+  'before-after': {
+    desc: 'Before/after transformation. beforeTitle?, beforeBody, afterTitle?, afterBody.',
+    render: function(d) {
+      var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">';
+      h += '<div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:16px">';
+      h += '<div style="font-weight:700;color:#991b1b;margin-bottom:8px">❌ '+esc(d.beforeTitle||'Before')+'</div>';
+      h += '<p style="color:#7f1d1d;margin:0;font-size:14px">'+esc(d.beforeBody||d.before||'')+'</p></div>';
+      h += '<div style="background:#ecfdf5;border:2px solid #6ee7b7;border-radius:10px;padding:16px">';
+      h += '<div style="font-weight:700;color:#065f46;margin-bottom:8px">✅ '+esc(d.afterTitle||'After')+'</div>';
+      h += '<p style="color:#064e3b;margin:0;font-size:14px">'+esc(d.afterBody||d.after||'')+'</p></div>';
+      return h+'</div>';
+    }
+  },
+  // ── 53. progress-tracker ── visual completion bar
+  'progress-tracker': {
+    desc: 'Progress bar. percent (0-100), label?, steps?:[{label, done?}], color? (#4f46e5).',
+    render: function(d) {
+      var pct = Math.min(100,Math.max(0,parseInt(d.percent)||0));
+      var color = d.color||'#4f46e5';
+      var h = '<div style="margin:16px 0">';
+      if (d.label) h += '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:600;color:#1e293b;font-size:14px">'+esc(d.label)+'</span><span style="color:'+color+';font-weight:700;font-size:14px">'+pct+'%</span></div>';
+      h += '<div style="width:100%;height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden">';
+      h += '<div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:6px;transition:width 0.6s ease"></div></div>';
+      if (d.steps && d.steps.length) {
+        h += '<div style="display:flex;justify-content:space-between;margin-top:8px">';
+        for (var i=0;i<d.steps.length;i++) {
+          var s = d.steps[i];
+          var done = s.done?'✅':'⬜';
+          h += '<span style="font-size:11px;color:'+(s.done?'#059669':'#94a3b8')+'">'+done+' '+esc(s.label||'')+'</span>';
+        }
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 54. star-award ── achievement badge
+  'star-award': {
+    desc: 'Achievement badge. title, subtitle?, stars?:1-5, icon? (🏆).',
+    render: function(d) {
+      var stars = Math.min(5,Math.max(1,parseInt(d.stars)||3));
+      var h = '<div style="display:inline-block;background:linear-gradient(135deg,#fef3c7,#fff7ed);border:2px solid #fcd34d;border-radius:16px;padding:16px 24px;margin:12px 0;text-align:center;min-width:160px">';
+      h += '<div style="font-size:32px;margin-bottom:6px">'+(d.icon||'🏆')+'</div>';
+      h += '<div style="font-weight:800;color:#92400e;font-size:16px">'+esc(d.title||'Achievement Unlocked')+'</div>';
+      if (d.subtitle) h += '<div style="color:#b45309;font-size:13px;margin-top:4px">'+esc(d.subtitle)+'</div>';
+      h += '<div style="margin-top:8px;font-size:24px;letter-spacing:2px">';
+      for (var i=0;i<5;i++) h += i<stars?'⭐':'☆';
+      return h+'</div></div>';
+    }
+  },
+  // ── 55. word-bank ── vocabulary tag pills
+  'word-bank': {
+    desc: 'Key vocabulary as colorful pills. title?, words:[{word, hint?}], color? (#4f46e5).',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:'+color+';margin-bottom:10px;font-weight:700">📝 '+esc(d.title||'Word Bank')+'</h3>';
+      h += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+      for (var i=0;i<(d.words||[]).length;i++) {
+        var w = d.words[i];
+        var word = typeof w==='string'?w:(w.word||'');
+        h += '<span style="display:inline-flex;align-items:center;gap:4px;background:#eef2ff;color:'+color+';border:1px solid '+color+';border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600">'+esc(word);
+        if (w.hint) h += '<span style="font-size:10px;opacity:0.6">('+esc(w.hint)+')</span>';
+        h += '</span>';
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 56. concept-map ── simple mind map
+  'concept-map': {
+    desc: 'Concept mind map. central, nodes:[{label, description?, icon?}], color?.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var h = '<div style="margin:24px 0;text-align:center">';
+      // Central node
+      h += '<div style="display:inline-block;background:'+color+';color:#fff;padding:14px 22px;border-radius:12px;font-weight:700;font-size:16px;margin-bottom:16px;box-shadow:0 4px 12px rgba(79,70,229,0.3)">'+esc(d.central||d.topic||'')+'</div>';
+      // Connector lines + nodes
+      h += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;position:relative">';
+      for (var i=0;i<(d.nodes||[]).length;i++) {
+        var n = d.nodes[i];
+        h += '<div style="background:#fff;border:2px solid '+color+';border-radius:10px;padding:12px 16px;text-align:center;min-width:100px;position:relative">';
+        if (n.icon) h += '<div style="font-size:22px;margin-bottom:4px">'+esc(n.icon)+'</div>';
+        h += '<div style="font-weight:600;color:#1e293b;font-size:13px">'+esc(n.label||'')+'</div>';
+        if (n.description) h += '<div style="font-size:11px;color:#94a3b8;margin-top:2px">'+esc(n.description)+'</div>';
+        h += '</div>';
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 57. debate ── two-sided argument framework
+  'debate': {
+    desc: 'Structured debate. topic, positionA:{label,points:[]}, positionB:{label,points:[]}.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:#f1f5f9;padding:12px 20px;font-weight:700;color:#1e293b;text-align:center">⚖️ '+esc(d.topic||'Debate')+'</div>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr">';
+      // Position A
+      h += '<div style="padding:16px;border-right:1px solid #e2e8f0">';
+      h += '<div style="font-weight:700;color:#4f46e5;margin-bottom:10px">🔵 '+esc((d.positionA||{}).label||'Position A')+'</div>';
+      var ptsA = (d.positionA||{}).points||[];
+      for (var a=0;a<ptsA.length;a++) h += '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#4f46e5;font-weight:700">'+ (a+1)+'.</span><span style="color:#475569">'+esc(ptsA[a])+'</span></div>';
+      h += '</div>';
+      // Position B
+      h += '<div style="padding:16px">';
+      h += '<div style="font-weight:700;color:#d97706;margin-bottom:10px">🟠 '+esc((d.positionB||{}).label||'Position B')+'</div>';
+      var ptsB = (d.positionB||{}).points||[];
+      for (var b=0;b<ptsB.length;b++) h += '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#d97706;font-weight:700">'+ (b+1)+'.</span><span style="color:#475569">'+esc(ptsB[b])+'</span></div>';
+      h += '</div>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 58. character-guide ── mascot/character speech bubble
+  'character-guide': {
+    desc: 'Character/mascot speaking. character, emoji? (🦊), message, variant:kid|teacher|expert|coach.',
+    render: function(d) {
+      var themes = {
+        kid: ['🦊','#fef3c7','#92400e'],
+        teacher: ['👩‍🏫','#eef2ff','#3730a3'],
+        expert: ['🧑‍🔬','#f0fdf4','#065f46'],
+        coach: ['💪','#fee2e2','#991b1b']
+      };
+      var t = themes[d.variant]||themes.teacher;
+      var h = '<div style="display:flex;gap:14px;align-items:flex-start;margin:16px 0;padding:16px 20px;background:'+t[1]+';border-radius:14px;border:2px solid '+t[2]+'">';
+      h += '<div style="font-size:40px;flex-shrink:0;line-height:1">'+(d.emoji||t[0])+'</div>';
+      h += '<div>';
+      h += '<div style="font-weight:700;color:'+t[2]+';margin-bottom:4px">'+esc(d.character||'Guide')+' says...</div>';
+      h += '<p style="color:#475569;margin:0;font-size:15px;line-height:1.7">'+esc(d.message||d.body||'')+'</p>';
+      h += '</div></div>';
+      return h;
+    }
+  },
+  // ── 59. vocab-card ── rich vocabulary card
+  'vocab-card': {
+    desc: 'Rich vocabulary card. word, definition, example?, partOfSpeech?, pronunciation?, color?.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var h = '<div style="border:2px solid '+color+';border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;max-width:500px">';
+      h += '<div style="background:'+color+';padding:12px 18px;display:flex;align-items:center;gap:10px">';
+      h += '<span style="color:#fff;font-weight:800;font-size:18px">'+esc(d.word||'')+'</span>';
+      if (d.pronunciation) h += '<span style="color:rgba(255,255,255,0.7);font-size:13px">/'+esc(d.pronunciation)+'/</span>';
+      if (d.partOfSpeech) h += '<span style="margin-left:auto;background:rgba(255,255,255,0.2);color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">'+esc(d.partOfSpeech)+'</span>';
+      h += '</div>';
+      h += '<div style="padding:16px 18px">';
+      h += '<p style="color:#475569;margin:0 0 10px;font-size:14px"><strong style="color:#1e293b">Definition:</strong> '+esc(d.definition||'')+'</p>';
+      if (d.example) h += '<p style="color:#64748b;margin:0;font-size:13px;font-style:italic">💬 '+esc(d.example)+'</p>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 60. encouragement ── motivational boost box
+  'encouragement': {
+    desc: 'Motivational boost. message, icon? (🌟), variant:cheer|persist|celebrate|believe.',
+    render: function(d) {
+      var themes = {
+        cheer: ['🎉','#ecfdf5','#059669'],
+        persist: ['💪','#eef2ff','#4f46e5'],
+        celebrate: ['🏆','#fef3c7','#d97706'],
+        believe: ['🌟','#fdf2f8','#db2777']
+      };
+      var t = themes[d.variant]||themes.believe;
+      var h = '<div style="text-align:center;padding:20px 24px;margin:20px 0;background:'+t[1]+';border-radius:16px;border:2px solid '+t[2]+'">';
+      h += '<div style="font-size:40px;margin-bottom:8px">'+(d.icon||t[0])+'</div>';
+      h += '<p style="color:'+t[2]+';font-weight:700;font-size:18px;margin:0">'+esc(d.message||'You\u2019ve got this! 💪')+'</p></div>';
+      return h;
+    }
+  },
+  // ══════════════════════════════════════
+  //  CHARTS & DATA VISUALIZATION (61-72)
+  // ══════════════════════════════════════
+  // ── 61. bar-chart ── horizontal bar chart
+  'bar-chart': {
+    desc: 'Horizontal bar chart. title?, items:[{label, value, color?, maxValue?}], showValues?, height?:24.',
+    render: function(d) {
+      var maxVal = d.maxValue || 0;
+      if (!maxVal) { for (var i=0;i<(d.items||[]).length;i++) { var v=parseFloat(d.items[i].value)||0; if(v>maxVal)maxVal=v; } }
+      if (maxVal===0) maxVal=100;
+      var barH = (d.height||24)+'px';
+      var colors = ['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777','#ca8a04'];
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">📊 '+esc(d.title)+'</h3>';
+      for (var i=0;i<(d.items||[]).length;i++) {
+        var it = d.items[i];
+        var val = parseFloat(it.value)||0;
+        var pct = Math.round((val/maxVal)*100);
+        var clr = it.color||colors[i%colors.length];
+        h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+        h += '<span style="min-width:100px;font-size:13px;color:#475569;text-align:right">'+esc(it.label||'')+'</span>';
+        h += '<div style="flex:1;background:#f1f5f9;border-radius:4px;height:'+barH+';overflow:hidden">';
+        h += '<div style="width:'+pct+'%;height:100%;background:'+clr+';border-radius:4px;transition:width 0.8s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:6px">';
+        if (d.showValues!==false) h += '<span style="font-size:10px;color:#fff;font-weight:700">'+esc(it.value)+'</span>';
+        h += '</div></div></div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 62. pie-chart ── pie/donut using conic-gradient
+  'pie-chart': {
+    desc: 'Pie or donut chart. title?, segments:[{label, value, color?}], donut?:true, size?:200, showLegend?:true.',
+    render: function(d) {
+      var segs = d.segments||[];
+      if (!segs.length) return '';
+      var total = 0;
+      for (var i=0;i<segs.length;i++) total += parseFloat(segs[i].value)||0;
+      if (total===0) return '';
+      var colors = ['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2','#db2777','#ca8a04','#2563eb','#16a34a'];
+      var gradParts = [];
+      var cumPct = 0;
+      for (var j=0;j<segs.length;j++) {
+        var pct = ((parseFloat(segs[j].value)||0)/total)*100;
+        var clr = segs[j].color||colors[j%colors.length];
+        gradParts.push(clr+' '+cumPct+'% '+(cumPct+pct)+'%');
+        cumPct += pct;
+      }
+      var size = (d.size||200)+'px';
+      var isDonut = d.donut!==false; // default to donut
+      var cssGrad = 'conic-gradient('+gradParts.join(',')+')';
+      var h = '<div style="margin:16px 0;text-align:center">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:12px;font-weight:700">🥧 '+esc(d.title)+'</h3>';
+      h += '<div style="display:inline-block;position:relative;width:'+size+';height:'+size+'">';
+      // Pie/donut
+      h += '<div style="width:100%;height:100%;border-radius:50%;background:'+cssGrad+'"></div>';
+      if (isDonut) {
+        var holeSize = (parseInt(d.size||200)*0.45)+'px';
+        h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:'+holeSize+';height:'+holeSize+';background:#fff;border-radius:50%"></div>';
+        if (d.centerLabel) h += '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:800;color:#1e293b;font-size:18px">'+esc(d.centerLabel)+'</div>';
+      }
+      h += '</div>';
+      // Legend
+      if (d.showLegend!==false) {
+        h += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-top:12px">';
+        for (var k=0;k<segs.length;k++) {
+          var lclr = segs[k].color||colors[k%colors.length];
+          h += '<div style="display:flex;align-items:center;gap:4px;font-size:12px"><span style="width:10px;height:10px;border-radius:2px;background:'+lclr+';flex-shrink:0"></span><span style="color:#475569">'+esc(segs[k].label||'')+' ('+Math.round((parseFloat(segs[k].value)||0)/total*100)+'%)</span></div>';
+        }
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 63. gauge ── semi-circular gauge
+  'gauge': {
+    desc: 'Speedometer gauge. value, min?, max:100, label?, colorScheme?:green|blue|multi, size?:180.',
+    render: function(d) {
+      var val = parseFloat(d.value)||0;
+      var minV = parseFloat(d.min)||0;
+      var maxV = parseFloat(d.max)||100;
+      var pct = Math.max(0,Math.min(100,((val-minV)/(maxV-minV))*100));
+      var size = (d.size||180)+'px';
+      var schemes = {
+        green: ['#e2e8f0','#059669'],
+        blue: ['#e2e8f0','#4f46e5'],
+        multi: ['#e2e8f0', pct>80?'#059669':pct>50?'#d97706':'#dc2626']
+      };
+      var scheme = schemes[d.colorScheme||'blue'];
+      var trackColor = scheme[0];
+      var fillColor = typeof scheme[1]==='function'?scheme[1]():scheme[1];
+      var h = '<div style="margin:16px 0;text-align:center">';
+      h += '<div style="display:inline-block;position:relative;width:'+size+';height:'+(parseInt(size)/2)+'px;overflow:hidden">';
+      h += '<div style="width:'+size+';height:'+size+';border-radius:50%;background:conic-gradient('+fillColor+' 0% '+pct+'%, '+trackColor+' '+pct+'% 100%)"></div>';
+      h += '</div>';
+      h += '<div style="font-family:Georgia,serif;font-size:28px;font-weight:800;color:#1e293b;margin-top:-10px">'+esc(d.value)+'<span style="font-size:14px;color:#94a3b8"> / '+esc(d.max||100)+'</span></div>';
+      if (d.label) h += '<div style="font-size:12px;color:#64748b;margin-top:2px">'+esc(d.label)+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 64. funnel ── funnel/trapezoid stages
+  'funnel': {
+    desc: 'Funnel chart. title?, stages:[{label, value, color?}] (top to bottom narrowing).',
+    render: function(d) {
+      var stages = d.stages||[];
+      if (!stages.length) return '';
+      var colors = ['#4f46e5','#6366f1','#818cf8','#a5b4fc','#c7d2fe','#e0e7ff'];
+      var maxV = 0;
+      for (var i=0;i<stages.length;i++) { var sv=parseFloat(stages[i].value)||0; if(sv>maxV)maxV=sv; }
+      var h = '<div style="margin:16px 0;text-align:center">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">🔽 '+esc(d.title)+'</h3>';
+      for (var j=0;j<stages.length;j++) {
+        var st = stages[j];
+        var pct = maxV>0?Math.max(15,Math.round(((parseFloat(st.value)||0)/maxV)*100)):100;
+        var clr = st.color||colors[j%colors.length];
+        h += '<div style="margin:0 auto 4px;width:'+pct+'%;background:'+clr+';color:#fff;padding:8px 16px;font-weight:600;font-size:13px;position:relative;min-width:60px">';
+        h += esc(st.label||'')+' — '+esc(st.value||'');
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 65. metric-card ── single KPI with trend
+  'metric-card': {
+    desc: 'Single KPI card. value, label, trend:up|down|flat, delta?, icon?, color?.',
+    render: function(d) {
+      var trendIcons = { up:'📈', down:'📉', flat:'📊' };
+      var trendColors = { up:'#059669', down:'#dc2626', flat:'#94a3b8' };
+      var trendArrows = { up:'↑', down:'↓', flat:'→' };
+      var tr = d.trend||'flat';
+      var h = '<div style="display:inline-block;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin:8px;text-align:center;min-width:140px">';
+      if (d.icon) h += '<div style="font-size:28px;margin-bottom:6px">'+esc(d.icon)+'</div>';
+      h += '<div style="font-family:Georgia,serif;font-size:32px;font-weight:800;color:'+(d.color||'#1e293b')+'">'+esc(d.value)+'</div>';
+      h += '<div style="font-size:12px;color:#64748b;margin:4px 0">'+esc(d.label||'')+'</div>';
+      h += '<div style="font-size:13px;font-weight:600;color:'+trendColors[tr]+'">'+trendArrows[tr]+' '+(d.delta||'')+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 66. leaderboard ── ranked list
+  'leaderboard': {
+    desc: 'Ranked leaderboard. title?, items:[{label, value, highlight?}], medals?:true, sortDesc?:true.',
+    render: function(d) {
+      var items = (d.items||[]).slice();
+      if (d.sortDesc!==false) items.sort(function(a,b){ return (parseFloat(b.value)||0)-(parseFloat(a.value)||0); });
+      var medals = ['🥇','🥈','🥉'];
+      var h = '<div style="margin:16px 0;max-width:500px">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:10px;font-weight:700">🏆 '+esc(d.title)+'</h3>';
+      for (var i=0;i<items.length;i++) {
+        var it = items[i];
+        var bg = it.highlight?'#eef2ff':(i%2===0?'#fafbfc':'#fff');
+        var rankIcon = d.medals!==false&&i<3?medals[i]:('#'+(i+1));
+        h += '<div style="display:flex;align-items:center;padding:8px 14px;background:'+bg+';border-radius:6px;margin-bottom:4px">';
+        h += '<span style="font-size:18px;width:36px;text-align:center">'+rankIcon+'</span>';
+        h += '<span style="flex:1;font-weight:500;color:#1e293b">'+esc(it.label||'')+'</span>';
+        h += '<span style="font-weight:700;color:#4f46e5">'+esc(it.value||'')+'</span>';
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 67. heatmap ── color intensity grid
+  'heatmap': {
+    desc: 'Heatmap grid. title?, rowLabels?:[], colLabels?:[], cells:[[value]], lowColor?:"#e2e8f0", highColor?:"#4f46e5".',
+    render: function(d) {
+      var lowC = d.lowColor||'#e2e8f0';
+      var highC = d.highColor||'#4f46e5';
+      var cells = d.cells||[];
+      var rowLabels = d.rowLabels||[];
+      var colLabels = d.colLabels||[];
+      // Find min/max
+      var minV=Infinity, maxV=-Infinity;
+      for (var r=0;r<cells.length;r++) {
+        for (var c=0;c<(cells[r]||[]).length;c++) {
+          var cv = parseFloat(cells[r][c]); if(!isNaN(cv)){ if(cv<minV)minV=cv; if(cv>maxV)maxV=cv; }
+        }
+      }
+      if (minV===Infinity) return '';
+      var range = maxV-minV||1;
+      var h = '<div style="overflow-x:auto;margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:10px;font-weight:700">🔥 '+esc(d.title)+'</h3>';
+      h += '<table style="border-collapse:collapse;font-size:12px"><tbody>';
+      // Header row
+      if (colLabels.length) {
+        h += '<tr><td></td>';
+        for (var cl=0;cl<colLabels.length;cl++) h += '<td style="padding:4px 8px;text-align:center;font-weight:600;color:#64748b;font-size:11px">'+esc(colLabels[cl])+'</td>';
+        h += '</tr>';
+      }
+      for (var r2=0;r2<cells.length;r2++) {
+        h += '<tr>';
+        if (rowLabels[r2]) h += '<td style="padding:4px 8px;font-weight:600;color:#475569;font-size:11px;text-align:right">'+esc(rowLabels[r2])+'</td>';
+        for (var c2=0;c2<(cells[r2]||[]).length;c2++) {
+          var v2 = parseFloat(cells[r2][c2]);
+          var t = isNaN(v2)?0:((v2-minV)/range);
+          // Interpolate between lowC and highC
+          var rVal = parseInt(lowC.substr(1,2),16); var gVal = parseInt(lowC.substr(3,2),16); var bVal = parseInt(lowC.substr(5,2),16);
+          var rHi = parseInt(highC.substr(1,2),16); var gHi = parseInt(highC.substr(3,2),16); var bHi = parseInt(highC.substr(5,2),16);
+          var rr = Math.round(rVal+(rHi-rVal)*t);
+          var gg = Math.round(gVal+(gHi-gVal)*t);
+          var bb = Math.round(bVal+(bHi-bVal)*t);
+          var bgColor = 'rgb('+rr+','+gg+','+bb+')';
+          var textColor = t>0.5?'#fff':'#1e293b';
+          h += '<td style="padding:6px 12px;text-align:center;background:'+bgColor+';color:'+textColor+';font-weight:500;border-radius:4px;margin:1px">'+esc(isNaN(v2)?'':cells[r2][c2])+'</td>';
+        }
+        h += '</tr>';
+      }
+      return h+'</tbody></table></div>';
+    }
+  },
+  // ── 68. venn-diagram ── overlapping circles
+  'venn-diagram': {
+    desc: 'Venn diagram. title?, sets:[{label, size?, color?}], intersections?:[{labels:[],text}], size?:300.',
+    render: function(d) {
+      var sets = d.sets||[];
+      if (sets.length<2) return '';
+      var size = d.size||280;
+      var colors = ['rgba(79,70,229,0.5)','rgba(5,150,105,0.5)','rgba(217,119,6,0.5)'];
+      var borderColors = ['#4f46e5','#059669','#d97706'];
+      // Layout: 2 sets = side-by-side; 3 sets = triangle
+      var h = '<div style="margin:16px 0;text-align:center">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">🔴🔵 '+esc(d.title)+'</h3>';
+      h += '<div style="position:relative;display:inline-block;width:'+size+'px;height:'+size+'px">';
+      for (var i=0;i<sets.length;i++) {
+        var s = sets[i];
+        var sz = (s.size||(size*0.6))+'px';
+        var bg = s.color||colors[i];
+        var border = borderColors[i%3];
+        // Position circles overlapping
+        var positions = [
+          { left:'10%', top:'20%' },
+          { left:'45%', top:'20%' },
+          { left:'27%', top:'45%' }
+        ];
+        var pos = positions[i]||positions[0];
+        h += '<div style="position:absolute;left:'+pos.left+';top:'+pos.top+';width:'+sz+';height:'+sz+';border-radius:50%;background:'+bg+';border:2px solid '+border+';display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e293b;font-size:13px">'+esc(s.label||'')+'</div>';
+      }
+      // Intersection labels
+      if (d.intersections) {
+        for (var j=0;j<d.intersections.length;j++) {
+          var inter = d.intersections[j];
+          h += '<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:11px;color:#1e293b;font-weight:600;background:rgba(255,255,255,0.8);padding:2px 8px;border-radius:10px;z-index:2">'+esc(inter.text||'')+'</div>';
+        }
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 69. dashboard-grid ── grid of KPI metric cards
+  'dashboard-grid': {
+    desc: 'KPI dashboard grid. title?, cards:[{value, label, trend?, delta?, icon?, color?}], cols:2|3|4.',
+    render: function(d) {
+      var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr','4':'1fr 1fr 1fr 1fr' };
+      var trendIcons = { up:'📈', down:'📉', flat:'📊' };
+      var trendArrows = { up:'↑', down:'↓', flat:'→' };
+      var trendColors = { up:'#059669', down:'#dc2626', flat:'#94a3b8' };
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:12px;font-weight:700">📋 '+esc(d.title)+'</h3>';
+      h += '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['3'])+';gap:12px">';
+      for (var i=0;i<(d.cards||[]).length;i++) {
+        var c = d.cards[i];
+        var tr = c.trend||'flat';
+        h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 16px;text-align:center">';
+        if (c.icon) h += '<div style="font-size:26px;margin-bottom:6px">'+esc(c.icon)+'</div>';
+        h += '<div style="font-family:Georgia,serif;font-size:28px;font-weight:800;color:'+(c.color||'#1e293b')+'">'+esc(c.value)+'</div>';
+        h += '<div style="font-size:11px;color:#64748b;margin:4px 0">'+esc(c.label||'')+'</div>';
+        h += '<div style="font-size:12px;font-weight:600;color:'+trendColors[tr]+'">'+trendArrows[tr]+' '+(c.delta||'')+'</div>';
+        h += '</div>';
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 70. bullet-chart ── value vs target bar
+  'bullet-chart': {
+    desc: 'Bullet chart. value, target, max, label?, color?, targetColor?:"#dc2626".',
+    render: function(d) {
+      var val = parseFloat(d.value)||0;
+      var target = parseFloat(d.target)||0;
+      var maxV = parseFloat(d.max)||100;
+      var valPct = Math.min(100,Math.round((val/maxV)*100));
+      var targetPct = Math.min(100,Math.round((target/maxV)*100));
+      var color = d.color||'#4f46e5';
+      var h = '<div style="margin:12px 0">';
+      if (d.label) h += '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:600;color:#1e293b;font-size:13px">'+esc(d.label)+'</span><span style="color:#64748b;font-size:12px">'+esc(d.value)+' / '+esc(d.target||'Target: '+d.target)+'</span></div>';
+      h += '<div style="position:relative;height:22px;background:#f1f5f9;border-radius:4px;overflow:hidden">';
+      h += '<div style="position:absolute;left:0;top:0;height:100%;width:'+valPct+'%;background:'+color+';border-radius:4px"></div>';
+      // Target marker
+      h += '<div style="position:absolute;left:'+targetPct+'%;top:-2px;height:26px;width:3px;background:'+(d.targetColor||'#dc2626')+';border-radius:2px"></div>';
+      h += '</div></div>';
+      return h;
+    }
+  },
+  // ── 71. sparkline ── tiny inline trend bars
+  'sparkline': {
+    desc: 'Tiny sparkline trend. values:[], color?:"#4f46e5", height?:40, highlightMax?:true, label?.',
+    render: function(d) {
+      var vals = d.values||[];
+      if (!vals.length) return '';
+      var maxV = -Infinity, minV = Infinity;
+      for (var i=0;i<vals.length;i++) { var v=parseFloat(vals[i])||0; if(v>maxV)maxV=v; if(v<minV)minV=v; }
+      var range = maxV-minV||1;
+      var barW = Math.max(4,Math.floor(300/vals.length));
+      var h = '<div style="display:inline-flex;align-items:flex-end;gap:2px;height:'+(d.height||40)+'px;padding:4px 0;vertical-align:middle">';
+      for (var j=0;j<vals.length;j++) {
+        var bv = parseFloat(vals[j])||0;
+        var bh = Math.max(2,((bv-minV)/range)*(d.height||40));
+        var isMax = d.highlightMax!==false && bv===maxV;
+        var clr = isMax?(d.highlightColor||'#dc2626'):(d.color||'#4f46e5');
+        h += '<div style="width:'+barW+'px;height:'+bh+'px;background:'+clr+';border-radius:2px 2px 0 0;opacity:'+(isMax?'1':'0.7')+'" title="'+esc(bv)+'"></div>';
+      }
+      h += '</div>';
+      if (d.label) h += '<span style="font-size:11px;color:#64748b;margin-left:8px">'+esc(d.label)+'</span>';
+      return '<div style="margin:8px 0">'+h+'</div>';
+    }
+  },
+  // ── 72. waterfall ── running total cascade
+  'waterfall': {
+    desc: 'Waterfall chart. title?, items:[{label, value, isTotal?}], colorUp?:"#059669", colorDown?:"#dc2626", colorTotal?:"#4f46e5".',
+    render: function(d) {
+      var items = d.items||[];
+      if (!items.length) return '';
+      var colorUp = d.colorUp||'#059669';
+      var colorDown = d.colorDown||'#dc2626';
+      var colorTotal = d.colorTotal||'#4f46e5';
+      var running = 0;
+      var allVals = [];
+      for (var i=0;i<items.length;i++) { var v=parseFloat(items[i].value)||0; running+=v; allVals.push(Math.abs(v)); allVals.push(Math.abs(running)); }
+      var maxAbs = Math.max.apply(null,allVals)||100;
+      running = 0;
+      var h = '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">🌊 '+esc(d.title)+'</h3>';
+      for (var j=0;j<items.length;j++) {
+        var it = items[j];
+        var iv = parseFloat(it.value)||0;
+        var isTotal = it.isTotal;
+        var barStart = running;
+        running += iv;
+        var barEnd = running;
+        var barLeft = Math.round((Math.min(barStart,barEnd)/maxAbs)*100);
+        var barW = Math.max(2,Math.round((Math.abs(iv)/maxAbs)*100));
+        var clr = isTotal?colorTotal:(iv>=0?colorUp:colorDown);
+        var connectorColor = '#cbd5e1';
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+        h += '<span style="min-width:90px;font-size:12px;color:#475569;text-align:right">'+esc(it.label||'')+'</span>';
+        h += '<div style="flex:1;height:18px;position:relative">';
+        // Invisible connector from 0 to barStart
+        if (barStart>0) h += '<div style="position:absolute;left:0;top:6px;width:'+Math.round((barStart/maxAbs)*100)+'%;height:6px;background:'+connectorColor+';border-radius:3px"></div>';
+        // Bar
+        h += '<div style="position:absolute;left:'+barLeft+'%;top:2px;width:'+barW+'%;height:14px;background:'+clr+';border-radius:3px"></div>';
+        h += '</div>';
+        h += '<span style="min-width:50px;font-size:12px;font-weight:600;color:#1e293b;text-align:right">'+esc(iv)+'</span>';
+        h += '</div>';
+      }
+      return h+'</div>';
+    }
+  },
+  // ── 73. info-card ── single card with colored header + body
+  'info-card': {
+    desc: 'Single info card. icon?, title, body, variant:default|definition|reference|example, color?.',
+    render: function(d) {
+      var themes = {
+        default: ['📋','#4f46e5','#eef2ff'],
+        definition: ['📖','#7c3aed','#f5f3ff'],
+        reference: ['🔗','#0891b2','#ecfeff'],
+        example: ['✏️','#059669','#ecfdf5']
+      };
+      var t = themes[d.variant]||themes.default;
+      var color = d.color||t[1];
+      var h = '<div class="sg-card" style="margin:14px 0">';
+      h += '<div class="sg-card-header" style="background:'+t[2]+';border-bottom:2px solid '+color+'">'+(d.icon||t[0])+' <strong>'+esc(d.title||'')+'</strong></div>';
+      h += '<div class="sg-card-body">'+(d.body||d.content||'')+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 74. heading ── styled section heading with icon
+  'heading': {
+    desc: 'Section heading. text, icon?, level:section|subsection (section=larger with border).',
+    render: function(d) {
+      if (d.level==='subsection') {
+        return '<h3 class="sg-subheading">'+(d.icon||'')+' '+esc(d.text||d.title||'')+'</h3>';
+      }
+      return '<h2 class="sg-heading">'+(d.icon||'')+' '+esc(d.text||d.title||'')+'</h2>';
+    }
+  },
+  // ── 75. reading-time ── estimated reading time indicator
+  'reading-time': {
+    desc: 'Reading time badge. minutes, label?, badgeText? (e.g. section name).',
+    render: function(d) {
+      var h = '<p class="sg-reading-time" style="color:#94a3b8;font-size:13px;margin:8px 0 16px">⏱️ '+esc(d.label||'Estimated Reading Time')+': '+esc(d.minutes||'5-10')+' min';
+      if (d.badgeText) h += ' | <span class="sg-badge">'+esc(d.badgeText)+'</span>';
+      return h+'</p>';
+    }
+  }
+};
+
+/** Render a components array into full study HTML */
+function renderComponentsToHtml(components) {
+  if (!components || !components.length) return '';
+  var h = '<div class="study-guide">';
+  for (var i = 0; i < components.length; i++) {
+    var comp = components[i];
+    var renderer = STUDY_COMPONENTS[comp.type || comp.component];
+    if (renderer) h += renderer.render(comp.data || comp);
+  }
+  return h + '</div>';
+}
+
+/** Render study HTML for preview: component-based format or raw HTML fallback */
+function getStudyHtmlForPreview() {
+  if (editingStudyHtmlData && editingStudyHtmlData.components) {
+    return renderComponentsToHtml(editingStudyHtmlData.components);
+  }
+  return editingHtmlCode || '';
+}
 
 /* ── YouTube ID extraction ── */
 function extractYouTubeId(url) {
@@ -224,8 +1618,8 @@ function renderSections() {
           lessonsSorted.map(function(les, li) {
             var lesRealIdx = (s.lessons || []).indexOf(les);
             var media = (hasLessonVideo(les)?'🎬':'') + (les.presentationPdfUrls&&les.presentationPdfUrls.length?'📊':'') + (les.studyDocPdfUrls&&les.studyDocPdfUrls.length?'📖':'') + (les.worksheetPdfUrls&&les.worksheetPdfUrls.length?'📝':'') || '—';
-            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '🌐' : '';
-            var flashcardIndicator = (les.flashcards && (Array.isArray(les.flashcards) ? les.flashcards.length : (typeof les.flashcards === 'string' && les.flashcards.length > 10)) ? '🃏' : '');
+            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '<span title="Study HTML generated">🌐</span>' : '';
+            var flashcardIndicator = (les.flashcards && (Array.isArray(les.flashcards) ? les.flashcards.length : (typeof les.flashcards === 'string' && les.flashcards.length > 10)) ? '<span title="Flashcards generated">🃏</span>' : '');
             var quizIndicator = (les.quiz && les.quiz.length ? '✅ ' + les.quiz.length + ' Q' : '—');
             var extraMedia = [studyHtmlIndicator, flashcardIndicator].filter(Boolean).join('');
             if (extraMedia) media = (media === '—' ? '' : media + ' ') + extraMedia;
@@ -421,6 +1815,7 @@ function startAddLesson() {
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = '';
+  editingStudyHtmlData = null;
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
@@ -457,6 +1852,7 @@ function editLesson(idx) {
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
+  editingStudyHtmlData = les.studyHtmlData || null;
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
   updateHtmlPreview();
@@ -501,8 +1897,9 @@ function saveLessonFromEditor() {
     answerKeyPdfUrls: editingAnswerKeyPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingAnswerKeyPdfUrls)) : null,
     htmlDocUrls: editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null,
     hiddenDocUrls: editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null,
-    flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
     htmlCode: editingHtmlCode || null,
+    studyHtmlData: editingStudyHtmlData || null,
+    flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
     sourceUrls: editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null,
     quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null
   };
@@ -562,6 +1959,7 @@ function startAddLessonDirect(sectionIdx) {
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = '';
+  editingStudyHtmlData = null;
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
@@ -599,6 +1997,7 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   hideSubModal('pdf-editor-panel');
   renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
+  editingStudyHtmlData = les.studyHtmlData || null;
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
   updateHtmlPreview();
@@ -1170,80 +2569,96 @@ function generateHtmlFromPdf() {
     if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
     if (genBtn) genBtn.textContent = '⏳ AI generating HTML...';
 
-    var prompt = 'You are an expert educational content designer creating an INTERACTIVE STUDY GUIDE. Based on the document content below, generate a beautiful, well-structured, highly interactive HTML study document. Return ONLY raw HTML — no markdown fences, no intro text.\n\n' +
-      '⭐ YOUR GOAL: Create a step-by-step learning experience that engages the student actively, not passively.\n\n' +
-      '🔷 OVERALL STRUCTURE (follow this order):\n' +
-      '1. <div class="study-guide"> wrapper\n' +
-      '2. <div class="sg-hero"> — eye-catching title + subtitle + estimated reading time\n' +
-      '3. <div class="sg-summary"> — Learning Objectives with animated bullet icons\n' +
-      '4. <section> blocks for each major topic, ordered logically from basics to advanced\n' +
-      '5. Between sections, include <div class="sg-divider"></div> for visual rhythm\n' +
-      '6. End with <div class="sg-summary sg-recap"> — Key Takeaways recap\n\n' +
-      '🔷 SECTION STYLING (use these exact classes):\n' +
-      '- <section> wraps each topic\n' +
-      '- <h2 class="sg-heading"> for section titles (purple, bold)\n' +
-      '- <h3 class="sg-subheading"> for sub-topics\n' +
-      '- <p> for paragraphs, <strong> for key terms, <em> for emphasis\n' +
-      '- <ul class="sg-list"> / <ol class="sg-list"> for lists\n' +
-      '- <blockquote class="sg-note"> for important tips, warnings, or key takeaways (amber left border)\n' +
-      '- <div class="sg-highlight"> for critical concepts that need emphasis (purple background)\n' +
-      '- <div class="sg-step"> for numbered step-by-step instructions with <span class="sg-step-num">\n' +
-      '- Use <table class="sg-table"> for comparison data with <thead> and striped rows\n\n' +
-      '🔷 INTERACTIVE QUIZ — USE THIS EXACT HTML STRUCTURE (do NOT reorder elements):\n' +
-      'For EVERY major concept, create a clickable self-check quiz item. COPY THIS EXACT TEMPLATE — only change the text:\n\n' +
-      '<div class="sg-quiz-item-v3">\n' +
-      '  <p class="sg-quiz-question-v3">❓ Question text?</p>\n' +
-      '  <div class="sg-quiz-choices-v3">\n' +
-      '    <input type="radio" name="qN" id="qN-a" class="sg-q-radio"><label class="sg-q-opt" for="qN-a">A) Option one</label>\n' +
-      '    <input type="radio" name="qN" id="qN-b" class="sg-q-radio sg-q-correct"><label class="sg-q-opt" for="qN-b">B) Correct option</label>\n' +
-      '    <input type="radio" name="qN" id="qN-c" class="sg-q-radio"><label class="sg-q-opt" for="qN-c">C) Option three</label>\n' +
-      '    <input type="radio" name="qN" id="qN-d" class="sg-q-radio"><label class="sg-q-opt" for="qN-d">D) Option four</label>\n' +
-      '  </div>\n' +
-      '  <button class="sg-show-answer-btn" disabled>🔍 Show Answer</button>\n' +
-      '  <div class="sg-q-feedback" style="display:none">\n' +
-      '    <p class="sg-answer-correct">🎉 <strong>Correct! B) Correct option</strong></p>\n' +
-      '    <p class="sg-answer-wrong" style="display:none">❌ <strong>Not quite.</strong> The correct answer is <strong>B) Correct option</strong>.</p>\n' +
-      '    <p class="sg-explanation">💡 <strong>Explanation:</strong> Detailed step-by-step reasoning. Reference the source material. Explain WHY each wrong option is incorrect.</p>\n' +
-      '  </div>\n' +
-      '</div>\n\n' +
-      '⚠️ ABSOLUTE RULES — follow exactly or the quiz will break:\n' +
-      '1. Radio inputs MUST come BEFORE their labels (input+label pairs, not label wrapping input)\n' +
-      '2. The sg-show-answer-btn button MUST come between the choices div and sg-q-feedback div\n' +
-      '3. The sg-q-feedback div MUST be the VERY LAST element inside sg-quiz-item-v3, with style="display:none"\n' +
-      '4. ONLY the correct answer input gets class="sg-q-radio sg-q-correct" — wrong answers get class="sg-q-radio" only\n' +
-      '5. The sg-show-answer-btn MUST have the disabled attribute initially\n' +
-      '6. BOTH sg-answer-correct AND sg-answer-wrong paragraphs MUST be present inside sg-q-feedback — each with style="display:none" initially\n' +
-      '7. Every question needs a UNIQUE name (q1, q2, q3...) so radio groups are independent\n' +
-      '8. Every id must be unique too (q1-a, q1-b, q2-a, q2-b...)\n' +
-      '9. Each label must reference its input via for="..." matching the id\n' +
-      '10. Include 5-8 quiz items, each inside its own sg-quiz-item-v3, all wrapped in <div class="sg-quiz-section">\n\n' +
-      '🔷 VISUAL ENHANCEMENTS (use these classes for professional look):\n' +
-      '- <span class="sg-badge"> for inline labels/tags\n' +
-      '- <div class="sg-card"> for grouped info boxes with <div class="sg-card-header"> and <div class="sg-card-body">\n' +
-      '- <div class="sg-timeline"> with <div class="sg-timeline-item"> for chronological/sequential content\n' +
-      '- <div class="sg-grid-2"> for side-by-side comparisons (2-column grid)\n' +
-      '- Use emoji icons strategically in headings (📌 🎯 ⚡ 🔍 💡 ⭐)\n\n' +
-      '🔷 COLOR PALETTE (use inline where helpful — the CMS provides matching CSS):\n' +
-      '- Primary/Accent: #4f46e5 (purple), #eef2ff (light purple bg)\n' +
-      '- Success: #059669 (green), #d1fae5 (light green bg)\n' +
-      '- Warning: #d97706 (amber), #fef3c7 (light amber bg)\n' +
-      '- Text: #1e293b (dark), #64748b (muted)\n' +
-      '- Backgrounds: #ffffff (white), #f8fafc (light gray), #fafbfe (blue-tinted)\n' +
-      '⚠️ CONTRAST RULES (critical for readability):\n' +
-      '- NEVER use light text (#94a3b8, #cbd5e1) on light backgrounds (#f8fafc, #ffffff, #eef2ff)\n' +
-      '- Dark text (#1e293b, #334155) on light backgrounds only\n' +
-      '- Light/white text (#fff, #f8fafc) ONLY on dark backgrounds (#4f46e5, #3730a3, #1e293b)\n' +
-      '- Muted text (#64748b) is safe on white/#f8fafc backgrounds ONLY\n' +
-      '- If using a colored background (purple/green/amber), ALWAYS use white or very dark text — never mid-tones\n' +
-      '- Inline styles: always set BOTH color AND background-color together, never just one\n' +
-      '- Minimum contrast ratio: 4.5:1 for body text, 3:1 for large text (18px+)\n\n' +
-      '🔷 LENGTH & QUALITY:\n' +
-      '- Comprehensive: 1000-3000 words\n' +
-      '- Well-researched: derive ALL facts from the source material\n' +
-      '- Engaging tone: friendly but academic, like a knowledgeable tutor\n' +
-      '- Short paragraphs (2-4 sentences max) for readability\n' +
-      '- Use bullet points and numbered lists liberally for scannability\n\n' +
-      'Document content:\n"""\n' + text + '\n"""\n\nSTART YOUR RESPONSE WITH: <div class="study-guide">';
+    var prompt = 'You are an expert educational content designer. Compose a rich study guide using COMPONENTS from the library below. Return ONLY a JSON object.\n\n' +
+      'COMPONENT LIBRARY (75 types — Grade 1 to professional, pick freely):\n' +
+      'STRUCTURAL:\n' +
+      '1. "accordion" — collapsible sections {items:[{title, content, icon?, open?}]}\n' +
+      '2. "separator" — divider line {label?}\n' +
+      '3. "columns-2" — two-column layout {left, right, leftWidth?, rightWidth?}\n' +
+      '4. "heading" — section heading {text, icon?, level:"section"|"subsection"}\n' +
+      '5. "reading-time" — reading time badge {minutes, label?, badgeText?}\n' +
+      'HERO & EMPHASIS:\n' +
+      '6. "intro-hero" — large hero card {icon:"🚀", heading, description, objectives:["..."]}\n' +
+      '7. "highlight-box" — prominent emphasis {variant:"idea"|"important"|"discover"|"challenge", title?, body}\n' +
+      '8. "callout" — colored alert {variant:"info"|"tip"|"key"|"warn", title?, body}\n' +
+      '9. "quote" — styled quotation {text, attribution?, icon?}\n' +
+      '10. "difficulty-meter" — difficulty badge {level:"beginner"|"intermediate"|"advanced"|"expert", label?}\n' +
+      '11. "star-award" — achievement badge {title, subtitle?, stars:1-5, icon?}\n' +
+      '12. "encouragement" — motivational boost {message, variant:"cheer"|"persist"|"celebrate"|"believe"}\n' +
+      '13. "character-guide" — mascot speech bubble {character, emoji?, message, variant:"kid"|"teacher"|"expert"|"coach"}\n' +
+      '14. "info-card" — single card with header {icon?, title, body, variant:"default"|"definition"|"reference"|"example"}\n' +
+      'DATA & STATS:\n' +
+      '15. "fact-grid" — stat cards {cols:"2"|"3"|"4", items:[{label, value}]}\n' +
+      '16. "key-numbers" — large centered stats {items:[{value, unit?, label}]}\n' +
+      '17. "stat-row" — horizontal emoji stat cards {items:[{emoji?, value, label}]}\n' +
+      '18. "weight-bar" — range indicator dots {segments:[{range, label, rule?, color}]}\n' +
+      '19. "data-table" — styled table {columns:[{key,header}], rows:[{key:value}]}\n' +
+      '20. "formula" — math/equation {formula, caption?, variant:"highlight"|"basic"}\n' +
+      '21. "swot" — SWOT 2×2 grid {strengths:[], weaknesses:[], opportunities:[], threats:[]}\n' +
+      '22. "pyramid" — hierarchy triangle {levels:[{label, description?, color?}] bottom-to-top}\n' +
+      '23. "concept-map" — mind map {central, nodes:[{label, description?, icon?}], color?}\n' +
+      '24. "progress-tracker" — progress bar {percent:0-100, label?, steps:[{label,done?}]}\n' +
+      '25. "metric-card" — single KPI card {value, label, trend:"up"|"down"|"flat", delta?, icon?, color?}\n' +
+      '26. "dashboard-grid" — KPI dashboard {title?, cards:[{value,label,trend?,delta?,icon?}], cols:"2"|"3"|"4"}\n' +
+      'CHARTS & VISUALIZATIONS:\n' +
+      '27. "bar-chart" — horizontal bars {title?, items:[{label,value,color?}], showValues?, height?}\n' +
+      '28. "pie-chart" — pie/donut {title?, segments:[{label,value,color?}], donut?:true, size?, showLegend?, centerLabel?}\n' +
+      '29. "gauge" — speedometer {value, min?, max, label?, colorScheme?:"green"|"blue"|"multi", size?}\n' +
+      '30. "funnel" — narrowing stages {title?, stages:[{label, value, color?}]}\n' +
+      '31. "leaderboard" — ranked list {title?, items:[{label,value,highlight?}], medals?:true}\n' +
+      '32. "heatmap" — color intensity grid {title?, rowLabels?, colLabels?, cells:[[value]], lowColor?, highColor?}\n' +
+      '33. "venn-diagram" — overlapping circles {title?, sets:[{label,size?,color?}], intersections?}\n' +
+      '34. "bullet-chart" — value vs target {value, target, max, label?, color?}\n' +
+      '35. "sparkline" — tiny trend bars {values:[], color?, height?, highlightMax?, label?}\n' +
+      '36. "waterfall" — cascade chart {title?, items:[{label,value,isTotal?}], colorUp?, colorDown?}\n' +
+      'COMPARISON & STRUCTURE:\n' +
+      '37. "pros-cons" — side-by-side green/red {prosTitle?, pros:[], consTitle?, cons:[]}\n' +
+      '38. "comparison" — multi-dimension A vs B {aLabel, bLabel, rows:[{dimension, a, b}]}\n' +
+      '39. "definition-list" — term/definition pairs {title?, terms:[{term, definition}]}\n' +
+      '40. "memory-box" — amber key takeaways {title?, rows:[{key, value}]}\n' +
+      '41. "summary-box" — end-of-section recap {title?, body?, points:[]}\n' +
+      '42. "before-after" — transformation {beforeTitle?, beforeBody, afterTitle?, afterBody}\n' +
+      '43. "debate" — two-sided argument {topic, positionA:{label,points:[]}, positionB:{label,points:[]}}\n' +
+      '44. "analogy" — think-of-it-like bridge {concept, analogy, explanation?}\n' +
+      'FLOW & SEQUENCE:\n' +
+      '45. "phase-flow" — vertical timeline {phases:[{name, description, emoji?, color}]}\n' +
+      '46. "timeline" — horizontal chronological {events:[{date, title, description?, icon?}]}\n' +
+      '47. "steps" — numbered procedure {title?, steps:[{title?, description, icon?}]}\n' +
+      'CARDS & GRIDS:\n' +
+      '48. "icon-grid" — emoji card grid {cols:"2"|"3"|"4", items:[{emoji, name, subtitle?, highlight?:"yes"}]}\n' +
+      '49. "card-grid" — expandable detail cards {cols:"2"|"3", items:[{emoji?, name, tag?, description?, detail}]}\n' +
+      '50. "gallery" — image gallery grid {cols:"2"|"3"|"4", images:[{url, caption?, alt?}]}\n' +
+      '51. "resource-links" — resource cards {title?, links:[{label,url,description?,type}]}\n' +
+      'INSTRUCTIONAL:\n' +
+      '52. "worked-example" — problem→steps→answer {problem, steps:[], answer, note?}\n' +
+      '53. "scenario" — purple scenario box {context, question, debrief}\n' +
+      '54. "prerequisites" — before-you-begin {title?, body?, items:[]}\n' +
+      '55. "checklist" — checkable list {title?, items:[{text, checked?}]}\n' +
+      '56. "common-mistake" — pitfall warning {title?, mistake, correct?, explanation?}\n' +
+      '57. "exam-hint" — exam focus tip {title?, tips:[], body?}\n' +
+      '58. "real-world" — application {title?, example, body?}\n' +
+      '59. "study-tip" — learning strategy {title?, tip, method?}\n' +
+      '60. "did-you-know" — fun fact {fact, icon?, title?, source?}\n' +
+      '61. "story-box" — narrative {title?, story, moral?, character?}\n' +
+      '62. "tip-jar" — quick tips collection {title?, tips:[], icon?}\n' +
+      '63. "try-it" — hands-on activity {title?, instruction, hint?, timeEstimate?}\n' +
+      '64. "word-bank" — vocabulary pills {title?, words:[{word, hint?}], color?}\n' +
+      '65. "vocab-card" — rich word card {word, definition, example?, partOfSpeech?, pronunciation?}\n' +
+      'MEDIA & EMBED:\n' +
+      '66. "image-block" — centered image {url, alt?, caption?, credit?, maxHeight?}\n' +
+      '67. "video-embed" — YouTube/Vimeo {url, title?, aspectRatio:"16by9"|"4by3"}\n' +
+      '68. "code-block" — code with language {code, language?, filename?}\n' +
+      '69. "html" — raw HTML {html:"<p>...</p>"}\n' +
+      'INTERACTIVE:\n' +
+      '70. "quiz" — Q&A with radio buttons {items:[{question, options:[], correct:0, explanation}]}\n' +
+      '71. "flashcards-inline" — click-to-flip {cards:[{front, back}], cols:"2"|"3"}\n' +
+      '72. "reflection-prompt" — pause-and-think {title?, questions:[], icon?}\n' +
+      '73. "self-assessment" — 1-5 star scale {question?, lowLabel?, highLabel?}\n' +
+      '74. "fill-blank" — fill-in-the-blank {items:[{prompt, answer, hint?}]}\n' +
+      '75. "next-steps" — post-lesson guidance {title?, steps:[{label, description?, type}]}\n\n' +
+      'RETURN FORMAT:\n{"components":[{"type":"intro-hero","data":{...}},{"type":"separator","data":{}},{"type":"fact-grid","data":{...}},{"type":"quiz","data":{"items":[...]}}]}\n\n' +
+      'RULES: Start with intro-hero + difficulty-meter. Use separator between sections. For statistics/data: prefer bar-chart, pie-chart, dashboard-grid, or heatmap (never raw tables for visual data). For kids: use character-guide, story-box, star-award. For professionals: use code-block, debate, concept-map, waterfall. Always include reflection-prompt or self-assessment. End with summary-box → quiz → next-steps. 4-6 quiz questions (correct=0-based). Prefer charts over tables for numeric data.\n\n' +
+      'Document:\n"""\n' + text + '\n"""\n\nSTART WITH: {"components":';
 
     var fullResponse = '';
     var _htmlStreamState = { scrolling: true, tokenCount: 0 }; // object, not primitive
@@ -1283,9 +2698,30 @@ function generateHtmlFromPdf() {
         // Final preview refresh
         updateHtmlPreview();
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
-        var html = fullResponse.trim();
-        html = html.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
-        // Extract HTML content (between first < and last >)
+        var raw = fullResponse.trim();
+        raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+        // Try component-based format: { "components": [...] }
+        try {
+          var obj = JSON.parse(raw);
+          if (obj.components && Array.isArray(obj.components)) {
+            editingStudyHtmlData = obj;
+            var rendered = renderComponentsToHtml(obj.components);
+            editingHtmlCode = rendered;
+            if (el('edit-html-code')) el('edit-html-code').value = rendered;
+            if (el('edit-html-code-v2')) el('edit-html-code-v2').value = rendered;
+            updateHtmlPreview();
+            var compTypes = {};
+            for (var ci = 0; ci < obj.components.length; ci++) {
+              var ct = obj.components[ci].type || '?';
+              compTypes[ct] = (compTypes[ct] || 0) + 1;
+            }
+            var summary = Object.keys(compTypes).map(function(k) { return k + '×' + compTypes[k]; }).join(', ');
+            tool.notify('✅ Study guide generated with ' + obj.components.length + ' components! (' + summary + ')', 'success');
+            return;
+          }
+        } catch(e) { /* fall through */ }
+        // Parse as raw HTML fallback
+        var html = raw;
         var startIdx = html.indexOf('<');
         var endIdx = html.lastIndexOf('>');
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -1296,6 +2732,7 @@ function generateHtmlFromPdf() {
           return;
         }
         editingHtmlCode = html;
+        editingStudyHtmlData = null;
         if (el('edit-html-code')) el('edit-html-code').value = html;
         if (el('edit-html-code-v2')) el('edit-html-code-v2').value = html;
         updateHtmlPreview();
@@ -1464,9 +2901,7 @@ function generateFlashcardsFromPdf() {
 function updateHtmlPreview() {
   var iframe = el('study-html-preview-iframe');
   if (!iframe) return;
-  var code = '';
-  if (el('edit-html-code-v2')) code = el('edit-html-code-v2').value;
-  else if (el('edit-html-code')) code = el('edit-html-code').value;
+  var code = getStudyHtmlForPreview();
 
   // Base CSS that matches the SelfPacedLearn tool's study guide styles
   var previewCss = '<style>'
@@ -1516,11 +2951,29 @@ function updateHtmlPreview() {
     + '.sg-q-feedback .sg-answer-correct{font-size:15px;margin-bottom:6px;color:#065f46}'
     + '.sg-q-feedback .sg-explanation{font-size:14px;color:#64748b;line-height:1.7;margin-top:6px}'
     + '@keyframes sgFadeSlide{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}'
+    + 'details{margin:8px 0}details summary{padding:8px 0;font-weight:600;color:#4f46e5;cursor:pointer;user-select:none}details summary:hover{color:#3730a3}'
+    + '.sg-show-answer-btn{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:8px 18px;border:1px solid #4f46e5;border-radius:8px;background:#eef2ff;color:#4f46e5;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}'
+    + '.sg-show-answer-btn:hover:not(:disabled){background:#4f46e5;color:#fff}'
+    + '.sg-show-answer-btn:disabled{opacity:0.45;cursor:not-allowed;border-color:#e2e8f0;background:#f1f5f9;color:#94a3b8}'
+    + '.sg-answer-correct{font-size:15px;margin-bottom:6px;color:#065f46}'
+    + '.sg-answer-wrong{font-size:15px;margin-bottom:6px;color:#991b1b}'
+    /* New component styles */
+    + 'blockquote p{margin:0}'
+    + 'a[rel="noopener"]:hover{background:#f8fafc!important;border-color:#818cf8!important}'
+    + 'details summary:hover{color:#4f46e5}'
+    /* Flashcard flip */
+    + '.fc-flip-check:checked+.fc-card-label .fc-card-inner{transform:rotateY(180deg)!important}'
+    + '.fc-card-wrapper:hover .fc-card-inner{box-shadow:0 4px 16px rgba(79,70,229,0.15)}'
+    /* Self-assessment stars */
+    + '.sa-radio:checked+.sa-star{filter:none!important;opacity:1!important;transform:scale(1.15)}'
+    + '.sa-star:hover{filter:none!important;opacity:0.8!important}'
+    /* Fill-blank */
+    + 'details summary::-webkit-details-marker{display:none}'
     + '@media(max-width:600px){.sg-grid-2{grid-template-columns:1fr}.sg-hero{padding:20px 16px}.sg-hero h1{font-size:20px}}'
     + '</style>';
 
   if (!code || code.length < 10) {
-    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px">📝 Enter HTML code to see a live preview here</body>';
+    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center;padding:20px"><div>🤖<br><br>Click <strong>AI Generate from PDFs</strong> above to create a study guide.<br><small>The AI will compose a rich lesson using 75 visual components — Grade 1 to professional.</small></div></body>';
   } else {
     iframe.srcdoc = previewCss + code;
   }

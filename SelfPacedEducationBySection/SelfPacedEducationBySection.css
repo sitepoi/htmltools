@@ -734,3 +734,111 @@ body.dark .flashcard-content { color: #e2e8f0; }
   .study-step-body { padding: 0 12px 20px 12px; }
   .study-step-info { flex-wrap: wrap; }
 }
+
+/* ═══════════════════════════════════════════
+   RICH COMPONENT LIBRARY STYLES (72 components)
+   Synced with Curriculum Builder — all AI-generated
+   study guide components render correctly.
+   ═══════════════════════════════════════════ */
+
+/* ── Inline Flashcards (click-to-flip via checkbox hack) ── */
+.fc-card-wrapper {
+  perspective: 600px;
+}
+.fc-card-label {
+  display: block; cursor: pointer;
+}
+.fc-card-inner {
+  position: relative; width: 100%; height: 100%;
+  transition: transform 0.5s ease;
+  transform-style: preserve-3d;
+}
+.fc-flip-check:checked + .fc-card-label .fc-card-inner {
+  transform: rotateY(180deg) !important;
+}
+.fc-card-wrapper:hover .fc-card-inner {
+  box-shadow: 0 4px 16px rgba(79,70,229,0.15);
+}
+.fc-front, .fc-back {
+  position: absolute; width: 100%; height: 100%;
+  backface-visibility: hidden;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 16px; text-align: center;
+}
+.fc-front {
+  background: linear-gradient(135deg, #eef2ff, #f0f4ff);
+  border: 2px solid #818cf8;
+}
+.fc-back {
+  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+  border: 2px solid #6ee7b7;
+  transform: rotateY(180deg);
+}
+
+/* ── Self-Assessment Stars ── */
+.sa-radio:checked + .sa-star {
+  filter: none !important; opacity: 1 !important;
+  transform: scale(1.15);
+}
+.sa-star {
+  transition: all 0.2s ease;
+}
+.sa-star:hover {
+  filter: none !important; opacity: 0.8 !important;
+}
+
+/* ── Study Guide Interactive ── */
+details summary {
+  padding: 8px 0; font-weight: 600; color: var(--primary);
+  cursor: pointer; user-select: none;
+}
+details summary:hover { color: var(--primary-dark); }
+details summary::-webkit-details-marker { display: none; }
+
+/* Resource link hover */
+a[rel="noopener"]:hover {
+  background: #f8fafc !important; border-color: #818cf8 !important;
+}
+
+/* Blockquote within detail-content */
+.detail-content blockquote,
+.study-guide blockquote { margin: 0; }
+.detail-content blockquote p,
+.study-guide blockquote p { margin: 0; }
+
+/* ── Dark Mode — Rich Components ── */
+body.dark .fc-front {
+  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  border-color: #4338ca;
+}
+body.dark .fc-front div { color: #e2e8f0; }
+body.dark .fc-back {
+  background: linear-gradient(135deg, #064e3b, #065f46);
+  border-color: #059669;
+}
+body.dark .fc-back div { color: #e2e8f0; }
+body.dark details summary { color: #818cf8; }
+body.dark details summary:hover { color: #a5b4fc; }
+body.dark a[rel="noopener"]:hover {
+  background: #334155 !important; border-color: #818cf8 !important;
+}
+body.dark .sg-table tr:nth-child(even) td { background: #1e293b; }
+body.dark .sg-divider { background: #475569; }
+body.dark .sg-highlight { background: #1e1b4b; border-color: #4338ca; }
+body.dark .sg-highlight strong { color: #a5b4fc; }
+body.dark .sg-summary { background: linear-gradient(135deg, #1e1b4b, #312e81); border-color: #4338ca; }
+body.dark .sg-summary h2 { color: #a5b4fc; }
+body.dark .sg-note { background: #422006; color: #fbbf24; }
+body.dark .sg-recap { background: linear-gradient(135deg, #422006, #78350f); border-color: #d97706; }
+body.dark .sg-card { background: #1e293b; }
+body.dark .sg-card-header { background: #334155; }
+body.dark .sg-timeline::before { background: #4338ca; }
+body.dark .sg-step-num { background: #4338ca; }
+
+/* ── Charts & Data Viz Dark Mode ── */
+body.dark .sg-quiz-section .sg-q-feedback {
+  background: linear-gradient(135deg, #064e3b, #065f46);
+  border-color: #059669;
+}
