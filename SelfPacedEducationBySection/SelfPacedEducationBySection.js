@@ -449,8 +449,15 @@ function isLessonAccessible(sectionId, lessonId) {
   }
   if (targetIdx === -1) return false;
   if (targetIdx === 0) return true;
+  // Check management type: supervised requires previous lesson approved, self-paced requires completed
+  var mgmtType = (CONFIG.managementType || 'self_paced');
   for (var i = 0; i < targetIdx; i++) {
-    if (getLessonProgress(all[i].sectionId, all[i].lessonId).status !== 'completed') return false;
+    var prevProg = getLessonProgress(all[i].sectionId, all[i].lessonId);
+    if (mgmtType === 'supervised') {
+      if (prevProg.supervisorStatus !== 'approved' && prevProg.status !== 'completed') return false;
+    } else {
+      if (prevProg.status !== 'completed') return false;
+    }
   }
   return true;
 }
@@ -645,11 +652,15 @@ function renderLessonDetail() {
   el('detail-estimated').textContent = '⏱️ Estimated: ' + (lesson.estimatedMinutes || '—') + ' min';
 
   var badge = el('detail-badge');
-  var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' };
-  var statusClasses = { not_started: 'status-not_started', in_progress: 'status-in_progress', completed: 'status-completed' };
+  var statusLabels = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed', pending_review: 'Awaiting Review', studying: 'Study & Retry' };
+  var statusClasses = { not_started: 'status-not_started', in_progress: 'status-in_progress', completed: 'status-completed', pending_review: 'status-pending_review', studying: 'status-studying' };
   badge.textContent = statusLabels[prog.status] || 'Not Started';
   badge.className = 'detail-badge ' + (statusClasses[prog.status] || 'status-not_started');
-  el('detail-status-label').textContent = typeof prog.score === 'number' ? ' | Score: ' + prog.score + '%' : '';
+  var statusExtra = typeof prog.score === 'number' ? ' | Score: ' + prog.score + '%' : '';
+  if (prog.supervisorStatus === 'rejected' && prog.supervisorNotes) {
+    statusExtra += ' | 📝 Supervisor feedback: ' + esc(prog.supervisorNotes);
+  }
+  el('detail-status-label').textContent = statusExtra;
 
   var youtubeUrls = normalizePdfArray(lesson.youtubeUrls);
   var presentationPdfs = normalizePdfArray(lesson.presentationPdfUrls);
@@ -657,6 +668,23 @@ function renderLessonDetail() {
   var worksheetPdfs = normalizePdfArray(lesson.worksheetPdfUrls);
   var answerKeyPdfs = normalizePdfArray(lesson.answerKeyPdfUrls);
   var htmlDocs = normalizePdfArray(lesson.htmlDocUrls);
+
+  // Filter out hidden documents (manager toggled them off for students)
+  var hiddenDocUrls = normalizePdfArray(lesson.hiddenDocUrls);
+  if (hiddenDocUrls.length > 0) {
+    function isHiddenDoc(url) {
+      for (var hd = 0; hd < hiddenDocUrls.length; hd++) {
+        if (hiddenDocUrls[hd] === url) return true;
+      }
+      return false;
+    }
+    presentationPdfs = presentationPdfs.filter(function(u) { return !isHiddenDoc(u); });
+    studyDocPdfs = studyDocPdfs.filter(function(u) { return !isHiddenDoc(u); });
+    worksheetPdfs = worksheetPdfs.filter(function(u) { return !isHiddenDoc(u); });
+    answerKeyPdfs = answerKeyPdfs.filter(function(u) { return !isHiddenDoc(u); });
+    htmlDocs = htmlDocs.filter(function(u) { return !isHiddenDoc(u); });
+  }
+
   var content = lesson.content || '';
 
   var quizData = lesson.quiz;
@@ -670,19 +698,24 @@ function renderLessonDetail() {
     stepNum++;
     var videoIds = [];
     for (var vi = 0; vi < youtubeUrls.length; vi++) { var vid = extractYouTubeId(youtubeUrls[vi]); if (vid) videoIds.push(vid); }
-    steps.push({ num: stepNum, icon: '🎬', title: 'Watch Video' + (videoIds.length > 1 ? 's' : ''), type: 'video', videoIds: videoIds, hasContent: videoIds.length > 0 });
+    steps.push({ num: stepNum, icon: '🎬', title: 'Video' + (videoIds.length > 1 ? 's' : ''), type: 'video', videoIds: videoIds, hasContent: videoIds.length > 0 });
   }
-  if (presentationPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📊', title: 'Review Presentation' + (presentationPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: presentationPdfs, label: 'Presentation Slide', hasContent: true }); }
-  if (studyDocPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Read Study Document' + (studyDocPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: studyDocPdfs, label: 'Study Material', hasContent: true }); }
-  if (worksheetPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Complete Worksheet' + (worksheetPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
-  if (answerKeyPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Check Answer Key' + (answerKeyPdfs.length > 1 ? 's' : ''), type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
-  if (htmlDocs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'HTML Document' + (htmlDocs.length > 1 ? 's' : ''), type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'HTML Doc', hasContent: true }); }
+  if (presentationPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📊', title: 'Slides', type: 'pdfs', pdfUrls: presentationPdfs, label: 'Presentation Slide', hasContent: true }); }
+  if (studyDocPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Documents', type: 'pdfs', pdfUrls: studyDocPdfs, label: 'Study Material', hasContent: true }); }
+  if (worksheetPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Worksheet', type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
+  if (answerKeyPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Answers', type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
+  if (htmlDocs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'HTML Doc', type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'HTML Doc', hasContent: true }); }
   var htmlCode = lesson.htmlCode || '';
   if (htmlCode && htmlCode.length > 20) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
-  if (content && content !== '<br>' && content !== '<br>') { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Lesson Notes', type: 'html', html: content, hasContent: true }); }
-  if (hasQuiz) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Knowledge Check', type: 'quiz', quizData: quizData, hasContent: true }); }
+  // Flashcards tab
+  var flashcards = lesson.flashcards;
+  if (flashcards && typeof flashcards === 'string') { try { flashcards = JSON.parse(flashcards); } catch(e) { flashcards = null; } }
+  var hasFlashcards = flashcards && Array.isArray(flashcards) && flashcards.length > 0;
+  if (hasFlashcards) { stepNum++; steps.push({ num: stepNum, icon: '🃏', title: 'Flashcards', type: 'flashcards', flashcards: flashcards, hasContent: true }); }
+  if (content && content !== '<br>' && content !== '<br>') { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Notes', type: 'html', html: content, hasContent: true }); }
+  if (hasQuiz) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Quiz', type: 'quiz', quizData: quizData, hasContent: true }); }
   // Always add a nav step at the end with Previous/Next/Complete buttons
-  stepNum++; steps.push({ num: stepNum, icon: '✅', title: 'Complete Lesson', type: 'nav', hasContent: true });
+  stepNum++; steps.push({ num: stepNum, icon: '✅', title: 'Finish', type: 'nav', hasContent: true });
 
   var flowEl = el('study-flow');
   var html = '';
@@ -754,6 +787,8 @@ function renderLessonDetail() {
         }
       } else if (step.type === 'htmlCode') {
         html += '<div class="detail-content">' + step.htmlCode + '</div>';
+      } else if (step.type === 'flashcards') {
+        html += renderFlashcardsInFlow(step.flashcards);
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
       } else if (step.type === 'quiz') {
@@ -1043,6 +1078,31 @@ function calcQuizScore(quizData, answers) {
   return quizData.length > 0 ? Math.round((correct / quizData.length) * 100) : 0;
 }
 
+/** Render flashcards as flip-card grid */
+function renderFlashcardsInFlow(flashcards) {
+  var html = '<div class="flashcards-grid">';
+  for (var fi = 0; fi < flashcards.length; fi++) {
+    var card = flashcards[fi];
+    var cardId = 'fc-' + fi + '-' + Date.now();
+    html += '<div class="flashcard" onclick="this.classList.toggle(\'flipped\')" title="Click to flip">';
+    html += '<div class="flashcard-inner">';
+    html += '<div class="flashcard-face flashcard-front">';
+    html += '<div class="flashcard-number">' + (fi + 1) + ' / ' + flashcards.length + '</div>';
+    html += '<div class="flashcard-content"><p>' + esc(card.front || card.q || '') + '</p></div>';
+    html += '<div class="flashcard-hint">👆 Click to reveal answer</div>';
+    html += '</div>';
+    html += '<div class="flashcard-face flashcard-back">';
+    html += '<div class="flashcard-number">💡 Answer</div>';
+    html += '<div class="flashcard-content"><p>' + esc(card.back || card.a || '') + '</p></div>';
+    html += '<div class="flashcard-hint">👆 Click to flip back</div>';
+    html += '</div>';
+    html += '</div></div>';
+  }
+  html += '</div>';
+  html += '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">🃏 ' + flashcards.length + ' cards · Click any card to flip · All cards flip independently</div>';
+  return html;
+}
+
 /* ═══════════════════════════════════════════
    NAVIGATION
    ═══════════════════════════════════════════ */
@@ -1134,15 +1194,23 @@ function markComplete() {
   }
 
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
-  PROGRESS[currentSectionId][currentLessonId] = { status: 'completed', score: null, completedAt: new Date().toISOString(), quizAttempts: [], quizAnswers: {} };
+  var mgmtType = CONFIG.managementType || 'self_paced';
+  var newStatus = (mgmtType === 'supervised' && hasQuiz) ? 'pending_review' : 'completed';
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: null, completedAt: new Date().toISOString(), quizAttempts: [], quizAnswers: {}, supervisorStatus: null, supervisorNotes: '' };
   saveProgress();
   renderLessonDetail();
   updateProgressBar();
-  tool.notify('Lesson marked as complete! ✅', 'success');
+  if (newStatus === 'pending_review') {
+    tool.notify('Lesson submitted for supervisor review. ✅', 'success');
+  } else {
+    tool.notify('Lesson marked as complete! ✅', 'success');
+  }
 
-  var next = getNextLesson(currentSectionId, currentLessonId);
-  if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 800);
-  else setTimeout(function() { openSection(currentSectionId); }, 800);
+  if (newStatus === 'completed') {
+    var next = getNextLesson(currentSectionId, currentLessonId);
+    if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 800);
+    else setTimeout(function() { openSection(currentSectionId); }, 800);
+  }
 }
 
 function markInProgress() {
@@ -1170,7 +1238,9 @@ function submitQuiz(quizData) {
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
 
   if (passed) {
-    PROGRESS[currentSectionId][currentLessonId] = { status: 'completed', score: score, completedAt: new Date().toISOString(), quizAttempts: attempts, currentSet: 0, studyUntil: null, quizAnswers: JSON.parse(JSON.stringify(quizAnswers)) };
+    var mgmtType = CONFIG.managementType || 'self_paced';
+    var finalStatus = (mgmtType === 'supervised') ? 'pending_review' : 'completed';
+    PROGRESS[currentSectionId][currentLessonId] = { status: finalStatus, score: score, completedAt: new Date().toISOString(), quizAttempts: attempts, currentSet: 0, studyUntil: null, quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), supervisorStatus: null, supervisorNotes: '' };
   } else {
     var nextSet = currentSet + 1;
     if (nextSet >= QUIZ_SETS) nextSet = 0;
@@ -1183,10 +1253,15 @@ function submitQuiz(quizData) {
   updateProgressBar();
 
   if (passed) {
-    tool.notify('Quiz passed! Score: ' + score + '% ✅', 'success');
-    var next = getNextLesson(currentSectionId, currentLessonId);
-    if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 1200);
-    else setTimeout(function() { openSection(currentSectionId); }, 1200);
+    var mgmtType2 = CONFIG.managementType || 'self_paced';
+    if (mgmtType2 === 'supervised') {
+      tool.notify('Quiz passed! Score: ' + score + '%. Awaiting supervisor approval. ⏳', 'success');
+    } else {
+      tool.notify('Quiz passed! Score: ' + score + '% ✅', 'success');
+      var next = getNextLesson(currentSectionId, currentLessonId);
+      if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 1200);
+      else setTimeout(function() { openSection(currentSectionId); }, 1200);
+    }
   } else {
     tool.notify('Score: ' + score + '%. Study for ' + STUDY_WAIT_MIN + ' minutes, then try again.', 'warning');
   }
@@ -1338,6 +1413,7 @@ function loadData(val) {
   // Load config (object-level, set by admin per object)
   if (val && val.config && typeof val.config === 'object') {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
+    CONFIG.managementType = val.config.managementType || 'self_paced';
   }
   // Legacy: also check tool param for backward compat
   if (!CONFIG.curriculumSourceId) {
@@ -1439,6 +1515,19 @@ function renderSetup() {
   }
   select.innerHTML = optionsHtml;
 
+  // Management type selector
+  var mgmtHtml = '<label class="setup-label" style="margin-top:16px">📋 Course Management Type</label>';
+  mgmtHtml += '<select class="setup-select" id="setup-management-type">';
+  mgmtHtml += '<option value="self_paced"' + (CONFIG.managementType !== 'supervised' ? ' selected' : '') + '>🚀 Self-Paced — lessons unlock automatically</option>';
+  mgmtHtml += '<option value="supervised"' + (CONFIG.managementType === 'supervised' ? ' selected' : '') + '>🛡️ Supervised — supervisor approves each lesson</option>';
+  mgmtHtml += '</select>';
+  // Insert after the curriculum select
+  var selectContainer = select.parentNode;
+  var tempDiv = document.createElement('div');
+  tempDiv.innerHTML = mgmtHtml;
+  var existingMgmt = el('setup-management-type');
+  if (!existingMgmt) selectContainer.appendChild(tempDiv.firstElementChild);
+
   hint.innerHTML = isAdmin()
     ? 'Select a curriculum and click Save. Only admins can change this later.'
     : '🔒 Only admins can configure the curriculum. Please contact your administrator.';
@@ -1466,6 +1555,8 @@ function saveSetupConfig() {
   }
 
   var selectedId = el('setup-curriculum-select').value;
+  var mgmtSelect = el('setup-management-type');
+  var mgmtType = mgmtSelect ? mgmtSelect.value : 'self_paced';
 
   if (!selectedId) {
     tool.notify('Please select a curriculum.', 'warning');
@@ -1473,6 +1564,7 @@ function saveSetupConfig() {
   }
 
   CONFIG.curriculumSourceId = selectedId;
+  CONFIG.managementType = mgmtType;
   saveProgress();
 
   tool.notify('Curriculum configured! Loading...', 'success');
@@ -1501,6 +1593,97 @@ function updateAdminUI() {
   if (saveBtn && currentView === 'setup') {
     saveBtn.disabled = !isAdmin();
   }
+  // Render supervisor panel if in supervised mode
+  renderSupervisorPanel();
+}
+
+/** Supervisor panel — admin can approve/reject pending-review lessons */
+function renderSupervisorPanel() {
+  var existing = el('supervisor-panel');
+  if (existing) existing.remove();
+  if (!isAdmin()) return;
+  var mgmtType = CONFIG.managementType || 'self_paced';
+  if (mgmtType !== 'supervised') return;
+
+  var pending = [];
+  var all = getAllLessonsInOrder();
+  for (var i = 0; i < all.length; i++) {
+    var prog = getLessonProgress(all[i].sectionId, all[i].lessonId);
+    if (prog.status === 'pending_review') {
+      var sec = findSection(all[i].sectionId);
+      var les = sec ? findLesson(sec, all[i].lessonId) : null;
+      pending.push({ sectionId: all[i].sectionId, lessonId: all[i].lessonId, sectionTitle: sec ? sec.title : '', lessonTitle: les ? les.title : '', score: prog.score });
+    }
+  }
+
+  var panel = document.createElement('div');
+  panel.id = 'supervisor-panel';
+  panel.style.cssText = 'margin:12px 24px;padding:16px 20px;background:var(--surface);border:1px solid var(--warning);border-radius:var(--radius-lg);';
+  var html = '<div style="font-weight:700;color:var(--warning);margin-bottom:2px">🛡️ Supervisor Panel</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Supervised mode — approve or reject submitted lessons</div>';
+
+  if (pending.length === 0) {
+    html += '<div style="font-size:13px;color:var(--text-muted)">No lessons awaiting review.</div>';
+  } else {
+    html += pending.map(function(p) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0"><strong>' + esc(p.lessonTitle) + '</strong> <span style="color:var(--text-muted);font-size:12px">in ' + esc(p.sectionTitle) + '</span>' +
+        (typeof p.score === 'number' ? ' · Score: ' + p.score + '%' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;flex-shrink:0">' +
+        '<button class="btn btn-sm btn-success" data-sup-approve="' + p.sectionId + '|' + p.lessonId + '">✓ Approve</button>' +
+        '<button class="btn btn-sm btn-danger" data-sup-reject="' + p.sectionId + '|' + p.lessonId + '">✕ Reject</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  panel.innerHTML = html;
+
+  var header = document.querySelector('.app-header');
+  if (header && header.parentNode) {
+    header.parentNode.insertBefore(panel, header.nextSibling);
+  }
+
+  setTimeout(function() {
+    var approveBtns = panel.querySelectorAll('[data-sup-approve]');
+    for (var a = 0; a < approveBtns.length; a++) {
+      approveBtns[a].addEventListener('click', function() {
+        var parts = this.getAttribute('data-sup-approve').split('|');
+        supervisorAction(parts[0], parts[1], 'approved', '');
+      });
+    }
+    var rejectBtns = panel.querySelectorAll('[data-sup-reject]');
+    for (var r = 0; r < rejectBtns.length; r++) {
+      rejectBtns[r].addEventListener('click', function() {
+        var parts = this.getAttribute('data-sup-reject').split('|');
+        var notes = prompt('Rejection reason / feedback for the student:');
+        if (notes === null) return;
+        supervisorAction(parts[0], parts[1], 'rejected', notes || 'Please review and resubmit.');
+      });
+    }
+  }, 50);
+}
+
+function supervisorAction(sectionId, lessonId, decision, notes) {
+  if (!PROGRESS[sectionId]) PROGRESS[sectionId] = {};
+  if (!PROGRESS[sectionId][lessonId]) PROGRESS[sectionId][lessonId] = {};
+  var p = PROGRESS[sectionId][lessonId];
+  if (decision === 'approved') {
+    p.status = 'completed';
+    p.supervisorStatus = 'approved';
+    p.supervisorNotes = notes;
+    p.completedAt = new Date().toISOString();
+    tool.notify('Lesson approved! ✅', 'success');
+  } else {
+    p.status = 'in_progress';
+    p.supervisorStatus = 'rejected';
+    p.supervisorNotes = notes;
+    p.completedAt = null;
+    tool.notify('Lesson rejected. Student will see your feedback. 📝', 'info');
+  }
+  saveProgress();
+  renderSupervisorPanel();
+  updateProgressBar();
+  if (currentView === 'lessons') renderLessons();
 }
 
 /* ═══════════════════════════════════════════
@@ -1514,6 +1697,14 @@ function bindEvents() {
   el('btn-setup-save').addEventListener('click', saveSetupConfig);
   el('btn-setup-cancel').addEventListener('click', cancelSetup);
   el('btn-change-course').addEventListener('click', function() { showSetup(); });
+  el('btn-dark-mode').addEventListener('click', toggleDarkMode);
+}
+
+/* ── Dark Mode ── */
+function toggleDarkMode() {
+  var isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('sp-dark-mode', isDark ? '1' : '0');
+  el('btn-dark-mode').textContent = isDark ? '☀️' : '🌙';
 }
 
 /* ═══════════════════════════════════════════
@@ -1537,6 +1728,12 @@ tool.onReady(function(val, fields) {
   loadData(val);
   updateRoleBadge(tool.getUser());
   bindEvents();
+
+  // Dark mode init
+  if (localStorage.getItem('sp-dark-mode') === '1') {
+    document.body.classList.add('dark');
+    el('btn-dark-mode').textContent = '☀️';
+  }
 
   tool.onValueChange(function(v) {
     loadData(v);

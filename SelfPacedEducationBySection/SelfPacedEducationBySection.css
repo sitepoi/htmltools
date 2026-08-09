@@ -31,6 +31,50 @@
   --transition: 0.2s ease;
 }
 
+/* ── Dark Mode ── */
+body.dark {
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-alt: #334155;
+  --border: #475569;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-light: #64748b;
+  --primary-bg: #1e1b4b;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
+}
+body.dark .app-header { background: #1e293b; border-color: #475569; }
+body.dark .detail-hero { background: #1e293b; }
+body.dark .study-step { background: #1e293b; }
+body.dark .study-step.expanded { background: #1e1b2e; }
+body.dark .study-step-body { background: #1e1b2e; }
+body.dark .study-step-header:hover { background: #334155; }
+body.dark .study-step.expanded .study-step-header { background: #1e1b4b; }
+body.dark .pdf-viewer-card { background: #1e293b; }
+body.dark .pdf-viewer-toolbar { background: #334155; }
+body.dark .pdf-page-canvas { background: #1e293b; }
+body.dark .pdf-canvas-error { background: #334155; }
+body.dark .lesson-card { background: #1e293b; }
+body.dark .section-group-card { background: #1e293b; }
+body.dark .quiz-question { background: #1e293b; }
+body.dark .quiz-option { background: #334155; }
+body.dark .quiz-option:hover { background: #1e1b4b; }
+body.dark .sg-quiz-item-v3 { background: #1e293b; }
+body.dark .sg-q-opt { background: #334155; }
+body.dark .sg-q-opt:hover { background: #1e1b4b; }
+body.dark .source-links-area { background: #334155; }
+body.dark .setup-card { background: #1e293b; }
+body.dark .setup-select, body.dark .setup-input { background: #334155; color: #e2e8f0; border-color: #475569; }
+body.dark .search-input, body.dark .filter-select { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+body.dark .btn-outline { background: #334155; color: #e2e8f0; border-color: #475569; }
+body.dark .btn-outline:hover:not(:disabled) { background: #475569; }
+body.dark .html-doc-container { background: #1e293b; }
+body.dark .pdf-zoom-btn { background: #334155; }
+body.dark .pdf-zoom-btn:hover { background: #475569; }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
   font-size: 15px;
@@ -124,6 +168,8 @@ body {
 .status-in_progress { background: var(--warning-light); color: var(--warning); }
 .status-not_started { background: var(--surface-alt); color: var(--text-muted); }
 .status-locked { background: var(--danger-light); color: var(--danger); }
+.status-pending_review { background: #e0e7ff; color: #4338ca; }
+.status-studying { background: #fce7f3; color: #be185d; }
 
 /* ── Empty State ── */
 .empty-state { grid-column: 1 / -1; text-align: center; padding: 60px 20px; }
@@ -339,6 +385,64 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 20px 0; flex-wrap: wrap;
 }
+
+/* ── Flashcard Grid ── */
+.flashcards-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px; padding: 24px;
+}
+.flashcard {
+  perspective: 1000px; cursor: pointer;
+  height: 240px;
+}
+.flashcard-inner {
+  position: relative; width: 100%; height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+.flashcard-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  display: flex; flex-direction: column;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.flashcard-front {
+  background: linear-gradient(145deg, #eef2ff 0%, #e0e7ff 100%);
+  border-color: #c7d2fe;
+}
+.flashcard-back {
+  background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #a7f3d0;
+  transform: rotateY(180deg);
+}
+.flashcard-number {
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  margin-bottom: 8px; opacity: 0.7;
+}
+.flashcard-content {
+  flex: 1; overflow-y: auto;
+  font-size: 15px; line-height: 1.6; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  /* Hide scrollbar */
+  scrollbar-width: thin;
+}
+.flashcard-content::-webkit-scrollbar { width: 4px; }
+.flashcard-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.flashcard-hint {
+  font-size: 10px; color: var(--text-muted); text-align: center;
+  margin-top: 8px; opacity: 0.6;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+/* Dark mode */
+body.dark .flashcard-front { background: linear-gradient(145deg, #1e1b4b 0%, #312e81 100%); border-color: #4338ca; }
+body.dark .flashcard-back { background: linear-gradient(145deg, #064e3b 0%, #065f46 100%); border-color: #059669; }
+body.dark .flashcard-content { color: #e2e8f0; }
 
 /* ── Setup Screen ── */
 .setup-card {

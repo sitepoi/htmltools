@@ -535,11 +535,12 @@ body {
   border-radius: var(--radius-lg);
   padding: 18px;
   margin-top: 12px;
-  /* Appear as a sub-modal overlay when shown */
+  /* Appear as a sub-modal overlay — scales with viewport */
   position: fixed; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   z-index: 250;
-  width: calc(100% - 40px); max-width: 750px; max-height: 88vh;
+  width: calc(100vw - 48px); max-width: 1100px;
+  height: calc(100vh - 64px); max-height: 92vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
@@ -564,6 +565,9 @@ body {
   margin-bottom: 14px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  position: sticky; top: 0; z-index: 5;
+  background: var(--surface);
+  padding-top: 2px;
 }
 .lesson-tab {
   padding: 8px 14px;
@@ -821,6 +825,18 @@ body {
 .quiz-editor-item-actions, .source-link-editor-item-actions {
   display: flex; gap: 4px; flex-shrink: 0;
 }
+/* Document visibility toggle (eye icon) */
+.doc-vis-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); cursor: pointer;
+  font-size: 14px; transition: all var(--transition);
+  line-height: 1;
+}
+.doc-vis-toggle:hover { background: var(--surface-alt); border-color: #cbd5e1; }
+.doc-vis-toggle.doc-vis-hidden { background: var(--surface-alt); border-color: #cbd5e1; opacity: 0.6; }
+.doc-vis-toggle.doc-vis-hidden:hover { opacity: 1; }
 
 /* ── Managed Editor Panel (inline sub-form) ── */
 .managed-editor-panel {

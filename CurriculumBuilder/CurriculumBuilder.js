@@ -23,6 +23,8 @@ var editingStudyDocPdfUrls = [];
 var editingWorksheetPdfUrls = [];
 var editingAnswerKeyPdfUrls = [];
 var editingHtmlDocUrls = [];
+var editingHiddenDocUrls = [];  // URLs hidden from student view
+var editingFlashcards = [];     // Flashcards (AI-generated from PDFs)
 var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
 var editingQuizQuestionIdx = null;
 var editingQuizQuestionSetIdx = null;
@@ -41,6 +43,25 @@ function extractYouTubeId(url) {
   url = url.trim().replace(/&amp;/g, '&');
   var m = url.match(/(?:youtu\.be\/|embed\/|[?&]v=)([a-zA-Z0-9_-]{8,15})(?:[?\/\#&]|$)/);
   return m ? m[1] : null;
+}
+
+/** Extract a human-readable name from a file URL */
+function readableFileName(url) {
+  if (!url) return 'Unknown';
+  try {
+    var decoded = decodeURIComponent(url);
+    var pathPart = decoded.split('?')[0];
+    var segments = pathPart.split('/');
+    var meaningful = [];
+    for (var s = segments.length - 1; s >= 0 && meaningful.length < 3; s--) {
+      var seg = segments[s];
+      if (seg === 'o' || seg === '' || seg.length > 100) continue;
+      meaningful.unshift(seg);
+    }
+    return meaningful.join('/') || (segments[segments.length - 1] || url);
+  } catch(e) {
+    return url.substring(url.lastIndexOf('/')+1) || url;
+  }
 }
 
 function normalizePdfArray(field) {
@@ -203,7 +224,12 @@ function renderSections() {
           lessonsSorted.map(function(les, li) {
             var lesRealIdx = (s.lessons || []).indexOf(les);
             var media = (hasLessonVideo(les)?'🎬':'') + (les.presentationPdfUrls&&les.presentationPdfUrls.length?'📊':'') + (les.studyDocPdfUrls&&les.studyDocPdfUrls.length?'📖':'') + (les.worksheetPdfUrls&&les.worksheetPdfUrls.length?'📝':'') || '—';
-            return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong></td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+(les.quiz&&les.quiz.length?'✅ '+les.quiz.length+' Q':'—')+'</td>' +
+            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '🌐' : '';
+            var flashcardIndicator = (les.flashcards && (Array.isArray(les.flashcards) ? les.flashcards.length : (typeof les.flashcards === 'string' && les.flashcards.length > 10)) ? '🃏' : '');
+            var quizIndicator = (les.quiz && les.quiz.length ? '✅ ' + les.quiz.length + ' Q' : '—');
+            var extraMedia = [studyHtmlIndicator, flashcardIndicator].filter(Boolean).join('');
+            if (extraMedia) media = (media === '—' ? '' : media + ' ') + extraMedia;
+            return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong></td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
               '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les-sec="' + realIdx + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les-sec="' + realIdx + ':' + lesRealIdx + '">🗑</button></div></td></tr>';
           }).join('') + '</tbody></table>'
           : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
@@ -388,9 +414,12 @@ function startAddLesson() {
   renderYoutubeEditorList();
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
+  editingHiddenDocUrls = [];
+  editingFlashcards = [];
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  renderFlashcardsEditorList();
   editingHtmlCode = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
@@ -426,6 +455,7 @@ function editLesson(idx) {
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
@@ -470,6 +500,8 @@ function saveLessonFromEditor() {
     worksheetPdfUrls: editingWorksheetPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingWorksheetPdfUrls)) : null,
     answerKeyPdfUrls: editingAnswerKeyPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingAnswerKeyPdfUrls)) : null,
     htmlDocUrls: editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null,
+    hiddenDocUrls: editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null,
+    flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
     htmlCode: editingHtmlCode || null,
     sourceUrls: editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null,
     quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null
@@ -524,9 +556,11 @@ function startAddLessonDirect(sectionIdx) {
   renderYoutubeEditorList();
   hideSubModal('youtube-editor-panel');
   editingPresentationPdfUrls = []; editingStudyDocPdfUrls = []; editingWorksheetPdfUrls = []; editingAnswerKeyPdfUrls = []; editingHtmlDocUrls = [];
+  editingHiddenDocUrls = [];
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  renderFlashcardsEditorList();
   editingHtmlCode = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
@@ -563,6 +597,7 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
@@ -900,15 +935,39 @@ function renderPdfEditorList(type) {
     list.innerHTML = '<div style="padding:8px 12px;color:var(--text-muted);font-size:12px;">No files added yet.</div>';
   } else {
     list.innerHTML = arr.map(function(url, idx) {
-      return '<div class="source-link-editor-item"><div class="source-link-editor-item-info"><div class="source-link-editor-item-title">📎 ' + esc(url.substring(url.lastIndexOf('/')+1) || url) + '</div><div class="source-link-editor-item-meta">' + esc(url) + '</div></div><div class="source-link-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-pdf="' + type + ':' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-pdf="' + type + ':' + idx + '">🗑</button></div></div>';
+      var isHidden = editingHiddenDocUrls.indexOf(url) !== -1;
+      var displayName = readableFileName(url);
+      return '<div class="source-link-editor-item"><div class="source-link-editor-item-info"><div class="source-link-editor-item-title">📎 ' + esc(displayName) + (isHidden ? ' <span style="color:var(--text-muted);font-size:11px;font-weight:400">(hidden)</span>' : '') + '</div><div class="source-link-editor-item-meta" title="' + esc(url) + '">' + esc(url.substring(0, 80) + (url.length > 80 ? '…' : '')) + '</div></div><div class="source-link-editor-item-actions"><button class="btn btn-sm doc-vis-toggle' + (isHidden ? ' doc-vis-hidden' : '') + '" data-vis-pdf="' + type + ':' + idx + '" title="' + (isHidden ? 'Show to students' : 'Hide from students') + '">' + (isHidden ? '👁‍🗨' : '👁') + '</button><button class="btn btn-sm btn-outline" data-edit-pdf="' + type + ':' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-pdf="' + type + ':' + idx + '">🗑</button></div></div>';
     }).join('');
+    // Wire visibility toggles
+    var visBtns = list.querySelectorAll('[data-vis-pdf]');
+    for (var k = 0; k < visBtns.length; k++) {
+      visBtns[k].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var parts = this.getAttribute('data-vis-pdf').split(':');
+        var t = parts[0];
+        var i = parseInt(parts[1]);
+        var u = getPdfArray(t)[i];
+        var hidx = editingHiddenDocUrls.indexOf(u);
+        if (hidx === -1) {
+          editingHiddenDocUrls.push(u);
+        } else {
+          editingHiddenDocUrls.splice(hidx, 1);
+        }
+        renderPdfEditorList(t);
+      });
+    }
     var editBtns = list.querySelectorAll('[data-edit-pdf]');
     for (var i = 0; i < editBtns.length; i++) {
       editBtns[i].addEventListener('click', function(e) { e.stopPropagation(); var parts = this.getAttribute('data-edit-pdf').split(':'); openPdfEditor(parts[0], parseInt(parts[1])); });
     }
     var delBtns = list.querySelectorAll('[data-del-pdf]');
     for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); var parts = this.getAttribute('data-del-pdf').split(':'); var t = parts[0]; getPdfArray(t).splice(parseInt(parts[1]), 1); renderPdfEditorList(t); });
+      delBtns[j].addEventListener('click', function(e) { e.stopPropagation(); var parts = this.getAttribute('data-del-pdf').split(':'); var t = parts[0]; var i = parseInt(parts[1]); var arr = getPdfArray(t); var u = arr[i]; arr.splice(i, 1);
+        // Also remove from hidden list when deleted
+        var hidx = editingHiddenDocUrls.indexOf(u);
+        if (hidx !== -1) editingHiddenDocUrls.splice(hidx, 1);
+        renderPdfEditorList(t); });
     }
   }
 }
@@ -1169,7 +1228,15 @@ function generateHtmlFromPdf() {
       '- Success: #059669 (green), #d1fae5 (light green bg)\n' +
       '- Warning: #d97706 (amber), #fef3c7 (light amber bg)\n' +
       '- Text: #1e293b (dark), #64748b (muted)\n' +
-      '- Backgrounds: #ffffff (white), #f8fafc (light gray), #fafbfe (blue-tinted)\n\n' +
+      '- Backgrounds: #ffffff (white), #f8fafc (light gray), #fafbfe (blue-tinted)\n' +
+      '⚠️ CONTRAST RULES (critical for readability):\n' +
+      '- NEVER use light text (#94a3b8, #cbd5e1) on light backgrounds (#f8fafc, #ffffff, #eef2ff)\n' +
+      '- Dark text (#1e293b, #334155) on light backgrounds only\n' +
+      '- Light/white text (#fff, #f8fafc) ONLY on dark backgrounds (#4f46e5, #3730a3, #1e293b)\n' +
+      '- Muted text (#64748b) is safe on white/#f8fafc backgrounds ONLY\n' +
+      '- If using a colored background (purple/green/amber), ALWAYS use white or very dark text — never mid-tones\n' +
+      '- Inline styles: always set BOTH color AND background-color together, never just one\n' +
+      '- Minimum contrast ratio: 4.5:1 for body text, 3:1 for large text (18px+)\n\n' +
       '🔷 LENGTH & QUALITY:\n' +
       '- Comprehensive: 1000-3000 words\n' +
       '- Well-researched: derive ALL facts from the source material\n' +
@@ -1179,9 +1246,42 @@ function generateHtmlFromPdf() {
       'Document content:\n"""\n' + text + '\n"""\n\nSTART YOUR RESPONSE WITH: <div class="study-guide">';
 
     var fullResponse = '';
+    var _htmlStreamState = { scrolling: true, tokenCount: 0 }; // object, not primitive
+    // Track manual scroll on the textarea — if user scrolls up, pause auto-scroll
+    var taScroll = el('edit-html-code-v2') || el('edit-html-code');
+    if (taScroll) {
+      taScroll._onScroll = function() {
+        var atBottom = taScroll.scrollTop + taScroll.clientHeight >= taScroll.scrollHeight - 50;
+        _htmlStreamState.scrolling = atBottom;
+      };
+      taScroll.addEventListener('scroll', taScroll._onScroll);
+    }
     tool.requestAIStream(prompt, null, {
-      onToken: function(token) { fullResponse += token; },
+      onToken: function(token) {
+        fullResponse += token;
+        // Live-update the HTML code textarea as tokens stream in
+        var ta = el('edit-html-code-v2') || el('edit-html-code');
+        if (ta) {
+          ta.value = fullResponse;
+          // Auto-scroll to end unless user manually scrolled up
+          if (_htmlStreamState.scrolling) {
+            ta.scrollTop = ta.scrollHeight;
+          }
+        }
+        // Live-update the preview iframe every 150 tokens (reduced — avoids constant scroll reset)
+        _htmlStreamState.tokenCount++;
+        if (_htmlStreamState.tokenCount % 150 === 0) {
+          updateHtmlPreview();
+        }
+      },
       onComplete: function() {
+        // Clean up stream state
+        if (taScroll && taScroll._onScroll) {
+          taScroll.removeEventListener('scroll', taScroll._onScroll);
+        }
+        _htmlStreamState = null;
+        // Final preview refresh
+        updateHtmlPreview();
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
         var html = fullResponse.trim();
         html = html.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
@@ -1199,13 +1299,164 @@ function generateHtmlFromPdf() {
         if (el('edit-html-code')) el('edit-html-code').value = html;
         if (el('edit-html-code-v2')) el('edit-html-code-v2').value = html;
         updateHtmlPreview();
-        tool.notify('✅ Study HTML generated! Review it in the Study HTML tab, then save the lesson.', 'success');
+        // Warn if source PDFs are still visible to students
+        var stillVisible = [];
+        for (var su = 0; su < allUrls.length; su++) {
+          if (editingHiddenDocUrls.indexOf(allUrls[su]) === -1) {
+            stillVisible.push(allUrls[su]);
+          }
+        }
+        var msg = '✅ Study HTML generated! Review it in the Study HTML tab, then save the lesson.';
+        if (stillVisible.length > 0) {
+          msg += ' 💡 ' + stillVisible.length + ' source PDF(s) are still visible to students — use the 👁 toggle in the Documents tab to hide them.';
+        }
+        tool.notify(msg, 'success');
       },
       onError: function(err) {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
         tool.notify('AI generation failed: ' + err, 'error');
       }
     });
+  }
+}
+
+/** Render the flashcards list in the Flashcards editor tab */
+function renderFlashcardsEditorList() {
+  var list = el('flashcards-editor-list');
+  var count = el('flashcards-editor-count');
+  if (count) count.textContent = editingFlashcards.length + ' card(s)';
+  if (!list) return;
+  if (editingFlashcards.length === 0) {
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No flashcards yet. Click "AI Generate" to create them from your PDFs, or add manually.</div>';
+  } else {
+    list.innerHTML = editingFlashcards.map(function(card, idx) {
+      return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">🃏 ' + esc(card.front || card.q || '') + '</div><div class="quiz-editor-item-meta">💡 ' + esc(card.back || card.a || '') + '</div></div><div class="quiz-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-fc="' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-fc="' + idx + '">🗑</button></div></div>';
+    }).join('');
+    var editBtns = list.querySelectorAll('[data-edit-fc]');
+    for (var i = 0; i < editBtns.length; i++) {
+      editBtns[i].addEventListener('click', function(e) {
+        e.stopPropagation();
+        var idx = parseInt(this.getAttribute('data-edit-fc'));
+        showFlashcardInlineEditor(idx, this.closest('.quiz-editor-item'));
+      });
+    }
+    var delBtns = list.querySelectorAll('[data-del-fc]');
+    for (var j = 0; j < delBtns.length; j++) {
+      delBtns[j].addEventListener('click', function(e) {
+        e.stopPropagation();
+        editingFlashcards.splice(parseInt(this.getAttribute('data-del-fc')), 1);
+        renderFlashcardsEditorList();
+      });
+    }
+  }
+}
+
+/** Inline editor for a flashcard (replaces prompt() which is blocked by sandbox) */
+function showFlashcardInlineEditor(idx, rowEl) {
+  var card = editingFlashcards[idx];
+  if (!card || !rowEl) return;
+  rowEl.innerHTML = '<div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">' +
+    '<input class="form-input fc-inline-front" value="' + esc(card.front || card.q || '') + '" placeholder="Question / term" style="font-size:12px;padding:6px 8px">' +
+    '<input class="form-input fc-inline-back" value="' + esc(card.back || card.a || '') + '" placeholder="Answer / definition" style="font-size:12px;padding:6px 8px">' +
+    '</div>' +
+    '<div style="display:flex;gap:4px;flex-shrink:0">' +
+    '<button class="btn btn-sm btn-primary fc-inline-save">✓</button>' +
+    '<button class="btn btn-sm btn-outline fc-inline-cancel">✕</button></div>';
+
+  // Use scoped queries (not getElementById) to avoid stale-ID collisions
+  rowEl.querySelector('.fc-inline-save').addEventListener('click', function() {
+    var front = rowEl.querySelector('.fc-inline-front').value.trim();
+    var back = rowEl.querySelector('.fc-inline-back').value.trim();
+    if (!front) { tool.notify('Question/term is required.', 'warning'); return; }
+    editingFlashcards[idx] = { front: front, back: back };
+    renderFlashcardsEditorList();
+  });
+  rowEl.querySelector('.fc-inline-cancel').addEventListener('click', function() {
+    renderFlashcardsEditorList(); // rebuild list fresh — avoids stale event listeners
+  });
+  // Focus the front input
+  setTimeout(function() {
+    var f = rowEl.querySelector('.fc-inline-front');
+    if (f) { f.focus(); f.select(); }
+  }, 50);
+}
+
+/** AI: Generate flashcards from PDFs */
+function generateFlashcardsFromPdf() {
+  var allUrls = [];
+  allUrls = allUrls.concat(editingPresentationPdfUrls);
+  allUrls = allUrls.concat(editingStudyDocPdfUrls);
+  allUrls = allUrls.concat(editingWorksheetPdfUrls);
+  allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+
+  if (allUrls.length === 0) {
+    tool.notify('No PDFs added yet. Add PDFs first.', 'warning');
+    return;
+  }
+
+  var genBtn = el('btn-generate-flashcards') || el('btn-generate-flashcards-v2');
+  var genBtn2 = el('btn-generate-flashcards-v2');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ Reading PDFs...'; }
+  if (genBtn2 && genBtn2 !== genBtn) { genBtn2.disabled = true; genBtn2.textContent = '⏳ Reading PDFs...'; }
+
+  var combinedText = '';
+  var remaining = allUrls.length;
+  for (var ri = 0; ri < allUrls.length; ri++) {
+    (function(idx) {
+      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+        remaining--;
+        if (!err && fileResult) {
+          var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
+          if (text && text.length > 50) combinedText += '\n\n--- Doc ' + (idx+1) + ' ---\n\n' + text;
+        }
+        if (remaining === 0) {
+          if (!combinedText || combinedText.length < 50) {
+            if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
+            tool.notify('Could not extract enough text.', 'warning');
+            return;
+          }
+          var prompt = 'You are an expert flashcard creator. Generate 10-20 flashcards from the document content below. Return ONLY a JSON array — no markdown, no intro. Format: [{"front":"Question or term","back":"Answer or definition"},...]\n\nDocument:\n"""\n' + combinedText.substring(0, 12000) + '\n"""\n\nSTART WITH: [{"front":';
+          var fullResponse = '';
+          var _fcStreamState = { tokenCount: 0 };
+          // Update status during generation
+          var statusEl = el('flashcards-status');
+          if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '⏳ AI generating flashcards...'; }
+          tool.requestAIStream(prompt, null, {
+            onToken: function(t) {
+              fullResponse += t;
+              _fcStreamState.tokenCount++;
+              // Every 25 tokens, update the status + try to show partial card count
+              if (_fcStreamState.tokenCount % 25 === 0) {
+                var partialCount = (fullResponse.match(/"front"/gi) || []).length;
+                if (statusEl) statusEl.textContent = '⏳ Generated ~' + partialCount + ' cards so far (' + fullResponse.length + ' chars)';
+              }
+            },
+            onComplete: function() {
+              if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
+              if (genBtn2 && genBtn2 !== genBtn) { genBtn2.disabled = false; genBtn2.textContent = '🃏 AI Generate Flashcards from PDFs'; }
+              if (statusEl) statusEl.style.display = 'none';
+              try {
+                var json = fullResponse.trim().replace(/^```[\\s\\S]*?\n?/i, '').replace(/\n?```\s*$/i, '');
+                var arrMatch = json.match(/\[[\s\S]*\]/);
+                if (arrMatch) json = arrMatch[0];
+                var cards = JSON.parse(json);
+                if (!Array.isArray(cards)) throw new Error('Not an array');
+                editingFlashcards = cards;
+                renderFlashcardsEditorList();
+                tool.notify('✅ Generated ' + cards.length + ' flashcards! Save the lesson to keep them.', 'success');
+              } catch(e) {
+                tool.notify('Could not parse flashcards. Try again.', 'error');
+                console.error('Flashcard parse error:', e, fullResponse);
+              }
+            },
+            onError: function(err) {
+              if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
+              tool.notify('AI generation failed: ' + err, 'error');
+            }
+          });
+        }
+      });
+    })(ri);
   }
 }
 
@@ -1370,6 +1621,10 @@ function bindEvents() {
   if (btnGen2) btnGen2.addEventListener('click', generateQuizFromPdf);
   var btnGenHtmlV2 = el('btn-generate-html-from-pdf-v2');
   if (btnGenHtmlV2) btnGenHtmlV2.addEventListener('click', generateHtmlFromPdf);
+  var btnGenFlashcards = el('btn-generate-flashcards');
+  if (btnGenFlashcards) btnGenFlashcards.addEventListener('click', generateFlashcardsFromPdf);
+  var btnGenFlashcardsV2 = el('btn-generate-flashcards-v2');
+  if (btnGenFlashcardsV2) btnGenFlashcardsV2.addEventListener('click', generateFlashcardsFromPdf);
 
   // Study HTML sub-tabs (Code / Preview)
   var htmlTabs = document.querySelector('.study-html-tabs');
