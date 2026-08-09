@@ -24,7 +24,7 @@ var editingWorksheetPdfUrls = [];
 var editingAnswerKeyPdfUrls = [];
 var editingHtmlDocUrls = [];
 var editingHiddenDocUrls = [];  // URLs hidden from student view
-var editingFlashcards = [];     // Flashcards (AI-generated from PDFs)
+var editingFlashcards = [];     // Flashcards (generated from PDFs)
 var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
 var editingStudyHtmlData = null;   // JSON data: { components: [...] }
 var editingQuizQuestionIdx = null;
@@ -39,8 +39,8 @@ var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 
 /* ═══════════════════════════════════════════
-   STUDY HTML COMPONENTS — Rich Block Library (75 block types)
-   AI composes them freely: {"components":[{type,data},...]}
+   STUDY HTML COMPONENTS — Rich Block Library (101 block types)
+   System composes them freely: {"components":[{type,data},...]}
    ═══════════════════════════════════════════ */
 var STUDY_COMPONENTS = {
   // ── 1. callout ── colored left-border alert box
@@ -751,9 +751,9 @@ var STUDY_COMPONENTS = {
         var it = d.items[i];
         var fid = 'fb-'+Date.now()+'-'+i;
         h += '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;margin-bottom:10px;background:#fff">';
-        h += '<p style="color:#1e293b;margin:0 0 10px">'+(i+1)+'. '+esc(it.prompt||it.text||'')+'</p>';
-        h += '<div style="display:inline-block;border-bottom:2px dashed #4f46e5;min-width:120px;padding:4px 8px;color:#94a3b8;font-style:italic;margin-right:8px">your answer...</div>';
-        h += '<details style="display:inline-block"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;display:inline">👁️ Reveal</summary>';
+        h += '<p style="color:#1e293b;margin:0 0 8px">'+(i+1)+'. '+esc(it.prompt||it.text||'')+'</p>';
+        h += '<input type="text" style="border:none;border-bottom:2px dashed #4f46e5;padding:4px 8px;font-size:14px;color:#1e293b;min-width:200px;outline:none;background:transparent;font-family:inherit" placeholder="type your answer...">';
+        h += '<details style="display:inline-block;margin-left:8px"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;display:inline;list-style:none">👁️ Reveal</summary>';
         h += '<span style="color:#059669;font-weight:700;font-size:15px;margin-left:6px">'+esc(it.answer||'')+'</span>';
         if (it.hint) h += '<span style="color:#94a3b8;font-size:12px;margin-left:6px">('+esc(it.hint)+')</span>';
         h += '</details></div>';
@@ -944,23 +944,24 @@ var STUDY_COMPONENTS = {
       return h+'</div></div>';
     }
   },
-  // ── 57. debate ── two-sided argument framework
-  'debate': {
-    desc: 'Structured debate. topic, positionA:{label,points:[]}, positionB:{label,points:[]}.',
+  // ── 57. perspectives ── two viewpoints side-by-side (for solo reflection, NOT classroom debate)
+  'perspectives': {
+    desc: 'Two perspectives for student consideration. topic, viewA:{label,points:[]}, viewB:{label,points:[]}. Accepts positionA/positionB for compat.',
     render: function(d) {
       var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
-      h += '<div style="background:#f1f5f9;padding:12px 20px;font-weight:700;color:#1e293b;text-align:center">⚖️ '+esc(d.topic||'Debate')+'</div>';
+      h += '<div style="background:#f1f5f9;padding:12px 20px;font-weight:700;color:#1e293b;text-align:center">🔍 '+esc(d.topic||'Two Perspectives')+'</div>';
+      h += '<div style="padding:8px 12px;color:#94a3b8;font-size:11px;text-align:center">Consider both before forming your own conclusion</div>';
       h += '<div style="display:grid;grid-template-columns:1fr 1fr">';
-      // Position A
+      // View A
       h += '<div style="padding:16px;border-right:1px solid #e2e8f0">';
-      h += '<div style="font-weight:700;color:#4f46e5;margin-bottom:10px">🔵 '+esc((d.positionA||{}).label||'Position A')+'</div>';
-      var ptsA = (d.positionA||{}).points||[];
+      h += '<div style="font-weight:700;color:#4f46e5;margin-bottom:10px">🔵 '+esc((d.viewA||d.positionA||{}).label||'View A')+'</div>';
+      var ptsA = (d.viewA||d.positionA||{}).points||[];
       for (var a=0;a<ptsA.length;a++) h += '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#4f46e5;font-weight:700">'+ (a+1)+'.</span><span style="color:#475569">'+esc(ptsA[a])+'</span></div>';
       h += '</div>';
-      // Position B
+      // View B
       h += '<div style="padding:16px">';
-      h += '<div style="font-weight:700;color:#d97706;margin-bottom:10px">🟠 '+esc((d.positionB||{}).label||'Position B')+'</div>';
-      var ptsB = (d.positionB||{}).points||[];
+      h += '<div style="font-weight:700;color:#d97706;margin-bottom:10px">🟠 '+esc((d.viewB||d.positionB||{}).label||'View B')+'</div>';
+      var ptsB = (d.viewB||d.positionB||{}).points||[];
       for (var b=0;b<ptsB.length;b++) h += '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#d97706;font-weight:700">'+ (b+1)+'.</span><span style="color:#475569">'+esc(ptsB[b])+'</span></div>';
       h += '</div>';
       return h+'</div></div>';
@@ -1157,21 +1158,20 @@ var STUDY_COMPONENTS = {
       return h+'</div>';
     }
   },
-  // ── 66. leaderboard ── ranked list
-  'leaderboard': {
-    desc: 'Ranked leaderboard. title?, items:[{label, value, highlight?}], medals?:true, sortDesc?:true.',
+  // ── 66. ranked-list ── ranked listing of things/concepts (NOT people — solo study)
+  'ranked-list': {
+    desc: 'Ranked list of things/concepts by metric. title?, items:[{label, value, highlight?}], showRanks?:true, sortDesc?:true. For ranking concepts by importance/frequency — NOT students.',
     render: function(d) {
       var items = (d.items||[]).slice();
       if (d.sortDesc!==false) items.sort(function(a,b){ return (parseFloat(b.value)||0)-(parseFloat(a.value)||0); });
-      var medals = ['🥇','🥈','🥉'];
       var h = '<div style="margin:16px 0;max-width:500px">';
-      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:10px;font-weight:700">🏆 '+esc(d.title)+'</h3>';
+      if (d.title) h += '<h3 style="color:#1e293b;margin-bottom:10px;font-weight:700">📊 '+esc(d.title)+'</h3>';
       for (var i=0;i<items.length;i++) {
         var it = items[i];
         var bg = it.highlight?'#eef2ff':(i%2===0?'#fafbfc':'#fff');
-        var rankIcon = d.medals!==false&&i<3?medals[i]:('#'+(i+1));
+        var rankIcon = d.showRanks!==false?('#'+(i+1)):'';
         h += '<div style="display:flex;align-items:center;padding:8px 14px;background:'+bg+';border-radius:6px;margin-bottom:4px">';
-        h += '<span style="font-size:18px;width:36px;text-align:center">'+rankIcon+'</span>';
+        if (rankIcon) h += '<span style="font-size:14px;width:36px;text-align:center;color:#94a3b8">'+rankIcon+'</span>';
         h += '<span style="flex:1;font-weight:500;color:#1e293b">'+esc(it.label||'')+'</span>';
         h += '<span style="font-weight:700;color:#4f46e5">'+esc(it.value||'')+'</span>';
         h += '</div>';
@@ -1408,8 +1408,444 @@ var STUDY_COMPONENTS = {
       if (d.badgeText) h += ' | <span class="sg-badge">'+esc(d.badgeText)+'</span>';
       return h+'</p>';
     }
+  },
+  // ══════════════════════════════════════
+  //  ENGAGEMENT & DEEP LEARNING (76-87)
+  // ══════════════════════════════════════
+  // ── 76. curiosity-hook ── spark interest before content
+  'curiosity-hook': {
+    desc: 'Curiosity-sparking opener. hook (question or statement), reveal?, icon? (🤔).',
+    render: function(d) {
+      var h = '<div style="border:2px dashed #818cf8;background:linear-gradient(135deg,#eef2ff,#fafbff);border-radius:12px;padding:18px 22px;margin:18px 0">';
+      h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">'+(d.icon||'🤔')+'</span><strong style="color:#4f46e5;font-size:16px">'+esc(d.title||'Have You Ever Wondered?')+'</strong></div>';
+      h += '<p style="color:#1e293b;font-size:16px;font-weight:500;margin:0;line-height:1.7">'+esc(d.hook||d.question||'')+'</p>';
+      if (d.reveal) h += '<details style="margin-top:12px"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:14px">👁️ Reveal the answer</summary><p style="color:#475569;margin:8px 0 0;line-height:1.7">'+esc(d.reveal)+'</p></details>';
+      return h+'</div>';
+    }
+  },
+  // ── 77. myth-buster ── correct common misconceptions
+  'myth-buster': {
+    desc: 'Myth vs reality. myth, reality, explanation?, icon? (💥).',
+    render: function(d) {
+      return '<div style="border:2px solid #f97316;background:linear-gradient(135deg,#fff7ed,#fffbeb);border-radius:12px;padding:18px 22px;margin:18px 0">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">'+(d.icon||'💥')+'</span><strong style="color:#c2410c;font-size:16px">'+esc(d.title||'Myth Buster')+'</strong></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
+        '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px"><strong style="color:#991b1b">❌ Myth:</strong><p style="color:#7f1d1d;margin:4px 0 0;font-size:14px">'+esc(d.myth||'')+'</p></div>'+
+        '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px"><strong style="color:#065f46">✅ Reality:</strong><p style="color:#064e3b;margin:4px 0 0;font-size:14px">'+esc(d.reality||'')+'</p></div>'+
+        '</div>'+
+        (d.explanation?'<p style="color:#78716c;margin:10px 0 0;font-size:13px">💡 '+esc(d.explanation)+'</p>':'')+
+        '</div>';
+    }
+  },
+  // ── 78. imagine ── put student in a realistic scenario
+  'imagine': {
+    desc: 'Scenario immersion. scenario, question?, reflection?, icon? (🎬).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #06b6d4;background:linear-gradient(135deg,#ecfeff,#f0f9ff);border-radius:12px;overflow:hidden;margin:18px 0">';
+      h += '<div style="background:linear-gradient(135deg,#0891b2,#06b6d4);padding:10px 20px;color:#fff;font-weight:700;font-size:14px">'+(d.icon||'🎬')+' '+esc(d.title||'Put Yourself Here')+'</div>';
+      h += '<div style="padding:18px 20px">';
+      h += '<p style="color:#155e75;margin:0;line-height:1.8;font-size:15px">'+esc(d.scenario||d.body||'')+'</p>';
+      if (d.question) h += '<p style="color:#0891b2;font-weight:600;margin:12px 0 0;font-size:15px">🤔 '+esc(d.question)+'</p>';
+      if (d.reflection) h += '<details style="margin-top:10px"><summary style="cursor:pointer;color:#0891b2;font-weight:600;font-size:13px">💭 Reflect on this</summary><p style="color:#475569;margin:8px 0 0;font-size:14px">'+esc(d.reflection)+'</p></details>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 79. insight ── crystallize the key "aha!" takeaway
+  'insight': {
+    desc: 'Key insight / aha moment. insight, title?, icon? (💎).',
+    render: function(d) {
+      return '<div style="border:2px solid #8b5cf6;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:6px">'+(d.icon||'💎')+'</div>'+
+        '<div style="font-weight:700;color:#6d28d9;font-size:14px;margin-bottom:8px">'+esc(d.title||'Key Insight')+'</div>'+
+        '<p style="color:#5b21b6;font-size:17px;font-weight:600;margin:0;line-height:1.7">'+esc(d.insight||d.body||'')+'</p>'+
+        '</div>';
+    }
+  },
+  // ── 80. rule-of-thumb ── memorable heuristic
+  'rule-of-thumb': {
+    desc: 'Memorable rule of thumb. rule, context?, icon? (👍).',
+    render: function(d) {
+      return '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:12px">'+
+        '<span style="font-size:32px;flex-shrink:0">'+(d.icon||'👍')+'</span>'+
+        '<div><div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:4px">'+esc(d.title||'Rule of Thumb')+'</div>'+
+        '<p style="color:#78350f;margin:0;font-size:15px;font-weight:600">'+esc(d.rule||d.body||'')+'</p>'+
+        (d.context?'<p style="color:#a8a29e;margin:4px 0 0;font-size:12px">'+esc(d.context)+'</p>':'')+
+        '</div></div>';
+    }
+  },
+  // ── 81. contrast ── "don't confuse X with Y"
+  'contrast': {
+    desc: 'Contrast two easily-confused concepts. a:{label,desc}, b:{label,desc}, title?.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">⚠️ '+esc(d.title||'Don\'t Confuse These')+'</div>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr">';
+      h += '<div style="padding:14px 16px;border-right:1px solid #e2e8f0"><div style="font-weight:700;color:#4f46e5;margin-bottom:6px">🔵 '+esc((d.a||{}).label||'Concept A')+'</div><p style="color:#475569;margin:0;font-size:14px">'+esc((d.a||{}).desc||'')+'</p></div>';
+      h += '<div style="padding:14px 16px"><div style="font-weight:700;color:#d97706;margin-bottom:6px">🟠 '+esc((d.b||{}).label||'Concept B')+'</div><p style="color:#475569;margin:0;font-size:14px">'+esc((d.b||{}).desc||'')+'</p></div>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 82. common-question ── FAQ-style box
+  'common-question': {
+    desc: 'FAQ / common student question. question, answer, icon? (❓).',
+    render: function(d) {
+      return '<div style="border:1px solid #cbd5e1;background:#fafbfc;border-radius:10px;padding:16px 20px;margin:14px 0">'+
+        '<div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:22px;flex-shrink:0">'+(d.icon||'❓')+'</span>'+
+        '<div><div style="font-weight:700;color:#1e293b;margin-bottom:6px">Students often ask: <span style="color:#4f46e5">'+esc(d.question||'')+'</span></div>'+
+        '<p style="color:#475569;margin:0;font-size:14px;line-height:1.7">'+esc(d.answer||d.body||'')+'</p></div></div></div>';
+    }
+  },
+  // ── 83. pause-point ── comprehension checkpoint
+  'pause-point': {
+    desc: 'Comprehension checkpoint. checks:[string questions], title?, icon? (🛑).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:12px;padding:18px 22px;margin:20px 0">';
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:24px">'+(d.icon||'🛑')+'</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Pause & Check Yourself')+'</strong></div>';
+      h += '<p style="color:#78716c;margin:0 0 10px;font-size:13px">Before continuing, make sure you can answer these:</p>';
+      h += '<ol style="margin:0;padding-left:20px">';
+      for (var i=0;i<(d.checks||d.items||[]).length;i++) h += '<li style="color:#b45309;margin-bottom:6px"><input type="checkbox" style="margin-right:8px;accent-color:#f59e0b">'+esc(typeof d.checks[i]==='string'?d.checks[i]:d.checks[i].text||d.checks[i])+'</li>';
+      h += '</ol></div>';
+      return h;
+    }
+  },
+  // ── 84. joke ── appropriate humor break
+  'joke': {
+    desc: 'Light humor break (use only when subject-appropriate — NOT law/medicine/serious). joke, icon? (😄).',
+    render: function(d) {
+      return '<div style="border:2px dashed #a78bfa;background:linear-gradient(135deg,#faf5ff,#fefce8);border-radius:10px;padding:14px 20px;margin:16px 0;text-align:center">'+
+        '<div style="font-size:28px;margin-bottom:4px">'+(d.icon||'😄')+'</div>'+
+        '<p style="color:#6d28d9;font-style:italic;margin:0;font-size:15px">'+esc(d.joke||d.body||'')+'</p>'+
+        (d.punchline?'<p style="color:#7c3aed;font-weight:700;margin:4px 0 0;font-size:14px">'+esc(d.punchline)+'</p>':'')+
+        '</div>';
+    }
+  },
+  // ── 85. speed-run ── ultra-condensed review
+  'speed-run': {
+    desc: 'Ultra-condensed review. title?, points:[] (one-liner summaries).',
+    render: function(d) {
+      var h = '<div style="border:2px solid #14b8a6;background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border-radius:12px;overflow:hidden;margin:18px 0">';
+      h += '<div style="background:linear-gradient(135deg,#0d9488,#14b8a6);padding:8px 18px;color:#fff;font-weight:700;font-size:14px">⚡ '+esc(d.title||'Speed Run — 30-Second Recap')+'</div>';
+      h += '<div style="padding:14px 18px">';
+      for (var i=0;i<(d.points||d.items||[]).length;i++) h += '<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;color:#0f766e"><span style="color:#14b8a6;font-weight:700">▸</span><span>'+esc(typeof d.points[i]==='string'?d.points[i]:d.points[i].text||d.points[i])+'</span></div>';
+      return h+'</div></div>';
+    }
+  },
+  // ── 86. expert-voice ── first-person practitioner insight
+  'expert-voice': {
+    desc: 'First-person expert insight. quote, expertName, expertRole?, icon? (🎙️).',
+    render: function(d) {
+      return '<div style="border-left:4px solid #0891b2;background:linear-gradient(135deg,#fafdfe,#ecfeff);padding:16px 20px;margin:18px 0;border-radius:0 10px 10px 0">'+
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:22px">'+(d.icon||'🎙️')+'</span><strong style="color:#0e7490">'+esc(d.expertName||'Expert')+'</strong>'+(d.expertRole?'<span style="color:#94a3b8;font-size:12px;font-weight:400"> — '+esc(d.expertRole)+'</span>':'')+'</div>'+
+        '<p style="color:#164e63;margin:0;font-style:italic;font-size:15px;line-height:1.7">"'+esc(d.quote||d.body||'')+'"</p>'+
+        '</div>';
+    }
+  },
+  // ── 87. visual-metaphor ── text-based metaphor for abstract concepts
+  'visual-metaphor': {
+    desc: 'Text-based visual metaphor. concept, metaphor, explanation?, icon? (🔍).',
+    render: function(d) {
+      return '<div style="border:2px solid #c084fc;background:linear-gradient(135deg,#faf5ff,#f5f3ff);border-radius:12px;padding:20px;margin:18px 0;text-align:center">'+
+        '<div style="font-size:26px;margin-bottom:6px">'+(d.icon||'🔍')+'</div>'+
+        '<div style="font-weight:700;color:#7c3aed;font-size:15px;margin-bottom:10px">Think of it this way...</div>'+
+        '<div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<span style="background:#fff;border:2px solid #a78bfa;border-radius:8px;padding:10px 18px;font-weight:700;color:#6d28d9;font-size:15px">'+esc(d.concept||'')+'</span>'+
+        '<span style="font-size:22px;color:#a78bfa">→</span>'+
+        '<span style="background:#fef3c7;border:2px solid #fcd34d;border-radius:8px;padding:10px 18px;font-weight:700;color:#92400e;font-size:15px">'+esc(d.metaphor||'')+'</span>'+
+        '</div>'+
+        (d.explanation?'<p style="color:#64748b;margin:0;font-size:13px">'+esc(d.explanation)+'</p>':'')+
+        '</div>';
+    }
+  },
+  // ══════════════════════════════════════
+  //  READING & INTERACTIVE REVEAL (88-93)
+  // ══════════════════════════════════════
+  // ── 88. paragraph ── regular reading paragraph (MOST IMPORTANT — use for 60-70% of content)
+  'paragraph': {
+    desc: 'Regular reading paragraph. text, variant?:normal|lead|small|muted. Use heavily — this is the main reading content.',
+    render: function(d) {
+      var styles = {
+        normal: 'font-size:15px;color:#1e293b;line-height:1.85;margin:0 0 14px',
+        lead: 'font-size:17px;color:#334155;line-height:1.85;margin:0 0 16px;font-weight:500',
+        small: 'font-size:13px;color:#64748b;line-height:1.65;margin:0 0 10px',
+        muted: 'font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 8px;font-style:italic'
+      };
+      var s = styles[d.variant||'normal'];
+      return '<p style="'+s+'">'+esc(d.text||d.body||'')+'</p>';
+    }
+  },
+  // ── 89. reveal ── generic click-to-reveal hidden content
+  'reveal': {
+    desc: 'Click-to-reveal hidden content. teaser, content, icon? (👁️). Great for "Think first, then check" pattern.',
+    render: function(d) {
+      return '<div style="border:2px dashed #818cf8;background:linear-gradient(135deg,#eef2ff,#fafbff);border-radius:10px;padding:16px 20px;margin:14px 0">'+
+        '<details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:14px;list-style:none">'+(d.icon||'👁️')+' '+esc(d.teaser||d.label||'Click to reveal')+'</summary>'+
+        '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;line-height:1.7;color:#475569">'+(d.content||d.body||'')+'</div></details></div>';
+    }
+  },
+  // ── 90. stat-chart ── statistics / survey results bar chart (display-only, no voting)
+  'stat-chart': {
+    desc: 'Display survey/statistics results as a bar chart. title?, options:[{label, value}], showValues?:true. Use for showing real-world data in study content.',
+    render: function(d) {
+      var totalVal = 0;
+      for (var i=0;i<(d.options||[]).length;i++) totalVal += parseFloat(d.options[i].value)||0;
+      var colors = ['#4f46e5','#059669','#d97706','#dc2626','#7c3aed','#0891b2'];
+      var h = '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin:16px 0;background:#fff">';
+      h += '<div style="font-weight:700;color:#1e293b;margin-bottom:12px">📊 '+esc(d.title||d.question||'Statistics')+'</div>';
+      for (var j=0;j<(d.options||[]).length;j++) {
+        var opt = d.options[j];
+        var val = parseFloat(opt.value||opt.votes)||0;
+        var pct = totalVal>0?Math.round((val/totalVal)*100):0;
+        var clr = colors[j%colors.length];
+        h += '<div style="margin-bottom:10px">';
+        h += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px"><span style="color:#475569">'+esc(opt.label||'')+'</span><span style="color:#94a3b8;font-weight:600">'+(d.showValues!==false?pct+'%':val)+'</span></div>';
+        h += '<div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden">';
+        h += '<div style="height:100%;width:'+(d.showValues!==false?pct:0)+'%;background:'+clr+';border-radius:4px;transition:width 0.8s ease"></div></div></div>';
+      }
+      if (d.showValues!==false&&totalVal>0) h += '<div style="font-size:11px;color:#94a3b8;margin-top:8px;text-align:center">Based on '+totalVal+' data points</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 91. spotlight ── animated pulsing attention highlight
+  'spotlight': {
+    desc: 'Animated spotlight highlight. text, icon? (💡), color? (#4f46e5). Pulsing glow draws attention to key point.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      return '<div class="sg-spotlight" style="border:2px solid '+color+';background:#fff;border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center;box-shadow:0 0 20px '+color+'33">'+
+        '<div style="font-size:28px;margin-bottom:6px">'+(d.icon||'💡')+'</div>'+
+        '<p style="color:#1e293b;font-weight:600;font-size:16px;margin:0">'+esc(d.text||d.body||'')+'</p></div>';
+    }
+  },
+  // ── 92. ordered-list ── mentally sort then reveal correct order
+  'ordered-list': {
+    desc: 'Sort-then-reveal. title?, items:[string] (scrambled), correctOrder?:"Reveal correct order" button.',
+    render: function(d) {
+      var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">🔢 '+esc(d.title||'Put These in Order')+'</div>';
+      h += '<div style="padding:14px 18px">';
+      h += '<p style="color:#64748b;font-size:13px;margin:0 0 12px">Mentally arrange these in the correct sequence, then check your answer:</p>';
+      h += '<ol style="margin:0 0 12px 20px;color:#475569;line-height:1.8">';
+      for (var i=0;i<(d.items||[]).length;i++) h += '<li style="margin-bottom:4px">'+esc(typeof d.items[i]==='string'?d.items[i]:d.items[i].text||d.items[i])+'</li>';
+      h += '</ol>';
+      h += '<details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;list-style:none">✅ Reveal correct order</summary>';
+      h += '<div style="margin-top:10px;padding:12px 14px;background:#ecfdf5;border-radius:8px;line-height:1.8;color:#065f46;font-weight:500"><ol style="margin:0 0 0 18px">';
+      for (var j=0;j<(d.correctOrder||d.items||[]).length;j++) h += '<li>'+esc(typeof d.correctOrder[j]==='string'?d.correctOrder[j]:d.correctOrder[j].text||d.correctOrder[j])+'</li>';
+      h += '</ol></div></details></div></div>';
+      return h;
+    }
+  },
+  // ── 93. match ── match pairs with reveal
+  'match': {
+    desc: 'Match pairs. title?, pairs:[{a, b}] or left:[], right:[] — mentally match then reveal.',
+    render: function(d) {
+      var pairs = d.pairs||[];
+      // Support left/right format too
+      if (!pairs.length && d.left && d.right) {
+        var len = Math.min(d.left.length, d.right.length);
+        for (var k=0;k<len;k++) pairs.push({a:d.left[k], b:d.right[k]});
+      }
+      if (!pairs.length) return '';
+      var h = '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0">';
+      h += '<div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">🔗 '+esc(d.title||'Match the Pairs')+'</div>';
+      h += '<div style="padding:14px 18px">';
+      h += '<p style="color:#64748b;font-size:13px;margin:0 0 12px">Try to match each item with its pair, then reveal to check:</p>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+      for (var i=0;i<pairs.length;i++) {
+        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(pairs[i].a||'')+'</div>';
+        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">'+esc(pairs[i].b||'')+'</div>';
+      }
+      h += '</div>';
+      h += '<details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;list-style:none">✅ Reveal matches</summary>';
+      h += '<div style="margin-top:10px;padding:12px 14px;background:#ecfdf5;border-radius:8px;line-height:1.8;color:#065f46">';
+      for (var j=0;j<pairs.length;j++) h += '<div style="padding:4px 0">'+(j+1)+'. <strong>'+esc(pairs[j].a)+'</strong> ↔ <strong>'+esc(pairs[j].b)+'</strong></div>';
+      h += '</div></details></div></div>';
+      return h;
+    }
+  },
+  // ═══════════════════════════════════════════
+  // NEW: ENGAGING SOLO-STUDY COMPONENTS (94–101)
+  // ═══════════════════════════════════════════
+  // ── 94. flip-card ── CSS 3D click-to-flip term card (solo study: key concept drill)
+  'flip-card': {
+    desc: 'Click-to-flip term card. front, back — single concept drill. Use 1-3 per section for key terms.',
+    render: function(d) {
+      var cid = 'fc-'+Date.now()+'-'+Math.floor(Math.random()*9999);
+      return '<div style="perspective:800px;margin:16px 0">'+
+        '<label for="'+cid+'" style="cursor:pointer;display:block">'+
+        '<input type="checkbox" id="'+cid+'" style="position:absolute;opacity:0;pointer-events:none">'+
+        '<div class="sg-flip-card" style="position:relative;width:100%;min-height:140px;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d">'+
+        '<div class="sg-flip-front" style="position:absolute;inset:0;backface-visibility:hidden;background:#eef2ff;border:2px solid #c7d2fe;border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">'+
+        '<div style="font-size:13px;color:#6366f1;margin-bottom:8px;font-weight:600">🧠 KEY CONCEPT</div>'+
+        '<div style="font-size:17px;font-weight:700;color:#1e293b">'+esc(d.front||d.q||'')+'</div>'+
+        '<div style="font-size:12px;color:#94a3b8;margin-top:10px">👆 Click to reveal</div></div>'+
+        '<div class="sg-flip-back" style="position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);background:#ecfdf5;border:2px solid #a7f3d0;border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">'+
+        '<div style="font-size:13px;color:#059669;margin-bottom:8px;font-weight:600">💡 ANSWER</div>'+
+        '<div style="font-size:16px;color:#1e293b;line-height:1.6">'+esc(d.back||d.a||'')+'</div>'+
+        '<div style="font-size:12px;color:#94a3b8;margin-top:10px">👆 Click to flip back</div></div>'+
+        '</div></label>'+
+        '<style>#'+cid+':checked+.sg-flip-card{transform:rotateY(180deg)}</style></div>';
+    }
+  },
+  // ── 95. progress-ring ── SVG animated circular stat (mastery/section completion visual)
+  'progress-ring': {
+    desc: 'Animated SVG ring chart. percent:0-100, label?, color?:"#4f46e5", size?:120. Use after completing a topic subsection.',
+    render: function(d) {
+      var pct = Math.min(100,Math.max(0,parseFloat(d.percent)||0));
+      var sz = d.size||120;
+      var color = d.color||'#4f46e5';
+      var r = (sz/2)-10;
+      var circ = 2*Math.PI*r;
+      var offset = circ*(1-pct/100);
+      var animId = 'pr-'+Date.now();
+      return '<div style="text-align:center;margin:20px 0">'+
+        '<style>@keyframes '+animId+'{from{stroke-dashoffset:'+circ+'}to{stroke-dashoffset:'+offset+'}}</style>'+
+        '<svg width="'+sz+'" height="'+sz+'" style="display:inline-block"><circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+r+'" fill="none" stroke="#e2e8f0" stroke-width="8"/>'+
+        '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="8" stroke-linecap="round" stroke-dasharray="'+circ+'" stroke-dashoffset="'+circ+'" style="animation:'+animId+' 1.2s ease-out forwards;transform:rotate(-90deg);transform-origin:'+(sz/2)+'px '+(sz/2)+'px"/>'+
+        '<text x="'+(sz/2)+'" y="'+(sz/2)+'" text-anchor="middle" dominant-baseline="central" style="font-family:Georgia,serif;font-size:'+(sz*0.22)+'px;font-weight:800;fill:'+color+'">'+Math.round(pct)+'%</text></svg>'+
+        (d.label?'<div style="margin-top:8px;font-weight:600;color:#1e293b;font-size:14px">'+esc(d.label)+'</div>':'')+
+        '</div>';
+    }
+  },
+  // ── 96. mind-map ── radial concept map (section summary visual)
+  'mind-map': {
+    desc: 'Radial concept map. central:{label,icon?}, nodes:[{label,description?,icon?}], color?:"#4f46e5". Perfect for END of a major section — "see how it all connects".',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var nodes = d.nodes||[];
+      var h = '<div style="margin:24px 0;text-align:center">';
+      // Central node
+      h += '<div style="display:inline-block;background:'+color+';color:#fff;border-radius:50%;width:90px;height:90px;line-height:90px;text-align:center;font-weight:700;font-size:14px;margin-bottom:18px;box-shadow:0 4px 16px '+color+'44;position:relative;z-index:2">'+esc(d.central.label||d.central||'')+'</div>';
+      // Branch nodes in a responsive grid
+      h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;max-width:700px;margin:0 auto">';
+      for (var i=0;i<nodes.length;i++) {
+        var nd = nodes[i];
+        h += '<div class="mind-map-node" style="background:#fff;border:2px solid '+color+'33;border-radius:12px;padding:14px 12px;position:relative;text-align:center;transition:transform 0.2s,box-shadow 0.2s">';
+        h += '<div style="font-size:24px;margin-bottom:4px">'+(nd.icon||'•')+'</div>';
+        h += '<div style="font-weight:700;color:#1e293b;font-size:14px">'+esc(nd.label||'')+'</div>';
+        if (nd.description) h += '<div style="font-size:12px;color:#64748b;margin-top:4px;line-height:1.4">'+esc(nd.description)+'</div>';
+        h += '</div>';
+      }
+      h += '</div>';
+      if (d.title) h += '<div style="margin-top:12px;font-size:13px;color:#64748b;font-weight:600">'+esc(d.title)+'</div>';
+      return h+'</div>';
+    }
+  },
+  // ── 97. process-flow ── horizontal step flow with arrows (procedures, methods, sequences)
+  'process-flow': {
+    desc: 'Horizontal process flow with arrows. title?, steps:[{label, description?, icon?}], color?:"#4f46e5". For procedures, methods, lifecycles — clearer than phase-flow.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var steps = d.steps||[];
+      if (!steps.length) return '';
+      var h = '<div style="margin:20px 0;overflow-x:auto;padding:8px 0">';
+      if (d.title) h += '<div style="text-align:center;font-weight:700;color:#1e293b;margin-bottom:14px;font-size:15px">🔄 '+esc(d.title)+'</div>';
+      h += '<div style="display:flex;align-items:flex-start;gap:0;min-width:max-content;justify-content:center">';
+      for (var i=0;i<steps.length;i++) {
+        var stp = steps[i];
+        h += '<div style="flex-shrink:0;text-align:center;width:140px">';
+        h += '<div class="process-flow-step" style="background:#fff;border:2px solid '+color+';border-radius:12px;padding:14px 10px;position:relative;box-shadow:0 2px 8px '+color+'18">';
+        if (stp.icon) h += '<div style="font-size:24px;margin-bottom:4px">'+esc(stp.icon)+'</div>';
+        h += '<div style="font-weight:700;color:'+color+';font-size:13px;margin-bottom:2px">Step '+(i+1)+'</div>';
+        h += '<div style="font-weight:600;color:#1e293b;font-size:14px">'+esc(stp.label||'')+'</div>';
+        if (stp.description) h += '<div style="font-size:11px;color:#64748b;margin-top:4px;line-height:1.3">'+esc(stp.description)+'</div>';
+        h += '</div></div>';
+        // Arrow connector (except after last)
+        if (i<steps.length-1) {
+          h += '<div style="flex-shrink:0;display:flex;align-items:center;padding:0 2px;margin-top:30px">'+
+            '<div style="width:24px;height:2px;background:'+color+'55;position:relative">'+
+            '<div style="position:absolute;right:-4px;top:-5px;width:0;height:0;border-left:8px solid '+color+';border-top:6px solid transparent;border-bottom:6px solid transparent"></div></div></div>';
+        }
+      }
+      return h+'</div></div>';
+    }
+  },
+  // ── 98. count-up ── animated stat highlight (large number with label, CSS entrance)
+  'count-up': {
+    desc: 'Animated stat highlight. value, label?, prefix?, suffix?, icon?, color?:"#4f46e5". For impressive numbers — "over 1,200 species..." with animated entrance.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      var animId = 'cu-'+Date.now();
+      return '<div class="count-up-box" style="text-align:center;margin:20px 0;padding:24px;background:linear-gradient(135deg,'+color+'08,'+color+'15);border-radius:16px;border:1px solid '+color+'22">'+
+        (d.icon?'<div style="font-size:36px;margin-bottom:6px">'+esc(d.icon)+'</div>':'')+
+        '<style>@keyframes '+animId+'{0%{opacity:0;transform:scale(0.6)}60%{transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}</style>'+
+        '<div style="font-family:Georgia,serif;font-size:42px;font-weight:900;color:'+color+';animation:'+animId+' 0.7s ease-out forwards;line-height:1.1">'+(d.prefix||'')+esc(d.value)+''+(d.suffix||'')+'</div>'+
+        (d.label?'<div style="font-size:14px;color:#64748b;margin-top:6px;font-weight:500">'+esc(d.label)+'</div>':'')+
+        '</div>';
+    }
+  },
+  // ── 99. typewriter ── animated text reveal (dramatic quote or key insight)
+  'typewriter': {
+    desc: 'Typewriter text reveal. text, speed?:"medium" (slow|medium|fast). Use ONCE per guide for dramatic impact — key insight or motivational quote.',
+    render: function(d) {
+      var text = d.text||'';
+      var speedMap = {slow:'5s',medium:'3s',fast:'1.5s'};
+      var dur = speedMap[d.speed]||'3s';
+      var steps = Math.max(20,text.length);
+      var animId = 'tw-'+Date.now();
+      // Use a wrapper with width animation + overflow hidden + white-space:nowrap + border-right cursor
+      return '<div class="typewriter-box" style="text-align:center;margin:24px 0;padding:20px;background:#1e293b;color:#f1f5f9;border-radius:12px">'+
+        '<style>@keyframes '+animId+'{from{width:0}to{width:100%}}@keyframes tw-blink-'+animId+'{0%,100%{border-color:transparent}50%{border-color:#f1f5f9}}</style>'+
+        '<div style="display:inline-block;overflow:hidden;white-space:nowrap;border-right:3px solid #f1f5f9;max-width:100%;animation:'+animId+' '+dur+' steps('+steps+') forwards,tw-blink-'+animId+' 0.7s step-end 5;font-family:Georgia,serif;font-size:17px;line-height:1.6;letter-spacing:0.02em">'+
+        esc(text)+'</div>'+
+        '<div style="margin-top:10px;font-size:12px;color:#94a3b8">⌨️ '+esc(d.label||'Key Insight')+'</div>'+
+        '</div>';
+    }
+  },
+  // ── 100. slider-compare ── side-by-side comparison (before/after, A vs B)
+  'slider-compare': {
+    desc: 'Side-by-side concept comparison. leftTitle?, leftContent, rightTitle?, rightContent, leftColor?:"#fef2f2", rightColor?:"#ecfdf5". For before/after, two approaches, then vs now.',
+    render: function(d) {
+      var leftC = d.leftColor||'#fef2f2';
+      var rightC = d.rightColor||'#ecfdf5';
+      var leftBorder = d.leftColor?'#fecaca':'#e2e8f0';
+      var rightBorder = d.rightColor?'#a7f3d0':'#e2e8f0';
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0">'+
+        '<div class="slider-compare-panel" style="background:'+leftC+';border:2px solid '+leftBorder+';border-radius:12px;padding:18px">'+
+        '<div style="font-weight:700;color:#dc2626;margin-bottom:10px;font-size:14px">⬅ '+esc(d.leftTitle||'Before')+'</div>'+
+        '<div style="color:#475569;font-size:14px;line-height:1.7">'+esc(d.leftContent||'')+'</div></div>'+
+        '<div class="slider-compare-panel" style="background:'+rightC+';border:2px solid '+rightBorder+';border-radius:12px;padding:18px">'+
+        '<div style="font-weight:700;color:#059669;margin-bottom:10px;font-size:14px">'+esc(d.rightTitle||'After')+' ➡</div>'+
+        '<div style="color:#475569;font-size:14px;line-height:1.7">'+esc(d.rightContent||'')+'</div></div></div>';
+    }
+  },
+  // ── 101. hierarchy-tree ── CSS tree/organizational chart (classification, taxonomy)
+  'hierarchy-tree': {
+    desc: 'Hierarchy tree diagram. title?, root:{label,icon?}, children:[{label,children:[...]?,icon?}], color?:"#4f46e5". For taxonomy, org structures, classification.',
+    render: function(d) {
+      var color = d.color||'#4f46e5';
+      function renderNode(node, depth) {
+        var h = '<div style="text-align:center">';
+        h += '<div class="hierarchy-node" style="display:inline-block;background:#fff;border:2px solid '+color+';border-radius:10px;padding:10px 16px;font-weight:600;font-size:13px;color:#1e293b;white-space:nowrap;box-shadow:0 1px 4px '+color+'18">';
+        if (node.icon) h += '<span style="margin-right:4px">'+esc(node.icon)+'</span>';
+        h += esc(node.label||'');
+        h += '</div></div>';
+        if (node.children && node.children.length) {
+          // Connector line
+          h += '<div style="height:18px;border-left:2px solid '+color+'55;margin:0 auto;width:0"></div>';
+          h += '<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;position:relative">';
+          // Horizontal connector bar
+          h += '<div style="position:absolute;top:0;left:15%;right:15%;height:2px;background:'+color+'55"></div>';
+          for (var j=0;j<node.children.length;j++) {
+            h += '<div style="position:relative;padding-top:8px">';
+            h += '<div style="height:10px;border-left:2px solid '+color+'55;margin:0 auto;width:0"></div>';
+            h += renderNode(node.children[j],depth+1);
+            h += '</div>';
+          }
+          h += '</div>';
+        }
+        return h;
+      }
+      var h = '<div style="margin:20px 0;overflow-x:auto;padding:10px 0">';
+      if (d.title) h += '<div style="text-align:center;font-weight:700;color:#1e293b;margin-bottom:14px;font-size:15px">🌳 '+esc(d.title)+'</div>';
+      h += renderNode(d.root||{label:d.label||'Root'},0);
+      return h+'</div>';
+    }
   }
 };
+
+// ── Backward-compat aliases (old names → new names) ──
+STUDY_COMPONENTS['poll'] = STUDY_COMPONENTS['stat-chart'];
+STUDY_COMPONENTS['debate'] = STUDY_COMPONENTS['perspectives'];
+STUDY_COMPONENTS['leaderboard'] = STUDY_COMPONENTS['ranked-list'];
 
 /** Render a components array into full study HTML */
 function renderComponentsToHtml(components) {
@@ -2478,7 +2914,7 @@ function generateQuizFromPdf() {
   function generateWithAI(text) {
     var maxLen = 12000;
     if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
-    updateGenerateButtons({ text: '⏳ AI generating...' });
+    updateGenerateButtons({ text: '⏳ Generating...' });
 
     var prompt = 'You are an expert quiz generator. Generate EXACTLY 15 multiple-choice questions based on the documents below. Return ONLY a JSON array — no markdown, no intro text.\n\nCRITICAL: You MUST generate exactly 15 questions.\n\nDocument content:\n"""\n' + text + '\n"""\n\nThe 15 questions are organized as 3 identical sets of 5 questions each. Each set of 5 follows this difficulty pattern: easy, medium, medium, hard, hard. Each question must have exactly 4 options. Use this JSON format:\n{"question":"...","options":["A","B","C","D"],"answer":0,"difficulty":"easy|medium|hard","explanation_correct":"step-by-step solution","explanations_incorrect":["","","",""]}\n\nSTART YOUR RESPONSE WITH: [{"question":';
 
@@ -2506,16 +2942,16 @@ function generateQuizFromPdf() {
           renderQuizEditorList();
           hideSubModal('quiz-question-editor-panel');
           var msg = '✅ Generated ' + questions.length + ' questions from ' + allUrls.length + ' PDF(s).';
-          if (questions.length < 15) msg += ' AI produced fewer than 15 — you can add more manually.';
+          if (questions.length < 15) msg += ' Generated fewer than 15 — you can add more manually.';
           tool.notify(msg, 'success');
         } catch(e) {
-          tool.notify('AI response could not be parsed. See console.', 'error');
+          tool.notify('Response could not be parsed. See console.', 'error');
           console.error('Quiz gen parse error:', e, 'Raw:', fullResponse);
         }
       },
       onError: function(err) {
         updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
-        tool.notify('AI generation failed: ' + err, 'error');
+        tool.notify('Generation failed: ' + err, 'error');
       }
     });
   }
@@ -2554,7 +2990,7 @@ function generateHtmlFromPdf() {
         }
         if (remaining === 0) {
           if (!combinedText || combinedText.length < 50) {
-            if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
+            if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
             tool.notify('Could not extract enough text from the PDFs.', 'warning');
             return;
           }
@@ -2567,97 +3003,158 @@ function generateHtmlFromPdf() {
   function generateHtmlWithAI(text) {
     var maxLen = 15000;
     if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
-    if (genBtn) genBtn.textContent = '⏳ AI generating HTML...';
+    if (genBtn) genBtn.textContent = '⏳ Generating content...';
 
     var prompt = 'You are an expert educational content designer. Compose a rich study guide using COMPONENTS from the library below. Return ONLY a JSON object.\n\n' +
-      'COMPONENT LIBRARY (75 types — Grade 1 to professional, pick freely):\n' +
-      'STRUCTURAL:\n' +
-      '1. "accordion" — collapsible sections {items:[{title, content, icon?, open?}]}\n' +
-      '2. "separator" — divider line {label?}\n' +
-      '3. "columns-2" — two-column layout {left, right, leftWidth?, rightWidth?}\n' +
-      '4. "heading" — section heading {text, icon?, level:"section"|"subsection"}\n' +
-      '5. "reading-time" — reading time badge {minutes, label?, badgeText?}\n' +
-      'HERO & EMPHASIS:\n' +
-      '6. "intro-hero" — large hero card {icon:"🚀", heading, description, objectives:["..."]}\n' +
-      '7. "highlight-box" — prominent emphasis {variant:"idea"|"important"|"discover"|"challenge", title?, body}\n' +
-      '8. "callout" — colored alert {variant:"info"|"tip"|"key"|"warn", title?, body}\n' +
-      '9. "quote" — styled quotation {text, attribution?, icon?}\n' +
-      '10. "difficulty-meter" — difficulty badge {level:"beginner"|"intermediate"|"advanced"|"expert", label?}\n' +
-      '11. "star-award" — achievement badge {title, subtitle?, stars:1-5, icon?}\n' +
-      '12. "encouragement" — motivational boost {message, variant:"cheer"|"persist"|"celebrate"|"believe"}\n' +
-      '13. "character-guide" — mascot speech bubble {character, emoji?, message, variant:"kid"|"teacher"|"expert"|"coach"}\n' +
-      '14. "info-card" — single card with header {icon?, title, body, variant:"default"|"definition"|"reference"|"example"}\n' +
-      'DATA & STATS:\n' +
-      '15. "fact-grid" — stat cards {cols:"2"|"3"|"4", items:[{label, value}]}\n' +
-      '16. "key-numbers" — large centered stats {items:[{value, unit?, label}]}\n' +
-      '17. "stat-row" — horizontal emoji stat cards {items:[{emoji?, value, label}]}\n' +
-      '18. "weight-bar" — range indicator dots {segments:[{range, label, rule?, color}]}\n' +
-      '19. "data-table" — styled table {columns:[{key,header}], rows:[{key:value}]}\n' +
-      '20. "formula" — math/equation {formula, caption?, variant:"highlight"|"basic"}\n' +
-      '21. "swot" — SWOT 2×2 grid {strengths:[], weaknesses:[], opportunities:[], threats:[]}\n' +
-      '22. "pyramid" — hierarchy triangle {levels:[{label, description?, color?}] bottom-to-top}\n' +
-      '23. "concept-map" — mind map {central, nodes:[{label, description?, icon?}], color?}\n' +
-      '24. "progress-tracker" — progress bar {percent:0-100, label?, steps:[{label,done?}]}\n' +
-      '25. "metric-card" — single KPI card {value, label, trend:"up"|"down"|"flat", delta?, icon?, color?}\n' +
-      '26. "dashboard-grid" — KPI dashboard {title?, cards:[{value,label,trend?,delta?,icon?}], cols:"2"|"3"|"4"}\n' +
-      'CHARTS & VISUALIZATIONS:\n' +
-      '27. "bar-chart" — horizontal bars {title?, items:[{label,value,color?}], showValues?, height?}\n' +
-      '28. "pie-chart" — pie/donut {title?, segments:[{label,value,color?}], donut?:true, size?, showLegend?, centerLabel?}\n' +
-      '29. "gauge" — speedometer {value, min?, max, label?, colorScheme?:"green"|"blue"|"multi", size?}\n' +
-      '30. "funnel" — narrowing stages {title?, stages:[{label, value, color?}]}\n' +
-      '31. "leaderboard" — ranked list {title?, items:[{label,value,highlight?}], medals?:true}\n' +
-      '32. "heatmap" — color intensity grid {title?, rowLabels?, colLabels?, cells:[[value]], lowColor?, highColor?}\n' +
-      '33. "venn-diagram" — overlapping circles {title?, sets:[{label,size?,color?}], intersections?}\n' +
-      '34. "bullet-chart" — value vs target {value, target, max, label?, color?}\n' +
-      '35. "sparkline" — tiny trend bars {values:[], color?, height?, highlightMax?, label?}\n' +
-      '36. "waterfall" — cascade chart {title?, items:[{label,value,isTotal?}], colorUp?, colorDown?}\n' +
-      'COMPARISON & STRUCTURE:\n' +
-      '37. "pros-cons" — side-by-side green/red {prosTitle?, pros:[], consTitle?, cons:[]}\n' +
-      '38. "comparison" — multi-dimension A vs B {aLabel, bLabel, rows:[{dimension, a, b}]}\n' +
-      '39. "definition-list" — term/definition pairs {title?, terms:[{term, definition}]}\n' +
-      '40. "memory-box" — amber key takeaways {title?, rows:[{key, value}]}\n' +
-      '41. "summary-box" — end-of-section recap {title?, body?, points:[]}\n' +
-      '42. "before-after" — transformation {beforeTitle?, beforeBody, afterTitle?, afterBody}\n' +
-      '43. "debate" — two-sided argument {topic, positionA:{label,points:[]}, positionB:{label,points:[]}}\n' +
-      '44. "analogy" — think-of-it-like bridge {concept, analogy, explanation?}\n' +
-      'FLOW & SEQUENCE:\n' +
-      '45. "phase-flow" — vertical timeline {phases:[{name, description, emoji?, color}]}\n' +
-      '46. "timeline" — horizontal chronological {events:[{date, title, description?, icon?}]}\n' +
-      '47. "steps" — numbered procedure {title?, steps:[{title?, description, icon?}]}\n' +
-      'CARDS & GRIDS:\n' +
-      '48. "icon-grid" — emoji card grid {cols:"2"|"3"|"4", items:[{emoji, name, subtitle?, highlight?:"yes"}]}\n' +
-      '49. "card-grid" — expandable detail cards {cols:"2"|"3", items:[{emoji?, name, tag?, description?, detail}]}\n' +
-      '50. "gallery" — image gallery grid {cols:"2"|"3"|"4", images:[{url, caption?, alt?}]}\n' +
-      '51. "resource-links" — resource cards {title?, links:[{label,url,description?,type}]}\n' +
-      'INSTRUCTIONAL:\n' +
-      '52. "worked-example" — problem→steps→answer {problem, steps:[], answer, note?}\n' +
-      '53. "scenario" — purple scenario box {context, question, debrief}\n' +
-      '54. "prerequisites" — before-you-begin {title?, body?, items:[]}\n' +
-      '55. "checklist" — checkable list {title?, items:[{text, checked?}]}\n' +
-      '56. "common-mistake" — pitfall warning {title?, mistake, correct?, explanation?}\n' +
-      '57. "exam-hint" — exam focus tip {title?, tips:[], body?}\n' +
-      '58. "real-world" — application {title?, example, body?}\n' +
-      '59. "study-tip" — learning strategy {title?, tip, method?}\n' +
-      '60. "did-you-know" — fun fact {fact, icon?, title?, source?}\n' +
-      '61. "story-box" — narrative {title?, story, moral?, character?}\n' +
-      '62. "tip-jar" — quick tips collection {title?, tips:[], icon?}\n' +
-      '63. "try-it" — hands-on activity {title?, instruction, hint?, timeEstimate?}\n' +
-      '64. "word-bank" — vocabulary pills {title?, words:[{word, hint?}], color?}\n' +
-      '65. "vocab-card" — rich word card {word, definition, example?, partOfSpeech?, pronunciation?}\n' +
-      'MEDIA & EMBED:\n' +
-      '66. "image-block" — centered image {url, alt?, caption?, credit?, maxHeight?}\n' +
-      '67. "video-embed" — YouTube/Vimeo {url, title?, aspectRatio:"16by9"|"4by3"}\n' +
-      '68. "code-block" — code with language {code, language?, filename?}\n' +
-      '69. "html" — raw HTML {html:"<p>...</p>"}\n' +
-      'INTERACTIVE:\n' +
-      '70. "quiz" — Q&A with radio buttons {items:[{question, options:[], correct:0, explanation}]}\n' +
-      '71. "flashcards-inline" — click-to-flip {cards:[{front, back}], cols:"2"|"3"}\n' +
-      '72. "reflection-prompt" — pause-and-think {title?, questions:[], icon?}\n' +
-      '73. "self-assessment" — 1-5 star scale {question?, lowLabel?, highLabel?}\n' +
-      '74. "fill-blank" — fill-in-the-blank {items:[{prompt, answer, hint?}]}\n' +
-      '75. "next-steps" — post-lesson guidance {title?, steps:[{label, description?, type}]}\n\n' +
-      'RETURN FORMAT:\n{"components":[{"type":"intro-hero","data":{...}},{"type":"separator","data":{}},{"type":"fact-grid","data":{...}},{"type":"quiz","data":{"items":[...]}}]}\n\n' +
-      'RULES: Start with intro-hero + difficulty-meter. Use separator between sections. For statistics/data: prefer bar-chart, pie-chart, dashboard-grid, or heatmap (never raw tables for visual data). For kids: use character-guide, story-box, star-award. For professionals: use code-block, debate, concept-map, waterfall. Always include reflection-prompt or self-assessment. End with summary-box → quiz → next-steps. 4-6 quiz questions (correct=0-based). Prefer charts over tables for numeric data.\n\n' +
+      'COMPONENT LIBRARY (101 types — Grade 1 to professional, pick freely):\n' +
+      'STRUCTURAL (5):\n' +
+      '1. "accordion" {items:[{title, content, icon?, open?}]}\n' +
+      '2. "separator" {label?}\n' +
+      '3. "columns-2" {left, right, leftWidth?, rightWidth?}\n' +
+      '4. "heading" {text, icon?, level:"section"|"subsection"}\n' +
+      '5. "reading-time" {minutes, label?, badgeText?}\n' +
+      'READING — use "paragraph" for 60-70% of all content (study guide first, components enhance):\n' +
+      '6. "paragraph" — regular reading {text, variant:"normal"|"lead"|"small"|"muted"} ← USE HEAVILY\n' +
+      'HERO & EMPHASIS (8):\n' +
+      '7. "intro-hero" {icon, heading, description, objectives:[...]}\n' +
+      '8. "highlight-box" {variant:"idea"|"important"|"discover"|"challenge", title?, body}\n' +
+      '9. "callout" {variant:"info"|"tip"|"key"|"warn", title?, body}\n' +
+      '10. "quote" {text, attribution?, icon?}\n' +
+      '11. "difficulty-meter" {level:"beginner"|"intermediate"|"advanced"|"expert", label?}\n' +
+      '12. "star-award" {title, subtitle?, stars:1-5, icon?}\n' +
+      '13. "encouragement" {message, variant:"cheer"|"persist"|"celebrate"|"believe"}\n' +
+      '14. "character-guide" {character, emoji?, message, variant:"kid"|"teacher"|"expert"|"coach"}\n' +
+      'ENGAGEMENT & DEEP LEARNING (12):\n' +
+      '15. "curiosity-hook" — spark interest {hook, reveal?, icon?}\n' +
+      '16. "myth-buster" — correct misconceptions {myth, reality, explanation?}\n' +
+      '17. "imagine" — put student in scenario {scenario, question?, reflection?}\n' +
+      '18. "insight" — crystallize key takeaway {insight, title?}\n' +
+      '19. "rule-of-thumb" — memorable heuristic {rule, context?}\n' +
+      '20. "contrast" — don\'t confuse X with Y {a:{label,desc}, b:{label,desc}}\n' +
+      '21. "common-question" — FAQ {question, answer}\n' +
+      '22. "pause-point" — comprehension checkpoint {checks:[strings]}\n' +
+      '23. "joke" — humor (ONLY light subjects — NEVER law/medicine/safety) {joke, punchline?}\n' +
+      '24. "speed-run" — 30-second recap {title?, points:[]}\n' +
+      '25. "expert-voice" — practitioner quote {quote, expertName, expertRole?}\n' +
+      '26. "visual-metaphor" — concept→metaphor {concept, metaphor, explanation?}\n' +
+      '27. "spotlight" — animated pulsing highlight {text, icon?, color?} — draws attention\n' +
+      'INTERACTIVE REVEAL (4) — "think first, then check" pattern (no voting, no competition):\n' +
+      '28. "reveal" — generic click-to-reveal {teaser, content, icon?}\n' +
+      '29. "ordered-list" — mentally sort then reveal correct order {title?, items:[scrambled], correctOrder?:[correct]}\n' +
+      '30. "match" — match pairs then reveal {title?, pairs:[{a,b}] or left:[],right:[]}\n' +
+      '31. "fill-blank" — type answers then reveal {items:[{prompt, answer, hint?}]} — student types in <input>, then checks\n' +
+      'STATISTICS DISPLAY (1) — data visualization, not interactive voting:\n' +
+      '32. "stat-chart" — bar chart of survey/statistics data {title?, options:[{label, value}]} — display-only, use for real-world data\n' +
+      'DATA & STATS (12):\n' +
+      '33. "fact-grid" {cols, items:[{label,value}]}\n' +
+      '34. "key-numbers" {items:[{value,unit?,label}]}\n' +
+      '35. "stat-row" {items:[{emoji?,value,label}]}\n' +
+      '36. "weight-bar" {segments:[{range,label,rule?,color}]}\n' +
+      '37. "data-table" {columns:[{key,header}],rows:[{key:value}]}\n' +
+      '38. "formula" {formula,caption?,variant:"highlight"|"basic"}\n' +
+      '39. "swot" {strengths:[],weaknesses:[],opportunities:[],threats:[]}\n' +
+      '40. "pyramid" — hierarchy levels bottom→top {levels:[{label,description?,color?}]}. USE for ANY layered/hierarchical concept — legal systems, Maslow, food chains, org levels. When you WRITE "imagine a pyramid", you MUST add this component.\n' +
+      '41. "concept-map" {central,nodes:[{label,description?,icon?}],color?}\n' +
+      '42. "progress-tracker" {percent,label?,steps:[{label,done?}]}\n' +
+      '43. "metric-card" {value,label,trend:"up"|"down"|"flat",delta?,icon?}\n' +
+      '44. "dashboard-grid" {title?,cards:[{value,label,trend?,delta?,icon?}],cols}\n' +
+      'CHARTS (10):\n' +
+      '45. "bar-chart" {title?,items:[{label,value,color?}],showValues?}\n' +
+      '46. "pie-chart" {title?,segments:[{label,value,color?}],donut?:true,size?,showLegend?}\n' +
+      '47. "gauge" {value,min?,max,label?,colorScheme?,size?}\n' +
+      '48. "funnel" {title?,stages:[{label,value,color?}]}\n' +
+      '49. "leaderboard" {title?,items:[{label,value,highlight?}],medals?:true}\n' +
+      '50. "heatmap" {title?,rowLabels?,colLabels?,cells:[[value]],lowColor?,highColor?}\n' +
+      '51. "venn-diagram" {title?,sets:[{label,size?,color?}],intersections?}\n' +
+      '52. "bullet-chart" {value,target,max,label?,color?}\n' +
+      '53. "sparkline" {values:[],color?,height?,highlightMax?,label?}\n' +
+      '54. "waterfall" {title?,items:[{label,value,isTotal?}],colorUp?,colorDown?}\n' +
+      'COMPARISON (8):\n' +
+      '55. "pros-cons" {prosTitle?,pros:[],consTitle?,cons:[]}\n' +
+      '56. "comparison" {aLabel,bLabel,rows:[{dimension,a,b}]}\n' +
+      '57. "definition-list" {title?,terms:[{term,definition}]}\n' +
+      '58. "memory-box" {title?,rows:[{key,value}]}\n' +
+      '59. "summary-box" {title?,body?,points:[]}\n' +
+      '60. "before-after" {beforeTitle?,beforeBody,afterTitle?,afterBody}\n' +
+      '61. "perspectives" {topic,viewA:{label,points:[]},viewB:{label,points:[]}} — two views for student to consider, NOT classroom debate\n' +
+      '62. "analogy" {concept,analogy,explanation?}\n' +
+      'FLOW (3):\n' +
+      '63. "phase-flow" {phases:[{name,description,emoji?,color}]}\n' +
+      '64. "timeline" {events:[{date,title,description?,icon?}]}\n' +
+      '65. "steps" {title?,steps:[{title?,description,icon?}]}\n' +
+      'CARDS & GRIDS (5):\n' +
+      '66. "icon-grid" {cols,items:[{emoji,name,subtitle?,highlight?}]}\n' +
+      '67. "card-grid" {cols,items:[{emoji?,name,tag?,description?,detail}]}\n' +
+      '68. "gallery" {cols,images:[{url,caption?,alt?}]}\n' +
+      '69. "resource-links" {title?,links:[{label,url,description?,type}]}\n' +
+      '70. "info-card" {icon?, title, body, variant:"default"|"definition"|"reference"|"example"}\n' +
+      'INSTRUCTIONAL (14):\n' +
+      '71. "worked-example" {problem,steps:[],answer,note?}\n' +
+      '72. "scenario" {context,question,debrief}\n' +
+      '73. "prerequisites" {title?,body?,items:[]}\n' +
+      '74. "checklist" {title?,items:[{text,checked?}]}\n' +
+      '75. "common-mistake" {title?,mistake,correct?,explanation?}\n' +
+      '76. "exam-hint" {title?,tips:[],body?}\n' +
+      '77. "real-world" {title?,example,body?}\n' +
+      '78. "study-tip" {title?,tip,method?}\n' +
+      '79. "did-you-know" {fact,icon?,title?,source?}\n' +
+      '80. "story-box" {title?,story,moral?,character?}\n' +
+      '81. "tip-jar" {title?,tips:[],icon?}\n' +
+      '82. "try-it" {title?,instruction,hint?,timeEstimate?}\n' +
+      '83. "word-bank" {title?,words:[{word,hint?}],color?}\n' +
+      '84. "vocab-card" {word,definition,example?,partOfSpeech?,pronunciation?}\n' +
+      'MEDIA (4):\n' +
+      '85. "image-block" {url,alt?,caption?,credit?,maxHeight?}\n' +
+      '86. "video-embed" {url,title?,aspectRatio:"16by9"|"4by3"}\n' +
+      '87. "code-block" {code,language?,filename?}\n' +
+      '88. "html" {html}\n' +
+      'INTERACTIVE (5):\n' +
+      '89. "quiz" {items:[{question,options:[],correct:0,explanation}]}\n' +
+      '90. "flashcards-inline" {cards:[{front,back}],cols}\n' +
+      '91. "reflection-prompt" {title?,questions:[],icon?}\n' +
+      '92. "self-assessment" {question?,lowLabel?,highLabel?}\n' +
+      '93. "next-steps" {title?,steps:[{label,description?,type}]}\n' +
+      'SOLO ENGAGEMENT (8) — animated, visual, & interactive components for personal study:\n' +
+      '94. "flip-card" — click-to-flip term card {front, back} — drill key concepts. Place 1-3 per section right after introducing a new term. Student clicks to self-test.\n' +
+      '95. "progress-ring" — animated SVG ring {percent:0-100, label?, color?, size?} — show mastery/topic coverage. Use after completing a difficult subsection: "You just covered 3 of 4 aerodynamic forces!".\n' +
+      '96. "mind-map" — radial concept map {central:{label}, nodes:[{label,description?,icon?}], title?} — visual summary. Use at END of a major section to show connections. Replace bullet-point summaries.\n' +
+      '97. "process-flow" — horizontal step flow {title?, steps:[{label,description?,icon?}], color?} — arrows connect steps. For procedures, methods, lifecycles. Clearer than phase-flow for sequential processes.\n' +
+      '98. "count-up" — animated stat highlight {value, label?, prefix?, suffix?, icon?, color?} — large number with animated entrance. Use for impressive stats: "over 1,200 known species". 1-2 per guide max.\n' +
+      '99. "typewriter" — animated text reveal {text, speed?:"medium"|"slow"|"fast", label?} — dramatic key insight. Use ONCE per guide for maximum impact. Best after a build-up paragraph. Dark background, white text.\n' +
+      '100. "slider-compare" — side-by-side comparison {leftTitle?, leftContent, rightTitle?, rightContent, leftColor?, rightColor?} — before/after, approach A vs B. For contrasting two states, methods, or time periods.\n' +
+      '101. "hierarchy-tree" — tree diagram {title?, root:{label,icon?}, children:[{label,children?:[...],icon?}]} — MUST include children for 2-4 levels. Example: root:"Aeronautics Act", children:[{label:"CARs"},{label:"Minister Powers"}] — each child can have its own children. For taxonomy, org charts, legal hierarchies. NEVER use with root only.\n\n' +
+      'RETURN FORMAT:\n{"components":[{"type":"paragraph","data":{"text":"..."}},{"type":"heading","data":{...}},{"type":"quiz","data":{"items":[...]}}]}\n\n' +
+      'CRITICAL RULES — VISUAL STUDY GUIDE (balance text with visuals):\n' +
+      '• VISUAL RATIO: 40-50% paragraphs, 50-60% visual/interactive components. This is a RICH, visually engaging study experience.\n' +
+      '• MAXIMUM 3 consecutive paragraphs without a visual component. After 2-3 paragraphs, insert a flip-card, slider-compare, callout, curiosity-hook, myth-buster, or chart.\n' +
+      '• VISUAL METAPHOR MATCHING: When you WRITE a metaphor or analogy in paragraph text, you MUST follow it with the matching visual component. "Imagine a pyramid of laws" → immediately add a pyramid component. "Think of it like a tree" → immediately add a hierarchy-tree. "It works like a chain reaction" → immediately add a process-flow.\n' +
+      '• Generate 25-40 components total for a substantial lesson.\n' +
+      '• LEARNING ARC: Hook (curiosity-hook/myth-buster/count-up) → Reading (paragraph×2-3 maximum, then visual break) → Visualize (pyramid/hierarchy-tree/process-flow/stat-chart — match the metaphor in the text) → Deepen (imagine/expert-voice/visual-metaphor → its visual partner) → Interact (reveal/flip-card/ordered-list/match/fill-blank) → Check (pause-point/quiz) → Reflect (reflection-prompt/self-assessment) → Map (mind-map) → Recap (summary-box/speed-run) → Next (next-steps).\n' +
+      '• Use reveal, ordered-list, match, fill-blank, and flip-card throughout for "think first, then check" interactivity.\n' +
+      '• FLIP-CARD: after introducing a key term, insert a flip-card so the student can self-test. Front=term/question, Back=definition/answer. 1-3 per section.\n' +
+      '• PYRAMID: for ANY layered concept (legal systems, food chains, Maslow hierarchy, organizational levels). When you write "at the top... then... then... at the bottom" — you MUST add a pyramid. levels:[bottomLabel...topLabel] in order.\n' +
+      '• HIERARCHY-TREE: for ANY parent→child classification (taxonomy, org charts, legal hierarchies, concept breakdowns). Root at top, 2-4 levels of children below. NEVER use without children — the whole point is showing the branches.\n' +
+      '• PROGRESS-RING: after a difficult subsection, show topic coverage: "You\'ve now covered X% of this topic." Use at most 2 per guide.\n' +
+      '• MIND-MAP: at the end of each major section, replace bullet-point summaries with a mind-map. Central concept in a colored circle, 4-8 branches around it.\n' +
+      '• PROCESS-FLOW: for any procedural topic (scientific method, workflow, lifecycle, recipe), use process-flow with numbered steps connected by arrows.\n' +
+      '• COUNT-UP: place 1-2 impressive statistics early in the guide. Pair with "did-you-know" for maximum impact.\n' +
+      '• TYPEWRITER: use exactly ONCE per guide for the single most powerful insight. Dark background creates contrast.\n' +
+      '• SLIDER-COMPARE: for before/after, two approaches, two time periods. Left=red tint (before/option A), Right=green tint (after/option B).\n' +
+      '• STAT-CHART: when the source document contains survey data, statistics, or percentages — display them visually.\n' +
+      '• Use spotlight for the single most important point in each major section.\n' +
+      '• Use myth-buster for any widely-held misconceptions.\n' +
+      '• Use perspectives (NOT debate) to present two viewpoints for student consideration.\n' +
+      '• Use ranked-list (NOT leaderboard) to rank things/concepts by metric — never rank people.\n' +
+      '• Use contrast when two concepts are easily confused.\n' +
+      '• Use joke ONLY for light subjects (never law/medicine/safety/compliance). Maximum 1 joke per guide.\n' +
+      '• Use columns-2 for side-by-side comparisons or juxtaposing two related concepts.\n' +
+      '• Use progress-tracker to show progress through a process described in the content — NOT the student course progress.\n' +
+      '• Use self-assessment for student reflection only (not scored) — ask "how confident are you?"\n' +
+      '• For data: prefer charts over raw data-table.\n' +
+      '• End with summary-box OR speed-run → self-assessment → quiz → next-steps.\n' +
+      '• 5-8 quiz questions (correct=0-based). Include explanation on every question.\n' +
+      '• For kids: use character-guide, story-box, star-award, encouragement, joke.\n' +
+      '• For professionals: use code-block, perspectives, waterfall, expert-voice, concept-map, ranked-list.\n\n' +
       'Document:\n"""\n' + text + '\n"""\n\nSTART WITH: {"components":';
 
     var fullResponse = '';
@@ -2697,7 +3194,7 @@ function generateHtmlFromPdf() {
         _htmlStreamState = null;
         // Final preview refresh
         updateHtmlPreview();
-        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
         var raw = fullResponse.trim();
         raw = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
         // Try component-based format: { "components": [...] }
@@ -2728,7 +3225,7 @@ function generateHtmlFromPdf() {
           html = html.substring(startIdx, endIdx + 1);
         }
         if (html.length < 20) {
-          tool.notify('AI generated too little content. Try again with more PDFs.', 'warning');
+          tool.notify('Generated too little content. Try again with more PDFs.', 'warning');
           return;
         }
         editingHtmlCode = html;
@@ -2750,8 +3247,8 @@ function generateHtmlFromPdf() {
         tool.notify(msg, 'success');
       },
       onError: function(err) {
-        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 AI Generate from PDFs'; }
-        tool.notify('AI generation failed: ' + err, 'error');
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
+        tool.notify('Generation failed: ' + err, 'error');
       }
     });
   }
@@ -2764,7 +3261,7 @@ function renderFlashcardsEditorList() {
   if (count) count.textContent = editingFlashcards.length + ' card(s)';
   if (!list) return;
   if (editingFlashcards.length === 0) {
-    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No flashcards yet. Click "AI Generate" to create them from your PDFs, or add manually.</div>';
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No flashcards yet. Click "Generate" to create them from your PDFs, or add manually.</div>';
   } else {
     list.innerHTML = editingFlashcards.map(function(card, idx) {
       return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">🃏 ' + esc(card.front || card.q || '') + '</div><div class="quiz-editor-item-meta">💡 ' + esc(card.back || card.a || '') + '</div></div><div class="quiz-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-fc="' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-fc="' + idx + '">🗑</button></div></div>';
@@ -2857,7 +3354,7 @@ function generateFlashcardsFromPdf() {
           var _fcStreamState = { tokenCount: 0 };
           // Update status during generation
           var statusEl = el('flashcards-status');
-          if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '⏳ AI generating flashcards...'; }
+          if (statusEl) { statusEl.style.display = ''; statusEl.textContent = '⏳ Generating flashcards...'; }
           tool.requestAIStream(prompt, null, {
             onToken: function(t) {
               fullResponse += t;
@@ -2870,7 +3367,7 @@ function generateFlashcardsFromPdf() {
             },
             onComplete: function() {
               if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
-              if (genBtn2 && genBtn2 !== genBtn) { genBtn2.disabled = false; genBtn2.textContent = '🃏 AI Generate Flashcards from PDFs'; }
+              if (genBtn2 && genBtn2 !== genBtn) { genBtn2.disabled = false; genBtn2.textContent = '🃏 Generate Flashcards from PDFs'; }
               if (statusEl) statusEl.style.display = 'none';
               try {
                 var json = fullResponse.trim().replace(/^```[\\s\\S]*?\n?/i, '').replace(/\n?```\s*$/i, '');
@@ -2888,7 +3385,7 @@ function generateFlashcardsFromPdf() {
             },
             onError: function(err) {
               if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
-              tool.notify('AI generation failed: ' + err, 'error');
+              tool.notify('Generation failed: ' + err, 'error');
             }
           });
         }
@@ -2969,11 +3466,14 @@ function updateHtmlPreview() {
     + '.sa-star:hover{filter:none!important;opacity:0.8!important}'
     /* Fill-blank */
     + 'details summary::-webkit-details-marker{display:none}'
+    /* Spotlight animation */
+    + '@keyframes sgSpotlight{0%,100%{box-shadow:0 0 10px rgba(79,70,229,0.15);transform:scale(1)}50%{box-shadow:0 0 25px rgba(79,70,229,0.35);transform:scale(1.01)}}'
+    + '.sg-spotlight{animation:sgSpotlight 2.5s ease-in-out infinite}'
     + '@media(max-width:600px){.sg-grid-2{grid-template-columns:1fr}.sg-hero{padding:20px 16px}.sg-hero h1{font-size:20px}}'
     + '</style>';
 
   if (!code || code.length < 10) {
-    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center;padding:20px"><div>🤖<br><br>Click <strong>AI Generate from PDFs</strong> above to create a study guide.<br><small>The AI will compose a rich lesson using 75 visual components — Grade 1 to professional.</small></div></body>';
+    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center;padding:20px"><div>🤖<br><br>Click <strong>Generate from PDFs</strong> above to create a study guide.<br><small>Generates a rich lesson using 93 visual components — Grade 1 to professional.</small></div></body>';
   } else {
     iframe.srcdoc = previewCss + code;
   }

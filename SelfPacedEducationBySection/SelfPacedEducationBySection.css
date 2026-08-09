@@ -842,3 +842,48 @@ body.dark .sg-quiz-section .sg-q-feedback {
   background: linear-gradient(135deg, #064e3b, #065f46);
   border-color: #059669;
 }
+
+/* ── Spotlight animation ── */
+@keyframes sgSpotlight {
+  0%, 100% { box-shadow: 0 0 10px rgba(79,70,229,0.15); transform: scale(1); }
+  50% { box-shadow: 0 0 25px rgba(79,70,229,0.35); transform: scale(1.01); }
+}
+.sg-spotlight { animation: sgSpotlight 2.5s ease-in-out infinite; }
+
+/* ── Flip Card (solo-study key concept drill) ── */
+.sg-flip-card { transition: transform 0.6s cubic-bezier(0.4,0,0.2,1); transform-style: preserve-3d; }
+.sg-flip-card:hover { filter: brightness(0.97); }
+
+/* ── Process Flow step hover ── */
+.process-flow-step:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.08); transition: all 0.2s; }
+
+/* ── Mind Map node hover ── */
+.mind-map-node { transition: transform 0.2s, box-shadow 0.2s; }
+.mind-map-node:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+
+/* ── Hierarchy Tree node hover ── */
+.hierarchy-node:hover { filter: brightness(0.96); transform: scale(1.03); transition: all 0.15s; }
+
+/* ── Slider Compare panel hover ── */
+.slider-compare-panel { transition: transform 0.2s; }
+.slider-compare-panel:hover { transform: scale(1.01); }
+
+/* ── Dark mode: flip-card ── */
+body.dark .sg-flip-front { background: #1e293b; border-color: #3730a3; }
+body.dark .sg-flip-front div { color: #c7d2fe; }
+body.dark .sg-flip-front div:first-child { color: #818cf8; }
+body.dark .sg-flip-back { background: #0f2b1a; border-color: #166534; }
+body.dark .sg-flip-back div { color: #d1fae5; }
+body.dark .sg-flip-back div:first-child { color: #34d399; }
+
+/* ── Dark mode: typewriter ── */
+body.dark .typewriter-box { background: #0f172a; }
+
+/* ── Dark mode: count-up ── */
+body.dark .count-up-box { background: rgba(79,70,229,0.08); }
+
+/* ── Dark mode: mind-map / process-flow / hierarchy-tree ── */
+body.dark .mind-map-node,
+body.dark .process-flow-step,
+body.dark .hierarchy-node { background: #1e293b; border-color: #334155; }
+body.dark .slider-compare-panel { background: #1e293b; }
