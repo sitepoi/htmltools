@@ -111,10 +111,10 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0">';
       h += '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px"><h3 style="color:#065f46;margin-bottom:8px">✅ '+esc(d.prosTitle||'Pros')+'</h3><ul style="list-style:none;padding:0">';
-      for (var i=0;i<(d.pros||[]).length;i++) h += '<li style="padding:4px 0;color:#065f46">➕ '+esc(d.pros[i])+'</li>';
+      for (var i=0;i<(d.pros||[]).length;i++) h += '<li style="padding:4px 0;color:#475569">➕ '+esc(d.pros[i])+'</li>';
       h += '</ul></div>';
       h += '<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:16px"><h3 style="color:#991b1b;margin-bottom:8px">❌ '+esc(d.consTitle||'Cons')+'</h3><ul style="list-style:none;padding:0">';
-      for (var j=0;j<(d.cons||[]).length;j++) h += '<li style="padding:4px 0;color:#991b1b">➖ '+esc(d.cons[j])+'</li>';
+      for (var j=0;j<(d.cons||[]).length;j++) h += '<li style="padding:4px 0;color:#475569">➖ '+esc(d.cons[j])+'</li>';
       h += '</ul></div></div>';
       return h;
     }
@@ -413,7 +413,7 @@ var STUDY_COMPONENTS = {
         for (var i=0;i<d.steps.length;i++) h += '<li style="margin-bottom:6px">'+esc(d.steps[i])+'</li>';
         h += '</ol></div>';
       }
-      h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px"><strong style="color:#065f46">✅ Answer:</strong> <span style="color:#047857">'+esc(d.answer||'')+'</span></div>';
+      h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px"><strong style="color:#065f46">✅ Answer:</strong> <span style="color:#1e293b">'+esc(d.answer||'')+'</span></div>';
       if (d.note) h += '<div style="margin-top:12px;font-size:13px;color:#94a3b8">💡 '+esc(d.note)+'</div>';
       return h+'</div></div>';
     }
@@ -444,7 +444,7 @@ var STUDY_COMPONENTS = {
       if (d.body) h += '<p style="color:#64748b;margin:0 0 12px">'+esc(d.body)+'</p>';
       if (d.points && d.points.length) {
         h += '<ul style="margin:0;padding-left:20px">';
-        for (var i=0;i<d.points.length;i++) h += '<li style="color:#b45309;margin-bottom:6px">'+esc(d.points[i])+'</li>';
+        for (var i=0;i<d.points.length;i++) h += '<li style="color:#475569;margin-bottom:6px">'+esc(d.points[i])+'</li>';
         h += '</ul>';
       }
       return h+'</div>';
@@ -603,7 +603,7 @@ var STUDY_COMPONENTS = {
       h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:26px">'+(d.icon||'🤔')+'</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Pause & Reflect')+'</strong></div>';
       if (d.questions && d.questions.length) {
         h += '<ol style="margin:0;padding-left:20px">';
-        for (var i=0;i<d.questions.length;i++) h += '<li style="color:#b45309;margin-bottom:8px;font-weight:500">'+esc(typeof d.questions[i]==='string'?d.questions[i]:d.questions[i].text||d.questions[i])+'</li>';
+        for (var i=0;i<d.questions.length;i++) h += '<li style="color:#475569;margin-bottom:8px;font-weight:500">'+esc(typeof d.questions[i]==='string'?d.questions[i]:d.questions[i].text||d.questions[i])+'</li>';
         h += '</ol>';
       }
       if (d.body) h += '<p style="color:#78716c;margin:10px 0 0;font-size:13px">'+esc(d.body)+'</p>';
@@ -635,7 +635,7 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       var h = '<div style="border-left:4px solid #dc2626;background:linear-gradient(135deg,#fef2f2,#fee2e2);padding:16px 20px;margin:16px 0;border-radius:0 10px 10px 0">';
       h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">⚠️</span><strong style="color:#991b1b">'+esc(d.title||'Common Mistake')+'</strong></div>';
-      h += '<p style="color:#7f1d1d;margin:0 0 8px"><strong>❌ Wrong:</strong> '+esc(d.mistake||'')+'</p>';
+      h += '<p style="color:#475569;margin:0 0 8px"><strong>❌ Wrong:</strong> '+esc(d.mistake||'')+'</p>';
       if (d.correct) h += '<p style="color:#065f46;margin:0 0 8px"><strong>✅ Correct:</strong> '+esc(d.correct)+'</p>';
       if (d.explanation) h += '<p style="color:#475569;margin:0;font-size:13px">💡 '+esc(d.explanation)+'</p>';
       return h+'</div>';
@@ -650,7 +650,7 @@ var STUDY_COMPONENTS = {
       if (d.body) h += '<p style="color:#475569;margin:0 0 10px;font-size:14px">'+esc(d.body)+'</p>';
       if (d.tips && d.tips.length) {
         h += '<ul style="margin:0;padding-left:18px">';
-        for (var i=0;i<d.tips.length;i++) h += '<li style="color:#5b21b6;margin-bottom:4px">'+esc(d.tips[i])+'</li>';
+        for (var i=0;i<d.tips.length;i++) h += '<li style="color:#475569;margin-bottom:4px">'+esc(d.tips[i])+'</li>';
         h += '</ul>';
       }
       return h+'</div>';
@@ -662,7 +662,7 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       var h = '<div style="border:2px solid #059669;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:10px;padding:18px 20px;margin:16px 0">';
       h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">'+(d.icon||'🌍')+'</span><strong style="color:#065f46">'+esc(d.title||'Real-World Application')+'</strong></div>';
-      h += '<p style="color:#064e3b;margin:0 0 8px;font-weight:500">'+esc(d.example||d.body||'')+'</p>';
+      h += '<p style="color:#475569;margin:0 0 8px;font-weight:500">'+esc(d.example||d.body||'')+'</p>';
       if (d.body && d.example) h += '<p style="color:#475569;margin:0;font-size:13px">'+esc(d.body)+'</p>';
       return h+'</div>';
     }
@@ -673,7 +673,7 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       var h = '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:10px;padding:18px 20px;margin:16px 0">';
       h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">📚</span><strong style="color:#92400e">'+esc(d.title||'Study Smart')+'</strong></div>';
-      h += '<p style="color:#78350f;margin:0">'+esc(d.tip||d.body||'')+'</p>';
+      h += '<p style="color:#475569;margin:0">'+esc(d.tip||d.body||'')+'</p>';
       if (d.method) h += '<div style="margin-top:10px;padding:10px 14px;background:#fff;border-radius:6px;font-size:13px"><strong style="color:#4f46e5">🧠 '+esc(d.method)+'</strong></div>';
       return h+'</div>';
     }
@@ -794,7 +794,7 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       return '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fef9e7);border-radius:12px;padding:16px 20px;margin:16px 0">'+
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:22px">'+(d.icon||'💡')+'</span><strong style="color:#92400e;font-size:15px">'+esc(d.title||'Did You Know?')+'</strong></div>'+
-        '<p style="color:#78350f;margin:0;font-size:15px;line-height:1.7">'+esc(d.fact||d.body||'')+'</p>'+
+        '<p style="color:#475569;margin:0;font-size:15px;line-height:1.7">'+esc(d.fact||d.body||'')+'</p>'+
         (d.source?'<div style="font-size:11px;color:#a8a29e;margin-top:6px">📖 '+esc(d.source)+'</div>':'')+
         '</div>';
     }
@@ -807,7 +807,7 @@ var STUDY_COMPONENTS = {
       h += '<div style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:10px 20px;color:#fff;font-weight:700;font-size:14px">📖 '+esc(d.title||'Story Time')+(d.character?' — with '+esc(d.character):'')+'</div>';
       h += '<div style="padding:18px 20px">';
       h += '<p style="color:#475569;margin:0;line-height:1.8;font-size:15px">'+esc(d.story||d.body||'')+'</p>';
-      if (d.moral) h += '<div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #c084fc"><strong style="color:#7c3aed">🌟 Moral:</strong> <span style="color:#6b21a8">'+esc(d.moral)+'</span></div>';
+      if (d.moral) h += '<div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #c084fc"><strong style="color:#7c3aed">🌟 Moral:</strong> <span style="color:#475569">'+esc(d.moral)+'</span></div>';
       return h+'</div></div>';
     }
   },
@@ -821,7 +821,7 @@ var STUDY_COMPONENTS = {
         var tip = d.tips[i];
         h += '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #fde68a">';
         h += '<span style="color:#f59e0b;font-weight:700;flex-shrink:0">'+(i+1)+'.</span>';
-        h += '<span style="color:#78350f">'+esc(typeof tip==='string'?tip:tip.text||tip)+'</span></div>';
+        h += '<span style="color:#475569">'+esc(typeof tip==='string'?tip:tip.text||tip)+'</span></div>';
       }
       return h+'</div>';
     }
@@ -862,10 +862,10 @@ var STUDY_COMPONENTS = {
       var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">';
       h += '<div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:10px;padding:16px">';
       h += '<div style="font-weight:700;color:#991b1b;margin-bottom:8px">❌ '+esc(d.beforeTitle||'Before')+'</div>';
-      h += '<p style="color:#7f1d1d;margin:0;font-size:14px">'+esc(d.beforeBody||d.before||'')+'</p></div>';
+      h += '<p style="color:#475569;margin:0;font-size:14px">'+esc(d.beforeBody||d.before||'')+'</p></div>';
       h += '<div style="background:#ecfdf5;border:2px solid #6ee7b7;border-radius:10px;padding:16px">';
       h += '<div style="font-weight:700;color:#065f46;margin-bottom:8px">✅ '+esc(d.afterTitle||'After')+'</div>';
-      h += '<p style="color:#064e3b;margin:0;font-size:14px">'+esc(d.afterBody||d.after||'')+'</p></div>';
+      h += '<p style="color:#475569;margin:0;font-size:14px">'+esc(d.afterBody||d.after||'')+'</p></div>';
       return h+'</div>';
     }
   },
@@ -1430,8 +1430,8 @@ var STUDY_COMPONENTS = {
       return '<div style="border:2px solid #f97316;background:linear-gradient(135deg,#fff7ed,#fffbeb);border-radius:12px;padding:18px 22px;margin:18px 0">'+
         '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">'+(d.icon||'💥')+'</span><strong style="color:#c2410c;font-size:16px">'+esc(d.title||'Myth Buster')+'</strong></div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+
-        '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px"><strong style="color:#991b1b">❌ Myth:</strong><p style="color:#7f1d1d;margin:4px 0 0;font-size:14px">'+esc(d.myth||'')+'</p></div>'+
-        '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px"><strong style="color:#065f46">✅ Reality:</strong><p style="color:#064e3b;margin:4px 0 0;font-size:14px">'+esc(d.reality||'')+'</p></div>'+
+        '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px"><strong style="color:#991b1b">❌ Myth:</strong><p style="color:#475569;margin:4px 0 0;font-size:14px">'+esc(d.myth||'')+'</p></div>'+
+        '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px"><strong style="color:#065f46">✅ Reality:</strong><p style="color:#475569;margin:4px 0 0;font-size:14px">'+esc(d.reality||'')+'</p></div>'+
         '</div>'+
         (d.explanation?'<p style="color:#78716c;margin:10px 0 0;font-size:13px">💡 '+esc(d.explanation)+'</p>':'')+
         '</div>';
@@ -1457,7 +1457,7 @@ var STUDY_COMPONENTS = {
       return '<div style="border:2px solid #8b5cf6;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:6px">'+(d.icon||'💎')+'</div>'+
         '<div style="font-weight:700;color:#6d28d9;font-size:14px;margin-bottom:8px">'+esc(d.title||'Key Insight')+'</div>'+
-        '<p style="color:#5b21b6;font-size:17px;font-weight:600;margin:0;line-height:1.7">'+esc(d.insight||d.body||'')+'</p>'+
+        '<p style="color:#475569;font-size:17px;font-weight:600;margin:0;line-height:1.7">'+esc(d.insight||d.body||'')+'</p>'++
         '</div>';
     }
   },
@@ -1468,7 +1468,7 @@ var STUDY_COMPONENTS = {
       return '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:12px">'+
         '<span style="font-size:32px;flex-shrink:0">'+(d.icon||'👍')+'</span>'+
         '<div><div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:4px">'+esc(d.title||'Rule of Thumb')+'</div>'+
-        '<p style="color:#78350f;margin:0;font-size:15px;font-weight:600">'+esc(d.rule||d.body||'')+'</p>'+
+        '<p style="color:#475569;margin:0;font-size:15px;font-weight:600">'+esc(d.rule||d.body||'')+'</p>'+
         (d.context?'<p style="color:#a8a29e;margin:4px 0 0;font-size:12px">'+esc(d.context)+'</p>':'')+
         '</div></div>';
     }
@@ -1503,7 +1503,7 @@ var STUDY_COMPONENTS = {
       h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:24px">'+(d.icon||'🛑')+'</span><strong style="color:#92400e;font-size:16px">'+esc(d.title||'Pause & Check Yourself')+'</strong></div>';
       h += '<p style="color:#78716c;margin:0 0 10px;font-size:13px">Before continuing, make sure you can answer these:</p>';
       h += '<ol style="margin:0;padding-left:20px">';
-      for (var i=0;i<(d.checks||d.items||[]).length;i++) h += '<li style="color:#b45309;margin-bottom:6px"><input type="checkbox" style="margin-right:8px;accent-color:#f59e0b">'+esc(typeof d.checks[i]==='string'?d.checks[i]:d.checks[i].text||d.checks[i])+'</li>';
+      for (var i=0;i<(d.checks||d.items||[]).length;i++) h += '<li style="color:#475569;margin-bottom:6px"><input type="checkbox" style="margin-right:8px;accent-color:#f59e0b">'+esc(typeof d.checks[i]==='string'?d.checks[i]:d.checks[i].text||d.checks[i])+'</li>';
       h += '</ol></div>';
       return h;
     }
@@ -1514,8 +1514,8 @@ var STUDY_COMPONENTS = {
     render: function(d) {
       return '<div style="border:2px dashed #a78bfa;background:linear-gradient(135deg,#faf5ff,#fefce8);border-radius:10px;padding:14px 20px;margin:16px 0;text-align:center">'+
         '<div style="font-size:28px;margin-bottom:4px">'+(d.icon||'😄')+'</div>'+
-        '<p style="color:#6d28d9;font-style:italic;margin:0;font-size:15px">'+esc(d.joke||d.body||'')+'</p>'+
-        (d.punchline?'<p style="color:#7c3aed;font-weight:700;margin:4px 0 0;font-size:14px">'+esc(d.punchline)+'</p>':'')+
+        '<p style="color:#475569;font-style:italic;margin:0;font-size:15px">'+esc(d.joke||d.body||'')+'</p>'+
+        (d.punchline?'<p style="color:#475569;font-weight:700;margin:4px 0 0;font-size:14px">'+esc(d.punchline)+'</p>':'')+
         '</div>';
     }
   },
@@ -3154,7 +3154,8 @@ function generateHtmlFromPdf() {
       '• End with summary-box OR speed-run → self-assessment → quiz → next-steps.\n' +
       '• 5-8 quiz questions (correct=0-based). Include explanation on every question.\n' +
       '• For kids: use character-guide, story-box, star-award, encouragement, joke.\n' +
-      '• For professionals: use code-block, perspectives, waterfall, expert-voice, concept-map, ranked-list.\n\n' +
+      '• For professionals: use code-block, perspectives, waterfall, expert-voice, concept-map, ranked-list.\n' +
+      '• COLOR RULES: headings/labels on colored backgrounds keep their semantic color (red for danger, green for correct). Body text on colored backgrounds always uses dark neutral (#475569 or #1e293b) — never same-hue text on same-hue background.\n\n' +
       'Document:\n"""\n' + text + '\n"""\n\nSTART WITH: {"components":';
 
     var fullResponse = '';
@@ -3473,7 +3474,7 @@ function updateHtmlPreview() {
     + '</style>';
 
   if (!code || code.length < 10) {
-    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center;padding:20px"><div>🤖<br><br>Click <strong>Generate from PDFs</strong> above to create a study guide.<br><small>Generates a rich lesson using 93 visual components — Grade 1 to professional.</small></div></body>';
+    iframe.srcdoc = previewCss + '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center;padding:20px"><div>🤖<br><br>Click <strong>Generate from PDFs</strong> above to create a study guide.<br><small>Generates a rich lesson using 101 visual components — Grade 1 to professional.</small></div></body>';
   } else {
     iframe.srcdoc = previewCss + code;
   }
