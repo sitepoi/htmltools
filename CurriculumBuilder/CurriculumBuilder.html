@@ -63,11 +63,13 @@
   <!-- LESSON EDITOR PANEL -->
   <div class="lesson-editor-panel" id="lesson-editor-panel" style="display:none">
     <h4 class="lesson-editor-heading" id="lesson-editor-heading">Add Lesson</h4>
+    <div class="visibility-toggle-bar" id="visibility-toggle-bar" style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:6px 0;margin-bottom:8px;border-bottom:1px solid var(--border)"></div>
     <div class="lesson-tabs">
       <button class="lesson-tab active" data-lesson-tab="info">📋 Main Info</button>
       <button class="lesson-tab" data-lesson-tab="videos">🎬 Videos</button>
       <button class="lesson-tab" data-lesson-tab="documents">📄 Documents</button>
-      <button class="lesson-tab" data-lesson-tab="studyHtml">🌐 Study HTML</button>
+      <button class="lesson-tab" data-lesson-tab="studyHtml">🌐 Study Content</button>
+      <button class="lesson-tab" data-lesson-tab="presentation">🎞️ Presentation</button>
       <button class="lesson-tab" data-lesson-tab="flashcards">🃏 Flashcards</button>
       <button class="lesson-tab" data-lesson-tab="content">📝 Content</button>
       <button class="lesson-tab" data-lesson-tab="questions">❓ Questions</button>
@@ -146,7 +148,7 @@
         <span class="form-hint">Answer keys for worksheets. Shown after the worksheet step.</span>
       </div>
       <div class="form-group">
-        <label class="form-label">🌐 HTML Documents</label>
+        <label class="form-label">🌐 Web Documents</label>
         <div class="managed-list-header">
           <span id="pdf-count-htmlDoc">0 file(s)</span>
           <button type="button" class="btn btn-sm btn-primary" data-add-pdf="htmlDoc">+ Add</button>
@@ -161,15 +163,22 @@
         <button class="study-html-tab active" data-html-tab="preview">👁️ Preview</button>
       </div>
       <div class="study-html-panel" data-html-panel="code">
-        <textarea class="form-input form-textarea" id="edit-html-code-v2" placeholder="<h2>Study Guide</h2><p>Paste or generate HTML content here...</p>" style="min-height:350px;font-family:monospace;font-size:13px;resize:vertical"></textarea>
+        <textarea class="form-input form-textarea" id="edit-html-code-v2" placeholder="<h2>Study Guide</h2><p>Paste or generate study content here...</p>" style="min-height:350px;font-family:monospace;font-size:13px;resize:vertical"></textarea>
       </div>
       <div class="study-html-panel active" data-html-panel="preview">
         <div class="study-html-preview-toolbar">
           <button type="button" class="btn btn-outline btn-sm btn-generate-html" id="btn-generate-html-from-pdf-v2">🤖 Generate from PDFs</button>
           <span id="generate-html-info-v2" style="display:none;font-size:12px;color:var(--text-muted);padding:4px 0">📭 Add PDFs first.</span>
         </div>
-        <iframe class="study-html-preview-iframe" id="study-html-preview-iframe" sandbox="allow-scripts allow-same-origin" title="HTML Preview"></iframe>
+        <iframe class="study-html-preview-iframe" id="study-html-preview-iframe" sandbox="allow-scripts allow-same-origin allow-modals" title="Content Preview"></iframe>
       </div>
+    </div>
+    <div class="lesson-tab-panel" data-lesson-panel="presentation">
+      <div class="study-html-preview-toolbar">
+        <button type="button" class="btn btn-outline btn-sm" id="btn-generate-presentation">🎞️ Generate Presentation from PDFs</button>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:8px">Creates slide-based HTML presentation · Exportable to PDF</span>
+      </div>
+      <iframe class="study-html-preview-iframe" id="pres-preview-iframe" sandbox="allow-scripts allow-same-origin allow-modals" title="Presentation Preview"></iframe>
     </div>
     <div class="lesson-tab-panel" data-lesson-panel="flashcards">
       <div class="form-group" style="text-align:center;padding:4px 0">

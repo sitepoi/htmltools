@@ -27,6 +27,8 @@ var editingHiddenDocUrls = [];  // URLs hidden from student view
 var editingFlashcards = [];     // Flashcards (generated from PDFs)
 var editingHtmlCode = '';       // Raw HTML code (not URL — embedded directly)
 var editingStudyHtmlData = null;   // JSON data: { components: [...] }
+var editingPresentationHtml = '';  // AI-generated presentation HTML (slides)
+var editingHiddenSections = [];    // Content sections hidden from students
 var editingQuizQuestionIdx = null;
 var editingQuizQuestionSetIdx = null;
 var editingSourceLinkIdx = null;
@@ -39,7 +41,7 @@ var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 
 /* ═══════════════════════════════════════════
-   STUDY HTML COMPONENTS — Rich Block Library (101 block types)
+   STUDY CONTENT COMPONENTS — Rich Block Library (101 block types)
    System composes them freely: {"components":[{type,data},...]}
    ═══════════════════════════════════════════ */
 var STUDY_COMPONENTS = {
@@ -554,31 +556,105 @@ var STUDY_COMPONENTS = {
       return h+'</div>';
     }
   },
-  // ── 33. flashcards-inline ── click-to-flip CSS cards
+  // ── 33. flashcards-inline ── click-to-flip CSS cards (ENHANCED — rich visuals, categories, difficulty, mastered toggle)
   'flashcards-inline': {
-    desc: 'Click-to-flip flashcards embedded in content. cards:[{front, back}], cols:2|3.',
+    desc: 'Click-to-flip flashcards. cards:[{front, back, category?, difficulty?, type?, hint?, imageUrl?}], cols:2|3. Supports rich HTML.',
     render: function(d) {
       var cols = { '2':'1fr 1fr','3':'1fr 1fr 1fr' };
       var cards = d.cards||d.items||[];
       if (!cards.length) return '';
-      var h = '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['2'])+';gap:14px;margin:16px 0">';
-      for (var i=0;i<cards.length;i++) {
-        var cid = 'fc-inline-'+Date.now()+'-'+i;
-        var card = cards[i];
-        h += '<div class="fc-card-wrapper">';
-        h += '<input type="checkbox" class="fc-flip-check" id="'+cid+'" style="display:none">';
-        h += '<label class="fc-card-label" for="'+cid+'" style="display:block;cursor:pointer;perspective:600px;height:200px">';
-        h += '<div class="fc-card-inner" style="position:relative;width:100%;height:100%;transition:transform 0.5s;transform-style:preserve-3d">';
-        h += '<div class="fc-front" style="position:absolute;width:100%;height:100%;backface-visibility:hidden;background:linear-gradient(135deg,#eef2ff,#f0f4ff);border:2px solid #818cf8;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center">';
-        h += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">📖 TERM</div>';
-        h += '<div style="font-weight:700;color:#3730a3;font-size:15px">'+esc(card.front||card.q||card.term||'')+'</div>';
-        h += '<div style="font-size:10px;color:#94a3b8;margin-top:8px">👆 Click to reveal</div>';
+      var catColors = [
+        { bg:'#eef2ff', border:'#818cf8', text:'#4f46e5', dot:'#4f46e5' },
+        { bg:'#ecfdf5', border:'#6ee7b7', text:'#059669', dot:'#059669' },
+        { bg:'#fef3c7', border:'#fcd34d', text:'#d97706', dot:'#d97706' },
+        { bg:'#fce7f3', border:'#f9a8d4', text:'#db2777', dot:'#db2777' },
+        { bg:'#f0fdf4', border:'#86efac', text:'#16a34a', dot:'#16a34a' },
+        { bg:'#fef2f2', border:'#fca5a5', text:'#dc2626', dot:'#dc2626' },
+        { bg:'#f5f3ff', border:'#c4b5fd', text:'#7c3aed', dot:'#7c3aed' },
+        { bg:'#ecfeff', border:'#67e8f9', text:'#0891b2', dot:'#0891b2' }
+      ];
+      var diffBadges = { easy:'🟢 Easy', medium:'🟡 Medium', hard:'🔴 Hard' };
+      var diffDots = { easy:'#059669', medium:'#d97706', hard:'#dc2626' };
+      var typeIcons = { term:'📖', question:'❓', code:'💻', image:'🖼️', concept:'💡' };
+      var typeLabels = { term:'TERM', question:'QUESTION', code:'CODE', image:'VISUAL', concept:'CONCEPT' };
+      var uniqueId = Date.now();
+      var h = '<div class="enhanced-fc-section" style="margin:20px 0">';
+      h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">';
+      h += '<span style="font-weight:700;color:#1e293b;font-size:15px">🃏 '+esc(d.title||'Flashcards')+'</span>';
+      h += '<span style="font-size:12px;color:#94a3b8;background:#f1f5f9;padding:4px 12px;border-radius:20px;font-weight:600">'+cards.length+' card'+(cards.length!==1?'s':'')+'</span>';
+      h += '</div>';
+      var cats = {};
+      for (var ci=0;ci<cards.length;ci++) { var cat=cards[ci].category||''; if(cat) cats[cat]=(cats[cat]||0)+1; }
+      var catKeys = Object.keys(cats);
+      if (catKeys.length>0) {
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">';
+        h += '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;background:#4f46e5;color:#fff">📋 All ('+cards.length+')</span>';
+        for (var ck=0;ck<catKeys.length;ck++) {
+          var cc = catColors[ck%catColors.length];
+          h += '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;background:'+cc.bg+';color:'+cc.text+';border:1px solid '+cc.border+'">'+esc(catKeys[ck])+' ('+cats[catKeys[ck]]+')</span>';
+        }
         h += '</div>';
-        h += '<div class="fc-back" style="position:absolute;width:100%;height:100%;backface-visibility:hidden;background:linear-gradient(135deg,#d1fae5,#ecfdf5);border:2px solid #6ee7b7;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;text-align:center;transform:rotateY(180deg)">';
-        h += '<div style="font-size:11px;color:#059669;margin-bottom:6px">💡 DEFINITION</div>';
-        h += '<div style="font-weight:600;color:#065f46;font-size:14px;line-height:1.5">'+esc(card.back||card.a||card.definition||'')+'</div>';
-        h += '</div></div></label></div>';
       }
+      h += '<div style="display:grid;grid-template-columns:'+(cols[d.cols]||cols['2'])+';gap:16px">';
+      for (var i=0;i<cards.length;i++) {
+        var cid = 'efc-'+uniqueId+'-'+i;
+        var card = cards[i];
+        var diff = card.difficulty||'medium';
+        var type = card.type||'term';
+        var catIdx = card.category?catKeys.indexOf(card.category):-1;
+        var cc2 = catColors[catIdx>=0?catIdx%catColors.length:i%catColors.length];
+        var accentColor = diffDots[diff]||cc2.dot;
+        var icon = typeIcons[type]||'📖';
+        var typeLabel = typeLabels[type]||'TERM';
+        var frontContent = card.front||card.q||card.term||'';
+        var backContent = card.back||card.a||card.definition||'';
+        var isRich = /<[a-z][\s\S]*>/i.test(frontContent+backContent);
+        h += '<div style="perspective:800px">';
+        var mid = 'efc-mastered-'+uniqueId+'-'+i;
+        h += '<input type="checkbox" class="efc-mastered-check" id="'+mid+'" style="position:absolute;opacity:0;pointer-events:none">';
+        h += '<input type="checkbox" class="efc-flip-check" id="'+cid+'" style="position:absolute;opacity:0;pointer-events:none">';
+        h += '<label class="efc-card-label" for="'+cid+'" style="display:block;cursor:pointer">';
+        h += '<div class="efc-card-inner" style="position:relative;width:100%;min-height:220px;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d">';
+        h += '<div class="efc-front" style="position:absolute;inset:0;backface-visibility:hidden;background:linear-gradient(145deg,'+cc2.bg+',#fff);border:2px solid '+accentColor+'33;border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,0.04)">';
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">';
+        h += '<span style="display:inline-flex;align-items:center;gap:3px;background:'+accentColor+';color:#fff;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.3px">'+icon+' '+typeLabel+'</span>';
+        if (card.category) h += '<span style="display:inline-flex;align-items:center;gap:3px;background:'+cc2.bg+';color:'+cc2.text+';border:1px solid '+cc2.border+';padding:2px 10px;border-radius:12px;font-size:10px;font-weight:600">'+esc(card.category)+'</span>';
+        h += '<span style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:600">'+(i+1)+'/'+cards.length+'</span>';
+        h += '</div>';
+        h += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:10px"><span style="width:8px;height:8px;border-radius:50%;background:'+accentColor+';display:inline-block"></span><span style="font-size:10px;color:'+accentColor+';font-weight:600">'+esc(diffBadges[diff]||diff)+'</span></div>';
+        if (card.imageUrl) h += '<div style="margin-bottom:10px;text-align:center"><img src="'+esc(card.imageUrl)+'" style="max-width:100%;max-height:80px;border-radius:8px;object-fit:contain" alt=""></div>';
+        h += '<div class="efc-content" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:6px 2px;text-align:center;font-weight:700;color:#1e293b;font-size:15px;line-height:1.5;min-height:0">';
+        h += isRich?frontContent:('<p style="margin:auto 0">'+esc(frontContent)+'</p>');
+        h += '</div>';
+        if (card.hint) h += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#94a3b8;font-style:italic">💭 '+esc(card.hint)+'</div>';
+        h += '<div style="text-align:center;margin-top:10px;font-size:10px;color:#94a3b8;opacity:0.7">👆 Click to flip</div>';
+        h += '</div>';
+        h += '<div class="efc-back" style="position:absolute;inset:0;backface-visibility:hidden;background:linear-gradient(145deg,#ecfdf5,#f0fdf4);border:2px solid #05966933;border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,0.04);transform:rotateY(180deg)">';
+        h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">';
+        h += '<span style="display:inline-flex;align-items:center;gap:3px;background:#059669;color:#fff;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700">💡 ANSWER</span>';
+        h += '<span style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:600">'+(i+1)+'/'+cards.length+'</span>';
+        h += '</div>';
+        h += '<div class="efc-content" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:6px 2px;text-align:center;font-weight:600;color:#065f46;font-size:14px;line-height:1.6;min-height:0">';
+        h += isRich?backContent:('<p style="margin:auto 0">'+esc(backContent)+'</p>');
+        h += '</div>';
+        h += '<div style="text-align:center;margin-top:10px">';
+        h += '<label for="'+mid+'" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;transition:all 0.2s">⬜ Mark mastered</label>';
+        h += '</div>';
+        h += '<div style="text-align:center;margin-top:6px;font-size:10px;color:#94a3b8;opacity:0.7">👆 Click to flip back</div>';
+        h += '</div>';
+        h += '</div></label>';
+        h += '<style>';
+        h += '#'+cid+':checked+.efc-card-label .efc-card-inner{transform:rotateY(180deg)}';
+        h += '#'+mid+':checked~.efc-card-label .efc-front,';
+        h += '#'+mid+':checked~.efc-card-label .efc-back{opacity:0.5;filter:grayscale(35%)}';
+        h += '.efc-card-label:hover .efc-front,.efc-card-label:hover .efc-back{box-shadow:0 6px 20px rgba(79,70,229,0.12)}';
+        h += '.efc-mastered-check:checked+label .efc-card-label .efc-mastered-btn,';
+        h += '.efc-mastered-check:checked~.efc-card-label .efc-mastered-btn{background:#d1fae5!important;color:#059669!important;border-color:#6ee7b7!important}';
+        h += '</style>';
+        h += '</div>';
+      }
+      h += '</div>';
+      h += '<div style="text-align:center;padding:12px;color:#94a3b8;font-size:12px;margin-top:8px">🃏 Click cards to flip · Mark mastered when you know them cold</div>';
       return h+'</div>';
     }
   },
@@ -1869,7 +1945,7 @@ function renderComponentsToHtml(components) {
   return h + '</div>';
 }
 
-/** Render study HTML for preview: component-based format or raw HTML fallback */
+/** Render study content for preview: component-based format or raw content fallback */
 function getStudyHtmlForPreview() {
   if (editingStudyHtmlData && editingStudyHtmlData.components) {
     return renderComponentsToHtml(editingStudyHtmlData.components);
@@ -2064,7 +2140,7 @@ function renderSections() {
           lessonsSorted.map(function(les, li) {
             var lesRealIdx = (s.lessons || []).indexOf(les);
             var media = (hasLessonVideo(les)?'🎬':'') + (les.presentationPdfUrls&&les.presentationPdfUrls.length?'📊':'') + (les.studyDocPdfUrls&&les.studyDocPdfUrls.length?'📖':'') + (les.worksheetPdfUrls&&les.worksheetPdfUrls.length?'📝':'') || '—';
-            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '<span title="Study HTML generated">🌐</span>' : '';
+            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '<span title="Study Content generated">🌐</span>' : '';
             var flashcardIndicator = (les.flashcards && (Array.isArray(les.flashcards) ? les.flashcards.length : (typeof les.flashcards === 'string' && les.flashcards.length > 10)) ? '<span title="Flashcards generated">🃏</span>' : '');
             var quizIndicator = (les.quiz && les.quiz.length ? '✅ ' + les.quiz.length + ' Q' : '—');
             var extraMedia = [studyHtmlIndicator, flashcardIndicator].filter(Boolean).join('');
@@ -2262,6 +2338,7 @@ function startAddLesson() {
   renderFlashcardsEditorList();
   editingHtmlCode = '';
   editingStudyHtmlData = null;
+  editingPresentationHtml = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
@@ -2274,6 +2351,7 @@ function startAddLesson() {
   hideSubModal('quiz-question-editor-panel');
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
+  updateVisibilityBar();
   el('lesson-editor-heading').textContent = 'Add Lesson';
 }
 
@@ -2296,9 +2374,15 @@ function editLesson(idx) {
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  var fcVal = les.flashcards;
+  if (fcVal && typeof fcVal === 'string') { try { fcVal = JSON.parse(fcVal); } catch(e) { fcVal = null; } }
+  editingFlashcards = (fcVal && Array.isArray(fcVal)) ? JSON.parse(JSON.stringify(fcVal)) : [];
   renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
   editingStudyHtmlData = les.studyHtmlData || null;
+  editingPresentationHtml = les.presentationHtml || '';
+  editingHiddenSections = (les.hiddenSections && Array.isArray(les.hiddenSections)) ? JSON.parse(JSON.stringify(les.hiddenSections)) : [];
+  updateVisibilityBar();
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
   updateHtmlPreview();
@@ -2345,6 +2429,8 @@ function saveLessonFromEditor() {
     hiddenDocUrls: editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null,
     htmlCode: editingHtmlCode || null,
     studyHtmlData: editingStudyHtmlData || null,
+    presentationHtml: editingPresentationHtml || null,
+    hiddenSections: editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null,
     flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
     sourceUrls: editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null,
     quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null
@@ -2387,6 +2473,101 @@ function cancelLessonEditor() {
   editingDirectSectionIdx = null;
 }
 
+/** Update the visibility toggle bar in the lesson editor */
+function updateVisibilityBar() {
+  var bar = el('visibility-toggle-bar');
+  if (!bar) return;
+  var sections = [
+    { key: 'presentation', icon: '🎞️', label: 'Presentation', has: !!editingPresentationHtml },
+    { key: 'studyContent', icon: '📖', label: 'Study Content', has: !!(editingHtmlCode || editingStudyHtmlData) },
+    { key: 'flashcards', icon: '🃏', label: 'Flashcards', has: editingFlashcards.length > 0 },
+    { key: 'questions', icon: '❓', label: 'Quiz Questions', has: editingQuizQuestions.length > 0 },
+    { key: 'videos', icon: '🎬', label: 'Videos', has: editingYoutubeUrls.length > 0 },
+    { key: 'slides', icon: '📊', label: 'PDF Slides', has: editingPresentationPdfUrls.length > 0 },
+    { key: 'studyDocs', icon: '📄', label: 'Study Docs', has: editingStudyDocPdfUrls.length > 0 },
+    { key: 'worksheets', icon: '📝', label: 'Worksheets', has: editingWorksheetPdfUrls.length > 0 },
+    { key: 'answerKeys', icon: '🔑', label: 'Answer Keys', has: editingAnswerKeyPdfUrls.length > 0 },
+    { key: 'webDocs', icon: '🌐', label: 'Web Docs', has: editingHtmlDocUrls.length > 0 },
+    { key: 'notes', icon: '📋', label: 'Notes', has: !!(getHtmlContent && getHtmlContent()) }
+  ];
+  var html = '';
+  for (var i = 0; i < sections.length; i++) {
+    var sec = sections[i];
+    var isHidden = editingHiddenSections.indexOf(sec.key) !== -1;
+    var bg = isHidden ? '#fee2e2' : (sec.has ? '#d1fae5' : '#f1f5f9');
+    var border = isHidden ? '#fca5a5' : (sec.has ? '#6ee7b7' : '#e2e8f0');
+    var color = isHidden ? '#991b1b' : (sec.has ? '#065f46' : '#94a3b8');
+    var eye = isHidden ? '🙈' : '👁️';
+    html += '<button class="vis-toggle-chip" data-vis-key="' + sec.key + '" title="' + (isHidden ? 'Hidden from students — click to show' : 'Visible to students — click to hide') + '" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';cursor:pointer;font-family:inherit;transition:all 0.15s;opacity:' + (sec.has ? '1' : '0.5') + '">' + eye + ' ' + sec.icon + ' ' + sec.label + '</button>';
+  }
+  bar.innerHTML = '<span style="font-size:11px;color:var(--text-muted);margin-right:6px;font-weight:600">👁️ Visibility:</span>' + html;
+  // Wire click handlers
+  var chips = bar.querySelectorAll('.vis-toggle-chip');
+  for (var c = 0; c < chips.length; c++) {
+    chips[c].addEventListener('click', function() {
+      var key = this.getAttribute('data-vis-key');
+      var idx = editingHiddenSections.indexOf(key);
+      if (idx === -1) {
+        editingHiddenSections.push(key);
+      } else {
+        editingHiddenSections.splice(idx, 1);
+      }
+      autoSaveCurrentLesson();
+      updateVisibilityBar();
+    });
+  }
+}
+
+/** Auto-save the current lesson state to CMS without closing the editor.
+ *  Called after AI generation (quiz, flashcards, study content) and flashcard edits.
+ *  If this is a new (unsaved) lesson, it creates the lesson first. */
+function autoSaveCurrentLesson() {
+  if (tool.isReadOnly()) return;
+  // Determine which lesson and where it lives
+  var targetLesson = null;
+  var targetArray = null;
+  if (editingDirectSectionIdx !== null) {
+    var sec = sections[editingDirectSectionIdx];
+    if (!sec) return;
+    if (!sec.lessons) sec.lessons = [];
+    targetArray = sec.lessons;
+  } else if (editingSectionIdx !== null) {
+    targetArray = editingLessons;
+  }
+  if (!targetArray) return;
+
+  // If this is a new lesson (no idx yet), create it in the array
+  if (editingLessonIdx === null) {
+    var title = el('edit-lesson-title').value.trim() || 'Untitled Lesson';
+    var order = parseInt(el('edit-lesson-order').value) || targetArray.length + 1;
+    var minutes = parseInt(el('edit-lesson-minutes').value) || 0;
+    var newLesson = {
+      id: genId(),
+      title: title,
+      order: order,
+      estimatedMinutes: minutes,
+      content: getHtmlContent() || null
+    };
+    targetArray.push(newLesson);
+    editingLessonIdx = targetArray.length - 1;
+  }
+
+  targetLesson = targetArray[editingLessonIdx];
+  if (!targetLesson) return;
+
+  // Sync current editor state into the lesson object
+  targetLesson.htmlCode = editingHtmlCode || null;
+  targetLesson.studyHtmlData = editingStudyHtmlData || null;
+  targetLesson.presentationHtml = editingPresentationHtml || null;
+  targetLesson.flashcards = editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null;
+  targetLesson.quiz = editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null;
+  targetLesson.sourceUrls = editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null;
+
+  // Persist to CMS (deep-clone sections to avoid reference issues)
+  tool.reportValid(true, '');
+  tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
+}
+
 /* ── Direct Lesson Management (from main view, bypasses section modal) ── */
 
 function startAddLessonDirect(sectionIdx) {
@@ -2406,6 +2587,7 @@ function startAddLessonDirect(sectionIdx) {
   renderFlashcardsEditorList();
   editingHtmlCode = '';
   editingStudyHtmlData = null;
+  editingPresentationHtml = '';
   if (el('edit-html-code')) el('edit-html-code').value = '';
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = '';
   updateHtmlPreview();
@@ -2418,6 +2600,7 @@ function startAddLessonDirect(sectionIdx) {
   hideSubModal('quiz-question-editor-panel');
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
+  updateVisibilityBar();
   el('lesson-editor-heading').textContent = 'Add Lesson to ' + (sections[sectionIdx].title || 'Section');
 }
 
@@ -2441,9 +2624,15 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   editingPdfIdx = null; editingPdfType = null;
   renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
   hideSubModal('pdf-editor-panel');
+  var fcVal2 = les.flashcards;
+  if (fcVal2 && typeof fcVal2 === 'string') { try { fcVal2 = JSON.parse(fcVal2); } catch(e) { fcVal2 = null; } }
+  editingFlashcards = (fcVal2 && Array.isArray(fcVal2)) ? JSON.parse(JSON.stringify(fcVal2)) : [];
   renderFlashcardsEditorList();
   editingHtmlCode = les.htmlCode || '';
   editingStudyHtmlData = les.studyHtmlData || null;
+  editingPresentationHtml = les.presentationHtml || '';
+  editingHiddenSections = (les.hiddenSections && Array.isArray(les.hiddenSections)) ? JSON.parse(JSON.stringify(les.hiddenSections)) : [];
+  updateVisibilityBar();
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
   updateHtmlPreview();
@@ -2491,8 +2680,10 @@ function switchLessonEditorTab(tabName) {
   for (var j = 0; j < panels.length; j++) {
     panels[j].classList.toggle('active', panels[j].getAttribute('data-lesson-panel') === tabName);
   }
-  // Role-based: hide Code sub-tab in Study HTML for non-admin users
+  // Role-based: hide Code sub-tab in Study Content for non-admin users
   if (tabName === 'studyHtml') updateStudyHtmlTabRoles();
+  if (tabName === 'presentation') updatePresentationPreview();
+  if (tabName === 'flashcards') renderFlashcardsEditorList();
   tool.resize();
 }
 
@@ -2758,7 +2949,7 @@ var PDF_LABELS = {
   studyDoc: { icon: '📖', label: 'Study Documents' },
   worksheet: { icon: '📝', label: 'Worksheets' },
   answerKey: { icon: '🔑', label: 'Answer Keys' },
-  htmlDoc: { icon: '🌐', label: 'HTML Documents' }
+  htmlDoc: { icon: '🌐', label: 'Web Documents' }
 };
 
 function getPdfArray(type) {
@@ -2829,7 +3020,7 @@ function openPdfEditor(type, idx) {
   var isHtml = type === 'htmlDoc';
   var labelEl = document.querySelector('#pdf-editor-panel .form-label');
   var btnEl = el('btn-pdf-editor-save');
-  if (labelEl) labelEl.innerHTML = (isHtml ? 'HTML Document URL' : 'PDF URL') + ' <span class="required">*</span>';
+  if (labelEl) labelEl.innerHTML = (isHtml ? 'Web Document URL' : 'PDF URL') + ' <span class="required">*</span>';
   if (btnEl) btnEl.textContent = 'Save ' + (isHtml ? 'HTML Doc' : 'PDF');
 }
 
@@ -2951,7 +3142,8 @@ function generateQuizFromPdf() {
           editingQuizQuestionIdx = null; editingQuizQuestionSetIdx = null;
           renderQuizEditorList();
           hideSubModal('quiz-question-editor-panel');
-          var msg = '✅ Generated ' + questions.length + ' questions from ' + allUrls.length + ' PDF(s).';
+          autoSaveCurrentLesson();
+          var msg = '✅ Generated ' + questions.length + ' questions & auto-saved!';
           if (questions.length < 15) msg += ' Generated fewer than 15 — you can add more manually.';
           tool.notify(msg, 'success');
         } catch(e) {
@@ -2983,7 +3175,7 @@ function generateHtmlFromPdf() {
 
   var genBtn = el('btn-generate-html-from-pdf-v2');
   if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ Reading ' + allUrls.length + ' PDF(s)...'; }
-  tool.notify('Reading ' + allUrls.length + ' PDF(s) for HTML generation...', 'info');
+tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation...', 'info');
 
   var combinedText = '';
   var remaining = allUrls.length;
@@ -3224,7 +3416,8 @@ function generateHtmlFromPdf() {
               compTypes[ct] = (compTypes[ct] || 0) + 1;
             }
             var summary = Object.keys(compTypes).map(function(k) { return k + '×' + compTypes[k]; }).join(', ');
-            tool.notify('✅ Study guide generated with ' + obj.components.length + ' components! (' + summary + ')', 'success');
+            autoSaveCurrentLesson();
+            tool.notify('✅ Study content generated with ' + obj.components.length + ' components & auto-saved! (' + summary + ')', 'success');
             return;
           }
         } catch(e) { /* fall through */ }
@@ -3251,7 +3444,8 @@ function generateHtmlFromPdf() {
             stillVisible.push(allUrls[su]);
           }
         }
-        var msg = '✅ Study HTML generated! Review it in the Study HTML tab, then save the lesson.';
+        autoSaveCurrentLesson();
+        var msg = '✅ Study content generated & auto-saved!';
         if (stillVisible.length > 0) {
           msg += ' 💡 ' + stillVisible.length + ' source PDF(s) are still visible to students — use the 👁 toggle in the Documents tab to hide them.';
         }
@@ -3275,7 +3469,16 @@ function renderFlashcardsEditorList() {
     list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:13px;">No flashcards yet. Click "Generate" to create them from your PDFs, or add manually.</div>';
   } else {
     list.innerHTML = editingFlashcards.map(function(card, idx) {
-      return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">🃏 ' + esc(card.front || card.q || '') + '</div><div class="quiz-editor-item-meta">💡 ' + esc(card.back || card.a || '') + '</div></div><div class="quiz-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-fc="' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-fc="' + idx + '">🗑</button></div></div>';
+      var diffIcon = { easy:'🟢', medium:'🟡', hard:'🔴' };
+      var typeIcon = { term:'📖', question:'❓', code:'💻', concept:'💡', image:'🖼️' };
+      var dIcon = diffIcon[card.difficulty]||'';
+      var tIcon = typeIcon[card.type]||'📖';
+      var metaParts = [];
+      if (card.type) metaParts.push(tIcon+' '+((card.type||'term').charAt(0).toUpperCase()+(card.type||'term').slice(1)));
+      if (card.difficulty) metaParts.push(dIcon+' '+((card.difficulty||'').charAt(0).toUpperCase()+(card.difficulty||'').slice(1)));
+      if (card.category) metaParts.push('🏷 '+esc(card.category));
+      var meta = metaParts.join(' · ') || '💡 ' + esc((card.back||card.a||'').substring(0,60));
+      return '<div class="quiz-editor-item"><div class="quiz-editor-item-info"><div class="quiz-editor-item-title">🃏 ' + esc(card.front || card.q || '') + '</div><div class="quiz-editor-item-meta">' + meta + '</div></div><div class="quiz-editor-item-actions"><button class="btn btn-sm btn-outline" data-edit-fc="' + idx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-fc="' + idx + '">🗑</button></div></div>';
     }).join('');
     var editBtns = list.querySelectorAll('[data-edit-fc]');
     for (var i = 0; i < editBtns.length; i++) {
@@ -3291,35 +3494,63 @@ function renderFlashcardsEditorList() {
         e.stopPropagation();
         editingFlashcards.splice(parseInt(this.getAttribute('data-del-fc')), 1);
         renderFlashcardsEditorList();
+        autoSaveCurrentLesson();
       });
     }
   }
 }
 
-/** Inline editor for a flashcard (replaces prompt() which is blocked by sandbox) */
+/** Inline editor for a flashcard — with category, difficulty, type, hint, imageUrl fields */
 function showFlashcardInlineEditor(idx, rowEl) {
   var card = editingFlashcards[idx];
   if (!card || !rowEl) return;
+  var diff = card.difficulty||'medium';
+  var type = card.type||'term';
+  var cat = card.category||'';
+  var hint = card.hint||'';
+  var imgUrl = card.imageUrl||'';
   rowEl.innerHTML = '<div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">' +
-    '<input class="form-input fc-inline-front" value="' + esc(card.front || card.q || '') + '" placeholder="Question / term" style="font-size:12px;padding:6px 8px">' +
-    '<input class="form-input fc-inline-back" value="' + esc(card.back || card.a || '') + '" placeholder="Answer / definition" style="font-size:12px;padding:6px 8px">' +
+    '<div style="display:flex;gap:6px">' +
+    '<input class="form-input fc-inline-front" value="' + esc(card.front || card.q || '') + '" placeholder="Question / term" style="flex:1;font-size:12px;padding:6px 8px">' +
+    '<input class="form-input fc-inline-back" value="' + esc(card.back || card.a || '') + '" placeholder="Answer / definition" style="flex:1;font-size:12px;padding:6px 8px">' +
     '</div>' +
-    '<div style="display:flex;gap:4px;flex-shrink:0">' +
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+    '<select class="form-input fc-inline-type" style="font-size:11px;padding:3px 6px;width:auto"><option value="term"'+(type==='term'?' selected':'')+'>📖 Term</option><option value="question"'+(type==='question'?' selected':'')+'>❓ Question</option><option value="code"'+(type==='code'?' selected':'')+'>💻 Code</option><option value="concept"'+(type==='concept'?' selected':'')+'>💡 Concept</option><option value="image"'+(type==='image'?' selected':'')+'>🖼️ Visual</option></select>' +
+    '<select class="form-input fc-inline-diff" style="font-size:11px;padding:3px 6px;width:auto"><option value="easy"'+(diff==='easy'?' selected':'')+'>🟢 Easy</option><option value="medium"'+(diff==='medium'?' selected':'')+'>🟡 Medium</option><option value="hard"'+(diff==='hard'?' selected':'')+'>🔴 Hard</option></select>' +
+    '<input class="form-input fc-inline-cat" value="' + esc(cat) + '" placeholder="Category (e.g. Physics)" style="font-size:11px;padding:3px 6px;width:120px">' +
+    '</div>' +
+    '<div style="display:flex;gap:6px">' +
+    '<input class="form-input fc-inline-hint" value="' + esc(hint) + '" placeholder="Hint shown on front (optional)" style="flex:1;font-size:11px;padding:4px 6px">' +
+    '<input class="form-input fc-inline-img" value="' + esc(imgUrl) + '" placeholder="Image URL (optional)" style="flex:1;font-size:11px;padding:4px 6px">' +
+    '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:4px;flex-shrink:0;align-items:flex-start">' +
     '<button class="btn btn-sm btn-primary fc-inline-save">✓</button>' +
     '<button class="btn btn-sm btn-outline fc-inline-cancel">✕</button></div>';
 
-  // Use scoped queries (not getElementById) to avoid stale-ID collisions
   rowEl.querySelector('.fc-inline-save').addEventListener('click', function() {
     var front = rowEl.querySelector('.fc-inline-front').value.trim();
     var back = rowEl.querySelector('.fc-inline-back').value.trim();
     if (!front) { tool.notify('Question/term is required.', 'warning'); return; }
-    editingFlashcards[idx] = { front: front, back: back };
+    var newCard = {
+      front: front,
+      back: back,
+      type: rowEl.querySelector('.fc-inline-type').value,
+      difficulty: rowEl.querySelector('.fc-inline-diff').value,
+      category: rowEl.querySelector('.fc-inline-cat').value.trim(),
+      hint: rowEl.querySelector('.fc-inline-hint').value.trim(),
+      imageUrl: rowEl.querySelector('.fc-inline-img').value.trim()
+    };
+    if (!newCard.category) delete newCard.category;
+    if (!newCard.hint) delete newCard.hint;
+    if (!newCard.imageUrl) delete newCard.imageUrl;
+    editingFlashcards[idx] = newCard;
     renderFlashcardsEditorList();
+    autoSaveCurrentLesson();
   });
   rowEl.querySelector('.fc-inline-cancel').addEventListener('click', function() {
-    renderFlashcardsEditorList(); // rebuild list fresh — avoids stale event listeners
+    renderFlashcardsEditorList();
   });
-  // Focus the front input
   setTimeout(function() {
     var f = rowEl.querySelector('.fc-inline-front');
     if (f) { f.focus(); f.select(); }
@@ -3360,7 +3591,7 @@ function generateFlashcardsFromPdf() {
             tool.notify('Could not extract enough text.', 'warning');
             return;
           }
-          var prompt = 'You are an expert flashcard creator. Generate 10-20 flashcards from the document content below. Return ONLY a JSON array — no markdown, no intro. Format: [{"front":"Question or term","back":"Answer or definition"},...]\n\nDocument:\n"""\n' + combinedText.substring(0, 12000) + '\n"""\n\nSTART WITH: [{"front":';
+          var prompt = 'You are an expert flashcard creator. Generate 15-25 high-quality flashcards from the document content below. Return ONLY a JSON array — no markdown, no intro.\n\nEach flashcard must have this structure:\n{\n  "front": "Question, term, or prompt",\n  "back": "Answer, definition, or explanation",\n  "type": "term|question|code|concept|image",\n  "difficulty": "easy|medium|hard",\n  "category": "short category label (e.g. Aerodynamics, Regulations, Weather)",\n  "hint": "brief memory hint (optional, omit if not helpful)"\n}\n\nRULES:\n• Vary types: ~40% term (vocabulary definitions), ~30% question (test understanding), ~15% concept (big ideas), ~10% code (if applicable), ~5% image (visual identification)\n• Vary difficulty: ~30% easy, ~40% medium, ~30% hard\n• Group related cards under the same category label (3-5 unique categories)\n• Back answers must be thorough — complete definitions/explanations, not one word\n• Use hints only for genuinely tricky cards where a small clue helps without giving away the answer\n• Professional/educational tone matching the source material\n\nDocument:\n"""\n' + combinedText.substring(0, 12000) + '\n"""\n\nSTART WITH: [{"front":';
           var fullResponse = '';
           var _fcStreamState = { tokenCount: 0 };
           // Update status during generation
@@ -3388,7 +3619,8 @@ function generateFlashcardsFromPdf() {
                 if (!Array.isArray(cards)) throw new Error('Not an array');
                 editingFlashcards = cards;
                 renderFlashcardsEditorList();
-                tool.notify('✅ Generated ' + cards.length + ' flashcards! Save the lesson to keep them.', 'success');
+                autoSaveCurrentLesson();
+                tool.notify('✅ Generated ' + cards.length + ' flashcards & auto-saved!', 'success');
               } catch(e) {
                 tool.notify('Could not parse flashcards. Try again.', 'error');
                 console.error('Flashcard parse error:', e, fullResponse);
@@ -3403,6 +3635,132 @@ function generateFlashcardsFromPdf() {
       });
     })(ri);
   }
+}
+
+/** AI: Generate presentation slides from PDFs */
+function generatePresentationFromPdf() {
+  var allUrls = [];
+  allUrls = allUrls.concat(editingPresentationPdfUrls);
+  allUrls = allUrls.concat(editingStudyDocPdfUrls);
+  allUrls = allUrls.filter(function(u) { return u && u.trim(); });
+
+  if (allUrls.length === 0) {
+    tool.notify('No PDFs added yet. Add PDFs to Presentation Slides or Study Documents first.', 'warning');
+    return;
+  }
+
+  var genBtn = el('btn-generate-presentation');
+  if (genBtn) { genBtn.disabled = true; genBtn.textContent = '⏳ Reading ' + allUrls.length + ' PDF(s)...'; }
+  tool.notify('Reading ' + allUrls.length + ' PDF(s) for presentation generation...', 'info');
+
+  var combinedText = '';
+  var remaining = allUrls.length;
+  for (var ri = 0; ri < allUrls.length; ri++) {
+    (function(idx) {
+      tool.requestFileContent(toHostingUrl(allUrls[idx]), function(err, fileResult) {
+        remaining--;
+        if (!err && fileResult) {
+          var text = typeof fileResult === 'string' ? fileResult : (fileResult.text || fileResult.content || '');
+          if (text && text.length > 50) combinedText += '\n\n--- Document ' + (idx+1) + ' ---\n\n' + text;
+        }
+        if (remaining === 0) {
+          if (!combinedText || combinedText.length < 50) {
+            if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
+            tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            return;
+          }
+          generatePresWithAI(combinedText);
+        }
+      });
+    })(ri);
+  }
+
+  function generatePresWithAI(text) {
+    var maxLen = 12000;
+    if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
+    if (genBtn) genBtn.textContent = '⏳ Generating slides...';
+
+    var prompt = 'You are an expert presentation designer. Create a BEAUTIFUL, professional HTML presentation (slide deck) from the document content below. Return ONLY valid HTML — no markdown, no intro text.\n\n' +
+      'REQUIREMENTS:\n' +
+      '• Output MUST start with <div class="pres-deck"> and contain multiple slides\n' +
+      '• Each slide uses: <div class="pres-slide"><div class="pres-slide-inner">...content...</div></div>\n' +
+      '• Generate 6-12 slides covering the key topics in the document\n' +
+      '• Slide types to vary: title slide, content slides, bullet slides, image slides, quote slides, summary slide\n' +
+      '• Title slide: gradient background, large title, subtitle, document source\n' +
+      '• Content slides: clean layout with heading + 2-4 paragraphs or bullet points\n' +
+      '• Use a consistent color scheme (pick one): blue-indigo, green-teal, or warm-amber\n' +
+      '• Each slide should have good visual hierarchy: clear heading, readable body text, proper spacing\n' +
+      '• Use CSS gradients, subtle shadows, and border-radius for a modern look\n' +
+      '• Include slide numbers in the bottom-right corner of each slide\n' +
+      '• MAX 1 slide with a data table — prefer bullet points, key stats, and visual descriptions\n' +
+      '• Use emoji icons sparingly for visual interest (📊 📈 🎯 💡 ✅)\n' +
+      '• Font: system-ui sans-serif, headings in a serif or bold weight\n' +
+      '• Keep text concise — presentation style, not paragraph style\n' +
+      '• IMPORTANT: Each slide must fit within a 16:9 aspect ratio viewport without scrolling\n' +
+      '\nSTYLE INLINE CSS TEMPLATE to include in a <style> tag:\n' +
+      '.pres-deck{max-width:960px;margin:0 auto;font-family:system-ui,sans-serif}\n' +
+      '.pres-slide{width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;page-break-after:always;position:relative;overflow:hidden}\n' +
+      '.pres-slide-inner{max-width:800px;width:100%}\n' +
+      '.pres-slide h1{font-size:36px;font-weight:800;margin-bottom:16px;line-height:1.2}\n' +
+      '.pres-slide h2{font-size:26px;font-weight:700;margin-bottom:14px}\n' +
+      '.pres-slide p,.pres-slide li{font-size:18px;line-height:1.6;color:#334155}\n' +
+      '.pres-slide-num{position:absolute;bottom:16px;right:24px;font-size:12px;color:#94a3b8}\n' +
+      '.pres-title-slide{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}\n' +
+      '.pres-title-slide h1{color:#fff;font-size:42px}\n' +
+      '.pres-title-slide p{color:rgba(255,255,255,0.85)}\n' +
+      '@media print{body{margin:0;padding:0}.pres-slide{page-break-after:always;width:100vw;height:100vh;padding:60px}}\n' +
+      '\nDocument content:\n"""\n' + text + '\n"""\n\nSTART YOUR HTML WITH: <div class="pres-deck">';
+
+    var fullResponse = '';
+    tool.requestAIStream(prompt, null, {
+      onToken: function(token) { fullResponse += token; },
+      onComplete: function() {
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
+        var raw = fullResponse.trim();
+        raw = raw.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+        // Extract HTML starting from pres-deck
+        var startIdx = raw.indexOf('<div class="pres-deck"');
+        if (startIdx === -1) startIdx = raw.indexOf('<div class=\'pres-deck\'');
+        if (startIdx === -1) startIdx = raw.indexOf('<style');
+        if (startIdx === -1) startIdx = raw.indexOf('<div');
+        var endIdx = raw.lastIndexOf('</div>');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          raw = raw.substring(startIdx, endIdx + 6);
+        }
+        if (raw.length < 50) {
+          tool.notify('Generated too little content. Try again.', 'warning');
+          return;
+        }
+        editingPresentationHtml = raw;
+        // Update the presentation preview
+        updatePresentationPreview();
+        autoSaveCurrentLesson();
+        tool.notify('✅ Presentation generated & auto-saved! ' + (raw.match(/pres-slide/g)||[]).length + ' slides', 'success');
+      },
+      onError: function(err) {
+        if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
+        tool.notify('Generation failed: ' + err, 'error');
+      }
+    });
+  }
+}
+
+/** Update the presentation preview iframe */
+function updatePresentationPreview() {
+  var iframe = el('pres-preview-iframe');
+  if (!iframe) return;
+  if (!editingPresentationHtml || editingPresentationHtml.length < 10) {
+    iframe.srcdoc = '<body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui;color:#94a3b8;font-size:14px;text-align:center"><div>🎞️<br><br>Click <strong>Generate Presentation</strong> to create slides from PDFs.</div></body>';
+    return;
+  }
+  var navHtml = '<div style="text-align:center;padding:12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-family:system-ui;position:sticky;top:0;z-index:10">' +
+    '<button onclick="window.presPrev&&window.presPrev()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;margin:0 4px;font-size:13px">◀ Prev</button>' +
+    '<span class="pres-counter" style="margin:0 12px;font-size:13px;color:#64748b;font-weight:600">Slide 1</span>' +
+    '<button onclick="window.presNext&&window.presNext()" style="padding:6px 14px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;margin:0 4px;font-size:13px">Next ▶</button>' +
+    '<button onclick="window.print()" style="padding:6px 14px;border:1px solid #059669;border-radius:6px;background:#ecfdf5;color:#059669;cursor:pointer;margin:0 4px;font-size:13px;font-weight:600">📄 Export PDF</button>' +
+    '</div>';
+  var slideJs = '<script>var slides=document.querySelectorAll(".pres-slide");var cur=0;function showSlide(n){slides.forEach(function(s,i){s.style.display=i===n?"flex":"none"});var c=document.querySelector(".pres-counter");if(c)c.textContent="Slide "+(n+1)+" of "+slides.length};window.presNext=function(){cur=Math.min(cur+1,slides.length-1);showSlide(cur)};window.presPrev=function(){cur=Math.max(cur-1,0);showSlide(cur)};showSlide(0);</' + 'script>';
+  iframe.srcdoc = navHtml + editingPresentationHtml + slideJs;
 }
 
 /** Update the live HTML preview iframe from the code textarea */
@@ -3589,8 +3947,10 @@ function bindEvents() {
   if (btnGenFlashcards) btnGenFlashcards.addEventListener('click', generateFlashcardsFromPdf);
   var btnGenFlashcardsV2 = el('btn-generate-flashcards-v2');
   if (btnGenFlashcardsV2) btnGenFlashcardsV2.addEventListener('click', generateFlashcardsFromPdf);
+  var btnGenPres = el('btn-generate-presentation');
+  if (btnGenPres) btnGenPres.addEventListener('click', generatePresentationFromPdf);
 
-  // Study HTML sub-tabs (Code / Preview)
+  // Study Content sub-tabs (Code / Preview)
   var htmlTabs = document.querySelector('.study-html-tabs');
   if (htmlTabs) {
     htmlTabs.addEventListener('click', function(e) {

@@ -742,40 +742,64 @@ body.dark .flashcard-content { color: #e2e8f0; }
    ═══════════════════════════════════════════ */
 
 /* ── Inline Flashcards (click-to-flip via checkbox hack) ── */
-.fc-card-wrapper {
-  perspective: 600px;
-}
-.fc-card-label {
-  display: block; cursor: pointer;
-}
-.fc-card-inner {
-  position: relative; width: 100%; height: 100%;
-  transition: transform 0.5s ease;
-  transform-style: preserve-3d;
-}
-.fc-flip-check:checked + .fc-card-label .fc-card-inner {
-  transform: rotateY(180deg) !important;
-}
-.fc-card-wrapper:hover .fc-card-inner {
-  box-shadow: 0 4px 16px rgba(79,70,229,0.15);
-}
-.fc-front, .fc-back {
-  position: absolute; width: 100%; height: 100%;
-  backface-visibility: hidden;
-  border-radius: 10px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 16px; text-align: center;
-}
-.fc-front {
-  background: linear-gradient(135deg, #eef2ff, #f0f4ff);
-  border: 2px solid #818cf8;
-}
-.fc-back {
-  background: linear-gradient(135deg, #d1fae5, #ecfdf5);
-  border: 2px solid #6ee7b7;
-  transform: rotateY(180deg);
-}
+/* Legacy styles — kept for old generated content */
+.fc-card-wrapper { perspective: 600px; }
+.fc-card-label { display: block; cursor: pointer; }
+.fc-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.5s ease; transform-style: preserve-3d; }
+.fc-flip-check:checked + .fc-card-label .fc-card-inner { transform: rotateY(180deg) !important; }
+.fc-card-wrapper:hover .fc-card-inner { box-shadow: 0 4px 16px rgba(79,70,229,0.15); }
+.fc-front, .fc-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; text-align: center; }
+.fc-front { background: linear-gradient(135deg, #eef2ff, #f0f4ff); border: 2px solid #818cf8; }
+.fc-back { background: linear-gradient(135deg, #d1fae5, #ecfdf5); border: 2px solid #6ee7b7; transform: rotateY(180deg); }
+
+/* ── ENHANCED Inline Flashcards (efc- prefix, from Curriculum Builder v2) ── */
+.efc-flip-check:checked + .efc-card-label .efc-card-inner { transform: rotateY(180deg) !important; }
+.efc-card-label { display: block; cursor: pointer; }
+.efc-card-label:hover .efc-front,
+.efc-card-label:hover .efc-back { box-shadow: 0 6px 20px rgba(79,70,229,0.15) !important; }
+.efc-content { display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding: 6px 2px; }
+.efc-content > * { margin: auto 0; min-height: 0; }
+.efc-content::-webkit-scrollbar { width: 4px; }
+.efc-content::-webkit-scrollbar-thumb { background: var(--border, #e2e8f0); border-radius: 4px; }
+.efc-mastered-check:checked ~ .efc-card-label .efc-front,
+.efc-mastered-check:checked ~ .efc-card-label .efc-back { opacity: 0.5; filter: grayscale(35%); }
+/* ── Student Tool: Enhanced Flashcard Grid (sfc- prefix) ── */
+.sfc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.sfc-card-wrapper { perspective: 1000px; }
+.sfc-card { cursor: pointer; height: 260px; }
+.sfc-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
+.sfc-flipped .sfc-card-inner { transform: rotateY(180deg); }
+.sfc-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; }
+.sfc-front { background: linear-gradient(145deg, #eef2ff 0%, #fff 100%); border: 2px solid #4f46e533; }
+.sfc-back { background: linear-gradient(145deg, #ecfdf5 0%, #f0fdf4 100%); border: 2px solid #05966933; transform: rotateY(180deg); }
+.sfc-card-wrapper:hover .sfc-face { box-shadow: 0 6px 20px rgba(79,70,229,0.12); }
+.sfc-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; min-height: 0; padding: 6px 2px; }
+.sfc-content > * { margin: auto 0; min-height: 0; }
+.sfc-content::-webkit-scrollbar { width: 4px; }
+.sfc-content::-webkit-scrollbar-thumb { background: var(--border, #e2e8f0); border-radius: 4px; }
+.sfc-filter-chip { transition: all 0.15s ease; }
+.sfc-filter-chip:hover { opacity: 0.85; transform: translateY(-1px); }
+.sfc-filter-active { box-shadow: 0 2px 8px rgba(79,70,229,0.3) !important; }
+.sfc-know-btn { transition: all 0.2s ease; }
+.sfc-know-btn:hover { background: #eef2ff !important; border-color: #818cf8 !important; }
+
+/* Status filter buttons (All / Pending / Done) */
+.sfc-status-btn { transition: all 0.15s ease; }
+.sfc-status-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.sfc-status-active { background: #4f46e5 !important; color: #fff !important; border-color: #4f46e5 !important; box-shadow: 0 2px 8px rgba(79,70,229,0.3); }
+/* Mastered cards: extra transparency so they're easily distinguishable from pending */
+.sfc-mastered .sfc-front,
+.sfc-mastered .sfc-back { opacity: 0.45; filter: grayscale(40%); }
+.sfc-mastered .sfc-know-btn { background: #d1fae5 !important; color: #059669 !important; border-color: #6ee7b7 !important; }
+
+/* Dark mode for enhanced flashcards */
+body.dark .sfc-front { background: linear-gradient(145deg, #1e1b4b 0%, #1e293b 100%); border-color: #4338ca44; }
+body.dark .sfc-back { background: linear-gradient(145deg, #064e3b 0%, #0f172a 100%); border-color: #05966944; }
+body.dark .sfc-content { color: #e2e8f0; }
+/* sfc-filter-chip colors set inline — dark mode handled by component */
+body.dark .efc-front { background: linear-gradient(145deg, #1e1b4b 0%, #1e293b 100%) !important; }
+body.dark .efc-back { background: linear-gradient(145deg, #064e3b 0%, #0f172a 100%) !important; }
+body.dark .efc-content { color: #e2e8f0; }
 
 /* ── Self-Assessment Stars ── */
 .sa-radio:checked + .sa-star {
@@ -887,3 +911,38 @@ body.dark .mind-map-node,
 body.dark .process-flow-step,
 body.dark .hierarchy-node { background: #1e293b; border-color: #334155; }
 body.dark .slider-compare-panel { background: #1e293b; }
+
+/* ── Presentation Slides ── */
+.pres-slides-wrap { background: var(--surface-alt, #f1f5f9); padding: 16px; }
+.pres-slides-wrap .pres-slide { display: none; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16/9; padding: 0; box-sizing: border-box; position: relative; overflow: hidden; page-break-after: always; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); margin-bottom: 16px; }
+.pres-slides-wrap .pres-slide:first-child { display: flex; }
+.pres-slides-wrap .pres-slide:last-child { margin-bottom: 0; }
+/* Remove any forced background — let AI-generated inline styles take precedence */
+.pres-slides-wrap .pres-slide .pres-slide-inner { max-width: 800px; width: 100%; margin: auto; } /* Fallback: show first slide even if JS fails */
+.pres-slides-wrap .pres-slide-inner { max-width: 800px; width: 100%; }
+.pres-fullscreen { position: fixed !important; inset: 0 !important; z-index: 9999 !important; background: #0f172a !important; border-radius: 0 !important; border: none !important; overflow-y: auto !important; padding: 0 !important; }
+.pres-fullscreen .pres-slide { min-height: 100vh; aspect-ratio: auto; margin-bottom: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+
+/* Fullscreen overlay nav bar */
+.pres-fs-nav { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 10001; background: rgba(30,41,59,0.92); backdrop-filter: blur(10px); border-radius: 40px; padding: 8px 18px; gap: 10px; align-items: center; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+.pres-fs-nav.show { display: flex; }
+.pres-fs-nav button { padding: 8px 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; font-family: inherit; transition: all 0.15s; white-space: nowrap; }
+.pres-fs-nav button:hover { background: rgba(255,255,255,0.2); }
+.pres-fs-nav .pres-fs-counter { color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 600; min-width: 100px; text-align: center; }
+.pres-fs-exit { background: rgba(220,38,38,0.35) !important; border-color: rgba(220,38,38,0.5) !important; }
+.pres-fs-exit:hover { background: rgba(220,38,38,0.55) !important; }
+
+/* Print / PDF export */
+@media print {
+  body * { visibility: hidden; }
+  .pres-slides-wrap, .pres-slides-wrap * { visibility: visible; }
+  .pres-slides-wrap { position: absolute; left: 0; top: 0; width: 100%; border: none !important; border-radius: 0 !important; }
+  .pres-slides-wrap .pres-slide { page-break-after: always; break-after: page; width: 100vw; height: 100vh; padding: 60px; display: flex !important; }
+  .pres-nav { display: none !important; }
+  @page { margin: 0; size: landscape; }
+}
+
+/* Dark mode presentation */
+body.dark .pres-slides-wrap { background: #0f172a; }
+body.dark .pres-slides-wrap .pres-slide { color: #e2e8f0; }
+body.dark .pres-fullscreen { background: #0f172a !important; }

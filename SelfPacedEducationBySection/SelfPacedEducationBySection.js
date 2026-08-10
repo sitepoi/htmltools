@@ -372,7 +372,7 @@ function renderHtmlDocIntoContainer(containerId, url) {
     })
     .catch(function(err) {
       console.error('HTML doc render error:', err);
-      container.innerHTML = '<div class="pdf-canvas-error"><div>⚠️ Could not load HTML document.</div><a onclick="tool.openUrl(\'' + url + '\')">↗ Open in New Tab</a></div>';
+      container.innerHTML = '<div class="pdf-canvas-error"><div>⚠️ Could not load document.</div><a onclick="tool.openUrl(\'' + url + '\')">↗ Open in New Tab</a></div>';
       tool.resize();
     });
 }
@@ -687,6 +687,10 @@ function renderLessonDetail() {
 
   var content = lesson.content || '';
 
+  // Check hidden sections (visibility toggles set by manager)
+  var hiddenSections = (lesson.hiddenSections && Array.isArray(lesson.hiddenSections)) ? lesson.hiddenSections : [];
+  function isHidden(key) { return hiddenSections.indexOf(key) !== -1; }
+
   var quizData = lesson.quiz;
   if (quizData && typeof quizData === 'string') { try { quizData = JSON.parse(quizData); } catch(e) { quizData = null; } }
   var hasQuiz = quizData && Array.isArray(quizData) && quizData.length > 0;
@@ -694,26 +698,29 @@ function renderLessonDetail() {
   var steps = [];
   var stepNum = 0;
 
-  if (youtubeUrls.length > 0) {
+  if (youtubeUrls.length > 0 && !isHidden('videos')) {
     stepNum++;
     var videoIds = [];
     for (var vi = 0; vi < youtubeUrls.length; vi++) { var vid = extractYouTubeId(youtubeUrls[vi]); if (vid) videoIds.push(vid); }
     steps.push({ num: stepNum, icon: '🎬', title: 'Video' + (videoIds.length > 1 ? 's' : ''), type: 'video', videoIds: videoIds, hasContent: videoIds.length > 0 });
   }
-  if (presentationPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📊', title: 'Slides', type: 'pdfs', pdfUrls: presentationPdfs, label: 'Presentation Slide', hasContent: true }); }
-  if (studyDocPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Documents', type: 'pdfs', pdfUrls: studyDocPdfs, label: 'Study Material', hasContent: true }); }
-  if (worksheetPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Worksheet', type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
-  if (answerKeyPdfs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Answers', type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
-  if (htmlDocs.length > 0) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'HTML Doc', type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'HTML Doc', hasContent: true }); }
+  if (presentationPdfs.length > 0 && !isHidden('slides')) { stepNum++; steps.push({ num: stepNum, icon: '📊', title: 'Slides', type: 'pdfs', pdfUrls: presentationPdfs, label: 'Presentation Slide', hasContent: true }); }
+  if (studyDocPdfs.length > 0 && !isHidden('studyDocs')) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Documents', type: 'pdfs', pdfUrls: studyDocPdfs, label: 'Study Material', hasContent: true }); }
+  if (worksheetPdfs.length > 0 && !isHidden('worksheets')) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Worksheet', type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
+  if (answerKeyPdfs.length > 0 && !isHidden('answerKeys')) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Answers', type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
+  if (htmlDocs.length > 0 && !isHidden('webDocs')) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'Web Doc', type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'Web Doc', hasContent: true }); }
   var htmlCode = lesson.htmlCode || '';
-  if (htmlCode && htmlCode.length > 20) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
+  if (htmlCode && htmlCode.length > 20 && !isHidden('studyContent')) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
+  // Presentation slides tab
+  var presHtml = lesson.presentationHtml || '';
+  if (presHtml && presHtml.length > 50 && !isHidden('presentation')) { stepNum++; steps.push({ num: stepNum, icon: '🎞️', title: 'Presentation', type: 'presentation', presHtml: presHtml, hasContent: true }); }
   // Flashcards tab
   var flashcards = lesson.flashcards;
   if (flashcards && typeof flashcards === 'string') { try { flashcards = JSON.parse(flashcards); } catch(e) { flashcards = null; } }
   var hasFlashcards = flashcards && Array.isArray(flashcards) && flashcards.length > 0;
-  if (hasFlashcards) { stepNum++; steps.push({ num: stepNum, icon: '🃏', title: 'Flashcards', type: 'flashcards', flashcards: flashcards, hasContent: true }); }
-  if (content && content !== '<br>' && content !== '<br>') { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Notes', type: 'html', html: content, hasContent: true }); }
-  if (hasQuiz) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Quiz', type: 'quiz', quizData: quizData, hasContent: true }); }
+  if (hasFlashcards && !isHidden('flashcards')) { stepNum++; steps.push({ num: stepNum, icon: '🃏', title: 'Flashcards', type: 'flashcards', flashcards: flashcards, hasContent: true }); }
+  if (content && content !== '<br>' && content !== '<br>' && !isHidden('notes')) { stepNum++; steps.push({ num: stepNum, icon: '📄', title: 'Notes', type: 'html', html: content, hasContent: true }); }
+  if (hasQuiz && !isHidden('questions')) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Quiz', type: 'quiz', quizData: quizData, hasContent: true }); }
   // Always add a nav step at the end with Previous/Next/Complete buttons
   stepNum++; steps.push({ num: stepNum, icon: '✅', title: 'Finish', type: 'nav', hasContent: true });
 
@@ -787,8 +794,10 @@ function renderLessonDetail() {
         }
       } else if (step.type === 'htmlCode') {
         html += '<div class="detail-content">' + step.htmlCode + '</div>';
+      } else if (step.type === 'presentation') {
+        html += renderPresentationInFlow(step.presHtml);
       } else if (step.type === 'flashcards') {
-        html += renderFlashcardsInFlow(step.flashcards);
+        html += renderFlashcardsInFlow(step.flashcards, prog, currentSectionId, currentLessonId);
       } else if (step.type === 'html') {
         html += '<div class="detail-content">' + step.html + '</div>';
       } else if (step.type === 'quiz') {
@@ -811,6 +820,12 @@ function renderLessonDetail() {
     html += '</div>';
   }
   flowEl.innerHTML = html;
+
+  // Initialize all flashcard containers (progress bars, filter state)
+  window.sfcInitAll();
+
+  // Initialize all presentation containers (hide all slides except #1, update counters)
+  window.presInitAll();
 
   // Wire "Open in New Tab" links via tool.openUrl (reliable inside the sandboxed iframe)
   var openLinks = flowEl.querySelectorAll('[data-open-url]');
@@ -888,7 +903,7 @@ function renderLessonDetail() {
     }
   }, 50);
 
-  // Wire up interactive quiz "Show Answer" buttons in AI-generated study guide HTML
+  // Wire up interactive quiz "Show Answer" buttons in AI-generated study guide content
   setTimeout(function() {
     var quizItems = document.querySelectorAll('.sg-quiz-item-v3');
     for (var qi = 0; qi < quizItems.length; qi++) {
@@ -1078,34 +1093,495 @@ function calcQuizScore(quizData, answers) {
   return quizData.length > 0 ? Math.round((correct / quizData.length) * 100) : 0;
 }
 
-/** Render flashcards as flip-card grid */
-function renderFlashcardsInFlow(flashcards) {
-  var html = '<div class="flashcards-grid">';
+/** Render flashcards as enhanced flip-card grid with categories, difficulty, progress tracking */
+function renderFlashcardsInFlow(flashcards, prog, sectionId, lessonId) {
+  if (!flashcards || !flashcards.length) return '';
+  var uniqueId = 'sfc-' + Date.now();
+  // Load mastered card indices from progress (persisted across sessions)
+  var masteredIndices = (prog && prog.flashcardMastered && Array.isArray(prog.flashcardMastered)) ? prog.flashcardMastered : [];
+  // Store sectionId/lessonId on container for save callbacks
+  var sectionIdEsc = esc(sectionId || '');
+  var lessonIdEsc = esc(lessonId || '');
+  // Category color palette
+  var catColors = [
+    { bg:'#eef2ff', border:'#818cf8', text:'#4f46e5' },
+    { bg:'#ecfdf5', border:'#6ee7b7', text:'#059669' },
+    { bg:'#fef3c7', border:'#fcd34d', text:'#d97706' },
+    { bg:'#fce7f3', border:'#f9a8d4', text:'#db2777' },
+    { bg:'#f0fdf4', border:'#86efac', text:'#16a34a' },
+    { bg:'#fef2f2', border:'#fca5a5', text:'#dc2626' },
+    { bg:'#f5f3ff', border:'#c4b5fd', text:'#7c3aed' },
+    { bg:'#ecfeff', border:'#67e8f9', text:'#0891b2' }
+  ];
+  var diffBadges = { easy:'🟢 Easy', medium:'🟡 Medium', hard:'🔴 Hard' };
+  var diffDots = { easy:'#059669', medium:'#d97706', hard:'#dc2626' };
+  var typeIcons = { term:'📖', question:'❓', code:'💻', image:'🖼️', concept:'💡' };
+  var typeLabels = { term:'TERM', question:'QUESTION', code:'CODE', image:'VISUAL', concept:'CONCEPT' };
+
+  // Gather categories
+  var cats = {};
   for (var fi = 0; fi < flashcards.length; fi++) {
-    var card = flashcards[fi];
-    var cardId = 'fc-' + fi + '-' + Date.now();
-    html += '<div class="flashcard" onclick="this.classList.toggle(\'flipped\')" title="Click to flip">';
-    html += '<div class="flashcard-inner">';
-    html += '<div class="flashcard-face flashcard-front">';
-    html += '<div class="flashcard-number">' + (fi + 1) + ' / ' + flashcards.length + '</div>';
-    html += '<div class="flashcard-content"><p>' + esc(card.front || card.q || '') + '</p></div>';
-    html += '<div class="flashcard-hint">👆 Click to reveal answer</div>';
+    var cat = flashcards[fi].category || '';
+    if (cat) cats[cat] = (cats[cat] || 0) + 1;
+  }
+  var catKeys = Object.keys(cats);
+
+  var html = '<div class="enhanced-fc-student" id="' + uniqueId + '" data-sfc-cat-filter="all" data-sfc-status-filter="all" data-sfc-sid="' + sectionIdEsc + '" data-sfc-lid="' + lessonIdEsc + '">';
+
+  // Header with card count
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">';
+  html += '<span style="font-weight:700;color:var(--text);font-size:16px">🃏 Flashcards</span>';
+  html += '<span style="font-size:12px;color:var(--text-muted);background:var(--surface-secondary,#f1f5f9);padding:4px 12px;border-radius:20px;font-weight:600">' + flashcards.length + ' cards</span>';
+  html += '</div>';
+
+  // Status filter buttons (All / Pending / Done) — always show
+  html += '<div class="sfc-status-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+  html += '<button class="sfc-status-btn sfc-status-active" data-sfc-status="all" onclick="window.sfcApplyStatusFilter(\'' + uniqueId + '\',\'all\')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#1e293b;cursor:pointer;font-family:inherit">📋 All (' + flashcards.length + ')</button>';
+  html += '<button class="sfc-status-btn" data-sfc-status="pending" onclick="window.sfcApplyStatusFilter(\'' + uniqueId + '\',\'pending\')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#1e293b;cursor:pointer;font-family:inherit">⏳ Pending (' + flashcards.length + ')</button>';
+  html += '<button class="sfc-status-btn" data-sfc-status="done" onclick="window.sfcApplyStatusFilter(\'' + uniqueId + '\',\'done\')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#1e293b;cursor:pointer;font-family:inherit">✅ Done (0)</button>';
+  html += '</div>';
+
+  // Category filter chips (clickable)
+  if (catKeys.length > 0) {
+    html += '<div class="sfc-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    html += '<button class="sfc-filter-chip sfc-filter-active" data-sfc-filter="all" onclick="window.sfcApplyFilter(\'' + uniqueId + '\',\'all\')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #4f46e5;background:#4f46e5;color:#fff;cursor:pointer;font-family:inherit">📋 All (' + flashcards.length + ')</button>';
+    for (var ck = 0; ck < catKeys.length; ck++) {
+      var cc = catColors[ck % catColors.length];
+      html += '<button class="sfc-filter-chip" data-sfc-filter="' + esc(catKeys[ck]) + '" onclick="window.sfcApplyFilter(\'' + uniqueId + '\',\'' + esc(catKeys[ck]) + '\')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid ' + cc.border + ';background:' + cc.bg + ';color:' + cc.text + ';cursor:pointer;font-family:inherit">' + esc(catKeys[ck]) + ' (' + cats[catKeys[ck]] + ')</button>';
+    }
     html += '</div>';
-    html += '<div class="flashcard-face flashcard-back">';
-    html += '<div class="flashcard-number">💡 Answer</div>';
-    html += '<div class="flashcard-content"><p>' + esc(card.back || card.a || '') + '</p></div>';
-    html += '<div class="flashcard-hint">👆 Click to flip back</div>';
+  }
+
+  // Progress bar
+  html += '<div class="sfc-progress" style="margin-bottom:16px">';
+  html += '<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;color:var(--text-muted)"><span>Progress</span><span class="sfc-progress-text">0 mastered · 0 / ' + flashcards.length + ' reviewed</span></div>';
+  html += '<div style="width:100%;height:6px;background:var(--border,#e2e8f0);border-radius:3px;overflow:hidden">';
+  html += '<div class="sfc-progress-fill" style="width:0%;height:100%;background:#059669;border-radius:3px;transition:width 0.3s ease"></div>';
+  html += '</div></div>';
+
+  // Card grid
+  html += '<div class="sfc-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px">';
+  for (var i = 0; i < flashcards.length; i++) {
+    var card = flashcards[i];
+    var diff = card.difficulty || 'medium';
+    var type = card.type || 'term';
+    var catIdx = card.category ? catKeys.indexOf(card.category) : -1;
+    var cc2 = catColors[catIdx >= 0 ? catIdx % catColors.length : i % catColors.length];
+    var accentColor = diffDots[diff] || cc2.dot;
+    var icon = typeIcons[type] || '📖';
+    var typeLabel = typeLabels[type] || 'TERM';
+    var frontContent = card.front || card.q || card.term || '';
+    var backContent = card.back || card.a || card.definition || '';
+    var isRich = /<[a-z][\s\S]*>/i.test(frontContent + backContent);
+
+    var isMastered = masteredIndices.indexOf(i) !== -1;
+    html += '<div class="sfc-card-wrapper' + (isMastered ? ' sfc-mastered' : '') + '" data-sfc-cat="' + esc(card.category || '') + '" data-sfc-diff="' + diff + '" data-sfc-idx="' + i + '" style="perspective:1000px">';
+    html += '<div class="sfc-card" onclick="window.sfcFlipCard(this.closest(\'.sfc-card-wrapper\'),\'' + uniqueId + '\')" title="Click to flip">';
+    html += '<div class="sfc-card-inner" style="position:relative;width:100%;min-height:240px;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d">';
+
+    // ── FRONT ──
+    html += '<div class="sfc-face sfc-front" style="position:absolute;inset:0;backface-visibility:hidden;background:linear-gradient(145deg,' + cc2.bg + ',#fff);border:2px solid ' + accentColor + '33;border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,0.04)">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap">';
+    html += '<span style="display:inline-flex;align-items:center;gap:3px;background:' + accentColor + ';color:#fff;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:0.3px">' + icon + ' ' + typeLabel + '</span>';
+    if (card.category) html += '<span style="display:inline-flex;align-items:center;gap:3px;background:' + cc2.bg + ';color:' + cc2.text + ';border:1px solid ' + cc2.border + ';padding:2px 10px;border-radius:12px;font-size:10px;font-weight:600">' + esc(card.category) + '</span>';
+    html += '<span style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:600">' + (i + 1) + '/' + flashcards.length + '</span>';
     html += '</div>';
-    html += '</div></div>';
+    html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:10px"><span style="width:8px;height:8px;border-radius:50%;background:' + accentColor + ';display:inline-block"></span><span style="font-size:10px;color:' + accentColor + ';font-weight:600">' + esc(diffBadges[diff] || diff) + '</span></div>';
+    html += '<div class="sfc-content" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:6px 2px;text-align:center;font-weight:700;color:#1e293b;font-size:15px;line-height:1.5;min-height:0">';
+    html += isRich ? frontContent : ('<p style="margin:auto 0">' + esc(frontContent) + '</p>');
+    html += '</div>';
+    if (card.hint) html += '<div style="text-align:center;margin-top:8px;font-size:11px;color:#94a3b8;font-style:italic">💭 ' + esc(card.hint) + '</div>';
+    html += '<div style="text-align:center;margin-top:10px;font-size:10px;color:#94a3b8;opacity:0.7">👆 Click to reveal</div>';
+    html += '</div>';
+
+    // ── BACK ──
+    html += '<div class="sfc-face sfc-back" style="position:absolute;inset:0;backface-visibility:hidden;background:linear-gradient(145deg,#ecfdf5,#f0fdf4);border:2px solid #05966933;border-radius:14px;padding:20px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(0,0,0,0.04);transform:rotateY(180deg)">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">';
+    html += '<span style="display:inline-flex;align-items:center;gap:3px;background:#059669;color:#fff;padding:2px 10px;border-radius:12px;font-size:10px;font-weight:700">💡 ANSWER</span>';
+    html += '<span style="margin-left:auto;font-size:10px;color:#94a3b8;font-weight:600">' + (i + 1) + '/' + flashcards.length + '</span>';
+    html += '</div>';
+    html += '<div class="sfc-content" style="flex:1;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;padding:6px 2px;text-align:center;font-weight:600;color:#065f46;font-size:14px;line-height:1.6;min-height:0">';
+    html += isRich ? backContent : ('<p style="margin:auto 0">' + esc(backContent) + '</p>');
+    html += '</div>';
+    // "I know this" / "Review again" toggle button
+    html += '<div style="text-align:center;margin-top:10px">';
+    html += '<button class="sfc-know-btn" onclick="event.stopPropagation();window.sfcToggleKnow(this,\'' + uniqueId + '\')" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:14px;font-size:10px;font-weight:600;cursor:pointer;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;font-family:inherit">' + (isMastered ? '✅ Got it!' : '⬜ I know this') + '</button>';
+    html += '</div>';
+    html += '<div style="text-align:center;margin-top:6px;font-size:10px;color:#94a3b8;opacity:0.7">👆 Click to flip back</div>';
+    html += '</div>';
+
+    html += '</div></div></div>';
   }
   html += '</div>';
-  html += '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px">🃏 ' + flashcards.length + ' cards · Click any card to flip · All cards flip independently</div>';
-  return html;
+
+  // Footer
+  html += '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:12px;margin-top:8px">🃏 Click cards to flip · Mark "I know this" when mastered · Use filters above</div>';
+
+  return html + '</div>';
+}
+
+/** Render presentation slides with navigation and PDF export */
+function renderPresentationInFlow(presHtml) {
+  if (!presHtml) return '';
+  var uniqueId = 'pres-' + Date.now();
+  var html = '<div class="pres-container" id="' + uniqueId + '">';
+  // Navigation bar
+  html += '<div class="pres-nav" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;background:var(--surface-alt,#f1f5f9);border:1px solid var(--border,#e2e8f0);border-radius:12px 12px 0 0;flex-wrap:wrap">';
+  html += '<button class="btn btn-outline btn-sm" onclick="window.presNav(\'' + uniqueId + '\',-1)" title="Previous slide">◀ Prev</button>';
+  html += '<span class="pres-counter" style="font-size:13px;color:var(--text-muted);font-weight:600;min-width:100px;text-align:center">Slide 1</span>';
+  html += '<button class="btn btn-outline btn-sm" onclick="window.presNav(\'' + uniqueId + '\',1)" title="Next slide">Next ▶</button>';
+  html += '<span style="color:var(--border);margin:0 4px">|</span>';
+  html += '<button class="btn btn-sm" onclick="window.presFullscreen(\'' + uniqueId + '\')" style="background:var(--primary-bg,#eef2ff);color:var(--primary);border:1px solid var(--primary-light,#818cf8);font-size:12px;font-weight:600" title="Fullscreen presentation">📺 Fullscreen</button>';
+  html += '<button class="btn btn-sm" onclick="window.print()" style="background:var(--success-light,#d1fae5);color:var(--success);border:1px solid var(--success);font-size:12px;font-weight:600" title="Export to PDF">📄 Export PDF</button>';
+  html += '</div>';
+  // Slides container
+  html += '<div class="pres-slides-wrap" style="border:1px solid var(--border,#e2e8f0);border-top:none;border-radius:0 0 12px 12px;background:#fff;overflow:hidden">';
+  html += presHtml;
+  html += '</div>';
+  return html + '</div>';
 }
 
 /* ═══════════════════════════════════════════
-   NAVIGATION
+   PRESENTATION INTERACTIVITY (global functions — innerHTML-safe)
    ═══════════════════════════════════════════ */
+
+window.presSlides = {};
+
+/** Navigate slides: dir = -1 (prev) or +1 (next) */
+window.presNav = function(containerId, dir) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var slides = c.querySelectorAll('.pres-slide');
+  if (!slides.length) return;
+  var cur = window.presSlides[containerId] || 0;
+  cur = Math.max(0, Math.min(slides.length - 1, cur + dir));
+  window.presSlides[containerId] = cur;
+  for (var i = 0; i < slides.length; i++) {
+    slides[i].style.display = i === cur ? 'flex' : 'none';
+  }
+  var cnt = c.querySelector('.pres-counter');
+  if (cnt) cnt.textContent = 'Slide ' + (cur + 1) + ' of ' + slides.length;
+};
+
+/** Toggle fullscreen for a presentation using browser Fullscreen API */
+window.presFullscreen = function(containerId) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var wrap = c.querySelector('.pres-slides-wrap');
+  if (!wrap) return;
+  // If already in our custom fullscreen, exit
+  if (wrap.classList.contains('pres-fullscreen')) {
+    window._presExitFullscreen(containerId);
+    return;
+  }
+  // Try browser Fullscreen API first
+  if (wrap.requestFullscreen) {
+    wrap.requestFullscreen().catch(function() {
+      // Fallback: CSS-only fullscreen
+      window._presCssFullscreen(containerId, wrap);
+    });
+  } else if (wrap.webkitRequestFullscreen) {
+    wrap.webkitRequestFullscreen();
+  } else {
+    // Fallback: CSS-only fullscreen
+    window._presCssFullscreen(containerId, wrap);
+  }
+};
+
+/** CSS fallback fullscreen with floating nav bar */
+window._presCssFullscreen = function(containerId, wrap) {
+  wrap.classList.add('pres-fullscreen');
+  document.body.style.overflow = 'hidden';
+  window._presShowFsNav(containerId, true);
+};
+
+/** Exit fullscreen (browser API or CSS) */
+window._presExitFullscreen = function(containerId) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var wrap = c.querySelector('.pres-slides-wrap');
+  if (!wrap) return;
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(function(){});
+  } else if (document.webkitFullscreenElement) {
+    document.webkitExitFullscreen();
+  }
+  wrap.classList.remove('pres-fullscreen');
+  document.body.style.overflow = '';
+  window._presShowFsNav(containerId, false);
+};
+
+/** Show/hide floating fullscreen nav bar */
+window._presShowFsNav = function(containerId, show) {
+  var existing = document.querySelector('.pres-fs-nav');
+  if (existing) existing.remove();
+  if (!show) return;
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var slides = c.querySelectorAll('.pres-slide');
+  var cur = window.presSlides[containerId] || 0;
+  var nav = document.createElement('div');
+  nav.className = 'pres-fs-nav show';
+  nav.innerHTML = '<button onclick="window.presNav(\'' + containerId + '\',-1)">◀ Prev</button>' +
+    '<span class="pres-fs-counter">Slide ' + (cur+1) + ' of ' + slides.length + '</span>' +
+    '<button onclick="window.presNav(\'' + containerId + '\',1)">Next ▶</button>' +
+    '<button class="pres-fs-exit" onclick="window._presExitFullscreen(\'' + containerId + '\')">✕ Exit</button>';
+  document.body.appendChild(nav);
+  // Store ref for updating counter
+  nav.setAttribute('data-pres-id', containerId);
+};
+
+/** Update fullscreen nav counter when slide changes */
+window._presUpdateFsCounter = function(containerId) {
+  var nav = document.querySelector('.pres-fs-nav[data-pres-id="' + containerId + '"]');
+  if (!nav) return;
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var slides = c.querySelectorAll('.pres-slide');
+  var cur = window.presSlides[containerId] || 0;
+  var cnt = nav.querySelector('.pres-fs-counter');
+  if (cnt) cnt.textContent = 'Slide ' + (cur+1) + ' of ' + slides.length;
+};
+
+/** Navigate slides: dir = -1 (prev) or +1 (next) */
+window.presNav = function(containerId, dir) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  var slides = c.querySelectorAll('.pres-slide');
+  if (!slides.length) return;
+  var cur = window.presSlides[containerId] || 0;
+  cur = Math.max(0, Math.min(slides.length - 1, cur + dir));
+  window.presSlides[containerId] = cur;
+  for (var i = 0; i < slides.length; i++) {
+    slides[i].style.display = i === cur ? 'flex' : 'none';
+  }
+  var cnt = c.querySelector('.pres-counter');
+  if (cnt) cnt.textContent = 'Slide ' + (cur + 1) + ' of ' + slides.length;
+  // Update fullscreen nav counter too
+  window._presUpdateFsCounter(containerId);
+};
+
+/** Export to PDF — tries multiple methods */
+window.presExportPdf = function() {
+  try {
+    // Try direct print first
+    window.print();
+  } catch(e1) {
+    try {
+      // Try parent window
+      window.top.print();
+    } catch(e2) {
+      // Show fallback message
+      if (typeof tool !== 'undefined' && tool.notify) {
+        tool.notify('📄 To export as PDF: press Ctrl+P (or Cmd+P on Mac) in your browser, then choose "Save as PDF" as the printer.', 'info');
+      } else {
+        alert('To export as PDF: press Ctrl+P (or Cmd+P on Mac), then choose "Save as PDF".');
+      }
+    }
+  }
+};
+
+/** Initialize all presentation containers: show slide 1, update counters, wire keyboard */
+window.presInitAll = function() {
+  var containers = document.querySelectorAll('.pres-container');
+  for (var i = 0; i < containers.length; i++) {
+    var c = containers[i];
+    var slides = c.querySelectorAll('.pres-slide');
+    if (slides.length) {
+      for (var s = 0; s < slides.length; s++) {
+        slides[s].style.display = s === 0 ? 'flex' : 'none';
+      }
+      var cnt = c.querySelector('.pres-counter');
+      if (cnt) cnt.textContent = 'Slide 1 of ' + slides.length;
+      window.presSlides[c.id] = 0;
+    }
+  }
+  // Wire keyboard: left/right arrows navigate the currently visible presentation
+  if (!window._presKeyBound) {
+    window._presKeyBound = true;
+    document.addEventListener('keydown', function(e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        var dir = e.key === 'ArrowRight' ? 1 : -1;
+        // Find the first visible pres-container (inside an expanded study step or active tab)
+        var allContainers = document.querySelectorAll('.pres-container');
+        for (var ci = 0; ci < allContainers.length; ci++) {
+          var container = allContainers[ci];
+          // Check if this container is visible (inside expanded step or active tab)
+          var step = container.closest('.study-step');
+          if (step) {
+            var isExpanded = step.classList.contains('expanded');
+            var isActiveTab = step.classList.contains('active-tab');
+            var body = step.querySelector('.study-step-body');
+            var bodyVisible = body && (body.style.display !== 'none');
+            if (isExpanded || isActiveTab || bodyVisible) {
+              window.presNav(container.id, dir);
+              e.preventDefault();
+              break;
+            }
+          } else {
+            // Not inside a study step — just navigate
+            window.presNav(container.id, dir);
+            e.preventDefault();
+            break;
+          }
+        }
+      }
+      // Escape key exits fullscreen
+      if (e.key === 'Escape') {
+        var fsNav = document.querySelector('.pres-fs-nav.show');
+        if (fsNav) {
+          var fsId = fsNav.getAttribute('data-pres-id');
+          if (fsId) window._presExitFullscreen(fsId);
+        }
+      }
+    });
+  }
+};
+
+/* ═══════════════════════════════════════════
+   FLASHCARD INTERACTIVITY (global functions — innerHTML-safe)
+   ═══════════════════════════════════════════ */
+
+/** Called onclick on a flashcard wrapper div. Toggles flip & updates progress. */
+window.sfcFlipCard = function(wrapper, containerId) {
+  var wasFlipped = wrapper.classList.contains('sfc-flipped');
+  wrapper.classList.toggle('sfc-flipped');
+  if (!wasFlipped) {
+    window.updateSfcProgress(containerId);
+  }
+};
+
+/** Called onclick on the "I know this" / "Got it!" button. Toggles mastered state. */
+window.sfcToggleKnow = function(btn, containerId) {
+  var wrapper = btn.closest('.sfc-card-wrapper');
+  if (!wrapper) return;
+  wrapper.classList.toggle('sfc-mastered');
+  var isNowMastered = wrapper.classList.contains('sfc-mastered');
+  btn.textContent = isNowMastered ? '✅ Got it!' : '⬜ I know this';
+  window.updateSfcProgress(containerId);
+  // Re-apply current status filter (so mastered cards move between Pending/Done)
+  var container = document.getElementById(containerId);
+  if (container) {
+    var activeStatus = container.getAttribute('data-sfc-status-filter') || 'all';
+    window.sfcApplyStatusFilter(containerId, activeStatus);
+  }
+  // Persist mastered state to progress
+  var sid = container ? container.getAttribute('data-sfc-sid') : '';
+  var lid = container ? container.getAttribute('data-sfc-lid') : '';
+  if (sid && lid) {
+    try {
+      var val = tool.getValue ? tool.getValue() : null;
+      var progress = (val && val.progress) ? val.progress : {};
+      if (!progress[sid]) progress[sid] = {};
+      if (!progress[sid][lid]) progress[sid][lid] = {};
+      var mastered = progress[sid][lid].flashcardMastered || [];
+      var idx = parseInt(wrapper.getAttribute('data-sfc-idx'));
+      if (!isNaN(idx)) {
+        if (isNowMastered && mastered.indexOf(idx) === -1) {
+          mastered.push(idx);
+        } else if (!isNowMastered) {
+          var pos = mastered.indexOf(idx);
+          if (pos !== -1) mastered.splice(pos, 1);
+        }
+        progress[sid][lid].flashcardMastered = mastered;
+        tool.setValue({ config: (val && val.config) || {}, progress: progress });
+      }
+    } catch(e) { /* ignore save errors */ }
+  }
+};
+
+/** Called onclick on a category filter chip. Shows/hides cards by category. */
+window.sfcApplyFilter = function(containerId, category) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  // Update active chip styling
+  var chips = container.querySelectorAll('.sfc-filter-chip');
+  for (var c = 0; c < chips.length; c++) {
+    var chip = chips[c];
+    var isActive = chip.getAttribute('data-sfc-filter') === category;
+    if (isActive) {
+      chip.classList.add('sfc-filter-active');
+    } else {
+      chip.classList.remove('sfc-filter-active');
+    }
+  }
+  // Store current category filter
+  container.setAttribute('data-sfc-cat-filter', category);
+  // Apply combined filters (category + status)
+  window._sfcApplyCombinedFilters(container);
+};
+
+/** Called onclick on a status filter button (All / Pending / Done). */
+window.sfcApplyStatusFilter = function(containerId, status) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  // Update active button styling
+  var btns = container.querySelectorAll('.sfc-status-btn');
+  for (var b = 0; b < btns.length; b++) {
+    var btn = btns[b];
+    if (btn.getAttribute('data-sfc-status') === status) {
+      btn.classList.add('sfc-status-active');
+    } else {
+      btn.classList.remove('sfc-status-active');
+    }
+  }
+  // Store current status filter
+  container.setAttribute('data-sfc-status-filter', status);
+  // Apply combined filters
+  window._sfcApplyCombinedFilters(container);
+};
+
+/** Internal: apply both category and status filters together */
+window._sfcApplyCombinedFilters = function(container) {
+  var catFilter = container.getAttribute('data-sfc-cat-filter') || 'all';
+  var statusFilter = container.getAttribute('data-sfc-status-filter') || 'all';
+  var wrappers = container.querySelectorAll('.sfc-card-wrapper');
+  for (var w = 0; w < wrappers.length; w++) {
+    var wr = wrappers[w];
+    var cat = wr.getAttribute('data-sfc-cat') || '';
+    var mastered = wr.classList.contains('sfc-mastered');
+    var showByCat = (catFilter === 'all' || cat === catFilter);
+    var showByStatus = (statusFilter === 'all' ||
+      (statusFilter === 'done' && mastered) ||
+      (statusFilter === 'pending' && !mastered));
+    wr.style.display = (showByCat && showByStatus) ? '' : 'none';
+  }
+  window.updateSfcProgress(container.id);
+};
+
+/** Update the progress bar and text for a flashcard container. */
+window.updateSfcProgress = function(containerId) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var wrappers = container.querySelectorAll('.sfc-card-wrapper');
+  var total = wrappers.length;
+  var mastered = 0;
+  var reviewed = 0;
+  for (var w = 0; w < wrappers.length; w++) {
+    if (wrappers[w].classList.contains('sfc-mastered')) mastered++;
+    if (wrappers[w].classList.contains('sfc-flipped')) reviewed++;
+  }
+  var fill = container.querySelector('.sfc-progress-fill');
+  if (fill) fill.style.width = total > 0 ? Math.round((reviewed / total) * 100) + '%' : '0%';
+  var txt = container.querySelector('.sfc-progress-text');
+  if (txt) txt.textContent = mastered + ' mastered · ' + reviewed + ' / ' + total + ' reviewed';
+  // Update the status filter button counts
+  var allBtn = container.querySelector('.sfc-status-btn[data-sfc-status="all"]');
+  if (allBtn) allBtn.textContent = '📋 All (' + total + ')';
+  var pendingBtn = container.querySelector('.sfc-status-btn[data-sfc-status="pending"]');
+  if (pendingBtn) pendingBtn.textContent = '⏳ Pending (' + (total - mastered) + ')';
+  var doneBtn = container.querySelector('.sfc-status-btn[data-sfc-status="done"]');
+  if (doneBtn) doneBtn.textContent = '✅ Done (' + mastered + ')';
+};
+
+/** Initialize all flashcard containers on the page (called after innerHTML insertion). */
+window.sfcInitAll = function() {
+  var containers = document.querySelectorAll('.enhanced-fc-student');
+  for (var i = 0; i < containers.length; i++) {
+    window.updateSfcProgress(containers[i].id);
+  }
+};
 
 function showSections() {
   currentView = 'sections'; currentSectionId = null; currentLessonId = null;
