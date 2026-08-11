@@ -10,7 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-var CONFIG = { curriculumSourceId: '' }; // Object-level config (set by admin per object)
+var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: true }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
 var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail' | 'setup'
@@ -1942,6 +1942,7 @@ function loadData(val) {
   if (val && val.config && typeof val.config === 'object') {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
     CONFIG.managementType = val.config.managementType || 'self_paced';
+    CONFIG.dashboardVisible = val.config.dashboardVisible !== undefined ? val.config.dashboardVisible : true;
   }
   // Legacy: also check tool param for backward compat
   if (!CONFIG.curriculumSourceId) {
@@ -2110,6 +2111,11 @@ function saveSetupConfig() {
     return;
   }
 
+  // Reset progress if switching to a different curriculum
+  if (CONFIG.curriculumSourceId && CONFIG.curriculumSourceId !== selectedId) {
+    PROGRESS = {};
+  }
+
   CONFIG.curriculumSourceId = selectedId;
   CONFIG.managementType = mgmtType;
 
@@ -2138,6 +2144,12 @@ function updateAdminUI() {
   if (changeBtn) {
     changeBtn.style.display = (isAdmin() && CONFIG.curriculumSourceId) ? '' : 'none';
   }
+  // Dashboard toggle — visible for admins when curriculum is loaded
+  var dashBtn = el('btn-toggle-dashboard');
+  if (dashBtn) {
+    dashBtn.style.display = (isAdmin() && CONFIG.curriculumSourceId) ? '' : 'none';
+    dashBtn.textContent = (CONFIG.dashboardVisible !== false) ? '📊 Hide Dashboard' : '📊 Dashboard';
+  }
   // Disable save button in setup if not admin
   var saveBtn = el('btn-setup-save');
   if (saveBtn && currentView === 'setup') {
@@ -2152,6 +2164,7 @@ function renderSupervisorPanel() {
   var existing = el('supervisor-panel');
   if (existing) existing.remove();
   if (!isAdmin()) return;
+  if (CONFIG.dashboardVisible === false) return;
 
   var all = getAllLessonsInOrder();
   if (all.length === 0) return;
@@ -2193,11 +2206,13 @@ function renderSupervisorPanel() {
   html += '</div></div>';
 
   // ── Quick stats bar ──
-  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt)">';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt);align-items:center">';
   html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46">✅ ' + completed + ' Completed</span>';
   html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e">📖 ' + inProgress + ' In Progress</span>';
   html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#f1f5f9;color:#64748b">📌 ' + notStarted + ' Not Started</span>';
   if (pendingReview > 0) html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fee2e2;color:#991b1b">⏳ ' + pendingReview + ' Awaiting Review</span>';
+  html += '<span style="flex:1"></span>';
+  html += '<button data-sup-reset-all style="font-size:10px;padding:3px 10px;border-radius:12px;border:1px solid #d1d5db;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap" title="Reset all student progress back to Not Started">🗑 Reset All Progress</button>';
   html += '</div>';
 
   // ── Section breakdown ──
@@ -2251,7 +2266,7 @@ function renderSupervisorPanel() {
     header.parentNode.insertBefore(panel, header.nextSibling);
   }
 
-  // Wire approve/reject buttons
+  // Wire approve/reject/reset buttons
   setTimeout(function() {
     var approveBtns = panel.querySelectorAll('[data-sup-approve]');
     for (var a = 0; a < approveBtns.length; a++) {
@@ -2268,6 +2283,10 @@ function renderSupervisorPanel() {
         if (notes === null) return;
         supervisorAction(parts[0], parts[1], 'rejected', notes || 'Please review and resubmit.');
       });
+    }
+    var resetBtn = panel.querySelector('[data-sup-reset-all]');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', resetAllProgress);
     }
   }, 50);
 }
@@ -2295,6 +2314,29 @@ function supervisorAction(sectionId, lessonId, decision, notes) {
   if (currentView === 'lessons') renderLessons();
 }
 
+/** Show/hide the supervisor dashboard panel */
+function toggleDashboard() {
+  CONFIG.dashboardVisible = !CONFIG.dashboardVisible;
+  var dashBtn = el('btn-toggle-dashboard');
+  dashBtn.textContent = CONFIG.dashboardVisible ? '📊 Hide Dashboard' : '📊 Dashboard';
+  saveProgress();
+  renderSupervisorPanel();
+}
+
+/** Reset all student progress back to Not Started (admin only) */
+function resetAllProgress() {
+  if (!isAdmin()) { tool.notify('Only admins can reset progress.', 'warning'); return; }
+  if (!confirm('This will reset ALL lesson progress for this student back to "Not Started".\n\nThis action cannot be undone. Continue?')) return;
+  PROGRESS = {};
+  saveProgress();
+  renderSupervisorPanel();
+  updateProgressBar();
+  if (currentView === 'sections') renderSections();
+  else if (currentView === 'lessons') renderLessons();
+  else if (currentView === 'lesson-detail') renderLessonDetail();
+  tool.notify('All progress has been reset.', 'success');
+}
+
 /* ═══════════════════════════════════════════
    EVENT BINDINGS
    ═══════════════════════════════════════════ */
@@ -2306,6 +2348,7 @@ function bindEvents() {
   el('btn-setup-save').addEventListener('click', saveSetupConfig);
   el('btn-setup-cancel').addEventListener('click', cancelSetup);
   el('btn-change-course').addEventListener('click', function() { showSetup(); });
+  el('btn-toggle-dashboard').addEventListener('click', toggleDashboard);
   el('btn-dark-mode').addEventListener('click', toggleDarkMode);
 }
 
@@ -2372,6 +2415,7 @@ tool.onReady(function(val, fields) {
     loadCurriculum(function() {
       updateProgressBar();
       renderSections();
+      updateAdminUI();  // re-render supervisor panel now that SECTIONS is loaded
       tool.resize();
     });
   }
