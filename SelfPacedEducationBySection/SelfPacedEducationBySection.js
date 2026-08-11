@@ -2059,18 +2059,21 @@ function renderSetup() {
   }
   select.innerHTML = optionsHtml;
 
-  // Management type selector
-  var mgmtHtml = '<label class="setup-label" style="margin-top:16px">📋 Course Management Type</label>';
-  mgmtHtml += '<select class="setup-select" id="setup-management-type">';
-  mgmtHtml += '<option value="self_paced"' + (CONFIG.managementType !== 'supervised' ? ' selected' : '') + '>🚀 Self-Paced — lessons unlock automatically</option>';
-  mgmtHtml += '<option value="supervised"' + (CONFIG.managementType === 'supervised' ? ' selected' : '') + '>🛡️ Supervised — supervisor approves each lesson</option>';
-  mgmtHtml += '</select>';
-  // Insert after the curriculum select
+  // Management type selector — update value if it exists, create if not
   var selectContainer = select.parentNode;
-  var tempDiv = document.createElement('div');
-  tempDiv.innerHTML = mgmtHtml;
   var existingMgmt = el('setup-management-type');
-  if (!existingMgmt) selectContainer.appendChild(tempDiv.firstElementChild);
+  if (existingMgmt) {
+    existingMgmt.value = CONFIG.managementType || 'self_paced';
+  } else {
+    var mgmtHtml = '<label class="setup-label" style="margin-top:16px">📋 Course Management Type</label>';
+    mgmtHtml += '<select class="setup-select" id="setup-management-type">';
+    mgmtHtml += '<option value="self_paced"' + (CONFIG.managementType !== 'supervised' ? ' selected' : '') + '>🚀 Self-Paced — lessons unlock automatically</option>';
+    mgmtHtml += '<option value="supervised"' + (CONFIG.managementType === 'supervised' ? ' selected' : '') + '>🛡️ Supervised — supervisor approves each lesson</option>';
+    mgmtHtml += '</select>';
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = mgmtHtml;
+    selectContainer.appendChild(tempDiv.firstElementChild);
+  }
 
   hint.innerHTML = isAdmin()
     ? 'Select a curriculum and click Save. Only admins can change this later.'
@@ -2109,15 +2112,18 @@ function saveSetupConfig() {
 
   CONFIG.curriculumSourceId = selectedId;
   CONFIG.managementType = mgmtType;
-  saveProgress();
 
-  tool.notify('Curriculum configured! Loading...', 'success');
-
-  // Hide setup, show sections view
+  // Switch view BEFORE saving — so onValueChange won't re-render setup
   el('view-setup').style.display = 'none';
   el('progress-bar-wrap').style.display = '';
   currentView = 'sections';
 
+  // Persist config
+  saveProgress();
+
+  tool.notify('Curriculum configured! Loading...', 'success');
+
+  // Load curriculum now (onValueChange may also trigger this, but double-load is harmless)
   loadCurriculum(function() {
     updateProgressBar();
     renderSections();
