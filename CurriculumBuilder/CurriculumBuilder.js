@@ -39,6 +39,170 @@ var editingPdfType = null;
 /* ── Constants ── */
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
+var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
+
+/* ── Lesson Document CRUD (Phase 1: dual-write for backward compat) ──
+   Heavy lesson content (presentation HTML, study data, flashcards, quiz)
+   is mirrored to separate CMS objects of type curriculum-lessons-uniconbase.
+   This keeps the main curriculum document small while the student tool
+   still reads from the main doc. Phase 2 will switch the student tool to
+   read lesson docs directly.
+
+   REQUIRED CMS ADMIN CONFIG (Field Group → settings.allowedObjectTypes):
+     { mainObjectType: 'curriculum-lessons-uniconbase',
+       role: 'editor',
+       scope: 'shared',
+       targetCollection: 'private' }
+   • scope: 'shared' → accessible across all curriculum instances, no parent filtering
+   • targetCollection: 'private' → stores in om_private_objects (same
+     collection as the main curriculum doc)
+   • Also set: settings.allowObjectCRUD: 'yes'
+
+   Gracefully degrades if CRUD is not configured. */
+
+/** Check if lesson doc CRUD is available */
+function canUseLessonDocs() {
+  return typeof tool.requestObjects === 'function';
+}
+
+/** Extract heavy fields from a lesson object for the lesson doc */
+function extractHeavyLessonData(les) {
+  return {
+    curriculumId: tool.param('builderObjectId', '') || null,
+    lessonId: les.id || null,
+    title: les.title || '',
+    content: les.content || null,
+    htmlCode: les.htmlCode || null,
+    studyHtmlData: les.studyHtmlData || null,
+    presentationHtml: les.presentationHtml || null,
+    flashcards: les.flashcards || null,
+    quiz: les.quiz || null,
+    sourceUrls: les.sourceUrls || null,
+    hiddenSections: les.hiddenSections || null
+  };
+}
+
+/** Create or update a lesson doc. Returns lessonDocId via callback. */
+function saveLessonDoc(lessonObj, callback) {
+  if (!canUseLessonDocs()) {
+    if (callback) callback(null, lessonObj.lessonDocId || null);
+    return;
+  }
+  var heavyData = extractHeavyLessonData(lessonObj);
+  var lessonDocId = lessonObj.lessonDocId;
+  
+  if (lessonDocId) {
+    // Update existing lesson doc
+    tool.requestObjects('update', {
+      mainObjectType: LESSON_DOC_TYPE,
+      objectId: lessonDocId,
+      name: lessonObj.title || 'Lesson',
+      productData: { data_categoriesBased: { lessonJson: JSON.stringify(heavyData) } }
+    }, function(err) {
+      if (err) { console.warn('Lesson doc update failed:', err); }
+      // Don't pass docId — it already exists, no need to re-save main doc
+      if (callback) callback(err);
+    });
+  } else {
+    // Create new lesson doc
+    tool.requestObjects('create', {
+      mainObjectType: LESSON_DOC_TYPE,
+      name: lessonObj.title || 'Lesson',
+      productData: { data_categoriesBased: { lessonJson: JSON.stringify(heavyData) } }
+    }, function(err, result) {
+      if (err) { console.warn('Lesson doc create failed:', err); }
+      var newId = (result && result.object) ? result.object.id : null;
+      if (callback) callback(err, newId);
+    });
+  }
+}
+
+/** Load heavy lesson data from a lesson doc. Falls back to main doc data. */
+function loadLessonDoc(lessonObj, callback) {
+  if (!canUseLessonDocs() || !lessonObj.lessonDocId) {
+    // No lesson doc — use data already in the main doc lesson object
+    if (callback) callback(null, lessonObj);
+    return;
+  }
+  tool.requestObjects('get', {
+    mainObjectType: LESSON_DOC_TYPE,
+    objectId: lessonObj.lessonDocId
+  }, function(err, result) {
+    if (err || !result || !result.object) {
+      // Fall back to data in the main doc
+      console.warn('Lesson doc load failed, using main doc data:', err);
+      if (callback) callback(null, lessonObj);
+      return;
+    }
+    try {
+      var pd = result.object.productData;
+      var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
+      var docData = raw ? JSON.parse(raw) : {};
+      // Merge: lesson doc data wins, fall back to main doc for any missing fields
+      var merged = JSON.parse(JSON.stringify(lessonObj));
+      if (docData.content !== undefined) merged.content = docData.content;
+      if (docData.htmlCode !== undefined) merged.htmlCode = docData.htmlCode;
+      if (docData.studyHtmlData !== undefined) merged.studyHtmlData = docData.studyHtmlData;
+      if (docData.presentationHtml !== undefined) merged.presentationHtml = docData.presentationHtml;
+      if (docData.flashcards !== undefined) merged.flashcards = docData.flashcards;
+      if (docData.quiz !== undefined) merged.quiz = docData.quiz;
+      if (docData.sourceUrls !== undefined) merged.sourceUrls = docData.sourceUrls;
+      if (docData.hiddenSections !== undefined) merged.hiddenSections = docData.hiddenSections;
+      if (callback) callback(null, merged);
+    } catch(e) {
+      console.warn('Lesson doc parse error, using main doc data:', e);
+      if (callback) callback(null, lessonObj);
+    }
+  });
+}
+
+/** Delete a lesson doc (fire-and-forget) */
+function deleteLessonDoc(lessonDocId) {
+  if (!canUseLessonDocs() || !lessonDocId) return;
+  tool.requestObjects('delete', {
+    mainObjectType: LESSON_DOC_TYPE,
+    objectId: lessonDocId
+  }, function(err) {
+    if (err) console.warn('Lesson doc delete failed:', err);
+  });
+}
+
+/** Open a lesson doc in the CMS object viewer (new tab) */
+function openLessonDocUrl(lessonDocId) {
+  if (!lessonDocId) return;
+  var template = tool.param('lessonDocUrlTemplate', '');
+  var url;
+  if (template) {
+    url = template.replace('__ID__', lessonDocId).replace('__TYPE__', LESSON_DOC_TYPE).replace('__ORIGIN__', window.location.origin);
+  } else {
+    // Default: CMS admin object viewer
+    url = window.location.origin + '/admin/objects/' + LESSON_DOC_TYPE + '/' + lessonDocId;
+  }
+  tool.openUrl(url);
+}
+
+/** Show/hide the 📄 lesson doc link in the editor heading */
+function updateLessonEditorDocLink(lessonObj) {
+  var heading = el('lesson-editor-heading');
+  if (!heading) return;
+  // Remove existing link if any
+  var existing = heading.querySelector('.lesson-doc-link');
+  if (existing) existing.remove();
+  // Add link if lesson has a doc ID
+  var docId = lessonObj && lessonObj.lessonDocId;
+  if (docId) {
+    var link = document.createElement('span');
+    link.className = 'lesson-doc-link';
+    link.style.cssText = 'margin-left:10px;font-size:11px;font-weight:400;cursor:pointer;color:#7c3aed;text-decoration:underline;white-space:nowrap';
+    link.textContent = '📄 Open Lesson Doc';
+    link.title = 'Open this lesson\'s Firestore document in a new tab';
+    link.addEventListener('click', function(e) {
+      e.stopPropagation();
+      openLessonDocUrl(docId);
+    });
+    heading.appendChild(link);
+  }
+}
 
 /* ═══════════════════════════════════════════
    STUDY CONTENT COMPONENTS — Rich Block Library (101 block types)
@@ -2145,7 +2309,8 @@ function renderSections() {
             var quizIndicator = (les.quiz && les.quiz.length ? '✅ ' + les.quiz.length + ' Q' : '—');
             var extraMedia = [studyHtmlIndicator, flashcardIndicator].filter(Boolean).join('');
             if (extraMedia) media = (media === '—' ? '' : media + ' ') + extraMedia;
-            return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong></td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
+            var docLinkBtn = les.lessonDocId ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
+            return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
               '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les-sec="' + realIdx + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les-sec="' + realIdx + ':' + lesRealIdx + '">🗑</button></div></td></tr>';
           }).join('') + '</tbody></table>'
           : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
@@ -2193,6 +2358,14 @@ function renderSections() {
         e.stopPropagation();
         var parts = this.getAttribute('data-del-les-sec').split(':');
         deleteLessonDirect(parseInt(parts[0]), parseInt(parts[1]));
+      });
+    }
+    // Bind open lesson doc buttons
+    var docBtns = container.querySelectorAll('[data-open-doc]');
+    for (var n = 0; n < docBtns.length; n++) {
+      docBtns[n].addEventListener('click', function(e) {
+        e.stopPropagation();
+        openLessonDocUrl(this.getAttribute('data-open-doc'));
       });
     }
   }
@@ -2351,14 +2524,13 @@ function startAddLesson() {
   hideSubModal('quiz-question-editor-panel');
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
-  updateVisibilityBar();
+  updateAllVisToggles();
+  updateLessonEditorDocLink(null);  // clear doc link for new lesson
   el('lesson-editor-heading').textContent = 'Add Lesson';
 }
 
-function editLesson(idx) {
-  editingLessonIdx = idx;
-  var les = editingLessons[idx];
-  if (!les) return;
+/** Populate the lesson editor fields from a lesson data object */
+function populateEditorFromLesson(les) {
   el('edit-lesson-title').value = les.title || '';
   el('edit-lesson-order').value = typeof les.order === 'number' ? les.order : '';
   el('edit-lesson-minutes').value = les.estimatedMinutes || '';
@@ -2382,7 +2554,7 @@ function editLesson(idx) {
   editingStudyHtmlData = les.studyHtmlData || null;
   editingPresentationHtml = les.presentationHtml || '';
   editingHiddenSections = (les.hiddenSections && Array.isArray(les.hiddenSections)) ? JSON.parse(JSON.stringify(les.hiddenSections)) : [];
-  updateVisibilityBar();
+  updateAllVisToggles();
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
   updateHtmlPreview();
@@ -2402,6 +2574,18 @@ function editLesson(idx) {
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
   el('lesson-editor-heading').textContent = 'Edit Lesson';
+  // Show lesson doc link if available
+  updateLessonEditorDocLink(les);
+}
+
+function editLesson(idx) {
+  editingLessonIdx = idx;
+  var les = editingLessons[idx];
+  if (!les) return;
+  // Phase 1: try to load heavy content from lesson doc, fall back to main doc
+  loadLessonDoc(les, function(err, enrichedLes) {
+    populateEditorFromLesson(enrichedLes || les);
+  });
 }
 
 function saveLessonFromEditor() {
@@ -2433,7 +2617,8 @@ function saveLessonFromEditor() {
     hiddenSections: editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null,
     flashcards: editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null,
     sourceUrls: editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null,
-    quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null
+    quiz: editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null,
+    lessonDocId: null  // populated by saveLessonDoc below
   };
 
   // Direct mode: save to sections[editingDirectSectionIdx].lessons and persist immediately
@@ -2442,14 +2627,35 @@ function saveLessonFromEditor() {
     if (!sec.lessons) sec.lessons = [];
     if (editingLessonIdx !== null && sec.lessons[editingLessonIdx]) {
       lessonData.id = sec.lessons[editingLessonIdx].id;
+      lessonData.lessonDocId = sec.lessons[editingLessonIdx].lessonDocId || null;
       sec.lessons[editingLessonIdx] = lessonData;
     } else {
       sec.lessons.push(lessonData);
     }
+    var savedSectionIdx = editingDirectSectionIdx;  // capture before clearing
+    var savedLessonId = lessonData.id;
     hideSubModal('lesson-editor-panel');
     editingDirectSectionIdx = null;
     saveCurriculum(function(err) {
       if (err) return;
+      // Phase 1: mirror heavy content to separate lesson doc
+      saveLessonDoc(lessonData, function(docErr, docId) {
+        if (docId) {
+          // Update the lessonDocId in the CURRENT sections array (not the potentially
+          // orphaned lessonData reference — onValueChange may have replaced sections)
+          var sec2 = sections[savedSectionIdx];
+          if (sec2 && sec2.lessons) {
+            for (var ul = 0; ul < sec2.lessons.length; ul++) {
+              if (sec2.lessons[ul].id === savedLessonId) {
+                sec2.lessons[ul].lessonDocId = docId;
+                break;
+              }
+            }
+          }
+          // Re-save main doc with the lessonDocId reference
+          saveCurriculum();
+        }
+      });
       tool.notify('Lesson saved! ✅', 'success');
     });
     return;
@@ -2458,6 +2664,7 @@ function saveLessonFromEditor() {
   // Modal mode: save to editingLessons temp array
   if (editingLessonIdx !== null && editingLessons[editingLessonIdx]) {
     lessonData.id = editingLessons[editingLessonIdx].id;
+    lessonData.lessonDocId = editingLessons[editingLessonIdx].lessonDocId || null;
     editingLessons[editingLessonIdx] = lessonData;
   } else {
     editingLessons.push(lessonData);
@@ -2465,6 +2672,19 @@ function saveLessonFromEditor() {
 
   hideSubModal('lesson-editor-panel');
   renderLessonsEditorList();
+  // Phase 1: mirror heavy content to separate lesson doc (fire-and-forget)
+  saveLessonDoc(lessonData, function(docErr, docId) {
+    if (docId && !lessonData.lessonDocId) {
+      lessonData.lessonDocId = docId;
+      // Update the lesson in editingLessons with the doc ID
+      for (var ui = 0; ui < editingLessons.length; ui++) {
+        if (editingLessons[ui].id === lessonData.id) {
+          editingLessons[ui].lessonDocId = docId;
+          break;
+        }
+      }
+    }
+  });
   tool.notify('Lesson saved! ✅', 'success');
 }
 
@@ -2473,50 +2693,38 @@ function cancelLessonEditor() {
   editingDirectSectionIdx = null;
 }
 
-/** Update the visibility toggle bar in the lesson editor */
-function updateVisibilityBar() {
-  var bar = el('visibility-toggle-bar');
-  if (!bar) return;
-  var sections = [
-    { key: 'presentation', icon: '🎞️', label: 'Presentation', has: !!editingPresentationHtml },
-    { key: 'studyContent', icon: '📖', label: 'Study Content', has: !!(editingHtmlCode || editingStudyHtmlData) },
-    { key: 'flashcards', icon: '🃏', label: 'Flashcards', has: editingFlashcards.length > 0 },
-    { key: 'questions', icon: '❓', label: 'Quiz Questions', has: editingQuizQuestions.length > 0 },
-    { key: 'videos', icon: '🎬', label: 'Videos', has: editingYoutubeUrls.length > 0 },
-    { key: 'slides', icon: '📊', label: 'PDF Slides', has: editingPresentationPdfUrls.length > 0 },
-    { key: 'studyDocs', icon: '📄', label: 'Study Docs', has: editingStudyDocPdfUrls.length > 0 },
-    { key: 'worksheets', icon: '📝', label: 'Worksheets', has: editingWorksheetPdfUrls.length > 0 },
-    { key: 'answerKeys', icon: '🔑', label: 'Answer Keys', has: editingAnswerKeyPdfUrls.length > 0 },
-    { key: 'webDocs', icon: '🌐', label: 'Web Docs', has: editingHtmlDocUrls.length > 0 },
-    { key: 'notes', icon: '📋', label: 'Notes', has: !!(getHtmlContent && getHtmlContent()) }
-  ];
-  var html = '';
-  for (var i = 0; i < sections.length; i++) {
-    var sec = sections[i];
-    var isHidden = editingHiddenSections.indexOf(sec.key) !== -1;
-    var bg = isHidden ? '#fee2e2' : (sec.has ? '#d1fae5' : '#f1f5f9');
-    var border = isHidden ? '#fca5a5' : (sec.has ? '#6ee7b7' : '#e2e8f0');
-    var color = isHidden ? '#991b1b' : (sec.has ? '#065f46' : '#94a3b8');
-    var eye = isHidden ? '🙈' : '👁️';
-    html += '<button class="vis-toggle-chip" data-vis-key="' + sec.key + '" title="' + (isHidden ? 'Hidden from students — click to show' : 'Visible to students — click to hide') + '" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:600;border:1px solid ' + border + ';background:' + bg + ';color:' + color + ';cursor:pointer;font-family:inherit;transition:all 0.15s;opacity:' + (sec.has ? '1' : '0.5') + '">' + eye + ' ' + sec.icon + ' ' + sec.label + '</button>';
-  }
-  bar.innerHTML = '<span style="font-size:11px;color:var(--text-muted);margin-right:6px;font-weight:600">👁️ Visibility:</span>' + html;
-  // Wire click handlers
-  var chips = bar.querySelectorAll('.vis-toggle-chip');
-  for (var c = 0; c < chips.length; c++) {
-    chips[c].addEventListener('click', function() {
-      var key = this.getAttribute('data-vis-key');
-      var idx = editingHiddenSections.indexOf(key);
-      if (idx === -1) {
-        editingHiddenSections.push(key);
-      } else {
-        editingHiddenSections.splice(idx, 1);
-      }
-      autoSaveCurrentLesson();
-      updateVisibilityBar();
-    });
+/** Update ALL per-tab visibility toggle buttons */
+function updateAllVisToggles() {
+  // Map of vis-key to whether there's content for that section
+  var statusMap = {
+    'presentation': !!editingPresentationHtml,
+    'studyContent': !!(editingHtmlCode || editingStudyHtmlData),
+    'flashcards': editingFlashcards.length > 0,
+    'questions': editingQuizQuestions.length > 0,
+    'videos': editingYoutubeUrls.length > 0,
+    'slides': editingPresentationPdfUrls.length > 0,
+    'studyDocs': editingStudyDocPdfUrls.length > 0,
+    'worksheets': editingWorksheetPdfUrls.length > 0,
+    'answerKeys': editingAnswerKeyPdfUrls.length > 0,
+    'webDocs': editingHtmlDocUrls.length > 0,
+    'notes': !!(typeof getHtmlContent === 'function' && getHtmlContent())
+  };
+
+  var toggles = document.querySelectorAll('.vis-tab-toggle');
+  for (var i = 0; i < toggles.length; i++) {
+    var btn = toggles[i];
+    var key = btn.getAttribute('data-vis-key');
+    var isHidden = editingHiddenSections.indexOf(key) !== -1;
+    var hasContent = statusMap[key] || false;
+    btn.innerHTML = isHidden ? '🙈 Hidden' : '👁️ Visible';
+    btn.style.opacity = hasContent ? '1' : '0.45';
+    btn.style.background = isHidden ? '#fee2e2' : '#fff';
+    btn.style.borderColor = isHidden ? '#fca5a5' : 'var(--border)';
+    btn.style.color = isHidden ? '#991b1b' : 'inherit';
   }
 }
+
+/** Toggle a single section's visibility */
 
 /** Auto-save the current lesson state to CMS without closing the editor.
  *  Called after AI generation (quiz, flashcards, study content) and flashcard edits.
@@ -2562,10 +2770,40 @@ function autoSaveCurrentLesson() {
   targetLesson.flashcards = editingFlashcards.length > 0 ? JSON.parse(JSON.stringify(editingFlashcards)) : null;
   targetLesson.quiz = editingQuizQuestions.length > 0 ? JSON.parse(JSON.stringify(editingQuizQuestions)) : null;
   targetLesson.sourceUrls = editingSourceLinks.length > 0 ? JSON.parse(JSON.stringify(editingSourceLinks)) : null;
+  targetLesson.hiddenSections = editingHiddenSections.length > 0 ? JSON.parse(JSON.stringify(editingHiddenSections)) : null;
+  // Also sync content (rich text) and pdf urls to keep lesson doc complete
+  targetLesson.content = getHtmlContent() || null;
+  targetLesson.youtubeUrls = editingYoutubeUrls.length > 0 ? JSON.parse(JSON.stringify(editingYoutubeUrls)) : null;
+  targetLesson.presentationPdfUrls = editingPresentationPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingPresentationPdfUrls)) : null;
+  targetLesson.studyDocPdfUrls = editingStudyDocPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingStudyDocPdfUrls)) : null;
+  targetLesson.worksheetPdfUrls = editingWorksheetPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingWorksheetPdfUrls)) : null;
+  targetLesson.answerKeyPdfUrls = editingAnswerKeyPdfUrls.length > 0 ? JSON.parse(JSON.stringify(editingAnswerKeyPdfUrls)) : null;
+  targetLesson.htmlDocUrls = editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null;
+  targetLesson.hiddenDocUrls = editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null;
 
   // Persist to CMS (deep-clone sections to avoid reference issues)
   tool.reportValid(true, '');
   tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
+  // Phase 1: mirror heavy content to separate lesson doc (fire-and-forget)
+  var autoSaveLessonId = targetLesson.id;
+  saveLessonDoc(targetLesson, function(docErr, docId) {
+    if (docId && !targetLesson.lessonDocId) {
+      // Find the lesson in the CURRENT sections array and update its lessonDocId
+      for (var si = 0; si < sections.length; si++) {
+        var slessons = sections[si].lessons;
+        if (!slessons) continue;
+        for (var li = 0; li < slessons.length; li++) {
+          if (slessons[li].id === autoSaveLessonId) {
+            slessons[li].lessonDocId = docId;
+            break;
+          }
+        }
+      }
+      // Re-save main doc with the new lessonDocId reference
+      tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
+    }
+  });
+  updateAllVisToggles();
 }
 
 /* ── Direct Lesson Management (from main view, bypasses section modal) ── */
@@ -2600,7 +2838,8 @@ function startAddLessonDirect(sectionIdx) {
   hideSubModal('quiz-question-editor-panel');
   showSubModal('lesson-editor-panel');
   switchLessonEditorTab('info');
-  updateVisibilityBar();
+  updateAllVisToggles();
+  updateLessonEditorDocLink(null);  // clear doc link for new lesson
   el('lesson-editor-heading').textContent = 'Add Lesson to ' + (sections[sectionIdx].title || 'Section');
 }
 
@@ -2610,58 +2849,23 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   var sec = sections[sectionIdx];
   var les = sec.lessons && sec.lessons[lessonIdx];
   if (!les) return;
-  el('edit-lesson-title').value = les.title || '';
-  el('edit-lesson-order').value = typeof les.order === 'number' ? les.order : '';
-  el('edit-lesson-minutes').value = les.estimatedMinutes || '';
-  editingYoutubeUrls = normalizePdfArray(les.youtubeUrls); editingYoutubeIdx = null;
-  renderYoutubeEditorList();
-  hideSubModal('youtube-editor-panel');
-  editingPresentationPdfUrls = normalizePdfArray(les.presentationPdfUrls);
-  editingStudyDocPdfUrls = normalizePdfArray(les.studyDocPdfUrls);
-  editingWorksheetPdfUrls = normalizePdfArray(les.worksheetPdfUrls);
-  editingAnswerKeyPdfUrls = normalizePdfArray(les.answerKeyPdfUrls);
-  editingHtmlDocUrls = normalizePdfArray(les.htmlDocUrls);
-  editingPdfIdx = null; editingPdfType = null;
-  renderPdfEditorList('presentation'); renderPdfEditorList('studyDoc'); renderPdfEditorList('worksheet'); renderPdfEditorList('answerKey'); renderPdfEditorList('htmlDoc');
-  hideSubModal('pdf-editor-panel');
-  var fcVal2 = les.flashcards;
-  if (fcVal2 && typeof fcVal2 === 'string') { try { fcVal2 = JSON.parse(fcVal2); } catch(e) { fcVal2 = null; } }
-  editingFlashcards = (fcVal2 && Array.isArray(fcVal2)) ? JSON.parse(JSON.stringify(fcVal2)) : [];
-  renderFlashcardsEditorList();
-  editingHtmlCode = les.htmlCode || '';
-  editingStudyHtmlData = les.studyHtmlData || null;
-  editingPresentationHtml = les.presentationHtml || '';
-  editingHiddenSections = (les.hiddenSections && Array.isArray(les.hiddenSections)) ? JSON.parse(JSON.stringify(les.hiddenSections)) : [];
-  updateVisibilityBar();
-  if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
-  if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
-  updateHtmlPreview();
-  setHtmlContent(les.content || '');
-  var srcVal = les.sourceUrls;
-  if (srcVal && typeof srcVal === 'string') { try { srcVal = JSON.parse(srcVal); } catch(e) { srcVal = null; } }
-  editingSourceLinks = (srcVal && Array.isArray(srcVal)) ? JSON.parse(JSON.stringify(srcVal)) : [];
-  editingSourceLinkIdx = null;
-  renderSourceLinksEditorList();
-  hideSubModal('source-link-editor-panel');
-  var quizVal = les.quiz;
-  if (quizVal && typeof quizVal === 'string') { try { quizVal = JSON.parse(quizVal); } catch(e) { quizVal = null; } }
-  editingQuizQuestions = (quizVal && Array.isArray(quizVal)) ? JSON.parse(JSON.stringify(quizVal)) : [];
-  editingQuizQuestionIdx = null;
-  renderQuizEditorList();
-  hideSubModal('quiz-question-editor-panel');
-  showSubModal('lesson-editor-panel');
-  switchLessonEditorTab('info');
-  el('lesson-editor-heading').textContent = 'Edit Lesson';
+  // Phase 1: try to load heavy content from lesson doc, fall back to main doc
+  loadLessonDoc(les, function(err, enrichedLes) {
+    populateEditorFromLesson(enrichedLes || les);
+  });
 }
 
 function deleteLessonDirect(sectionIdx, lessonIdx) {
   var sec = sections[sectionIdx];
   var les = sec.lessons && sec.lessons[lessonIdx];
   var name = les ? (les.title || 'this lesson') : 'this lesson';
+  var docId = les ? les.lessonDocId : null;
   sandboxConfirm('Delete "' + name + '" from "' + (sec.title || 'Section') + '"? This cannot be undone.', function() {
     if (sec.lessons) sec.lessons.splice(lessonIdx, 1);
     saveCurriculum(function(err) {
       if (err) return;
+      // Phase 1: also delete the lesson doc
+      if (docId) deleteLessonDoc(docId);
       tool.notify('Lesson deleted.', 'info');
     });
   });
@@ -3680,36 +3884,49 @@ function generatePresentationFromPdf() {
     if (text.length > maxLen) text = text.substring(0, maxLen) + '\n\n[... content truncated ...]';
     if (genBtn) genBtn.textContent = '⏳ Generating slides...';
 
-    var prompt = 'You are an expert presentation designer. Create a BEAUTIFUL, professional HTML presentation (slide deck) from the document content below. Return ONLY valid HTML — no markdown, no intro text.\n\n' +
-      'REQUIREMENTS:\n' +
-      '• Output MUST start with <div class="pres-deck"> and contain multiple slides\n' +
-      '• Each slide uses: <div class="pres-slide"><div class="pres-slide-inner">...content...</div></div>\n' +
-      '• Generate 6-12 slides covering the key topics in the document\n' +
-      '• Slide types to vary: title slide, content slides, bullet slides, image slides, quote slides, summary slide\n' +
-      '• Title slide: gradient background, large title, subtitle, document source\n' +
-      '• Content slides: clean layout with heading + 2-4 paragraphs or bullet points\n' +
-      '• Use a consistent color scheme (pick one): blue-indigo, green-teal, or warm-amber\n' +
-      '• Each slide should have good visual hierarchy: clear heading, readable body text, proper spacing\n' +
-      '• Use CSS gradients, subtle shadows, and border-radius for a modern look\n' +
-      '• Include slide numbers in the bottom-right corner of each slide\n' +
-      '• MAX 1 slide with a data table — prefer bullet points, key stats, and visual descriptions\n' +
-      '• Use emoji icons sparingly for visual interest (📊 📈 🎯 💡 ✅)\n' +
-      '• Font: system-ui sans-serif, headings in a serif or bold weight\n' +
-      '• Keep text concise — presentation style, not paragraph style\n' +
-      '• IMPORTANT: Each slide must fit within a 16:9 aspect ratio viewport without scrolling\n' +
-      '\nSTYLE INLINE CSS TEMPLATE to include in a <style> tag:\n' +
-      '.pres-deck{max-width:960px;margin:0 auto;font-family:system-ui,sans-serif}\n' +
-      '.pres-slide{width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;padding:40px;box-sizing:border-box;page-break-after:always;position:relative;overflow:hidden}\n' +
-      '.pres-slide-inner{max-width:800px;width:100%}\n' +
-      '.pres-slide h1{font-size:36px;font-weight:800;margin-bottom:16px;line-height:1.2}\n' +
-      '.pres-slide h2{font-size:26px;font-weight:700;margin-bottom:14px}\n' +
-      '.pres-slide p,.pres-slide li{font-size:18px;line-height:1.6;color:#334155}\n' +
-      '.pres-slide-num{position:absolute;bottom:16px;right:24px;font-size:12px;color:#94a3b8}\n' +
-      '.pres-title-slide{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff}\n' +
-      '.pres-title-slide h1{color:#fff;font-size:42px}\n' +
-      '.pres-title-slide p{color:rgba(255,255,255,0.85)}\n' +
-      '@media print{body{margin:0;padding:0}.pres-slide{page-break-after:always;width:100vw;height:100vh;padding:60px}}\n' +
-      '\nDocument content:\n"""\n' + text + '\n"""\n\nSTART YOUR HTML WITH: <div class="pres-deck">';
+    var prompt = 'You are an expert presentation designer. Create a VISUALLY STUNNING, professional HTML slide deck from the document below. Return ONLY valid HTML — no markdown, no intro text, no code fences.\n\n' +
+      'CRITICAL OUTPUT FORMAT:\n' +
+      'Your ENTIRE response must be: <style>...ALL CSS rules...</style><div class="pres-deck">...slides...</div>\n' +
+      'The <style> tag MUST come FIRST, immediately followed by <div class="pres-deck">. Do NOT use markdown code blocks.\n\n' +
+      'SLIDE HTML STRUCTURE — every slide must follow this exact pattern:\n' +
+      '<div class="pres-slide" style="background:...gradient or color...">\n' +
+      '  <div class="pres-slide-inner">\n' +
+      '    <!-- Put your content here — use inline styles for cards, icons, stat boxes etc. -->\n' +
+      '  </div>\n' +
+      '  <div class="pres-slide-num">1</div>\n' +
+      '</div>\n\n' +
+      'CSS TEMPLATE — COPY this EXACTLY into your <style> tag, then CUSTOMIZE the slide background colors via inline style="" on each .pres-slide:\n' +
+      '.pres-deck{max-width:960px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif}\n' +
+      '.pres-slide{width:100%;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;box-sizing:border-box;position:relative;overflow:hidden}\n' +
+      '.pres-slide-inner{max-width:800px;width:100%;padding:36px 44px;box-sizing:border-box}\n' +
+      '.pres-slide h1{font-size:34px;font-weight:800;margin:0 0 10px 0;line-height:1.25;letter-spacing:-0.02em}\n' +
+      '.pres-slide h2{font-size:24px;font-weight:700;margin:0 0 8px 0;line-height:1.3}\n' +
+      '.pres-slide p,.pres-slide li{font-size:16px;line-height:1.55;margin:0 0 6px 0;color:#334155}\n' +
+      '.pres-slide ul,.pres-slide ol{margin:0;padding-left:22px}\n' +
+      '.pres-slide-num{position:absolute;bottom:12px;right:18px;font-size:11px;color:rgba(148,163,184,0.8);font-weight:600}\n' +
+      '@media print{.pres-slide{page-break-after:always;width:100vw;height:100vh}}\n\n' +
+      'SLIDE TYPES — generate 7-10 varied slides:\n' +
+      '1. TITLE SLIDE: Full-slide gradient background (e.g. linear-gradient(135deg,#4f46e5,#7c3aed)), white text, large h1 title, subtitle in lighter white, optional document source line at bottom\n' +
+      '2. CONTENT SLIDES (3-5): Clean heading + 2-3 paragraphs wrapped in styled cards (use inline style: background:rgba(255,255,255,0.92);border-radius:12px;padding:20px 24px;box-shadow:0 2px 12px rgba(0,0,0,0.06)). Use light pastel slide backgrounds.\n' +
+      '3. BULLET SLIDES (1-2): Heading + 4-5 bullet points with emoji markers (🎯 💡 ✅ 📌 ⭐). Each bullet can be a small card.\n' +
+      '4. KEY STATS / HIGHLIGHT SLIDE (1): 2-4 stat cards side by side (use inline flex/grid) with big numbers and labels\n' +
+      '5. QUOTE SLIDE (1): Centered impactful quote with large decorative quote marks, attribution below\n' +
+      '6. SUMMARY SLIDE (1): 5-7 one-line takeaways in a compact list or card grid\n\n' +
+      'VISUAL DESIGN RULES — EVERY slide must look designed:\n' +
+      '• Pick ONE color scheme: Blue-Indigo (#4f46e5,#3730a3,#eef2ff), Green-Teal (#059669,#0d9488,#d1fae5), or Warm-Amber (#d97706,#92400e,#fef3c7)\n' +
+      '• EVERY slide MUST have a non-white background (gradient or solid color). Use light tints for content slides (e.g. #f8faff, #f5f9ff), bold gradients for title/section slides\n' +
+      '• Content text should be in styled cards/boxes — never just bare text on the slide\n' +
+      '• Use subtle shadows (box-shadow:0 2px 12px rgba(0,0,0,0.06)), rounded corners (border-radius:12px)\n' +
+      '• Use emoji icons as visual anchors in headings and bullet points\n' +
+      '• Slide numbers (.pres-slide-num) on EVERY slide\n' +
+      '• Title slide h1 color: white (#fff). Title slide p/subtitle color: rgba(255,255,255,0.85)\n\n' +
+      'CONTENT FIT GUIDELINES (keep slides from overflowing):\n' +
+      '• Max 5 bullet points per slide, each 1 line (~80 chars)\n' +
+      '• Content slides: 1 heading + max 2 paragraphs (3-4 sentences each) OR 1 heading + 4-5 bullets\n' +
+      '• If you have more content, split into an additional slide — more slides is better than overflow\n' +
+      '• Total ~100-130 words max per content slide\n\n' +
+      'Document to present:\n"""\n' + text + '\n"""\n\n' +
+      'REMEMBER: Start with <style> tag, then <div class="pres-deck">. Every slide colored. Content in styled cards. Make it BEAUTIFUL.';
 
     var fullResponse = '';
     tool.requestAIStream(prompt, null, {
@@ -3718,10 +3935,10 @@ function generatePresentationFromPdf() {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
         var raw = fullResponse.trim();
         raw = raw.replace(/^```(?:html)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
-        // Extract HTML starting from pres-deck
-        var startIdx = raw.indexOf('<div class="pres-deck"');
+        // Extract HTML: prefer <style> first, then pres-deck, then any div
+        var startIdx = raw.indexOf('<style');
+        if (startIdx === -1) startIdx = raw.indexOf('<div class="pres-deck"');
         if (startIdx === -1) startIdx = raw.indexOf('<div class=\'pres-deck\'');
-        if (startIdx === -1) startIdx = raw.indexOf('<style');
         if (startIdx === -1) startIdx = raw.indexOf('<div');
         var endIdx = raw.lastIndexOf('</div>');
         if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
@@ -3950,6 +4167,25 @@ function bindEvents() {
   var btnGenPres = el('btn-generate-presentation');
   if (btnGenPres) btnGenPres.addEventListener('click', generatePresentationFromPdf);
 
+  // Visibility toggle clicks (delegated)
+  var editorPanel = el('lesson-editor-panel');
+  if (editorPanel) {
+    editorPanel.addEventListener('click', function(e) {
+      var toggleBtn = e.target.closest('.vis-tab-toggle');
+      if (!toggleBtn) return;
+      var key = toggleBtn.getAttribute('data-vis-key');
+      if (!key) return;
+      var idx = editingHiddenSections.indexOf(key);
+      if (idx === -1) {
+        editingHiddenSections.push(key);
+      } else {
+        editingHiddenSections.splice(idx, 1);
+      }
+      autoSaveCurrentLesson();
+      updateAllVisToggles();
+    });
+  }
+
   // Study Content sub-tabs (Code / Preview)
   var htmlTabs = document.querySelector('.study-html-tabs');
   if (htmlTabs) {
@@ -4043,7 +4279,8 @@ tool.onReady(function(val, fields) {
 
   tool.declareParams([
     { name: 'builderObjectId', label: 'contentId (for display)', type: 'text', default: '', severity: 'goodToHave', hint: 'Optional: set to this CMS object\'s contentId. Displays in header for copying to the Student tool\'s curriculumSourceId.' },
-    { name: 'managerRole', label: 'Manager Role(s)', type: 'text', default: 'admin,editor', severity: 'goodToHave', hint: 'Comma-separated roles that can manage the curriculum.' }
+    { name: 'managerRole', label: 'Manager Role(s)', type: 'text', default: 'admin,editor', severity: 'goodToHave', hint: 'Comma-separated roles that can manage the curriculum.' },
+    { name: 'lessonDocUrlTemplate', label: 'Lesson Doc URL Template', type: 'text', default: '', severity: 'optional', hint: 'URL template for opening lesson Firestore docs. Use __ID__ for lessonDocId, __TYPE__ for object type, __ORIGIN__ for current origin. Leave empty for default CMS object viewer URL.' }
   ]);
 
   updateIdBadge();

@@ -22,10 +22,51 @@ var availableCurriculums = []; // Cached list of Builder objects for the setup p
 
 /* ── Constants ── */
 var SECTIONS_TYPE = 'curriculum-builder-uniconbaseapps';
+var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
 var MIN_PASS_SCORE = 60;
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 var STUDY_WAIT_MIN = 30;
+
+/* ── Lesson Doc Loader (Phase 2: read heavy content from separate docs) ── */
+/** Fetch a lesson's heavy content from its curriculum-lessons-uniconbase doc.
+ *  Falls back to the main curriculum doc data if lesson doc is unavailable. */
+function loadLessonDocData(lesson, callback) {
+  if (!lesson || !lesson.lessonDocId || typeof tool.requestObjects !== 'function') {
+    // No lesson doc — use data already in the lesson object (backward compat)
+    if (callback) callback(null, lesson);
+    return;
+  }
+  tool.requestObjects('get', {
+    mainObjectType: LESSON_DOC_TYPE,
+    objectId: lesson.lessonDocId
+  }, function(err, result) {
+    if (err || !result || !result.object) {
+      // Fall back to main doc data silently
+      if (callback) callback(null, lesson);
+      return;
+    }
+    try {
+      var pd = result.object.productData;
+      var raw = pd && pd.data_categoriesBased && pd.data_categoriesBased.lessonJson;
+      var docData = raw ? JSON.parse(raw) : {};
+      // Merge: lesson doc data wins, main doc as fallback
+      var enriched = JSON.parse(JSON.stringify(lesson));
+      if (docData.content !== undefined) enriched.content = docData.content;
+      if (docData.htmlCode !== undefined) enriched.htmlCode = docData.htmlCode;
+      if (docData.studyHtmlData !== undefined) enriched.studyHtmlData = docData.studyHtmlData;
+      if (docData.presentationHtml !== undefined) enriched.presentationHtml = docData.presentationHtml;
+      if (docData.flashcards !== undefined) enriched.flashcards = docData.flashcards;
+      if (docData.quiz !== undefined) enriched.quiz = docData.quiz;
+      if (docData.sourceUrls !== undefined) enriched.sourceUrls = docData.sourceUrls;
+      if (docData.hiddenSections !== undefined) enriched.hiddenSections = docData.hiddenSections;
+      if (callback) callback(null, enriched);
+    } catch(e) {
+      // Parse error — fall back to main doc
+      if (callback) callback(null, lesson);
+    }
+  });
+}
 
 /* ── Role check ── */
 function isAdmin() {
@@ -638,7 +679,8 @@ function renderLessons() {
 function renderLessonDetail() {
   var section = findSection(currentSectionId);
   if (!section) { showSections(); return; }
-  var lesson = findLesson(section, currentLessonId);
+  // Use enriched lesson from lesson doc if available, else fall back to main doc data
+  var lesson = window._currentEnrichedLesson || findLesson(section, currentLessonId);
   if (!lesson) { openSection(currentSectionId); return; }
 
   var prog = getLessonProgress(section.id, lesson.id);
@@ -1466,28 +1508,28 @@ window.sfcToggleKnow = function(btn, containerId) {
     var activeStatus = container.getAttribute('data-sfc-status-filter') || 'all';
     window.sfcApplyStatusFilter(containerId, activeStatus);
   }
-  // Persist mastered state to progress
+  // Persist mastered state to in-memory PROGRESS (debounced save — no reload on every click)
   var sid = container ? container.getAttribute('data-sfc-sid') : '';
   var lid = container ? container.getAttribute('data-sfc-lid') : '';
   if (sid && lid) {
-    try {
-      var val = tool.getValue ? tool.getValue() : null;
-      var progress = (val && val.progress) ? val.progress : {};
-      if (!progress[sid]) progress[sid] = {};
-      if (!progress[sid][lid]) progress[sid][lid] = {};
-      var mastered = progress[sid][lid].flashcardMastered || [];
-      var idx = parseInt(wrapper.getAttribute('data-sfc-idx'));
-      if (!isNaN(idx)) {
-        if (isNowMastered && mastered.indexOf(idx) === -1) {
-          mastered.push(idx);
-        } else if (!isNowMastered) {
-          var pos = mastered.indexOf(idx);
-          if (pos !== -1) mastered.splice(pos, 1);
-        }
-        progress[sid][lid].flashcardMastered = mastered;
-        tool.setValue({ config: (val && val.config) || {}, progress: progress });
+    if (!PROGRESS[sid]) PROGRESS[sid] = {};
+    if (!PROGRESS[sid][lid]) PROGRESS[sid][lid] = {};
+    var mastered = PROGRESS[sid][lid].flashcardMastered || [];
+    var idx = parseInt(wrapper.getAttribute('data-sfc-idx'));
+    if (!isNaN(idx)) {
+      if (isNowMastered && mastered.indexOf(idx) === -1) {
+        mastered.push(idx);
+      } else if (!isNowMastered) {
+        var pos = mastered.indexOf(idx);
+        if (pos !== -1) mastered.splice(pos, 1);
       }
-    } catch(e) { /* ignore save errors */ }
+      PROGRESS[sid][lid].flashcardMastered = mastered;
+      // Debounced save — avoids full re-render on every click
+      if (window._sfcSaveTimer) clearTimeout(window._sfcSaveTimer);
+      window._sfcSaveTimer = setTimeout(function() {
+        saveProgress();
+      }, 1500);
+    }
   }
 };
 
@@ -1584,6 +1626,8 @@ window.sfcInitAll = function() {
 };
 
 function showSections() {
+  // Flush any pending flashcard mastered saves before navigating away
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
   currentView = 'sections'; currentSectionId = null; currentLessonId = null;
   el('view-sections').style.display = '';
   el('view-lessons').style.display = 'none';
@@ -1596,6 +1640,8 @@ function showSections() {
 }
 
 function openSection(sectionId) {
+  // Flush any pending flashcard mastered saves before navigating away
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
   if (!isSectionAccessible(sectionId)) { tool.notify('🔒 You must complete all previous sections first.', 'warning'); return; }
   currentView = 'lessons'; currentSectionId = sectionId; currentLessonId = null;
   el('view-sections').style.display = 'none';
@@ -1610,6 +1656,8 @@ function openSection(sectionId) {
 }
 
 function openLesson(sectionId, lessonId) {
+  // Flush any pending flashcard mastered saves before navigating to a new lesson
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
   if (!isLessonAccessible(sectionId, lessonId)) { tool.notify('🔒 You must complete all previous lessons first.', 'warning'); return; }
   currentView = 'lesson-detail'; currentSectionId = sectionId; currentLessonId = lessonId;
   el('view-sections').style.display = 'none';
@@ -1619,9 +1667,13 @@ function openLesson(sectionId, lessonId) {
   var section = findSection(sectionId);
   var lesson = section ? findLesson(section, lessonId) : null;
   el('app-title').textContent = '📖 ' + (lesson ? (lesson.title || 'Lesson') : 'Lesson');
-  renderLessonDetail();
-  window.scrollTo(0, 0);
-  tool.resize();
+  // Phase 2: load heavy content from lesson doc (fallback to main doc data)
+  loadLessonDocData(lesson, function(err, enrichedLesson) {
+    window._currentEnrichedLesson = enrichedLesson || lesson;
+    renderLessonDetail();
+    window.scrollTo(0, 0);
+    tool.resize();
+  });
 }
 
 function navigateLesson(direction) {
@@ -1954,8 +2006,24 @@ function fetchAvailableCurriculums(callback) {
   });
 }
 
-/** Show the setup screen (only for admins) */
+/** Show the setup screen (only for admins). Non-admins are redirected back. */
 function showSetup() {
+  if (!isAdmin()) {
+    // Non-admins: silently redirect. If no curriculum, show a clean message in the UI.
+    if (!CONFIG.curriculumSourceId) {
+      el('view-setup').style.display = 'none';
+      el('view-sections').style.display = '';
+      el('view-lessons').style.display = 'none';
+      el('view-lesson-detail').style.display = 'none';
+      el('progress-bar-wrap').style.display = 'none';
+      el('app-title').textContent = '📚 Self-Paced Learning';
+      el('section-group-grid').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No course configured yet</div><div class="empty-desc">Please contact your administrator to set up the course curriculum.</div></div>';
+      tool.resize();
+      return;
+    }
+    cancelSetup();
+    return;
+  }
   currentView = 'setup';
   el('view-sections').style.display = 'none';
   el('view-lessons').style.display = 'none';
@@ -2073,45 +2141,103 @@ function updateAdminUI() {
   renderSupervisorPanel();
 }
 
-/** Supervisor panel — admin can approve/reject pending-review lessons */
+/** Supervisor panel — admin dashboard showing full course progress + pending reviews */
 function renderSupervisorPanel() {
   var existing = el('supervisor-panel');
   if (existing) existing.remove();
   if (!isAdmin()) return;
-  var mgmtType = CONFIG.managementType || 'self_paced';
-  if (mgmtType !== 'supervised') return;
 
-  var pending = [];
   var all = getAllLessonsInOrder();
+  if (all.length === 0) return;
+
+  // Gather stats
+  var totalLessons = all.length;
+  var completed = 0, inProgress = 0, notStarted = 0, pendingReview = 0;
+  var pendingItems = [];
+  var sectionStats = {}; // sectionId → { title, total, completed, inProgress, notStarted, pendingReview }
   for (var i = 0; i < all.length; i++) {
-    var prog = getLessonProgress(all[i].sectionId, all[i].lessonId);
-    if (prog.status === 'pending_review') {
-      var sec = findSection(all[i].sectionId);
-      var les = sec ? findLesson(sec, all[i].lessonId) : null;
-      pending.push({ sectionId: all[i].sectionId, lessonId: all[i].lessonId, sectionTitle: sec ? sec.title : '', lessonTitle: les ? les.title : '', score: prog.score });
-    }
+    var sid = all[i].sectionId;
+    var lid = all[i].lessonId;
+    var prog = getLessonProgress(sid, lid);
+    var sec = findSection(sid);
+    var les = sec ? findLesson(sec, lid) : null;
+    var secTitle = sec ? sec.title : 'Unknown Section';
+    if (!sectionStats[sid]) sectionStats[sid] = { title: secTitle, total: 0, completed: 0, inProgress: 0, notStarted: 0, pendingReview: 0, lessons: [] };
+    sectionStats[sid].total++;
+    var lessonEntry = { lessonId: lid, title: les ? les.title : 'Unknown', status: prog.status, score: prog.score };
+    sectionStats[sid].lessons.push(lessonEntry);
+    if (prog.status === 'completed') { completed++; sectionStats[sid].completed++; }
+    else if (prog.status === 'pending_review') { pendingReview++; sectionStats[sid].pendingReview++; pendingItems.push({ sectionId: sid, lessonId: lid, sectionTitle: secTitle, lessonTitle: les ? les.title : '', score: prog.score }); }
+    else if (prog.status === 'in_progress' || prog.status === 'studying') { inProgress++; sectionStats[sid].inProgress++; }
+    else { notStarted++; sectionStats[sid].notStarted++; }
   }
+  var overallPct = totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
 
   var panel = document.createElement('div');
   panel.id = 'supervisor-panel';
-  panel.style.cssText = 'margin:12px 24px;padding:16px 20px;background:var(--surface);border:1px solid var(--warning);border-radius:var(--radius-lg);';
-  var html = '<div style="font-weight:700;color:var(--warning);margin-bottom:2px">🛡️ Supervisor Panel</div>';
-  html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Supervised mode — approve or reject submitted lessons</div>';
+  panel.style.cssText = 'margin:12px 20px;padding:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md)';
 
-  if (pending.length === 0) {
-    html += '<div style="font-size:13px;color:var(--text-muted)">No lessons awaiting review.</div>';
-  } else {
-    html += pending.map(function(p) {
-      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap">' +
-        '<div style="flex:1;min-width:0"><strong>' + esc(p.lessonTitle) + '</strong> <span style="color:var(--text-muted);font-size:12px">in ' + esc(p.sectionTitle) + '</span>' +
-        (typeof p.score === 'number' ? ' · Score: ' + p.score + '%' : '') +
+  // ── Header ──
+  var html = '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+  html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📊</span><div><div style="font-weight:700;color:#f1f5f9;font-size:15px">Supervisor Dashboard</div><div style="font-size:11px;color:#94a3b8">' + esc(CONFIG.managementType === 'supervised' ? '🛡️ Supervised' : '🚀 Self-Paced') + ' · ' + totalLessons + ' lessons in ' + Object.keys(sectionStats).length + ' section(s)</div></div></div>';
+  // Overall progress ring
+  html += '<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 16px">';
+  html += '<svg width="44" height="44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + (2*Math.PI*18) + '" stroke-dashoffset="' + (2*Math.PI*18*(1-overallPct/100)) + '" transform="rotate(-90,22,22)"/><text x="22" y="22" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:800;fill:#f1f5f9">' + overallPct + '%</text></svg>';
+  html += '<div style="color:#f1f5f9;font-size:12px;line-height:1.4"><strong>' + completed + '</strong> done<br><span style="color:#94a3b8">' + inProgress + ' active · ' + notStarted + ' new</span></div>';
+  html += '</div></div>';
+
+  // ── Quick stats bar ──
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt)">';
+  html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46">✅ ' + completed + ' Completed</span>';
+  html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e">📖 ' + inProgress + ' In Progress</span>';
+  html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#f1f5f9;color:#64748b">📌 ' + notStarted + ' Not Started</span>';
+  if (pendingReview > 0) html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fee2e2;color:#991b1b">⏳ ' + pendingReview + ' Awaiting Review</span>';
+  html += '</div>';
+
+  // ── Section breakdown ──
+  html += '<div style="padding:14px 20px">';
+  html += '<div style="font-weight:700;color:var(--text);font-size:13px;margin-bottom:10px">📁 Section Breakdown</div>';
+  var secIds = Object.keys(sectionStats);
+  for (var si = 0; si < secIds.length; si++) {
+    var ss = sectionStats[secIds[si]];
+    var secPct = ss.total > 0 ? Math.round((ss.completed / ss.total) * 100) : 0;
+    var barColor = secPct === 100 ? '#22c55e' : secPct > 0 ? '#f59e0b' : '#e2e8f0';
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px"><span style="font-weight:600;color:var(--text)">' + esc(ss.title) + '</span><span style="color:var(--text-muted)">' + ss.completed + '/' + ss.total + ' · ' + secPct + '%</span></div>';
+    html += '<div style="width:100%;height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;display:flex">';
+    if (ss.completed > 0) html += '<div style="width:' + (ss.completed/ss.total*100) + '%;height:100%;background:#22c55e;border-radius:3px 0 0 3px"></div>';
+    if (ss.inProgress > 0) html += '<div style="width:' + (ss.inProgress/ss.total*100) + '%;height:100%;background:#f59e0b"></div>';
+    if (ss.pendingReview > 0) html += '<div style="width:' + (ss.pendingReview/ss.total*100) + '%;height:100%;background:#ef4444"></div>';
+    html += '</div>';
+    // Lesson status dots
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">';
+    for (var li = 0; li < ss.lessons.length; li++) {
+      var l = ss.lessons[li];
+      var dot = l.status === 'completed' ? '🟢' : l.status === 'pending_review' ? '🟡' : l.status === 'in_progress' || l.status === 'studying' ? '🔵' : '⚪';
+      html += '<span title="' + esc(l.title) + ' — ' + (l.status === 'completed' ? 'Done' + (typeof l.score==='number'?' ('+l.score+'%)':'') : l.status === 'pending_review' ? 'Pending review' : l.status === 'in_progress'||l.status==='studying' ? 'In progress' : 'Not started') + '" style="font-size:14px;cursor:default">' + dot + '</span>';
+    }
+    html += '</div></div>';
+  }
+  html += '</div>';
+
+  // ── Pending review actions (supervised mode only) ──
+  var mgmtType = CONFIG.managementType || 'self_paced';
+  if (pendingItems.length > 0 && mgmtType === 'supervised') {
+    html += '<div style="border-top:2px solid #fca5a5;padding:14px 20px;background:#fef2f2">';
+    html += '<div style="font-weight:700;color:#991b1b;font-size:13px;margin-bottom:8px">⏳ Pending Review — Action Required</div>';
+    html += pendingItems.map(function(p) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:4px;background:#fff;border:1px solid #fecaca;border-radius:8px;gap:8px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0"><strong style="font-size:13px">' + esc(p.lessonTitle) + '</strong> <span style="color:var(--text-muted);font-size:11px">in ' + esc(p.sectionTitle) + '</span>' +
+        (typeof p.score === 'number' ? ' <span style="font-size:11px;color:#92400e;font-weight:600">· ' + p.score + '%</span>' : '') +
         '</div>' +
-        '<div style="display:flex;gap:6px;flex-shrink:0">' +
-        '<button class="btn btn-sm btn-success" data-sup-approve="' + p.sectionId + '|' + p.lessonId + '">✓ Approve</button>' +
-        '<button class="btn btn-sm btn-danger" data-sup-reject="' + p.sectionId + '|' + p.lessonId + '">✕ Reject</button>' +
+        '<div style="display:flex;gap:4px;flex-shrink:0">' +
+        '<button class="btn btn-sm" data-sup-approve="' + p.sectionId + '|' + p.lessonId + '" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-size:11px;padding:3px 10px">✓ Approve</button>' +
+        '<button class="btn btn-sm" data-sup-reject="' + p.sectionId + '|' + p.lessonId + '" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:11px;padding:3px 10px">✕ Reject</button>' +
         '</div></div>';
     }).join('');
+    html += '</div>';
   }
+
   panel.innerHTML = html;
 
   var header = document.querySelector('.app-header');
@@ -2119,6 +2245,7 @@ function renderSupervisorPanel() {
     header.parentNode.insertBefore(panel, header.nextSibling);
   }
 
+  // Wire approve/reject buttons
   setTimeout(function() {
     var approveBtns = panel.querySelectorAll('[data-sup-approve]');
     for (var a = 0; a < approveBtns.length; a++) {

@@ -186,6 +186,16 @@ tool.openUrl(url)            → open a URL in a new browser tab via the parent
                                or <a target="_blank"> to avoid sandbox popup
                                blocking.  The parent context is not sandboxed
                                so the URL opens reliably.
+tool.openObjectDetail(mainObjectType, objectId)
+                             → open the CMS object detail viewer for a specific
+                               object in a new browser tab.  The tool does NOT
+                               need to know the URL structure — the parent CMS
+                               constructs the correct /admin/objects/{type}/{id}
+                               URL.  Use this for "Open in CMS" / "View Detail"
+                               buttons that link to CMS objects your tool creates
+                               or references.
+                               • mainObjectType — the CMS object type string
+                               • objectId       — the Firestore document ID
 
 ── Schema declaration (optional) ──────────────────────
 tool.declareOutput(jsonSchema)
@@ -606,8 +616,8 @@ The CMS admin must configure two settings on the html-tool field:
 
   settings.allowObjectCRUD: 'yes'           ← enables tool.requestObjects()
   settings.allowedObjectTypes: [            ← which CMS types the tool can access
-    { mainObjectType: 'taskSprints-uniconbaseapps', role: 'editor', scope: 'shared' },
-    { mainObjectType: 'taskItems-uniconbaseapps',   role: 'editor', scope: 'instance' },
+    { mainObjectType: 'taskSprints-uniconbaseapps', role: 'editor', scope: 'shared', targetCollection: 'public' },
+    { mainObjectType: 'taskItems-uniconbaseapps',   role: 'editor', scope: 'instance', targetCollection: 'private' },
   ]
 
   • 'viewer' role — only query and get are allowed; write operations blocked
@@ -620,8 +630,14 @@ The CMS admin must configure two settings on the html-tool field:
     in CMS settings. The bridge auto-creates a default folder on first use.
   • All operations go through CMS permissions automatically. You don't need
     to manage permissions yourself.
-  • Data is stored in om_private_objects and is visible in the
-    standard ObjectManager UI if the type is registered in CMS Settings.
+  • targetCollection: 'public' (default) — data stored in om_objects,
+    publicly readable per the CMS public-access rules.
+  • targetCollection: 'private' — data stored in om_private_objects,
+    requiring authentication to access. Use this for dynamically generated
+    types that are NOT registered in CMS Settings (no app definition).
+    When targetCollection is OMITTED, the system falls back to the
+    registered object type's rules.publicAccess setting (if the type
+    is registered in CMS Settings → App Designer).
 
 ── Tenant-level parameter overrides ──────────────────────────────────────────
   For connected tools (from Application Store or My Tools), the tool's
