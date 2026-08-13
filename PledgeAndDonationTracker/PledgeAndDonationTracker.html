@@ -131,7 +131,7 @@
 						<div class="mgmt-icon mgmt-icon-cash">💵</div>
 						<div>
 							<div class="mgmt-title">Cash Payments — Stored List</div>
-							<div class="mgmt-subtitle">Edits save automatically to CMS — shared across all instances</div>
+						<div class="mgmt-subtitle">Saved automatically with this tool</div>
 						</div>
 					</div>
 					<div class="mgmt-actions">
@@ -154,18 +154,17 @@
 					</div>
 					<div class="col-map" id="cash-map" style="display:none;padding:0 12px 12px">
 						<label class="field-label">Donor / Name column</label>
-						<select class="field-select" id="cash-col-donor"></select>
+						<select class="field-select" id="cash-col-donor" onchange="renderCashManager()"></select>
 						<label class="field-label">Payment Date</label>
-						<select class="field-select" id="cash-col-date"></select>
+						<select class="field-select" id="cash-col-date" onchange="renderCashManager()"></select>
 						<label class="field-label">Amount Paid (Income)</label>
-						<select class="field-select" id="cash-col-amount"></select>
+						<select class="field-select" id="cash-col-amount" onchange="renderCashManager()"></select>
 						<label class="field-label">Explanation / Note</label>
-						<select class="field-select" id="cash-col-note" onchange="refreshExplOptions()"></select>
+						<select class="field-select" id="cash-col-note" onchange="refreshExplOptions();renderCashManager()"></select>
 						<div id="cash-expl-filter" style="display:none;margin-top:8px">
 							<label class="field-label">Filter by Explanation <span class="field-hint">(only matching rows count as payments)</span></label>
 							<select class="field-select" id="cash-col-expl-val"><option value="">— All rows (no filter) —</option></select>
 						</div>
-						<button class="btn btn-primary btn-sm" id="cash-import-to-cms-btn" style="display:none;margin-top:10px;width:100%" onclick="saveCashImportToCMS()">💾 Save to Stored Payments</button>
 					</div>
 				</div>
 				<div class="table-card" style="border:none;border-radius:0;box-shadow:none">
@@ -194,7 +193,7 @@
 						<div class="mgmt-icon mgmt-icon-people">👥</div>
 						<div>
 							<div class="mgmt-title">People &amp; Groups — Stored List</div>
-							<div class="mgmt-subtitle">Edits save automatically to CMS — shared across all instances</div>
+						<div class="mgmt-subtitle">Saved automatically with this tool</div>
 						</div>
 					</div>
 					<div class="mgmt-actions">
@@ -217,11 +216,11 @@
 					</div>
 					<div class="col-map" id="people-map" style="display:none;padding:0 12px 12px">
 						<label class="field-label">Name column</label>
-						<select class="field-select" id="people-col-name"></select>
+						<select class="field-select" id="people-col-name" onchange="renderPeopleManager()"></select>
 						<label class="field-label">Group column</label>
-						<select class="field-select" id="people-col-group"></select>
+						<select class="field-select" id="people-col-group" onchange="renderPeopleManager()"></select>
 						<label class="field-label">Phone (optional)</label>
-						<select class="field-select" id="people-col-phone"></select>
+						<select class="field-select" id="people-col-phone" onchange="renderPeopleManager()"></select>
 					</div>
 				</div>
 				<div class="table-card" style="border:none;border-radius:0;box-shadow:none">
@@ -273,31 +272,12 @@
 
 			<!-- Report content (hidden until generated) -->
 			<div id="report-content" style="display:none">
-				<!-- Stats Row -->
-				<div class="stats-row" id="stats-row">
-					<div class="stat-card stat-blue"><div class="stat-icon-bubble stat-bubble-blue">👤</div><div class="stat-body"><div class="stat-label">Total Donors</div><div class="stat-value" id="s-donors">0</div></div></div>
-					<div class="stat-card stat-indigo"><div class="stat-icon-bubble stat-bubble-indigo">🏘</div><div class="stat-body"><div class="stat-label">Groups</div><div class="stat-value" id="s-groups">0</div></div></div>
-					<div class="stat-card stat-slate"><div class="stat-icon-bubble stat-bubble-slate">📋</div><div class="stat-body"><div class="stat-label">Total Pledged</div><div class="stat-value stat-money" id="s-pledged">$0</div></div></div>
-					<div class="stat-card stat-green"><div class="stat-icon-bubble stat-bubble-green">✅</div><div class="stat-body"><div class="stat-label">Total Paid</div><div class="stat-value stat-money" id="s-paid">$0</div></div></div>
-					<div class="stat-card stat-amber"><div class="stat-icon-bubble stat-bubble-amber">⏳</div><div class="stat-body"><div class="stat-label">Outstanding</div><div class="stat-value stat-money" id="s-balance">$0</div></div></div>
-					<div class="stat-card stat-teal"><div class="stat-icon-bubble stat-bubble-teal">🎯</div><div class="stat-body"><div class="stat-label">Fully Paid</div><div class="stat-value" id="s-full">0</div></div></div>
-					<div class="stat-card stat-red"><div class="stat-icon-bubble stat-bubble-red">🔴</div><div class="stat-body"><div class="stat-label">Unpaid</div><div class="stat-value" id="s-unpaid">0</div></div></div>
-					<div class="stat-card stat-purple"><div class="stat-icon-bubble stat-bubble-purple">🔔</div><div class="stat-body"><div class="stat-label">No Pledge</div><div class="stat-value" id="s-nopledge">0</div></div></div>
-				</div>
-
-				<!-- Regenerate CTA -->
-				<div class="cta-row" style="margin-bottom:16px">
-					<button class="btn btn-primary" id="generate-btn2" onclick="combine()">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-						Regenerate Report
-					</button>
-				</div>
-
 				<!-- Report Sub-Tabs -->
 				<div class="report-tabs-wrap">
 					<div class="tabs-bar" style="border-radius:var(--radius-lg) var(--radius-lg) 0 0">
 						<div class="tabs">
-							<button class="tab-btn active" onclick="switchTab('flat')">📋 Full List</button>
+							<button class="tab-btn active" onclick="switchTab('dashboard')">📈 Dashboard</button>
+							<button class="tab-btn" onclick="switchTab('flat')">📋 Full List</button>
 							<button class="tab-btn" onclick="switchTab('group')">🗂 By Group</button>
 							<button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
 							<button class="tab-btn" onclick="switchTab('cards')">🪪 Donor Cards</button>
@@ -307,8 +287,28 @@
 						</div>
 					</div>
 
+					<!-- DASHBOARD -->
+					<div class="tab-panel active" id="tab-dashboard">
+						<div class="stats-row" id="stats-row">
+							<div class="stat-card stat-blue"><div class="stat-icon-bubble stat-bubble-blue">👤</div><div class="stat-body"><div class="stat-label">Total Donors</div><div class="stat-value" id="s-donors">0</div></div></div>
+							<div class="stat-card stat-indigo"><div class="stat-icon-bubble stat-bubble-indigo">🏘</div><div class="stat-body"><div class="stat-label">Groups</div><div class="stat-value" id="s-groups">0</div></div></div>
+							<div class="stat-card stat-slate"><div class="stat-icon-bubble stat-bubble-slate">📋</div><div class="stat-body"><div class="stat-label">Total Pledged</div><div class="stat-value stat-money" id="s-pledged">$0</div></div></div>
+							<div class="stat-card stat-green"><div class="stat-icon-bubble stat-bubble-green">✅</div><div class="stat-body"><div class="stat-label">Total Paid</div><div class="stat-value stat-money" id="s-paid">$0</div></div></div>
+							<div class="stat-card stat-amber"><div class="stat-icon-bubble stat-bubble-amber">⏳</div><div class="stat-body"><div class="stat-label">Outstanding</div><div class="stat-value stat-money" id="s-balance">$0</div></div></div>
+							<div class="stat-card stat-teal"><div class="stat-icon-bubble stat-bubble-teal">🎯</div><div class="stat-body"><div class="stat-label">Fully Paid</div><div class="stat-value" id="s-full">0</div></div></div>
+							<div class="stat-card stat-red"><div class="stat-icon-bubble stat-bubble-red">🔴</div><div class="stat-body"><div class="stat-label">Unpaid</div><div class="stat-value" id="s-unpaid">0</div></div></div>
+							<div class="stat-card stat-purple"><div class="stat-icon-bubble stat-bubble-purple">🔔</div><div class="stat-body"><div class="stat-label">No Pledge</div><div class="stat-value" id="s-nopledge">0</div></div></div>
+						</div>
+						<div class="cta-row" style="margin-bottom:0;margin-top:16px">
+							<button class="btn btn-primary" id="generate-btn2" onclick="combine()">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+								Regenerate Report
+							</button>
+						</div>
+					</div>
+
 					<!-- FLAT LIST -->
-					<div class="tab-panel active" id="tab-flat">
+					<div class="tab-panel" id="tab-flat">
 						<div class="action-bar">
 							<div class="search-wrap">
 								<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -319,7 +319,7 @@
 							<button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
 							<button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
 						</div>
-						<div class="table-card"><table><thead><tr><th style="width:32px"></th><th onclick="sortBy('donor')" class="sortable">Donor</th><th onclick="sortBy('group')" class="sortable">Group</th><th onclick="sortBy('invoice')" class="sortable">Invoice #</th><th onclick="sortBy('date')" class="sortable">Date</th><th onclick="sortBy('pledged')" class="sortable">Pledged</th><th onclick="sortBy('paid')" class="sortable">Paid</th><th onclick="sortBy('balance')" class="sortable">Balance</th><th>Progress</th><th onclick="sortBy('status')" class="sortable">Status</th></tr></thead><tbody id="report-body"></tbody></table></div>
+						<div class="table-card"><table><thead><tr><th style="width:32px"></th><th style="width:36px">#</th><th onclick="sortBy('donor')" class="sortable">Donor</th><th onclick="sortBy('group')" class="sortable">Group</th><th onclick="sortBy('invoice')" class="sortable">Invoice #</th><th onclick="sortBy('date')" class="sortable">Date</th><th onclick="sortBy('pledged')" class="sortable">Pledged</th><th onclick="sortBy('paid')" class="sortable">Paid</th><th onclick="sortBy('balance')" class="sortable">Balance</th><th onclick="sortBy('pct')" class="sortable">Progress</th><th onclick="sortBy('status')" class="sortable">Status</th></tr></thead><tbody id="report-body"></tbody></table></div>
 						<div class="row-count" id="row-count"></div>
 					</div>
 

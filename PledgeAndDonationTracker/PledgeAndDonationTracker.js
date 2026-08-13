@@ -18,6 +18,7 @@ function scheduleResize() {
 // RENDERING GUARD — blocks onValueChange re-entry
 // ══════════════════════════════════════════════════════════
 let _isSaving = false;
+let _pendingSourceSave = false;
 
 // ── State ─────────────────────────────────────────────────
 let qbData = [], cashData = [], peopleData = [], combined = [], unpledged = [], groupMap = {};
@@ -26,70 +27,23 @@ let npSortCol = 'name', npSortDir = 1;
 const UNASSIGNED = 'Unassigned';
 const QB_COLS = { transactionType: 'Transaction type', donor: 'Name', invoice: '#', date: 'Date', amount: 'Amount', balance: 'Open balance' };
 
-// ── CMS STORAGE ────────────────────────────────────────
-const PEOPLE_TYPE = 'pledgePeople-uniconbaseapps';
-const CASH_TYPE = 'pledgeCashPayments-uniconbaseapps';
-const MASTER_ID = 'master-list';
+// ── STORAGE ─────────────────────────────────────────────
+// No CMS object CRUD — data is kept in the tool's saved value only.
 let _cmsAvailable = false;
-let _cmsBusy = false;
-let _pendingCashFile = null;
 let _sourceUrls = { qb: '', cash: '', people: '' };
 let _urlFetchBusy = false;
 
-function _cmsGet(type, cb) {
-	tool.requestObjects('get', { mainObjectType: type, objectId: MASTER_ID }, function (err, result) {
-		if (err) { _cmsAvailable = false; cb(err, null); return; }
-		_cmsAvailable = true;
-		var obj = result && result.object;
-		var records = obj && obj.productData && obj.productData.data_categoriesBased && obj.productData.data_categoriesBased.records;
-		cb(null, Array.isArray(records) ? records : []);
-	});
-}
-
-function _cmsSave(type, records, cb) {
-	if (_cmsBusy) { if (cb) cb('busy'); return; }
-	_cmsBusy = true;
-	var payload = { productData: { data_categoriesBased: { records: records } } };
-	tool.requestObjects('get', { mainObjectType: type, objectId: MASTER_ID }, function (err, result) {
-		if (err || !result || !result.object) {
-			tool.requestObjects('create', {
-				mainObjectType: type, objectId: MASTER_ID,
-				name: type === PEOPLE_TYPE ? 'People & Groups Master List' : 'Cash Payments Master List',
-				productData: { data_categoriesBased: { records: records } }
-			}, function (e2, r2) {
-				_cmsBusy = false;
-				if (e2) { _cmsAvailable = false; if (cb) cb(e2); return; }
-				_cmsAvailable = true;
-				if (cb) cb(null);
-			});
-			return;
-		}
-		_cmsAvailable = true;
-		tool.requestObjects('update', {
-			mainObjectType: type, objectId: MASTER_ID, productData: payload.productData
-		}, function (e2) {
-			_cmsBusy = false;
-			if (e2) { _cmsAvailable = false; if (cb) cb(e2); return; }
-			if (cb) cb(null);
-		});
-	});
-}
-
-function loadStoredPeople(cb) { _cmsGet(PEOPLE_TYPE, function (err, records) { if (err) { peopleData = []; if (cb) cb(err); return; } peopleData = records; refreshPeopleCard(); renderPeopleManager(); if (cb) cb(null); }); }
-function loadStoredCash(cb) { _cmsGet(CASH_TYPE, function (err, records) { if (err) { cashData = []; if (cb) cb(err); return; } cashData = records; refreshCashCard(); renderCashManager(); if (cb) cb(null); }); }
-function saveStoredPeople(cb) { _cmsSave(PEOPLE_TYPE, peopleData, function (err) { if (!err) refreshPeopleCard(); if (cb) cb(err); }); }
-function saveStoredCash(cb) { _cmsSave(CASH_TYPE, cashData, function (err) { if (!err) refreshCashCard(); if (cb) cb(err); }); }
+function saveStoredPeople(cb) { refreshPeopleCard(); if (cb) cb(null); }
+function saveStoredCash(cb) { refreshCashCard(); if (cb) cb(null); }
 
 // ── PEOPLE MANAGEMENT UI ───────────────────────────────
 function refreshPeopleCard() {
 	var label = document.getElementById('people-label');
 	if (!label) return;
-	if (_cmsAvailable && peopleData.length) {
-		label.textContent = '\u2713 ' + peopleData.length + ' people stored in CMS';
-	} else if (_cmsAvailable) {
-		label.textContent = 'No people stored yet — add manually or import from file';
+	if (peopleData.length) {
+		label.textContent = '\u2713 ' + peopleData.length + ' people saved with this tool';
 	} else {
-		label.textContent = 'Upload an Excel/CSV file with Name, Group, and Phone columns';
+		label.textContent = 'No people stored yet \u2014 import from file or add manually';
 	}
 	updateTabBadges();
 }
@@ -97,12 +51,10 @@ function refreshPeopleCard() {
 function refreshCashCard() {
 	var label = document.getElementById('cash-label');
 	if (!label) return;
-	if (_cmsAvailable && cashData.length) {
-		label.textContent = '\u2713 ' + cashData.length + ' payments stored in CMS';
-	} else if (_cmsAvailable) {
-		label.textContent = 'No payments stored yet — add manually or import from file';
+	if (cashData.length) {
+		label.textContent = '\u2713 ' + cashData.length + ' payments saved with this tool';
 	} else {
-		label.textContent = 'Upload an Excel/CSV file with payment records';
+		label.textContent = 'No payments stored yet \u2014 import from file or add manually';
 	}
 	updateTabBadges();
 }
@@ -127,15 +79,20 @@ function renderPeopleManager() {
 		if (countEl) countEl.textContent = '';
 		return;
 	}
-	var sorted = peopleData.slice().sort(function (a, b) { return (a.group || '').localeCompare(b.group || '') || (a.name || '').localeCompare(b.name || ''); });
-	sorted.forEach(function (p, i) {
+	var sorted = peopleData.slice().sort(function (a, b) {
+		var ca = peopleCell(a), cb = peopleCell(b);
+		return ca.group.localeCompare(cb.group) || ca.name.localeCompare(cb.name);
+	});
+	sorted.forEach(function (p) {
+		var origIdx = peopleData.indexOf(p);
+		var cell = peopleCell(p);
 		var tr = document.createElement('tr');
-		tr.id = 'prow-' + i;
+		tr.id = 'prow-' + origIdx;
 		tr.innerHTML =
-			'<td><span class="mgmt-cell" id="pcell-name-' + i + '">' + esc(p.name || '') + '</span></td>' +
-			'<td><span class="mgmt-cell" id="pcell-group-' + i + '">' + esc(p.group || '') + '</span></td>' +
-			'<td><span class="mgmt-cell" id="pcell-phone-' + i + '">' + esc(p.phone || '') + '</span></td>' +
-			'<td><button class="btn btn-outline btn-sm" onclick="editPerson(' + i + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deletePerson(' + i + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
+			'<td><span class="mgmt-cell" id="pcell-name-' + origIdx + '">' + esc(cell.name) + '</span></td>' +
+			'<td><span class="mgmt-cell" id="pcell-group-' + origIdx + '">' + esc(cell.group) + '</span></td>' +
+			'<td><span class="mgmt-cell" id="pcell-phone-' + origIdx + '">' + esc(cell.phone) + '</span></td>' +
+			'<td><button class="btn btn-outline btn-sm" onclick="editPerson(' + origIdx + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deletePerson(' + origIdx + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
 		tbody.appendChild(tr);
 	});
 	if (countEl) countEl.textContent = peopleData.length + ' people stored';
@@ -146,33 +103,43 @@ function addPersonRow() {
 	if (!name || !name.trim()) return;
 	var group = prompt('Enter group name (or leave blank):') || '';
 	var phone = prompt('Enter phone (or leave blank):') || '';
-	peopleData.push({ name: name.trim(), group: group.trim(), phone: phone.trim() });
+	peopleData.push(_mkPeopleRow(name.trim(), group.trim(), phone.trim()));
 	renderPeopleManager();
+	_persistSourceData();
 	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person added \u2713', 'success'); });
 	scheduleResize();
 }
 
 function editPerson(idx) {
 	var p = peopleData[idx];
-	var name = prompt('Edit name:', p.name || '');
+	var cell = peopleCell(p);
+	var name = prompt('Edit name:', cell.name);
 	if (name === null) return;
-	var group = prompt('Edit group:', p.group || '');
+	var group = prompt('Edit group:', cell.group);
 	if (group === null) return;
-	var phone = prompt('Edit phone:', p.phone || '');
+	var phone = prompt('Edit phone:', cell.phone);
 	if (phone === null) return;
-	p.name = name.trim();
-	p.group = group.trim();
-	p.phone = phone.trim();
+	if (peopleStd()) {
+		p.name = name.trim(); p.group = group.trim(); p.phone = phone.trim();
+	} else {
+		var cols = _peopleCols();
+		_setRowField(p, cols.name, 'name', name.trim());
+		_setRowField(p, cols.group, 'group', group.trim());
+		_setRowField(p, cols.phone, 'phone', phone.trim());
+	}
 	renderPeopleManager();
+	_persistSourceData();
 	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person updated \u2713', 'success'); });
 	scheduleResize();
 }
 
 function deletePerson(idx) {
 	var p = peopleData[idx];
-	if (!confirm('Delete "' + (p.name || 'this person') + '"?')) return;
+	var cell = peopleCell(p);
+	if (!confirm('Delete "' + (cell.name || 'this person') + '"?')) return;
 	peopleData.splice(idx, 1);
 	renderPeopleManager();
+	_persistSourceData();
 	saveStoredPeople(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Person deleted \u2713', 'success'); });
 	scheduleResize();
 }
@@ -192,16 +159,21 @@ function renderCashManager() {
 		if (countEl) countEl.textContent = '';
 		return;
 	}
-	var sorted = cashData.slice().sort(function (a, b) { return (a.donorName || '').localeCompare(b.donorName || '') || (a.date || '').localeCompare(b.date || ''); });
-	sorted.forEach(function (c, i) {
+	var sorted = cashData.slice().sort(function (a, b) {
+		var ca = cashCell(a), cb = cashCell(b);
+		return ca.donor.localeCompare(cb.donor) || ca.date.localeCompare(cb.date);
+	});
+	sorted.forEach(function (c) {
+		var origIdx = cashData.indexOf(c);
+		var cell = cashCell(c);
 		var tr = document.createElement('tr');
-		tr.id = 'crow-' + i;
+		tr.id = 'crow-' + origIdx;
 		tr.innerHTML =
-			'<td><span class="mgmt-cell" id="ccell-donor-' + i + '">' + esc(c.donorName || '') + '</span></td>' +
-			'<td><span class="mgmt-cell" id="ccell-date-' + i + '">' + esc(c.date || '') + '</span></td>' +
-			'<td style="font-weight:700;color:var(--c-green)"><span class="mgmt-cell" id="ccell-amount-' + i + '">' + fmt(c.amount || 0) + '</span></td>' +
-			'<td><span class="mgmt-cell" id="ccell-note-' + i + '">' + esc(c.note || '') + '</span></td>' +
-			'<td><button class="btn btn-outline btn-sm" onclick="editCash(' + i + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deleteCash(' + i + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
+			'<td><span class="mgmt-cell" id="ccell-donor-' + origIdx + '">' + esc(cell.donor) + '</span></td>' +
+			'<td><span class="mgmt-cell" id="ccell-date-' + origIdx + '">' + esc(cell.date) + '</span></td>' +
+			'<td style="font-weight:700;color:var(--c-green)"><span class="mgmt-cell" id="ccell-amount-' + origIdx + '">' + fmt(cell.amount) + '</span></td>' +
+			'<td><span class="mgmt-cell" id="ccell-note-' + origIdx + '">' + esc(cell.note) + '</span></td>' +
+			'<td><button class="btn btn-outline btn-sm" onclick="editCash(' + origIdx + ')" title="Edit">\u270f</button> <button class="btn btn-outline btn-sm" onclick="deleteCash(' + origIdx + ')" title="Delete" style="color:var(--c-red);border-color:var(--c-red-mid)">\u2715</button></td>';
 		tbody.appendChild(tr);
 	});
 	if (countEl) countEl.textContent = cashData.length + ' payments stored';
@@ -214,42 +186,112 @@ function addCashRow() {
 	var amt = parseFloat(prompt('Enter amount:') || '0');
 	if (isNaN(amt) || amt <= 0) { tool.notify('Invalid amount', 'warning'); return; }
 	var note = prompt('Enter note (or leave blank):') || '';
-	cashData.push({ donorName: donor.trim(), date: date.trim(), amount: amt, note: note.trim() });
+	cashData.push(_mkCashRow(donor.trim(), date.trim(), amt, note.trim()));
 	renderCashManager();
+	_persistSourceData();
 	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment added \u2713', 'success'); });
 	scheduleResize();
 }
 
 function editCash(idx) {
 	var c = cashData[idx];
-	var donor = prompt('Edit donor name:', c.donorName || '');
+	var cell = cashCell(c);
+	var donor = prompt('Edit donor name:', cell.donor);
 	if (donor === null) return;
-	var date = prompt('Edit date:', c.date || '');
+	var date = prompt('Edit date:', cell.date);
 	if (date === null) return;
-	var amt = parseFloat(prompt('Edit amount:', c.amount || 0));
+	var amt = parseFloat(prompt('Edit amount:', cell.amount || 0));
 	if (isNaN(amt)) return;
-	var note = prompt('Edit note:', c.note || '');
+	var note = prompt('Edit note:', cell.note);
 	if (note === null) return;
-	c.donorName = donor.trim();
-	c.date = date.trim();
-	c.amount = amt;
-	c.note = note.trim();
+	if (cashStd()) {
+		c.donorName = donor.trim(); c.date = date.trim(); c.amount = amt; c.note = note.trim();
+	} else {
+		var cols = _cashCols();
+		_setRowField(c, cols.donor, 'donorName', donor.trim());
+		_setRowField(c, cols.date, 'date', date.trim());
+		_setRowField(c, cols.amount, 'amount', amt);
+		_setRowField(c, cols.note, 'note', note.trim());
+	}
 	renderCashManager();
+	_persistSourceData();
 	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment updated \u2713', 'success'); });
 	scheduleResize();
 }
 
 function deleteCash(idx) {
 	var c = cashData[idx];
-	if (!confirm('Delete payment from "' + (c.donorName || 'unknown') + '" for ' + fmt(c.amount || 0) + '?')) return;
+	var cell = cashCell(c);
+	if (!confirm('Delete payment from "' + (cell.donor || 'unknown') + '" for ' + fmt(cell.amount) + '?')) return;
 	cashData.splice(idx, 1);
 	renderCashManager();
+	_persistSourceData();
 	saveStoredCash(function (err) { if (err) tool.notify('Save failed: ' + err, 'error'); else tool.notify('Payment deleted \u2713', 'success'); });
 	scheduleResize();
 }
 
 function importCashFile() {
 	document.getElementById('cash-file').click();
+}
+
+// ── ROW FIELD HELPERS (CMS-standard & file-mapped rows) ──
+function cashStd() { return _cmsAvailable || (cashData.length > 0 && cashData[0] && cashData[0].hasOwnProperty('donorName')); }
+function peopleStd() { return _cmsAvailable || (peopleData.length > 0 && peopleData[0] && peopleData[0].hasOwnProperty('name') && peopleData[0].hasOwnProperty('group')); }
+function _cashCols() {
+	return {
+		donor: (document.getElementById('cash-col-donor') || {}).value || '',
+		date: (document.getElementById('cash-col-date') || {}).value || '',
+		amount: (document.getElementById('cash-col-amount') || {}).value || '',
+		note: (document.getElementById('cash-col-note') || {}).value || ''
+	};
+}
+function _peopleCols() {
+	return {
+		name: (document.getElementById('people-col-name') || {}).value || '',
+		group: (document.getElementById('people-col-group') || {}).value || '',
+		phone: (document.getElementById('people-col-phone') || {}).value || ''
+	};
+}
+function cashCell(c) {
+	if (cashStd()) return { donor: String(c.donorName || ''), date: String(c.date || ''), amount: Number(c.amount) || 0, note: String(c.note || '') };
+	var cols = _cashCols();
+	return {
+		donor: cols.donor ? String(c[cols.donor] || '') : String(c.donorName || c.Name || ''),
+		date: cols.date ? String(c[cols.date] || '') : String(c.Date || ''),
+		amount: cols.amount ? (parseFloat(String(c[cols.amount]).replace(/[^0-9.]/g, '')) || 0) : (Number(c.amount) || Number(c.Income) || 0),
+		note: cols.note ? String(c[cols.note] || '') : String(c.Explanation || '')
+	};
+}
+function peopleCell(p) {
+	if (peopleStd()) return { name: String(p.name || ''), group: String(p.group || ''), phone: String(p.phone || '') };
+	var cols = _peopleCols();
+	return {
+		name: cols.name ? String(p[cols.name] || '') : String(p.name || p.Name || ''),
+		group: cols.group ? String(p[cols.group] || '') : String(p.group || p.Group || ''),
+		phone: cols.phone ? String(p[cols.phone] || '') : String(p.phone || p.Phone || '')
+	};
+}
+function _setRowField(row, colName, stdKey, val) {
+	if (colName) { row[colName] = val; } else { row[stdKey] = val; }
+}
+function _mkCashRow(donor, date, amount, note) {
+	if (cashStd()) return { donorName: donor, date: date, amount: amount, note: note };
+	var cols = _cashCols();
+	var row = {};
+	_setRowField(row, cols.donor, 'donorName', donor);
+	_setRowField(row, cols.date, 'date', date);
+	_setRowField(row, cols.amount, 'amount', amount);
+	_setRowField(row, cols.note, 'note', note);
+	return row;
+}
+function _mkPeopleRow(name, group, phone) {
+	if (peopleStd()) return { name: name, group: group, phone: phone };
+	var cols = _peopleCols();
+	var row = {};
+	_setRowField(row, cols.name, 'name', name);
+	_setRowField(row, cols.group, 'group', group);
+	_setRowField(row, cols.phone, 'phone', phone);
+	return row;
 }
 
 // ── TOP-LEVEL TAB SWITCHING ─────────────────────────────
@@ -369,8 +411,113 @@ function _persistSourceUrls() {
 	var val = tool.getValue() || {};
 	val.sourceUrls = { qb: _sourceUrls.qb, cash: _sourceUrls.cash, people: _sourceUrls.people };
 	_isSaving = true;
-	tool.setValue(val);
+	tool.setValue(sanitizeForSave(val));
 	setTimeout(function () { _isSaving = false; }, 200);
+}
+
+// ── PERSIST RAW FILE CONTENT INTO SAVED VALUE ───────────
+function _persistSourceData() {
+	if (_isSaving) { _pendingSourceSave = true; return; }
+	_pendingSourceSave = false;
+	var val = tool.getValue() || {};
+	val.qbRecords = qbData;
+	val.cashRecords = cashData;
+	val.peopleRecords = peopleData;
+	_isSaving = true;
+	tool.setValue(sanitizeForSave(val));
+	setTimeout(function () {
+		_isSaving = false;
+		if (_pendingSourceSave) _persistSourceData();
+	}, 200);
+}
+
+// ── SANITIZE DATA SENT TO THE CMS PARENT (Firestore-safe) ──
+// Firestore rejects: undefined / NaN values and empty field names.
+function sanitizeForSave(v) {
+	if (Array.isArray(v)) {
+		var arr = [];
+		for (var i = 0; i < v.length; i++) arr.push(sanitizeForSave(v[i]));
+		return arr;
+	}
+	if (v && typeof v === 'object' && !(v instanceof Date)) {
+		var out = {};
+		Object.keys(v).forEach(function (k) {
+			if (!k || !String(k).trim()) return; // drop empty field names
+			var val = v[k];
+			if (val === undefined || val === null || (typeof val === 'number' && isNaN(val))) {
+				out[k] = '';
+			} else {
+				out[k] = sanitizeForSave(val);
+			}
+		});
+		return out;
+	}
+	return v;
+}
+function logUndefinedPaths(obj, path) {
+	path = path || 'value';
+	if (Array.isArray(obj)) {
+		for (var i = 0; i < obj.length; i++) logUndefinedPaths(obj[i], path + '[' + i + ']');
+		return;
+	}
+	if (obj && typeof obj === 'object' && !(obj instanceof Date)) {
+		Object.keys(obj).forEach(function (k) {
+			var val = obj[k];
+			if (val === undefined) { console.warn('[PledgeTracker] UNDEFINED at: ' + path + '.' + k); return; }
+			logUndefinedPaths(val, path + '.' + k);
+		});
+		return;
+	}
+	if (obj === undefined) console.warn('[PledgeTracker] UNDEFINED at: ' + path);
+}
+
+// ── RESTORE RAW FILE CONTENT FROM SAVED VALUE ───────────
+function restoreSourceData(val) {
+	if (!val) return;
+	// Invoices: always restored from the saved value
+	if (Array.isArray(val.qbRecords) && val.qbRecords.length) {
+		qbData = val.qbRecords;
+		var qbDrop = document.getElementById('qb-drop');
+		var qbLabel = document.getElementById('qb-label');
+		if (qbDrop) qbDrop.classList.add('loaded');
+		if (qbLabel) qbLabel.textContent = '\u2713 Restored from last save (' + qbData.length + ' invoice rows)';
+		var qbMap = document.getElementById('qb-map');
+		if (qbMap) qbMap.style.display = 'block';
+		renderInvoiceList();
+	}
+	// Cash & people: fall back to the saved value only when CMS storage is unavailable
+	if (!_cmsAvailable) {
+		if (Array.isArray(val.cashRecords) && val.cashRecords.length) {
+			cashData = val.cashRecords;
+			var cDrop = document.getElementById('cash-drop');
+			var cLabel = document.getElementById('cash-label');
+			if (cDrop) cDrop.classList.add('loaded');
+			if (cLabel) cLabel.textContent = '\u2713 Restored from last save (' + cashData.length + ' payments)';
+			var cMap = document.getElementById('cash-map');
+			if (cMap) cMap.style.display = 'block';
+			var cCols = Object.keys(cashData[0] || {});
+			populateSelect('cash-col-donor', cCols, ['name', 'donor', 'customer', 'payer']);
+			populateSelect('cash-col-date', cCols, ['date', 'paid', 'payment']);
+			populateSelect('cash-col-amount', cCols, ['income', 'amount', 'paid', 'cash', 'payment']);
+			populateSelect('cash-col-note', cCols, ['explanation', 'note', 'description', 'memo', 'comment']);
+			renderCashManager();
+		}
+		if (Array.isArray(val.peopleRecords) && val.peopleRecords.length) {
+			peopleData = val.peopleRecords;
+			var pDrop = document.getElementById('people-drop');
+			var pLabel = document.getElementById('people-label');
+			if (pDrop) pDrop.classList.add('loaded');
+			if (pLabel) pLabel.textContent = '\u2713 Restored from last save (' + peopleData.length + ' people)';
+			var pMap = document.getElementById('people-map');
+			if (pMap) pMap.style.display = 'block';
+			var pCols = Object.keys(peopleData[0] || {});
+			populateSelect('people-col-name', pCols, ['name', 'donor', 'person', 'full']);
+			populateSelect('people-col-group', pCols, ['group', 'location', 'team', 'category', 'class']);
+			populateSelect('people-col-phone', pCols, ['phone', 'mobile', 'tel', 'cell']);
+			renderPeopleManager();
+		}
+	}
+	updateTabBadges();
 }
 
 // ── FETCH FILE FROM URL ───────────────────────────────
@@ -417,16 +564,7 @@ function fetchUrlFile(type) {
 			if (type === 'qb') {
 				onQBLoad(rows);
 			} else if (type === 'cash') {
-				_pendingCashFile = rows;
-				document.getElementById('cash-map').style.display = 'block';
-				var cols = Object.keys(rows[0]);
-				populateSelect('cash-col-donor', cols, ['name', 'donor', 'customer', 'payer']);
-				populateSelect('cash-col-date', cols, ['date', 'paid', 'payment']);
-				populateSelect('cash-col-amount', cols, ['income', 'amount', 'paid', 'cash', 'payment']);
-				populateSelect('cash-col-note', cols, ['explanation', 'note', 'description', 'memo', 'comment']);
-				var importBtn = document.getElementById('cash-import-to-cms-btn');
-				if (importBtn) importBtn.style.display = '';
-				document.getElementById('cash-label').textContent = '\u26a1 ' + rows.length + ' rows from URL — map columns & save';
+				onCashLoad(rows);
 			} else if (type === 'people') {
 				onPeopleLoad(rows);
 			}
@@ -478,7 +616,9 @@ function restoreFromValue(val) {
 			balance: r.balance || 0,
 			status: r.status || 'unpaid',
 			pct: r.pct || 0,
-			payments: []
+			qbPaid: (r.qbPaid !== undefined && r.qbPaid !== null) ? (Number(r.qbPaid) || 0)
+				: Math.max(0, (Number(r.pledged) || 0) - (Number(r.balance) || 0)),
+			payments: Array.isArray(r.payments) ? r.payments.map(function (p) { return { date: String(p.date || ''), amount: Number(p.amount) || 0, note: String(p.note || '') }; }) : []
 		};
 	});
 
@@ -556,7 +696,7 @@ function setupDrop(dropId, fileId, onLoad) {
 	var file = document.getElementById(fileId);
 	if (!drop || !file) return;
 	file.onchange = function (e) { handleFile(e.target.files[0], dropId, onLoad); };
-	drop.onclick = function () { if (_cmsAvailable && (dropId === 'cash-drop' || dropId === 'people-drop')) return; file.click(); };
+	drop.onclick = function () { file.click(); };
 	drop.ondragover = function (e) { e.preventDefault(); drop.classList.add('drag-over'); };
 	drop.ondragleave = function () { drop.classList.remove('drag-over'); };
 	drop.ondrop = function (e) { e.preventDefault(); drop.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0], dropId, onLoad); };
@@ -630,6 +770,7 @@ function onQBLoad(rows) {
 	}
 	renderInvoiceList();
 	updateTabBadges();
+	_persistSourceData();
 }
 
 function onCashLoad(rows) {
@@ -659,73 +800,12 @@ function onCashLoad(rows) {
 	}
 	document.getElementById('cash-expl-filter').style.display = 'block';
 
-	if (_cmsAvailable) {
-		_pendingCashFile = rawCash;
-		var importBtn = document.getElementById('cash-import-to-cms-btn');
-		if (importBtn) importBtn.style.display = '';
-		var labelEl = document.getElementById('cash-label');
-		var kept = rawCash.length, total = rows.length;
-		if (labelEl) labelEl.textContent = '\u26a1 ' + kept + ' rows loaded — map columns & click "Save to Stored"';
-	} else {
-		cashData = rawCash;
-		var labelEl2 = document.getElementById('cash-label');
-		var kept2 = rawCash.length, total2 = rows.length;
-		if (labelEl2) labelEl2.textContent = '\u2713 ' + kept2 + ' rows' + (kept2 < total2 ? ' of ' + total2 + ' total' : '') + ' (temp)';
-	}
-}
-
-function saveCashImportToCMS() {
-	if (!_cmsAvailable) { tool.notify('CMS storage not available', 'warning'); return; }
-	if (!_pendingCashFile || !_pendingCashFile.length) { tool.notify('No file data to import. Upload a cash file first.', 'warning'); return; }
-	var cashDonorC = document.getElementById('cash-col-donor').value;
-	var cashAmC = document.getElementById('cash-col-amount').value;
-	var cashDateC = document.getElementById('cash-col-date').value;
-	var cashNoteC = document.getElementById('cash-col-note').value;
-	var explSel = document.getElementById('cash-col-expl-val');
-	var cashExplFilter = explSel ? explSel.value.trim() : '';
-
-	var filteredCash = _pendingCashFile.filter(function (row) {
-		if (!cashExplFilter) return true;
-		var expl = String(row[cashNoteC] || '').trim();
-		return expl.toLowerCase() === cashExplFilter.toLowerCase();
-	});
-
-	var imported = filteredCash.map(function (r) {
-		return {
-			donorName: cashDonorC ? String(r[cashDonorC] || '').trim() : '',
-			date: cashDateC ? String(r[cashDateC] || '').trim() : '',
-			amount: cashAmC ? (parseFloat(String(r[cashAmC]).replace(/[^0-9.]/g, '')) || 0) : 0,
-			note: cashNoteC ? String(r[cashNoteC] || '').trim() : ''
-		};
-	}).filter(function (r) { return r.donorName !== '' && r.amount > 0; });
-
-	if (!imported.length) { tool.notify('No valid payment rows to import', 'warning'); return; }
-
-	var existingKeys = {};
-	cashData.forEach(function (c) { existingKeys[normalize(c.donorName) + '|' + c.date + '|' + c.amount] = true; });
-	var added = 0;
-	imported.forEach(function (r) {
-		var dedup = normalize(r.donorName) + '|' + r.date + '|' + r.amount;
-		if (!existingKeys[dedup]) {
-			cashData.push(r);
-			existingKeys[dedup] = true;
-			added++;
-		}
-	});
-
-	saveStoredCash(function (err) {
-		if (!err) {
-			tool.notify('Imported ' + added + ' new payments to CMS \u2713', 'success');
-			_pendingCashFile = null;
-			document.getElementById('cash-import-to-cms-btn').style.display = 'none';
-			document.getElementById('cash-label').textContent = '\u2713 ' + cashData.length + ' payments stored in CMS';
-		} else {
-			tool.notify('Import failed: ' + err, 'error');
-		}
-	});
+	cashData = rawCash;
+	var labelEl = document.getElementById('cash-label');
+	var kept = rawCash.length, total = rows.length;
+	if (labelEl) labelEl.textContent = '\u2713 ' + kept + ' rows' + (kept < total ? ' of ' + total + ' total' : '') + ' \u2014 saved with this tool';
 	renderCashManager();
-	refreshCashCard();
-	scheduleResize();
+	_persistSourceData();
 }
 
 function onPeopleLoad(rows) {
@@ -734,41 +814,11 @@ function onPeopleLoad(rows) {
 	populateSelect('people-col-name', cols, ['name', 'donor', 'person', 'full']);
 	populateSelect('people-col-group', cols, ['group', 'location', 'team', 'category', 'class']);
 	populateSelect('people-col-phone', cols, ['phone', 'mobile', 'tel', 'cell']);
-
-	if (_cmsAvailable) {
-		var nameCol = document.getElementById('people-col-name').value || cols.find(function (c) { return c.toLowerCase().trim() === 'name'; }) || '';
-		var groupCol = document.getElementById('people-col-group').value || '';
-		var phoneCol = document.getElementById('people-col-phone').value || '';
-		var imported = rows.map(function (r) {
-			return {
-				name: String(r[nameCol] || '').trim(),
-				group: groupCol ? String(r[groupCol] || '').trim() : '',
-				phone: phoneCol ? String(r[phoneCol] || '').trim() : ''
-			};
-		}).filter(function (r) { return r.name !== ''; });
-		if (imported.length) {
-			var existingKeys = {};
-			peopleData.forEach(function (p) { existingKeys[normalize(p.name)] = true; });
-			var added = 0;
-			imported.forEach(function (r) {
-				if (!existingKeys[normalize(r.name)]) {
-					peopleData.push(r);
-					existingKeys[normalize(r.name)] = true;
-					added++;
-				}
-			});
-			saveStoredPeople(function (err) {
-				if (!err) tool.notify('Imported ' + added + ' new people to CMS \u2713', 'success');
-				else tool.notify('Import failed: ' + err, 'error');
-			});
-			renderPeopleManager();
-			refreshPeopleCard();
-		}
-	} else {
-		peopleData = rows;
-		var labelEl = document.getElementById('people-label');
-		if (labelEl) labelEl.textContent = '\u2713 ' + rows.length + ' rows (temp — CMS storage not available)';
-	}
+	peopleData = rows;
+	var labelEl = document.getElementById('people-label');
+	if (labelEl) labelEl.textContent = '\u2713 ' + rows.length + ' rows \u2014 saved with this tool';
+	renderPeopleManager();
+	_persistSourceData();
 }
 
 // ── CMS SDK ENTRY POINT ───────────────────────────────────
@@ -780,13 +830,15 @@ tool.onReady(function (val, fields) {
 			generatedAt: { type: 'string' },
 			summary: { type: 'object' },
 			records: { type: 'array' },
-			unpledgedRecords: { type: 'array' }
+			unpledgedRecords: { type: 'array' },
+			qbRecords: { type: 'array' },
+			cashRecords: { type: 'array' },
+			peopleRecords: { type: 'array' }
 		}
 	});
 
 	// Declare params
 	tool.declareParams([
-		{ name: 'allowObjectCRUD', label: 'Allow CMS Object CRUD', type: 'toggle', default: 'yes', hint: 'Enable CMS object storage for people & cash lists' },
 		{ name: 'allowFileContent', label: 'Allow File Content Extraction', type: 'toggle', default: 'yes', hint: 'Enable fetching files from URLs (for source file URLs)' },
 		{ name: 'allowExportPdf', label: 'Allow PDF Export', type: 'toggle', default: 'yes', hint: 'Enable PDF export via CMS' }
 	]);
@@ -808,28 +860,23 @@ tool.onReady(function (val, fields) {
 	// Restore saved source URLs
 	_restoreSourceUrls(val);
 
-	// Try to load stored data from CMS
-	_cmsAvailable = true;
-	loadStoredPeople(function (err) {
-		if (err) { _cmsAvailable = false; console.log('CMS people load failed, file-only mode'); }
-		loadStoredCash(function (err2) {
-			if (err2) { _cmsAvailable = false; console.log('CMS cash load failed, file-only mode'); }
-			// Now restore saved report
-			var restored = restoreFromValue(val);
-			if (restored) {
-				switchTopTab('reports');
-			} else {
-				switchTopTab('invoices');
-			}
-			updateTabBadges();
+	// Restore raw file content from the saved value
+	restoreSourceData(val);
+	// Restore saved report
+	var restored = restoreFromValue(val);
+	if (restored) {
+		switchTab('dashboard');
+		switchTopTab('reports');
+	} else {
+		switchTopTab('invoices');
+	}
+	updateTabBadges();
 
-			// Auto-fetch QB URL if present and no QB data loaded
-			if (_sourceUrls.qb && !qbData.length) {
-				setTimeout(function () { fetchUrlFile('qb'); }, 500);
-			}
-			scheduleResize();
-		});
-	});
+	// Auto-fetch QB URL if present and no QB data loaded
+	if (_sourceUrls.qb && !qbData.length) {
+		setTimeout(function () { fetchUrlFile('qb'); }, 500);
+	}
+	scheduleResize();
 
 	tool.onValueChange(function (newVal) {
 		if (_isSaving) return;
@@ -961,9 +1008,9 @@ function combine() {
 			? parseFloat(String(qbBalRaw).replace(/[^0-9.]/g, '')) : null;
 		var payments = cashPayMap[key] || [];
 		var cashPaid = payments.reduce(function (s, p) { return s + p.amount; }, 0);
-		var paid, balance;
+		var paid, balance, qbPaid = 0;
 		if (qbBalance !== null && !isNaN(qbBalance)) {
-			var qbPaid = pledged - qbBalance;
+			qbPaid = pledged - qbBalance;
 			paid = qbPaid + cashPaid;
 			balance = pledged - paid;
 		} else {
@@ -979,7 +1026,7 @@ function combine() {
 		return {
 			donor: donor, key: key, group: group, phone: phone,
 			invoice: String(row[QB_COLS.invoice] || ''), date: String(row[QB_COLS.date] || ''),
-			pledged: pledged, paid: paid, balance: balance, status: status, pct: pct,
+			pledged: pledged, paid: paid, balance: balance, status: status, pct: pct, qbPaid: qbPaid,
 			payments: payments.map(function (p) { return { date: p.date, amount: p.amount, note: p.note }; })
 		};
 	});
@@ -1027,7 +1074,7 @@ function combine() {
 					phone: String(row.phone || '').trim(),
 					invoice: '', date: '',
 					pledged: 0, paid: 0, balance: 0,
-					status: 'nopledge', pct: 0,
+					status: 'nopledge', pct: 0, qbPaid: 0,
 					payments: []
 				});
 			});
@@ -1045,7 +1092,7 @@ function combine() {
 					phone: pcol3 ? String(row[pcol3] || '').trim() : '',
 					invoice: '', date: '',
 					pledged: 0, paid: 0, balance: 0,
-					status: 'nopledge', pct: 0,
+					status: 'nopledge', pct: 0, qbPaid: 0,
 					payments: []
 				});
 			});
@@ -1203,22 +1250,29 @@ function combine() {
 			return {
 				donor: r.donor, group: r.group, phone: r.phone, invoice: r.invoice,
 				date: r.date, pledged: r.pledged, paid: r.paid, balance: r.balance,
-				status: r.status, pct: r.pct
+				status: r.status, pct: r.pct, qbPaid: r.qbPaid,
+				payments: (r.payments || []).map(function (p) { return { date: String(p.date || ''), amount: Number(p.amount) || 0, note: String(p.note || '') }; })
 			};
 		}),
 		unpledgedRecords: unpledged.map(function (r) {
 			return { name: r.name, group: r.group, phone: r.phone };
 		}),
+		qbRecords: qbData,
+		cashRecords: cashData,
+		peopleRecords: peopleData,
 		mismatches: mismatches,
 		resolvedMismatches: Object.keys(warnResolved)
 	};
 
+	logUndefinedPaths(reportPayload, 'reportPayload');
+	console.log('[PledgeTracker] SAVING to CMS:', JSON.stringify(sanitizeForSave(reportPayload)));
 	_isSaving = true;
-	tool.setValue(reportPayload);
+	tool.setValue(sanitizeForSave(reportPayload));
 	setTimeout(function () { _isSaving = false; }, 200);
 	tool.notify('Report generated and saved \u2713', 'success');
 
 	setFileTabsVisible(false);
+	switchTab('dashboard');
 	switchTopTab('reports');
 	scheduleResize();
 }
@@ -1284,7 +1338,7 @@ function renderFlat() {
 	var tbody = document.getElementById('report-body');
 	tbody.innerHTML = '';
 	if (!rows.length) {
-		tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="e-icon">\ud83d\udd0d</div><h3>No results</h3><p>Adjust your search or filter.</p></div></td></tr>';
+		tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><div class="e-icon">\ud83d\udd0d</div><h3>No results</h3><p>Adjust your search or filter.</p></div></td></tr>';
 		document.getElementById('row-count').textContent = '';
 		return;
 	}
@@ -1292,6 +1346,7 @@ function renderFlat() {
 		var tr = document.createElement('tr');
 		tr.innerHTML =
 			'<td><span class="expand-btn" onclick="toggleFlatDetail(' + i + ')" data-expand="' + i + '">\u25b6</span></td>' +
+			'<td style="color:var(--c-text3);font-size:11px;font-weight:700">' + (i + 1) + '</td>' +
 			'<td><div class="donor-name">' + esc(r.donor) + '</div>' + (r.phone ? '<div style="font-size:11px;color:var(--c-text3);margin-top:2px">' + esc(r.phone) + '</div>' : '') + '</td>' +
 			'<td><span style="font-size:11px;font-weight:700;color:var(--c-blue);background:var(--c-blue-bg);padding:2px 8px;border-radius:12px">' + esc(r.group) + '</span></td>' +
 			'<td><span class="invoice-no">' + esc(r.invoice) + '</span></td>' +
@@ -1312,7 +1367,16 @@ function renderFlat() {
 			r.payments.map(function (p) { return '<tr><td>' + esc(p.date) + '</td><td style="color:var(--c-green);font-weight:700">' + fmt(p.amount) + '</td><td style="color:var(--c-text2)">' + esc(p.note) + '</td></tr>'; }).join('') +
 			'</tbody></table>'
 			: '<p style="font-size:12px;color:var(--c-text3)">No cash payments recorded.</p>';
-		dtr.innerHTML = '<td colspan="10"><div class="detail-inner"><div class="section-title-sm">Cash payments</div>' + payHtml + '</div></td>';
+		var cashPaid = (r.payments || []).reduce(function (s, p) { return s + (Number(p.amount) || 0); }, 0);
+		var qbPaid = (r.qbPaid === undefined || r.qbPaid === null)
+			? Math.max(0, (Number(r.pledged) || 0) - (Number(r.balance) || 0) - cashPaid)
+			: (Number(r.qbPaid) || 0);
+		var sumHtml = '<div class="detail-summary">' +
+			'<div class="ds-item"><span class="ds-label">From QuickBooks invoices</span><span class="ds-value ds-qb">' + fmt(qbPaid) + '</span></div>' +
+			'<div class="ds-item"><span class="ds-label">From cash payments</span><span class="ds-value ds-cash">' + fmt(cashPaid) + '</span></div>' +
+			'<div class="ds-item"><span class="ds-label">Total paid</span><span class="ds-value">' + fmt(Number(r.paid) || 0) + '</span></div>' +
+			'</div>';
+		dtr.innerHTML = '<td colspan="11"><div class="detail-inner">' + sumHtml + '<div class="section-title-sm" style="margin-top:8px">Cash payment list</div>' + payHtml + '</div></td>';
 		tbody.appendChild(dtr);
 	});
 	document.getElementById('row-count').textContent = rows.length + ' of ' + combined.length + ' records shown';
@@ -2017,7 +2081,7 @@ function _persistResolvedWarns() {
 	var val = tool.getValue() || {};
 	val.resolvedMismatches = Object.keys(warnResolved);
 	_isSaving = true;
-	tool.setValue(val);
+	tool.setValue(sanitizeForSave(val));
 	setTimeout(function () { _isSaving = false; }, 200);
 }
 function toggleWarnPanel() {
@@ -2033,18 +2097,8 @@ function showNotice(msg) { var n = document.getElementById('notice'); n.textCont
 function loadSample() {
 	qbData = [{ 'Transaction type': 'Invoice', Name: 'Smith, John', '#': 'INV-1001', Date: '2024-01-15', Amount: 5000, 'Open balance': 5000 }, { 'Transaction type': 'Invoice', Name: 'Cohen, Rachel', '#': 'INV-1002', Date: '2024-01-20', Amount: 3000, 'Open balance': 3000 }, { 'Transaction type': 'Invoice', Name: 'Goldberg, David', '#': 'INV-1003', Date: '2024-02-01', Amount: 10000, 'Open balance': 8000 }, { 'Transaction type': 'Invoice', Name: 'Levy, Sarah', '#': 'INV-1004', Date: '2024-02-10', Amount: 2500, 'Open balance': 2500 }, { 'Transaction type': 'Invoice', Name: 'Miller, Robert', '#': 'INV-1005', Date: '2024-03-01', Amount: 7500, 'Open balance': 7500 }, { 'Transaction type': 'Invoice', Name: 'Davis, Emily', '#': 'INV-1006', Date: '2024-03-15', Amount: 1200, 'Open balance': 1200 }, { 'Transaction type': 'Invoice', Name: 'Brown, Michael', '#': 'INV-1007', Date: '2024-03-20', Amount: 4000, 'Open balance': 4000 }, { 'Transaction type': 'Invoice', Name: 'Wilson, Lisa', '#': 'INV-1008', Date: '2024-03-25', Amount: 6000, 'Open balance': 6000 }];
 
-	if (_cmsAvailable) {
-		// Use standardized format for CMS storage
-		peopleData = [{ name: 'Smith, John', group: 'North Side', phone: '555-0101' }, { name: 'Cohen, Rachel', group: 'North Side', phone: '555-0102' }, { name: 'Green, Nancy', group: 'North Side', phone: '555-0103' }, { name: 'Harris, Paul', group: 'North Side', phone: '555-0104' }, { name: 'Goldberg, David', group: 'Downtown', phone: '555-0201' }, { name: 'Levy, Sarah', group: 'Downtown', phone: '555-0202' }, { name: 'Klein, Peter', group: 'Downtown', phone: '555-0203' }, { name: 'Miller, Robert', group: 'East End', phone: '555-0301' }, { name: 'Davis, Emily', group: 'East End', phone: '555-0302' }, { name: 'Torres, Maria', group: 'East End', phone: '555-0303' }, { name: 'Brown, Michael', group: '', phone: '555-0401' }, { name: 'Wilson, Lisa', group: '', phone: '555-0402' }, { name: 'Adams, Carol', group: '', phone: '555-0403' }];
-		cashData = [{ donorName: 'Smith, John', date: '2024-03-10', amount: 2500, note: 'Donation 26' }, { donorName: 'Smith, John', date: '2024-05-01', amount: 2500, note: 'Donation 26' }, { donorName: 'Cohen, Rachel', date: '2024-04-15', amount: 1500, note: 'Donation 26' }, { donorName: 'Goldberg, David', date: '2024-02-20', amount: 2000, note: 'Donation 26' }, { donorName: 'Davis, Emily', date: '2024-04-01', amount: 1200, note: 'Donation 26' }];
-		saveStoredPeople();
-		saveStoredCash();
-		renderPeopleManager();
-		renderCashManager();
-		refreshPeopleCard();
-		refreshCashCard();
-	} else {
-		// Fallback: use file-based format with column mapping
+	{
+		// Use file-based format with column mapping
 		cashData = [{ Name: 'Smith, John', Date: '2024-03-10', Income: 2500, Explanation: 'Donation 26' }, { Name: 'Smith, John', Date: '2024-05-01', Income: 2500, Explanation: 'Donation 26' }, { Name: 'COHEN, RACHEL', Date: '2024-04-15', Income: 1500, Explanation: 'Donation 26' }, { Name: 'Goldberg, David', Date: '2024-02-20', Income: 2000, Explanation: 'Donation 26' }, { Name: 'Davis, Emily', Date: '2024-04-01', Income: 1200, Explanation: 'Donation 26' }, { Name: 'Brown, Michael', Date: '2024-02-15', Expense: 50, Explanation: 'Winter camp table cloth' }, { Name: 'Wilson, Lisa', Date: '2024-03-01', Expense: 30, Explanation: 'Office supplies' }, { Name: 'Thompson, Alice', Date: '2024-04-10', Income: 500, Explanation: 'Donation 26' }];
 		peopleData = [{ Name: 'Smith, John', Group: 'North Side', Phone: '555-0101' }, { Name: 'Cohen, Rachel', Group: 'North Side', Phone: '555-0102' }, { Name: 'Green, Nancy', Group: 'North Side', Phone: '555-0103' }, { Name: 'Harris, Paul', Group: 'North Side', Phone: '555-0104' }, { Name: 'Goldberg, David', Group: 'Downtown', Phone: '555-0201' }, { Name: 'Levy, Sarah', Group: 'Downtown', Phone: '555-0202' }, { Name: 'Klein, Peter', Group: 'Downtown', Phone: '555-0203' }, { Name: 'Miller, Robert', Group: 'East End', Phone: '555-0301' }, { Name: 'Davis, Emily', Group: 'East End', Phone: '555-0302' }, { Name: 'Torres, Maria', Group: 'East End', Phone: '555-0303' }, { Name: 'Brown, Michael', Group: '', Phone: '555-0401' }, { Name: 'Wilson, Lisa', Group: '', Phone: '555-0402' }, { Name: 'Adams, Carol', Group: '', Phone: '555-0403' }];
 		['qb-drop', 'cash-drop', 'people-drop'].forEach(function (id) { document.getElementById(id).classList.add('loaded'); });
