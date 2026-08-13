@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MapleBooks Tax Prep BC — Test Harness</title>
+<link rel="stylesheet" href="PersonalTaxPreparation.css">
+<style>
+body { padding-top: 30px !important; }
+#app { min-height: calc(100vh - 30px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: .5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — MapleBooks Tax Prep BC</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">📊 Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB</span>
+  <span class="sep">|</span>
+  <span class="hint">Mock AI + mock uploads are active</span>
+</div>
+
+<!-- ══ TOOL HTML MARKUP (inline) ══ -->
+<div id="app">
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<div class="brand-logo">🍁</div>
+			<div class="brand-name">MapleBooks</div>
+			<div class="brand-sub">Tax Prep · BC</div>
+		</div>
+		<nav class="nav">
+			<div class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span> Dashboard</div>
+			<div class="nav-item" data-page="documents"><span class="nav-icon">📂</span> Documents<span class="nav-badge" id="nav-docs-count">0</span></div>
+			<div class="nav-item" data-page="transactions"><span class="nav-icon">⇄</span> Transactions<span class="nav-badge" id="nav-tx-count">0</span></div>
+			<div class="nav-item" data-page="finder"><span class="nav-icon">💡</span> Expense Finder<span class="nav-badge" id="nav-finder-count">0</span></div>
+			<div class="nav-item" data-page="gst"><span class="nav-icon">🧾</span> GST / PST</div>
+			<div class="nav-item" data-page="assistant"><span class="nav-icon">🤖</span> Tax Assistant</div>
+			<div class="nav-item" data-page="reports"><span class="nav-icon">📤</span> Reports</div>
+			<div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span> Settings</div>
+		</nav>
+		<div class="sidebar-footer">
+			<div class="sb-year">Tax year <strong id="sidebar-tax-year">2025</strong></div>
+			<div class="sb-gst" id="sidebar-gst-status">GST status: —</div>
+		</div>
+	</aside>
+
+	<main class="main">
+		<div class="topbar">
+			<div class="topbar-left"><span class="topbar-save" id="topbar-save">✓ Saved</span></div>
+			<div class="topbar-right">
+				<span class="ai-pill" id="ai-pill" title="AI connection status">AI: checking…</span>
+				<span class="user-chip" id="user-chip"></span>
+				<button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>
+			</div>
+		</div>
+
+		<!-- DASHBOARD -->
+		<section id="sec-dashboard" class="section active">
+			<div class="page-header">
+				<div class="page-title">🍁 Tax Prep Dashboard</div>
+				<div class="page-sub">Tax year <span id="dash-tax-year">2025</span> · British Columbia · personal + company books</div>
+			</div>
+			<div class="banner" id="dash-finder-alert" style="display:none">
+				💡 The AI found <strong id="dash-finder-alert-n">0</strong> possible extra deduction(s).
+				<button class="btn btn-ghost btn-sm" data-nav="finder">Review now</button>
+			</div>
+			<div class="stats-row" id="dash-stats"></div>
+			<div class="card">
+				<div class="card-header">
+					<span class="card-title">📈 Return readiness</span>
+					<span class="card-sub" id="dash-readiness-pct">0%</span>
+				</div>
+				<div class="progress-track"><div class="progress-fill" id="dash-readiness-bar" style="width:0%"></div></div>
+				<div class="readiness-items" id="dash-readiness-items"></div>
+			</div>
+			<div class="dash-grid">
+				<div class="card">
+					<div class="card-header">
+						<span class="card-title">📋 Document checklist</span>
+						<button class="btn btn-ghost btn-sm" data-nav="documents">Open documents</button>
+					</div>
+					<div class="card-body" id="dash-checklist"></div>
+				</div>
+				<div class="card">
+					<div class="card-header"><span class="card-title">⚡ Action center</span></div>
+					<div class="card-body action-center" id="dash-actions"></div>
+				</div>
+			</div>
+			<div class="card">
+				<div class="card-header"><span class="card-title">🕘 Recent activity</span></div>
+				<div class="card-body" id="dash-activity"></div>
+			</div>
+		</section>
+
+		<!-- DOCUMENTS -->
+		<section id="sec-documents" class="section">
+			<div class="page-header">
+				<div class="page-title">📂 Documents &amp; Bank Statements</div>
+				<div class="page-sub">Upload invoices, receipts and statements — the AI extracts income &amp; expense transactions from them.</div>
+				<div class="toolbar">
+					<button class="btn btn-primary" id="btn-upload-docs">📤 Upload Documents</button>
+					<button class="btn btn-outline" id="btn-analyze-all">🤖 Analyze All with AI</button>
+					<select class="form-input form-inline" id="doc-filter">
+						<option value="all">All documents</option>
+						<option value="document">PDF / Word / Other</option>
+						<option value="csv">Bank CSVs</option>
+						<option value="pending">Needs analysis</option>
+					</select>
+					<span class="toolbar-status" id="doc-status"></span>
+				</div>
+			</div>
+			<div class="dropzone" id="doc-dropzone">
+				<div class="dz-icon">📤</div>
+				<div class="dz-title">Drop / click to upload documents</div>
+				<div class="dz-sub">Invoices · receipts · bank statements (PDF, DOCX, XLSX, CSV, TXT, images)</div>
+				<button class="btn btn-primary" id="btn-upload-docs2">Choose files</button>
+			</div>
+			<div class="card">
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Document</th>
+								<th>Type</th>
+								<th>Size</th>
+								<th>Status</th>
+								<th>Tx found</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="docs-tbody"></tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- TRANSACTIONS -->
+		<section id="sec-transactions" class="section">
+			<div class="page-header">
+				<div class="page-title">⇄ Transaction Ledger</div>
+				<div class="page-sub">Every income &amp; expense found in your documents — review and correct before filing.</div>
+				<div class="toolbar">
+					<button class="btn btn-primary" id="btn-add-tx">+ Add Transaction</button>
+					<select class="form-input form-inline" id="tx-type-filter">
+						<option value="all">All types</option>
+						<option value="income">Income</option>
+						<option value="expense">Expense</option>
+					</select>
+					<select class="form-input form-inline" id="tx-cat-filter"><option value="all">All categories</option></select>
+					<select class="form-input form-inline" id="tx-entity-filter">
+						<option value="all">All entities</option>
+						<option value="company">Company</option>
+						<option value="personal">Personal</option>
+					</select>
+					<input type="text" class="form-input form-inline" id="tx-search" placeholder="Search description…" style="width:200px">
+					<button class="btn btn-ghost btn-sm" id="btn-reclassify-ai">🤖 Re-classify with AI</button>
+				</div>
+			</div>
+			<div class="chips-row" id="tx-chips"></div>
+			<div class="card">
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Date</th>
+								<th>Description</th>
+								<th>Category</th>
+								<th>Entity</th>
+								<th class="num">GST / PST</th>
+								<th class="num">Amount</th>
+								<th>Source</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="tx-tbody"></tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- EXPENSE FINDER -->
+		<section id="sec-finder" class="section">
+			<div class="page-header">
+				<div class="page-title">💡 Expense Finder</div>
+				<div class="page-sub">The AI interviews you, spots missing deductible expenses, and asks for the right documents.</div>
+				<div class="toolbar">
+					<button class="btn btn-primary" id="btn-finder-interview">🎙 Start Expense Interview</button>
+					<button class="btn btn-outline" id="btn-finder-scan">⚡ Quick Scan (no questions)</button>
+					<span class="toolbar-status" id="finder-status"></span>
+				</div>
+			</div>
+			<div class="finder-grid">
+				<div class="card">
+					<div class="card-header"><span class="card-title">🎙 AI interview</span><span class="card-sub">Answer what you can — skip the rest</span></div>
+					<div class="card-body" id="finder-interview"></div>
+				</div>
+				<div class="card">
+					<div class="card-header"><span class="card-title">✨ Suggested deductions</span><span class="card-sub">Accept to add to your ledger</span></div>
+					<div class="card-body" id="finder-suggestions"></div>
+				</div>
+			</div>
+		</section>
+
+		<!-- GST / PST -->
+		<section id="sec-gst" class="section">
+			<div class="page-header">
+				<div class="page-title">🧾 GST / HST &amp; BC PST</div>
+				<div class="page-sub">Canada GST 5% + BC PST 7% — numbers built from your ledger, ready for the GST34 return.</div>
+			</div>
+			<div class="card" id="gst-reg-card"></div>
+			<div class="stats-row" id="gst-stats"></div>
+			<div class="dash-grid">
+				<div class="card">
+					<div class="card-header"><span class="card-title">📆 Monthly summary</span></div>
+					<div class="table-wrap">
+						<table class="data-table">
+							<thead>
+								<tr><th>Month</th><th class="num">Revenue</th><th class="num">GST collected</th><th class="num">ITCs</th><th class="num">Net GST</th></tr>
+							</thead>
+							<tbody id="gst-monthly-tbody"></tbody>
+						</table>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-header"><span class="card-title">🗓 Filing periods</span></div>
+					<div class="table-wrap">
+						<table class="data-table">
+							<thead>
+								<tr><th>Period</th><th class="num">Collected</th><th class="num">ITCs</th><th class="num">Net</th></tr>
+							</thead>
+							<tbody id="gst-periods-body"></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+			<div class="card">
+				<div class="card-header">
+					<span class="card-title">🔧 Adjustments (GST34 lines 104–108)</span>
+					<button class="btn btn-primary btn-sm" id="btn-save-gst-adj">Save adjustments</button>
+				</div>
+				<div class="adjust-grid">
+					<label class="field"><span>Other GST adjustments (add)</span><input type="number" step="0.01" class="form-input" id="gst-adj-debits"></label>
+					<label class="field"><span>Other credits (subtract)</span><input type="number" step="0.01" class="form-input" id="gst-adj-credits"></label>
+				</div>
+			</div>
+		</section>
+
+		<!-- TAX ASSISTANT -->
+		<section id="sec-assistant" class="section">
+			<div class="page-header">
+				<div class="page-title">🤖 Tax Assistant</div>
+				<div class="page-sub">Ask anything about your books, deductions, GST and CRA filing — it sees everything you've loaded.</div>
+			</div>
+			<div class="chat-layout">
+				<aside class="chat-sessions-panel">
+					<div class="chat-panel-header">
+						<span class="card-title">💬 Chats</span>
+						<button class="btn btn-primary btn-sm" id="btn-new-chat">+ New</button>
+					</div>
+					<div class="chat-sessions-list" id="chat-sessions-list"></div>
+				</aside>
+				<div class="chat-main">
+					<div class="chat-messages" id="chat-messages"></div>
+					<div class="chat-quick-chips" id="chat-quick-chips">
+						<button class="chip" data-q="What documents am I still missing?">📄 Missing documents?</button>
+						<button class="chip" data-q="What expenses can I still deduct that I haven't recorded?">💡 More deductions?</button>
+						<button class="chip" data-q="Explain my current GST result and what I should double-check.">🧾 Explain my GST</button>
+						<button class="chip" data-q="What should I do next to get my return ready to file?">✅ Next steps</button>
+						<button class="chip" data-q="Draft a short summary email for my accountant with my key numbers.">✉️ Email draft</button>
+					</div>
+					<div class="chat-input-row">
+						<textarea id="chat-input" rows="1" placeholder="Ask about deductions, GST, CRA filing…"></textarea>
+						<button class="btn btn-primary" id="chat-send">Send ➤</button>
+					</div>
+					<div class="chat-status" id="chat-status"></div>
+				</div>
+			</div>
+		</section>
+
+		<!-- REPORTS -->
+		<section id="sec-reports" class="section">
+			<div class="page-header">
+				<div class="page-title">📤 Reports &amp; Handoff</div>
+				<div class="page-sub">Everything your accountant or tax software needs, in one package.</div>
+				<div class="toolbar">
+					<button class="btn btn-primary" id="btn-export-package">📄 Export Preparer Package (PDF)</button>
+					<button class="btn btn-outline" id="btn-export-gst">🧾 Export GST Summary (PDF)</button>
+					<button class="btn btn-outline" id="btn-email-accountant">✉️ Email to Accountant</button>
+				</div>
+			</div>
+			<div class="dash-grid">
+				<div class="card">
+					<div class="card-header"><span class="card-title">📦 What's in the Preparer Package</span></div>
+					<div class="card-body">
+						<ul class="plain-list">
+							<li>✔ Taxpayer &amp; business profile (name, entity, GST/PST registration)</li>
+							<li>✔ Income statement — revenue by category</li>
+							<li>✔ Expense breakdown by T2125 / T2 schedule category</li>
+							<li>✔ Full transaction ledger</li>
+							<li>✔ GST / HST summary (GST34 line map) + BC PST paid</li>
+							<li>✔ Document register with source links</li>
+							<li>✔ Checklist status &amp; open questions from the AI</li>
+						</ul>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-header"><span class="card-title">⚠️ Before you file</span></div>
+					<div class="card-body">
+						<ul class="plain-list">
+							<li>Verify every AI-classified transaction against source documents.</li>
+							<li>Home-office and vehicle claims need % and km support.</li>
+							<li>Estimates in this tool are planning aids — not filing numbers.</li>
+							<li>Consider having an accountant review before submitting to CRA.</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- SETTINGS -->
+		<section id="sec-settings" class="section">
+			<div class="page-header">
+				<div class="page-title">⚙ Settings &amp; Profile</div>
+				<div class="page-sub">Set up the taxpayer, the business, and GST / PST details.</div>
+				<div class="toolbar">
+					<button class="btn btn-primary" id="btn-save-settings">💾 Save Settings</button>
+					<button class="btn btn-danger-ghost" id="btn-reset-tool">🗑 Reset everything</button>
+				</div>
+			</div>
+			<div class="dash-grid">
+				<div class="card">
+					<div class="card-header"><span class="card-title">👤 Taxpayer &amp; business</span></div>
+					<div class="card-body form-stack">
+						<label class="field"><span>Filing entity</span>
+							<div class="entity-cards">
+								<label class="entity-card"><input type="radio" name="set-entityType" value="personal"><span class="ec-title">Personal</span><span class="ec-sub">T1 only</span></label>
+								<label class="entity-card"><input type="radio" name="set-entityType" value="soleProp"><span class="ec-title">Sole Proprietor</span><span class="ec-sub">T1 + T2125</span></label>
+								<label class="entity-card"><input type="radio" name="set-entityType" value="corporation"><span class="ec-title">Corporation</span><span class="ec-sub">T2 (CCPC)</span></label>
+							</div>
+						</label>
+						<label class="field"><span>Your name / business name</span><input type="text" class="form-input" id="set-businessName" placeholder="e.g. Acme Consulting Ltd."></label>
+						<label class="field"><span>Tax year</span><input type="number" class="form-input" id="set-taxYear" min="2020" max="2030"></label>
+						<label class="field"><span>Fiscal year end</span>
+							<select class="form-input" id="set-fiscalEnd">
+								<option value="12-31">December 31</option><option value="06-30">June 30</option>
+								<option value="03-31">March 31</option><option value="09-30">September 30</option>
+							</select>
+						</label>
+						<label class="field"><span>Industry</span>
+							<select class="form-input" id="set-industry">
+								<option value="consulting">Consulting / Professional</option>
+								<option value="tech">Technology / Software</option>
+								<option value="trades">Trades / Construction</option>
+								<option value="retail">Retail / E-commerce</option>
+								<option value="food">Food &amp; Hospitality</option>
+								<option value="transport">Transport / Delivery</option>
+								<option value="creative">Creative / Media</option>
+								<option value="other">Other</option>
+							</select>
+						</label>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-header"><span class="card-title">🧾 GST / PST &amp; income extras</span></div>
+					<div class="card-body form-stack">
+						<label class="field"><span>GST / HST registered</span>
+							<select class="form-input" id="set-gstRegistered">
+								<option value="yes">Yes — I charge &amp; claim GST</option>
+								<option value="no">No — not registered</option>
+							</select>
+						</label>
+						<label class="field"><span>GST number</span><input type="text" class="form-input" id="set-gstNumber" placeholder="9-digit BN (optional)"></label>
+						<label class="field"><span>GST filing frequency</span>
+							<select class="form-input" id="set-gstFrequency">
+								<option value="annual">Annual</option><option value="quarterly">Quarterly</option><option value="monthly">Monthly</option>
+							</select>
+						</label>
+						<label class="field"><span>BC PST registered</span>
+							<select class="form-input" id="set-pstRegistered">
+								<option value="no">No</option><option value="yes">Yes</option>
+							</select>
+						</label>
+						<label class="field"><span>Employment income (T4) — personal</span><input type="number" step="0.01" class="form-input" id="set-employmentIncome" placeholder="0.00"></label>
+						<label class="field"><span>Other personal income</span><input type="number" step="0.01" class="form-input" id="set-otherIncome" placeholder="0.00"></label>
+						<label class="field"><span>Accountant email (for handoff)</span><input type="text" class="form-input" id="set-accountantEmail" placeholder="accountant@example.com"></label>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<div class="modal-overlay" id="modal-overlay" style="display:none">
+		<div class="modal" id="modal-box"></div>
+	</div>
+	<div class="toast-container" id="toast-container"></div>
+</div>
+
+<!-- ══ MOCK TOOL SDK ══ -->
+<script>
+(function () {
+	var STORAGE_KEY = 'ptp_maplebooks_test_db';
+	var OBJ_KEY = 'ptp_maplebooks_test_objects';
+	var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+	var _readOnly = false, _user = null, _fields = {}, _value = null;
+	var _fileContent = {};
+
+	function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch (e) { _value = null; } }
+	function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch (e) {} }
+	function fire(evt, arg) { (listeners[evt] || []).forEach(function (cb) { try { cb(arg); } catch (e) {} }); }
+	function loadObjs() { try { var raw = localStorage.getItem(OBJ_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+	function saveObjs(o) { try { localStorage.setItem(OBJ_KEY, JSON.stringify(o)); } catch (e) {} }
+
+	var DEFAULTS = { allowAi: 'yes', allowUpload: 'yes', allowFileContent: 'yes', allowObjectCRUD: 'yes', allowExportPdf: 'yes', allowSendEmail: 'yes', taxYear: '2025', province: 'BC', accountantEmail: 'accountant@example.com' };
+
+	function mockAiResponse(prompt) {
+		if (/\{"transactions"/.test(prompt)) {
+			return JSON.stringify({
+				transactions: [
+					{ date: '2025-03-12', description: 'Telus Mobility', amount: 86.5, direction: 'expense', category: 'phoneInternet', gstAmount: 4.12, pstAmount: 6.06, gstIncluded: true, confidence: 'high' },
+					{ date: '2025-03-15', description: 'Freshii — client lunch', amount: 24.8, direction: 'expense', category: 'meals', gstAmount: null, pstAmount: null, gstIncluded: false, confidence: 'medium' },
+					{ date: '2025-03-18', description: 'Amazon Business — office supplies', amount: 159.99, direction: 'expense', category: 'officeSupplies', gstAmount: 7.62, pstAmount: 10.67, gstIncluded: true, confidence: 'high' },
+					{ date: '2025-04-01', description: 'Client payment — Northwind Traders', amount: 4200, direction: 'income', category: 'services', gstAmount: 200, pstAmount: null, gstIncluded: true, confidence: 'high' },
+					{ date: '2025-04-02', description: 'QuickBooks subscription', amount: 45, direction: 'expense', category: 'software', gstAmount: 2.14, pstAmount: null, gstIncluded: true, confidence: 'high' },
+					{ date: '2025-04-10', description: 'ICBC business insurance', amount: 310, direction: 'expense', category: 'insurance', gstAmount: null, pstAmount: null, gstIncluded: false, confidence: 'medium' }
+				],
+				missingDocs: ['Home internet bills', 'Vehicle mileage logbook', 'Equipment purchase invoices'],
+				notes: 'Found business payments and client deposits.'
+			});
+		}
+		if (/\{"questions"/.test(prompt)) {
+			return JSON.stringify({ questions: [
+				{ id: 'q1', question: 'Did you use part of your home for business? Roughly what % of your home area is used?', hint: 'Home-office deductions are one of the biggest missed savings for BC small businesses.' },
+				{ id: 'q2', question: 'Do you use a personal vehicle for business? Roughly how many km were business-related?', hint: 'Vehicle expenses need a logbook but often save thousands.' },
+				{ id: 'q3', question: 'Do you pay for your own phone and internet plan? What do you pay per month?', hint: 'A reasonable business-use portion is deductible.' },
+				{ id: 'q4', question: 'Did you attend conferences, training, or pay professional memberships this year?', hint: 'Training and membership dues are deductible.' },
+				{ id: 'q5', question: 'Did any family members help with the business (bookkeeping, admin)? Were they paid?', hint: 'Reasonable wages to family members are deductible.' }
+			]});
+		}
+		if (/\{"suggestions"/.test(prompt)) {
+			return JSON.stringify({ suggestions: [
+				{ name: 'Home office (business-use-of-home)', category: 'homeOffice', amount: 1200, reason: 'Based on your answers, a portion of rent/utilities is deductible under the business-use-of-home rules.', evidenceNeeded: 'Home area m² vs total m², rent and utility bills', confidence: 'medium' },
+				{ name: 'Vehicle business use', category: 'vehicle', amount: 850, reason: 'Business km usually represent a deductible share of fuel, insurance and maintenance.', evidenceNeeded: 'Mileage logbook or calendar-based estimate', confidence: 'medium' },
+				{ name: 'Phone & internet business portion', category: 'phoneInternet', amount: 540, reason: 'A reasonable share of personal phone/internet plans used for business is deductible.', evidenceNeeded: 'Monthly bills for the year', confidence: 'high' },
+				{ name: 'Client meeting meals', category: 'meals', amount: 380, reason: 'Meals with clients are 50% deductible in Canada.', evidenceNeeded: 'Receipts noting who attended and business purpose', confidence: 'medium' },
+				{ name: 'Professional memberships & training', category: 'memberships', amount: 250, reason: 'Industry dues and continuing education are deductible.', evidenceNeeded: 'Membership invoices / course receipts', confidence: 'high' }
+			]});
+		}
+		if (/\{"results"/.test(prompt)) return JSON.stringify({ results: [] });
+		return 'Here is my quick read of your situation:\n\n• Your books look consistent — the biggest wins are documenting home-office and vehicle use.\n• Keep every GST-bearing receipt: the 5% GST on business purchases is recoverable as input tax credits (ITCs).\n• BC PST (7%) is generally NOT recoverable — record it as an expense.\n• For a complete file, upload all 12 monthly bank statements, your sales invoices, and receipts.\n\nRemember: final filing numbers should be confirmed by an accountant.';
+	}
+
+	window.tool = {
+		onReady: function (cb) { load(); cb(_value, _fields); },
+		getValue: function () { return _value; },
+		setValue: function (data) { save(data); fire('valueChange', data); },
+		onValueChange: function (cb) { listeners.valueChange.push(cb); },
+		getFields: function () { return Object.assign({}, _fields); },
+		setField: function (id, v) { _fields[id] = v; },
+		setFields: function (o) { Object.assign(_fields, o); },
+		watchField: function (id, cb) { listeners.fieldsChange.push(cb); },
+		onFieldsChange: function (cb) { listeners.fieldsChange.push(cb); },
+		param: function (name, fallback) {
+			try {
+				var q = new URLSearchParams(window.location.search).get(name);
+				if (q !== null && q !== '') return q;
+			} catch (e) {}
+			return DEFAULTS[name] !== undefined ? DEFAULTS[name] : fallback;
+		},
+		isReadOnly: function () { return _readOnly; },
+		onReadonlyChange: function (cb) { listeners.readonlyChange.push(cb); },
+		_setReadOnly: function (v) { _readOnly = v; fire('readonlyChange', v); },
+		_toggleReadOnly: function () { this._setReadOnly(!_readOnly); },
+		getUser: function () { return _user || { id: 'u1', name: 'Alex Carter', email: 'alex@example.com', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true }, locale: 'en-CA' }; },
+		onUserChange: function (cb) { listeners.userChange.push(cb); },
+		getPermittedUsers: function () { return [{ id: 'u1', name: 'Alex Carter', email: 'alex@example.com', roles: ['admin', 'editor'] }]; },
+		reportValid: function () {},
+		notify: function (message, severity) {
+			severity = severity || 'info';
+			var colors = { info: '#0f766e', success: '#15803d', warning: '#b45309', error: '#b91c1c' };
+			var t = document.createElement('div');
+			t.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:99999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 18px;border-radius:8px;font-family:system-ui;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.35);max-width:380px';
+			t.textContent = '[CMS] ' + message;
+			document.body.appendChild(t);
+			setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function () { t.remove(); }, 300); }, 3000);
+		},
+		resize: function () {},
+		openUrl: function (url) { try { window.open(url, '_blank'); } catch (e) {} },
+		openObjectDetail: function () {},
+		declareOutput: function () {},
+		declareParams: function (p) { console.log('[harness] declareParams:', p.map(function (x) { return x.name; }).join(', ')); },
+		reportMissingParams: function (m, msg) { console.warn('[harness] reportMissingParams:', m, msg); },
+		reportValid: function () {},
+		requestAI: function (prompt, context, callback) {
+			console.log('[harness] requestAI — prompt length:', prompt.length, 'context length:', (context || '').length);
+			setTimeout(function () { callback(null, mockAiResponse(prompt, context)); }, 600);
+		},
+		requestAIStream: function (prompt, context, callbacks) {
+			var full = mockAiResponse(prompt, context);
+			var i = 0;
+			var iv = setInterval(function () {
+				if (i >= full.length) {
+					clearInterval(iv);
+					if (callbacks.onComplete) callbacks.onComplete(full);
+					return;
+				}
+				var tok = full.slice(i, i + 8);
+				i += 8;
+				if (callbacks.onToken) callbacks.onToken(tok);
+			}, 14);
+		},
+		requestUpload: function (accept, cb) {
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = accept || '';
+			input.style.display = 'none';
+			document.body.appendChild(input);
+			input.onchange = function () {
+				var f = input.files[0];
+				input.remove();
+				if (!f) { cb('No file selected', null); return; }
+				var url = 'mock://' + encodeURIComponent(f.name);
+				function finish() {
+					cb(null, { name: f.name, url: url, size: f.size, type: f.type || 'application/octet-stream' });
+				}
+				if (/\.(csv|txt)$/i.test(f.name)) {
+					var reader = new FileReader();
+					reader.onload = function () { _fileContent[url] = String(reader.result || ''); finish(); };
+					reader.onerror = function () { _fileContent[url] = ''; finish(); };
+					reader.readAsText(f);
+				} else {
+					_fileContent[url] = [
+						'RBC Royal Bank — Business Operating Account',
+						'Statement period: March 1–31, ' + DEFAULTS.taxYear,
+						'',
+						'Date        Description                    Debit       Credit',
+						'03/12/' + DEFAULTS.taxYear.slice(2) + '   TELUS MOBILITY                 86.50',
+						'03/15/' + DEFAULTS.taxYear.slice(2) + '   FRESHII DOWNTOWN               24.80',
+						'03/18/' + DEFAULTS.taxYear.slice(2) + '   AMAZON MARKETPLACE            159.99',
+						'04/01/' + DEFAULTS.taxYear.slice(2) + '   DEPOSIT NORTHWIND TRADERS               4200.00',
+						'04/02/' + DEFAULTS.taxYear.slice(2) + '   INTUIT QUICKBOOKS             45.00',
+						'04/10/' + DEFAULTS.taxYear.slice(2) + '   ICBC INSURANCE                310.00',
+						'',
+						'(mock statement text generated by the test harness for "' + f.name + '")'
+					].join('\n');
+					finish();
+				}
+			};
+			input.click();
+		},
+		requestFileContent: function (url, cb) {
+			setTimeout(function () {
+				var t = _fileContent[url];
+				if (t === undefined) t = 'Mock extracted text for ' + url;
+				cb(null, t);
+			}, 250);
+		},
+		requestExportPdf: function (options, cb) {
+			var html = options.html || document.body.innerHTML;
+			var blob = new Blob([html], { type: 'text/html' });
+			var url = URL.createObjectURL(blob);
+			try { window.open(url, '_blank'); } catch (e) {}
+			cb(null, { name: (options.filename || 'export') + '.html', url: url, size: html.length, type: 'text/html' });
+		},
+		requestSendEmail: function (options, cb) {
+			console.log('[harness] requestSendEmail →', options.to, '|', options.subject);
+			window.tool.notify('Email sent (mock) to ' + options.to, 'success');
+			cb(null, { ok: true });
+		},
+		requestObjects: function (action, params, cb) {
+			setTimeout(function () {
+				var objs = loadObjs();
+				if (action === 'query') {
+					var list = objs.filter(function (o) { return o.cmsObjectType === params.mainObjectType; });
+					cb(null, { objects: list });
+				} else if (action === 'create') {
+					var obj = {
+						id: 'obj_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+						name: params.name || '',
+						cmsObjectType: params.mainObjectType,
+						productData: params.productData || { data_categoriesBased: {} },
+						created: new Date().toISOString(),
+						updated: new Date().toISOString()
+					};
+					objs.push(obj);
+					saveObjs(objs);
+					cb(null, { object: obj });
+				} else if (action === 'update') {
+					var o = objs.find(function (x) { return x.id === params.objectId; });
+					if (o) {
+						if (params.name) o.name = params.name;
+						if (params.productData) {
+							var cur = (o.productData && o.productData.data_categoriesBased) || {};
+							var pdc = params.productData.data_categoriesBased || {};
+							Object.keys(pdc).forEach(function (k) {
+								if (pdc[k] === null || pdc[k] === undefined) delete cur[k];
+								else cur[k] = pdc[k];
+							});
+							o.productData = { data_categoriesBased: cur };
+						}
+						o.updated = new Date().toISOString();
+						saveObjs(objs);
+					}
+					cb(null, { ok: true });
+				} else if (action === 'delete') {
+					objs = objs.filter(function (x) { return x.id !== params.objectId; });
+					saveObjs(objs);
+					cb(null, { ok: true });
+				} else if (action === 'get') {
+					cb(null, { object: objs.find(function (x) { return x.id === params.objectId; }) || null });
+				} else {
+					cb('Unknown action: ' + action, null);
+				}
+			}, 40);
+		},
+		_loadSample: function (data) { save(data); window.location.reload(); },
+		_clearData: function () { localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(OBJ_KEY); window.location.reload(); },
+		_dump: function () { console.log('MapleBooks DB:', JSON.parse(JSON.stringify(_value))); }
+	};
+})();
+</script>
+
+<script src="PersonalTaxPreparation.js"></script>
+
+<script>
+/* ── Harness controls ── */
+document.getElementById('th-load-sample').addEventListener('click', function () {
+	var y = 2025;
+	var tx = [
+		{ id: 's1', date: y + '-01-10', description: 'Client payment — Acme Foods', amount: 2800, type: 'income', category: 'sales', entity: 'company', gstIncluded: true, gstAmount: 133.33, pstAmount: null, source: 'csv', confidence: 'high', estimated: false, verified: true },
+		{ id: 's2', date: y + '-01-22', description: 'Rogers Business Internet', amount: 129.99, type: 'expense', category: 'phoneInternet', entity: 'company', gstIncluded: true, gstAmount: 6.19, pstAmount: 9.10, source: 'csv', confidence: 'high', estimated: false, verified: true },
+		{ id: 's3', date: y + '-02-03', description: 'Staples — office supplies', amount: 214.37, type: 'expense', category: 'officeSupplies', entity: 'company', gstIncluded: true, gstAmount: 10.21, pstAmount: 14.29, source: 'ai', confidence: 'high', estimated: false, verified: false },
+		{ id: 's4', date: y + '-02-14', description: 'Client payment — Bluepeak Ltd.', amount: 5200, type: 'income', category: 'services', entity: 'company', gstIncluded: true, gstAmount: 247.62, pstAmount: null, source: 'ai', confidence: 'high', estimated: false, verified: true },
+		{ id: 's5', date: y + '-02-20', description: 'Petro-Canada — fuel', amount: 87.4, type: 'expense', category: 'vehicle', entity: 'company', gstIncluded: true, gstAmount: 4.16, pstAmount: null, source: 'csv', confidence: 'high', estimated: false, verified: false },
+		{ id: 's6', date: y + '-03-05', description: 'LinkedIn ads', amount: 175, type: 'expense', category: 'advertising', entity: 'company', gstIncluded: true, gstAmount: 8.33, pstAmount: null, source: 'manual', confidence: 'high', estimated: false, verified: true },
+		{ id: 's7', date: y + '-03-18', description: 'Freshii — client lunch', amount: 68.2, type: 'expense', category: 'meals', entity: 'company', gstIncluded: true, gstAmount: 3.25, pstAmount: null, source: 'ai', confidence: 'medium', estimated: false, verified: false },
+		{ id: 's8', date: y + '-04-01', description: 'Client payment — Cascade Corp.', amount: 3100, type: 'income', category: 'sales', entity: 'company', gstIncluded: true, gstAmount: 147.62, pstAmount: null, source: 'csv', confidence: 'high', estimated: false, verified: true },
+		{ id: 's9', date: y + '-04-12', description: 'Workspace (WeWork) monthly', amount: 480, type: 'expense', category: 'rent', entity: 'company', gstIncluded: true, gstAmount: 22.86, pstAmount: 33.60, source: 'csv', confidence: 'high', estimated: false, verified: true },
+		{ id: 's10', date: y + '-05-02', description: 'Accountant — corporate year-end', amount: 1450, type: 'expense', category: 'professionalFees', entity: 'company', gstIncluded: true, gstAmount: 69.05, pstAmount: null, source: 'manual', confidence: 'high', estimated: false, verified: true },
+		{ id: 's11', date: y + '-05-15', description: 'T4 employment income (part-year job)', amount: 18000, type: 'income', category: 'employmentIncome', entity: 'personal', gstIncluded: false, gstAmount: null, pstAmount: null, source: 'manual', confidence: 'high', estimated: false, verified: true },
+		{ id: 's12', date: y + '-06-03', description: 'Dell monitor + keyboard', amount: 549.99, type: 'expense', category: 'equipment', entity: 'company', gstIncluded: true, gstAmount: 26.19, pstAmount: 38.50, source: 'ai', confidence: 'high', estimated: false, verified: false },
+		{ id: 's13', date: y + '-06-18', description: 'QuickBooks subscription (annual)', amount: 330, type: 'expense', category: 'software', entity: 'company', gstIncluded: true, gstAmount: 15.71, pstAmount: null, source: 'csv', confidence: 'high', estimated: false, verified: true },
+		{ id: 's14', date: y + '-07-01', description: 'BC Chamber of Commerce dues', amount: 295, type: 'expense', category: 'memberships', entity: 'company', gstIncluded: true, gstAmount: 14.05, pstAmount: null, source: 'ai', confidence: 'medium', estimated: false, verified: false },
+		{ id: 's15', date: y + '-07-20', description: 'Client payment — Meridian Group', amount: 4600, type: 'income', category: 'services', entity: 'company', gstIncluded: true, gstAmount: 219.05, pstAmount: null, source: 'csv', confidence: 'high', estimated: false, verified: true }
+	];
+	var sample = {
+		version: '1.0.0',
+		profile: {
+			entityType: 'soleProp', businessName: 'Carter Consulting', taxYear: y, fiscalYearEnd: '12-31',
+			gstRegistered: 'yes', gstNumber: '123456789RT0001', gstFrequency: 'quarterly', pstRegistered: 'yes',
+			industry: 'consulting', employmentIncome: 18000, otherIncome: 0, accountantEmail: 'accountant@example.com'
+		},
+		docs: [
+			{ id: 'd1', name: 'bank-statement-mar.pdf', url: 'mock://bank-statement-mar.pdf', size: 241152, type: 'application/pdf', kind: 'document', status: 'analyzed', extracted: 'RBC statement text sample — see mock SDK for extraction simulation.', analyzedAt: new Date().toISOString(), txCount: 4, notes: 'Found business payments and client deposits.' },
+			{ id: 'd2', name: 'transactions-q1.csv', url: 'mock://transactions-q1.csv', size: 8244, type: 'text/csv', kind: 'csv', status: 'analyzed', extracted: 'Date,Description,Debit,Credit\n2025-01-10,Client payment Acme Foods,,2800.00\n2025-01-22,Rogers Business Internet,129.99,\n2025-02-20,Petro-Canada fuel,87.40,\n2025-04-12,Workspace rent,480.00,', analyzedAt: new Date().toISOString(), txCount: 4, notes: 'Parsed 4 rows · 4 new transactions.' }
+		],
+		transactions: tx,
+		checklist: [
+			{ id: 'ck-bank', label: 'All 12 months of bank & credit-card statements', done: false, source: 'system' },
+			{ id: 'ck-invoices', label: 'All sales invoices issued during the year', done: true, source: 'system' },
+			{ id: 'ck-receipts', label: 'Expense receipts & vendor bills', done: false, source: 'system' },
+			{ id: 'ck-t4', label: 'T4 / T4A / T5 slips (personal income)', done: true, source: 'system' },
+			{ id: 'ck-gst-prior', label: 'Prior-year GST return + notice of assessment', done: false, source: 'system' },
+			{ id: 'ck-assets', label: 'List of equipment & asset purchases (CCA)', done: false, source: 'system' },
+			{ id: 'ck-vehicle', label: 'Vehicle logbook — business km', done: false, source: 'system' },
+			{ id: 'ck-homeoffice', label: 'Home-office details (area & expenses)', done: false, source: 'system' },
+			{ id: 'ck-review', label: 'Review every AI-classified transaction', done: false, source: 'system' },
+			{ id: 'ck-accountant', label: 'Send package to accountant / verify figures', done: false, source: 'system' }
+		],
+		suggestions: [
+			{ id: 'sg1', name: 'Home office (business-use-of-home)', category: 'homeOffice', amount: 1200, reason: 'A portion of rent/utilities is deductible under business-use-of-home rules.', evidenceNeeded: 'Home area m² vs total m², rent and utility bills', confidence: 'medium', status: 'pending' },
+			{ id: 'sg2', name: 'Vehicle business use', category: 'vehicle', amount: 850, reason: 'Business km represent a deductible share of fuel, insurance and maintenance.', evidenceNeeded: 'Mileage logbook', confidence: 'medium', status: 'pending' }
+		],
+		questions: [],
+		activity: [
+			{ t: new Date().toISOString(), type: 'setup', text: '👋 Welcome! Start by loading bank statements and invoices.' },
+			{ t: new Date(Date.now() - 86400000).toISOString(), type: 'ai', text: '🤖 Analyzed bank-statement-mar.pdf (4 tx)' }
+		],
+		gstAdj: { debits: 0, credits: 0 },
+		chatMessages: [], activeSessionId: '', _theme: 'light'
+	};
+	window.tool._loadSample(sample);
+});
+document.getElementById('th-clear').addEventListener('click', function () { window.tool._clearData(); });
+document.getElementById('th-reload').addEventListener('click', function () { window.location.reload(); });
+document.addEventListener('keydown', function (e) {
+	if (e.ctrlKey && e.shiftKey && (e.key === 'R' || e.key === 'r')) { e.preventDefault(); window.tool._toggleReadOnly(); }
+	if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) { e.preventDefault(); window.tool._dump(); }
+});
+</script>
+</body>
+</html>
