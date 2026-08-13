@@ -1,0 +1,315 @@
+<!-- ── Volunteer Management ── -->
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="top-bar-logo">🤝</div>
+    <div>
+      <div class="top-bar-title">Volunteer Management</div>
+      <div class="top-bar-subtitle" id="topEventName">Loading event...</div>
+    </div>
+  </div>
+  <div class="top-bar-right">
+    <span class="top-bar-user" id="topUserName"></span>
+    <span class="top-bar-role" id="topRoleBadge"></span>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="volunteers">👥 Volunteers <span class="tab-badge" id="badgeVolunteers">0</span></button>
+  <button class="tab-btn" data-tab="tasks">📋 Tasks <span class="tab-badge" id="badgeTasks">0</span></button>
+  <button class="tab-btn" data-tab="hours">⏱️ Hours</button>
+  <button class="tab-btn" data-tab="messages">💬 Messages <span class="tab-badge" id="badgeMessages">0</span></button>
+  <button class="tab-btn" data-tab="certificate">📜 Certificate</button>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="stats-row" id="dashStats"></div>
+
+    <div class="card" id="dashMyStatus" style="display:none;">
+      <div class="card-header"><h3>📝 My Volunteer Status</h3></div>
+      <div class="card-body" id="dashMyStatusBody"></div>
+    </div>
+
+    <div class="card" id="dashPendingApprovals" style="display:none;">
+      <div class="card-header">
+        <h3>⏳ Pending Approvals</h3>
+        <button class="btn btn-sm btn-outline" onclick="switchTab('volunteers')">View All</button>
+      </div>
+      <div class="card-body" id="dashPendingApprovalsBody"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📅 My Upcoming Tasks</h3></div>
+      <div class="card-body" id="dashMyTasks"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>💬 Recent Messages</h3></div>
+      <div class="card-body" id="dashRecentMessages"></div>
+    </div>
+  </div>
+
+  <!-- ═══ VOLUNTEERS ═══ -->
+  <div class="tab-panel" id="panel-volunteers">
+    <div class="quick-actions" id="volActions"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3 id="volListTitle">All Volunteers</h3>
+        <div style="display:flex;gap:8px;">
+          <select class="form-select" id="volFilterStatus" style="width:auto;" onchange="renderVolunteers()">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" id="volList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TASKS ═══ -->
+  <div class="tab-panel" id="panel-tasks">
+    <div class="quick-actions" id="taskActions"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Event Tasks</h3>
+        <div style="display:flex;gap:8px;">
+          <select class="form-select" id="taskFilterStatus" style="width:auto;" onchange="renderTasks()">
+            <option value="all">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="assigned">Assigned</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+          <select class="form-select" id="taskFilterAssignee" style="width:auto;" onchange="renderTasks()">
+            <option value="all">All Assignees</option>
+            <option value="me">My Tasks</option>
+            <option value="unassigned">Unassigned</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" id="taskList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ HOURS ═══ -->
+  <div class="tab-panel" id="panel-hours">
+    <div class="quick-actions" id="hourActions"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Hour Logs</h3>
+        <div style="display:flex;gap:8px;">
+          <select class="form-select" id="hourFilterVolunteer" style="width:auto;" onchange="renderHours()">
+            <option value="all">All Volunteers</option>
+            <option value="me">My Hours</option>
+          </select>
+          <select class="form-select" id="hourFilterStatus" style="width:auto;" onchange="renderHours()">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-body" id="hourList"></div>
+    </div>
+    <div class="card" id="hourSummary" style="display:none;">
+      <div class="card-header"><h3>📊 Hours Summary</h3></div>
+      <div class="card-body" id="hourSummaryBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ MESSAGES ═══ -->
+  <div class="tab-panel" id="panel-messages">
+    <div class="quick-actions" id="msgActions"></div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Messages</h3>
+        <button class="btn btn-sm btn-outline" id="msgRefreshBtn">🔄 Refresh</button>
+      </div>
+      <div class="card-body msg-thread" id="msgList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CERTIFICATE ═══ -->
+  <div class="tab-panel" id="panel-certificate">
+    <div class="card">
+      <div class="card-header"><h3>📜 Volunteer Hours Certificate</h3></div>
+      <div class="card-body" id="certBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODALS ═══════════════ -->
+
+<!-- Register as Volunteer Modal -->
+<div class="modal-overlay" id="modalRegister">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🙋 Register as Volunteer</h3>
+      <button class="modal-close" onclick="closeModal('modalRegister')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Your Skills & Experience</label>
+        <textarea class="form-textarea" id="regSkills" placeholder="Describe your relevant skills, experience, and what you can help with..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Availability Notes</label>
+        <textarea class="form-textarea" id="regAvailability" placeholder="Your availability during the event (dates, times, constraints)..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Why do you want to volunteer?</label>
+        <textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitRegistration()">Submit Registration</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal-overlay" id="modalTask">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTaskTitle">📋 Create Task</h3>
+      <button class="modal-close" onclick="closeModal('modalTask')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editTaskId">
+      <div class="form-group">
+        <label class="form-label">Task Name</label>
+        <input type="text" class="form-input" id="taskName" placeholder="e.g. Setup Registration Desk">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="taskDesc" placeholder="Describe the task in detail..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Assign To</label>
+          <select class="form-select" id="taskAssignee">
+            <option value="">-- Unassigned (Open) --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date</label>
+          <input type="date" class="form-input" id="taskDueDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Estimated Hours</label>
+          <input type="number" class="form-input" id="taskEstHours" placeholder="e.g. 4" min="0.5" step="0.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="taskStatus">
+            <option value="open">Open</option>
+            <option value="assigned">Assigned</option>
+            <option value="in-progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalTask')">Cancel</button>
+      <button class="btn btn-primary" id="btnSaveTask" onclick="saveTask()">Create Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log Hours Modal -->
+<div class="modal-overlay" id="modalHours">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>⏱️ Log Hours</h3>
+      <button class="modal-close" onclick="closeModal('modalHours')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editHourId">
+      <div class="form-group">
+        <label class="form-label">Task</label>
+        <select class="form-select" id="hourTaskId">
+          <option value="">-- Select Task --</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date Worked</label>
+          <input type="date" class="form-input" id="hourDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hours</label>
+          <input type="number" class="form-input" id="hourAmount" placeholder="e.g. 3.5" min="0.5" step="0.5">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description of Work Done</label>
+        <textarea class="form-textarea" id="hourDesc" placeholder="Describe what you accomplished..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalHours')">Cancel</button>
+      <button class="btn btn-primary" id="btnSaveHours" onclick="saveHours()">Log Hours</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send Message Modal -->
+<div class="modal-overlay" id="modalMessage">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💬 Send Message</h3>
+      <button class="modal-close" onclick="closeModal('modalMessage')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">To</label>
+        <select class="form-select" id="msgTo">
+          <option value="managers">All Event Managers</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input type="text" class="form-input" id="msgSubject" placeholder="Message subject...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message</label>
+        <textarea class="form-textarea" id="msgBody" placeholder="Type your message..." style="min-height:120px;"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalMessage')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendMessage()">Send Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="modalConfirm">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="confirmTitle">Confirm</h3>
+      <button class="modal-close" onclick="closeModal('modalConfirm')">✕</button>
+    </div>
+    <div class="modal-body" id="confirmBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalConfirm')">Cancel</button>
+      <button class="btn btn-primary" id="confirmBtn">Confirm</button>
+    </div>
+  </div>
+</div>

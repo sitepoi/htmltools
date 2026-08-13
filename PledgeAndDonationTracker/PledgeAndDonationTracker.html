@@ -40,27 +40,23 @@
 					<div class="saved-banner-title">Showing saved report</div>
 					<div class="saved-banner-sub" id="saved-banner-sub">Generated previously — upload new files to regenerate</div>
 				</div>
-				<button class="btn btn-outline btn-sm" onclick="switchTopTab('invoices')">↑ Update Data</button>
+				<button class="btn btn-outline btn-sm" onclick="showFilesForUpdate()">↑ Update Data</button>
 			</div>
 		</div>
 
 		<!-- ══ TOP-LEVEL TAB BAR ══ -->
 		<div class="top-tabs-bar">
-			<button class="top-tab-btn active" data-tab="invoices" onclick="switchTopTab('invoices')">
+			<button class="top-tab-btn active" data-tab="invoices" data-filetab="yes" onclick="switchTopTab('invoices')">
 				<span class="top-tab-icon">📋</span> Invoices
 				<span class="top-tab-badge" id="invoice-tab-count" style="display:none">0</span>
 			</button>
-			<button class="top-tab-btn" data-tab="cash" onclick="switchTopTab('cash')">
+			<button class="top-tab-btn" data-tab="cash" data-filetab="yes" onclick="switchTopTab('cash')">
 				<span class="top-tab-icon">💵</span> Cash Payments
 				<span class="top-tab-badge" id="cash-tab-count" style="display:none">0</span>
 			</button>
-			<button class="top-tab-btn" data-tab="people" onclick="switchTopTab('people')">
+			<button class="top-tab-btn" data-tab="people" data-filetab="yes" onclick="switchTopTab('people')">
 				<span class="top-tab-icon">👥</span> People &amp; Groups
 				<span class="top-tab-badge" id="people-tab-count" style="display:none">0</span>
-			</button>
-			<button class="top-tab-btn" data-tab="mismatches" id="top-tab-mismatches" style="display:none" onclick="switchTopTab('mismatches')">
-				<span class="top-tab-icon">⚠</span> Mismatches
-				<span class="top-tab-badge top-tab-badge-warn" id="mismatch-tab-count">0</span>
 			</button>
 			<button class="top-tab-btn" data-tab="reports" onclick="switchTopTab('reports')">
 				<span class="top-tab-icon">📊</span> Reports
@@ -245,27 +241,6 @@
 			</div>
 		</div>
 
-		<!-- ══ TAB: MISMATCHES ══ -->
-		<div class="top-tab-panel" id="top-tab-mismatches">
-			<div class="warn-panel" id="warn-panel">
-				<div class="warn-panel-header" onclick="toggleWarnPanel()">
-					<div class="warn-header-left">
-						<div class="warn-icon">⚠</div>
-						<div>
-							<div class="warn-title">Name Mismatch Issues Detected</div>
-							<div class="warn-subtitle">Fix these in your source files, then re-import</div>
-						</div>
-						<div class="warn-badge" id="warn-count">0</div>
-					</div>
-					<button class="warn-toggle-btn" id="warn-toggle-label">Show ▾</button>
-				</div>
-				<div class="warn-panel-body" id="warn-panel-body" style="display:none">
-					<p class="warn-intro">These names could not be matched across your files. Check for typos, different spellings, or extra spaces. Tick each item as you fix it, then re-import.</p>
-					<div id="warn-list"></div>
-				</div>
-			</div>
-		</div>
-
 		<!-- ══ TAB: REPORTS ══ -->
 		<div class="top-tab-panel" id="top-tab-reports">
 			<!-- Notice -->
@@ -307,6 +282,7 @@
 					<div class="stat-card stat-amber"><div class="stat-icon-bubble stat-bubble-amber">⏳</div><div class="stat-body"><div class="stat-label">Outstanding</div><div class="stat-value stat-money" id="s-balance">$0</div></div></div>
 					<div class="stat-card stat-teal"><div class="stat-icon-bubble stat-bubble-teal">🎯</div><div class="stat-body"><div class="stat-label">Fully Paid</div><div class="stat-value" id="s-full">0</div></div></div>
 					<div class="stat-card stat-red"><div class="stat-icon-bubble stat-bubble-red">🔴</div><div class="stat-body"><div class="stat-label">Unpaid</div><div class="stat-value" id="s-unpaid">0</div></div></div>
+					<div class="stat-card stat-purple"><div class="stat-icon-bubble stat-bubble-purple">🔔</div><div class="stat-body"><div class="stat-label">No Pledge</div><div class="stat-value" id="s-nopledge">0</div></div></div>
 				</div>
 
 				<!-- Regenerate CTA -->
@@ -325,6 +301,7 @@
 							<button class="tab-btn" onclick="switchTab('group')">🗂 By Group</button>
 							<button class="tab-btn" onclick="switchTab('summary')">📊 Summary</button>
 							<button class="tab-btn" onclick="switchTab('cards')">🪪 Donor Cards</button>
+							<button class="tab-btn" id="tab-btn-mismatches" onclick="switchTab('mismatches')" style="display:none">⚠ Mismatches <span class="top-tab-badge top-tab-badge-warn" id="mismatch-tab-count">0</span></button>
 							<button class="tab-btn" id="tab-btn-nopledge-list" onclick="switchTab('nopledge-list')" style="display:none">🔔 No Pledge — List</button>
 							<button class="tab-btn" id="tab-btn-nopledge-group" onclick="switchTab('nopledge-group')" style="display:none">🔔 No Pledge — Groups</button>
 						</div>
@@ -337,7 +314,7 @@
 								<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
 								<input class="search-box" type="text" id="search" placeholder="Search donor or invoice…" oninput="renderFlat()">
 							</div>
-							<select class="filter-select" id="filter-status" onchange="renderFlat()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option></select>
+							<select class="filter-select" id="filter-status" onchange="renderFlat()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option><option value="nopledge">No Pledge</option></select>
 							<select class="filter-select" id="filter-group" onchange="renderFlat()"><option value="">All groups</option></select>
 							<button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Excel</button>
 							<button class="btn btn-outline btn-sm" onclick="window.print()">🖨 Print</button>
@@ -353,7 +330,7 @@
 								<svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
 								<input class="search-box" type="text" id="group-search" placeholder="Search donor…" oninput="renderGroupView()">
 							</div>
-							<select class="filter-select" id="group-filter-status" onchange="renderGroupView()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option></select>
+							<select class="filter-select" id="group-filter-status" onchange="renderGroupView()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option><option value="nopledge">No Pledge</option></select>
 							<button class="btn btn-outline btn-sm" onclick="expandAll()">Expand All</button>
 							<button class="btn btn-outline btn-sm" onclick="collapseAll()">Collapse All</button>
 						</div>
@@ -366,7 +343,7 @@
 							<button class="btn btn-outline btn-sm" onclick="exportExcel()">📊 Export Excel</button>
 							<button class="btn btn-outline btn-sm" onclick="exportGroupImages()">🖼 Group Images</button>
 						</div>
-						<div class="table-card"><table class="summary-table"><thead><tr><th>Group</th><th>Donors</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>% Collected</th><th>Fully Paid</th><th>Unpaid</th></tr></thead><tbody id="summary-body"></tbody></table></div>
+						<div class="table-card"><table class="summary-table"><thead><tr><th>Group</th><th>Donors</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>% Collected</th><th>Fully Paid</th><th>Unpaid</th><th>Share</th></tr></thead><tbody id="summary-body"></tbody></table></div>
 					</div>
 
 					<!-- DONOR CARDS -->
@@ -377,9 +354,30 @@
 								<input class="search-box" type="text" id="cards-search" placeholder="Search donor…" oninput="renderCards()">
 							</div>
 							<select class="filter-select" id="cards-filter-group" onchange="renderCards()"><option value="">All groups</option></select>
-							<select class="filter-select" id="cards-filter-status" onchange="renderCards()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option></select>
+							<select class="filter-select" id="cards-filter-status" onchange="renderCards()"><option value="">All statuses</option><option value="paid">Fully paid</option><option value="partial">Partial</option><option value="unpaid">Unpaid</option><option value="nopledge">No Pledge</option></select>
 						</div>
 						<div class="cards-grid" id="cards-grid"></div>
+					</div>
+
+					<!-- MISMATCHES -->
+					<div class="tab-panel" id="tab-mismatches">
+						<div class="warn-panel" id="warn-panel">
+							<div class="warn-panel-header" onclick="toggleWarnPanel()">
+								<div class="warn-header-left">
+									<div class="warn-icon">⚠</div>
+									<div>
+										<div class="warn-title">Name Mismatch Issues Detected</div>
+										<div class="warn-subtitle">Fix these in your source files, then re-import</div>
+									</div>
+									<div class="warn-badge" id="warn-count">0</div>
+								</div>
+								<button class="warn-toggle-btn" id="warn-toggle-label">Show ▾</button>
+							</div>
+							<div class="warn-panel-body" id="warn-panel-body" style="display:none">
+								<p class="warn-intro">These names could not be matched across your files. Check for typos, different spellings, or extra spaces. Tick each item as you fix it, then re-import.</p>
+								<div id="warn-list"></div>
+							</div>
+						</div>
 					</div>
 
 					<!-- NO PLEDGE LIST -->

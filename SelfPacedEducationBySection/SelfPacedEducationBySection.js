@@ -10,7 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: true }; // Object-level config (set by admin per object)
+var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
 var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail' | 'setup'
@@ -69,15 +69,35 @@ function loadLessonDocData(lesson, callback) {
 }
 
 /* ── Role check ── */
+/** Uses effectiveAccess.isManager (raw object-level admin flag) to determine
+ *  if the current user has admin/manager rights on this CMS record.
+ *  This disambiguates system-level from object-level access — unlike the
+ *  merged roles[] array, which may include 'admin' for everyone if the
+ *  object's folder/app permissions grant broad access. */
 function isAdmin() {
   var user = tool.getUser();
   if (!user) return false;
+  // Primary: raw object-level manager flag (most reliable)
+  if (user.effectiveAccess && user.effectiveAccess.isManager) return true;
+  // Fallback: system-level developer/owner always have full access
   var roles = user.roles || [];
   for (var i = 0; i < roles.length; i++) {
     var r = (roles[i] || '').toLowerCase();
-    if (r === 'admin' || r === 'developer' || r === 'owner') return true;
+    if (r === 'developer' || r === 'owner') return true;
   }
   return false;
+}
+
+/** Debug: log what the CMS sandbox tells us about the current user. */
+function debugLogUser() {
+  try {
+    var user = tool.getUser();
+    console.log('[SelfPaced] tool.getUser():', JSON.stringify(user, null, 2));
+    console.log('[SelfPaced] effectiveAccess:', user ? (user.effectiveAccess || 'none') : 'null');
+    console.log('[SelfPaced] isAdmin():', isAdmin());
+  } catch(e) {
+    console.log('[SelfPaced] tool.getUser() threw:', e);
+  }
 }
 
 /* ── URL Transform: Storage → Hosting proxy ── */
@@ -629,11 +649,14 @@ function renderLessons() {
   var lessons = getLessons(section);
   var summary = getSectionProgressSummary(section.id);
 
-  el('section-info-title').textContent = '📁 ' + (section.title || 'Section');
-  el('section-info-progress').textContent = summary.completed + ' of ' + summary.total + ' lessons completed';
+  var infoTitle = el('section-info-title');
+  if (infoTitle) infoTitle.textContent = '📁 ' + (section.title || 'Section');
+  var infoProgress = el('section-info-progress');
+  if (infoProgress) infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed';
 
   var list = el('lesson-list');
   var empty = el('lessons-empty');
+  if (!list || !empty) return;
 
   if (lessons.length === 0) {
     list.innerHTML = '';
@@ -1942,7 +1965,7 @@ function loadData(val) {
   if (val && val.config && typeof val.config === 'object') {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
     CONFIG.managementType = val.config.managementType || 'self_paced';
-    CONFIG.dashboardVisible = val.config.dashboardVisible !== undefined ? val.config.dashboardVisible : true;
+    CONFIG.dashboardVisible = val.config.dashboardVisible !== undefined ? val.config.dashboardVisible : false;
   }
   // Legacy: also check tool param for backward compat
   if (!CONFIG.curriculumSourceId) {
@@ -1968,8 +1991,10 @@ function updateProgressBar() {
   var all = getAllLessonsInOrder();
   var completed = 0;
   for (var i = 0; i < all.length; i++) { if (getLessonProgress(all[i].sectionId, all[i].lessonId).status === 'completed') completed++; }
-  el('progress-bar-fill').style.width = pct + '%';
-  el('progress-bar-text').textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)';
+  var fill = el('progress-bar-fill');
+  var text = el('progress-bar-text');
+  if (fill) fill.style.width = pct + '%';
+  if (text) text.textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)';
 }
 
 function showLoading(show) { el('loading-overlay').style.display = show ? '' : 'none'; }
@@ -1981,7 +2006,8 @@ function updateRoleBadge(user) {
   if (!user) { badge.style.display = 'none'; return; }
   badge.style.display = '';
   var name = user.name || user.displayName || user.email || user.id || 'Student';
-  badge.textContent = '👤 ' + name;
+  badge.textContent = '👤 ' + name + (isAdmin() ? ' 🛡️' : '');
+  badge.title = isAdmin() ? 'Admin (manager access on this record)' : 'Student (no manager access)';
 }
 
 /* ═══════════════════════════════════════════
@@ -2154,6 +2180,11 @@ function updateAdminUI() {
   var saveBtn = el('btn-setup-save');
   if (saveBtn && currentView === 'setup') {
     saveBtn.disabled = !isAdmin();
+  }
+  // Force-remove supervisor panel from DOM for non-admins (belt-and-suspenders)
+  if (!isAdmin()) {
+    var panel = el('supervisor-panel');
+    if (panel) panel.remove();
   }
   // Render supervisor panel if in supervised mode
   renderSupervisorPanel();
@@ -2380,6 +2411,7 @@ tool.onReady(function(val, fields) {
   loadData(val);
   updateRoleBadge(tool.getUser());
   bindEvents();
+  debugLogUser();  // log CMS user identity to browser console
 
   // Dark mode init
   if (localStorage.getItem('sp-dark-mode') === '1') {

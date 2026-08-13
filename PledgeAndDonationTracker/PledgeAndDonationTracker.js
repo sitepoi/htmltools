@@ -253,6 +253,31 @@ function importCashFile() {
 }
 
 // ── TOP-LEVEL TAB SWITCHING ─────────────────────────────
+var FILE_TABS = ['invoices', 'cash', 'people'];
+
+function setFileTabsVisible(show) {
+	document.querySelectorAll('.top-tab-btn[data-filetab]').forEach(function (b) {
+		b.style.display = show ? '' : 'none';
+	});
+}
+
+function setBannerTime(iso) {
+	var sub = document.getElementById('saved-banner-sub');
+	if (!sub || !iso) return;
+	var d = new Date(iso);
+	sub.textContent = 'Generated ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function updateSavedBanner() {
+	var banner = document.getElementById('saved-banner');
+	var reportShown = document.getElementById('report-content') && document.getElementById('report-content').style.display === 'block';
+	if (banner) banner.style.display = reportShown ? 'block' : 'none';
+}
+
+function showFilesForUpdate() {
+	switchTopTab('invoices');
+}
+
 function switchTopTab(name) {
 	document.querySelectorAll('.top-tab-btn').forEach(function (b) {
 		b.classList.toggle('active', b.getAttribute('data-tab') === name);
@@ -260,6 +285,15 @@ function switchTopTab(name) {
 	document.querySelectorAll('.top-tab-panel').forEach(function (p) {
 		p.classList.toggle('active', p.id === 'top-tab-' + name);
 	});
+	var isFileTab = FILE_TABS.indexOf(name) !== -1;
+	var reportShown = document.getElementById('report-content') && document.getElementById('report-content').style.display === 'block';
+	if (isFileTab) {
+		setFileTabsVisible(true);
+		document.getElementById('saved-banner').style.display = 'none';
+	} else if (name === 'reports' && reportShown) {
+		setFileTabsVisible(false);
+		updateSavedBanner();
+	}
 	if (name === 'cash') { renderCashManager(); }
 	if (name === 'people') { renderPeopleManager(); }
 	if (name === 'invoices') { renderInvoiceList(); }
@@ -463,12 +497,8 @@ function restoreFromValue(val) {
 
 	// Show saved banner
 	var banner = document.getElementById('saved-banner');
-	var sub = document.getElementById('saved-banner-sub');
 	if (banner) {
-		if (val.generatedAt) {
-			var d = new Date(val.generatedAt);
-			sub.textContent = 'Generated ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-		}
+		setBannerTime(val.generatedAt);
 		banner.style.display = 'block';
 	}
 
@@ -509,6 +539,13 @@ function restoreFromValue(val) {
 	renderSummary();
 	renderCards();
 	if (hasUnpledged) { renderNoPledgeList(); renderNoPledgeGroup(); }
+
+	// ── Restore mismatches (persist across refresh) ──────────
+	warnResolved = {};
+	if (val.resolvedMismatches && Array.isArray(val.resolvedMismatches)) {
+		val.resolvedMismatches.forEach(function (k) { warnResolved[k] = true; });
+	}
+	renderWarnings(val.mismatches && Array.isArray(val.mismatches) ? val.mismatches : []);
 
 	return true;
 }
@@ -828,9 +865,16 @@ function v(id) { return document.getElementById(id).value; }
 function badge(status) {
 	return status === 'paid' ? '<span class="badge badge-paid">Paid</span>'
 		: status === 'partial' ? '<span class="badge badge-partial">Partial</span>'
+		: status === 'nopledge' ? '<span class="badge badge-nopledge">No Pledge</span>'
 			: '<span class="badge badge-unpaid">Unpaid</span>';
 }
-function fillClass(status) { return status === 'paid' ? 'fill-paid' : status === 'partial' ? 'fill-partial' : 'fill-unpaid'; }
+function fillClass(status) { return status === 'paid' ? 'fill-paid' : status === 'partial' ? 'fill-partial' : status === 'nopledge' ? 'fill-nopledge' : 'fill-unpaid'; }
+function pledgedFirst(a, b) {
+	var aNp = a.status === 'nopledge' ? 1 : 0;
+	var bNp = b.status === 'nopledge' ? 1 : 0;
+	if (aNp !== bNp) return aNp - bNp;
+	return 0;
+}
 
 // ── COMBINE & SAVE ────────────────────────────────────────
 function combine() {
@@ -969,40 +1013,48 @@ function combine() {
 		}
 	}
 
+	// ── Append people without pledges as 0-pledge records ─────
+	if (peopleData.length) {
+		var useStdP3 = _cmsAvailable || (peopleData[0] && peopleData[0].hasOwnProperty('name') && peopleData[0].hasOwnProperty('group'));
+		if (useStdP3) {
+			peopleData.forEach(function (row) {
+				var orig = String(row.name || '').trim();
+				var key = normalize(orig);
+				if (!key || qbKeys.has(key)) return;
+				combined.push({
+					donor: orig, key: key,
+					group: String(row.group || '').trim() || UNASSIGNED,
+					phone: String(row.phone || '').trim(),
+					invoice: '', date: '',
+					pledged: 0, paid: 0, balance: 0,
+					status: 'nopledge', pct: 0,
+					payments: []
+				});
+			});
+		} else {
+			var ncol3 = v('people-col-name');
+			var gcol3 = v('people-col-group');
+			var pcol3 = v('people-col-phone');
+			peopleData.forEach(function (row) {
+				var orig = String(row[ncol3] || '').trim();
+				var key = normalize(orig);
+				if (!key || qbKeys.has(key)) return;
+				combined.push({
+					donor: orig, key: key,
+					group: String(row[gcol3] || '').trim() || UNASSIGNED,
+					phone: pcol3 ? String(row[pcol3] || '').trim() : '',
+					invoice: '', date: '',
+					pledged: 0, paid: 0, balance: 0,
+					status: 'nopledge', pct: 0,
+					payments: []
+				});
+			});
+		}
+	}
+
 	var totalPledged = combined.reduce(function (s, r) { return s + r.pledged; }, 0);
 	var totalPaid = combined.reduce(function (s, r) { return s + r.paid; }, 0);
 	var totalBalance = combined.reduce(function (s, r) { return s + r.balance; }, 0);
-
-	// ── FIX: Include unpledgedRecords in saved payload ────────
-	var reportPayload = {
-		generatedAt: new Date().toISOString(),
-		sourceUrls: { qb: _sourceUrls.qb, cash: _sourceUrls.cash, people: _sourceUrls.people },
-		summary: {
-			donors: new Set(combined.map(function (r) { return r.key; })).size,
-			groups: new Set(combined.map(function (r) { return r.group; })).size,
-			pledged: totalPledged,
-			paid: totalPaid,
-			balance: totalBalance,
-			fullyPaid: combined.filter(function (r) { return r.status === 'paid'; }).length,
-			unpaid: combined.filter(function (r) { return r.status === 'unpaid'; }).length
-		},
-		records: combined.map(function (r) {
-			return {
-				donor: r.donor, group: r.group, phone: r.phone, invoice: r.invoice,
-				date: r.date, pledged: r.pledged, paid: r.paid, balance: r.balance,
-				status: r.status, pct: r.pct
-			};
-		}),
-		unpledgedRecords: unpledged.map(function (r) {
-			return { name: r.name, group: r.group, phone: r.phone };
-		})
-	};
-
-	_isSaving = true;
-	tool.setValue(reportPayload);
-	setTimeout(function () { _isSaving = false; }, 200);
-
-	tool.notify('Report generated and saved \u2713', 'success');
 
 	if (btn) btn.disabled = false;
 	if (btnText) btnText.textContent = 'Combine & Generate Report';
@@ -1014,7 +1066,7 @@ function combine() {
 		pill.style.display = 'flex';
 	}
 
-	document.getElementById('saved-banner').style.display = 'none';
+	setBannerTime(new Date().toISOString());
 	document.getElementById('no-report-state').style.display = 'none';
 	document.getElementById('report-content').style.display = 'block';
 
@@ -1092,10 +1144,6 @@ function combine() {
 			var orig = cashNames[key];
 			if (!qbNames[key]) addIssue('Cash Payments', orig, 'No matching QuickBooks invoice \u2014 payment cannot be linked to a pledge', 'High');
 		});
-		Object.keys(peopleOrig).forEach(function (key) {
-			var orig = peopleOrig[key];
-			if (!qbNames[key]) addIssue('People/Groups', orig, 'Person is in your groups list but has no QuickBooks invoice', 'Low');
-		});
 	} else {
 		Object.keys(cashNames).forEach(function (key) {
 			var orig = cashNames[key];
@@ -1137,6 +1185,40 @@ function combine() {
 	if (hasUnpledged) { renderNoPledgeList(); renderNoPledgeGroup(); }
 
 	updateTabBadges();
+
+	// ── Auto-save full report payload (incl. mismatches) ─────
+	var reportPayload = {
+		generatedAt: new Date().toISOString(),
+		sourceUrls: { qb: _sourceUrls.qb, cash: _sourceUrls.cash, people: _sourceUrls.people },
+		summary: {
+			donors: new Set(combined.map(function (r) { return r.key; })).size,
+			groups: new Set(combined.map(function (r) { return r.group; })).size,
+			pledged: totalPledged,
+			paid: totalPaid,
+			balance: totalBalance,
+			fullyPaid: combined.filter(function (r) { return r.status === 'paid'; }).length,
+			unpaid: combined.filter(function (r) { return r.status === 'unpaid'; }).length
+		},
+		records: combined.map(function (r) {
+			return {
+				donor: r.donor, group: r.group, phone: r.phone, invoice: r.invoice,
+				date: r.date, pledged: r.pledged, paid: r.paid, balance: r.balance,
+				status: r.status, pct: r.pct
+			};
+		}),
+		unpledgedRecords: unpledged.map(function (r) {
+			return { name: r.name, group: r.group, phone: r.phone };
+		}),
+		mismatches: mismatches,
+		resolvedMismatches: Object.keys(warnResolved)
+	};
+
+	_isSaving = true;
+	tool.setValue(reportPayload);
+	setTimeout(function () { _isSaving = false; }, 200);
+	tool.notify('Report generated and saved \u2713', 'success');
+
+	setFileTabsVisible(false);
 	switchTopTab('reports');
 	scheduleResize();
 }
@@ -1152,6 +1234,8 @@ function updateStats() {
 	document.getElementById('s-balance').textContent = fmt(balance);
 	document.getElementById('s-full').textContent = combined.filter(function (r) { return r.status === 'paid'; }).length;
 	document.getElementById('s-unpaid').textContent = combined.filter(function (r) { return r.status === 'unpaid'; }).length;
+	var npEl = document.getElementById('s-nopledge');
+	if (npEl) npEl.textContent = combined.filter(function (r) { return r.status === 'nopledge'; }).length;
 }
 
 function populateGroupFilters() {
@@ -1190,6 +1274,8 @@ function renderFlat() {
 		return true;
 	});
 	rows.sort(function (a, b) {
+		var p = pledgedFirst(a, b);
+		if (p !== 0) return p;
 		var av = a[sortCol], bv = b[sortCol];
 		if (typeof av === 'string') av = av.toLowerCase();
 		if (typeof bv === 'string') bv = bv.toLowerCase();
@@ -1260,6 +1346,11 @@ function renderGroupView() {
 	var sortedGroups = Object.keys(groups).sort(function (a, b) { return a === UNASSIGNED ? 1 : b === UNASSIGNED ? -1 : a.localeCompare(b); });
 	sortedGroups.forEach(function (grp) {
 		var members = groups[grp];
+		members.sort(function (a, b) {
+			var p = pledgedFirst(a, b);
+			if (p !== 0) return p;
+			return (a.donor || '').localeCompare(b.donor || '');
+		});
 		var tPledged = members.reduce(function (s, r) { return s + r.pledged; }, 0);
 		var tPaid = members.reduce(function (s, r) { return s + r.paid; }, 0);
 		var tBalance = members.reduce(function (s, r) { return s + r.balance; }, 0);
@@ -1275,6 +1366,7 @@ function renderGroupView() {
 			'<span>Balance: <strong style="color:var(--c-red)">' + fmt(tBalance) + '</strong></span>' +
 			'<span style="color:var(--c-blue);font-weight:800">' + pct + '% collected</span>' +
 			'</div>' +
+			'<div class="group-actions" onclick="event.stopPropagation()">' + imgBtns(grp) + '</div>' +
 			'</div>' +
 			'<div class="group-body">' +
 			'<table><thead><tr><th>Donor</th><th>Invoice #</th><th>Date</th><th>Pledged</th><th>Paid</th><th>Balance</th><th>Progress</th><th>Status</th></tr></thead>' +
@@ -1330,7 +1422,8 @@ function renderSummary() {
 			'<td style="color:var(--c-red);font-weight:800">' + fmt(g.balance) + '</td>' +
 			'<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:100px"><div class="progress-fill ' + (pct === 100 ? 'fill-paid' : pct > 0 ? 'fill-partial' : 'fill-unpaid') + '" style="width:' + pct + '%"></div></div><span style="font-size:12px;font-weight:700">' + pct + '%</span></div></td>' +
 			'<td style="color:var(--c-green);font-weight:800">' + g.full + '</td>' +
-			'<td style="color:var(--c-red);font-weight:800">' + g.unpaid + '</td>';
+			'<td style="color:var(--c-red);font-weight:800">' + g.unpaid + '</td>' +
+			'<td><div class="share-cell">' + imgBtns(grp) + '</div></td>';
 		tbody.appendChild(tr);
 	});
 	var tpct = totals.pledged > 0 ? Math.round(totals.paid / totals.pledged * 100) : 0;
@@ -1344,7 +1437,8 @@ function renderSummary() {
 		'<td style="color:var(--c-red);font-weight:900">' + fmt(totals.balance) + '</td>' +
 		'<td><div style="display:flex;align-items:center;gap:8px"><div class="progress-bar" style="width:100px"><div class="progress-fill fill-partial" style="width:' + tpct + '%"></div></div><span style="font-size:12px;font-weight:800">' + tpct + '%</span></div></td>' +
 		'<td style="color:var(--c-green);font-weight:900">' + totals.full + '</td>' +
-		'<td style="color:var(--c-red);font-weight:900">' + totals.unpaid + '</td>';
+		'<td style="color:var(--c-red);font-weight:900">' + totals.unpaid + '</td>' +
+		'<td></td>';
 	tbody.appendChild(ttr);
 }
 
@@ -1358,7 +1452,13 @@ function renderCards() {
 		if (groupF && r.group !== groupF) return false;
 		if (statusF && r.status !== statusF) return false;
 		return true;
-	}).sort(function (a, b) { return a.group.localeCompare(b.group) || a.donor.localeCompare(b.donor); });
+	}).sort(function (a, b) {
+		var g = a.group.localeCompare(b.group);
+		if (g !== 0) return g;
+		var p = pledgedFirst(a, b);
+		if (p !== 0) return p;
+		return a.donor.localeCompare(b.donor);
+	});
 	if (!rows.length) { grid.innerHTML = '<div class="empty-state"><div class="e-icon">\ud83d\udd0d</div><h3>No results</h3></div>'; return; }
 	rows.forEach(function (r) {
 		var fillGrad = r.status === 'paid' ? 'linear-gradient(90deg,#15803d,#22c55e)' : r.status === 'partial' ? 'linear-gradient(90deg,#b45309,#f59e0b)' : 'linear-gradient(90deg,#b91c1c,#ef4444)';
@@ -1464,49 +1564,256 @@ function npCollapseAll() { document.querySelectorAll('#nopledge-group-view .grou
 // ── EXPORT EXCEL ──────────────────────────────────────────
 function styleSheet(ws, colWidths) { ws['!cols'] = colWidths.map(function (w) { return { wch: w }; }); }
 function fmtNum(n) { return Number(n || 0).toFixed(2); }
+
+// ── Excel formatting helpers ─────────────────────────────
+var XL_STYLES = {
+	hdr: { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: '1D4ED8' } }, alignment: { horizontal: 'center', vertical: 'center' }, border: { bottom: { style: 'medium', color: { rgb: '93C5FD' } } } },
+	title: { font: { bold: true, sz: 16, color: { rgb: '0F172A' } }, alignment: { vertical: 'center', horizontal: 'left' } },
+	sub: { font: { sz: 9, color: { rgb: '64748B' } }, alignment: { vertical: 'center', horizontal: 'left' } },
+	tot: { font: { bold: true, sz: 11, color: { rgb: '1E3A8A' } }, fill: { fgColor: { rgb: 'DBEAFE' } } },
+	zebra: { fill: { fgColor: { rgb: 'F8FAFC' } } },
+	groupCell: { font: { bold: true, color: { rgb: '1D4ED8' } } },
+	donorCell: { font: { bold: true, color: { rgb: '0F172A' } } },
+	center: { alignment: { horizontal: 'center' } },
+	bar: { font: { name: 'Consolas', sz: 9, color: { rgb: '334155' } }, alignment: { horizontal: 'left', vertical: 'center' } },
+	barStyle: function (s) {
+		var col = s === 'paid' ? '15803D' : s === 'partial' ? 'B45309' : s === 'nopledge' ? '64748B' : 'B91C1C';
+		var bg = s === 'paid' ? 'F0FDF4' : s === 'partial' ? 'FFFBEB' : s === 'nopledge' ? 'F1F5F9' : 'FEF2F2';
+		return { font: { name: 'Consolas', sz: 9, bold: true, color: { rgb: col } }, fill: { fgColor: { rgb: bg } }, alignment: { horizontal: 'left', vertical: 'center' } };
+	},
+	pctStyle: function (s) {
+		var col = s === 'paid' ? '15803D' : s === 'partial' ? 'B45309' : s === 'nopledge' ? '64748B' : 'B91C1C';
+		return { font: { bold: true, color: { rgb: col } }, alignment: { horizontal: 'center' } };
+	},
+	moneyFmt: '$#,##0.00',
+	pctFmt: '0"%"',
+	statusStyle: function (s) {
+		if (s === 'paid') return { font: { bold: true, color: { rgb: '15803D' } }, fill: { fgColor: { rgb: 'F0FDF4' } }, alignment: { horizontal: 'center' } };
+		if (s === 'partial') return { font: { bold: true, color: { rgb: 'B45309' } }, fill: { fgColor: { rgb: 'FFFBEB' } }, alignment: { horizontal: 'center' } };
+		if (s === 'nopledge') return { font: { color: { rgb: '64748B' } }, fill: { fgColor: { rgb: 'F1F5F9' } }, alignment: { horizontal: 'center' } };
+		return { font: { bold: true, color: { rgb: 'B91C1C' } }, fill: { fgColor: { rgb: 'FEF2F2' } }, alignment: { horizontal: 'center' } };
+	}
+};
+function xlAddr(r, c) { return XLSX.utils.encode_cell({ r: r, c: c }); }
+function xlSet(ws, r, c, style) {
+	var a = xlAddr(r, c);
+	if (!ws[a]) return;
+	if (!ws[a].s) ws[a].s = {};
+	Object.keys(style).forEach(function (k) { ws[a].s[k] = style[k]; });
+}
+function xlRowBase(ws, r, ncols, zebra) {
+	if (!zebra) return;
+	for (var c = 0; c < ncols; c++) xlSet(ws, r, c, XL_STYLES.zebra);
+}
+function xlTitle(ws, title, subtitle, ncols) {
+	ws['!merges'] = [
+		{ s: { r: 0, c: 0 }, e: { r: 0, c: ncols - 1 } },
+		{ s: { r: 1, c: 0 }, e: { r: 1, c: ncols - 1 } }
+	];
+	xlSet(ws, 0, 0, XL_STYLES.title);
+	xlSet(ws, 1, 0, XL_STYLES.sub);
+	ws['!rows'] = ws['!rows'] || [];
+	ws['!rows'][0] = { hpt: 28 };
+	ws['!rows'][1] = { hpt: 16 };
+}
+function xlHeaderRow(ws, r, ncols) {
+	for (var c = 0; c < ncols; c++) xlSet(ws, r, c, XL_STYLES.hdr);
+	ws['!rows'] = ws['!rows'] || [];
+	ws['!rows'][r] = { hpt: 20 };
+}
+function xlPct(ws, r, c, status) {
+	var s = XL_STYLES.pctStyle(status);
+	s.numFmt = XL_STYLES.pctFmt;
+	xlSet(ws, r, c, s);
+}
+function xlTableBorders(ws, r1, c1, r2, c2) {
+	var b = { style: 'thin', color: { rgb: 'D8DEE9' } };
+	for (var r = r1; r <= r2; r++) {
+		for (var c = c1; c <= c2; c++) {
+			xlSet(ws, r, c, { border: { top: b, bottom: b, left: b, right: b } });
+		}
+	}
+}
+function barText(pct) {
+	var filled = Math.round(Math.min(100, Math.max(0, pct)) / 10);
+	var bar = '';
+	for (var i = 0; i < 10; i++) bar += i < filled ? '\u2588' : '\u2591';
+	return bar + ' ' + pct + '%';
+}
+function statusText(s) { return s === 'paid' ? 'Paid' : s === 'partial' ? 'Partial' : s === 'nopledge' ? 'No Pledge' : 'Unpaid'; }
 function exportExcel() {
 	if (!combined.length) return;
 	var wb = XLSX.utils.book_new();
-	var fullHeader = ['Group', 'Donor', 'Phone', 'Invoice #', 'Date', 'Pledged', 'Paid', 'Balance', '% Paid', 'Status'];
-	var fullRows = combined.slice().sort(function (a, b) { return a.group.localeCompare(b.group) || a.donor.localeCompare(b.donor); })
-		.map(function (r) { return [r.group, r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, r.status]; });
-	var wsAll = XLSX.utils.aoa_to_sheet([fullHeader].concat(fullRows));
-	styleSheet(wsAll, [18, 22, 14, 14, 12, 12, 12, 12, 8, 10]);
-	XLSX.utils.book_append_sheet(wb, wsAll, 'Full List');
+	var genDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+	// ── Aggregates ─────────────────────────────────────────
 	var groups = {};
 	combined.forEach(function (r) {
-		if (!groups[r.group]) groups[r.group] = { pledged: 0, paid: 0, balance: 0, count: 0, full: 0, unpaid: 0 };
+		if (!groups[r.group]) groups[r.group] = { pledged: 0, paid: 0, balance: 0, count: 0, full: 0, unpaid: 0, noPledge: 0 };
 		var g = groups[r.group];
 		g.pledged += r.pledged; g.paid += r.paid; g.balance += r.balance; g.count++;
-		if (r.status === 'paid') g.full++; if (r.status === 'unpaid') g.unpaid++;
+		if (r.status === 'paid') g.full++;
+		if (r.status === 'unpaid') g.unpaid++;
+		if (r.status === 'nopledge') g.noPledge++;
 	});
 	var sortedGroups = Object.keys(groups).sort(function (a, b) { return a === UNASSIGNED ? 1 : b === UNASSIGNED ? -1 : a.localeCompare(b); });
-	var sumHeader = ['Group', 'Donors', 'Pledged', 'Paid', 'Balance', '% Collected', 'Fully Paid', 'Unpaid'];
-	var totals = { pledged: 0, paid: 0, balance: 0, count: 0, full: 0, unpaid: 0 };
-	var sumRows = sortedGroups.map(function (grp) {
-		var g = groups[grp]; Object.keys(totals).forEach(function (k) { totals[k] += g[k]; });
-		return [grp, g.count, +fmtNum(g.pledged), +fmtNum(g.paid), +fmtNum(g.balance), g.pledged > 0 ? Math.round(g.paid / g.pledged * 100) : 0, g.full, g.unpaid];
+	var totals = { pledged: 0, paid: 0, balance: 0, count: 0, full: 0, unpaid: 0, noPledge: 0 };
+	sortedGroups.forEach(function (grp) { var g = groups[grp]; Object.keys(totals).forEach(function (k) { totals[k] += g[k]; }); });
+	var tPctAll = totals.pledged > 0 ? Math.round(totals.paid / totals.pledged * 100) : 0;
+
+	// ── Sheet 1: Full List ─────────────────────────────────
+	var flHeader = ['Group', 'Donor', 'Phone', 'Invoice #', 'Date', 'Pledged', 'Paid', 'Balance', '% Paid', 'Progress', 'Status'];
+	var flSorted = combined.slice().sort(function (a, b) {
+		var g = a.group.localeCompare(b.group);
+		if (g !== 0) return g;
+		var p = pledgedFirst(a, b);
+		if (p !== 0) return p;
+		return a.donor.localeCompare(b.donor);
 	});
-	var tpct = totals.pledged > 0 ? Math.round(totals.paid / totals.pledged * 100) : 0;
-	sumRows.push(['TOTAL', totals.count, +fmtNum(totals.pledged), +fmtNum(totals.paid), +fmtNum(totals.balance), tpct, totals.full, totals.unpaid]);
-	var wsSum = XLSX.utils.aoa_to_sheet([sumHeader].concat(sumRows));
-	styleSheet(wsSum, [20, 8, 14, 14, 14, 12, 10, 8]);
-	XLSX.utils.book_append_sheet(wb, wsSum, 'Summary');
+	var flAoa = [
+		['PLEDGE & DONATION REPORT'],
+		['Full List \u00b7 Generated ' + genDate + ' \u00b7 ' + totals.count + ' donors \u00b7 ' + sortedGroups.length + ' groups \u00b7 ' + tPctAll + '% collected'],
+		[],
+		flHeader
+	];
+	flSorted.forEach(function (r) {
+		flAoa.push([r.group, r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
+	});
+	flAoa.push(['TOTAL', '', '', '', '', +fmtNum(totals.pledged), +fmtNum(totals.paid), +fmtNum(totals.balance), tPctAll, barText(tPctAll), '']);
+	var wsAll = XLSX.utils.aoa_to_sheet(flAoa);
+	styleSheet(wsAll, [18, 22, 14, 14, 12, 13, 13, 13, 9, 16, 12]);
+	xlTitle(wsAll, flAoa[0][0], flAoa[1][0], 11);
+	xlHeaderRow(wsAll, 3, 11);
+	var flBase = 4;
+	flSorted.forEach(function (r, i) {
+		var rowIdx = flBase + i;
+		xlRowBase(wsAll, rowIdx, 11, i % 2 === 1);
+		xlSet(wsAll, rowIdx, 0, XL_STYLES.groupCell);
+		xlSet(wsAll, rowIdx, 1, XL_STYLES.donorCell);
+		xlSet(wsAll, rowIdx, 5, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsAll, rowIdx, 6, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsAll, rowIdx, 7, { numFmt: XL_STYLES.moneyFmt });
+		xlPct(wsAll, rowIdx, 8, r.status);
+		xlSet(wsAll, rowIdx, 9, XL_STYLES.barStyle(r.status));
+		xlSet(wsAll, rowIdx, 10, XL_STYLES.statusStyle(r.status));
+	});
+	var flTot = flBase + flSorted.length;
+	for (var cF = 0; cF < 11; cF++) xlSet(wsAll, flTot, cF, XL_STYLES.tot);
+	xlSet(wsAll, flTot, 5, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsAll, flTot, 6, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsAll, flTot, 7, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsAll, flTot, 8, { numFmt: XL_STYLES.pctFmt, alignment: { horizontal: 'center' } });
+	xlSet(wsAll, flTot, 9, XL_STYLES.bar);
+	xlTableBorders(wsAll, flBase, 0, flTot, 10);
+	wsAll['!autofilter'] = { ref: 'A4:K' + (flTot + 1) };
+	XLSX.utils.book_append_sheet(wb, wsAll, 'Full List');
+
+	// ── Sheet 2: Summary ───────────────────────────────────
+	var smHeader = ['Group', 'Donors', 'Pledged', 'Paid', 'Balance', '% Collected', 'Progress', 'Fully Paid', 'Unpaid'];
+	var smAoa = [
+		['GROUP SUMMARY'],
+		['Generated ' + genDate + ' \u00b7 ' + sortedGroups.length + ' groups \u00b7 ' + totals.count + ' donors \u00b7 ' + tPctAll + '% collected overall'],
+		[],
+		smHeader
+	];
 	sortedGroups.forEach(function (grp) {
-		var members = combined.filter(function (r) { return r.group === grp; }).sort(function (a, b) { return a.donor.localeCompare(b.donor); });
-		var hdr = ['Donor', 'Phone', 'Invoice #', 'Date', 'Pledged', 'Paid', 'Balance', '% Paid', 'Status'];
-		var rs = members.map(function (r) { return [r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, r.status]; });
-		var tP = members.reduce(function (s, r) { return s + r.pledged; }, 0), tPd = members.reduce(function (s, r) { return s + r.paid; }, 0), tB = members.reduce(function (s, r) { return s + r.balance; }, 0);
-		rs.push(['TOTAL', '', '', '', +fmtNum(tP), +fmtNum(tPd), +fmtNum(tB), '', '']);
-		var wsG = XLSX.utils.aoa_to_sheet([hdr].concat(rs));
-		styleSheet(wsG, [22, 14, 14, 12, 12, 12, 12, 8, 10]);
+		var g = groups[grp];
+		var pct = g.pledged > 0 ? Math.round(g.paid / g.pledged * 100) : 0;
+		smAoa.push([grp, g.count, +fmtNum(g.pledged), +fmtNum(g.paid), +fmtNum(g.balance), pct, barText(pct), g.full, g.unpaid]);
+	});
+	smAoa.push(['TOTAL', totals.count, +fmtNum(totals.pledged), +fmtNum(totals.paid), +fmtNum(totals.balance), tPctAll, barText(tPctAll), totals.full, totals.unpaid]);
+	var wsSum = XLSX.utils.aoa_to_sheet(smAoa);
+	styleSheet(wsSum, [20, 9, 14, 14, 14, 12, 16, 11, 9]);
+	xlTitle(wsSum, smAoa[0][0], smAoa[1][0], 9);
+	xlHeaderRow(wsSum, 3, 9);
+	var smBase = 4;
+	sortedGroups.forEach(function (grp, i) {
+		var g = groups[grp];
+		var pct = g.pledged > 0 ? Math.round(g.paid / g.pledged * 100) : 0;
+		var gStat = g.pledged > 0 ? (g.paid >= g.pledged ? 'paid' : g.paid > 0 ? 'partial' : 'unpaid') : 'nopledge';
+		var rowIdx = smBase + i;
+		xlRowBase(wsSum, rowIdx, 9, i % 2 === 1);
+		xlSet(wsSum, rowIdx, 0, XL_STYLES.groupCell);
+		xlSet(wsSum, rowIdx, 1, XL_STYLES.center);
+		xlSet(wsSum, rowIdx, 2, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsSum, rowIdx, 3, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsSum, rowIdx, 4, { numFmt: XL_STYLES.moneyFmt });
+		xlPct(wsSum, rowIdx, 5, gStat);
+		xlSet(wsSum, rowIdx, 6, XL_STYLES.barStyle(gStat));
+		xlSet(wsSum, rowIdx, 7, XL_STYLES.center);
+		xlSet(wsSum, rowIdx, 8, XL_STYLES.center);
+	});
+	var smTot = smBase + sortedGroups.length;
+	for (var cS = 0; cS < 9; cS++) xlSet(wsSum, smTot, cS, XL_STYLES.tot);
+	xlSet(wsSum, smTot, 2, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsSum, smTot, 3, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsSum, smTot, 4, { numFmt: XL_STYLES.moneyFmt });
+	xlSet(wsSum, smTot, 5, { numFmt: XL_STYLES.pctFmt, alignment: { horizontal: 'center' } });
+	xlSet(wsSum, smTot, 6, XL_STYLES.bar);
+	xlTableBorders(wsSum, smBase, 0, smTot, 8);
+	wsSum['!autofilter'] = { ref: 'A4:I' + (smTot + 1) };
+	XLSX.utils.book_append_sheet(wb, wsSum, 'Summary');
+
+	// ── Sheet 3+: one per group (screenshot-ready) ──────────
+	sortedGroups.forEach(function (grp) {
+		var members = combined.filter(function (r) { return r.group === grp; }).sort(function (a, b) {
+			var p = pledgedFirst(a, b);
+			if (p !== 0) return p;
+			return a.donor.localeCompare(b.donor);
+		});
+		var tP = members.reduce(function (s, r) { return s + r.pledged; }, 0);
+		var tPd = members.reduce(function (s, r) { return s + r.paid; }, 0);
+		var tB = members.reduce(function (s, r) { return s + r.balance; }, 0);
+		var gPct = tP > 0 ? Math.round(tPd / tP * 100) : 0;
+		var gHeader = ['Donor', 'Phone', 'Invoice #', 'Date', 'Pledged', 'Paid', 'Balance', '% Paid', 'Progress', 'Status'];
+		var gAoa = [
+			[grp.toUpperCase()],
+			['Generated ' + genDate + ' \u00b7 ' + members.length + ' donors \u00b7 ' + fmt(tP) + ' pledged \u00b7 ' + fmt(tPd) + ' paid \u00b7 ' + fmt(tB) + ' balance \u00b7 ' + gPct + '% collected'],
+			[],
+			gHeader
+		];
+		members.forEach(function (r) {
+			gAoa.push([r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
+		});
+		gAoa.push(['TOTAL', '', '', '', +fmtNum(tP), +fmtNum(tPd), +fmtNum(tB), gPct, barText(gPct), '']);
+		var wsG = XLSX.utils.aoa_to_sheet(gAoa);
+		styleSheet(wsG, [22, 14, 14, 12, 13, 13, 13, 9, 16, 12]);
+		xlTitle(wsG, gAoa[0][0], gAoa[1][0], 10);
+		xlHeaderRow(wsG, 3, 10);
+		var gBase = 4;
+		members.forEach(function (r, i) {
+			var rowIdx = gBase + i;
+			xlRowBase(wsG, rowIdx, 10, i % 2 === 1);
+			xlSet(wsG, rowIdx, 0, XL_STYLES.donorCell);
+			xlSet(wsG, rowIdx, 4, { numFmt: XL_STYLES.moneyFmt });
+			xlSet(wsG, rowIdx, 5, { numFmt: XL_STYLES.moneyFmt });
+			xlSet(wsG, rowIdx, 6, { numFmt: XL_STYLES.moneyFmt });
+			xlPct(wsG, rowIdx, 7, r.status);
+			xlSet(wsG, rowIdx, 8, XL_STYLES.barStyle(r.status));
+			xlSet(wsG, rowIdx, 9, XL_STYLES.statusStyle(r.status));
+		});
+		var gTot = gBase + members.length;
+		for (var cG = 0; cG < 10; cG++) xlSet(wsG, gTot, cG, XL_STYLES.tot);
+		xlSet(wsG, gTot, 4, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsG, gTot, 5, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsG, gTot, 6, { numFmt: XL_STYLES.moneyFmt });
+		xlSet(wsG, gTot, 7, { numFmt: XL_STYLES.pctFmt, alignment: { horizontal: 'center' } });
+		xlSet(wsG, gTot, 8, XL_STYLES.bar);
+		xlTableBorders(wsG, gBase, 0, gTot, 9);
+		wsG['!autofilter'] = { ref: 'A4:J' + (gTot + 1) };
 		XLSX.utils.book_append_sheet(wb, wsG, grp.replace(/[\\\/:*?"<>|]/g, '').substring(0, 31) || 'Group');
 	});
+
 	XLSX.writeFile(wb, 'pledge-report.xlsx');
 }
 
 // ── EXPORT GROUP IMAGES ───────────────────────────────────
 function drawGroupCard(grp, members) {
+	members.sort(function (a, b) {
+		var p = pledgedFirst(a, b);
+		if (p !== 0) return p;
+		return (a.donor || '').localeCompare(b.donor || '');
+	});
 	var CARD_W = 800, ROW_H = 36, HEADER_H = 100, FOOTER_H = 50, PADDING = 24;
 	var cardH = HEADER_H + (members.length + 1) * ROW_H + FOOTER_H + PADDING;
 	var canvas = document.createElement('canvas');
@@ -1578,6 +1885,58 @@ function truncate(ctx, text, maxW) {
 	while (text.length > 1 && ctx.measureText(text + '...').width > maxW) text = text.slice(0, -1);
 	return text + '...';
 }
+function jsq(str) { return String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function getGroupMembers(grp) {
+	return combined.filter(function (r) { return r.group === grp; });
+}
+function imgBtns(grp) {
+	var g = jsq(grp);
+	return '<button class="btn btn-outline btn-sm" title="Copy group image (paste into WhatsApp)" onclick="copyGroupImage(this, \'' + g + '\')">📋</button> <button class="btn btn-outline btn-sm" title="Download group image" onclick="downloadGroupImage(\'' + g + '\')">⬇</button>';
+}
+function downloadGroupImage(grp) {
+	var members = getGroupMembers(grp);
+	if (!members.length) { tool.notify('No data for this group', 'warning'); return; }
+	var canvas = drawGroupCard(grp, members);
+	canvas.toBlob(function (blob) {
+		if (!blob) { tool.notify('Image generation failed', 'error'); return; }
+		var a = document.createElement('a');
+		a.href = URL.createObjectURL(blob);
+		a.download = String(grp).replace(/[^a-zA-Z0-9]/g, '_') + '-pledge-report.png';
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+		tool.notify('Downloaded "' + grp + '" report image \u2713', 'success');
+	}, 'image/png');
+}
+function copyGroupImage(btn, grp) {
+	var members = getGroupMembers(grp);
+	if (!members.length) { tool.notify('No data for this group', 'warning'); return; }
+	var canvas = drawGroupCard(grp, members);
+	canvas.toBlob(function (blob) {
+		if (!blob) { tool.notify('Image generation failed', 'error'); return; }
+		function copiedEffect(ok) {
+			if (btn) {
+				var orig = btn.textContent;
+				btn.classList.add('copied');
+				btn.textContent = '\u2705';
+				setTimeout(function () {
+					btn.classList.remove('copied');
+					btn.textContent = orig;
+				}, 1600);
+			}
+			if (ok) tool.notify('Group image copied \u2014 paste into WhatsApp \u2713', 'success');
+		}
+		if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+			navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+				.then(function () { copiedEffect(true); })
+				.catch(function (e) { copiedEffect(false); tool.notify('Copy failed: ' + e.message, 'error'); });
+		} else {
+			copiedEffect(false);
+			tool.notify('Clipboard image copy not supported in this browser', 'warning');
+		}
+	}, 'image/png');
+}
 async function exportGroupImages() {
 	if (!combined.length) return;
 	var groups = {};
@@ -1597,10 +1956,11 @@ function exportCSV() { exportExcel(); }
 
 // ── WARNINGS ──────────────────────────────────────────────
 var warnData = [], warnSortCol = 'priority', warnSortDir = 1;
+var warnResolved = {};
 function renderWarnings(mismatches) {
 	warnData = mismatches;
 	var panel = document.getElementById('warn-panel'), countEl = document.getElementById('warn-count');
-	var tabBtn = document.getElementById('top-tab-mismatches');
+	var tabBtn = document.getElementById('tab-btn-mismatches');
 	var tabCount = document.getElementById('mismatch-tab-count');
 	if (!mismatches.length) {
 		if (panel) panel.style.display = 'none';
@@ -1629,23 +1989,37 @@ function renderWarnTable() {
 	}).join('') + '<th style="padding:9px 12px;background:var(--c-surface2);border-bottom:1px solid var(--c-border);font-size:10px;color:var(--c-text3)">Fixed?</th>';
 	var rowsHtml = sorted.map(function (m) {
 		var origIdx = warnData.indexOf(m), rowId = 'wrow-' + origIdx;
+		var dedup = m.source + '|' + normalize(m.name);
 		var isHigh = m.priority === 'High';
 		var priBg = isHigh ? 'var(--c-red-bg)' : 'var(--c-amber-bg)';
 		var priCol = isHigh ? 'var(--c-red)' : 'var(--c-amber)';
 		var icon = m.source === 'QuickBooks' ? '\ud83d\udcc4' : m.source === 'Cash Payments' ? '\ud83d\udcb5' : '\ud83d\udc65';
-		var resolved = document.getElementById(rowId) && document.getElementById(rowId).classList.contains('resolved');
+		var resolved = !!warnResolved[dedup];
 		return '<tr id="' + rowId + '" class="warn-row' + (resolved ? ' resolved' : '') + '" style="border-bottom:1px solid var(--c-border)">' +
 			'<td style="padding:9px 12px"><span class="badge" style="background:' + priBg + ';color:' + priCol + '">' + esc(m.priority) + '</span></td>' +
 			'<td style="padding:9px 12px;font-weight:800;font-size:13px">' + esc(m.name) + '</td>' +
 			'<td style="padding:9px 12px;font-size:12px;color:var(--c-text2)">' + icon + ' ' + esc(m.source) + '</td>' +
 			'<td style="padding:9px 12px;font-size:12px;color:var(--c-text2)">' + esc(m.detail) + '</td>' +
-			'<td style="padding:9px 12px;text-align:center"><input type="checkbox" ' + (resolved ? 'checked' : '') + ' onchange="resolveWarn(this,\'' + rowId + '\')" title="Mark as fixed"></td>' +
+			'<td style="padding:9px 12px;text-align:center"><input type="checkbox" ' + (resolved ? 'checked' : '') + ' onchange="resolveWarn(this,\'' + jsq(dedup) + '\')" title="Mark as fixed"></td>' +
 			'</tr>';
 	}).join('');
 	list.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr>' + thHtml + '</tr></thead><tbody>' + rowsHtml + '</tbody></table>';
 }
 function warnSort(col) { if (warnSortCol === col) warnSortDir *= -1; else { warnSortCol = col; warnSortDir = 1; } renderWarnTable(); }
-function resolveWarn(cb, rowId) { var row = document.getElementById(rowId); if (!row) return; if (cb.checked) row.classList.add('resolved'); else row.classList.remove('resolved'); }
+function resolveWarn(cb, dedupKey) {
+	if (cb.checked) { warnResolved[dedupKey] = true; } else { delete warnResolved[dedupKey]; }
+	var row = cb.parentNode.parentNode;
+	if (row) row.classList.toggle('resolved', cb.checked);
+	_persistResolvedWarns();
+}
+function _persistResolvedWarns() {
+	if (_isSaving) return;
+	var val = tool.getValue() || {};
+	val.resolvedMismatches = Object.keys(warnResolved);
+	_isSaving = true;
+	tool.setValue(val);
+	setTimeout(function () { _isSaving = false; }, 200);
+}
 function toggleWarnPanel() {
 	var body = document.getElementById('warn-panel-body'), label = document.getElementById('warn-toggle-label');
 	var open = body.style.display === 'none';

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VolunteerManagement — Test Harness</title>
+<link rel="stylesheet" href="VolunteerManagement.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-role { background: #f59e0b; color: #000; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — VolunteerManagement</strong><span class="sep">|</span>
+  <button class="btn-role" id="th-role-manager">Switch to Manager</button>
+  <button class="btn-role" id="th-role-volunteer">Switch to Volunteer</button>
+  <button class="btn-clear" id="th-clear">Clear All Data</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+<div id="app-container">
+<!-- ═══════════════ INLINED TOOL HTML ═══════════════ -->
+<!-- Top Bar -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="top-bar-logo">🤝</div>
+    <div>
+      <div class="top-bar-title">Volunteer Management</div>
+      <div class="top-bar-subtitle" id="topEventName">Loading event...</div>
+    </div>
+  </div>
+  <div class="top-bar-right">
+    <span class="top-bar-user" id="topUserName"></span>
+    <span class="top-bar-role" id="topRoleBadge"></span>
+  </div>
+</div>
+<div class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="volunteers">👥 Volunteers <span class="tab-badge" id="badgeVolunteers">0</span></button>
+  <button class="tab-btn" data-tab="tasks">📋 Tasks <span class="tab-badge" id="badgeTasks">0</span></button>
+  <button class="tab-btn" data-tab="hours">⏱️ Hours</button>
+  <button class="tab-btn" data-tab="messages">💬 Messages <span class="tab-badge" id="badgeMessages">0</span></button>
+  <button class="tab-btn" data-tab="certificate">📜 Certificate</button>
+</div>
+<div class="main-content">
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="stats-row" id="dashStats"></div>
+    <div class="card" id="dashMyStatus" style="display:none;"><div class="card-header"><h3>📝 My Volunteer Status</h3></div><div class="card-body" id="dashMyStatusBody"></div></div>
+    <div class="card" id="dashPendingApprovals" style="display:none;"><div class="card-header"><h3>⏳ Pending Approvals</h3><button class="btn btn-sm btn-outline" onclick="switchTab('volunteers')">View All</button></div><div class="card-body" id="dashPendingApprovalsBody"></div></div>
+    <div class="card"><div class="card-header"><h3>📅 My Upcoming Tasks</h3></div><div class="card-body" id="dashMyTasks"></div></div>
+    <div class="card"><div class="card-header"><h3>💬 Recent Messages</h3></div><div class="card-body" id="dashRecentMessages"></div></div>
+  </div>
+  <div class="tab-panel" id="panel-volunteers">
+    <div class="quick-actions" id="volActions"></div>
+    <div class="card"><div class="card-header"><h3 id="volListTitle">All Volunteers</h3><div style="display:flex;gap:8px;"><select class="form-select" id="volFilterStatus" style="width:auto;" onchange="renderVolunteers()"><option value="all">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="withdrawn">Withdrawn</option></select></div></div><div class="card-body" id="volList"></div></div>
+  </div>
+  <div class="tab-panel" id="panel-tasks">
+    <div class="quick-actions" id="taskActions"></div>
+    <div class="card"><div class="card-header"><h3>Event Tasks</h3><div style="display:flex;gap:8px;"><select class="form-select" id="taskFilterStatus" style="width:auto;" onchange="renderTasks()"><option value="all">All Statuses</option><option value="open">Open</option><option value="assigned">Assigned</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select><select class="form-select" id="taskFilterAssignee" style="width:auto;" onchange="renderTasks()"><option value="all">All Assignees</option><option value="me">My Tasks</option><option value="unassigned">Unassigned</option></select></div></div><div class="card-body" id="taskList"></div></div>
+  </div>
+  <div class="tab-panel" id="panel-hours">
+    <div class="quick-actions" id="hourActions"></div>
+    <div class="card"><div class="card-header"><h3>Hour Logs</h3><div style="display:flex;gap:8px;"><select class="form-select" id="hourFilterVolunteer" style="width:auto;" onchange="renderHours()"><option value="all">All Volunteers</option><option value="me">My Hours</option></select><select class="form-select" id="hourFilterStatus" style="width:auto;" onchange="renderHours()"><option value="all">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div></div><div class="card-body" id="hourList"></div></div>
+    <div class="card" id="hourSummary" style="display:none;"><div class="card-header"><h3>📊 Hours Summary</h3></div><div class="card-body" id="hourSummaryBody"></div></div>
+  </div>
+  <div class="tab-panel" id="panel-messages">
+    <div class="quick-actions" id="msgActions"></div>
+    <div class="card"><div class="card-header"><h3>Messages</h3><button class="btn btn-sm btn-outline" id="msgRefreshBtn">🔄 Refresh</button></div><div class="card-body msg-thread" id="msgList"></div></div>
+  </div>
+  <div class="tab-panel" id="panel-certificate">
+    <div class="card"><div class="card-header"><h3>📜 Volunteer Hours Certificate</h3></div><div class="card-body" id="certBody"></div></div>
+  </div>
+</div>
+<!-- Modals -->
+<div class="modal-overlay" id="modalRegister"><div class="modal"><div class="modal-header"><h3>🙋 Register as Volunteer</h3><button class="modal-close" onclick="closeModal('modalRegister')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Your Skills & Experience</label><textarea class="form-textarea" id="regSkills" placeholder="Describe your relevant skills, experience, and what you can help with..."></textarea></div><div class="form-group"><label class="form-label">Availability Notes</label><textarea class="form-textarea" id="regAvailability" placeholder="Your availability during the event (dates, times, constraints)..."></textarea></div><div class="form-group"><label class="form-label">Why do you want to volunteer?</label><textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button><button class="btn btn-primary" onclick="submitRegistration()">Submit Registration</button></div></div></div>
+<div class="modal-overlay" id="modalTask"><div class="modal"><div class="modal-header"><h3 id="modalTaskTitle">📋 Create Task</h3><button class="modal-close" onclick="closeModal('modalTask')">✕</button></div><div class="modal-body"><input type="hidden" id="editTaskId"><div class="form-group"><label class="form-label">Task Name</label><input type="text" class="form-input" id="taskName" placeholder="e.g. Setup Registration Desk"></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="taskDesc" placeholder="Describe the task in detail..."></textarea></div><div class="form-row"><div class="form-group"><label class="form-label">Assign To</label><select class="form-select" id="taskAssignee"><option value="">-- Unassigned (Open) --</option></select></div><div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-input" id="taskDueDate"></div></div><div class="form-row"><div class="form-group"><label class="form-label">Estimated Hours</label><input type="number" class="form-input" id="taskEstHours" placeholder="e.g. 4" min="0.5" step="0.5"></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="taskStatus"><option value="open">Open</option><option value="assigned">Assigned</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalTask')">Cancel</button><button class="btn btn-primary" id="btnSaveTask" onclick="saveTask()">Create Task</button></div></div></div>
+<div class="modal-overlay" id="modalHours"><div class="modal"><div class="modal-header"><h3>⏱️ Log Hours</h3><button class="modal-close" onclick="closeModal('modalHours')">✕</button></div><div class="modal-body"><input type="hidden" id="editHourId"><div class="form-group"><label class="form-label">Task</label><select class="form-select" id="hourTaskId"><option value="">-- Select Task --</option></select></div><div class="form-row"><div class="form-group"><label class="form-label">Date Worked</label><input type="date" class="form-input" id="hourDate"></div><div class="form-group"><label class="form-label">Hours</label><input type="number" class="form-input" id="hourAmount" placeholder="e.g. 3.5" min="0.5" step="0.5"></div></div><div class="form-group"><label class="form-label">Description of Work Done</label><textarea class="form-textarea" id="hourDesc" placeholder="Describe what you accomplished..."></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalHours')">Cancel</button><button class="btn btn-primary" id="btnSaveHours" onclick="saveHours()">Log Hours</button></div></div></div>
+<div class="modal-overlay" id="modalMessage"><div class="modal"><div class="modal-header"><h3>💬 Send Message</h3><button class="modal-close" onclick="closeModal('modalMessage')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">To</label><select class="form-select" id="msgTo"><option value="managers">All Event Managers</option></select></div><div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="msgSubject" placeholder="Message subject..."></div><div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="msgBody" placeholder="Type your message..." style="min-height:120px;"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalMessage')">Cancel</button><button class="btn btn-primary" onclick="sendMessage()">Send Message</button></div></div></div>
+<div class="modal-overlay" id="modalConfirm"><div class="modal"><div class="modal-header"><h3 id="confirmTitle">Confirm</h3><button class="modal-close" onclick="closeModal('modalConfirm')">✕</button></div><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalConfirm')">Cancel</button><button class="btn btn-primary" id="confirmBtn">Confirm</button></div></div></div>
+<!-- ═══════════════ END INLINED TOOL HTML ═══════════════ -->
+</div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_PREFIX = 'vm_test_';
+  var _readOnly = false;
+  var _user = null;
+  var _fields = {};
+  var _value = null;
+  var _permittedUsers = [];
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+
+  function storageKey(type) { return STORAGE_PREFIX + type; }
+  function loadObjects(type) {
+    try { var raw = localStorage.getItem(storageKey(type)); return raw ? JSON.parse(raw) : []; }
+    catch(e) { return []; }
+  }
+  function saveObjects(type, arr) {
+    try { localStorage.setItem(storageKey(type), JSON.stringify(arr)); } catch(e) {}
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, val) { _fields[id] = val; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+
+    param: function(name, def) { return def; },
+    declareParams: function(arr) {},
+    declareOutput: function(schema) {},
+    reportMissingParams: function(missing, msg) {},
+    reportValid: function(valid, msg) {},
+
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+
+    getPermittedUsers: function() { return _permittedUsers; },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+
+    notify: function(msg, severity) { console.log('[' + (severity || 'info') + '] ' + msg); el('th-status').textContent = msg; },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    openObjectDetail: function(type, id) { console.log('openObjectDetail:', type, id); },
+
+    requestObjects: function(action, params, cb) {
+      setTimeout(function() {
+        try {
+          var type = params.mainObjectType;
+          var objects = loadObjects(type);
+          switch (action) {
+            case 'query':
+              cb(null, { objects: objects });
+              break;
+            case 'get':
+              var found = null;
+              for (var i = 0; i < objects.length; i++) {
+                if (objects[i].id === params.objectId) { found = objects[i]; break; }
+              }
+              cb(null, { object: found });
+              break;
+            case 'create':
+              var newObj = {
+                id: 'vm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                name: params.name || 'Untitled',
+                productData: params.productData || { data_categoriesBased: {} },
+                created: new Date().toISOString(),
+                updated: new Date().toISOString()
+              };
+              objects.push(newObj);
+              saveObjects(type, objects);
+              cb(null, { object: newObj });
+              break;
+            case 'update':
+              for (var j = 0; j < objects.length; j++) {
+                if (objects[j].id === params.objectId) {
+                  if (params.name) objects[j].name = params.name;
+                  if (params.productData && params.productData.data_categoriesBased) {
+                    if (!objects[j].productData) objects[j].productData = {};
+                    if (!objects[j].productData.data_categoriesBased) objects[j].productData.data_categoriesBased = {};
+                    Object.assign(objects[j].productData.data_categoriesBased, params.productData.data_categoriesBased);
+                  }
+                  objects[j].updated = new Date().toISOString();
+                  saveObjects(type, objects);
+                  break;
+                }
+              }
+              cb(null, { ok: true });
+              break;
+            case 'delete':
+              objects = objects.filter(function(o) { return o.id !== params.objectId; });
+              saveObjects(type, objects);
+              cb(null, { ok: true });
+              break;
+            case 'batch':
+              if (params.operations) {
+                params.operations.forEach(function(op) {
+                  if (op.action === 'update') {
+                    var arr = loadObjects(op.mainObjectType);
+                    for (var k = 0; k < arr.length; k++) {
+                      if (arr[k].id === op.objectId) {
+                        if (op.productData && op.productData.data_categoriesBased) {
+                          if (!arr[k].productData) arr[k].productData = {};
+                          if (!arr[k].productData.data_categoriesBased) arr[k].productData.data_categoriesBased = {};
+                          Object.assign(arr[k].productData.data_categoriesBased, op.productData.data_categoriesBased);
+                        }
+                        arr[k].updated = new Date().toISOString();
+                        break;
+                      }
+                    }
+                    saveObjects(op.mainObjectType, arr);
+                  }
+                });
+              }
+              cb(null, { ok: true, results: [] });
+              break;
+            default:
+              cb('Unknown action: ' + action, null);
+          }
+        } catch(e) { cb(e.message, null); }
+      }, 100);
+    },
+
+    requestExportPdf: function(options, cb) {
+      var htmlContent = options.html || document.body.innerHTML;
+      var blob = new Blob(['<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + htmlContent + '</body></html>'], { type: 'text/html' });
+      var url = URL.createObjectURL(blob);
+      cb(null, { name: (options.filename || 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+    },
+
+    requestSendEmail: function(options, cb) {
+      console.log('Mock email sent to:', options.to, 'subject:', options.subject);
+      cb(null, { ok: true });
+    },
+
+    requestAI: function(prompt, context, cb) {
+      cb(null, 'AI response: I received your prompt about: ' + prompt.slice(0, 100));
+    },
+
+    requestAIStream: function(prompt, context, callbacks) {
+      var text = 'Streaming AI response for: ' + prompt.slice(0, 50);
+      if (callbacks.onToken) callbacks.onToken(text);
+      if (callbacks.onComplete) callbacks.onComplete(text);
+    },
+
+    requestUpload: function(accept, cb) {
+      cb('Upload not available in test harness', null);
+    },
+
+    requestFileContent: function(url, cb) {
+      cb('File content extraction not available in test harness', null);
+    },
+
+    onReady: function(cb) {
+      // Simulate async initialization
+      setTimeout(function() {
+        _fields = { name: 'Sample Community Event', description: 'A test event for volunteer management.' };
+        _user = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'mock_user') || 'null');
+        _permittedUsers = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'permitted_users') || '[]');
+        if (!_user) {
+          _user = { id: 'usr_manager1', name: 'Alice Manager', email: 'alice@example.com', roles: ['admin', 'editor'] };
+          _permittedUsers = [
+            { id: 'usr_manager1', name: 'Alice Manager', email: 'alice@example.com', roles: ['admin'] },
+            { id: 'usr_vol1', name: 'Bob Volunteer', email: 'bob@example.com', roles: ['viewer'] },
+            { id: 'usr_vol2', name: 'Carol Helper', email: 'carol@example.com', roles: ['viewer'] },
+            { id: 'usr_vol3', name: 'Dave Supporter', email: 'dave@example.com', roles: ['viewer'] }
+          ];
+          localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify(_user));
+          localStorage.setItem(STORAGE_PREFIX + 'permitted_users', JSON.stringify(_permittedUsers));
+        }
+        cb(_value, _fields);
+      }, 50);
+    }
+  };
+
+  function el(id) { return document.getElementById(id); }
+
+  // Test harness controls
+  document.addEventListener('DOMContentLoaded', function() {
+    el('th-role-manager').addEventListener('click', function() {
+      var u = { id: 'usr_manager1', name: 'Alice Manager', email: 'alice@example.com', roles: ['admin', 'editor'] };
+      localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify(u));
+      location.reload();
+    });
+    el('th-role-volunteer').addEventListener('click', function() {
+      var u = { id: 'usr_vol1', name: 'Bob Volunteer', email: 'bob@example.com', roles: ['viewer'] };
+      localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify(u));
+      location.reload();
+    });
+    el('th-clear').addEventListener('click', function() {
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var key = localStorage.key(i);
+        if (key.indexOf(STORAGE_PREFIX) === 0) keys.push(key);
+      }
+      keys.forEach(function(k) { localStorage.removeItem(k); });
+      location.reload();
+    });
+    el('th-reload').addEventListener('click', function() { location.reload(); });
+  });
+})();
+</script>
+
+<script src="VolunteerManagement.js"></script>
+</body>
+</html>

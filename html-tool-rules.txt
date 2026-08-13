@@ -78,8 +78,31 @@ tool.onReadonlyChange(cb)    → cb(bool) — fires when the mode toggles.
                                Lock/unlock your UI in this callback.
 
 ── Authenticated user ─────────────────────────────────
-tool.getUser()               → { id, name, email, roles, locale } or null if
-                               the user is not logged in
+tool.getUser()               → { id, name, email, roles, effectiveAccess, locale }
+                               or null if the user is not logged in.
+                               • roles — system-level roles (developer, owner,
+                                 admin, user-manager, editor, viewer) MERGED with
+                                 effective object-level permissions from the full
+                                 permission cascade (system → app → folder →
+                                 object → field group).  A user with system role
+                                 'viewer' who has editor access to the current
+                                 CMS record will see roles: ['viewer', 'editor'].
+                                 Use for simple gating: roles.includes('editor').
+                               • effectiveAccess — RAW object-level permission
+                                 flags on the current CMS record, before they are
+                                 merged into roles:
+                                   isViewer  — can view this record
+                                   isEditor  — can edit this record
+                                   isManager — has admin/owner access to this record
+                                 Use to DISAMBIGUATE system-level from object-level
+                                 access.  Example: user.roles.includes('admin') &&
+                                 !user.effectiveAccess.isManager → true system admin.
+                               • A user with system role 'viewer' who is assigned
+                                 as an editor on this specific object will have:
+                                   roles: ['viewer', 'editor']
+                                   effectiveAccess: { isViewer: true, isEditor: true, isManager: false }
+                                 Use roles for simple gating, effectiveAccess
+                                 when you need to distinguish system vs object.
 tool.onUserChange(cb)        → cb(user) — fires when the session user changes.
                                user is null when logged out.
 
