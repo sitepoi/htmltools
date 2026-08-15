@@ -32,6 +32,10 @@ body { padding-top: 28px !important; margin: 0; }
   <span class="sep">|</span>
   <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
   <span class="sep">|</span>
+  <span class="hint">URL: ?view=present | ?view=manage</span>
+  <span class="sep">|</span>
+  <span class="hint">💡 Open 2 tabs — data syncs live</span>
+  <span class="sep">|</span>
   <span id="th-status" class="hint">Loading…</span>
 </div>
 <div id="app-container"></div>
@@ -50,6 +54,16 @@ body { padding-top: 28px !important; margin: 0; }
     catch(e) { _value = null; }
   }
   function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  // Cross-tab live sync: when ANOTHER tab of this harness saves data, broadcast it
+  // to this tab — simulates the CMS firing tool.onValueChange() across sessions.
+  window.addEventListener('storage', function(e) {
+    if (e.key !== STORAGE_KEY || !e.newValue) return;
+    try {
+      _value = JSON.parse(e.newValue);
+      listeners.valueChange.forEach(function(cb) { try { cb(_value); } catch(err) {} });
+    } catch(err) {}
+  });
 
   window.tool = {
     getValue: function() { return _value; },
@@ -156,6 +170,7 @@ var EMBEDDED_HTML = '\
           <h1 class="brand-title" id="header-title">Fundraising Campaign</h1>\
           <p class="brand-sub" id="header-sub">Loading…</p>\
         </div>\
+        <span class="live-badge" id="live-badge" style="display:none"><span class="live-dot"></span>LIVE</span>\
       </div>\
       <div class="header-actions" id="header-actions">\
         <div class="view-toggle" id="view-toggle">\

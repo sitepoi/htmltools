@@ -253,11 +253,11 @@ function _peopleCols() {
 	};
 }
 function cashCell(c) {
-	if (cashStd()) return { donor: String(c.donorName || ''), date: String(c.date || ''), amount: Number(c.amount) || 0, note: String(c.note || '') };
+	if (cashStd()) return { donor: String(c.donorName || ''), date: fmtDate(c.date), amount: Number(c.amount) || 0, note: String(c.note || '') };
 	var cols = _cashCols();
 	return {
 		donor: cols.donor ? String(c[cols.donor] || '') : String(c.donorName || c.Name || ''),
-		date: cols.date ? String(c[cols.date] || '') : String(c.Date || ''),
+		date: cols.date ? fmtDate(c[cols.date]) : fmtDate(c.Date),
 		amount: cols.amount ? (parseFloat(String(c[cols.amount]).replace(/[^0-9.]/g, '')) || 0) : (Number(c.amount) || Number(c.Income) || 0),
 		note: cols.note ? String(c[cols.note] || '') : String(c.Explanation || '')
 	};
@@ -369,7 +369,7 @@ function renderInvoiceList() {
 			'<td><span class="badge" style="background:var(--c-blue-bg);color:var(--c-blue);border:1px solid var(--c-blue-mid)">' + esc(String(row[QB_COLS.transactionType] || 'Invoice')) + '</span></td>' +
 			'<td><span class="donor-name">' + esc(String(row[QB_COLS.donor] || '')) + '</span></td>' +
 			'<td><span class="invoice-no">' + esc(String(row[QB_COLS.invoice] || '')) + '</span></td>' +
-			'<td style="font-size:12px;color:var(--c-text2)">' + esc(String(row[QB_COLS.date] || '')) + '</td>' +
+			'<td style="font-size:12px;color:var(--c-text2)">' + esc(fmtDate(row[QB_COLS.date])) + '</td>' +
 			'<td class="invoice-amount">' + fmt(amt) + '</td>' +
 			'<td class="invoice-balance ' + balClass + '">' + fmt(bal) + '</td>';
 		tbody.appendChild(tr);
@@ -618,7 +618,7 @@ function restoreFromValue(val) {
 			pct: r.pct || 0,
 			qbPaid: (r.qbPaid !== undefined && r.qbPaid !== null) ? (Number(r.qbPaid) || 0)
 				: Math.max(0, (Number(r.pledged) || 0) - (Number(r.balance) || 0)),
-			payments: Array.isArray(r.payments) ? r.payments.map(function (p) { return { date: String(p.date || ''), amount: Number(p.amount) || 0, note: String(p.note || '') }; }) : []
+			payments: Array.isArray(r.payments) ? r.payments.map(function (p) { return { date: fmtDate(p.date), amount: Number(p.amount) || 0, note: String(p.note || '') }; }) : []
 		};
 	});
 
@@ -908,6 +908,24 @@ function refreshExplOptions() {
 function normalize(str) { return String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim(); }
 function fmt(n) { return '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function fmtDate(v) {
+	if (v === undefined || v === null || v === '') return '';
+	if (v instanceof Date) return v.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	var s = String(v).trim();
+	if (!s) return '';
+	// Full Date.toString() output, e.g. 'Fri Jul 10 2026 00:00:00 GMT-0700 ...'
+	if (/^\w{3} \w{3} \d{1,2} \d{4}/.test(s)) {
+		var d = new Date(s);
+		if (!isNaN(d.getTime())) return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+	// ISO date / datetime, e.g. '2026-07-10' or '2026-07-10T07:00:00.000Z'
+	var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (m) {
+		var d2 = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+		return d2.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	}
+	return s;
+}
 function v(id) { return document.getElementById(id).value; }
 function badge(status) {
 	return status === 'paid' ? '<span class="badge badge-paid">Paid</span>'
@@ -971,7 +989,7 @@ function combine() {
 			if (!key) return;
 			if (!cashPayMap[key]) cashPayMap[key] = [];
 			cashPayMap[key].push({
-				date: String(row.date || ''),
+				date: fmtDate(row.date),
 				amount: Number(row.amount) || 0,
 				note: String(row.note || '')
 			});
@@ -992,7 +1010,7 @@ function combine() {
 			if (!key) return;
 			if (!cashPayMap[key]) cashPayMap[key] = [];
 			cashPayMap[key].push({
-				date: cashDateC ? String(row[cashDateC] || '') : '',
+				date: cashDateC ? fmtDate(row[cashDateC]) : '',
 				amount: parseFloat(String(row[cashAmC]).replace(/[^0-9.]/g, '')) || 0,
 				note: cashNoteC ? String(row[cashNoteC] || '') : ''
 			});
@@ -1251,7 +1269,7 @@ function combine() {
 				donor: r.donor, group: r.group, phone: r.phone, invoice: r.invoice,
 				date: r.date, pledged: r.pledged, paid: r.paid, balance: r.balance,
 				status: r.status, pct: r.pct, qbPaid: r.qbPaid,
-				payments: (r.payments || []).map(function (p) { return { date: String(p.date || ''), amount: Number(p.amount) || 0, note: String(p.note || '') }; })
+				payments: (r.payments || []).map(function (p) { return { date: fmtDate(p.date), amount: Number(p.amount) || 0, note: String(p.note || '') }; })
 			};
 		}),
 		unpledgedRecords: unpledged.map(function (r) {
@@ -1350,7 +1368,7 @@ function renderFlat() {
 			'<td><div class="donor-name">' + esc(r.donor) + '</div>' + (r.phone ? '<div style="font-size:11px;color:var(--c-text3);margin-top:2px">' + esc(r.phone) + '</div>' : '') + '</td>' +
 			'<td><span style="font-size:11px;font-weight:700;color:var(--c-blue);background:var(--c-blue-bg);padding:2px 8px;border-radius:12px">' + esc(r.group) + '</span></td>' +
 			'<td><span class="invoice-no">' + esc(r.invoice) + '</span></td>' +
-			'<td style="color:var(--c-text2);font-size:12px">' + esc(r.date) + '</td>' +
+			'<td style="color:var(--c-text2);font-size:12px">' + esc(fmtDate(r.date)) + '</td>' +
 			'<td style="font-weight:800">' + fmt(r.pledged) + '</td>' +
 			'<td style="font-weight:800;color:var(--c-green)">' + fmt(r.paid) + '</td>' +
 			'<td style="font-weight:800;color:var(--c-red)">' + fmt(r.balance) + '</td>' +
@@ -1363,8 +1381,8 @@ function renderFlat() {
 		dtr.className = 'detail-row';
 		dtr.style.display = 'none';
 		var payHtml = r.payments && r.payments.length
-			? '<table style="width:100%"><thead><tr><th>Date</th><th>Amount</th><th>Note</th></tr></thead><tbody>' +
-			r.payments.map(function (p) { return '<tr><td>' + esc(p.date) + '</td><td style="color:var(--c-green);font-weight:700">' + fmt(p.amount) + '</td><td style="color:var(--c-text2)">' + esc(p.note) + '</td></tr>'; }).join('') +
+			? '<table class="pay-table" style="width:100%"><thead><tr><th>Date</th><th>Amount</th><th>Note</th></tr></thead><tbody>' +
+			r.payments.map(function (p) { return '<tr><td class="pay-date">' + esc(fmtDate(p.date)) + '</td><td class="pay-amount">' + fmt(p.amount) + '</td><td class="pay-note">' + esc(p.note) + '</td></tr>'; }).join('') +
 			'</tbody></table>'
 			: '<p style="font-size:12px;color:var(--c-text3)">No cash payments recorded.</p>';
 		var cashPaid = (r.payments || []).reduce(function (s, p) { return s + (Number(p.amount) || 0); }, 0);
@@ -1438,7 +1456,7 @@ function renderGroupView() {
 				return '<tr>' +
 					'<td><div class="donor-name">' + esc(r.donor) + '</div>' + (r.phone ? '<div style="font-size:11px;color:var(--c-text3)">' + esc(r.phone) + '</div>' : '') + '</td>' +
 					'<td><span class="invoice-no">' + esc(r.invoice) + '</span></td>' +
-					'<td style="font-size:12px;color:var(--c-text2)">' + esc(r.date) + '</td>' +
+					'<td style="font-size:12px;color:var(--c-text2)">' + esc(fmtDate(r.date)) + '</td>' +
 					'<td style="font-weight:800">' + fmt(r.pledged) + '</td>' +
 					'<td style="color:var(--c-green);font-weight:700">' + fmt(r.paid) + '</td>' +
 					'<td style="color:var(--c-red);font-weight:700">' + fmt(r.balance) + '</td>' +
@@ -1529,7 +1547,7 @@ function renderCards() {
 		var card = document.createElement('div');
 		card.className = 'donor-card';
 		var payRows = r.payments && r.payments.length
-			? r.payments.map(function (p) { return '<div class="dc-pay-row"><span>' + esc(p.date) + '</span><span style="color:var(--c-green);font-weight:700">' + fmt(p.amount) + '</span><span style="color:var(--c-text3)">' + esc(p.note) + '</span></div>'; }).join('')
+			? r.payments.map(function (p) { return '<div class="dc-pay-row"><span class="pay-date">' + esc(fmtDate(p.date)) + '</span><span style="color:var(--c-green);font-weight:700">' + fmt(p.amount) + '</span><span style="color:var(--c-text3)">' + esc(p.note) + '</span></div>'; }).join('')
 			: '<div style="color:var(--c-text3)">No cash payments</div>';
 		card.innerHTML =
 			'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">' +
@@ -1539,7 +1557,7 @@ function renderCards() {
 			'<div class="dc-bar"><div class="dc-bar-fill" style="width:' + r.pct + '%;background:' + fillGrad + '"></div></div>' +
 			'<div style="text-align:right;font-size:10px;color:var(--c-text3);margin-bottom:6px;font-weight:600">' + r.pct + '% complete</div>' +
 			'<div class="dc-row"><span class="label">Invoice #</span><span class="invoice-no">' + esc(r.invoice) + '</span></div>' +
-			'<div class="dc-row"><span class="label">Date</span><span>' + esc(r.date) + '</span></div>' +
+			'<div class="dc-row"><span class="label">Date</span><span>' + esc(fmtDate(r.date)) + '</span></div>' +
 			'<div class="dc-row"><span class="label">Pledged</span><span style="font-weight:800">' + fmt(r.pledged) + '</span></div>' +
 			'<div class="dc-row"><span class="label">Paid</span><span style="color:var(--c-green);font-weight:800">' + fmt(r.paid) + '</span></div>' +
 			'<div class="dc-row"><span class="label">Balance</span><span style="color:var(--c-red);font-weight:800">' + fmt(r.balance) + '</span></div>' +
@@ -1741,7 +1759,7 @@ function exportExcel() {
 		flHeader
 	];
 	flSorted.forEach(function (r) {
-		flAoa.push([r.group, r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
+		flAoa.push([r.group, r.donor, r.phone, r.invoice, fmtDate(r.date), +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
 	});
 	flAoa.push(['TOTAL', '', '', '', '', +fmtNum(totals.pledged), +fmtNum(totals.paid), +fmtNum(totals.balance), tPctAll, barText(tPctAll), '']);
 	var wsAll = XLSX.utils.aoa_to_sheet(flAoa);
@@ -1837,7 +1855,7 @@ function exportExcel() {
 			gHeader
 		];
 		members.forEach(function (r) {
-			gAoa.push([r.donor, r.phone, r.invoice, r.date, +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
+			gAoa.push([r.donor, r.phone, r.invoice, fmtDate(r.date), +fmtNum(r.pledged), +fmtNum(r.paid), +fmtNum(r.balance), r.pct, barText(r.pct), statusText(r.status)]);
 		});
 		gAoa.push(['TOTAL', '', '', '', +fmtNum(tP), +fmtNum(tPd), +fmtNum(tB), gPct, barText(gPct), '']);
 		var wsG = XLSX.utils.aoa_to_sheet(gAoa);

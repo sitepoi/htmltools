@@ -66,6 +66,44 @@ var pendingImportRows = null;
 var pendingPasteRows = null;
 var AVATAR_COLORS = ['#2563eb','#7c3aed','#16a34a','#d97706','#0d9488','#dc2626','#ea580c','#8b5cf6','#059669','#c2410c'];
 
+/* ── LIVE SYNC (cross-session updates) ──
+   Other instances of this tool call tool.setValue() → the CMS fires
+   tool.onValueChange() here. We re-render and flash a LIVE indicator. */
+var _liveDebounce = null;
+var _liveBadgeTimer = null;
+var _liveFlashTimer = null;
+
+function flashLiveUpdate() {
+  var targets = qsa('.stat-card, .progress-section');
+  targets.forEach(function (t) { t.classList.add('live-flash'); });
+  if (_liveFlashTimer) clearTimeout(_liveFlashTimer);
+  _liveFlashTimer = setTimeout(function () {
+    targets.forEach(function (t) { t.classList.remove('live-flash'); });
+  }, 1400);
+}
+
+function showLiveBadge() {
+  var b = el('live-badge');
+  if (!b) return;
+  b.style.display = 'inline-flex';
+  if (_liveBadgeTimer) clearTimeout(_liveBadgeTimer);
+  _liveBadgeTimer = setTimeout(function () { b.style.display = 'none'; }, 3000);
+}
+
+function handleExternalValue(v) {
+  var incoming = v ? JSON.stringify(v) : '';
+  var current = JSON.stringify(state);
+  if (incoming === current) return;  // echo of our own save, or identical data — skip re-render
+  if (_liveDebounce) clearTimeout(_liveDebounce);
+  _liveDebounce = setTimeout(function () {
+    loadState(v);
+    renderAll();
+    flashLiveUpdate();
+    showLiveBadge();
+    tool.notify('Live update received', 'info');
+  }, 150);
+}
+
 /* ── PERSISTENCE ── */
 function persist() {
   tool.setValue(state);
@@ -298,6 +336,25 @@ function renderDashboard() {
   renderSourceCards();
 }
 
+/* ── INITIAL VIEW (querystring → admin param → default) ── */
+function getInitialView() {
+  // 1) URL querystring: ?view=present / ?view=manage (also accepts mode=, dashboard, table)
+  try {
+    var qp = new URLSearchParams(window.location.search);
+    var qv = String(qp.get('view') || qp.get('mode') || '').toLowerCase();
+    if (qv === 'present' || qv === 'dashboard' || qv === 'p') return 'dashboard';
+    if (qv === 'manage' || qv === 'table' || qv === 'm') return 'manage';
+  } catch (e) { /* ignore */ }
+  // 2) Admin-configured tool param: initialView
+  try {
+    var pv = String(tool.param('initialView', '') || '').toLowerCase();
+    if (pv === 'present' || pv === 'dashboard') return 'dashboard';
+    if (pv === 'manage' || pv === 'table') return 'manage';
+  } catch (e) { /* ignore */ }
+  // 3) Default
+  return 'manage';
+}
+
 function switchView(view) {
   currentView = view;
   el('dashboard-panels').style.display = view === 'dashboard' ? 'block' : 'none';
@@ -306,6 +363,12 @@ function switchView(view) {
   el('btn-view-manage').classList.toggle('active', view === 'manage');
   document.body.classList.toggle('view-dashboard', view === 'dashboard');
   document.body.classList.toggle('view-manage', view === 'manage');
+  // Persist the chosen view in the URL so a reload lands on the same view
+  try {
+    var url = new URL(window.location.href);
+    url.searchParams.set('view', view === 'dashboard' ? 'present' : 'manage');
+    window.history.replaceState(null, '', url.toString());
+  } catch (e) { /* ignore */ }
   if (view === 'dashboard') renderDashboard();
   scheduleResize();
 }
@@ -318,9 +381,12 @@ function renderAll() {
   } else {
     renderTable();
   }
-  el('input-campaign-name').value = state.campaignName;
-  el('input-target-amount').value = state.targetAmount;
-  el('input-currency').value = state.currency;
+  // Don't overwrite the fields while the operator is mid-edit in the target modal
+  if (el('target-overlay').style.display !== 'flex') {
+    el('input-campaign-name').value = state.campaignName;
+    el('input-target-amount').value = state.targetAmount;
+    el('input-currency').value = state.currency;
+  }
   scheduleResize();
 }
 
@@ -770,16 +836,24 @@ tool.onReady(function (val, fields) {
   bindEvents();
   loadState(val);
   updateSortButtons();
-  switchView('manage');  // ensure body class + panel visibility are synced on initial load
+  switchView(getInitialView());  // querystring ?view=present|manage → admin param → default manage
   renderAll();
   if (tool.isReadOnly()) lockUI(true);
 
-  tool.onValueChange(function (v) { loadState(v); renderAll(); });
+  tool.onValueChange(function (v) { handleExternalValue(v); });  // LIVE: another session/user changed the data
   tool.onFieldsChange(function () {}); // No sibling fields to sync
   tool.onReadonlyChange(function (ro) { lockUI(ro); });
 
   // Declare params for admin configuration
   tool.declareParams([
+    {
+      name: 'initialView',
+      label: 'Initial View',
+      type: 'text',
+      default: 'manage',
+      hint: "Which view to show on load: 'present' or 'manage'. A ?view=present|manage querystring on the page URL overrides this.",
+      severity: 'optional'
+    },
     {
       name: 'defaultCurrency',
       label: 'Default Currency',
@@ -797,6 +871,18 @@ tool.onReady(function (val, fields) {
       severity: 'optional'
     }
   ]);
+
+  // Declare the JSON shape of the saved value
+  tool.declareOutput({
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      campaignName: { type: 'string' },
+      targetAmount: { type: 'number' },
+      currency: { type: 'string' },
+      donations: { type: 'array', items: { type: 'object' } }
+    }
+  });
 
   tool.reportValid(true);
 });

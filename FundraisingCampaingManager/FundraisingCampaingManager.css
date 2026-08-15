@@ -513,6 +513,32 @@ body.view-dashboard .brand-icon { width: 44px; height: 44px; }
 body.view-dashboard .brand-title { cursor: pointer; user-select: none; }
 body.view-dashboard .brand-title:hover { color: var(--c-accent); }
 
+/* ── LIVE SYNC INDICATOR ── */
+.live-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 100px;
+  background: var(--c-green-bg); color: var(--c-green);
+  font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
+  border: 1px solid var(--c-green-mid);
+  white-space: nowrap;
+}
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--c-green); animation: livePulse 1.2s infinite;
+}
+@keyframes livePulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── LIVE FLASH ON EXTERNAL UPDATE ── */
+.live-flash { animation: liveFlash 1.4s ease; }
+@keyframes liveFlash {
+  0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.55); }
+  100% { box-shadow: 0 0 0 20px rgba(74,222,128,0); }
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
   .stats-row { grid-template-columns: repeat(2, 1fr); }

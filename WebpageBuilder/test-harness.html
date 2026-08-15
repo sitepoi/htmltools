@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webpage Builder — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="WebpageBuilder.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1e1b2e; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a78bfa; letter-spacing: 0.5px; }
+#th-bar .sep { color: #6f6790; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #7c3aed; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .hint { color: #a5a0b8; font-size: 10px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Webpage Builder</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Page</button>
+  <button class="btn-ro" id="th-toggle-ro">Toggle Read-Only</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+
+<!-- TOOL HTML INLINED (mirrors WebpageBuilder.html) -->
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">🎨</div>
+      <div class="header-title">
+        <h1>Webpage Builder</h1>
+        <span class="header-sub">AI-First • Chat-Driven • Single-Page Web Design Studio</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Page Settings">⚙️ Settings</button>
+      <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
+      <button class="btn btn-sm btn-ghost" id="btn-guide" title="View active rules (generalwebsite-page-rules.txt)">📐 Rules</button>
+      <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
+      <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Studio (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab chat-tab-dev" data-chat-tab="response" style="display:none">📥 Response</button>
+        <button class="chat-tab chat-tab-dev" data-chat-tab="prompt" style="display:none">📤 Prompt</button>
+        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">🪄</div>
+              <h3>Describe your webpage</h3>
+              <p>Tell me what page you need — <b>a restaurant menu page, a company profile, a product launch page…</b> — and I'll design &amp; build it for you, section by section.</p>
+              <div class="template-gallery" id="template-gallery"></div>
+              <div class="template-view-all"><button id="btn-view-all-templates">View all 8 page templates →</button></div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — I'll interview you about your page step by step.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Raw Response (developer only) -->
+        <div class="chat-tab-panel" data-chat-panel="response">
+          <div class="dev-raw-panel-inline">
+            <div class="dev-raw-header">
+              <span class="dev-raw-title">🔧 Raw AI Response</span>
+              <span class="dev-raw-status" id="dev-raw-status"></span>
+            </div>
+            <pre class="dev-raw-content" id="dev-raw-content"></pre>
+          </div>
+        </div>
+        <!-- Tab: Raw Prompt (developer only) -->
+        <div class="chat-tab-panel" data-chat-panel="prompt">
+          <div class="dev-raw-panel-inline">
+            <div class="dev-raw-header">
+              <span class="dev-raw-title">📤 Raw AI Prompt</span>
+              <span class="dev-raw-status" id="dev-prompt-status"></span>
+            </div>
+            <pre class="dev-raw-content" id="dev-prompt-content"></pre>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-attachment" id="chat-attachment" style="display:none">
+        <span class="attach-icon">📎</span>
+        <span class="attach-name" id="attach-name"></span>
+        <span class="attach-size" id="attach-size"></span>
+        <button class="attach-remove" id="attach-remove" title="Remove attachment">✕</button>
+        <span class="attach-status" id="attach-status"></span>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-input-toolbar">
+          <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a reference file (mockup, logo, spec doc…)">📎 Attach</button>
+          <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your webpage or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Studio Panel -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="preview">👁️ Preview</button>
+        <button class="ctab" data-tab="sections">🧩 Sections</button>
+        <button class="ctab" data-tab="compliance">🧪 Compliance</button>
+        <button class="ctab" data-tab="html">📄 HTML</button>
+        <button class="ctab" data-tab="css">🎨 CSS</button>
+        <button class="ctab" data-tab="js">⚡ JS</button>
+        <button class="ctab" data-tab="console">🪲 Console</button>
+        <button class="ctab" data-tab="settings">⚙️ Settings</button>
+        <div class="content-actions" id="content-actions" style="display:none">
+          <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
+          <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
+        </div>
+      </div>
+
+      <div class="content-editors">
+        <!-- Preview -->
+        <div class="content-editor active" id="editor-preview">
+          <div class="preview-toolbar">
+            <div class="browser-chrome">
+              <span class="browser-dots"><i></i><i></i><i></i></span>
+              <span class="browser-url" id="preview-url">—</span>
+            </div>
+            <div class="device-toggle" id="device-toggle">
+              <button class="dev-btn active" data-device="desktop" title="Desktop view">🖥️</button>
+              <button class="dev-btn" data-device="tablet" title="Tablet view (768px)">📱</button>
+              <button class="dev-btn" data-device="mobile" title="Mobile view (390px)">📲</button>
+            </div>
+            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          </div>
+          <div class="preview-stage" id="preview-stage">
+            <div class="preview-frame-wrap" id="preview-frame-wrap">
+              <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups"></iframe>
+            </div>
+            <div class="preview-empty" id="preview-empty">
+              <div class="empty-icon">👁️</div>
+              <p>Your webpage will appear here</p>
+              <p class="empty-sub">Describe your page in the chat to generate it</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sections -->
+        <div class="content-editor" id="editor-sections">
+          <div class="sections-panel">
+            <div class="sections-header">
+              <h2>🧩 Page Sections</h2>
+              <p>Detected from your page. Click a section to scroll to it in Preview.</p>
+              <button class="btn btn-sm btn-ghost" id="btn-sections-refresh">↻ Rescan</button>
+            </div>
+            <div class="quick-add-row" id="quick-add-row" style="display:none">
+              <span class="quick-add-label">➕ Add a section:</span>
+              <button class="qa-chip" data-qa="testimonials">Testimonials</button>
+              <button class="qa-chip" data-qa="pricing">Pricing</button>
+              <button class="qa-chip" data-qa="faq">FAQ</button>
+              <button class="qa-chip" data-qa="team">Team</button>
+              <button class="qa-chip" data-qa="gallery">Gallery</button>
+              <button class="qa-chip" data-qa="contact">Contact</button>
+              <button class="qa-chip" data-qa="cta">Call-to-action</button>
+            </div>
+            <div class="sections-list" id="sections-list">
+              <div class="sections-empty">No sections yet. Generate a page first — or use the quick-add buttons above once you have one.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compliance -->
+        <div class="content-editor" id="editor-compliance">
+          <div class="compliance-panel">
+            <div class="compliance-header">
+              <h2>🧪 Rules Compliance Checker</h2>
+              <p>Automated checks against the active rules file — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
+              <div class="compliance-actions">
+                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
+                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page against every rule">🤖 AI Review</button>
+                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
+              </div>
+              <div class="rules-source-note" id="rules-source-note"></div>
+            </div>
+            <div class="compliance-score" id="compliance-score"></div>
+            <div class="compliance-list" id="compliance-list">
+              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
+            </div>
+            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
+              <div class="ai-review-status" id="ai-review-status"></div>
+              <pre class="ai-review-output" id="ai-review-output"></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- HTML Editor -->
+        <div class="content-editor" id="editor-html">
+          <div class="code-lines" id="html-lines"></div>
+          <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
+        </div>
+        <!-- CSS Editor -->
+        <div class="content-editor" id="editor-css">
+          <div class="code-lines" id="css-lines"></div>
+          <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
+        </div>
+        <!-- JS Editor -->
+        <div class="content-editor" id="editor-js">
+          <div class="code-lines" id="js-lines"></div>
+          <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
+        </div>
+
+        <!-- Console -->
+        <div class="content-editor" id="editor-console">
+          <div class="console-output" id="console-output">
+            <div class="console-empty">🪲 Console output from the preview appears here.<br>Click buttons in the Preview tab and watch for logs and errors.</div>
+          </div>
+          <div class="console-actions">
+            <button class="btn btn-sm btn-ghost" id="btn-console-clear">🗑️ Clear</button>
+            <span class="console-count" id="console-count">0 entries</span>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="content-editor" id="editor-settings">
+          <div class="config-scroll">
+            <div class="config-header">
+              <h2>⚙️ Page Settings</h2>
+              <p>These settings guide the AI when it designs your page. Changes apply on the next generation.</p>
+            </div>
+
+            <div class="config-section">
+              <h3>🏷️ Identity</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Page Name <span class="req">*</span></label>
+                  <input type="text" id="f-page-name" class="form-input" placeholder="e.g. Sunrise Bakery — Home">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Page Type</label>
+                  <select id="f-page-type" class="form-input">
+                    <option value="landing">Landing / Marketing Page</option>
+                    <option value="saas">SaaS / Product Page</option>
+                    <option value="restaurant">Restaurant / Café</option>
+                    <option value="company">Company / Business Profile</option>
+                    <option value="portfolio">Portfolio</option>
+                    <option value="event">Event Page</option>
+                    <option value="product">Product Launch</option>
+                    <option value="realestate">Real Estate / Listings</option>
+                    <option value="coming-soon">Coming Soon</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Brand / Organization</label>
+                  <input type="text" id="f-brand-name" class="form-input" placeholder="e.g. Sunrise Bakery">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tagline / Slogan</label>
+                  <input type="text" id="f-tagline" class="form-input" placeholder="e.g. Fresh bread, baked with love">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Target Audience</label>
+                  <select id="f-audience" class="form-input">
+                    <option value="general">General Public</option>
+                    <option value="customers">Customers / Clients</option>
+                    <option value="investors">Investors / Partners</option>
+                    <option value="community">Community Members</option>
+                    <option value="students">Students</option>
+                    <option value="donors">Donors / Supporters</option>
+                    <option value="staff">Staff / Internal</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Language</label>
+                  <select id="f-lang" class="form-input">
+                    <option value="en">English</option>
+                    <option value="tr">Türkçe</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="es">Español</option>
+                    <option value="ar">العربية</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Favicon Emoji</label>
+                  <input type="text" id="f-favicon" class="form-input" maxlength="4" placeholder="🍞" style="text-align:center;font-size:18px">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">SEO Title</label>
+                  <input type="text" id="f-seo-title" class="form-input" placeholder="Shown in browser tab & search results">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">SEO Description</label>
+                <textarea id="f-seo-desc" class="form-input form-textarea" rows="2" placeholder="Short summary used by search engines and social sharing…"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">SEO Keywords (comma-separated)</label>
+                <input type="text" id="f-seo-keywords" class="form-input" placeholder="bakery, fresh bread, istanbul…">
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3>🎨 Design Direction</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Color Scheme</label>
+                  <select id="f-color-scheme" class="form-input">
+                    <option value="emerald">Emerald — fresh & natural</option>
+                    <option value="blue">Blue — trusted & professional</option>
+                    <option value="indigo">Indigo — modern tech</option>
+                    <option value="violet">Violet — creative & bold</option>
+                    <option value="rose">Rose — warm & friendly</option>
+                    <option value="amber">Amber — cozy & rustic</option>
+                    <option value="teal">Teal — calm & balanced</option>
+                    <option value="ocean">Ocean — deep blue gradient</option>
+                    <option value="forest">Forest — earthy & organic</option>
+                    <option value="sunset">Sunset — orange-pink gradient</option>
+                    <option value="mono">Monochrome — minimal black & white</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Typography</label>
+                  <select id="f-typography" class="form-input">
+                    <option value="modern-sans">Modern Sans — clean & readable</option>
+                    <option value="elegant-serif">Elegant Serif — classic & refined</option>
+                    <option value="friendly-rounded">Friendly Rounded — approachable</option>
+                    <option value="tech-mono">Tech Mono — developer vibe</option>
+                    <option value="editorial">Editorial — magazine style</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Visual Style</label>
+                  <select id="f-style-mode" class="form-input">
+                    <option value="modern">Modern & polished</option>
+                    <option value="minimal">Minimal & airy</option>
+                    <option value="bold">Bold & colorful</option>
+                    <option value="elegant">Elegant & luxurious</option>
+                    <option value="playful">Playful & fun</option>
+                    <option value="corporate">Corporate & serious</option>
+                    <option value="editorial">Editorial & typographic</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dark Mode</label>
+                  <select id="f-dark-mode" class="form-input">
+                    <option value="light-only">Light only</option>
+                    <option value="light-dark">Light + dark toggle</option>
+                    <option value="dark-first">Dark-first design</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3>🧩 Sections to Include</h3>
+              <div class="sec-grid">
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="hero" checked><span>🏠 Hero</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="about"><span>💬 About</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="features"><span>✨ Features</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="services"><span>🛠️ Services</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="stats"><span>📊 Stats</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="gallery"><span>🖼️ Gallery</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="testimonials"><span>⭐ Testimonials</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="pricing"><span>💰 Pricing</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="team"><span>👥 Team</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="faq"><span>❓ FAQ</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="contact"><span>✉️ Contact</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="cta"><span>📣 Call-to-Action</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="news"><span>📰 News / Blog</span></label>
+                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="footer" checked><span>🦶 Footer</span></label>
+              </div>
+              <div class="form-group" style="margin-top:12px">
+                <label class="form-label">Extra Style Notes</label>
+                <textarea id="f-style-notes" class="form-input form-textarea" rows="3" placeholder="Anything specific: 'big rounded cards', 'glassmorphism', 'animated gradient hero', 'sticky navbar with blur'…"></textarea>
+              </div>
+            </div>
+
+            <div class="config-actions">
+              <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Page (HTML + CSS + JS)</button>
+              <p class="gen-hint">Or just type what you want in the <b>💬 Chat</b> on the left — the AI understands natural language.</p>
+            </div>
+            <div id="gen-status" class="gen-status" style="display:none">
+              <div class="gen-status-icon">⏳</div>
+              <div class="gen-status-text" id="gen-status-text">Generating…</div>
+            </div>
+
+            <div class="config-section">
+              <h3>📦 Export</h3>
+              <div class="export-row">
+                <button class="btn btn-primary" id="btn-export-html">📥 Download .html</button>
+                <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
+                <button class="btn btn-outline" id="btn-export-gw-block" title="Copy a GeneralWebsite html-code block (JSON) ready to paste into sp_contents.blocks">📋 Copy GW html-code Block</button>
+                <button class="btn btn-outline" id="btn-export-gw-value" title="Copy only the combined html-code value (style + markup + script)">📋 Copy GW Block Value</button>
+                <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
+                <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
+              </div>
+              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array (see the 📐 Rules file, Section 3).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-backdrop" id="modal-backdrop" hidden></div>
+  <div class="modal" id="modal-history" style="display:none">
+    <div class="modal-header"><h3>📋 Generation History</h3><button class="btn-close" id="btn-close-history">✕</button></div>
+    <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Design your first page!</div></div>
+  </div>
+
+  <!-- Rules Modal (active rules + editor) -->
+  <div class="modal" id="modal-guide" style="display:none">
+    <div class="modal-header">
+      <h3>📐 GeneralWebsite Page Rules <span class="rules-source-label" id="rules-source-label"></span></h3>
+      <div class="modal-header-actions">
+        <button class="btn btn-sm btn-ghost" id="btn-edit-rules" style="display:none">✏️ Edit</button>
+        <button class="btn-close" id="btn-close-guide">✕</button>
+      </div>
+    </div>
+    <div class="modal-body rules-body">
+      <div class="rules-loading" id="rules-loading">Loading rules…</div>
+      <div id="guide-body"></div>
+      <div class="rules-edit-wrap" id="rules-edit-wrap" style="display:none">
+        <p class="rules-edit-hint">Paste the updated rules text here (generalwebsite-page-rules.txt). This overrides the built-in copy for this tool. The AI prompts and the compliance checker use the active rules automatically.</p>
+        <textarea id="rules-editor" class="rules-editor" spellcheck="false"></textarea>
+        <div class="rules-edit-actions">
+          <button class="btn btn-primary btn-sm" id="btn-rules-save">💾 Save Rules</button>
+          <button class="btn btn-ghost btn-sm" id="btn-rules-reset">↺ Reset to Built-in</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Template Detail Modal -->
+  <div class="modal" id="modal-template" style="display:none">
+    <div class="modal-header">
+      <h3 id="tpl-modal-title">📋 Template</h3>
+      <button class="btn-close" id="btn-close-template">✕</button>
+    </div>
+    <div class="template-modal-body">
+      <div class="template-modal-info">
+        <span class="tmi-icon" id="tpl-icon">🚀</span>
+        <div class="tmi-meta">
+          <div class="tmi-title" id="tpl-title">Template Name</div>
+          <div class="tmi-desc" id="tpl-desc">Description</div>
+        </div>
+      </div>
+      <div class="template-prompt-area">
+        <div class="template-prompt-label">✏️ Customize this brief — edit any part, then send to AI:</div>
+        <textarea id="tpl-prompt-text" class="template-prompt-text" spellcheck="false"></textarea>
+      </div>
+      <div class="template-modal-actions">
+        <button class="btn btn-ghost" id="btn-tpl-reset">↺ Reset to Original</button>
+        <button class="btn btn-primary" id="btn-tpl-use">🚀 Send to AI</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBEDDED GENERALWEBSITE PAGE RULES (v1.2) — injected verbatim into AI prompts.
+       The text below is HTML-entity escaped so it can never terminate this script element. -->
+  <script type="text/plain" id="page-guide-source" style="display:none">
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GENERALWEBSITE-PAGE-RULES.TXT  —  v1.2  (ALIGNED WITH THE ACTUAL CODEBASE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WHY v1.2 REPLACES v1.1
+──────────────────────
+v1.1 described an idealized architecture: a `window.gw` SDK, [METADATA]/[HTML]/
+[CSS]/[JS] output blocks, auto-scoped CSS, gw.db()/gw.service()/gw.api(),
+partials and page gating — NONE of which exist in the codebase yet.
+
+v1.2 describes what the GeneralWebsite platform ACTUALLY ingests today,
+grounded in the real implementation (verified against the code):
+
+  • Content is stored as CMS content records with `blocks[]` (Firestore
+    `sp_contents`), rendered by Next.js SSR (pages/[...param].js →
+    PageBlocks/dynamicPages/PageSSR/MainPageSSR → PageJSX/MainPageJSX →
+    FlatContent).
+  • `html-code` blocks DO execute custom JavaScript and hoist &lt;style&gt;/&lt;link&gt;
+    into &lt;head&gt;.  `html` blocks render raw markup but do NOT execute scripts.
+  • Metadata comes from the content's `seo` field (metaTitle/metaDesc/metaImage).
+  • There is NO window.gw SDK yet.  CMS JavaScript runs unsandboxed with full
+    DOM access (Section 15).
+
+Every capability that the platform does NOT support yet is marked [PLANNED]
+and itemized in the companion document:
+    zHTMLDOCS/generalwebsite-roadmap/generalwebsite-capability-roadmap.html   (how to build them)
+
+NOTE FOR YOUR UNICONHUB TOOL: generate content in the FORMAT DESCRIBED HERE
+(Section 3).  Do not emit the v1.1 [METADATA]/[CSS]/[JS] block syntax — the
+platform does not parse it.  Section 3.3 shows the exact mapping from the old
+syntax to the real format.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TABLE OF CONTENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. WHAT GENERALWEBSITE IS
+  2. ONE PAGE MODEL — SEO CONTENT + EMBEDDED WEB APPS
+  3. WHAT YOU DELIVER — THE CMS CONTENT RECORD (the real format)
+  4. HOW YOUR PAGE IS RENDERED (real pipeline, no iframe)
+  5. BLOCK TYPE REFERENCE (what exists today)
+  6. NUNJUCKS TEMPLATING (globals, filters, variables)
+  7. DATA CONNECTIVITY (object lists, forms, payments, email — real APIs)
+  8. SEO REQUIREMENTS FOR PUBLIC PAGES
+  9. PAGE METADATA &amp; STRUCTURED DATA (what is auto-generated)
+ 10. ROUTING &amp; DEEP LINKS
+ 11. MOBILE RESPONSIVENESS (Mandatory)
+ 12. AUTHENTICATION — what exists today (+ planned gating)
+ 13. ASSET HANDLING
+ 14. PERFORMANCE CONSTRAINTS
+ 15. SECURITY MODEL
+ 16. TESTING &amp; PREVIEW
+ 17. CAPABILITY MATRIX (EXISTS / PARTIAL / PLANNED)
+ 18. EXAMPLE: SEO LANDING PAGE (real format)
+ APPENDIX A — PLANNED window.gw SDK (future)
+ APPENDIX B — FIELD GLOSSARY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. WHAT GENERALWEBSITE IS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GeneralWebsite (GW) is the Uniconhub system that publishes public websites
+from CMS content.  You generate the INNER CONTENT of a page, stored as a
+content record (or you configure reusable pieces of it), and the platform
+renders it inside a live public website.
+
+  • Runs NATIVELY in the host page DOM — NEVER inside an iframe.
+  • Inherits the website's theme, global CSS/JS, SEO shell, navigation, footer.
+  • Full SEO — content is SSR-rendered into the page HTML and is indexable.
+  • Server-side Nunjucks templating on all text/html block values.
+  • Custom JavaScript CAN run (via `html-code` blocks) with full DOM access.
+  • Target audience: the general public.
+  • Mobile-responsive is MANDATORY (Section 11).
+
+You NEVER write &lt;html&gt;, &lt;head&gt;, or &lt;body&gt; tags.  Your output is only inner
+content embedded into an already running page.  [METADATA]/[HTML]/[CSS]/[JS]
+block syntax from v1.1 is NOT supported — see Section 3 for the real format.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. ONE PAGE MODEL — SEO CONTENT + EMBEDDED WEB APPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+There is ONE kind of output: a page composed of CMS blocks.  A page can be
+mostly informational, can contain interactive web applications (booking
+forms, calculators, product catalogs, payment checkout), or can mix both.
+Web apps are just ordinary `html-code` / `dynamic-form` / `object-query-list`
+blocks on the same page.
+
+Informational parts must follow Section 8 (SEO).  Interactive parts only need
+the starred (★) SEO basics and mobile responsiveness.
+
+DECLARATION COMMENT — a generator convention (the platform does NOT parse it,
+it exists for human/agent traceability only):
+
+  &lt;!-- GW-PAGE-ID: your-page-slug --&gt;
+
+For a shared/reusable piece use:
+
+  &lt;!-- GW-PARTIAL-ID: your-partial-name --&gt;
+
+(Partials are implemented today via `shared-content`, `settings-items`,
+`additions-*` and `page-header`/`page-footer` blocks — see Section 3.4.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. WHAT YOU DELIVER — THE CMS CONTENT RECORD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── 3.1 CONTENT RECORD ANATOMY (sp_contents) ───────────────────────────────────
+
+A page is one Firestore content record (collection `sp_contents`-&lt;tenant&gt;):
+
+  {
+    "contentId": "contact-us",          // stable ID = translation group id
+    "slug": "contact-us",               // URL slug (per language)
+    "tenantId": "...",                  // auto
+    "typeId": "...",                    // content type
+    "name": "Contact Us",
+    "meta": {
+      "language": "en",                 // en, es, fr, de, tr, it, pt, nl, pl, ru, sv
+      "category1": "page",              // category1/2/3; category1 === 'blog' ⇒ BlogPosting JSON-LD
+      "category2": "",
+      "category3": "",
+      "status": "enabled",              // 'enabled' | ...
+      "pageOrder": 1,
+      "isVisible": ""                   // 'no' hides the whole content
+    },
+    "seo": {                            // ← this is the [METADATA] of v1.1
+      "metaTitle": "Contact Us | Your Company",        // ≤ 60 chars (company name auto-appended)
+      "metaDesc": "Talk to our team. We reply within one business day.",  // ≤ 160 chars
+      "metaImage": "https://cdn.example.com/og/contact.jpg"               // og:image / featured image
+    },
+    "blocks": [ ... ]                   // Section 3.2
+  }
+
+Translation variants share the same `contentId` and differ in `slug` +
+`meta.language`.  The platform builds hreflang tags and the language switcher
+from these siblings automatically.
+
+── 3.2 BLOCK ANATOMY ──────────────────────────────────────────────────────────
+
+Each block:
+
+  {
+    "type": "html-code",                // 'html' | 'html-code' | 'text' | 'image' | 'json' | 'faq-item'
+    "value": "&lt;section&gt;...&lt;/section&gt;",  // depends on type (see Section 5)
+    "meta": {
+      "slug": "hero",                   // becomes the DOM id of the block wrapper
+      "name": "Hero",
+      "isVisible": "",                  // 'no' hides the block
+      "mobileDesktopVisibility": "",    // hide on mobile/desktop (component-specific)
+      "cssClassNames": "my-hero",       // extra className on html-code wrapper
+      "altText": "", "width": 600, "height": 300,   // image blocks
+      "groupId": ""
+    },
+    "css": "{\"paddingTop\":\"24px\"}",         // JSON string of React inline styles for the wrapper
+    "settingsJSON": "{}",                       // JSON string passed to the block component
+    "fullWidthBlockCss": "{}"                   // JSON string of styles for the full-width wrapper
+  }
+
+IMPORTANT: `css`, `settingsJSON`, `fullWidthBlockCss` must be JSON STRINGS of
+React inline-style objects (camelCase keys), NOT CSS text.
+
+── 3.3 MAPPING FROM THE v1.1 FORMAT TO THE REAL FORMAT ────────────────────────
+
+  v1.1                            →  REAL PLATFORM
+  ──────────────────────────────     ──────────────────────────────────────────
+  [METADATA] title                →  seo.metaTitle
+  [METADATA] description          →  seo.metaDesc
+  [METADATA] og:image             →  seo.metaImage
+  [METADATA] canonical            →  auto-generated from slug (Section 10);
+                                     override: seo.canonicalUrl  [PLANNED]
+  [METADATA] robots noindex       →  seo.noIndex            [PLANNED]
+  [METADATA] keywords             →  seo.keywords           [PLANNED]
+  [METADATA] schema               →  auto JSON-LD (Section 9);
+                                     arbitrary passthrough: seo.structuredDataJson [PLANNED]
+  [HTML] (markup only)            →  block { type: 'html', value: '...' }
+  [HTML] + [JS] + &lt;style&gt;         →  block { type: 'html-code', value: '&lt;style&gt;…&lt;/style&gt;
+                                     &lt;div&gt;…&lt;/div&gt;&lt;script&gt;…&lt;/script&gt;' }
+  [CSS]                           →  block.css (JSON inline styles) and/or a &lt;style&gt;
+                                     tag inside the html-code value (hoisted to &lt;head&gt;)
+  [JS]                            →  &lt;script&gt;…&lt;/script&gt; at the end of an html-code
+                                     block value (executed after the DOM is ready)
+  gw.onReady(cb)                  →  NO SDK YET — see Section 4 (script timing) and
+                                     Appendix A (planned SDK)
+
+── 3.4 REUSABLE PIECES THAT EXIST TODAY ───────────────────────────────────────
+
+  • shared-content — a json block with meta.slug === 'shared-content' and
+    value { "sharedContentId": "&lt;contentId&gt;" } splices another content's
+    blocks into the current page at that position.
+  • settings-items — site-wide content whose `css-variables` / `css-classes`
+    blocks are applied to every page (and compiled into /api/css/[host].css).
+  • additions-inside-head / additions-after-body-start /
+    additions-before-body-end — three fixed contentIds whose html/html-code
+    blocks are injected into the document &lt;head&gt; / after &lt;body&gt; start /
+    before &lt;/body&gt; (site-wide scripts, pixels, cookie banners).
+  • default-header / default-footer — site chrome contents; overridable per
+    page with `page-header` / `page-footer` blocks (meta.slug set, isVisible ≠ 'no').
+  • Partial WITH PARAMETERS ({% include 'x' with {...} %} style) is [PLANNED]
+    — see roadmap P6.
+
+── 3.5 HTML/CSS/JS WRITING RULES FOR GENERATED CODE ────────────────────────────
+
+  ✓ Never emit &lt;html&gt;, &lt;head&gt;, &lt;body&gt;, &lt;style&gt; or &lt;script&gt; outside a block.
+    &lt;style&gt;/&lt;script&gt; are allowed INSIDE an html-code block value only.
+  ✓ Prefix ALL your class names (e.g. `gw-` or page-specific prefix).  CSS
+    injected from html-code is global to the page — there is NO automatic
+    scoping in the platform today.
+  ✓ Block meta.slug becomes the DOM id — keep it unique within the page.
+  ✓ Nunjucks runs over html/html-code/text/markdown values with autoescape
+    OFF.  If your generated markup contains literal `{{ }}` or `{% %}` (e.g.
+    a client-side templating library), wrap it in {% raw %} ... {% endraw %}.
+  ✓ Escape user data yourself — no sanitizer runs anywhere (Section 15).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. HOW YOUR PAGE IS RENDERED (REAL PIPELINE — NO IFRAME)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Request → pages/index.js (home) or pages/[...param].js (everything else).
+     Both call shouldBlockRequest() (bot/traffic filtering), then MainPageSSR.
+  2. MainPageSSR resolves:
+       • language: context.locale, else env &lt;HOSTNAME_WITH_UNDERSCORES&gt;_default_language, else 'en'
+       • route → page id (Section 10)
+       • content by slug (getContentBySlug) → contentId + translation siblings
+       • fetch ids: ['default-header', &lt;pageId&gt;, 'settings-items', 'default-footer']
+         via getModifiedContentsByIds (data/utils/contentUtils.js)
+  3. getModifiedContentsByIds applies the pipeline:
+       • Nunjucks rendering of block values (Section 6)
+       • shared-content splicing
+       • object-query-list expansion (Section 7.1)
+       • i18n block variables
+       • css-classes / css-variables collection and substitution
+       • productData.data_categoriesBased → content.data
+  4. SSR returns props (ssr_contents, ssr_seoMeta, ssr_canonicalUrl,
+     ssr_hreflangTags, ssr_pageMainStructuredData, ssr_variablesForContent, ...).
+  5. MainPageJSX renders MainAppView → Layout1 → for each content → FlatContent,
+     which dispatches each block by `type` (Section 5).
+  6. html-code blocks: InjectedContent (PageBlocks/web/content-components/
+     InjectedContent.js) injects the HTML, hoists &lt;style&gt;/&lt;link rel="stylesheet"&gt;
+     into &lt;head&gt; (deduped), and executes &lt;script&gt; tags sequentially after a
+     double requestAnimationFrame — i.e. after the DOM is ready.  Inline
+     scripts run inside an IIFE (Blob URL) with error-swallowing timers, and
+     top-level named functions are hoisted to window so inline onclick
+     handlers work.  You do NOT need DOMContentLoaded — scripts already run
+     after render.  For SPA navigation re-inits, CMS chrome scripts are
+     re-run via a reinit registry.
+
+  SCRIPT TIMING RULE FOR GENERATED CODE:
+  Put everything in one &lt;script&gt; at the end of the html-code value.  Wrap
+  your code in an IIFE and namespace globals under one window object, e.g.
+  window.MyPage = { init: function(){ ... } }.  There is no gw.onReady yet.
+
+  YOU DO NOT CONTROL:
+  • &lt;title&gt;/&lt;meta&gt;/JSON-LD — they come from the content's seo field + the
+    platform's HeadAndMetaData component (Sections 8–9).
+  • The document shell, site header/footer (unless you use page-header /
+    page-footer / additions-*).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. BLOCK TYPE REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  TYPE           VALUE                        RENDERING
+  ──────────     ──────────────────────────   ─────────────────────────────────
+  html           raw HTML string              dangerouslySetInnerHTML.
+                                              Nunjucks-rendered.
+                                              ✗ &lt;script&gt; inside will NOT run.
+                                              ✗ &lt;style&gt; inside will NOT be hoisted.
+                                              Use for static markup only.
+
+  html-code      raw HTML string              InjectedContent: HTML injected,
+                                              &lt;style&gt;/&lt;link&gt; hoisted to &lt;head&gt;,
+                                              &lt;script&gt; executed (sequential).
+                                              Nunjucks-rendered.
+                                              Use when the page needs CSS or JS.
+
+  text           plain text                   rendered as escaped-ish text node.
+
+  image          { url, thumb_url }           next/image; alt/title/width/height
+                                              from meta.altText/meta.width/meta.height.
+
+  json           depends on meta.slug         dispatched to ContentComponentIncluder:
+    meta.slug === 'dynamic-form'                → DynamicForm (Section 7.2)
+    meta.slug === 'enduser-registration-form'   → EndUserRegistration
+    meta.slug === 'object-query-list'           → QueryList (Section 7.1)
+    meta.slug === 'new-uniconhub-company-account' → NewCompanySubDomain
+    meta.slug === 'flexbox-content'             → legacy layout (deprecated)
+    meta.slug === 'shared-content'              → content splicing (Section 3.4)
+    meta.slug === 'i18n'                        → translation variables (Section 6)
+    meta.slug === 'css-variables' / 'css-classes' / 'css-classes-sync-with-components'
+                                                → theme pipeline (Section 3.4)
+    meta.slug === 'page-header' / 'page-footer' → replaces default chrome
+    meta.slug === 'product-listing-component'   → LEGACY, do not use
+                                              (replaced by object-query-list)
+
+  faq-item       { question, answer }         visual rendering TEMPORARILY DISABLED;
+                                              FAQPage JSON-LD is still auto-generated
+                                              from these blocks (Section 9).
+
+  markdown       markdown text                Nunjucks-rendered but NOT displayed by
+                                              FlatContent today — avoid.
+
+  image-gallery  { imageList: [...] }         TEMPORARILY DISABLED — avoid.
+
+  Block meta controls (all types):
+    meta.isVisible === 'no'            → block hidden
+    meta.mobileDesktopVisibility       → hide per device class
+    meta.cssClassNames                 → extra className (html-code)
+    css / fullWidthBlockCss / settingsJSON → see 3.2
+
+  Every page automatically runs the hooks useScrollAnimation, useParallax and
+  useStickyHeader (FlatContent).  Generated code can use the classes they
+  watch: .block-effect-50 / -100 / -150 / -200 (scroll reveal) etc.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. NUNJUCKS TEMPLATING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Applied server-side (data/utils/templateUtils.js, autoescape: false) to the
+values of html, html-code, text, markdown blocks, to meta.slug/meta.name and
+to seo.metaTitle/metaDesc.
+
+  CONTEXT = whole content record + variablesFromParams + i18n block vars:
+    {{ slug }}, {{ name }}, {{ contentId }}          → content fields
+    {{ company_name }}                               → websiteSettings.texts.companyName
+    {{ templatedContentId }}                         → /t/ template pages
+    {{ current_language }}                           → page language
+    {{ lang_switcher_html }}                         → pre-built language links HTML
+    i18n block vars (Section 5)
+
+  GLOBALS (functions):
+    nextDays(n)  previousDays(n)  previousDate(n, 'YYYY-MM-DD')
+    futureDate(n, 'YYYY-MM-DD')   daysOfMonth(month)  monthsOfYear(year)
+
+  FILTERS:
+    endswith  nl2brSentences  bulletEachSentence  formatDate  linkify
+    formatNumberedList  wrapLinesWithDiv  bulletsToList
+
+  Example:
+    {% for day in nextDays(7) %}
+      &lt;div class="gw-slot"&gt;{{ day | formatDate('ddd, MMM D') }}&lt;/div&gt;
+    {% endfor %}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. DATA CONNECTIVITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── 7.1 OBJECT LISTS — object-query-list (READ) ────────────────────────────────
+
+  json block, meta.slug 'object-query-list', value:
+
+    {
+      "objectQueries": [
+        {
+          "cmsObjectType": "products-uniconbaseapps",
+          "folders": [ { "slug": "summer-collection", "maxCount": 8 } ],
+          "itemTemplateId": "product-card-template"
+        }
+      ],
+      "itemTemplateId": "default-product-card"
+    }
+
+  The platform loads the objects (om_objects / om_private_objects, respecting
+  the object type's publicAccess + parentTenants) and renders each item with
+  the Nunjucks template stored in the referenced `system-items` object.
+  Inside the item template the item's data is available; the object's
+  productData.data_categoriesBased is copied to `data`.
+
+  Object type visibility: rules.publicAccess === 'no' moves objects to a
+  private collection; per-user permissions.{email}.hasPermission further
+  filter reads.
+
+── 7.2 FORMS — dynamic-form (WRITE, no login needed) ──────────────────────────
+
+  json block, meta.slug 'dynamic-form'; the block VALUE is a JSON string with
+  the key `form-type-id` pointing to the form definition:
+
+    { "form-type-id": "quote-request-form" }
+
+  Form definition = a `system-items` object whose config json block describes:
+    dataDefinitions[]  (field types, validationRules, formulas)
+    destinationTable   (default 'forms'; 'users' stores roles:['customer'])
+    saveType           ('cmsObject' → saves as a CMS object instead)
+    afterSaveApiHooks  (e.g. call /api/email/sendEmail)
+
+  Capabilities: validation rules, cross-field formulas (moment, axios, xlsx,
+  fuse, context functions), dependent chaining, file upload (react-dropzone →
+  Firebase Storage folder from cmsParams.onlineStorageFolder), multilingual
+  labels.  NO captcha yet [PLANNED].  Form submissions land in the tenant's
+  Firestore `forms` collection (or destinationTable).
+
+── 7.3 PAYMENTS (Stripe) ──────────────────────────────────────────────────────
+
+  Existing API route: /api/pay/stripe/[...param]  (API-key gated)
+    mp  / str-002 → charge via stripe tokens
+    mpfi / str-003 → pay an invoice object (updates paymentStatus)
+  Client: PaymentSelection / PaymentCreditOnline (@stripe/react-stripe-js).
+  The v1.1 gw.service('createPayment') abstraction does NOT exist [PLANNED].
+
+── 7.4 EMAIL (AWS SES) ────────────────────────────────────────────────────────
+
+  /api/email/sendEmail — nodemailer + AWS SES.  Types: end-user-register,
+  new-form-submitted, your-form-submitted.  Trigger from form hooks.
+
+── 7.5 FILE UPLOAD ────────────────────────────────────────────────────────────
+
+  Via form upload fields (Section 7.2) — there is no standalone gw.service
+  ('upload') yet [PLANNED].
+
+── 7.6 [PLANNED] — NOT BUILT YET ──────────────────────────────────────────────
+
+  gw.service('search') (full-text) — fuse.js exists as a dependency; today
+    filtering is only via object-query-list folders/filters.
+  gw.service('exportPdf') — @react-pdf/renderer dependency exists; no route.
+  gw.service('ai') — no AI gateway wired.
+  gw.api() external proxy — no generic proxy route.
+  Native HTML form apps (window.gw.forms → /api/forms/submit) — the planned
+    replacement for dynamic-form: native &lt;form&gt; markup in html-code blocks
+    submitted through one secure endpoint.  See roadmap P0.4.
+  See zHTMLDOCS/generalwebsite-roadmap/generalwebsite-capability-roadmap.html for how to add these.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SEO REQUIREMENTS FOR PUBLIC PAGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Mandatory for the content sections of every generated page:
+
+  ★ EXACTLY ONE &lt;h1&gt; per page, first heading, containing the primary keyword.
+  ★ Logical heading hierarchy — never skip levels.
+  ★ Semantic HTML5: &lt;article&gt;, &lt;section&gt;, &lt;aside&gt;, &lt;nav&gt;.
+  ★ All images: alt text, width &amp; height, loading="lazy" (below the fold),
+    loading="eager" + fetchpriority="high" for the LCP hero image.
+  ★ Internal links: real &lt;a href="/..."&gt;.  For SPA navigation you may add
+    data-ic-nav-href="/path" — the platform intercepts it for soft navigation.
+  ★ Content visible in the HTML source WITHOUT JavaScript (SSR covers this
+    automatically — never render primary content from client JS only).
+
+  Meta (seo field):
+    metaTitle    50–60 chars, primary keyword first (company name is appended
+                 automatically by the platform when &lt; 50 chars)
+    metaDesc     140–160 chars
+    metaImage    absolute URL, 1200×630 recommended
+
+  Performance targets: total &lt; 2 MB; LCP &lt; 2.5 s; CLS &lt; 0.1; FID &lt; 100 ms.
+  Mobile-first indexing: ≥ 16 px body text, ≥ 48×48 px tap targets, no
+  horizontal scroll at 320 px.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. PAGE METADATA &amp; STRUCTURED DATA (WHAT IS AUTO-GENERATED)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HeadAndMetaData (PageBlocks/web/content-components/HeadAndMetaData.js) emits:
+
+  • &lt;title&gt; (truncated 60 + " | companyName"), meta description (160)
+  • og:title/description/image/url/type, twitter:card
+  • canonical (Section 10), hreflang + x-default
+  • favicon set, theme-color, google-site-verification
+  • Dublin Core DC.title/DC.description/DC.creator, last-modified
+
+JSON-LD auto-generated:
+  • WebPage (every page) — headline, description, image, publisher
+  • BlogPosting when meta.category1|2|3 === 'blog' (+ datePublished,
+    mainEntityOfPage)
+  • FAQPage from faq-item blocks
+  • Product + BreadcrumbList on /product/ pages
+  • Organization + SitelinksSearchBox (site-wide)
+
+NOT wired from CMS yet [PLANNED]:
+  seo.noIndex, seo.keywords, seo.canonicalUrl (override), and an arbitrary
+  seo.structuredDataJson passthrough.  Today every CMS page is index,follow
+  and canonical is always auto-derived.
+
+Bot-facing pages (all automatic): sitemap.xml index (+ /p/sitemap/*, per
+object-type sitemaps when objectType.webSettings.sitemapSettings.
+addObjectsToSitemap === 'yes'), robots.txt, feed.xml (blog RSS), llms.txt
+(merge of generated + a CMS 'llms-txt' content), /api/indexnow (pings
+api.indexnow.org).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. ROUTING &amp; DEEP LINKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Real route patterns today (pages/[...param].js):
+
+  /                       → content 'home-page' (per-language siblings)
+  /&lt;slug&gt;                 → page content (multilingual slug lookup)
+  /&lt;objectType&gt;/&lt;id&gt;      → CMS object page (e.g. /products/prod-123)
+  /t/&lt;templateId&gt;/&lt;contentId&gt; → template-based page; template is contentId
+                            pageId, {{ templatedContentId }} variable
+
+  Query params: ?showheader=&amp;showfooter= toggle chrome.
+  SPA navigation: links with data-ic-nav-href are intercepted (InjectedContent).
+
+  NO page-level :param route patterns exist yet (e.g. /blog/:post) [PLANNED].
+  Workarounds today:
+    • object pages already give you /&lt;type&gt;/&lt;id&gt; dynamic URLs;
+    • template pages give you /t/&lt;template&gt;/&lt;contentId&gt; with a Nunjucks
+      variable — ideal for generated detail pages.
+
+  Do NOT hardcode the domain — use relative paths everywhere.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. MOBILE RESPONSIVENESS (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Same rules as v1.1 (unchanged — they apply to generated code):
+
+  • Mobile-first CSS; breakpoints 640 / 768 / 1024 / 1280.
+  • Grid/Flexbox, relative units, max-width 1200px containers.
+  • Test 320 / 375 / 414 / 768 / 1024 / 1280 / 1440.
+  • Wide tables: wrap in overflow-x:auto.
+  • Forms: full-width inputs, labels above on mobile.
+  • Images: srcset / &lt;picture&gt;; videos: controls, no autoplay with sound,
+    respect prefers-reduced-motion.
+  • Touch targets ≥ 48×48 px; click/tap primary, hover only as enhancement.
+  • Input types: email/tel/number/date for correct mobile keyboards.
+  • CSS from html-code &lt;style&gt; is global to the page — use media queries and
+    prefixed class names; block-level css JSON handles block layout.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. AUTHENTICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+What exists:
+  • Firebase email/password auth (client SDK, per-tenant app via /api/relay/ras).
+  • Credentials cached in localStorage (email + base64 password) and restored
+    by AuthContext on load.
+  • Roles in the Firestore `users` collection (owner, admin, agent, enduser,
+    customer, ...) — used by admin UI and object permissions.
+  • End-user registration block: enduser-registration-form (creates Firebase
+    auth user + end_user_accounts doc + confirmation email).
+  • Login/logout/reset pages: /p/user/*.
+  • Object-level privacy: rules.publicAccess === 'no' → private collection.
+
+What does NOT exist [PLANNED]:
+  • No CMS-driven page gating (e.g. "require login to view this page").
+    MainPageJSX hardcodes withAuth={false} and SSR never checks auth.
+  • No gw.requireAuth().
+  See roadmap P4 for the plan (client-side gate + meta.requireAuth field).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. ASSET HANDLING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Images: use the `image` block (value.url) or &lt;img&gt; in html/html-code.
+    Host on Firebase Storage / the website media library — never hotlink
+    third-party images.  next/image optimizes `image` blocks automatically.
+  • Fonts: use the website's font stack.  Do NOT load Google Fonts — custom
+    fonts via additions-* only if required (and always with system fallbacks).
+  • External scripts (chat, maps, social embeds): place in additions-* or in
+    an html-code &lt;script&gt; (external src, loaded sequentially).  Prefer
+    website-level installs (Google Analytics, Google Tag, Meta Pixel, ShareThis
+    are already plug-in slots in website-settings.plugins).
+  • Libraries: the platform has moment, fuse.js, axios, react-pdf, stripe.js
+    in its bundle, but page scripts run in global scope — DO NOT import npm
+    packages from generated code; load extra libraries from CDN via
+    &lt;script src&gt; in an html-code block, or request bundling [PLANNED].
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. PERFORMANCE CONSTRAINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Budgets (per page): HTML &lt; 100 KB, CSS &lt; 50 KB, JS &lt; 200 KB, images
+  &lt; 1.5 MB, total &lt; 2.5 MB.  Content-only pages should stay well below
+  (~50 KB HTML / 30 KB CSS / 50 KB JS).
+
+  Platform behavior you get for free: SSR, 72 h CDN cache (Cache-Control
+  s-maxage=259200 + stale-while-revalidate), Vercel cache-tags
+  (content-&lt;id&gt;, host-&lt;host&gt;) for purge, PWA service worker (next-pwa),
+  next/image optimization, bot filtering.
+
+  ✗ No jQuery, no UI framework CDNs (Bootstrap/Tailwind), no tight polling,
+    no large JSON payloads, no setInterval &lt; 1 s, no DOM changes outside
+    your block wrapper.
+  ✓ Debounce inputs (300 ms), lazy-load below-fold images, use Intersection
+    Observer (the platform's useScrollAnimation already observes
+    .block-effect-* classes).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15. SECURITY MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The REAL model today (differs from v1.1):
+
+  • CMS content is written by trusted tenant admins/tools.  html-code blocks
+    execute arbitrary JavaScript with FULL page privileges (no sandbox).
+    Form formulas are evaluated with new Function().  InjectedContent
+    neutralizes inline onerror handlers and suppresses CMS-script errors,
+    but this is noise control, NOT a security boundary.
+  • There is NO HTML sanitization anywhere.  Generated pages MUST escape
+    user-generated data themselves (Nunjucks autoescape is OFF).  Sanitizing
+    object-list item templates is [PLANNED] (roadmap P3).
+  • Secrets must NEVER be placed in content — API keys live server-side in
+    env vars (Stripe, SES, IndexNow, revalidate secret).  There is no
+    per-page key storage.
+  • State-changing API routes are key-gated (checkAPIKey) and form writes go
+    through Firestore rules.
+  • If a page collects personal data, include a privacy notice / link.
+  • Known hardening backlog (fixes, not features): hardcoded AWS SES
+    credentials in /api/email/sendEmail, hardcoded Stripe fallback key line
+    in /api/pay/stripe, hardcoded API keys in data/utils/apiUtils.js,
+    base64 password in localStorage (see roadmap "housekeeping").
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+16. TESTING &amp; PREVIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  • Preview unpublished content: append ?cms-preview=1 (CMS header/footer
+    render even when status ≠ 'enabled').
+  • ?showheader=&amp;showfooter= to debug chrome.
+  • Localhost bypasses the CDN cache (cacheStatus !== disabled still caches
+    in prod; use websiteSettings.cmsParams.cacheStatus === 'disabled' to
+    disable per tenant).
+
+  Checklist (per generated page):
+  □ No JS console errors (Chrome/Firefox/Safari/Edge)
+  □ 320/375/768/1024 no horizontal scroll
+  □ All images alt + dimensions + load
+  □ One &lt;h1&gt;, correct heading hierarchy
+  □ Content visible with JS disabled (SSR check: view-source)
+  □ seo.metaTitle/metaDesc present; canonical + hreflang correct
+  □ JSON-LD valid (Google Rich Results Test)
+  □ Forms persist to Firestore (check destinationTable)
+  □ After-save hooks fire
+  □ Lighthouse: Perf ≥ 90 content / ≥ 70 interactive; A11y ≥ 90; SEO ≥ 90
+  □ No hardcoded absolute URLs
+  □ Generated scripts namespaced, no global collisions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+17. CAPABILITY MATRIX
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ EXISTS — ✅ | PARTIAL — 🔶 | PLANNED — ❌ (see roadmap)
+
+  ✅ Multi-tenant hostname → tenant → Firebase config resolution (/api/relay/ras)
+  ✅ Page by slug, multilingual (11 locales), hreflang + language switcher
+  ✅ Object pages /&lt;type&gt;/&lt;id&gt;; template pages /t/&lt;template&gt;/&lt;contentId&gt;
+  ✅ Nunjucks templating (globals + filters) on block values and seo fields
+  ✅ Raw HTML injection (html blocks) and full JS execution (html-code blocks)
+  ✅ Per-block CSS (css JSON), full-width css, cssClassNames, settingsJSON
+  ✅ Site-wide css-variables / css-classes + /api/css/[host].css stylesheet
+  ✅ Site-wide additions: additions-inside-head / -after-body-start / -before-body-end
+  ✅ SEO: seo.metaTitle/metaDesc/metaImage, canonical, og/twitter, JSON-LD
+     (WebPage/BlogPosting/FAQ/Product/Organization/Breadcrumb/Sitelinks)
+  ✅ Sitemaps, robots.txt, feed.xml, llms.txt, IndexNow
+  ✅ 72 h CDN cache + tagged purge (/api/revalidate)
+  ✅ Forms (dynamic-form): validation, formulas, file upload, hooks → Firestore
+  ✅ Payments (Stripe charge + invoice), email (SES), end-user registration
+  ✅ Analytics plug-ins: GA4 (gtag), Google Tag, Meta Pixel, ShareThis
+  ✅ PWA (next-pwa + /api/manifest), scroll/parallax/sticky hooks on all pages
+  ✅ Bot/traffic blocking (shouldBlockRequest)
+
+  🔶 Shared content splicing (shared-content) — whole-content splice only,
+     no parameters
+  🔶 Search — folder/filter object queries only; no full-text service
+  🔶 Object-level privacy (publicAccess / permissions) — but no PAGE gating
+
+  ❌ window.gw SDK (onReady, pageId, params, storage, track, navigate, notify,
+     showModal, sanitize) — roadmap P2
+  ❌ seo.noIndex / seo.keywords / seo.canonicalUrl / seo.structuredDataJson —
+     roadmap P1
+  ❌ Page gating (requireAuth / meta.requireAuth) — roadmap P4
+  ❌ HTML sanitization of generated/user content — roadmap P3
+  ❌ Partial include with parameters — roadmap P6
+  ❌ Page-level :param route patterns + query params as template variables —
+     roadmap P5
+  ❌ Services: search, exportPdf, ai, external API proxy — roadmap P7–P9
+  ❌ reCAPTCHA on public forms — roadmap P10
+  ❌ Native HTML form endpoint (gw.forms / /api/forms/submit) — roadmap P0.4
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+18. EXAMPLE: SEO LANDING PAGE (REAL FORMAT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Content record the generator should create (Firestore `sp_contents`):
+
+{
+  "contentId": "summer-sale-2026",
+  "slug": "summer-sale-2026",
+  "name": "Summer Sale 2026",
+  "typeId": "page",
+  "meta": {
+    "language": "en",
+    "category1": "page",
+    "status": "enabled"
+  },
+  "seo": {
+    "metaTitle": "Summer Sale 2026 — Up to 50% Off Outdoor Gear",
+    "metaDesc": "Save big on tents, hiking boots and camping stoves. Free shipping on orders over $75. Sale ends July 31.",
+    "metaImage": "https://cdn.example.com/og/summer-sale-2026.jpg"
+  },
+  "blocks": [
+    {
+      "type": "html-code",
+      "meta": { "slug": "hero", "name": "Hero" },
+      "css": "{\"paddingTop\":\"32px\"}",
+      "value": "&lt;!-- GW-PAGE-ID: summer-sale-2026 --&gt;\n&lt;style&gt;\n  .gw-sale-hero { text-align:center; padding:2rem 1rem; }\n  .gw-sale-hero h1 { font-size:2rem; }\n  @media (min-width:768px){ .gw-sale-hero h1 { font-size:2.5rem; } }\n&lt;/style&gt;\n&lt;section class=\"gw-sale-hero\"&gt;\n  &lt;span&gt;Limited Time&lt;/span&gt;\n  &lt;h1&gt;Summer Sale: Up to 50% Off&lt;/h1&gt;\n  &lt;p&gt;Tents, boots, stoves and more. Ends July 31.&lt;/p&gt;\n  &lt;a href=\"/products?tag=summer-sale\" class=\"gw-sale-cta\"&gt;Shop the Sale →&lt;/a&gt;\n&lt;/section&gt;\n&lt;script&gt;\n(function(){\n  var root = document.getElementById('hero');\n  if (root) { console.log('summer-sale hero ready'); }\n  // No gw SDK yet — use plain DOM APIs. Namespace everything!\n})();\n&lt;/script&gt;"
+    },
+    {
+      "type": "json",
+      "meta": { "slug": "object-query-list", "name": "Featured Deals" },
+      "value": "{ \"objectQueries\": [ { \"cmsObjectType\": \"products-uniconbaseapps\", \"folders\": [ { \"slug\": \"summer-collection\", \"maxCount\": 8 } ], \"itemTemplateId\": \"product-card-template\" } ] }"
+    },
+    { "type": "faq-item", "value": { "question": "How long does shipping take?", "answer": "Free standard shipping (5-7 business days) on orders over $75." } },
+    { "type": "faq-item", "value": { "question": "What is your return policy?", "answer": "Return any unused item within 30 days for a full refund." } },
+    {
+      "type": "json",
+      "meta": { "slug": "dynamic-form", "name": "Get a Quote" },
+      "value": "{ \"form-type-id\": \"quote-request-form\" }"
+    }
+  ]
+}
+
+NOTES:
+  • &lt;style&gt; and &lt;script&gt; live INSIDE the html-code value.
+  • The declaration comment is a convention only.
+  • faq-item blocks still emit FAQPage JSON-LD (visual rendering is disabled).
+  • An SEO intro section (h2 + text) should be added as an `html` block for
+    crawlable content — the h1 above is the single page heading.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APPENDIX A — PLANNED window.gw SDK (FUTURE — NOT AVAILABLE YET)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+v1.1 described this SDK as if it existed.  It does not — it is the proposed
+future surface.  Do NOT generate page code that depends on it until it ships.
+
+Planned surface (see roadmap P2):
+  gw.pageId, gw.language, gw.getPageParams(), gw.getUser(), gw.isAuthenticated(),
+  gw.login(returnUrl), gw.navigate(path), gw.openUrl(url), gw.storage.*,
+  gw.track(event, data), gw.notify(msg, severity), gw.showModal(html, opts),
+  gw.setLoading(bool), gw.sanitize(html)
+
+Planned service layer (roadmap P7–P9): gw.db.query/get (object reads),
+gw.service('submitForm' | 'createPayment' | 'sendEmail' | 'exportPdf' |
+'search' | 'ai'), gw.api.* proxy.
+
+Once shipped, this document will be re-versioned with the final SDK reference
+and the timing/lifecycle rules (gw.onReady etc.).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+APPENDIX B — FIELD GLOSSARY (verified against code)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Content: contentId, slug, tenantId, typeId, name, meta{}, seo{}, blocks[],
+            created, lastUpdated
+  meta:    language, category1, category2, category3, status, pageOrder,
+            isVisible
+  seo:     metaTitle, metaDesc, metaImage   (+ [PLANNED] noIndex, keywords,
+            canonicalUrl, structuredDataJson)
+  block:   type, value, meta{}, css, settingsJSON, fullWidthBlockCss
+  block.meta: slug, name, isVisible, mobileDesktopVisibility, cssClassNames,
+            altText, width, height, groupId
+  settings (website-settings): texts.companyName, images.fullLogo,
+            plugins.googleAnalyticsId/googleTagId/facebookPixelId/shareThis,
+            cmsParams.cacheStatus, cmsParams.onlineStorageFolder
+  settings (cms-settings): objectTypes[] (rules.publicAccess, parentTenants,
+            webSettings.sitemapSettings)
+  object:  contentId, id, slug, name, tenantId, cmsObjectType,
+            productData.data_categoriesBased, blocks[], meta.language
+</script>
+</div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'webpagebuilder_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'u-test', name: 'Test User', email: 'test@example.com', roles: ['developer'] };
+  var _fields = {};
+  var _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch(e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch(e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch(e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, _fields); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return _fields; },
+    setField: function(id, val) { _fields[id] = val; fire('fieldsChange', _fields); },
+    setFields: function(obj) { Object.assign(_fields, obj); fire('fieldsChange', _fields); },
+    watchField: function() {},
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, def) { return name === 'allowAi' ? 'yes' : def; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return [{id:'u1',name:'Alice'},{id:'u2',name:'Bob'}]; },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 200)); },
+    declareParams: function(p) { console.log('declareParams:', p.length, 'params'); },
+    reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function(prompt, context, callback) {
+      console.log('AI REQUEST (batch) — prompt length:', prompt.length);
+      setTimeout(function() { callback(null, generateMockResponse(prompt)); }, 900);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      console.log('AI REQUEST (stream) — prompt length:', prompt.length);
+      var full = generateMockResponse(prompt);
+      var pos = 0;
+      var step = Math.max(8, Math.floor(full.length / 60));
+      var timer = setInterval(function() {
+        var chunk = full.substring(pos, pos + step);
+        pos += step;
+        if (chunk) callbacks.onToken(chunk);
+        if (pos >= full.length) {
+          clearInterval(timer);
+          callbacks.onComplete(full);
+        }
+      }, 25);
+    },
+    requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'reference.png', url: 'https://example.com/reference.png', size: 2048, type: 'image/png' }); }, 500); },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
+    requestObjects: function(action, params, cb) {
+      if (action === 'query') setTimeout(function() { cb(null, { objects: [] }); }, 250);
+      else if (action === 'create') setTimeout(function() { cb(null, { object: { id: 'n-' + Date.now().toString(36), name: params.name, productData: params.productData } }); }, 250);
+      else if (action === 'update') setTimeout(function() { cb(null, { ok: true }); }, 250);
+      else if (action === 'delete') setTimeout(function() { cb(null, { ok: true }); }, 250);
+      else setTimeout(function() { cb(null, { ok: true }); }, 250);
+    },
+    requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename || 'export') + '.html', url: 'https://example.com/export.html', size: 4096, type: 'text/html' }); }, 500); },
+    requestSendEmail: function(opts, cb) { setTimeout(function() { cb(null, { ok: true }); }, 500); }
+  };
+
+  function generateMockResponse(prompt) {
+    var isChat = prompt.indexOf('=== USER REQUEST ===') !== -1;
+    var isRefine = prompt.indexOf('CURRENT PAGE CODE') !== -1;
+    if (isChat && isRefine) {
+      return 'Here\'s the updated page with your requested change:\n\n[HTML]\n<header id="header">\n  <nav class="nav" id="nav">\n    <span class="brand">🌿 Bloom Café</span>\n    <button class="nav-toggle" id="nav-toggle" aria-label="Open menu">☰</button>\n    <div class="nav-links" id="nav-links">\n      <a href="#about">About</a><a href="#menu">Menu</a><a href="#contact">Contact</a>\n    </div>\n  </nav>\n</header>\n<main>\n  <section id="hero" class="hero">\n    <h1>Fresh, locally roasted coffee</h1>\n    <p>Small-batch beans, friendly people, cozy corners.</p>\n    <a class="btn-main" href="#menu">See the menu</a>\n  </section>\n  <section id="about" class="section">\n    <h2>Our story</h2>\n    <p>Bloom Café started as a tiny cart in 2016 and grew into a neighborhood favorite.</p>\n  </section>\n  <section id="menu" class="section">\n    <h2>Menu highlights</h2>\n    <div class="cards">\n      <div class="card"><h3>Espresso</h3><p>Rich double shot</p><span class="price">$3</span></div>\n      <div class="card"><h3>Flat White</h3><p>Silky steamed milk</p><span class="price">$4</span></div>\n      <div class="card"><h3>Cold Brew</h3><p>Steeped 18 hours</p><span class="price">$4.5</span></div>\n    </div>\n  </section>\n  <section id="contact" class="section">\n    <h2>Visit us</h2>\n    <form id="contact-form" class="contact-form">\n      <label for="c-name">Name</label><input id="c-name" type="text" required>\n      <label for="c-email">Email</label><input id="c-email" type="email" required>\n      <button type="submit" class="btn-main">Send message</button>\n      <p class="form-msg" id="form-msg"></p>\n    </form>\n  </section>\n</main>\n<footer id="footer" class="footer">\n  <p>© <span id="year"></span> Bloom Café</p>\n</footer>\n\n[CSS]\n:root { --bg: #faf6f0; --text: #2c2420; --muted: #7a6f66; --accent: #a16207; --surface: #fffdf9; --radius: 14px; }\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }\n.nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); position: sticky; top: 0; z-index: 10; }\n.brand { font-weight: 800; font-size: 18px; }\n.nav-links a { color: var(--text); text-decoration: none; margin-left: 18px; font-weight: 600; }\n.nav-toggle { display: none; background: none; border: none; font-size: 20px; cursor: pointer; }\n.hero { text-align: center; padding: 90px 24px; background: linear-gradient(135deg, #fef3c7, #fde68a); }\n.hero h1 { font-size: clamp(30px, 6vw, 52px); margin-bottom: 10px; }\n.hero p { color: var(--muted); font-size: 18px; margin-bottom: 22px; }\n.btn-main { display: inline-block; background: var(--accent); color: #fff; padding: 12px 26px; border-radius: 30px; text-decoration: none; font-weight: 700; border: none; cursor: pointer; }\n.section { padding: 70px 24px; max-width: 900px; margin: 0 auto; }\n.section h2 { font-size: 30px; margin-bottom: 18px; }\n.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }\n.card { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }\n.card .price { display: inline-block; margin-top: 10px; font-weight: 800; color: var(--accent); }\n.contact-form { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }\n.contact-form input { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }\n.form-msg { font-weight: 700; color: #16a34a; min-height: 18px; }\n.footer { text-align: center; padding: 26px; background: var(--surface); color: var(--muted); }\n@media (max-width: 640px) { .nav-links { display: none; flex-direction: column; width: 100%; position: absolute; top: 52px; left: 0; background: var(--surface); padding: 10px 20px; } .nav-links.open { display: flex; } .nav-links a { margin: 8px 0; } .nav-toggle { display: block; } }\n\n[JS]\nfunction toggleNav() {\n  var links = document.getElementById("nav-links");\n  if (links) links.classList.toggle("open");\n}\nfunction bindNav() {\n  var btn = document.getElementById("nav-toggle");\n  if (btn) btn.onclick = toggleNav;\n}\nfunction bindContact() {\n  var form = document.getElementById("contact-form");\n  if (!form) return;\n  form.onsubmit = function(e) {\n    e.preventDefault();\n    var msg = document.getElementById("form-msg");\n    if (msg) msg.textContent = "✓ Thanks! We\'ll get back to you soon.";\n    form.reset();\n  };\n}\nfunction setYear() {\n  var y = document.getElementById("year");\n  if (y) y.textContent = new Date().getFullYear();\n}\ndocument.addEventListener("DOMContentLoaded", function() { bindNav(); bindContact(); setYear(); console.log("Bloom Café page ready"); });\n\nYour page now has a mobile hamburger menu, a working contact form and the current year in the footer.\n[[suggest_darkmode]] Add dark mode toggle\n[[suggest_gallery]] Add a photo gallery section\n[[suggest_faq]] Add an FAQ section\n';
+    }
+    return 'Here\'s your new webpage! 🎉\n\n[HTML]\n<header id="header">\n  <nav class="nav" id="nav">\n    <span class="brand">🌿 Bloom Café</span>\n    <button class="nav-toggle" id="nav-toggle" aria-label="Open menu">☰</button>\n    <div class="nav-links" id="nav-links">\n      <a href="#about">About</a><a href="#menu">Menu</a><a href="#contact">Contact</a>\n    </div>\n  </nav>\n</header>\n<main>\n  <section id="hero" class="hero">\n    <h1>Fresh, locally roasted coffee</h1>\n    <p>Small-batch beans, friendly people, cozy corners.</p>\n    <a class="btn-main" href="#menu">See the menu</a>\n  </section>\n  <section id="about" class="section">\n    <h2>Our story</h2>\n    <p>Bloom Café started as a tiny cart in 2016 and grew into a neighborhood favorite.</p>\n  </section>\n  <section id="menu" class="section">\n    <h2>Menu highlights</h2>\n    <div class="cards">\n      <div class="card"><h3>Espresso</h3><p>Rich double shot</p><span class="price">$3</span></div>\n      <div class="card"><h3>Flat White</h3><p>Silky steamed milk</p><span class="price">$4</span></div>\n      <div class="card"><h3>Cold Brew</h3><p>Steeped 18 hours</p><span class="price">$4.5</span></div>\n    </div>\n  </section>\n  <section id="contact" class="section">\n    <h2>Visit us</h2>\n    <form id="contact-form" class="contact-form">\n      <label for="c-name">Name</label><input id="c-name" type="text" required>\n      <label for="c-email">Email</label><input id="c-email" type="email" required>\n      <button type="submit" class="btn-main">Send message</button>\n      <p class="form-msg" id="form-msg"></p>\n    </form>\n  </section>\n</main>\n<footer id="footer" class="footer">\n  <p>© <span id="year"></span> Bloom Café</p>\n</footer>\n\n[CSS]\n:root { --bg: #faf6f0; --text: #2c2420; --muted: #7a6f66; --accent: #a16207; --surface: #fffdf9; --radius: 14px; }\n* { box-sizing: border-box; margin: 0; padding: 0; }\nbody { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }\n.nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); position: sticky; top: 0; z-index: 10; }\n.brand { font-weight: 800; font-size: 18px; }\n.nav-links a { color: var(--text); text-decoration: none; margin-left: 18px; font-weight: 600; }\n.nav-toggle { display: none; background: none; border: none; font-size: 20px; cursor: pointer; }\n.hero { text-align: center; padding: 90px 24px; background: linear-gradient(135deg, #fef3c7, #fde68a); }\n.hero h1 { font-size: clamp(30px, 6vw, 52px); margin-bottom: 10px; }\n.hero p { color: var(--muted); font-size: 18px; margin-bottom: 22px; }\n.btn-main { display: inline-block; background: var(--accent); color: #fff; padding: 12px 26px; border-radius: 30px; text-decoration: none; font-weight: 700; border: none; cursor: pointer; }\n.section { padding: 70px 24px; max-width: 900px; margin: 0 auto; }\n.section h2 { font-size: 30px; margin-bottom: 18px; }\n.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }\n.card { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }\n.card .price { display: inline-block; margin-top: 10px; font-weight: 800; color: var(--accent); }\n.contact-form { display: flex; flex-direction: column; gap: 10px; max-width: 420px; }\n.contact-form input { padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; }\n.form-msg { font-weight: 700; color: #16a34a; min-height: 18px; }\n.footer { text-align: center; padding: 26px; background: var(--surface); color: var(--muted); }\n@media (max-width: 640px) { .nav-links { display: none; flex-direction: column; width: 100%; position: absolute; top: 52px; left: 0; background: var(--surface); padding: 10px 20px; } .nav-links.open { display: flex; } .nav-links a { margin: 8px 0; } .nav-toggle { display: block; } }\n\n[JS]\nfunction toggleNav() {\n  var links = document.getElementById("nav-links");\n  if (links) links.classList.toggle("open");\n}\nfunction bindNav() {\n  var btn = document.getElementById("nav-toggle");\n  if (btn) btn.onclick = toggleNav;\n}\nfunction bindContact() {\n  var form = document.getElementById("contact-form");\n  if (!form) return;\n  form.onsubmit = function(e) {\n    e.preventDefault();\n    var msg = document.getElementById("form-msg");\n    if (msg) msg.textContent = "✓ Thanks! We\'ll get back to you soon.";\n    form.reset();\n  };\n}\nfunction setYear() {\n  var y = document.getElementById("year");\n  if (y) y.textContent = new Date().getFullYear();\n}\ndocument.addEventListener("DOMContentLoaded", function() { bindNav(); bindContact(); setYear(); console.log("Bloom Café page ready"); });\n\nI\'ve designed a cozy café page with a hero, our story, menu highlights, a working contact form and a footer. It\'s fully responsive — on phones the menu collapses into a hamburger button.\n[[suggest_darkmode]] Add dark mode toggle\n[[suggest_gallery]] Add a photo gallery section\n[[suggest_faq]] Add an FAQ section\n[[suggest_stats]] Add a stats band with animated counters\n[[suggest_backtotop]] Add a back-to-top button\n';
+  }
+
+  window._toolMock = {
+    setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); },
+    getValue: function() { return _value; },
+    clear: function() { _value = null; save(); fire('valueChange', null); location.reload(); }
+  };
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="WebpageBuilder.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function() {
+  var thStatus = document.getElementById('th-status');
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool.setValue({
+      pageName: 'Bloom Café — Home', pageType: 'restaurant', brandName: 'Bloom Café',
+      tagline: 'Fresh, locally roasted coffee', audience: 'customers', lang: 'en', favicon: '🌿',
+      seoTitle: 'Bloom Café — Fresh Coffee', seoDesc: 'Small-batch coffee in a cozy neighborhood café.',
+      seoKeywords: 'coffee, cafe, espresso', colorScheme: 'amber', typography: 'modern-sans',
+      styleMode: 'modern', darkMode: 'light-only', sections: ['hero', 'about', 'gallery', 'contact', 'footer'],
+      styleNotes: 'Cozy and warm', device: 'desktop', history: [], chatMessages: [], _theme: 'light', version: '1.0.0'
+    });
+    if (thStatus) thStatus.textContent = 'Sample config loaded — open ⚙️ Settings or chat "build me a coffee shop page".';
+  };
+  document.getElementById('th-toggle-ro').onclick = function() {
+    window._toolMock.setReadOnly(!document.body.classList.contains('readonly'));
+    if (thStatus) thStatus.textContent = document.body.classList.contains('readonly') ? 'READ-ONLY' : 'Ready';
+  };
+  document.getElementById('th-clear').onclick = function() { if (confirm('Clear all test data?')) window._toolMock.clear(); };
+  document.getElementById('th-reload').onclick = function() { location.reload(); };
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      e.preventDefault();
+      console.log('=== DB ===');
+      console.log(JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2));
+    }
+  });
+})();
+</script>
+</body>
+</html>
