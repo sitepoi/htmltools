@@ -1,4 +1,6 @@
 <div id="app">
+  <!-- DIFF LIBRARY CDN — loaded before all other scripts (developer visual line diff in chat) -->
+  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
@@ -9,9 +11,8 @@
       </div>
     </div>
     <div class="header-right">
-      <button class="btn btn-sm btn-ghost" id="btn-config" title="Page Settings">⚙️ Settings</button>
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
-      <button class="btn btn-sm btn-ghost" id="btn-guide" title="View active rules (generalwebsite-page-rules.txt)">📐 Rules</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
       <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
@@ -84,6 +85,7 @@
       <div class="chat-input-area">
         <div class="chat-input-toolbar">
           <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a reference file (mockup, logo, spec doc…)">📎 Attach</button>
+          <button class="guided-toggle active" id="btn-agentic-mode" title="Agentic Mode — large requests become a task plan and run step by step (avoids timeouts)">🧠 Agentic</button>
           <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
         </div>
         <div class="chat-input-row">
@@ -98,28 +100,14 @@
     <main class="content-panel" id="content-panel">
       <div class="content-tabs" id="content-tabs">
         <button class="ctab active" data-tab="preview">👁️ Preview</button>
-        <button class="ctab" data-tab="sections">🧩 Sections</button>
-        <button class="ctab" data-tab="compliance">🧪 Compliance</button>
-        <button class="ctab" data-tab="html">📄 HTML</button>
-        <button class="ctab" data-tab="css">🎨 CSS</button>
-        <button class="ctab" data-tab="js">⚡ JS</button>
-        <button class="ctab" data-tab="console">🪲 Console</button>
-        <button class="ctab" data-tab="settings">⚙️ Settings</button>
-        <div class="content-actions" id="content-actions" style="display:none">
-          <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
-          <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
-          <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
-        </div>
+        <button class="ctab" data-tab="suggestions">💡 Suggestions</button>
+        <button class="ctab" data-tab="advanced">🛠️ Advanced</button>
       </div>
 
       <div class="content-editors">
         <!-- Preview -->
         <div class="content-editor active" id="editor-preview">
           <div class="preview-toolbar">
-            <div class="browser-chrome">
-              <span class="browser-dots"><i></i><i></i><i></i></span>
-              <span class="browser-url" id="preview-url">—</span>
-            </div>
             <div class="device-toggle" id="device-toggle">
               <button class="dev-btn active" data-device="desktop" title="Desktop view">🖥️</button>
               <button class="dev-btn" data-device="tablet" title="Tablet view (768px)">📱</button>
@@ -139,72 +127,64 @@
           </div>
         </div>
 
-        <!-- Sections -->
-        <div class="content-editor" id="editor-sections">
+        <!-- Suggestions -->
+        <div class="content-editor" id="editor-suggestions">
           <div class="sections-panel">
             <div class="sections-header">
-              <h2>🧩 Page Sections</h2>
-              <p>Detected from your page. Click a section to scroll to it in Preview.</p>
+              <h2>💡 Suggestions</h2>
+              <p>Computed from your current page — these are the sections your page is missing. Click one and the AI adds it with a prompt tailored to your content.</p>
               <button class="btn btn-sm btn-ghost" id="btn-sections-refresh">↻ Rescan</button>
             </div>
+            <div id="suggest-page-type" class="suggest-page-type"></div>
             <div class="quick-add-row" id="quick-add-row" style="display:none">
-              <span class="quick-add-label">➕ Add a section:</span>
-              <button class="qa-chip" data-qa="testimonials">Testimonials</button>
-              <button class="qa-chip" data-qa="pricing">Pricing</button>
-              <button class="qa-chip" data-qa="faq">FAQ</button>
-              <button class="qa-chip" data-qa="team">Team</button>
-              <button class="qa-chip" data-qa="gallery">Gallery</button>
-              <button class="qa-chip" data-qa="contact">Contact</button>
-              <button class="qa-chip" data-qa="cta">Call-to-action</button>
+              <span class="quick-add-label">Suggested next sections:</span>
+              <div class="qa-chips" id="qa-chips"></div>
             </div>
-            <div class="sections-list" id="sections-list">
-              <div class="sections-empty">No sections yet. Generate a page first — or use the quick-add buttons above once you have one.</div>
+            <div class="skills-block" id="skills-row-wrap">
+              <div class="quick-add-row skills-row-inner">
+                <span class="quick-add-label">🧠 Skills</span>
+                <div class="qa-chips" id="skills-row"></div>
+              </div>
+              <span class="qa-hint">Extra expertise the AI applies when designing. Page-type guidance (menu, pricing, listings…) is added automatically from your content.</span>
             </div>
           </div>
         </div>
 
-        <!-- Compliance -->
-        <div class="content-editor" id="editor-compliance">
-          <div class="compliance-panel">
-            <div class="compliance-header">
-              <h2>🧪 Rules Compliance Checker</h2>
-              <p>Automated checks against the active rules file — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
-              <div class="compliance-actions">
-                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
-                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page against every rule">🤖 AI Review</button>
-                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
-              </div>
-              <div class="rules-source-note" id="rules-source-note"></div>
+        <!-- Advanced (code, console, compliance, export) -->
+        <div class="content-editor" id="editor-advanced">
+          <div class="adv-subtabs">
+            <button class="advtab" data-advtab="html">📄 HTML</button>
+            <button class="advtab" data-advtab="css">🎨 CSS</button>
+            <button class="advtab" data-advtab="js">⚡ JS</button>
+            <button class="advtab" data-advtab="console">🪲 Console</button>
+            <button class="advtab active" data-advtab="settings">⚙️ Generate &amp; Export</button>
+            <div class="content-actions" id="content-actions" style="display:none">
+              <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
+              <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
+              <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
             </div>
-            <div class="compliance-score" id="compliance-score"></div>
-            <div class="compliance-list" id="compliance-list">
-              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
-            </div>
-            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
-              <div class="ai-review-status" id="ai-review-status"></div>
-              <pre class="ai-review-output" id="ai-review-output"></pre>
-            </div>
+            <button class="btn btn-sm btn-outline adv-compliance-btn" id="btn-compliance-open" title="Run page quality checks">🧪 Compliance</button>
           </div>
-        </div>
+          <div class="adv-panels">
 
         <!-- HTML Editor -->
-        <div class="content-editor" id="editor-html">
+        <div class="advpanel" id="editor-html">
           <div class="code-lines" id="html-lines"></div>
           <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
         </div>
         <!-- CSS Editor -->
-        <div class="content-editor" id="editor-css">
+        <div class="advpanel" id="editor-css">
           <div class="code-lines" id="css-lines"></div>
           <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
         </div>
         <!-- JS Editor -->
-        <div class="content-editor" id="editor-js">
+        <div class="advpanel" id="editor-js">
           <div class="code-lines" id="js-lines"></div>
           <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
         </div>
 
         <!-- Console -->
-        <div class="content-editor" id="editor-console">
+        <div class="advpanel" id="editor-console">
           <div class="console-output" id="console-output">
             <div class="console-empty">🪲 Console output from the preview appears here.<br>Click buttons in the Preview tab and watch for logs and errors.</div>
           </div>
@@ -215,167 +195,17 @@
         </div>
 
         <!-- Settings -->
-        <div class="content-editor" id="editor-settings">
+        <div class="advpanel active" id="editor-settings">
           <div class="config-scroll">
             <div class="config-header">
-              <h2>⚙️ Page Settings</h2>
-              <p>These settings guide the AI when it designs your page. Changes apply on the next generation.</p>
+              <h2>⚙️ Generate & Export</h2>
+              <p>Page identity and SEO metadata live on the parent CMS content record — this tool stores only the page code. Design direction comes from admin parameters and is shared across pages.</p>
             </div>
 
             <div class="config-section">
-              <h3>🏷️ Identity</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Page Name <span class="req">*</span></label>
-                  <input type="text" id="f-page-name" class="form-input" placeholder="e.g. Sunrise Bakery — Home">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Page Type</label>
-                  <select id="f-page-type" class="form-input">
-                    <option value="landing">Landing / Marketing Page</option>
-                    <option value="saas">SaaS / Product Page</option>
-                    <option value="restaurant">Restaurant / Café</option>
-                    <option value="company">Company / Business Profile</option>
-                    <option value="portfolio">Portfolio</option>
-                    <option value="event">Event Page</option>
-                    <option value="product">Product Launch</option>
-                    <option value="realestate">Real Estate / Listings</option>
-                    <option value="coming-soon">Coming Soon</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Brand / Organization</label>
-                  <input type="text" id="f-brand-name" class="form-input" placeholder="e.g. Sunrise Bakery">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Tagline / Slogan</label>
-                  <input type="text" id="f-tagline" class="form-input" placeholder="e.g. Fresh bread, baked with love">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Target Audience</label>
-                  <select id="f-audience" class="form-input">
-                    <option value="general">General Public</option>
-                    <option value="customers">Customers / Clients</option>
-                    <option value="investors">Investors / Partners</option>
-                    <option value="community">Community Members</option>
-                    <option value="students">Students</option>
-                    <option value="donors">Donors / Supporters</option>
-                    <option value="staff">Staff / Internal</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Language</label>
-                  <select id="f-lang" class="form-input">
-                    <option value="en">English</option>
-                    <option value="tr">Türkçe</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="es">Español</option>
-                    <option value="ar">العربية</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Favicon Emoji</label>
-                  <input type="text" id="f-favicon" class="form-input" maxlength="4" placeholder="🍞" style="text-align:center;font-size:18px">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">SEO Title</label>
-                  <input type="text" id="f-seo-title" class="form-input" placeholder="Shown in browser tab & search results">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">SEO Description</label>
-                <textarea id="f-seo-desc" class="form-input form-textarea" rows="2" placeholder="Short summary used by search engines and social sharing…"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">SEO Keywords (comma-separated)</label>
-                <input type="text" id="f-seo-keywords" class="form-input" placeholder="bakery, fresh bread, istanbul…">
-              </div>
-            </div>
-
-            <div class="config-section">
-              <h3>🎨 Design Direction</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Color Scheme</label>
-                  <select id="f-color-scheme" class="form-input">
-                    <option value="emerald">Emerald — fresh & natural</option>
-                    <option value="blue">Blue — trusted & professional</option>
-                    <option value="indigo">Indigo — modern tech</option>
-                    <option value="violet">Violet — creative & bold</option>
-                    <option value="rose">Rose — warm & friendly</option>
-                    <option value="amber">Amber — cozy & rustic</option>
-                    <option value="teal">Teal — calm & balanced</option>
-                    <option value="ocean">Ocean — deep blue gradient</option>
-                    <option value="forest">Forest — earthy & organic</option>
-                    <option value="sunset">Sunset — orange-pink gradient</option>
-                    <option value="mono">Monochrome — minimal black & white</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Typography</label>
-                  <select id="f-typography" class="form-input">
-                    <option value="modern-sans">Modern Sans — clean & readable</option>
-                    <option value="elegant-serif">Elegant Serif — classic & refined</option>
-                    <option value="friendly-rounded">Friendly Rounded — approachable</option>
-                    <option value="tech-mono">Tech Mono — developer vibe</option>
-                    <option value="editorial">Editorial — magazine style</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Visual Style</label>
-                  <select id="f-style-mode" class="form-input">
-                    <option value="modern">Modern & polished</option>
-                    <option value="minimal">Minimal & airy</option>
-                    <option value="bold">Bold & colorful</option>
-                    <option value="elegant">Elegant & luxurious</option>
-                    <option value="playful">Playful & fun</option>
-                    <option value="corporate">Corporate & serious</option>
-                    <option value="editorial">Editorial & typographic</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Dark Mode</label>
-                  <select id="f-dark-mode" class="form-input">
-                    <option value="light-only">Light only</option>
-                    <option value="light-dark">Light + dark toggle</option>
-                    <option value="dark-first">Dark-first design</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="config-section">
-              <h3>🧩 Sections to Include</h3>
-              <div class="sec-grid">
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="hero" checked><span>🏠 Hero</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="about"><span>💬 About</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="features"><span>✨ Features</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="services"><span>🛠️ Services</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="stats"><span>📊 Stats</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="gallery"><span>🖼️ Gallery</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="testimonials"><span>⭐ Testimonials</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="pricing"><span>💰 Pricing</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="team"><span>👥 Team</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="faq"><span>❓ FAQ</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="contact"><span>✉️ Contact</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="cta"><span>📣 Call-to-Action</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="news"><span>📰 News / Blog</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="footer" checked><span>🦶 Footer</span></label>
-              </div>
-              <div class="form-group" style="margin-top:12px">
-                <label class="form-label">Extra Style Notes</label>
-                <textarea id="f-style-notes" class="form-input form-textarea" rows="3" placeholder="Anything specific: 'big rounded cards', 'glassmorphism', 'animated gradient hero', 'sticky navbar with blur'…"></textarea>
-              </div>
+              <h3>🎨 Design Direction (admin parameters)</h3>
+              <div class="params-summary" id="params-summary">Loading…</div>
+              <p class="gen-hint">These values are configured as tool parameters in the field settings and are shared across pages. Ask an admin to change them — or describe the look you want in the chat and the AI will follow it.</p>
             </div>
 
             <div class="config-actions">
@@ -397,8 +227,34 @@
                 <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
                 <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
               </div>
-              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array (see the 📐 Rules file, Section 3).</p>
+              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array.</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Compliance -->
+        <div class="advpanel" id="editor-compliance">
+          <div class="compliance-panel">
+            <div class="compliance-header">
+              <h2>🧪 Page Quality Checker</h2>
+              <p>Automated quality checks — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
+              <div class="compliance-actions">
+                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
+                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page">🤖 AI Review</button>
+                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
+              </div>
+            </div>
+            <div class="compliance-score" id="compliance-score"></div>
+            <div class="compliance-list" id="compliance-list">
+              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
+            </div>
+            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
+              <div class="ai-review-status" id="ai-review-status"></div>
+              <pre class="ai-review-output" id="ai-review-output"></pre>
+            </div>
+          </div>
+        </div>
+
           </div>
         </div>
       </div>
@@ -408,31 +264,8 @@
   <!-- History Modal -->
   <div class="modal-backdrop" id="modal-backdrop" hidden></div>
   <div class="modal" id="modal-history" style="display:none">
-    <div class="modal-header"><h3>📋 Generation History</h3><button class="btn-close" id="btn-close-history">✕</button></div>
+    <div class="modal-header"><div><h3>📋 Version History</h3><p class="modal-sub">Every generation is saved as a version. Click ↩️ Restore to go back — the current version is always visible in the header and at the top of the code blocks.</p></div><button class="btn-close" id="btn-close-history">✕</button></div>
     <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Design your first page!</div></div>
-  </div>
-
-  <!-- Rules Modal (active rules + editor) -->
-  <div class="modal" id="modal-guide" style="display:none">
-    <div class="modal-header">
-      <h3>📐 GeneralWebsite Page Rules <span class="rules-source-label" id="rules-source-label"></span></h3>
-      <div class="modal-header-actions">
-        <button class="btn btn-sm btn-ghost" id="btn-edit-rules" style="display:none">✏️ Edit</button>
-        <button class="btn-close" id="btn-close-guide">✕</button>
-      </div>
-    </div>
-    <div class="modal-body rules-body">
-      <div class="rules-loading" id="rules-loading">Loading rules…</div>
-      <div id="guide-body"></div>
-      <div class="rules-edit-wrap" id="rules-edit-wrap" style="display:none">
-        <p class="rules-edit-hint">Paste the updated rules text here (generalwebsite-page-rules.txt). This overrides the built-in copy for this tool. The AI prompts and the compliance checker use the active rules automatically.</p>
-        <textarea id="rules-editor" class="rules-editor" spellcheck="false"></textarea>
-        <div class="rules-edit-actions">
-          <button class="btn btn-primary btn-sm" id="btn-rules-save">💾 Save Rules</button>
-          <button class="btn btn-ghost btn-sm" id="btn-rules-reset">↺ Reset to Built-in</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Template Detail Modal -->

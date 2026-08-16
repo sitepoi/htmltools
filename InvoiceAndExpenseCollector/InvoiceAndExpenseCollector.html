@@ -1,0 +1,157 @@
+<div class="sx-shell" id="sx-shell">
+  <header class="sx-header">
+    <div class="sx-brand">
+      <div class="sx-logo">🧾</div>
+      <div class="sx-brand-txt">
+        <h1 class="sx-title">Invoice &amp; Expense Collector</h1>
+        <p class="sx-sub">Sales invoices &middot; receipt scanning with AI &middot; accounting exports</p>
+      </div>
+    </div>
+    <div class="sx-head-right">
+      <div class="sx-chip" id="sx-user-chip">&hellip;</div>
+    </div>
+  </header>
+
+  <div class="sx-lockbanner" id="sx-lock-banner" style="display:none">🔒 <span id="sx-lock-text">View only</span></div>
+
+  <div class="sx-body">
+    <nav class="sx-tabs sx-side" id="sx-tabs">
+      <button class="sx-tab-btn active" type="button" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="sx-tab-btn" type="button" data-tab="invoices" onclick="switchTab('invoices')">🧾 Invoices <span class="sx-badge" id="badge-inv" style="display:none"></span></button>
+      <button class="sx-tab-btn" type="button" data-tab="expenses" onclick="switchTab('expenses')">🧮 Expenses <span class="sx-badge" id="badge-exp" style="display:none"></span></button>
+      <button class="sx-tab-btn" type="button" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
+      <button class="sx-tab-btn" type="button" data-tab="reports" onclick="switchTab('reports')">📑 Reports</button>
+      <button class="sx-tab-btn" type="button" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+    </nav>
+
+    <main class="sx-main">
+      <section class="sx-tabpane active" id="pane-dashboard">
+        <div class="sx-stats" id="sx-stats"></div>
+        <div class="sx-dash-actions">
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-dash-invoice" onclick="openInvoiceForm()">＋ New Invoice</button>
+          <button class="sx-btn sx-btn-scan" type="button" id="btn-dash-scan" onclick="startReceiptScan()">📷 Scan Receipt</button>
+          <button class="sx-btn sx-btn-ghost" type="button" id="btn-dash-exp" onclick="openExpenseForm()">＋ Expense (manual)</button>
+        </div>
+        <div class="sx-dash-grid">
+          <div class="sx-dash-card">
+            <div class="sx-dash-head"><span class="sx-dash-title">🧾 Recent invoices</span><button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" onclick="switchTab('invoices')">All &rarr;</button></div>
+            <div class="sx-list" id="dash-invoices"></div>
+          </div>
+          <div class="sx-dash-card">
+            <div class="sx-dash-head"><span class="sx-dash-title">🧮 Recent expenses</span><button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" onclick="switchTab('expenses')">All &rarr;</button></div>
+            <div class="sx-list" id="dash-expenses"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-invoices">
+        <div class="sx-toolbar">
+          <div class="sx-search">
+            <span class="sx-search-ic">🔍</span>
+            <input class="sx-input" type="text" id="inv-search" placeholder="Search number, customer&hellip;" oninput="renderInvoices()">
+          </div>
+          <select class="sx-input sx-select" id="inv-filter" onchange="renderInvoices()">
+            <option value="all" selected>All invoices</option>
+            <option value="draft">Drafts</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+            <option value="void">Void</option>
+          </select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-new-invoice" onclick="openInvoiceForm()">＋ New Invoice</button>
+        </div>
+        <div class="sx-list" id="inv-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-expenses">
+        <div class="sx-toolbar">
+          <div class="sx-search">
+            <span class="sx-search-ic">🔍</span>
+            <input class="sx-input" type="text" id="exp-search" placeholder="Search vendor, category&hellip;" oninput="renderExpenses()">
+          </div>
+          <select class="sx-input sx-select" id="exp-filter" onchange="renderExpenses()">
+            <option value="all" selected>All expenses</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-scan" type="button" id="btn-scan-receipt" onclick="startReceiptScan()">📷 Scan Receipt</button>
+          <button class="sx-btn sx-btn-ghost" type="button" id="btn-new-expense" onclick="openExpenseForm()">＋ Manual</button>
+        </div>
+        <div class="sx-scan-card" id="scan-status" style="display:none"></div>
+        <div class="sx-list" id="exp-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-customers">
+        <div class="sx-toolbar">
+          <div class="sx-toolbar-hint">💡 Saved customers fill the invoice form automatically — including the email used to send the invoice.</div>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-new-customer" onclick="openCustomerForm()">＋ Add Customer</button>
+        </div>
+        <div class="sx-list" id="cust-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-reports">
+        <div class="sx-toolbar">
+          <select class="sx-input sx-select" id="rep-month" onchange="renderReports()"></select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" id="btn-csv-inv" onclick="exportInvoicesCsv()">⬇ Invoices CSV</button>
+          <button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" id="btn-csv-exp" onclick="exportExpensesCsv()">⬇ Expenses CSV</button>
+          <button class="sx-btn sx-btn-primary sx-btn-keep sx-btn-sm" type="button" id="btn-pdf-report" onclick="exportReportPdf()">📄 PDF Report</button>
+        </div>
+        <div class="sx-stats" id="rep-summary"></div>
+
+        <div class="sx-mv-title" style="margin-top:16px">📆 Monthly summary <span class="sx-mv-total">revenue, VAT and expenses per month</span></div>
+        <div class="sx-table-card">
+          <table class="sx-table">
+            <thead><tr><th>Month</th><th>Revenue</th><th>VAT collected</th><th>Expenses</th><th>VAT paid</th><th>Net</th></tr></thead>
+            <tbody id="rep-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="sx-mv-title" style="margin-top:18px">🏷 Expense categories <span class="sx-mv-total" id="rep-cats-sub">selected period</span></div>
+        <div class="sx-table-card">
+          <table class="sx-table">
+            <thead><tr><th>Category</th><th>Count</th><th>Amount</th><th>VAT</th><th>Share</th></tr></thead>
+            <tbody id="rep-cats-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-settings">
+        <div class="sx-settings-card">
+          <div class="sx-mv-title">🏢 Company profile <span class="sx-mv-total">appears on invoices and PDF reports</span></div>
+          <div class="sx-form-grid">
+            <div class="sx-fld"><label class="sx-label">Company name</label><input class="sx-input" type="text" id="st-name" placeholder="Your company"></div>
+            <div class="sx-fld"><label class="sx-label">Tax / VAT ID</label><input class="sx-input" type="text" id="st-taxid" placeholder="Tax number"></div>
+            <div class="sx-fld"><label class="sx-label">Email</label><input class="sx-input" type="text" id="st-email" placeholder="invoices@company.com"></div>
+            <div class="sx-fld"><label class="sx-label">Phone</label><input class="sx-input" type="text" id="st-phone" placeholder="+90&hellip;"></div>
+            <div class="sx-fld sx-fld-full"><label class="sx-label">Address</label><input class="sx-input" type="text" id="st-address" placeholder="Street, city, country"></div>
+          </div>
+
+          <div class="sx-mv-title" style="margin-top:16px">🧾 Invoicing defaults</div>
+          <div class="sx-form-grid">
+            <div class="sx-fld"><label class="sx-label">Default currency</label>
+              <select class="sx-input sx-select" id="st-currency" style="width:100%"></select>
+            </div>
+            <div class="sx-fld"><label class="sx-label">Default VAT rate %</label><input class="sx-input" type="number" min="0" step="0.1" id="st-taxrate"></div>
+            <div class="sx-fld"><label class="sx-label">Invoice prefix</label><input class="sx-input" type="text" id="st-prefix" placeholder="INV"></div>
+            <div class="sx-fld"><label class="sx-label">Next invoice number</label><input class="sx-input" type="number" min="1" step="1" id="st-nextseq"></div>
+          </div>
+
+          <div class="sx-settings-actions">
+            <button class="sx-btn sx-btn-primary" type="button" id="btn-save-settings" onclick="saveSettings()">💾 Save Settings</button>
+            <button class="sx-btn sx-btn-danger" type="button" id="btn-reset-data" onclick="resetAllData()">🗑 Delete all data</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="sx-backdrop" id="sx-backdrop" style="display:none">
+    <div class="sx-modal" id="sx-modal" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <datalist id="sx-cat-options"></datalist>
+</div>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice &amp; Expense Collector — Test Harness</title>
+<link rel="stylesheet" href="InvoiceAndExpenseCollector.css">
+<style>
+body { padding-top: 30px !important; margin: 0; background: #eef1f5; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #818cf8; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar select { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: none; }
+#th-bar .btn-sample { background: #4338ca; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-dump { background: #7c3aed; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#app-container { max-width: 1060px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Invoice &amp; Expense Collector</strong><span class="sep">|</span>
+  <button class="btn-sample" id="th-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <label style="color:#94a3b8">Role:</label>
+  <select id="th-role">
+    <option value="admin">Admin (owner)</option>
+    <option value="editor">Editor (accountant)</option>
+    <option value="viewer">Viewer</option>
+    <option value="none">Not signed in</option>
+  </select>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Scan Receipt uses a file picker + canned AI response</span>
+  <span class="sep">|</span>
+  <button class="btn-dump" id="th-dump">Dump Value</button>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready — click "Load Sample Data"</span>
+</div>
+
+<div id="app-container">
+<!-- TOOL HTML START -->
+<div class="sx-shell" id="sx-shell">
+  <header class="sx-header">
+    <div class="sx-brand">
+      <div class="sx-logo">🧾</div>
+      <div class="sx-brand-txt">
+        <h1 class="sx-title">Invoice &amp; Expense Collector</h1>
+        <p class="sx-sub">Sales invoices &middot; receipt scanning with AI &middot; accounting exports</p>
+      </div>
+    </div>
+    <div class="sx-head-right">
+      <div class="sx-chip" id="sx-user-chip">&hellip;</div>
+    </div>
+  </header>
+
+  <div class="sx-lockbanner" id="sx-lock-banner" style="display:none">🔒 <span id="sx-lock-text">View only</span></div>
+
+  <div class="sx-body">
+    <nav class="sx-tabs sx-side" id="sx-tabs">
+      <button class="sx-tab-btn active" type="button" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="sx-tab-btn" type="button" data-tab="invoices" onclick="switchTab('invoices')">🧾 Invoices <span class="sx-badge" id="badge-inv" style="display:none"></span></button>
+      <button class="sx-tab-btn" type="button" data-tab="expenses" onclick="switchTab('expenses')">🧮 Expenses <span class="sx-badge" id="badge-exp" style="display:none"></span></button>
+      <button class="sx-tab-btn" type="button" data-tab="customers" onclick="switchTab('customers')">👥 Customers</button>
+      <button class="sx-tab-btn" type="button" data-tab="reports" onclick="switchTab('reports')">📑 Reports</button>
+      <button class="sx-tab-btn" type="button" data-tab="settings" onclick="switchTab('settings')">⚙️ Settings</button>
+    </nav>
+
+    <main class="sx-main">
+      <section class="sx-tabpane active" id="pane-dashboard">
+        <div class="sx-stats" id="sx-stats"></div>
+        <div class="sx-dash-actions">
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-dash-invoice" onclick="openInvoiceForm()">＋ New Invoice</button>
+          <button class="sx-btn sx-btn-scan" type="button" id="btn-dash-scan" onclick="startReceiptScan()">📷 Scan Receipt</button>
+          <button class="sx-btn sx-btn-ghost" type="button" id="btn-dash-exp" onclick="openExpenseForm()">＋ Expense (manual)</button>
+        </div>
+        <div class="sx-dash-grid">
+          <div class="sx-dash-card">
+            <div class="sx-dash-head"><span class="sx-dash-title">🧾 Recent invoices</span><button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" onclick="switchTab('invoices')">All &rarr;</button></div>
+            <div class="sx-list" id="dash-invoices"></div>
+          </div>
+          <div class="sx-dash-card">
+            <div class="sx-dash-head"><span class="sx-dash-title">🧮 Recent expenses</span><button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" onclick="switchTab('expenses')">All &rarr;</button></div>
+            <div class="sx-list" id="dash-expenses"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-invoices">
+        <div class="sx-toolbar">
+          <div class="sx-search">
+            <span class="sx-search-ic">🔍</span>
+            <input class="sx-input" type="text" id="inv-search" placeholder="Search number, customer&hellip;" oninput="renderInvoices()">
+          </div>
+          <select class="sx-input sx-select" id="inv-filter" onchange="renderInvoices()">
+            <option value="all" selected>All invoices</option>
+            <option value="draft">Drafts</option>
+            <option value="sent">Sent</option>
+            <option value="paid">Paid</option>
+            <option value="overdue">Overdue</option>
+            <option value="void">Void</option>
+          </select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-new-invoice" onclick="openInvoiceForm()">＋ New Invoice</button>
+        </div>
+        <div class="sx-list" id="inv-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-expenses">
+        <div class="sx-toolbar">
+          <div class="sx-search">
+            <span class="sx-search-ic">🔍</span>
+            <input class="sx-input" type="text" id="exp-search" placeholder="Search vendor, category&hellip;" oninput="renderExpenses()">
+          </div>
+          <select class="sx-input sx-select" id="exp-filter" onchange="renderExpenses()">
+            <option value="all" selected>All expenses</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-scan" type="button" id="btn-scan-receipt" onclick="startReceiptScan()">📷 Scan Receipt</button>
+          <button class="sx-btn sx-btn-ghost" type="button" id="btn-new-expense" onclick="openExpenseForm()">＋ Manual</button>
+        </div>
+        <div class="sx-scan-card" id="scan-status" style="display:none"></div>
+        <div class="sx-list" id="exp-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-customers">
+        <div class="sx-toolbar">
+          <div class="sx-toolbar-hint">💡 Saved customers fill the invoice form automatically — including the email used to send the invoice.</div>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-primary" type="button" id="btn-new-customer" onclick="openCustomerForm()">＋ Add Customer</button>
+        </div>
+        <div class="sx-list" id="cust-list"></div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-reports">
+        <div class="sx-toolbar">
+          <select class="sx-input sx-select" id="rep-month" onchange="renderReports()"></select>
+          <div class="sx-spacer"></div>
+          <button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" id="btn-csv-inv" onclick="exportInvoicesCsv()">⬇ Invoices CSV</button>
+          <button class="sx-btn sx-btn-ghost sx-btn-sm" type="button" id="btn-csv-exp" onclick="exportExpensesCsv()">⬇ Expenses CSV</button>
+          <button class="sx-btn sx-btn-primary sx-btn-keep sx-btn-sm" type="button" id="btn-pdf-report" onclick="exportReportPdf()">📄 PDF Report</button>
+        </div>
+        <div class="sx-stats" id="rep-summary"></div>
+
+        <div class="sx-mv-title" style="margin-top:16px">📆 Monthly summary <span class="sx-mv-total">revenue, VAT and expenses per month</span></div>
+        <div class="sx-table-card">
+          <table class="sx-table">
+            <thead><tr><th>Month</th><th>Revenue</th><th>VAT collected</th><th>Expenses</th><th>VAT paid</th><th>Net</th></tr></thead>
+            <tbody id="rep-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="sx-mv-title" style="margin-top:18px">🏷 Expense categories <span class="sx-mv-total" id="rep-cats-sub">selected period</span></div>
+        <div class="sx-table-card">
+          <table class="sx-table">
+            <thead><tr><th>Category</th><th>Count</th><th>Amount</th><th>VAT</th><th>Share</th></tr></thead>
+            <tbody id="rep-cats-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="sx-tabpane" id="pane-settings">
+        <div class="sx-settings-card">
+          <div class="sx-mv-title">🏢 Company profile <span class="sx-mv-total">appears on invoices and PDF reports</span></div>
+          <div class="sx-form-grid">
+            <div class="sx-fld"><label class="sx-label">Company name</label><input class="sx-input" type="text" id="st-name" placeholder="Your company"></div>
+            <div class="sx-fld"><label class="sx-label">Tax / VAT ID</label><input class="sx-input" type="text" id="st-taxid" placeholder="Tax number"></div>
+            <div class="sx-fld"><label class="sx-label">Email</label><input class="sx-input" type="text" id="st-email" placeholder="invoices@company.com"></div>
+            <div class="sx-fld"><label class="sx-label">Phone</label><input class="sx-input" type="text" id="st-phone" placeholder="+90&hellip;"></div>
+            <div class="sx-fld sx-fld-full"><label class="sx-label">Address</label><input class="sx-input" type="text" id="st-address" placeholder="Street, city, country"></div>
+          </div>
+
+          <div class="sx-mv-title" style="margin-top:16px">🧾 Invoicing defaults</div>
+          <div class="sx-form-grid">
+            <div class="sx-fld"><label class="sx-label">Default currency</label>
+              <select class="sx-input sx-select" id="st-currency" style="width:100%"></select>
+            </div>
+            <div class="sx-fld"><label class="sx-label">Default VAT rate %</label><input class="sx-input" type="number" min="0" step="0.1" id="st-taxrate"></div>
+            <div class="sx-fld"><label class="sx-label">Invoice prefix</label><input class="sx-input" type="text" id="st-prefix" placeholder="INV"></div>
+            <div class="sx-fld"><label class="sx-label">Next invoice number</label><input class="sx-input" type="number" min="1" step="1" id="st-nextseq"></div>
+          </div>
+
+          <div class="sx-settings-actions">
+            <button class="sx-btn sx-btn-primary" type="button" id="btn-save-settings" onclick="saveSettings()">💾 Save Settings</button>
+            <button class="sx-btn sx-btn-danger" type="button" id="btn-reset-data" onclick="resetAllData()">🗑 Delete all data</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="sx-backdrop" id="sx-backdrop" style="display:none">
+    <div class="sx-modal" id="sx-modal" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <datalist id="sx-cat-options"></datalist>
+</div>
+
+<!-- TOOL HTML END -->
+</div>
+
+<script>
+/* ══ MOCK tool SDK (must load BEFORE main JS) ══ */
+(function () {
+  var STORAGE_KEY = 'sxc_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _value = null, _fields = {};
+  var _role = 'admin';
+
+  var MOCK_USERS = {
+    admin:  { id: 'u_ada',  name: 'Ada Owner',       email: 'ada@uniconhub.com',  roles: ['admin'],  effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    editor: { id: 'u_ali',  name: 'Ali Accountant',  email: 'ali@uniconhub.com',  roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    viewer: { id: 'u_vera', name: 'Vera Viewer',     email: 'vera@uniconhub.com', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } }
+  };
+
+  function load() { try { _value = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { _value = null; } }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch (e) {} }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+  function pickFile(accept, cb) {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept || '';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      input.remove();
+      if (!f) { cb('No file selected', null); return; }
+      var reader = new FileReader();
+      reader.onload = function () {
+        cb(null, { name: f.name, url: reader.result, size: f.size, type: f.type || '' });
+      };
+      reader.onerror = function () { cb('Could not read file', null); };
+      reader.readAsDataURL(f);
+    });
+    input.click();
+  }
+
+  window.tool = {
+    getValue: function () { return _value; },
+    setValue: function (data) { save(data); listeners.valueChange.forEach(function (cb) { try { cb(data); } catch (e) {} }); },
+    onValueChange: function (cb) { listeners.valueChange.push(cb); },
+    getFields: function () { return Object.assign({}, _fields); },
+    setField: function (id, v) { _fields[id] = v; },
+    setFields: function (o) { Object.assign(_fields, o); },
+    watchField: function (id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function (cb) { listeners.fieldsChange.push(cb); },
+    param: function (name, fb) { var p = (new URLSearchParams(location.search)).get(name); return p !== null && p !== '' ? p : fb; },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function (v) { _readOnly = v; listeners.readonlyChange.forEach(function (cb) { try { cb(v); } catch (e) {} }); },
+    getUser: function () { return _role === 'none' ? null : MOCK_USERS[_role]; },
+    onUserChange: function (cb) { listeners.userChange.push(cb); },
+    _setRole: function (r) { _role = r; listeners.userChange.forEach(function (cb) { try { cb(window.tool.getUser()); } catch (e) {} }); },
+    reportValid: function () {},
+    reportMissingParams: function () {},
+    notify: function (msg, sev) {
+      sev = sev || 'info';
+      var cols = { info: '#4338ca', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (cols[sev] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font:13px system-ui;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s;max-width:400px';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function () { t.remove(); }, 300); }, 2500);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    openUrl: function (url) { if (url && url !== '#') window.open(url, '_blank'); else window.tool.notify('(harness: no URL)', 'info'); },
+    openObjectDetail: function () {},
+    getPermittedUsers: function () { return []; },
+    onPermittedUsersChange: function () {},
+    requestExportPdf: function (opts, cb) {
+      setTimeout(function () {
+        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + (opts.filename || 'export') + '</title></head><body>' + (opts.html || '') + '</body></html>';
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        window.tool.notify('Export opened in a new tab — use Print → Save as PDF (' + (opts.filename || 'export') + ')', 'info');
+        if (cb) cb(null, { name: (opts.filename || 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+      }, 150);
+    },
+    requestSendEmail: function (opts, cb) {
+      console.log('[mock] requestSendEmail →', opts.to, '| subject:', opts.subject, '| attachments:', (opts.attachments || []).length);
+      setTimeout(function () {
+        window.tool.notify('Email sent (mock) to ' + opts.to, 'success');
+        if (cb) cb(null, { ok: true });
+      }, 400);
+    },
+    requestUpload: function (accept, cb) {
+      pickFile(accept, cb);
+    },
+    requestFileContent: function (url, cb) {
+      setTimeout(function () {
+        var today = iso(new Date());
+        var text = 'KARAKOY LOKANTASI\nGIDA VE ICELEK SAN. TIC. LTD.\nAdres: Karakoy, Istanbul\nTARIH: ' + today + ' 13:42\nFIS NO: 8821\n\n1 x Iskender Kebap      420.00\n2 x Limonata            120.00\n1 x Baklava             160.00\nAra Toplam             700.00\nKDV %18                190.68\nTOPLAM                1.250,00 TL\n\nOdeme: KREDI KARTI\nTesekkur Ederiz';
+        cb(null, text);
+      }, 600);
+    },
+    requestAI: function (prompt, ctx, cb) {
+      setTimeout(function () {
+        if (prompt.indexOf('accounting OCR assistant') !== -1) {
+          var today = iso(new Date());
+          var resp = '{"vendor":"Karaköy Lokantası","date":"' + today + '","amount":1250,"taxAmount":190.68,"taxRate":18,"currency":"TRY","category":"Food & Dining","paymentMethod":"card","confidence":"high","notes":"FIS NO: 8821"}';
+          cb(null, resp);
+        } else {
+          cb('No mock response for this prompt', null);
+        }
+      }, 900);
+    },
+    requestAIStream: function (prompt, ctx, callbacks) {
+      var err = 'requestAIStream not mocked';
+      if (callbacks && callbacks.onError) callbacks.onError(err);
+      else if (callbacks && callbacks.onComplete) callbacks.onComplete('');
+    },
+    requestObjects: function (action, params, cb) { if (cb) cb('CMS objects not used by this tool', null); },
+    onReady: function (cb) { load(); cb(_value, _fields); },
+    _loadSample: function () {
+      localStorage.removeItem(STORAGE_KEY);
+      _value = null;
+      if (typeof loadSample === 'function') { loadSample(); }
+      else { location.reload(); }
+    },
+    _clearAll: function () { localStorage.removeItem(STORAGE_KEY); _value = null; location.reload(); },
+    _toggleRO: function () { this._setReadOnly(!_readOnly); },
+    _dumpValue: function () { console.log('Tool value:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+      window.tool._toggleRO();
+      window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT MODE', 'info');
+    }
+  });
+})();
+</script>
+<script src="InvoiceAndExpenseCollector.js"></script>
+<script>
+/* ══ WIRE TEST HARNESS BUTTONS ══ */
+document.getElementById('th-sample').addEventListener('click', function () {
+  window.tool._loadSample();
+  document.getElementById('th-status').textContent = 'Sample data loaded';
+});
+document.getElementById('th-clear').addEventListener('click', function () {
+  window.tool._clearAll();
+  document.getElementById('th-status').textContent = 'Cleared';
+});
+document.getElementById('th-reload').addEventListener('click', function () { location.reload(); });
+document.getElementById('th-role').addEventListener('change', function () {
+  window.tool._setRole(this.value);
+  window.tool.notify('Role: ' + (this.value === 'none' ? 'not signed in' : this.value), 'info');
+});
+document.getElementById('th-dump').addEventListener('click', function () {
+  window.tool._dumpValue();
+  window.tool.notify('Tool value dumped to console', 'info');
+});
+</script>
+</body>
+</html>

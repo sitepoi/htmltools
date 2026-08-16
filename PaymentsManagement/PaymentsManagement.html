@@ -1,0 +1,191 @@
+<div class="pm-shell" id="pm-shell">
+  <header class="pm-header">
+    <div class="pm-brand">
+      <div class="pm-logo">💳</div>
+      <div class="pm-brand-txt">
+        <h1 class="pm-title">Payments Manager</h1>
+        <p class="pm-sub">Recurring payments &middot; one-off requests &middot; check them off when done</p>
+      </div>
+    </div>
+    <div class="pm-head-right">
+      <div class="pm-chip" id="pm-month-chip">&hellip;</div>
+      <div class="pm-chip" id="pm-user-chip">&hellip;</div>
+    </div>
+  </header>
+
+  <div class="pm-lockbanner" id="pm-lock-banner" style="display:none">🔒 <span id="pm-lock-text">View-only</span></div>
+
+  <div class="pm-body">
+    <nav class="pm-tabs pm-side" id="pm-tabs">
+      <button class="pm-tab-btn active" type="button" data-tab="dashboard" onclick="switchTab('dashboard')">📊 Dashboard</button>
+      <button class="pm-tab-btn" type="button" data-tab="due" onclick="switchTab('due')">📅 Due &amp; Check-off <span class="pm-badge pm-badge--count" id="badge-due" style="display:none"></span></button>
+      <button class="pm-tab-btn" type="button" data-tab="regular" onclick="switchTab('regular')">🔁 Regular <span class="pm-badge pm-badge--count" id="badge-regular" style="display:none"></span></button>
+      <button class="pm-tab-btn" type="button" data-tab="requests" onclick="switchTab('requests')">📩 Requests <span class="pm-badge" id="badge-requests" style="display:none"></span></button>
+      <button class="pm-tab-btn" type="button" data-tab="monthview" onclick="switchTab('monthview')">📆 Month View</button>
+      <button class="pm-tab-btn" type="button" data-tab="history" onclick="switchTab('history')">🧾 History</button>
+      <button class="pm-tab-btn" type="button" data-tab="payees" onclick="switchTab('payees')">👥 Payees</button>
+      <button class="pm-tab-btn" type="button" data-tab="org" onclick="switchTab('org')">🏢 Departments &amp; Budgets</button>
+    </nav>
+
+    <main class="pm-main">
+      <section class="pm-tabpane active" id="pane-dashboard">
+        <div class="pm-stats" id="pm-stats"></div>
+        <div class="pm-dash-actions" id="pm-dash-actions">
+          <button class="pm-btn pm-btn-primary" type="button" id="btn-dash-request" onclick="openRequestForm()">＋ Request</button>
+          <button class="pm-btn pm-btn-primary" type="button" id="btn-dash-regular" onclick="openRegularForm()">＋ Regular Payment</button>
+          <button class="pm-btn pm-btn-ghost" type="button" id="btn-dash-qb" onclick="openQbImport()">📥 Import QuickBooks</button>
+        </div>
+        <div class="pm-dash-grid">
+          <div class="pm-dash-card">
+            <div class="pm-dash-head"><span class="pm-dash-title">📅 Due now</span><button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" onclick="switchTab('due')">View all →</button></div>
+            <div class="pm-list" id="dash-due"></div>
+          </div>
+          <div class="pm-dash-card">
+            <div class="pm-dash-head"><span class="pm-dash-title">🏢 Department budgets</span><button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" onclick="switchTab('org')">Manage →</button></div>
+            <div class="pm-list" id="dash-depts"></div>
+          </div>
+          <div class="pm-dash-card">
+            <div class="pm-dash-head"><span class="pm-dash-title">🕐 Awaiting approval</span><button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" onclick="switchTab('requests')">Review →</button></div>
+            <div class="pm-list" id="dash-pending"></div>
+          </div>
+          <div class="pm-dash-card">
+            <div class="pm-dash-head"><span class="pm-dash-title">✅ Recently paid</span><button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" onclick="switchTab('history')">History →</button></div>
+            <div class="pm-list" id="dash-paid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="pm-tabpane" id="pane-due">
+      <div class="pm-toolbar">
+        <div class="pm-search">
+          <span class="pm-search-ic">🔍</span>
+          <input class="pm-input" type="text" id="due-search" placeholder="Search payee, payment, method&hellip;" oninput="renderDue()">
+        </div>
+        <select class="pm-input pm-select" id="due-filter" onchange="renderDue()">
+          <option value="current" selected>📅 Due now (overdue + this month)</option>
+          <option value="all">All unpaid</option>
+          <option value="overdue">⏰ Overdue only</option>
+          <option value="month">📅 This month only</option>
+          <option value="upcoming">🔜 Upcoming</option>
+        </select>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-primary pm-btn-sm" type="button" id="btn-add-request-quick" onclick="openRequestForm()">＋ Request</button>
+        <button class="pm-btn pm-btn-primary pm-btn-sm" type="button" id="btn-add-regular-quick" onclick="openRegularForm()">＋ Regular</button>
+      </div>
+      <div class="pm-list" id="due-list"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-regular">
+      <div class="pm-toolbar">
+        <div class="pm-search">
+          <span class="pm-search-ic">🔍</span>
+          <input class="pm-input" type="text" id="regular-search" placeholder="Search regular payments&hellip;" oninput="renderRegulars()">
+        </div>
+        <select class="pm-input pm-select" id="regular-filter" onchange="renderRegulars()">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+        </select>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-export-regulars" onclick="exportRegulars()">⬇ Export List</button>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-import-regulars" onclick="importRegulars()">⬆ Import List</button>
+        <button class="pm-btn pm-btn-primary" type="button" id="btn-add-regular" onclick="openRegularForm()">＋ Add Regular Payment</button>
+      </div>
+      <div class="pm-list" id="regular-list"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-requests">
+      <div class="pm-toolbar">
+        <div class="pm-search">
+          <span class="pm-search-ic">🔍</span>
+          <input class="pm-input" type="text" id="requests-search" placeholder="Search requests&hellip;" oninput="renderRequests()">
+        </div>
+        <select class="pm-input pm-select" id="requests-filter" onchange="renderRequests()">
+          <option value="open">Open (pending + approved)</option>
+          <option value="pending">Pending approval</option>
+          <option value="approved">Approved</option>
+          <option value="paid">Paid</option>
+          <option value="declined">Declined</option>
+          <option value="all">All</option>
+        </select>
+        <div class="pm-spacer"></div>
+        <span class="pm-toolbar-hint" id="req-vis-hint" style="display:none">👁 You only see your own requests</span>
+        <button class="pm-btn pm-btn-primary" type="button" id="btn-add-request" onclick="openRequestForm()">＋ New Request</button>
+      </div>
+      <div class="pm-list" id="requests-list"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-monthview">
+      <div class="pm-toolbar">
+        <select class="pm-input pm-select" id="mv-month" onchange="renderMonthView()"></select>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-mv-csv" onclick="exportMonthCsv()">⬇ CSV</button>
+      </div>
+      <div class="pm-hist-summary" id="mv-summary"></div>
+      <div class="pm-list" id="mv-not-done"></div>
+      <div class="pm-list" id="mv-done" style="margin-top:14px"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-history">
+      <div class="pm-toolbar">
+        <select class="pm-input pm-select" id="history-month" onchange="renderHistory()">
+          <option value="all">All months</option>
+        </select>
+        <select class="pm-input pm-select" id="history-cat" onchange="renderHistory()">
+          <option value="all">All categories</option>
+        </select>
+        <div class="pm-search">
+          <span class="pm-search-ic">🔍</span>
+          <input class="pm-input" type="text" id="history-search" placeholder="Search&hellip;" oninput="renderHistory()">
+        </div>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-import-qb" onclick="openQbImport()">📥 Import QB</button>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-trim" onclick="openTrimModal()">🧹 Trim</button>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-export-csv" onclick="exportCsv()">⬇ CSV</button>
+        <button class="pm-btn pm-btn-ghost pm-btn-sm" type="button" id="btn-export-pdf" onclick="exportPdf()">📄 PDF</button>
+      </div>
+      <div class="pm-hist-summary" id="history-summary"></div>
+      <div class="pm-table-card">
+        <table class="pm-table">
+          <thead><tr><th>Paid on</th><th>Due</th><th>Payment</th><th>Type</th><th>Category</th><th>Method</th><th>Who</th><th>Amount</th><th>Paid by</th></tr></thead>
+          <tbody id="history-body"></tbody>
+        </table>
+      </div>
+      <div class="pm-rowcount" id="history-count"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-payees">
+      <div class="pm-toolbar">
+        <div class="pm-toolbar-hint">💡 Saved payees make adding payments fast &mdash; pick one and the &ldquo;who / method / details&rdquo; fill in automatically (e.g. the email for Interac).</div>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-primary" type="button" id="btn-add-payee" onclick="openPayeeForm()">＋ Add Payee</button>
+      </div>
+      <div class="pm-list" id="payees-list"></div>
+    </section>
+
+    <section class="pm-tabpane" id="pane-org">
+      <div class="pm-toolbar">
+        <div class="pm-toolbar-hint">💡 Departments hold a yearly budget. Link payments to a department, a payment type and a money source, then watch budget usage here.</div>
+        <div class="pm-spacer"></div>
+        <button class="pm-btn pm-btn-primary" type="button" id="btn-add-dept" onclick="openDepartmentForm()">＋ Add Department</button>
+      </div>
+      <div class="pm-list" id="dept-list"></div>
+
+      <div class="pm-mv-title" style="margin-top:18px">🏷 Payment Types <span class="pm-mv-total">what each payment is — salary, rent, event cost…</span></div>
+      <div class="pm-toolbar" style="margin-top:6px"><div class="pm-spacer"></div><button class="pm-btn pm-btn-primary" type="button" id="btn-add-type" onclick="openTypeForm()">＋ Add Type</button></div>
+      <div class="pm-list" id="types-list"></div>
+
+      <div class="pm-mv-title" style="margin-top:18px">🏦 Money Sources <span class="pm-mv-total">where the money comes from — grants, bank accounts, cash…</span></div>
+      <div class="pm-toolbar" style="margin-top:6px"><div class="pm-spacer"></div><button class="pm-btn pm-btn-primary" type="button" id="btn-add-source" onclick="openSourceForm()">＋ Add Source</button></div>
+      <div class="pm-list" id="sources-list"></div>
+    </section>
+
+  </main>
+
+  <div class="pm-backdrop" id="pm-backdrop" style="display:none">
+    <div class="pm-modal" id="pm-modal" role="dialog" aria-modal="true"></div>
+  </div>
+
+  <datalist id="pm-cat-options"></datalist>
+  </div>
+</div>

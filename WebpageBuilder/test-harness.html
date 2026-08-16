@@ -19,7 +19,10 @@ body { padding-top: 28px !important; margin: 0; }
 #th-bar .btn-clear { background: #dc2626; color: #fff; }
 #th-bar .btn-reload { background: #16a34a; color: #fff; }
 #th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .btn-dump { background: #0ea5e9; color: #fff; }
 #th-bar .hint { color: #a5a0b8; font-size: 10px; }
+#th-dump-wrap { display: none; max-height: 320px; overflow: auto; background: #0b1220; color: #34d399; font: 11px/1.45 Consolas, monospace; margin: 6px 8px; padding: 10px; border: 1px solid #374151; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+#th-dump-wrap .dump-title { color: #9ca3af; margin-bottom: 6px; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -29,14 +32,21 @@ body { padding-top: 28px !important; margin: 0; }
   <button class="btn-ro" id="th-toggle-ro">Toggle Read-Only</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-dump" id="th-dump-btn">📋 Saved JSON</button>
   <span class="sep">|</span>
-  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="hint">Shortcut: Ctrl+Shift+Y (or click 📋)</span>
   <span class="sep">|</span>
   <span id="th-status" class="hint">Ready</span>
+</div>
+<div id="th-dump-wrap">
+  <div class="dump-title">Saved value (what tool.setValue sends to the parent CMS object):</div>
+  <span id="th-dump"></span>
 </div>
 
 <!-- TOOL HTML INLINED (mirrors WebpageBuilder.html) -->
 <div id="app">
+  <!-- DIFF LIBRARY CDN — loaded before all other scripts (developer visual line diff in chat) -->
+  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
@@ -47,9 +57,8 @@ body { padding-top: 28px !important; margin: 0; }
       </div>
     </div>
     <div class="header-right">
-      <button class="btn btn-sm btn-ghost" id="btn-config" title="Page Settings">⚙️ Settings</button>
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
-      <button class="btn btn-sm btn-ghost" id="btn-guide" title="View active rules (generalwebsite-page-rules.txt)">📐 Rules</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
       <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
@@ -122,6 +131,7 @@ body { padding-top: 28px !important; margin: 0; }
       <div class="chat-input-area">
         <div class="chat-input-toolbar">
           <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a reference file (mockup, logo, spec doc…)">📎 Attach</button>
+          <button class="guided-toggle active" id="btn-agentic-mode" title="Agentic Mode — large requests become a task plan and run step by step (avoids timeouts)">🧠 Agentic</button>
           <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
         </div>
         <div class="chat-input-row">
@@ -136,28 +146,14 @@ body { padding-top: 28px !important; margin: 0; }
     <main class="content-panel" id="content-panel">
       <div class="content-tabs" id="content-tabs">
         <button class="ctab active" data-tab="preview">👁️ Preview</button>
-        <button class="ctab" data-tab="sections">🧩 Sections</button>
-        <button class="ctab" data-tab="compliance">🧪 Compliance</button>
-        <button class="ctab" data-tab="html">📄 HTML</button>
-        <button class="ctab" data-tab="css">🎨 CSS</button>
-        <button class="ctab" data-tab="js">⚡ JS</button>
-        <button class="ctab" data-tab="console">🪲 Console</button>
-        <button class="ctab" data-tab="settings">⚙️ Settings</button>
-        <div class="content-actions" id="content-actions" style="display:none">
-          <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
-          <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
-          <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
-        </div>
+        <button class="ctab" data-tab="suggestions">💡 Suggestions</button>
+        <button class="ctab" data-tab="advanced">🛠️ Advanced</button>
       </div>
 
       <div class="content-editors">
         <!-- Preview -->
         <div class="content-editor active" id="editor-preview">
           <div class="preview-toolbar">
-            <div class="browser-chrome">
-              <span class="browser-dots"><i></i><i></i><i></i></span>
-              <span class="browser-url" id="preview-url">—</span>
-            </div>
             <div class="device-toggle" id="device-toggle">
               <button class="dev-btn active" data-device="desktop" title="Desktop view">🖥️</button>
               <button class="dev-btn" data-device="tablet" title="Tablet view (768px)">📱</button>
@@ -177,72 +173,64 @@ body { padding-top: 28px !important; margin: 0; }
           </div>
         </div>
 
-        <!-- Sections -->
-        <div class="content-editor" id="editor-sections">
+        <!-- Suggestions -->
+        <div class="content-editor" id="editor-suggestions">
           <div class="sections-panel">
             <div class="sections-header">
-              <h2>🧩 Page Sections</h2>
-              <p>Detected from your page. Click a section to scroll to it in Preview.</p>
+              <h2>💡 Suggestions</h2>
+              <p>Computed from your current page — these are the sections your page is missing. Click one and the AI adds it with a prompt tailored to your content.</p>
               <button class="btn btn-sm btn-ghost" id="btn-sections-refresh">↻ Rescan</button>
             </div>
+            <div id="suggest-page-type" class="suggest-page-type"></div>
             <div class="quick-add-row" id="quick-add-row" style="display:none">
-              <span class="quick-add-label">➕ Add a section:</span>
-              <button class="qa-chip" data-qa="testimonials">Testimonials</button>
-              <button class="qa-chip" data-qa="pricing">Pricing</button>
-              <button class="qa-chip" data-qa="faq">FAQ</button>
-              <button class="qa-chip" data-qa="team">Team</button>
-              <button class="qa-chip" data-qa="gallery">Gallery</button>
-              <button class="qa-chip" data-qa="contact">Contact</button>
-              <button class="qa-chip" data-qa="cta">Call-to-action</button>
+              <span class="quick-add-label">Suggested next sections:</span>
+              <div class="qa-chips" id="qa-chips"></div>
             </div>
-            <div class="sections-list" id="sections-list">
-              <div class="sections-empty">No sections yet. Generate a page first — or use the quick-add buttons above once you have one.</div>
+            <div class="skills-block" id="skills-row-wrap">
+              <div class="quick-add-row skills-row-inner">
+                <span class="quick-add-label">🧠 Skills</span>
+                <div class="qa-chips" id="skills-row"></div>
+              </div>
+              <span class="qa-hint">Extra expertise the AI applies when designing. Page-type guidance (menu, pricing, listings…) is added automatically from your content.</span>
             </div>
           </div>
         </div>
 
-        <!-- Compliance -->
-        <div class="content-editor" id="editor-compliance">
-          <div class="compliance-panel">
-            <div class="compliance-header">
-              <h2>🧪 Rules Compliance Checker</h2>
-              <p>Automated checks against the active rules file — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
-              <div class="compliance-actions">
-                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
-                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page against every rule">🤖 AI Review</button>
-                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
-              </div>
-              <div class="rules-source-note" id="rules-source-note"></div>
+        <!-- Advanced (code, console, compliance, export) -->
+        <div class="content-editor" id="editor-advanced">
+          <div class="adv-subtabs">
+            <button class="advtab" data-advtab="html">📄 HTML</button>
+            <button class="advtab" data-advtab="css">🎨 CSS</button>
+            <button class="advtab" data-advtab="js">⚡ JS</button>
+            <button class="advtab" data-advtab="console">🪲 Console</button>
+            <button class="advtab active" data-advtab="settings">⚙️ Generate &amp; Export</button>
+            <div class="content-actions" id="content-actions" style="display:none">
+              <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
+              <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
+              <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
             </div>
-            <div class="compliance-score" id="compliance-score"></div>
-            <div class="compliance-list" id="compliance-list">
-              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
-            </div>
-            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
-              <div class="ai-review-status" id="ai-review-status"></div>
-              <pre class="ai-review-output" id="ai-review-output"></pre>
-            </div>
+            <button class="btn btn-sm btn-outline adv-compliance-btn" id="btn-compliance-open" title="Run page quality checks">🧪 Compliance</button>
           </div>
-        </div>
+          <div class="adv-panels">
 
         <!-- HTML Editor -->
-        <div class="content-editor" id="editor-html">
+        <div class="advpanel" id="editor-html">
           <div class="code-lines" id="html-lines"></div>
           <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
         </div>
         <!-- CSS Editor -->
-        <div class="content-editor" id="editor-css">
+        <div class="advpanel" id="editor-css">
           <div class="code-lines" id="css-lines"></div>
           <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
         </div>
         <!-- JS Editor -->
-        <div class="content-editor" id="editor-js">
+        <div class="advpanel" id="editor-js">
           <div class="code-lines" id="js-lines"></div>
           <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
         </div>
 
         <!-- Console -->
-        <div class="content-editor" id="editor-console">
+        <div class="advpanel" id="editor-console">
           <div class="console-output" id="console-output">
             <div class="console-empty">🪲 Console output from the preview appears here.<br>Click buttons in the Preview tab and watch for logs and errors.</div>
           </div>
@@ -253,167 +241,17 @@ body { padding-top: 28px !important; margin: 0; }
         </div>
 
         <!-- Settings -->
-        <div class="content-editor" id="editor-settings">
+        <div class="advpanel active" id="editor-settings">
           <div class="config-scroll">
             <div class="config-header">
-              <h2>⚙️ Page Settings</h2>
-              <p>These settings guide the AI when it designs your page. Changes apply on the next generation.</p>
+              <h2>⚙️ Generate & Export</h2>
+              <p>Page identity and SEO metadata live on the parent CMS content record — this tool stores only the page code. Design direction comes from admin parameters and is shared across pages.</p>
             </div>
 
             <div class="config-section">
-              <h3>🏷️ Identity</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Page Name <span class="req">*</span></label>
-                  <input type="text" id="f-page-name" class="form-input" placeholder="e.g. Sunrise Bakery — Home">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Page Type</label>
-                  <select id="f-page-type" class="form-input">
-                    <option value="landing">Landing / Marketing Page</option>
-                    <option value="saas">SaaS / Product Page</option>
-                    <option value="restaurant">Restaurant / Café</option>
-                    <option value="company">Company / Business Profile</option>
-                    <option value="portfolio">Portfolio</option>
-                    <option value="event">Event Page</option>
-                    <option value="product">Product Launch</option>
-                    <option value="realestate">Real Estate / Listings</option>
-                    <option value="coming-soon">Coming Soon</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Brand / Organization</label>
-                  <input type="text" id="f-brand-name" class="form-input" placeholder="e.g. Sunrise Bakery">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Tagline / Slogan</label>
-                  <input type="text" id="f-tagline" class="form-input" placeholder="e.g. Fresh bread, baked with love">
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Target Audience</label>
-                  <select id="f-audience" class="form-input">
-                    <option value="general">General Public</option>
-                    <option value="customers">Customers / Clients</option>
-                    <option value="investors">Investors / Partners</option>
-                    <option value="community">Community Members</option>
-                    <option value="students">Students</option>
-                    <option value="donors">Donors / Supporters</option>
-                    <option value="staff">Staff / Internal</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Language</label>
-                  <select id="f-lang" class="form-input">
-                    <option value="en">English</option>
-                    <option value="tr">Türkçe</option>
-                    <option value="fr">Français</option>
-                    <option value="de">Deutsch</option>
-                    <option value="es">Español</option>
-                    <option value="ar">العربية</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Favicon Emoji</label>
-                  <input type="text" id="f-favicon" class="form-input" maxlength="4" placeholder="🍞" style="text-align:center;font-size:18px">
-                </div>
-                <div class="form-group">
-                  <label class="form-label">SEO Title</label>
-                  <input type="text" id="f-seo-title" class="form-input" placeholder="Shown in browser tab & search results">
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">SEO Description</label>
-                <textarea id="f-seo-desc" class="form-input form-textarea" rows="2" placeholder="Short summary used by search engines and social sharing…"></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">SEO Keywords (comma-separated)</label>
-                <input type="text" id="f-seo-keywords" class="form-input" placeholder="bakery, fresh bread, istanbul…">
-              </div>
-            </div>
-
-            <div class="config-section">
-              <h3>🎨 Design Direction</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Color Scheme</label>
-                  <select id="f-color-scheme" class="form-input">
-                    <option value="emerald">Emerald — fresh & natural</option>
-                    <option value="blue">Blue — trusted & professional</option>
-                    <option value="indigo">Indigo — modern tech</option>
-                    <option value="violet">Violet — creative & bold</option>
-                    <option value="rose">Rose — warm & friendly</option>
-                    <option value="amber">Amber — cozy & rustic</option>
-                    <option value="teal">Teal — calm & balanced</option>
-                    <option value="ocean">Ocean — deep blue gradient</option>
-                    <option value="forest">Forest — earthy & organic</option>
-                    <option value="sunset">Sunset — orange-pink gradient</option>
-                    <option value="mono">Monochrome — minimal black & white</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Typography</label>
-                  <select id="f-typography" class="form-input">
-                    <option value="modern-sans">Modern Sans — clean & readable</option>
-                    <option value="elegant-serif">Elegant Serif — classic & refined</option>
-                    <option value="friendly-rounded">Friendly Rounded — approachable</option>
-                    <option value="tech-mono">Tech Mono — developer vibe</option>
-                    <option value="editorial">Editorial — magazine style</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Visual Style</label>
-                  <select id="f-style-mode" class="form-input">
-                    <option value="modern">Modern & polished</option>
-                    <option value="minimal">Minimal & airy</option>
-                    <option value="bold">Bold & colorful</option>
-                    <option value="elegant">Elegant & luxurious</option>
-                    <option value="playful">Playful & fun</option>
-                    <option value="corporate">Corporate & serious</option>
-                    <option value="editorial">Editorial & typographic</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Dark Mode</label>
-                  <select id="f-dark-mode" class="form-input">
-                    <option value="light-only">Light only</option>
-                    <option value="light-dark">Light + dark toggle</option>
-                    <option value="dark-first">Dark-first design</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="config-section">
-              <h3>🧩 Sections to Include</h3>
-              <div class="sec-grid">
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="hero" checked><span>🏠 Hero</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="about"><span>💬 About</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="features"><span>✨ Features</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="services"><span>🛠️ Services</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="stats"><span>📊 Stats</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="gallery"><span>🖼️ Gallery</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="testimonials"><span>⭐ Testimonials</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="pricing"><span>💰 Pricing</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="team"><span>👥 Team</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="faq"><span>❓ FAQ</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="contact"><span>✉️ Contact</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="cta"><span>📣 Call-to-Action</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="news"><span>📰 News / Blog</span></label>
-                <label class="sec-card"><input type="checkbox" class="sec-check" data-sec="footer" checked><span>🦶 Footer</span></label>
-              </div>
-              <div class="form-group" style="margin-top:12px">
-                <label class="form-label">Extra Style Notes</label>
-                <textarea id="f-style-notes" class="form-input form-textarea" rows="3" placeholder="Anything specific: 'big rounded cards', 'glassmorphism', 'animated gradient hero', 'sticky navbar with blur'…"></textarea>
-              </div>
+              <h3>🎨 Design Direction (admin parameters)</h3>
+              <div class="params-summary" id="params-summary">Loading…</div>
+              <p class="gen-hint">These values are configured as tool parameters in the field settings and are shared across pages. Ask an admin to change them — or describe the look you want in the chat and the AI will follow it.</p>
             </div>
 
             <div class="config-actions">
@@ -435,8 +273,34 @@ body { padding-top: 28px !important; margin: 0; }
                 <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
                 <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
               </div>
-              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array (see the 📐 Rules file, Section 3).</p>
+              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array.</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Compliance -->
+        <div class="advpanel" id="editor-compliance">
+          <div class="compliance-panel">
+            <div class="compliance-header">
+              <h2>🧪 Page Quality Checker</h2>
+              <p>Automated quality checks — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
+              <div class="compliance-actions">
+                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
+                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page">🤖 AI Review</button>
+                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
+              </div>
+            </div>
+            <div class="compliance-score" id="compliance-score"></div>
+            <div class="compliance-list" id="compliance-list">
+              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
+            </div>
+            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
+              <div class="ai-review-status" id="ai-review-status"></div>
+              <pre class="ai-review-output" id="ai-review-output"></pre>
+            </div>
+          </div>
+        </div>
+
           </div>
         </div>
       </div>
@@ -446,31 +310,8 @@ body { padding-top: 28px !important; margin: 0; }
   <!-- History Modal -->
   <div class="modal-backdrop" id="modal-backdrop" hidden></div>
   <div class="modal" id="modal-history" style="display:none">
-    <div class="modal-header"><h3>📋 Generation History</h3><button class="btn-close" id="btn-close-history">✕</button></div>
+    <div class="modal-header"><div><h3>📋 Version History</h3><p class="modal-sub">Every generation is saved as a version. Click ↩️ Restore to go back — the current version is always visible in the header and at the top of the code blocks.</p></div><button class="btn-close" id="btn-close-history">✕</button></div>
     <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Design your first page!</div></div>
-  </div>
-
-  <!-- Rules Modal (active rules + editor) -->
-  <div class="modal" id="modal-guide" style="display:none">
-    <div class="modal-header">
-      <h3>📐 GeneralWebsite Page Rules <span class="rules-source-label" id="rules-source-label"></span></h3>
-      <div class="modal-header-actions">
-        <button class="btn btn-sm btn-ghost" id="btn-edit-rules" style="display:none">✏️ Edit</button>
-        <button class="btn-close" id="btn-close-guide">✕</button>
-      </div>
-    </div>
-    <div class="modal-body rules-body">
-      <div class="rules-loading" id="rules-loading">Loading rules…</div>
-      <div id="guide-body"></div>
-      <div class="rules-edit-wrap" id="rules-edit-wrap" style="display:none">
-        <p class="rules-edit-hint">Paste the updated rules text here (generalwebsite-page-rules.txt). This overrides the built-in copy for this tool. The AI prompts and the compliance checker use the active rules automatically.</p>
-        <textarea id="rules-editor" class="rules-editor" spellcheck="false"></textarea>
-        <div class="rules-edit-actions">
-          <button class="btn btn-primary btn-sm" id="btn-rules-save">💾 Save Rules</button>
-          <button class="btn btn-ghost btn-sm" id="btn-rules-reset">↺ Reset to Built-in</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Template Detail Modal -->
@@ -1323,17 +1164,64 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
     requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'reference.png', url: 'https://example.com/reference.png', size: 2048, type: 'image/png' }); }, 500); },
     requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
     requestObjects: function(action, params, cb) {
-      if (action === 'query') setTimeout(function() { cb(null, { objects: [] }); }, 250);
-      else if (action === 'create') setTimeout(function() { cb(null, { object: { id: 'n-' + Date.now().toString(36), name: params.name, productData: params.productData } }); }, 250);
-      else if (action === 'update') setTimeout(function() { cb(null, { ok: true }); }, 250);
-      else if (action === 'delete') setTimeout(function() { cb(null, { ok: true }); }, 250);
-      else setTimeout(function() { cb(null, { ok: true }); }, 250);
+      var KEY = params.mainObjectType === 'webpagebuilder-history-uniconbaseapps' ? 'webpagebuilder_test_history' : 'webpagebuilder_test_sessions';
+      function loadSess() { try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSess(arr) { try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch (e) {} }
+      setTimeout(function() {
+        if (action === 'query') {
+          cb(null, { objects: loadSess() });
+        } else if (action === 'create') {
+          var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'New Chat', _parentObjectId: 'mock-parent', productData: params.productData };
+          var arr = loadSess();
+          arr.unshift(obj);
+          saveSess(arr);
+          cb(null, { object: obj });
+        } else if (action === 'update') {
+          var arr2 = loadSess();
+          for (var si = 0; si < arr2.length; si++) {
+            if (arr2[si].id === params.objectId) {
+              if (params.name) arr2[si].name = params.name;
+              if (params.productData) {
+                arr2[si].productData = arr2[si].productData || {};
+                var oldDcb = arr2[si].productData.data_categoriesBased || {};
+                var newDcb = params.productData.data_categoriesBased || {};
+                arr2[si].productData.data_categoriesBased = Object.assign({}, oldDcb, newDcb);
+              }
+              break;
+            }
+          }
+          saveSess(arr2);
+          cb(null, { ok: true });
+        } else if (action === 'delete') {
+          var arr3 = loadSess().filter(function(s) { return s.id !== params.objectId; });
+          saveSess(arr3);
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 250);
     },
     requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename || 'export') + '.html', url: 'https://example.com/export.html', size: 4096, type: 'text/html' }); }, 500); },
     requestSendEmail: function(opts, cb) { setTimeout(function() { cb(null, { ok: true }); }, 500); }
   };
 
   function generateMockResponse(prompt) {
+    var isPlan = prompt.indexOf('OUTPUT ONLY A RAW JSON ARRAY') !== -1;
+    var isStep = prompt.indexOf('You are executing step') !== -1;
+    if (isPlan) {
+      return '[{"t":"add","d":"Add a newsletter signup section"},{"t":"add","d":"Add a testimonials section with 3 reviews"},{"t":"style","d":"Refine spacing and mobile paddings"}]';
+    }
+    if (isStep) {
+      var taskStart = prompt.indexOf('=== TASK ===');
+      var taskEnd = prompt.indexOf('=== CURRENT PAGE');
+      if (taskEnd === -1) taskEnd = prompt.length;
+      var taskDesc = taskStart !== -1 ? prompt.substring(taskStart + 12, taskEnd).replace(/^\s+|\s+$/g, '') : 'Update the page';
+      if (/spacing|padding|mobile|style/i.test(taskDesc)) {
+        return '[CSS]\n.gw-section { padding: 32px 16px; }\n@media (max-width: 640px) { .gw-section { padding: 24px 12px; } }\n[/CSS]\nStep done.';
+      }
+      var id = 'gw-' + (taskDesc.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'new');
+      return '[HTML]\n<section id="' + id + '" class="gw-section">\n  <h2>' + taskDesc.replace(/[<>&]/g, '') + '</h2>\n  <p>This section was added by the agentic plan step.</p>\n</section>\n[/HTML]\nStep done.';
+    }
     var isChat = prompt.indexOf('=== USER REQUEST ===') !== -1;
     var isRefine = prompt.indexOf('CURRENT PAGE CODE') !== -1;
     if (isChat && isRefine) {
@@ -1345,7 +1233,13 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
   window._toolMock = {
     setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); },
     getValue: function() { return _value; },
-    clear: function() { _value = null; save(); fire('valueChange', null); location.reload(); }
+    clear: function() {
+      _value = null;
+      save();
+      try { localStorage.removeItem('webpagebuilder_test_sessions'); localStorage.removeItem('webpagebuilder_test_history'); } catch (e) {}
+      fire('valueChange', null);
+      location.reload();
+    }
   };
 })();
 </script>
@@ -1357,16 +1251,20 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
 <script>
 (function() {
   var thStatus = document.getElementById('th-status');
+  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-08-15l';
   document.getElementById('th-load-sample').onclick = function() {
+    // Slim saved value — design direction comes from params, identity from the parent object.
     window.tool.setValue({
-      pageName: 'Bloom Café — Home', pageType: 'restaurant', brandName: 'Bloom Café',
-      tagline: 'Fresh, locally roasted coffee', audience: 'customers', lang: 'en', favicon: '🌿',
-      seoTitle: 'Bloom Café — Fresh Coffee', seoDesc: 'Small-batch coffee in a cozy neighborhood café.',
-      seoKeywords: 'coffee, cafe, espresso', colorScheme: 'amber', typography: 'modern-sans',
-      styleMode: 'modern', darkMode: 'light-only', sections: ['hero', 'about', 'gallery', 'contact', 'footer'],
-      styleNotes: 'Cozy and warm', device: 'desktop', history: [], chatMessages: [], _theme: 'light', version: '1.0.0'
+      code: {
+        html: '<div class="gw-hero gw-bloom-hero"><h1>Bloom Café</h1><p class="gw-lead">Fresh, locally roasted coffee in a cozy neighborhood café.</p><a class="gw-btn" href="#contact">Visit Us</a></div>',
+        css: '.gw-bloom-hero{padding:4rem 1.5rem;text-align:center;background:linear-gradient(135deg,#fff8ec,#ffe4c4)}.gw-bloom-hero h1{font-size:2.6rem;color:#7a4a1f}.gw-lead{color:#5c4a33}.gw-btn{display:inline-block;margin-top:1rem;padding:.8rem 1.6rem;background:#c97b2d;color:#fff;border-radius:.5rem;text-decoration:none}',
+        js: "document.addEventListener('click', function(e){ if(e.target.closest('.gw-btn')){ alert('Welcome to Bloom Café!'); } });"
+      },
+      history: [],
+      version: '1.0.0',
+      activeSessionId: ''
     });
-    if (thStatus) thStatus.textContent = 'Sample config loaded — open ⚙️ Settings or chat "build me a coffee shop page".';
+    if (thStatus) thStatus.textContent = 'Sample code loaded — design direction comes from params (check ⚙️ Generate & Export tab).';
   };
   document.getElementById('th-toggle-ro').onclick = function() {
     window._toolMock.setReadOnly(!document.body.classList.contains('readonly'));
@@ -1374,12 +1272,37 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
   };
   document.getElementById('th-clear').onclick = function() { if (confirm('Clear all test data?')) window._toolMock.clear(); };
   document.getElementById('th-reload').onclick = function() { location.reload(); };
-  document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      e.preventDefault();
-      console.log('=== DB ===');
-      console.log(JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2));
+
+  // Surface ANY uncaught JS error in the status line (mock callbacks swallow errors silently).
+  window.addEventListener('error', function(e) {
+    if (thStatus) thStatus.textContent = '⚠ JS error: ' + (e && e.message ? e.message : String(e)) + ' — open DevTools console for details.';
+    return false;
+  });
+
+  function thDump() {
+    var json = JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2);
+    console.log('=== DB (saved value) ===');
+    console.log(json);
+    var wrap = document.getElementById('th-dump-wrap');
+    var out = document.getElementById('th-dump');
+    if (wrap && out) {
+      out.textContent = json;
+      wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+      if (wrap.style.display !== 'none') wrap.scrollTop = 0;
     }
+    if (thStatus) thStatus.textContent = 'Saved JSON dumped — see the panel above the tool (and the console).';
+  }
+  document.getElementById('th-dump-btn').onclick = thDump;
+  // Shortcut from the parent page itself
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'Y' || e.key === 'y')) {
+      e.preventDefault();
+      thDump();
+    }
+  });
+  // Shortcut relayed from inside the preview iframe (focus usually sits there)
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.wbDump) thDump();
   });
 })();
 </script>
