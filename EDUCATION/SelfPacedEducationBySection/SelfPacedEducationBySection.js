@@ -18,6 +18,10 @@ var currentSectionId = null;
 var currentLessonId = null;
 var quizAnswers = {};
 var quizSubmitted = false;
+var activeStudyTab = 0;                 // remember which tab is open across re-renders
+var _quizSaveTimer = null;              // debounced auto-save for quiz answers
+var _suppressNextValueChange = false;   // skip onValueChange reload after our own save
+var _lastSavedJson = null;              // JSON of our last internal save (to tell internal vs external changes apart)
 var availableCurriculums = []; // Cached list of Builder objects for the setup picker
 
 /* ── Constants ── */
@@ -577,7 +581,38 @@ function getPrevLesson(sectionId, lessonId) {
 
 /* ── Persist progress (preserves config) ── */
 function saveProgress() {
-  tool.setValue({ config: CONFIG, progress: PROGRESS });
+  var data = { config: CONFIG, progress: PROGRESS };
+  _lastSavedJson = JSON.stringify(data || null);
+  // Mark this save as internal so onValueChange can skip the heavy
+  // curriculum reload (which resets tabs and makes students think data was lost)
+  _suppressNextValueChange = true;
+  tool.setValue(data);
+}
+
+/** Flush any pending debounced saves (flashcards, quiz answers) */
+function flushPendingSaves() {
+  var pending = false;
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; pending = true; }
+  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; pending = true; }
+  if (pending) saveProgress();
+}
+
+/** Debounced auto-save of the in-progress quiz answers to PROGRESS.
+ *  Answers persist on every selection — no data loss on re-render. */
+function scheduleQuizAutoSave() {
+  if (!currentSectionId || !currentLessonId) return;
+  if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
+  if (!PROGRESS[currentSectionId][currentLessonId]) PROGRESS[currentSectionId][currentLessonId] = {};
+  PROGRESS[currentSectionId][currentLessonId].quizAnswers = JSON.parse(JSON.stringify(quizAnswers));
+  var st = el('quiz-save-status-inline');
+  if (st) { st.textContent = '💾 Saving…'; st.style.color = '#d97706'; }
+  if (_quizSaveTimer) clearTimeout(_quizSaveTimer);
+  _quizSaveTimer = setTimeout(function() {
+    _quizSaveTimer = null;
+    saveProgress();
+    var st2 = el('quiz-save-status-inline');
+    if (st2) { st2.textContent = '✓ Answers saved'; st2.style.color = '#059669'; }
+  }, 1000);
 }
 
 /* ═══════════════════════════════════════════
@@ -915,10 +950,10 @@ function renderLessonDetail() {
   setTimeout(function() {
     var allSteps = flowEl.querySelectorAll('.study-step');
     var expanded = false;
-    if (prog.status === 'completed' && hasQuiz) {
-      // Open the quiz tab on completed lessons
+    if ((prog.status === 'completed' || prog.status === 'pending_review' || prog.status === 'studying') && hasQuiz) {
+      // Open the quiz tab on submitted/completed lessons so results are visible
       for (var es = 0; es < allSteps.length; es++) {
-        if (steps[es] && steps[es].type === 'quiz') { allSteps[es].classList.add('expanded'); expanded = true; break; }
+        if (steps[es] && steps[es].type === 'quiz') { allSteps[es].classList.add('expanded'); expanded = true; activeStudyTab = es; break; }
       }
     }
     if (!expanded && allSteps.length > 0) allSteps[0].classList.add('expanded');
@@ -940,6 +975,7 @@ function renderLessonDetail() {
           stepEls[activeStepIdx].classList.remove('active-tab');
         }
         activeStepIdx = idx;
+        activeStudyTab = idx; // remember across re-renders
         if (stepEls[idx]) {
           stepEls[idx].classList.add('active-tab');
           // Restore scroll position for this tab
@@ -963,8 +999,9 @@ function renderLessonDetail() {
           btn.addEventListener('click', function() { activateTab(idx); });
         })(tabBtns[tb], tb);
       }
-      // Open first tab by default
-      activateTab(0);
+      // Restore the tab the student was on (defaults to first tab)
+      var defaultTab = (typeof activeStudyTab === 'number' && activeStudyTab >= 0 && activeStudyTab < tabBtns.length) ? activeStudyTab : 0;
+      activateTab(defaultTab);
     }
   }, 50);
 
@@ -1069,8 +1106,12 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     saveProgress();
   }
 
-  var wasSubmitted = prog.status === 'completed' || (prog.quizAnswers && Object.keys(prog.quizAnswers).length > 0);
+  // Submitted = the student actually pressed Submit / Mark Complete (explicit flag
+  // or a terminal status). Merely having auto-saved answers does NOT count — the
+  // student must still see the Submit button when they return.
+  var wasSubmitted = prog.quizSubmitted === true || prog.status === 'completed' || prog.status === 'pending_review' || prog.status === 'studying';
   var isCompleted = prog.status === 'completed';
+  var hasSavedAnswers = !!(prog.quizAnswers && typeof prog.quizAnswers === 'object' && Object.keys(prog.quizAnswers).length > 0);
   quizSubmitted = wasSubmitted;
   quizAnswers = prog.quizAnswers ? JSON.parse(JSON.stringify(prog.quizAnswers)) : {};
 
@@ -1099,7 +1140,7 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     }).join('');
 
     if (!wasSubmitted) {
-      html += '<div class="quiz-actions"><button class="btn btn-primary" id="btn-submit-quiz-inline">Submit Answers</button></div>';
+      html += '<div class="quiz-actions"><button class="btn btn-primary" id="btn-submit-quiz-inline">Submit Answers</button><span id="quiz-save-status-inline" style="font-size:12px;color:var(--text-muted);align-self:center">💾 Answers auto-save as you answer</span></div>';
       html += '<div class="quiz-result" id="quiz-result-inline" style="display:none"></div>';
     } else if (!isCompleted && !isStudying) {
       var score = calcQuizScore(activeQuestions, prog.quizAnswers);
@@ -1144,6 +1185,8 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
           for (var ao = 0; ao < allOpts.length; ao++) allOpts[ao].classList.remove('selected');
           var parentLabel = this.closest('.quiz-option');
           if (parentLabel) parentLabel.classList.add('selected');
+          // Auto-save the answer immediately (debounced) — nothing is lost
+          scheduleQuizAutoSave();
         });
       }
     }
@@ -1649,8 +1692,8 @@ window.sfcInitAll = function() {
 };
 
 function showSections() {
-  // Flush any pending flashcard mastered saves before navigating away
-  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
+  // Flush any pending debounced saves before navigating away
+  flushPendingSaves();
   currentView = 'sections'; currentSectionId = null; currentLessonId = null;
   el('view-sections').style.display = '';
   el('view-lessons').style.display = 'none';
@@ -1663,8 +1706,8 @@ function showSections() {
 }
 
 function openSection(sectionId) {
-  // Flush any pending flashcard mastered saves before navigating away
-  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
+  // Flush any pending debounced saves before navigating away
+  flushPendingSaves();
   if (!isSectionAccessible(sectionId)) { tool.notify('🔒 You must complete all previous sections first.', 'warning'); return; }
   currentView = 'lessons'; currentSectionId = sectionId; currentLessonId = null;
   el('view-sections').style.display = 'none';
@@ -1679,9 +1722,10 @@ function openSection(sectionId) {
 }
 
 function openLesson(sectionId, lessonId) {
-  // Flush any pending flashcard mastered saves before navigating to a new lesson
-  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); saveProgress(); }
+  // Flush any pending debounced saves before navigating to a new lesson
+  flushPendingSaves();
   if (!isLessonAccessible(sectionId, lessonId)) { tool.notify('🔒 You must complete all previous lessons first.', 'warning'); return; }
+  activeStudyTab = 0; // new lesson starts on the first tab
   currentView = 'lesson-detail'; currentSectionId = sectionId; currentLessonId = lessonId;
   el('view-sections').style.display = 'none';
   el('view-lessons').style.display = 'none';
@@ -1747,14 +1791,20 @@ function markComplete() {
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
   var mgmtType = CONFIG.managementType || 'self_paced';
   var newStatus = (mgmtType === 'supervised' && hasQuiz) ? 'pending_review' : 'completed';
-  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: null, completedAt: new Date().toISOString(), quizAttempts: [], quizAnswers: {}, supervisorStatus: null, supervisorNotes: '' };
+  // Preserve quiz score + answers instead of wiping them on completion
+  var existingProg = getLessonProgress(currentSectionId, currentLessonId);
+  var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
+  var prevAnswers = (existingProg.quizAnswers && typeof existingProg.quizAnswers === 'object') ? JSON.parse(JSON.stringify(existingProg.quizAnswers)) : {};
+  var prevAttempts = (existingProg.quizAttempts && Array.isArray(existingProg.quizAttempts)) ? JSON.parse(JSON.stringify(existingProg.quizAttempts)) : [];
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, supervisorStatus: null, supervisorNotes: '' };
+  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
   saveProgress();
   renderLessonDetail();
   updateProgressBar();
   if (newStatus === 'pending_review') {
-    tool.notify('Lesson submitted for supervisor review. ✅', 'success');
+    tool.notify('Lesson submitted for supervisor review ✅ — saved to CMS.', 'success');
   } else {
-    tool.notify('Lesson marked as complete! ✅', 'success');
+    tool.notify('Lesson marked as complete ✅ — saved to CMS.', 'success');
   }
 
   if (newStatus === 'completed') {
@@ -1768,6 +1818,7 @@ function markInProgress() {
   if (!currentSectionId || !currentLessonId) return;
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
   PROGRESS[currentSectionId][currentLessonId] = { status: 'in_progress' };
+  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
   saveProgress();
   renderLessonDetail();
   updateProgressBar();
@@ -1791,14 +1842,15 @@ function submitQuiz(quizData) {
   if (passed) {
     var mgmtType = CONFIG.managementType || 'self_paced';
     var finalStatus = (mgmtType === 'supervised') ? 'pending_review' : 'completed';
-    PROGRESS[currentSectionId][currentLessonId] = { status: finalStatus, score: score, completedAt: new Date().toISOString(), quizAttempts: attempts, currentSet: 0, studyUntil: null, quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), supervisorStatus: null, supervisorNotes: '' };
+    PROGRESS[currentSectionId][currentLessonId] = { status: finalStatus, score: score, completedAt: new Date().toISOString(), quizAttempts: attempts, currentSet: 0, studyUntil: null, quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), quizSubmitted: true, supervisorStatus: null, supervisorNotes: '' };
   } else {
     var nextSet = currentSet + 1;
     if (nextSet >= QUIZ_SETS) nextSet = 0;
-    PROGRESS[currentSectionId][currentLessonId] = { status: 'studying', score: score, completedAt: null, quizAttempts: attempts, currentSet: nextSet, studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(), quizAnswers: JSON.parse(JSON.stringify(quizAnswers)) };
+    PROGRESS[currentSectionId][currentLessonId] = { status: 'studying', score: score, completedAt: null, quizAttempts: attempts, currentSet: nextSet, studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(), quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), quizSubmitted: true };
   }
 
   quizSubmitted = true;
+  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
   saveProgress();
   renderLessonDetail();
   updateProgressBar();
@@ -1806,15 +1858,15 @@ function submitQuiz(quizData) {
   if (passed) {
     var mgmtType2 = CONFIG.managementType || 'self_paced';
     if (mgmtType2 === 'supervised') {
-      tool.notify('Quiz passed! Score: ' + score + '%. Awaiting supervisor approval. ⏳', 'success');
+      tool.notify('Quiz passed! Score: ' + score + '% — submitted for supervisor approval ✅', 'success');
     } else {
-      tool.notify('Quiz passed! Score: ' + score + '% ✅', 'success');
+      tool.notify('Quiz passed! Score: ' + score + '% — saved ✅', 'success');
       var next = getNextLesson(currentSectionId, currentLessonId);
       if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 1200);
       else setTimeout(function() { openSection(currentSectionId); }, 1200);
     }
   } else {
-    tool.notify('Score: ' + score + '%. Study for ' + STUDY_WAIT_MIN + ' minutes, then try again.', 'warning');
+    tool.notify('Score: ' + score + '% — saved. Study for ' + STUDY_WAIT_MIN + ' minutes, then try again.', 'warning');
   }
 }
 
@@ -1827,8 +1879,10 @@ function retryQuiz() {
   if (PROGRESS[currentSectionId] && PROGRESS[currentSectionId][currentLessonId]) {
     PROGRESS[currentSectionId][currentLessonId].quizAnswers = {};
     PROGRESS[currentSectionId][currentLessonId].status = 'in_progress';
+    PROGRESS[currentSectionId][currentLessonId].quizSubmitted = false;
     PROGRESS[currentSectionId][currentLessonId].studyUntil = null;
   }
+  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
   saveProgress();
   renderLessonDetail();
   updateProgressBar();
@@ -2420,7 +2474,13 @@ tool.onReady(function(val, fields) {
   }
 
   tool.onValueChange(function(v) {
+    var internal = _suppressNextValueChange && JSON.stringify(v || null) === _lastSavedJson;
+    _suppressNextValueChange = false;
     loadData(v);
+    // Our own saveProgress() — the caller already re-rendered the view.
+    // Skip the heavy curriculum reload so the active tab stays put and
+    // nothing flickers or appears to lose data.
+    if (internal) return;
     // If config changed externally, reload curriculum
     if (CONFIG.curriculumSourceId && currentView !== 'setup') {
       loadCurriculum(function() {
