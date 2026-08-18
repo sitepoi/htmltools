@@ -193,6 +193,48 @@ tool.reportValid(bool, msg)  → false blocks form save and shows `msg` as an
                                Call reportValid(true) to clear the error.
                                Call this whenever your validation state changes.
 
+── Autosave (persist to Firestore WITHOUT the parent Save click) ──
+BY DEFAULT tool.setValue() only STAGES the value in the parent form state.
+Nothing is written to Firestore until the user clicks the parent form's
+Save button (or presses Ctrl+S).  Reloading before Save loses the change.
+
+There are TWO ways to get an immediate commit:
+
+1. tool.requestSave(callback)   ← RECOMMENDED for "submit now" flows
+   Asks the parent form to commit its CURRENT state to Firestore
+   immediately — exactly like the user clicking the parent Save button.
+   Requires: allowRequestSave: 'yes' in toolParams (field settings).
+   callback(error, ok):
+     ok=true  — save request accepted and dispatched to the host form
+     ok=false — rejected: allowRequestSave not enabled, or form is read-only
+
+   BEST PRACTICE — set the value FIRST, then request the save:
+     tool.setValue({ answers: [...], submittedAt: Date.now() })
+     tool.requestSave(function(err, ok) {
+       if (err || !ok) tool.notify('Save failed: ' + (err || 'denied'), 'error')
+       else tool.notify('Answers saved ✓', 'success')
+     })
+
+   Use this for: quiz "Submit Answers", exam results, signatures, one-shot
+   forms — any action where the user must be able to leave the page
+   immediately after clicking a button.
+
+2. saveFormOnChange: 'yes' (field setting)
+   When this field setting is on, EVERY tool.setValue() autosaves the whole
+   parent record after a 150 ms debounce.  No toolParams opt-in needed.
+   Use for tools that continuously produce data (timers, live counters,
+   meters) where each change should persist on its own.
+
+RULES & LIMITS
+  • Save requests are DENIED when the form is read-only (viewer).
+  • The save writes the WHOLE parent CMS record — not just this field.
+  • requestSave() flushes the latest staged tool value before saving, so
+    setValue() followed by requestSave() never loses data.
+  • The ok=true ack means "dispatched" — the Firestore write is async in
+    the host.  It does NOT guarantee the write completed in the same tick.
+  • Autosave respects the normal permission cascade; a viewer cannot
+    autosave any more than they could click Save.
+
 ── Host notifications ─────────────────────────────────
 tool.notify(message, severity)
     → shows a toast notification in the CMS host UI

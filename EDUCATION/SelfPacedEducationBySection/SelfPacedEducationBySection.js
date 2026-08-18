@@ -19,7 +19,6 @@ var currentLessonId = null;
 var quizAnswers = {};
 var quizSubmitted = false;
 var activeStudyTab = 0;                 // remember which tab is open across re-renders
-var _quizSaveTimer = null;              // debounced auto-save for quiz answers
 var _suppressNextValueChange = false;   // skip onValueChange reload after our own save
 var _lastSavedJson = null;              // JSON of our last internal save (to tell internal vs external changes apart)
 var availableCurriculums = []; // Cached list of Builder objects for the setup picker
@@ -101,6 +100,21 @@ function debugLogUser() {
     console.log('[SelfPaced] isAdmin():', isAdmin());
   } catch(e) {
     console.log('[SelfPaced] tool.getUser() threw:', e);
+  }
+}
+
+/** Diagnostic: log the SDK save capability so admins can verify the
+ *  "Allow Save Request" setting is active. */
+function probeToolApi() {
+  try {
+    console.log('[SelfPaced] tool API keys:', Object.keys(tool || {}).join(', '));
+    console.log('[SelfPaced] tool.isReadOnly():', tool.isReadOnly ? tool.isReadOnly() : '(not available)');
+    console.log('[SelfPaced] tool.requestSave available:', typeof tool.requestSave === 'function');
+    console.log('[SelfPaced] allowRequestSave param:', tool.param ? tool.param('allowRequestSave', '(unset)') : '(no param API)');
+    console.log('[SelfPaced] save-like SDK methods found:', findSaveTriggers().join(', ') || '(none)');
+    console.log('[SelfPaced] current stored value:', (JSON.stringify(tool.getValue ? tool.getValue() : null) || '').slice(0, 400));
+  } catch(e) {
+    console.log('[SelfPaced] probeToolApi threw:', e);
   }
 }
 
@@ -540,11 +554,14 @@ function getSectionProgressSummary(sectionId) {
   if (!section) return { status: 'not_started', completed: 0, total: 0 };
   var lessons = getLessons(section);
   var completed = 0;
+  var active = 0;
   for (var j = 0; j < lessons.length; j++) {
-    if (getLessonProgress(sectionId, lessons[j].id).status === 'completed') completed++;
+    var st = getLessonProgress(sectionId, lessons[j].id).status;
+    if (st === 'completed') completed++;
+    else if (st === 'in_progress' || st === 'studying' || st === 'pending_review') active++;
   }
   var total = lessons.length;
-  var status = total === 0 ? 'not_started' : completed === total ? 'completed' : completed > 0 ? 'in_progress' : 'not_started';
+  var status = total === 0 ? 'not_started' : completed === total ? 'completed' : (completed + active) > 0 ? 'in_progress' : 'not_started';
   return { status: status, completed: completed, total: total };
 }
 
@@ -579,39 +596,121 @@ function getPrevLesson(sectionId, lessonId) {
   return null;
 }
 
-/* ── Persist progress (preserves config) ── */
-function saveProgress() {
+/* ── Persist progress to the parent CMS object ──
+ *  Progress lives on the REAL CMS record this tool is installed on.
+ *  Save semantics (verified with the CMS codebase):
+ *    • tool.setValue() only STAGES the value in the parent form.
+ *    • tool.requestSave(cb) asks the parent to commit the whole record to
+ *      Firestore NOW — same cascade as the parent Save button.
+ *      Requires the field setting allowRequestSave: 'yes'.
+ *  saveProgress(immediate) stages on every call; when immediate=true
+ *  (Submit Answers, Mark Complete, …) it also fires requestSave and reports
+ *  the true outcome. We never claim "saved" unless the save was accepted. */
+function findSaveTriggers() {
+  var found = [];
+  try {
+    var keys = Object.keys(tool || {});
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      if (/save|commit|persist|flush/i.test(k) && typeof tool[k] === 'function' && found.indexOf(k) === -1) {
+        found.push(k);
+      }
+    }
+  } catch(e) {}
+  return found;
+}
+
+function saveProgress(immediate, onDone) {
   var data = { config: CONFIG, progress: PROGRESS };
   _lastSavedJson = JSON.stringify(data || null);
-  // Mark this save as internal so onValueChange can skip the heavy
-  // curriculum reload (which resets tabs and makes students think data was lost)
   _suppressNextValueChange = true;
-  tool.setValue(data);
+  var readOnly = false;
+  try { readOnly = !!(tool.isReadOnly && tool.isReadOnly()); } catch(e) {}
+  try { tool.reportValid(true, ''); } catch(e) {}
+  // 1) Stage the latest value in the parent form.
+  try { tool.setValue(data); } catch(e) {}
+  var staged = false;
+  try { staged = JSON.stringify(tool.getValue() || null) === _lastSavedJson; } catch(e) {}
+  var result = { ok: true, readOnly: readOnly, staged: staged, saved: false, saveError: '' };
+  // 2) On explicit user actions, ask the parent CMS to commit the record to
+  //    Firestore immediately (it flushes the latest staged value first).
+  if (immediate) {
+    if (typeof tool.requestSave === 'function') {
+      try {
+        tool.requestSave(function(err, ok) {
+          if (ok) {
+            result.saved = true;
+            console.log('[SelfPaced] requestSave accepted — Firestore write dispatched');
+          } else {
+            result.saveError = err || 'denied — enable "Allow Save Request" in the field settings';
+            console.log('[SelfPaced] requestSave rejected:', result.saveError);
+          }
+          if (onDone) onDone(result);
+        });
+        return;
+      } catch(e) {
+        result.saveError = String(e);
+        console.log('[SelfPaced] requestSave threw:', e);
+      }
+    } else {
+      result.saveError = 'CMS does not support requestSave — update the CMS or enable "Save on Change" on the field.';
+      console.log('[SelfPaced] requestSave not available');
+    }
+  }
+  if (onDone) onDone(result);
 }
 
-/** Flush any pending debounced saves (flashcards, quiz answers) */
+/** Report a save outcome honestly — "Saved ✓" only when the parent CMS
+ *  accepted the save request (real Firestore commit dispatched). */
+function reportSaveResult(res, successPrefix) {
+  console.log('[SelfPaced] save result:', JSON.stringify(res || null));
+  var st = el('quiz-save-status-inline');
+  if (res.readOnly) {
+    var m1 = '⚠️ Could not save — the page is read-only. Ask an admin to save the record.';
+    if (st) { st.textContent = m1; st.style.color = '#dc2626'; }
+    tool.notify(m1, 'warning');
+  } else if (res.saved) {
+    var m2 = (successPrefix || 'Saved') + ' ✓';
+    if (st) { st.textContent = m2; st.style.color = '#059669'; }
+    tool.notify(m2, 'success');
+  } else if (res.saveError) {
+    var m2b = '⚠️ Save to the course record failed: ' + res.saveError;
+    if (st) { st.textContent = m2b; st.style.color = '#dc2626'; }
+    tool.notify(m2b, 'error');
+  } else if (res.staged) {
+    var m4 = '📝 Recorded in the form — click Save in the CMS toolbar to keep it permanently.';
+    if (st) { st.textContent = m4; st.style.color = '#d97706'; }
+    tool.notify(m4, 'warning');
+  } else {
+    var m5 = '⚠️ Could not record the value in the form. Please try again.';
+    if (st) { st.textContent = m5; st.style.color = '#dc2626'; }
+    tool.notify(m5, 'error');
+  }
+  return res;
+}
+
+/** Flush any pending debounced saves (flashcards, quiz staging) */
 function flushPendingSaves() {
   var pending = false;
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; pending = true; }
   if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; pending = true; }
-  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; pending = true; }
-  if (pending) saveProgress();
+  if (pending) saveProgress(true);
 }
 
-/** Debounced auto-save of the in-progress quiz answers to PROGRESS.
- *  Answers persist on every selection — no data loss on re-render. */
+/** Debounced staging of in-progress quiz answers into PROGRESS + the parent
+ *  form. This is NOT a database save — the parent CMS only writes to
+ *  Firestore when the form is saved. The real save happens when the student
+ *  clicks "Submit Answers" (or an admin clicks the CMS Save button).
+ *  No "Saved" message is shown here — that would be misleading. */
 function scheduleQuizAutoSave() {
   if (!currentSectionId || !currentLessonId) return;
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
   if (!PROGRESS[currentSectionId][currentLessonId]) PROGRESS[currentSectionId][currentLessonId] = {};
   PROGRESS[currentSectionId][currentLessonId].quizAnswers = JSON.parse(JSON.stringify(quizAnswers));
-  var st = el('quiz-save-status-inline');
-  if (st) { st.textContent = '💾 Saving…'; st.style.color = '#d97706'; }
-  if (_quizSaveTimer) clearTimeout(_quizSaveTimer);
-  _quizSaveTimer = setTimeout(function() {
-    _quizSaveTimer = null;
-    saveProgress();
-    var st2 = el('quiz-save-status-inline');
-    if (st2) { st2.textContent = '✓ Answers saved'; st2.style.color = '#059669'; }
+  if (window._quizStageTimer) clearTimeout(window._quizStageTimer);
+  window._quizStageTimer = setTimeout(function() {
+    window._quizStageTimer = null;
+    saveProgress();  // silent stage only — never claims "saved"
   }, 1000);
 }
 
@@ -701,12 +800,15 @@ function renderLessons() {
     list.innerHTML = lessons.map(function(les, idx) {
       var prog = getLessonProgress(section.id, les.id);
       var lock = !isLessonAccessible(section.id, les.id);
-      var iconClass = lock ? 'locked' : prog.status;
-      var iconMap = { completed: '✅', in_progress: '📖', not_started: '📌', locked: '🔒' };
-      var icon = iconMap[lock ? 'locked' : prog.status] || '📌';
-      var badgeMap = { completed: 'Completed', in_progress: 'In Progress', not_started: 'Not Started', locked: 'Locked' };
-      var badgeLabel = badgeMap[lock ? 'locked' : prog.status] || 'Not Started';
-      var badgeClass = 'status-' + (lock ? 'locked' : prog.status);
+      // Status key drives icon + badge. pending_review / studying must NOT
+      // fall back to "Not Started" (the old maps lacked those two keys).
+      var stKey = lock ? 'locked' : (prog.status || 'not_started');
+      var iconMap = { completed: '✅', in_progress: '📖', studying: '🔁', pending_review: '⏳', not_started: '📌', locked: '🔒' };
+      var icon = iconMap[stKey] || '📌';
+      var badgeMap = { completed: 'Completed', in_progress: 'In Progress', studying: 'Study & Retry', pending_review: 'Awaiting Review', not_started: 'Not Started', locked: 'Locked' };
+      var badgeLabel = badgeMap[stKey] || 'Not Started';
+      var iconClass = stKey;
+      var badgeClass = 'status-' + stKey;
       var scoreHtml = typeof prog.score === 'number' ? ' · Score: ' + prog.score + '%' : '';
 
       return '<div class="lesson-card' + (lock ? ' locked' : '') + '"' +
@@ -903,16 +1005,27 @@ function renderLessonDetail() {
       } else if (step.type === 'quiz') {
         html += '<div class="study-quiz-wrap">' + renderQuizInFlow(step.quizData, prog, currentSectionId, currentLessonId) + '</div>';
       } else if (step.type === 'nav') {
-        // Completion step — show message if no quiz, plus nav buttons
-        if (!hasQuiz) {
-          html += '<div style="text-align:center;padding:20px 0;color:var(--text-muted)">📭 There are no questions for this lesson.</div>';
-        }
+        // Completion step — final action to finish the lesson
+        var mgmtTypeNav = CONFIG.managementType || 'self_paced';
+        var isAwaitingReview = prog.status === 'pending_review';
         html += '<div class="quiz-nav-actions">';
         html += '<button class="btn btn-outline" id="btn-prev-lesson-inline"' + (!getPrevLesson(section.id, lesson.id) ? ' disabled' : '') + '>← Previous</button>';
-        html += '<button class="btn btn-success" id="btn-mark-complete-inline"' + (prog.status === 'completed' ? ' style="display:none"' : '') + '>✓ Mark Complete</button>';
-        html += '<button class="btn btn-outline" id="btn-mark-inprogress-inline"' + (prog.status !== 'completed' ? ' style="display:none"' : '') + '>📖 Mark In Progress</button>';
+        if (isAwaitingReview) {
+          html += '<button class="btn btn-outline" disabled>⏳ Awaiting Supervisor Approval</button>';
+        } else if (prog.status === 'completed') {
+          html += '<button class="btn btn-outline" id="btn-mark-inprogress-inline">📖 Mark In Progress</button>';
+        } else {
+          var completeLabel = (mgmtTypeNav === 'supervised') ? '✓ Mark Complete & Submit for Review' : '✓ Mark Complete';
+          html += '<button class="btn btn-success" id="btn-mark-complete-inline">' + completeLabel + '</button>';
+        }
         html += '<button class="btn btn-outline" id="btn-next-lesson-inline"' + (!getNextLesson(section.id, lesson.id) || (getNextLesson(section.id, lesson.id) && !isLessonAccessible(getNextLesson(section.id, lesson.id).sectionId, getNextLesson(section.id, lesson.id).lessonId)) ? ' disabled' : '') + '>Next →</button>';
         html += '</div>';
+        if (!hasQuiz && !isAwaitingReview && prog.status !== 'completed') {
+          html += '<div style="text-align:center;padding:14px 0 0;color:var(--text-muted);font-size:13px">📭 There are no questions for this lesson — review the materials, then click Mark Complete.</div>';
+        }
+        if (hasQuiz && !isAwaitingReview && prog.status !== 'completed' && prog.quizPassed !== true && !(typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE)) {
+          html += '<div style="text-align:center;padding:14px 0 0;color:var(--warning);font-size:13px">📝 You must pass the quiz in the Quiz tab before you can mark this lesson complete.</div>';
+        }
       }
 
       html += '</div></div>';
@@ -1140,12 +1253,17 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     }).join('');
 
     if (!wasSubmitted) {
-      html += '<div class="quiz-actions"><button class="btn btn-primary" id="btn-submit-quiz-inline">Submit Answers</button><span id="quiz-save-status-inline" style="font-size:12px;color:var(--text-muted);align-self:center">💾 Answers auto-save as you answer</span></div>';
+      html += '<div class="quiz-actions"><button class="btn btn-primary" id="btn-submit-quiz-inline">Submit Answers</button><span id="quiz-save-status-inline" style="font-size:12px;color:var(--text-muted);align-self:center">Answer all questions, then click Submit Answers to save</span></div>';
       html += '<div class="quiz-result" id="quiz-result-inline" style="display:none"></div>';
     } else if (!isCompleted && !isStudying) {
       var score = calcQuizScore(activeQuestions, prog.quizAnswers);
       var passed = score >= MIN_PASS_SCORE;
       html += '<div class="quiz-result ' + (passed ? 'pass' : 'fail') + '" style="display:block">Quiz ' + (passed ? 'passed' : 'failed') + ' — Score: ' + score + '%' + (passed ? '' : ' (need ' + MIN_PASS_SCORE + '%)') + '</div>';
+      html += '<span id="quiz-save-status-inline" style="display:block;text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px"></span>';
+      if (passed) {
+        var mgmtTypeQ = CONFIG.managementType || 'self_paced';
+        html += '<div style="text-align:center;padding:12px 16px;background:var(--primary-bg);border-radius:8px;font-size:13px;color:var(--primary-dark);margin-top:12px">✅ Great! Next step: open the <strong>Finish</strong> tab and click <strong>“' + (mgmtTypeQ === 'supervised' ? 'Mark Complete & Submit for Review' : 'Mark Complete') + '”</strong> to save your completion.</div>';
+      }
       if (!passed && currentSet < QUIZ_SETS - 1) html += '<div class="quiz-actions"><button class="btn btn-outline" id="btn-retry-quiz-inline">🔄 Retry Quiz</button></div>';
     }
   } else if (isCompleted) {
@@ -1774,8 +1892,8 @@ function markComplete() {
 
   if (hasQuiz && quizSubmitted) {
     var prog = getLessonProgress(currentSectionId, currentLessonId);
-    if (prog.status !== 'completed' && typeof prog.score === 'number' && prog.score < MIN_PASS_SCORE) {
-      tool.notify('You must retry and pass the quiz (≥' + MIN_PASS_SCORE + '%) before completing.', 'warning');
+    if (prog.status !== 'completed' && prog.quizPassed !== true && !(typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE)) {
+      tool.notify('You must pass the quiz (≥' + MIN_PASS_SCORE + '%) before completing this lesson.', 'warning');
       return;
     }
   }
@@ -1796,16 +1914,13 @@ function markComplete() {
   var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
   var prevAnswers = (existingProg.quizAnswers && typeof existingProg.quizAnswers === 'object') ? JSON.parse(JSON.stringify(existingProg.quizAnswers)) : {};
   var prevAttempts = (existingProg.quizAttempts && Array.isArray(existingProg.quizAttempts)) ? JSON.parse(JSON.stringify(existingProg.quizAttempts)) : [];
-  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, supervisorStatus: null, supervisorNotes: '' };
-  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
-  saveProgress();
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: existingProg.quizPassed === true, quizSubmitted: true, flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: null, supervisorNotes: '' };
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
-  if (newStatus === 'pending_review') {
-    tool.notify('Lesson submitted for supervisor review ✅ — saved to CMS.', 'success');
-  } else {
-    tool.notify('Lesson marked as complete ✅ — saved to CMS.', 'success');
-  }
+  saveProgress(true, function(res) {
+    reportSaveResult(res, newStatus === 'pending_review' ? 'Lesson submitted for supervisor review' : 'Lesson marked as complete');
+  });
 
   if (newStatus === 'completed') {
     var next = getNextLesson(currentSectionId, currentLessonId);
@@ -1818,10 +1933,10 @@ function markInProgress() {
   if (!currentSectionId || !currentLessonId) return;
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
   PROGRESS[currentSectionId][currentLessonId] = { status: 'in_progress' };
-  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
-  saveProgress();
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
+  saveProgress(true, function(res) { reportSaveResult(res, 'Status changed'); });
   tool.notify('Lesson moved back to In Progress.', 'info');
 }
 
@@ -1838,35 +1953,61 @@ function submitQuiz(quizData) {
   attempts.push({ setIndex: currentSet, score: score, timestamp: new Date().toISOString() });
 
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
+  var prev = PROGRESS[currentSectionId][currentLessonId] || {};
 
+  // Save the quiz result to the CMS, but DO NOT change the lesson status here.
+  // Completion (or submission for supervisor review) only happens when the
+  // student clicks "Mark Complete" in the Finish tab.
   if (passed) {
-    var mgmtType = CONFIG.managementType || 'self_paced';
-    var finalStatus = (mgmtType === 'supervised') ? 'pending_review' : 'completed';
-    PROGRESS[currentSectionId][currentLessonId] = { status: finalStatus, score: score, completedAt: new Date().toISOString(), quizAttempts: attempts, currentSet: 0, studyUntil: null, quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), quizSubmitted: true, supervisorStatus: null, supervisorNotes: '' };
+    PROGRESS[currentSectionId][currentLessonId] = {
+      status: (prev.status === 'completed' || prev.status === 'pending_review') ? prev.status : 'in_progress',
+      score: score,
+      quizPassed: true,
+      completedAt: prev.completedAt || null,
+      quizAttempts: attempts,
+      currentSet: 0,
+      studyUntil: null,
+      quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
+      quizSubmitted: true,
+      flashcardMastered: prev.flashcardMastered || [],
+      supervisorStatus: prev.supervisorStatus || null,
+      supervisorNotes: prev.supervisorNotes || ''
+    };
   } else {
     var nextSet = currentSet + 1;
     if (nextSet >= QUIZ_SETS) nextSet = 0;
-    PROGRESS[currentSectionId][currentLessonId] = { status: 'studying', score: score, completedAt: null, quizAttempts: attempts, currentSet: nextSet, studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(), quizAnswers: JSON.parse(JSON.stringify(quizAnswers)), quizSubmitted: true };
+    PROGRESS[currentSectionId][currentLessonId] = {
+      status: 'studying',
+      score: score,
+      quizPassed: false,
+      completedAt: null,
+      quizAttempts: attempts,
+      currentSet: nextSet,
+      studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(),
+      quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
+      quizSubmitted: true,
+      flashcardMastered: prev.flashcardMastered || []
+    };
   }
 
   quizSubmitted = true;
-  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
-  saveProgress();
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
+  // Real save attempt on Submit Answers — outcome reported honestly.
+  saveProgress(true, function(res) {
+    reportSaveResult(res, 'Quiz answers saved');
+  });
 
   if (passed) {
     var mgmtType2 = CONFIG.managementType || 'self_paced';
     if (mgmtType2 === 'supervised') {
-      tool.notify('Quiz passed! Score: ' + score + '% — submitted for supervisor approval ✅', 'success');
+      tool.notify('Quiz passed! Score: ' + score + '%. Now go to the Finish tab and click "Mark Complete & Submit for Review".', 'success');
     } else {
-      tool.notify('Quiz passed! Score: ' + score + '% — saved ✅', 'success');
-      var next = getNextLesson(currentSectionId, currentLessonId);
-      if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 1200);
-      else setTimeout(function() { openSection(currentSectionId); }, 1200);
+      tool.notify('Quiz passed! Score: ' + score + '%. Now go to the Finish tab and click "Mark Complete".', 'success');
     }
   } else {
-    tool.notify('Score: ' + score + '% — saved. Study for ' + STUDY_WAIT_MIN + ' minutes, then try again.', 'warning');
+    tool.notify('Score: ' + score + '%. Study for ' + STUDY_WAIT_MIN + ' minutes, then try again.', 'warning');
   }
 }
 
@@ -1882,10 +2023,10 @@ function retryQuiz() {
     PROGRESS[currentSectionId][currentLessonId].quizSubmitted = false;
     PROGRESS[currentSectionId][currentLessonId].studyUntil = null;
   }
-  if (_quizSaveTimer) { clearTimeout(_quizSaveTimer); _quizSaveTimer = null; }
-  saveProgress();
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
+  saveProgress(true, function(res) { reportSaveResult(res, 'Quiz reset'); });
   tool.notify('Quiz ready. Good luck!', 'info');
 }
 
@@ -2205,7 +2346,7 @@ function saveSetupConfig() {
   currentView = 'sections';
 
   // Persist config
-  saveProgress();
+  saveProgress(true);
 
   tool.notify('Curriculum configured! Loading...', 'success');
 
@@ -2393,10 +2534,10 @@ function supervisorAction(sectionId, lessonId, decision, notes) {
     p.completedAt = null;
     tool.notify('Lesson rejected. Student will see your feedback. 📝', 'info');
   }
-  saveProgress();
   renderSupervisorPanel();
   updateProgressBar();
   if (currentView === 'lessons') renderLessons();
+  saveProgress(true, function(res) { reportSaveResult(res, 'Supervisor decision saved'); });
 }
 
 /** Show/hide the supervisor dashboard panel */
@@ -2404,7 +2545,7 @@ function toggleDashboard() {
   CONFIG.dashboardVisible = !CONFIG.dashboardVisible;
   var dashBtn = el('btn-toggle-dashboard');
   dashBtn.textContent = CONFIG.dashboardVisible ? '📊 Hide Dashboard' : '📊 Dashboard';
-  saveProgress();
+  saveProgress(true);
   renderSupervisorPanel();
 }
 
@@ -2413,7 +2554,7 @@ function resetAllProgress() {
   if (!isAdmin()) { tool.notify('Only admins can reset progress.', 'warning'); return; }
   if (!confirm('This will reset ALL lesson progress for this student back to "Not Started".\n\nThis action cannot be undone. Continue?')) return;
   PROGRESS = {};
-  saveProgress();
+  saveProgress(true, function(res) { reportSaveResult(res, 'Progress reset'); });
   renderSupervisorPanel();
   updateProgressBar();
   if (currentView === 'sections') renderSections();
@@ -2455,17 +2596,30 @@ tool.onReady(function(val, fields) {
 
   tool.declareParams([
     { name: 'builderFieldName', label: 'Builder Field Name (default)', type: 'text', default: '', severity: 'goodToHave', hint: 'Default field ID of the Curriculum Builder tool inside CMS objects. Can be overridden per-object in setup.' },
-    { name: 'curriculumBuilderAppId', label: 'Curriculum Builder App ID', type: 'text', default: 'curriculum-builder-uniconbaseapps', severity: 'goodToHave', hint: 'The CMS object type ID of the Curriculum Builder app. Used to query curriculum objects. Default works for most cases.' }
+    { name: 'curriculumBuilderAppId', label: 'Curriculum Builder App ID', type: 'text', default: 'curriculum-builder-uniconbaseapps', severity: 'goodToHave', hint: 'The CMS object type ID of the Curriculum Builder app. Used to query curriculum objects. Default works for most cases.' },
+    { name: 'allowRequestSave', label: 'Allow Save Request', type: 'toggle', default: 'no', severity: 'mandatory', hint: 'Must be "yes" so quiz answers and progress are saved to the CMS record immediately on Submit Answers (field setting: Allow Save Request).' }
   ]);
 
   var stype = tool.param('curriculumBuilderAppId', 'curriculum-builder-uniconbaseapps');
   SECTIONS_TYPE = stype || 'curriculum-builder-uniconbaseapps';
 
+  // Guide the admin: without Allow Save Request, Submit Answers can only
+  // stage data and a warning is shown instead of a save confirmation.
+  if (tool.param('allowRequestSave', 'no') !== 'yes') {
+    try {
+      tool.reportMissingParams([{
+        name: 'allowRequestSave', label: 'Allow Save Request', type: 'toggle', default: 'yes', severity: 'mandatory',
+        reason: 'Quiz answers and lesson progress must be saved to the CMS record immediately when the student clicks Submit Answers.'
+      }], 'This tool needs "Allow Save Request" enabled on the field settings so student answers persist immediately.');
+    } catch(e) {}
+  }
+
   // Load config from object data (set by admin via setup screen)
   loadData(val);
   updateRoleBadge(tool.getUser());
   bindEvents();
-  debugLogUser();  // log CMS user identity to browser console
+  debugLogUser();         // log CMS user identity to browser console
+  probeToolApi();         // log SDK save capability + settings (see console)
 
   // Dark mode init
   if (localStorage.getItem('sp-dark-mode') === '1') {
