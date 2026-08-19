@@ -179,6 +179,7 @@ var _logoName = '';
 var _exifData = null;
 var _frPreset = 'none';
 var _ocrHistory = [];     // saved OCR extractions (persisted in settings)
+var _colLayout = 'side';  // collage layout id (buttons set this, no input element)
 
 // ── Small helpers ─────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -1778,7 +1779,7 @@ function applyLogo() {
 
 // ── Collage ───────────────────────────────────────────────────
 function getLayout() {
-  var id = v('col-layout');
+  var id = _colLayout;
   if (id === 'custom') {
     var rows = clamp(Math.round(parseNum(v('col-rows'))), 1, 5);
     var cols = clamp(Math.round(parseNum(v('col-cols'))), 1, 5);
@@ -1791,6 +1792,14 @@ function getLayout() {
     return { label: 'Custom grid', slots: slots };
   }
   return LAYOUTS[id] || LAYOUTS.side;
+}
+function updateColLayoutChips() {
+  var btns = document.querySelectorAll('#col-layouts .iet-layout-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].getAttribute('data-layout') === _colLayout);
+  }
+  var row = el('col-custom-row');
+  if (row) row.style.display = _colLayout === 'custom' ? 'grid' : 'none';
 }
 function syncSlots() {
   var lay = getLayout();
@@ -1914,7 +1923,7 @@ function runOcrLocal() {
   if (!src) { notify('Load an image first — use 📂 Open or drop a file while on the OCR tab', 'warning'); return; }
   var lang = v('ocr-lang');
   _ocrBusy = true;
-  ocrStatus('Loading the OCR engine…');
+  ocrStatus('Loading the OCR engine… the first run downloads the engine (~15 MB) and the ' + lang + ' language pack — this can take a minute.');
   loadTesseract(function (err) {
     if (err) {
       _ocrBusy = false;
@@ -2410,7 +2419,7 @@ function collectSettings() {
     fmt: v('cnv-format'), quality: +v('cnv-quality'),
     cmpFmt: v('cmp-format'), cmpQuality: +v('cmp-quality'),
     ocrLang: v('ocr-lang'),
-    colLayout: v('col-layout'), colAspect: v('col-aspect'), colWidth: +v('col-width'),
+    colLayout: _colLayout, colAspect: v('col-aspect'), colWidth: +v('col-width'),
     colGap: +v('col-gap'), colPad: +v('col-pad'), colBg: v('col-bg'),
     wmText: v('wm-text'), wmSize: +v('wm-size'), wmFont: v('wm-font'), wmColor: v('wm-color'),
     wmOpacity: +v('wm-opacity'), wmPos: _wmPos, wmRot: +v('wm-rot'),
@@ -2441,7 +2450,7 @@ function applySettings(s) {
   setV('cmp-format', s.cmpFmt);
   setV('cmp-quality', s.cmpQuality);
   setV('ocr-lang', s.ocrLang);
-  setV('col-layout', s.colLayout);
+  _colLayout = s.colLayout || 'side';
   setV('col-aspect', s.colAspect);
   setV('col-width', s.colWidth);
   setV('col-gap', s.colGap);
@@ -2465,6 +2474,7 @@ function applySettings(s) {
   updateCropArChips();
   updateWmPosChips();
   updateFilterPresetChips();
+  updateColLayoutChips();
   renderOcrHistory();
   onCnvFormatChanged();
   onCmpFormatChanged();
@@ -2778,9 +2788,8 @@ function wireEvents() {
     var btn = e.target;
     while (btn && btn !== this && !(btn.classList && btn.classList.contains('iet-layout-btn'))) btn = btn.parentNode;
     if (!btn || btn === this) return;
-    var btns = document.querySelectorAll('#col-layouts .iet-layout-btn');
-    for (var i3 = 0; i3 < btns.length; i3++) btns[i3].classList.toggle('active', btns[i3] === btn);
-    el('col-custom-row').style.display = btn.getAttribute('data-layout') === 'custom' ? 'grid' : 'none';
+    _colLayout = btn.getAttribute('data-layout');
+    updateColLayoutChips();
     renderSlotGrid();
     persistSettingsSoon();
   });
@@ -2824,9 +2833,8 @@ function wireEvents() {
     var f = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
     if (f) handleFile(f, +s.getAttribute('data-i'));
   });
-  ['col-layout', 'col-aspect', 'col-width', 'col-bg'].forEach(function (id) {
+  ['col-aspect', 'col-width', 'col-bg'].forEach(function (id) {
     el(id).addEventListener('change', function () {
-      if (id === 'col-layout') renderSlotGrid();
       persistSettingsSoon();
     });
   });
