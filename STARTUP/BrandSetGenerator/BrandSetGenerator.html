@@ -1,4 +1,5 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <div class="bsg-root" id="bsg-root">
   <header class="bsg-header">
     <div class="bsg-header-inner">
@@ -18,7 +19,8 @@
     <nav class="bsg-steps" id="steps-nav">
       <button class="bsg-step active" data-step="1"><span class="num">1</span>Company Profile</button>
       <button class="bsg-step" data-step="2"><span class="num">2</span>Logo Studio</button>
-      <button class="bsg-step" data-step="3"><span class="num">3</span>Brand Kit</button>
+      <button class="bsg-step" data-step="3"><span class="num">3</span>Creative Lab</button>
+      <button class="bsg-step" data-step="4"><span class="num">4</span>Brand Kit</button>
     </nav>
   </header>
 
@@ -214,12 +216,26 @@
         </div>
       </div>
       <div class="bsg-step-actions">
-        <button class="bsg-btn bsg-btn-primary" id="btn-step2-next">Continue to Brand Kit →</button>
+        <button class="bsg-btn bsg-btn-primary" id="btn-step2-next">Continue to Creative Lab →</button>
       </div>
     </section>
 
-    <!-- ============ STEP 3 — BRAND KIT ============ -->
+    <!-- ============ STEP 3 — CREATIVE LAB ============ -->
     <section class="bsg-pane" id="pane-3" style="display:none">
+      <div class="bsg-lab">
+        <aside class="bsg-kit-side">
+          <div class="bsg-kit-side-title">Creative tools</div>
+          <nav class="bsg-kit-nav" id="lab-nav"></nav>
+        </aside>
+        <div class="bsg-kit-content" id="lab-content"></div>
+      </div>
+      <div class="bsg-step-actions">
+        <button class="bsg-btn bsg-btn-primary" id="btn-step3-next">Continue to Brand Kit →</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 4 — BRAND KIT ============ -->
+    <section class="bsg-pane" id="pane-4" style="display:none">
       <div class="bsg-kit-toolbar">
         <div>
           <h2>Brand Kit</h2>
@@ -228,9 +244,25 @@
         <div class="bsg-kit-actions">
           <button class="bsg-btn bsg-btn-primary" id="btn-zip">⬇ Download all (ZIP)</button>
           <button class="bsg-btn bsg-btn-ghost" id="btn-pdf-guidelines">📄 Guidelines PDF</button>
+          <button class="bsg-btn bsg-btn-ghost" id="btn-kit-dark">🌙 Dark variant</button>
           <button class="bsg-btn bsg-btn-ghost" id="btn-copy-json">📋 Copy Brand JSON</button>
           <button class="bsg-btn bsg-btn-ghost" id="btn-download-json">⬇ brand.json</button>
         </div>
+      </div>
+      <div class="bsg-kit-settings">
+        <details class="bsg-kit-setting">
+          <summary>🏷️ File naming scheme</summary>
+          <div class="bsg-kit-setting-body">
+            <label class="bsg-set-field"><span>Slug</span><input id="f-slug" type="text" placeholder="auto: nova-labs"></label>
+            <label class="bsg-set-field"><span>Prefix</span><input id="f-prefix" type="text" placeholder="e.g. brand"></label>
+            <label class="bsg-set-field"><span>Suffix</span><input id="f-suffix" type="text" placeholder="e.g. 2026"></label>
+            <div class="bsg-hint" style="align-self:center">Example: <code id="f-name-sample">nova-labs-primary-logo.svg</code></div>
+          </div>
+        </details>
+        <details class="bsg-kit-setting">
+          <summary>📦 Export preferences</summary>
+          <div class="bsg-kit-setting-body" id="export-prefs"></div>
+        </details>
       </div>
       <div class="bsg-kit-layout">
         <aside class="bsg-kit-side">
@@ -239,10 +271,6 @@
         </aside>
         <div class="bsg-kit-content">
           <div id="kit-content"></div>
-          <div class="bsg-card bsg-guidelines">
-            <h3 style="font-size:15px">📖 Brand Guidelines</h3>
-            <div class="bsg-guidelines-body" id="guidelines-body"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -259,6 +287,11 @@
             <button class="bsg-lb-bg dark" data-lbbg="dark" title="Dark background"></button>
             <button class="bsg-lb-bg brand" data-lbbg="brand" title="Brand color"></button>
           </div>
+          <select class="bsg-lb-scale" id="lb-scale" title="PNG / WebP export size">
+            <option value="1">1× native</option>
+            <option value="2" selected>2× retina</option>
+            <option value="4">4× large</option>
+          </select>
           <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-svg">⬇ SVG</button>
           <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-png">🖼 PNG</button>
           <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-html" style="display:none">⬇ HTML</button>

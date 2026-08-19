@@ -106,10 +106,36 @@ T(st.indexOf('<!DOCTYPE html>') === 0, 'standalone starts with doctype');
 T(st.indexOf('<style>') !== -1, 'standalone embeds styles');
 T(st.indexOf('doc-page') !== -1, 'standalone has a doc-page fallback');
 T(st.indexOf('@page{size:A4') !== -1, 'standalone has A4 print page rule');
-T(docCss().indexOf('.doc-page{width:210mm') !== -1, 'docCss defines A4 pages');
+T(docCss().indexOf('width:210mm') !== -1, 'docCss defines A4 pages');
+DB.settings.pageSize = 'Letter';
+T(docCss().indexOf('width:216mm') !== -1, 'docCss defines Letter pages');
+DB.settings.pageSize = 'A4';
 T(docCss().indexOf('page-break-after:always') !== -1, 'docCss breaks pages for print');
 var st2 = buildStandaloneHtml('<div class="doc-page" data-lb-id="0">paginated</div>');
 T(st2.indexOf('data-lb-id="0"') !== -1, 'standalone accepts pre-paginated pages html');
+
+/* 4c. injected preview scripts must compile */
+function extractScripts(html) {
+  var out = [];
+  var i = 0;
+  while (true) {
+    var a = html.indexOf('<script>', i);
+    if (a === -1) break;
+    var b = html.indexOf('</script>', a);
+    if (b === -1) break;
+    out.push(html.substring(a + 8, b));
+    i = b + 9;
+  }
+  return out;
+}
+var scripts = extractScripts(pv);
+T(scripts.length === 1, 'preview has one combined script block (' + scripts.length + ')');
+for (var si = 0; si < scripts.length; si++) {
+  try { new Function(scripts[si]); T(true, 'injected script #' + (si + 1) + ' compiles'); }
+  catch (e2) { T(false, 'injected script #' + (si + 1) + ' compiles (' + e2.message + ')'); }
+}
+try { new Function(PAGINATOR_JS); T(true, 'PAGINATOR_JS compiles'); } catch (e3) { T(false, 'PAGINATOR_JS compiles (' + e3.message + ')'); }
+try { new Function(EDIT_JS); T(true, 'EDIT_JS compiles'); } catch (e4) { T(false, 'EDIT_JS compiles (' + e4.message + ')'); }
 
 /* 4b. manual-edit overrides */
 DB.blocks = [{ type: 'clause', data: { number: '1', text: 'original' } }];
@@ -163,6 +189,122 @@ T(_looksLikeDocOp({ hello: 1 }) === false, '_looksLikeDocOp rejects junk');
 
 /* 9. onReady callback captured, params declared */
 T(typeof _capturedReady === 'function', 'tool.onReady captured');
+
+/* 10. Phase-1: dynamic variables */
+DB.variables = { partyA: { label: 'Party A', value: 'Acme Inc' }, partyB: { label: 'Party B', value: '' } };
+DB.blocks = [
+  { type: 'title', data: { text: 'Agreement {{partyA}}' } },
+  { type: 'clause', data: { number: '1', text: '{{partyA}} and {{partyB}} agree. {{unknownVar}} placeholder.' } },
+  { type: 'clause', data: { number: '2', text: 'Second clause.' } }
+];
+var vh = blocksToHtml();
+T(vh.indexOf('Acme Inc') !== -1, 'renderVars substitutes values');
+T(vh.indexOf('partyB') !== -1, 'renderVars shows empty var name');
+T(vh.indexOf('unknownVar') !== -1, 'unknown vars stay visible as name');
+T(varUsageCount('partyA') === 2, 'varUsageCount counts occurrences');
+scanBlocksForVars();
+T(DB.variables.unknownVar !== undefined && DB.variables.partyB !== undefined, 'scanBlocksForVars registers new vars');
+setVariableValue('partyB', 'Beta Corp');
+T(DB.variables.partyB.value === 'Beta Corp', 'setVariableValue updates registry');
+T(applyAiOp({ replaceBlock: 1, block: { type: 'clause', data: { number: '1', text: '{{partyB}} wins.' } } }) === true, 'applyAiOp replace with vars');
+
+/* 11. undo/redo + block operations */
+_snapshotPush();
+deleteBlockAt(0);
+T(DB.blocks.length === 2, 'deleteBlockAt removes');
+undo();
+T(DB.blocks.length === 3, 'undo restores length');
+redo();
+T(DB.blocks.length === 2, 'redo reapplies deletion');
+undo();
+moveBlock(2, 0);
+T(DB.blocks[0].type === 'clause' && DB.blocks[0].data.text === 'Second clause.', 'moveBlock reorders');
+moveBlock(0, 2);
+duplicateBlock(1);
+T(DB.blocks.length === 4, 'duplicateBlock appends copy');
+deleteBlockAt(1);
+T(DB.blocks.length === 3, 'deleteBlockAt removes again');
+
+renumberBlocks();
+var rn = DB.blocks.filter(function (b) { return b.type === 'clause'; });
+T(rn.length === 2 && String(rn[0].data.number) === '1' && String(rn[1].data.number) === '2', 'renumberBlocks renumbers clauses');
+
+/* 12. markdown import + lint + readability + toc */
+var md = markdownToBlocks('# Heading One\\nA paragraph of text.\\n- bullet one\\n- bullet two');
+T(md.length === 3 && md[0].type === 'section' && md[2].type === 'bullets', 'markdownToBlocks parses md');
+var lintRes = runLint();
+T(Array.isArray(lintRes), 'runLint returns array');
+var rdd = runReadability();
+T(typeof rdd === 'object' && (rdd.avg === null || typeof rdd.avg === 'number'), 'runReadability returns object');
+DB.blocks = [{ type: 'h', data: { text: 'Intro' } }, { type: 'section', data: { title: 'Terms' } }, { type: 'clause', data: { number: '1', text: 'x' } }, { type: 'toc', data: {} }];
+var tocHtml = blocksToHtml();
+T(tocHtml.indexOf('TABLE OF CONTENTS') !== -1, 'toc component renders TOC');
+
+/* 13. Phase 2 — components, gap analysis, macros, variants */
+T(!!LEGAL_COMPONENTS['non-compete'] && !!LEGAL_COMPONENTS['gdpr-dpa'] && !!LEGAL_COMPONENTS['settlement-deed'] && !!LEGAL_COMPONENTS['deed'], 'phase-2 components added');
+T(LEGAL_COMPONENTS['non-compete'].render({}, S()).indexOf('NON-COMPETITION') !== -1, 'non-compete renders');
+DB.blocks = [
+  { type: 'title', data: { text: 'Non-Disclosure Agreement' } },
+  { type: 'clause', data: { number: '1', text: 'Sample NDA text' } }
+];
+_detectDocType();
+T(_docType === 'nda', 'doc type detected as nda');
+var gap = runGapAnalysis();
+T(gap.type === 'nda' && gap.missing.length >= 2, 'gap analysis finds missing clauses');
+T(typeRulesBlock().indexOf('DOCUMENT TYPE RULES') !== -1, 'type rules block built');
+T(Array.isArray(runTypeChecks()) && runTypeChecks().length > 0, 'type checks run');
+T(handleMacro('/plain').indexOf('plain') !== -1, 'macro /plain expands');
+T(handleMacro('/nonsense') === null, 'unknown macro rejected');
+var vp = parseAiResponse('{"variants":[{"label":"Strict","replaceBlock":1,"block":{"type":"clause","data":{"text":"x"}}}]} Pick one.');
+T(vp.op === null && vp.variants && vp.variants.length === 1 && vp.variants[0].label === 'Strict', 'variants parsed');
+DB.blocks = [
+  { type: 'clause', data: { number: '1', text: 'Alpha Corporation signs.' } },
+  { type: 'paragraph', data: { text: 'Alpha Corporation pays.' } }
+];
+T(runFind('Alpha').length === 2, 'find matches blocks');
+_walkBlockText(DB.blocks[0], function (o, k) { o[k] = String(o[k]).split('Alpha').join('Beta'); });
+T(DB.blocks[0].data.text.indexOf('Beta Corporation') !== -1, 'walk replace changes text');
+_snapshotPush();
+DB.blocks = [{ type: 'clause', data: { number: '1', text: 'old' } }];
+applyVariant({ label: 'Strict', op: { replaceBlock: 0, block: { type: 'clause', data: { number: '1', text: 'strict version' } } } });
+T(DB.blocks[0].data.text === 'strict version', 'variant applied');
+
+/* 14. Phase 2 — defined terms, markdown, a11y, history, snippets, comments, status */
+DB.blocks = [
+  { type: 'definitions', data: { terms: [{ term: 'Confidential Information', definition: 'secret data' }, { term: 'Parties', definition: 'the signatories' }] } },
+  { type: 'clause', data: { number: '1', text: 'The Confidential Information is protected.' } }
+];
+var dt = collectDefinedTerms();
+T(dt.length === 2 && dt[0].count >= 1, 'defined terms collected');
+var mdOut = blocksToMarkdown();
+T(mdOut.indexOf('**1.**') !== -1, 'markdown export includes clause');
+var a11 = runA11yChecks();
+T(Array.isArray(a11) && a11.length >= 4, 'a11y checks run');
+DB.history = [];
+DB.version = '2.0.0';
+_pushHistory();
+T(DB.history.length === 1, 'history snapshot pushed');
+DB.snippets = [];
+DB.blocks = [{ type: 'clause', data: { text: 'snippet me' } }];
+saveBlockAsSnippet(0);
+T(DB.snippets.length === 1, 'snippet saved');
+insertSnippet(0);
+T(DB.blocks.length === 2, 'snippet inserted');
+deleteSnippet(0);
+T(DB.snippets.length === 0, 'snippet deleted');
+DB.comments = {};
+addComment(0, 'Check this');
+T((DB.comments[0] || []).length === 1, 'comment added');
+toggleCommentResolve(0, DB.comments[0][0].id);
+T(DB.comments[0][0].resolved === true, 'comment resolved');
+deleteCommentAt(0, DB.comments[0][0].id);
+T(!DB.comments[0], 'comment deleted');
+DB.status = 'draft';
+DB.statusLog = [];
+setDocStatus('in-review');
+T(DB.status === 'in-review' && DB.statusLog.length === 1, 'status transition logged');
+setDocStatus('approved');
+T(DB.status === 'in-review', 'approve blocked without admin role');
 
 console.log('');
 if (failures.length) {

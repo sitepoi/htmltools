@@ -43,9 +43,10 @@ var DB = {
   history: [],
   chatMessages: [],   // in-memory — canonical copy in ai-chat-sessions-uniconbaseapps
   chatCache: { sessionId: '', messages: [] }, // bounded fallback kept IN the record value so chat survives even if session storage fails
-  seo: null,          // === SEO === JSON from the AI (new publicwebsite rules)
+  seo: null,          // === SEO === JSON from the AI (publicwebsite rules)
   pageMeta: null,     // === PAGE META === JSON from the AI
   configNeeded: '',   // === CMS CONFIG NEEDED === notes for the CMS author
+  emailTemplate: '',  // === EMAIL TEMPLATE === artifact (for email hooks)
   activeSessionId: '',
   version: '1.0.0'
 };
@@ -194,7 +195,8 @@ function _dbSnapshot() {
     DB.code.html, DB.code.css, DB.code.js,
     JSON.stringify(DB.seo || null),
     JSON.stringify(DB.pageMeta || null),
-    DB.configNeeded || ''
+    DB.configNeeded || '',
+    DB.emailTemplate || ''
   ].join('\u0001');
 }
 
@@ -229,6 +231,7 @@ function _slimValue() {
     seo: DB.seo || null,
     pageMeta: DB.pageMeta || null,
     configNeeded: DB.configNeeded || '',
+    emailTemplate: DB.emailTemplate || '',
     version: DB.version,
     activeSessionId: DB.activeSessionId || '',
     chatCache: { sessionId: _activeSessionId || '', messages: _trimChatCache(DB.chatMessages) },
@@ -1543,7 +1546,7 @@ function _appendStreamingToken(token) {
    === SEO === (JSON) / === PAGE META === (JSON) / === CMS CONFIG NEEDED ===.
    Legacy [HTML]/[CSS]/[JS] markers and ``` fences are still accepted. ── */
 function _parseSection(text, tag) {
-  var re = new RegExp('===\\s*' + tag + '\\s*===\\s*([\\s\\S]*?)(?=\\n?===\\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\\s*===|$)', 'i');
+  var re = new RegExp('===\\s*' + tag + '\\s*===\\s*([\\s\\S]*?)(?=\\n?===\\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED|EMAIL TEMPLATE|CHROME|TEMPLATE)\\s*===|$)', 'i');
   var m = re.exec(text || '');
   return m ? m[1].replace(/^\n+|\n+$/g, '').trim() : '';
 }
@@ -1558,11 +1561,12 @@ function _parseJsonLenient(s) {
   } catch (e2) { return null; }
 }
 function parseGeneratedCode(text) {
-  var r = { html: '', css: '', js: '', seo: null, pageMeta: null, configNeeded: '' };
+  var r = { html: '', css: '', js: '', seo: null, pageMeta: null, configNeeded: '', emailTemplate: '' };
   r.html = _parseSection(text, 'HTML');
   r.css = _parseSection(text, 'CSS');
   r.js = _parseSection(text, 'JS');
   r.configNeeded = _parseSection(text, 'CMS CONFIG NEEDED');
+  r.emailTemplate = _parseSection(text, 'EMAIL TEMPLATE');
   var seoText = _parseSection(text, 'SEO');
   var metaText = _parseSection(text, 'PAGE META');
   if (seoText) r.seo = _parseJsonLenient(seoText);
@@ -1940,6 +1944,10 @@ function applyGeneratedCode(code) {
     DB.configNeeded = String(code.configNeeded).trim();
     changed = true;
   }
+  if (code.emailTemplate && String(code.emailTemplate).trim() !== String(DB.emailTemplate || '').trim()) {
+    DB.emailTemplate = String(code.emailTemplate).trim();
+    changed = true;
+  }
   DB.code.html = code.html || '';
   DB.code.css = code.css || '';
   DB.code.js = code.js || '';
@@ -2130,6 +2138,11 @@ function processAIResponse(raw, hasCode) {
       '🛠️ **CMS CONFIG NEEDED** (for the CMS author — create these in the site app):\n' +
       '```\n' + String(code.configNeeded).trim() + '\n```';
   }
+  if (code.emailTemplate && String(code.emailTemplate).trim()) {
+    finalText = (finalText ? finalText + '\n\n' : '') +
+      '📧 **EMAIL TEMPLATE captured** (used by email hooks — full document allowed here):\n' +
+      '```\n' + String(code.emailTemplate).trim() + '\n```';
+  }
   if (!finalText) finalText = hasNewCode ? '✓ Page updated.' : '⚠️ I couldn\'t produce code for that. Please try rephrasing your request.';
   addChatMessage('ai', finalText, extra);
   autoTitleSession();
@@ -2269,12 +2282,16 @@ function buildSettingsSummary() {
     '- The platform injects your output into a page container between the site header/footer — output a BODY FRAGMENT only. Never emit <html>/<head>/<body>/<!DOCTYPE> tags.',
     '- Site chrome (header/footer) is platform-rendered — never generate your own global nav/header/footer.',
     '- Page sections are decided per request in chat — never apply a fixed default section list.',
-    '- CSS is injected GLOBALLY: scope EVERY rule under one unique page class (e.g. .shop-home). Never style bare html/body/*/a/button/h1.',
-    '- JS re-runs on every visit and every SPA navigation: make it idempotent (IIFE + guard for window/document listeners), vanilla JS only, no top-level await, no external <script src> libraries.',
-    '- Use the window.gw SDK: gw.db.query/get for reads, gw.forms.bind() + data-gw-form for forms, gw.db.operation / flows / cart for writes, data-gw-app widgets (menu, cart, checkout-flow, slot-picker, search-box…). Never invent raw writes.',
-    '- Theme: use --gw-color-* CSS variables from site settings instead of hard-coding brand colors; format money with gw.formatCurrency.',
+    '- REUSABLE SECTIONS: a page may declare data.sections (flat, ordered, max 20) of {cmsObjectType, objectId} refs — the platform composes them BEFORE the page\'s own html. Use for shared strips (promo bars, CTAs, social proof, disclaimers). Sections contribute html/css/js only — no SEO, no chrome.',
+    '- TEMPLATE PAGES: for one-template-many-objects flows, set data.templateContentType in === PAGE META ===. LAYOUT lives in the template page, DATA in content objects (read via gw.getPageParams() + gw.db.get). Content objects may override with their own htmlPage.',
+    '- WIDGETS: prefer islands over hand-coding — menu, cart, checkout-flow, slot-picker, seat-map, account-dashboard, rewards, order-status, search-box and the no-code `list` widget (config-only reads rendered as inert text).',
+    '- CSS is injected GLOBALLY: scope EVERY rule under one unique page class (e.g. .shop-home). The gw- prefix is RESERVED for the platform/sharedCss — you may USE --gw-color-* variables and gw-shared-* classes but NEVER define gw-* rules. Never style bare html/body/*/a/button/h1.',
+    '- JS re-runs on every visit and every SPA navigation: idempotent (IIFE + guards for window/document listeners), vanilla only, no top-level await, no external <script src>. Attach page helpers to gw.ns (fresh per visit) — never rely on hoisted window functions.',
+    '- Theme: use --gw-color-* CSS variables; default-settings.sharedCss provides site-level classes. Format money with gw.formatCurrency.',
+    '- FORMS: data-gw-form + gw.forms.bind() + honeypot (gw_hp/website/company reserved) + [data-gw-form-status]. Never auto-submit on load.',
+    '- WRITES: never raw — operations (gw.db.operation), flows, forms or cart only. If an operation/flow/email hook is missing, STILL generate the page and append === CMS CONFIG NEEDED === (add === EMAIL TEMPLATE === with {{key}} placeholders when the note asks for an email hook).',
     '- Imagery: external absolute URLs are fine. Use https://loremflickr.com/<width>/<height>/<keyword1,keyword2> placeholders whose keywords describe the photo (restaurant → food,dish; team → portrait,people). Keep alt/width/height/loading on every <img>.',
-    '- SEO comes from your === SEO === section (mapped to the page object\'s seo field) — never emit <title>/<meta> tags inside the code.'
+    '- SEO comes from your === SEO === section (metaTitle/metaDesc/schemaItems…) — never emit <title>/<meta> tags inside the code. The platform injects its own trace comment — never emit GW-PAGE-ID-style comments.'
   ];
   var skills = _skillsBlock();
   if (skills) { parts.push(''); parts.push(skills); }
@@ -2363,20 +2380,21 @@ function buildChatPrompt(userMsg) {
   parts.push('=== OUTPUT CONTRACT ===');
   parts.push('Output ALL of these sections for every code response: === HTML === (body fragment), === CSS === (scoped rules only), === JS === (idempotent vanilla JS), === SEO === (JSON), === PAGE META === (JSON).');
   parts.push('The platform injects the HTML fragment into a page container between the site header/footer and appends the CSS to <head> — the HTML block must contain NO <html>/<head>/<body>/<style>/<script> tags.');
-  parts.push('If the page needs an operation or flow that may not exist, STILL generate the page and append === CMS CONFIG NEEDED === with the description of what the CMS author must create.');
+  parts.push('If the page needs an operation, flow or email template that may not exist, STILL generate the page and append === CMS CONFIG NEEDED === (add === EMAIL TEMPLATE === {templateId, subject, html} with {{key}} placeholders when the note asks for an email hook).');
   parts.push('CRITICAL COMPLIANCE SELF-CHECK before outputting:');
   parts.push('  - Exactly ONE <h1>, first heading, with the primary keyword. No skipped heading levels.');
   parts.push('  - Semantic landmarks (<section>/<article>/<nav>); all <img> have alt, width, height and loading; labels/aria on inputs; visible focus; contrast.');
-  parts.push('  - ALL CSS scoped under one unique page class prefix (e.g. .shop-home). Never style bare html/body/*/a/button/h1.');
-  parts.push('  - JS idempotent (re-runs on SPA nav): IIFE; guard window/document listeners with window.__xInit; no top-level await; vanilla JS only.');
+  parts.push('  - ALL CSS scoped under one unique page class prefix (e.g. .shop-home). Never style bare html/body/*/a/button/h1. The gw- prefix is RESERVED for the platform/sharedCss — never DEFINE gw-* rules yourself.');
+  parts.push('  - JS idempotent (re-runs on SPA nav): IIFE; guard window/document listeners with window.__xInit; attach page helpers to gw.ns; no top-level await; vanilla JS only.');
   parts.push('  - No external <script src> libraries. No hardcoded host domains in canonical URLs. No secrets.');
   parts.push('  - Forms: data-gw-form + gw.forms.bind() + honeypot (names gw_hp/website/company reserved) + [data-gw-form-status]. Never auto-submit on load.');
-  parts.push('  - data-gw-config attributes must be VALID JSON (no comments, no trailing commas).');
+  parts.push('  - data-gw-config attributes must be VALID JSON (no comments, no trailing commas). Prefer built-in islands (menu, cart, checkout-flow, slot-picker, search-box, list…).');
+  parts.push('  - data.sections (when used): flat, ordered, max 20, each {cmsObjectType, objectId}.');
   parts.push('  - User/data content rendered with textContent or gw.sanitize — never innerHTML with interpolated values.');
   parts.push('  - Mobile-first: @media queries, 48px tap targets, prefers-reduced-motion, overflow-x:auto on tables.');
   parts.push('  - Size budgets: HTML < 100 KB, CSS < 50 KB, JS < 200 KB.');
   parts.push('  - Imagery: external absolute URLs are fine. Use https://loremflickr.com/<width>/<height>/<keywords> placeholders whose keywords describe the photo (food, people, city, technology, concert…), different keyword pairs per image. Always keep alt, width, height and loading.');
-  parts.push('  - No site-wide header, navigation or footer — the platform shell renders them around your content.');
+  parts.push('  - No site-wide header, navigation or footer — the platform shell renders them around your content. The platform injects its own trace comment — never emit GW-PAGE-ID-style comments.');
   parts.push('');
   parts.push('REQUIRED — PLAIN-LANGUAGE SUMMARY AFTER EVERY CODE RESPONSE:');
   parts.push('After the code sections, write a short 2-5 sentence summary for a NON-TECHNICAL user explaining what the page now shows or does — no code jargon.');
@@ -2393,13 +2411,14 @@ function buildMinimalPrompt(userMsg) {
     'Design a single-page website for the UniconHub PublicWebsite platform. Output the required sections:',
     '=== HTML === body fragment only (semantic sections, no document tags), === CSS === scoped rules only, === JS === idempotent vanilla JS, === SEO === JSON, === PAGE META === JSON.',
     'KEY RULES: exactly one <h1>; no skipped heading levels; all <img> have alt/width/height/loading;',
-    'every CSS rule scoped under one unique page class; no <html>/<head>/<body>/<style>/<script> tags in the HTML fragment;',
+    'every CSS rule scoped under one unique page class; the gw- prefix is RESERVED for the platform — never define gw-* rules; no <html>/<head>/<body>/<style>/<script> tags in the HTML fragment;',
     'no jQuery/Bootstrap/Tailwind or external script libraries; mobile-first with @media queries; no hardcoded host domains; no secrets;',
     'no site-wide header/nav/footer (platform shell provides it);',
     'images via https://loremflickr.com/<width>/<height>/<keywords> where the keywords describe the photo (food, people, city, technology…); keep alt/width/height/loading;',
     _thinkingDirective(),
-    'JS idempotent (IIFE + guard), no top-level await; use window.gw SDK for reads/forms/operations/widgets; forms need data-gw-form + honeypot.',
-    'If a needed operation/flow is missing, append === CMS CONFIG NEEDED ===.',
+    'JS idempotent (IIFE + guard), helpers on gw.ns, no top-level await; use window.gw SDK for reads/forms/operations/widgets (incl. the no-code list island); forms need data-gw-form + honeypot.',
+    'Reusable shared strips via data.sections (flat, max 20); template pages via data.templateContentType when asked.',
+    'If a needed operation/flow/email hook is missing, append === CMS CONFIG NEEDED === (+ === EMAIL TEMPLATE === with {{key}} placeholders for email hooks).',
     'Real copy, no lorem ipsum. No placeholders, no TODOs.',
     ''
   ];
@@ -2735,7 +2754,7 @@ function _buildStepPrompt(step, idx, total) {
   } else {
     parts.push('Output ONLY a === JS === block: a small self-contained IDEMPOTENT script implementing the behavior.');
   }
-  parts.push('Never output <style>/<script>/<html>/<head>/<body> tags, site headers/footers, or unrelated page parts. Keep it under ~120 lines. Real copy, no lorem ipsum. Images via https://loremflickr.com/<width>/<height>/<content-keywords> with alt/width/height/loading.');
+  parts.push('Never output <style>/<script>/<html>/<head>/<body> tags, site headers/footers, or unrelated page parts. Keep it under ~120 lines. Real copy, no lorem ipsum. Attach helpers to gw.ns; the gw- CSS prefix is reserved for the platform. Images via https://loremflickr.com/<width>/<height>/<content-keywords> with alt/width/height/loading.');
   return parts.join('\n');
 }
 
@@ -3657,7 +3676,7 @@ function buildSectionPrompt(kind) {
   lines.push('CONTEXT — keep it consistent:');
   lines.push('- Existing sections: ' + (ctx.existing.length ? ctx.existing.join(', ') : 'none yet — this will be the first section.'));
   lines.push('- Design tokens: ' + ctx.color + ' palette · ' + ctx.typography + ' typography · copy language: ' + ctx.lang + '.');
-  lines.push('- Keep the existing page class prefix and scope all new CSS under it; use unique, prefixed ids; follow all PublicWebsite page rules (body fragment, one <h1>, scoped CSS, idempotent JS, no site header/footer).');
+  lines.push('- Keep the existing page class prefix and scope all new CSS under it; the gw- prefix is RESERVED for the platform (never define gw-* rules); use unique, prefixed ids; helpers on gw.ns; follow all PublicWebsite page rules (body fragment, one <h1>, scoped CSS, idempotent JS, no site header/footer).');
   return lines.join('\n');
 }
 
@@ -3925,19 +3944,44 @@ function gwChecks() {
       }
     },
     {
+      id: 'gw-reserved-prefix', section: '3.4', label: 'gw- prefix reserved for the platform',
+      run: function(h, c) {
+        var defined = c.match(/\.gw-[a-zA-Z][\w-]*\s*[\[{:]/g) || [];
+        if (defined.length) return { status: 'fail', detail: defined.length + ' gw-* selector(s) DEFINED in page CSS — the gw- prefix is reserved for the platform shell, widgets and sharedCss. Use --gw-color-* variables and gw-shared-* classes, but define your own rules under your page class.' };
+        return { status: 'pass', detail: 'No gw-* rules defined in page CSS (using reserved classes is allowed, defining them is not).' };
+      }
+    },
+    {
+      id: 'sections-valid', section: '12.3', label: 'data.sections flat & ordered (max 20)',
+      run: function() {
+        var pm = DB.pageMeta;
+        var secs = pm && pm.data && pm.data.sections;
+        if (!secs) return { status: 'pass', detail: 'No reusable sections declared.' };
+        if (!Array.isArray(secs)) return { status: 'warn', detail: 'data.sections must be an array of {cmsObjectType, objectId}.' };
+        if (secs.length > 20) return { status: 'fail', detail: 'data.sections has ' + secs.length + ' entries — the platform limit is 20 (flat, ordered).' };
+        var bad = 0;
+        for (var i = 0; i < secs.length; i++) {
+          if (!secs[i] || typeof secs[i] !== 'object' || !secs[i].cmsObjectType || !secs[i].objectId) bad++;
+        }
+        if (bad) return { status: 'fail', detail: bad + ' section reference(s) missing cmsObjectType/objectId.' };
+        return { status: 'pass', detail: secs.length + ' reusable section reference(s) — flat and valid.' };
+      }
+    },
+    {
       id: 'js-idempotent', section: '3.3', label: 'JS idempotent (SPA re-runs)',
       run: function(h, c, j) {
         if (!j.trim()) return { status: 'pass', detail: 'No JavaScript needed.' };
         var iife = /^\(function|^\(\s*function|^;?\(function/.test(j.trim());
         var guard = /__[A-Za-z_$][\w$]*(Init|Ready|Mounted|Loaded)/.test(j);
+        var usesNs = /gw\.ns/.test(j);
         var winListeners = /(window|document)\.addEventListener/.test(j);
         var topAwait = /(^|\n)\s*await\s/.test(j);
         var problems = [];
         if (!iife && !/\(function/.test(j)) problems.push('not wrapped in an IIFE');
         if (winListeners && !guard) problems.push('window/document listeners without a __xInit guard (listeners leak across SPA navigations)');
         if (topAwait) problems.push('top-level await (scripts run in a non-async wrapper)');
-        if (problems.length) return { status: 'warn', detail: problems.join('; ') + ' — your JS re-runs on every SPA navigation.' };
-        return { status: 'pass', detail: 'Script is idempotent (IIFE + guarded listeners, no top-level await).' };
+        if (problems.length) return { status: 'warn', detail: problems.join('; ') + ' — your JS re-runs on every SPA navigation. Attach page helpers to gw.ns, never to hoisted window functions.' };
+        return { status: 'pass', detail: usesNs ? 'Script is idempotent and uses gw.ns for helpers.' : 'Script is idempotent (IIFE + guarded listeners, no top-level await).' };
       }
     },
     {
@@ -4196,6 +4240,7 @@ function fixWithAi() {
 function _gwPreviewMockScript(lang) {
   return '<script>\n(function(){var L=' + JSON.stringify(lang || 'en') + ';var gw={\n' +
     'pageId:"preview",siteId:"preview",folderId:"preview",language:L,host:"preview",currency:"USD",\n' +
+    'ns:{},\n' +
     'getPageParams:function(){return {slug:"preview"};},\n' +
     'navigate:function(){return false;},\n' +
     'openUrl:function(u){window.open(u,"_blank");},\n' +
@@ -4327,6 +4372,7 @@ function buildGeneratorOutputText() {
   var pm = DB.pageMeta ? JSON.stringify(DB.pageMeta, null, 2) : '{\n  "name": "Page",\n  "slug": "' + pageSlug() + '",\n  "meta": { "language": "en" }\n}';
   var out = '=== HTML ===\n' + (DB.code.html || '') + '\n\n=== CSS ===\n' + (DB.code.css || '') + '\n\n=== JS ===\n' + (DB.code.js || '') + '\n\n=== SEO ===\n' + seo + '\n\n=== PAGE META ===\n' + pm;
   if (DB.configNeeded) out += '\n\n=== CMS CONFIG NEEDED ===\n' + DB.configNeeded;
+  if (DB.emailTemplate) out += '\n\n=== EMAIL TEMPLATE ===\n' + DB.emailTemplate;
   return out;
 }
 function buildPageObjectJson() {
@@ -4343,6 +4389,9 @@ function buildPageObjectJson() {
   };
   if (pm.data && pm.data.requireAuth) obj.data.requireAuth = pm.data.requireAuth;
   if (pm.data && pm.data.templateContentType) obj.data.templateContentType = pm.data.templateContentType;
+  if (pm.data && Array.isArray(pm.data.sections) && pm.data.sections.length) {
+    obj.data.sections = pm.data.sections.slice(0, 20); // flat, ordered, max 20
+  }
   return JSON.stringify(obj, null, 2);
 }
 function copyGeneratorOutput() {
@@ -4737,7 +4786,7 @@ function lockUI(ro) {
 }
 
 /* ── Render (restore from saved value) ── */
-var KNOWN_KEYS = ['version', 'activeSessionId', 'chatCache', 'seo', 'pageMeta', 'configNeeded', '_instanceId', '_parentRecordId'];
+var KNOWN_KEYS = ['version', 'activeSessionId', 'chatCache', 'seo', 'pageMeta', 'configNeeded', 'emailTemplate', '_instanceId', '_parentRecordId'];
 function render(v) {
   if (v && typeof v === 'object') {
     try {
@@ -4916,7 +4965,7 @@ var _initialized = false;
 tool.onReady(function(val, fields) {
   if (_initialized) { console.warn('[WEBPAGEBUILDER:INIT] Already initialized — skipping'); return; }
   _initialized = true;
-  console.log('[WEBPAGEBUILDER] build 2026-08-18a — publicwebsite v2 ruleset + resilient chat cache');
+  console.log('[WEBPAGEBUILDER] build 2026-08-18b — full capability coverage: sections, gw.ns, list widget, email templates');
 
   _loadSkills();
   _loadAgenticPref();
@@ -4941,7 +4990,8 @@ tool.onReady(function(val, fields) {
       },
       seo: { type: 'object', title: 'SEO', description: '=== SEO === JSON from the AI (metaTitle, metaDesc, schemaItems, …) — mapped to the page object seo field.' },
       pageMeta: { type: 'object', title: 'Page Meta', description: '=== PAGE META === JSON from the AI (name, slug, meta.language, data.status, data.requireAuth).' },
-      configNeeded: { type: 'string', title: 'CMS Config Needed', description: '=== CMS CONFIG NEEDED === notes listing the operations/flows the CMS author must create for this page.' },
+      configNeeded: { type: 'string', title: 'CMS Config Needed', description: '=== CMS CONFIG NEEDED === notes listing the operations/flows/email templates the CMS author must create for this page.' },
+      emailTemplate: { type: 'string', title: 'Email Template', description: '=== EMAIL TEMPLATE === artifact (templateId, subject, html with {{key}} placeholders) captured when the AI asks for an email hook.' },
       chatCache: { type: 'object', title: 'Chat Cache', description: 'Bounded fallback copy of the last chat messages ({sessionId, messages}) so chat survives even if session storage is unavailable.' },
       version: { type: 'string', title: 'Page Version', description: 'Semantic version of the generated page. AI update → minor bump; manual edit → patch bump.' },
       activeSessionId: { type: 'string', title: 'Active Chat Session ID', description: 'Document id in ai-chat-sessions-uniconbaseapps (canonical chat transcript).' },

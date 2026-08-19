@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+1-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -51,6 +51,10 @@
     <div class="header-right">
       <span class="pres-badge" id="pres-badge" title="Slides in this presentation">0 slides</span>
       <span class="version-badge" id="tool-version" title="Presentation version">v1.0.0</span>
+      <span class="collab-chip" id="collab-chip" style="display:none"></span>
+      <button class="btn btn-sm btn-ghost" id="btn-undo" title="Undo last change" disabled>↩</button>
+      <button class="btn btn-sm btn-ghost" id="btn-redo" title="Redo" disabled>↪</button>
+      <button class="btn btn-sm btn-ghost" id="btn-history" title="Version history">🕘</button>
       <button class="btn btn-sm btn-ghost" id="btn-goto-export" title="Export the standalone presentation">📥 Export</button>
     </div>
   </header>
@@ -65,6 +69,7 @@
         <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
         <span class="chat-panel-badge" id="chat-msg-count">0</span>
         <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+        <button class="btn btn-sm btn-ghost" id="btn-outline-gen" title="Build an outline from pasted text or a PDF">📄 From text/PDF</button>
       </div>
 
       <div class="chat-tab-content" id="chat-tab-content">
@@ -93,8 +98,13 @@
       </div>
 
       <div class="chat-input-area">
+        <div class="chat-target-chip" id="chat-target-chip" style="display:none">
+          <span>🎯 <b id="chat-target-label">Slide</b> — the next AI message edits only this slide</span>
+          <button id="btn-target-clear" title="Clear target">✕</button>
+        </div>
         <div class="chat-input-row">
           <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your presentation or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-sm btn-voice" id="btn-voice" title="Dictate your request (speech input)">🎙</button>
           <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
           <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
         </div>
@@ -115,6 +125,15 @@
           <div class="pres-toolbar">
             <input class="deck-title-input" id="deck-title-input" placeholder="Presentation title…" title="Presentation title">
             <span class="pres-toolbar-info" id="slide-counter">0 / 0</span>
+            <select class="theme-select" id="theme-select" title="Deck theme — also restyle with one word in chat ('make it dark')"></select>
+            <select class="theme-select" id="deck-transition" title="Whole-deck slide transition">
+              <option value="">Crossfade</option>
+              <option value="slide">Slide</option>
+              <option value="zoom">Zoom</option>
+              <option value="flip">Flip</option>
+            </select>
+            <span class="timing-total" id="timing-total" style="display:none"></span>
+            <button class="btn btn-sm btn-ghost" id="btn-target-mode" title="Target mode: click a slide in the strip to target it for the next AI edit">🎯</button>
             <button class="btn btn-sm btn-ghost" id="btn-prev" title="Previous slide">◀</button>
             <button class="btn btn-sm btn-ghost" id="btn-next" title="Next slide">▶</button>
             <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
@@ -138,8 +157,27 @@
         <div class="content-editor" id="editor-slides">
           <div class="slides-toolbar">
             <h2>🧩 Slides</h2>
-            <p class="slides-hint">Manage the pages of this presentation. Click ✏️ to edit a slide's components as JSON, or 🤖 to ask the AI about that slide.</p>
+            <p class="slides-hint">Manage the pages of this presentation. Drag cards to reorder, click 🎯 to target a slide for the next AI edit, 🔒 to protect it from AI changes. Click ✏️ to edit components as JSON, or 🤖 to ask the AI about that slide.</p>
             <button class="btn btn-primary btn-sm" id="btn-add-slide">+ Add Blank Slide</button>
+            <button class="btn btn-outline btn-sm" id="btn-gen-notes" title="AI writes presenter notes for every slide">🗒 Generate Notes</button>
+            <button class="btn btn-outline btn-sm" id="btn-doctor" title="Automated deck quality checks with one-click fixes">🧪 Deck Doctor</button>
+            <button class="btn btn-outline btn-sm" id="btn-arc" title="Story arc advisor (hook → problem → solution → proof → ask)">🗺 Story Arc</button>
+            <button class="btn btn-outline btn-sm" id="btn-a11y" title="Accessibility audit (alt text, headings, readability)">♿ A11y</button>
+            <button class="btn btn-outline btn-sm" id="btn-translate" title="Translate the whole deck">🌐 Translate</button>
+            <button class="btn btn-outline btn-sm" id="btn-split" title="Find and split overcrowded slides">✂️ Split dense</button>
+            <button class="btn btn-outline btn-sm" id="btn-datasets" title="Edit reusable datasets that charts can reference">🗃 Datasets</button>
+            <button class="btn btn-outline btn-sm" id="btn-snippets" title="Reusable slide snippet library">📚 Snippets</button>
+            <button class="btn btn-outline btn-sm" id="btn-timing" title="AI estimates seconds per slide for the deck">⏱ Estimate timing</button>
+            <button class="btn btn-outline btn-sm" id="btn-proof" title="AI proofreads all slide text and speaker notes">🔤 Proofread</button>
+          </div>
+          <div class="bulk-bar" id="bulk-bar" style="display:none">
+            <span class="bulk-label" id="bulk-label"></span>
+            <button class="btn btn-sm btn-outline" id="btn-bulk-restyle">🎨 Restyle</button>
+            <button class="btn btn-sm btn-outline" id="btn-bulk-ai">🤖 Ask AI</button>
+            <button class="btn btn-sm btn-outline" id="btn-bulk-lock">🔒 Lock</button>
+            <button class="btn btn-sm btn-outline" id="btn-bulk-unlock">🔓 Unlock</button>
+            <button class="btn btn-sm btn-danger" id="btn-bulk-delete">🗑 Delete</button>
+            <button class="btn btn-sm btn-ghost" id="btn-bulk-clear">✕ Clear</button>
           </div>
           <div class="slides-list" id="slides-list"></div>
         </div>
@@ -155,13 +193,209 @@
               <button class="btn btn-primary" id="btn-export-download">📥 Download .html</button>
               <button class="btn btn-outline" id="btn-export-pptx">📊 Download .pptx</button>
               <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
+              <button class="btn btn-outline" id="btn-export-notes">🗒 Notes pages PDF</button>
               <button class="btn btn-outline" id="btn-export-copy">📋 Copy Full HTML</button>
+              <button class="btn btn-outline" id="btn-export-share">🔗 Share link</button>
+              <button class="btn btn-outline" id="btn-export-embed">🧩 Embed snippet</button>
+              <button class="btn btn-outline" id="btn-export-png">🖼️ Slides as PNG (.zip)</button>
+              <button class="btn btn-outline" id="btn-export-outline">📝 Outline (.md)</button>
+              <button class="btn btn-outline" id="btn-perf">📈 Performance</button>
             </div>
             <div class="export-info" id="export-info"></div>
           </div>
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- HISTORY MODAL -->
+  <div class="modal-overlay" id="history-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🕘 Version History</h3>
+        <button class="btn-icon" id="btn-history-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- DECK DOCTOR MODAL -->
+  <div class="modal-overlay" id="doctor-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🧪 Deck Doctor</h3>
+        <button class="btn-icon" id="btn-doctor-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="doctor-list"></div>
+    </div>
+  </div>
+
+  <!-- SNIPPETS MODAL -->
+  <div class="modal-overlay" id="snippets-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>📚 Snippet library</h3>
+        <button class="btn-icon" id="btn-snippets-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Save any slide (✏️ inspector → 💾 Save as snippet) and reinsert it into any deck later.</p>
+        <button class="btn btn-outline btn-sm" id="btn-snip-save-active">💾 Save active slide as snippet</button>
+        <div id="snippets-list" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATASETS MODAL -->
+  <div class="modal-overlay" id="datasets-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🗃 Datasets (live charts)</h3>
+        <button class="btn-icon" id="btn-datasets-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Charts can reference a dataset with <code>"dataset":"name"</code> — update the numbers here and every chart refreshes.</p>
+        <textarea class="modal-textarea" id="datasets-json" rows="12" spellcheck="false"></textarea>
+        <div class="modal-actions"><button class="btn btn-primary btn-sm" id="btn-datasets-apply">Apply &amp; refresh charts</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STORY ARC MODAL -->
+  <div class="modal-overlay" id="arc-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🗺 Story Arc Advisor</h3>
+        <button class="btn-icon" id="btn-arc-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="arc-list"></div>
+    </div>
+  </div>
+
+  <!-- ACCESSIBILITY MODAL -->
+  <div class="modal-overlay" id="a11y-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>♿ Accessibility audit</h3>
+        <button class="btn-icon" id="btn-a11y-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="a11y-list"></div>
+    </div>
+  </div>
+
+  <!-- TRANSLATE MODAL -->
+  <div class="modal-overlay" id="translate-overlay" style="display:none">
+    <div class="modal-box modal-sm">
+      <div class="modal-head">
+        <h3>🌐 Translate the deck</h3>
+        <button class="btn-icon" id="btn-translate-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">The AI translates every slide (locked slides stay untouched) and keeps the layout.</p>
+        <label class="modal-label">Target language</label>
+        <select class="modal-select" id="translate-lang"></select>
+        <div class="modal-actions"><button class="btn btn-primary btn-sm" id="btn-translate-go">🌐 Translate</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPLIT MODAL -->
+  <div class="modal-overlay" id="split-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>✂️ Smart slide splitter</h3>
+        <button class="btn-icon" id="btn-split-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="split-list"></div>
+    </div>
+  </div>
+
+  <!-- OUTLINE MODAL -->
+  <div class="modal-overlay" id="outline-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>📄 Outline from text / PDF</h3>
+        <button class="btn-icon" id="btn-outline-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Paste raw material — or upload a PDF — and the AI scaffolds a complete slide outline.</p>
+        <textarea class="modal-textarea" id="outline-text" rows="10" placeholder="Paste your document text here…"></textarea>
+        <div class="modal-actions">
+          <button class="btn btn-outline btn-sm" id="btn-outline-upload">📤 Upload PDF / file</button>
+          <button class="btn btn-primary btn-sm" id="btn-outline-generate">✨ Generate outline</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBED MODAL -->
+  <div class="modal-overlay" id="embed-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🧩 Embed snippet</h3>
+        <button class="btn-icon" id="btn-embed-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Copy this iframe into any page. Use "🔗 Share link" first to publish the deck and get a real URL.</p>
+        <textarea class="modal-textarea code" id="embed-code" rows="5" spellcheck="false"></textarea>
+        <div class="modal-actions"><button class="btn btn-primary btn-sm" id="btn-embed-copy">📋 Copy embed code</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTLINE EXPORT MODAL -->
+  <div class="modal-overlay" id="md-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>📝 Outline export (Markdown)</h3>
+        <button class="btn-icon" id="btn-md-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <textarea class="modal-textarea" id="md-outline" rows="14" spellcheck="false"></textarea>
+        <div class="modal-actions">
+          <button class="btn btn-primary btn-sm" id="btn-md-download">📥 Download .md</button>
+          <button class="btn btn-outline btn-sm" id="btn-md-copy">📋 Copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERFORMANCE MODAL -->
+  <div class="modal-overlay" id="perf-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>📈 Export size &amp; performance</h3>
+        <button class="btn-icon" id="btn-perf-close" title="Close">✕</button>
+      </div>
+      <div class="modal-body" id="perf-list"></div>
+    </div>
+  </div>
+
+  <!-- SLIDE INSPECTOR DRAWER -->
+  <div class="inspector-drawer" id="inspector-drawer">
+    <div class="inspector-head">
+      <h3>✏️ Slide Inspector</h3>
+      <button class="btn-icon" id="btn-insp-close" title="Close">✕</button>
+    </div>
+    <div class="inspector-body">
+      <label class="modal-label" for="insp-title">Title</label>
+      <input id="insp-title" class="modal-input">
+      <label class="modal-label" for="insp-notes">Speaker notes</label>
+      <textarea id="insp-notes" class="modal-input" rows="6"></textarea>
+      <label class="modal-label" for="insp-duration">Duration (seconds, 0 = auto)</label>
+      <input id="insp-duration" type="number" min="0" class="modal-input">
+      <label class="modal-label" for="insp-transition">Transition</label>
+      <select id="insp-transition" class="modal-input">
+        <option value="">Crossfade (default)</option>
+        <option value="slide">Slide</option>
+        <option value="zoom">Zoom</option>
+        <option value="flip">Flip</option>
+      </select>
+      <label class="modal-label" for="insp-bg">Background override (CSS)</label>
+      <input id="insp-bg" class="modal-input" placeholder="e.g. linear-gradient(135deg,#0f172a,#312e81)">
+      <label class="insp-check-row"><input type="checkbox" id="insp-locked"> 🔒 Lock from AI edits</label>
+      <button class="btn btn-outline btn-sm" id="btn-insp-snippet">💾 Save as snippet</button>
+      <button class="btn btn-outline btn-sm" id="btn-insp-target">🎯 Target for AI</button>
+    </div>
   </div>
 
   <!-- CONFIRM DIALOG -->
@@ -286,6 +520,123 @@
   };
 
   function generateMockResponse(prompt) {
+    if (prompt.indexOf('Estimate how many SECONDS') !== -1) {
+      var tRe = /(\d+)\. \[([a-zA-Z0-9_-]+)\]/g;
+      var tm, tPatches = [];
+      while ((tm = tRe.exec(prompt)) !== null) tPatches.push({ op: 'timing', id: tm[2], duration: 20 + (parseInt(tm[1], 10) * 5) });
+      return JSON.stringify({ patches: tPatches, summary: 'Estimated timing for ' + tPatches.length + ' slides.' });
+    }
+    if (prompt.indexOf('Proofread ALL slide text') !== -1) {
+      var pRe = /(\d+)\. \[([a-zA-Z0-9_-]+)\]/g;
+      var pm, pPatches = [];
+      while ((pm = pRe.exec(prompt)) !== null) {
+        pPatches.push({ op: 'upsertSlide', slide: { id: pm[2], title: 'Proofed Slide ' + pm[1], notes: 'Proofed notes.', components: [
+          { type: 'heading', data: { text: 'Proofed Slide ' + pm[1] } },
+          { type: 'bullets', data: { items: [{ text: 'Corrected grammar and spelling.' }] } }
+        ] } });
+      }
+      return JSON.stringify({ patches: pPatches, summary: 'Proofread ' + pPatches.length + ' slides.' });
+    }
+    if (prompt.indexOf('You are planning a slide deck') !== -1) {
+      return JSON.stringify({
+        title: 'Mock Planned Deck', summary: 'A step-by-step deck build.',
+        slides: [
+          { title: 'Cover', hint: 'title-slide with icon' },
+          { title: 'Agenda', hint: 'agenda component' },
+          { title: 'The Idea', hint: 'heading + bullets' },
+          { title: 'Thanks', hint: 'closing-slide' }
+        ]
+      });
+    }
+    var stepMatch = /Position:\s*(\d+)\s+of\s+\d+\.\s*Title:\s*([^\n]+)/.exec(prompt);
+    if (prompt.indexOf('=== TARGET SLIDE ===') !== -1 && stepMatch) {
+      var stepTitle = stepMatch[2].trim();
+      return JSON.stringify({
+        slide: {
+          id: 'mockstep' + stepMatch[1],
+          title: stepTitle,
+          notes: 'Notes for ' + stepTitle + '.',
+          components: [
+            { type: 'heading', data: { text: stepTitle, kicker: 'MOCK' } },
+            { type: 'bullets', data: { items: [{ text: 'Built step by step', icon: '✅' }, { text: 'Editable later', icon: '✏️' }] } }
+          ]
+        }
+      });
+    }
+    if (prompt.indexOf('Write short speaker notes') !== -1 || prompt.indexOf('speaker notes for EVERY slide') !== -1) {
+      var idRe = /(\d+)\. \[([a-zA-Z0-9_-]+)\]/g;
+      var m, patches = [], ids = [];
+      while ((m = idRe.exec(prompt)) !== null) ids.push(m[2]);
+      for (var ni = 0; ni < ids.length; ni++) {
+        patches.push({ op: 'notes', id: ids[ni], notes: 'Presenter notes for slide "' + ids[ni] + '": greet the audience, walk through the key points on screen, then transition to the next slide.' });
+      }
+      return JSON.stringify({ patches: patches, summary: 'Wrote speaker notes for ' + patches.length + ' slides.' });
+    }
+    if (/make it dark|dark theme|corporate look/.test(prompt)) {
+      var t = /corporate/.test(prompt) ? 'corporate' : 'dark';
+      return JSON.stringify({ patches: [{ op: 'meta', theme: t }], summary: 'Restyled the deck with the ' + t + ' theme.' });
+    }
+    if (prompt.indexOf('Deck Doctor found') !== -1) {
+      var sidRe = /slide id "([a-zA-Z0-9_-]+)"/.exec(prompt);
+      var fixId = sidRe ? sidRe[1] : null;
+      var fixPatches = [];
+      if (fixId) {
+        fixPatches.push({ op: 'upsertSlide', slide: { id: fixId, title: 'Fixed Slide', components: [
+          { type: 'heading', data: { text: 'Fixed Slide' } },
+          { type: 'bullets', data: { items: [ { text: 'Trimmed and clarified content', icon: '✅' }, { text: 'Now fits comfortably on screen', icon: '✅' } ] } }
+        ] } });
+      }
+      return JSON.stringify({ patches: fixPatches, summary: 'Doctor fix applied.' });
+    }
+    if (prompt.indexOf('Convert this raw material') !== -1) {
+      return JSON.stringify({
+        title: 'Scaffolded from material',
+        outline: [
+          { title: 'Cover', components: ['title-slide'] },
+          { title: 'Introduction', components: ['heading', 'bullets'] },
+          { title: 'Key Points', components: ['heading', 'figure'] },
+          { title: 'Summary & Next Steps', components: ['closing-slide'] }
+        ]
+      });
+    }
+    if (prompt.indexOf('Translate the ENTIRE deck') !== -1) {
+      return JSON.stringify({ patches: [{ op: 'meta', title: 'Çevrilmiş Başlık (tr)', subtitle: 'alt başlık', author: 'Sunucu' }], summary: 'Translated the deck to the target language.' });
+    }
+    if (prompt.indexOf('Split this overcrowded slide') !== -1) {
+      var splitId = /"id":"([a-zA-Z0-9_-]+)"/.exec(prompt);
+      var sid = splitId ? splitId[1] : 'split-src';
+      return JSON.stringify({
+        patches: [
+          { op: 'upsertSlide', slide: { id: sid, title: 'Split A', components: [ { type: 'heading', data: { text: 'First half' } }, { type: 'bullets', data: { items: [{ text: 'Part one' }, { text: 'Part two' }] } } ] } },
+          { op: 'upsertSlide', slide: { id: sid + '-b', title: 'Split B', components: [ { type: 'heading', data: { text: 'Second half' } }, { type: 'bullets', data: { items: [{ text: 'Part three' }, { text: 'Part four' }] } } ] } }
+        ],
+        summary: 'Split the slide into two.'
+      });
+    }
+    if (prompt.indexOf('Give me 3 design variants') !== -1) {
+      var vId = /"slideId":"([a-zA-Z0-9_-]+)"/.exec(prompt);
+      var vid = vId ? vId[1] : 'cover';
+      var mk = function(label, icon) {
+        return { label: label, slide: { id: vid, title: label + ' Variant', components: [
+          { type: 'heading', data: { text: label + ' Variant', kicker: 'OPTION ' + label } },
+          { type: 'bullets', data: { items: [{ text: 'Design ' + label, icon: icon }, { text: 'Alternate layout', icon: '🎨' }] } }
+        ] } };
+      };
+      return JSON.stringify({ variants: [mk('A', '🅰'), mk('B', '🅱'), mk('C', '🅲')], slideId: vid, summary: 'Three design variants ready.' });
+    }
+    if (prompt.indexOf('Review my deck like a professional') !== -1) {
+      var review = {
+        review: {
+          score: 7,
+          summary: 'Solid deck with a few quick wins.',
+          findings: [
+            { slideId: 'agenda', issue: 'Agenda is plain', suggestion: 'Add icons and subtitles to agenda items.' },
+            { issue: 'No data proof', suggestion: 'Add a chart or metric slide.' }
+          ]
+        }
+      };
+      return JSON.stringify(review);
+    }
     var hasDeck = prompt.indexOf('=== CURRENT DECK ===') !== -1 && /\d+\. \[[a-zA-Z0-9_-]+\]/.test(prompt);
     if (hasDeck) {
       var patches = {

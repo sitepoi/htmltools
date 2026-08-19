@@ -25,12 +25,14 @@ var S_CLOSE = '</scr' + 'ipt>';
 
 /* ── State ── */
 var DB = {
-  pres: { title: '', subtitle: '', author: '', slides: [], deckCss: '', deckJs: '' },
+  pres: { title: '', subtitle: '', author: '', slides: [], deckCss: '', deckJs: '', theme: 'clean', datasets: {}, animLevel: 'subtle', lang: '', transition: '', brand: { primary: '', font: '' } },
   activeSlideId: '',
   version: '1.0.0',
   activeSessionId: '',
   chatMessages: [],       // in-memory — canonical copy in ai-chat-sessions-uniconbaseapps
   chatCache: { sessionId: '', messages: [] },
+  history: [],            // bounded undo snapshots (persisted)
+  snippets: [],           // reusable slide snippets (persisted, cap 20)
   _instanceId: '',
   _parentRecordId: ''
 };
@@ -52,11 +54,1954 @@ var _streamCallback = null;
 var _previewSeq = 0;
 var _lastStagedValue = '';
 
+/* Phase 1 — undo/redo + targeting state */
+var _redoStack = [];
+var _targetSlideId = '';
+var _targetMode = false;
+var _dragSlideId = null;
+var HISTORY_MAX = 15;
+var HISTORY_BYTES_MAX = 300000;
+
 var _sessions = [];
 var _activeSessionId = '';
 var _sessionsLoaded = false;
 var SESSION_TYPE = 'ai-chat-sessions-uniconbaseapps';
 var _sessionWarnShown = false;
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — THEMES
+   ═══════════════════════════════════════════ */
+var THEMES = {
+  clean: {
+    name: 'Clean Light',
+    css: ''
+  },
+  dark: {
+    name: 'Dark',
+    css: '.pres-slide{background:#0f172a}.pres-cover,.pres-body,.pres-slide{color:#e2e8f0}.pres-h2,.pres-h3{color:#f1f5f9}.pres-kicker{color:var(--pres-accent,#a78bfa)}.pres-bullets li{color:#cbd5e1}.pres-bullet-icon{color:var(--pres-accent,#a78bfa)}.pres-table{color:#cbd5e1}.pres-table th{background:#1e293b;color:#e2e8f0;border-color:#334155}.pres-table td{border-color:#334155;color:#cbd5e1}.pres-table tr:nth-child(even) td{background:#111827}.pres-quote-wrap{background:linear-gradient(135deg,#1e293b,#0f172a);border-color:#334155}.pres-quote{color:#e2e8f0}.pres-quote-cite{color:#94a3b8}.pres-agenda-item{background:#1e293b;border-color:#334155;color:#e2e8f0}.pres-agenda-num{background:var(--pres-accent,#a78bfa);color:#fff}.pres-figure figcaption{background:#1e293b;color:#94a3b8}.pres-unknown{background:#451a03;color:#fde68a;border-color:#78350f}.pres-tab-pane{color:#cbd5e1}.pres-tab-btns{border-color:#334155}.pres-tab-btn{color:#94a3b8}.pres-tab-btn.active{color:#a78bfa;border-color:#a78bfa}.pres-q-opt{color:#cbd5e1;border-color:#334155}.pres-q-radio:checked+.pres-q-opt{border-color:var(--pres-accent,#a78bfa);background:#1e293b}.pres-q-prompt{color:#e2e8f0}.pres-timeline-item{background:#1e293b;border-color:#334155;color:#cbd5e1}.pres-metric-value{color:#f1f5f9}'
+  },
+  corporate: {
+    name: 'Corporate',
+    css: '.pres-slide{--pres-accent:#2563eb}.pres-kicker{color:#2563eb}.pres-agenda-num{background:#2563eb}.pres-q-radio:checked+.pres-q-opt{border-color:#2563eb;background:#eff6ff}.pres-tab-btn.active{color:#2563eb;border-color:#2563eb}.pres-h2{color:#0f172a}.pres-bullet-icon{color:#2563eb}.pres-spotlight{border-color:#2563eb!important}.pres-timeline-num{background:#2563eb;color:#fff}'
+  },
+  playful: {
+    name: 'Playful',
+    css: '.pres-slide{--pres-accent:#ec4899}.pres-kicker{color:#ec4899}.pres-agenda-num{background:#ec4899}.pres-h2{color:#be185d}.pres-h3{color:#db2777}.pres-bullet-icon{color:#ec4899}.pres-q-radio:checked+.pres-q-opt{border-color:#ec4899;background:#fdf2f8}.pres-tab-btn.active{color:#ec4899;border-color:#ec4899}.pres-timeline-num{background:#ec4899;color:#fff}.pres-quote{border-left-color:#ec4899}.pres-spotlight{border-color:#ec4899!important}'
+  },
+  minimal: {
+    name: 'Minimal',
+    css: '.pres-slide{--pres-accent:#111827}.pres-kicker{color:#111827;letter-spacing:0.3em;text-transform:uppercase;font-size:0.68em}.pres-agenda-num{background:#111827}.pres-h2{color:#111827;font-weight:600;letter-spacing:-0.02em}.pres-bullet-icon{color:#111827}.pres-q-radio:checked+.pres-q-opt{border-color:#111827;background:#f3f4f6}.pres-tab-btn.active{color:#111827;border-color:#111827}.pres-timeline-num{background:#111827;color:#fff}.pres-quote{font-style:normal;font-weight:300;letter-spacing:-0.01em}'
+  },
+  editorial: {
+    name: 'Editorial',
+    css: '.pres-slide{--pres-accent:#b91c1c}.pres-kicker{color:#b91c1c;text-transform:uppercase;letter-spacing:0.25em;font-size:0.7em}.pres-agenda-num{background:#b91c1c}.pres-h2{color:#1c1917;font-family:Georgia,"Times New Roman",serif;font-weight:700}.pres-h3{font-family:Georgia,"Times New Roman",serif}.pres-bullet-icon{color:#b91c1c}.pres-q-radio:checked+.pres-q-opt{border-color:#b91c1c;background:#fef2f2}.pres-tab-btn.active{color:#b91c1c;border-color:#b91c1c}.pres-timeline-num{background:#b91c1c;color:#fff}.pres-quote{font-family:Georgia,"Times New Roman",serif;font-style:italic}'
+  },
+  warm: {
+    name: 'Warm',
+    css: '.pres-slide{--pres-accent:#ea580c}.pres-kicker{color:#ea580c}.pres-agenda-num{background:#ea580c}.pres-h2{color:#7c2d12}.pres-h3{color:#9a3412}.pres-bullet-icon{color:#ea580c}.pres-q-radio:checked+.pres-q-opt{border-color:#ea580c;background:#fff7ed}.pres-tab-btn.active{color:#ea580c;border-color:#ea580c}.pres-timeline-num{background:#ea580c;color:#fff}.pres-spotlight{border-color:#ea580c!important}'
+  }
+};
+var THEME_ORDER = ['clean', 'dark', 'corporate', 'playful', 'minimal', 'editorial', 'warm'];
+
+function syncThemeSelect() {
+  var sel = el('theme-select');
+  if (!sel || !sel.dataset) return;
+  if (!sel.dataset.filled) {
+    sel.innerHTML = '';
+    for (var i = 0; i < THEME_ORDER.length; i++) {
+      var key = THEME_ORDER[i];
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = THEMES[key].name;
+      sel.appendChild(opt);
+    }
+    sel.dataset.filled = '1';
+  }
+  sel.value = (THEMES[DB.pres.theme]) ? DB.pres.theme : 'clean';
+  sel.disabled = !canWrite();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — TEMPLATES
+   ═══════════════════════════════════════════ */
+var TEMPLATES = [
+  { id: 'pitch', icon: '🚀', title: 'Startup pitch', desc: 'Problem, solution, traction, ask', prompt: 'Create a 10-slide startup pitch deck for a fictional SaaS product. Cover: 1) Cover 2) Problem 3) Solution 4) Market 5) Product demo 6) Business model 7) Competition 8) Traction 9) Team 10) Ask & closing. Use a mix of bullets, metrics, quote and spotlight. Keep text tight.' },
+  { id: 'quarterly', icon: '📊', title: 'Quarterly review', desc: 'KPIs, wins, blockers, next quarter', prompt: 'Create an 8-slide quarterly business review: cover, highlights, KPI metrics, wins & losses, blockers, learnings, next-quarter goals, closing. Use metrics, bars, bullets and a section slide. Professional tone.' },
+  { id: 'training', icon: '🎓', title: 'Training session', desc: 'Objectives, concepts, quiz, wrap-up', prompt: 'Create a 9-slide training deck for new employees on "company onboarding basics": cover, agenda, 4 concept slides with bullets and figures, a timeline, a 2-question quiz, and a closing slide. Simple language.' },
+  { id: 'workshop', icon: '🛠', title: 'Workshop', desc: 'Agenda, exercises, discussion prompts', prompt: 'Create a 9-slide workshop deck for a "creative problem solving" session: cover, agenda, intro, 2 exercise slides with steps, a discussion prompt slide, key takeaways, and a closing. Engaging, practical.' },
+  { id: 'launch', icon: '🎉', title: 'Product launch', desc: 'Teaser, features, pricing, CTA', prompt: 'Create a 9-slide product launch deck for a new mobile app: cover teaser, agenda, the problem, our solution, 3 key features, pricing table, launch timeline, closing call-to-action. Energetic tone.' },
+  { id: 'wedding', icon: '💍', title: 'Wedding / event', desc: 'Story, schedule, photos, thanks', prompt: 'Create a 8-slide presentation for a wedding reception: cover, our story, how we met (timeline), people to thank, photo placeholders, evening program agenda, a quote, and a thank-you closing. Warm, elegant tone.' }
+];
+
+function renderTemplateGallery() {
+  var g = el('template-gallery');
+  if (!g) return;
+  var h = '';
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    var t = TEMPLATES[i];
+    h += '<button type="button" class="template-chip" data-tpl="' + t.id + '"><span class="tpl-ico">' + t.icon + '</span><b>' + esc(t.title) + '</b><small>' + esc(t.desc) + '</small></button>';
+  }
+  g.innerHTML = h;
+  var chips = g.querySelectorAll('.template-chip');
+  for (var j = 0; j < chips.length; j++) {
+    chips[j].addEventListener('click', function() {
+      var id = this.getAttribute('data-tpl');
+      for (var k = 0; k < TEMPLATES.length; k++) {
+        if (TEMPLATES[k].id === id) {
+          var input = el('chat-input');
+          if (input) input.value = TEMPLATES[k].prompt;
+          sendChatMessage();
+          return;
+        }
+      }
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — UNDO / REDO / HISTORY
+   ═══════════════════════════════════════════ */
+function updateHistoryButtons() {
+  var u = el('btn-undo');
+  var r = el('btn-redo');
+  if (u) u.disabled = !(DB.history && DB.history.length);
+  if (r) r.disabled = !_redoStack.length;
+}
+
+function pushHistoryRaw(pres, activeSlideId, label) {
+  if (!Array.isArray(DB.history)) DB.history = [];
+  DB.history.push({
+    time: new Date().toISOString(),
+    label: String(label || 'Change').substring(0, 80),
+    version: DB.version || '1.0.0',
+    pres: JSON.parse(JSON.stringify(pres || DB.pres)),
+    activeSlideId: activeSlideId || ''
+  });
+  _redoStack = [];
+  while (DB.history.length > HISTORY_MAX) DB.history.shift();
+  while (JSON.stringify(DB.history).length > HISTORY_BYTES_MAX && DB.history.length > 2) DB.history.shift();
+  updateHistoryButtons();
+}
+
+function pushHistory(label) {
+  pushHistoryRaw(JSON.parse(JSON.stringify(DB.pres)), DB.activeSlideId, label);
+}
+
+function restoreState(snap) {
+  if (!snap || !snap.pres) return;
+  DB.pres = normalizeDeck(snap.pres);
+  DB.activeSlideId = snap.activeSlideId || '';
+  _aiJustUpdated = true; /* restoring is not a manual edit — no version bump */
+  persist();
+  fixActiveSlide();
+  renderAll();
+  updatePreview();
+  syncThemeSelect();
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (!DB.history || !DB.history.length) {
+    try { tool.notify('Nothing to undo', 'info'); } catch (e) {}
+    return;
+  }
+  var cur = { time: new Date().toISOString(), label: 'redo point', version: DB.version, pres: JSON.parse(JSON.stringify(DB.pres)), activeSlideId: DB.activeSlideId };
+  _redoStack.push(cur);
+  var snap = DB.history.pop();
+  restoreState(snap);
+  try { tool.notify('↩ Undid: ' + snap.label, 'info'); } catch (e) {}
+}
+
+function redo() {
+  if (!_redoStack.length) {
+    try { tool.notify('Nothing to redo', 'info'); } catch (e) {}
+    return;
+  }
+  var snap = _redoStack.pop();
+  DB.history.push({ time: new Date().toISOString(), label: 'undo point', version: DB.version, pres: JSON.parse(JSON.stringify(DB.pres)), activeSlideId: DB.activeSlideId });
+  restoreState(snap);
+  try { tool.notify('↪ Redid: ' + snap.label, 'info'); } catch (e) {}
+}
+
+function shortTime(iso) {
+  if (!iso) return '';
+  try {
+    var d = new Date(iso);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+  } catch (e) { return ''; }
+}
+
+function renderHistoryList() {
+  var list = el('history-list');
+  if (!list) return;
+  if (!DB.history || !DB.history.length) {
+    list.innerHTML = '<div class="modal-empty">No snapshots yet. Changes you make (AI edits, add/delete/reorder slides, themes…) are recorded here so you can jump back in time.</div>';
+    return;
+  }
+  var h = '';
+  for (var i = DB.history.length - 1; i >= 0; i--) {
+    var s = DB.history[i];
+    var slideCount = (s.pres && s.pres.slides && s.pres.slides.length) || 0;
+    h += '<div class="history-row"><span class="history-time">' + shortTime(s.time) + '</span><b>' + esc(s.label || 'Change') + '</b><span class="history-meta">v' + esc(s.version || '1.0.0') + ' · ' + slideCount + ' slides</span><button class="btn btn-sm btn-outline" data-restore="' + i + '">Restore</button></div>';
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-restore]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].addEventListener('click', function() {
+      var idx = parseInt(this.getAttribute('data-restore'), 10);
+      var snap = DB.history[idx];
+      if (!snap) return;
+      pushHistoryRaw(JSON.parse(JSON.stringify(DB.pres)), DB.activeSlideId, 'restore point');
+      DB.history.splice(idx, 1);
+      restoreState(snap);
+      renderHistoryList();
+      try { tool.notify('Restored snapshot: ' + snap.label, 'info'); } catch (e) {}
+    });
+  }
+}
+
+function openHistory() {
+  renderHistoryList();
+  var ov = el('history-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeHistory() {
+  var ov = el('history-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — TARGETED EDIT
+   ═══════════════════════════════════════════ */
+function setTargetSlide(id) {
+  if (slideIndexById(id) === -1) return;
+  _targetSlideId = id;
+  updateTargetChip();
+  try { tool.notify('🎯 Targeting "Slide ' + (slideIndexById(id) + 1) + '" — the next AI message will edit only this slide', 'info'); } catch (e) {}
+}
+function clearTargetSlide() {
+  _targetSlideId = '';
+  updateTargetChip();
+}
+function updateTargetChip() {
+  var chip = el('chat-target-chip');
+  var label = el('chat-target-label');
+  if (!chip) return;
+  var idx = slideIndexById(_targetSlideId);
+  if (_targetSlideId && idx !== -1) {
+    chip.style.display = '';
+    if (label) label.textContent = 'Slide ' + (idx + 1) + ' · ' + (DB.pres.slides[idx].title || 'Untitled');
+  } else {
+    chip.style.display = 'none';
+    _targetSlideId = '';
+  }
+}
+function toggleTargetMode() {
+  _targetMode = !_targetMode;
+  var b = el('btn-target-mode');
+  if (b) b.classList.toggle('active', _targetMode);
+  try { tool.notify(_targetMode ? '🎯 Target mode ON — click a slide in the strip to target it' : 'Target mode off', 'info'); } catch (e) {}
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — DECK DOCTOR
+   ═══════════════════════════════════════════ */
+function runDeckChecks() {
+  var slides = DB.pres.slides || [];
+  var results = [];
+  function add(sev, label, detail, slideId) {
+    results.push({ id: 'dc' + results.length, sev: sev, label: label, detail: detail || '', slideId: slideId || '' });
+  }
+  if (!slides.length) {
+    add('info', 'No slides yet', 'Describe your presentation in the chat to get started.');
+    results.passed = 1; results.failed = 0; results.warned = 0; results.total = 1;
+    return results;
+  }
+  var hasAgenda = false;
+  var hasCover = false;
+  var hasClosing = false;
+  var titlesSeen = {};
+  var bulletRun = 0;
+  var lockedCount = 0;
+  var noNotesCount = 0;
+
+  for (var i = 0; i < slides.length; i++) {
+    var s = slides[i];
+    var types = [];
+    for (var t = 0; t < s.components.length; t++) types.push(s.components[t].type);
+    var lowTitle = String(s.title || '').trim().toLowerCase();
+    if (lowTitle && titlesSeen[lowTitle] !== undefined) add('warn', 'Duplicate title', 'Slides ' + (titlesSeen[lowTitle] + 1) + ' and ' + (i + 1) + ' both read "' + s.title + '".', s.id);
+    if (lowTitle) titlesSeen[lowTitle] = i;
+
+    if (i === 0) hasCover = (types.indexOf('title-slide') !== -1 || types.indexOf('section-slide') !== -1);
+    if (i === slides.length - 1) hasClosing = (types.indexOf('closing-slide') !== -1 || types.indexOf('title-slide') !== -1);
+    if (types.indexOf('agenda') !== -1) hasAgenda = true;
+
+    if (s.locked) lockedCount++;
+
+    if (!s.components.length) {
+      add('fail', 'Slide ' + (i + 1) + ' is empty', 'Add content in the Slides tab or ask the AI to fill it.', s.id);
+      continue;
+    }
+    var hasHeading = (types.indexOf('heading') !== -1 || types.indexOf('title-slide') !== -1 || types.indexOf('section-slide') !== -1 || types.indexOf('closing-slide') !== -1 || types.indexOf('agenda') !== -1 || types.indexOf('quiz') !== -1);
+    if (!hasHeading) add('info', 'Slide ' + (i + 1) + ' has no heading', 'A heading makes navigation clearer.', s.id);
+
+    var bulletCount = 0;
+    var textLen = 0;
+    var nonVisual = true;
+    for (var c = 0; c < s.components.length; c++) {
+      var comp = s.components[c];
+      if (comp.type === 'bullets') bulletCount += ((comp.data && comp.data.items) ? comp.data.items.length : 0);
+      if (comp.type === 'paragraph') textLen += String((comp.data && (comp.data.text || comp.data.body)) || '').length;
+      if (['figure', 'bars', 'rings', 'quiz', 'timeline', 'table', 'spotlight', 'quote', 'area-chart', 'radar', 'scatter', 'org-tree'].indexOf(comp.type) !== -1) nonVisual = false;
+    }
+    if (bulletCount > 8) add('warn', 'Slide ' + (i + 1) + ' has ' + bulletCount + ' bullets', 'Too dense — split into two slides or trim.', s.id);
+    if (textLen > 600) add('warn', 'Slide ' + (i + 1) + ' has a lot of text', 'Shorten the paragraph(s) for better readability.', s.id);
+
+    var bulletish = (nonVisual && bulletCount > 0);
+    bulletRun = bulletish ? bulletRun + 1 : 0;
+    if (bulletRun >= 3) add('warn', '3+ text-only slides in a row', 'Add a figure, bars, rings, quiz or timeline to break the monotony.', s.id);
+
+    if (!s.notes) noNotesCount++;
+  }
+
+  if (!hasCover) add('warn', 'Deck does not start with a cover', 'Make the first slide a Title (cover) or Section slide.', slides.length ? slides[0].id : '');
+  if (!hasClosing) add('warn', 'No closing slide', 'End with a closing slide (thanks, CTA or summary).');
+  if (slides.length > 4 && !hasAgenda) add('info', 'No agenda slide', 'Decks over 4 slides read better with an agenda.');
+  if (slides.length > 15) add('info', 'Long deck (' + slides.length + ' slides)', 'Consider splitting into two presentations.');
+  if (noNotesCount > 0) add('info', noNotesCount + ' slide(s) without speaker notes', 'Use 🗒 Generate Notes in the Slides tab.');
+  if (lockedCount > 0) add('info', lockedCount + ' slide(s) are locked', 'AI edits are blocked on locked slides.');
+
+  var failed = 0, warned = 0, passed = 0;
+  for (var r = 0; r < results.length; r++) {
+    if (results[r].sev === 'fail') failed++;
+    else if (results[r].sev === 'warn') warned++;
+    else passed++;
+  }
+  results.total = results.length;
+  results.failed = failed;
+  results.warned = warned;
+  results.passed = passed;
+  return results;
+}
+
+function renderDoctorModal(results) {
+  var list = el('doctor-list');
+  if (!list) return;
+  var h = '<div class="doctor-summary">' + results.passed + ' passing · ' + results.warned + ' warnings · ' + results.failed + ' problems</div>';
+  for (var i = 0; i < results.length; i++) {
+    var it = results[i];
+    var ico = it.sev === 'fail' ? '⛔' : (it.sev === 'warn' ? '⚠️' : 'ℹ️');
+    var fixBtn = (it.sev === 'info' && /locked/.test(it.label)) ? '' : '<button class="btn btn-sm btn-outline" data-fix="' + i + '" title="Ask the AI to fix this">🤖 Fix</button>';
+    h += '<div class="doctor-item sev-' + it.sev + '"><span class="doctor-ico">' + ico + '</span><div class="doctor-body"><b>' + esc(it.label) + '</b><span>' + esc(it.detail) + '</span></div>' + fixBtn + '</div>';
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-fix]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].addEventListener('click', function() {
+      var it = results[parseInt(this.getAttribute('data-fix'), 10)];
+      if (!it) return;
+      closeDoctor();
+      var input = el('chat-input');
+      var prompt = 'Deck Doctor found: ' + it.label + '. ' + it.detail + (it.slideId ? ' Fix slide id "' + it.slideId + '".' : ' Fix the deck.');
+      if (input) input.value = prompt;
+      sendChatMessage();
+    });
+  }
+}
+
+function openDoctor() {
+  renderDoctorModal(runDeckChecks());
+  var ov = el('doctor-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeDoctor() {
+  var ov = el('doctor-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — AUTO SPEAKER NOTES
+   ═══════════════════════════════════════════ */
+function generateAllNotes() {
+  if (!canWrite()) return;
+  if (_aiCallActive) { try { tool.notify('An AI request is already running', 'warning'); } catch (e) {} return; }
+  if (!DB.pres.slides.length) {
+    try { tool.notify('No slides to write notes for', 'warning'); } catch (e) {}
+    return;
+  }
+  var slides = DB.pres.slides;
+  var beforePres = JSON.parse(JSON.stringify(DB.pres));
+  var beforeActive = DB.activeSlideId;
+  var promptParts = [
+    'You are a presentation coach. Write short speaker notes for EVERY slide in the deck below.',
+    '=== DECK ===',
+    deckStateBlock(),
+    '=== TASK ===',
+    'For each slide write 2-4 spoken sentences the presenter can read aloud: hook the audience, explain the slide content, and include a transition to the next slide. Write notes even for locked slides (notes are not content edits).',
+    'Return ONLY valid JSON: {"patches":[{"op":"notes","id":"<slide id>","notes":"..."}],"summary":"one short sentence"}. Include exactly one notes patch per slide.'
+  ];
+  var prompt = promptParts.join('\n');
+
+  _aiCallActive = true;
+  _setAiUIActive(true);
+  updateConnStatus('busy');
+  showThinkingBubble('🗒 Writing speaker notes for ' + slides.length + ' slides…', true);
+  setAiTimeout(prompt.length);
+
+  var full = '';
+  var started = Date.now();
+  var token = { cancelled: false };
+  _reqToken = token;
+
+  function finishNotes(raw) {
+    if (token.cancelled) return;
+    if (_aiTimeoutId) { clearTimeout(_aiTimeoutId); _aiTimeoutId = null; }
+    var parsed = parseAIResponse(raw);
+    var notesPatches = [];
+    if (parsed && parsed.json && parsed.json.patches) {
+      for (var p = 0; p < parsed.json.patches.length; p++) {
+        var patch = parsed.json.patches[p];
+        if (patch && patch.op === 'notes' && patch.id && String(patch.notes || '').length) notesPatches.push(patch);
+      }
+    }
+    if (!notesPatches.length) {
+      hideThinkingBubble();
+      _aiCallActive = false;
+      _setAiUIActive(false);
+      updateConnStatus('ok');
+      addChatMessage('ai', '⚠️ The AI could not produce speaker notes. Try again or ask in the chat: "write speaker notes".', { isError: true });
+      persist();
+      renderChatMessages();
+      return;
+    }
+    var applied = 0;
+    for (var q = 0; q < notesPatches.length; q++) {
+      var np = notesPatches[q];
+      var idx = slideIndexById(np.id);
+      if (idx === -1) continue;
+      DB.pres.slides[idx].notes = String(np.notes || '').substring(0, 4000);
+      applied++;
+    }
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('ok');
+    if (applied) {
+      pushHistoryRaw(beforePres, beforeActive, 'AI: speaker notes (' + applied + ' slides)');
+      _aiJustUpdated = true;
+      persist();
+      renderAll();
+      updatePreview();
+      renderSlidesList();
+      var summary = (parsed.json && parsed.json.summary) ? String(parsed.json.summary) : 'Speaker notes written for ' + applied + ' slides.';
+      addChatMessage('ai', '🗒 ' + summary, { doctor: runDeckChecks() });
+      renderChatMessages();
+      try { tool.notify('🗒 Speaker notes written for ' + applied + ' slides', 'success'); } catch (e) {}
+    }
+  }
+
+  function failNotes(err) {
+    if (token.cancelled) return;
+    if (_aiTimeoutId) { clearTimeout(_aiTimeoutId); _aiTimeoutId = null; }
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('error');
+    addChatMessage('ai', '⚠️ Notes generation failed: ' + (err && err.message ? err.message : String(err || 'unknown error')), { isError: true });
+    persist();
+    renderChatMessages();
+  }
+
+  if (typeof tool.requestAIStream === 'function') {
+    try {
+      tool.requestAIStream(prompt, '', {
+        onToken: function(t) {
+          if (token.cancelled) return;
+          full += t;
+          if (_thinkingMsgEl) {
+            var elapsed = Math.round((Date.now() - _thinkingStartTime) / 1000);
+            _thinkingMsgEl.textContent = '🗒 Writing speaker notes… ' + full.length + ' chars · ' + elapsed + 's';
+          }
+        },
+        onComplete: function() { finishNotes(full); },
+        onError: function(err) { failNotes(err); }
+      });
+    } catch (e) {
+      failNotes(e);
+    }
+  } else {
+    try {
+      tool.requestAI(prompt).then(function(res) {
+        finishNotes(res && res.text ? res.text : String(res || ''));
+      }).catch(function(err) {
+        failNotes(err);
+      });
+    } catch (e) {
+      failNotes(e);
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — DRAG & DROP REORDER
+   ═══════════════════════════════════════════ */
+function reorderSlide(dragId, targetId) {
+  if (!canWrite()) return;
+  var fi = slideIndexById(dragId);
+  var ti = slideIndexById(targetId);
+  if (fi === -1 || ti === -1 || fi === ti) return;
+  pushHistory('Reorder slides');
+  var moved = DB.pres.slides.splice(fi, 1)[0];
+  ti = slideIndexById(targetId);
+  if (ti === -1) ti = DB.pres.slides.length;
+  DB.pres.slides.splice(ti, 0, moved);
+  fixActiveSlide();
+  persist();
+  renderAll();
+  updatePreview();
+}
+
+function bindSlideDrag(card, sid) {
+  if (!card) return;
+  card.setAttribute('draggable', 'true');
+  card.addEventListener('dragstart', function(e) {
+    _dragSlideId = sid;
+    card.classList.add('dragging');
+    try {
+      e.dataTransfer.setData('text/plain', sid);
+      e.dataTransfer.effectAllowed = 'move';
+    } catch (err) {}
+  });
+  card.addEventListener('dragend', function() {
+    _dragSlideId = null;
+    card.classList.remove('dragging');
+    var overs = document.querySelectorAll('.slide-card.drag-over');
+    for (var o = 0; o < overs.length; o++) overs[o].classList.remove('drag-over');
+  });
+  card.addEventListener('dragover', function(e) {
+    if (!_dragSlideId || _dragSlideId === sid) return;
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+    card.classList.add('drag-over');
+  });
+  card.addEventListener('dragleave', function() {
+    card.classList.remove('drag-over');
+  });
+  card.addEventListener('drop', function(e) {
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    if (!_dragSlideId || _dragSlideId === sid) return;
+    var dragId = _dragSlideId;
+    _dragSlideId = null;
+    reorderSlide(dragId, sid);
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 1 — LOCK SLIDES
+   ═══════════════════════════════════════════ */
+function toggleLockSlide(id) {
+  if (!canWrite()) return;
+  var idx = slideIndexById(id);
+  if (idx === -1) return;
+  pushHistory('Lock/unlock slide ' + (idx + 1));
+  DB.pres.slides[idx].locked = !DB.pres.slides[idx].locked;
+  persist();
+  renderStrip();
+  renderSlidesList();
+  updatePreview();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — SHARED AI TASK RUNNER
+   Sends one prompt, applies returned patches, handles history/UI.
+   ═══════════════════════════════════════════ */
+function applyTheme(key) {
+  if (!THEMES[key]) return;
+  pushHistory('Theme: ' + key);
+  DB.pres.theme = key;
+  persist();
+  renderStrip();
+  updatePreview();
+  syncThemeSelect();
+  addChatMessage('ai', '🎨 Theme switched to **' + THEMES[key].name + '**.', {});
+  try { tool.notify('Theme: ' + THEMES[key].name, 'success'); } catch (e) {}
+}
+
+function runAiPatchesTask(label, prompt) {
+  if (_aiCallActive) { try { tool.notify('An AI request is already running', 'warning'); } catch (e) {} return; }
+  var beforePres = JSON.parse(JSON.stringify(DB.pres));
+  var beforeActive = DB.activeSlideId;
+  _aiCallActive = true;
+  _setAiUIActive(true);
+  updateConnStatus('busy');
+  showThinkingBubble(label, true);
+  setAiTimeout(prompt.length);
+  var tok = { cancelled: false };
+  _reqToken = tok;
+  var full = '';
+
+  function finish(raw) {
+    if (tok.cancelled) return;
+    if (_aiTimeoutId) { clearTimeout(_aiTimeoutId); _aiTimeoutId = null; }
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('ok');
+    var parsed = parseAIResponse(raw);
+    var applied = 0;
+    if (parsed.json && Array.isArray(parsed.json.patches)) {
+      for (var p = 0; p < parsed.json.patches.length; p++) {
+        if (applyPatchOp(parsed.json.patches[p])) applied++;
+      }
+    }
+    var summary = (parsed.json && parsed.json.summary) ? String(parsed.json.summary) : '';
+    if (applied) {
+      pushHistoryRaw(beforePres, beforeActive, 'AI: ' + String(label || 'task').substring(0, 50));
+      _aiJustUpdated = true;
+      persist();
+      renderAll();
+      updatePreview();
+      syncThemeSelect();
+      updateHistoryButtons();
+      addChatMessage('ai', '✅ ' + (summary || (String(label) + ' done.')), { version: DB.version, doctor: runDeckChecks() });
+      renderChatMessages();
+      try { tool.notify(String(label) + ' — done (' + applied + ' patch(es)).', 'success'); } catch (e) {}
+    } else {
+      addChatMessage('ai', '⚠️ The AI could not complete "' + String(label) + '": ' + (summary || 'no patches returned. Try again or rephrase.'), { isError: true });
+      persist();
+      renderChatMessages();
+    }
+    tool.resize();
+  }
+
+  function fail(err) {
+    if (tok.cancelled) return;
+    if (_aiTimeoutId) { clearTimeout(_aiTimeoutId); _aiTimeoutId = null; }
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('error');
+    addChatMessage('ai', '⚠️ "' + String(label) + '" failed: ' + (err && err.message ? err.message : String(err || 'unknown error')), { isError: true });
+    persist();
+    renderChatMessages();
+    tool.resize();
+  }
+
+  if (typeof tool.requestAIStream === 'function') {
+    try {
+      tool.requestAIStream(prompt, '', {
+        onToken: function(t) { if (tok.cancelled) return; full += t; },
+        onComplete: function() { finish(full); },
+        onError: function(err) { fail(err); }
+      });
+    } catch (e) { fail(e); }
+  } else {
+    try {
+      tool.requestAI(prompt, '', function(err, res) {
+        if (err) { fail(err); return; }
+        finish(typeof res === 'string' ? res : String((res && res.text) || ''));
+      });
+    } catch (e) { fail(e); }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — A1 AGENTIC MULTI-STEP BUILDS
+   ═══════════════════════════════════════════ */
+function _shouldPlan(msg) {
+  var m = String(msg || '');
+  var n = parseInt((/\b(\d{1,2})\s*-?\s*slides?\b/i.exec(m) || [])[1], 10);
+  if (n >= 8 && /\b(slide|deck|presentation|training|course|pitch|workshop|lecture)\b/i.test(m)) return true;
+  var verbs = (m.match(/\b(build|create|make|generate|prepare|design|write)\b/gi) || []).length;
+  return /\b(slides?|deck|presentation|training|course|workshop)\b/i.test(m) && m.length >= 80 && verbs >= 2;
+}
+
+function sendChatMessageAgentic(msg, tok) {
+  var beforePres = JSON.parse(JSON.stringify(DB.pres));
+  var beforeActive = DB.activeSlideId;
+  var planPrompt = [
+    'You are planning a slide deck. Do NOT write slide content yet.',
+    'Return ONLY JSON: {"title":"deck title","summary":"one sentence","slides":[{"title":"slide title","hint":"what components to include"}]}.',
+    'Rules: 6-12 slides; one clear idea per slide; slide 1 is a cover (title-slide), include an agenda slide, and end with a closing slide.',
+    'USER REQUEST: ' + msg
+  ].join('\n');
+  _aiCallActive = true;
+  _setAiUIActive(true);
+  updateConnStatus('busy');
+  showThinkingBubble('🧭 Planning the deck…', false);
+  setAiTimeout(planPrompt.length);
+  var planStart = Date.now();
+
+  function doPlan(raw, err) {
+    if (tok.cancelled) return;
+    clearAiTimeout();
+    _markThinkingComplete(Date.now() - planStart);
+    var parsed = raw ? parseAIResponse(raw) : null;
+    var json = parsed && parsed.json;
+    if (!json || !Array.isArray(json.slides) || !json.slides.length) {
+      /* plan failed — fall back to a single full-deck call */
+      hideThinkingBubble();
+      _aiCallActive = false;
+      _setAiUIActive(false);
+      updateConnStatus('ok');
+      _generateSingle(msg, tok);
+      return;
+    }
+    var tasks = json.slides.slice(0, 12).map(function(s, i) {
+      return { title: String((s && s.title) || ('Slide ' + (i + 1))).substring(0, 100), hint: String((s && s.hint) || '').substring(0, 200) };
+    });
+    if (json.title) { DB.pres.title = String(json.title).substring(0, 140); }
+    hideThinkingBubble();
+    _addPlanMessage(tasks);
+    _execSteps(tasks, beforePres, beforeActive, tok, json);
+  }
+
+  try {
+    if (typeof tool.requestAIStream === 'function') {
+      var full = '';
+      tool.requestAIStream(planPrompt, '', {
+        onToken: function(t) { if (tok.cancelled) return; full += t; },
+        onComplete: function() { doPlan(full, null); },
+        onError: function(e) { doPlan('', e); }
+      });
+    } else {
+      tool.requestAI(planPrompt, '', function(err, res) { doPlan(typeof res === 'string' ? res : String((res && res.text) || ''), err); });
+    }
+  } catch (e) {
+    doPlan('', e);
+  }
+}
+
+function _addPlanMessage(tasks) {
+  addChatMessage('plan', '', { tasks: tasks.map(function(t) { return { title: t.title, status: 'todo' }; }) });
+}
+
+function _updatePlanTask(i, status) {
+  var last = DB.chatMessages[DB.chatMessages.length - 1];
+  if (last && last.role === 'plan' && last.tasks && last.tasks[i]) last.tasks[i].status = status;
+  var box = el('chat-messages');
+  if (!box) return;
+  var items = box.querySelectorAll('.plan-task');
+  var it = items[i];
+  if (it) {
+    it.className = 'plan-task st-' + status;
+    var chk = it.querySelector('.plan-check');
+    if (chk) chk.textContent = status === 'done' ? '✅' : (status === 'error' ? '⚠️' : (status === 'doing' ? '⏳' : '○'));
+  }
+}
+
+function _execSteps(tasks, beforePres, beforeActive, tok, planJson) {
+  var i = 0;
+  function next() {
+    if (tok.cancelled) return;
+    if (i >= tasks.length) { _finishPlan(tasks, beforePres, beforeActive, tok, planJson); return; }
+    var t = tasks[i];
+    _updatePlanTask(i, 'doing');
+    showThinkingBubble('🎞️ Building slide ' + (i + 1) + ' / ' + tasks.length + ' — ' + t.title, false);
+    updateConnStatus('busy');
+    var sp = [
+      'Build EXACTLY ONE slide. Return ONLY JSON: {"slide":{"id":"...","title":"...","notes":"...","components":[...]}}.',
+      '=== TARGET SLIDE ===',
+      'Position: ' + (i + 1) + ' of ' + tasks.length + '. Title: ' + t.title + (t.hint ? ' — include: ' + t.hint : '') + '.',
+      i === 0 ? 'This is the COVER — use a title-slide component.' : (i === tasks.length - 1 ? 'This is the CLOSING — use a closing-slide component.' : ''),
+      '=== DECK SO FAR ===',
+      deckStateBlock(),
+      '=== COMPONENT LIBRARY ===',
+      libraryCatalog(),
+      '=== DESIGN RULES ===',
+      'Real content, no lorem ipsum. Language: ' + _p('lang', 'en') + '. Keep text short (max ~5 bullets, ~10 words each).'
+    ].join('\n');
+    setAiTimeout(sp.length);
+    var stepStart = Date.now();
+    function done(raw, err) {
+      if (tok.cancelled) return;
+      clearAiTimeout();
+      _markThinkingComplete(Date.now() - stepStart);
+      if (raw && !err) {
+        var parsed = parseAIResponse(raw);
+        var slide = parsed.json && (parsed.json.slide || (Array.isArray(parsed.json.slides) ? parsed.json.slides[0] : null));
+        if (slide && slide.components) {
+          applyPatchOp({ op: 'upsertSlide', slide: slide });
+          _updatePlanTask(i, 'done');
+        } else {
+          _updatePlanTask(i, 'error');
+        }
+      } else {
+        _updatePlanTask(i, 'error');
+      }
+      hideThinkingBubble();
+      i++;
+      next();
+    }
+    try {
+      if (typeof tool.requestAIStream === 'function') {
+        var full = '';
+        tool.requestAIStream(sp, '', {
+          onToken: function(tk) { if (tok.cancelled) return; full += tk; },
+          onComplete: function() { done(full, null); },
+          onError: function(e) { done('', e); }
+        });
+      } else {
+        tool.requestAI(sp, '', function(err, res) { done(typeof res === 'string' ? res : String((res && res.text) || ''), err); });
+      }
+    } catch (e) { done('', e); }
+  }
+  next();
+}
+
+function _finishPlan(tasks, beforePres, beforeActive, tok, planJson) {
+  hideThinkingBubble();
+  _aiCallActive = false;
+  _reqToken = null;
+  clearAiTimeout();
+  _setAiUIActive(false);
+  updateConnStatus('ok');
+  var beforeJson = JSON.stringify(beforePres);
+  var changed = beforeJson !== JSON.stringify(DB.pres) || beforeActive !== DB.activeSlideId;
+  if (changed) pushHistoryRaw(beforePres, beforeActive, 'AI: agentic build (' + tasks.length + ' slides)');
+  if (changed) {
+    _bumpVersion('minor');
+    _aiJustUpdated = true;
+  }
+  fixActiveSlide();
+  persist();
+  renderAll();
+  updatePreview();
+  syncThemeSelect();
+  updateHistoryButtons();
+  var docRes = runDeckChecks();
+  var doneCount = tasks.filter(function(t) { return t.status === 'done'; }).length;
+  var summary = '✅ Built ' + doneCount + ' of ' + tasks.length + ' slides step by step — ' + DB.pres.slides.length + ' slide(s) in the deck.' +
+    (planJson && planJson.summary ? ' ' + String(planJson.summary) : '');
+  addChatMessage('ai', summary, { options: fallbackDeckSuggestions(), slideOptions: fallbackSlideSuggestions(), version: DB.version, doctor: docRes });
+  try {
+    tool.notify(changed ? '💾 Deck saved — v' + DB.version : 'No deck changes applied', changed ? 'success' : 'info');
+    if (docRes.failed > 0 || docRes.warned > 0) tool.notify('🧪 Deck Doctor: ' + docRes.failed + ' problem(s), ' + docRes.warned + ' warning(s)', 'info');
+  } catch (e) {}
+  tool.resize();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — A5 SLASH COMMANDS
+   ═══════════════════════════════════════════ */
+function handleSlashCommand(msg) {
+  var m = /^\/([a-z]+)\s*(.*)$/i.exec(msg.trim());
+  if (!m) return null;
+  var cmd = m[1].toLowerCase();
+  var arg = m[2].trim();
+  if (cmd === 'notes') { generateAllNotes(); return 'done'; }
+  if (cmd === 'restyle') {
+    var key = String(arg || '').toLowerCase();
+    if (THEMES[key]) { applyTheme(key); return 'done'; }
+    return 'Restyle the whole deck with the ' + (key || 'a fresh look') + ' theme. Pick a theme: dark, corporate, playful, minimal, editorial, warm.';
+  }
+  if (cmd === 'split') { openSplitter(); return 'done'; }
+  if (cmd === 'translate') { openTranslate(arg); return 'done'; }
+  if (cmd === 'review') {
+    return 'Review my deck like a professional presentation coach. Return {"review":{"findings":[{"slideId":"<id>","issue":"...","suggestion":"..."}],"score":<0-10>,"summary":"..."}} with one finding per weak slide.';
+  }
+  if (cmd === 'outline') {
+    return 'Create an agenda slide that reflects the current deck, and re-check that the whole deck follows a logical story arc.';
+  }
+  if (cmd === 'quiz') {
+    return 'Add an interactive quiz slide with 3 questions covering the most important points of this deck.';
+  }
+  if (cmd === 'summarize') {
+    return 'Add a key-takeaways summary slide capturing the most important points of this deck, placed before the closing slide.';
+  }
+  if (cmd === 'variants') {
+    var idx = arg ? findSlideIndexByIdOrTitle(arg) : Math.max(0, activeSlideIndex());
+    if (idx === -1) return 'Give me 3 design variants of the current slide.';
+    var s = DB.pres.slides[idx];
+    return 'Give me 3 design variants for slide "' + s.title + '" (id: ' + s.id + '). Return ONLY {"variants":[{"label":"A","slide":{...}},{"label":"B","slide":{...}},{"label":"C","slide":{...}}],"slideId":"' + s.id + '"} — do NOT modify the deck yet.';
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — A3 DESIGN VARIANTS
+   ═══════════════════════════════════════════ */
+function applyVariant(btn) {
+  if (!canWrite()) return;
+  var mi = parseInt(btn.getAttribute('data-vmsg'), 10);
+  var vi = parseInt(btn.getAttribute('data-vidx'), 10);
+  var msg = DB.chatMessages[mi];
+  if (!msg || !msg.variants || !msg.variants[vi]) return;
+  var variant = msg.variants[vi];
+  var slide = variant.slide;
+  if (!slide) return;
+  var idx = slide.id ? slideIndexById(slide.id) : (slide.title ? findSlideIndexByIdOrTitle(slide.title) : -1);
+  if (idx === -1) idx = Math.max(0, activeSlideIndex());
+  var existing = DB.pres.slides[idx];
+  var fixed = normalizeSlide(slide, idx);
+  fixed.id = existing.id;
+  fixed.locked = existing.locked;
+  if (!slide.title) fixed.title = existing.title;
+  pushHistory('Variant: ' + String(variant.label || '') + ' → slide ' + (idx + 1));
+  DB.pres.slides[idx] = fixed;
+  _aiJustUpdated = true;
+  persist();
+  renderAll();
+  updatePreview();
+  try { tool.notify('Variant ' + (variant.label || '') + ' applied to slide ' + (idx + 1), 'success'); } catch (e) {}
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — A7 REVIEW FIX
+   ═══════════════════════════════════════════ */
+function handleReviewFix(btn) {
+  var sid = btn.getAttribute('data-fix-sid');
+  var issue = btn.getAttribute('data-fix-issue');
+  var sug = btn.getAttribute('data-fix-sug');
+  var inp = el('chat-input');
+  if (!inp) return;
+  if (sid) {
+    setTargetSlide(sid);
+    var idx = slideIndexById(sid);
+    inp.value = 'Fix slide "' + (idx !== -1 ? DB.pres.slides[idx].title : sid) + '" (id: ' + sid + '): ' + issue + ' — ' + sug;
+  } else {
+    inp.value = 'Fix the deck: ' + issue + ' — ' + sug;
+  }
+  inp.style.height = 'auto';
+  switchChatTab('chat');
+  inp.focus();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C2 SLIDE INSPECTOR DRAWER
+   ═══════════════════════════════════════════ */
+var _inspectorSlideId = '';
+function openInspector(id) {
+  var idx = slideIndexById(id);
+  if (idx === -1) return;
+  _inspectorSlideId = id;
+  var s = DB.pres.slides[idx];
+  var t = el('insp-title'); if (t) t.value = s.title || '';
+  var n = el('insp-notes'); if (n) n.value = s.notes || '';
+  var du = el('insp-duration'); if (du) du.value = s.duration ? String(s.duration) : '';
+  var tr = el('insp-transition'); if (tr) tr.value = s.transition || '';
+  var bg = el('insp-bg'); if (bg) bg.value = s.background || '';
+  var lk = el('insp-locked'); if (lk) lk.checked = !!s.locked;
+  var drawer = el('inspector-drawer');
+  if (drawer) drawer.classList.add('open');
+}
+function closeInspector() {
+  var drawer = el('inspector-drawer');
+  if (drawer) drawer.classList.remove('open');
+  _inspectorSlideId = '';
+}
+function commitInspector() {
+  var idx = slideIndexById(_inspectorSlideId);
+  if (idx === -1 || !canWrite()) return;
+  var s = DB.pres.slides[idx];
+  var changed = false;
+  var t = el('insp-title');
+  if (t && String(t.value).trim() && String(t.value).trim() !== s.title) { s.title = String(t.value).trim().substring(0, 120); changed = true; }
+  var n = el('insp-notes');
+  if (n && String(n.value) !== String(s.notes || '')) { s.notes = String(n.value || '').substring(0, 4000); changed = true; }
+  var du = el('insp-duration');
+  if (du) {
+    var dnum = parseInt(du.value, 10) || 0;
+    if (dnum !== (s.duration || 0)) { s.duration = Math.max(0, dnum); changed = true; }
+  }
+  var tr = el('insp-transition');
+  if (tr && String(tr.value) !== String(s.transition || '')) { s.transition = ['slide', 'zoom', 'flip'].indexOf(String(tr.value)) !== -1 ? String(tr.value) : ''; changed = true; }
+  var bg = el('insp-bg');
+  if (bg && String(bg.value) !== String(s.background || '')) { s.background = String(bg.value || '').substring(0, 500); changed = true; }
+  var lk = el('insp-locked');
+  if (lk && !!lk.checked !== !!s.locked) { s.locked = !!lk.checked; changed = true; }
+  if (changed) {
+    pushHistory('Inspector edit — slide ' + (idx + 1));
+    persist();
+    renderStrip();
+    renderSlidesList();
+    updatePreview();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C5 SNIPPET LIBRARY
+   ═══════════════════════════════════════════ */
+function saveSlideAsSnippet(id) {
+  var idx = slideIndexById(id);
+  if (idx === -1) return;
+  var s = DB.pres.slides[idx];
+  var snip = { id: genId(), name: (s.title || ('Slide ' + (idx + 1))).substring(0, 80), components: JSON.parse(JSON.stringify(s.components || [])), created: new Date().toISOString() };
+  DB.snippets.unshift(snip);
+  if (DB.snippets.length > 20) DB.snippets = DB.snippets.slice(0, 20);
+  persist();
+  renderSnippetsModal();
+  try { tool.notify('💾 Snippet saved: ' + snip.name, 'success'); } catch (e) {}
+}
+function insertSnippet(snipId) {
+  if (!canWrite()) return;
+  var snip = null;
+  for (var i = 0; i < DB.snippets.length; i++) {
+    if (DB.snippets[i].id === snipId) { snip = DB.snippets[i]; break; }
+  }
+  if (!snip) return;
+  pushHistory('Insert snippet');
+  var slide = { id: genId(), title: snip.name, notes: '', locked: false, components: JSON.parse(JSON.stringify(snip.components || [])) };
+  DB.pres.slides.push(slide);
+  DB.activeSlideId = slide.id;
+  _activeSlideIndex = DB.pres.slides.length - 1;
+  persist();
+  renderAll();
+  updatePreview();
+  closeSnippets();
+  switchTab('present');
+  try { tool.notify('Snippet inserted as slide ' + DB.pres.slides.length, 'success'); } catch (e) {}
+}
+function deleteSnippet(snipId) {
+  for (var i = 0; i < DB.snippets.length; i++) {
+    if (DB.snippets[i].id === snipId) { DB.snippets.splice(i, 1); break; }
+  }
+  persist();
+  renderSnippetsModal();
+}
+function renderSnippetsModal() {
+  var list = el('snippets-list');
+  if (!list) return;
+  if (!DB.snippets.length) {
+    list.innerHTML = '<div class="modal-empty">No snippets yet. Open a slide\'s ✏️ inspector and press "💾 Save as snippet" — or use the button below.</div>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < DB.snippets.length; i++) {
+    var sn = DB.snippets[i];
+    h += '<div class="snippet-row"><div class="snippet-info"><b>' + esc(sn.name) + '</b><span>' + sn.components.length + ' component(s) · ' + sn.components.slice(0, 3).map(function(c) { return c.type; }).join(' · ') + '</span></div>' +
+      '<button class="btn btn-sm btn-primary" data-insert="' + esc(sn.id) + '">Insert as slide</button>' +
+      '<button class="btn-icon danger" data-snipdel="' + esc(sn.id) + '" title="Delete snippet">✕</button></div>';
+  }
+  list.innerHTML = h;
+  var ins = list.querySelectorAll('[data-insert]');
+  for (var j = 0; j < ins.length; j++) {
+    ins[j].onclick = function() { insertSnippet(this.getAttribute('data-insert')); };
+  }
+  var dels = list.querySelectorAll('[data-snipdel]');
+  for (var k = 0; k < dels.length; k++) {
+    dels[k].onclick = function() { deleteSnippet(this.getAttribute('data-snipdel')); };
+  }
+}
+function openSnippets() {
+  renderSnippetsModal();
+  var ov = el('snippets-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeSnippets() {
+  var ov = el('snippets-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D1 DATASETS (live charts)
+   ═══════════════════════════════════════════ */
+function renderDatasetsModal() {
+  var ta = el('datasets-json');
+  if (ta) ta.value = JSON.stringify(DB.pres.datasets || {}, null, 2);
+}
+function applyDatasets() {
+  var ta = el('datasets-json');
+  if (!ta || !canWrite()) return;
+  var obj = null;
+  try { obj = JSON.parse(ta.value); } catch (e) { try { tool.notify('Invalid JSON: ' + e.message, 'error'); } catch (e2) {} return; }
+  if (!obj || typeof obj !== 'object') { try { tool.notify('Datasets must be a JSON object.', 'error'); } catch (e) {} return; }
+  pushHistory('Update datasets');
+  DB.pres.datasets = normalizeDatasets(obj);
+  persist();
+  updatePreview();
+  closeDatasets();
+  try { tool.notify('Datasets updated — charts referencing them refreshed.', 'success'); } catch (e) {}
+}
+function openDatasets() {
+  renderDatasetsModal();
+  var ov = el('datasets-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeDatasets() {
+  var ov = el('datasets-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C6 OUTLINE FROM TEXT / PDF
+   ═══════════════════════════════════════════ */
+function openOutlineModal() {
+  var ov = el('outline-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeOutlineModal() {
+  var ov = el('outline-overlay');
+  if (ov) ov.style.display = 'none';
+}
+function outlineUpload() {
+  try {
+    tool.requestUpload(function(err, file) {
+      if (err) { try { tool.notify('Upload failed: ' + err, 'error'); } catch (e) {} return; }
+      if (!file || !file.url) return;
+      tool.requestFileContent(file.url, function(err2, text) {
+        if (err2) { try { tool.notify('Could not read the file: ' + err2, 'error'); } catch (e) {} return; }
+        var ta = el('outline-text');
+        if (ta) { ta.value = String(text || '').substring(0, 20000); }
+        try { tool.notify('File content loaded — review it, then press Generate.', 'info'); } catch (e) {}
+      });
+    });
+  } catch (e) { try { tool.notify('Upload unavailable: ' + e.message, 'warning'); } catch (e2) {} }
+}
+function runOutlineGeneration() {
+  var ta = el('outline-text');
+  if (!ta) return;
+  var text = String(ta.value || '').trim();
+  if (!text) { try { tool.notify('Paste some text or upload a PDF first.', 'warning'); } catch (e) {} return; }
+  if (_aiCallActive) { try { tool.notify('An AI request is already running', 'warning'); } catch (e) {} return; }
+  var beforePres = JSON.parse(JSON.stringify(DB.pres));
+  var beforeActive = DB.activeSlideId;
+  var prompt = [
+    'Convert this raw material into a slide deck OUTLINE. Return ONLY JSON:',
+    '{"title":"deck title","outline":[{"title":"slide title","components":["bullets","figure"]}]}',
+    'Use ONLY component types from the library: ' + libraryCatalog().split('\n').map(function(l) { return '"' + l.split('"')[1] + '"'; }).join(', ') + '.',
+    '6-12 slides. First slide is a cover (title-slide), include an agenda, end with a closing slide.',
+    'MATERIAL:',
+    text.substring(0, 8000)
+  ].join('\n');
+  _aiCallActive = true;
+  _setAiUIActive(true);
+  updateConnStatus('busy');
+  showThinkingBubble('📄 Converting to an outline…', true);
+  setAiTimeout(prompt.length);
+  var tok = { cancelled: false };
+  _reqToken = tok;
+  var full = '';
+  function finish(raw) {
+    if (tok.cancelled) return;
+    clearAiTimeout();
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('ok');
+    var parsed = parseAIResponse(raw);
+    var json = parsed.json;
+    var outline = json && Array.isArray(json.outline) ? json.outline : null;
+    if (outline && outline.length) {
+      if (json.title) DB.pres.title = String(json.title).substring(0, 140);
+      for (var i = 0; i < outline.length; i++) {
+        var o = outline[i];
+        var title = String((o && o.title) || ('Slide ' + (i + 1))).substring(0, 120);
+        var comps = [];
+        var hint = (o && Array.isArray(o.components) && o.components.length) ? o.components : ['bullets'];
+        comps.push({ type: 'heading', data: { text: title } });
+        for (var c = 0; c < hint.length && comps.length < 3; c++) {
+          var type = String(hint[c]);
+          if (type === 'bullets') comps.push({ type: 'bullets', data: { items: [{ text: 'Key point — add details here' }] } });
+          else if (PRES_COMPONENTS[type] && !PRES_ALIAS_KEYS[type] && ['bullets', 'heading', 'paragraph'].indexOf(type) === -1) comps.push({ type: type, data: {} });
+        }
+        DB.pres.slides.push({ id: genId(), title: title, notes: '', locked: false, components: comps });
+      }
+      pushHistoryRaw(beforePres, beforeActive, 'AI: outline scaffold (' + outline.length + ' slides)');
+      _aiJustUpdated = true;
+      persist();
+      renderAll();
+      updatePreview();
+      closeOutlineModal();
+      addChatMessage('ai', '✅ Scaffolded ' + outline.length + ' slide(s) from your material. Now chat to refine each slide.', { doctor: runDeckChecks() });
+      renderChatMessages();
+      try { tool.notify('Outline scaffolded — ' + outline.length + ' slide(s).', 'success'); } catch (e) {}
+    } else {
+      addChatMessage('ai', '⚠️ The AI could not build an outline. Try a shorter text.', { isError: true });
+      persist();
+      renderChatMessages();
+    }
+    tool.resize();
+  }
+  function fail(err) {
+    if (tok.cancelled) return;
+    clearAiTimeout();
+    hideThinkingBubble();
+    _aiCallActive = false;
+    _setAiUIActive(false);
+    updateConnStatus('error');
+    addChatMessage('ai', '⚠️ Outline generation failed: ' + (err && err.message ? err.message : String(err || 'unknown')), { isError: true });
+    persist();
+    renderChatMessages();
+    tool.resize();
+  }
+  try {
+    if (typeof tool.requestAIStream === 'function') {
+      tool.requestAIStream(prompt, '', {
+        onToken: function(t) { if (tok.cancelled) return; full += t; },
+        onComplete: function() { finish(full); },
+        onError: function(err) { fail(err); }
+      });
+    } else {
+      tool.requestAI(prompt, '', function(err, res) { if (err) { fail(err); return; } finish(typeof res === 'string' ? res : String((res && res.text) || '')); });
+    }
+  } catch (e) { fail(e); }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D4 STORY ARC ADVISOR
+   ═══════════════════════════════════════════ */
+function runStoryArc() {
+  var slides = DB.pres.slides || [];
+  var findings = [];
+  function add(sev, label, detail, fix) { findings.push({ sev: sev, label: label, detail: detail || '', fix: fix || '' }); }
+  if (!slides.length) {
+    add('info', 'No slides yet', 'Build the deck first.');
+    findings.score = 0;
+    return findings;
+  }
+  var allText = slides.map(function(s) {
+    return (s.title || '') + ' ' + (s.notes || '') + ' ' + s.components.map(function(c) { return JSON.stringify(c.data || {}); }).join(' ');
+  }).join(' ').toLowerCase();
+  var firstType = slides[0].components.length ? slides[0].components[0].type : '';
+  if (firstType !== 'title-slide' && firstType !== 'section-slide') add('warn', 'No strong hook', 'Open with a cover (title-slide) that hooks the audience.', 'Make the first slide a cover with a strong hook.');
+  var hasAgenda = slides.some(function(s) { return s.components.some(function(c) { return c.type === 'agenda'; }); });
+  if (slides.length > 4 && !hasAgenda) add('warn', 'No agenda slide', 'An agenda sets expectations.', 'Add an agenda slide after the cover.');
+  if (!/problem|challenge|pain|issue|gap/.test(allText)) add('warn', 'Missing problem statement', 'The arc needs a clear problem/challenge the audience recognizes.', 'Add a slide that states the problem or challenge clearly.');
+  if (!/solution|approach|how it works|our way|fix|resolve/.test(allText)) add('warn', 'Missing solution step', 'State how you solve the problem.', 'Add a solution slide explaining the approach.');
+  var hasProof = slides.some(function(s) { return s.components.some(function(c) { return /chart|stat|metric|number|gauge|table|figure/.test(c.type); }); });
+  if (!hasProof) add('warn', 'No proof / evidence', 'Numbers or a visual prove your point.', 'Add a chart, metrics or a case study slide as proof.');
+  var lastType = slides[slides.length - 1].components.length ? slides[slides.length - 1].components[0].type : '';
+  if (lastType !== 'closing-slide' && !/next steps|contact|call to action|thank|questions/.test(slides[slides.length - 1].title.toLowerCase())) {
+    add('warn', 'Weak closing', 'End with a closing slide (thanks, CTA or next steps).', 'Make the last slide a closing with a clear call to action.');
+  }
+  var score = Math.max(0, 10 - findings.filter(function(f) { return f.sev === 'warn'; }).length);
+  findings.score = score;
+  return findings;
+}
+function renderArcModal(findings) {
+  var list = el('arc-list');
+  if (!list) return;
+  var h = '<div class="doctor-summary">Story arc score: <b>' + findings.score + '/10</b> · ' + (findings.score >= 9 ? 'excellent' : findings.score >= 7 ? 'solid' : findings.score >= 5 ? 'needs work' : 'weak') + '</div>';
+  for (var i = 0; i < findings.length; i++) {
+    var it = findings[i];
+    var ico = it.sev === 'warn' ? '⚠️' : 'ℹ️';
+    h += '<div class="doctor-item sev-' + it.sev + '"><span class="doctor-ico">' + ico + '</span><div class="doctor-body"><b>' + esc(it.label) + '</b><span>' + esc(it.detail) + '</span></div>' +
+      (it.fix ? '<button class="btn btn-sm btn-outline" data-arcfix="' + i + '" title="Ask the AI to fix this">🤖 Fix</button>' : '') + '</div>';
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-arcfix]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].onclick = function() {
+      var it = findings[parseInt(this.getAttribute('data-arcfix'), 10)];
+      if (!it) return;
+      closeArc();
+      var inp = el('chat-input');
+      if (inp) inp.value = 'Story arc advisor: ' + it.label + '. ' + it.detail + ' ' + it.fix;
+      switchChatTab('chat');
+      sendChatMessage();
+    };
+  }
+}
+function openArc() {
+  renderArcModal(runStoryArc());
+  var ov = el('arc-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeArc() {
+  var ov = el('arc-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D5 ONE-CLICK TRANSLATION
+   ═══════════════════════════════════════════ */
+var LANG_NAMES = { en: 'English', tr: 'Türkçe', fr: 'Français', de: 'Deutsch', es: 'Español', ar: 'العربية' };
+function openTranslate(preset) {
+  var sel = el('translate-lang');
+  if (sel) {
+    if (!sel.dataset.filled) {
+      sel.innerHTML = '';
+      for (var k in LANG_NAMES) {
+        if (!Object.prototype.hasOwnProperty.call(LANG_NAMES, k)) continue;
+        var opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = LANG_NAMES[k];
+        sel.appendChild(opt);
+      }
+      sel.dataset.filled = '1';
+    }
+    sel.value = (preset && LANG_NAMES[preset]) ? preset : (DB.pres.lang || _p('lang', 'en'));
+  }
+  var ov = el('translate-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeTranslate() {
+  var ov = el('translate-overlay');
+  if (ov) ov.style.display = 'none';
+}
+function doTranslate() {
+  var sel = el('translate-lang');
+  if (!sel) return;
+  var lang = String(sel.value || 'en');
+  if (!DB.pres.slides.length) { try { tool.notify('No slides to translate.', 'warning'); } catch (e) {} return; }
+  var prompt = [
+    'Translate the ENTIRE deck into ' + (LANG_NAMES[lang] || lang) + ' (' + lang + ').',
+    'Return ONLY JSON: {"patches":[{"op":"meta","title":"...","subtitle":"...","author":"..."},{"op":"upsertSlide","slide":{"id":"<existing id>","title":"...","notes":"...","components":[...translated...]}}, ...],"summary":"..."}.',
+    'Keep the SAME slide ids and the same component types/structure — only translate the text inside.',
+    'SKIP slides marked 🔒 LOCKED in the deck state.',
+    '=== DECK ===',
+    deckStateBlock()
+  ].join('\n');
+  closeTranslate();
+  runAiPatchesTask('🌐 Translate to ' + (LANG_NAMES[lang] || lang), prompt);
+  var doneHook = function() { DB.pres.lang = lang; };
+  /* language stamp is applied right away so the next prompts use the new language */
+  DB.pres.lang = lang;
+  persist();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D6 SMART SLIDE SPLITTER
+   ═══════════════════════════════════════════ */
+function runSplitCheck() {
+  var slides = DB.pres.slides || [];
+  var results = [];
+  for (var i = 0; i < slides.length; i++) {
+    var s = slides[i];
+    if (s.locked) continue;
+    var bulletCount = 0;
+    var textLen = 0;
+    for (var c = 0; c < s.components.length; c++) {
+      var comp = s.components[c];
+      if (comp.type === 'bullets') bulletCount += ((comp.data && comp.data.items) ? comp.data.items.length : 0);
+      if (comp.type === 'paragraph') textLen += String((comp.data && (comp.data.text || comp.data.body)) || '').length;
+    }
+    if (bulletCount > 8) results.push({ slideId: s.id, label: 'Slide ' + (i + 1) + ' has ' + bulletCount + ' bullets', detail: 'Too dense — split it into two slides.' });
+    if (textLen > 600) results.push({ slideId: s.id, label: 'Slide ' + (i + 1) + ' has a very long text', detail: 'Split the paragraphs across two slides.' });
+  }
+  return results;
+}
+function renderSplitModal(results) {
+  var list = el('split-list');
+  if (!list) return;
+  if (!results.length) {
+    list.innerHTML = '<div class="modal-empty">🎉 No overcrowded slides — every slide is comfortably packed.</div>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < results.length; i++) {
+    var it = results[i];
+    h += '<div class="doctor-item sev-warn"><span class="doctor-ico">✂️</span><div class="doctor-body"><b>' + esc(it.label) + '</b><span>' + esc(it.detail) + '</span></div>' +
+      '<button class="btn btn-sm btn-outline" data-splitfix="' + esc(it.slideId) + '">🤖 Split</button></div>';
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-splitfix]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].onclick = function() {
+      var sid = this.getAttribute('data-splitfix');
+      doSplitSlide(sid);
+    };
+  }
+}
+function openSplitter() {
+  renderSplitModal(runSplitCheck());
+  var ov = el('split-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeSplitter() {
+  var ov = el('split-overlay');
+  if (ov) ov.style.display = 'none';
+}
+function doSplitSlide(id) {
+  var idx = slideIndexById(id);
+  if (idx === -1) return;
+  var s = DB.pres.slides[idx];
+  var prompt = [
+    'Split this overcrowded slide into TWO slides.',
+    'Return ONLY JSON: {"patches":[{"op":"upsertSlide","slide":{"id":"' + id + '","title":"' + s.title + '","components":[...first half...]}},{"op":"upsertSlide","slide":{"id":"<new-id>","title":"...","components":[...second half...]}}],"summary":"..."}.',
+    'Keep the existing id for the first half, give the second half a NEW short kebab-case id. Distribute the content evenly.',
+    '=== SLIDE ===',
+    JSON.stringify(s.components).substring(0, 3000)
+  ].join('\n');
+  closeSplitter();
+  runAiPatchesTask('✂️ Split slide ' + (idx + 1), prompt);
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — F4 SHARE + F5 EMBED
+   ═══════════════════════════════════════════ */
+function shareLink() {
+  if (!DB.pres.slides.length) { try { tool.notify('Nothing to share yet.', 'warning'); } catch (e) {} return; }
+  var doc = buildStandalone();
+  if (typeof tool.requestExportPdf === 'function') {
+    try {
+      tool.notify('Publishing the shareable file…', 'info');
+      tool.requestExportPdf({ html: doc, filename: slugify(DB.pres.title), landscape: true }, function(err, file) {
+        if (err) { try { tool.notify('Share failed: ' + err, 'error'); } catch (e) {} return; }
+        var url = (file && file.url) || '';
+        if (url) {
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).then(function() {
+                try { tool.notify('🔗 Share link ready — copied to clipboard', 'success'); } catch (e) {}
+              });
+            }
+          } catch (e) {}
+          openEmbedModal(url);
+        } else {
+          try { tool.notify('Share file ready: ' + ((file && file.name) || 'download'), 'success'); } catch (e) {}
+        }
+      });
+    } catch (e) {
+      try { tool.notify('Share unavailable: ' + e.message, 'warning'); } catch (e2) {}
+    }
+  } else {
+    try { tool.notify('Sharing is not enabled (allowExportPdf: yes).', 'warning'); } catch (e) {}
+  }
+}
+function openEmbedModal(url) {
+  var ta = el('embed-code');
+  if (!ta) return;
+  var fallback = 'https://your-cms.example.com/decks/' + slugify(DB.pres.title) + '.html';
+  ta.value = '<iframe src="' + (url || fallback) + '" title="' + esc(DB.pres.title || 'Presentation').replace(/&quot;/g, '&amp;quot;') + '" style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px" loading="lazy" allowfullscreen></iframe>';
+  var ov = el('embed-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeEmbedModal() {
+  var ov = el('embed-overlay');
+  if (ov) ov.style.display = 'none';
+}
+function copyEmbedCode() {
+  var ta = el('embed-code');
+  if (!ta) return;
+  function fallback() {
+    try {
+      ta.select();
+      document.execCommand('copy');
+      try { tool.notify('Embed code copied.', 'success'); } catch (e) {}
+    } catch (e2) { try { tool.notify('Copy failed — select the text manually.', 'error'); } catch (e3) {} }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(function() {
+      try { tool.notify('Embed code copied.', 'success'); } catch (e) {}
+    }).catch(fallback);
+  } else fallback();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — H2 ACCESSIBILITY AUDIT
+   ═══════════════════════════════════════════ */
+function runA11yChecks() {
+  var slides = DB.pres.slides || [];
+  var results = [];
+  function add(sev, label, detail, slideId) { results.push({ id: 'a11' + results.length, sev: sev, label: label, detail: detail || '', slideId: slideId || '' }); }
+  if (!slides.length) {
+    add('info', 'No slides yet', 'Build the deck first.');
+    results.total = 1; results.failed = 0; results.warned = 0; results.passed = 1;
+    return results;
+  }
+  for (var i = 0; i < slides.length; i++) {
+    var s = slides[i];
+    var hasHeading = s.components.some(function(c) { return ['heading', 'title-slide', 'section-slide', 'closing-slide', 'agenda'].indexOf(c.type) !== -1; });
+    if (!hasHeading) add('warn', 'Slide ' + (i + 1) + ' has no heading', 'Screen readers navigate by headings.', s.id);
+    for (var c = 0; c < s.components.length; c++) {
+      var comp = s.components[c];
+      var d = comp.data || {};
+      if (comp.type === 'image') {
+        if (!d.alt) add('fail', 'Image without alt text on slide ' + (i + 1), 'Describe the image for screen readers.', s.id);
+        else if (String(d.alt).length < 5) add('warn', 'Very short alt text on slide ' + (i + 1), 'Alt text should describe the image meaningfully.', s.id);
+      }
+      if (comp.type === 'gallery') {
+        var imgs = d.images || [];
+        var missing = 0;
+        for (var g = 0; g < imgs.length; g++) if (!(imgs[g] && imgs[g].alt)) missing++;
+        if (missing) add('warn', missing + ' gallery image(s) without alt on slide ' + (i + 1), 'Add alt text to each gallery image.', s.id);
+      }
+      if (comp.type === 'video' && !d.title) add('warn', 'Video without a title on slide ' + (i + 1), 'Add a title describing the video.', s.id);
+      if (typeof d.fontSize === 'number' && d.fontSize < 11) add('warn', 'Very small text on slide ' + (i + 1), 'Fonts below 11px are hard to read.', s.id);
+      if (comp.type === 'html') add('info', 'Custom HTML block on slide ' + (i + 1), 'Check contrast, focus order and keyboard reachability manually.', s.id);
+    }
+  }
+  var failed = 0, warned = 0, passed = 0;
+  for (var r = 0; r < results.length; r++) {
+    if (results[r].sev === 'fail') failed++;
+    else if (results[r].sev === 'warn') warned++;
+    else passed++;
+  }
+  results.total = results.length;
+  results.failed = failed;
+  results.warned = warned;
+  results.passed = passed;
+  return results;
+}
+function renderA11yModal(results) {
+  var list = el('a11y-list');
+  if (!list) return;
+  var h = '<div class="doctor-summary">♿ ' + results.passed + ' passing · ' + results.warned + ' warnings · ' + results.failed + ' problems</div>';
+  for (var i = 0; i < results.length; i++) {
+    var it = results[i];
+    var ico = it.sev === 'fail' ? '⛔' : (it.sev === 'warn' ? '⚠️' : 'ℹ️');
+    h += '<div class="doctor-item sev-' + it.sev + '"><span class="doctor-ico">' + ico + '</span><div class="doctor-body"><b>' + esc(it.label) + '</b><span>' + esc(it.detail) + '</span></div>' +
+      (it.sev === 'info' ? '' : '<button class="btn btn-sm btn-outline" data-a11fix="' + i + '" title="Ask the AI to fix this">🤖 Fix</button>') + '</div>';
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-a11fix]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].onclick = function() {
+      var it = results[parseInt(this.getAttribute('data-a11fix'), 10)];
+      if (!it) return;
+      closeA11y();
+      var inp = el('chat-input');
+      var prompt = 'Accessibility audit found: ' + it.label + '. ' + it.detail + (it.slideId ? ' Fix slide id "' + it.slideId + '".' : ' Fix the deck.');
+      if (it.slideId) setTargetSlide(it.slideId);
+      if (inp) inp.value = prompt;
+      switchChatTab('chat');
+      sendChatMessage();
+    };
+  }
+}
+function openA11y() {
+  renderA11yModal(runA11yChecks());
+  var ov = el('a11y-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeA11y() {
+  var ov = el('a11y-overlay');
+  if (ov) ov.style.display = 'none';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — A6 VOICE INPUT
+   ═══════════════════════════════════════════ */
+var _voiceOn = false;
+var _voiceRec = null;
+function toggleVoiceInput() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var btn = el('btn-voice');
+  if (!SR) {
+    try { tool.notify('Voice input is not supported in this browser — type instead.', 'warning'); } catch (e) {}
+    return;
+  }
+  if (_voiceOn) {
+    _voiceOn = false;
+    if (_voiceRec) { try { _voiceRec.stop(); } catch (e) {} _voiceRec = null; }
+    if (btn) { btn.classList.remove('rec'); btn.textContent = '🎙'; }
+    return;
+  }
+  try {
+    _voiceRec = new SR();
+    _voiceRec.lang = DB.pres.lang || _p('lang', 'en');
+    _voiceRec.interimResults = true;
+    _voiceOn = true;
+    if (btn) { btn.classList.add('rec'); btn.textContent = '⏺'; }
+    _voiceRec.onresult = function(ev) {
+      var txt = '';
+      for (var i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript;
+      var inp = el('chat-input');
+      if (inp) { inp.value = txt; inp.style.height = 'auto'; }
+    };
+    _voiceRec.onend = function() {
+      _voiceOn = false;
+      if (btn) { btn.classList.remove('rec'); btn.textContent = '🎙'; }
+      _voiceRec = null;
+    };
+    _voiceRec.onerror = function() {
+      _voiceOn = false;
+      if (btn) { btn.classList.remove('rec'); btn.textContent = '🎙'; }
+      _voiceRec = null;
+      try { tool.notify('Voice input stopped — type instead.', 'info'); } catch (e) {}
+    };
+    _voiceRec.start();
+    try { tool.notify('🎙 Listening… speak your brief, then press Send.', 'info'); } catch (e) {}
+  } catch (e) {
+    _voiceOn = false;
+    try { tool.notify('Voice input failed: ' + (e.message || e), 'warning'); } catch (e2) {}
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — D3 PER-SLIDE TIMING ESTIMATES
+   ═══════════════════════════════════════════ */
+function estimateTiming() {
+  if (!DB.pres.slides.length) { try { tool.notify('No slides to estimate.', 'warning'); } catch (e) {} return; }
+  var prompt = [
+    'Estimate how many SECONDS a presenter needs for each slide. Return ONLY JSON:',
+    '{"patches":[{"op":"timing","id":"<slide id>","duration":<seconds>}, ...],"summary":"..."}.',
+    'One timing patch per slide. Typical: cover 15-20s, agenda 10s, text slides 30-60s, charts 25-40s, quiz 30s, closing 15s.',
+    '=== DECK ===',
+    deckStateBlock()
+  ].join('\n');
+  runAiPatchesTask('⏱ Estimate timing', prompt);
+  var done = function() { renderStrip(); };
+  setTimeout(function() { renderStrip(); }, 200);
+}
+function timingTotal() {
+  var total = 0;
+  for (var i = 0; i < DB.pres.slides.length; i++) total += DB.pres.slides[i].duration || 0;
+  return total;
+}
+function renderTimingTotal() {
+  var el2 = el('timing-total');
+  if (!el2) return;
+  var total = timingTotal();
+  if (!total) { el2.textContent = ''; el2.style.display = 'none'; return; }
+  var m = Math.floor(total / 60);
+  var s = total % 60;
+  el2.textContent = '⏱ ~' + m + ':' + (s < 10 ? '0' : '') + s + ' total';
+  el2.style.display = '';
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — C4 BULK SELECT & ACTIONS
+   ═══════════════════════════════════════════ */
+var _selectedSlides = {};
+function toggleSlideSelect(id, checked) {
+  if (checked) _selectedSlides[id] = true;
+  else delete _selectedSlides[id];
+  renderBulkBar();
+}
+function selectedSlideIds() {
+  var out = [];
+  for (var k in _selectedSlides) {
+    if (Object.prototype.hasOwnProperty.call(_selectedSlides, k) && _selectedSlides[k] && slideIndexById(k) !== -1) out.push(k);
+  }
+  return out;
+}
+function renderBulkBar() {
+  var bar = el('bulk-bar');
+  if (!bar) return;
+  var n = selectedSlideIds().length;
+  bar.style.display = n ? 'flex' : 'none';
+  var label = el('bulk-label');
+  if (label) label.textContent = n + ' slide(s) selected';
+}
+function clearSelection() {
+  _selectedSlides = {};
+  renderBulkBar();
+  renderSlidesList();
+}
+function bulkDelete() {
+  var ids = selectedSlideIds();
+  if (!ids.length || !canWrite()) return;
+  sandboxConfirm('Delete ' + ids.length + ' selected slide(s)? This cannot be undone.', function() {
+    pushHistory('Bulk delete ' + ids.length + ' slides');
+    for (var i = 0; i < ids.length; i++) {
+      var idx = slideIndexById(ids[i]);
+      if (idx !== -1) DB.pres.slides.splice(idx, 1);
+    }
+    _selectedSlides = {};
+    fixActiveSlide();
+    persist();
+    renderAll();
+    updatePreview();
+    try { tool.notify(ids.length + ' slide(s) deleted.', 'info'); } catch (e) {}
+  });
+}
+function bulkSetLock(lock) {
+  var ids = selectedSlideIds();
+  if (!ids.length || !canWrite()) return;
+  pushHistory('Bulk ' + (lock ? 'lock' : 'unlock') + ' ' + ids.length + ' slides');
+  for (var i = 0; i < ids.length; i++) {
+    var idx = slideIndexById(ids[i]);
+    if (idx !== -1) DB.pres.slides[idx].locked = !!lock;
+  }
+  persist();
+  renderStrip();
+  renderSlidesList();
+  updatePreview();
+  try { tool.notify(ids.length + ' slide(s) ' + (lock ? 'locked 🔒' : 'unlocked 🔓') + '.', 'success'); } catch (e) {}
+}
+function bulkAiPrompt() {
+  var ids = selectedSlideIds();
+  if (!ids.length) return;
+  var inp = el('chat-input');
+  if (!inp) return;
+  inp.value = 'Apply the requested change ONLY to these slides (ids): ' + ids.join(', ') + '. Change: ';
+  inp.style.height = 'auto';
+  switchChatTab('chat');
+  inp.focus();
+}
+function bulkRestyle() {
+  var ids = selectedSlideIds();
+  if (!ids.length) return;
+  var inp = el('chat-input');
+  if (!inp) return;
+  inp.value = 'Restyle these slides with the same consistent design (ids): ' + ids.join(', ') + '. Keep each slide\'s id and content — improve the visuals.';
+  inp.style.height = 'auto';
+  switchChatTab('chat');
+  sendChatMessage();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — F3 OUTLINE TEXT EXPORT
+   ═══════════════════════════════════════════ */
+function buildOutlineText() {
+  var pres = DB.pres || {};
+  var lines = [];
+  lines.push('# ' + (pres.title || 'Presentation'));
+  if (pres.subtitle) lines.push('*' + pres.subtitle + '*');
+  if (pres.author) lines.push('By ' + pres.author);
+  lines.push('');
+  lines.push('Language: ' + (pres.lang || _p('lang', 'en')) + ' · ' + pres.slides.length + ' slides · theme: ' + (pres.theme || 'clean'));
+  lines.push('');
+  for (var i = 0; i < pres.slides.length; i++) {
+    var s = pres.slides[i];
+    lines.push('## ' + (i + 1) + '. ' + (s.title || ('Slide ' + (i + 1))));
+    for (var c = 0; c < s.components.length; c++) {
+      var comp = s.components[c];
+      var d = comp.data || {};
+      if (comp.type === 'heading') lines.push('**' + (d.text || d.title || '') + '**');
+      else if (comp.type === 'bullets') {
+        for (var b = 0; b < (d.items || []).length; b++) {
+          var it = d.items[b];
+          lines.push('- ' + (typeof it === 'string' ? it : (it.text || '')));
+        }
+      } else if (comp.type === 'paragraph') {
+        lines.push(String(d.text || d.body || '').replace(/\n/g, ' '));
+      } else if (comp.type === 'title-slide' || comp.type === 'section-slide' || comp.type === 'closing-slide') {
+        lines.push('_' + (d.title || '') + '_');
+      } else {
+        lines.push('[' + comp.type + ']');
+      }
+    }
+    if (s.notes) lines.push('> 🗒 ' + String(s.notes).replace(/\n/g, ' '));
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+function openMdModal() {
+  if (!DB.pres.slides.length) { try { tool.notify('Nothing to export yet.', 'warning'); } catch (e) {} return; }
+  var ta = el('md-outline');
+  if (ta) ta.value = buildOutlineText();
+  var ov = el('md-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closeMdModal() {
+  var ov = el('md-overlay');
+  if (ov) ov.style.display = 'none';
+}
+function downloadOutline() {
+  var text = buildOutlineText();
+  try {
+    _downloadBlob(new Blob([text], { type: 'text/markdown' }), slugify(DB.pres.title) + '-outline.md');
+    try { tool.notify('Outline downloaded as Markdown.', 'success'); } catch (e) {}
+  } catch (e) {
+    try { tool.notify('Download blocked — use Copy instead.', 'warning'); } catch (e2) {}
+  }
+}
+function copyOutline() {
+  var ta = el('md-outline');
+  var text = ta ? ta.value : buildOutlineText();
+  function fallback() {
+    try {
+      if (ta) { ta.select(); document.execCommand('copy'); } else return;
+      try { tool.notify('Outline copied.', 'success'); } catch (e) {}
+    } catch (e2) {}
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function() {
+      try { tool.notify('Outline copied.', 'success'); } catch (e) {}
+    }).catch(fallback);
+  } else fallback();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — F1 EXPORT SLIDES AS PNG
+   ═══════════════════════════════════════════ */
+function exportSlidesPng() {
+  if (!DB.pres.slides.length) { try { tool.notify('Nothing to export yet.', 'warning'); } catch (e) {} return; }
+  if (DB.pres.slides.length > 50) { try { tool.notify('Too many slides for image export (max 50).', 'warning'); } catch (e) {} return; }
+  try { tool.notify('Rendering ' + DB.pres.slides.length + ' slide image(s)…', 'info'); } catch (e) {}
+  var W = 1280, H = 720;
+  var files = [];
+  var failed = 0;
+  var idx = 0;
+  function next() {
+    if (idx >= DB.pres.slides.length) {
+      if (!files.length) { try { tool.notify('Image export failed — the browser blocked canvas rendering.', 'error'); } catch (e) {} return; }
+      try {
+        var zip = _zipFiles(files);
+        _downloadBlob(new Blob([zip], { type: 'application/zip' }), slugify(DB.pres.title) + '-slides.zip');
+        try { tool.notify('Downloaded ' + files.length + ' slide PNG(s)' + (failed ? ' (' + failed + ' skipped)' : '') + '.', 'success'); } catch (e) {}
+      } catch (e) {
+        try { tool.notify('ZIP failed: ' + (e.message || e), 'error'); } catch (e2) {}
+      }
+      return;
+    }
+    var i = idx;
+    idx++;
+    var s = DB.pres.slides[i];
+    var slideHtml = '<section class="pres-slide is-active">' +
+      '<div class="pres-slide-inner">' + renderComponents(s.components || []) + '</div></section>';
+    var full = '<html><head><meta charset="utf-8"><style>' + PRES_DECK_BASE_CSS + '\n' + _sanitizeCss((THEMES[DB.pres.theme] && THEMES[DB.pres.theme].css) || '') + '\n' + _sanitizeCss(brandCss()) +
+      '\nbody{background:#0f172a;display:flex;align-items:center;justify-content:center}.pres-deck{width:1280px;height:720px}.pres-slide{position:relative;width:1280px;height:720px;opacity:1;visibility:visible;pointer-events:auto;border-radius:0;box-shadow:none}' +
+      '</sty' + 'le></head><body><div class="pres-deck">' + slideHtml + '</div></body></html>';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '"><foreignObject width="100%" height="100%">' + full.replace(/&/g, '&amp;') + '</foreignObject></svg>';
+    var url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+    var img = new Image();
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      canvas.width = W;
+      canvas.height = H;
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, W, H);
+      try {
+        ctx.drawImage(img, 0, 0, W, H);
+        var dataUrl = canvas.toDataURL('image/png');
+        var bin = atob(dataUrl.split(',')[1]);
+        var bytes = new Uint8Array(bin.length);
+        for (var b = 0; b < bin.length; b++) bytes[b] = bin.charCodeAt(b);
+        files.push({ name: 'slide-' + (i + 1) + '.png', data: bytes });
+      } catch (e) {
+        failed++;
+      }
+      next();
+    };
+    img.onerror = function() { failed++; next(); };
+    img.src = url;
+  }
+  next();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — G2 BRAND PRESET MEMORY
+   ═══════════════════════════════════════════ */
+function brandStorageKey() {
+  var u = getUserSafe() || {};
+  return 'aichatpres_brand_' + (u.id || 'anon');
+}
+function saveBrandPreset() {
+  var b = effectiveBrand();
+  if (!b.primary && !b.font) return;
+  try { localStorage.setItem(brandStorageKey(), JSON.stringify(b)); } catch (e) {}
+}
+function loadBrandPreset() {
+  try {
+    var raw = localStorage.getItem(brandStorageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function applyBrandPreset() {
+  var preset = loadBrandPreset();
+  if (!preset) return;
+  pushHistory('Brand preset');
+  DB.pres.brand = {
+    primary: _validHex(preset.primary || ''),
+    font: String(preset.font || '').replace(/[^a-zA-Z0-9 \-',]/g, '').trim().substring(0, 60)
+  };
+  persist();
+  updatePreview();
+  renderChatMessages();
+  try { tool.notify('🎨 Saved brand applied to this deck.', 'success'); } catch (e) {}
+}
+function renderBrandChip() {
+  var slot = el('brand-preset-slot');
+  if (!slot) return;
+  var preset = loadBrandPreset();
+  var hasPreset = preset && (preset.primary || preset.font);
+  var inUse = DB.pres.brand && (DB.pres.brand.primary || DB.pres.brand.font);
+  if (hasPreset && !inUse) {
+    slot.innerHTML = '<button class="brand-chip" id="btn-brand-preset" title="Apply your saved brand (from admin params)">🎨 Use my saved brand</button>';
+    var b = el('btn-brand-preset');
+    if (b) b.onclick = applyBrandPreset;
+  } else {
+    slot.innerHTML = '';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — G3 COLLABORATION AWARENESS
+   ═══════════════════════════════════════════ */
+var _permittedUsers = null;
+function refreshPermittedUsers() {
+  try {
+    if (typeof tool.getPermittedUsers === 'function') {
+      var u = tool.getPermittedUsers();
+      if (u) _permittedUsers = u;
+    }
+  } catch (e) {}
+  renderCollabChip();
+}
+function renderCollabChip() {
+  var chip = el('collab-chip');
+  if (!chip) return;
+  var names = [];
+  if (_permittedUsers && _permittedUsers.length) {
+    for (var i = 0; i < _permittedUsers.length; i++) names.push(_permittedUsers[i].name || _permittedUsers[i].id || '');
+    names = names.filter(Boolean);
+  }
+  if (names.length) {
+    chip.textContent = '👥 ' + names.length + ' editor' + (names.length > 1 ? 's' : '');
+    chip.title = 'Can edit: ' + names.join(', ');
+    chip.style.display = '';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+function stampAiActor(msg) {
+  var u = getUserSafe();
+  if (u && u.name && msg.role === 'ai') msg.actorName = u.name;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — H3 GRAMMAR & SPELLING PASS
+   ═══════════════════════════════════════════ */
+function proofreadDeck() {
+  if (!DB.pres.slides.length) { try { tool.notify('No slides to proofread.', 'warning'); } catch (e) {} return; }
+  var prompt = [
+    'Proofread ALL slide text and speaker notes of this deck. Fix grammar, spelling, punctuation and awkward phrasing.',
+    'Return ONLY JSON: {"patches":[{"op":"upsertSlide","slide":{"id":"<existing id>","title":"...","notes":"...","components":[...corrected, same structure...]}}, ...],"summary":"..."}.',
+    'Keep the SAME ids, component types and structure — only correct the text.',
+    'SKIP slides marked 🔒 LOCKED.',
+    '=== DECK ===',
+    deckStateBlock()
+  ].join('\n');
+  runAiPatchesTask('🔤 Proofread deck', prompt);
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 3 — H4 EXPORT SIZE & PERFORMANCE REPORT
+   ═══════════════════════════════════════════ */
+function runExportChecks() {
+  var results = [];
+  function add(sev, label, detail) { results.push({ sev: sev, label: label, detail: detail || '' }); }
+  var slides = DB.pres.slides || [];
+  var compCount = 0;
+  for (var i = 0; i < slides.length; i++) compCount += slides[i].components.length;
+  var htmlSize = slides.length ? buildStandalone().length : 0;
+  var pptxSize = slides.length ? buildPptx().length : 0;
+  add('info', slides.length + ' slide(s) · ' + compCount + ' component(s)', 'Total content size.');
+  add('info', 'HTML: ' + formatSize(htmlSize) + ' · PPTX: ' + formatSize(pptxSize), 'Standalone export weights.');
+  if (htmlSize > 1500000) add('warn', 'HTML export is large (' + formatSize(htmlSize) + ')', 'Trim custom CSS/JS or split the deck.');
+  if (pptxSize > 2000000) add('warn', 'PPTX export is large (' + formatSize(pptxSize) + ')', 'Reduce components or slide count.');
+  if (slides.length > 40) add('warn', slides.length + ' slides is heavy', 'Consider splitting into two presentations.');
+  if (compCount > 250) add('warn', compCount + ' components total', 'Trim dense slides (✂️ Split dense helps).');
+  if (DB.history && DB.history.length) add('info', 'History: ' + DB.history.length + ' snapshot(s) · ' + formatSize(JSON.stringify(DB.history).length), 'Undo snapshots stored in the record.');
+  if (DB.snippets && DB.snippets.length) add('info', 'Snippets: ' + DB.snippets.length + ' saved', 'Reusable slides stored in the record.');
+  if (!results.some(function(r) { return r.sev === 'warn'; })) add('info', '✅ No performance warnings', 'The deck exports comfortably.');
+  var failed = 0, warned = 0, passed = 0;
+  for (var r = 0; r < results.length; r++) {
+    if (results[r].sev === 'fail') failed++;
+    else if (results[r].sev === 'warn') warned++;
+    else passed++;
+  }
+  results.total = results.length; results.failed = failed; results.warned = warned; results.passed = passed;
+  return results;
+}
+function renderPerfModal(results) {
+  var list = el('perf-list');
+  if (!list) return;
+  var h = '<div class="doctor-summary">' + results.passed + ' passing · ' + results.warned + ' warnings · ' + results.failed + ' problems</div>';
+  for (var i = 0; i < results.length; i++) {
+    var it = results[i];
+    var ico = it.sev === 'warn' ? '⚠️' : 'ℹ️';
+    h += '<div class="doctor-item sev-' + it.sev + '"><span class="doctor-ico">' + ico + '</span><div class="doctor-body"><b>' + esc(it.label) + '</b><span>' + esc(it.detail) + '</span></div></div>';
+  }
+  list.innerHTML = h;
+}
+function openPerf() {
+  renderPerfModal(runExportChecks());
+  var ov = el('perf-overlay');
+  if (ov) ov.style.display = 'flex';
+}
+function closePerf() {
+  var ov = el('perf-overlay');
+  if (ov) ov.style.display = 'none';
+}
 
 /* ── Instance id & params ── */
 function _p(name, def) {
@@ -64,6 +2009,60 @@ function _p(name, def) {
     var v = tool.param(name, def);
     return (v === null || v === undefined || v === '') ? def : String(v);
   } catch (e) { return def; }
+}
+
+function _validHex(v) {
+  var s = String(v || '').trim();
+  if (/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?([0-9a-fA-F]{2})?$/.test(s)) return s;
+  return '';
+}
+
+/* Admin-configured brand kit → CSS tokens injected into the standalone export */
+function effectiveBrand() {
+  var p = (DB.pres && DB.pres.brand) ? DB.pres.brand.primary : '';
+  var f = (DB.pres && DB.pres.brand) ? DB.pres.brand.font : '';
+  return {
+    primary: p || _validHex(_p('brandPrimary', '')),
+    font: f || _p('brandFont', '').replace(/[^a-zA-Z0-9 \-',]/g, '').trim()
+  };
+}
+function brandCss() {
+  var b = effectiveBrand();
+  var rules = [];
+  if (b.primary) {
+    rules.push(':root{--pres-accent:' + b.primary + '}');
+    rules.push('.pres-kicker{color:' + b.primary + '}.pres-agenda-num{background:' + b.primary + '}.pres-q-radio:checked+.pres-q-opt{border-color:' + b.primary + '}.pres-tab-btn.active{color:' + b.primary + ';border-color:' + b.primary + '}.pres-timeline-num{background:' + b.primary + ';color:#fff}.pres-bullet-icon{color:' + b.primary + '}');
+  }
+  if (b.font) {
+    rules.push('.pres-slide,.pres-body,.pres-cover{font-family:' + b.font + ',system-ui,sans-serif}');
+  }
+  return rules.join('\n');
+}
+
+/* B6 — cover background designer: mesh / shine / dots / lines */
+function coverBackground(d) {
+  d = d || {};
+  if (d.background) return d.background;
+  var primary = effectiveBrand().primary || '#7c3aed';
+  var deep = '#312e81';
+  switch (d.backgroundStyle) {
+    case 'mesh':
+      return 'radial-gradient(at 18% 22%, ' + primary + 'aa 0%, transparent 45%),radial-gradient(at 82% 18%, #4f46e5cc 0%, transparent 42%),radial-gradient(at 30% 85%, #9333eacc 0%, transparent 45%),radial-gradient(at 78% 82%, ' + primary + '88 0%, transparent 40%),linear-gradient(135deg,' + deep + ',#0f172a)';
+    case 'shine':
+      return 'linear-gradient(120deg,' + deep + ' 0%,#4f46e5 40%,#a78bfa 50%,#4f46e5 60%,' + deep + ' 100%)';
+    case 'dots':
+      return 'radial-gradient(' + primary + '33 2px, transparent 2.5px) 0 0/26px 26px,linear-gradient(135deg,' + deep + ',#312e81 60%,#1e1b4b)';
+    case 'lines':
+      return 'repeating-linear-gradient(-45deg,' + primary + '22 0 2px,transparent 2px 26px),linear-gradient(135deg,' + deep + ',#1e1b4b)';
+    default:
+      return 'linear-gradient(135deg,' + deep + ' 0%,#4f46e5 45%,' + primary + ' 100%)';
+  }
+}
+
+/* B7 — offline gradient placeholder for missing images */
+function imgPlaceholderHtml(d, height) {
+  var label = (d && (d.alt || d.caption)) || 'Image';
+  return '<div class="pres-img-ph" style="height:' + (height ? esc(height) : '100%') + ';flex:1;min-height:80px"><span class="pres-img-ph-ico">🖼</span><span>' + esc(label) + '</span></div>';
 }
 
 function _resolveInstanceId() {
@@ -125,9 +2124,9 @@ function renderComponents(components) {
 var PRES_COMPONENTS = {
   /* ── 1. title-slide — deck cover */
   'title-slide': {
-    desc: 'Deck cover. {title, subtitle?, presenter?, date?, icon?, background? (CSS background, default indigo gradient)}',
+    desc: 'Deck cover. {title, subtitle?, presenter?, date?, icon?, background? (CSS), backgroundStyle?: mesh|shine|dots|lines}',
     render: function(d) {
-      var bg = d.background || 'linear-gradient(135deg,#312e81 0%,#4f46e5 45%,#7c3aed 100%)';
+      var bg = coverBackground(d);
       var h = '<div class="pres-cover" style="background:' + bg + '">';
       if (d.icon) h += '<div style="font-size:52px;margin-bottom:14px">' + esc(d.icon) + '</div>';
       h += '<h1 class="pres-h1" style="color:#fff">' + esc(d.title || '') + '</h1>';
@@ -138,9 +2137,9 @@ var PRES_COMPONENTS = {
   },
   /* ── 2. section-slide — divider */
   'section-slide': {
-    desc: 'Section divider slide. {title, subtitle?, icon?, number? (e.g. "02"), background?}',
+    desc: 'Section divider slide. {title, subtitle?, icon?, number? (e.g. "02"), background?, backgroundStyle?: mesh|shine|dots|lines}',
     render: function(d) {
-      var bg = d.background || 'linear-gradient(135deg,#0f172a,#312e81)';
+      var bg = coverBackground(d);
       var h = '<div class="pres-cover" style="background:' + bg + '">';
       if (d.number) h += '<div style="font-size:13px;font-weight:700;letter-spacing:4px;color:rgba(255,255,255,0.5);margin-bottom:10px">' + esc(d.number) + '</div>';
       if (d.icon) h += '<div style="font-size:44px;margin-bottom:12px">' + esc(d.icon) + '</div>';
@@ -151,9 +2150,9 @@ var PRES_COMPONENTS = {
   },
   /* ── 3. closing-slide — thank you / contact */
   'closing-slide': {
-    desc: 'Closing slide. {title? (default "Thank You"), message?, contact?:[{label,value}], icon?, background?}',
+    desc: 'Closing slide. {title? (default "Thank You"), message?, contact?:[{label,value}], icon?, background?, backgroundStyle?: mesh|shine|dots|lines}',
     render: function(d) {
-      var bg = d.background || 'linear-gradient(135deg,#4f46e5,#7c3aed)';
+      var bg = coverBackground(d);
       var h = '<div class="pres-cover" style="background:' + bg + '">';
       h += '<div style="font-size:44px;margin-bottom:10px">' + esc(d.icon || '🙏') + '</div>';
       h += '<h1 class="pres-h1" style="color:#fff">' + esc(d.title || 'Thank You') + '</h1>';
@@ -228,8 +2227,9 @@ var PRES_COMPONENTS = {
   },
   /* ── 9. image */
   'image': {
-    desc: 'Image. {url, alt?, caption?, height? (px, default fills available), fit?:cover|contain}',
+    desc: 'Image. {url, alt?, caption?, height? (px, default fills available), fit?:cover|contain} — missing URLs get a branded gradient placeholder (no broken images, works offline).',
     render: function(d) {
+      if (!d.url) return '<figure class="pres-figure" style="display:flex;flex-direction:column">' + imgPlaceholderHtml(d, d.height) + (d.caption ? '<figcaption class="pres-muted">' + esc(d.caption) + '</figcaption>' : '') + '</figure>';
       var h = '<figure class="pres-figure" style="height:' + (d.height ? esc(d.height) + 'px' : '100%') + '">';
       h += '<img src="' + esc(d.url) + '" alt="' + esc(d.alt || '') + '" style="width:100%;height:100%;object-fit:' + (d.fit === 'contain' ? 'contain' : 'cover') + '">';
       if (d.caption) h += '<figcaption class="pres-muted">' + esc(d.caption) + '</figcaption>';
@@ -244,6 +2244,10 @@ var PRES_COMPONENTS = {
       var h = '<div class="' + cols + '">';
       for (var i = 0; i < (d.images || []).length; i++) {
         var img = d.images[i];
+        if (!img.url && !img.src) {
+          h += '<figure class="pres-figure" style="display:flex;flex-direction:column">' + imgPlaceholderHtml(img, d.height || 170) + (img.caption ? '<figcaption class="pres-muted">' + esc(img.caption) + '</figcaption>' : '') + '</figure>';
+          continue;
+        }
         h += '<figure class="pres-figure" style="height:' + (d.height || 170) + 'px"><img src="' + esc(img.url || img.src || '') + '" alt="' + esc(img.alt || '') + '" style="width:100%;height:100%;object-fit:cover">' +
           (img.caption ? '<figcaption class="pres-muted">' + esc(img.caption) + '</figcaption>' : '') + '</figure>';
       }
@@ -312,8 +2316,12 @@ var PRES_COMPONENTS = {
   },
   /* ── 16. bar-chart */
   'bar-chart': {
-    desc: 'Horizontal bars. {title?, items:[{label, value, color?}], maxValue?, showValues?:true, unit?}',
+    desc: 'Horizontal bars. {title?, items:[{label, value, color?}], maxValue?, showValues?:true, unit?, dataset?}',
     render: function(d) {
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        d = { title: d.title || d.dataset, items: (ds.labels || []).map(function(l, i) { return { label: l, value: (ds.values || [])[i] || 0 }; }), maxValue: d.maxValue, showValues: d.showValues, unit: d.unit };
+      }
       var maxV = parseFloat(d.maxValue) || 0;
       if (!maxV) { for (var i = 0; i < (d.items || []).length; i++) { var v = parseFloat(d.items[i].value) || 0; if (v > maxV) maxV = v; } }
       if (maxV <= 0) maxV = 100;
@@ -333,8 +2341,12 @@ var PRES_COMPONENTS = {
   },
   /* ── 17. column-chart */
   'column-chart': {
-    desc: 'Vertical columns. {title?, items:[{label, value, color?}], maxValue?, showValues?:true}',
+    desc: 'Vertical columns. {title?, items:[{label, value, color?}], maxValue?, showValues?:true, dataset?}',
     render: function(d) {
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        d = { title: d.title || d.dataset, items: (ds.labels || []).map(function(l, i) { return { label: l, value: (ds.values || [])[i] || 0 }; }), maxValue: d.maxValue, showValues: d.showValues };
+      }
       var maxV = parseFloat(d.maxValue) || 0;
       if (!maxV) { for (var i = 0; i < (d.items || []).length; i++) { var v = parseFloat(d.items[i].value) || 0; if (v > maxV) maxV = v; } }
       if (maxV <= 0) maxV = 100;
@@ -355,11 +2367,16 @@ var PRES_COMPONENTS = {
   },
   /* ── 18. line-chart (SVG) */
   'line-chart': {
-    desc: 'SVG line chart. {title?, labels:[], series:[{name, values:[], color?}], min?/max? auto}',
+    desc: 'SVG line chart. {title?, labels:[], series:[{name, values:[], color?}], min?/max? auto, dataset?}',
     render: function(d) {
       var W = 640, H = 240, P = 34;
       var labels = d.labels || [];
       var series = d.series || [];
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        labels = ds.labels || labels;
+        series = ds.series.length ? ds.series : series;
+      }
       if (!labels.length || !series.length) return '';
       var minV = Infinity, maxV = -Infinity;
       for (var i = 0; i < series.length; i++) {
@@ -413,8 +2430,12 @@ var PRES_COMPONENTS = {
   },
   /* ── 19. pie-chart */
   'pie-chart': {
-    desc: 'Pie / donut. {title?, segments:[{label, value, color?}], donut?:true, size?:200, showLegend?:true}',
+    desc: 'Pie / donut. {title?, segments:[{label, value, color?}], donut?:true, size?:200, showLegend?:true, dataset?}',
     render: function(d) {
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        d = { title: d.title || d.dataset, segments: (ds.labels || []).map(function(l, i) { return { label: l, value: (ds.values || [])[i] || 0 }; }), donut: d.donut, size: d.size, showLegend: d.showLegend };
+      }
       var segs = d.segments || [];
       if (!segs.length) return '';
       var total = 0;
@@ -446,6 +2467,182 @@ var PRES_COMPONENTS = {
         }
         h += '</div>';
       }
+      return h + '</div>';
+    }
+  },
+  /* ── 19b. area-chart (SVG filled area) */
+  'area-chart': {
+    desc: 'Filled area chart. {title?, labels:[], series:[{name, values:[], color?}], dataset? (deck dataset name)}',
+    render: function(d) {
+      var labels = d.labels || [];
+      var series = d.series || [];
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        labels = ds.labels || labels;
+        series = ds.series.length ? ds.series : series;
+      }
+      if (!labels.length || !series.length) return '';
+      var W = 640, H = 240, P = 34;
+      var minV = Infinity, maxV = -Infinity;
+      for (var i = 0; i < series.length; i++) {
+        for (var j = 0; j < series[i].values.length; j++) {
+          var v = parseFloat(series[i].values[j]);
+          if (isNaN(v)) continue;
+          if (v < minV) minV = v;
+          if (v > maxV) maxV = v;
+        }
+      }
+      if (minV === Infinity) return '';
+      if (maxV - minV < 1e-9) maxV = minV + 1;
+      function px(j) { return P + (labels.length <= 1 ? 0 : (j * (W - 2 * P)) / (labels.length - 1)); }
+      function py(v) { return H - P - ((v - minV) / (maxV - minV)) * (H - 2 * P); }
+      var h = '<div class="pres-body">';
+      if (d.title) h += '<h3 class="pres-h3">📈 ' + esc(d.title) + '</h3>';
+      h += '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">';
+      for (var g = 0; g <= 4; g++) {
+        var gy = P + (g * (H - 2 * P)) / 4;
+        h += '<line x1="' + P + '" y1="' + gy + '" x2="' + (W - P) + '" y2="' + gy + '" stroke="#e2e8f0" stroke-width="1"/>';
+      }
+      for (var l = 0; l < labels.length; l++) {
+        h += '<text x="' + px(l) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + esc(labels[l]) + '</text>';
+      }
+      for (var s = 0; s < series.length; s++) {
+        var ser = series[s];
+        var color = ser.color || PRES_COLORS[s % PRES_COLORS.length];
+        var pts = '';
+        for (var p = 0; p < ser.values.length; p++) {
+          pts += (p ? ' ' : '') + px(p).toFixed(1) + ',' + py(parseFloat(ser.values[p]) || minV).toFixed(1);
+        }
+        var area = pts + ' ' + px(ser.values.length - 1).toFixed(1) + ',' + (H - P).toFixed(1) + ' ' + px(0).toFixed(1) + ',' + (H - P).toFixed(1);
+        h += '<polygon points="' + area + '" fill="' + color + '" opacity="0.14"/>';
+        h += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+      }
+      h += '</svg>';
+      if (series.length > 1) {
+        h += '<div style="display:flex;gap:14px;justify-content:center;margin-top:6px">';
+        for (var k = 0; k < series.length; k++) {
+          h += '<span style="font-size:12px;color:#475569"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:' + (series[k].color || PRES_COLORS[k % PRES_COLORS.length]) + ';margin-right:5px"></span>' + esc(series[k].name || ('Series ' + (k + 1))) + '</span>';
+        }
+        h += '</div>';
+      }
+      return h + '</div>';
+    }
+  },
+  /* ── 19c. radar — spider chart */
+  'radar': {
+    desc: 'Radar/spider chart. {title?, axes:[], series:[{name, values:[], color?}], dataset?, size?:250}',
+    render: function(d) {
+      var axes = d.axes || [];
+      var series = d.series || [];
+      if (d.dataset && DB.pres.datasets && DB.pres.datasets[d.dataset]) {
+        var ds = DB.pres.datasets[d.dataset];
+        axes = ds.labels || axes;
+        series = ds.series.length ? ds.series : series;
+      }
+      if (axes.length < 3 || !series.length) return '';
+      var size = d.size || 260;
+      var cx = size / 2, cy = size / 2, R = size / 2 - 44;
+      function pt(i, ratio) {
+        var ang = (Math.PI * 2 * i) / axes.length - Math.PI / 2;
+        return [cx + Math.cos(ang) * R * ratio, cy + Math.sin(ang) * R * ratio];
+      }
+      var h = '<div class="pres-body" style="text-align:center">';
+      if (d.title) h += '<h3 class="pres-h3">🕸 ' + esc(d.title) + '</h3>';
+      h += '<svg width="' + size + '" height="' + size + '" style="display:inline-block">';
+      for (var g = 1; g <= 4; g++) {
+        var pts = '';
+        for (var a = 0; a < axes.length; a++) {
+          var p = pt(a, g / 4);
+          pts += (a ? ' ' : '') + p[0].toFixed(1) + ',' + p[1].toFixed(1);
+        }
+        h += '<polygon points="' + pts + '" fill="none" stroke="#e2e8f0" stroke-width="1"/>';
+      }
+      for (var ax = 0; ax < axes.length; ax++) {
+        var tip = pt(ax, 1);
+        h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + tip[0].toFixed(1) + '" y2="' + tip[1].toFixed(1) + '" stroke="#e2e8f0" stroke-width="1"/>';
+        var lab = pt(ax, 1.18);
+        h += '<text x="' + lab[0].toFixed(1) + '" y="' + (lab[1] + 4).toFixed(1) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + esc(axes[ax]) + '</text>';
+      }
+      for (var s = 0; s < series.length; s++) {
+        var ser = series[s];
+        var color = ser.color || PRES_COLORS[s % PRES_COLORS.length];
+        var max = 0;
+        for (var m = 0; m < ser.values.length; m++) max = Math.max(max, parseFloat(ser.values[m]) || 0);
+        if (max <= 0) max = 1;
+        var p2 = '';
+        for (var r = 0; r < axes.length; r++) {
+          var ratio = Math.max(0.04, Math.min(1, (parseFloat(ser.values[r]) || 0) / max));
+          var pp = pt(r, ratio);
+          p2 += (r ? ' ' : '') + pp[0].toFixed(1) + ',' + pp[1].toFixed(1);
+        }
+        h += '<polygon points="' + p2 + '" fill="' + color + '" opacity="0.2" stroke="' + color + '" stroke-width="2"/>';
+        for (var q = 0; q < axes.length; q++) {
+          var ratio2 = Math.max(0.04, Math.min(1, (parseFloat(ser.values[q]) || 0) / max));
+          var dp = pt(q, ratio2);
+          h += '<circle cx="' + dp[0].toFixed(1) + '" cy="' + dp[1].toFixed(1) + '" r="3" fill="' + color + '"/>';
+        }
+      }
+      h += '</svg>';
+      return h + '</div>';
+    }
+  },
+  /* ── 19d. scatter — bubble plot */
+  'scatter': {
+    desc: 'Scatter/bubble plot. {title?, points:[{x, y, label?, size?, color?}], xLabel?, yLabel?}',
+    render: function(d) {
+      var points = d.points || [];
+      if (!points.length) return '';
+      var W = 640, H = 250, P = 36;
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (var i = 0; i < points.length; i++) {
+        var x = parseFloat(points[i].x), y = parseFloat(points[i].y);
+        if (isNaN(x) || isNaN(y)) continue;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      }
+      if (minX === Infinity) return '';
+      if (maxX - minX < 1e-9) maxX = minX + 1;
+      if (maxY - minY < 1e-9) maxY = minY + 1;
+      var h = '<div class="pres-body">';
+      if (d.title) h += '<h3 class="pres-h3">🎯 ' + esc(d.title) + '</h3>';
+      h += '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto">';
+      h += '<line x1="' + P + '" y1="' + (H - P) + '" x2="' + (W - P) + '" y2="' + (H - P) + '" stroke="#cbd5e1" stroke-width="1.5"/>';
+      h += '<line x1="' + P + '" y1="' + (H - P) + '" x2="' + P + '" y2="' + P + '" stroke="#cbd5e1" stroke-width="1.5"/>';
+      if (d.xLabel) h += '<text x="' + (W / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + esc(d.xLabel) + '</text>';
+      if (d.yLabel) h += '<text x="14" y="' + (H / 2) + '" text-anchor="middle" font-size="10.5" fill="#64748b" transform="rotate(-90 14 ' + (H / 2) + ')">' + esc(d.yLabel) + '</text>';
+      for (var p = 0; p < points.length; p++) {
+        var pt = points[p];
+        var pxv = P + ((parseFloat(pt.x) - minX) / (maxX - minX)) * (W - 2 * P);
+        var pyv = (H - P) - ((parseFloat(pt.y) - minY) / (maxY - minY)) * (H - 2 * P);
+        var color = pt.color || PRES_COLORS[p % PRES_COLORS.length];
+        var r = Math.max(5, Math.min(22, parseInt(pt.size, 10) || 8));
+        h += '<circle cx="' + pxv.toFixed(1) + '" cy="' + pyv.toFixed(1) + '" r="' + r + '" fill="' + color + '" opacity="0.75"/>';
+        if (pt.label) h += '<text x="' + (pxv + r + 3).toFixed(1) + '" y="' + (pyv + 3).toFixed(1) + '" font-size="10" fill="#475569">' + esc(pt.label) + '</text>';
+      }
+      return h + '</svg></div>';
+    }
+  },
+  /* ── 19e. org-tree — hierarchy */
+  'org-tree': {
+    desc: 'Org / hierarchy tree. {title?, root:{name, role?, children:[{name, role?, children:[…]}]}}',
+    render: function(d) {
+      var root = d.root;
+      if (!root || !root.name) return '';
+      function nodeHtml(n, depth) {
+        var children = n.children || [];
+        var color = PRES_COLORS[depth % PRES_COLORS.length];
+        var h = '<li><div class="pres-org-node" style="border-color:' + color + '"><strong>' + esc(n.name || '') + '</strong>' +
+          (n.role ? '<span>' + esc(n.role) + '</span>' : '') + '</div>';
+        if (children.length) {
+          h += '<ul>';
+          for (var i = 0; i < children.length; i++) h += nodeHtml(children[i], depth + 1);
+          h += '</ul>';
+        }
+        return h + '</li>';
+      }
+      var h = '<div class="pres-body">';
+      if (d.title) h += '<h3 class="pres-h3">🏛 ' + esc(d.title) + '</h3>';
+      h += '<div class="pres-org-tree"><ul>' + nodeHtml(root, 0) + '</ul></div>';
       return h + '</div>';
     }
   },
@@ -944,7 +3141,9 @@ function renderDeckMarkup(pres) {
   var h = '<div class="pres-deck">';
   for (var i = 0; i < slides.length; i++) {
     var s = slides[i];
-    h += '<section class="pres-slide' + (i === 0 ? ' is-active' : '') + '" data-slide="' + i + '">';
+    h += '<section class="pres-slide' + (i === 0 ? ' is-active' : '') + '" data-slide="' + i + '" data-title="' + esc(s.title || ('Slide ' + (i + 1))) + '"' +
+      (s.transition ? ' data-transition="' + esc(s.transition) + '"' : '') +
+      (s.background ? ' style="background:' + esc(s.background) + '"' : '') + '>';
     h += '<div class="pres-slide-inner">' + renderComponents(s.components || []) + '</div>';
     h += '<div class="pres-slide-num">' + (i + 1) + ' / ' + slides.length + '</div>';
     h += '</section>';
@@ -978,6 +3177,9 @@ var PRES_DECK_BASE_CSS = [
   '.pres-cols-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-content:start}',
   '.pres-cols-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-content:start}',
   '.pres-figure{margin:0;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}',
+  '.pres-img-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px dashed #c7d2fe;border-radius:12px;color:#6366f1;width:100%}',
+  '.pres-img-ph .pres-img-ph-ico{font-size:26px}',
+  '.pres-img-ph span:not(.pres-img-ph-ico){font-size:12px;color:#818cf8;font-weight:600}',
   '.pres-figure img{flex:1;min-height:0;display:block}',
   '.pres-figure figcaption{text-align:center;padding:6px 8px;background:#fff}',
   '.pres-table{width:100%;border-collapse:collapse;font-size:13.5px}',
@@ -1018,7 +3220,54 @@ var PRES_DECK_BASE_CSS = [
   '.pres-ui-counter{color:#cbd5e1;font-size:12px;font-weight:700;margin:0 6px;min-width:56px;text-align:center}',
   '.pres-progress{position:fixed;top:0;left:0;height:3px;background:#7c3aed;width:0%;transition:width .3s ease;z-index:60}',
   '.pres-notes{position:fixed;left:50%;transform:translateX(-50%);bottom:60px;width:min(720px,90vw);max-height:40%;overflow:auto;background:#fef9c3;border:1px solid #facc15;border-radius:12px;padding:14px 18px;display:none;z-index:40;color:#713f12;font-size:14px;line-height:1.6;white-space:pre-wrap;box-shadow:0 12px 32px rgba(0,0,0,.3)}',
-  '@media print{body{background:#fff}#pres-root{position:static;padding:0;height:auto}.pres-deck{aspect-ratio:auto;max-height:none}.pres-slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;page-break-after:always;border-radius:0;box-shadow:none;width:100%;height:100vh}.pres-slide-inner{overflow:visible}.pres-ui,.pres-progress,.pres-notes,.pres-slide-num{display:none!important}}'
+  /* org tree */
+  '.pres-org-tree ul{display:flex;justify-content:center;list-style:none;padding:0;margin:0}',
+  '.pres-org-tree li{display:flex;flex-direction:column;align-items:center;padding:0 10px;position:relative}',
+  '.pres-org-tree .pres-org-node{background:#fff;border:2px solid #c7d2fe;border-radius:10px;padding:8px 14px;text-align:center;font-size:12px;color:#1e293b;max-width:170px}',
+  '.pres-org-tree .pres-org-node span{display:block;color:#64748b;font-size:10.5px}',
+  '.pres-org-tree>ul>li{margin-top:14px}',
+  '.pres-org-tree>ul>li:before{content:"";position:absolute;top:-14px;left:50%;height:14px;border-left:1.5px solid #cbd5e1}',
+  '.pres-org-tree li>ul{margin-top:14px}',
+  '.pres-org-tree li>ul:before{content:"";position:absolute;top:-14px;left:50%;height:14px;border-left:1.5px solid #cbd5e1}',
+  '.pres-org-tree li>ul>li:before{content:"";position:absolute;top:-14px;left:50%;width:50%;height:14px;border-top:1.5px solid #cbd5e1;border-left:1.5px solid #cbd5e1}',
+  '.pres-org-tree li>ul>li:after{content:"";position:absolute;top:-14px;right:50%;width:50%;height:14px;border-top:1.5px solid #cbd5e1;border-right:1.5px solid #cbd5e1}',
+  /* per-slide transitions (B5-style pack, applied via data-transition) */
+  '.pres-slide.pres-t-slide.is-active{animation:presInSlide .45s ease}',
+  '.pres-slide.pres-t-zoom.is-active{animation:presInZoom .45s ease}',
+  '.pres-slide.pres-t-flip.is-active{animation:presInFlip .55s ease}',
+  '@keyframes presInSlide{from{transform:translateX(7%);opacity:0}to{transform:none;opacity:1}}',
+  '@keyframes presInZoom{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}',
+  '@keyframes presInFlip{from{transform:rotateY(-90deg);opacity:0}to{transform:none;opacity:1}}',
+  /* presenter mode (E1) */
+  '.pres-timer{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.92);color:#e2e8f0;font-size:12px;font-weight:700;padding:4px 14px;border-radius:999px;z-index:60;display:none;font-family:system-ui,sans-serif}',
+  '.pres-presenter .pres-timer{display:block}',
+  '.pres-next{position:fixed;right:14px;bottom:70px;width:200px;background:rgba(15,23,42,.92);border:1px solid #334155;border-radius:12px;padding:10px 12px;color:#e2e8f0;font-size:11px;display:none;z-index:40;font-family:system-ui,sans-serif}',
+  '.pres-next b{display:block;color:#a78bfa;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}',
+  '.pres-presenter .pres-next{display:block}',
+  '.pres-presenter .pres-notes{display:block}',
+  '.pres-presenter #pres-root{padding-bottom:190px}',
+  /* E3 — ink + laser */
+  '.pres-ink-canvas{position:fixed;inset:0;z-index:45;pointer-events:none;display:none}',
+  '.pres-ink-canvas.on{pointer-events:auto;cursor:crosshair}',
+  '.pres-laser{position:fixed;width:16px;height:16px;border-radius:50%;background:#ef4444;box-shadow:0 0 16px 5px rgba(239,68,68,0.75);pointer-events:none;z-index:46;display:none}',
+  /* E4/E5 — overlays */
+  '.pres-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.95);z-index:70;display:none;overflow:auto;padding:22px;font-family:system-ui,sans-serif}',
+  '.pres-grid-head{display:flex;justify-content:space-between;align-items:center;color:#e2e8f0;font-size:14px;font-weight:700;margin-bottom:14px}',
+  '.pres-grid-close{background:#334155;border:none;color:#e2e8f0;border-radius:8px;padding:4px 12px;cursor:pointer;font-weight:700}',
+  '.pres-grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}',
+  '.pres-grid-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;cursor:pointer;color:#cbd5e1}',
+  '.pres-grid-card.on{border-color:#a78bfa;background:#312e81}',
+  '.pres-grid-card:hover{border-color:#a78bfa}',
+  '.pres-grid-num{display:inline-block;background:#7c3aed;color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:1px 7px;margin-bottom:6px}',
+  '.pres-grid-card b{display:block;font-size:12px;color:#f1f5f9;margin-bottom:3px}',
+  '.pres-grid-card span{display:block;font-size:10.5px;color:#94a3b8}',
+  '.pres-reh-row{display:flex;align-items:center;gap:10px;color:#cbd5e1;font-size:12px;padding:6px 0;border-bottom:1px solid #1e293b}',
+  '.pres-reh-row span{flex:0 0 80px}',
+  '.pres-reh-row b{flex:0 0 50px;color:#a78bfa;text-align:right}',
+  '.pres-reh-row.total b{color:#fbbf24}',
+  '.pres-reh-bar{flex:1;height:6px;background:#1e293b;border-radius:4px;overflow:hidden}',
+  '.pres-reh-bar div{height:100%;background:#7c3aed;border-radius:4px}',
+  '@media print{body{background:#fff}#pres-root{position:static;padding:0;height:auto}.pres-deck{aspect-ratio:auto;max-height:none}.pres-slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;page-break-after:always;border-radius:0;box-shadow:none;width:100%;height:100vh}.pres-slide-inner{overflow:visible}.pres-ui,.pres-progress,.pres-notes,.pres-slide-num,.pres-timer,.pres-next,.pres-ink-canvas,.pres-laser,.pres-overlay{display:none!important}}'
 ].join('\n');
 
 /* ═══════════════════════════════════════════
@@ -1031,6 +3280,7 @@ function PRES_RUNTIME(root, data, opts) {
   var deck = root ? root.querySelector('.pres-deck') : null;
   var slides = deck ? deck.querySelectorAll('.pres-slide') : [];
   var notes = data.notes || [];
+  var durations = data.durations || [];
   var cur = Math.max(0, Math.min(parseInt(data.startSlide, 10) || 0, Math.max(0, slides.length - 1)));
 
   /* UI chrome */
@@ -1040,7 +3290,13 @@ function PRES_RUNTIME(root, data, opts) {
     '<button class="pres-ui-btn" data-act="prev" title="Previous (←)">⏮</button>' +
     '<button class="pres-ui-btn" data-act="next" title="Next (→)">⏭</button>' +
     '<span class="pres-ui-counter">1 / ' + slides.length + '</span>' +
+    '<button class="pres-ui-btn" data-act="play" title="Kiosk autoplay — uses per-slide durations, loops at the end">▶</button>' +
     '<button class="pres-ui-btn" data-act="notes" title="Speaker notes (N)">🗒</button>' +
+    '<button class="pres-ui-btn" data-act="ink" title="Draw highlights (I)">🖊</button>' +
+    '<button class="pres-ui-btn" data-act="laser" title="Laser pointer (L)">🔦</button>' +
+    '<button class="pres-ui-btn" data-act="grid" title="Overview grid (G)">⊞</button>' +
+    '<button class="pres-ui-btn" data-act="rehearsal" title="Rehearsal timer (R)">⏱</button>' +
+    '<button class="pres-ui-btn" data-act="presenter" title="Presenter mode (P)">🎤</button>' +
     '<button class="pres-ui-btn" data-act="full" title="Fullscreen (F)">⛶</button>';
   document.body.appendChild(bar);
   var progress = document.createElement('div');
@@ -1049,6 +3305,160 @@ function PRES_RUNTIME(root, data, opts) {
   var notesBox = document.createElement('div');
   notesBox.className = 'pres-notes';
   document.body.appendChild(notesBox);
+  var timerEl = document.createElement('div');
+  timerEl.className = 'pres-timer';
+  document.body.appendChild(timerEl);
+  var nextBox = document.createElement('div');
+  nextBox.className = 'pres-next';
+  document.body.appendChild(nextBox);
+
+  /* E3 — laser + ink */
+  var laserEl = document.createElement('div');
+  laserEl.className = 'pres-laser';
+  document.body.appendChild(laserEl);
+  var inkCanvas = document.createElement('canvas');
+  inkCanvas.className = 'pres-ink-canvas';
+  document.body.appendChild(inkCanvas);
+  var inkCtx = inkCanvas.getContext ? inkCanvas.getContext('2d') : null;
+  function sizeInk() {
+    try {
+      inkCanvas.width = window.innerWidth || 1280;
+      inkCanvas.height = window.innerHeight || 720;
+    } catch (e) {}
+  }
+  sizeInk();
+  var inkOn = false;
+  var laserOn = false;
+  var drawing = false;
+  var lastPt = null;
+  function setInk(on) {
+    inkOn = on;
+    inkCanvas.classList.toggle('on', on);
+    inkCanvas.style.display = on ? 'block' : 'none';
+    var ib = bar.querySelector('[data-act="ink"]');
+    if (ib) ib.classList.toggle('on', on);
+  }
+  function setLaser(on) {
+    laserOn = on;
+    laserEl.style.display = on ? 'block' : 'none';
+    var lb = bar.querySelector('[data-act="laser"]');
+    if (lb) lb.classList.toggle('on', on);
+  }
+  document.addEventListener('mousemove', function(e) {
+    if (!laserOn) return;
+    laserEl.style.left = (e.clientX - 8) + 'px';
+    laserEl.style.top = (e.clientY - 8) + 'px';
+  });
+  inkCanvas.addEventListener('pointerdown', function(e) {
+    if (!inkOn || !inkCtx) return;
+    drawing = true;
+    lastPt = [e.clientX, e.clientY];
+  });
+  inkCanvas.addEventListener('pointermove', function(e) {
+    if (!inkOn || !drawing || !inkCtx) return;
+    inkCtx.lineWidth = 3;
+    inkCtx.strokeStyle = 'rgba(239,68,68,0.92)';
+    inkCtx.lineCap = 'round';
+    inkCtx.beginPath();
+    inkCtx.moveTo(lastPt[0], lastPt[1]);
+    inkCtx.lineTo(e.clientX, e.clientY);
+    inkCtx.stroke();
+    lastPt = [e.clientX, e.clientY];
+  });
+  inkCanvas.addEventListener('pointerup', function() { drawing = false; });
+
+  /* E2 — kiosk autoplay (loops) */
+  var playing = false;
+  var playTimer = null;
+  function scheduleNext() {
+    if (!playing) return;
+    playTimer = setTimeout(function() {
+      if (!playing) return;
+      if (cur >= slides.length - 1) show(0); else show(cur + 1);
+      scheduleNext();
+    }, durations[cur] || 6000);
+  }
+  function setPlay(on) {
+    playing = on;
+    if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+    var pb = bar.querySelector('[data-act="play"]');
+    if (pb) { pb.textContent = on ? '⏸' : '▶'; pb.classList.toggle('on', on); }
+    if (on) scheduleNext();
+  }
+
+  /* E4 — overview grid overlay */
+  var gridOverlay = document.createElement('div');
+  gridOverlay.className = 'pres-overlay';
+  document.body.appendChild(gridOverlay);
+  function openGrid() {
+    var h = '<div class="pres-grid-head"><span>⊞ All slides — click to jump</span><button class="pres-grid-close">✕ Close</button></div><div class="pres-grid-cards">';
+    for (var i = 0; i < slides.length; i++) {
+      var heading = slides[i].querySelector('.pres-h2, .pres-h1, .pres-h3');
+      h += '<div class="pres-grid-card' + (i === cur ? ' on' : '') + '" data-g="' + i + '">' +
+        '<span class="pres-grid-num">' + (i + 1) + '</span>' +
+        '<b>' + escT(slides[i].getAttribute('data-title') || ('Slide ' + (i + 1))) + '</b>' +
+        (heading ? '<span>' + escT(String(heading.textContent).substring(0, 60)) + '</span>' : '') + '</div>';
+    }
+    h += '</div>';
+    gridOverlay.innerHTML = h;
+    gridOverlay.style.display = 'block';
+  }
+  gridOverlay.addEventListener('click', function(e) {
+    var close = e.target.closest('.pres-grid-close');
+    if (close) { gridOverlay.style.display = 'none'; return; }
+    var card = e.target.closest('.pres-grid-card');
+    if (card) {
+      show(parseInt(card.getAttribute('data-g'), 10));
+      gridOverlay.style.display = 'none';
+    }
+  });
+
+  /* E5 — rehearsal timer (per-slide seconds) */
+  var rehearsal = {};
+  var rehearsalStart = Date.now();
+  var rehearsalEl = document.createElement('div');
+  rehearsalEl.className = 'pres-overlay';
+  document.body.appendChild(rehearsalEl);
+  function openRehearsal() {
+    var total = 0;
+    var h = '<div class="pres-grid-head"><span>⏱ Rehearsal — seconds per slide</span><button class="pres-grid-close">✕ Close</button></div>';
+    for (var i = 0; i < slides.length; i++) {
+      var ms = rehearsal[i] || 0;
+      if (i === cur) ms += Date.now() - rehearsalStart;
+      total += ms;
+      var s = Math.round(ms / 1000);
+      h += '<div class="pres-reh-row"><span>Slide ' + (i + 1) + '</span><div class="pres-reh-bar"><div style="width:' + Math.min(100, s / 3) + '%"></div></div><b>' + s + 's</b></div>';
+    }
+    h += '<div class="pres-reh-row total"><span>Total</span><div class="pres-reh-bar"></div><b>' + Math.round(total / 1000) + 's</b></div>';
+    rehearsalEl.innerHTML = h;
+    rehearsalEl.style.display = 'block';
+  }
+  rehearsalEl.addEventListener('click', function(e) {
+    if (e.target.closest('.pres-grid-close')) rehearsalEl.style.display = 'none';
+  });
+
+  var presenter = false;
+  var talkStart = null;
+  var timerInt = null;
+  function escT(s) { return String(s === null || s === undefined ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function setPresenter(on) {
+    presenter = on;
+    document.body.classList.toggle('pres-presenter', on);
+    var pb = bar.querySelector('[data-act="presenter"]');
+    if (pb) pb.classList.toggle('on', on);
+    if (on) {
+      talkStart = Date.now();
+      if (timerInt) clearInterval(timerInt);
+      timerInt = setInterval(function() {
+        var el = Math.floor((Date.now() - talkStart) / 1000);
+        timerEl.textContent = '⏱ ' + Math.floor(el / 60) + ':' + ('0' + (el % 60)).slice(-2);
+      }, 1000);
+    } else {
+      if (timerInt) { clearInterval(timerInt); timerInt = null; }
+      timerEl.textContent = '';
+    }
+    show(cur);
+  }
 
   function fmtNum(el) {
     var v = parseFloat(el.getAttribute('data-count')) || 0;
@@ -1087,6 +3497,22 @@ function PRES_RUNTIME(root, data, opts) {
       if (bars[b].getAttribute('data-fill') === 'h') bars[b].style.height = w + '%';
       else bars[b].style.width = w + '%';
     }
+    /* staggered entrance (B4) — skipped at animLevel 'none' */
+    if (data.animLevel !== 'none') {
+      var inner = slide.querySelector('.pres-slide-inner');
+      if (inner) {
+        var kids = inner.children;
+        for (var k = 0; k < kids.length; k++) {
+          (function(el, delay) {
+            el.style.transition = 'opacity .45s ease, transform .45s ease';
+            el.style.transitionDelay = delay + 'ms';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(16px)';
+            setTimeout(function() { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }, 40);
+          })(kids[k], k * 70);
+        }
+      }
+    }
   }
 
   function show(n) {
@@ -1094,16 +3520,37 @@ function PRES_RUNTIME(root, data, opts) {
     if (isNaN(n)) n = cur;
     if (n < 0) n = 0;
     if (n > slides.length - 1) n = slides.length - 1;
+    if (n !== cur) {
+      /* E5 — accumulate rehearsal time on the slide we are leaving */
+      rehearsal[cur] = (rehearsal[cur] || 0) + (Date.now() - rehearsalStart);
+      rehearsalStart = Date.now();
+      /* E3 — ink is cleared per slide */
+      if (inkCtx) inkCtx.clearRect(0, 0, inkCanvas.width, inkCanvas.height);
+    }
     cur = n;
     for (var i = 0; i < slides.length; i++) {
-      slides[i].classList.toggle('is-active', i === cur);
+      var on = i === cur;
+      slides[i].classList.toggle('is-active', on);
+      slides[i].classList.remove('pres-t-slide', 'pres-t-zoom', 'pres-t-flip');
+      var tr = slides[i].getAttribute('data-transition') || data.transition || '';
+      if (on && tr) slides[i].classList.add('pres-t-' + tr);
     }
     bar.querySelector('.pres-ui-counter').textContent = (cur + 1) + ' / ' + slides.length;
     progress.style.width = slides.length ? (((cur + 1) / slides.length) * 100) + '%' : '0%';
     notesBox.textContent = notes[cur] ? ('🗒 Speaker notes — slide ' + (cur + 1) + ':\n\n' + notes[cur]) : '';
-    notesBox.style.display = 'none';
+    notesBox.style.display = presenter && notes[cur] ? 'block' : 'none';
     var notesBtn = bar.querySelector('[data-act="notes"]');
-    if (notesBtn) notesBtn.classList.remove('on');
+    if (notesBtn) notesBtn.classList.toggle('on', presenter && !!notes[cur]);
+    /* next-slide preview */
+    if (slides[cur + 1]) {
+      var nextSlide = slides[cur + 1];
+      var nextTitle = nextSlide.getAttribute('data-title') || ('Slide ' + (cur + 2));
+      var nextHeading = nextSlide.querySelector('.pres-h2, .pres-h1, .pres-h3');
+      nextBox.innerHTML = '<b>⏭ Next — ' + (cur + 2) + ' / ' + slides.length + '</b>' + escT(nextTitle) +
+        (nextHeading ? '<div style="margin-top:4px;color:#94a3b8">' + escT(nextHeading.textContent.substring(0, 70)) + '</div>' : '');
+    } else {
+      nextBox.innerHTML = '<b>🏁 End of deck</b>';
+    }
     animateSlide(cur);
     if (opts.sync && window.parent && window.parent.postMessage) {
       try { window.parent.postMessage({ pres: { type: 'current', n: cur, count: slides.length } }, '*'); } catch (e) {}
@@ -1119,6 +3566,12 @@ function PRES_RUNTIME(root, data, opts) {
     var act = btn.getAttribute('data-act');
     if (act === 'next') next();
     else if (act === 'prev') prev();
+    else if (act === 'play') setPlay(!playing);
+    else if (act === 'ink') setInk(!inkOn);
+    else if (act === 'laser') setLaser(!laserOn);
+    else if (act === 'grid') openGrid();
+    else if (act === 'rehearsal') openRehearsal();
+    else if (act === 'presenter') setPresenter(!presenter);
     else if (act === 'full') {
       try {
         if (document.fullscreenElement) document.exitFullscreen();
@@ -1165,6 +3618,25 @@ function PRES_RUNTIME(root, data, opts) {
     else if (e.key === 'n' || e.key === 'N') {
       var btn = bar.querySelector('[data-act="notes"]');
       if (btn) btn.click();
+    }
+    else if (e.key === 'p' || e.key === 'P') {
+      setPresenter(!presenter);
+    }
+    else if (e.key === 'l' || e.key === 'L') {
+      setLaser(!laserOn);
+    }
+    else if (e.key === 'i' || e.key === 'I') {
+      setInk(!inkOn);
+    }
+    else if (e.key === 'g' || e.key === 'G') {
+      openGrid();
+    }
+    else if (e.key === 'r' || e.key === 'R') {
+      openRehearsal();
+    }
+    else if (e.key === 'Escape') {
+      gridOverlay.style.display = 'none';
+      rehearsalEl.style.display = 'none';
     }
   });
 
@@ -1220,7 +3692,10 @@ function buildStandalone() {
     subtitle: pres.subtitle || '',
     author: pres.author || '',
     notes: slides.map(function(s) { return s.notes || ''; }),
-    startSlide: Math.max(0, Math.min(activeSlideIndex(), slides.length - 1))
+    durations: slides.map(function(s) { return s.duration || 0; }),
+    transition: pres.transition || '',
+    startSlide: Math.max(0, Math.min(activeSlideIndex(), slides.length - 1)),
+    animLevel: pres.animLevel === 'none' ? 'none' : 'subtle'
   };
   var rawJs = collectRawJs(pres);
   var parts = [];
@@ -1230,7 +3705,7 @@ function buildStandalone() {
   parts.push('<meta charset="utf-8">');
   parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
   parts.push('<title>' + esc(title) + '</title>');
-  parts.push('<style>' + PRES_DECK_BASE_CSS + '\n' + _sanitizeCss(pres.deckCss) + '</sty' + 'le>');
+  parts.push('<style>' + PRES_DECK_BASE_CSS + '\n' + _sanitizeCss(pres.deckCss) + '\n' + _sanitizeCss((THEMES[pres.theme] && THEMES[pres.theme].css) || '') + '\n' + _sanitizeCss(brandCss()) + '</sty' + 'le>');
   parts.push('</head>');
   parts.push('<body>');
   parts.push('<div id="pres-root">');
@@ -1254,6 +3729,66 @@ function buildStandalone() {
 }
 
 /* ═══════════════════════════════════════════
+   HANDOUT / NOTES PAGES (F2) — slide on top,
+   speaker notes below, one per printed page.
+   ═══════════════════════════════════════════ */
+var PRES_HANDOUT_CSS = [
+  'html,body{margin:0;padding:0;background:#f1f5f9}',
+  '.pres-handout-root{display:block;padding:24px;background:#f1f5f9}',
+  '.pres-handout-page{break-after:page;page-break-after:always;background:#fff;border-radius:12px;overflow:hidden;margin-bottom:28px;box-shadow:0 4px 14px rgba(0,0,0,0.08)}',
+  '.pres-handout-slide{position:relative;aspect-ratio:16/9;background:#fff;display:flex;overflow:hidden}',
+  '.pres-handout-slide .pres-slide-inner{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:clamp(20px,2.6vw,36px)}',
+  '.pres-handout-notes{margin:0;padding:14px 18px;background:#fef9c3;border-top:1px solid #facc15;font-size:13px;line-height:1.6;color:#713f12;white-space:pre-wrap}',
+  '.pres-handout-notes b{display:block;color:#92400e;margin-bottom:4px;font-size:12.5px}',
+  '@media print{body{background:#fff}.pres-handout-root{padding:0}.pres-handout-page{box-shadow:none;border-radius:0;margin:0}}'
+].join('\n');
+
+function buildHandoutHtml() {
+  var pres = DB.pres || {};
+  var slides = pres.slides || [];
+  var parts = [];
+  parts.push('<!DOCTYPE html>');
+  parts.push('<html lang="' + esc(_p('lang', pres.lang || 'en')) + '">');
+  parts.push('<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">');
+  parts.push('<title>' + esc((pres.title || 'Presentation') + ' — Notes') + '</title>');
+  parts.push('<style>' + PRES_DECK_BASE_CSS + '\n' + _sanitizeCss((THEMES[pres.theme] && THEMES[pres.theme].css) || '') + '\n' + _sanitizeCss(brandCss()) + '\n' + PRES_HANDOUT_CSS + '</sty' + 'le>');
+  parts.push('</head><body><div class="pres-handout-root">');
+  for (var i = 0; i < slides.length; i++) {
+    var s = slides[i];
+    parts.push('<div class="pres-handout-page">');
+    parts.push('<div class="pres-handout-slide"' + (s.background ? ' style="background:' + esc(s.background) + '"' : '') + '>');
+    parts.push('<div class="pres-slide-inner">' + renderComponents(s.components || []) + '</div>');
+    parts.push('</div>');
+    parts.push('<div class="pres-handout-notes"><b>Slide ' + (i + 1) + ' — ' + esc(s.title || '') + '</b>' + esc(s.notes || 'No speaker notes for this slide.') + '</div>');
+    parts.push('</div>');
+  }
+  parts.push('</div></body></html>');
+  return parts.join('\n');
+}
+
+function downloadNotesPdf() {
+  if (!DB.pres.slides.length) {
+    try { tool.notify('Nothing to export yet — create some slides first.', 'warning'); } catch (e) {}
+    return;
+  }
+  var doc = buildHandoutHtml();
+  if (typeof tool.requestExportPdf === 'function') {
+    try {
+      tool.notify('Building notes pages…', 'info');
+      tool.requestExportPdf({ html: doc, filename: slugify(DB.pres.title) + '-notes', landscape: false }, function(err, file) {
+        if (err) { try { tool.notify('Notes PDF export failed: ' + err, 'error'); } catch (e) {} return; }
+        try { tool.notify('Notes pages ready: ' + (file && file.name ? file.name : 'download'), 'success'); } catch (e) {}
+        try { tool.openUrl(file.url); } catch (e2) {}
+      });
+    } catch (e) {
+      try { tool.notify('Notes PDF unavailable: ' + e.message, 'warning'); } catch (e2) {}
+    }
+  } else {
+    try { tool.notify('PDF export is not enabled (allowExportPdf: yes).', 'warning'); } catch (e) {}
+  }
+}
+
+/* ═══════════════════════════════════════════
    DATA NORMALIZATION & PERSISTENCE
    ═══════════════════════════════════════════ */
 function normalizeComponent(c) {
@@ -1272,7 +3807,25 @@ function normalizeSlide(s, idx) {
       if (c) components.push(c);
     }
   }
-  return { id: id, title: title.substring(0, 120), notes: (s && s.notes) ? String(s.notes) : '', components: components };
+  return { id: id, title: title.substring(0, 120), notes: (s && s.notes) ? String(s.notes) : '', locked: !!(s && s.locked), duration: (s && typeof s.duration === 'number' && s.duration > 0) ? Math.round(s.duration) : 0, transition: (s && ['slide', 'zoom', 'flip'].indexOf(String(s.transition || '')) !== -1) ? String(s.transition) : '', background: String((s && s.background) || '').substring(0, 500), components: components };
+}
+
+function normalizeDatasets(ds) {
+  var out = {};
+  if (!ds || typeof ds !== 'object') return out;
+  for (var k in ds) {
+    if (!Object.prototype.hasOwnProperty.call(ds, k)) continue;
+    var d = ds[k];
+    if (!d || typeof d !== 'object') continue;
+    out[k] = {
+      labels: Array.isArray(d.labels) ? d.labels.map(function(x) { return String(x); }).slice(0, 24) : [],
+      values: Array.isArray(d.values) ? d.values.slice(0, 24) : [],
+      series: Array.isArray(d.series) ? d.series.slice(0, 4).map(function(s) {
+        return { name: String((s && s.name) || ''), values: Array.isArray(s && s.values) ? s.values.slice(0, 24) : [] };
+      }) : []
+    };
+  }
+  return out;
 }
 
 function normalizeDeck(pres) {
@@ -1284,7 +3837,16 @@ function normalizeDeck(pres) {
     author: String(pres.author || ''),
     slides: slides.map(function(s, i) { return normalizeSlide(s, i); }),
     deckCss: String(pres.deckCss || ''),
-    deckJs: String(pres.deckJs || '')
+    deckJs: String(pres.deckJs || ''),
+    theme: THEMES[String(pres.theme || '')] ? String(pres.theme) : 'clean',
+    datasets: normalizeDatasets(pres.datasets),
+    animLevel: pres.animLevel === 'none' ? 'none' : 'subtle',
+    lang: String(pres.lang || ''),
+    transition: ['slide', 'zoom', 'flip'].indexOf(String(pres.transition || '')) !== -1 ? String(pres.transition) : '',
+    brand: {
+      primary: _validHex((pres.brand && pres.brand.primary) || ''),
+      font: String((pres.brand && pres.brand.font) || '').replace(/[^a-zA-Z0-9 \-',]/g, '').trim().substring(0, 60)
+    }
   };
 }
 
@@ -1299,6 +3861,8 @@ function _slimValue() {
     version: DB.version || '1.0.0',
     activeSessionId: DB.activeSessionId || '',
     chatCache: { sessionId: _activeSessionId || '', messages: _trimChatCache(DB.chatMessages) },
+    history: DB.history || [],
+    snippets: (DB.snippets || []).slice(0, 20),
     _instanceId: DB._instanceId || '',
     _parentRecordId: DB._parentRecordId || ''
   };
@@ -1371,6 +3935,10 @@ function _trimChatCache(list) {
     if (m.isError) copy.isError = true;
     if (m.options && m.options.length) copy.options = m.options;
     if (m.slideOptions && m.slideOptions.length) copy.slideOptions = m.slideOptions;
+    if (m.doctor) copy.doctor = m.doctor;
+    if (m.tasks && m.tasks.length) copy.tasks = m.tasks;
+    if (m.variants && m.variants.length) copy.variants = m.variants.slice(0, 4);
+    if (m.review) copy.review = m.review;
     out.push(copy);
   }
   return out;
@@ -1731,6 +4299,13 @@ function addChatMessage(role, text, extra) {
   if (extra && extra.slideOptions && extra.slideOptions.length) msg.slideOptions = extra.slideOptions;
   if (extra && extra.version) msg.version = extra.version;
   if (extra && extra.isError) msg.isError = true;
+  if (extra && extra.doctor) {
+    msg.doctor = { total: extra.doctor.total, failed: extra.doctor.failed, warned: extra.doctor.warned, passed: extra.doctor.passed };
+  }
+  if (extra && extra.tasks && extra.tasks.length) msg.tasks = extra.tasks;
+  if (extra && extra.variants && extra.variants.length) msg.variants = extra.variants.slice(0, 4);
+  if (extra && extra.review) msg.review = extra.review;
+  stampAiActor(msg);
   DB.chatMessages.push(msg);
   if (DB.chatMessages.length > 500) DB.chatMessages = DB.chatMessages.slice(-500);
   DB.chatCache = { sessionId: _activeSessionId, messages: _trimChatCache(DB.chatMessages) };
@@ -1764,7 +4339,9 @@ var WELCOME_HTML =
       '<button class="hint-chip" data-hint="Build a quarterly business review presentation: KPI overview, revenue chart, key wins, challenges, roadmap and Q&amp;A.">📊 Business review</button>' +
       '<button class="hint-chip" data-hint="Make a training presentation about workplace safety: 5 key rules, common hazards, emergency procedures and a short quiz.">🦺 Training deck</button>' +
     '</div>' +
-    '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> You can also say <b>"add a slide about X"</b> or <b>"replace slide 3 with a chart"</b> — I\'ll only change what you asked.</p>' +
+    '<div class="template-gallery" id="template-gallery"></div>' +
+    '<div id="brand-preset-slot"></div>' +
+    '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> You can also say <b>"add a slide about X"</b> or <b>"replace slide 3 with a chart"</b> — I\'ll only change what you asked. Click 🎯 on a slide to edit just that one. Try <b>/notes</b>, <b>/restyle dark</b>, <b>/translate tr</b>, <b>/review</b>.</p>' +
   '</div>';
 
 function renderChatMessages() {
@@ -1782,6 +4359,8 @@ function renderChatMessages() {
         sendChatMessage();
       });
     }
+    renderTemplateGallery();
+    renderBrandChip();
     return;
   }
   var out = '';
@@ -1791,10 +4370,24 @@ function renderChatMessages() {
     if (m.role === 'user') {
       out += '<div class="chat-msg user"><div class="chat-avatar">👤</div><div><div class="chat-bubble">' + markdownLite(m.text) + '</div>' +
         '<div class="chat-msg-time">' + time + '</div></div></div>';
+    } else if (m.role === 'plan') {
+      out += '<div class="chat-msg ai"><div class="chat-avatar">🧭</div><div><div class="plan-bubble"><div class="plan-head">📋 Building the deck step by step</div>';
+      var tasks = m.tasks || [];
+      for (var pi = 0; pi < tasks.length; pi++) {
+        var st = tasks[pi].status || 'todo';
+        out += '<div class="plan-task st-' + st + '" data-pi="' + pi + '"><span class="plan-check">' + (st === 'done' ? '✅' : (st === 'error' ? '⚠️' : (st === 'doing' ? '⏳' : '○'))) + '</span><span>' + esc(tasks[pi].title || ('Slide ' + (pi + 1))) + '</span></div>';
+      }
+      out += '</div><div class="chat-msg-time">' + time + '</div></div></div>';
     } else {
       out += '<div class="chat-msg ai' + (m.isError ? ' err' : '') + '"><div class="chat-avatar">🎞️</div><div>' +
         '<div class="chat-bubble">' + markdownLite(m.text) + '</div>';
       if (m.version) out += '<div><span class="chat-version-chip">✓ deck v' + esc(m.version) + '</span></div>';
+      if (m.doctor) {
+        var dcls = m.doctor.failed > 0 ? 'fail' : (m.doctor.warned > 0 ? 'warn' : '');
+        out += '<div><span class="chat-doctor-chip ' + dcls + '" onclick="openDoctor()">🧪 ' + m.doctor.passed + '/' + m.doctor.total + ' checks pass</span></div>';
+      }
+      if (m.review) out += reviewHtml(m.review);
+      if (m.variants && m.variants.length) out += variantsHtml(m.variants, i);
       if (m.options && m.options.length) out += optionsHtml(m.options);
       if (m.slideOptions && m.slideOptions.length) out += slideOptionsHtml(m.slideOptions);
       out += '<div class="chat-msg-time">' + time + '</div></div></div>';
@@ -1823,6 +4416,36 @@ function slideOptionsHtml(options) {
       '<span class="opt-num">💠</span>' + esc(label) + '</button>';
   }
   return h + '</div>';
+}
+
+/* ── A7 review card ── */
+function reviewHtml(review) {
+  var h = '<div class="chat-review"><div class="chat-review-head">🧐 Deck review' + (review && review.score !== undefined ? ' — score ' + esc(review.score) + '/10' : '') + '</div>';
+  var findings = (review && review.findings) || [];
+  if (!findings.length) {
+    h += '<div class="chat-review-item" style="color:#065f46">✅ The deck looks great — no major findings.</div>';
+  }
+  for (var i = 0; i < findings.length; i++) {
+    var f = findings[i];
+    var idx = f.slideId ? slideIndexById(f.slideId) : -1;
+    h += '<div class="chat-review-item"><b>' + (idx !== -1 ? 'Slide ' + (idx + 1) : 'Deck') + ':</b> ' + esc(f.issue || '') +
+      '<div class="chat-review-sug">💡 ' + esc(f.suggestion || '') + '</div>' +
+      '<button class="chat-review-fix" data-fix-sid="' + esc(f.slideId || '') + '" data-fix-issue="' + esc(f.issue || '') + '" data-fix-sug="' + esc(f.suggestion || '') + '" onclick="handleReviewFix(this)">🛠 Fix</button></div>';
+  }
+  return h + '</div>';
+}
+
+/* ── A3 variant cards ── */
+function variantsHtml(variants, msgIdx) {
+  var h = '<div class="chat-variants"><div class="chat-variants-head">🎨 Design variants — pick one:</div><div class="chat-variants-grid">';
+  for (var i = 0; i < variants.length; i++) {
+    var v = variants[i];
+    var types = (v.slide && v.slide.components) ? v.slide.components.map(function(c) { return c.type; }) : [];
+    h += '<div class="variant-card"><div class="variant-label">' + esc(v.label || ('Variant ' + (i + 1))) + '</div>' +
+      '<div class="variant-types">' + esc(types.slice(0, 4).join(' · ') || 'custom') + '</div>' +
+      '<button class="btn btn-sm btn-primary" data-vmsg="' + msgIdx + '" data-vidx="' + i + '" onclick="applyVariant(this)">Use this</button></div>';
+  }
+  return h + '</div></div>';
 }
 
 function handleOptionClick(btn) {
@@ -2066,6 +4689,10 @@ function deckStateBlock() {
   if (DB.pres.author) lines.push('Author/presenter: ' + DB.pres.author);
   lines.push('Custom deckCss present: ' + (DB.pres.deckCss ? 'yes' : 'no'));
   lines.push('Custom deckJs present: ' + (DB.pres.deckJs ? 'yes' : 'no'));
+  lines.push('Theme: ' + (DB.pres.theme || 'clean'));
+  lines.push('Language: ' + (DB.pres.lang || _p('lang', 'en')));
+  var dsKeys = Object.keys(DB.pres.datasets || {});
+  lines.push('Datasets: ' + (dsKeys.length ? dsKeys.join(', ') : 'none'));
   lines.push('');
   if (!slides.length) {
     lines.push('NO SLIDES YET — build the whole deck from scratch.');
@@ -2074,7 +4701,10 @@ function deckStateBlock() {
     for (var i = 0; i < slides.length; i++) {
       var types = [];
       for (var j = 0; j < slides[i].components.length; j++) types.push(slides[i].components[j].type);
-      lines.push((i + 1) + '. [' + slides[i].id + '] "' + slides[i].title + '" (components: ' + (types.join(', ') || 'none') + ')');
+      var flags = [];
+      if (slides[i].locked) flags.push('LOCKED');
+      if (slides[i].id === _targetSlideId) flags.push('TARGETED');
+      lines.push((i + 1) + '. [' + slides[i].id + '] "' + slides[i].title + '" (components: ' + (types.join(', ') || 'none') + ')' + (flags.length ? ' 🔒 ' + flags.join(' ') : ''));
     }
   }
   return lines.join('\n');
@@ -2091,6 +4721,21 @@ function buildChatPrompt(userMsg) {
   parts.push('=== USER REQUEST ===');
   parts.push(userMsg);
   parts.push('');
+  if (_targetSlideId && slideIndexById(_targetSlideId) !== -1) {
+    parts.push('=== TARGETED EDIT ===');
+    parts.push('The user TARGETED slide id "' + _targetSlideId + '". Apply the request ONLY to that slide — return a single upsertSlide patch that keeps its existing id. Do NOT touch any other slide.');
+    parts.push('');
+  }
+  var bp = _validHex(_p('brandPrimary', ''));
+  var bs = _validHex(_p('brandSecondary', ''));
+  var bf = _p('brandFont', '').replace(/[^a-zA-Z0-9 \-',]/g, '').trim();
+  if (bp || bs || bf) {
+    parts.push('=== BRAND KIT (admin-configured — honor it) ===');
+    if (bp) parts.push('Primary/accent color: ' + bp + ' — use it for accents, color: fields, chart colors, borders and the cover.');
+    if (bs) parts.push('Secondary color: ' + bs);
+    if (bf) parts.push('Font: ' + bf);
+    parts.push('');
+  }
   parts.push('HOW TO RESPOND:');
   parts.push('• JSON ONLY for deck changes: the tool merges your JSON with the component library and renders all HTML/CSS itself — never output raw HTML/CSS/JS for slides unless the user explicitly asked for a custom "html" component. JSON-only responses are much faster and cheaper.');
   parts.push('• If the request changes the deck (create it, add/change/delete slides, restyle, add a chart…), reply with ONE JSON object per the OUTPUT CONTRACT below. No markdown fences.');
@@ -2106,9 +4751,24 @@ function buildChatPrompt(userMsg) {
   parts.push('{"title":"Deck title","subtitle":"optional subtitle","author":"optional presenter","deckCss":"optional extra CSS (overrides base theme)","deckJs":"optional custom JS (runs after the deck runtime, window.pres available)","slides":[{"id":"intro","title":"Slide label","notes":"optional speaker notes","components":[{"type":"title-slide","data":{"title":"…","subtitle":"…"}},{"type":"stat-cards","data":{"items":[{"value":120,"label":"Users"}]}}]}],"summary":"short plain-language summary","suggestions":["[[suggest_x]] add a chart slide"],"slideSuggestions":[{"slideId":"intro","text":"add a big-number stat"}]}');
   parts.push('');
   parts.push('PATCHES (preferred for edits to an existing deck — list ONLY the slides that change):');
-  parts.push('{"patches":[{"op":"upsertSlide","slide":{"id":"intro","title":"…","components":[…]}},{"op":"deleteSlide","id":"old-slide"},{"op":"moveSlide","id":"x","to":0},{"op":"meta","title":"New title"},{"op":"deckCss","css":"…"},{"op":"deckJs","js":"…"}],"summary":"what changed","suggestions":["[[suggest_x]] …"],"slideSuggestions":[{"slideId":"intro","text":"…"}]}');
-  parts.push('upsertSlide matches by "id" first, then by exact "title" — otherwise it appends. Keep the SAME id when editing an existing slide. Give NEW slides short unique kebab-case ids.');
+  parts.push('{"patches":[{"op":"upsertSlide","slide":{"id":"intro","title":"…","components":[…]}},{"op":"deleteSlide","id":"old-slide"},{"op":"moveSlide","id":"x","to":0},{"op":"notes","id":"intro","notes":"…"},{"op":"meta","title":"New title","theme":"dark"},{"op":"deckCss","css":"…"},{"op":"deckJs","js":"…"}],"summary":"what changed","suggestions":["[[suggest_x]] …"],"slideSuggestions":[{"slideId":"intro","text":"…"}]}');
+  parts.push('upsertSlide matches by "id" first, then by exact "title" — otherwise it appends. Keep the SAME id when editing an existing slide. Give NEW slides short unique kebab-case ids. The "notes" op writes speaker notes onto an existing slide without touching its content.');
+  parts.push('');
+  parts.push('DESIGN VARIANTS (A/B/C): if the user asks for design options for a slide, return {"variants":[{"label":"A","slide":{...}},{"label":"B","slide":{...}},{"label":"C","slide":{...}}],"slideId":"<id>"} — do NOT modify the deck, the user picks one.');
+  parts.push('DECK REVIEW: if the user asks to review/critique the deck, return {"review":{"findings":[{"slideId":"<id or empty>","issue":"...","suggestion":"..."}],"score":<0-10>,"summary":"..."}} — do NOT modify the deck.');
+  parts.push('');
+  parts.push('=== DATASETS (live charts) ===');
+  parts.push('The deck stores reusable numbers under "datasets" (full deck JSON) as {"<name>":{"labels":[...],"values":[...]}} or {"<name>":{"labels":[...],"series":[{"name":"...","values":[...]}]}}. When numbers may change later, put them in a dataset and have the chart component reference it with "dataset":"<name>" (bar-chart, column-chart, line-chart, area-chart, radar, pie-chart support it).');
+  parts.push('');
   parts.push('ALWAYS include BOTH "suggestions" (deck-level next steps) and "slideSuggestions" (per-slide next steps — each one is {"slideId":"existing slide id","text":"short action"}) so the user can keep developing the presentation by clicking the suggestions.');
+  parts.push('');
+  parts.push('=== THEMES ===');
+  parts.push('Available deck themes: clean (default), dark, corporate, playful, minimal, editorial, warm.');
+  parts.push('To restyle the WHOLE deck (e.g. user says "make it dark" or "corporate look"), just set {"op":"meta","theme":"<name>"} (or "theme" in a full deck) — do NOT rewrite the slides for a theme change.');
+  parts.push('Whole-deck TRANSITION: {"op":"meta","transition":"slide|zoom|flip"} (empty = crossfade). Per-slide timing: {"op":"timing","id":"<id>","duration":<seconds>}.');
+  parts.push('');
+  parts.push('=== LOCKED SLIDES ===');
+  parts.push('Slides marked 🔒 LOCKED in the deck state must NEVER be modified: skip them in upsertSlide/deleteSlide patches, do not rewrite their components, and do not include them in a full-deck rebuild (the tool restores them automatically). "notes" patches on locked slides ARE allowed.');
   parts.push('');
   parts.push('=== DESIGN RULES ===');
   parts.push('• 16:9 slides. One clear idea per slide. ~6-12 slides unless the user asks otherwise.');
@@ -2119,6 +4779,7 @@ function buildChatPrompt(userMsg) {
   parts.push('• Real content, no lorem ipsum. Language: ' + _p('lang', 'en') + '.');
   parts.push('• Every slide component is {"type": "...", "data": {...}} — data keys per the library. Container components (columns, tabs) take "items" as nested component descriptors.');
   parts.push('• Use the "html" component (html/css/js) for anything the library cannot express.');
+  parts.push('• Cover slides (title-slide, section-slide, closing-slide) accept backgroundStyle: mesh | shine | dots | lines — generated from the brand colors. Images with no URL get branded offline placeholders automatically.');
   parts.push('• Each slide gets a short "notes" for the presenter. ALWAYS end every code response with a "summary", 3-5 deck-level "suggestions" ([[suggest_xxx]] format) AND 2-4 "slideSuggestions" ([{"slideId":"...","text":"..."}]) that target specific existing slides.');
   return parts.join('\n');
 }
@@ -2193,6 +4854,7 @@ function applyPatchOp(p) {
     var idx = -1;
     if (p.slide.id) idx = findSlideIndexByIdOrTitle(p.slide.id);
     if (idx === -1 && p.slide.title) idx = findSlideIndexByIdOrTitle(p.slide.title);
+    if (idx !== -1 && slides[idx].locked) return false; // LOCKED slides are off-limits to AI
     if (idx === -1) {
       if (p.position === 'start') {
         slides.unshift(normalizeSlide(p.slide, 0));
@@ -2210,6 +4872,7 @@ function applyPatchOp(p) {
       fixed.id = existing.id;  // keep the existing identity
       if (p.slide.title) fixed.title = p.slide.title.substring(0, 120);
       if (p.slide.notes !== undefined) fixed.notes = String(p.slide.notes || '');
+      fixed.locked = existing.locked; // never drop the lock flag
       slides[idx] = fixed;
     }
     return true;
@@ -2217,10 +4880,24 @@ function applyPatchOp(p) {
   if (op === 'deleteSlide') {
     var di = p.id ? findSlideIndexByIdOrTitle(p.id) : (typeof p.index === 'number' ? p.index : -1);
     if (di >= 0 && di < slides.length) {
+      if (slides[di].locked) return false; // LOCKED slides are off-limits to AI
       slides.splice(di, 1);
       return true;
     }
     return false;
+  }
+  if (op === 'notes') {
+    var ni = p.id ? findSlideIndexByIdOrTitle(p.id) : -1;
+    if (ni === -1) return false;
+    slides[ni].notes = String(p.notes || '').substring(0, 4000);
+    return true;
+  }
+  if (op === 'timing') {
+    var ti = p.id ? findSlideIndexByIdOrTitle(p.id) : -1;
+    if (ti === -1) return false;
+    var secs = parseInt(p.duration, 10);
+    slides[ti].duration = (isNaN(secs) || secs < 0) ? 0 : Math.min(secs, 3600);
+    return true;
   }
   if (op === 'moveSlide') {
     var mi = p.id ? findSlideIndexByIdOrTitle(p.id) : -1;
@@ -2238,6 +4915,19 @@ function applyPatchOp(p) {
     if (p.title !== undefined) { DB.pres.title = String(p.title).substring(0, 140); changed = true; }
     if (p.subtitle !== undefined) { DB.pres.subtitle = String(p.subtitle).substring(0, 240); changed = true; }
     if (p.author !== undefined) { DB.pres.author = String(p.author).substring(0, 120); changed = true; }
+    if (p.theme !== undefined) {
+      var t = String(p.theme || '').toLowerCase();
+      DB.pres.theme = THEMES[t] ? t : 'clean';
+      changed = true;
+    }
+    if (p.transition !== undefined) {
+      DB.pres.transition = ['slide', 'zoom', 'flip'].indexOf(String(p.transition || '')) !== -1 ? String(p.transition) : '';
+      changed = true;
+    }
+    if (p.animLevel !== undefined) {
+      DB.pres.animLevel = String(p.animLevel) === 'none' ? 'none' : 'subtle';
+      changed = true;
+    }
     return changed;
   }
   if (op === 'deckCss') {
@@ -2286,9 +4976,22 @@ function applyAIResponse(raw) {
   var json = parsed.json;
   var changed = false;
   var summary = '';
+  var extra = {};
+  var beforePres = JSON.parse(JSON.stringify(DB.pres));
+  var beforeActive = DB.activeSlideId;
 
   if (json) {
-    if (Array.isArray(json.patches) && json.patches.length) {
+    if (Array.isArray(json.variants) && json.variants.length) {
+      /* A3 — design variants are presented as cards, not applied */
+      extra.variants = json.variants.slice(0, 4);
+      summary = json.summary ? String(json.summary) : ('🎨 ' + extra.variants.length + ' design variant(s) ready — pick one.');
+      json.patches = null; json.slides = null; json.title = json.subtitle = json.author = json.deckCss = json.deckJs = json.theme = undefined;
+    } else if (json.review) {
+      /* A7 — deck review rendered with per-finding fix buttons */
+      extra.review = json.review;
+      summary = json.summary ? String(json.summary) : (String(json.review.summary || '') || '🧐 Here is the deck review.');
+      json.patches = null; json.slides = null; json.title = json.subtitle = json.author = json.deckCss = json.deckJs = json.theme = undefined;
+    } else if (Array.isArray(json.patches) && json.patches.length) {
       for (var i = 0; i < json.patches.length; i++) {
         if (applyPatchOp(json.patches[i])) changed = true;
       }
@@ -2297,14 +5000,32 @@ function applyAIResponse(raw) {
       var prevTitle = DB.pres.title;
       var prevSub = DB.pres.subtitle;
       var prevAuthor = DB.pres.author;
+      var lockedSaved = [];
+      for (var lk = 0; lk < DB.pres.slides.length; lk++) {
+        if (DB.pres.slides[lk].locked) lockedSaved.push({ idx: lk, slide: JSON.parse(JSON.stringify(DB.pres.slides[lk])) });
+      }
       DB.pres = normalizeDeck({
         title: json.title !== undefined ? json.title : prevTitle,
         subtitle: json.subtitle !== undefined ? json.subtitle : prevSub,
         author: json.author !== undefined ? json.author : prevAuthor,
         slides: json.slides,
         deckCss: json.deckCss !== undefined ? json.deckCss : DB.pres.deckCss,
-        deckJs: json.deckJs !== undefined ? json.deckJs : DB.pres.deckJs
+        deckJs: json.deckJs !== undefined ? json.deckJs : DB.pres.deckJs,
+        theme: json.theme !== undefined ? json.theme : DB.pres.theme
       });
+      /* LOCKED slides survive a full rebuild: restore them by id (or re-insert at their original position). */
+      for (var lr = 0; lr < lockedSaved.length; lr++) {
+        var ls = lockedSaved[lr];
+        var at = findSlideIndexByIdOrTitle(ls.slide.id);
+        if (at !== -1) {
+          DB.pres.slides[at] = normalizeSlide(ls.slide, at);
+          DB.pres.slides[at].locked = true;
+        } else {
+          var pos = Math.min(ls.idx, DB.pres.slides.length);
+          DB.pres.slides.splice(pos, 0, normalizeSlide(ls.slide, pos));
+          DB.pres.slides[pos].locked = true;
+        }
+      }
       changed = true;
       summary = json.summary ? String(json.summary) : '';
     } else {
@@ -2312,6 +5033,11 @@ function applyAIResponse(raw) {
       if (json.title !== undefined) { DB.pres.title = String(json.title).substring(0, 140); metaChanged = true; }
       if (json.subtitle !== undefined) { DB.pres.subtitle = String(json.subtitle).substring(0, 240); metaChanged = true; }
       if (json.author !== undefined) { DB.pres.author = String(json.author).substring(0, 120); metaChanged = true; }
+      if (json.theme !== undefined) {
+        var th = String(json.theme || '').toLowerCase();
+        DB.pres.theme = THEMES[th] ? th : 'clean';
+        metaChanged = true;
+      }
       if (json.deckCss !== undefined) { DB.pres.deckCss = String(json.deckCss); metaChanged = true; }
       if (json.deckJs !== undefined) { DB.pres.deckJs = String(json.deckJs); metaChanged = true; }
       changed = metaChanged;
@@ -2334,16 +5060,26 @@ function applyAIResponse(raw) {
   var slideOpts = parsed.slideSuggestions.slice(0, 5);
   if (!deckOpts.length) deckOpts = fallbackDeckSuggestions();
   if (!slideOpts.length && DB.pres.slides.length) slideOpts = fallbackSlideSuggestions();
-  var extra = { options: deckOpts, slideOptions: slideOpts };
+  extra.options = deckOpts;
+  extra.slideOptions = slideOpts;
   if (changed) {
+    if (JSON.stringify(beforePres) !== JSON.stringify(DB.pres) || beforeActive !== DB.activeSlideId) {
+      pushHistoryRaw(beforePres, beforeActive, 'AI: ' + String(summary || 'update').substring(0, 60));
+    }
     _bumpVersion('minor');
     _aiJustUpdated = true;
     extra.version = DB.version;
     if (!summary) summary = '✅ Presentation updated — ' + DB.pres.slides.length + ' slide(s).';
+    if (_targetSlideId) clearTargetSlide(); // a successful targeted edit consumes the target
   }
   persist();
   renderAll();
   updatePreview();
+  syncThemeSelect();
+  updateHistoryButtons();
+
+  var docRes = runDeckChecks();
+  extra.doctor = docRes;
 
   var prose = parsed.text;
   if (json) {
@@ -2355,6 +5091,9 @@ function applyAIResponse(raw) {
   addChatMessage('ai', finalText, extra);
   try {
     tool.notify(changed ? '💾 Deck saved — v' + DB.version : 'No deck changes applied', changed ? 'success' : 'info');
+    if (docRes.failed > 0 || docRes.warned > 0) {
+      tool.notify('🧪 Deck Doctor: ' + docRes.failed + ' problem(s), ' + docRes.warned + ' warning(s) — open it from the Slides tab', 'info');
+    }
   } catch (e) {}
   tool.resize();
 }
@@ -2409,6 +5148,10 @@ function sendChatMessage() {
   var msg = input.value.trim();
   if (!msg) return;
 
+  var slash = handleSlashCommand(msg);
+  if (slash === 'done') return;
+  if (slash) msg = slash;
+
   var tok = { cancelled: false };
   _reqToken = tok;
 
@@ -2427,6 +5170,15 @@ function sendChatMessage() {
     });
   }
 
+  if (_shouldPlan(msg)) {
+    sendChatMessageAgentic(msg, tok);
+    return;
+  }
+  _generateSingle(msg, tok);
+}
+
+/* Single-shot generation (the pre-agentic flow) */
+function _generateSingle(msg, tok) {
   var prompt = buildChatPrompt(msg);
   updateConnStatus('busy');
   _aiCallActive = true;
@@ -2555,15 +5307,21 @@ function renderStrip() {
   var h = '';
   for (var i = 0; i < slides.length; i++) {
     var isActive = i === _activeSlideIndex;
+    var lockBadge = slides[i].locked ? ' 🔒' : '';
     h += '<div class="strip-item' + (isActive ? ' active' : '') + '" data-strip="' + i + '" title="' + esc(slides[i].title) + '">' +
       '<span class="strip-num">' + (i + 1) + '</span>' +
-      '<span class="strip-title">' + esc(slides[i].title || 'Slide ' + (i + 1)) + '</span></div>';
+      '<span class="strip-title">' + esc(slides[i].title || 'Slide ' + (i + 1)) + lockBadge + '</span></div>';
   }
   strip.innerHTML = h;
   var items = strip.querySelectorAll('.strip-item');
   for (var j = 0; j < items.length; j++) {
     items[j].addEventListener('click', function() {
-      gotoSlide(parseInt(this.getAttribute('data-strip'), 10));
+      var n = parseInt(this.getAttribute('data-strip'), 10);
+      if (_targetMode && DB.pres.slides[n]) {
+        setTargetSlide(DB.pres.slides[n].id);
+      } else {
+        gotoSlide(n);
+      }
     });
   }
 }
@@ -2595,8 +5353,10 @@ function renderSlidesList() {
     var s = slides[i];
     var types = [];
     for (var j = 0; j < s.components.length; j++) types.push(s.components[j].type);
-    h += '<div class="slide-card" data-sid="' + esc(s.id) + '">' +
+    var lockBtnTitle = s.locked ? 'Unlock (allow AI edits)' : 'Lock (protect from AI edits)';
+    h += '<div class="slide-card' + (s.locked ? ' locked-card' : '') + (s.id === DB.activeSlideId ? ' is-active-card' : '') + '" data-sid="' + esc(s.id) + '">' +
       '<div class="slide-card-header">' +
+        '<label class="slide-sel-wrap" title="Select for bulk actions"><input type="checkbox" class="slide-sel"' + (_selectedSlides[s.id] ? ' checked' : '') + ' data-sel="' + esc(s.id) + '"></label>' +
         '<span class="slide-card-num">' + (i + 1) + '</span>' +
         '<input class="slide-card-title" data-title-sid="' + esc(s.id) + '" value="' + esc(s.title) + '" title="Click to rename">' +
         '<span class="slide-card-comps">' + esc(types.slice(0, 4).join(' · ') || 'empty') + (types.length > 4 ? ' · +' + (types.length - 4) : '') + '</span>' +
@@ -2604,6 +5364,9 @@ function renderSlidesList() {
           '<button class="btn-icon" data-up="' + esc(s.id) + '" title="Move up">↑</button>' +
           '<button class="btn-icon" data-down="' + esc(s.id) + '" title="Move down">↓</button>' +
           '<button class="btn-icon" data-dup="' + esc(s.id) + '" title="Duplicate">⧉</button>' +
+          '<button class="btn-icon" data-insp="' + esc(s.id) + '" title="Inspector: title, notes, duration, transition, background, lock">✏️</button>' +
+          '<button class="btn-icon" data-target="' + esc(s.id) + '" title="Target: next AI message edits only this slide">🎯</button>' +
+          '<button class="btn-icon' + (s.locked ? ' lock-on' : '') + '" data-lock="' + esc(s.id) + '" title="' + esc(lockBtnTitle) + '">' + (s.locked ? '🔒' : '🔓') + '</button>' +
           '<button class="btn-icon" data-ai="' + esc(s.id) + '" title="Ask the AI about this slide">🤖</button>' +
           '<button class="btn-icon danger" data-del="' + esc(s.id) + '" title="Delete">✕</button>' +
         '</div>' +
@@ -2613,6 +5376,7 @@ function renderSlidesList() {
           '<span>ID: <code>' + esc(s.id) + '</code></span>' +
           '<span>' + s.components.length + ' component(s)</span>' +
           (s.notes ? '<span>🗒 notes</span>' : '') +
+          (s.locked ? '<span class="slide-lock-badge">🔒 Locked</span>' : '') +
         '</div>' +
         '<details class="slide-json-editor"><summary style="cursor:pointer;font-size:11px;color:#7c3aed;font-weight:600">🧩 Edit components JSON</summary>' +
           '<textarea data-json-sid="' + esc(s.id) + '" spellcheck="false">' + esc(JSON.stringify(s.components, null, 2)) + '</textarea>' +
@@ -2626,9 +5390,13 @@ function renderSlidesList() {
   var cards = list.querySelectorAll('.slide-card');
   for (var c = 0; c < cards.length; c++) {
     var sid = cards[c].getAttribute('data-sid');
+    var selBox = cards[c].querySelector('[data-sel]');
     var upBtn = cards[c].querySelector('[data-up]');
     var downBtn = cards[c].querySelector('[data-down]');
     var dupBtn = cards[c].querySelector('[data-dup]');
+    var inspBtn = cards[c].querySelector('[data-insp]');
+    var targetBtn = cards[c].querySelector('[data-target]');
+    var lockBtn = cards[c].querySelector('[data-lock]');
     var aiBtn = cards[c].querySelector('[data-ai]');
     var delBtn = cards[c].querySelector('[data-del]');
     var titleInput = cards[c].querySelector('[data-title-sid]');
@@ -2638,6 +5406,10 @@ function renderSlidesList() {
     if (upBtn) upBtn.onclick = function() { moveSlide(sid, -1); };
     if (downBtn) downBtn.onclick = function() { moveSlide(sid, 1); };
     if (dupBtn) dupBtn.onclick = function() { duplicateSlide(sid); };
+    if (inspBtn) inspBtn.onclick = function() { openInspector(sid); };
+    if (selBox) selBox.onchange = function() { toggleSlideSelect(sid, selBox.checked); };
+    if (targetBtn) targetBtn.onclick = function() { setTargetSlide(sid); switchChatTab('chat'); };
+    if (lockBtn) lockBtn.onclick = function() { toggleLockSlide(sid); };
     if (aiBtn) aiBtn.onclick = function() { askAiAboutSlide(sid); };
     if (delBtn) delBtn.onclick = function() { deleteSlideById(sid); };
     if (titleInput) {
@@ -2650,6 +5422,7 @@ function renderSlidesList() {
         applySlideJson(sid, jsonArea.value);
       };
     }
+    bindSlideDrag(cards[c], sid);
   }
 }
 
@@ -2658,8 +5431,22 @@ function renderAll() {
   renderStrip();
   renderSlidesList();
   updateSlideCounter();
+  syncThemeSelect();
+  syncDeckTransition();
+  updateHistoryButtons();
+  updateTargetChip();
+  renderTimingTotal();
+  renderBulkBar();
+  renderCollabChip();
   var titleInput = el('deck-title-input');
   if (titleInput && titleInput.value !== DB.pres.title) titleInput.value = DB.pres.title || '';
+}
+
+function syncDeckTransition() {
+  var sel = el('deck-transition');
+  if (!sel) return;
+  sel.value = DB.pres.transition || '';
+  sel.disabled = !canWrite();
 }
 
 function updatePreview() {
@@ -2704,6 +5491,7 @@ function addBlankSlide() {
       { type: 'bullets', data: { items: [{ text: 'Add your content here' }] } }
     ]
   };
+  pushHistory('Add blank slide');
   DB.pres.slides.push(slide);
   DB.activeSlideId = slide.id;
   _activeSlideIndex = DB.pres.slides.length - 1;
@@ -2723,8 +5511,10 @@ function duplicateSlide(id) {
     id: genId(),
     title: src.title + ' (copy)',
     notes: src.notes || '',
+    locked: false,
     components: JSON.parse(JSON.stringify(src.components || []))
   };
+  pushHistory('Duplicate slide');
   DB.pres.slides.splice(idx + 1, 0, copy);
   persist();
   renderAll();
@@ -2737,6 +5527,7 @@ function deleteSlideById(id) {
   if (idx === -1) return;
   var name = DB.pres.slides[idx].title || 'this slide';
   sandboxConfirm('Delete "' + name + '"? This cannot be undone.', function() {
+    pushHistory('Delete slide');
     DB.pres.slides.splice(idx, 1);
     fixActiveSlide();
     persist();
@@ -2752,6 +5543,7 @@ function moveSlide(id, delta) {
   if (idx === -1) return;
   var to = idx + delta;
   if (to < 0 || to >= DB.pres.slides.length) return;
+  pushHistory('Reorder slides');
   var moved = DB.pres.slides.splice(idx, 1)[0];
   DB.pres.slides.splice(to, 0, moved);
   _activeSlideIndex = to;
@@ -2770,6 +5562,7 @@ function renameSlide(id, newTitle) {
     renderSlidesList();
     return;
   }
+  pushHistory('Rename slide');
   DB.pres.slides[idx].title = t.substring(0, 120);
   persist();
   renderStrip();
@@ -2796,6 +5589,7 @@ function applySlideJson(id, jsonText) {
     var c = normalizeComponent(components[i]);
     if (c) cleaned.push(c);
   }
+  pushHistory('Edit slide components');
   DB.pres.slides[idx].components = cleaned;
   persist();
   renderSlidesList();
@@ -2809,6 +5603,7 @@ function askAiAboutSlide(id) {
   var s = DB.pres.slides[idx];
   var types = [];
   for (var i = 0; i < s.components.length; i++) types.push(s.components[i].type);
+  setTargetSlide(id);
   var prompt = 'Update the slide "' + s.title + '" (id: ' + s.id + '). Its current components: ' + (types.join(', ') || 'none') + '. Make it: ';
   var inp = el('chat-input');
   if (!inp) return;
@@ -2859,11 +5654,12 @@ function updateExportInfo() {
   }
   var info = el('export-info');
   if (info) {
+    var heavy = (doc.length > 1500000 || (pptx && pptx.length > 2000000)) ? ' ⚠ large export — see Performance.' : '';
     info.textContent = 'Slides: ' + DB.pres.slides.length +
       ' · HTML: ' + formatSize(doc.length) +
       (pptx ? ' · PPTX: ' + formatSize(pptx.length) : ' · PPTX: —') +
       ' · Version: v' + DB.version +
-      ' · .html = interactive design · .pptx = editable slides in PowerPoint · PDF = printing.';
+      ' · .html = interactive design · .pptx = editable slides in PowerPoint · PDF = printing.' + heavy;
   }
 }
 
@@ -3069,7 +5865,8 @@ function pptxComponentLines(comp) {
     case 'comparison': line(d.title, 2600, true); items = d.rows || []; for (var cm = 0; cm < items.length; cm++) { var rr = items[cm]; line((rr.dimension || rr.label || '') + ' · ' + (d.aLabel || 'A') + ': ' + (rr.a || '') + ' | ' + (d.bLabel || 'B') + ': ' + (rr.b || ''), 1700); } break;
     case 'quiz': line(d.title, 2400, true); items = d.items || []; for (var qz = 0; qz < items.length; qz++) { var q = items[qz]; line('Q' + (qz + 1) + '. ' + (q.question || ''), 1800, true); for (var oi = 0; oi < (q.options || []).length; oi++) line((oi === q.correct ? '✓ ' : '     ') + q.options[oi], 1600); } break;
     case 'table': line(d.title, 2600, true); items = d.rows || []; for (var tr = 0; tr < items.length; tr++) { var row = items[tr]; var cells = []; for (var tc = 0; tc < (d.columns || []).length; tc++) { var key = typeof d.columns[tc] === 'string' ? d.columns[tc] : d.columns[tc].key; cells.push(row[key] === undefined ? '' : row[key]); } line(cells.join('  |  '), 1600); } break;
-    case 'bar-chart': case 'column-chart': case 'pie-chart': case 'stat-chart': case 'funnel': line(d.title, 2400, true); items = t === 'funnel' ? (d.stages || []) : (t === 'pie-chart' ? (d.segments || []) : (d.items || d.options || [])); for (var ch = 0; ch < items.length; ch++) line((items[ch].label || '') + ': ' + (items[ch].value || ''), 1700); break;
+    case 'bar-chart': case 'column-chart': case 'pie-chart': case 'stat-chart': case 'funnel': case 'area-chart': case 'radar': case 'scatter': line(d.title, 2400, true); items = t === 'funnel' ? (d.stages || []) : (t === 'pie-chart' ? (d.segments || []) : (t === 'area-chart' || t === 'radar' ? ((d.series || [])[0] ? ((d.labels || []).map(function(lb, li) { return { label: lb, value: ((d.series || [])[0].values || [])[li] }; })) : []) : (d.items || d.options || d.points || []))); for (var ch = 0; ch < items.length; ch++) line((items[ch].label || '') + ': ' + (items[ch].value !== undefined ? items[ch].value : (items[ch].x + ', ' + items[ch].y)), 1700); break;
+    case 'org-tree': line(d.title, 2400, true); (function walkOrg(n, depth) { if (!n) return; line(new Array(depth + 1).join('  ') + '• ' + (n.name || '') + (n.role ? ' (' + n.role + ')' : ''), 1600, depth === 0); var chs = n.children || []; for (var oi2 = 0; oi2 < chs.length; oi2++) walkOrg(chs[oi2], depth + 1); })(d.root, 0); break;
     case 'line-chart': line(d.title, 2400, true); items = d.series || []; for (var ls = 0; ls < items.length; ls++) line((items[ls].name || 'Series') + ': ' + (items[ls].values || []).join(', '), 1700); break;
     case 'timeline': items = d.events || []; for (var tl = 0; tl < items.length; tl++) { var ev = items[tl]; line((ev.date ? ev.date + ' · ' : '') + (ev.title || '') + (ev.description ? ' — ' + ev.description : ''), 1700); } break;
     case 'process-flow': line(d.title, 2400, true); items = d.steps || []; for (var pf = 0; pf < items.length; pf++) line((pf + 1) + '. ' + (items[pf].label || '') + (items[pf].description ? ' — ' + items[pf].description : ''), 1700); break;
@@ -3162,7 +5959,8 @@ function buildPptx() {
     var slide = slides[i];
     var firstType = slide.components.length ? slide.components[0].type : '';
     var isCover = firstType === 'title-slide' || firstType === 'section-slide' || firstType === 'closing-slide';
-    var bg = isCover ? '312E81' : 'FFFFFF';
+    var brandBg = _validHex(_p('brandPrimary', ''));
+    var bg = isCover ? (brandBg ? brandBg.slice(1) : '312E81') : 'FFFFFF';
     var textColor = isCover ? 'FFFFFF' : '1E293B';
     var lines = [];
     for (var c = 0; c < slide.components.length; c++) lines = lines.concat(pptxComponentLines(slide.components[c]));
@@ -3271,6 +6069,8 @@ function render(val) {
   DB.activeSlideId = val.activeSlideId || '';
   DB.version = val.version || '1.0.0';
   DB.activeSessionId = val.activeSessionId || '';
+  DB.history = Array.isArray(val.history) ? val.history : [];
+  DB.snippets = Array.isArray(val.snippets) ? val.snippets.slice(0, 20) : [];
   DB.chatCache = (val.chatCache && typeof val.chatCache === 'object') ? val.chatCache : { sessionId: '', messages: [] };
   DB._instanceId = val._instanceId || '';
   DB._parentRecordId = val._parentRecordId || '';
@@ -3339,6 +6139,188 @@ function bindEvents() {
   el('btn-next').addEventListener('click', function() { gotoSlide(Math.min(DB.pres.slides.length - 1, _activeSlideIndex + 1)); });
   el('btn-refresh-preview').addEventListener('click', updatePreview);
 
+  var undoBtn = el('btn-undo');
+  if (undoBtn) undoBtn.addEventListener('click', undo);
+  var redoBtn = el('btn-redo');
+  if (redoBtn) redoBtn.addEventListener('click', redo);
+  var histBtn = el('btn-history');
+  if (histBtn) histBtn.addEventListener('click', openHistory);
+  var histClose = el('btn-history-close');
+  if (histClose) histClose.addEventListener('click', closeHistory);
+  var histOv = el('history-overlay');
+  if (histOv) {
+    histOv.addEventListener('click', function(e) { if (e.target === histOv) closeHistory(); });
+  }
+
+  var targetModeBtn = el('btn-target-mode');
+  if (targetModeBtn) targetModeBtn.addEventListener('click', toggleTargetMode);
+  var targetClearBtn = el('btn-target-clear');
+  if (targetClearBtn) targetClearBtn.addEventListener('click', clearTargetSlide);
+
+  var genNotesBtn = el('btn-gen-notes');
+  if (genNotesBtn) genNotesBtn.addEventListener('click', generateAllNotes);
+  var doctorBtn = el('btn-doctor');
+  if (doctorBtn) doctorBtn.addEventListener('click', openDoctor);
+  var doctorCloseBtn = el('btn-doctor-close');
+  if (doctorCloseBtn) doctorCloseBtn.addEventListener('click', closeDoctor);
+  var doctorOv = el('doctor-overlay');
+  if (doctorOv) {
+    doctorOv.addEventListener('click', function(e) { if (e.target === doctorOv) closeDoctor(); });
+  }
+
+  /* ── Phase 2 bindings ── */
+  var snippetsBtn = el('btn-snippets');
+  if (snippetsBtn) snippetsBtn.addEventListener('click', openSnippets);
+  var snipClose = el('btn-snippets-close');
+  if (snipClose) snipClose.addEventListener('click', closeSnippets);
+  var snipOv = el('snippets-overlay');
+  if (snipOv) snipOv.addEventListener('click', function(e) { if (e.target === snipOv) closeSnippets(); });
+  var snipSaveActive = el('btn-snip-save-active');
+  if (snipSaveActive) snipSaveActive.addEventListener('click', function() { saveSlideAsSnippet(DB.activeSlideId); });
+
+  var datasetsBtn = el('btn-datasets');
+  if (datasetsBtn) datasetsBtn.addEventListener('click', openDatasets);
+  var dsApply = el('btn-datasets-apply');
+  if (dsApply) dsApply.addEventListener('click', applyDatasets);
+  var dsClose = el('btn-datasets-close');
+  if (dsClose) dsClose.addEventListener('click', closeDatasets);
+
+  var arcBtn = el('btn-arc');
+  if (arcBtn) arcBtn.addEventListener('click', openArc);
+  var arcClose = el('btn-arc-close');
+  if (arcClose) arcClose.addEventListener('click', closeArc);
+  var arcOv = el('arc-overlay');
+  if (arcOv) arcOv.addEventListener('click', function(e) { if (e.target === arcOv) closeArc(); });
+
+  var a11yBtn = el('btn-a11y');
+  if (a11yBtn) a11yBtn.addEventListener('click', openA11y);
+  var a11yClose = el('btn-a11y-close');
+  if (a11yClose) a11yClose.addEventListener('click', closeA11y);
+  var a11yOv = el('a11y-overlay');
+  if (a11yOv) a11yOv.addEventListener('click', function(e) { if (e.target === a11yOv) closeA11y(); });
+
+  var translateBtn = el('btn-translate');
+  if (translateBtn) translateBtn.addEventListener('click', function() { openTranslate(''); });
+  var translateGo = el('btn-translate-go');
+  if (translateGo) translateGo.addEventListener('click', doTranslate);
+  var translateClose = el('btn-translate-close');
+  if (translateClose) translateClose.addEventListener('click', closeTranslate);
+
+  var splitBtn = el('btn-split');
+  if (splitBtn) splitBtn.addEventListener('click', openSplitter);
+  var splitClose = el('btn-split-close');
+  if (splitClose) splitClose.addEventListener('click', closeSplitter);
+  var splitOv = el('split-overlay');
+  if (splitOv) splitOv.addEventListener('click', function(e) { if (e.target === splitOv) closeSplitter(); });
+
+  var outlineBtn = el('btn-outline-gen');
+  if (outlineBtn) outlineBtn.addEventListener('click', openOutlineModal);
+  var outlineClose = el('btn-outline-close');
+  if (outlineClose) outlineClose.addEventListener('click', closeOutlineModal);
+  var outlineUploadBtn = el('btn-outline-upload');
+  if (outlineUploadBtn) outlineUploadBtn.addEventListener('click', outlineUpload);
+  var outlineGo = el('btn-outline-generate');
+  if (outlineGo) outlineGo.addEventListener('click', runOutlineGeneration);
+
+  var inspClose = el('btn-insp-close');
+  if (inspClose) inspClose.addEventListener('click', closeInspector);
+  var inspInputs = ['insp-title', 'insp-notes', 'insp-duration', 'insp-transition', 'insp-bg'];
+  for (var ii = 0; ii < inspInputs.length; ii++) {
+    var inpEl = el(inspInputs[ii]);
+    if (inpEl) inpEl.addEventListener('input', debounce(commitInspector, 500));
+  }
+  var inspLock = el('insp-locked');
+  if (inspLock) inspLock.addEventListener('change', commitInspector);
+  var inspSnippet = el('btn-insp-snippet');
+  if (inspSnippet) inspSnippet.addEventListener('click', function() { saveSlideAsSnippet(_inspectorSlideId); });
+  var inspTarget = el('btn-insp-target');
+  if (inspTarget) inspTarget.addEventListener('click', function() { if (_inspectorSlideId) { setTargetSlide(_inspectorSlideId); switchChatTab('chat'); } });
+
+  var shareBtn = el('btn-export-share');
+  if (shareBtn) shareBtn.addEventListener('click', shareLink);
+  var embedBtn = el('btn-export-embed');
+  if (embedBtn) embedBtn.addEventListener('click', function() { openEmbedModal(''); });
+  var embedClose = el('btn-embed-close');
+  if (embedClose) embedClose.addEventListener('click', closeEmbedModal);
+  var embedCopy = el('btn-embed-copy');
+  if (embedCopy) embedCopy.addEventListener('click', copyEmbedCode);
+  var embedOv = el('embed-overlay');
+  if (embedOv) embedOv.addEventListener('click', function(e) { if (e.target === embedOv) closeEmbedModal(); });
+
+  var notesPdfBtn = el('btn-export-notes');
+  if (notesPdfBtn) notesPdfBtn.addEventListener('click', downloadNotesPdf);
+
+  var themeSel = el('theme-select');
+  if (themeSel) {
+    themeSel.addEventListener('change', function() {
+      if (!canWrite()) { syncThemeSelect(); return; }
+      var t = String(this.value || '').toLowerCase();
+      if (!THEMES[t] || t === DB.pres.theme) return;
+      pushHistory('Theme: ' + t);
+      DB.pres.theme = t;
+      persist();
+      renderStrip();
+      updatePreview();
+      try { tool.notify('Theme: ' + THEMES[t].name, 'success'); } catch (e) {}
+    });
+  }
+
+  var deckTransSel = el('deck-transition');
+  if (deckTransSel) {
+    deckTransSel.addEventListener('change', function() {
+      if (!canWrite()) { syncDeckTransition(); return; }
+      var t = String(this.value || '');
+      if (t === DB.pres.transition) return;
+      pushHistory('Deck transition: ' + (t || 'crossfade'));
+      DB.pres.transition = ['slide', 'zoom', 'flip'].indexOf(t) !== -1 ? t : '';
+      persist();
+      updatePreview();
+      try { tool.notify('Deck transition: ' + (t || 'crossfade'), 'success'); } catch (e) {}
+    });
+  }
+
+  /* ── Phase 3 bindings ── */
+  var voiceBtn = el('btn-voice');
+  if (voiceBtn) voiceBtn.addEventListener('click', toggleVoiceInput);
+
+  var timingBtn = el('btn-timing');
+  if (timingBtn) timingBtn.addEventListener('click', estimateTiming);
+  var proofBtn = el('btn-proof');
+  if (proofBtn) proofBtn.addEventListener('click', proofreadDeck);
+
+  var bulkDel = el('btn-bulk-delete');
+  if (bulkDel) bulkDel.addEventListener('click', bulkDelete);
+  var bulkLock = el('btn-bulk-lock');
+  if (bulkLock) bulkLock.addEventListener('click', function() { bulkSetLock(true); });
+  var bulkUnlock = el('btn-bulk-unlock');
+  if (bulkUnlock) bulkUnlock.addEventListener('click', function() { bulkSetLock(false); });
+  var bulkRestyle = el('btn-bulk-restyle');
+  if (bulkRestyle) bulkRestyle.addEventListener('click', bulkRestyle);
+  var bulkAi = el('btn-bulk-ai');
+  if (bulkAi) bulkAi.addEventListener('click', bulkAiPrompt);
+  var bulkClear = el('btn-bulk-clear');
+  if (bulkClear) bulkClear.addEventListener('click', clearSelection);
+
+  var pngBtn = el('btn-export-png');
+  if (pngBtn) pngBtn.addEventListener('click', exportSlidesPng);
+  var outlineBtn = el('btn-export-outline');
+  if (outlineBtn) outlineBtn.addEventListener('click', openMdModal);
+  var mdClose = el('btn-md-close');
+  if (mdClose) mdClose.addEventListener('click', closeMdModal);
+  var mdCopy = el('btn-md-copy');
+  if (mdCopy) mdCopy.addEventListener('click', copyOutline);
+  var mdDl = el('btn-md-download');
+  if (mdDl) mdDl.addEventListener('click', downloadOutline);
+  var mdOv = el('md-overlay');
+  if (mdOv) mdOv.addEventListener('click', function(e) { if (e.target === mdOv) closeMdModal(); });
+
+  var perfBtn = el('btn-perf');
+  if (perfBtn) perfBtn.addEventListener('click', openPerf);
+  var perfClose = el('btn-perf-close');
+  if (perfClose) perfClose.addEventListener('click', closePerf);
+  var perfOv = el('perf-overlay');
+  if (perfOv) perfOv.addEventListener('click', function(e) { if (e.target === perfOv) closePerf(); });
+
   el('btn-export-download').addEventListener('click', downloadExport);
   el('btn-export-pptx').addEventListener('click', downloadPptx);
   el('btn-export-copy').addEventListener('click', copyExport);
@@ -3349,7 +6331,10 @@ function bindEvents() {
   if (titleInput) {
     titleInput.addEventListener('input', debounce(function() {
       if (!canWrite()) return;
-      DB.pres.title = titleInput.value.trim();
+      var t = titleInput.value.trim();
+      if (t === DB.pres.title) return;
+      pushHistory('Rename deck');
+      DB.pres.title = t;
       persist();
       renderStrip();
       renderSlidesList();
@@ -3386,7 +6371,9 @@ function bindEvents() {
   });
 
   document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') hideConfirm();
+    if (e.key === 'Escape') {
+      hideConfirm(); closeHistory(); closeDoctor(); closeSnippets(); closeDatasets(); closeArc(); closeA11y(); closeTranslate(); closeSplitter(); closeOutlineModal(); closeEmbedModal(); closeInspector(); closeMdModal(); closePerf();
+    }
   });
 }
 
@@ -3416,7 +6403,11 @@ tool.onReady(function(val, fields) {
     { name: 'allowAi', label: 'Enable AI Prompt Relay', type: 'toggle', default: 'yes', severity: 'mandatory', hint: 'Required for chat-driven presentation generation.' },
     { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Chat history is stored in CMS type ai-chat-sessions-uniconbaseapps. Add it to allowedObjectTypes with role: editor, scope: instance.' },
     { name: 'allowExportPdf', label: 'Enable PDF Export', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Enables the Export PDF button in the Export tab.' },
-    { name: 'lang', label: 'Presentation Language', type: 'text', default: 'en', severity: 'optional', hint: 'Language used in generated slide copy (en, tr, fr, de, es, ar).' }
+    { name: 'lang', label: 'Presentation Language', type: 'text', default: 'en', severity: 'optional', hint: 'Language used in generated slide copy (en, tr, fr, de, es, ar).' },
+    { name: 'brandPrimary', label: 'Brand Primary Color', type: 'text', default: '', severity: 'optional', hint: 'Hex color (e.g. #7c3aed) used as the accent across decks — cover background, bullets, charts and tabs. The AI honors it too.' },
+    { name: 'brandSecondary', label: 'Brand Secondary Color', type: 'text', default: '', severity: 'optional', hint: 'Optional second brand color (hex). Mentioned to the AI when designing.' },
+    { name: 'brandFont', label: 'Brand Font', type: 'text', default: '', severity: 'optional', hint: 'Font stack used for slide text (e.g. Montserrat, Georgia). Applied to exported decks.' },
+    { name: 'brandLogo', label: 'Brand Logo', type: 'text', default: '', severity: 'optional', hint: 'Optional logo reference shared with the AI prompt.' }
   ]);
 
   var aiParam = tool.param('allowAi');
@@ -3433,6 +6424,8 @@ tool.onReady(function(val, fields) {
   try { tool.reportValid(true); } catch (e) {}
 
   refreshUser();
+  refreshPermittedUsers();
+  saveBrandPreset();
   render(val);
   bindEvents();
   updateConnStatus('ok');
@@ -3458,6 +6451,14 @@ tool.onValueChange(function(v) {
     var json = JSON.stringify(v || null);
     if (json === _lastStagedValue) return; // echo of our own staged write — skipping avoids an iframe rebuild/flicker
   } catch (e) {}
+  /* G3 — collaboration: an update that is NOT our own echo is someone else's edit */
+  if (_initialized && v && v.pres) {
+    try {
+      if (JSON.stringify(v.pres) !== JSON.stringify(DB.pres)) {
+        tool.notify('🔄 Another user updated this deck — changes reloaded.', 'info');
+      }
+    } catch (e) {}
+  }
   render(v);
 });
 tool.onReadonlyChange(function(ro) {

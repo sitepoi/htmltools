@@ -20,10 +20,11 @@ function fakeEl(id) {
     style: {}, disabled: false, value: '', textContent: '', innerHTML: '',
     srcdoc: '', className: '', classList: {
       _open: false,
-      add: function(c) { if (c === 'open') this._open = true; },
-      remove: function(c) { if (c === 'open') this._open = false; },
-      toggle: function(c) { if (c === 'open') this._open = !this._open; },
-      contains: function(c) { return c === 'open' ? this._open : false; }
+      _set: {},
+      add: function(c) { if (c === 'open') this._open = true; this._set[c] = true; },
+      remove: function(c) { if (c === 'open') this._open = false; this._set[c] = false; },
+      toggle: function(c) { if (c === 'open') this._open = !this._open; this._set[c] = !this._set[c]; },
+      contains: function(c) { return c === 'open' ? this._open : !!this._set[c]; }
     },
     options: [], children: [], childNodes: [],
     addEventListener: function(evt, cb) { (e._listeners = e._listeners || {})[evt] = cb; },
@@ -215,6 +216,67 @@ T(DB.blocks[0].data.html === '<div>raw edited</div>', 'html blocks store edits i
 
 /* resolveTitle falls back when parent fields unavailable */
 T(resolveTitle() === 'Legal Document', 'resolveTitle fallback');
+
+/* Phase-1: variables drawer + whole-document update */
+DB.blocks = [{ type: 'clause', data: { number: '1', text: 'Between {{partyA}} and {{partyB}}.' } }];
+DB.variables = { partyA: { label: 'Party A', value: '' }, partyB: { label: 'Party B', value: '' } };
+scanBlocksForVars();
+openDrawer('variables');
+T(_els['drawer-variables'].classList.contains('open') === true, 'variables drawer opens');
+renderVariables();
+T(_els['var-list'].innerHTML.indexOf('partyA') !== -1, 'variable rows rendered');
+setVariableValue('partyA', 'Acme Holdings');
+T(blocksToHtml().indexOf('Acme Holdings') !== -1, 'variable value updates whole document');
+T(_els['btn-open-variables'].textContent.indexOf('Variables (2, 1 empty)') !== -1, 'variable badge counts totals and empties');
+
+/* Phase-1: page options + undo/redo buttons */
+applyPageOption('pageSize', 'Letter');
+T(DB.settings.pageSize === 'Letter', 'page size option applied');
+T(_els['doc-preview'].srcdoc.indexOf('width:216mm') !== -1, 'preview re-mounted with Letter pages');
+applyPageOption('pageSize', 'A4');
+var undoBtn = _els['btn-undo'];
+var redoBtn = _els['btn-redo'];
+T(!!undoBtn && !!redoBtn, 'undo/redo buttons exist');
+_snapshotPush();
+deleteBlockAt(0);
+undo();
+T(DB.blocks.length === 1, 'undo button restores block');
+redo();
+T(DB.blocks.length === 0, 'redo reapplies');
+undo();
+
+/* Phase-2 wiring: settings lists, macros, nav, zoom, focus, status */
+openDrawer('settings');
+renderSettingsPhase2();
+T(_els['gap-list'] && _els['gap-list'].innerHTML !== undefined, 'gap analysis list rendered');
+T(_els['rules-list'] && _els['rules-list'].innerHTML !== undefined, 'type rules list rendered');
+T(_els['history-list'] && _els['history-list'].innerHTML !== undefined, 'version history list rendered');
+renderMacroChips();
+T(_els['macro-chips'].innerHTML.indexOf('macro-chip') !== -1, 'macro chips rendered');
+renderMacroList();
+T(_els['macro-list'].innerHTML.indexOf('/plain') !== -1, 'macro list rendered');
+toggleNav();
+T(_els['nav-panel'].classList.contains('open') === true, 'nav panel opens');
+toggleNav();
+T(_els['nav-panel'].classList.contains('open') === false, 'nav panel closes');
+applyZoom(1.2);
+T(_zoom === 1.2, 'zoom applied');
+toggleFocusMode();
+T(_els['app'].classList.contains('focus-mode') === true, 'focus mode on');
+toggleFocusMode();
+T(_els['app'].classList.contains('focus-mode') === false, 'focus mode off');
+renderStatus();
+T(_els['status-chip'].textContent.indexOf('Draft') !== -1, 'status chip shown');
+setDocStatus('in-review');
+T(DB.status === 'in-review', 'status change applied');
+DB.blocks = [{ type: 'clause', data: { number: '1', text: 'FindMe here' } }];
+saveBlockAsSnippet(0);
+renderSnippets();
+T(DB.snippets.length === 1 && _els['snippet-list'].innerHTML.indexOf('Clause') !== -1, 'snippet saved and rendered');
+addComment(0, 'Review this');
+T((DB.comments[0] || []).length === 1, 'comment added via panel flow');
+renderCommentPanel(0);
+T(_els['comment-list'].innerHTML.indexOf('Review this') !== -1, 'comment panel rendered');
 
 console.log('');
 if (failures.length) {

@@ -214,6 +214,8 @@ var _pinching = false;
 var _restoreThumb = '';
 var _restoreName = '';
 var _frTemplate = 'none';
+var _aiLayout = null;      // AI-proposed collage layout override
+var _avifSupport = null;   // cached AVIF encode capability probe
 
 // ── Small helpers ─────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -967,6 +969,12 @@ function updateConvertEst() {
   if (!_working) { el('cnv-est').style.display = 'none'; return; }
   var mime = v('cnv-format');
   var q = +v('cnv-quality');
+  if (mime === 'image/avif' && !avifSupported()) {
+    var boxA = el('cnv-est');
+    boxA.style.display = 'block';
+    boxA.innerHTML = '⚠️ This browser cannot encode AVIF. Use WebP (nearly as small) instead.';
+    return;
+  }
   estimateSize(_working, mime, q, function (size) {
     var box = el('cnv-est');
     if (!size) { box.style.display = 'none'; return; }
@@ -983,6 +991,10 @@ function scheduleConvertEst() {
 function convertDownload() {
   if (!_working) { needImage(); return; }
   var mime = v('cnv-format');
+  if (mime === 'image/avif' && !avifSupported()) {
+    notify('This browser cannot encode AVIF — pick WebP instead', 'warning');
+    return;
+  }
   var q = +v('cnv-quality');
   var src = (mime === 'image/jpeg') ? flatten(_working, v('cnv-bg')) : _working;
   saveCanvas(src, baseName() + '-converted', mime, q);
@@ -2198,6 +2210,7 @@ function applyLogo() {
 
 // ── Collage ───────────────────────────────────────────────────
 function getLayout() {
+  if (_aiLayout) return _aiLayout;
   var id = _colLayout;
   if (id === 'custom') {
     var rows = clamp(Math.round(parseNum(v('col-rows'))), 1, 5);
@@ -3283,8 +3296,10 @@ function openMetaModal() {
   var html = '<table class="iet-meta-table">' + rows.map(function (r) {
     return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>';
   }).join('') + '</table>' +
+    '<div class="iet-row" style="margin-top:10px"><button class="iet-btn" id="iet-meta-ai" type="button">🤖 Write CMS metadata (title, description, tags)</button></div>' +
     '<div class="iet-subhint" style="margin-top:10px">✅ Privacy by design: every export from this tool is re-encoded by the browser, so EXIF / GPS metadata never leaves your device.</div>';
   openModal('ℹ️ Image info &amp; metadata', html);
+  el('iet-meta-ai').addEventListener('click', function () { openAiMeta(); });
 }
 
 // ── Settings persistence ──────────────────────────────────────
@@ -3543,6 +3558,17 @@ function wireEvents() {
   el('cnv-html').addEventListener('click', function () { snippetModal('html'); });
   el('cnv-pdf').addEventListener('click', exportPdf);
   el('cnv-gif').addEventListener('click', openGifPicker);
+  el('cnv-save-proj').addEventListener('click', saveProject);
+  el('cnv-load-proj').addEventListener('click', openProjectPicker);
+  el('iet-project-file').addEventListener('change', function () {
+    var files = this.files;
+    this.value = '';
+    if (files && files.length) loadProjectFile(files[0]);
+  });
+  el('flt-advice').addEventListener('click', aiEnhanceAdvice);
+  el('flt-bg-guide').addEventListener('click', aiBgGuide);
+  el('col-ai').addEventListener('click', aiSuggestLayout);
+  el('ocr-tr').addEventListener('click', ocrTranslate);
   el('iet-gif-file').addEventListener('change', function () {
     var files = this.files;
     this.value = '';
@@ -3786,6 +3812,7 @@ function wireEvents() {
     while (btn && btn !== this && !(btn.classList && btn.classList.contains('iet-layout-btn'))) btn = btn.parentNode;
     if (!btn || btn === this) return;
     _colLayout = btn.getAttribute('data-layout');
+    _aiLayout = null;
     updateColLayoutChips();
     renderSlotGrid();
     persistSettingsSoon();
@@ -4002,6 +4029,265 @@ function setupResize() {
   } catch (e) {
     window.addEventListener('resize', function () { renderPreview(); });
   }
+}
+
+// ── Phase 3: AI tools + project save/load + AVIF probe ─────────
+function avifSupported() {
+  if (_avifSupport !== null) return _avifSupport;
+  _avifSupport = false;
+  try {
+    var c = makeCanvas(2, 2);
+    _avifSupport = String(c.toDataURL('image/avif', 0.8) || '').indexOf('image/avif') === 0;
+  } catch (e) {}
+  return _avifSupport;
+}
+function openProjectPicker() {
+  el('iet-project-file').click();
+}
+function saveProject() {
+  if (!_working) { needImage(); return; }
+  if (_working.width * _working.height > 12e6) notify('Large image — project file will be big', 'info');
+  setBusy('Building project file…');
+  setTimeout(function () {
+    try {
+      var dataUrl = _working.toDataURL('image/png');
+      var proj = {
+        v: 'iet-project',
+        savedAt: new Date().toISOString(),
+        name: _origMeta.name || 'image',
+        ops: _opLog.map(function (o) { return o.label; }),
+        settings: collectSettings(),
+        image: dataUrl
+      };
+      triggerDownload(new Blob([JSON.stringify(proj)], { type: 'application/json' }), baseName() + '.ietproject.json');
+      clearBusy();
+      notify('Project saved — image, ' + proj.ops.length + ' steps and settings', 'success');
+    } catch (e) {
+      clearBusy();
+      notify('Project save failed: ' + e, 'error');
+    }
+  }, 30);
+}
+function loadProjectFile(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var proj;
+    try {
+      proj = JSON.parse(reader.result);
+    } catch (e) {
+      notify('Not a valid project JSON', 'error');
+      return;
+    }
+    if (!proj || proj.v !== 'iet-project' || !proj.image || proj.image.indexOf('data:image/') !== 0) {
+      notify('Not a valid ImageEditingTools project file', 'error');
+      return;
+    }
+    setBusy('Restoring project…');
+    dataUrlToCanvas(proj.image, function (err, c) {
+      clearBusy();
+      if (err) { notify('Project image could not be decoded: ' + err, 'error'); return; }
+      setWorking(c, { name: proj.name || 'project.png', size: 0, type: 'image/png' });
+      if (Array.isArray(proj.ops)) {
+        _opLog = proj.ops.map(function (l) { return { label: String(l), time: Date.now() }; });
+        _opIndex = _opLog.length;
+        updateHeader();
+        renderOpLog();
+      }
+      if (proj.settings && typeof proj.settings === 'object') {
+        try { applySettings(proj.settings); } catch (e2) {}
+      }
+      notify('Project restored — ' + _opLog.length + ' steps shown in 🕘 Steps (undo history is not included)', 'success');
+    });
+  };
+  reader.onerror = function () { notify('Could not read the project file', 'error'); };
+  reader.readAsText(file);
+}
+// ── AI collage layout ─────────────────────────────────────────
+function aiSuggestLayout() {
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  syncSlots();
+  var filled = [];
+  for (var i = 0; i < _slots.length; i++) {
+    if (_slots[i]) filled.push(Math.round(_slots[i].canvas.width / Math.max(1, _slots[i].canvas.height) * 100) / 100);
+  }
+  if (!filled.length) { notify('Add at least one image to a slot first', 'warning'); return; }
+  openModal('✨ AI layout', '<div class="iet-subhint">Asking the AI for a layout…</div>');
+  var prompt = [
+    'I am building a photo collage with ' + filled.length + ' images whose aspect ratios (w/h) are: ' + filled.join(', ') + '.',
+    'Design a balanced collage layout covering the full unit square [0,1]×[0,1].',
+    'Return STRICT JSON only, no commentary, in the form:',
+    '{"slots":[{"x":0,"y":0,"w":0.5,"h":1}, ...]}',
+    'Rules: every slot must have x,y,w,h numbers between 0 and 1; w>0.05 and h>0.05; slots may share edges but should not overlap; the union should roughly cover the square.'
+  ].join('\n');
+  tool.requestAI(prompt, 'Number of photos: ' + filled.length, function (err, resp) {
+    if (err && !resp) {
+      openModal('✨ AI layout', '<div class="iet-status error">AI failed: ' + esc(err) + '</div>');
+      return;
+    }
+    var s = String(resp || '').replace(/```json/gi, '').replace(/```/g, '');
+    var a = s.indexOf('{');
+    var b = s.lastIndexOf('}');
+    var parsed = null;
+    if (a !== -1 && b > a) {
+      try { parsed = JSON.parse(s.slice(a, b + 1)); } catch (e) { parsed = null; }
+    }
+    if (!parsed || !Array.isArray(parsed.slots) || !parsed.slots.length) {
+      openModal('✨ AI layout', '<div class="iet-status warn">The AI did not return a usable layout. Try again.</div><pre>' + esc(String(resp || '').slice(0, 600)) + '</pre>');
+      return;
+    }
+    var slots = [];
+    for (var j = 0; j < parsed.slots.length; j++) {
+      var r = parsed.slots[j];
+      if (typeof r.x !== 'number' || typeof r.y !== 'number' || typeof r.w !== 'number' || typeof r.h !== 'number') continue;
+      if (r.w < 0.05 || r.h < 0.05) continue;
+      slots.push({ x: Math.max(0, Math.min(1, r.x)), y: Math.max(0, Math.min(1, r.y)), w: Math.max(0.05, Math.min(1, r.w)), h: Math.max(0.05, Math.min(1, r.h)) });
+      if (slots.length >= 25) break;
+    }
+    if (!slots.length) {
+      openModal('✨ AI layout', '<div class="iet-status warn">The AI layout was unusable. Try again.</div>');
+      return;
+    }
+    _aiLayout = { label: 'AI layout', slots: slots };
+    closeModal();
+    switchTab('collage');
+    renderSlotGrid();
+    notify('AI layout applied (' + slots.length + ' slots) — fill the slots, then build', 'success');
+  });
+}
+// ── AI background removal guide ───────────────────────────────
+function aiBgGuide() {
+  if (!_working) { needImage(); return; }
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  openModal('🧹 Background removal guide', '<div class="iet-subhint">Analyzing…</div>');
+  var context = 'Image ' + _working.width + '×' + _working.height + 'px. ' +
+    'Available tools: crop, portrait blur (filters tab), pixelate/blur area, duotone, filters, watermark.';
+  try {
+    context += ' The image is attached as a base64 JPEG data URL: ' + downscaleForOcr(_working).toDataURL('image/jpeg', 0.7);
+  } catch (e) {}
+  var prompt = [
+    'I want to remove or de-emphasize the background of this image using a simple browser canvas editor (no AI cutout available).',
+    'Give me: 1) A one-line assessment of how hard the background is to remove.',
+    '2) A step-by-step recipe using ONLY these tools: crop, portrait blur, area blur/pixelate, filters (brightness/contrast/saturation), watermark.',
+    '3) If you can see the image, describe the subject and background briefly.',
+    'Keep it under 12 lines.'
+  ].join('\n');
+  tool.requestAI(prompt, context, function (err, resp) {
+    if (err && !resp) {
+      openModal('🧹 Background removal guide', '<div class="iet-status error">AI failed: ' + esc(err) + '</div>');
+      return;
+    }
+    openModal('🧹 Background removal guide',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(String(resp || '')) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px"><button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button></div>');
+    bindSnippetCopy();
+  });
+}
+// ── AI enhance recipe ─────────────────────────────────────────
+function aiEnhanceAdvice() {
+  if (!_working) { needImage(); return; }
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  var stats = null;
+  try { stats = imageStats(_working); } catch (e) {}
+  var context = 'Image ' + _working.width + '×' + _working.height + 'px. Luminance mean=' +
+    (stats ? Math.round(stats.mean) : '?') + ', contrast std=' + (stats ? Math.round(stats.std) : '?') + ' (0-255 scale).';
+  openModal('🩹 Enhance recipe', '<div class="iet-subhint">Asking the AI…</div>');
+  var prompt = [
+    'Recommend an enhancement recipe for this photo. Return STRICT JSON only:',
+    '{"brightness":100,"contrast":100,"saturation":100,"note":"short explanation"}',
+    'Ranges: brightness 50-150, contrast 50-150, saturation 0-200. Base values are 100 (unchanged).',
+    'Consider the luminance statistics above (low mean = dark image, low std = flat image).'
+  ].join('\n');
+  tool.requestAI(prompt, context, function (err, resp) {
+    var s = String(resp || '').replace(/```json/gi, '').replace(/```/g, '');
+    var a = s.indexOf('{');
+    var b = s.lastIndexOf('}');
+    var parsed = null;
+    if (a !== -1 && b > a) {
+      try { parsed = JSON.parse(s.slice(a, b + 1)); } catch (e) { parsed = null; }
+    }
+    if (parsed && (typeof parsed.brightness === 'number' || typeof parsed.contrast === 'number' || typeof parsed.saturation === 'number')) {
+      setV('flt-brightness', clamp(Math.round(parsed.brightness || 100), 50, 150));
+      setV('flt-contrast', clamp(Math.round(parsed.contrast || 100), 50, 150));
+      setV('flt-saturate', clamp(Math.round(parsed.saturation || 100), 0, 200));
+      _fltPreset = 'custom';
+      updateFilterLabels();
+      updateFilterPresetChips();
+      closeModal();
+      switchTab('filters');
+      notify('Recipe applied to the sliders — press "Apply to image" to bake it' + (parsed.note ? ' (' + esc(String(parsed.note).slice(0, 80)) + ')' : ''), 'success');
+      return;
+    }
+    openModal('🩹 Enhance recipe',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(String(resp || err || '')) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px"><button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button></div>');
+    bindSnippetCopy();
+  });
+}
+// ── AI metadata writer ────────────────────────────────────────
+function openAiMeta() {
+  if (!_working) { needImage(); return; }
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  openModal('🤖 AI metadata', '<div class="iet-subhint">Writing metadata…</div>');
+  var context = 'Image ' + _working.width + '×' + _working.height + 'px, file: ' + esc(_origMeta.name || '') + '.';
+  try {
+    context += ' The image is attached as a base64 JPEG data URL: ' + downscaleForOcr(_working).toDataURL('image/jpeg', 0.7);
+  } catch (e) {}
+  var prompt = [
+    'Write CMS metadata for the attached/described image. Return STRICT JSON only:',
+    '{"title":"short title","description":"1-2 sentences","tags":["tag1","tag2","tag3","tag4","tag5"]}'
+  ].join('\n');
+  tool.requestAI(prompt, context, function (err, resp) {
+    var s = String(resp || '').replace(/```json/gi, '').replace(/```/g, '');
+    var a = s.indexOf('{');
+    var b = s.lastIndexOf('}');
+    var parsed = null;
+    if (a !== -1 && b > a) {
+      try { parsed = JSON.parse(s.slice(a, b + 1)); } catch (e) { parsed = null; }
+    }
+    var pretty;
+    if (parsed) {
+      pretty = 'TITLE: ' + (parsed.title || '') + '\nDESCRIPTION: ' + (parsed.description || '') + '\nTAGS: ' + (Array.isArray(parsed.tags) ? parsed.tags.join(', ') : '');
+    } else {
+      pretty = String(resp || err || 'No response');
+    }
+    openModal('🤖 AI metadata',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(pretty) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px"><button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button></div>');
+    bindSnippetCopy();
+  });
+}
+// ── OCR translation ───────────────────────────────────────────
+function ocrTranslate() {
+  var text = el('ocr-result').value;
+  if (!text.trim()) { notify('Nothing to translate — extract text first', 'info'); return; }
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  var lang = v('ocr-tr-lang');
+  openModal('🌐 Translate to ' + lang, '<div class="iet-subhint">Translating…</div>');
+  tool.requestAI('Translate the following text to ' + lang + '. Return ONLY the translation, preserving line breaks.', String(text).slice(0, 6000), function (err, resp) {
+    if (err && !resp) {
+      openModal('🌐 Translate', '<div class="iet-status error">AI failed: ' + esc(err) + '</div>');
+      return;
+    }
+    openModal('🌐 Translation (' + lang + ')',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(String(resp || '')) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px"><button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button></div>');
+    bindSnippetCopy();
+  });
 }
 
 // ── Boot ──────────────────────────────────────────────────────

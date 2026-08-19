@@ -133,7 +133,10 @@
     <div class="hero-meta">
       <span class="hero-chip">📅 2026-08-18</span>
       <span class="hero-chip">📁 GENERATING_CONTENT/AIChatPresentationBuilder/</span>
-      <span class="hero-chip">🧩 47 components · 2-level suggestions · HTML/PPTX/PDF export</span>
+      <span class="hero-chip">🧩 51 components · 2-level suggestions · HTML/PPTX/PDF export</span>
+      <span class="hero-chip">🟢 Phase 1 — 9/9 shipped</span>
+      <span class="hero-chip">🟡 Phase 2 — 18/18 shipped</span>
+      <span class="hero-chip">🟣 Phase 3 — 16/16 shipped · 43/43 complete</span>
     </div>
   </div>
 </header>
@@ -156,26 +159,32 @@
 
   <div class="baseline">
     <h2>✅ Baseline — already built (not in the backlog)</h2>
-    Chat-driven single-deck builder · JSON-only AI contract (full deck + targeted patches) · 47-type visual component library injected into every prompt · two-level clickable suggestions (deck + slide) · live streaming thinking bubble · chat sessions (ai-chat-sessions-uniconbaseapps) · slide strip with active slide + crossfade preview · Slides manager (add/rename/move/duplicate/delete/JSON edit) · speaker notes · dependency-free PPTX/PDF/standalone-HTML export · safe margins + full-bleed covers · echo-guarded no-flicker preview.
+    Chat-driven single-deck builder · JSON-only AI contract (full deck + targeted patches) · 51-type visual component library injected into every prompt · two-level clickable suggestions (deck + slide) · live streaming thinking bubble · chat sessions (ai-chat-sessions-uniconbaseapps) · slide strip with active slide + crossfade preview · Slides manager (add/rename/move/duplicate/delete/JSON edit) · speaker notes · dependency-free PPTX/PDF/standalone-HTML export · safe margins + full-bleed covers · echo-guarded no-flicker preview.
+    <p style="margin:10px 0 2px;font-size:12px;color:#6d28d9;font-weight:700">🟢 Phase 1 shipped 2026-08-19 (9/9): targeted slide editing 🎯 · undo/redo + version history · theme system (7 themes, one-word restyle) · brand kit params · drag &amp; drop reorder · slide locks 🔒 · one-click speaker notes 🗒 · template gallery (6 starters) · Deck Doctor 🧪.</p>
+    <p style="margin:4px 0 2px;font-size:12px;color:#b45309;font-weight:700">🟡 Phase 2 shipped 2026-08-19 (18/18): agentic multi-step builds 🧭 · design variants A/B/C · slash commands (/notes /restyle /translate /review…) · AI deck review with fix buttons · 4 new chart components (area, radar, scatter, org-tree) · staggered entrance animations · slide inspector drawer · snippet library · outline from text/PDF · live datasets for charts · story arc advisor · one-click translation · smart slide splitter · presenter mode 🎤 · notes-pages PDF · share link · embed snippet · accessibility audit ♿.</p>
+    <p style="margin:4px 0 2px;font-size:12px;color:#7c3aed;font-weight:700">🟣 Phase 3 shipped 2026-08-19 (16/16): voice input 🎙 · whole-deck transitions · cover background designer (mesh/shine/dots/lines) · offline gradient image placeholders · bulk select &amp; actions · AI timing estimates (⏱ chip) · kiosk autoplay · laser pointer + ink drawing · overview grid · rehearsal timer · slides as PNG (zip) · outline export (.md) · brand preset memory · collaboration awareness · proofreading pass · export size &amp; performance report.</p>
     <div class="chips">
       <span>Chat · AI</span><span>Components</span><span>Patches</span><span>Suggestions</span><span>Present</span><span>Slides</span><span>HTML</span><span>PPTX</span><span>PDF</span><span>Notes</span>
+      <span>🎯 Target</span><span>↩ Undo</span><span>🎨 Themes</span><span>🔒 Lock</span><span>🗂 Templates</span><span>🧪 Doctor</span>
+      <span>🧭 Agentic</span><span>🎛 Variants</span><span>⌨ Slash</span><span>✏️ Inspector</span><span>🗃 Datasets</span><span>🌐 Translate</span><span>♿ A11y</span>
+      <span>🎙 Voice</span><span>▶ Kiosk</span><span>🔦 Laser</span><span>⊞ Grid</span><span>⏱ Rehearsal</span><span>🖼 PNG</span><span>📈 Perf</span>
     </div>
   </div>
 
   <div class="phases">
     <div class="phase phase-1">
-      <h3>🟢 Phase 1 — Quick wins (apply first)</h3>
-      <p>High value, low risk, mostly one-file changes. Do these before anything else.</p>
+      <h3>🟢 Phase 1 — Quick wins <span style="font-size:10.5px;color:#059669;font-weight:800">✅ SHIPPED 9/9</span></h3>
+      <p>High value, low risk, mostly one-file changes. <b>All nine are done and live in the tool.</b></p>
       <div class="ids" id="phase-1-ids"></div>
     </div>
     <div class="phase phase-2">
-      <h3>🟡 Phase 2 — Core expansion</h3>
-      <p>The meat: richer AI workflows, design engine, content intelligence, presenter mode.</p>
+      <h3>🟡 Phase 2 — Core expansion <span style="font-size:10.5px;color:#059669;font-weight:800">✅ SHIPPED 18/18</span></h3>
+      <p>The meat: richer AI workflows, design engine, content intelligence, presenter mode. <b>All eighteen are done and live in the tool.</b></p>
       <div class="ids" id="phase-2-ids"></div>
     </div>
     <div class="phase phase-3">
-      <h3>🟣 Phase 3 — Nice-to-haves</h3>
-      <p>Polish, power-user and sharing features. Apply when the core is stable.</p>
+      <h3>🟣 Phase 3 — Nice-to-haves <span style="font-size:10.5px;color:#059669;font-weight:800">✅ SHIPPED 16/16</span></h3>
+      <p>Polish, power-user and sharing features. <b>All sixteen are done and live in the tool.</b></p>
       <div class="ids" id="phase-3-ids"></div>
     </div>
   </div>
@@ -277,6 +286,15 @@ var KEY = 'aichatpres_devplan_v1';
 var store = {};
 try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { store = {}; }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+/* All three phases shipped — seed every item as Done unless the user already set a status. */
+var DONE_BY_DEFAULT = PHASE1.concat(PHASE2).concat(PHASE3);
+var SEEDED_KEY = '__shipped_seed_v3';
+if (!store[SEEDED_KEY]) {
+  DONE_BY_DEFAULT.forEach(function(id) { if (!(id in store)) store[id] = 'done'; });
+  store[SEEDED_KEY] = 1;
+  save();
+}
 function statusOf(id) { return store[id] || 'planned'; }
 
 var currentFilter = 'all';

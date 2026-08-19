@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NewsGenerator — Development Plan</title>
+<style>
+  :root {
+    --bg:#0f1220; --panel:#171a2c; --panel2:#1d2137; --line:#2a2f4d;
+    --text:#e8eaf6; --dim:#9aa1c0; --accent:#f59e0b; --accent2:#fbbf24;
+    --good:#34d399; --warn:#fbbf24; --bad:#f87171; --indigo:#6366f1;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Segoe UI",system-ui,sans-serif; line-height:1.55; }
+  .wrap { max-width:1100px; margin:0 auto; padding:26px 20px 80px; }
+  header { display:flex; flex-wrap:wrap; gap:14px; align-items:center; border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:18px; }
+  header h1 { margin:0; font-size:22px; }
+  header h1 span { color:var(--accent2); }
+  header p { margin:4px 0 0; color:var(--dim); font-size:13px; max-width:680px; }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 18px; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-size:12.5px; }
+  .stat b { font-size:17px; display:block; }
+  .bar { height:8px; background:var(--panel2); border-radius:99px; overflow:hidden; margin-top:6px; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--indigo),var(--accent)); border-radius:99px; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .fbtn { font:inherit; font-size:12px; color:var(--dim); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; }
+  .fbtn.active { color:var(--accent2); border-color:var(--accent); background:rgba(245,158,11,.1); }
+  .fcat { font:inherit; font-size:11.5px; color:var(--dim); background:transparent; border:1px dashed var(--line); border-radius:8px; padding:7px 11px; cursor:pointer; }
+  .fcat.active { color:var(--text); border-style:solid; border-color:var(--indigo); }
+  .phase-block { margin-bottom:26px; }
+  .phase-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .phase-head h2 { margin:0; font-size:16px; }
+  .phase-head .pct { font-size:12px; color:var(--dim); }
+  .feat { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:8px; display:grid; grid-template-columns:150px 1fr auto auto; gap:12px; align-items:center; }
+  .feat-id { font-family:Consolas,monospace; font-size:12px; color:var(--accent2); font-weight:700; }
+  .feat-body b { font-size:13.5px; }
+  .feat-body p { margin:2px 0 0; font-size:12px; color:var(--dim); }
+  .cat { display:inline-block; font-size:10px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:99px; margin-left:8px; vertical-align:1px; }
+  .cat-A { background:rgba(99,102,241,.15); color:#a5b4fc; }
+  .cat-B { background:rgba(52,211,153,.12); color:var(--good); }
+  .cat-C { background:rgba(244,114,182,.14); color:#f9a8d4; }
+  .cat-D { background:rgba(245,158,11,.14); color:var(--accent2); }
+  .cat-E { background:rgba(56,189,248,.14); color:#7dd3fc; }
+  .cat-F { background:rgba(248,113,113,.14); color:#fca5a5; }
+  .cat-G { background:rgba(148,163,184,.14); color:#cbd5e1; }
+  .effort { font-size:10.5px; color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:2px 7px; }
+  select { font:inherit; font-size:12px; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:6px 8px; cursor:pointer; }
+  .st-done { color:var(--good); border-color:rgba(52,211,153,.4); }
+  .st-progress { color:var(--warn); border-color:rgba(251,191,36,.4); }
+  .st-todo { color:var(--dim); }
+  footer { margin-top:30px; padding-top:14px; border-top:1px solid var(--line); font-size:12px; color:var(--dim); }
+  @media (max-width:760px) {
+    .feat { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📰 NewsGenerator <span>Development Plan</span></h1>
+      <p>Backlog of creative upgrades for the AI news-page studio. Statuses persist in this browser (<code>newsgen_devplan_v1</code>). Statuses are shared with the team's browsers only locally — this file is the single source of truth for the plan itself.</p>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="st-done">0</b>done</div>
+    <div class="stat"><b id="st-progress">0</b>in progress</div>
+    <div class="stat"><b id="st-todo">0</b>todo</div>
+    <div class="stat" style="flex:1 1 260px"><b id="st-total">0</b>features total
+      <div class="bar"><i id="st-bar" style="width:0%"></i></div>
+    </div>
+  </div>
+
+  <div class="filters" id="phase-filters">
+    <button class="fbtn active" data-p="all">All phases</button>
+    <button class="fbtn" data-p="1">⚡ Phase 1 · quick wins</button>
+    <button class="fbtn" data-p="2">🧠 Phase 2 · core upgrades</button>
+    <button class="fbtn" data-p="3">🚀 Phase 3 · platform & polish</button>
+    <button class="fcat" data-c="A">A editorial</button>
+    <button class="fcat" data-c="B">B components</button>
+    <button class="fcat" data-c="C">C engagement</button>
+    <button class="fcat" data-c="D">D AI workflow</button>
+    <button class="fcat" data-c="E">E publishing</button>
+    <button class="fcat" data-c="F">F safety</button>
+    <button class="fcat" data-c="G">G quality</button>
+  </div>
+
+  <div id="phases"></div>
+
+  <footer>
+    <b>Maintainer note.</b> To add a feature: append one entry to the <code>FEATURES</code> array in this file
+    (id, title, desc, cat, phase, effort) — the report renders it automatically. "Phase" is a roadmap bucket,
+    "status" is per-browser tracking. Built 2026-08-19 — the B1 newsroom component pack is already shipped
+    and marked done. Verify this file with <code>node --check</code> after edits (extract the script block first).
+  </footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'newsgen_devplan_v3';
+  var CATS = { A: 'editorial', B: 'components', C: 'engagement', D: 'ai-workflow', E: 'publishing', F: 'safety', G: 'quality' };
+  var FEATURES = [
+    // ── A · Editorial intelligence ──
+    { id: 'A1', cat: 'A', phase: 1, effort: 'M', title: 'Story archetype detection', desc: 'Classify the brief/chat (breaking · feature · data · sports · investigative · event · opinion) and auto-apply the matching recipe + hero style, so the AI starts from the right bones instead of guessing.' },
+    { id: 'A2', cat: 'A', phase: 2, effort: 'M', title: 'Headline lab', desc: 'AI proposes 5 headline variants (straight news, feature, SEO, social, short) side by side; one click applies the chosen one to hero + metaTitle.' },
+    { id: 'A3', cat: 'A', phase: 2, effort: 'S', title: 'Standfirst & social deck generator', desc: 'Auto-write the standfirst plus per-platform share decks (X, Facebook, WhatsApp) in one pass.' },
+    { id: 'A4', cat: 'A', phase: 1, effort: 'S', title: 'SEO & schema scorecard', desc: 'Live score on the Publish tab: title/description lengths, JSON-LD validity, ogImage present, keyword coverage of the brief.' },
+    { id: 'A5', cat: 'A', phase: 3, effort: 'L', title: 'Multi-language variants', desc: 'Generate sibling pages per language sharing contentId (hreflang handled by the platform); one chat command per language.' },
+    { id: 'A6', cat: 'A', phase: 2, effort: 'M', title: 'Tone & style sliders', desc: 'Serious↔lively, dense↔scannable, formal↔conversational sliders injected into the prompt; persisted per story.' },
+
+    // ── B · Components & presentation ──
+    { id: 'B1', cat: 'B', phase: 1, effort: 'L', title: 'News-native component pack', desc: 'Byline/dateline, standfirst, breaking strip, liveblog, keypoints, factcheck, scorecard, photostory, personcard, editorsnote, corrections + broadsheet & breaking hero styles with newsroom typography. SHIPPED 2026-08-19.' },
+    { id: 'B2', cat: 'B', phase: 1, effort: 'M', title: 'Archetype starter templates', desc: 'One-click starter plans per story type shown in the chat empty state ("Breaking live page", "Feature longform", "Data story"…).' },
+    { id: 'B3', cat: 'B', phase: 2, effort: 'S', title: 'Dark-mode aware styling', desc: 'Generated page reads the platform dark theme variables so the paper aesthetic adapts to dark sites.' },
+    { id: 'B4', cat: 'B', phase: 2, effort: 'M', title: 'Newsprint print stylesheet', desc: '@media print layout: single column, black ink on white, no sticky elements — a true newspaper clip when saved as PDF.' },
+    { id: 'B5', cat: 'B', phase: 2, effort: 'M', title: 'Component gallery browser', desc: 'Visual thumbnail strip of all ~42 components with live mini-previews; click to insert a component into the plan.' },
+    { id: 'B6', cat: 'B', phase: 3, effort: 'L', title: 'More interactive widgets', desc: 'Graded story quiz, annotated SVG map, heat-strip data visual, before/after video compare, clickable org chart.' },
+    { id: 'B7', cat: 'B', phase: 3, effort: 'L', title: 'Scrollytelling engine', desc: 'Chapter markers with sticky full-bleed frames that swap as the reader scrolls — longform feature magic.' },
+
+    // ── C · Interaction & engagement ──
+    { id: 'C1', cat: 'C', phase: 1, effort: 'M', title: 'Quote-highlight sharing', desc: 'Select any sentence in the preview → popup with share/copy carrying a #fragment deep link to that exact paragraph.' },
+    { id: 'C2', cat: 'C', phase: 3, effort: 'M', title: 'Reader reactions v2 (aggregate)', desc: 'Optional CMS operation to persist reaction/poll totals server-side (emits CMS CONFIG NEEDED when not configured).' },
+    { id: 'C3', cat: 'C', phase: 3, effort: 'M', title: 'Comments & discussion hook', desc: 'Embeddable discussion placeholder that binds to a CMS form/operation when the admin configures one.' },
+    { id: 'C4', cat: 'C', phase: 2, effort: 'S', title: 'Listen to this story', desc: 'Browser speechSynthesis narration toggle in the byline ("🔊 Listen") — no server, no API key.' },
+    { id: 'C5', cat: 'C', phase: 2, effort: 'S', title: 'Reading progress with chapter markers', desc: 'Progress bar segmented per subhead; tooltip shows the current chapter title.' },
+    { id: 'C6', cat: 'C', phase: 2, effort: 'M', title: 'Animated charts', desc: 'Charts animate in on scroll and can transition between two datasets (then↔now) on a toggle.' },
+    { id: 'C7', cat: 'C', phase: 3, effort: 'M', title: 'Story quiz', desc: 'Graded 3-5 question quiz about the story with a shareable result card.' },
+
+    // ── D · AI workflow ──
+    { id: 'D1', cat: 'D', phase: 1, effort: 'M', title: 'Interview mode', desc: 'The AI interviews the reporter question-by-question (who/what/where/when/why/so-what) until the brief is complete, then offers to compose.' },
+    { id: 'D2', cat: 'D', phase: 2, effort: 'M', title: 'Source manager', desc: 'Paste URLs → extract text via requestFileContent → keep per-claim citations that flow into the sources component automatically.' },
+    { id: 'D3', cat: 'D', phase: 2, effort: 'L', title: 'Fact-check assistant', desc: 'AI cross-checks every claim in the draft against the provided sources and flags unsupported statements before publish.' },
+    { id: 'D4', cat: 'D', phase: 3, effort: 'L', title: 'Agentic multi-step builds', desc: 'Planner → per-section generation loop (like WebpageBuilder) so very long features are built in coherent chunks with progress tasks.' },
+    { id: 'D5', cat: 'D', phase: 2, effort: 'M', title: 'Version history browser', desc: 'Snapshots of every page build (separate CMS objects) with restore, compare and rollback.' },
+    { id: 'D6', cat: 'D', phase: 2, effort: 'M', title: 'Visual diff between versions', desc: 'Side-by-side rendered diff of two builds — what actually changed on the page, not just code.' },
+    { id: 'D7', cat: 'D', phase: 3, effort: 'M', title: 'A/B variant composer', desc: 'Generate two distinct design directions for the same story and flip between them in preview before picking.' },
+    { id: 'D8', cat: 'D', phase: 2, effort: 'M', title: 'Auto-draft from URL', desc: 'Paste a press release/news article URL → content extracted → brief + first plan drafted automatically.' },
+
+    // ── E · Platform & publishing ──
+    { id: 'E1', cat: 'E', phase: 3, effort: 'M', title: 'One-click CMS page object create', desc: 'Create the page object directly via requestObjects when the admin authorizes the type (falls back to copy-paste JSON today).' },
+    { id: 'E2', cat: 'E', phase: 1, effort: 'S', title: 'Publish checklist wizard', desc: 'Step-by-step pre-flight: guardrails, SEO score, photo credits, corrections, review sign-off — one checklist before copy.' },
+    { id: 'E3', cat: 'E', phase: 3, effort: 'M', title: 'Related stories picker', desc: 'Query CMS object types to pick real related articles (URLs + images) instead of typing them by hand.' },
+    { id: 'E4', cat: 'E', phase: 2, effort: 'S', title: 'Social card preview', desc: 'Mock the OG card (image + title + description) so the share preview is checked before publishing.' },
+    { id: 'E5', cat: 'E', phase: 3, effort: 'L', title: 'Email newsletter edition', desc: 'Generate the email-template artifact for the story (subject, {{key}} body) for newsletter hooks.' },
+    { id: 'E6', cat: 'E', phase: 2, effort: 'S', title: 'Editor notification', desc: 'requestSendEmail "Story ready for review" to configured editor addresses with a one-line summary.' },
+    { id: 'E7', cat: 'E', phase: 3, effort: 'S', title: 'Scheduled publish passthrough', desc: 'Date/time field in pageMeta; the tool reminds editors what is staged versus published.' },
+
+    // ── F · Collaboration & safety ──
+    { id: 'F1', cat: 'F', phase: 2, effort: 'M', title: 'Review workflow', desc: 'draft → in review → approved states with editor notes stored on the record; AI respects "no compose while in review".' },
+    { id: 'F2', cat: 'F', phase: 2, effort: 'S', title: 'Image rights & credits manager', desc: 'Per-image license/source/credit fields that render into captions and the corrections/sources section.' },
+    { id: 'F3', cat: 'F', phase: 3, effort: 'M', title: 'Style & plagiarism lint', desc: 'Repeated-phrase detection + AI style review (AP-style hints, passive voice, clichés) before publish.' },
+    { id: 'F4', cat: 'F', phase: 1, effort: 'S', title: 'Accessibility audit', desc: 'Extend the guardrail checks: contrast, heading order, tap-target size, aria labels on interactive components.' },
+
+    // ── G · Quality & tooling ──
+    { id: 'G1', cat: 'G', phase: 1, effort: 'S', title: 'Preview device lab', desc: 'Mobile / tablet / desktop previews side-by-side instead of one at a time.' },
+    { id: 'G2', cat: 'G', phase: 2, effort: 'S', title: 'Performance budget meter', desc: 'Live KB counter, image count and external request count with the page-budget threshold.' },
+    { id: 'G3', cat: 'G', phase: 2, effort: 'M', title: 'Component unit-test mode', desc: 'Render each component with sample data in isolation to catch layout regressions before they reach a page.' },
+    { id: 'G4', cat: 'G', phase: 3, effort: 'L', title: 'Prompt optimizer', desc: 'Store AI prompt variants, track which yield better pages (score by guardrails + user keeps), promote winners.' }
+  ];
+
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { state = {}; }
+  var phaseFilter = 'all';
+  var catFilter = null;
+
+  function statusOf(id) { return state[id] || 'todo'; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  function render() {
+    var root = document.getElementById('phases');
+    var counts = { done: 0, progress: 0, todo: 0 };
+    FEATURES.forEach(function (f) { counts[statusOf(f.id)] = (counts[statusOf(f.id)] || 0) + 1; });
+    document.getElementById('st-done').textContent = counts.done;
+    document.getElementById('st-progress').textContent = counts.progress;
+    document.getElementById('st-todo').textContent = counts.todo;
+    document.getElementById('st-total').textContent = FEATURES.length;
+    var pct = Math.round((counts.done / FEATURES.length) * 100);
+    document.getElementById('st-bar').style.width = pct + '%';
+
+    var html = '';
+    [1, 2, 3].forEach(function (ph) {
+      var list = FEATURES.filter(function (f) { return f.phase === ph; });
+      if (phaseFilter !== 'all') list = list.filter(function (f) { return String(f.phase) === String(phaseFilter); });
+      if (catFilter) list = list.filter(function (f) { return f.cat === catFilter; });
+      if (!list.length) return;
+      var done = list.filter(function (f) { return statusOf(f.id) === 'done'; }).length;
+      var pct2 = Math.round((done / list.length) * 100);
+      html += '<div class="phase-block"><div class="phase-head"><h2>' +
+        (ph === 1 ? '⚡' : ph === 2 ? '🧠' : '🚀') + ' Phase ' + ph + '</h2>' +
+        '<span class="pct">' + done + '/' + list.length + ' done · ' + pct2 + '%</span></div>';
+      list.forEach(function (f) {
+        var st = statusOf(f.id);
+        html += '<div class="feat"><span class="feat-id">' + f.id + '</span>' +
+          '<div class="feat-body"><b>' + f.title + '</b><span class="cat cat-' + f.cat + '">' + CATS[f.cat] + '</span>' +
+          '<p>' + f.desc + '</p></div>' +
+          '<span class="effort">' + f.effort + '</span>' +
+          '<select class="feat-status st-' + st + '" data-id="' + f.id + '" aria-label="Status for ' + f.id + '">' +
+          '<option value="todo"' + (st === 'todo' ? ' selected' : '') + '>todo</option>' +
+          '<option value="progress"' + (st === 'progress' ? ' selected' : '') + '>in progress</option>' +
+          '<option value="done"' + (st === 'done' ? ' selected' : '') + '>done ✓</option>' +
+          '</select></div>';
+      });
+      html += '</div>';
+    });
+    root.innerHTML = html;
+    Array.prototype.forEach.call(root.querySelectorAll('.feat-status'), function (sel) {
+      sel.addEventListener('change', function () {
+        state[sel.getAttribute('data-id')] = sel.value;
+        save();
+        render();
+      });
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#phase-filters .fbtn'), function (b) {
+    b.addEventListener('click', function () {
+      phaseFilter = b.getAttribute('data-p');
+      document.querySelectorAll('#phase-filters .fbtn').forEach(function (x) { x.classList.toggle('active', x === b); });
+      render();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#phase-filters .fcat'), function (b) {
+    b.addEventListener('click', function () {
+      if (catFilter === b.getAttribute('data-c')) catFilter = null; else catFilter = b.getAttribute('data-c');
+      document.querySelectorAll('#phase-filters .fcat').forEach(function (x) { x.classList.toggle('active', x.getAttribute('data-c') === catFilter); });
+      render();
+    });
+  });
+
+  // seed: Phase 1 shipped 2026-08-19 (A1 archetype detection, A4 SEO scorecard,
+  // B1 newsroom pack, B2 starter templates, C1 quote-highlight sharing,
+  // D1 interview mode, E2 publish checklist, F4 accessibility audit, G1 device lab).
+  // Phase 2 shipped 2026-08-19: A2 headline lab, A3 deck lab, A6 tone sliders,
+  // B3 dark-aware colors, B4 newsprint print CSS, B5 gallery, C4 listen-to-story,
+  // C5 chapter progress, C6 animated/toggle charts, D2 source manager, D3 fact-check,
+  // D5/D6 history+diff, D8 draft-from-URL, E4 social preview, E6 editor notify,
+  // F1 review workflow, F2 image credits, G2 perf meter, G3 component tests.
+  var SHIPPED = ['A1', 'A4', 'B1', 'B2', 'C1', 'D1', 'E2', 'F4', 'G1',
+    'A2', 'A3', 'A6', 'B3', 'B4', 'B5', 'C4', 'C5', 'C6', 'D2', 'D3',
+    'D5', 'D6', 'D8', 'E4', 'E6', 'F1', 'F2', 'G2', 'G3'];
+  SHIPPED.forEach(function (id) {
+    if (state[id] === undefined) state[id] = 'done';
+  });
+  save();
+  render();
+})();
+</script>
+</body>
+</html>

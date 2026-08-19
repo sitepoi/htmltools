@@ -68,7 +68,7 @@ var svgFiles = [
 ];
 // asset cards: walk kit-content sections for svg previews
 var sections = els['kit-content']._children || [];
-var labels = ['primary', 'stacked', 'mark', 'mono-black', 'mono-white', 'reversed', 'favicon', 'app-icon', 'avatar', 'banner-light', 'banner-dark', 'card-front', 'card-back', 'letterhead', 'email-sig', 'brand-json', 'summary'];
+var labels = ['primary', 'stacked', 'mark', 'mono-black', 'mono-white', 'reversed', 'favicon', 'app-icon', 'avatar', 'favicon-adaptive', 'favicon-snippet', 'banner-light', 'banner-dark', 'newsletter-header', 'email-template', 'animated-intro', 'facebook-cover', 'linkedin-cover', 'x-cover', 'youtube-cover', 'social-profile', 'instagram-post', 'instagram-story', 'whatsapp-profile', 'whatsapp-catalog', 'card-front', 'card-back', 'card-print', 'letterhead', 'invoice-header', 'proposal-cover', 'ppt-title-slide', 'gdoc-header', 'envelope-dl', 'mailing-label', 'fax-cover', 'id-badge-front', 'id-badge-back', 'lanyard', 'review-sheet', 'swag-stickers', 'sign-storefront', 'sign-door', 'sign-vehicle', 'email-sig', 'vcard', 'brand-json', 'summary', 'contrast-checker', 'cvd-simulation'];
 var li = 0;
 sections.forEach(function (sec, i) {
   var innerGrid = sec._children && sec._children[1];
@@ -79,6 +79,8 @@ sections.forEach(function (sec, i) {
     var label = labels[li++] || ('extra-' + i + '-' + j);
     if (img && img.src && img.src.indexOf('data:image/svg+xml') === 0) {
       svgFiles.push([label, decodeURIComponent(img.src.replace('data:image/svg+xml;charset=utf-8,', ''))]);
+    } else if (prev && prev.innerHTML && String(prev.innerHTML).indexOf('<svg') === 0) {
+      svgFiles.push([label, prev.innerHTML]);
     } else {
       svgFiles.push([label, 'non-svg']);
     }
@@ -101,11 +103,12 @@ files.forEach(f => {
 function balance(s) {
   const stack = [];
   const re = /<\/?([a-zA-Z][a-zA-Z0-9:-]*)((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>/g;
-  const voidTags = { path: 1, circle: 1, rect: 1, image: 1, stop: 1, feDropShadow: 1, feColorMatrix: 1 };
+  const voidTags = { path: 1, circle: 1, rect: 1, image: 1, stop: 1, feDropShadow: 1, feColorMatrix: 1, feTurbulence: 1, feComposite: 1, feGaussianBlur: 1, animate: 1, animateTransform: 1 };
   let m;
   while ((m = re.exec(s))) {
     const full = m[0], tag = m[1];
     if (full[1] === '/') {
+      if (voidTags[tag]) continue; // explicit close of a void tag — ignore
       const open = stack.pop();
       if (open !== tag) { console.error('MISMATCH: expected </' + open + '> got </' + tag + '>'); return false; }
     } else if (!voidTags[tag] && full[full.length - 2] !== '/') {

@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NewsGenerator — Test Harness</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #0f1220; }
+  #app { height: 100%; }
+  .th-bar {
+    position: fixed; top: 8px; right: 10px; z-index: 99999;
+    display: flex; gap: 6px; align-items: center;
+    background: rgba(15,18,32,.92); border: 1px solid #3a4068; border-radius: 10px;
+    padding: 6px 8px; font: 11px system-ui, sans-serif; color: #c3c8e4;
+  }
+  .th-bar select, .th-bar button {
+    font: inherit; color: inherit; background: #1d2137; border: 1px solid #3a4068;
+    border-radius: 6px; padding: 4px 7px; cursor: pointer;
+  }
+  .th-status { color: #34d399; }
+</style>
+<link rel="stylesheet" href="NewsGenerator.css">
+</head>
+<body>
+<div class="th-bar">
+  <span id="th-status" class="th-status">harness</span>
+  <label>Role
+    <select id="th-role">
+      <option value="developer">developer</option>
+      <option value="editor">editor</option>
+      <option value="viewer">viewer</option>
+      <option value="none">none (session arrives late)</option>
+    </select>
+  </label>
+  <button id="th-readonly">RO: off</button>
+  <button id="th-sample">Fill sample brief</button>
+  <button id="th-clear">Clear all</button>
+</div>
+
+<div id="app">
+<!-- TOOL HTML START -->
+<div class="ng-app" id="ng-app">
+
+  <!-- ═══════ TOP BAR ═══════ -->
+  <header class="ng-topbar">
+    <div class="ng-brand">
+      <span class="ng-logo">📰</span>
+      <div class="ng-brand-txt">
+        <strong>News Page Studio</strong>
+        <span id="ng-story-title">No story yet — describe the event in the AI Newsroom</span>
+      </div>
+    </div>
+    <div class="ng-top-actions">
+      <span class="ng-chip" id="ng-page-chip">📄 No page</span>
+      <span class="ng-chip ng-chip-dim" id="ng-ver-chip">v0</span>
+      <button class="ng-btn ng-btn-accent" id="ng-btn-generate" title="Build or rebuild the page from the story brief + chat">⚡ Generate Page</button>
+      <button class="ng-btn" id="ng-btn-save" title="Stage the value and request an immediate CMS save">💾 Save</button>
+      <span class="ng-userchip" id="ng-user-chip">…</span>
+    </div>
+  </header>
+
+  <!-- ═══════ WORKSPACE ═══════ -->
+  <div class="ng-workspace">
+
+    <!-- ───── AI NEWSROOM (chat sidebar) ───── -->
+    <aside class="ng-side" id="ng-side">
+      <div class="ng-side-head">
+        <span class="ng-side-title">🤖 AI Newsroom</span>
+        <div class="ng-side-head-btns">
+          <button class="ng-iconbtn" id="ng-btn-interview" title="Interview mode — the AI interviews you question by question to gather the facts">🎙 Interview</button>
+          <button class="ng-iconbtn" id="ng-btn-newchat" title="Clear this conversation (the page is kept)">↺ New chat</button>
+        </div>
+      </div>
+
+      <div class="ng-chat-body" id="ng-chat-body">
+        <div class="ng-chat-empty" id="ng-chat-empty">
+          <div class="ng-chat-empty-emoji">🗞️</div>
+          <p><b>Tell the AI about the event.</b> Paste a press note, list the facts, or drop links — it will keep asking until the story is complete, then compose the page.</p>
+          <p class="ng-chat-empty-sub">Try: <i>"A community solar farm opened in Izmir today — 4,000 panels, will power 1,200 homes…"</i></p>
+        </div>
+      </div>
+
+      <div class="ng-chips" id="ng-chips"></div>
+
+      <div class="ng-chat-foot">
+        <textarea id="ng-chat-input" rows="2" placeholder="Describe the event, paste a press note, or ask for changes…"></textarea>
+        <div class="ng-chat-actions">
+          <span class="ng-chat-hint" id="ng-chat-hint">Enter ↵ to send · Shift+Enter for new line</span>
+          <button class="ng-btn ng-btn-accent" id="ng-btn-send">Send ✦</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ───── MAIN PANELS ───── -->
+    <main class="ng-main">
+      <nav class="ng-tabs" id="ng-tabs">
+        <button class="ng-tab active" data-tab="preview">👁 Preview</button>
+        <button class="ng-tab" data-tab="gallery">🎨 Gallery & Theme</button>
+        <button class="ng-tab" data-tab="story">📝 Story</button>
+        <button class="ng-tab" data-tab="code">⌨ Code</button>
+        <button class="ng-tab" data-tab="publish">🚀 Publish</button>
+      </nav>
+
+      <!-- ── PREVIEW ── -->
+      <section class="ng-pane active" id="pane-preview">
+        <div class="ng-prev-toolbar">
+          <div class="ng-device-group" id="ng-device-group">
+            <button class="ng-device active" data-dev="mobile" title="Mobile 390px">📱</button>
+            <button class="ng-device" data-dev="tablet" title="Tablet 768px">📟</button>
+            <button class="ng-device" data-dev="desktop" title="Desktop — fill width">🖥</button>
+            <button class="ng-device" data-dev="all" title="Device lab — all three side by side">🗂 Lab</button>
+          </div>
+          <span class="ng-prev-meta" id="ng-prev-meta">—</span>
+          <span class="ng-spacer"></span>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-rerun" title="Re-run the page scripts in the preview">⟳ Re-run</button>
+        </div>
+        <div class="ng-prev-stage" id="ng-prev-stage">
+          <div class="ng-prev-viewport" id="ng-prev-viewport"></div>
+          <div class="ng-empty-prev" id="ng-empty-prev">
+            <div class="ng-empty-prev-emoji">🗞️</div>
+            <h3>No page yet</h3>
+            <p>Describe the event in the <b>AI Newsroom</b>, or pick a story template in <b>🎨 Gallery & Theme</b>, then press <b>⚡ Generate Page</b>.<br>The generated page will appear here exactly as visitors will see it — animations, polls, charts and all.</p>
+            <button class="ng-btn ng-btn-accent" id="ng-btn-generate-empty">⚡ Generate Page</button>
+          </div>
+        </div>
+        <details class="ng-console" id="ng-console-wrap">
+          <summary>🖥 Preview console <span class="ng-console-count" id="ng-console-count"></span></summary>
+          <div class="ng-console-out" id="ng-console-out">
+            <div class="ng-console-line ng-console-dim">Script logs and errors from the preview appear here.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ── GALLERY & THEME ── -->
+      <section class="ng-pane" id="pane-gallery">
+        <div class="ng-story-head">
+          <h2>🎨 Component gallery & theme</h2>
+          <p>Every available component rendered with the <b>current color set</b>. Pick a color set — it applies to the gallery below AND to the generated page instantly (no AI call needed). <b>＋ Insert</b> adds a component to the current page plan.</p>
+        </div>
+        <div class="ng-gallery-tools">
+          <div class="ng-colorsets" id="ng-colorsets" role="radiogroup" aria-label="Color sets"></div>
+          <span class="ng-spacer"></span>
+          <span class="ng-chip ng-chip-dim" id="ng-archetype-chip">🧭 archetype: —</span>
+        </div>
+        <div class="ng-templates-wrap" id="ng-templates-wrap"></div>
+        <div class="ng-gallery-grid" id="ng-gallery-grid"></div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧪 Component unit tests</span><span id="ng-comptest-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-comptest" type="button">Run component tests</button>
+          <ul class="ng-pub-checks" id="ng-comptest-list"></ul>
+        </div>
+      </section>
+
+      <!-- ── STORY BRIEF ── -->
+      <section class="ng-pane" id="pane-story">
+        <div class="ng-story-head">
+          <h2>📝 Story Brief</h2>
+          <p>These are the <b>facts of record</b>. The AI reads them on every generation, so the page always reflects the latest truth. The AI also keeps its own editorial notes in the chat.</p>
+          <div class="ng-archetype-bar" id="ng-archetype-bar"></div>
+        </div>
+        <div class="ng-brief-grid">
+          <label class="ng-field ng-field-wide">
+            <span>Headline / working title *</span>
+            <input type="text" id="bf-title" placeholder="e.g. Solar Farm Opens, Powering 1,200 Homes" maxlength="160">
+          </label>
+          <label class="ng-field">
+            <span>URL slug (auto)</span>
+            <input type="text" id="bf-slug" placeholder="auto" maxlength="120">
+            <em class="ng-field-hint">Leave empty to auto-generate from the title.</em>
+          </label>
+          <label class="ng-field">
+            <span>Category / kicker</span>
+            <input type="text" id="bf-category" placeholder="e.g. ENERGY · CITY" maxlength="60">
+          </label>
+          <label class="ng-field">
+            <span>Author / byline</span>
+            <input type="text" id="bf-author" placeholder="e.g. Newsroom" maxlength="80">
+          </label>
+          <label class="ng-field">
+            <span>Event date</span>
+            <input type="text" id="bf-date" placeholder="e.g. 2026-08-19 or August 19, 2026" maxlength="60">
+          </label>
+          <label class="ng-field">
+            <span>Location</span>
+            <input type="text" id="bf-location" placeholder="e.g. Izmir, Türkiye" maxlength="120">
+          </label>
+          <label class="ng-field">
+            <span>Page language</span>
+            <select id="bf-language">
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ar">العربية</option>
+            </select>
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Hero image URL</span>
+            <input type="text" id="bf-heroimage" placeholder="https://… (optional — AI can also pick fitting visuals)" maxlength="500">
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Summary (1–3 sentences of the story)</span>
+            <textarea id="bf-summary" rows="3" placeholder="What happened, why it matters…"></textarea>
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Tags (comma separated)</span>
+            <input type="text" id="bf-tags" placeholder="solar, energy, izmir" maxlength="200">
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Sources & links (one per line: <i>Name | https://url</i>)</span>
+            <textarea id="bf-sources" rows="3" placeholder="City Press Office | https://…"></textarea>
+          </label>
+        </div>
+        <div class="ng-story-actions">
+          <button class="ng-btn" id="ng-btn-brief-save">💾 Save brief</button>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-brief-generate">⚡ Save & regenerate page</button>
+          <span class="ng-brief-status" id="ng-brief-status"></span>
+        </div>
+
+        <div class="ng-phase2-lab">
+          <div class="ng-lab-row">
+            <div class="ng-lab-box">
+              <strong>✍️ Headline lab</strong>
+              <small>Five headline variants; click one to apply to hero + SEO title.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-headline-lab">Generate headlines</button>
+              <div class="ng-lab-results" id="ng-headline-results"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🎬 Standfirst & social deck</strong>
+              <small>Auto-write the standfirst + share decks for X / Facebook / WhatsApp.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-deck-lab">Generate deck copy</button>
+              <div class="ng-lab-results" id="ng-deck-results"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🔗 Draft from URL</strong>
+              <small>Paste a press release or article URL — extract, draft the brief, then compose.</small>
+              <div class="ng-draft-row">
+                <input type="text" id="ng-draft-url" placeholder="https://…">
+                <button class="ng-btn ng-btn-sm" id="ng-btn-draft-url">Draft</button>
+              </div>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>🎚️ Tone & style sliders</strong>
+              <small>Applied to every AI prompt and saved with this story.</small>
+              <div class="ng-sliders">
+                <label class="ng-slider"><span>Serious ↔ Lively</span><input type="range" id="ng-tone-lively" min="-2" max="2" step="1" value="0"></label>
+                <label class="ng-slider"><span>Dense ↔ Scannable</span><input type="range" id="ng-tone-dense" min="-2" max="2" step="1" value="0"></label>
+                <label class="ng-slider"><span>Formal ↔ Conversational</span><input type="range" id="ng-tone-formal" min="-2" max="2" step="1" value="0"></label>
+              </div>
+            </div>
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>📎 Source manager</strong>
+              <small>Paste URLs (one per line) and extract their text — the AI cites these when writing.</small>
+              <div class="ng-draft-row ng-src-row">
+                <textarea id="ng-src-urls" rows="2" placeholder="https://…"></textarea>
+                <button class="ng-btn ng-btn-sm" id="ng-btn-src-extract">Extract</button>
+              </div>
+              <div class="ng-lab-results" id="ng-src-results"></div>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box">
+              <strong>🌐 Language variants</strong>
+              <small>Translate the whole plan — same contentId, ready for language routing.</small>
+              <div class="ng-draft-row">
+                <select id="ng-ml-lang" aria-label="Target language">
+                  <option value="en">English</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="de">Deutsch</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="ar">العربية</option>
+                </select>
+                <button class="ng-btn ng-btn-sm" id="ng-btn-translate">Translate page</button>
+              </div>
+              <div class="ng-lab-results" id="ng-translate-result"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🤖 Agentic build</strong>
+              <small>The AI plans 2–4 build steps, then executes each one in sequence.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-agentic">Plan &amp; run build</button>
+            </div>
+            <div class="ng-lab-box">
+              <strong>⚖ A/B composer</strong>
+              <small>Two alternative pages — human interest vs data driven. Preview both, keep one.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-ab">Compose A/B variants</button>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>🧭 House preference (prompt optimizer)</strong>
+              <small>Learned from your 👍/👎 prompt votes and injected into every AI call. Editable.</small>
+              <textarea id="ng-extra-prompt" rows="2" placeholder="e.g. Always use short paragraphs, quote at least two named people, keep it under 600 words…"></textarea>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-prompt-opt">✨ Optimize with AI</button>
+              <div class="ng-lab-results" id="ng-prompt-opt-result"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CODE ── -->
+      <section class="ng-pane" id="pane-code">
+        <div class="ng-code-bar">
+          <div class="ng-code-tabs" id="ng-code-tabs">
+            <button class="ng-codetab active" data-code="html">HTML</button>
+            <button class="ng-codetab" data-code="css">CSS</button>
+            <button class="ng-codetab" data-code="js">JS</button>
+            <button class="ng-codetab" data-code="seo">SEO</button>
+            <button class="ng-codetab" data-code="meta">PAGE META</button>
+            <button class="ng-codetab" data-code="config">CMS CONFIG</button>
+          </div>
+          <span class="ng-spacer"></span>
+          <span class="ng-code-meta" id="ng-code-meta"></span>
+        </div>
+        <textarea class="ng-code-out" id="ng-code-out" readonly spellcheck="false" wrap="off"></textarea>
+        <div class="ng-code-actions">
+          <button class="ng-btn" id="ng-btn-copy-current">📋 Copy this section</button>
+          <button class="ng-btn" id="ng-btn-copy-all">📋 Copy generator output (=== sections)</button>
+          <button class="ng-btn" id="ng-btn-download">⬇ Download standalone .html</button>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-export-pdf">🖨 Print / PDF</button>
+        </div>
+        <p class="ng-code-note">The code is compiled from the AI's component plan by the tool itself — the AI never writes raw page code. Every section is scoped to <code>.news-<i>slug</i></code>, idempotent, and passes the platform guardrails.</p>
+      </section>
+
+      <!-- ── PUBLISH ── -->
+      <section class="ng-pane" id="pane-publish">
+        <div class="ng-pub-head">
+          <h2>🚀 Publish the story</h2>
+          <p>Two routes into the platform — pick whichever fits your CMS workflow.</p>
+        </div>
+        <div class="ng-pub-cards">
+          <div class="ng-pub-card">
+            <h3>1 · Page object JSON</h3>
+            <p>One JSON that contains everything: <code>name</code>, <code>slug</code>, <code>data.htmlPage.code.{html,css,js}</code> and <code>seo</code>. Create the page object in your site app with this payload.</p>
+            <button class="ng-btn ng-btn-accent" id="ng-btn-copy-pageobj">📦 Copy Page Object JSON</button>
+          </div>
+          <div class="ng-pub-card">
+            <h3>2 · Generator output</h3>
+            <p>The plain <code>=== HTML / CSS / JS / SEO / PAGE META ===</code> sections used by the page generator — paste into the CMS tool builder fields.</p>
+            <button class="ng-btn" id="ng-btn-copy-gen">📋 Copy generator output</button>
+          </div>
+          <div class="ng-pub-card">
+            <h3>3 · Proof & share</h3>
+            <p>Open a standalone HTML copy for quick proofing, or send it to the CMS print pipeline as a PDF.</p>
+            <button class="ng-btn" id="ng-btn-download2">⬇ Download standalone .html</button>
+            <button class="ng-btn ng-btn-ghost" id="ng-btn-export-pdf2">🖨 Print / PDF</button>
+          </div>
+        </div>
+        <div class="ng-pub-json-wrap">
+          <div class="ng-pub-json-head">
+            <span>Page object JSON preview</span>
+            <button class="ng-btn ng-btn-ghost ng-btn-sm" id="ng-btn-refresh-pub">⟳ Refresh</button>
+          </div>
+          <pre class="ng-pub-json" id="ng-pub-json">No page generated yet.</pre>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧪 Platform guardrail checks</span><span id="ng-check-score"></span></div>
+          <ul class="ng-pub-checks" id="ng-pub-checks"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🔍 SEO & schema scorecard</span><span class="ng-seo-score" id="ng-seo-score"></span></div>
+          <ul class="ng-pub-checks" id="ng-seo-list"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>✅ Pre-flight checklist</span><span id="ng-checklist-score"></span></div>
+          <div class="ng-checklist" id="ng-checklist-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🕵️ Fact-check assistant</span><span id="ng-factcheck-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-factcheck" type="button">Check draft against sources</button>
+          <ul class="ng-pub-checks" id="ng-factcheck-list"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📊 Performance budget</span><span id="ng-perf-score"></span></div>
+          <div class="ng-perf" id="ng-perf-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📇 Social card preview</span><span id="ng-social-meta"></span></div>
+          <div class="ng-social" id="ng-social-preview"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🖼️ Image credits</span><span id="ng-credits-score"></span></div>
+          <div class="ng-credits" id="ng-credits-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🕘 Version history</span><span id="ng-history-count"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-history" type="button">Open history</button>
+          <div class="ng-history" id="ng-history-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>👥 Review workflow</span><span id="ng-review-badge"></span></div>
+          <div class="ng-review">
+            <select id="ng-review-status" aria-label="Review status">
+              <option value="draft">✏️ Draft</option>
+              <option value="review">🔍 In review</option>
+              <option value="approved">✅ Approved</option>
+            </select>
+            <input type="text" id="ng-review-note" placeholder="Editor note…" maxlength="300">
+          </div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📧 Notify editors</span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-notify" type="button">📧 Send “story ready for review” email</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>⏰ Scheduled publish</span></div>
+          <div class="ng-publish-at-row">
+            <input type="datetime-local" id="ng-publish-at" aria-label="Scheduled publish time">
+            <span class="ng-hint" id="ng-publish-at-hint"></span>
+          </div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🚀 One-click CMS page object</span></div>
+          <p class="ng-hint">Creates the page object (name, slug, htmlPage.code, seo) directly in the CMS, then asks the CMS to open it. Object type comes from the <code>pageTypeId</code> param or the dialog.</p>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-pageobj" type="button">📄 Create CMS page object…</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🔗 Related stories picker</span></div>
+          <p class="ng-hint">Query a CMS object type, tick stories, and inject them into the page’s related block. Source type from the <code>relatedTypeId</code> param or the dialog.</p>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-related" type="button">🔍 Pick related stories…</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>✉ Email newsletter edition</span></div>
+          <div class="ng-email" id="ng-email-edition"></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-email" type="button">✉ Write email edition</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🖋 Style & cliché lint</span><span id="ng-lint-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-lint" type="button">Run draft lint</button>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-style" type="button">🖋 AI style review</button>
+          <div class="ng-lint" id="ng-lint-results"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧭 Prompt lab</span></div>
+          <p class="ng-hint">Prompts that produced pages — vote on them and the optimizer learns your house style.</p>
+          <div class="ng-prompt-lab" id="ng-prompt-lab"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══════ STATUS STRIP ═══════ -->
+  <footer class="ng-statusbar" id="ng-statusbar">
+    <span id="ng-status-text">Ready — waiting for the story.</span>
+  </footer>
+
+  <!-- ═══════ MODAL (history / diffs) ═══════ -->
+  <div class="ng-modal-overlay" id="ng-modal-overlay" style="display:none">
+    <div class="ng-modal-box">
+      <div class="ng-modal-head">
+        <span id="ng-modal-title">Modal</span>
+        <button class="ng-iconbtn" id="ng-modal-close" type="button">✕</button>
+      </div>
+      <div class="ng-modal-body" id="ng-modal-body"></div>
+    </div>
+  </div>
+</div>
+<!-- TOOL HTML END -->
+</div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function () {
+  var STORAGE_KEY = 'newsgen_test_db';
+  var SESSION_KEY = 'newsgen_test_sessions';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _roles = ['developer'];
+  var _fields = { _id: 'parent-rec-123', name: 'Test Parent Record', title: 'Test Parent Record' };
+  var _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch (e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch (e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function (cb) { try { cb(arg); } catch (e) {} }); }
+  function currentUser() {
+    if (_roles.indexOf('none') !== -1) return null;
+    return { id: 'u-test', name: 'Test User', email: 'test@example.com', roles: _roles, effectiveAccess: { isViewer: true, isEditor: _roles.indexOf('viewer') === -1, isManager: _roles.indexOf('developer') !== -1 } };
+  }
+
+  window.tool = {
+    onReady: function (cb) { load(); setTimeout(function () { cb(_value, _fields); }, 10); },
+    getValue: function () { return _value; },
+    setValue: function (data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function (cb) { listeners.valueChange.push(cb); },
+    getFields: function () { return _fields; },
+    setField: function (id, val) { _fields[id] = val; },
+    setFields: function (obj) { Object.assign(_fields, obj); },
+    watchField: function () {},
+    onFieldsChange: function () {},
+    param: function (name, def) {
+      if (name === 'allowAi') return 'yes';
+      if (name === 'allowRequestSave') return 'yes';
+      if (name === 'defaultLanguage') return 'en';
+      if (name === 'newsTone') return '';
+      if (name === 'maxChatMessages') return '20';
+      if (name === 'objectId') return 'parent-rec-123';
+      return def;
+    },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonlyChange.push(cb); },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function () { return [{ id: 'u1', name: 'Alice', email: 'a@x.com', roles: ['editor'] }, { id: 'u2', name: 'Bob', email: 'b@x.com', roles: ['viewer'] }]; },
+    onPermittedUsersChange: function () {},
+    reportValid: function (valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function (msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
+    resize: function () {},
+    openUrl: function (url) { window.open(url, '_blank'); },
+    openObjectDetail: function () {},
+    declareOutput: function (s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 160)); },
+    declareParams: function (p) { console.log('declareParams:', (p || []).length, 'params'); },
+    reportMissingParams: function (m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function (prompt, context, callback) {
+      console.log('AI REQUEST (batch) — prompt len:', prompt.length, '| context len:', context.length);
+      setTimeout(function () { callback(null, generateMockResponse(prompt)); }, 700);
+    },
+    requestAIStream: function (prompt, context, callbacks) {
+      console.log('AI REQUEST (stream) — prompt len:', prompt.length, '| context len:', context.length);
+      var full = generateMockResponse(prompt);
+      var pos = 0;
+      var step = Math.max(10, Math.floor(full.length / 70));
+      var timer = setInterval(function () {
+        var chunk = full.substring(pos, pos + step);
+        pos += step;
+        if (chunk) callbacks.onToken(chunk);
+        if (pos >= full.length) {
+          clearInterval(timer);
+          callbacks.onComplete(full);
+        }
+      }, 18);
+    },
+    requestSave: function (cb) { console.log('requestSave dispatched'); setTimeout(function () { cb(null, true); }, 50); },
+    requestUpload: function (accept, cb) { setTimeout(function () { cb(null, { name: 'photo.jpg', url: 'https://loremflickr.com/1200/800/izmir', size: 2048, type: 'image/jpeg' }); }, 400); },
+    requestFileContent: function (url, cb) { setTimeout(function () { cb(null, 'Mock extracted content from ' + url); }, 300); },
+    requestObjects: function (action, params, cb) {
+      function loadSess() { try { var raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSess(arr) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(arr)); } catch (e) {} }
+      setTimeout(function () {
+        if (action === 'query') {
+          cb(null, { objects: loadSess() });
+        } else if (action === 'create') {
+          var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'New Chat', _parentObjectId: 'parent-rec-123', productData: params.productData };
+          var arr = loadSess();
+          arr.unshift(obj);
+          saveSess(arr);
+          cb(null, { object: obj });
+        } else if (action === 'update') {
+          var arr2 = loadSess();
+          for (var si = 0; si < arr2.length; si++) {
+            if (arr2[si].id === params.objectId) {
+              if (params.name) arr2[si].name = params.name;
+              if (params.productData) {
+                arr2[si].productData = arr2[si].productData || {};
+                var oldDcb = arr2[si].productData.data_categoriesBased || {};
+                var newDcb = params.productData.data_categoriesBased || {};
+                arr2[si].productData.data_categoriesBased = Object.assign({}, oldDcb, newDcb);
+              }
+              break;
+            }
+          }
+          saveSess(arr2);
+          cb(null, { ok: true });
+        } else if (action === 'delete') {
+          saveSess(loadSess().filter(function (s) { return s.id !== params.objectId; }));
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 150);
+    },
+    requestExportPdf: function (opts, cb) { setTimeout(function () { cb(null, { name: (opts.filename || 'export') + '.html', url: 'https://example.com/export.html', size: 8192, type: 'text/html' }); }, 500); },
+    requestSendEmail: function (opts, cb) { setTimeout(function () { cb(null, { ok: true }); }, 500); }
+  };
+
+  function mockPlan() {
+    return {
+      "design": { "accentColor": "#f59e0b" },
+      "components": [
+        { "component": "hero", "content": {
+          "style": "broadsheet",
+          "kicker": "ENERGY · IZMIR",
+          "title": "Community Solar Farm Opens in Izmir, Powering 1,200 Homes",
+          "subtitle": "The 4,000-panel Gunesova project is the city's largest citizen-funded renewable installation — and it is only the beginning.",
+          "image": "https://loremflickr.com/1200/675/solar,panels",
+          "imageAlt": "Solar panels at the Gunesova community solar farm",
+          "caption": "The Gunesova field stretches across a former quarry east of Izmir. (Photo: D. Aydin / Izmir Newsroom)",
+          "meta": { "date": "August 19, 2026", "author": "Deniz Aydin", "location": "Izmir, Türkiye", "readingTime": "4 min read", "updated": "12:40" },
+          "ctas": [ { "label": "Read the story", "url": "#story", "primary": true }, { "label": "City energy plan", "url": "/city-energy-plan" } ]
+        } },
+        { "component": "breaking", "content": {
+          "label": "BREAKING",
+          "text": "The farm began exporting to the grid at 9:14 local time — 14 months after ground was broken.",
+          "time": "09:22"
+        } },
+        { "component": "byline", "content": {
+          "name": "Deniz Aydin",
+          "role": "Energy correspondent",
+          "location": "Izmir",
+          "date": "August 19, 2026",
+          "updated": "12:40",
+          "readingTime": "4 min read"
+        } },
+        { "component": "standfirst", "content": {
+          "text": "Two hundred and fourteen families pooled ₺120 million to build their own power station on a disused quarry. This morning, it started paying them back."
+        } },
+        { "component": "lead", "content": {
+          "text": "At 9:14 this morning, the last of 4,000 solar panels clicked into place on a former quarry east of Izmir — and with it, the Gunesova community farm began feeding the grid for the first time."
+        } },
+        { "component": "keyfacts", "content": {
+          "title": "The project in numbers",
+          "stats": [
+            { "value": 4000, "label": "Solar panels", "icon": "☀️" },
+            { "value": 1200, "label": "Homes powered", "icon": "🏠" },
+            { "value": 8.4, "suffix": " MW", "label": "Installed capacity", "icon": "⚡" },
+            { "value": 3100, "suffix": " t", "label": "CO₂ avoided / year", "icon": "🌱" }
+          ]
+        } },
+        { "component": "article", "content": { "blocks": [
+          { "t": "h2", "text": "What happened" },
+          { "t": "p", "text": "The ceremony was short: a ribbon cut by Mayor Elif Kaya, a round of applause from the 214 citizen-investors who funded the farm, and then the hum of inverters starting up. Within fifteen minutes the first kilowatt-hours were flowing into the city grid." },
+          { "t": "quote", "text": "We did not wait for someone else to build our energy future. We built it ourselves — 214 ordinary families.", "by": "Elif Kaya", "role": "Mayor of Izmir" },
+          { "t": "p", "text": "The cooperative model is simple. Citizens bought shares starting at ₺5,000. Profits from electricity sales return to members as credits on their bills. The city provided the land — a disused quarry — under a 25-year lease." },
+          { "t": "h3", "text": "Why this matters" },
+          { "t": "p", "text": "Energy analysts say Gunesova is a template: mid-sized cities can cut emissions without waiting for national grid investment. The project was built in 14 months, under budget." },
+          { "t": "note", "kind": "info", "text": "<strong>Full grid connection</strong> was certified by the regional transmission operator on August 18, 2026." },
+          { "t": "ul", "items": ["214 citizen-investors", "₺120M total budget, ₺8M under budget", "25-year city land lease", "Second phase of 6 MW planned for 2027"] }
+        ] } },
+        { "component": "timeline", "content": {
+          "title": "How we got here",
+          "items": [
+            { "time": "Mar 2025", "title": "Cooperative founded", "text": "214 families sign the founding charter.", "kind": "milestone" },
+            { "time": "Jun 2025", "title": "Land lease signed", "text": "The city grants the former quarry east of Izmir.", "kind": "update" },
+            { "time": "Apr 2026", "title": "First panels installed", "text": "Crews finish the north field two weeks early.", "kind": "update" },
+            { "time": "Aug 18, 2026", "title": "Grid connection certified", "text": "The regional operator approves the connection.", "kind": "milestone" },
+            { "time": "Aug 19, 2026", "title": "The farm goes live", "text": "First power flows at 9:14 AM.", "kind": "quote" }
+          ]
+        } },
+        { "component": "keypoints", "content": {
+          "title": "At a glance",
+          "points": [
+            "The Gunesova farm went live at 9:14 on August 19, 2026.",
+            "4,000 panels will cover the electricity of about 1,200 homes.",
+            "214 citizen-investors own the cooperative; the city leased the land.",
+            "Members receive profits as credits on their electricity bills.",
+            "A 6 MW second phase opens its share round in September."
+          ]
+        } },
+        { "component": "factcheck", "content": {
+          "claim": "Gunesova is the largest citizen-funded solar installation in Izmir.",
+          "verdict": "true",
+          "by": "The energy desk",
+          "explanation": "The regional energy office's community-solar registry lists no larger citizen-funded project in the Izmir region as of August 2026."
+        } },
+        { "component": "liveblog", "content": {
+          "title": "Opening day — as it happened",
+          "entries": [
+            { "time": "12:40", "text": "First billing credits confirmed for early members — applied to September invoices.", "tag": "milestone" },
+            { "time": "11:05", "text": "Phase two share round announced for September 8; minimum buy-in stays at ₺5,000.", "tag": "update" },
+            { "time": "09:35", "text": "Mayor Elif Kaya: \"This is not a project, it is a habit — ordinary families deciding their own energy future.\"", "tag": "quote" },
+            { "time": "09:14", "text": "Inverters start. The farm begins exporting to the grid for the first time.", "tag": "milestone" },
+            { "time": "09:00", "text": "Ribbon cut by Mayor Kaya. 214 investors in attendance.", "tag": "update" }
+          ]
+        } },
+        { "component": "toc", "content": { "title": "In this story" } },
+        { "component": "quote", "content": {
+          "text": "When the meter started turning backwards, one of the investors — a retired schoolteacher — started crying. 'That is our sun,' she said.",
+          "by": "Field reporter notes"
+        } },
+        { "component": "gallery", "content": {
+          "title": "Opening day",
+          "cols": 3,
+          "images": [
+            { "src": "https://loremflickr.com/900/700/solar,panel", "alt": "A row of new solar panels", "caption": "The north field at dawn" },
+            { "src": "https://loremflickr.com/900/700/ceremony,ribbon", "alt": "Mayor cutting the ribbon", "caption": "Mayor Elif Kaya cuts the ribbon" },
+            { "src": "https://loremflickr.com/900/700/crowd,family", "alt": "Citizen investors celebrating", "caption": "214 investors at the opening" }
+          ]
+        } },
+        { "component": "photostory", "content": {
+          "kicker": "THE MOMENT",
+          "title": "When the meter turned",
+          "image": "https://loremflickr.com/1600/900/sunset,solar",
+          "alt": "The sun setting over the solar field on opening day",
+          "caption": "As the first kilowatt-hours flowed, the crowd watched the site meter begin counting backwards.",
+          "credit": "Photo: D. Aydin / Izmir Newsroom"
+        } },
+        { "component": "personcard", "content": {
+          "name": "Elif Kaya",
+          "role": "Mayor of Izmir",
+          "photo": "https://loremflickr.com/320/320/portrait,woman",
+          "bio": "Elected in 2024 on a platform of community-owned infrastructure. Gunesova is her administration's flagship energy project.",
+          "quote": "We did not wait for someone else to build our energy future. We built it ourselves.",
+          "connection": "The city provided the quarry land under a 25-year lease and holds no shares in the cooperative."
+        } },
+        { "component": "chart", "content": {
+          "title": "Solar capacity in the Izmir region (MW)",
+          "type": "bar",
+          "labels": ["2022", "2023", "2024", "2025", "2026"],
+          "series": [ { "label": "Community solar", "data": [12, 20, 31, 47, 78], "color": "#f59e0b" }, { "label": "Utility solar", "data": [60, 72, 80, 92, 105], "color": "#2f6fed" } ],
+          "unit": "MW",
+          "source": "Regional energy office"
+        } },
+        { "component": "poll", "content": {
+          "question": "Would you invest in a community solar cooperative?",
+          "options": ["Yes — sign me up", "Maybe, if returns are clear", "No — not for me"],
+          "note": "Demo poll: votes are stored in your browser only."
+        } },
+        { "component": "countdown", "content": {
+          "title": "Phase two ground-breaking",
+          "target": "2027-03-01T09:00:00Z",
+          "note": "The 6 MW expansion adds another 1,900 homes."
+        } },
+        { "component": "faq", "content": {
+          "title": "What we know so far",
+          "items": [
+            { "q": "Who owns the farm?", "a": "A cooperative of 214 citizen-investors. The city leases the land but owns no shares." },
+            { "q": "How are profits distributed?", "a": "As bill credits to members, proportional to their shares." },
+            { "q": "Can new members join?", "a": "Yes — a second share round opens in September for phase two." }
+          ]
+        } },
+        { "component": "steps", "content": {
+          "title": "How to join phase two",
+          "items": [
+            { "title": "Attend an info evening", "text": "Three sessions in September at the city hall.", "icon": "📅" },
+            { "title": "Reserve your shares", "text": "From ₺5,000, online or at the cooperative office.", "icon": "✍️" },
+            { "title": "Watch your bills shrink", "text": "Credits appear within the first operating year.", "icon": "💡" }
+          ]
+        } },
+        { "component": "mapcard", "content": {
+          "title": "On location",
+          "place": "Gunesova Community Solar Farm",
+          "address": "Former quarry, Menderes district — 22 km east of Izmir",
+          "region": "Aegean Region, Türkiye",
+          "note": "Open to visitors on Saturdays 10:00–14:00."
+        } },
+        { "component": "cta", "content": {
+          "title": "Follow the second phase",
+          "text": "The 6 MW expansion opens its share round this September.",
+          "button": { "label": "Get updates", "url": "/newsletter" },
+          "kind": "subscribe"
+        } },
+        { "component": "share", "content": { "title": "Share this story", "text": "Community solar farm opens in Izmir — 4,000 panels, 1,200 homes" } },
+        { "component": "reactions", "content": {} },
+        { "component": "related", "content": {
+          "title": "Keep reading",
+          "items": [
+            { "title": "City unveils 2030 energy plan", "url": "/city-energy-plan", "tag": "POLICY" },
+            { "title": "Wind co-op approved in the north", "url": "/wind-coop", "tag": "ENERGY" },
+            { "title": "How the quarry became a garden", "url": "/quarry-park", "tag": "CITY" }
+          ]
+        } },
+        { "component": "sources", "content": {
+          "title": "Sources & further reading",
+          "items": [
+            { "name": "Izmir Municipality press office", "url": "https://example.com/press" },
+            { "name": "Regional transmission operator — connection certificate", "url": "https://example.com/cert" },
+            { "name": "Gunesova Cooperative annual report", "url": "https://example.com/report" }
+          ]
+        } },
+        { "component": "tags", "content": { "tags": ["solar", "izmir", "energy", "cooperative", "climate"] } },
+        { "component": "authorcard", "content": {
+          "name": "Deniz Aydin",
+          "role": "Energy correspondent",
+          "bio": "Covers the Aegean energy transition for the Izmir Newsroom since 2021.",
+          "links": [ { "label": "More from Deniz", "url": "/author/deniz" } ]
+        } },
+        { "component": "widget", "content": { "name": "list", "config": { "cmsObjectType": "news-updates", "orderBy": "created", "orderDir": "desc", "pageSize": 5, "fields": [ { "field": "title", "label": "Latest" } ] }, "note": "Loading the latest updates…" } },
+        { "component": "corrections", "content": { "note": "An earlier version of this story said the ceremony began at 09:00; it began at 08:52. This version also adds the transmission operator's certification date." } },
+        { "component": "divider", "content": { "icon": "✦" } }
+      ],
+      "flags": { "readingProgress": true },
+      "customCss": ".news-solar-farm-opens-in-izmir .n-hero-title { text-wrap: balance; }",
+      "customJs": "var navEl = document.querySelector('.news-solar-farm-opens-in-izmir .n-hero-ctas a[href=\"#story\"]'); if (navEl) { navEl.addEventListener('click', function(){ var t = document.querySelector('.news-solar-farm-opens-in-izmir .n-article'); if (t) { try { t.scrollIntoView({ behavior: 'smooth' }); } catch (e) { t.scrollIntoView(); } } }); }",
+      "seo": {
+        "metaTitle": "Community Solar Farm Opens in Izmir — 1,200 Homes Powered",
+        "metaDesc": "The 4,000-panel Gunesova cooperative farm went live on August 19, 2026, becoming Izmir's largest citizen-funded renewable installation.",
+        "metaKeywords": "solar, izmir, community energy, cooperative, renewable",
+        "ogTitle": "Community Solar Farm Opens in Izmir",
+        "ogDesc": "4,000 panels, 214 families, 1,200 homes — the Gunesova farm is live.",
+        "ogImage": "https://loremflickr.com/1200/630/solar",
+        "sitemapPriority": "0.8",
+        "sitemapChangefreq": "daily",
+        "aiDescription": "News article about the opening of the Gunesova community solar farm in Izmir.",
+        "aiKeyTopics": "solar energy, community cooperative, Izmir",
+        "schemaItems": [ { "id": "article", "type": "NewsArticle", "json": "{\"@type\":\"NewsArticle\",\"headline\":\"Community Solar Farm Opens in Izmir\",\"datePublished\":\"2026-08-19\",\"author\":{\"@type\":\"Organization\",\"name\":\"Izmir Newsroom\"}}" } ]
+      },
+      "pageMeta": {
+        "name": "Community Solar Farm Opens in Izmir",
+        "slug": "solar-farm-opens-in-izmir",
+        "contentId": "news-solar-izmir-1",
+        "meta": { "language": "en" },
+        "data": { "status": "published", "requireAuth": false }
+      },
+      "notes": "Composed a rich opening-day package: hero, facts, timeline, gallery, chart, poll, countdown and a widget island."
+    };
+  }
+
+  function generateMockResponse(prompt) {
+    if (prompt.indexOf('HEADLINE LAB') !== -1) {
+      return JSON.stringify({ variants: [
+        { style: 'straight', headline: 'Council Approves Waterfront Plan, 41–0' },
+        { style: 'feature', headline: 'The Coastline Vote: How a City Chose Its Own Future' },
+        { style: 'seo', headline: 'Waterfront Master Plan Approved by Council in Unanimous Vote' },
+        { style: 'social', headline: 'It took six years — now the waterfront is finally happening' },
+        { style: 'short', headline: 'Waterfront plan passes 41–0' }
+      ] });
+    }
+    if (prompt.indexOf('STANDFIRST & DECK LAB') !== -1) {
+      return JSON.stringify({ standfirst: 'After six years of consultation, the harbour plan passes unanimously — and the first cranes arrive next spring.', decks: { x: 'The waterfront plan just passed 41–0. Cranes arrive in 2027.', facebook: 'Six years, one vote: the city approved its biggest-ever waterfront plan.', whatsapp: 'Waterfront plan approved 41–0 — construction starts spring 2027.' } });
+    }
+    if (prompt.indexOf('FACT-CHECK') !== -1) {
+      return JSON.stringify({ checks: [
+        { claim: 'The plan passed unanimously.', verdict: 'true', note: 'Confirmed by the council minutes in the sources.' },
+        { claim: 'The project is fully city-funded.', verdict: 'mostly-false', note: 'Sources say one third comes from a national grant.' }
+      ] });
+    }
+    if (prompt.indexOf('DRAFT A STORY BRIEF') !== -1) {
+      return JSON.stringify({ title: 'Council Approves Waterfront Master Plan', summary: 'The 12-hectare harbour district was approved 41–0 after six years of consultation.', category: 'CITY · IZMIR', tags: ['city', 'waterfront', 'planning'], location: 'Izmir, Türkiye', date: 'August 19, 2026' });
+    }
+    if (prompt.indexOf('TRANSLATE VARIANT') !== -1) {
+      var tp = JSON.parse(JSON.stringify(mockPlan()));
+      tp.pageMeta.meta.language = 'tr';
+      tp.seo.metaTitle = 'İzmir’de Topluluk Güneş Çiftliği Açıldı — 1.200 Ev Enerjileniyor';
+      tp.seo.metaDesc = 'Güneşova kooperatif çiftliği 19 Ağustos 2026’da devreye girdi.';
+      var hero = tp.components[0];
+      if (hero && hero.content) { hero.content.kicker = 'ENERJİ'; hero.content.title = 'İzmir’de Topluluk Güneş Çiftliği Açıldı'; }
+      tp.notes = 'Translated the page into Turkish, sharing the same contentId.';
+      return JSON.stringify(tp);
+    }
+    if (prompt.indexOf('AGENTIC BUILD PLANNER') !== -1) {
+      return JSON.stringify({ title: 'Interactive polish', steps: [
+        { do: 'Append a graded story quiz and a comments hook.', component: 'quiz' },
+        { do: 'Add a heatstrip showing monthly energy output.', component: 'heatstrip' }
+      ] });
+    }
+    if (prompt.indexOf('AGENTIC BUILD STEP') !== -1) {
+      var sp = JSON.parse(JSON.stringify(mockPlan()));
+      sp.components.push({ component: 'quiz', content: { title: 'How well did you follow the story?', questions: [{ q: 'When did the farm open?', options: ['August 19, 2026', 'June 2025', 'Spring 2027'], correct: 0 }, { q: 'How many homes are powered?', options: ['1,200', '400', '8,000'], correct: 0 }] } });
+      sp.components.push({ component: 'comments', content: { title: 'Join the discussion' } });
+      sp.notes = 'Agentic step applied: quiz + comments hook.';
+      return JSON.stringify(sp);
+    }
+    if (prompt.indexOf('A/B VARIANT A') !== -1) {
+      var pa2 = JSON.parse(JSON.stringify(mockPlan()));
+      var ha2 = pa2.components[0];
+      if (ha2 && ha2.content) { ha2.content.title = 'The Day the Sun Became a Neighbour: Izmir’s 214 Families Power Their Own City'; ha2.content.subtitle = 'A human story of one cooperative that built the city’s largest citizen-funded solar farm.'; }
+      pa2.notes = 'Variant A — human interest.';
+      return JSON.stringify(pa2);
+    }
+    if (prompt.indexOf('A/B VARIANT') !== -1) {
+      var pb2 = JSON.parse(JSON.stringify(mockPlan()));
+      var hb2 = pb2.components[0];
+      if (hb2 && hb2.content) { hb2.content.title = 'Solar Farm Opens: 4,000 Panels, 1,200 Homes, 214 Investors'; hb2.content.subtitle = 'The numbers behind Izmir’s largest cooperative energy project.'; }
+      pb2.components.push({ component: 'heatstrip', content: { title: 'Monthly output (MWh)', unit: 'MWh', items: [{ label: 'Jul', value: 42 }, { label: 'Aug', value: 38 }, { label: 'Sep', value: 31 }] } });
+      pb2.notes = 'Variant B — data driven.';
+      return JSON.stringify(pb2);
+    }
+    if (prompt.indexOf('EMAIL EDITION') !== -1) {
+      return JSON.stringify({ subject: 'The newsletter: Izmir’s solar farm is live', html: '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;font-family:Arial,sans-serif"><div style="max-width:600px;margin:0 auto;padding:24px"><h1 style="font-size:22px">The solar farm is live</h1><p>4,000 panels went online today.</p><p><a href="{{url}}">Read the story</a></p></div></body></html>' });
+    }
+    if (prompt.indexOf('STYLE REVIEW') !== -1) {
+      return JSON.stringify({ issues: [
+        { type: 'readability', where: 'The council chamber fell quiet as the final tally appeared on the screen', why: '36-word sentence — hard to scan on mobile.', fix: 'Split after “quiet”: “The chamber fell quiet. The tally appeared: 41 for, none against.”' },
+        { type: 'attribution', where: 'the mayor said', why: 'Give the full name and title on first reference.', fix: 'Mayor Elif Kaya said…' }
+      ] });
+    }
+    if (prompt.indexOf('PROMPT OPTIMIZER') !== -1) {
+      return JSON.stringify({ improved: 'Prefer short paragraphs, quote at least two named people, and always add a "why it matters" line in the standfirst.' });
+    }
+    if (prompt.indexOf('JSON REQUIRED') !== -1) {
+      return JSON.stringify(mockPlan());
+    }
+    return [
+      'Great — I have the facts. I can build this into a rich page: a split hero, key-number cards, an "as it happened" timeline, a gallery, a capacity chart, and a poll.',
+      '[[suggest_x]] add a before/after slider of the quarry site',
+      '[[suggest_x]] make the hero a full-bleed cover image',
+      '[[suggest_x]] add an audio statement from the mayor'
+    ].join('\n');
+  }
+
+  window._toolMock = {
+    setRole: function (role) {
+      _roles = role === 'none' ? ['none'] : [role];
+      fire('userChange', currentUser());
+    },
+    setReadOnly: function (ro) { _readOnly = ro; fire('readonlyChange', ro); },
+    isReadOnly: function () { return _readOnly; },
+    fillSampleBrief: function () {
+      var v = _value || {};
+      v.brief = {
+        title: 'Community Solar Farm Opens in Izmir, Powering 1,200 Homes',
+        slug: 'solar-farm-opens-in-izmir',
+        category: 'ENERGY · IZMIR',
+        author: 'Deniz Aydin',
+        date: 'August 19, 2026',
+        location: 'Izmir, Türkiye',
+        heroImage: 'https://loremflickr.com/1200/900/solar,panels',
+        summary: 'The 4,000-panel Gunesova community solar farm went live today, funded by 214 citizen-investors on a former quarry east of Izmir.',
+        tags: ['solar', 'izmir', 'energy', 'cooperative', 'climate'],
+        sources: [
+          { name: 'Izmir Municipality press office', url: 'https://example.com/press' },
+          { name: 'Regional transmission operator', url: 'https://example.com/cert' }
+        ],
+        language: 'en'
+      };
+      _value = v;
+      save();
+      fire('valueChange', _value);
+    },
+    clear: function () {
+      _value = null;
+      save();
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      fire('valueChange', null);
+      location.reload();
+    }
+  };
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="NewsGenerator.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function () {
+  var st = document.getElementById('th-status');
+  function setStatus(t) { if (st) st.textContent = t; }
+  var role = document.getElementById('th-role');
+  var roBtn = document.getElementById('th-readonly');
+  var sampleBtn = document.getElementById('th-sample');
+  var clearBtn = document.getElementById('th-clear');
+  role.addEventListener('change', function () {
+    window._toolMock.setRole(role.value);
+    setStatus('role: ' + role.value);
+  });
+  roBtn.addEventListener('click', function () {
+    var ro = !window._toolMock.isReadOnly();
+    window._toolMock.setReadOnly(ro);
+    roBtn.textContent = 'RO: ' + (ro ? 'on' : 'off');
+    setStatus('readOnly: ' + ro);
+  });
+  sampleBtn.addEventListener('click', function () {
+    window._toolMock.fillSampleBrief();
+    setStatus('sample brief loaded');
+  });
+  clearBtn.addEventListener('click', function () {
+    window._toolMock.clear();
+  });
+  setStatus('ready');
+})();
+</script>
+</body>
+</html>

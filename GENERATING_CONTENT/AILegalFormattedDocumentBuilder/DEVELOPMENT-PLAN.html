@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Legal Document Builder — Development Plan</title>
+<style>
+:root {
+  --primary: #4f46e5; --primary-dark: #3730a3; --primary-bg: #eef2ff;
+  --success: #059669; --success-bg: #ecfdf5;
+  --warning: #d97706; --warning-bg: #fef3c7;
+  --danger: #dc2626; --danger-bg: #fee2e2;
+  --border: #e2e8f0; --text: #1e293b; --muted: #64748b; --text3: #94a3b8;
+  --bg: #f6f7fb; --surface: #fff; --radius: 12px;
+  --shadow: 0 2px 10px rgba(15,23,42,.06);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+
+header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: -0.01em; }
+header p.sub { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; max-width: 820px; }
+
+/* Summary */
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 8px; }
+.sum-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.sum-card .num { font-size: 22px; font-weight: 800; }
+.sum-card .lbl { font-size: 11px; color: var(--muted); font-weight: 600; }
+.sum-card.done .num { color: var(--success); }
+.sum-card.prog .num { color: var(--warning); }
+.sum-card.planned .num { color: var(--primary); }
+.sum-card.skipped .num { color: var(--text3); }
+.progress-track { height: 10px; background: #e2e8f0; border-radius: 6px; overflow: hidden; margin: 10px 0 18px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #818cf8); border-radius: 6px; width: 0; transition: width .4s ease; }
+.progress-label { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.phase-rows { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+.phase-row { flex: 1; min-width: 220px; }
+.phase-row .ph-label { font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.phase-row .bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.phase-row .bar i { display: block; height: 100%; background: var(--success); border-radius: 4px; }
+.phase-row .ph-sub { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+
+/* Controls */
+.controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+.controls label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.controls select { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--text); cursor: pointer; outline: none; }
+.controls select:focus { border-color: var(--primary); }
+.cat-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.cat-chip { border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 16px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.cat-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 6px 12px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text); }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.btn-reset { margin-left: auto; color: var(--danger); border-color: #fecaca; }
+
+/* Feature cards */
+.feat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow); transition: border-color .15s ease; }
+.feat:hover { border-color: #c7d2fe; }
+.feat-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.feat-id { font-size: 10px; font-weight: 800; color: var(--primary); background: var(--primary-bg); border-radius: 6px; padding: 2px 7px; letter-spacing: .04em; }
+.feat-title { font-weight: 700; font-size: 14px; }
+.badge { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 9px; }
+.badge.phase1 { background: #d1fae5; color: #065f46; }
+.badge.phase2 { background: #fef3c7; color: #92400e; }
+.badge.phase3 { background: #fee2e2; color: #991b1b; }
+.badge.cat { background: #eef2ff; color: #4338ca; }
+.feat-desc { margin: 8px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.feat-benefit { margin: 4px 0 0; font-size: 12px; color: var(--success); font-weight: 600; }
+.feat-bottom { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.feat-status { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font-family: inherit; font-size: 12px; background: #fff; color: var(--text); cursor: pointer; outline: none; font-weight: 600; }
+.feat-status[data-st="Planned"] { border-color: #c7d2fe; color: var(--primary-dark); }
+.feat-status[data-st="In Progress"] { border-color: #fcd34d; color: #92400e; background: #fffbeb; }
+.feat-status[data-st="Done"] { border-color: #6ee7b7; color: #065f46; background: var(--success-bg); }
+.feat-status[data-st="Skipped"] { border-color: #e2e8f0; color: var(--text3); }
+.feat-notes-btn { border: none; background: transparent; color: var(--primary); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.feat-notes { display: none; margin-top: 8px; }
+.feat-notes.open { display: block; }
+.feat-notes textarea { width: 100%; min-height: 54px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 12.5px; resize: vertical; outline: none; color: var(--text); background: #fafbfc; }
+.feat-notes textarea:focus { border-color: var(--primary); background: #fff; }
+.empty { text-align: center; color: var(--muted); padding: 40px; font-size: 13px; }
+footer { margin-top: 26px; font-size: 11px; color: var(--text3); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>⚖️ Legal Document Builder — Development Plan</h1>
+    <p class="sub">Feature backlog for <b>AILegalFormattedDocumentBuilder</b> (chat-driven, Word-format legal document drafting tool). Each feature has a phase (1 = quick wins &amp; core polish, 2 = high-value additions, 3 = advanced) and a status you can update. Statuses and notes are saved in this browser (localStorage) — the file itself stays static.</p>
+    <div class="summary-grid" id="summary-grid"></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-label" id="progress-label"></div>
+    <div class="phase-rows" id="phase-rows"></div>
+  </header>
+
+  <div class="controls">
+    <label for="f-status">Status</label>
+    <select id="f-status">
+      <option value="all">All statuses</option>
+      <option value="Planned">Planned</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Done">Done</option>
+      <option value="Skipped">Skipped</option>
+    </select>
+    <label for="f-phase">Phase</label>
+    <select id="f-phase">
+      <option value="all">All phases</option>
+      <option value="1">Phase 1 — Quick wins &amp; core polish</option>
+      <option value="2">Phase 2 — High-value additions</option>
+      <option value="3">Phase 3 — Advanced</option>
+    </select>
+    <div class="cat-chips" id="cat-chips"></div>
+    <button class="btn btn-reset" id="btn-reset" title="Clear saved statuses and notes">↺ Reset</button>
+  </div>
+
+  <div id="list"></div>
+  <footer>Development plan for AILegalFormattedDocumentBuilder · generated 2026-08-18 · Phase-1 (24 items) applied 2026-08-19 · statuses &amp; notes persist locally</footer>
+</div>
+
+<script>
+var CATS = {
+  A: { name: 'AI & Drafting Intelligence', color: '#4338ca' },
+  B: { name: 'Editing & UX', color: '#0e7490' },
+  C: { name: 'Legal Components & Templates', color: '#7c3aed' },
+  D: { name: 'Collaboration & CMS', color: '#db2777' },
+  E: { name: 'Import', color: '#0891b2' },
+  F: { name: 'Export & Sharing', color: '#d97706' },
+  G: { name: 'Quality & Compliance', color: '#059669' },
+  H: { name: 'Performance & Ops', color: '#475569' }
+};
+
+var FEATURES = [
+  /* ── A. AI & Drafting Intelligence ── */
+  { id: 'A1', cat: 'A', phase: 1, title: 'Guided document interview (wizard)',
+    desc: 'Instead of one free-text request, the AI interviews the user step by step — parties, dates, amounts, special terms — then drafts the complete document from the answers. Reuses the interview pattern from WebpageBuilder\u2019s guided mode.',
+    benefit: 'Removes writer\u2019s block; fewer back-and-forth corrections.' },
+  { id: 'A2', cat: 'A', phase: 1, title: 'Document-type detection & tailored suggestions',
+    desc: 'Detect the document type (NDA, MSA, employment, lease…) from title/content and surface type-specific next-step chips (e.g. "add non-compete", "add probation clause").',
+    benefit: 'Faster completion; the AI suggests what the user forgot.' },
+  { id: 'A3', cat: 'A', phase: 2, title: 'Clause gap analysis',
+    desc: 'AI checklist per document type — verifies essential clauses are present (parties, term, payment, termination, liability, signatures) and lists what is missing with one-click add.',
+    benefit: 'Fewer invalid or incomplete agreements.' },
+  { id: 'A4', cat: 'A', phase: 2, title: 'Plain-language rewrite mode',
+    desc: 'One chat command rewrites the whole document (or a selection) in plain, modern language while preserving legal meaning and section numbering.',
+    benefit: 'Client-friendly documents without losing enforceability.' },
+  { id: 'A5', cat: 'A', phase: 2, title: 'Translate the document',
+    desc: 'Translate the entire document to another language keeping the block structure, numbering and formatting intact (e.g. English ↔ Turkish).',
+    benefit: 'Multilingual jurisdictions and international parties.' },
+  { id: 'A6', cat: 'A', phase: 2, title: 'Clause variants (pick 1 of 3)',
+    desc: 'When the AI adds or edits a clause it can offer 2–3 alternative wordings (strict / balanced / lenient) as chat chips; the chosen variant is applied.',
+    benefit: 'Negotiation-ready options in one step.' },
+  { id: 'A7', cat: 'A', phase: 2, title: 'Ask-the-document Q&A',
+    desc: 'Chat questions about the current document ("what does section 4 say?", "who pays taxes?") answered from the document content, with citations to the relevant block.',
+    benefit: 'Quick answers without reading the whole document.' },
+  { id: 'A8', cat: 'A', phase: 1, title: 'Auto table of contents / clause index',
+    desc: 'One-click block that generates a numbered table of contents from all "section" blocks, kept in sync when sections are added or renumbered.',
+    benefit: 'Professional multi-page agreements navigate like Word.' },
+
+  /* ── B. Editing & UX ── */
+  { id: 'B1', cat: 'B', phase: 1, title: 'Drag & drop reorder blocks',
+    desc: 'Drag blocks (and whole sections) up/down in a document-outline strip; order changes save automatically.',
+    benefit: 'Restructuring without chat round-trips.' },
+  { id: 'B2', cat: 'B', phase: 1, title: 'Block context menu + duplicate',
+    desc: 'Click a block to get a mini menu: ✏️ AI-edit, ⧉ duplicate, 🗑 delete, insert before/after. A "block" chip appears in the toolbar showing the selected block.',
+    benefit: 'Localized edits are one click away.' },
+  { id: 'B3', cat: 'B', phase: 1, title: 'Undo/redo + version history viewer',
+    desc: 'Local undo/redo stack for manual edits, plus a version history drawer (every AI/manual change) with diff and restore.',
+    benefit: 'Safe experimentation; recover from mistakes.' },
+  { id: 'B4', cat: 'B', phase: 1, title: 'Word-style selection mini-toolbar',
+    desc: 'When text is selected in the preview, a floating toolbar appears right above it (B / I / U / color / highlight / 🎯 target for AI) — no need to reach the top bar.',
+    benefit: 'Feels like Word while keeping the AI target flow.' },
+  { id: 'B5', cat: 'B', phase: 2, title: 'Find & replace',
+    desc: 'Search inside the document with match highlighting and replace (text-only, block-scoped).',
+    benefit: 'Renaming a party across the document takes seconds.' },
+  { id: 'B6', cat: 'B', phase: 2, title: 'Zoom + focus mode',
+    desc: 'Page zoom controls (fit-width / 100% / 150%) and a focus mode that collapses the chat for a full-width document view.',
+    benefit: 'Comfortable review on any screen.' },
+  { id: 'B7', cat: 'B', phase: 2, title: 'Outline / navigation sidebar',
+    desc: 'A collapsible outline panel listing all sections; click to jump to that page; drag to reorder sections.',
+    benefit: 'Long documents stay navigable.' },
+  { id: 'B8', cat: 'B', phase: 1, title: 'Keyboard shortcuts',
+    desc: 'Ctrl+B/I/U in edit mode, Ctrl+Z/Y undo/redo, Ctrl+S reminds to save in CMS, Esc closes drawers.',
+    benefit: 'Power users never touch the mouse.' },
+
+  /* ── C. Legal Components & Templates ── */
+  { id: 'C1', cat: 'C', phase: 1, title: 'Starter template gallery',
+    desc: 'One-click starter documents in the welcome screen: NDA, Service Agreement, Employment Contract, Lease, POA, Terms & Conditions — pre-filled with the right component flow.',
+    benefit: 'New documents start 80% complete.' },
+  { id: 'C2', cat: 'C', phase: 2, title: 'Expanded legal component library',
+    desc: 'New boilerplate blocks: GDPR/DPA, letter of intent, settlement agreement, non-compete, non-solicitation, IP assignment, software license, privacy & cookie policies, affidavits, deeds.',
+    benefit: 'Covers far more practice areas out of the box.' },
+  { id: 'C3', cat: 'C', phase: 1, title: 'Auto-numbering engine',
+    desc: 'Sections and clauses renumber automatically when blocks are inserted, moved or deleted (1., 1.1, (a), (i)…), including cross-references.',
+    benefit: 'No more hand-fixed numbering after edits.' },
+  { id: 'C4', cat: 'C', phase: 2, title: 'Defined-terms registry + highlighting',
+    desc: 'Collects every defined term ("Parties", "Confidential Information"…) into a registry view; highlights occurrences in the preview and checks for use-without-definition.',
+    benefit: 'Definition hygiene like a real drafting tool.' },
+  { id: 'C5', cat: 'C', phase: 2, title: 'My Clauses (user snippet library)',
+    desc: 'Save any block as a reusable snippet in a personal library, insertable via chat or the component drawer.',
+    benefit: 'Firms reuse their own approved wording.' },
+  { id: 'C6', cat: 'C', phase: 2, title: 'Party contact book',
+    desc: 'Remembers party details (name, address, email, role) across documents and auto-fills parties-blocks and notices.',
+    benefit: 'Repeat clients draft in minutes.' },
+  { id: 'C7', cat: 'C', phase: 1, title: 'Page header/footer with page numbers',
+    desc: 'Document header (title) and footer (page X of Y) rendered on every page of preview and exports.',
+    benefit: 'Prints look like a finalized Word document.' },
+  { id: 'C8', cat: 'C', phase: 1, title: 'Placeholder checker',
+    desc: 'Scans for unfilled [bracketed placeholders] and shows a warning chip with the count; one click asks the AI to resolve them.',
+    benefit: 'No document leaves with blanks.' },
+
+  /* ── D. Collaboration & CMS ── */
+  { id: 'D1', cat: 'D', phase: 2, title: 'Comments / annotations on blocks',
+    desc: 'Attach review comments to any block (threaded, with author + time), resolve them, and filter unresolved.',
+    benefit: 'Review cycles inside the tool.' },
+  { id: 'D2', cat: 'D', phase: 3, title: 'Multi-user presence & live co-editing',
+    desc: 'Show who else has the document open (presence avatars) and merge their changes via onValueChange.',
+    benefit: 'Real-time collaboration on one draft.' },
+  { id: 'D3', cat: 'D', phase: 2, title: 'Approval workflow states',
+    desc: 'Document status badges: Draft → In Review → Approved, with role-gated transitions and an approval history log.',
+    benefit: 'Governance for firms and teams.' },
+  { id: 'D4', cat: 'D', phase: 2, title: 'Send for signature via email',
+    desc: 'Attach the exported PDF/DOCX and send through the CMS email channel (tool.requestSendEmail) with a cover note.',
+    benefit: 'One-click distribution to parties.' },
+  { id: 'D5', cat: 'D', phase: 1, title: 'Sync document meta to parent CMS fields',
+    desc: 'Write detected metadata (parties, effective date, reference no) back to sibling CMS fields via tool.setField.',
+    benefit: 'The parent record stays searchable.' },
+  { id: 'D6', cat: 'D', phase: 3, title: 'Share print-only / read-only link',
+    desc: 'Generate a share link (or set permissions) that opens the document in view-only mode with watermark.',
+    benefit: 'Safe external sharing without editing rights.' },
+
+  /* ── E. Import ── */
+  { id: 'E1', cat: 'E', phase: 2, title: 'Import existing DOCX/PDF → blocks',
+    desc: 'Upload a document (requestUpload + requestFileContent); the AI converts it into the block model, preserving headings, clauses, tables and signatures.',
+    benefit: 'Modernize existing templates instantly.' },
+  { id: 'E2', cat: 'E', phase: 2, title: 'Paste from Word preserving formatting',
+    desc: 'Smart paste handler in edit mode that converts Word/Google Docs clipboard HTML into clean blocks (bold, italics, lists, tables).',
+    benefit: 'Copying content in without retyping.' },
+  { id: 'E3', cat: 'E', phase: 1, title: 'Import Markdown / plain text',
+    desc: 'Paste plain text or Markdown; the AI (or a deterministic parser) maps headings/lists to legal blocks.',
+    benefit: 'Quick drafts from notes.' },
+  { id: 'E4', cat: 'E', phase: 3, title: 'OCR import (scanned documents)',
+    desc: 'Upload a scan/photo of a paper agreement; the AI vision step extracts text and rebuilds it into blocks.',
+    benefit: 'Paper archives become editable.' },
+  { id: 'E5', cat: 'E', phase: 1, title: 'Import/export blocks JSON',
+    desc: 'Export the blocks array as JSON and import it into another record (transfer or backup).',
+    benefit: 'Easy migration between CMS records.' },
+
+  /* ── F. Export & Sharing ── */
+  { id: 'F1', cat: 'F', phase: 1, title: 'DOCX export options',
+    desc: 'Export dialog: margins, base font/size, cover page on/off, page numbers — applied to the Word output.',
+    benefit: 'Word files match firm templates.' },
+  { id: 'F2', cat: 'F', phase: 1, title: 'PDF options (A4/Letter, footer)',
+    desc: 'Choose A4 or Letter, page numbers in the footer, and DRAFT/CONFIDENTIAL watermark before generating the PDF.',
+    benefit: 'Ready-to-send PDFs.' },
+  { id: 'F3', cat: 'F', phase: 1, title: 'Watermarks',
+    desc: 'DRAFT / CONFIDENTIAL / FOR REVIEW diagonal watermarks on preview and all exports, toggleable.',
+    benefit: 'Clear version hygiene for legal teams.' },
+  { id: 'F4', cat: 'F', phase: 1, title: 'Auto cover page',
+    desc: 'Generated cover page block: document title, parties, date, reference number, confidentiality notice.',
+    benefit: 'Instant professional front page.' },
+  { id: 'F5', cat: 'F', phase: 2, title: 'Export Markdown / plain text',
+    desc: 'Additional text-only exports for version control, diffing and pasting into other systems.',
+    benefit: 'Git-friendly legal drafting.' },
+  { id: 'F6', cat: 'F', phase: 2, title: 'Compare versions (diff report)',
+    desc: 'Side-by-side comparison of any two saved versions, rendered like Word track-changes in the drawer.',
+    benefit: 'See exactly what changed between drafts.' },
+
+  /* ── G. Quality & Compliance ── */
+  { id: 'G1', cat: 'G', phase: 1, title: 'Spell check (red squiggles)',
+    desc: 'Browser spellcheck enabled in edit mode with a custom legal dictionary (add firm/party names).',
+    benefit: 'No typos in signed documents.' },
+  { id: 'G2', cat: 'G', phase: 1, title: 'Legal style lint',
+    desc: 'Lints common drafting issues: undefined/duplicate defined terms, inconsistent party names, orphaned cross-references, empty clauses.',
+    benefit: 'Catches mistakes a human misses.' },
+  { id: 'G3', cat: 'G', phase: 2, title: 'Per-type compliance rules',
+    desc: 'Embedded rules files per document type (like WebpageBuilder\u2019s rules) injected into AI prompts and checked after each change.',
+    benefit: 'Jurisdiction/type-specific guardrails.' },
+  { id: 'G4', cat: 'G', phase: 1, title: 'Readability score per section',
+    desc: 'Flesch reading-ease per section shown in the outline; one click asks the AI to simplify hard sections.',
+    benefit: 'Understandable contracts for clients.' },
+  { id: 'G5', cat: 'G', phase: 2, title: 'AI clause risk review',
+    desc: 'One button: the AI reviews the document from each party\u2019s perspective and flags risky/one-sided clauses with suggested rewrites.',
+    benefit: 'Built-in second opinion.' },
+  { id: 'G6', cat: 'G', phase: 2, title: 'Accessibility check on exported HTML',
+    desc: 'Checks exported HTML (contrast, semantics, headings order) so the standalone file is accessible.',
+    benefit: 'Inclusive and compliant deliverables.' },
+
+  /* ── H. Performance & Ops ── */
+  { id: 'H1', cat: 'H', phase: 1, title: 'Auto-save status + CMS save reminders',
+    desc: 'A visible "staged changes" indicator plus a reminder toast when the parent CMS record has unsaved changes.',
+    benefit: 'Nobody loses work to the parent Save button.' },
+  { id: 'H2', cat: 'H', phase: 1, title: 'Document size budget meter',
+    desc: 'Live Firestore 1MB budget meter (block data + chat cache) with trim suggestions.',
+    benefit: 'Long documents stay within CMS limits.' },
+  { id: 'H3', cat: 'H', phase: 2, title: 'Chat/session backup export',
+    desc: 'Export the chat transcript (JSON/Markdown) for records and hand-off notes.',
+    benefit: 'Drafting history is auditable.' },
+  { id: 'H4', cat: 'H', phase: 2, title: 'Prompt shortcuts / macros',
+    desc: 'User-defined quick commands ("/addsign", "/plain", "/formal") mapped to canned prompts, shown above the chat input.',
+    benefit: 'Repeated instructions in one tap.' },
+  { id: 'H5', cat: 'H', phase: 3, title: 'Analytics',
+    desc: 'Local stats: blocks added, AI requests, time spent, most-used components — shown in the settings drawer.',
+    benefit: 'Understand how the tool is used.' },
+  { id: 'H6', cat: 'H', phase: 3, title: 'Bulk operations on blocks',
+    desc: 'Multi-select blocks (shift-click in the outline) to move, duplicate, merge or delete them together.',
+    benefit: 'Fast restructuring of large documents.' }
+];
+
+var STORAGE_KEY = 'ailegaldoc_devplan_v1';
+var STATUSES = ['Planned', 'In Progress', 'Done', 'Skipped'];
+/* Phase-1 items were implemented on 2026-08-19 — default statuses are baked in;
+   anything you change in this page is saved to localStorage and overrides these. */
+var APPLIED_NOTE = 'Applied 2026-08-19';
+var DEFAULTS = {
+  statuses: {
+    A1: 'Done', A2: 'Done', A8: 'Done',
+    B1: 'Done', B2: 'Done', B3: 'Done', B4: 'Done', B8: 'Done',
+    C1: 'Done', C3: 'Done', C7: 'Done', C8: 'Done',
+    D5: 'Done',
+    E3: 'Done', E5: 'Done',
+    F1: 'Done', F2: 'Done', F3: 'Done', F4: 'Done',
+    G1: 'Done', G2: 'Done', G4: 'Done',
+    H1: 'Done', H2: 'Done'
+  },
+  notes: {
+    A1: APPLIED_NOTE + ' — “🪄 Guided interview” button in the chat welcome panel and under the input; AI asks one question at a time, then drafts.',
+    A2: APPLIED_NOTE + ' — _detectDocType() inspects the title/blocks and shows a type chip; component suggestions follow the detected type.',
+    A8: APPLIED_NOTE + ' — new “toc” component generates a numbered table of contents from section blocks, refreshed on render.',
+    B1: APPLIED_NOTE + ' — Outline drawer with drag & drop row reordering (moveBlock, auto-save).',
+    B2: APPLIED_NOTE + ' — Outline rows offer ✏️ target / ⧉ duplicate / 🗑 delete; toolbar shows the targeted block chip.',
+    B3: APPLIED_NOTE + ' — undo/redo stack (40 snapshots) with ↶/↷ toolbar buttons and Ctrl+Z / Ctrl+Y.',
+    B4: APPLIED_NOTE + ' — in-document floating mini toolbar on text selection: B/I/U/S, text color, highlight, 🎯 target, Save, Cancel.',
+    B8: APPLIED_NOTE + ' — Ctrl+B/I/U inside edit mode, Ctrl+Z/Y in the app, Esc closes all drawers, spellcheck enabled.',
+    C1: APPLIED_NOTE + ' — welcome template gallery: NDA, Service Agreement, Employment Contract, Lease, POA, T&C — each prompt uses {{variables}}.',
+    C3: APPLIED_NOTE + ' — “🔢 Renumber sections” tool renumbers clauses 1..N after insert/move/delete.',
+    C7: APPLIED_NOTE + ' — paginator renders the document title header and “Page X of Y” footer on every page (preview + HTML/PDF exports).',
+    C8: APPLIED_NOTE + ' — placeholder scanner shows a warning chip with the count; one click asks the AI to resolve them.',
+    D5: APPLIED_NOTE + ' — “⬆ Sync to CMS” writes detected parties/date/reference back to sibling CMS fields via tool.setField.',
+    E3: APPLIED_NOTE + ' — Settings → Import parses plain text and simple Markdown (headings → sections, “-” → bullets, “1.” → clauses).',
+    E5: APPLIED_NOTE + ' — “📋 Copy Blocks JSON” exports and the Import panel accepts blocks JSON (also `{blocks:[…]}`).',
+    F1: APPLIED_NOTE + ' — DOCX export options: margins (normal/moderate/narrow/wide), cover page on/off.',
+    F2: APPLIED_NOTE + ' — page size A4/Letter selector and page-number footer applied to the paginated PDF export.',
+    F3: APPLIED_NOTE + ' — watermark selector (DRAFT / CONFIDENTIAL / FOR REVIEW / SAMPLE) rendered on preview pages and exports.',
+    F4: APPLIED_NOTE + ' — “📕 Add cover page” inserts a title cover block; DOCX option prepends a cover page.',
+    G1: APPLIED_NOTE + ' — spellcheck enabled in edit mode; custom names can be added to the browser dictionary.',
+    G2: APPLIED_NOTE + ' — “🧪 Quality Lint” runs drafting checks (empty clauses, [placeholders], orphaned numbers…) with a “🔧 Fix with AI” action.',
+    G4: APPLIED_NOTE + ' — Flesch readability per paragraph in Settings; one click asks the AI to simplify the hardest paragraphs.',
+    H1: APPLIED_NOTE + ' — “💾 Staged” chip shows unsaved local changes and reminds to Save in the parent CMS record.',
+    H2: APPLIED_NOTE + ' — live storage meter in Settings showing KB used vs the 1 MB CMS budget.'
+  }
+};
+var state = { statuses: {}, notes: {} };
+try {
+  var raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) state = JSON.parse(raw) || state;
+} catch (e) {}
+/* Merge baked-in defaults under anything the user has saved locally */
+for (var dk in DEFAULTS.statuses) {
+  if (!Object.prototype.hasOwnProperty.call(state.statuses, dk)) state.statuses[dk] = DEFAULTS.statuses[dk];
+}
+for (var dn in DEFAULTS.notes) {
+  if (!Object.prototype.hasOwnProperty.call(state.notes, dn)) state.notes[dn] = DEFAULTS.notes[dn];
+}
+
+var filters = { status: 'all', phase: 'all', cat: 'all' };
+
+function getStatus(id) { return state.statuses[id] || 'Planned'; }
+function setStatus(id, st) {
+  state.statuses[id] = st;
+  save();
+}
+function getNotes(id) { return state.notes[id] || ''; }
+function setNotes(id, text) {
+  state.notes[id] = text;
+  save();
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function esc(s) {
+  return String(s === undefined || s === null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function counts() {
+  var c = { Planned: 0, 'In Progress': 0, Done: 0, Skipped: 0 };
+  FEATURES.forEach(function (f) { c[getStatus(f.id)]++; });
+  return c;
+}
+
+function renderSummary() {
+  var c = counts();
+  var total = FEATURES.length;
+  document.getElementById('summary-grid').innerHTML =
+    '<div class="sum-card planned"><div class="num">' + c.Planned + '</div><div class="lbl">Planned</div></div>' +
+    '<div class="sum-card prog"><div class="num">' + c['In Progress'] + '</div><div class="lbl">In Progress</div></div>' +
+    '<div class="sum-card done"><div class="num">' + c.Done + '</div><div class="lbl">Done</div></div>' +
+    '<div class="sum-card skipped"><div class="num">' + c.Skipped + '</div><div class="lbl">Skipped</div></div>' +
+    '<div class="sum-card"><div class="num">' + total + '</div><div class="lbl">Total features</div></div>';
+  var pct = Math.round((c.Done / total) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = 'Overall progress: ' + c.Done + ' / ' + total + ' done (' + pct + '%)';
+
+  var phaseHtml = '';
+  [1, 2, 3].forEach(function (p) {
+    var inPhase = FEATURES.filter(function (f) { return f.phase === p; });
+    var done = inPhase.filter(function (f) { return getStatus(f.id) === 'Done'; }).length;
+    var pp = Math.round((done / inPhase.length) * 100);
+    var label = p === 1 ? 'Quick wins & core polish' : p === 2 ? 'High-value additions' : 'Advanced';
+    phaseHtml += '<div class="phase-row"><div class="ph-label">Phase ' + p + ' — ' + label + '</div>' +
+      '<div class="bar"><i style="width:' + pp + '%"></i></div>' +
+      '<div class="ph-sub">' + done + ' / ' + inPhase.length + ' done (' + pp + '%)</div></div>';
+  });
+  document.getElementById('phase-rows').innerHTML = phaseHtml;
+}
+
+function renderChips() {
+  var h = '<button class="cat-chip' + (filters.cat === 'all' ? ' active' : '') + '" data-cat="all">All</button>';
+  for (var k in CATS) {
+    h += '<button class="cat-chip' + (filters.cat === k ? ' active' : '') + '" data-cat="' + k + '">' + k + ' · ' + esc(CATS[k].name) + '</button>';
+  }
+  var wrap = document.getElementById('cat-chips');
+  wrap.innerHTML = h;
+  var chips = wrap.querySelectorAll('.cat-chip');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].addEventListener('click', function () {
+      filters.cat = this.getAttribute('data-cat');
+      renderChips();
+      renderList();
+    });
+  }
+}
+
+function renderList() {
+  var box = document.getElementById('list');
+  var items = FEATURES.filter(function (f) {
+    if (filters.status !== 'all' && getStatus(f.id) !== filters.status) return false;
+    if (filters.phase !== 'all' && String(f.phase) !== filters.phase) return false;
+    if (filters.cat !== 'all' && f.cat !== filters.cat) return false;
+    return true;
+  });
+  if (!items.length) {
+    box.innerHTML = '<div class="empty">No features match the current filters.</div>';
+    return;
+  }
+  var h = '';
+  items.forEach(function (f) {
+    var st = getStatus(f.id);
+    h += '<div class="feat" data-id="' + f.id + '">' +
+      '<div class="feat-top"><span class="feat-id">' + f.id + '</span>' +
+      '<span class="feat-title">' + esc(f.title) + '</span>' +
+      '<span class="badge phase' + f.phase + '">Phase ' + f.phase + '</span>' +
+      '<span class="badge cat">' + f.cat + ' · ' + esc(CATS[f.cat].name) + '</span></div>' +
+      '<p class="feat-desc">' + esc(f.desc) + '</p>' +
+      '<p class="feat-benefit">💡 ' + esc(f.benefit) + '</p>' +
+      '<div class="feat-bottom">' +
+        '<select class="feat-status" data-st="' + st + '">' +
+          STATUSES.map(function (s) { return '<option' + (s === st ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select>' +
+        '<button class="feat-notes-btn">📝 Notes' + (getNotes(f.id) ? ' (' + getNotes(f.id).split(/\s+/).filter(Boolean).length + ' words)' : '') + '</button>' +
+      '</div>' +
+      '<div class="feat-notes' + (getNotes(f.id) ? ' open' : '') + '">' +
+        '<textarea placeholder="Notes for ' + esc(f.id) + ' — decisions, dependencies, ideas…">' + esc(getNotes(f.id)) + '</textarea>' +
+      '</div>' +
+    '</div>';
+  });
+  box.innerHTML = h;
+
+  var cards = box.querySelectorAll('.feat');
+  for (var i = 0; i < cards.length; i++) {
+    (function (card) {
+      var id = card.getAttribute('data-id');
+      var sel = card.querySelector('.feat-status');
+      sel.addEventListener('change', function () {
+        setStatus(id, sel.value);
+        sel.setAttribute('data-st', sel.value);
+        renderSummary();
+      });
+      var nb = card.querySelector('.feat-notes-btn');
+      var nw = card.querySelector('.feat-notes');
+      var ta = card.querySelector('textarea');
+      nb.addEventListener('click', function () {
+        nw.classList.toggle('open');
+      });
+      var tTimer = null;
+      ta.addEventListener('input', function () {
+        clearTimeout(tTimer);
+        var v = ta.value;
+        tTimer = setTimeout(function () { setNotes(id, v); }, 350);
+      });
+    })(cards[i]);
+  }
+}
+
+document.getElementById('f-status').addEventListener('change', function () {
+  filters.status = this.value;
+  renderList();
+});
+document.getElementById('f-phase').addEventListener('change', function () {
+  filters.phase = this.value;
+  renderList();
+});
+document.getElementById('btn-reset').addEventListener('click', function () {
+  if (!confirm('Clear all saved statuses and notes?')) return;
+  state = { statuses: {}, notes: {} };
+  try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+  renderSummary();
+  renderList();
+});
+
+renderSummary();
+renderChips();
+renderList();
+</script>
+</body>
+</html>

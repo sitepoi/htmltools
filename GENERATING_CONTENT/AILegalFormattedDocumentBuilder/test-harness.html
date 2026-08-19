@@ -86,6 +86,11 @@ body { padding-top: 28px !important; margin: 0; }
         <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
         <button class="btn btn-sm btn-stop" id="btn-chat-stop" title="Stop AI" style="display:none">⏹</button>
       </div>
+      <div class="macro-chips" id="macro-chips"></div>
+      <div class="chat-quick-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-guided" title="I will interview you question by question, then draft the document">🪄 Guided interview</button>
+        <button class="btn btn-ghost btn-sm" id="btn-plain" title="Rewrite the document (or the targeted selection) in plain, modern language">🧾 Plain language</button>
+      </div>
     </aside>
 
     <!-- RIGHT: Document Panel (full height; Components & Settings open as drawers) -->
@@ -104,8 +109,22 @@ body { padding-top: 28px !important; margin: 0; }
               <label class="efb-color" title="Highlight">🖍️<input type="color" id="edit-highlight" value="#fef08a"></label>
               <button class="btn btn-sm btn-outline" id="btn-edit-cancel" title="Discard edits">✕ Discard</button>
             </span>
+            <button class="btn btn-sm btn-ghost" id="btn-undo" title="Undo (Ctrl+Z)">↶</button>
+            <button class="btn btn-sm btn-ghost" id="btn-redo" title="Redo (Ctrl+Y)">↷</button>
+            <span class="tb-sep"></span>
+            <button class="btn btn-sm btn-ghost" id="btn-open-nav" title="Document navigation — jump to sections">📑 Nav</button>
+            <button class="btn btn-sm btn-ghost" id="btn-zoom-minus" title="Zoom out">🔍−</button>
+            <button class="btn btn-sm btn-ghost" id="btn-zoom-plus" title="Zoom in">🔍＋100%</button>
+            <span class="tb-sep"></span>
+            <button class="btn btn-sm btn-ghost" id="btn-open-variables" title="Dynamic document variables ({{name}} fields)">🔤 Variables</button>
+            <button class="btn btn-sm btn-ghost" id="btn-open-outline" title="Document outline — reorder, duplicate, delete blocks">🧭 Outline</button>
             <button class="btn btn-sm btn-ghost" id="btn-open-components" title="Open the legal component library">🧩 Components</button>
             <button class="btn btn-sm btn-ghost" id="btn-open-settings" title="Open settings &amp; export">⚙️ Settings &amp; Export</button>
+            <span class="doc-type-chip" id="doc-type-chip" style="display:none"></span>
+            <span class="ph-chip" id="placeholder-chip" style="display:none"></span>
+            <span class="staged-chip" id="staged-chip" style="display:none"></span>
+            <span class="status-chip" id="status-chip" style="display:none"></span>
+            <button class="btn btn-sm btn-ghost" id="btn-focus-mode" title="Collapse the chat for a full-width document view">⛶ Focus</button>
             <span class="sel-hint" id="sel-target-info">🎯 Select text inside the document to target it for the next AI edit</span>
             <span class="ro-banner" id="ro-banner" style="display:none">🔒 Read-only mode — ask an editor to make changes</span>
             <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
@@ -118,6 +137,15 @@ body { padding-top: 28px !important; margin: 0; }
             <p>Your document will appear here</p>
             <p class="empty-sub">Describe the document in the chat — e.g. “Draft a service agreement between two companies”.</p>
           </div>
+        </div>
+
+        <!-- Navigation panel (sections — click to jump) -->
+        <div class="nav-panel" id="nav-panel">
+          <div class="nav-panel-header">
+            <span>📑 Navigate</span>
+            <button class="btn btn-ghost btn-xs" id="btn-close-nav" title="Close navigation">✕</button>
+          </div>
+          <div id="nav-list" class="nav-list"></div>
         </div>
 
         <!-- Side drawer: Component library -->
@@ -159,12 +187,216 @@ body { padding-top: 28px !important; margin: 0; }
                   <button class="btn btn-primary" id="btn-export-docx2">📄 Download .docx</button>
                   <button class="btn btn-primary" id="btn-export-pdf2">🖨️ Export PDF</button>
                 </div>
+                <div class="export-row">
+                  <button class="btn btn-outline" id="btn-export-md">📝 Download .md</button>
+                  <button class="btn btn-outline" id="btn-export-chat">💬 Export chat transcript</button>
+                </div>
                 <p class="gen-hint">The exported HTML is one complete standalone file (all styles and scripts embedded, printable A4). The DOCX converts the document into a real Word file. The PDF is generated through the CMS export service.</p>
               </div>
               <div class="settings-section">
                 <h3>🔌 Parameters &amp; Data</h3>
                 <div class="params-summary" id="params-summary">Loading…</div>
                 <p class="gen-hint">Formatting defaults are configured as tool parameters in the field settings. Chat history is stored in the CMS <b>ai-chat-sessions-uniconbaseapps</b> object type.</p>
+              </div>
+              <div class="settings-section">
+                <h3>🧩 Gap Analysis</h3>
+                <div id="gap-list"></div>
+                <button class="btn btn-outline" id="btn-gap-fix" title="Ask the AI to add the missing essential clauses">➕ Add missing clauses</button>
+              </div>
+              <div class="settings-section">
+                <h3>📏 Type Rules</h3>
+                <div id="rules-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>🟢 Status</h3>
+                <div class="settings-row">
+                  <select id="doc-status">
+                    <option value="draft">📝 Draft</option>
+                    <option value="in-review">🔍 In Review</option>
+                    <option value="approved">✅ Approved</option>
+                  </select>
+                </div>
+                <div id="status-log"></div>
+              </div>
+              <div class="settings-section">
+                <h3>🔎 Find &amp; Replace</h3>
+                <div class="settings-row">
+                  <input type="text" id="find-input" class="var-value" placeholder="Find…">
+                </div>
+                <div class="settings-row">
+                  <input type="text" id="replace-input" class="var-value" placeholder="Replace with…">
+                </div>
+                <div class="settings-row">
+                  <button class="btn btn-outline btn-sm" id="btn-find">🔎 Find</button>
+                  <button class="btn btn-outline btn-sm" id="btn-replace-all">🔁 Replace all</button>
+                </div>
+                <div id="find-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>🌍 Translate</h3>
+                <div class="settings-row">
+                  <select id="translate-lang">
+                    <option value="English">English</option>
+                    <option value="Turkish">Turkish</option>
+                    <option value="German">German</option>
+                    <option value="French">French</option>
+                    <option value="Spanish">Spanish</option>
+                    <option value="Arabic">Arabic</option>
+                    <option value="Dutch">Dutch</option>
+                  </select>
+                  <button class="btn btn-outline" id="btn-translate">🌍 Translate whole document</button>
+                </div>
+                <p class="gen-hint">Keeps block structure, numbering and formatting intact.</p>
+              </div>
+              <div class="settings-section">
+                <h3>🚨 Risk Review</h3>
+                <p class="gen-hint">The AI reviews the document from each party’s perspective and flags one-sided or risky clauses with suggested rewrites.</p>
+                <button class="btn btn-outline" id="btn-risk-review">🚨 Risk review</button>
+              </div>
+              <div class="settings-section">
+                <h3>📑 Defined Terms</h3>
+                <div id="terms-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>📌 My Clauses</h3>
+                <div id="snippet-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>📇 Party Contact Book</h3>
+                <div id="contacts-list"></div>
+                <button class="btn btn-outline" id="btn-contacts-save">💾 Save parties from document</button>
+              </div>
+              <div class="settings-section">
+                <h3>📧 Send for Signature</h3>
+                <div class="settings-row">
+                  <input type="text" id="email-to" class="var-value" placeholder="recipient@example.com">
+                </div>
+                <div class="settings-row">
+                  <input type="text" id="email-subject" class="var-value" placeholder="Subject (optional)">
+                </div>
+                <button class="btn btn-outline" id="btn-send-email">📧 Email the document</button>
+              </div>
+              <div class="settings-section">
+                <h3>🕘 Version History</h3>
+                <div id="history-list"></div>
+                <div id="diff-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>♿ Accessibility</h3>
+                <div id="a11y-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>⌨ Prompt Macros</h3>
+                <p class="gen-hint">Type these in the chat (e.g. /plain) or click a chip above the input. Add context after the command to refine it.</p>
+                <div id="macro-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>🖨️ Page &amp; Export Options</h3>
+                <div class="settings-row">
+                  <label class="settings-label" for="page-size-select">Page size</label>
+                  <select id="page-size-select">
+                    <option value="A4">A4 (210 × 297 mm)</option>
+                    <option value="Letter">US Letter (216 × 279 mm)</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <label class="settings-label" for="page-numbers-check">Show page numbers</label>
+                  <input type="checkbox" id="page-numbers-check" checked>
+                </div>
+                <div class="settings-row">
+                  <label class="settings-label" for="watermark-select">Watermark</label>
+                  <select id="watermark-select">
+                    <option value="">None</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="CONFIDENTIAL">CONFIDENTIAL</option>
+                    <option value="FOR REVIEW">FOR REVIEW</option>
+                    <option value="SAMPLE">SAMPLE</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <label class="settings-label" for="docx-margins">DOCX margins</label>
+                  <select id="docx-margins">
+                    <option value="normal">Normal (1 in)</option>
+                    <option value="moderate">Moderate (0.75 in)</option>
+                    <option value="narrow">Narrow (0.5 in)</option>
+                    <option value="wide">Wide (1.25 in)</option>
+                  </select>
+                </div>
+                <div class="settings-row">
+                  <label class="settings-label" for="docx-cover">Add cover page to DOCX</label>
+                  <input type="checkbox" id="docx-cover">
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>🛠️ Document Tools</h3>
+                <div class="settings-row">
+                  <button class="btn btn-outline" id="btn-renumber" title="Renumber all numbered sections 1..N">🔢 Renumber sections</button>
+                  <button class="btn btn-outline" id="btn-add-cover" title="Add a title cover block on top">📕 Add cover page</button>
+                </div>
+                <div class="settings-row">
+                  <button class="btn btn-outline" id="btn-sync-cms" title="Push blocks back into the parent CMS record">⬆ Sync to CMS record</button>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>📥 Import</h3>
+                <p class="gen-hint">Paste blocks JSON (the format copied with “Copy Blocks JSON”), plain text / Markdown, or upload a .docx / .pdf / .txt / .md file and let the AI convert it.</p>
+                <textarea id="import-area" class="import-area" placeholder='[{"type":"h","data":"Section 1"}, …] or plain text'></textarea>
+                <div class="settings-row">
+                  <button class="btn btn-outline" id="btn-import">📥 Import into document</button>
+                  <button class="btn btn-outline" id="btn-import-file">📤 Upload file…</button>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>🧪 Quality Lint</h3>
+                <div id="lint-list"></div>
+                <button class="btn btn-outline" id="btn-lint-fix" title="Ask the AI to fix the issues found">🔧 Fix with AI</button>
+              </div>
+              <div class="settings-section">
+                <h3>📖 Readability</h3>
+                <div id="readability-list"></div>
+              </div>
+              <div class="settings-section">
+                <h3>💾 CMS Storage</h3>
+                <div class="size-meter-track"><div class="size-meter-fill" id="size-meter-fill"></div></div>
+                <div class="size-meter-label" id="size-meter-label">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side drawer: Document variables -->
+        <div class="side-drawer" id="drawer-variables">
+          <div class="drawer-header">
+            <h2>🔤 Document Variables</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-variables" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="comp-panel">
+              <p class="drawer-hint">Fill-once fields used anywhere in the document as <b>{{variableName}}</b>. Change a value here — or click a highlighted field inside the document — and every occurrence updates instantly.</p>
+              <div id="var-list" class="var-list"></div>
+              <div class="settings-row">
+                <button class="btn btn-outline btn-sm" id="btn-var-add">➕ Add variable</button>
+                <button class="btn btn-outline btn-sm" id="btn-var-scan">🔍 Scan document</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side drawer: Document outline -->
+        <div class="side-drawer" id="drawer-outline">
+          <div class="drawer-header">
+            <h2>🧭 Document Outline</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-outline" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <p class="drawer-hint">Drag ⠿ to reorder blocks. Use ✏️ to target, ⧉ to duplicate, � to save a clause, 💬 to comment, 🗑 to delete.</p>
+            <div id="outline-list" class="outline-list"></div>
+            <div class="outline-comments" id="outline-comments">
+              <p class="drawer-hint"><b>💬 Comments:</b> <span id="comment-target-label">click 💬 on a block</span></p>
+              <div id="comment-list"></div>
+              <div class="settings-row">
+                <input type="text" id="comment-input" class="var-value" placeholder="Add a comment…">
+                <button class="btn btn-outline btn-sm" id="btn-comment-add">💬 Add</button>
               </div>
             </div>
           </div>

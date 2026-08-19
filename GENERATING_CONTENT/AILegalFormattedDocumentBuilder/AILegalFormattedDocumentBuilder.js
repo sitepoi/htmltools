@@ -63,17 +63,26 @@ var DEFAULT_SETTINGS = {
   fontFamily: 'Times New Roman',
   fontSize: '12pt',
   color: '#111111',
-  lineHeight: '1.6'
+  lineHeight: '1.6',
+  pageSize: 'A4',          // A4 | Letter
+  showPageNumbers: true,
+  watermark: ''            // '' | DRAFT | CONFIDENTIAL | FOR REVIEW
 };
 
 /* ── State ── */
 var DB = {
   version: '1.0.0',
   blocks: [],
+  variables: {},           // {name: {label, value}} — dynamic document variables
   settings: null,          // initialized from params on ready
   activeSessionId: '',
   chatCache: null,         // {sessionId, messages} bounded fallback
-  _instanceId: ''          // deterministic id for chat-session isolation
+  _instanceId: '',         // deterministic id for chat-session isolation
+  comments: {},            // blockIdx -> [{id, text, user, time, resolved}]
+  snippets: [],            // [{id, name, type, data, time}] — My Clauses library
+  status: 'draft',         // draft | in-review | approved
+  statusLog: [],           // [{from, to, time, user}]
+  history: []              // [{version, blocks, time}] recent snapshots for compare/restore
 };
 var _chatMessages = [];
 var _sessions = [];
@@ -89,6 +98,525 @@ var _streamCallback = null;
 var _selTarget = null;     // {idx, type, text}
 var _previewBuildSeq = 0;
 var _sessionWarnShown = false;
+var _dirty = false;        // staged changes since last parent CMS save
+var _undoStack = [];       // [{blocks, variables, version}]
+var _redoStack = [];
+var _docType = '';         // detected document type
+
+/* ═══════════════════════════════════════════
+   DYNAMIC DOCUMENT VARIABLES ({{name}} placeholders)
+   ═══════════════════════════════════════════ */
+function prettifyVarName(name) {
+  var s = String(name || 'var').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ');
+  var words = s.split(/\s+/).filter(Boolean);
+  for (var i = 0; i < words.length; i++) {
+    words[i] = words[i].charAt(0).toUpperCase() + words[i].slice(1);
+  }
+  return words.join(' ') || 'Variable';
+}
+
+/** Replace {{name}} placeholders in rendered block HTML with value spans. */
+function renderVars(html) {
+  return String(html || '').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, function (m, name) {
+    var v = DB.variables[name];
+    var val2 = v ? String(v.value || '') : '';
+    var label = v ? (v.label || prettifyVarName(name)) : prettifyVarName(name);
+    return '<span class="lb-var" data-var="' + esc(name) + '" title="Variable: ' + esc(label) + ' — click to edit">' +
+      (val2 ? esc(val2) : '<span class="lb-var-empty">«' + esc(label) + '»</span>') + '</span>';
+  });
+}
+
+/** Collect all {{name}} references from blocks and sync the variable registry. */
+function scanBlocksForVars() {
+  var found = {};
+  try {
+    var json = JSON.stringify(DB.blocks);
+    var re = /\{\{([a-zA-Z0-9_]+)\}\}/g;
+    var m;
+    while ((m = re.exec(json)) !== null) found[m[1]] = true;
+  } catch (e) {}
+  var added = false;
+  for (var name in found) {
+    if (Object.prototype.hasOwnProperty.call(found, name) && !DB.variables[name]) {
+      DB.variables[name] = { label: prettifyVarName(name), value: '' };
+      added = true;
+    }
+  }
+  // drop registry entries no longer referenced anywhere
+  for (var k in DB.variables) {
+    if (Object.prototype.hasOwnProperty.call(DB.variables, k) && !found[k]) {
+      delete DB.variables[k];
+    }
+  }
+  return added;
+}
+
+function varUsageCount(name) {
+  var count = 0;
+  try {
+    var json = JSON.stringify(DB.blocks);
+    var re = new RegExp('\\{\\{' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\}\\}', 'g');
+    var m;
+    while ((m = re.exec(json)) !== null) count++;
+  } catch (e) {}
+  return count;
+}
+
+function setVariableValue(name, value) {
+  if (!DB.variables[name]) DB.variables[name] = { label: prettifyVarName(name), value: '' };
+  if (String(DB.variables[name].value) === String(value)) return;
+  DB.variables[name].value = String(value === undefined || value === null ? '' : value);
+  _snapshotPush();
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  renderVariables();
+  updateVarBadge();
+  showToast('🔤 "' + (DB.variables[name].label || name) + '" updated everywhere in the document.', 'success');
+}
+
+function setVariableLabel(name, label) {
+  if (!DB.variables[name]) return;
+  DB.variables[name].label = String(label || prettifyVarName(name));
+  persist();
+  mountPreview();
+}
+
+function addVariable() {
+  var i = 1;
+  var name = 'variable' + i;
+  while (DB.variables[name]) { i++; name = 'variable' + i; }
+  DB.variables[name] = { label: 'New Variable', value: '' };
+  _snapshotPush();
+  persist();
+  renderVariables();
+  updateVarBadge();
+  return name;
+}
+
+function removeVariable(name) {
+  var btn = el('btn-var-remove-' + name);
+  var doRemove = function () {
+    delete DB.variables[name];
+    _snapshotPush();
+    _bumpVersion('patch');
+    persist();
+    mountPreview();
+    renderVariables();
+    updateVarBadge();
+    showToast('Variable removed.', 'info');
+  };
+  if (btn) { confirmClick(btn, doRemove, 'Remove?'); return; }
+  doRemove();
+}
+
+function updateVarBadge() {
+  var btn = el('btn-open-variables');
+  if (!btn) return;
+  var total = 0, empty = 0;
+  for (var k in DB.variables) {
+    if (!Object.prototype.hasOwnProperty.call(DB.variables, k)) continue;
+    total++;
+    if (!String(DB.variables[k].value || '').trim()) empty++;
+  }
+  btn.textContent = '🔤 Variables' + (total ? ' (' + total + (empty ? ', ' + empty + ' empty' : '') + ')' : '');
+  btn.style.background = empty > 0 ? '#fffbeb' : '';
+  btn.style.borderColor = empty > 0 ? '#fcd34d' : '';
+  btn.style.color = empty > 0 ? '#92400e' : '';
+}
+
+/* ═══════════════════════════════════════════
+   UNDO / REDO + BLOCK OPERATIONS
+   ═══════════════════════════════════════════ */
+function _snapshotPush() {
+  try {
+    _undoStack.push({ blocks: JSON.parse(JSON.stringify(DB.blocks)), variables: JSON.parse(JSON.stringify(DB.variables)), version: DB.version });
+    if (_undoStack.length > 40) _undoStack.shift();
+  } catch (e) {}
+  _redoStack = [];
+  updateUndoButtons();
+}
+
+function _restoreSnapshot(snap) {
+  if (!snap) return;
+  DB.blocks = JSON.parse(JSON.stringify(snap.blocks));
+  DB.variables = JSON.parse(JSON.stringify(snap.variables || {}));
+  DB.version = snap.version || DB.version;
+  _renderVersion();
+  persist();
+  mountPreview();
+  updateDocStats();
+  updateVarBadge();
+  updateStagedChip();
+}
+
+function undo() {
+  var snap = _undoStack.pop();
+  if (!snap) { showToast('Nothing to undo.', 'info'); return; }
+  _redoStack.push({ blocks: JSON.parse(JSON.stringify(DB.blocks)), variables: JSON.parse(JSON.stringify(DB.variables)), version: DB.version });
+  _restoreSnapshot(snap);
+  updateUndoButtons();
+  showToast('↶ Undone.', 'info');
+}
+
+function redo() {
+  var snap = _redoStack.pop();
+  if (!snap) { showToast('Nothing to redo.', 'info'); return; }
+  _undoStack.push({ blocks: JSON.parse(JSON.stringify(DB.blocks)), variables: JSON.parse(JSON.stringify(DB.variables)), version: DB.version });
+  _restoreSnapshot(snap);
+  updateUndoButtons();
+  showToast('↷ Redone.', 'info');
+}
+
+function updateUndoButtons() {
+  var u = el('btn-undo');
+  var r = el('btn-redo');
+  if (u) u.style.opacity = _undoStack.length ? '1' : '0.4';
+  if (r) r.style.opacity = _redoStack.length ? '1' : '0.4';
+}
+
+function moveBlock(from, to) {
+  if (from === to) return;
+  if (from < 0 || from >= DB.blocks.length || to < 0 || to >= DB.blocks.length) return;
+  _snapshotPush();
+  var b = DB.blocks.splice(from, 1)[0];
+  DB.blocks.splice(to, 0, b);
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+}
+
+function duplicateBlock(idx) {
+  if (idx < 0 || idx >= DB.blocks.length) return;
+  _snapshotPush();
+  var copy = JSON.parse(JSON.stringify(DB.blocks[idx]));
+  DB.blocks.splice(idx + 1, 0, copy);
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  showToast('Block duplicated.', 'info');
+}
+
+function deleteBlockAt(idx) {
+  if (idx < 0 || idx >= DB.blocks.length) return;
+  _snapshotPush();
+  DB.blocks.splice(idx, 1);
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  showToast('Block deleted.', 'info');
+}
+
+/** Renumber sections (1..n), subsections (x.y) and clauses within sections. */
+function renumberBlocks() {
+  _snapshotPush();
+  var sec = 0, sub = 0;
+  var parentSec = '';
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    b.data = b.data || {};
+    if (b.type === 'section') {
+      sec++;
+      sub = 0;
+      parentSec = String(sec);
+      b.data.number = String(sec);
+    } else if (b.type === 'subsection') {
+      sub++;
+      b.data.number = parentSec + '.' + sub;
+    } else if (b.type === 'clause' && parentSec) {
+      // only renumber clauses that already have a number
+      if (b.data.number !== undefined && b.data.number !== null && String(b.data.number).trim() !== '') {
+        b.data.number = parentSec + '.' + (String(b.data.number).split('.').pop() || '1');
+      }
+    }
+  }
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  showToast('🔢 Sections, subsections and clauses renumbered.', 'success');
+}
+
+/* ═══════════════════════════════════════════
+   DOCUMENT-TYPE DETECTION
+   ═══════════════════════════════════════════ */
+var DOC_TYPES = [
+  { id: 'nda', icon: '🔒', label: 'Non-Disclosure Agreement', keys: ['non-disclosure', 'confidentiality', 'nda', 'gizlilik'] },
+  { id: 'employment', icon: '💼', label: 'Employment Contract', keys: ['employment', 'employe', 'iş akdi', 'istihdam', 'çalışan'] },
+  { id: 'lease', icon: '🏠', label: 'Lease Agreement', keys: ['lease', 'tenant', 'landlord', 'kira'] },
+  { id: 'service', icon: '🤝', label: 'Service Agreement', keys: ['service agreement', 'services', 'hizmet', 'msa', 'consulting'] },
+  { id: 'poa', icon: '🖋', label: 'Power of Attorney', keys: ['power of attorney', 'vekalet'] },
+  { id: 'terms', icon: '🌐', label: 'Terms & Conditions', keys: ['terms and conditions', 'terms of use', 'kullanım koşulları'] },
+  { id: 'settlement', icon: '⚖️', label: 'Settlement Agreement', keys: ['settlement', 'sulh', 'uzlaşma'] },
+  { id: 'purchase', icon: '🛒', label: 'Purchase / Sale Agreement', keys: ['purchase', 'sale agreement', 'satış', 'buyer', 'seller'] }
+];
+
+function _detectDocType() {
+  var text = (resolveTitle() + ' ' + JSON.stringify(DB.blocks)).toLowerCase();
+  var best = null, bestScore = 0;
+  for (var i = 0; i < DOC_TYPES.length; i++) {
+    var score = 0;
+    for (var j = 0; j < DOC_TYPES[i].keys.length; j++) {
+      if (text.indexOf(DOC_TYPES[i].keys[j]) !== -1) score++;
+    }
+    if (score > bestScore) { bestScore = score; best = DOC_TYPES[i]; }
+  }
+  _docType = (best && bestScore > 0) ? best.id : '';
+  var chip = el('doc-type-chip');
+  if (chip) {
+    if (best && bestScore > 0) {
+      chip.style.display = '';
+      chip.textContent = best.icon + ' ' + best.label;
+      chip.title = 'Detected document type — the AI tailors suggestions to it.';
+    } else {
+      chip.style.display = 'none';
+    }
+  }
+  return _docType;
+}
+
+/* ═══════════════════════════════════════════
+   SCANS: placeholders, lint, readability, size
+   ═══════════════════════════════════════════ */
+function runPlaceholderScan() {
+  var issues = [];
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    try {
+      var text = (b.type === 'html') ? ((b.data && b.data.html) || '') : JSON.stringify(b.data || {});
+      var m = text.match(/\[[A-Za-z][^\[\]\n]{0,60}\]/g);
+      if (m) {
+        for (var j = 0; j < m.length; j++) {
+          issues.push({ idx: i, type: b.type, text: m[j], preview: blockPreview(b, 90) });
+        }
+      }
+    } catch (e) {}
+  }
+  return issues;
+}
+
+function runLint() {
+  var out = [];
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    if (!b) continue;
+    if (b.type === 'clause' || b.type === 'paragraph' || b.type === 'bold-lead') {
+      var txt = b.type === 'bold-lead' ? ((b.data && b.data.text) || '') : ((b.data && b.data.text) || '');
+      if (b.type === 'paragraph') txt = (b.data && b.data.text) || '';
+      if (!String(txt || '').trim()) out.push({ idx: i, issue: 'Empty ' + b.type + ' block.' });
+    }
+    if (b.type === 'signature-block' && (!b.data || !(b.data.parties || []).length)) {
+      out.push({ idx: i, issue: 'Signature block has no parties.' });
+    }
+    if (b.type === 'section' && b.data) {
+      var n = String(b.data.number || '').trim();
+      if (n) {
+        var dups = 0;
+        for (var j = 0; j < DB.blocks.length; j++) {
+          if (j !== i && DB.blocks[j].type === 'section' && String((DB.blocks[j].data || {}).number || '').trim() === n) dups++;
+        }
+        if (dups > 0) out.push({ idx: i, issue: 'Duplicate section number "' + n + '".' });
+      } else {
+        out.push({ idx: i, issue: 'Section without a number.' });
+      }
+    }
+  }
+  // unfilled placeholders + empty variables
+  var ph = runPlaceholderScan();
+  for (var p = 0; p < ph.length; p++) out.push({ idx: ph[p].idx, issue: 'Unfilled placeholder ' + ph[p].text + '.' });
+  for (var k in DB.variables) {
+    if (Object.prototype.hasOwnProperty.call(DB.variables, k) && !String(DB.variables[k].value || '').trim() && varUsageCount(k) > 0) {
+      out.push({ idx: -1, issue: 'Variable "' + (DB.variables[k].label || k) + '" is empty but used ' + varUsageCount(k) + '×.' });
+    }
+  }
+  return out;
+}
+
+function fleschScore(text) {
+  var t = String(text || '');
+  var words = t.split(/\s+/).filter(function (w) { return /[a-zA-Z0-9]/.test(w); });
+  if (!words.length) return null;
+  var sentences = t.split(/[.!?]+/).filter(function (s) { return s.trim(); }).length || 1;
+  var syllables = 0;
+  for (var i = 0; i < words.length; i++) {
+    var w = words[i].toLowerCase().replace(/[^a-z]/g, '');
+    if (!w) continue;
+    var count = w.match(/[aeiouy]+/g);
+    syllables += Math.max(1, count ? count.length : 1);
+  }
+  var score = 206.835 - 1.015 * (words.length / sentences) - 84.6 * (syllables / words.length);
+  return Math.round(score);
+}
+
+function runReadability() {
+  var blocks = [];
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    var text = null;
+    if (b.type === 'paragraph') text = (b.data && b.data.text) || '';
+    else if (b.type === 'clause') text = ((b.data && b.data.text) || '');
+    else if (b.type === 'bold-lead') text = ((b.data && b.data.lead) || '') + ' ' + ((b.data && b.data.text) || '');
+    if (text) {
+      var sc = fleschScore(stripTags(text));
+      if (sc !== null) blocks.push({ idx: i, score: sc, preview: blockPreview(b, 70) });
+    }
+  }
+  var total = 0;
+  for (var j = 0; j < blocks.length; j++) total += blocks[j].score;
+  var avg = blocks.length ? Math.round(total / blocks.length) : null;
+  blocks.sort(function (a, b) { return a.score - b.score; });
+  return { avg: avg, hardest: blocks.slice(0, 3) };
+}
+
+function updateSizeMeter() {
+  var fill = el('size-meter-fill');
+  if (!fill) return;
+  var kb = 0;
+  try { kb = (JSON.stringify(slimValue()).length + (JSON.stringify(_chatMessages || []).length || 0)) / 1024; } catch (e) {}
+  var pct = Math.min(100, Math.round((kb / 1024) * 100));
+  var label = el('size-meter-label');
+  if (label) label.textContent = kb.toFixed(0) + ' KB of 1 MB CMS budget (' + pct + '%)';
+  fill.style.width = pct + '%';
+  fill.style.background = pct > 80 ? '#dc2626' : pct > 60 ? '#d97706' : '#059669';
+}
+
+function updateStagedChip() {
+  var chip = el('staged-chip');
+  if (!chip) return;
+  if (_dirty) {
+    chip.style.display = '';
+    chip.textContent = '💾 Staged v' + DB.version + ' — remember to Save in the CMS';
+    chip.title = 'Changes are staged in this field. Click Save in the parent CMS record to commit them.';
+  } else {
+    chip.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   IMPORT (JSON blocks or Markdown / plain text)
+   ═══════════════════════════════════════════ */
+function markdownToBlocks(text) {
+  var lines = String(text || '').replace(/\r/g, '').split('\n');
+  var blocks = [];
+  var listItems = [];
+  function flushList() {
+    if (listItems.length) { blocks.push({ type: 'bullets', data: { items: listItems } }); listItems = []; }
+  }
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) { flushList(); continue; }
+    if (/^[-•*]\s+/.test(line)) { listItems.push(line.replace(/^[-•*]\s+/, '')); continue; }
+    flushList();
+    var hm = line.match(/^(#{1,3})\s+(.*)$/);
+    if (hm) {
+      var level = hm[1].length;
+      if (level === 1) blocks.push({ type: 'section', data: { number: '', title: hm[2].trim() } });
+      else if (level === 2) blocks.push({ type: 'subsection', data: { number: '', title: hm[2].trim() } });
+      else blocks.push({ type: 'heading', data: { text: hm[2].trim(), level: 3 } });
+      continue;
+    }
+    var cm = line.match(/^(\d+)[.)]\s+(.*)$/);
+    if (cm) { blocks.push({ type: 'clause', data: { number: cm[1], text: cm[2].trim() } }); continue; }
+    blocks.push({ type: 'paragraph', data: { text: line } });
+  }
+  flushList();
+  return blocks;
+}
+
+function applyImportText() {
+  var area = el('import-area');
+  if (!area) return;
+  var text = String(area.value || '').trim();
+  if (!text) { showToast('Paste JSON blocks or Markdown text first.', 'warning'); return; }
+  var imported = [];
+  var trimmed = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  if (trimmed.charAt(0) === '[' || trimmed.charAt(0) === '{') {
+    try {
+      var obj = JSON.parse(trimmed);
+      if (Array.isArray(obj)) imported = sanitizeBlocks(obj);
+      else if (obj && Array.isArray(obj.blocks)) imported = sanitizeBlocks(obj.blocks);
+    } catch (e) { imported = []; }
+  }
+  if (!imported.length) imported = markdownToBlocks(text);
+  if (!imported.length) { showToast('Could not parse the import.', 'error'); return; }
+  _snapshotPush();
+  DB.blocks = DB.blocks.concat(imported);
+  scanBlocksForVars();
+  _bumpVersion('minor');
+  _pushHistory();
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  renderVariables();
+  updateVarBadge();
+  area.value = '';
+  showToast('📥 Imported ' + imported.length + ' block(s).', 'success');
+}
+
+/* ═══════════════════════════════════════════
+   COVER PAGE & CMS SYNC
+   ═══════════════════════════════════════════ */
+function addCoverPage() {
+  _snapshotPush();
+  var t = resolveTitle();
+  var newBlocks = [
+    { type: 'title', data: { text: t, subtitle: '', date: new Date().toLocaleDateString() } },
+    { type: 'center-line', data: { text: 'CONFIDENTIAL', bold: true } },
+    { type: 'page-break', data: {} }
+  ];
+  // prepend, after any existing title
+  var insertAt = 0;
+  for (var i = 0; i < DB.blocks.length; i++) {
+    if (DB.blocks[i].type === 'title') { insertAt = i + 1; break; }
+  }
+  DB.blocks.splice.apply(DB.blocks, [insertAt, 0].concat(newBlocks));
+  _pushHistory();
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  showToast('📕 Cover page added.', 'success');
+}
+
+function syncToCms() {
+  try {
+    var fields = tool.getFields();
+    if (!fields || typeof fields !== 'object') { showToast('No sibling fields are readable in this CMS context.', 'warning'); return; }
+    var written = {};
+    var title = resolveTitle();
+    for (var k in fields) {
+      if (!Object.prototype.hasOwnProperty.call(fields, k)) continue;
+      var kl = k.toLowerCase();
+      if (kl === 'documentname' || kl === 'documenttitle') {
+        tool.setField(k, title);
+        written[k] = title;
+      }
+      if (kl === 'effectivedate' || kl === 'documentdate') {
+        var v = DB.variables['effectiveDate'] || DB.variables['date'];
+        if (v && String(v.value || '').trim()) {
+          tool.setField(k, String(v.value).trim());
+          written[k] = v.value;
+        }
+      }
+    }
+    if (Object.keys(written).length) {
+      showToast('⬆ Synced to parent CMS: ' + Object.keys(written).join(', '), 'success');
+    } else {
+      showToast('Nothing to sync — no matching parent fields (documentName/title or date fields).', 'info');
+    }
+  } catch (e) {
+    showToast('Sync unavailable: ' + e.message, 'warning');
+  }
+}
 
 /* ═══════════════════════════════════════════
    LEGAL COMPONENT LIBRARY
@@ -151,6 +679,36 @@ var LEGAL_COMPONENTS = {
       var sizes = { 1: '14pt', 2: '13pt', 3: '12pt' };
       var center = d.center ? 'text-align:center;' : '';
       return '<h' + lvl + ' style="' + ps(S2, 'font-size:' + (sizes[lvl] || '12pt') + ';font-weight:700;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid #cbd5e1;' + center) + '">' + esc(d.text || '') + '</h' + lvl + '>';
+    }
+  },
+  'toc': {
+    name: 'Table of Contents', icon: '📑', cat: 'content',
+    desc: 'Auto-generated numbered index of all "section" blocks in the document.',
+    schema: '{title?, includeSubsections?: true}',
+    render: function (d, S2) {
+      var entries = [];
+      var sec = 0, sub = 0, parent = '';
+      for (var i = 0; i < DB.blocks.length; i++) {
+        var b = DB.blocks[i];
+        if (!b) continue;
+        if (b.type === 'section') {
+          sec++; sub = 0;
+          parent = String(sec);
+          var sn = (b.data && b.data.number) ? String(b.data.number) : parent;
+          entries.push({ num: sn, title: (b.data && b.data.title) || '' });
+        } else if (b.type === 'subsection' && d.includeSubsections !== false) {
+          sub++;
+          var sbn = (b.data && b.data.number) ? String(b.data.number) : parent + '.' + sub;
+          entries.push({ num: sbn, title: (b.data && b.data.title) || '', sub: true });
+        }
+      }
+      if (!entries.length) return '<p style="' + ps(S2, 'color:#94a3b8;font-style:italic;margin:0 0 10px') + '">[No sections yet]</p>';
+      var h = '<p style="' + ps(S2, 'text-align:center;font-weight:700;margin:14px 0 10px') + '">' + esc(d.title || 'TABLE OF CONTENTS') + '</p>';
+      for (var j = 0; j < entries.length; j++) {
+        var e = entries[j];
+        h += '<p style="' + ps(S2, 'margin:0 0 4px' + (e.sub ? ';padding-left:22px' : '')) + '">' + esc(e.num) + '. &nbsp;' + esc(e.title) + '</p>';
+      }
+      return h;
     }
   },
   'center-line': {
@@ -793,6 +1351,221 @@ var LEGAL_COMPONENTS = {
       }
       return h;
     }
+  },
+
+  /* ── Phase 2 expanded library ── */
+  'non-compete': {
+    name: 'Non-Compete Clause', icon: '🚫', cat: 'boilerplate',
+    desc: 'Post-termination non-competition covenant with duration and territory.',
+    schema: '{party?, years?: 1, territory?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var party = val(d.party, 'the Service Provider');
+      var years = val(d.years, 1);
+      var terr = val(d.territory, '[Territory]');
+      var paras = d.custom || [
+        'For a period of ' + years + ' year(s) after termination of this Agreement, ' + party + ' shall not, directly or indirectly, within ' + terr + ', engage in, own, manage, operate, control, be employed by, consult for, or otherwise provide services to any business that competes with the business of the other Party as conducted during the term of this Agreement.',
+        'The Parties acknowledge that the restrictions in this clause are reasonable and necessary to protect the legitimate business interests of the Parties and that monetary damages would be an inadequate remedy for any breach.',
+        'If any restriction in this clause is held to be unenforceable, it shall be modified to the minimum extent necessary to make it enforceable while preserving the Parties\u2019 intent.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">NON-COMPETITION</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'non-solicitation': {
+    name: 'Non-Solicitation Clause', icon: '🙅', cat: 'boilerplate',
+    desc: 'Restrictions on soliciting employees, contractors and customers.',
+    schema: '{party?, years?: 1, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var party = val(d.party, 'the Service Provider');
+      var years = val(d.years, 1);
+      var paras = d.custom || [
+        'For a period of ' + years + ' year(s) after termination of this Agreement, ' + party + ' shall not, directly or indirectly, solicit, induce or attempt to induce any employee, contractor or consultant of the other Party to leave their engagement, nor solicit or accept business from any customer or client of the other Party with whom ' + party + ' had material contact during the term.',
+        'Nothing in this clause restricts the right of any person to respond to general advertising or to seek employment voluntarily.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">NON-SOLICITATION</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'ip-assignment': {
+    name: 'IP Assignment Clause', icon: '🧠', cat: 'boilerplate',
+    desc: 'Assignment of intellectual property created under the agreement.',
+    schema: '{party?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var party = val(d.party, 'the Service Provider');
+      var paras = d.custom || [
+        'All intellectual property rights in any work, invention, design, software, documentation or other material created by ' + party + ' in the course of performing this Agreement ("Deliverables") shall, upon creation, vest in and be assigned to the other Party absolutely and free of all encumbrances.',
+        party + ' hereby irrevocably assigns to the other Party all present and future intellectual property rights in the Deliverables and agrees to execute all documents and do all acts necessary to perfect such assignment, including after termination of this Agreement.',
+        party + ' waives all moral rights in the Deliverables to the maximum extent permitted by law.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">INTELLECTUAL PROPERTY</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'gdpr-dpa': {
+    name: 'GDPR Data Processing Addendum', icon: '🛡️', cat: 'boilerplate',
+    desc: 'Data protection addendum: controller/processor roles, instructions, security, sub-processors.',
+    schema: '{controller?, processor?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var ctrl = val(d.controller, '[Controller]');
+      var proc = val(d.processor, '[Processor]');
+      var paras = d.custom || [
+        ctrl + ' acts as data controller and ' + proc + ' acts as data processor in respect of personal data processed under the Agreement.',
+        proc + ' shall process personal data only on documented instructions from ' + ctrl + ', including with regard to transfers of personal data to third countries, and shall ensure that persons authorised to process the personal data are committed to confidentiality.',
+        proc + ' shall implement appropriate technical and organisational measures to ensure a level of security appropriate to the risk, assist ' + ctrl + ' in responding to data subject requests, and notify ' + ctrl + ' without undue delay after becoming aware of a personal data breach.',
+        proc + ' shall not engage any sub-processor without prior written authorisation of ' + ctrl + ', shall enter into written contracts with authorised sub-processors imposing equivalent obligations, and shall delete or return all personal data to ' + ctrl + ' after the end of the services.',
+        'The Parties shall cooperate with supervisory authorities and maintain records of processing activities as required by the applicable data protection laws, including the EU General Data Protection Regulation (GDPR).'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">DATA PROTECTION</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'loi': {
+    name: 'Letter of Intent', icon: '💌', cat: 'boilerplate',
+    desc: 'Non-binding letter of intent: purpose, key terms, exclusivity, non-binding effect.',
+    schema: '{partyA?, partyB?, subject?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var a = val(d.partyA, '[Party A]');
+      var b = val(d.partyB, '[Party B]');
+      var subject = val(d.subject, '[Subject matter of the proposed transaction]');
+      var paras = d.custom || [
+        'This letter of intent sets out the principal terms on which ' + a + ' and ' + b + ' propose to enter into a definitive agreement regarding ' + subject + ' (the "Proposed Transaction").',
+        'The Parties shall negotiate in good faith the definitive agreement, which shall include customary representations, warranties, covenants, conditions and indemnities.',
+        'Each Party shall bear its own costs and expenses in connection with the Proposed Transaction, and neither Party shall be obliged to proceed unless and until a definitive agreement is executed by both Parties.',
+        'This letter is an expression of intent only and, except for the provisions on confidentiality, exclusivity (if any) and governing law, is not legally binding.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">LETTER OF INTENT</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'settlement-deed': {
+    name: 'Settlement Agreement', icon: '🤝', cat: 'boilerplate',
+    desc: 'Settlement and release: payment, releases, no admission, confidentiality.',
+    schema: '{parties?, amount?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var amt = val(d.amount, '[Settlement amount]');
+      var paras = d.custom || [
+        'In full and final settlement of all claims arising out of or in connection with [Describe the dispute], the Respondent shall pay to the Claimant the sum of ' + amt + ' within [30] days of the date of this Agreement.',
+        'Upon receipt of the settlement sum in full, the Claimant releases and forever discharges the Respondent, its officers, employees and affiliates from all claims, demands, actions and causes of action, whether known or unknown, arising out of the dispute.',
+        'This Agreement is entered into for the purpose of settlement only and neither the payment nor anything contained in this Agreement shall constitute or be construed as an admission of liability by any Party.',
+        'The terms of this Agreement and the fact of the settlement shall remain confidential, except as required by law or to enforce this Agreement.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">SETTLEMENT AND RELEASE</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'software-license': {
+    name: 'Software License', icon: '💿', cat: 'boilerplate',
+    desc: 'Grant, restrictions, ownership, support and termination for a software license.',
+    schema: '{licensor?, licensee?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var lic = val(d.licensor, 'the Licensor');
+      var lie = val(d.licensee, 'the Licensee');
+      var paras = d.custom || [
+        lic + ' grants ' + lie + ' a non-exclusive, non-transferable, revocable license to install and use the Software for its internal business purposes during the term of this Agreement.',
+        lie + ' shall not copy, modify, reverse engineer, decompile or disassemble the Software, sublicense, rent or lease it to third parties, or remove any proprietary notices, except to the extent permitted by applicable law.',
+        'All intellectual property rights in and to the Software remain vested in ' + lic + ', and ' + lie + ' acquires no rights in the Software other than the license expressly granted.',
+        'The Software is provided "as is" without warranty of any kind, except as expressly set out in this Agreement. In no event shall ' + lic + ' be liable for indirect, incidental or consequential damages arising from the use of the Software.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">SOFTWARE LICENSE</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'privacy-policy': {
+    name: 'Privacy Policy', icon: '🔐', cat: 'boilerplate',
+    desc: 'Privacy policy sections: data collected, purposes, sharing, rights, contact.',
+    schema: '{company?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var co = val(d.company, '[Company]');
+      var paras = d.custom || [
+        co + ' collects personal data that you provide directly (such as name, contact details and account information) and data collected automatically when you use our services (such as device information and usage data).',
+        'Personal data is processed for the following purposes: providing and improving the services, communicating with you, complying with legal obligations, and, where you have consented, direct marketing.',
+        'Personal data may be shared with service providers acting on our behalf and with public authorities where required by law. We do not sell personal data to third parties.',
+        'You have the right to access, correct, delete and port your personal data, to restrict or object to processing, and to withdraw consent at any time. To exercise these rights, contact us at [Contact details].',
+        'Personal data is retained only for as long as necessary for the purposes described, and we implement appropriate technical and organisational measures to protect it.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">PRIVACY POLICY</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'cookie-policy': {
+    name: 'Cookie Policy', icon: '🍪', cat: 'boilerplate',
+    desc: 'Cookie policy: what cookies are, types used, consent and managing preferences.',
+    schema: '{company?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var co = val(d.company, '[Company]');
+      var paras = d.custom || [
+        'Cookies are small text files stored on your device when you visit a website. ' + co + ' uses cookies to make the website work, to remember your preferences, and to understand how the website is used.',
+        'Strictly necessary cookies are required for the website to function and cannot be switched off. Preference cookies remember choices you make, statistics cookies help us understand usage, and marketing cookies may be set by our advertising partners.',
+        'We will ask for your consent before placing non-essential cookies on your device. You can withdraw or change your consent at any time through the cookie settings, and you can also block or delete cookies through your browser settings.',
+        'For more information about how we process personal data, see our Privacy Policy.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">COOKIE POLICY</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      return h;
+    }
+  },
+  'affidavit': {
+    name: 'Affidavit', icon: '📜', cat: 'boilerplate',
+    desc: 'Sworn statement with affiant details and jurat.',
+    schema: '{affiant?, statement?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var af = val(d.affiant, '[Affiant name]');
+      var st = val(d.statement, '[Statement of facts]');
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">AFFIDAVIT</h3>';
+      h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">I, ' + esc(af) + ', of [Address], being duly sworn, depose and say:</p>';
+      h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(st) + '</p>';
+      h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">I make this affidavit in support of [Purpose] and for no other purpose.</p>';
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">';
+      h += '<div style="text-align:center"><p style="' + ps(S2, 'margin:26px 0 2px') + '">________________________________</p><p style="' + ps(S2, 'font-size:11pt;margin:0') + '">Affiant Signature</p></div>';
+      h += '<div style="text-align:center"><p style="' + ps(S2, 'margin:26px 0 2px') + '">________________________________</p><p style="' + ps(S2, 'font-size:11pt;margin:0') + '">Notary / Commissioner</p></div>';
+      return h + '</div>';
+    }
+  },
+  'deed': {
+    name: 'Deed', icon: '🏛️', cat: 'boilerplate',
+    desc: 'Executed-as-a-deed block with recital and witness signature.',
+    schema: '{party?, custom?: [paragraphs]}',
+    render: function (d, S2) {
+      var pty = val(d.party, '[Party]');
+      var paras = d.custom || [
+        'This Deed is executed by ' + pty + ' as a deed and is intended to be and is hereby delivered on the date stated at the beginning of this document.',
+        'The obligations contained in this Deed are binding on the successors and assigns of ' + pty + '.'
+      ];
+      var h = '<h3 style="' + ps(S2, 'font-size:12pt;font-weight:700;margin:12px 0 6px') + '">EXECUTION AS A DEED</h3>';
+      for (var i = 0; i < paras.length; i++) {
+        h += '<p style="' + ps(S2, 'text-align:justify;margin:0 0 8px') + '">' + esc(paras[i]) + '</p>';
+      }
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:10px">';
+      h += '<div style="text-align:center"><p style="' + ps(S2, 'font-weight:700;margin:0 0 2px') + '">EXECUTED as a DEED by</p><p style="' + ps(S2, 'font-weight:700;margin:0 0 2px') + '">' + esc(pty) + '</p><p style="' + ps(S2, 'margin:34px 0 2px') + '">________________________________</p><p style="' + ps(S2, 'font-size:11pt;margin:0') + '">Signature</p></div>';
+      h += '<div style="text-align:center"><p style="' + ps(S2, 'font-weight:700;margin:0 0 2px') + '">In the presence of:</p><p style="' + ps(S2, 'margin:34px 0 2px') + '">________________________________</p><p style="' + ps(S2, 'font-size:11pt;margin:0') + '">Witness Signature</p><p style="' + ps(S2, 'font-size:11pt;margin:0') + '">Name: ____________</p></div>';
+      return h + '</div>';
+    }
   }
 };
 
@@ -816,6 +1589,7 @@ function blocksToHtml() {
     if (!inner && b.type !== 'html') {
       inner = '<p style="color:#94a3b8;font-style:italic">[unknown block type: ' + esc(b.type) + ']</p>';
     }
+    if (b.type !== 'html') inner = renderVars(inner);
     h += '<div class="lb-block" data-lb-id="' + i + '" data-lb-type="' + esc(b.type) + '">' + inner + '</div>';
   }
   return h;
@@ -825,6 +1599,10 @@ function blocksToHtml() {
 function docCss() {
   var s = DB.settings || DEFAULT_SETTINGS;
   var fam = qFont(s.fontFamily);
+  var letter = s.pageSize === 'Letter';
+  var pw = letter ? '216mm' : '210mm';
+  var ph = letter ? '279mm' : '297mm';
+  var pageSizeCss = letter ? 'Letter' : 'A4';
   var css = '';
   css += 'html,body{margin:0;padding:0;font-family:' + fam + ';}';
   css += 'h1,h2,h3,h4,h5,p,ul,ol,li,table,blockquote,hr{margin:0;padding:0;border:0;font-size:inherit;font-weight:inherit;}';
@@ -832,72 +1610,197 @@ function docCss() {
   css += 'table{border-collapse:collapse;width:100%;margin:10px 0;}';
   css += '.doc-sheet{display:none;}';
   css += '.doc-pages{display:block;}';
-  css += '.doc-page{width:210mm;height:297mm;background:#fff;padding:20mm 18mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;font-family:' + fam + ';font-size:' + s.fontSize + ';color:' + s.color + ';line-height:' + s.lineHeight + ';}';
+  css += '.doc-page{position:relative;width:' + pw + ';height:' + ph + ';background:#fff;padding:22mm 18mm;box-sizing:border-box;overflow:hidden;page-break-after:always;break-after:page;font-family:' + fam + ';font-size:' + s.fontSize + ';color:' + s.color + ';line-height:' + s.lineHeight + ';}';
   css += '.doc-page:last-child{page-break-after:auto;break-after:auto;}';
   css += '.lb-block{margin:0;}';
   css += '.lb-page-break{height:0;margin:24px 0;border-top:2px dashed #cbd5e1;page-break-after:always;break-after:page;}';
   css += '::selection{background:#c7d2fe;}';
-  css += '@page{size:A4;margin:0;}';
+  css += '.lb-page-header{position:absolute;top:8mm;left:18mm;right:18mm;font-size:9pt;color:#94a3b8;text-align:center;pointer-events:none;}';
+  css += '.lb-page-footer{position:absolute;bottom:8mm;left:18mm;right:18mm;font-size:9pt;color:#94a3b8;text-align:center;pointer-events:none;}';
+  css += '.lb-watermark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;}';
+  css += '.lb-watermark span{font-size:44pt;font-weight:800;letter-spacing:0.18em;color:rgba(100,116,139,0.14);transform:rotate(-30deg);white-space:nowrap;}';
+  css += '.lb-var{background:#eef2ff;color:#4338ca;border-bottom:1px dashed #818cf8;border-radius:3px;padding:0 3px;cursor:pointer;}';
+  css += '.lb-var-empty{color:#b45309;font-style:italic;background:#fef3c7;border-radius:3px;padding:0 3px;}';
+  css += '.lb-editing .lb-var{cursor:text;}';
+  css += '@page{size:' + pageSizeCss + ';margin:0;}';
   css += '@media screen{body{background:#d8dae1;padding:26px 20px;}.doc-pages{display:flex;flex-direction:column;gap:18px;}.doc-page{margin:0 auto;box-shadow:0 2px 16px rgba(15,23,42,0.18);border:1px solid #d5d8e0;}}';
   css += '@media print{body{background:#fff;padding:0;}.doc-pages{display:block;}.doc-page{margin:0;box-shadow:none;border:none;}.lb-page-break{border:none;margin:0;}}';
-  css += '.lb-editing .doc-page{overflow:visible;min-height:297mm;height:auto;outline:2px dashed #818cf8;outline-offset:-2px;cursor:text;}';
+  css += '.lb-editing .doc-page{overflow:visible;min-height:' + ph + ';height:auto;outline:2px dashed #818cf8;outline-offset:-2px;cursor:text;}';
+  css += '.lb-mini-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);display:none;z-index:99;background:#fff;border:1px solid #c7d2fe;border-radius:10px;box-shadow:0 6px 24px rgba(15,23,42,0.18);padding:5px 8px;align-items:center;gap:3px;font-family:system-ui,sans-serif;}';
+  css += '.lb-mini-bar.show{display:flex;}';
+  css += '.lb-mini-bar button{border:1px solid #e2e8f0;background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;min-width:26px;padding:3px 7px;color:#1e293b;}';
+  css += '.lb-mini-bar button:hover{background:#eef2ff;border-color:#818cf8;color:#3730a3;}';
+  css += '.lb-mini-bar input[type=color]{width:22px;height:22px;border:none;border-radius:5px;padding:0;cursor:pointer;background:transparent;}';
+  css += '.lb-mini-bar .mb-sep{width:1px;height:18px;background:#e2e8f0;margin:0 3px;}';
   return css;
 }
 
 /** Scripts injected into the sandboxed preview (srcdoc) — plain JS bodies (no script tags). */
 var SEL_JS =
   '(function(){' +
-  'function rep(){var s=window.getSelection();var t=(s&&s.toString)?s.toString().trim():"";if(!t||t.length>4000)return;' +
-  'var n=s.anchorNode;var e=(n&&n.nodeType===1)?n:((n&&n.parentElement)?n.parentElement:null);if(!e)return;' +
-  'var b=(e.closest)?e.closest("[data-lb-id]"):null;' +
+  'function rep(){var s=window.getSelection();var t=(s&&s.toString)?s.toString().trim():"";' +
+  'var n=s.anchorNode;var e=(n&&n.nodeType===1)?n:((n&&n.parentElement)?n.parentElement:null);' +
+  'var b=(e&&e.closest)?e.closest("[data-lb-id]"):null;' +
   'var idx=b?parseInt(b.getAttribute("data-lb-id"),10):-1;' +
   'var ty=b?b.getAttribute("data-lb-type"):"";' +
-  'try{parent.postMessage({lbSel:{idx:idx,type:ty,text:t}},"*");}catch(err){}}' +
+  'if(t&&t.length<=4000){try{parent.postMessage({lbSel:{idx:idx,type:ty,text:t}},"*");}catch(err){}}' +
+  'var mb=document.getElementById("lb-mini-bar");' +
+  'if(mb){if(t&&idx>=0){mb.classList.add("show");}else{mb.classList.remove("show");}}' +
+  '}' +
   'document.addEventListener("mouseup",function(){setTimeout(rep,0);});' +
-  'document.addEventListener("keyup",function(e){if(e.key==="Shift"){setTimeout(rep,0);}});' +
+  'document.addEventListener("keyup",function(e){if(e.key==="Shift"||e.key.length===1){setTimeout(rep,0);}});' +
+  'document.addEventListener("click",function(ev){' +
+  '  var v=ev.target&&ev.target.closest?ev.target.closest(".lb-var"):null;' +
+  '  if(v&&document.body.className.indexOf("lb-editing")===-1){' +
+  '    var name=v.getAttribute("data-var");' +
+  '    try{parent.postMessage({lbVar:{name:name}},"*");}catch(err){}' +
+  '  }' +
+  '});' +
   '})();';
 
 var EDIT_JS =
   '(function(){' +
+  'window.__lbStartEdit=function(){' +
+  '  var bs=document.querySelectorAll(".lb-block");window.__lbSnap={};' +
+  '  for(var i=0;i<bs.length;i++){window.__lbSnap[bs[i].getAttribute("data-lb-id")]=bs[i].innerHTML;}' +
+  '  var ps=document.querySelectorAll(".doc-page");' +
+  '  for(var j=0;j<ps.length;j++){ps[j].setAttribute("contenteditable","true");ps[j].setAttribute("spellcheck","true");}' +
+  '  document.body.className="lb-editing";' +
+  '};' +
+  'window.__lbFinishEdit=function(){' +
+  '  var ps2=document.querySelectorAll(".doc-page");' +
+  '  for(var j2=0;j2<ps2.length;j2++){ps2[j2].removeAttribute("contenteditable");}' +
+  '  document.body.className="";' +
+  '  var changed=[];' +
+  '  var bs2=document.querySelectorAll(".lb-block");' +
+  '  for(var k=0;k<bs2.length;k++){' +
+  '    var b=bs2[k];var idx=b.getAttribute("data-lb-id");' +
+  '    if(window.__lbSnap&&window.__lbSnap[idx]!==b.innerHTML){changed.push({idx:parseInt(idx,10),html:b.innerHTML});}' +
+  '  }' +
+  '  window.__lbSnap=null;' +
+  '  try{parent.postMessage({lbEdited:{blocks:changed}},"*");}catch(err){}' +
+  '};' +
   'window.addEventListener("message",function(e){' +
   'var d=e.data||{};' +
   'if(d.lbCmd&&d.lbCmd.cmd==="edit"){' +
-  '  if(d.lbCmd.on){' +
-  '    var bs=document.querySelectorAll(".lb-block");window.__lbSnap={};' +
-  '    for(var i=0;i<bs.length;i++){window.__lbSnap[bs[i].getAttribute("data-lb-id")]=bs[i].innerHTML;}' +
-  '    var ps=document.querySelectorAll(".doc-page");' +
-  '    for(var j=0;j<ps.length;j++){ps[j].setAttribute("contenteditable","true");}' +
-  '    document.body.className="lb-editing";' +
-  '  } else {' +
-  '    var ps2=document.querySelectorAll(".doc-page");' +
-  '    for(var j2=0;j2<ps2.length;j2++){ps2[j2].removeAttribute("contenteditable");}' +
-  '    document.body.className="";' +
-  '    var changed=[];' +
-  '    var bs2=document.querySelectorAll(".lb-block");' +
-  '    for(var k=0;k<bs2.length;k++){' +
-  '      var b=bs2[k];var idx=b.getAttribute("data-lb-id");' +
-  '      if(window.__lbSnap&&window.__lbSnap[idx]!==b.innerHTML){changed.push({idx:parseInt(idx,10),html:b.innerHTML});}' +
-  '    }' +
-  '    window.__lbSnap=null;' +
-  '    try{parent.postMessage({lbEdited:{blocks:changed}},"*");}catch(err){}' +
-  '  }' +
+  '  if(d.lbCmd.on){window.__lbStartEdit();}' +
+  '  else{window.__lbFinishEdit();}' +
   '} else if(d.lbCmd&&d.lbCmd.cmd==="format"){' +
   '  try{document.execCommand(d.lbCmd.op,false,d.lbCmd.val||null);}catch(err){}' +
+  '} else if(d.lbCmd&&d.lbCmd.cmd==="zoom"){' +
+  '  var wrap=document.getElementById("pages-wrap");' +
+  '  if(wrap){var z=parseFloat(d.lbCmd.scale)||1;' +
+  '    wrap.style.zoom=String(z);' +
+  '    wrap.style.width=(100/z)+"%";' +
+  '    wrap.style.transformOrigin="top center";' +
+  '    try{parent.postMessage({lbZoomed:{scale:z}},"*");}catch(err){}}' +
+  '} else if(d.lbCmd&&d.lbCmd.cmd==="goto"){' +
+  '  var t=document.querySelector("[data-lb-id=\\""+d.lbCmd.idx+"\\"]");' +
+  '  if(t){try{t.scrollIntoView({behavior:"smooth",block:"start"});}catch(err){t.scrollIntoView();}' +
+  '    t.style.outline="2px solid #6366f1";t.style.outlineOffset="2px";' +
+  '    setTimeout(function(){t.style.outline="";},1800);}' +
   '}' +
   '});' +
+  'function __lbCleanPaste(html){' +
+  '  try{' +
+  '    var doc=new DOMParser().parseFromString(html,"text/html");' +
+  '    var all=doc.querySelectorAll("*");' +
+  '    for(var i=0;i<all.length;i++){' +
+  '      var n=all[i];' +
+  '      if(/^(script|style|link|meta|title|head|form|input|button|iframe|object|embed)$/i.test(n.tagName)){if(n.parentNode)n.parentNode.removeChild(n);continue;}' +
+  '      var st=n.getAttribute("style")||"";' +
+  '      st=st.replace(/mso-[^;:]+:[^;]+;?/gi,"");' +
+  '      st=st.replace(/font-family\\s*:[^;]+;?/gi,"");' +
+  '      st=st.replace(/font-size\\s*:[^;]+;?/gi,"");' +
+  '      if(st.trim()){n.setAttribute("style",st.trim());}else{n.removeAttribute("style");}' +
+  '      n.removeAttribute("class");n.removeAttribute("id");' +
+  '      if(/^o:/i.test(n.tagName)){var frag=doc.createDocumentFragment();while(n.firstChild){frag.appendChild(n.firstChild);}if(n.parentNode){n.parentNode.replaceChild(frag,n);}}' +
+  '    }' +
+  '    return doc.body.innerHTML;' +
+  '  }catch(err){return html;}' +
+  '}' +
+  'document.addEventListener("paste",function(e){' +
+  '  var body=document.body;' +
+  '  if(body&&body.className.indexOf("lb-editing")===-1)return;' +
+  '  var t=e.target;' +
+  '  if(!t||!t.getAttribute||t.getAttribute("contenteditable")!=="true")return;' +
+  '  var html="";' +
+  '  try{html=e.clipboardData?e.clipboardData.getData("text/html"):"";}catch(err){}' +
+  '  if(!html)return;' +
+  '  e.preventDefault();' +
+  '  var clean=__lbCleanPaste(html);' +
+  '  try{document.execCommand("insertHTML",false,clean);}catch(err){}' +
+  '});' +
+  'document.addEventListener("keydown",function(e){' +
+  '  if(e.ctrlKey||e.metaKey){' +
+  '    var map={b:"bold",i:"italic",u:"underline"};' +
+  '    var k=String(e.key||"").toLowerCase();' +
+  '    if(map[k]){e.preventDefault();try{document.execCommand(map[k],false,null);}catch(err){}}' +
+  '  } else if(e.key==="Escape"&&document.body.className.indexOf("lb-editing")!==-1){' +
+  '    try{parent.postMessage({lbCancel:true},"*");}catch(err){}' +
+  '  }' +
+  '});' +
+  '})();';
+
+var MINI_TOOLBAR_JS =
+  '(function(){' +
+  'var bar=document.createElement("div");bar.className="lb-mini-bar";bar.id="lb-mini-bar";' +
+  'bar.innerHTML=' +
+  '  "<button data-mb=\\"bold\\" title=\\"Bold (Ctrl+B)\\"><b>B</b></button>"+' +
+  '  "<button data-mb=\\"italic\\" title=\\"Italic (Ctrl+I)\\"><i>I</i></button>"+' +
+  '  "<button data-mb=\\"underline\\" title=\\"Underline (Ctrl+U)\\"><u>U</u></button>"+' +
+  '  "<button data-mb=\\"strikeThrough\\" title=\\"Strikethrough\\"><s>S</s></button>"+' +
+  '  "<span class=\\"mb-sep\\"></span>"+' +
+  '  "<input type=\\"color\\" id=\\"mb-color\\" value=\\"#111111\\" title=\\"Text color\\">"+' +
+  '  "<input type=\\"color\\" id=\\"mb-hl\\" value=\\"#fef08a\\" title=\\"Highlight\\">"+' +
+  '  "<span class=\\"mb-sep\\"></span>"+' +
+  '  "<button data-mb=\\"target\\" title=\\"Use selection as AI edit target\\">🎯</button>"+' +
+  '  "<button id=\\"mb-save\\" title=\\"Save edits\\">✅ Save</button>"+' +
+  '  "<button id=\\"mb-cancel\\" title=\\"Exit editing and discard\\">✕</button>";' +
+  'document.body.appendChild(bar);' +
+  'bar.addEventListener("click",function(e){' +
+  '  var b=e.target.closest?e.target.closest("[data-mb],#mb-save,#mb-cancel"):null;' +
+  '  if(!b)return;' +
+  '  var mb=b.getAttribute("data-mb");' +
+  '  if(mb==="target"){ try{parent.postMessage({lbTarget:true},"*");}catch(err){} return; }' +
+  '  if(b.id==="mb-save"){ if(window.__lbFinishEdit){window.__lbFinishEdit();} return; }' +
+  '  if(b.id==="mb-cancel"){ try{parent.postMessage({lbCancel:true},"*");}catch(err){} return; }' +
+  '  if(mb){ try{document.execCommand(mb,false,null);}catch(err){} }' +
+  '});' +
+  'var mc=document.getElementById("mb-color");' +
+  'if(mc)mc.addEventListener("change",function(){try{document.execCommand("foreColor",false,mc.value);}catch(err){}});' +
+  'var mh=document.getElementById("mb-hl");' +
+  'if(mh)mh.addEventListener("change",function(){try{document.execCommand("hiliteColor",false,mh.value);}catch(err){}});' +
   '})();';
 
 var PAGINATOR_JS =
   '(function(){' +
   'function newPage(){var p=document.createElement("div");p.className="doc-page";' +
   'var wrap=document.getElementById("pages-wrap");if(wrap)wrap.appendChild(p);return p;}' +
+  'function decorate(){' +
+  '  var wrap=document.getElementById("pages-wrap");' +
+  '  var ps=wrap?wrap.querySelectorAll(".doc-page"):[];' +
+  '  var wm=(document.body.getAttribute("data-watermark")||"");' +
+  '  var showNums=document.body.getAttribute("data-pagenumbers")!=="0";' +
+  '  var title=(document.title||"").replace(/<[^>]*>/g,"");' +
+  '  for(var i=0;i<ps.length;i++){' +
+  '    var p=ps[i];' +
+  '    var h=p.querySelector(".lb-page-header");var f=p.querySelector(".lb-page-footer");var w=p.querySelector(".lb-watermark");' +
+  '    if(!h){h=document.createElement("div");h.className="lb-page-header";p.insertBefore(h,p.firstChild);}' +
+  '    h.textContent=title||"";' +
+  '    if(!f){f=document.createElement("div");f.className="lb-page-footer";p.appendChild(f);}' +
+  '    f.textContent=showNums?("Page "+(i+1)+" of "+ps.length):"";' +
+  '    if(!w){w=document.createElement("div");w.className="lb-watermark";p.appendChild(w);}' +
+  '    w.innerHTML=wm?("<span>"+wm.replace(/</g,"&lt;")+"</span>"):"";' +
+  '  }' +
+  '}' +
   'function paginate(){' +
   'var sheet=document.getElementById("doc-sheet");var wrap=document.getElementById("pages-wrap");' +
   'if(!sheet||!wrap)return;' +
   'var pages=wrap.querySelectorAll(".doc-page");' +
   'for(var i=0;i<pages.length;i++){' +
   '  var kids=Array.prototype.slice.call(pages[i].children);' +
-  '  for(var j=0;j<kids.length;j++)sheet.appendChild(kids[j]);' +
+  '  for(var j=0;j<kids.length;j++){if(kids[j].className.indexOf("lb-block")!==-1||kids[j].getAttribute("data-lb-id"))sheet.appendChild(kids[j]);}' +
   '  wrap.removeChild(pages[i]);' +
   '}' +
   'var blocks=Array.prototype.slice.call(sheet.querySelectorAll(".lb-block"));' +
@@ -914,9 +1817,10 @@ var PAGINATOR_JS =
   'var ps=wrap.querySelectorAll(".doc-page");' +
   'for(var m=0;m<ps.length;m++){' +
   '  if(ps[m].children.length===1&&ps[m].scrollHeight>ps[m].clientHeight+2){' +
-  '    ps[m].style.height="auto";ps[m].style.minHeight="297mm";' +
+  '    ps[m].style.height="auto";ps[m].style.minHeight=document.body.getAttribute("data-pageh")||"297mm";' +
   '  }' +
   '}' +
+  'decorate();' +
   '}' +
   'var rt=null;' +
   'window.addEventListener("resize",function(){clearTimeout(rt);rt=setTimeout(paginate,120);});' +
@@ -925,7 +1829,10 @@ var PAGINATOR_JS =
 
 /** Assemble a full HTML document shell: hidden block source + paginated page container. */
 function docBodyHtml(blocksHtml, extraJs) {
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + esc(resolveTitle()) + '</title><style>' + docCss() + '</style></head><body>' +
+  var s = DB.settings || DEFAULT_SETTINGS;
+  var wm = s.watermark ? ' data-watermark="' + esc(s.watermark) + '"' : '';
+  var pn = s.showPageNumbers !== false ? '' : ' data-pagenumbers="0"';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + esc(resolveTitle()) + '</title><style>' + docCss() + '</style></head><body' + wm + pn + '>' +
     '<div class="doc-pages" id="pages-wrap"></div>' +
     '<div class="doc-sheet" id="doc-sheet">' + blocksHtml + '</div>' +
     (extraJs ? '<script>' + extraJs + '<\/script>' : '') +
@@ -934,7 +1841,7 @@ function docBodyHtml(blocksHtml, extraJs) {
 
 /** Preview document (srcdoc for the sandboxed iframe): selection relay + edit mode + paginator. */
 function buildPreviewDoc() {
-  return docBodyHtml(blocksToHtml(), SEL_JS + '\n' + EDIT_JS + '\n' + PAGINATOR_JS);
+  return docBodyHtml(blocksToHtml(), SEL_JS + '\n' + EDIT_JS + '\n' + MINI_TOOLBAR_JS + '\n' + PAGINATOR_JS);
 }
 
 /** Pagination-only document, used by the offscreen capture iframe for exports. */
@@ -994,15 +1901,25 @@ function slimValue() {
   return {
     version: DB.version,
     blocks: DB.blocks,
+    variables: DB.variables,
     settings: DB.settings,
     activeSessionId: DB.activeSessionId,
     chatCache: DB.chatCache,
-    _instanceId: DB._instanceId
+    _instanceId: DB._instanceId,
+    comments: DB.comments,
+    snippets: DB.snippets,
+    status: DB.status,
+    statusLog: DB.statusLog,
+    history: DB.history
   };
 }
 
 function persist() {
-  try { tool.setValue(slimValue()); } catch (e) { console.warn('persist failed', e); }
+  try {
+    tool.setValue(slimValue());
+    _dirty = true;
+    updateStagedChip();
+  } catch (e) { console.warn('persist failed', e); }
 }
 
 function _bumpVersion(kind) {
@@ -1032,6 +1949,231 @@ function updateDocStats() {
     ' &nbsp;·&nbsp; <b>~' + words.toLocaleString() + '</b> words' +
     ' &nbsp;·&nbsp; <b>' + (chars / 1024).toFixed(1) + ' KB</b> of block data' +
     ' &nbsp;·&nbsp; version <b>v' + esc(DB.version) + '</b>';
+  renderSettingsExtras();
+}
+
+/* ═══════════════════════════════════════════
+   VARIABLES DRAWER UI
+   ═══════════════════════════════════════════ */
+function renderVariables() {
+  var list = el('var-list');
+  if (!list) return;
+  var names = Object.keys(DB.variables);
+  if (!names.length) {
+    list.innerHTML = '<p class="drawer-hint">No variables yet. The AI uses <b>{{variableName}}</b> placeholders for names, dates and amounts — e.g. "This Agreement is between {{partyA}} and {{partyB}}". Click 🔍 Scan to find them, or ➕ Add one manually.</p>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < names.length; i++) {
+    (function (name) {
+      var v = DB.variables[name];
+      var count = varUsageCount(name);
+      h += '<div class="var-row" id="var-row-' + esc(name) + '">' +
+        '<input class="var-label" id="var-label-' + esc(name) + '" value="' + esc(v.label || prettifyVarName(name)) + '" title="Display label">' +
+        '<input class="var-value" id="var-value-' + esc(name) + '" value="' + esc(v.value || '') + '" placeholder="Value…" title="Value shown everywhere {{' + esc(name) + '}} is used">' +
+        '<span class="var-count" title="Occurrences in the document">×' + count + '</span>' +
+        '<button class="btn btn-xs btn-danger" id="btn-var-remove-' + esc(name) + '" title="Remove variable">✕</button>' +
+        '</div>';
+    })(names[i]);
+  }
+  list.innerHTML = h + '<p class="drawer-hint" style="margin-top:8px">Click a highlighted variable inside the document to edit it here. Setting a value updates the whole document instantly.</p>';
+  for (var j = 0; j < names.length; j++) {
+    (function (name) {
+      var li = el('var-label-' + name);
+      if (li) {
+        li.addEventListener('change', function () { setVariableLabel(name, li.value); });
+      }
+      var vi = el('var-value-' + name);
+      if (vi) {
+        var t = null;
+        vi.addEventListener('input', function () {
+          clearTimeout(t);
+          var val3 = vi.value;
+          t = setTimeout(function () { setVariableValue(name, val3); }, 400);
+        });
+      }
+      var rm = el('btn-var-remove-' + name);
+      if (rm) {
+        rm.addEventListener('click', function () {
+          var self = rm;
+          confirmClick(self, function () { removeVariable(name); }, 'Remove variable?');
+        });
+      }
+    })(names[j]);
+  }
+  updateVarBadge();
+}
+
+/* ═══════════════════════════════════════════
+   OUTLINE DRAWER UI (reorder / duplicate / delete / target)
+   ═══════════════════════════════════════════ */
+function renderOutline() {
+  var list = el('outline-list');
+  if (!list) return;
+  if (!DB.blocks.length) {
+    list.innerHTML = '<p class="drawer-hint">No blocks yet — draft a document first.</p>';
+    return;
+  }
+  var h = '<p class="drawer-hint">Drag rows to reorder blocks. ✏️ targets a block for AI edits, ⧉ duplicates, 🗑 deletes.</p>';
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    var icon = (LEGAL_COMPONENTS[b.type] && LEGAL_COMPONENTS[b.type].icon) || '📄';
+    var preview = blockPreview(b, 46);
+    var cc = commentCount(i);
+    h += '<div class="outline-row" draggable="true" data-out-idx="' + i + '">' +
+      '<span class="outline-grip" title="Drag to reorder">⠿</span>' +
+      '<span class="outline-icon">' + icon + '</span>' +
+      '<span class="outline-meta">' + (i + 1) + ' · ' + esc(b.type) + '</span>' +
+      '<span class="outline-text">' + esc(preview) + '</span>' +
+      '<button class="btn btn-xs btn-ghost" data-out-target="' + i + '" title="Use as AI edit target">✏️</button>' +
+      '<button class="btn btn-xs btn-ghost" data-out-dup="' + i + '" title="Duplicate block">⧉</button>' +
+      '<button class="btn btn-xs btn-ghost" data-out-snip="' + i + '" title="Save to My Clauses">💾</button>' +
+      '<button class="btn btn-xs btn-ghost" data-out-comment="' + i + '" title="Comments">💬' + (cc ? '<b>' + cc + '</b>' : '') + '</button>' +
+      '<button class="btn btn-xs btn-ghost" data-out-del="' + i + '" title="Delete block">🗑</button>' +
+      '</div>';
+  }
+  list.innerHTML = h;
+
+  var rows = list.querySelectorAll('.outline-row');
+  var dragIdx = null;
+  for (var r = 0; r < rows.length; r++) {
+    rows[r].addEventListener('dragstart', function (e) {
+      dragIdx = parseInt(this.getAttribute('data-out-idx'), 10);
+      this.style.opacity = '0.4';
+      try { e.dataTransfer.setData('text/plain', String(dragIdx)); } catch (err) {}
+    });
+    rows[r].addEventListener('dragend', function () { this.style.opacity = ''; });
+    rows[r].addEventListener('dragover', function (e) {
+      e.preventDefault();
+      var to = parseInt(this.getAttribute('data-out-idx'), 10);
+      if (dragIdx !== null && to !== dragIdx) {
+        moveBlock(dragIdx, to);
+        dragIdx = to;
+      }
+    });
+    rows[r].addEventListener('drop', function (e) { e.preventDefault(); });
+  }
+
+  var tBtns = list.querySelectorAll('[data-out-target]');
+  for (var t = 0; t < tBtns.length; t++) {
+    tBtns[t].addEventListener('click', function () {
+      var idx = parseInt(this.getAttribute('data-out-target'), 10);
+      var b2 = DB.blocks[idx];
+      if (!b2) return;
+      setSelectionTarget({ idx: idx, type: b2.type, text: blockPreview(b2, 120) });
+      showToast('🎯 Block #' + (idx + 1) + ' targeted — the next AI request edits only this block.', 'info');
+    });
+  }
+  var dBtns = list.querySelectorAll('[data-out-dup]');
+  for (var d = 0; d < dBtns.length; d++) {
+    dBtns[d].addEventListener('click', function () {
+      duplicateBlock(parseInt(this.getAttribute('data-out-dup'), 10));
+    });
+  }
+  var sBtns = list.querySelectorAll('[data-out-snip]');
+  for (var s = 0; s < sBtns.length; s++) {
+    sBtns[s].addEventListener('click', function () {
+      saveBlockAsSnippet(parseInt(this.getAttribute('data-out-snip'), 10));
+    });
+  }
+  var cBtns = list.querySelectorAll('[data-out-comment]');
+  for (var cb = 0; cb < cBtns.length; cb++) {
+    cBtns[cb].addEventListener('click', function () {
+      var idx = parseInt(this.getAttribute('data-out-comment'), 10);
+      renderCommentPanel(idx);
+      var inp = el('comment-input');
+      if (inp) inp.focus();
+    });
+  }
+  var delBtns = list.querySelectorAll('[data-out-del]');
+  for (var x = 0; x < delBtns.length; x++) {
+    delBtns[x].addEventListener('click', function () {
+      var idx = parseInt(this.getAttribute('data-out-del'), 10);
+      var self = this;
+      confirmClick(self, function () { deleteBlockAt(idx); }, 'Delete block?');
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS DRAWER EXTRAS (import, lint, readability, size, options)
+   ═══════════════════════════════════════════ */
+function renderSettingsExtras() {
+  updateSizeMeter();
+  var lint = runLint();
+  var lintBox = el('lint-list');
+  if (lintBox) {
+    if (!lint.length) {
+      lintBox.innerHTML = '<p class="gen-hint">✅ No issues found.</p>';
+    } else {
+      var lh = '';
+      for (var i = 0; i < Math.min(lint.length, 8); i++) {
+        lh += '<div class="lint-item"><span class="lint-idx">#' + (lint[i].idx + 1) + '</span> ' + esc(lint[i].issue) + '</div>';
+      }
+      if (lint.length > 8) lh += '<div class="lint-item">… and ' + (lint.length - 8) + ' more</div>';
+      lintBox.innerHTML = lh;
+    }
+  }
+  var lintBtn = el('btn-lint-fix');
+  if (lintBtn) lintBtn.style.display = lint.length ? '' : 'none';
+  var read = runReadability();
+  var readBox = el('readability-list');
+  if (readBox) {
+    if (read.avg === null) {
+      readBox.innerHTML = '<p class="gen-hint">No scored paragraphs yet.</p>';
+    } else {
+      var rh = '<p class="gen-hint"><b>' + read.avg + '</b> avg Flesch score (higher = easier to read).</p>';
+      for (var j = 0; j < read.hardest.length; j++) {
+        rh += '<div class="lint-item"><span class="lint-idx">#' + (read.hardest[j].idx + 1) + '</span> score ' + read.hardest[j].score + ' — ' + esc(read.hardest[j].preview) +
+          ' <button class="btn btn-xs btn-ghost" data-read-fix="' + read.hardest[j].idx + '">Simplify</button></div>';
+      }
+      readBox.innerHTML = rh;
+    }
+  }
+  var readBtns = document.querySelectorAll('[data-read-fix]');
+  for (var rb = 0; rb < readBtns.length; rb++) {
+    readBtns[rb].addEventListener('click', function () {
+      var idx = parseInt(this.getAttribute('data-read-fix'), 10);
+      setSelectionTarget({ idx: idx, type: (DB.blocks[idx] || {}).type || '', text: blockPreview(DB.blocks[idx], 120) });
+      sendPreset('Rewrite block #' + (idx + 1) + ' in simpler, clearer plain language while keeping its legal meaning.');
+    });
+  }
+  var ph = runPlaceholderScan();
+  var phBox = el('placeholder-chip');
+  if (phBox) {
+    phBox.style.display = ph.length ? '' : 'none';
+    phBox.textContent = '⚠ ' + ph.length + ' placeholder' + (ph.length === 1 ? '' : 's');
+  }
+}
+
+function lintFixWithAi() {
+  var lint = runLint();
+  if (!lint.length) { showToast('No issues to fix.', 'info'); return; }
+  var parts = [];
+  for (var i = 0; i < Math.min(lint.length, 10); i++) parts.push('#' + (lint[i].idx + 1) + ': ' + lint[i].issue);
+  sendPreset('Fix these quality issues in the document:\n' + parts.join('\n'));
+}
+
+function renderPageOptions() {
+  var ps = el('page-size-select');
+  if (ps) ps.value = (DB.settings.pageSize || 'A4');
+  var pn = el('page-numbers-check');
+  if (pn) pn.checked = DB.settings.showPageNumbers !== false;
+  var wm = el('watermark-select');
+  if (wm) wm.value = DB.settings.watermark || '';
+  var mg = el('docx-margins');
+  if (mg) mg.value = String(DB.settings.docxMargins || 'normal');
+  var cv = el('docx-cover');
+  if (cv) cv.checked = !!DB.settings.docxCover;
+}
+
+function applyPageOption(key, value) {
+  if (!DB.settings[key] && value !== false && value !== '') { /* nothing */ }
+  if (String(DB.settings[key]) === String(value)) return;
+  DB.settings[key] = value;
+  persist();
+  mountPreview();
+  showToast('⚙️ Page option updated.', 'info');
 }
 
 /* ═══════════════════════════════════════════
@@ -1225,12 +2367,12 @@ function getUserSafe() {
    CHAT UI
    ═══════════════════════════════════════════ */
 var QUICK_PROMPTS = [
-  ['🔒 NDA', 'Draft a Non-Disclosure Agreement between a company and an individual consultant'],
-  ['🤝 Service Agreement', 'Draft a Service Agreement between two companies, with payment terms and termination'],
-  ['💼 Employment Contract', 'Draft an Employment Contract for a full-time employee with a probation period'],
-  ['🏠 Lease Agreement', 'Draft a Residential Lease Agreement for 12 months'],
-  ['🖋 Power of Attorney', 'Draft a General Power of Attorney'],
-  ['🌐 Terms & Conditions', 'Draft Terms & Conditions for a website selling digital products']
+  ['🔒 NDA', 'Draft a Non-Disclosure Agreement between {{disclosingParty}} and {{receivingParty}} with a 5-year confidentiality term'],
+  ['🤝 Service Agreement', 'Draft a Service Agreement between {{serviceProvider}} and {{client}}, with payment terms, termination and liability clauses'],
+  ['💼 Employment Contract', 'Draft an Employment Contract for a full-time employee {{employeeName}} at {{companyName}}, with a probation period and notice terms'],
+  ['🏠 Lease Agreement', 'Draft a Residential Lease Agreement for {{tenantName}} and {{landlordName}}, 12 months, starting {{leaseStartDate}}'],
+  ['🖋 Power of Attorney', 'Draft a General Power of Attorney for {{principalName}} appointing {{attorneyName}}'],
+  ['🌐 Terms & Conditions', 'Draft Terms & Conditions for a website selling digital products, operated by {{companyName}}']
 ];
 
 function welcomeHtml() {
@@ -1239,10 +2381,23 @@ function welcomeHtml() {
     '<p>Describe what you need — <b>an NDA, a service agreement, an employment contract, a lease…</b> — and I\u2019ll draft it in Word-document format, section by section.</p>' +
     '<div class="welcome-prompts">';
   for (var i = 0; i < QUICK_PROMPTS.length; i++) {
-    h += '<button class="btn btn-outline btn-sm" data-quick="' + i + '">' + esc(QUICK_PROMPTS[i][0]) + '</button>';
+    h += '<button class="btn btn-outline btn-sm" data-quick="' + i + '" title="' + esc(QUICK_PROMPTS[i][1]) + '">' + esc(QUICK_PROMPTS[i][0]) + '</button>';
   }
-  h += '</div><p class="welcome-tip">💡 <b>Tip:</b> Select a part of the document on the right, then ask me to change <i>that part only</i>.</p></div>';
+  h += '</div>' +
+    '<div class="welcome-actions"><button class="btn btn-primary btn-sm" data-guided="1">🪄 Guided interview</button></div>' +
+    '<p class="welcome-tip">💡 <b>Tips:</b> parties and dates become <b>fillable variables</b> you edit in the 🔤 Variables panel. Select text in the document to target AI edits. Press ✏️ Edit to type directly.</p></div>';
   return h;
+}
+
+function bindWelcomeActions() {
+  var box = el('chat-messages');
+  if (!box) return;
+  var g = box.querySelector('[data-guided]');
+  if (g) {
+    g.addEventListener('click', function () {
+      sendPreset('🪄 Guided interview: please interview me step by step about this document — its type, the parties, key dates, amounts and special terms. Ask ONE question at a time with short option answers, and when you have 4+ answers, draft the complete document.');
+    });
+  }
 }
 
 function renderChatMessages() {
@@ -1250,6 +2405,7 @@ function renderChatMessages() {
   if (!box) return;
   if (!_chatMessages || !_chatMessages.length) {
     box.innerHTML = welcomeHtml();
+    bindWelcomeActions();
     var qb = box.querySelectorAll('[data-quick]');
     for (var q = 0; q < qb.length; q++) {
       qb[q].addEventListener('click', function () {
@@ -1274,6 +2430,13 @@ function renderChatMessages() {
         '<div class="chat-avatar">⚖️</div>' +
         '<div><div class="chat-bubble">' + markdownLite(m.text) + '</div>';
       if (m.version) h += '<span class="chat-version-chip">✓ document v' + esc(m.version) + '</span>';
+      if (m.variants && m.variants.length) {
+        h += '<div class="chat-options"><span class="chat-options-label">🎛 Pick a variant:</span>';
+        for (var vi = 0; vi < m.variants.length; vi++) {
+          h += '<button class="chat-option-btn chat-variant-btn" data-variant-i="' + vi + '" data-msg-i="' + i + '">' + esc(m.variants[vi].label || ('Option ' + (vi + 1))) + '</button>';
+        }
+        h += '</div>';
+      }
       if (m.opts && m.opts.length) h += optionsHtml(m.opts);
       h += '<div class="chat-msg-time">' + time + '</div></div></div>';
     }
@@ -1294,7 +2457,23 @@ function optionsHtml(opts) {
 function bindOptionButtons() {
   var box = el('chat-messages');
   if (!box) return;
-  var btns = box.querySelectorAll('.chat-option-btn');
+  // Variant chips (A6): apply the chosen wording to the document
+  var vbtns = box.querySelectorAll('.chat-variant-btn');
+  for (var v = 0; v < vbtns.length; v++) {
+    vbtns[v].addEventListener('click', function () {
+      var mi = parseInt(this.getAttribute('data-msg-i'), 10);
+      var vi = parseInt(this.getAttribute('data-variant-i'), 10);
+      var msg = _chatMessages[mi];
+      if (!msg || !msg.variants || !msg.variants[vi]) return;
+      var parent = this.parentNode;
+      if (parent) {
+        var allV = parent.querySelectorAll('.chat-variant-btn');
+        for (var av = 0; av < allV.length; av++) { allV[av].classList.add('chat-option-used'); allV[av].disabled = true; }
+      }
+      applyVariant(msg.variants[vi]);
+    });
+  }
+  var btns = box.querySelectorAll('.chat-option-btn:not(.chat-variant-btn)');
   for (var i = 0; i < btns.length; i++) {
     btns[i].addEventListener('click', function () {
       var text = this.getAttribute('data-opt-text');
@@ -1325,6 +2504,7 @@ function addChatMessage(role, text, extra) {
     time: new Date().toISOString(),
     opts: extra.opts || null,
     version: extra.version || null,
+    variants: extra.variants || null,
     isError: extra.isError || false
   });
   updateChatCache();
@@ -1554,6 +2734,15 @@ function buildChatPrompt(userMsg) {
   parts.push('- Typical document flow: title → parties → recitals → agreement-word → definitions → numbered sections (section + clause/sub-clauses) → boilerplate clauses → execution-paragraph → signature-block. Keep section numbers consistent (1., 2., …).');
   parts.push('- Draft in the same language the user writes in.');
   parts.push('- Legal drafting quality: plain language, defined terms, complete sentences, no placeholders unless bracketed [like this].');
+  parts.push('');
+  parts.push('=== DYNAMIC VARIABLES (IMPORTANT) ===');
+  parts.push('For fields that are likely to change (party names, addresses, dates, amounts), write {{variableName}} inside the block text INSTEAD of a hardcoded value. Examples: "between {{partyA}} and {{partyB}}", "as of {{effectiveDate}}".');
+  parts.push('The tool renders these as fillable fields with a form — the user edits them once and the whole document updates.');
+  parts.push('- Use lowercase camelCase names: partyA, partyB, effectiveDate, contractAmount, landlord, tenant…');
+  parts.push('- You may include "variables": {"partyA": "Alpha LLC", "effectiveDate": "1 January 2026"} in the JSON op to pre-fill values.');
+  parts.push('- Never put variables in section/subsection numbers.');
+  var trb = typeRulesBlock();
+  if (trb) { parts.push(''); parts.push(trb); }
 
   if (DB.blocks.length === 0) {
     parts.push('');
@@ -1588,6 +2777,11 @@ function buildChatPrompt(userMsg) {
 
   parts.push('');
   parts.push('=== USER REQUEST ===');
+  var isQuestion = /[?؟]\s*$/.test(String(userMsg).trim()) && !/[?!]\s*(add|insert|change|rewrite|draft|delete|remove|replace|update|fix|make|create|add|put|include)/i.test(userMsg);
+  if (isQuestion) {
+    parts.push('=== QUESTION MODE ===');
+    parts.push('This is a QUESTION about the document. Answer ONLY from the document content shown above, citing the relevant block numbers (e.g. "block #3 (clause)") and section names. Do NOT output JSON and do NOT change the document.');
+  }
   parts.push(userMsg);
   parts.push('');
   parts.push('=== OUTPUT CONTRACT ===');
@@ -1606,6 +2800,7 @@ function buildChatPrompt(userMsg) {
   parts.push('3) After the JSON (outside it), write a 1-2 sentence plain-language summary of what changed, then 2-4 next-step suggestions, each on its own line starting with [[suggest_xxx]] e.g. [[suggest_signatures]] Add signature blocks for both parties.');
   parts.push('4) The JSON must be valid JSON (double quotes, no trailing commas, no comments) and must NOT be wrapped in markdown fences.');
   parts.push('5) Block types MUST be from the catalog above (or "html"). Unknown types are discarded.');
+  parts.push('6) VARIANTS: when the user asks for options / alternatives (e.g. "give me 3 versions of this clause"), output ONE JSON object of the shape {"variants":[{"label":"Strict","replaceBlock":<index>,"block":{...}},{"label":"Balanced","replaceBlock":<index>,"block":{...}}]} — each variant is itself a full operation. Do NOT apply any of them; the user picks one in the chat.');
   return parts.join('\n');
 }
 
@@ -1674,6 +2869,18 @@ function parseAiResponse(raw) {
   if (jsonStr) {
     try { op = JSON.parse(jsonStr); } catch (e) { op = null; }
   }
+  var variants = null;
+  if (op && Array.isArray(op.variants) && !_looksLikeDocOp(op)) {
+    // Variant response: {"variants":[{"label":"Strict", "op":{...}} | {"label":"...","replaceBlock":...}]}
+    variants = [];
+    for (var vi = 0; vi < op.variants.length; vi++) {
+      var v = op.variants[vi];
+      if (!v || typeof v !== 'object') continue;
+      var vop = v.op || v;
+      if (_looksLikeDocOp(vop)) variants.push({ label: String(v.label || ('Option ' + (vi + 1))), op: vop });
+    }
+    op = variants.length ? null : op;
+  }
   if (op && !_looksLikeDocOp(op)) op = null;
   var summary = text;
   if (jsonStr) {
@@ -1682,7 +2889,7 @@ function parseAiResponse(raw) {
   }
   summary = summary.replace(/\n{3,}/g, '\n\n').trim();
   if (summary.length > 800) summary = summary.substring(0, 800) + '…';
-  return { op: op, summary: summary, suggests: suggests };
+  return { op: op, variants: variants, summary: summary, suggests: suggests };
 }
 
 /** Apply an AI document operation. Returns true if the document changed. */
@@ -1714,6 +2921,22 @@ function applyAiOp(op) {
       changed = true;
     }
   }
+  // Merge any variables the AI declared
+  if (op.variables && typeof op.variables === 'object' && !Array.isArray(op.variables)) {
+    for (var vk in op.variables) {
+      if (!Object.prototype.hasOwnProperty.call(op.variables, vk)) continue;
+      var vv = op.variables[vk];
+      var entry = (typeof vv === 'string') ? { value: vv } : vv;
+      if (!entry || typeof entry !== 'object') continue;
+      if (!DB.variables[vk]) DB.variables[vk] = { label: prettifyVarName(vk), value: '' };
+      if (entry.label) DB.variables[vk].label = String(entry.label);
+      if (entry.value !== undefined) DB.variables[vk].value = String(entry.value);
+    }
+  }
+  if (changed) {
+    scanBlocksForVars();
+    updateVarBadge();
+  }
   return changed;
 }
 
@@ -1724,6 +2947,9 @@ function sendChatMessage() {
   if (_aiCallActive) { showToast('AI is already drafting. Wait or press Stop.', 'warning'); return; }
   var msg = input.value.trim();
   if (!msg) return;
+  // H4: slash macros (/plain, /translate …) expand to full prompts
+  var macro = handleMacro(msg);
+  if (macro) msg = macro;
 
   var tok = { cancelled: false };
   _reqToken = tok;
@@ -1786,12 +3012,17 @@ function finishAi(fullResponse) {
   var changed = false;
   var version = null;
   if (parsed.op) {
+    _snapshotPush();
     changed = applyAiOp(parsed.op);
     if (changed) {
       _bumpVersion('minor');
+      _pushHistory();
       persist();
       mountPreview();
       updateDocStats();
+      renderOutline();
+      renderVariables();
+      _detectDocType();
       version = DB.version;
     }
   }
@@ -1799,12 +3030,14 @@ function finishAi(fullResponse) {
   if (parsed.op && !changed) {
     text = (text ? text + '\n\n' : '') + '⚠️ The response did not contain valid block changes — please ask again.';
   }
-  if (!parsed.op && !text) {
+  if (!parsed.op && !parsed.variants && !text) {
     text = '✅ Done. Tell me what to adjust next.';
   }
-  addChatMessage('ai', text, { opts: parsed.suggests, version: version });
+  addChatMessage('ai', text, { opts: parsed.suggests, version: version, variants: parsed.variants });
   if (changed) {
     showToast('✅ Document updated to v' + DB.version + ' — remember to Save in the CMS to commit.', 'success');
+  } else if (parsed.variants && parsed.variants.length) {
+    showToast('🎛 Pick a clause variant below to apply it to the document.', 'info');
   }
   tool.resize();
 }
@@ -1869,6 +3102,10 @@ function setEditMode(on) {
   if (on && tool.isReadOnly()) { showToast('Read-only mode — editing is disabled.', 'warning'); return; }
   _editMode = !!on;
   sendDocMessage({ lbCmd: { cmd: 'edit', on: _editMode } });
+  if (_editMode) {
+    var iframe = el('doc-preview');
+    try { if (iframe && iframe.contentWindow) iframe.contentWindow.focus(); } catch (e) {}
+  }
   updateEditToolbar();
 }
 
@@ -1882,6 +3119,7 @@ function sendFormatCmd(op, val) {
 /** Apply blocks edited by hand in the preview back into the block model. */
 function applyManualEdits(changes) {
   if (!changes || !changes.length) return false;
+  _snapshotPush();
   var changedAny = false;
   for (var i = 0; i < changes.length; i++) {
     var c = changes[i];
@@ -2126,12 +3364,28 @@ function exportDocx() {
   ensureDocxLib(function (ok) {
     if (ok) {
       try {
+        var marginTwips = { narrow: 720, moderate: 1080, normal: 1440, wide: 1800 };
+        var mTw = marginTwips[DB.settings.docxMargins] || 1440;
         var items = htmlToDocxItems('<div class="doc-sheet">' + blocksToHtml() + '</div>');
         var W = window.docx;
+        if (DB.settings.docxCover) {
+          var coverItems = [
+            new W.Paragraph({ alignment: W.AlignmentType.CENTER, spacing: { before: 2400, after: 200 }, children: [new W.TextRun({ text: resolveTitle(), bold: true, size: 32, font: (DB.settings.fontFamily || 'Times New Roman') })] }),
+            new W.Paragraph({ alignment: W.AlignmentType.CENTER, spacing: { after: 200 }, children: [new W.TextRun({ text: 'CONFIDENTIAL', bold: true, size: 22, color: '64748B', font: (DB.settings.fontFamily || 'Times New Roman') })] }),
+            new W.Paragraph({ alignment: W.AlignmentType.CENTER, spacing: { after: 1200 }, children: [new W.TextRun({ text: new Date().toLocaleDateString(), size: 22, font: (DB.settings.fontFamily || 'Times New Roman') })] }),
+            new W.Paragraph({ children: [new W.PageBreak()] })
+          ];
+          items = coverItems.concat(items);
+        }
         var doc = new W.Document({
           creator: 'Legal Document Builder',
           title: resolveTitle(),
-          sections: [{ properties: {}, children: items }]
+          sections: [{
+            properties: {
+              page: { margin: { top: mTw, bottom: mTw, left: mTw, right: mTw } }
+            },
+            children: items
+          }]
         });
         W.Packer.toBlob(doc).then(function (blob) {
           downloadBlob(blob, slugify(resolveTitle()) + '.docx');
@@ -2441,10 +3695,12 @@ function openDrawer(name) {
   // Only one drawer at a time
   closeDrawer(name === 'components' ? 'settings' : 'components');
   var d = el('drawer-' + name);
+  if (name === 'variables') renderVariables();
+  if (name === 'outline') renderOutline();
   if (!d) return;
   d.classList.add('open');
   if (name === 'components') renderCatalog(el('comp-search') ? el('comp-search').value : '');
-  if (name === 'settings') updateDocStats();
+  if (name === 'settings') { updateDocStats(); renderSettingsPhase2(); }
   tool.resize();
 }
 
@@ -2511,6 +3767,143 @@ function bindEvents() {
   }
 
   // Manual edit mode
+  var undoBtn = el('btn-undo');
+  if (undoBtn) undoBtn.addEventListener('click', undo);
+  var redoBtn = el('btn-redo');
+  if (redoBtn) redoBtn.addEventListener('click', redo);
+
+  var openVars = el('btn-open-variables');
+  if (openVars) openVars.addEventListener('click', function () { toggleDrawer('variables'); });
+  var closeVars = el('btn-close-variables');
+  if (closeVars) closeVars.addEventListener('click', function () { closeDrawer('variables'); });
+  var varAdd = el('btn-var-add');
+  if (varAdd) varAdd.addEventListener('click', function () { addVariable(); });
+  var varScan = el('btn-var-scan');
+  if (varScan) {
+    varScan.addEventListener('click', function () {
+      var added = scanBlocksForVars();
+      persist();
+      renderVariables();
+      updateVarBadge();
+      showToast(added ? '🔍 Found new variables in the document.' : '🔍 Variable registry is up to date.', 'info');
+    });
+  }
+
+  var openOutline = el('btn-open-outline');
+  if (openOutline) openOutline.addEventListener('click', function () { toggleDrawer('outline'); });
+  var closeOutline = el('btn-close-outline');
+  if (closeOutline) closeOutline.addEventListener('click', function () { closeDrawer('outline'); });
+
+  // Guided interview (button lives in the chat welcome panel)
+  var guidedBtn = el('btn-guided');
+  if (guidedBtn) {
+    guidedBtn.addEventListener('click', function () {
+      sendPreset('🪄 Guided interview: please interview me step by step about this document — its type, the parties, key dates, amounts and special terms. Ask ONE question at a time with short option answers, and when you have 4+ answers, draft the complete document.');
+    });
+  }
+  var renumBtn = el('btn-renumber');
+  if (renumBtn) renumBtn.addEventListener('click', renumberBlocks);
+  var coverBtn = el('btn-add-cover');
+  if (coverBtn) coverBtn.addEventListener('click', addCoverPage);
+  var syncBtn = el('btn-sync-cms');
+  if (syncBtn) syncBtn.addEventListener('click', syncToCms);
+  var importBtn = el('btn-import');
+  if (importBtn) importBtn.addEventListener('click', applyImportText);
+  var lintFix = el('btn-lint-fix');
+  if (lintFix) lintFix.addEventListener('click', lintFixWithAi);
+
+  // Phase 2 bindings
+  var openNav = el('btn-open-nav');
+  if (openNav) openNav.addEventListener('click', function () { toggleNav(); });
+  var closeNav = el('btn-close-nav');
+  if (closeNav) closeNav.addEventListener('click', function () { toggleNav(false); });
+  var zoomMinus = el('btn-zoom-minus');
+  if (zoomMinus) zoomMinus.addEventListener('click', function () { applyZoom(_zoom - 0.1); });
+  var zoomPlus = el('btn-zoom-plus');
+  if (zoomPlus) zoomPlus.addEventListener('click', function () { applyZoom(_zoom + 0.1); });
+  var focusBtn = el('btn-focus-mode');
+  if (focusBtn) focusBtn.addEventListener('click', toggleFocusMode);
+  var plainBtn = el('btn-plain');
+  if (plainBtn) {
+    plainBtn.addEventListener('click', function () {
+      var targeted = _selTarget && _selTarget.idx >= 0 && _selTarget.idx < DB.blocks.length;
+      sendPreset(targeted
+        ? 'Rewrite ONLY block #' + _selTarget.idx + ' in plain, modern language while keeping its legal meaning. Reply with a single replaceBlock.'
+        : 'Rewrite the entire document in plain, modern language while preserving legal meaning and section numbering. Reply with {"blocks":[...]} containing the full rewritten document.');
+    });
+  }
+  var gapFix = el('btn-gap-fix');
+  if (gapFix) gapFix.addEventListener('click', gapFixWithAi);
+  var riskBtn = el('btn-risk-review');
+  if (riskBtn) {
+    riskBtn.addEventListener('click', function () {
+      sendPreset('/risk');
+    });
+  }
+  var translateBtn = el('btn-translate');
+  if (translateBtn) {
+    translateBtn.addEventListener('click', function () {
+      var sel = el('translate-lang');
+      var lang = sel && sel.value ? sel.value : 'English';
+      sendPreset('Translate the entire document into ' + lang + '. Keep block structure, numbering and formatting. Reply with {"blocks":[...]} containing the full translated document.');
+    });
+  }
+  var findBtn = el('btn-find');
+  if (findBtn) findBtn.addEventListener('click', renderFindResults);
+  var findInput = el('find-input');
+  if (findInput) findInput.addEventListener('input', renderFindResults);
+  var replaceBtn = el('btn-replace-all');
+  if (replaceBtn) replaceBtn.addEventListener('click', replaceAllInDoc);
+  var exportMd = el('btn-export-md');
+  if (exportMd) exportMd.addEventListener('click', exportMarkdown);
+  var exportChatBtn = el('btn-export-chat');
+  if (exportChatBtn) exportChatBtn.addEventListener('click', exportChat);
+  var importFile = el('btn-import-file');
+  if (importFile) importFile.addEventListener('click', importFileToBlocks);
+  var sendEmail = el('btn-send-email');
+  if (sendEmail) sendEmail.addEventListener('click', sendForSignature);
+  var contactsSave = el('btn-contacts-save');
+  if (contactsSave) contactsSave.addEventListener('click', savePartiesToBook);
+  var commentAdd = el('btn-comment-add');
+  if (commentAdd) {
+    commentAdd.addEventListener('click', function () {
+      var inp = el('comment-input');
+      if (!inp) return;
+      var t = inp.value;
+      addComment(_commentIdx, t);
+      inp.value = '';
+    });
+  }
+  var statusSel = el('doc-status');
+  if (statusSel) statusSel.addEventListener('change', function () { setDocStatus(statusSel.value); });
+
+  var pageSizeSel = el('page-size-select');
+  if (pageSizeSel) pageSizeSel.addEventListener('change', function () { applyPageOption('pageSize', pageSizeSel.value); });
+  var pageNums = el('page-numbers-check');
+  if (pageNums) pageNums.addEventListener('change', function () { applyPageOption('showPageNumbers', pageNums.checked); });
+  var wmSel = el('watermark-select');
+  if (wmSel) wmSel.addEventListener('change', function () { applyPageOption('watermark', wmSel.value); });
+  var mgSel = el('docx-margins');
+  if (mgSel) mgSel.addEventListener('change', function () { DB.settings.docxMargins = mgSel.value; persist(); });
+  var cvCheck = el('docx-cover');
+  if (cvCheck) cvCheck.addEventListener('change', function () { DB.settings.docxCover = cvCheck.checked; persist(); });
+
+  // Parent keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && String(e.key || '').toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    }
+    if (e.key === 'Escape') {
+      closeDrawer('components');
+      closeDrawer('settings');
+      closeDrawer('variables');
+      closeDrawer('outline');
+    }
+  });
+
+  var stagedChip = el('staged-chip');
+  if (stagedChip) stagedChip.addEventListener('click', function () { showToast('💾 Changes are staged in this field — click Save in the parent CMS record to commit.', 'info'); });
   var toggleEdit = el('btn-toggle-edit');
   if (toggleEdit) toggleEdit.addEventListener('click', toggleEditMode);
   var editCancel = el('btn-edit-cancel');
@@ -2594,15 +3987,40 @@ function bindEvents() {
     });
   }
 
-  // Selection relay + manual edits from the preview iframe
+  // Selection relay + manual edits + variable clicks from the preview iframe
   window.addEventListener('message', function (e) {
     if (!e.data) return;
     if (e.data.lbSel) { setSelectionTarget(e.data.lbSel); return; }
+    if (e.data.lbVar) {
+      openDrawer('variables');
+      renderVariables();
+      var vinput = el('var-value-' + e.data.lbVar.name);
+      if (vinput) {
+        vinput.focus();
+        vinput.select();
+        var row = el('var-row-' + e.data.lbVar.name);
+        if (row) {
+          row.classList.add('var-row-flash');
+          setTimeout(function () { row.classList.remove('var-row-flash'); }, 1600);
+        }
+      }
+      showToast('🔤 Edit the "' + (e.data.lbVar.name) + '" variable — the document updates live.', 'info');
+      return;
+    }
+    if (e.data.lbCancel) {
+      _ignoreEdits = true;
+      setEditMode(false);
+      mountPreview();
+      setTimeout(function () { _ignoreEdits = false; }, 300);
+      showToast('Editing cancelled — changes discarded.', 'info');
+      return;
+    }
     if (e.data.lbEdited) {
       if (_ignoreEdits) return;
       var changed = applyManualEdits(e.data.lbEdited.blocks);
       if (changed) {
         _bumpVersion('patch');
+        _pushHistory();
         persist();
         mountPreview();
         updateDocStats();
@@ -2637,6 +4055,995 @@ function bindEvents() {
 }
 
 /* ═══════════════════════════════════════════
+   PHASE 2 — A3 gap analysis / G3 type rules
+   ═══════════════════════════════════════════ */
+var DOC_REQUIREMENTS = {
+  nda: ['parties-block', 'confidentiality', 'termination', 'signature-block'],
+  employment: ['parties-block', 'payment-terms', 'termination', 'confidentiality', 'signature-block'],
+  lease: ['parties-block', 'payment-terms', 'termination', 'indemnity', 'signature-block'],
+  service: ['parties-block', 'payment-terms', 'termination', 'indemnity', 'confidentiality', 'signature-block'],
+  poa: ['parties-block', 'signature-block'],
+  terms: ['governing-law', 'termination', 'entire-agreement'],
+  settlement: ['parties-block', 'settlement-deed', 'signature-block'],
+  purchase: ['parties-block', 'payment-terms', 'termination', 'indemnity', 'signature-block']
+};
+
+function docTypeName(typeId) {
+  for (var i = 0; i < DOC_TYPES.length; i++) {
+    if (DOC_TYPES[i].id === typeId) return DOC_TYPES[i].label;
+  }
+  return null;
+}
+
+function typeRulesBlock() {
+  var type = _docType || _detectDocType();
+  if (!type || !DOC_REQUIREMENTS[type]) return '';
+  var req = DOC_REQUIREMENTS[type];
+  var lines = [];
+  lines.push('=== DOCUMENT TYPE RULES (' + docTypeName(type) + ') ===');
+  lines.push('This is a ' + docTypeName(type) + '. It MUST include these component types: ' + req.join(', ') + '.');
+  lines.push('Do not omit them unless the user explicitly asks. Additional components are welcome.');
+  return lines.join('\n');
+}
+
+function runGapAnalysis() {
+  var type = _docType || _detectDocType();
+  if (!type || !DOC_REQUIREMENTS[type]) return { type: '', name: null, missing: [] };
+  var have = {};
+  for (var i = 0; i < DB.blocks.length; i++) have[DB.blocks[i].type] = true;
+  var missing = [];
+  for (var j = 0; j < DOC_REQUIREMENTS[type].length; j++) {
+    var t = DOC_REQUIREMENTS[type][j];
+    if (!have[t]) {
+      var c = LEGAL_COMPONENTS[t];
+      missing.push({ type: t, name: c ? c.name : t });
+    }
+  }
+  return { type: type, name: docTypeName(type), missing: missing };
+}
+
+function renderGapList() {
+  var box = el('gap-list');
+  if (!box) return;
+  var gap = runGapAnalysis();
+  if (!gap.name) {
+    box.innerHTML = '<p class="gen-hint">No document type detected yet — draft a document (NDA, service agreement, employment contract…) and the required-clause checklist appears here.</p>';
+  } else if (!gap.missing.length) {
+    box.innerHTML = '<p class="gen-hint">✅ All essential clauses for a ' + esc(gap.name) + ' are present.</p>';
+  } else {
+    var h = '<p class="gen-hint">A <b>' + esc(gap.name) + '</b> should contain:</p>';
+    for (var i = 0; i < gap.missing.length; i++) {
+      h += '<div class="lint-item"><span class="lint-idx">⚠</span><span class="lint-text">Missing: <b>' + esc(gap.missing[i].name) + '</b> <span class="outline-meta">(' + esc(gap.missing[i].type) + ')</span></span></div>';
+    }
+    box.innerHTML = h;
+  }
+  var btn = el('btn-gap-fix');
+  if (btn) btn.style.display = (gap.missing && gap.missing.length) ? '' : 'none';
+}
+
+function gapFixWithAi() {
+  var gap = runGapAnalysis();
+  if (!gap.missing.length) { showToast('Nothing missing.', 'info'); return; }
+  var names = [];
+  for (var i = 0; i < gap.missing.length; i++) names.push(gap.missing[i].type);
+  sendPreset('Add the missing essential components to this ' + gap.name + ': ' + names.join(', ') + '. Insert each one where it belongs using insertAfter operations (or a full {"blocks":[...]} if restructuring is needed).');
+}
+
+function runTypeChecks() {
+  var gap = runGapAnalysis();
+  var out = [];
+  if (!gap.name) { out.push({ ok: null, text: 'No document type detected — type-specific rules apply once a document type is recognized.' }); return out; }
+  for (var i = 0; i < DOC_REQUIREMENTS[gap.type].length; i++) {
+    var t = DOC_REQUIREMENTS[gap.type][i];
+    var c = LEGAL_COMPONENTS[t];
+    var missing = false;
+    for (var j = 0; j < gap.missing.length; j++) if (gap.missing[j].type === t) missing = true;
+    out.push({ ok: !missing, text: (c ? c.name : t) + (missing ? ' — MISSING' : '') });
+  }
+  return out;
+}
+
+function renderRulesList() {
+  var box = el('rules-list');
+  if (!box) return;
+  var checks = runTypeChecks();
+  var h = '';
+  for (var i = 0; i < checks.length; i++) {
+    var ico = checks[i].ok === null ? 'ℹ️' : (checks[i].ok ? '✅' : '❌');
+    h += '<div class="lint-item"><span class="lint-idx">' + ico + '</span><span class="lint-text">' + esc(checks[i].text) + '</span></div>';
+  }
+  box.innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — F6 version history + compare
+   ═══════════════════════════════════════════ */
+function _pushHistory() {
+  try {
+    DB.history = DB.history || [];
+    // Skip if this version already snapshotted
+    if (DB.history.length && DB.history[DB.history.length - 1].version === DB.version) return;
+    DB.history.push({ version: DB.version, blocks: JSON.parse(JSON.stringify(DB.blocks)), time: new Date().toISOString() });
+    while (DB.history.length > 8) DB.history.shift();
+    if (DB.history.length > 8) DB.history = DB.history.slice(-8);
+    persist();
+  } catch (e) {}
+}
+
+function renderHistory() {
+  var box = el('history-list');
+  if (!box) return;
+  var hist = DB.history || [];
+  if (!hist.length) {
+    box.innerHTML = '<p class="gen-hint">No snapshots yet — versions are recorded after AI edits and manual saves.</p>';
+    return;
+  }
+  var h = '';
+  for (var i = hist.length - 1; i >= 0; i--) {
+    var e = hist[i];
+    var prev = i > 0 ? hist[i - 1] : null;
+    h += '<div class="lint-item"><span class="lint-idx">' + esc(e.version) + '</span>' +
+      '<span class="lint-text"><b>v' + esc(e.version) + '</b> · ' + e.blocks.length + ' blocks · ' + shortTime(e.time) + '</span>' +
+      '<button class="btn btn-xs btn-ghost" data-hist-cmp="' + i + '"' + (prev ? '' : ' disabled') + ' title="Compare with previous">↔</button>' +
+      '<button class="btn btn-xs btn-ghost" data-hist-restore="' + i + '" title="Restore this version">↩</button></div>';
+  }
+  box.innerHTML = h;
+  var cmp = box.querySelectorAll('[data-hist-cmp]');
+  for (var c = 0; c < cmp.length; c++) {
+    cmp[c].addEventListener('click', function () {
+      var i2 = parseInt(this.getAttribute('data-hist-cmp'), 10);
+      var prev2 = DB.history[i2 - 1];
+      if (!prev2) return;
+      compareVersions(prev2, DB.history[i2]);
+    });
+  }
+  var rst = box.querySelectorAll('[data-hist-restore]');
+  for (var r = 0; r < rst.length; r++) {
+    rst[r].addEventListener('click', function () {
+      var i3 = parseInt(this.getAttribute('data-hist-restore'), 10);
+      var snap = DB.history[i3];
+      if (!snap) return;
+      var self = this;
+      confirmClick(self, function () {
+        _snapshotPush();
+        DB.blocks = JSON.parse(JSON.stringify(snap.blocks));
+        DB.version = snap.version;
+        scanBlocksForVars();
+        _bumpVersion('patch');
+        persist();
+        mountPreview();
+        updateDocStats();
+        renderOutline();
+        renderVariables();
+        _detectDocType();
+        showToast('↩ Restored v' + snap.version + ' (now v' + DB.version + ').', 'success');
+      }, 'Restore v' + snap.version + '?');
+    });
+  }
+}
+
+function compareVersions(vA, vB) {
+  var box = el('diff-list');
+  if (!box) return;
+  var a = vA.blocks || [];
+  var b = vB.blocks || [];
+  var max = Math.max(a.length, b.length);
+  var h = '<p class="gen-hint">v' + esc(vA.version) + ' → v' + esc(vB.version) + ' — changed blocks:</p>';
+  var shown = 0;
+  for (var i = 0; i < max; i++) {
+    var ba = a[i], bb = b[i];
+    if (!ba && !bb) continue;
+    var changed = !ba || !bb || ba.type !== bb.type || JSON.stringify(ba.data) !== JSON.stringify(bb.data);
+    if (!changed) continue;
+    shown++;
+    h += '<div class="lint-item"><span class="lint-idx">#' + (i + 1) + '</span><span class="lint-text">' +
+      (ba ? '<b>' + esc(ba.type) + '</b> → ' : '<i>(new)</i> → ') +
+      (bb ? '<b>' + esc(bb.type) + '</b>' : '<i>(deleted)</i>') + '<br>' +
+      (ba ? '<span class="outline-meta">old: ' + esc(blockPreview(ba, 70)) + '</span><br>' : '') +
+      (bb ? '<span class="outline-meta">new: ' + esc(blockPreview(bb, 70)) + '</span>' : '') +
+      '</span></div>';
+  }
+  if (!shown) h += '<p class="gen-hint">No block-level changes between these versions.</p>';
+  box.innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D3 approval workflow
+   ═══════════════════════════════════════════ */
+function canApprove() {
+  try {
+    var u = getUserSafe() || {};
+    var roles = u.roles || u.role || [];
+    var list = Array.isArray(roles) ? roles : [roles];
+    for (var i = 0; i < list.length; i++) {
+      var r = String(list[i]).toLowerCase();
+      if (r === 'admin' || r === 'manager' || r === 'editor') return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function renderStatus() {
+  var sel = el('doc-status');
+  if (sel) sel.value = DB.status || 'draft';
+  var chip = el('status-chip');
+  if (chip) {
+    var map = { draft: ['📝 Draft', '#e0e7ff', '#3730a3'], 'in-review': ['🔍 In Review', '#fef3c7', '#92400e'], approved: ['✅ Approved', '#dcfce7', '#166534'] };
+    var m = map[DB.status] || map.draft;
+    chip.style.display = '';
+    chip.textContent = m[0];
+    chip.style.background = m[1];
+    chip.style.color = m[2];
+    chip.title = 'Document status — change it in Settings';
+  }
+  var log = el('status-log');
+  if (log) {
+    var hist = DB.statusLog || [];
+    if (!hist.length) log.innerHTML = '<p class="gen-hint">No status changes yet.</p>';
+    else {
+      var h = '';
+      for (var i = 0; i < hist.length; i++) {
+        h += '<div class="lint-item"><span class="lint-idx">↻</span><span class="lint-text">' + esc(hist[i].from || '—') + ' → <b>' + esc(hist[i].to) + '</b> · ' + esc(hist[i].user || 'Someone') + ' · ' + shortTime(hist[i].time) + '</span></div>';
+      }
+      log.innerHTML = h;
+    }
+  }
+}
+
+function setDocStatus(status) {
+  if (!status || String(status) === String(DB.status)) return;
+  if (status === 'approved' && !canApprove()) {
+    showToast('Only admins and editors can approve documents.', 'warning');
+    renderStatus();
+    return;
+  }
+  var u = getUserSafe() || {};
+  DB.statusLog = DB.statusLog || [];
+  DB.statusLog.push({ from: DB.status, to: status, time: new Date().toISOString(), user: u.name || u.id || 'Someone' });
+  if (DB.statusLog.length > 20) DB.statusLog = DB.statusLog.slice(-20);
+  DB.status = status;
+  persist();
+  renderStatus();
+  showToast('Status changed to ' + status + '.', 'success');
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — B5 find & replace
+   ═══════════════════════════════════════════ */
+function _walkBlockText(b, fn) {
+  // fn(value, path) — apply to every string field of a block's data
+  var d = b.data || {};
+  (function walk(o, path) {
+    if (o === null || typeof o !== 'object') return;
+    for (var k in o) {
+      if (!Object.prototype.hasOwnProperty.call(o, k)) continue;
+      var v = o[k];
+      if (typeof v === 'string') fn(o, k, path + '.' + k, v);
+      else if (v && typeof v === 'object') walk(v, path + '.' + k);
+    }
+  })(d, 'data');
+}
+
+function runFind(text) {
+  var needle = String(text || '').toLowerCase();
+  var out = [];
+  if (!needle) return out;
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    _walkBlockText(b, function (o, k, path, v) {
+      var lower = v.toLowerCase();
+      var count = 0, idx = 0;
+      while ((idx = lower.indexOf(needle, idx)) !== -1) { count++; idx += needle.length; }
+      if (count > 0) out.push({ idx: i, type: b.type, field: k, count: count, snippet: blockPreview(b, 80) });
+    });
+  }
+  return out;
+}
+
+function renderFindResults() {
+  var box = el('find-list');
+  var input = el('find-input');
+  if (!box) return;
+  if (!input || !input.value.trim()) { box.innerHTML = ''; return; }
+  var matches = runFind(input.value);
+  if (!matches.length) { box.innerHTML = '<p class="gen-hint">No matches.</p>'; return; }
+  var total = 0, h = '';
+  for (var i = 0; i < Math.min(matches.length, 12); i++) {
+    total += matches[i].count;
+    h += '<div class="lint-item"><span class="lint-idx">#' + (matches[i].idx + 1) + '</span><span class="lint-text"><b>' + matches[i].count + '×</b> in ' + esc(matches[i].type) + '.' + esc(matches[i].field) + ' — ' + esc(matches[i].snippet) + '</span></div>';
+  }
+  if (matches.length > 12) h += '<div class="lint-item">… and ' + (matches.length - 12) + ' more blocks</div>';
+  box.innerHTML = '<p class="gen-hint">' + total + ' occurrence(s) in ' + matches.length + ' block(s):</p>' + h;
+}
+
+function replaceAllInDoc() {
+  var fin = el('find-input');
+  var rin = el('replace-input');
+  if (!fin || !fin.value.trim()) { showToast('Type the text to find first.', 'warning'); return; }
+  var find = fin.value;
+  var replace = rin ? rin.value : '';
+  var count = 0;
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    _walkBlockText(b, function (o, k) {
+      if (String(o[k]).indexOf(find) !== -1) {
+        var parts = String(o[k]).split(find);
+        count += parts.length - 1;
+        o[k] = parts.join(replace);
+      }
+    });
+  }
+  if (!count) { showToast('No occurrences replaced.', 'info'); return; }
+  _snapshotPush();
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  renderFindResults();
+  showToast('🔁 Replaced ' + count + ' occurrence(s).', 'success');
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — B6 zoom + focus, B7 navigation
+   ═══════════════════════════════════════════ */
+var _zoom = 1;
+function applyZoom(scale) {
+  _zoom = Math.min(2, Math.max(0.6, scale));
+  sendDocMessage({ lbCmd: { cmd: 'zoom', scale: _zoom } });
+  var plus = el('btn-zoom-plus');
+  var minus = el('btn-zoom-minus');
+  if (plus) plus.textContent = '🔍＋' + Math.round(_zoom * 100) + '%';
+  if (minus) minus.style.opacity = _zoom <= 0.6 ? '0.4' : '';
+  if (plus) plus.style.opacity = _zoom >= 2 ? '0.4' : '';
+}
+
+function toggleFocusMode() {
+  var app = el('app');
+  if (!app) return;
+  var on = !app.classList.contains('focus-mode');
+  if (on) app.classList.add('focus-mode');
+  else app.classList.remove('focus-mode');
+  var btn = el('btn-focus-mode');
+  if (btn) btn.textContent = on ? '⛶ Exit Focus' : '⛶ Focus';
+  tool.resize();
+}
+
+function gotoBlock(idx) {
+  sendDocMessage({ lbCmd: { cmd: 'goto', idx: idx } });
+}
+
+function renderNav() {
+  var list = el('nav-list');
+  if (!list) return;
+  var h = '';
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    if (b.type !== 'section' && b.type !== 'subsection' && b.type !== 'title' && b.type !== 'schedule' && b.type !== 'exhibit') continue;
+    var label = '';
+    if (b.type === 'title') label = '📜 ' + ((b.data && b.data.text) || 'Title');
+    else if (b.type === 'section') label = (b.data && b.data.number ? b.data.number + '. ' : '') + ((b.data && b.data.title) || 'Section');
+    else if (b.type === 'subsection') label = '↳ ' + ((b.data && b.data.number ? b.data.number + ' ' : '') + ((b.data && b.data.title) || 'Subsection'));
+    else if (b.type === 'schedule') label = '🗓 Schedule ' + ((b.data && b.data.letter) || '');
+    else label = '🏷 Exhibit ' + ((b.data && b.data.letter) || '');
+    h += '<button class="nav-item" data-nav-idx="' + i + '" title="Jump to page">' + esc(label) + '</button>';
+  }
+  if (!h) h = '<p class="drawer-hint">No sections yet.</p>';
+  list.innerHTML = h;
+  var items = list.querySelectorAll('[data-nav-idx]');
+  for (var j = 0; j < items.length; j++) {
+    items[j].addEventListener('click', function () {
+      gotoBlock(parseInt(this.getAttribute('data-nav-idx'), 10));
+    });
+  }
+}
+
+function toggleNav(force) {
+  var panel = el('nav-panel');
+  if (!panel) return;
+  var on = force === undefined ? !panel.classList.contains('open') : !!force;
+  if (on) { renderNav(); panel.classList.add('open'); }
+  else panel.classList.remove('open');
+  tool.resize();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C4 defined terms registry
+   ═══════════════════════════════════════════ */
+function collectDefinedTerms() {
+  var terms = {};
+  function add(term, idx) {
+    var t = String(term || '').trim();
+    if (!t || t.length < 2 || t.length > 80) return;
+    if (!terms[t]) terms[t] = { count: 0, firstIdx: idx };
+  }
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    if (!b) continue;
+    if (b.type === 'definitions' && b.data && b.data.terms) {
+      for (var t = 0; t < b.data.terms.length; t++) add(b.data.terms[t].term, i);
+    }
+    // find "Term" means patterns in text blocks
+    var text = '';
+    if (b.type === 'clause' || b.type === 'paragraph' || b.type === 'bold-lead') {
+      text = JSON.stringify(b.data || {});
+      var re = /"([A-Z][A-Za-z0-9 \-,&]{1,60})"[ ]{0,10}(means|shall mean)/g;
+      var m;
+      while ((m = re.exec(text)) !== null) add(m[1], i);
+    }
+  }
+  // usage counts across all blocks
+  for (var u = 0; u < DB.blocks.length; u++) {
+    var json = '';
+    try { json = JSON.stringify(DB.blocks[u] && DB.blocks[u].data || {}); } catch (e) {}
+    for (var term in terms) {
+      if (!Object.prototype.hasOwnProperty.call(terms, term)) continue;
+      var idx = json.indexOf(term);
+      var cnt = 0;
+      var at = 0;
+      while (idx !== -1 && at < 50) { cnt++; at++; idx = json.indexOf(term, idx + term.length); }
+      terms[term].count += cnt;
+    }
+  }
+  var arr = [];
+  for (var k2 in terms) {
+    if (Object.prototype.hasOwnProperty.call(terms, k2)) arr.push({ term: k2, count: terms[k2].count, firstIdx: terms[k2].firstIdx });
+  }
+  arr.sort(function (a, b) { return a.term.localeCompare(b.term); });
+  return arr;
+}
+
+function renderDefinedTerms() {
+  var box = el('terms-list');
+  if (!box) return;
+  var terms = collectDefinedTerms();
+  if (!terms.length) { box.innerHTML = '<p class="gen-hint">No defined terms detected. Add a Definitions component or write “Term” means … in clauses.</p>'; return; }
+  var h = '';
+  for (var i = 0; i < terms.length; i++) {
+    h += '<div class="lint-item"><span class="lint-idx">“</span><span class="lint-text"><b>' + esc(terms[i].term) + '</b> · ' + terms[i].count + '× used</span>' +
+      '<button class="btn btn-xs btn-ghost" data-term-goto="' + terms[i].firstIdx + '" title="Jump to first use">📍</button></div>';
+  }
+  box.innerHTML = h;
+  var btns = box.querySelectorAll('[data-term-goto]');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].addEventListener('click', function () {
+      gotoBlock(parseInt(this.getAttribute('data-term-goto'), 10));
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C5 My Clauses (snippet library)
+   ═══════════════════════════════════════════ */
+function saveBlockAsSnippet(idx) {
+  var b = DB.blocks[idx];
+  if (!b) return;
+  DB.snippets = DB.snippets || [];
+  var name = (LEGAL_COMPONENTS[b.type] && LEGAL_COMPONENTS[b.type].name) || b.type;
+  DB.snippets.push({ id: genId(), name: name, type: b.type, data: JSON.parse(JSON.stringify(b.data || {})), time: new Date().toISOString() });
+  if (DB.snippets.length > 20) DB.snippets = DB.snippets.slice(-20);
+  persist();
+  renderSnippets();
+  showToast('📌 Saved "' + name + '" to My Clauses.', 'success');
+}
+
+function renderSnippets() {
+  var box = el('snippet-list');
+  if (!box) return;
+  var sn = DB.snippets || [];
+  if (!sn.length) {
+    box.innerHTML = '<p class="gen-hint">No saved clauses yet. In the 🧭 Outline drawer, press 💾 on any block to save it here.</p>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < sn.length; i++) {
+    h += '<div class="lint-item"><span class="lint-idx">📌</span><span class="lint-text"><b>' + esc(sn[i].name) + '</b> <span class="outline-meta">(' + esc(sn[i].type) + ')</span></span>' +
+      '<button class="btn btn-xs btn-ghost" data-snip-ins="' + i + '" title="Insert at the end of the document">➕</button>' +
+      '<button class="btn btn-xs btn-ghost" data-snip-del="' + i + '" title="Delete snippet">🗑</button></div>';
+  }
+  box.innerHTML = h;
+  var ins = box.querySelectorAll('[data-snip-ins]');
+  for (var a = 0; a < ins.length; a++) {
+    ins[a].addEventListener('click', function () { insertSnippet(parseInt(this.getAttribute('data-snip-ins'), 10)); });
+  }
+  var del = box.querySelectorAll('[data-snip-del]');
+  for (var d2 = 0; d2 < del.length; d2++) {
+    del[d2].addEventListener('click', function () {
+      var si = parseInt(this.getAttribute('data-snip-del'), 10);
+      var self = this;
+      confirmClick(self, function () { deleteSnippet(si); }, 'Delete?');
+    });
+  }
+}
+
+function insertSnippet(si) {
+  var s = (DB.snippets || [])[si];
+  if (!s) return;
+  _snapshotPush();
+  DB.blocks.push({ type: s.type, data: JSON.parse(JSON.stringify(s.data || {})) });
+  scanBlocksForVars();
+  _bumpVersion('patch');
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  renderVariables();
+  showToast('📌 Inserted "' + s.name + '".', 'success');
+}
+
+function deleteSnippet(si) {
+  DB.snippets = DB.snippets || [];
+  DB.snippets.splice(si, 1);
+  persist();
+  renderSnippets();
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — C6 party contact book (localStorage)
+   ═══════════════════════════════════════════ */
+function _contactsKey() {
+  var u = getUserSafe() || {};
+  return 'legaldoc_contacts_' + (u.id || 'shared');
+}
+
+function loadContacts() {
+  try {
+    var raw = localStorage.getItem(_contactsKey());
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveContacts(arr) {
+  try { localStorage.setItem(_contactsKey(), JSON.stringify(arr.slice(0, 50))); } catch (e) {}
+}
+
+function savePartiesToBook() {
+  var found = [];
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    if (!b || !b.data || !Array.isArray(b.data.parties)) continue;
+    for (var j = 0; j < b.data.parties.length; j++) {
+      var p = b.data.parties[j];
+      if (p && p.name) found.push({ name: String(p.name), details: String(p.details || ''), alias: String(p.alias || ''), time: new Date().toISOString() });
+    }
+  }
+  if (!found.length) { showToast('No parties found — the document has no parties/signature block yet.', 'warning'); return; }
+  var contacts = loadContacts();
+  var names = {};
+  for (var c = 0; c < contacts.length; c++) names[contacts[c].name] = true;
+  var added = 0;
+  for (var f = 0; f < found.length; f++) {
+    if (!names[found[f].name]) { contacts.push(found[f]); names[found[f].name] = true; added++; }
+  }
+  saveContacts(contacts);
+  renderContacts();
+  showToast('📇 Saved ' + added + ' party contact(s) to the contact book.', 'success');
+}
+
+function renderContacts() {
+  var box = el('contacts-list');
+  if (!box) return;
+  var contacts = loadContacts();
+  if (!contacts.length) {
+    box.innerHTML = '<p class="gen-hint">No contacts saved yet. Press “💾 Save parties from document” — contacts are shared across your documents on this device.</p>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < contacts.length; i++) {
+    h += '<div class="lint-item"><span class="lint-idx">👤</span><span class="lint-text"><b>' + esc(contacts[i].name) + '</b>' +
+      (contacts[i].alias ? ' <span class="outline-meta">(“' + esc(contacts[i].alias) + '”)</span>' : '') +
+      (contacts[i].details ? '<br><span class="outline-meta">' + esc(contacts[i].details) + '</span>' : '') + '</span>' +
+      '<button class="btn btn-xs btn-ghost" data-contact-use="' + i + '" title="Ask the AI to add this party to the document">➕</button>' +
+      '<button class="btn btn-xs btn-ghost" data-contact-del="' + i + '" title="Remove from contact book">🗑</button></div>';
+  }
+  box.innerHTML = h;
+  var use = box.querySelectorAll('[data-contact-use]');
+  for (var a = 0; a < use.length; a++) {
+    use[a].addEventListener('click', function () {
+      var c2 = loadContacts()[parseInt(this.getAttribute('data-contact-use'), 10)];
+      if (!c2) return;
+      var prompt = 'Add/update the parties in this document so that "' + c2.name + '" appears' + (c2.alias ? ' with the short name "' + c2.alias + '"' : '') + (c2.details ? ' and details: ' + c2.details : '') + '. Create a parties-block if none exists, otherwise update it.';
+      sendPreset(prompt);
+    });
+  }
+  var del = box.querySelectorAll('[data-contact-del]');
+  for (var d2 = 0; d2 < del.length; d2++) {
+    del[d2].addEventListener('click', function () {
+      var ci = parseInt(this.getAttribute('data-contact-del'), 10);
+      var self = this;
+      confirmClick(self, function () {
+        var arr = loadContacts();
+        arr.splice(ci, 1);
+        saveContacts(arr);
+        renderContacts();
+      }, 'Remove?');
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D1 block comments
+   ═══════════════════════════════════════════ */
+var _commentIdx = -1;
+
+function commentCount(idx) {
+  var list = (DB.comments && DB.comments[idx]) || [];
+  return list.length;
+}
+
+function addComment(idx, text) {
+  var t = String(text || '').trim();
+  if (!t) return;
+  DB.comments = DB.comments || {};
+  if (!DB.comments[idx]) DB.comments[idx] = [];
+  var u = getUserSafe() || {};
+  DB.comments[idx].push({ id: genId(), text: t, user: u.name || 'Someone', time: new Date().toISOString(), resolved: false });
+  persist();
+  renderCommentPanel(idx);
+  renderOutline();
+  showToast('💬 Comment added to block #' + (idx + 1) + '.', 'success');
+}
+
+function toggleCommentResolve(idx, cid) {
+  var list = (DB.comments && DB.comments[idx]) || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === cid) list[i].resolved = !list[i].resolved;
+  }
+  persist();
+  renderCommentPanel(idx);
+}
+
+function deleteCommentAt(idx, cid) {
+  var list = (DB.comments && DB.comments[idx]) || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].id === cid) { list.splice(i, 1); break; }
+  }
+  if (DB.comments && DB.comments[idx] && !DB.comments[idx].length) delete DB.comments[idx];
+  persist();
+  renderCommentPanel(idx);
+  renderOutline();
+}
+
+function renderCommentPanel(idx) {
+  _commentIdx = idx;
+  var head = el('comment-target-label');
+  var list = el('comment-list');
+  if (!list) return;
+  var b = DB.blocks[idx];
+  if (head) head.textContent = b ? ('Block #' + (idx + 1) + ' · ' + b.type) : '';
+  var comments = (DB.comments && DB.comments[idx]) || [];
+  if (!comments.length) {
+    list.innerHTML = '<p class="drawer-hint">No comments on this block yet.</p>';
+  } else {
+    var h = '';
+    for (var i = 0; i < comments.length; i++) {
+      var c = comments[i];
+      h += '<div class="lint-item" style="' + (c.resolved ? 'opacity:.55' : '') + '">' +
+        '<span class="lint-idx">' + (c.resolved ? '✅' : '💬') + '</span>' +
+        '<span class="lint-text"><b>' + esc(c.user) + '</b> · ' + shortTime(c.time) + '<br>' + esc(c.text) + '</span>' +
+        '<button class="btn btn-xs btn-ghost" data-cmt-tgl="' + c.id + '" title="' + (c.resolved ? 'Reopen' : 'Resolve') + '">' + (c.resolved ? '↩' : '✓') + '</button>' +
+        '<button class="btn btn-xs btn-ghost" data-cmt-del="' + c.id + '" title="Delete">🗑</button></div>';
+    }
+    list.innerHTML = h;
+    var tgl = list.querySelectorAll('[data-cmt-tgl]');
+    for (var t = 0; t < tgl.length; t++) {
+      tgl[t].addEventListener('click', function () { toggleCommentResolve(idx, this.getAttribute('data-cmt-tgl')); });
+    }
+    var del = list.querySelectorAll('[data-cmt-del]');
+    for (var d = 0; d < del.length; d++) {
+      del[d].addEventListener('click', function () {
+        var cid = this.getAttribute('data-cmt-del');
+        var self = this;
+        confirmClick(self, function () { deleteCommentAt(idx, cid); }, 'Delete?');
+      });
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — D4 send for signature (email)
+   ═══════════════════════════════════════════ */
+function sendForSignature() {
+  var to = el('email-to');
+  var subj = el('email-subject');
+  if (!to || !String(to.value || '').trim()) { showToast('Enter a recipient email address.', 'warning'); return; }
+  if (typeof tool.requestSendEmail !== 'function') {
+    showToast('Email is not available in this CMS context (requires requestSendEmail + allowSendEmail: yes).', 'warning');
+    return;
+  }
+  showToast('📧 Preparing email with the document attached…', 'info');
+  buildPaginatedHtml(function (pagesHtml) {
+    try {
+      var html = buildStandaloneHtml(pagesHtml);
+      var dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+      tool.requestSendEmail({
+        to: String(to.value || '').trim(),
+        subject: String(subj && subj.value ? subj.value : resolveTitle() + ' — for signature'),
+        body: 'Please find attached "' + resolveTitle() + '" for your review and signature.',
+        attachments: [{ name: slugify(resolveTitle()) + '.html', dataUrl: dataUrl, contentType: 'text/html' }]
+      }, function (err) {
+        if (err) showToast('Email failed: ' + err, 'error');
+        else showToast('📧 Sent to ' + to.value + '.', 'success');
+      });
+    } catch (e) {
+      showToast('Email failed: ' + e.message, 'error');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — E1 import DOCX/PDF/TXT via AI
+   ═══════════════════════════════════════════ */
+function importFileToBlocks() {
+  if (typeof tool.requestUpload !== 'function' || typeof tool.requestFileContent !== 'function') {
+    showToast('File import is not available in this CMS context (requires requestUpload + requestFileContent).', 'warning');
+    return;
+  }
+  showToast('📤 Choose a .docx / .pdf / .txt / .md file…', 'info');
+  try {
+    tool.requestUpload(['.pdf', '.docx', '.txt', '.md'], function (err, file) {
+      if (err || !file) { showToast('Upload cancelled: ' + (err || 'no file'), 'warning'); return; }
+      showToast('📥 Reading "' + file.name + '"…', 'info');
+      tool.requestFileContent(file.id || file, function (err2, content) {
+        if (err2 || content === undefined || content === null) { showToast('Could not read the file content.', 'error'); return; }
+        var text = typeof content === 'string' ? content : (content.text || String(content));
+        if (text.length > 80000) text = text.substring(0, 80000) + ' … (truncated)';
+        showToast('🧠 Converting the file into legal blocks…', 'info');
+        var prompt = 'Convert the following uploaded document content into the Legal Document Builder blocks format.\n' +
+          'Respond with ONLY one JSON object {"blocks":[{"type":"...","data":{...}}, ...]} using the component library.\n' +
+          'Preserve headings, numbered sections, clauses, lists, tables and signature pages. Use {{variableName}} for names, dates and amounts.\n\n=== UPLOADED DOCUMENT ===\n' + text;
+        try {
+          tool.requestAI(prompt, function (err3, response) {
+            if (err3 || !response) { showToast('AI conversion failed: ' + (err3 || 'no response'), 'error'); return; }
+            var parsed = parseAiResponse(response);
+            if (!parsed.op) { showToast('Could not parse blocks from the AI response.', 'error'); return; }
+            _snapshotPush();
+            var changed = applyAiOp(parsed.op);
+            if (!changed) { showToast('The AI response contained no valid blocks.', 'error'); return; }
+            scanBlocksForVars();
+            _bumpVersion('minor');
+            _pushHistory();
+            persist();
+            mountPreview();
+            updateDocStats();
+            renderOutline();
+            renderVariables();
+            _detectDocType();
+            showToast('📥 Imported ' + DB.blocks.length + ' block(s) from "' + file.name + '".', 'success');
+          });
+        } catch (e) {
+          showToast('AI conversion unavailable: ' + e.message, 'error');
+        }
+      });
+    });
+  } catch (e) {
+    showToast('Upload failed: ' + e.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — F5 export Markdown / chat backup (H3)
+   ═══════════════════════════════════════════ */
+function blocksToMarkdown() {
+  var lines = ['# ' + resolveTitle(), ''];
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    var d = b.data || {};
+    switch (b.type) {
+      case 'title': lines.push('# ' + (d.text || '')); break;
+      case 'section': lines.push('## ' + (d.number ? d.number + '. ' : '') + (d.title || '')); break;
+      case 'subsection': lines.push('### ' + (d.number ? d.number + ' ' : '') + (d.title || '')); break;
+      case 'heading': lines.push('#### ' + (d.text || '')); break;
+      case 'clause': lines.push('**' + (d.number ? d.number + '.** ' : '') + (d.lead ? d.lead + ' ' : '') + (d.text || '')); break;
+      case 'paragraph': case 'bold-lead': lines.push((b.type === 'bold-lead' ? '**' + (d.lead || '') + '** ' : '') + (d.text || '')); break;
+      case 'bullets': for (var j = 0; j < (d.items || []).length; j++) lines.push('- ' + d.items[j]); break;
+      case 'numbering': for (var k = 0; k < (d.items || []).length; k++) lines.push((k + 1) + '. ' + (typeof d.items[k] === 'string' ? d.items[k] : d.items[k].text)); break;
+      case 'table':
+        if (d.columns && d.columns.length) {
+          lines.push('| ' + d.columns.join(' | ') + ' |');
+          lines.push('|' + d.columns.map(function () { return ' --- '; }).join('|') + '|');
+          for (var r = 0; r < (d.rows || []).length; r++) lines.push('| ' + (d.rows[r] || []).join(' | ') + ' |');
+        }
+        break;
+      case 'page-break': lines.push('---'); break;
+      case 'signature-block': lines.push(''); lines.push('---'); lines.push('**Signatures:** ' + (d.parties || []).map(function (p) { return p.name; }).join(', ')); break;
+      case 'parties-block': lines.push('**Parties:** ' + (d.parties || []).map(function (p) { return p.name; }).join('; ')); break;
+      default:
+        var pb = blockPreview(b, 500);
+        if (pb) lines.push(pb);
+    }
+    lines.push('');
+  }
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+
+function exportMarkdown() {
+  try {
+    var md = blocksToMarkdown();
+    var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    downloadBlob(blob, slugify(resolveTitle()) + '.md');
+    showToast('📝 Markdown downloaded.', 'success');
+  } catch (e) { showToast('Export failed: ' + e.message, 'error'); }
+}
+
+function exportChat() {
+  var lines = ['# Chat — ' + resolveTitle(), ''];
+  for (var i = 0; i < _chatMessages.length; i++) {
+    var m = _chatMessages[i];
+    lines.push('**' + (m.role === 'user' ? 'User' : 'AI') + '** (' + shortTime(m.time) + ')\n');
+    lines.push(m.text);
+    lines.push('');
+  }
+  try {
+    var blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    downloadBlob(blob, slugify(resolveTitle()) + '-chat.md');
+    showToast('💬 Chat transcript downloaded.', 'success');
+  } catch (e) { showToast('Export failed: ' + e.message, 'error'); }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — G6 accessibility checks
+   ═══════════════════════════════════════════ */
+function _luminance(hex) {
+  try {
+    var h = String(hex || '#111111').replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var r = parseInt(h.substring(0, 2), 16) / 255;
+    var g = parseInt(h.substring(2, 4), 16) / 255;
+    var b = parseInt(h.substring(4, 6), 16) / 255;
+    function lin(v) { return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  } catch (e) { return 0.12; }
+}
+
+function runA11yChecks() {
+  var out = [];
+  // Contrast vs white page
+  var lum = _luminance(DB.settings.color);
+  var ratio = (1.05) / (lum + 0.05);
+  out.push({ ok: ratio >= 4.5, text: 'Text contrast on white ≈ ' + ratio.toFixed(1) + ':1 (WCAG AA needs ≥ 4.5:1).' });
+  // Title present
+  var hasTitle = false, firstHeadingLevel = null;
+  for (var i = 0; i < DB.blocks.length; i++) {
+    var b = DB.blocks[i];
+    if (b.type === 'title') hasTitle = true;
+    if (b.type === 'section' && firstHeadingLevel === null) firstHeadingLevel = 2;
+    if (b.type === 'subsection' && firstHeadingLevel === null) firstHeadingLevel = 3;
+  }
+  out.push({ ok: hasTitle, text: hasTitle ? 'Document has a title block.' : 'No title block — exports should start with a document title.' });
+  out.push({ ok: firstHeadingLevel !== 3, text: firstHeadingLevel === 3 ? 'Document starts with a subsection (###) before any main section — check the heading order.' : 'Heading order starts correctly.' });
+  // images in raw html blocks need alt
+  var imgsNoAlt = 0;
+  for (var j = 0; j < DB.blocks.length; j++) {
+    if (DB.blocks[j].type === 'html') {
+      var html2 = String((DB.blocks[j].data && DB.blocks[j].data.html) || '');
+      var ims = html2.match(/<img[^>]*>/gi) || [];
+      for (var m = 0; m < ims.length; m++) {
+        if (!/alt\s*=/.test(ims[m])) imgsNoAlt++;
+      }
+    }
+  }
+  out.push({ ok: imgsNoAlt === 0, text: imgsNoAlt ? imgsNoAlt + ' image(s) in raw HTML blocks have no alt attribute.' : 'All images in raw HTML have alt text.' });
+  // font size
+  var fs = parseInt(String(DB.settings.fontSize || '12pt'), 10) || 12;
+  out.push({ ok: fs >= 10, text: 'Base font size ' + DB.settings.fontSize + (fs >= 10 ? ' is readable.' : ' is too small.') });
+  return out;
+}
+
+function renderA11yList() {
+  var box = el('a11y-list');
+  if (!box) return;
+  var checks = runA11yChecks();
+  var h = '';
+  for (var i = 0; i < checks.length; i++) {
+    h += '<div class="lint-item"><span class="lint-idx">' + (checks[i].ok ? '✅' : '⚠') + '</span><span class="lint-text">' + esc(checks[i].text) + '</span></div>';
+  }
+  box.innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — H4 prompt shortcuts / macros
+   ═══════════════════════════════════════════ */
+var MACROS = [
+  ['/addsign', 'Add signature blocks for all parties.'],
+  ['/plain', 'Rewrite the document in plain, modern language while preserving legal meaning and section numbering. Output {"blocks":[...]} with the full rewritten document.'],
+  ['/formal', 'Rewrite the document in a more formal, traditional legal register while preserving meaning and numbering. Output {"blocks":[...]} with the full rewritten document.'],
+  ['/fixvars', 'Replace hardcoded party names, dates and amounts with {{variables}} throughout the document and list them in the variables field.'],
+  ['/number', 'Renumber all sections, subsections and clauses consistently.'],
+  ['/risk', 'Review the document from each party\u2019s perspective and flag one-sided or risky clauses with quotes and suggested rewrites. Answer in chat only — no JSON.'],
+  ['/summary', 'Summarize the document in 5 bullet points. Answer in chat only — no JSON.'],
+  ['/translate', 'Translate the entire document into [LANGUAGE]. Keep block structure, numbering and formatting. Output {"blocks":[...]} with the full translated document.']
+];
+
+function handleMacro(text) {
+  var t = String(text || '').trim();
+  if (t.charAt(0) !== '/') return null;
+  var parts = t.split(/\s+/);
+  var cmd = parts[0].toLowerCase();
+  for (var i = 0; i < MACROS.length; i++) {
+    if (MACROS[i][0] === cmd) {
+      var prompt = MACROS[i][1];
+      var rest = t.substring(cmd.length).trim();
+      if (cmd === '/translate' && rest) prompt = prompt.replace('[LANGUAGE]', rest);
+      else if (rest) prompt = prompt + ' Context: ' + rest;
+      return prompt;
+    }
+  }
+  return null;
+}
+
+function renderMacroChips() {
+  var box = el('macro-chips');
+  if (!box) return;
+  var h = '';
+  for (var i = 0; i < MACROS.length; i++) {
+    h += '<button class="chip macro-chip" data-macro="' + i + '" title="' + esc(MACROS[i][1]) + '">' + esc(MACROS[i][0]) + '</button>';
+  }
+  box.innerHTML = h;
+  var btns = box.querySelectorAll('[data-macro]');
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].addEventListener('click', function () {
+      var m = MACROS[parseInt(this.getAttribute('data-macro'), 10)];
+      if (!m) return;
+      var input = el('chat-input');
+      if (!input) return;
+      input.value = m[0];
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+      input.focus();
+      showToast('Send ' + m[0] + ' — or add extra context after it.', 'info');
+    });
+  }
+}
+
+function renderMacroList() {
+  var box = el('macro-list');
+  if (!box) return;
+  var h = '';
+  for (var i = 0; i < MACROS.length; i++) {
+    h += '<div class="lint-item"><span class="lint-idx">⌨</span><span class="lint-text"><b>' + esc(MACROS[i][0]) + '</b> — ' + esc(MACROS[i][1]) + '</span></div>';
+  }
+  box.innerHTML = h;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — A6 clause variants
+   ═══════════════════════════════════════════ */
+function applyVariant(variant) {
+  var op = variant.op || variant;
+  if (!op || !_looksLikeDocOp(op)) { showToast('This variant could not be applied.', 'error'); return; }
+  _snapshotPush();
+  var changed = applyAiOp(op);
+  if (!changed) { showToast('This variant could not be applied.', 'error'); return; }
+  scanBlocksForVars();
+  _bumpVersion('minor');
+  _pushHistory();
+  persist();
+  mountPreview();
+  updateDocStats();
+  renderOutline();
+  renderVariables();
+  _detectDocType();
+  showToast('✅ Variant applied (v' + DB.version + ').', 'success');
+}
+
+/* ═══════════════════════════════════════════
+   PHASE 2 — aggregated settings renderer
+   ═══════════════════════════════════════════ */
+function renderSettingsPhase2() {
+  renderGapList();
+  renderRulesList();
+  renderDefinedTerms();
+  renderA11yList();
+  renderHistory();
+  renderSnippets();
+  renderContacts();
+  renderStatus();
+  renderMacroList();
+  renderFindResults();
+}
+
+/* ═══════════════════════════════════════════
    ENTRY POINT
    ═══════════════════════════════════════════ */
 tool.onReady(function (val, fields) {
@@ -2644,6 +5051,12 @@ tool.onReady(function (val, fields) {
   var v = val && typeof val === 'object' ? val : {};
   DB.version = v.version || '1.0.0';
   DB.blocks = Array.isArray(v.blocks) ? v.blocks : [];
+  DB.comments = (v.comments && typeof v.comments === 'object') ? v.comments : {};
+  DB.snippets = Array.isArray(v.snippets) ? v.snippets : [];
+  DB.status = v.status || 'draft';
+  DB.statusLog = Array.isArray(v.statusLog) ? v.statusLog : [];
+  DB.history = Array.isArray(v.history) ? v.history : [];
+  DB.variables = (v.variables && typeof v.variables === 'object') ? v.variables : {};
   DB.activeSessionId = v.activeSessionId || '';
   DB.chatCache = (v.chatCache && typeof v.chatCache === 'object') ? v.chatCache : null;
   DB._instanceId = v._instanceId || '';
@@ -2654,6 +5067,9 @@ tool.onReady(function (val, fields) {
   if (!DB.settings.fontSize) DB.settings.fontSize = tool.param('defaultFontSize', '12pt');
   if (!DB.settings.color) DB.settings.color = tool.param('defaultColor', '#111111');
   if (!DB.settings.lineHeight) DB.settings.lineHeight = String(tool.param('defaultLineHeight', '1.6'));
+  if (!DB.settings.pageSize) DB.settings.pageSize = 'A4';
+  if (DB.settings.showPageNumbers === undefined) DB.settings.showPageNumbers = true;
+  if (DB.settings.watermark === undefined) DB.settings.watermark = '';
 
   tool.declareParams([
     { name: 'defaultFontFamily', label: 'Default Font Family', type: 'text', default: 'Times New Roman', severity: 'goodToHave', hint: 'Default font for new documents (Times New Roman, Georgia, Arial, Calibri…).' },
@@ -2668,8 +5084,16 @@ tool.onReady(function (val, fields) {
   _renderVersion();
   populateFmtControls();
   renderParamsSummary();
+  scanBlocksForVars();
   mountPreview();
   updateDocStats();
+  updateVarBadge();
+  updateStagedChip();
+  renderPageOptions();
+  renderStatus();
+  renderSettingsPhase2();
+  renderMacroChips();
+  _detectDocType();
   applyReadOnly(tool.isReadOnly());
 
   tool.onReadonlyChange(function (ro) {
@@ -2689,14 +5113,24 @@ tool.onReady(function (val, fields) {
     if (!newVal || typeof newVal !== 'object') return;
     DB.version = newVal.version || DB.version;
     DB.blocks = Array.isArray(newVal.blocks) ? newVal.blocks : [];
+    if (newVal.variables && typeof newVal.variables === 'object') DB.variables = newVal.variables;
     if (newVal.settings && typeof newVal.settings === 'object') DB.settings = newVal.settings;
-    if (newVal.activeSessionId !== undefined) DB.activeSessionId = newVal.activeSessionId;
-    if (newVal.chatCache) DB.chatCache = newVal.chatCache;
-    if (newVal._instanceId) DB._instanceId = newVal._instanceId;
+    if (newVal.comments && typeof newVal.comments === 'object') DB.comments = newVal.comments;
+    if (Array.isArray(newVal.snippets)) DB.snippets = newVal.snippets;
+    if (newVal.status) DB.status = newVal.status;
+    if (Array.isArray(newVal.statusLog)) DB.statusLog = newVal.statusLog;
+    if (Array.isArray(newVal.history)) DB.history = newVal.history;
     _renderVersion();
     populateFmtControls();
+    renderPageOptions();
     mountPreview();
     updateDocStats();
+    updateVarBadge();
+    renderOutline();
+    renderVariables();
+    renderStatus();
+    renderSettingsPhase2();
+    _detectDocType();
   });
 
   tool.resize();

@@ -1,0 +1,419 @@
+<div class="ng-app" id="ng-app">
+
+  <!-- ═══════ TOP BAR ═══════ -->
+  <header class="ng-topbar">
+    <div class="ng-brand">
+      <span class="ng-logo">📰</span>
+      <div class="ng-brand-txt">
+        <strong>News Page Studio</strong>
+        <span id="ng-story-title">No story yet — describe the event in the AI Newsroom</span>
+      </div>
+    </div>
+    <div class="ng-top-actions">
+      <span class="ng-chip" id="ng-page-chip">📄 No page</span>
+      <span class="ng-chip ng-chip-dim" id="ng-ver-chip">v0</span>
+      <button class="ng-btn ng-btn-accent" id="ng-btn-generate" title="Build or rebuild the page from the story brief + chat">⚡ Generate Page</button>
+      <button class="ng-btn" id="ng-btn-save" title="Stage the value and request an immediate CMS save">💾 Save</button>
+      <span class="ng-userchip" id="ng-user-chip">…</span>
+    </div>
+  </header>
+
+  <!-- ═══════ WORKSPACE ═══════ -->
+  <div class="ng-workspace">
+
+    <!-- ───── AI NEWSROOM (chat sidebar) ───── -->
+    <aside class="ng-side" id="ng-side">
+      <div class="ng-side-head">
+        <span class="ng-side-title">🤖 AI Newsroom</span>
+        <div class="ng-side-head-btns">
+          <button class="ng-iconbtn" id="ng-btn-interview" title="Interview mode — the AI interviews you question by question to gather the facts">🎙 Interview</button>
+          <button class="ng-iconbtn" id="ng-btn-newchat" title="Clear this conversation (the page is kept)">↺ New chat</button>
+        </div>
+      </div>
+
+      <div class="ng-chat-body" id="ng-chat-body">
+        <div class="ng-chat-empty" id="ng-chat-empty">
+          <div class="ng-chat-empty-emoji">🗞️</div>
+          <p><b>Tell the AI about the event.</b> Paste a press note, list the facts, or drop links — it will keep asking until the story is complete, then compose the page.</p>
+          <p class="ng-chat-empty-sub">Try: <i>"A community solar farm opened in Izmir today — 4,000 panels, will power 1,200 homes…"</i></p>
+        </div>
+      </div>
+
+      <div class="ng-chips" id="ng-chips"></div>
+
+      <div class="ng-chat-foot">
+        <textarea id="ng-chat-input" rows="2" placeholder="Describe the event, paste a press note, or ask for changes…"></textarea>
+        <div class="ng-chat-actions">
+          <span class="ng-chat-hint" id="ng-chat-hint">Enter ↵ to send · Shift+Enter for new line</span>
+          <button class="ng-btn ng-btn-accent" id="ng-btn-send">Send ✦</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ───── MAIN PANELS ───── -->
+    <main class="ng-main">
+      <nav class="ng-tabs" id="ng-tabs">
+        <button class="ng-tab active" data-tab="preview">👁 Preview</button>
+        <button class="ng-tab" data-tab="gallery">🎨 Gallery & Theme</button>
+        <button class="ng-tab" data-tab="story">📝 Story</button>
+        <button class="ng-tab" data-tab="code">⌨ Code</button>
+        <button class="ng-tab" data-tab="publish">🚀 Publish</button>
+      </nav>
+
+      <!-- ── PREVIEW ── -->
+      <section class="ng-pane active" id="pane-preview">
+        <div class="ng-prev-toolbar">
+          <div class="ng-device-group" id="ng-device-group">
+            <button class="ng-device active" data-dev="mobile" title="Mobile 390px">📱</button>
+            <button class="ng-device" data-dev="tablet" title="Tablet 768px">📟</button>
+            <button class="ng-device" data-dev="desktop" title="Desktop — fill width">🖥</button>
+            <button class="ng-device" data-dev="all" title="Device lab — all three side by side">🗂 Lab</button>
+          </div>
+          <span class="ng-prev-meta" id="ng-prev-meta">—</span>
+          <span class="ng-spacer"></span>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-rerun" title="Re-run the page scripts in the preview">⟳ Re-run</button>
+        </div>
+        <div class="ng-prev-stage" id="ng-prev-stage">
+          <div class="ng-prev-viewport" id="ng-prev-viewport"></div>
+          <div class="ng-empty-prev" id="ng-empty-prev">
+            <div class="ng-empty-prev-emoji">🗞️</div>
+            <h3>No page yet</h3>
+            <p>Describe the event in the <b>AI Newsroom</b>, or pick a story template in <b>🎨 Gallery & Theme</b>, then press <b>⚡ Generate Page</b>.<br>The generated page will appear here exactly as visitors will see it — animations, polls, charts and all.</p>
+            <button class="ng-btn ng-btn-accent" id="ng-btn-generate-empty">⚡ Generate Page</button>
+          </div>
+        </div>
+        <details class="ng-console" id="ng-console-wrap">
+          <summary>🖥 Preview console <span class="ng-console-count" id="ng-console-count"></span></summary>
+          <div class="ng-console-out" id="ng-console-out">
+            <div class="ng-console-line ng-console-dim">Script logs and errors from the preview appear here.</div>
+          </div>
+        </details>
+      </section>
+
+      <!-- ── GALLERY & THEME ── -->
+      <section class="ng-pane" id="pane-gallery">
+        <div class="ng-story-head">
+          <h2>🎨 Component gallery & theme</h2>
+          <p>Every available component rendered with the <b>current color set</b>. Pick a color set — it applies to the gallery below AND to the generated page instantly (no AI call needed). <b>＋ Insert</b> adds a component to the current page plan.</p>
+        </div>
+        <div class="ng-gallery-tools">
+          <div class="ng-colorsets" id="ng-colorsets" role="radiogroup" aria-label="Color sets"></div>
+          <span class="ng-spacer"></span>
+          <span class="ng-chip ng-chip-dim" id="ng-archetype-chip">🧭 archetype: —</span>
+        </div>
+        <div class="ng-templates-wrap" id="ng-templates-wrap"></div>
+        <div class="ng-gallery-grid" id="ng-gallery-grid"></div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧪 Component unit tests</span><span id="ng-comptest-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-comptest" type="button">Run component tests</button>
+          <ul class="ng-pub-checks" id="ng-comptest-list"></ul>
+        </div>
+      </section>
+
+      <!-- ── STORY BRIEF ── -->
+      <section class="ng-pane" id="pane-story">
+        <div class="ng-story-head">
+          <h2>📝 Story Brief</h2>
+          <p>These are the <b>facts of record</b>. The AI reads them on every generation, so the page always reflects the latest truth. The AI also keeps its own editorial notes in the chat.</p>
+          <div class="ng-archetype-bar" id="ng-archetype-bar"></div>
+        </div>
+        <div class="ng-brief-grid">
+          <label class="ng-field ng-field-wide">
+            <span>Headline / working title *</span>
+            <input type="text" id="bf-title" placeholder="e.g. Solar Farm Opens, Powering 1,200 Homes" maxlength="160">
+          </label>
+          <label class="ng-field">
+            <span>URL slug (auto)</span>
+            <input type="text" id="bf-slug" placeholder="auto" maxlength="120">
+            <em class="ng-field-hint">Leave empty to auto-generate from the title.</em>
+          </label>
+          <label class="ng-field">
+            <span>Category / kicker</span>
+            <input type="text" id="bf-category" placeholder="e.g. ENERGY · CITY" maxlength="60">
+          </label>
+          <label class="ng-field">
+            <span>Author / byline</span>
+            <input type="text" id="bf-author" placeholder="e.g. Newsroom" maxlength="80">
+          </label>
+          <label class="ng-field">
+            <span>Event date</span>
+            <input type="text" id="bf-date" placeholder="e.g. 2026-08-19 or August 19, 2026" maxlength="60">
+          </label>
+          <label class="ng-field">
+            <span>Location</span>
+            <input type="text" id="bf-location" placeholder="e.g. Izmir, Türkiye" maxlength="120">
+          </label>
+          <label class="ng-field">
+            <span>Page language</span>
+            <select id="bf-language">
+              <option value="en">English</option>
+              <option value="tr">Türkçe</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="es">Español</option>
+              <option value="ar">العربية</option>
+            </select>
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Hero image URL</span>
+            <input type="text" id="bf-heroimage" placeholder="https://… (optional — AI can also pick fitting visuals)" maxlength="500">
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Summary (1–3 sentences of the story)</span>
+            <textarea id="bf-summary" rows="3" placeholder="What happened, why it matters…"></textarea>
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Tags (comma separated)</span>
+            <input type="text" id="bf-tags" placeholder="solar, energy, izmir" maxlength="200">
+          </label>
+          <label class="ng-field ng-field-wide">
+            <span>Sources & links (one per line: <i>Name | https://url</i>)</span>
+            <textarea id="bf-sources" rows="3" placeholder="City Press Office | https://…"></textarea>
+          </label>
+        </div>
+        <div class="ng-story-actions">
+          <button class="ng-btn" id="ng-btn-brief-save">💾 Save brief</button>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-brief-generate">⚡ Save & regenerate page</button>
+          <span class="ng-brief-status" id="ng-brief-status"></span>
+        </div>
+
+        <div class="ng-phase2-lab">
+          <div class="ng-lab-row">
+            <div class="ng-lab-box">
+              <strong>✍️ Headline lab</strong>
+              <small>Five headline variants; click one to apply to hero + SEO title.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-headline-lab">Generate headlines</button>
+              <div class="ng-lab-results" id="ng-headline-results"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🎬 Standfirst & social deck</strong>
+              <small>Auto-write the standfirst + share decks for X / Facebook / WhatsApp.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-deck-lab">Generate deck copy</button>
+              <div class="ng-lab-results" id="ng-deck-results"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🔗 Draft from URL</strong>
+              <small>Paste a press release or article URL — extract, draft the brief, then compose.</small>
+              <div class="ng-draft-row">
+                <input type="text" id="ng-draft-url" placeholder="https://…">
+                <button class="ng-btn ng-btn-sm" id="ng-btn-draft-url">Draft</button>
+              </div>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>🎚️ Tone & style sliders</strong>
+              <small>Applied to every AI prompt and saved with this story.</small>
+              <div class="ng-sliders">
+                <label class="ng-slider"><span>Serious ↔ Lively</span><input type="range" id="ng-tone-lively" min="-2" max="2" step="1" value="0"></label>
+                <label class="ng-slider"><span>Dense ↔ Scannable</span><input type="range" id="ng-tone-dense" min="-2" max="2" step="1" value="0"></label>
+                <label class="ng-slider"><span>Formal ↔ Conversational</span><input type="range" id="ng-tone-formal" min="-2" max="2" step="1" value="0"></label>
+              </div>
+            </div>
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>📎 Source manager</strong>
+              <small>Paste URLs (one per line) and extract their text — the AI cites these when writing.</small>
+              <div class="ng-draft-row ng-src-row">
+                <textarea id="ng-src-urls" rows="2" placeholder="https://…"></textarea>
+                <button class="ng-btn ng-btn-sm" id="ng-btn-src-extract">Extract</button>
+              </div>
+              <div class="ng-lab-results" id="ng-src-results"></div>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box">
+              <strong>🌐 Language variants</strong>
+              <small>Translate the whole plan — same contentId, ready for language routing.</small>
+              <div class="ng-draft-row">
+                <select id="ng-ml-lang" aria-label="Target language">
+                  <option value="en">English</option>
+                  <option value="tr">Türkçe</option>
+                  <option value="de">Deutsch</option>
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="ar">العربية</option>
+                </select>
+                <button class="ng-btn ng-btn-sm" id="ng-btn-translate">Translate page</button>
+              </div>
+              <div class="ng-lab-results" id="ng-translate-result"></div>
+            </div>
+            <div class="ng-lab-box">
+              <strong>🤖 Agentic build</strong>
+              <small>The AI plans 2–4 build steps, then executes each one in sequence.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-agentic">Plan &amp; run build</button>
+            </div>
+            <div class="ng-lab-box">
+              <strong>⚖ A/B composer</strong>
+              <small>Two alternative pages — human interest vs data driven. Preview both, keep one.</small>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-ab">Compose A/B variants</button>
+            </div>
+          </div>
+          <div class="ng-lab-row">
+            <div class="ng-lab-box ng-lab-wide">
+              <strong>🧭 House preference (prompt optimizer)</strong>
+              <small>Learned from your 👍/👎 prompt votes and injected into every AI call. Editable.</small>
+              <textarea id="ng-extra-prompt" rows="2" placeholder="e.g. Always use short paragraphs, quote at least two named people, keep it under 600 words…"></textarea>
+              <button class="ng-btn ng-btn-sm" id="ng-btn-prompt-opt">✨ Optimize with AI</button>
+              <div class="ng-lab-results" id="ng-prompt-opt-result"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CODE ── -->
+      <section class="ng-pane" id="pane-code">
+        <div class="ng-code-bar">
+          <div class="ng-code-tabs" id="ng-code-tabs">
+            <button class="ng-codetab active" data-code="html">HTML</button>
+            <button class="ng-codetab" data-code="css">CSS</button>
+            <button class="ng-codetab" data-code="js">JS</button>
+            <button class="ng-codetab" data-code="seo">SEO</button>
+            <button class="ng-codetab" data-code="meta">PAGE META</button>
+            <button class="ng-codetab" data-code="config">CMS CONFIG</button>
+          </div>
+          <span class="ng-spacer"></span>
+          <span class="ng-code-meta" id="ng-code-meta"></span>
+        </div>
+        <textarea class="ng-code-out" id="ng-code-out" readonly spellcheck="false" wrap="off"></textarea>
+        <div class="ng-code-actions">
+          <button class="ng-btn" id="ng-btn-copy-current">📋 Copy this section</button>
+          <button class="ng-btn" id="ng-btn-copy-all">📋 Copy generator output (=== sections)</button>
+          <button class="ng-btn" id="ng-btn-download">⬇ Download standalone .html</button>
+          <button class="ng-btn ng-btn-ghost" id="ng-btn-export-pdf">🖨 Print / PDF</button>
+        </div>
+        <p class="ng-code-note">The code is compiled from the AI's component plan by the tool itself — the AI never writes raw page code. Every section is scoped to <code>.news-<i>slug</i></code>, idempotent, and passes the platform guardrails.</p>
+      </section>
+
+      <!-- ── PUBLISH ── -->
+      <section class="ng-pane" id="pane-publish">
+        <div class="ng-pub-head">
+          <h2>🚀 Publish the story</h2>
+          <p>Two routes into the platform — pick whichever fits your CMS workflow.</p>
+        </div>
+        <div class="ng-pub-cards">
+          <div class="ng-pub-card">
+            <h3>1 · Page object JSON</h3>
+            <p>One JSON that contains everything: <code>name</code>, <code>slug</code>, <code>data.htmlPage.code.{html,css,js}</code> and <code>seo</code>. Create the page object in your site app with this payload.</p>
+            <button class="ng-btn ng-btn-accent" id="ng-btn-copy-pageobj">📦 Copy Page Object JSON</button>
+          </div>
+          <div class="ng-pub-card">
+            <h3>2 · Generator output</h3>
+            <p>The plain <code>=== HTML / CSS / JS / SEO / PAGE META ===</code> sections used by the page generator — paste into the CMS tool builder fields.</p>
+            <button class="ng-btn" id="ng-btn-copy-gen">📋 Copy generator output</button>
+          </div>
+          <div class="ng-pub-card">
+            <h3>3 · Proof & share</h3>
+            <p>Open a standalone HTML copy for quick proofing, or send it to the CMS print pipeline as a PDF.</p>
+            <button class="ng-btn" id="ng-btn-download2">⬇ Download standalone .html</button>
+            <button class="ng-btn ng-btn-ghost" id="ng-btn-export-pdf2">🖨 Print / PDF</button>
+          </div>
+        </div>
+        <div class="ng-pub-json-wrap">
+          <div class="ng-pub-json-head">
+            <span>Page object JSON preview</span>
+            <button class="ng-btn ng-btn-ghost ng-btn-sm" id="ng-btn-refresh-pub">⟳ Refresh</button>
+          </div>
+          <pre class="ng-pub-json" id="ng-pub-json">No page generated yet.</pre>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧪 Platform guardrail checks</span><span id="ng-check-score"></span></div>
+          <ul class="ng-pub-checks" id="ng-pub-checks"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🔍 SEO & schema scorecard</span><span class="ng-seo-score" id="ng-seo-score"></span></div>
+          <ul class="ng-pub-checks" id="ng-seo-list"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>✅ Pre-flight checklist</span><span id="ng-checklist-score"></span></div>
+          <div class="ng-checklist" id="ng-checklist-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🕵️ Fact-check assistant</span><span id="ng-factcheck-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-factcheck" type="button">Check draft against sources</button>
+          <ul class="ng-pub-checks" id="ng-factcheck-list"></ul>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📊 Performance budget</span><span id="ng-perf-score"></span></div>
+          <div class="ng-perf" id="ng-perf-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📇 Social card preview</span><span id="ng-social-meta"></span></div>
+          <div class="ng-social" id="ng-social-preview"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🖼️ Image credits</span><span id="ng-credits-score"></span></div>
+          <div class="ng-credits" id="ng-credits-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🕘 Version history</span><span id="ng-history-count"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-history" type="button">Open history</button>
+          <div class="ng-history" id="ng-history-list"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>👥 Review workflow</span><span id="ng-review-badge"></span></div>
+          <div class="ng-review">
+            <select id="ng-review-status" aria-label="Review status">
+              <option value="draft">✏️ Draft</option>
+              <option value="review">🔍 In review</option>
+              <option value="approved">✅ Approved</option>
+            </select>
+            <input type="text" id="ng-review-note" placeholder="Editor note…" maxlength="300">
+          </div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>📧 Notify editors</span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-notify" type="button">📧 Send “story ready for review” email</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>⏰ Scheduled publish</span></div>
+          <div class="ng-publish-at-row">
+            <input type="datetime-local" id="ng-publish-at" aria-label="Scheduled publish time">
+            <span class="ng-hint" id="ng-publish-at-hint"></span>
+          </div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🚀 One-click CMS page object</span></div>
+          <p class="ng-hint">Creates the page object (name, slug, htmlPage.code, seo) directly in the CMS, then asks the CMS to open it. Object type comes from the <code>pageTypeId</code> param or the dialog.</p>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-pageobj" type="button">📄 Create CMS page object…</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🔗 Related stories picker</span></div>
+          <p class="ng-hint">Query a CMS object type, tick stories, and inject them into the page’s related block. Source type from the <code>relatedTypeId</code> param or the dialog.</p>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-related" type="button">🔍 Pick related stories…</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>✉ Email newsletter edition</span></div>
+          <div class="ng-email" id="ng-email-edition"></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-email" type="button">✉ Write email edition</button>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🖋 Style & cliché lint</span><span id="ng-lint-score"></span></div>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-lint" type="button">Run draft lint</button>
+          <button class="ng-btn ng-btn-sm ng-comptest-run" id="ng-btn-style" type="button">🖋 AI style review</button>
+          <div class="ng-lint" id="ng-lint-results"></div>
+        </div>
+        <div class="ng-pub-check-wrap">
+          <div class="ng-pub-json-head"><span>🧭 Prompt lab</span></div>
+          <p class="ng-hint">Prompts that produced pages — vote on them and the optimizer learns your house style.</p>
+          <div class="ng-prompt-lab" id="ng-prompt-lab"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ═══════ STATUS STRIP ═══════ -->
+  <footer class="ng-statusbar" id="ng-statusbar">
+    <span id="ng-status-text">Ready — waiting for the story.</span>
+  </footer>
+
+  <!-- ═══════ MODAL (history / diffs) ═══════ -->
+  <div class="ng-modal-overlay" id="ng-modal-overlay" style="display:none">
+    <div class="ng-modal-box">
+      <div class="ng-modal-head">
+        <span id="ng-modal-title">Modal</span>
+        <button class="ng-iconbtn" id="ng-modal-close" type="button">✕</button>
+      </div>
+      <div class="ng-modal-body" id="ng-modal-body"></div>
+    </div>
+  </div>
+</div>

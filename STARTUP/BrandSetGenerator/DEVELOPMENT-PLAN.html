@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brand Set Generator — Development Plan</title>
+<style>
+  :root {
+    --accent: #4f46e5;
+    --accent2: #7c3aed;
+    --grad: linear-gradient(135deg, #6366f1, #7c3aed);
+    --ink: #0f172a;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --line: #e5e9f2;
+    --bg: #f4f5fa;
+    --card: #fff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 22px 60px; }
+
+  header.hero {
+    background: #0f172a;
+    color: #e6edf5;
+    padding: 44px 22px 34px;
+    position: relative;
+    overflow: hidden;
+  }
+  header.hero::after {
+    content: '';
+    position: absolute;
+    right: -140px; top: -180px;
+    width: 520px; height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,58,237,.4) 0%, rgba(79,70,229,.2) 55%, transparent 72%);
+  }
+  .hero-inner { max-width: 1060px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+    background: var(--grad); color: #fff; border-radius: 999px; padding: 5px 14px; margin-bottom: 14px;
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -.4px; }
+  .hero p { margin: 0; color: #9aa7bd; font-size: 14px; max-width: 720px; }
+  .hero-meta { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: #94a3b8; }
+  .hero-meta span { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 5px 12px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin: 26px 0;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 22px -12px rgba(15,23,42,.15);
+  }
+  .stat b { display: block; font-size: 24px; letter-spacing: -.5px; }
+  .stat span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .stat.accent b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .legend {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+    font-size: 12px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 16px; margin-bottom: 26px;
+  }
+  .legend b { color: var(--ink); }
+  .pill { display: inline-block; border-radius: 999px; font-size: 10.5px; font-weight: 800; padding: 2px 10px; letter-spacing: .3px; }
+  .p0 { background: #fee2e2; color: #b91c1c; }
+  .p1 { background: #fef3c7; color: #b45309; }
+  .p2 { background: #e0e7ff; color: #3730a3; }
+  .eff { border: 1.5px solid var(--line); color: #475569; }
+  .done { background: #dcfce7; color: #15803d; }
+  .progress { background: #fde68a; color: #92400e; }
+  .planned { background: #e2e8f0; color: #475569; }
+  .skipped { background: #f1f5f9; color: #94a3b8; text-decoration: line-through; }
+
+  section.phase { margin-bottom: 34px; }
+  .phase-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 20px;
+    background: #0f172a; color: #fff;
+    border-radius: 16px 16px 0 0;
+  }
+  .phase-num {
+    width: 42px; height: 42px; flex: none;
+    display: grid; place-items: center;
+    background: var(--grad); border-radius: 12px;
+    font-size: 16px; font-weight: 800;
+    box-shadow: 0 8px 18px -8px rgba(124,58,237,.8);
+  }
+  .phase-head h2 { margin: 0; font-size: 17px; letter-spacing: -.2px; }
+  .phase-head .goal { color: #9aa7bd; font-size: 12.5px; margin-top: 2px; }
+  .phase-head .phase-count { margin-left: auto; font-size: 12px; color: #94a3b8; white-space: nowrap; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-top: none;
+    border-radius: 0 0 16px 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 26px -14px rgba(15,23,42,.18);
+  }
+  thead th {
+    text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted); background: #f8fafc;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 13px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8faff; }
+  td.id { font-family: Consolas, monospace; font-size: 11.5px; color: var(--accent); font-weight: 700; white-space: nowrap; }
+  td.feat { font-weight: 700; font-size: 13.5px; min-width: 190px; }
+  td.desc { color: #475569; font-size: 12.5px; }
+  td.note { color: var(--faint); font-size: 11.5px; min-width: 150px; }
+  td.prio, td.eff { white-space: nowrap; }
+  select.status {
+    font-family: inherit; font-size: 12px; font-weight: 600;
+    border-radius: 8px; border: 1.5px solid var(--line);
+    padding: 5px 8px; background: #fff; cursor: pointer;
+  }
+  select.status[data-status="Done"] { border-color: #86efac; color: #15803d; }
+  select.status[data-status="In Progress"] { border-color: #fcd34d; color: #92400e; }
+  select.status[data-status="Skipped"] { color: #94a3b8; }
+
+  .devnote {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 22px 24px; margin-top: 8px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 10px 26px -14px rgba(15,23,42,.18);
+  }
+  .devnote h3 { margin: 0 0 10px; font-size: 15px; }
+  .devnote pre {
+    background: #0f172a; color: #d7e1f5; border-radius: 12px;
+    padding: 16px 18px; overflow: auto; font-size: 12px; line-height: 1.6;
+  }
+  footer { margin-top: 40px; text-align: center; color: var(--faint); font-size: 12px; }
+  @media (max-width: 800px) {
+    td.note { display: none; }
+    thead th:nth-child(4) { display: none; }
+    td.desc { min-width: 140px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="hero-badge">Development Tracker</span>
+    <h1>Brand Set Generator — Development Plan</h1>
+    <p>A prioritized, creative backlog of features that would turn this html-tool into a full agency-grade brand platform. Status is editable and saved locally in this browser — update items as they get implemented and keep this file in the tool folder as the single source of truth.</p>
+    <div class="hero-meta">
+      <span>📁 STARTUP/BrandSetGenerator/</span>
+      <span>📅 Created 2026-08-18</span>
+      <span>🧭 Tool version v3 (sidebar brand kit)</span>
+      <span>🧩 35 proposed features</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="stats" id="stats"></div>
+
+  <div class="legend">
+    <b>Priority:</b>
+    <span class="pill p0">P0 — must-have</span>
+    <span class="pill p1">P1 — high value</span>
+    <span class="pill p2">P2 — nice to have</span>
+    <span style="width:14px"></span>
+    <b>Effort:</b>
+    <span class="pill eff">S — small</span>
+    <span class="pill eff">M — medium</span>
+    <span class="pill eff">L — large</span>
+  </div>
+
+  <!-- ================= PHASE 1 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <div class="phase-num">1</div>
+      <div>
+        <h2>Quick Wins — Social &amp; Digital Expansion</h2>
+        <div class="goal">Ship the assets every client asks for first. All of these reuse the existing SVG asset pipeline.</div>
+      </div>
+      <span class="phase-count" data-phase="1"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Feature</th><th>Description</th><th>Priority</th><th>Effort</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="id">P1-01</td><td class="feat">Social cover banners</td><td class="desc">Facebook 820×312, LinkedIn 1584×396, X/Twitter 1500×500, YouTube 2560×1440 covers with safe-area guides.</td><td class="prio"><span class="pill p0">P0</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P1-01"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Reuses buildBanner with a sizes map.</td></tr>
+        <tr><td class="id">P1-02</td><td class="feat">Social profile picture pack</td><td class="desc">Ready-to-upload profile images for FB/LinkedIn/X/YouTube (180–800px, rounded variants).</td><td class="prio"><span class="pill p0">P0</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P1-02"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P1-03</td><td class="feat">Instagram pack</td><td class="desc">Profile 1080×1080, square post template and 1080×1920 story template with brand watermark.</td><td class="prio"><span class="pill p0">P0</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P1-03"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P1-04</td><td class="feat">Email newsletter header</td><td class="desc">600×200 email banner + copy-paste HTML email template with logo and footer.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P1-04"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P1-05</td><td class="feat">WhatsApp Business assets</td><td class="desc">Profile logo and catalog cover sized for WhatsApp Business.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P1-05"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P1-06</td><td class="feat">Logo grid review sheet</td><td class="desc">One-page sheet with all lockups + mono versions for client approval meetings.</td><td class="prio"><span class="pill p0">P0</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P1-06"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Great PDF export candidate.</td></tr>
+        <tr><td class="id">P1-07</td><td class="feat">Multi-size export per asset</td><td class="desc">Download dialog offering 1×/2×/4× versions for banners and icons in one click.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P1-07"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Extends svgToPng scale option.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= PHASE 2 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <div class="phase-num">2</div>
+      <div>
+        <h2>Creative &amp; AI Intelligence</h2>
+        <div class="goal">Turn the generator into a thinking brand partner using the CMS AI relay.</div>
+      </div>
+      <span class="phase-count" data-phase="2"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Feature</th><th>Description</th><th>Priority</th><th>Effort</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="id">P2-01</td><td class="feat">Logo idea variations</td><td class="desc">"Give me 6 ideas" — auto-generates alternative layout/color/icon combinations in a grid to pick from.</td><td class="prio"><span class="pill p0">P0</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P2-01"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Pure config shuffling — no AI needed.</td></tr>
+        <tr><td class="id">P2-02</td><td class="feat">AI brand consultant chat</td><td class="desc">Chat tab asking AI to critique the logo, suggest palettes or naming, with the current manifest as context.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">L</span></td><td><select class="status" data-id="P2-02"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Persist to ai-chat-sessions-uniconbaseapps per rules.</td></tr>
+        <tr><td class="id">P2-03</td><td class="feat">AI brand voice pack</td><td class="desc">About-us (50/100/250 words), elevator pitch, mission/vision drafts and a press-release template via requestAI.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P2-03"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Reuses the tagline AI pattern.</td></tr>
+        <tr><td class="id">P2-04</td><td class="feat">Naming &amp; domain ideas</td><td class="desc">Alternative name suggestions and domain style ideas for the chosen name.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P2-04"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Real availability check needs an external API — out of scope for sandbox.</td></tr>
+        <tr><td class="id">P2-05</td><td class="feat">Tagline A/B sheet</td><td class="desc">Compare shortlisted taglines with the logo rendered under each.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P2-05"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P2-06</td><td class="feat">Palette from photo</td><td class="desc">Upload a mood photo and extract its dominant colors into the brand palette.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P2-06"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Canvas pixel read may be tainted for external URLs — use upload data where possible.</td></tr>
+        <tr><td class="id">P2-07</td><td class="feat">Competitor moodboard</td><td class="desc">Collect reference colors/typefaces of competitor brands side by side for positioning.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P2-07"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= PHASE 3 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <div class="phase-num">3</div>
+      <div>
+        <h2>Print, Office &amp; Physical Branding</h2>
+        <div class="goal">Cover everything a company touches offline — from desk to delivery van.</div>
+      </div>
+      <span class="phase-count" data-phase="3"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Feature</th><th>Description</th><th>Priority</th><th>Effort</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="id">P3-01</td><td class="feat">Print-ready business cards</td><td class="desc">Version with bleed, crop marks and approximate CMYK color values on a print sheet.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P3-01"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">RGB→CMYK is approximate; note for printers.</td></tr>
+        <tr><td class="id">P3-02</td><td class="feat">Office document suite</td><td class="desc">Invoice header, quote/proposal cover, PowerPoint 16:9 title slide and Google Doc header image.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P3-02"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P3-03</td><td class="feat">Envelopes, labels &amp; fax</td><td class="desc">DL/C5 envelope layout, mailing label and fax cover sheet.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P3-03"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P3-04</td><td class="feat">Email signature + vCard</td><td class="desc">Signature with photo placeholder and a downloadable .vcf contact file.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P3-04"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P3-05</td><td class="feat">ID badge &amp; lanyard</td><td class="desc">Employee badge front/back and lanyard template.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P3-05"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P3-06</td><td class="feat">Swag mockups</td><td class="desc">Die-cut sticker sheet with the logo applied (T-shirt/mug/tote/cap mockups were removed by request).</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">L</span></td><td><select class="status" data-id="P3-06"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Sticker sheet is its own SVG builder.</td></tr>
+        <tr><td class="id">P3-07</td><td class="feat">Signage templates</td><td class="desc">Storefront sign, door sticker and vehicle side-panel layouts.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">L</span></td><td><select class="status" data-id="P3-07"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P3-08</td><td class="feat">QR code on business card</td><td class="desc">vCard QR on the card back linking to contact details (CDN qrcode lib).</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P3-08"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">qrcode lib allowed via CDN script tag.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= PHASE 4 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <div class="phase-num">4</div>
+      <div>
+        <h2>Motion, Accessibility &amp; Quality</h2>
+        <div class="goal">Make the brand live, inclusive and production-proof.</div>
+      </div>
+      <span class="phase-count" data-phase="4"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Feature</th><th>Description</th><th>Priority</th><th>Effort</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="id">P4-01</td><td class="feat">Animated logo intro</td><td class="desc">Preview + export a CSS/SMIL-animated logo reveal for websites and presentations.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P4-01"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">SVG SMIL works in modern browsers.</td></tr>
+        <tr><td class="id">P4-02</td><td class="feat">WCAG contrast checker</td><td class="desc">Contrast ratios for every palette pairing with pass/fail badges and suggested fixes.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P4-02"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P4-03</td><td class="feat">Color-blind simulation</td><td class="desc">Preview the logo under protanopia / deuteranopia / tritanopia simulations.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P4-03"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Matrix recolor of palette only.</td></tr>
+        <tr><td class="id">P4-04</td><td class="feat">Dark-mode kit variant</td><td class="desc">Full asset set recolored for dark interfaces with one toggle.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P4-04"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P4-05</td><td class="feat">Usage examples in guidelines</td><td class="desc">Rendered do/don't examples: clear space, minimum sizes, busy backgrounds.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P4-05"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P4-06</td><td class="feat">Adaptive favicon (dark/light)</td><td class="desc">prefers-color-scheme-aware favicon SVG + instructions for webmasters.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P4-06"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= PHASE 5 ================= -->
+  <section class="phase">
+    <div class="phase-head">
+      <div class="phase-num">5</div>
+      <div>
+        <h2>Platform &amp; Collaboration</h2>
+        <div class="goal">Connect the tool to the CMS ecosystem and make it team-ready.</div>
+      </div>
+      <span class="phase-count" data-phase="5"></span>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Feature</th><th>Description</th><th>Priority</th><th>Effort</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="id">P5-01</td><td class="feat">Kit version history</td><td class="desc">Snapshots of brand kits with side-by-side compare and restore.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">L</span></td><td><select class="status" data-id="P5-01"><option>Planned</option><option>In Progress</option><option>Done</option><option>Skipped</option></select></td><td class="note">Store snapshots in requestObjects type to avoid 1MB doc bloat.</td></tr>
+        <tr><td class="id">P5-02</td><td class="feat">Approval workflow</td><td class="desc">Per-category checkmarks and approver comments using tool.getPermittedUsers().</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">L</span></td><td><select class="status" data-id="P5-02"><option>Planned</option><option>In Progress</option><option>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P5-03</td><td class="feat">CMS manifest registry</td><td class="desc">Persist the brand manifest into a shared CMS type (brand-manifests-uniconbaseapps) so other apps can query brands by record.</td><td class="prio"><span class="pill p1">P1</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P5-03"><option>Planned</option><option>In Progress</option><option>Done</option><option>Skipped</option></select></td><td class="note">Requires allowObjectCRUD + allowedObjectTypes config.</td></tr>
+        <tr><td class="id">P5-04</td><td class="feat">File naming scheme editor</td><td class="desc">Custom slug and suffix rules for generated filenames.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P5-04"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P5-05</td><td class="feat">Multi-language UI</td><td class="desc">EN/TR interface via param lang (all labels centralized).</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P5-05"><option>Planned</option><option>In Progress</option><option>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P5-06</td><td class="feat">Export preferences</td><td class="desc">Default formats (SVG/PNG/WebP/ICO) per asset group, saved in the tool value.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">S</span></td><td><select class="status" data-id="P5-06"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note"></td></tr>
+        <tr><td class="id">P5-07</td><td class="feat">ZIP gallery index</td><td class="desc">A generated index.html inside the downloaded ZIP — a browsable gallery of every asset.</td><td class="prio"><span class="pill p2">P2</span></td><td class="eff"><span class="pill eff">M</span></td><td><select class="status" data-id="P5-07"><option>Planned</option><option>In Progress</option><option selected>Done</option><option>Skipped</option></select></td><td class="note">Builds from the same asset list.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <div class="devnote">
+    <h3>🛠 Maintainer note — how to add a new asset (2-minute task)</h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 10px">The Brand Kit is fully data-driven. Most new assets only need one entry in <code>makeAssets()</code> — the sidebar menu, counts, cards, ZIP and brand.json manifest all update automatically.</p>
+<pre>{
+  id: 'facebook-cover',                    // filename slug-facebook-cover.svg
+  group: 'web',                            // ASSET_GROUPS id (or add a new group)
+  title: 'Facebook Cover',
+  desc: '820×312 cover with safe-area guide.',
+  tag: 'SVG · PNG · WebP',
+  webp: true,                              // adds WebP button + zip entry
+  build: function () { return buildFacebookCover(cfg); },  // returns {svg, w, h}
+  dark: false                              // dark preview background
+}</pre>
+    <p style="color:var(--muted);font-size:12.5px;margin:10px 0 0">For raster-pixel-perfect work reuse <code>svgToPng</code> (scale / pngW / mime options); new formats follow the <code>icoSizes</code> pattern. Always re-run <code>node --check BrandSetGenerator.js && node check-ids.cjs && node smoke-test.cjs</code> after edits.</p>
+  </div>
+
+  <footer>
+    Brand Set Generator · development plan · keep this file next to the tool and tick items as they ship.<br>
+    Statuses persist locally in this browser (localStorage key <code>bsg-devplan</code>).
+  </footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'bsg-devplan';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { state = {}; }
+
+  var selects = document.querySelectorAll('select.status');
+  selects.forEach(function (sel) {
+    if (state[sel.getAttribute('data-id')]) sel.value = state[sel.getAttribute('data-id')];
+    sel.setAttribute('data-status', sel.value);
+    sel.addEventListener('change', function () {
+      state[sel.getAttribute('data-id')] = sel.value;
+      sel.setAttribute('data-status', sel.value);
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      renderStats();
+    });
+  });
+
+  var rows = document.querySelectorAll('tbody tr');
+  var phases = document.querySelectorAll('section.phase');
+  phases.forEach(function (sec) {
+    var id = sec.getAttribute('data-phase') || sec.querySelector('.phase-num').textContent;
+    var n = sec.querySelectorAll('tbody tr').length;
+    var done = sec.querySelectorAll('select[data-status="Done"]').length;
+    sec.querySelector('.phase-count').textContent = done + ' / ' + n + ' done';
+  });
+
+  function renderStats() {
+    var all = document.querySelectorAll('select.status');
+    var done = 0, prog = 0, skipped = 0;
+    all.forEach(function (s) {
+      if (s.value === 'Done') done++;
+      else if (s.value === 'In Progress') prog++;
+      else if (s.value === 'Skipped') skipped++;
+    });
+    var planned = all.length - done - skipped;
+    var pct = Math.round((done / all.length) * 100);
+    document.getElementById('stats').innerHTML =
+      '<div class="stat accent"><b>' + all.length + '</b><span>Total features</span></div>' +
+      '<div class="stat"><b>' + done + '</b><span>Done</span></div>' +
+      '<div class="stat"><b>' + prog + '</b><span>In progress</span></div>' +
+      '<div class="stat"><b>' + planned + '</b><span>Planned</span></div>' +
+      '<div class="stat"><b>' + skipped + '</b><span>Skipped</span></div>' +
+      '<div class="stat accent"><b>' + pct + '%</b><span>Completion</span></div>';
+  }
+  renderStats();
+})();
+</script>
+</body>
+</html>
