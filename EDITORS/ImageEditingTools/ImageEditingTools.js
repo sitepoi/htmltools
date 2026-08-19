@@ -1,18 +1,21 @@
 // ════════════════════════════════════════════════════════════════
 // Image Editing Tools — UniconHub html-tool
 // A lightweight, event-based image editing toolbox for the CMS:
-//   • Convert   — PNG / JPEG / WebP file type converter
+//   • Convert   — PNG / JPEG / WebP converter, favicon pack, base64
 //   • Resize    — pixel dimensions with aspect lock
-//   • Crop      — drag selection or numeric crop
-//   • Rotate    — quarter turns, flips, fine rotation
-//   • Filters   — live brightness/contrast/saturation/hue/blur presets
+//   • Crop      — drag/numeric crop, social-size presets, circle crop
+//   • Rotate    — quarter turns, flips, fine rotation, horizon straighten
+//   • Frame     — border / mat / radius / shadow + Polaroid preset
+//   • Filters   — live sliders, presets v2, duotone, vignette, grain,
+//                 auto-enhance, area pixelate/blur
+//   • Annotate  — arrows, boxes, circles, freehand, highlighter
 //   • Compress  — quality slider + auto-tune to a target size
-//   • Watermark — text stamp (position, tilt, tile, shadow)
-//   • Collage   — combine several images in predefined frames
-//   • OCR       — text extraction (built-in engine or AI gateway)
-// All edits are local (canvas in memory) and chain together; results
-// are downloaded as files. Only lightweight UI settings are persisted
-// via tool.setValue(). No CMS object CRUD required.
+//   • Watermark — text stamp, pill, meme maker, logo overlay
+//   • Collage   — predefined + custom N×M grid frames
+//   • OCR       — built-in engine or AI gateway + history
+// Editing is chained: undo/redo, step-history jump, keyboard shortcuts.
+// All edits are local (canvas in memory); only lightweight settings and
+// OCR history persist via tool.setValue(). No CMS object CRUD required.
 // ════════════════════════════════════════════════════════════════
 'use strict';
 
@@ -22,6 +25,13 @@ var MAX_PIXELS = 40 * 1000 * 1000; // 40 MP safety cap
 var MAX_HISTORY = 25;
 var MAX_FILE_BYTES = 40 * 1024 * 1024; // 40 MB
 var ZOOM_STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+var SOCIAL_CROPS = [
+  { id: 'ig', label: 'IG 1:1', ar: 1, w: 1080, h: 1080 },
+  { id: 'story', label: 'Story 9:16', ar: 9 / 16, w: 1080, h: 1920 },
+  { id: 'yt', label: 'YouTube 16:9', ar: 16 / 9, w: 1280, h: 720 },
+  { id: 'fb', label: 'FB Cover', ar: 820 / 312, w: 820, h: 312 },
+  { id: 'li', label: 'LinkedIn', ar: 1584 / 396, w: 1584, h: 396 }
+];
 
 var OCR_PROMPT = [
   'You are an OCR (optical character recognition) assistant. The image to read is attached as a base64 data URL.',
@@ -87,7 +97,10 @@ var FILTER_SLIDERS = [
   { id: 'flt-blur', val: 'flt-blur-val', unit: 'px' },
   { id: 'flt-grayscale', val: 'flt-grayscale-val', unit: '%' },
   { id: 'flt-sepia', val: 'flt-sepia-val', unit: '%' },
-  { id: 'flt-invert', val: 'flt-invert-val', unit: '%' }
+  { id: 'flt-invert', val: 'flt-invert-val', unit: '%' },
+  { id: 'flt-vignette', val: 'flt-vignette-val', unit: '%' },
+  { id: 'flt-vig-soft', val: 'flt-vig-soft-val', unit: '%' },
+  { id: 'flt-grain', val: 'flt-grain-val', unit: '' }
 ];
 
 var FILTER_PRESETS = {
@@ -98,13 +111,19 @@ var FILTER_PRESETS = {
   cool: { 'flt-hue': -150, 'flt-saturate': 90, 'flt-brightness': 105 },
   warm: { 'flt-hue': -25, 'flt-saturate': 125, 'flt-contrast': 105 },
   vivid: { 'flt-saturate': 170, 'flt-contrast': 115 },
-  fade: { 'flt-brightness': 115, 'flt-contrast': 80, 'flt-saturate': 60 }
+  fade: { 'flt-brightness': 115, 'flt-contrast': 80, 'flt-saturate': 60 },
+  film: { 'flt-contrast': 115, 'flt-saturate': 85, 'flt-brightness': 95, 'flt-sepia': 15 },
+  neon: { 'flt-saturate': 200, 'flt-contrast': 130, 'flt-brightness': 110 },
+  kodak: { 'flt-sepia': 25, 'flt-contrast': 110, 'flt-saturate': 110, 'flt-brightness': 105 },
+  drama: { 'flt-contrast': 140, 'flt-grayscale': 30, 'flt-brightness': 95 },
+  noir: { 'flt-grayscale': 100, 'flt-contrast': 130, 'flt-brightness': 90 },
+  duotone: { 'flt-grayscale': 100, 'flt-contrast': 115 }
 };
 
 var DEFAULTS = {
   fmt: 'image/jpeg', quality: 85,
   cmpFmt: 'image/jpeg', cmpQuality: 85,
-  ocrLang: 'eng',
+  ocrLang: 'eng', ocrHistory: [],
   colLayout: 'side', colAspect: '1:1', colWidth: 1600,
   colGap: 8, colPad: 24, colBg: '#ffffff',
   wmText: '', wmSize: 48, wmFont: 'sans', wmColor: '#ffffff',
@@ -143,6 +162,23 @@ var _zoomScale = 1;         // 1 = full size (100%)
 var _panX = 0, _panY = 0;   // pan offsets in CSS px
 var _viewW = 0, _viewH = 0; // last preview viewport size
 var _panPtr = null;         // {x, y, px, py} while panning
+var _redo = [];             // canvas redo stack
+var _opLog = [];            // [{label, time}] applied ops in order
+var _opIndex = 0;           // number of ops currently applied (0 = original)
+var _socialCrop = null;     // active social crop preset or null
+var _straightenActive = false;
+var _lineStart = null, _lineEnd = null; // horizon line in 0..1 preview coords
+var _regionActive = false;
+var _regionPtr = null;
+var _regionRect = null;
+var _annotMarks = [];
+var _annotTool = 'arrow';
+var _annotPtr = null;
+var _logoCanvas = null;
+var _logoName = '';
+var _exifData = null;
+var _frPreset = 'none';
+var _ocrHistory = [];     // saved OCR extractions (persisted in settings)
 
 // ── Small helpers ─────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -283,16 +319,22 @@ function pushHistory() {
 function afterImageChange() {
   _filterLive = null;
   _cropRect = null;
+  _regionRect = null;
   refreshResizeInputs();
   initCropInputs();
   updateHeader();
   updateAllEsts();
   renderPreview();
+  renderOpLog();
   scheduleResize();
 }
-function commit(c) {
+function commit(c, label) {
   if (!c) return;
   pushHistory();
+  _redo = [];
+  _opLog = _opLog.slice(0, _opIndex);
+  _opLog.push({ label: label || 'Edit', time: Date.now() });
+  _opIndex = _opLog.length;
   _working = c;
   afterImageChange();
 }
@@ -300,18 +342,37 @@ function setWorking(c, meta) {
   _orig = cloneCanvas(c);
   _working = c;
   _history = [];
+  _redo = [];
+  _opLog = [];
+  _opIndex = 0;
+  _socialCrop = null;
+  updateSocialChips();
+  _exifData = null;
   _origMeta = meta || { name: 'image', size: 0, type: '' };
   resetZoomState();
   afterImageChange();
 }
 function undoWorking() {
   if (!_history.length) { notify('Nothing to undo', 'info'); return; }
+  _redo.push(cloneCanvas(_working));
   _working = _history.pop();
+  _opIndex = Math.max(0, _opIndex - 1);
+  afterImageChange();
+}
+function redoWorking() {
+  if (!_redo.length) { notify('Nothing to redo', 'info'); return; }
+  _history.push(cloneCanvas(_working));
+  _working = _redo.pop();
+  _opIndex = Math.min(_opLog.length, _opIndex + 1);
   afterImageChange();
 }
 function resetWorking() {
   if (!_orig) { needImage(); return; }
   pushHistory();
+  _redo = [];
+  _opLog = _opLog.slice(0, _opIndex);
+  _opLog.push({ label: '↺ Reset to original', time: Date.now() });
+  _opIndex = _opLog.length;
   _working = cloneCanvas(_orig);
   resetZoomState();
   afterImageChange();
@@ -423,8 +484,55 @@ function renderPreview() {
   x.imageSmoothingQuality = 'high';
   x.drawImage(src, fit.dx, fit.dy, fit.dw, fit.dh);
   x.filter = 'none';
+  if (_activeTab === 'filters') {
+    var vig = parseNum(v('flt-vignette'));
+    if (vig > 0 && fit.dw > 0) {
+      var soft = parseNum(v('flt-vig-soft')) / 100;
+      var grad = x.createRadialGradient(fit.dx + fit.dw / 2, fit.dy + fit.dh / 2, Math.min(fit.dw, fit.dh) * (0.2 + soft * 0.5), fit.dx + fit.dw / 2, fit.dy + fit.dh / 2, Math.max(fit.dw, fit.dh) * 0.72);
+      grad.addColorStop(0, 'rgba(0,0,0,0)');
+      grad.addColorStop(1, 'rgba(0,0,0,' + (vig / 100 * 0.8).toFixed(3) + ')');
+      x.fillStyle = grad;
+      x.fillRect(fit.dx, fit.dy, fit.dw, fit.dh);
+    }
+  }
   if (_activeTab === 'crop' && _cropRect) drawCropOverlay(x, src, fit);
+  if (_activeTab === 'filters' && _regionRect) drawRegionOverlay(x, src, fit);
+  if (_straightenActive && _lineStart && _lineEnd) drawStraightenLine(x, src, fit);
+  if (_activeTab === 'annotate') drawAnnotOverlay(x, src, fit);
   updateZoomUI();
+}
+function drawRegionOverlay(x, src, fit) {
+  var r = _regionRect;
+  if (!r) return;
+  var px = fit.dx + r.x / src.width * fit.dw;
+  var py = fit.dy + r.y / src.height * fit.dh;
+  var pw = r.w / src.width * fit.dw;
+  var ph = r.h / src.height * fit.dh;
+  x.save();
+  x.strokeStyle = '#ff5f56';
+  x.lineWidth = 2;
+  x.setLineDash([6, 4]);
+  x.strokeRect(px, py, pw, ph);
+  x.restore();
+}
+function drawStraightenLine(x, src, fit) {
+  x.save();
+  x.strokeStyle = '#ffd166';
+  x.lineWidth = 2;
+  x.setLineDash([8, 5]);
+  x.beginPath();
+  x.moveTo(fit.dx + _lineStart.x * fit.dw, fit.dy + _lineStart.y * fit.dh);
+  x.lineTo(fit.dx + _lineEnd.x * fit.dw, fit.dy + _lineEnd.y * fit.dh);
+  x.stroke();
+  x.setLineDash([]);
+  x.fillStyle = '#ffd166';
+  x.beginPath();
+  x.arc(fit.dx + _lineStart.x * fit.dw, fit.dy + _lineStart.y * fit.dh, 4, 0, Math.PI * 2);
+  x.fill();
+  x.beginPath();
+  x.arc(fit.dx + _lineEnd.x * fit.dw, fit.dy + _lineEnd.y * fit.dh, 4, 0, Math.PI * 2);
+  x.fill();
+  x.restore();
 }
 // ── Zoom / pan viewer controls ────────────────────────────────
 function currentScale() {
@@ -516,14 +624,59 @@ function updateHeader() {
   var has = !!_working;
   el('iet-filechip').style.display = has ? 'flex' : 'none';
   el('iet-btn-undo').disabled = !has || !_history.length;
+  el('iet-btn-redo').disabled = !has || !_redo.length;
   el('iet-btn-reset').disabled = !has;
   el('iet-btn-download').disabled = !has;
+  el('iet-btn-steps').disabled = !has;
+  el('iet-btn-meta').disabled = !has;
+  el('iet-btn-copy').disabled = !has;
   el('iet-meta-dims').textContent = has ? (_working.width + ' × ' + _working.height) : '—';
-  el('iet-meta-steps').textContent = has ? ('Step ' + (_history.length + 1) + ' · original ' + fmtSize(_origMeta.size)) : '—';
+  el('iet-meta-steps').textContent = has ? ('Step ' + _opIndex + '/' + _opLog.length + ' · original ' + fmtSize(_origMeta.size)) : '—';
   if (has) {
     el('iet-file-name').textContent = _origMeta.name || 'image';
     el('iet-file-dims').textContent = _working.width + '×' + _working.height + ' · ' + fmtSize(_origMeta.size);
   }
+}
+// ── Modal + step history ──────────────────────────────────────
+function openModal(title, html) {
+  el('iet-modal-title').textContent = title;
+  el('iet-modal-body').innerHTML = html;
+  el('iet-modal').style.display = 'flex';
+  scheduleResize();
+}
+function closeModal() {
+  el('iet-modal').style.display = 'none';
+}
+function fmtTime(t) {
+  try {
+    var d = new Date(t);
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return ''; }
+}
+function renderOpLog() {
+  var list = el('iet-oplog-list');
+  if (!list) return;
+  var html = '<div class="iet-oplog-item' + (_opIndex === 0 ? ' current' : '') + '" data-step="0">' +
+    '<span class="iet-oplog-step">0</span><span class="iet-oplog-label">Original image</span><span class="iet-oplog-time"></span></div>';
+  for (var i = 0; i < _opLog.length; i++) {
+    html += '<div class="iet-oplog-item' + (_opIndex === i + 1 ? ' current' : '') + '" data-step="' + (i + 1) + '">' +
+      '<span class="iet-oplog-step">' + (i + 1) + '</span>' +
+      '<span class="iet-oplog-label">' + esc(_opLog[i].label) + '</span>' +
+      '<span class="iet-oplog-time">' + fmtTime(_opLog[i].time) + '</span></div>';
+  }
+  list.innerHTML = html;
+}
+function openOpLog() {
+  if (!_working) { needImage(); return; }
+  openModal('🕘 Step history — click a step to jump back', '<div id="iet-oplog-list"></div>');
+  renderOpLog();
+}
+function jumpToStep(t) {
+  t = clamp(Math.round(t), 0, _opLog.length);
+  var guard = 0;
+  while (_opIndex > t && guard++ < 300) undoWorking();
+  while (_opIndex < t && guard++ < 300) redoWorking();
+  renderOpLog();
 }
 function updateLock() {
   el('iet-lock').style.display = _readOnly ? 'inline-block' : 'none';
@@ -556,6 +709,9 @@ function handleFile(file, slotIdx) {
     clearBusy();
     if (err) { notify(err, 'error'); _pendingSlot = -1; return; }
     routeCanvas(c, file.name, file.size);
+    if (_activeTab !== 'collage' && _activeTab !== 'ocr') {
+      readExifFromFile(file, function (ex) { _exifData = ex; });
+    }
   });
 }
 function openFilePicker() {
@@ -602,13 +758,15 @@ function switchTab(t) {
   if (t === 'collage') { renderSlotGrid(); }
   if (t === 'resize') { refreshResizeInputs(); }
   if (t === 'filters') { updateFilterLive(); } else { _filterLive = null; }
+  if (t !== 'rotate' && _straightenActive) stopStraighten();
+  if (t !== 'filters' && _regionActive) stopRegionSelect();
   updateDropTitle();
   updateAllEsts();
   renderPreview();
   scheduleResize();
   persistSettingsSoon();
   try {
-    el('iet-preview').style.cursor = (t === 'crop') ? 'crosshair' : 'grab';
+    el('iet-preview').style.cursor = (t === 'crop' || t === 'annotate') ? 'crosshair' : 'grab';
   } catch (e) {}
 }
 function updateDropTitle() {
@@ -664,7 +822,7 @@ function convertUseInEditor() {
     var url = src.toDataURL(mime, mime === 'image/png' ? undefined : q / 100);
     dataUrlToCanvas(url, function (err, c) {
       if (err) { notify(err, 'error'); return; }
-      commit(c);
+      commit(c, 'Convert format');
       notify('Converted result is now the working image', 'success');
     });
   } catch (e) {
@@ -703,7 +861,7 @@ function applyResize() {
   x.imageSmoothingEnabled = true;
   x.imageSmoothingQuality = 'high';
   x.drawImage(_working, 0, 0, w, h);
-  commit(c);
+  commit(c, 'Resize ' + w + '×' + h);
   notify('Resized to ' + w + '×' + h, 'success');
 }
 function toggleRszLock() {
@@ -745,7 +903,9 @@ function cropRectFromInputs() {
 }
 function setCropAr(ar) {
   _cropAr = ar;
+  _socialCrop = null;
   updateCropArChips();
+  updateSocialChips();
   if (_cropRect && _working && ar !== 'free') {
     var ratio = parseAr(ar);
     if (ratio > 0) {
@@ -769,17 +929,72 @@ function updateCropArChips() {
 }
 function clearCropSelection() {
   _cropRect = null;
+  _socialCrop = null;
+  updateSocialChips();
   initCropInputs();
   renderPreview();
+}
+function updateSocialChips() {
+  var chips = document.querySelectorAll('#crop-social .iet-chip-btn');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].classList.toggle('active', !!_socialCrop && chips[i].getAttribute('data-social') === _socialCrop.id);
+  }
+}
+function applySocialCrop(preset) {
+  if (!_working) { needImage(); return; }
+  _socialCrop = preset;
+  var ar = preset.ar;
+  var W = _working.width, H = _working.height;
+  var w, h;
+  if (W / H >= ar) { h = H; w = H * ar; } else { w = W; h = W / ar; }
+  _cropRect = { x: (W - w) / 2, y: (H - h) / 2, w: w, h: h };
+  _cropAr = preset.w + ':' + preset.h;
+  updateCropArChips();
+  updateSocialChips();
+  syncCropInputs();
+  renderPreview();
+}
+function applyCircleCrop() {
+  if (!_working) { needImage(); return; }
+  var r = _cropRect || cropRectFromInputs();
+  if (!r || r.w < 1 || r.h < 1) { notify('Select an area first — drag on the preview', 'warning'); return; }
+  var c = makeCanvas(r.w, r.h);
+  var x = c.getContext('2d');
+  var cx = r.w / 2, cy = r.h / 2, rad = Math.min(r.w, r.h) / 2;
+  x.beginPath();
+  x.arc(cx, cy, rad, 0, Math.PI * 2);
+  x.closePath();
+  x.clip();
+  x.drawImage(_working, -r.x, -r.y);
+  var ring = Math.round(parseNum(v('crop-circle-ring')));
+  if (ring > 0) {
+    x.lineWidth = ring;
+    x.strokeStyle = v('crop-circle-color');
+    x.beginPath();
+    x.arc(cx, cy, Math.max(1, rad - ring / 2), 0, Math.PI * 2);
+    x.stroke();
+  }
+  commit(c, 'Circle crop');
+  notify('Circle crop applied', 'success');
 }
 function applyCrop() {
   if (!_working) { needImage(); return; }
   var r = _cropRect || cropRectFromInputs();
   if (!r || r.w < 1 || r.h < 1) { notify('Select an area first — drag on the preview', 'warning'); return; }
-  if (r.w >= _working.width && r.h >= _working.height) { notify('The selection covers the whole image', 'info'); return; }
+  if (r.w >= _working.width && r.h >= _working.height && !_socialCrop) { notify('The selection covers the whole image', 'info'); return; }
   var c = makeCanvas(r.w, r.h);
   c.getContext('2d').drawImage(_working, -r.x, -r.y);
-  commit(c);
+  var label = 'Crop';
+  if (_socialCrop) {
+    var t = makeCanvas(_socialCrop.w, _socialCrop.h);
+    var tx = t.getContext('2d');
+    tx.imageSmoothingEnabled = true;
+    tx.imageSmoothingQuality = 'high';
+    tx.drawImage(c, 0, 0, t.width, t.height);
+    c = t;
+    label = 'Crop (' + _socialCrop.label + ')';
+  }
+  commit(c, label);
   notify('Cropped to ' + c.width + '×' + c.height, 'success');
 }
 function cvPointerPos(e) {
@@ -838,7 +1053,7 @@ function rotate90(dir) {
   if (dir > 0) { x.translate(H, 0); x.rotate(Math.PI / 2); }
   else { x.translate(0, W); x.rotate(-Math.PI / 2); }
   x.drawImage(_working, 0, 0);
-  commit(c);
+  commit(c, dir > 0 ? 'Rotated 90° right' : 'Rotated 90° left');
   notify(dir > 0 ? 'Rotated 90° right' : 'Rotated 90° left', 'success');
 }
 function rotate180() {
@@ -848,7 +1063,7 @@ function rotate180() {
   x.translate(c.width, c.height);
   x.rotate(Math.PI);
   x.drawImage(_working, 0, 0);
-  commit(c);
+  commit(c, 'Rotated 180°');
   notify('Rotated 180°', 'success');
 }
 function flipH() {
@@ -858,7 +1073,7 @@ function flipH() {
   x.translate(c.width, 0);
   x.scale(-1, 1);
   x.drawImage(_working, 0, 0);
-  commit(c);
+  commit(c, 'Flipped horizontally');
   notify('Flipped horizontally', 'success');
 }
 function flipV() {
@@ -868,31 +1083,79 @@ function flipV() {
   x.translate(0, c.height);
   x.scale(1, -1);
   x.drawImage(_working, 0, 0);
-  commit(c);
+  commit(c, 'Flipped vertically');
   notify('Flipped vertically', 'success');
 }
-function applyFineRotate() {
-  if (!_working) { needImage(); return; }
-  var deg = parseNum(v('rot-angle'));
-  if (!deg) { notify('Angle is 0° — nothing to do', 'info'); return; }
+function applyRotation(deg, bg, label) {
   var rad = deg * Math.PI / 180;
   var cs = Math.abs(Math.cos(rad)), sn = Math.abs(Math.sin(rad));
   var W = _working.width, H = _working.height;
   var nw = Math.ceil(W * cs + H * sn), nh = Math.ceil(W * sn + H * cs);
   if (nw < 1) nw = 1;
   if (nh < 1) nh = 1;
-  if (nw * nh > MAX_PIXELS * 2) { notify('Rotated canvas would be too large', 'warning'); return; }
+  if (nw * nh > MAX_PIXELS * 2) { notify('Rotated canvas would be too large', 'warning'); return false; }
   var c = makeCanvas(nw, nh);
   var x = c.getContext('2d');
-  x.fillStyle = v('rot-bg');
+  x.fillStyle = bg || '#ffffff';
   x.fillRect(0, 0, nw, nh);
   x.translate(nw / 2, nh / 2);
   x.rotate(rad);
   x.drawImage(_working, -W / 2, -H / 2);
-  commit(c);
+  commit(c, label || 'Rotated ' + deg + '°');
+  return true;
+}
+function applyFineRotate() {
+  if (!_working) { needImage(); return; }
+  var deg = parseNum(v('rot-angle'));
+  if (!deg) { notify('Angle is 0° — nothing to do', 'info'); return; }
+  if (!applyRotation(deg, v('rot-bg'), 'Rotated ' + deg + '°')) return;
   setV('rot-angle', 0);
   el('rot-angle-val').textContent = '0°';
   notify('Rotated ' + deg + '°', 'success');
+}
+// ── Straighten (horizon drag) ─────────────────────────────────
+function toggleStraighten() {
+  if (!_working) { needImage(); return; }
+  _straightenActive = !_straightenActive;
+  _lineStart = null;
+  _lineEnd = null;
+  el('rot-straighten').classList.toggle('active', _straightenActive);
+  el('rot-straighten-hint').style.display = _straightenActive ? 'inline' : 'none';
+  try { el('iet-preview').style.cursor = _straightenActive ? 'crosshair' : 'grab'; } catch (e) {}
+  renderPreview();
+}
+function stopStraighten() { if (_straightenActive) toggleStraighten(); }
+function straightenDown(e) {
+  if (!_straightenActive || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  e.preventDefault();
+  _lineStart = p;
+  _lineEnd = p;
+  try { el('iet-preview').setPointerCapture(e.pointerId); } catch (ignore) {}
+}
+function straightenMove(e) {
+  if (!_lineStart) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  _lineEnd = p;
+  renderPreview();
+}
+function straightenUp(e) {
+  if (!_lineStart || !_lineEnd) return;
+  var dx = _lineEnd.x - _lineStart.x;
+  var dy = _lineEnd.y - _lineStart.y;
+  var len = Math.sqrt(dx * dx + dy * dy);
+  _lineStart = null;
+  _lineEnd = null;
+  if (len < 0.03) { renderPreview(); notify('Drag a line along the horizon', 'info'); return; }
+  var deg = Math.atan2(dy, dx) * 180 / Math.PI;
+  var fix = -deg;
+  if (Math.abs(fix) < 0.15) { notify('Already level', 'info'); return; }
+  var rounded = Math.round(fix * 10) / 10;
+  applyRotation(rounded, v('rot-bg'), 'Straightened ' + rounded + '°');
+  stopStraighten();
+  notify('Straightened by ' + rounded + '°', 'success');
 }
 
 // ── Filters ───────────────────────────────────────────────────
@@ -961,17 +1224,378 @@ function onFilterSliderMoved() {
 function applyFilters() {
   if (!_working) { needImage(); return; }
   var f = buildFilterString();
-  if (!f) { notify('All sliders are at default — nothing to apply', 'info'); return; }
+  var vig = parseNum(v('flt-vignette'));
+  var grain = parseNum(v('flt-grain'));
+  if (!f && !vig && !grain) { notify('All adjustments are at default — nothing to apply', 'info'); return; }
   var c = cloneCanvas(_working);
   var x = c.getContext('2d');
-  x.filter = f;
-  x.drawImage(_working, 0, 0);
-  x.filter = 'none';
+  if (f) {
+    x.filter = f;
+    x.drawImage(_working, 0, 0);
+    x.filter = 'none';
+  }
+  if (vig > 0) {
+    var soft = parseNum(v('flt-vig-soft')) / 100;
+    var grad = x.createRadialGradient(c.width / 2, c.height / 2, Math.min(c.width, c.height) * (0.2 + soft * 0.5), c.width / 2, c.height / 2, Math.max(c.width, c.height) * 0.72);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,' + (vig / 100 * 0.8).toFixed(3) + ')');
+    x.fillStyle = grad;
+    x.fillRect(0, 0, c.width, c.height);
+  }
+  if (grain > 0) addGrain(x, c, grain);
   _fltPreset = 'none';
   applyFilterPreset('none');
   _filterLive = null;
-  commit(c);
+  commit(c, 'Filters applied');
   notify('Filters applied', 'success');
+}
+function addGrain(x, c, amount) {
+  var n = makeCanvas(256, 256);
+  var nx = n.getContext('2d');
+  var img = nx.createImageData(256, 256);
+  for (var i = 0; i < img.data.length; i += 4) {
+    var g = Math.round(Math.random() * 255);
+    img.data[i] = g;
+    img.data[i + 1] = g;
+    img.data[i + 2] = g;
+    img.data[i + 3] = Math.round(amount / 40 * 128);
+  }
+  nx.putImageData(img, 0, 0);
+  var pat = x.createPattern(n, 'repeat');
+  x.save();
+  x.globalCompositeOperation = 'overlay';
+  x.fillStyle = pat;
+  x.fillRect(0, 0, c.width, c.height);
+  x.restore();
+}
+// ── Duotone ───────────────────────────────────────────────────
+function hexToRgb(hex) {
+  var h = String(hex || '#000000').replace('#', '');
+  if (h.length === 3) h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2);
+  var n = parseInt(h, 16);
+  if (isNaN(n)) return { r: 0, g: 0, b: 0 };
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function applyDuotone() {
+  if (!_working) { needImage(); return; }
+  if (_working.width * _working.height > 8e6) notify('Large image — duotone may take a moment', 'info');
+  setBusy('Applying duotone…');
+  setTimeout(function () {
+    try {
+      var c1 = hexToRgb(v('flt-duo-1'));
+      var c2 = hexToRgb(v('flt-duo-2'));
+      var c = cloneCanvas(_working);
+      var x = c.getContext('2d');
+      var img = x.getImageData(0, 0, c.width, c.height);
+      var d = img.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var lum = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+        var t = lum / 255;
+        d[i] = c1.r + (c2.r - c1.r) * t;
+        d[i + 1] = c1.g + (c2.g - c1.g) * t;
+        d[i + 2] = c1.b + (c2.b - c1.b) * t;
+      }
+      x.putImageData(img, 0, 0);
+      clearBusy();
+      commit(c, 'Duotone');
+      notify('Duotone applied', 'success');
+    } catch (e) {
+      clearBusy();
+      notify('Duotone failed: ' + e, 'error');
+    }
+  }, 30);
+}
+// ── Auto enhance ──────────────────────────────────────────────
+function imageStats(src) {
+  var s = Math.min(1, 128 / Math.max(src.width, src.height));
+  var c = makeCanvas(Math.max(1, Math.round(src.width * s)), Math.max(1, Math.round(src.height * s)));
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  var d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+  var sum = 0, sum2 = 0, n = 0;
+  for (var i = 0; i < d.length; i += 4) {
+    var lum = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    sum += lum;
+    sum2 += lum * lum;
+    n++;
+  }
+  var mean = n ? sum / n : 128;
+  var std = n ? Math.sqrt(Math.max(0, sum2 / n - mean * mean)) : 0;
+  return { mean: mean, std: std };
+}
+function applyAutoEnhance() {
+  if (!_working) { needImage(); return; }
+  setBusy('Analyzing image…');
+  setTimeout(function () {
+    try {
+      var stats = imageStats(_working);
+      clearBusy();
+      var bright = clamp(1 + (128 - stats.mean) / 128 * 0.3, 0.85, 1.3);
+      var contrast = clamp(1 + (46 - stats.std) / 46 * 0.35, 1, 1.45);
+      var f = 'brightness(' + bright.toFixed(2) + ') contrast(' + contrast.toFixed(2) + ') saturate(1.15)';
+      var c = cloneCanvas(_working);
+      var x = c.getContext('2d');
+      x.filter = f;
+      x.drawImage(_working, 0, 0);
+      x.filter = 'none';
+      commit(c, 'Auto enhance');
+      notify('Auto-enhanced — brightness ' + Math.round(bright * 100) + '%, contrast ' + Math.round(contrast * 100) + '%', 'success');
+    } catch (e) {
+      clearBusy();
+      notify('Auto enhance failed', 'error');
+    }
+  }, 30);
+}
+// ── Region blur / pixelate ────────────────────────────────────
+function toggleRegionSelect() {
+  if (!_working) { needImage(); return; }
+  _regionActive = !_regionActive;
+  _regionPtr = null;
+  if (!_regionActive) _regionRect = null;
+  el('flt-region-btn').classList.toggle('active', _regionActive);
+  try { el('iet-preview').style.cursor = _regionActive ? 'crosshair' : 'grab'; } catch (e) {}
+  renderPreview();
+}
+function stopRegionSelect() { if (_regionActive) toggleRegionSelect(); }
+function regionDown(e) {
+  if (!_regionActive || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  e.preventDefault();
+  _regionPtr = { start: p };
+  try { el('iet-preview').setPointerCapture(e.pointerId); } catch (ignore) {}
+}
+function regionMove(e) {
+  if (!_regionPtr || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  var W = _working.width, H = _working.height;
+  var x = Math.min(_regionPtr.start.x, p.x) * W;
+  var y = Math.min(_regionPtr.start.y, p.y) * H;
+  var w = Math.abs(p.x - _regionPtr.start.x) * W;
+  var h = Math.abs(p.y - _regionPtr.start.y) * H;
+  _regionRect = { x: Math.max(0, x), y: Math.max(0, y), w: Math.max(1, Math.min(w, W)), h: Math.max(1, Math.min(h, H)) };
+  renderPreview();
+}
+function regionUp(e) {
+  if (!_regionPtr) return;
+  _regionPtr = null;
+  if (!_regionRect || _regionRect.w < 2 || _regionRect.h < 2) {
+    notify('Drag a box over the area to hide', 'info');
+    return;
+  }
+  applyRegion(_regionRect);
+  stopRegionSelect();
+}
+function applyRegion(r) {
+  var mode = v('flt-region-mode');
+  var strength = Math.round(parseNum(v('flt-region-strength')));
+  var c = cloneCanvas(_working);
+  var x = c.getContext('2d');
+  var rx = Math.max(0, Math.round(r.x)), ry = Math.max(0, Math.round(r.y));
+  var rw = Math.min(c.width - rx, Math.round(r.w)), rh = Math.min(c.height - ry, Math.round(r.h));
+  if (rw < 2 || rh < 2) return;
+  if (mode === 'pixelate') {
+    var bs = Math.max(2, strength);
+    var tmp = makeCanvas(Math.max(1, Math.ceil(rw / bs)), Math.max(1, Math.ceil(rh / bs)));
+    tmp.getContext('2d').drawImage(c, rx, ry, rw, rh, 0, 0, tmp.width, tmp.height);
+    x.imageSmoothingEnabled = false;
+    x.drawImage(tmp, 0, 0, tmp.width, tmp.height, rx, ry, rw, rh);
+    x.imageSmoothingEnabled = true;
+  } else {
+    var bl = Math.max(1, Math.round(strength / 3));
+    x.save();
+    x.beginPath();
+    x.rect(rx, ry, rw, rh);
+    x.clip();
+    x.filter = 'blur(' + bl + 'px)';
+    x.drawImage(c, 0, 0);
+    x.filter = 'none';
+    x.restore();
+  }
+  commit(c, mode === 'pixelate' ? 'Pixelated area' : 'Blurred area');
+  notify(mode === 'pixelate' ? 'Area pixelated' : 'Area blurred', 'success');
+}
+
+// ── Annotate ──────────────────────────────────────────────────
+function strokePoly(x, pts) {
+  if (!pts || pts.length < 2) return;
+  x.beginPath();
+  x.moveTo(pts[0].x, pts[0].y);
+  for (var i = 1; i < pts.length; i++) x.lineTo(pts[i].x, pts[i].y);
+  x.stroke();
+}
+function drawArrowShape(x, a, b, size) {
+  x.beginPath();
+  x.moveTo(a.x, a.y);
+  x.lineTo(b.x, b.y);
+  x.stroke();
+  var ang = Math.atan2(b.y - a.y, b.x - a.x);
+  var al = Math.max(10, size * 3.5);
+  x.beginPath();
+  x.moveTo(b.x, b.y);
+  x.lineTo(b.x - al * Math.cos(ang - 0.45), b.y - al * Math.sin(ang - 0.45));
+  x.moveTo(b.x, b.y);
+  x.lineTo(b.x - al * Math.cos(ang + 0.45), b.y - al * Math.sin(ang + 0.45));
+  x.stroke();
+}
+function drawMarksOnCtx(x, dx, dy, sx, sy) {
+  x.lineCap = 'round';
+  x.lineJoin = 'round';
+  for (var i = 0; i < _annotMarks.length; i++) {
+    var m = _annotMarks[i];
+    if (m.tool === 'highlight') {
+      x.strokeStyle = m.color;
+      x.globalAlpha = 0.35;
+      x.lineWidth = m.size * 4;
+      strokePoly(x, m.pts);
+      x.globalAlpha = 1;
+      continue;
+    }
+    x.strokeStyle = m.color;
+    x.fillStyle = m.color;
+    x.lineWidth = m.size;
+    if (m.tool === 'arrow') drawArrowShape(x, m.pts[0], m.pts[m.pts.length - 1], m.size);
+    else if (m.tool === 'rect') x.strokeRect(m.x0, m.y0, m.x1 - m.x0, m.y1 - m.y0);
+    else if (m.tool === 'ellipse') {
+      x.beginPath();
+      x.ellipse((m.x0 + m.x1) / 2, (m.y0 + m.y1) / 2, Math.abs(m.x1 - m.x0) / 2, Math.abs(m.y1 - m.y0) / 2, 0, 0, Math.PI * 2);
+      x.stroke();
+    } else if (m.tool === 'freehand') strokePoly(x, m.pts);
+  }
+}
+function drawAnnotOverlay(x, src, fit) {
+  if (!_annotMarks.length) return;
+  x.save();
+  x.translate(fit.dx, fit.dy);
+  x.scale(fit.dw / src.width, fit.dh / src.height);
+  drawMarksOnCtx(x, 0, 0, 1, 1);
+  x.restore();
+}
+function annotDown(e) {
+  if (_activeTab !== 'annotate' || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  e.preventDefault();
+  var ip = { x: p.x * _working.width, y: p.y * _working.height };
+  _annotMarks.push({ tool: _annotTool, color: v('ann-color'), size: parseNum(v('ann-size')), x0: ip.x, y0: ip.y, x1: ip.x, y1: ip.y, pts: [ip] });
+  _annotPtr = _annotMarks[_annotMarks.length - 1];
+  renderPreview();
+}
+function annotMove(e) {
+  if (!_annotPtr || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  var ip = { x: p.x * _working.width, y: p.y * _working.height };
+  if (_annotPtr.tool === 'freehand' || _annotPtr.tool === 'highlight') {
+    if (_annotPtr.pts.length > 300) return;
+    _annotPtr.pts.push(ip);
+  } else {
+    _annotPtr.x1 = ip.x;
+    _annotPtr.y1 = ip.y;
+  }
+  renderPreview();
+}
+function annotUp() { _annotPtr = null; }
+function bakeAnnotations() {
+  if (!_working) { needImage(); return; }
+  if (!_annotMarks.length) { notify('Draw something first', 'info'); return; }
+  var c = cloneCanvas(_working);
+  drawMarksOnCtx(c.getContext('2d'), 0, 0, 1, 1);
+  _annotMarks = [];
+  commit(c, 'Annotations baked');
+  notify('Annotations baked into the image', 'success');
+}
+function annotRemoveLast() {
+  if (!_annotMarks.length) { notify('No marks to remove', 'info'); return; }
+  _annotMarks.pop();
+  renderPreview();
+}
+function annotClearAll() {
+  _annotMarks = [];
+  renderPreview();
+  notify('Annotations cleared', 'info');
+}
+function updateAnnotToolChips() {
+  var chips = document.querySelectorAll('#ann-tools .iet-chip-btn');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].classList.toggle('active', chips[i].getAttribute('data-tool') === _annotTool);
+  }
+}
+// ── Frame & border studio ─────────────────────────────────────
+function roundRectPath(x, px, py, pw, ph, r) {
+  r = Math.max(0, Math.min(r, pw / 2, ph / 2));
+  x.beginPath();
+  if (!r) { x.rect(px, py, pw, ph); return; }
+  x.moveTo(px + r, py);
+  x.arcTo(px + pw, py, px + pw, py + ph, r);
+  x.arcTo(px + pw, py + ph, px, py + ph, r);
+  x.arcTo(px, py + ph, px, py, r);
+  x.arcTo(px, py, px + pw, py, r);
+  x.closePath();
+}
+function updateFrameChips() {
+  var chips = document.querySelectorAll('#fr-presets .iet-chip-btn');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].classList.toggle('active', chips[i].getAttribute('data-frame') === _frPreset);
+  }
+}
+function applyFrame() {
+  if (!_working) { needImage(); return; }
+  var polaroid = _frPreset === 'polaroid';
+  var border = Math.round(parseNum(v('fr-border')));
+  var radius = Math.round(parseNum(v('fr-radius')));
+  var mat = Math.round(parseNum(v('fr-mat')));
+  var shOp = parseNum(v('fr-shadow-op')) / 100;
+  var caption = (v('fr-caption') || '').trim();
+  var W = _working.width, H = _working.height;
+  var padS, padB, captionH = 0;
+  if (polaroid) {
+    padS = Math.round(Math.min(W, H) * 0.045);
+    padB = Math.round(Math.min(W, H) * 0.18);
+    border = 0;
+    mat = 0;
+    radius = 0;
+    if (caption) captionH = Math.round(Math.min(W, H) * 0.09);
+  } else {
+    padS = mat + border;
+    padB = padS;
+  }
+  var outW = W + padS * 2;
+  var outH = H + padS + padB + captionH;
+  var sh = shOp > 0 ? Math.max(24, Math.round(Math.min(outW, outH) * 0.035)) : 0;
+  var c = makeCanvas(outW + sh * 2, outH + sh * 2);
+  var x = c.getContext('2d');
+  if (shOp > 0) {
+    x.save();
+    x.shadowColor = 'rgba(0,0,0,' + (0.55 * shOp).toFixed(2) + ')';
+    x.shadowBlur = sh;
+    x.shadowOffsetX = 0;
+    x.shadowOffsetY = Math.round(sh * 0.4);
+  }
+  x.fillStyle = polaroid ? '#ffffff' : v('fr-mat-color');
+  roundRectPath(x, sh, sh, outW, outH, radius);
+  x.fill();
+  if (shOp > 0) x.restore();
+  x.save();
+  roundRectPath(x, sh + padS, sh + padS, W, H, Math.max(0, radius - border));
+  x.clip();
+  x.drawImage(_working, sh + padS, sh + padS, W, H);
+  x.restore();
+  if (border > 0) {
+    x.strokeStyle = v('fr-border-color');
+    x.lineWidth = border;
+    roundRectPath(x, sh + padS + border / 2, sh + padS + border / 2, W - border, H - border, Math.max(0, radius - border));
+    x.stroke();
+  }
+  if (captionH > 0 && caption) {
+    x.fillStyle = '#4a4a4a';
+    x.font = Math.max(14, Math.round(captionH * 0.55)) + 'px "Segoe Script", "Brush Script MT", cursive';
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.fillText(caption, c.width / 2, sh + padS + H + captionH / 2, W);
+  }
+  commit(c, polaroid ? 'Frame (polaroid)' : 'Frame applied');
+  notify('Frame applied', 'success');
 }
 
 // ── Compress ──────────────────────────────────────────────────
@@ -1087,16 +1711,87 @@ function applyWatermark() {
     x.save();
     x.translate(px, py);
     x.rotate(rot);
+    if (checked('wm-pill')) {
+      var tw = x.measureText(text).width;
+      var pw2 = tw + size * 0.9;
+      var ph2 = size * 1.7;
+      x.fillStyle = 'rgba(0,0,0,0.55)';
+      roundRectPath(x, -pw2 / 2, -ph2 / 2, pw2, ph2, ph2 / 2);
+      x.fill();
+      x.fillStyle = color;
+    }
     x.fillText(text, 0, 0);
     x.restore();
   }
   x.restore();
-  commit(c);
+  commit(c, 'Watermark');
   notify('Watermark applied — Undo removes it', 'success');
+}
+// ── Meme maker ────────────────────────────────────────────────
+function applyMeme() {
+  if (!_working) { needImage(); return; }
+  var top = (v('wm-meme-top') || '').trim();
+  var bottom = (v('wm-meme-bottom') || '').trim();
+  if (!top && !bottom) { notify('Type meme text first', 'warning'); return; }
+  var c = cloneCanvas(_working);
+  var x = c.getContext('2d');
+  var W = c.width, H = c.height;
+  var size = Math.max(14, Math.round(Math.min(W, H) / 10));
+  x.font = 'bold ' + size + 'px Impact, "Arial Narrow", sans-serif';
+  x.textAlign = 'center';
+  x.lineJoin = 'round';
+  function drawLine(text, y, baseline) {
+    if (!text) return;
+    x.textBaseline = baseline;
+    x.lineWidth = Math.max(3, size / 6);
+    x.strokeStyle = '#000';
+    x.strokeText(text, W / 2, y, W - size);
+    x.fillStyle = '#fff';
+    x.fillText(text, W / 2, y, W - size);
+  }
+  drawLine(top.toUpperCase(), size * 0.4, 'top');
+  drawLine(bottom.toUpperCase(), H - size * 1.4, 'alphabetic');
+  commit(c, 'Meme text');
+  notify('Meme text applied', 'success');
+}
+// ── Logo overlay ──────────────────────────────────────────────
+function applyLogo() {
+  if (!_working) { needImage(); return; }
+  if (!_logoCanvas) { notify('Choose a logo file first', 'warning'); return; }
+  var maxPct = parseNum(v('wm-logo-max')) / 100;
+  var op = parseNum(v('wm-logo-opacity')) / 100;
+  var pos = v('wm-logo-pos');
+  var maxW = Math.max(8, _working.width * maxPct);
+  var s = Math.min(1, maxW / _logoCanvas.width);
+  var lw = _logoCanvas.width * s, lh = _logoCanvas.height * s;
+  var margin = Math.max(4, Math.round(_working.width * 0.02));
+  var px = pos.charAt(1) === 'l' ? margin : _working.width - margin - lw;
+  var py = pos.charAt(0) === 't' ? margin : _working.height - margin - lh;
+  var c = cloneCanvas(_working);
+  var x = c.getContext('2d');
+  x.globalAlpha = op;
+  x.drawImage(_logoCanvas, px, py, lw, lh);
+  x.globalAlpha = 1;
+  commit(c, 'Logo overlay');
+  notify('Logo applied', 'success');
 }
 
 // ── Collage ───────────────────────────────────────────────────
-function getLayout() { return LAYOUTS[v('col-layout')] || LAYOUTS.side; }
+function getLayout() {
+  var id = v('col-layout');
+  if (id === 'custom') {
+    var rows = clamp(Math.round(parseNum(v('col-rows'))), 1, 5);
+    var cols = clamp(Math.round(parseNum(v('col-cols'))), 1, 5);
+    var slots = [];
+    for (var r = 0; r < rows; r++) {
+      for (var cc = 0; cc < cols; cc++) {
+        slots.push({ x: cc / cols, y: r / rows, w: 1 / cols, h: 1 / rows });
+      }
+    }
+    return { label: 'Custom grid', slots: slots };
+  }
+  return LAYOUTS[id] || LAYOUTS.side;
+}
 function syncSlots() {
   var lay = getLayout();
   var count = lay.slots.length;
@@ -1195,7 +1890,7 @@ function buildCollage() {
     drawFit(x, slot.canvas, rx, ry, rw, rh, slot.fit || 'cover');
     x.restore();
   }
-  commit(c);
+  commit(c, 'Collage');
   notify('Collage built — download it or keep editing', 'success');
 }
 
@@ -1353,6 +2048,40 @@ function ocrDownloadTxt() {
   var blob = new Blob([t], { type: 'text/plain' });
   triggerDownload(blob, baseName() + '-ocr.txt');
 }
+// ── OCR history ───────────────────────────────────────────────
+function saveOcrToHistory() {
+  var text = el('ocr-result').value;
+  if (!text.trim()) { notify('Nothing to save — extract text first', 'info'); return; }
+  _ocrHistory.unshift({
+    id: 'ocr' + Date.now().toString(36),
+    name: baseName(),
+    text: String(text).slice(0, 4000),
+    lines: text.split(/\n/).length,
+    time: new Date().toISOString()
+  });
+  if (_ocrHistory.length > 20) _ocrHistory.length = 20;
+  renderOcrHistory();
+  persistSettingsSoon();
+  notify('Saved to OCR history', 'success');
+}
+function renderOcrHistory() {
+  var box = el('ocr-history');
+  if (!box) return;
+  var q = (v('ocr-search') || '').toLowerCase();
+  var items = _ocrHistory.filter(function (h) {
+    return !q || (h.name && h.name.toLowerCase().indexOf(q) !== -1) || (h.text && h.text.toLowerCase().indexOf(q) !== -1);
+  });
+  if (!items.length) {
+    box.innerHTML = '<div class="iet-ocr-empty">' + (_ocrHistory.length ? 'No matches.' : 'Nothing saved yet — extract text, then 💾 Save to history.') + '</div>';
+    return;
+  }
+  box.innerHTML = items.map(function (h) {
+    var idx = _ocrHistory.indexOf(h);
+    return '<div class="iet-ocr-item" data-idx="' + idx + '"><b>' + esc(h.name) + ' · ' + h.lines + ' lines</b>' +
+      '<span class="iet-oplog-time">' + esc(h.time ? h.time.slice(5, 16).replace('T', ' ') : '') + '</span>' +
+      '<button class="iet-slot-btn" data-del="' + idx + '" type="button" title="Delete">✕</button></div>';
+  }).join('');
+}
 
 // ── Download helpers ──────────────────────────────────────────
 function triggerDownload(blob, filename) {
@@ -1412,6 +2141,253 @@ function downloadCurrent() {
   var src = (mime === 'image/jpeg') ? flatten(_working, v('cnv-bg')) : _working;
   saveCanvas(src, baseName(), mime, _settings.quality || 85);
 }
+// ── Favicon / ICO pack ────────────────────────────────────────
+function base64ToBytes(b64) {
+  var bin = atob(b64);
+  var out = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function buildIcoBlob(canvases) {
+  var pngs = [];
+  var offset = 6 + 16 * canvases.length;
+  for (var i = 0; i < canvases.length; i++) {
+    var u = canvases[i].toDataURL('image/png');
+    var b64 = u.slice(u.indexOf(',') + 1);
+    var bytes = base64ToBytes(b64);
+    pngs.push(bytes);
+    offset += bytes.length;
+  }
+  var buf = new Uint8Array(offset);
+  var dv = new DataView(buf.buffer);
+  dv.setUint16(0, 0, true);
+  dv.setUint16(2, 1, true);
+  dv.setUint16(4, canvases.length, true);
+  var pos = 6 + 16 * canvases.length;
+  for (var j = 0; j < canvases.length; j++) {
+    var e = 6 + 16 * j;
+    var s = canvases[j].width;
+    buf[e] = s >= 256 ? 0 : s;
+    buf[e + 1] = s >= 256 ? 0 : s;
+    buf[e + 2] = 0;
+    buf[e + 3] = 0;
+    dv.setUint16(e + 4, 1, true);
+    dv.setUint16(e + 6, 32, true);
+    dv.setUint32(e + 8, pngs[j].length, true);
+    dv.setUint32(e + 12, pos, true);
+    buf.set(pngs[j], pos);
+    pos += pngs[j].length;
+  }
+  return new Blob([buf], { type: 'image/x-icon' });
+}
+function faviconPack() {
+  if (!_working) { needImage(); return; }
+  setBusy('Building favicon pack…');
+  setTimeout(function () {
+    try {
+      var sizes = [16, 32, 48, 64];
+      var frames = [];
+      var last = null;
+      for (var i = 0; i < sizes.length; i++) {
+        var s = sizes[i];
+        var c = makeCanvas(s, s);
+        var x = c.getContext('2d');
+        x.imageSmoothingEnabled = true;
+        x.imageSmoothingQuality = 'high';
+        x.drawImage(_working, 0, 0, s, s);
+        frames.push(c);
+        last = c;
+      }
+      var big = makeCanvas(256, 256);
+      var bx = big.getContext('2d');
+      bx.imageSmoothingEnabled = true;
+      bx.imageSmoothingQuality = 'high';
+      bx.drawImage(_working, 0, 0, 256, 256);
+      triggerDownload(buildIcoBlob(frames), baseName() + '-favicon.ico');
+      notify('Favicon .ico saved (16/32/48/64)', 'success');
+      saveCanvas(big, baseName() + '-icon-256', 'image/png', 100);
+      clearBusy();
+    } catch (e) {
+      clearBusy();
+      notify('Favicon export failed: ' + e, 'error');
+    }
+  }, 30);
+}
+// ── Base64 / HTML snippet ─────────────────────────────────────
+function snippetModal(kind) {
+  if (!_working) { needImage(); return; }
+  var mime = _settings.fmt || 'image/png';
+  var q = (mime === 'image/png') ? undefined : (_settings.quality || 85) / 100;
+  var src = (mime === 'image/jpeg') ? flatten(_working, v('cnv-bg')) : _working;
+  try {
+    var url = src.toDataURL(mime, q);
+    var txt = kind === 'html'
+      ? '<img src="' + url + '" alt="' + esc(baseName()) + '" width="' + src.width + '" height="' + src.height + '">'
+      : url;
+    var note = txt.length > 200000 ? '<div class="iet-subhint" style="margin-top:8px">Large payload — consider JPEG quality for smaller snippets.</div>' : '';
+    openModal(kind === 'html' ? '&lt;img&gt; HTML snippet' : 'Base64 data URL',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(txt) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px">' +
+      '<button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button>' +
+      '<span class="iet-subhint">' + fmtSize(txt.length) + '</span>' +
+      '</div>' + note);
+    el('iet-snippet-copy').addEventListener('click', function () {
+      var ta = el('iet-snippet');
+      try {
+        ta.focus();
+        ta.select();
+        if (document.execCommand('copy')) notify('Copied to clipboard', 'success');
+        else notify('Copy blocked — select the text and press Ctrl+C', 'warning');
+      } catch (e) { notify('Copy blocked — select the text and press Ctrl+C', 'warning'); }
+    });
+  } catch (e) {
+    notify('This browser cannot encode ' + mime, 'error');
+  }
+}
+// ── Copy image to clipboard ───────────────────────────────────
+function copyImageToClipboard() {
+  if (!_working) { needImage(); return; }
+  try {
+    _working.toBlob(function (blob) {
+      if (!blob) { notify('Clipboard image encoding failed', 'error'); return; }
+      if (navigator.clipboard && navigator.clipboard.write) {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function () {
+          notify('Image copied to clipboard', 'success');
+        }, function () {
+          notify('Clipboard blocked by the sandbox — download instead', 'warning');
+        });
+      } else {
+        notify('Clipboard API not available — download instead', 'warning');
+      }
+    }, 'image/png');
+  } catch (e) {
+    notify('Clipboard blocked by the sandbox — download instead', 'warning');
+  }
+}
+// ── EXIF / metadata ───────────────────────────────────────────
+function readExifFromFile(file, cb) {
+  try {
+    var reader = new FileReader();
+    reader.onload = function () { cb(parseExif(reader.result)); };
+    reader.onerror = function () { cb(null); };
+    reader.readAsArrayBuffer(file);
+  } catch (e) { cb(null); }
+}
+function parseExif(buf) {
+  if (!buf || buf.byteLength < 32) return null;
+  var dv = new DataView(buf);
+  if (dv.getUint8(0) !== 0xFF || dv.getUint8(1) !== 0xD8) return null;
+  var out = {};
+  var off = 2;
+  while (off + 4 < buf.byteLength) {
+    if (dv.getUint8(off) !== 0xFF) break;
+    var marker = dv.getUint8(off + 1);
+    var len = dv.getUint16(off + 2);
+    if (marker === 0xE1 && dv.getUint8(off + 4) === 0x45 && dv.getUint8(off + 5) === 0x78) {
+      var tiff = off + 10;
+      var le = dv.getUint16(tiff) === 0x4949; // 'II' = little endian, 'MM' = big
+      if (dv.getUint16(tiff + 2, le) === 42) {
+        try {
+          var ifd0 = tiff + dv.getUint32(tiff + 4, le);
+          walkIfd(dv, ifd0, le, out);
+        } catch (e) {}
+      }
+      break;
+    }
+    if (marker === 0xDA) break;
+    off += 2 + len;
+  }
+  return Object.keys(out).length ? out : null;
+}
+function walkIfd(dv, base, le, out) {
+  try {
+    var n = dv.getUint16(base, le);
+    for (var i = 0; i < n && base + 2 + i * 12 + 12 <= dv.byteLength; i++) {
+      var e = base + 2 + i * 12;
+      var tag = dv.getUint16(e, le);
+      var type = dv.getUint16(e + 2, le);
+      var count = dv.getUint32(e + 4, le);
+      var valOff = e + 8;
+      var ts = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 6: 1, 7: 1, 8: 2, 9: 4, 10: 8 }[type] || 1;
+      var dataOff = count * ts > 4 ? base + dv.getUint32(valOff, le) : valOff;
+      if (tag === 0x010F) out.make = readStr(dv, dataOff, count);
+      else if (tag === 0x0110) out.model = readStr(dv, dataOff, count);
+      else if (tag === 0x0112) out.orientation = dv.getUint16(valOff, le);
+      else if (tag === 0x0131) out.software = readStr(dv, dataOff, count);
+      else if (tag === 0x0132) out.dateTime = readStr(dv, dataOff, count);
+      else if (tag === 0x8825) {
+        try { walkGps(dv, base + dv.getUint32(valOff, le), le, out); } catch (e2) {}
+      } else if (tag === 0x8769) {
+        try { walkExifIfd(dv, base + dv.getUint32(valOff, le), le, out); } catch (e3) {}
+      }
+    }
+  } catch (e) {}
+}
+function walkExifIfd(dv, base, le, out) {
+  var n = dv.getUint16(base, le);
+  for (var i = 0; i < n; i++) {
+    var e = base + 2 + i * 12;
+    var tag = dv.getUint16(e, le);
+    if (tag === 0x9003) {
+      var count = dv.getUint32(e + 4, le);
+      var dataOff = count > 4 ? base + dv.getUint32(e + 8, le) : e + 8;
+      out.dateOriginal = readStr(dv, dataOff, count);
+    } else if (tag === 0xA405) {
+      out.focalLength = Math.round((dv.getUint32(e + 8, le) / (dv.getUint32(e + 12, le) || 1)) * 10) / 10 + ' mm';
+    }
+  }
+}
+function walkGps(dv, base, le, out) {
+  var n = dv.getUint16(base, le);
+  for (var i = 0; i < n; i++) {
+    var e = base + 2 + i * 12;
+    var tag = dv.getUint16(e, le);
+    var count = dv.getUint32(e + 4, le);
+    if (tag === 0x0002) out.lat = readRational(dv, base + dv.getUint32(e + 8, le), le, count);
+    else if (tag === 0x0004) out.lon = readRational(dv, base + dv.getUint32(e + 8, le), le, count);
+  }
+}
+function readRational(dv, off, le, count) {
+  if (!count) return null;
+  var deg = dv.getUint32(off, le) / (dv.getUint32(off + 4, le) || 1);
+  var min = count > 1 ? dv.getUint32(off + 8, le) / (dv.getUint32(off + 12, le) || 1) : 0;
+  var sec = count > 2 ? dv.getUint32(off + 16, le) / (dv.getUint32(off + 20, le) || 1) : 0;
+  return deg + min / 60 + sec / 3600;
+}
+function readStr(dv, off, count) {
+  var s = '';
+  for (var i = 0; i < Math.min(count, 120); i++) {
+    var ch = dv.getUint8(off + i);
+    if (!ch) break;
+    s += String.fromCharCode(ch);
+  }
+  return s.trim();
+}
+function openMetaModal() {
+  if (!_working) { needImage(); return; }
+  var ex = _exifData;
+  var gps = '';
+  if (ex && ex.lat !== undefined && ex.lon !== undefined) {
+    gps = ex.lat.toFixed(5) + '°, ' + ex.lon.toFixed(5) + '°';
+  }
+  var rows = [
+    ['File', esc(_origMeta.name || '—')],
+    ['Dimensions', _working.width + ' × ' + _working.height + ' px'],
+    ['File size', fmtSize(_origMeta.size)],
+    ['Working step', _opIndex + ' of ' + _opLog.length],
+    ['Camera make', esc((ex && ex.make) || '—')],
+    ['Camera model', esc((ex && ex.model) || '—')],
+    ['Captured', esc((ex && (ex.dateOriginal || ex.dateTime)) || '—')],
+    ['Focal length', esc((ex && ex.focalLength) || '—')],
+    ['GPS', gps || '—'],
+    ['Software', esc((ex && ex.software) || '—')]
+  ];
+  var html = '<table class="iet-meta-table">' + rows.map(function (r) {
+    return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+  }).join('') + '</table>' +
+    '<div class="iet-subhint" style="margin-top:10px">✅ Privacy by design: every export from this tool is re-encoded by the browser, so EXIF / GPS metadata never leaves your device.</div>';
+  openModal('ℹ️ Image info &amp; metadata', html);
+}
 
 // ── Settings persistence ──────────────────────────────────────
 function readSettingsFromValue(val) {
@@ -1439,7 +2415,8 @@ function collectSettings() {
     wmText: v('wm-text'), wmSize: +v('wm-size'), wmFont: v('wm-font'), wmColor: v('wm-color'),
     wmOpacity: +v('wm-opacity'), wmPos: _wmPos, wmRot: +v('wm-rot'),
     wmTile: checked('wm-tile'), wmShadow: checked('wm-shadow'),
-    rszLock: _rszLock, cropAr: _cropAr, fltPreset: _fltPreset
+    rszLock: _rszLock, cropAr: _cropAr, fltPreset: _fltPreset,
+    ocrHistory: _ocrHistory
   };
 }
 function updateControlLabels() {
@@ -1482,11 +2459,13 @@ function applySettings(s) {
   _rszLock = s.rszLock !== false;
   _cropAr = s.cropAr || 'free';
   _fltPreset = s.fltPreset || 'none';
+  _ocrHistory = Array.isArray(s.ocrHistory) ? s.ocrHistory : [];
   updateControlLabels();
   updateLockBtn();
   updateCropArChips();
   updateWmPosChips();
   updateFilterPresetChips();
+  renderOcrHistory();
   onCnvFormatChanged();
   onCmpFormatChanged();
 }
@@ -1518,8 +2497,31 @@ function wireEvents() {
   el('iet-btn-open').addEventListener('click', openFilePicker);
   el('iet-btn-cms').addEventListener('click', uploadFromCms);
   el('iet-btn-undo').addEventListener('click', undoWorking);
+  el('iet-btn-redo').addEventListener('click', redoWorking);
   el('iet-btn-reset').addEventListener('click', resetWorking);
+  el('iet-btn-steps').addEventListener('click', openOpLog);
+  el('iet-btn-meta').addEventListener('click', openMetaModal);
+  el('iet-btn-copy').addEventListener('click', copyImageToClipboard);
   el('iet-btn-download').addEventListener('click', downloadCurrent);
+  // modal
+  el('iet-modal-close').addEventListener('click', closeModal);
+  el('iet-modal').addEventListener('click', function (e) {
+    if (e.target === el('iet-modal')) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && el('iet-modal').style.display === 'flex') closeModal();
+  });
+  // op log delegation
+  el('iet-modal-body').addEventListener('click', function (e) {
+    var node = e.target;
+    while (node && node !== el('iet-modal-body')) {
+      if (node.classList && node.classList.contains('iet-oplog-item')) {
+        jumpToStep(+node.getAttribute('data-step'));
+        return;
+      }
+      node = node.parentNode;
+    }
+  });
   // file input
   el('iet-file').addEventListener('change', function () {
     var files = this.files;
@@ -1561,11 +2563,31 @@ function wireEvents() {
       }
     }
   });
-  // keyboard: Ctrl+Z undo
+  // keyboard: shortcuts
   document.addEventListener('keydown', function (e) {
-    if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'z' || e.key === 'Z')) {
-      e.preventDefault();
-      undoWorking();
+    if (e.key === 'Escape') {
+      if (_straightenActive) stopStraighten();
+      else if (_regionActive) stopRegionSelect();
+      else closeModal();
+      return;
+    }
+    var tag = e.target && e.target.tagName ? e.target.tagName : '';
+    var typing = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if (typing || e.altKey || e.metaKey) return;
+    if (e.ctrlKey) {
+      if (e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); redoWorking(); }
+      else if (!e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undoWorking(); }
+      else if (!e.shiftKey && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redoWorking(); }
+      return;
+    }
+    switch (e.key) {
+      case 'r': case 'R': rotate90(1); break;
+      case 'c': case 'C': switchTab('crop'); break;
+      case 'f': case 'F': switchTab('filters'); break;
+      case '+': case '=': zoomAt(1, _viewW / 2, _viewH / 2); break;
+      case '-': zoomAt(-1, _viewW / 2, _viewH / 2); break;
+      case '0': setZoomScale(1); break;
+      case 'd': case 'D': downloadCurrent(); break;
     }
   });
   // convert
@@ -1578,6 +2600,9 @@ function wireEvents() {
   el('cnv-bg').addEventListener('change', function () { updateConvertEst(); persistSettingsSoon(); });
   el('cnv-download').addEventListener('click', convertDownload);
   el('cnv-use').addEventListener('click', convertUseInEditor);
+  el('cnv-favicon').addEventListener('click', faviconPack);
+  el('cnv-base64').addEventListener('click', function () { snippetModal('b64'); });
+  el('cnv-html').addEventListener('click', function () { snippetModal('html'); });
   // resize
   el('rsz-lock').addEventListener('click', toggleRszLock);
   el('rsz-w').addEventListener('input', onRszWidthChanged);
@@ -1610,6 +2635,21 @@ function wireEvents() {
   }
   el('crop-reset-sel').addEventListener('click', clearCropSelection);
   el('crop-apply').addEventListener('click', applyCrop);
+  el('crop-circle-apply').addEventListener('click', applyCircleCrop);
+  el('crop-circle-ring').addEventListener('input', function () {
+    el('crop-circle-ring-val').textContent = this.value + 'px';
+  });
+  var socialChips = document.querySelectorAll('#crop-social .iet-chip-btn');
+  for (var sc = 0; sc < socialChips.length; sc++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-social');
+        for (var i = 0; i < SOCIAL_CROPS.length; i++) {
+          if (SOCIAL_CROPS[i].id === id) { applySocialCrop(SOCIAL_CROPS[i]); return; }
+        }
+      });
+    })(socialChips[sc]);
+  }
   // rotate
   el('rot-ccw').addEventListener('click', function () { rotate90(-1); });
   el('rot-cw').addEventListener('click', function () { rotate90(1); });
@@ -1618,6 +2658,7 @@ function wireEvents() {
   el('flip-v').addEventListener('click', flipV);
   el('rot-angle').addEventListener('input', function () { el('rot-angle-val').textContent = this.value + '°'; });
   el('rot-apply-custom').addEventListener('click', applyFineRotate);
+  el('rot-straighten').addEventListener('click', toggleStraighten);
   // filters
   var fltChips = document.querySelectorAll('#flt-presets .iet-chip-btn');
   for (var f2 = 0; f2 < fltChips.length; f2++) {
@@ -1635,6 +2676,41 @@ function wireEvents() {
     applyFilterPreset('none');
   });
   el('flt-apply').addEventListener('click', applyFilters);
+  el('flt-auto').addEventListener('click', applyAutoEnhance);
+  el('flt-duo-apply').addEventListener('click', applyDuotone);
+  el('flt-region-btn').addEventListener('click', toggleRegionSelect);
+  el('flt-region-strength').addEventListener('input', function () {
+    el('flt-region-strength-val').textContent = this.value;
+  });
+  // annotate
+  var annTools = document.querySelectorAll('#ann-tools .iet-chip-btn');
+  for (var at = 0; at < annTools.length; at++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        _annotTool = btn.getAttribute('data-tool');
+        updateAnnotToolChips();
+      });
+    })(annTools[at]);
+  }
+  el('ann-size').addEventListener('input', function () { el('ann-size-val').textContent = this.value + 'px'; });
+  el('ann-apply').addEventListener('click', bakeAnnotations);
+  el('ann-undo').addEventListener('click', annotRemoveLast);
+  el('ann-clear').addEventListener('click', annotClearAll);
+  // frame
+  var frChips = document.querySelectorAll('#fr-presets .iet-chip-btn');
+  for (var fc = 0; fc < frChips.length; fc++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        _frPreset = btn.getAttribute('data-frame');
+        updateFrameChips();
+      });
+    })(frChips[fc]);
+  }
+  el('fr-border').addEventListener('input', function () { el('fr-border-val').textContent = this.value + 'px'; });
+  el('fr-radius').addEventListener('input', function () { el('fr-radius-val').textContent = this.value + 'px'; });
+  el('fr-mat').addEventListener('input', function () { el('fr-mat-val').textContent = this.value + 'px'; });
+  el('fr-shadow-op').addEventListener('input', function () { el('fr-shadow-op-val').textContent = this.value + '%'; });
+  el('fr-apply').addEventListener('click', applyFrame);
   // compress
   el('cmp-format').addEventListener('change', function () { onCmpFormatChanged(); persistSettingsSoon(); });
   el('cmp-quality').addEventListener('input', function () {
@@ -1665,9 +2741,38 @@ function wireEvents() {
     el('wm-rot-val').textContent = this.value + '°';
   });
   el('wm-apply').addEventListener('click', applyWatermark);
-  ['wm-text', 'wm-size', 'wm-font', 'wm-color', 'wm-opacity', 'wm-rot', 'wm-tile', 'wm-shadow'].forEach(function (id) {
+  ['wm-text', 'wm-size', 'wm-font', 'wm-color', 'wm-opacity', 'wm-rot', 'wm-tile', 'wm-shadow', 'wm-pill'].forEach(function (id) {
     el(id).addEventListener('change', persistSettingsSoon);
   });
+  el('wm-meme-toggle').addEventListener('click', function () {
+    var box = el('wm-meme-box');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    scheduleResize();
+  });
+  el('wm-meme-apply').addEventListener('click', applyMeme);
+  el('wm-logo-toggle').addEventListener('click', function () {
+    var box = el('wm-logo-box');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    scheduleResize();
+  });
+  el('wm-logo-file').addEventListener('click', function () { el('iet-logo-file').click(); });
+  el('iet-logo-file').addEventListener('change', function () {
+    var files = this.files;
+    if (files && files.length) {
+      var f = files[0];
+      fileToCanvas(f, function (err, c) {
+        if (err) { notify(err, 'error'); return; }
+        _logoCanvas = c;
+        _logoName = f.name;
+        el('wm-logo-name').textContent = f.name;
+        notify('Logo loaded: ' + f.name, 'success');
+      });
+    }
+    this.value = '';
+  });
+  el('wm-logo-max').addEventListener('input', function () { el('wm-logo-max-val').textContent = this.value + '%'; });
+  el('wm-logo-opacity').addEventListener('input', function () { el('wm-logo-opacity-val').textContent = this.value + '%'; });
+  el('wm-logo-apply').addEventListener('click', applyLogo);
   // collage
   el('col-layouts').addEventListener('click', function (e) {
     var btn = e.target;
@@ -1675,9 +2780,12 @@ function wireEvents() {
     if (!btn || btn === this) return;
     var btns = document.querySelectorAll('#col-layouts .iet-layout-btn');
     for (var i3 = 0; i3 < btns.length; i3++) btns[i3].classList.toggle('active', btns[i3] === btn);
+    el('col-custom-row').style.display = btn.getAttribute('data-layout') === 'custom' ? 'grid' : 'none';
     renderSlotGrid();
     persistSettingsSoon();
   });
+  el('col-rows').addEventListener('change', renderSlotGrid);
+  el('col-cols').addEventListener('change', renderSlotGrid);
   el('col-slots').addEventListener('click', function (e) {
     var slotNode = closestSlot(e.target);
     if (!slotNode) return;
@@ -1732,25 +2840,65 @@ function wireEvents() {
   el('ocr-btn-local').addEventListener('click', runOcrLocal);
   el('ocr-btn-ai').addEventListener('click', runOcrAi);
   el('ocr-btn-cms').addEventListener('click', uploadFromCms);
+  el('ocr-save').addEventListener('click', saveOcrToHistory);
+  el('ocr-search').addEventListener('input', renderOcrHistory);
+  el('ocr-history').addEventListener('click', function (e) {
+    var del = e.target;
+    if (del && del.classList && del.classList.contains('iet-slot-btn')) {
+      var di = +del.getAttribute('data-del');
+      if (_ocrHistory[di]) {
+        _ocrHistory.splice(di, 1);
+        renderOcrHistory();
+        persistSettingsSoon();
+      }
+      return;
+    }
+    var node = e.target;
+    while (node && node !== el('ocr-history')) {
+      if (node.classList && node.classList.contains('iet-ocr-item')) {
+        var idx = +node.getAttribute('data-idx');
+        if (_ocrHistory[idx]) {
+          el('ocr-result').value = _ocrHistory[idx].text;
+          ocrStatus('Opened from history: ' + esc(_ocrHistory[idx].name), 'ok');
+        }
+        return;
+      }
+      node = node.parentNode;
+    }
+  });
   el('ocr-copy').addEventListener('click', ocrCopy);
   el('ocr-download').addEventListener('click', ocrDownloadTxt);
   el('ocr-clear').addEventListener('click', function () {
     el('ocr-result').value = '';
     el('ocr-status').style.display = 'none';
   });
-  // preview canvas pointer interaction: crop drag OR pan, plus wheel zoom
+  // preview canvas pointer interaction: mode-specific
   el('iet-preview').addEventListener('pointerdown', function (e) {
-    if (_activeTab === 'crop') cropDown(e); else panDown(e);
+    if (_straightenActive) straightenDown(e);
+    else if (_regionActive) regionDown(e);
+    else if (_activeTab === 'crop') cropDown(e);
+    else if (_activeTab === 'annotate') annotDown(e);
+    else panDown(e);
   });
   el('iet-preview').addEventListener('pointermove', function (e) {
-    if (_cropPtr) cropMove(e); else panMove(e);
+    if (_straightenActive) straightenMove(e);
+    else if (_regionActive) regionMove(e);
+    else if (_cropPtr) cropMove(e);
+    else if (_activeTab === 'annotate') annotMove(e);
+    else panMove(e);
   });
   el('iet-preview').addEventListener('pointerup', function (e) {
+    straightenUp(e);
+    regionUp(e);
     cropUp(e);
+    annotUp();
     panUp();
   });
   el('iet-preview').addEventListener('pointercancel', function (e) {
+    straightenUp(e);
+    regionUp(e);
     cropUp(e);
+    annotUp();
     panUp();
   });
   el('iet-preview').addEventListener('wheel', wheelZoom, { passive: false });

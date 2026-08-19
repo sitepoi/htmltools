@@ -106,7 +106,7 @@ footer code { background: var(--panel-2); padding: 1px 6px; border-radius: 5px; 
 <header>
   <div>
     <h1><span class="ic">🖼️</span> ImageEditingTools — Development Plan</h1>
-    <div class="sub">Interactive feature backlog · generated 2026-08-19 · statuses and notes persist in this browser</div>
+    <div class="sub">Interactive feature backlog · generated 2026-08-19 · Phase 1 (24 features) shipped 2026-08-19 — statuses and notes persist in this browser</div>
   </div>
   <div class="tools">
     <button id="btn-json" title="Copy the full plan as JSON">📋 Copy JSON</button>
@@ -250,6 +250,17 @@ const FEATURES = [
   { id: 'H7', cat: 'H', phase: 3, title: 'Project save / load', desc: 'Export the whole edit session as an op-list JSON and re-apply it to the original later.' }
 ];
 
+const SHIPPED = [
+  // Phase 1 — Quick wins, shipped 2026-08-19
+  'A1', 'A2', 'A3', 'A4', 'A5',
+  'B1', 'B2', 'B3', 'B4', 'B5', 'B6',
+  'C2', 'C4', 'C6',
+  'D1', 'D2',
+  'E2', 'E3', 'E4',
+  'F1', 'F3',
+  'H1', 'H2', 'H4'
+];
+
 /* ── state ── */
 let state = load();
 function load() {
@@ -262,7 +273,10 @@ function load() {
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
 }
-function st(id) { return state[id] ? state[id].status : 'notstarted'; }
+function st(id) {
+  if (state[id]) return state[id].status;
+  return SHIPPED.indexOf(id) !== -1 ? 'done' : 'notstarted';
+}
 function note(id) { return state[id] ? (state[id].note || '') : ''; }
 
 /* ── render ── */

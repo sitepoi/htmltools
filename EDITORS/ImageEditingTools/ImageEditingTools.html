@@ -4,7 +4,7 @@
       <span class="iet-brand-icon">🖼️</span>
       <div class="iet-brand-text">
         <strong id="iet-title">Image Editing Tools</strong>
-        <span class="iet-sub">Convert · Resize · Rotate · Compress · Collage · OCR</span>
+        <span class="iet-sub">Convert · Resize · Frame · Annotate · Collage · OCR</span>
       </div>
     </div>
     <div class="iet-filechip" id="iet-filechip" style="display:none">
@@ -14,8 +14,12 @@
     <div class="iet-header-actions">
       <button id="iet-btn-open" class="iet-btn" type="button">📂 Open</button>
       <button id="iet-btn-cms" class="iet-btn" type="button" style="display:none" title="Pick a file from CMS storage">☁️ CMS</button>
-      <button id="iet-btn-undo" class="iet-btn" type="button" disabled title="Undo last edit">↩ Undo</button>
+      <button id="iet-btn-undo" class="iet-btn" type="button" disabled title="Undo last edit (Ctrl+Z)">↩ Undo</button>
+      <button id="iet-btn-redo" class="iet-btn" type="button" disabled title="Redo (Ctrl+Shift+Z)">↪ Redo</button>
       <button id="iet-btn-reset" class="iet-btn" type="button" disabled title="Back to the original image">↺ Reset</button>
+      <button id="iet-btn-steps" class="iet-btn" type="button" title="Step history — click a step to jump back">🕘 Steps</button>
+      <button id="iet-btn-meta" class="iet-btn" type="button" title="File info and metadata">ℹ️ Info</button>
+      <button id="iet-btn-copy" class="iet-btn" type="button" title="Copy the image to the clipboard">📋 Copy</button>
       <button id="iet-btn-download" class="iet-btn iet-btn-primary" type="button" disabled title="Download the current image">⬇ Download</button>
       <span class="iet-lock" id="iet-lock" style="display:none">🔒 Read-only</span>
     </div>
@@ -26,7 +30,9 @@
     <button class="iet-tab" data-tab="resize" type="button">📐 Resize</button>
     <button class="iet-tab" data-tab="crop" type="button">✂️ Crop</button>
     <button class="iet-tab" data-tab="rotate" type="button">🔄 Rotate</button>
+    <button class="iet-tab" data-tab="frame" type="button">🖼️ Frame</button>
     <button class="iet-tab" data-tab="filters" type="button">🎨 Filters</button>
+    <button class="iet-tab" data-tab="annotate" type="button">✏️ Annotate</button>
     <button class="iet-tab" data-tab="compress" type="button">🗜️ Compress</button>
     <button class="iet-tab" data-tab="watermark" type="button">💧 Watermark</button>
     <button class="iet-tab" data-tab="collage" type="button">🧩 Collage</button>
@@ -59,6 +65,11 @@
         <div class="iet-row iet-wrap">
           <button id="cnv-download" class="iet-btn iet-btn-primary" type="button">⬇ Convert &amp; download</button>
           <button id="cnv-use" class="iet-btn" type="button" title="Replace the working image with the converted result">Use result in editor</button>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="cnv-favicon" class="iet-btn" type="button" title="16/32/48/64 favicon .ico + 256 px PNG">🧩 Favicon pack</button>
+          <button id="cnv-base64" class="iet-btn" type="button" title="Copy the image as a base64 data URL">📄 Base64</button>
+          <button id="cnv-html" class="iet-btn" type="button" title="Copy a ready-to-use HTML img snippet">&lt;img&gt; snippet</button>
         </div>
       </div>
 
@@ -97,7 +108,7 @@
       <!-- CROP -->
       <div class="iet-pane" id="pane-crop">
         <h3 class="iet-pane-title">Crop</h3>
-        <p class="iet-pane-hint">Drag on the preview to select an area, or type exact numbers below.</p>
+        <p class="iet-pane-hint">Drag on the preview to select an area, type exact numbers, or use a social-size preset. Circle crop turns it into an avatar.</p>
         <div class="iet-field">
           <label>Aspect ratio</label>
           <div class="iet-chips" id="crop-aspects">
@@ -109,11 +120,34 @@
             <button class="iet-chip-btn" data-ar="9:16" type="button">9:16</button>
           </div>
         </div>
+        <div class="iet-field">
+          <label>Social sizes</label>
+          <div class="iet-chips" id="crop-social">
+            <button class="iet-chip-btn" data-social="ig" type="button">IG 1:1</button>
+            <button class="iet-chip-btn" data-social="story" type="button">Story 9:16</button>
+            <button class="iet-chip-btn" data-social="yt" type="button">YouTube 16:9</button>
+            <button class="iet-chip-btn" data-social="fb" type="button">FB Cover</button>
+            <button class="iet-chip-btn" data-social="li" type="button">LinkedIn</button>
+          </div>
+        </div>
         <div class="iet-grid2">
           <div class="iet-field"><label for="crop-x">X</label><input type="number" id="crop-x" class="iet-input" min="0" step="1"></div>
           <div class="iet-field"><label for="crop-y">Y</label><input type="number" id="crop-y" class="iet-input" min="0" step="1"></div>
           <div class="iet-field"><label for="crop-w">Width</label><input type="number" id="crop-w" class="iet-input" min="1" step="1"></div>
           <div class="iet-field"><label for="crop-h">Height</label><input type="number" id="crop-h" class="iet-input" min="1" step="1"></div>
+        </div>
+        <div class="iet-field">
+          <label>Circle crop (avatar)</label>
+          <div class="iet-row">
+            <input type="color" id="crop-circle-color" class="iet-color" value="#ffffff" title="Ring color">
+            <div class="iet-field iet-grow">
+              <label for="crop-circle-ring">Ring <span class="iet-val" id="crop-circle-ring-val">0</span>px</label>
+              <input type="range" id="crop-circle-ring" class="iet-range" min="0" max="60" value="0">
+            </div>
+          </div>
+          <div class="iet-row">
+            <button id="crop-circle-apply" class="iet-btn iet-btn-primary" type="button">⭕ Apply circle crop</button>
+          </div>
         </div>
         <div class="iet-row">
           <button id="crop-reset-sel" class="iet-btn" type="button">Clear selection</button>
@@ -143,12 +177,59 @@
         <div class="iet-row">
           <button id="rot-apply-custom" class="iet-btn iet-btn-primary" type="button">Apply fine rotation</button>
         </div>
+        <div class="iet-field">
+          <label>Straighten horizon</label>
+          <div class="iet-row iet-wrap">
+            <button id="rot-straighten" class="iet-btn" type="button">📏 Draw a horizon line</button>
+            <span class="iet-subhint" id="rot-straighten-hint" style="display:none">Drag across the horizon on the preview — release to level the image. Esc cancels.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FRAME -->
+      <div class="iet-pane" id="pane-frame">
+        <h3 class="iet-pane-title">Frame &amp; border studio</h3>
+        <p class="iet-pane-hint">Wrap the image in a border, mat and shadow. The Polaroid preset adds a white paper frame with a caption.</p>
+        <div class="iet-field">
+          <label>Preset</label>
+          <div class="iet-chips" id="fr-presets">
+            <button class="iet-chip-btn active" data-frame="none" type="button">Custom</button>
+            <button class="iet-chip-btn" data-frame="polaroid" type="button">📷 Polaroid</button>
+          </div>
+        </div>
+        <div class="iet-field">
+          <label for="fr-caption">Caption (Polaroid)</label>
+          <input type="text" id="fr-caption" class="iet-input" maxlength="120" placeholder="Summer 2026">
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field">
+            <label for="fr-border">Border <span class="iet-val" id="fr-border-val">0</span>px</label>
+            <input type="range" id="fr-border" class="iet-range" min="0" max="80" value="0">
+          </div>
+          <div class="iet-field"><label for="fr-border-color">Border color</label><input type="color" id="fr-border-color" class="iet-color" value="#000000"></div>
+          <div class="iet-field">
+            <label for="fr-radius">Corner radius <span class="iet-val" id="fr-radius-val">0</span>px</label>
+            <input type="range" id="fr-radius" class="iet-range" min="0" max="200" value="0">
+          </div>
+          <div class="iet-field">
+            <label for="fr-mat">Mat <span class="iet-val" id="fr-mat-val">0</span>px</label>
+            <input type="range" id="fr-mat" class="iet-range" min="0" max="120" value="0">
+          </div>
+          <div class="iet-field"><label for="fr-mat-color">Mat color</label><input type="color" id="fr-mat-color" class="iet-color" value="#ffffff"></div>
+          <div class="iet-field">
+            <label for="fr-shadow-op">Shadow <span class="iet-val" id="fr-shadow-op-val">0</span>%</label>
+            <input type="range" id="fr-shadow-op" class="iet-range" min="0" max="80" value="0">
+          </div>
+        </div>
+        <div class="iet-row">
+          <button id="fr-apply" class="iet-btn iet-btn-primary" type="button">🖼️ Apply frame</button>
+        </div>
       </div>
 
       <!-- FILTERS -->
       <div class="iet-pane" id="pane-filters">
         <h3 class="iet-pane-title">Filters &amp; adjustments</h3>
-        <p class="iet-pane-hint">The preview updates live as you move the sliders. Click "Apply to image" to make it permanent.</p>
+        <p class="iet-pane-hint">The preview updates live as you move the sliders. Click "Apply to image" to make it permanent. Grain is baked on Apply.</p>
         <div class="iet-field">
           <label>Quick presets</label>
           <div class="iet-chips" id="flt-presets">
@@ -156,10 +237,24 @@
             <button class="iet-chip-btn" data-preset="bw" type="button">B&amp;W</button>
             <button class="iet-chip-btn" data-preset="sepia" type="button">Sepia</button>
             <button class="iet-chip-btn" data-preset="vintage" type="button">Vintage</button>
+            <button class="iet-chip-btn" data-preset="film" type="button">Film</button>
+            <button class="iet-chip-btn" data-preset="neon" type="button">Neon</button>
+            <button class="iet-chip-btn" data-preset="kodak" type="button">Kodak</button>
+            <button class="iet-chip-btn" data-preset="drama" type="button">Drama</button>
+            <button class="iet-chip-btn" data-preset="noir" type="button">Noir</button>
             <button class="iet-chip-btn" data-preset="cool" type="button">Cool</button>
             <button class="iet-chip-btn" data-preset="warm" type="button">Warm</button>
             <button class="iet-chip-btn" data-preset="vivid" type="button">Vivid</button>
             <button class="iet-chip-btn" data-preset="fade" type="button">Fade</button>
+            <button class="iet-chip-btn" data-preset="duotone" type="button">Duotone</button>
+          </div>
+        </div>
+        <div class="iet-field">
+          <label>Custom duotone (gradient map)</label>
+          <div class="iet-row">
+            <input type="color" id="flt-duo-1" class="iet-color" value="#1a1a3a" title="Dark color">
+            <input type="color" id="flt-duo-2" class="iet-color" value="#ffd9a0" title="Light color">
+            <button id="flt-duo-apply" class="iet-btn iet-btn-fit" type="button" title="Remap the image from dark color to light color">Apply</button>
           </div>
         </div>
         <div class="iet-field">
@@ -194,9 +289,66 @@
           <label for="flt-invert">Invert <span class="iet-val" id="flt-invert-val">0</span>%</label>
           <input type="range" id="flt-invert" class="iet-range" min="0" max="100" value="0">
         </div>
+        <div class="iet-field">
+          <label for="flt-vignette">Vignette <span class="iet-val" id="flt-vignette-val">0</span>%</label>
+          <input type="range" id="flt-vignette" class="iet-range" min="0" max="100" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="flt-vig-soft">Vignette softness <span class="iet-val" id="flt-vig-soft-val">50</span>%</label>
+          <input type="range" id="flt-vig-soft" class="iet-range" min="0" max="100" value="50">
+        </div>
+        <div class="iet-field">
+          <label for="flt-grain">Film grain <span class="iet-val" id="flt-grain-val">0</span></label>
+          <input type="range" id="flt-grain" class="iet-range" min="0" max="40" value="0">
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="flt-auto" class="iet-btn" type="button" title="Analyze the image and adjust brightness, contrast and color automatically">✨ Auto enhance</button>
+        </div>
+        <div class="iet-field">
+          <label>Blur / pixelate an area</label>
+          <select id="flt-region-mode" class="iet-input">
+            <option value="pixelate" selected>Pixelate (mosaic)</option>
+            <option value="blur">Blur</option>
+          </select>
+          <div class="iet-row">
+            <div class="iet-field iet-grow">
+              <label for="flt-region-strength">Strength <span class="iet-val" id="flt-region-strength-val">12</span></label>
+              <input type="range" id="flt-region-strength" class="iet-range" min="2" max="64" value="12">
+            </div>
+            <button id="flt-region-btn" class="iet-btn iet-btn-fit" type="button" title="Then drag a box over the area on the preview">▦ Select area</button>
+          </div>
+        </div>
         <div class="iet-row">
           <button id="flt-reset" class="iet-btn" type="button">Reset sliders</button>
           <button id="flt-apply" class="iet-btn iet-btn-primary" type="button">Apply to image</button>
+        </div>
+      </div>
+
+      <!-- ANNOTATE -->
+      <div class="iet-pane" id="pane-annotate">
+        <h3 class="iet-pane-title">Annotate</h3>
+        <p class="iet-pane-hint">Draw arrows, shapes and highlights directly on the preview. Marks stay editable until you bake them into the image.</p>
+        <div class="iet-field">
+          <label>Tool</label>
+          <div class="iet-chips" id="ann-tools">
+            <button class="iet-chip-btn active" data-tool="arrow" type="button">➤ Arrow</button>
+            <button class="iet-chip-btn" data-tool="rect" type="button">▭ Box</button>
+            <button class="iet-chip-btn" data-tool="ellipse" type="button">◯ Circle</button>
+            <button class="iet-chip-btn" data-tool="freehand" type="button">✏️ Freehand</button>
+            <button class="iet-chip-btn" data-tool="highlight" type="button">🖍 Highlighter</button>
+          </div>
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field"><label for="ann-color">Color</label><input type="color" id="ann-color" class="iet-color" value="#ff3b30"></div>
+          <div class="iet-field">
+            <label for="ann-size">Thickness <span class="iet-val" id="ann-size-val">5</span>px</label>
+            <input type="range" id="ann-size" class="iet-range" min="1" max="24" value="5">
+          </div>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="ann-apply" class="iet-btn iet-btn-primary" type="button">✅ Bake marks</button>
+          <button id="ann-undo" class="iet-btn" type="button">↩ Remove last</button>
+          <button id="ann-clear" class="iet-btn" type="button">🗑 Clear all</button>
         </div>
       </div>
 
@@ -279,9 +431,57 @@
         <div class="iet-row iet-wrap">
           <label class="iet-check"><input type="checkbox" id="wm-tile"> Tile across image</label>
           <label class="iet-check"><input type="checkbox" id="wm-shadow" checked> Shadow</label>
+          <label class="iet-check"><input type="checkbox" id="wm-pill"> Pill background</label>
         </div>
         <div class="iet-row">
           <button id="wm-apply" class="iet-btn iet-btn-primary" type="button">Apply watermark</button>
+        </div>
+        <div class="iet-field">
+          <button id="wm-meme-toggle" class="iet-btn" type="button">🤣 Meme maker</button>
+          <div id="wm-meme-box" style="display:none">
+            <div class="iet-field" style="margin-top:8px;">
+              <label for="wm-meme-top">Top text</label>
+              <input type="text" id="wm-meme-top" class="iet-input" maxlength="160" placeholder="WHEN YOU…">
+            </div>
+            <div class="iet-field">
+              <label for="wm-meme-bottom">Bottom text</label>
+              <input type="text" id="wm-meme-bottom" class="iet-input" maxlength="160" placeholder="…BUT THEN">
+            </div>
+            <div class="iet-row">
+              <button id="wm-meme-apply" class="iet-btn iet-btn-primary" type="button">Apply meme text</button>
+            </div>
+          </div>
+        </div>
+        <div class="iet-field">
+          <button id="wm-logo-toggle" class="iet-btn" type="button">🖼️ Logo overlay</button>
+          <div id="wm-logo-box" style="display:none">
+            <div class="iet-row" style="margin-top:8px;">
+              <button id="wm-logo-file" class="iet-btn" type="button">Choose logo…</button>
+              <span class="iet-logo-name" id="wm-logo-name">none</span>
+            </div>
+            <div class="iet-grid2">
+              <div class="iet-field">
+                <label for="wm-logo-pos">Corner</label>
+                <select id="wm-logo-pos" class="iet-input">
+                  <option value="br" selected>Bottom right</option>
+                  <option value="bl">Bottom left</option>
+                  <option value="tr">Top right</option>
+                  <option value="tl">Top left</option>
+                </select>
+              </div>
+              <div class="iet-field">
+                <label for="wm-logo-max">Max width <span class="iet-val" id="wm-logo-max-val">20</span>%</label>
+                <input type="range" id="wm-logo-max" class="iet-range" min="5" max="100" value="20">
+              </div>
+              <div class="iet-field">
+                <label for="wm-logo-opacity">Opacity <span class="iet-val" id="wm-logo-opacity-val">100</span>%</label>
+                <input type="range" id="wm-logo-opacity" class="iet-range" min="10" max="100" value="100">
+              </div>
+            </div>
+            <div class="iet-row">
+              <button id="wm-logo-apply" class="iet-btn iet-btn-primary" type="button">Apply logo</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -298,7 +498,12 @@
             <button class="iet-layout-btn" data-layout="strip3" type="button"><span class="iet-layout-ic">▯▯▯</span>3 strips</button>
             <button class="iet-layout-btn" data-layout="col3" type="button"><span class="iet-layout-ic">▭▭▭</span>3 rows</button>
             <button class="iet-layout-btn" data-layout="hero" type="button"><span class="iet-layout-ic">▮▯</span>Hero + 2</button>
+            <button class="iet-layout-btn" data-layout="custom" type="button"><span class="iet-layout-ic">▦</span>Custom grid</button>
           </div>
+        </div>
+        <div class="iet-grid2" id="col-custom-row" style="display:none">
+          <div class="iet-field"><label for="col-rows">Rows</label><input type="number" id="col-rows" class="iet-input" min="1" max="5" value="2"></div>
+          <div class="iet-field"><label for="col-cols">Columns</label><input type="number" id="col-cols" class="iet-input" min="1" max="5" value="3"></div>
         </div>
         <div class="iet-grid2">
           <div class="iet-field">
@@ -345,13 +550,27 @@
             <option value="deu">Deutsch</option>
             <option value="fra">Français</option>
             <option value="spa">Español</option>
+            <option value="ita">Italiano</option>
+            <option value="por">Português</option>
+            <option value="rus">Русский</option>
             <option value="ara">العربية</option>
+            <option value="chi_sim">中文 (简体)</option>
+            <option value="jpn">日本語</option>
+            <option value="kor">한국어</option>
           </select>
         </div>
         <div class="iet-row iet-wrap">
           <button id="ocr-btn-local" class="iet-btn iet-btn-primary" type="button">🔍 Extract (built-in engine)</button>
           <button id="ocr-btn-ai" class="iet-btn" type="button">🤖 Extract with AI</button>
           <button id="ocr-btn-cms" class="iet-btn" type="button" style="display:none">☁️ From CMS</button>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="ocr-save" class="iet-btn" type="button" title="Save the current result to history">💾 Save to history</button>
+        </div>
+        <div class="iet-field">
+          <label for="ocr-search">History (click to reopen)</label>
+          <input type="text" id="ocr-search" class="iet-input" placeholder="Search saved extractions…">
+          <div id="ocr-history" class="iet-ocr-history"></div>
         </div>
         <div class="iet-status" id="ocr-status" style="display:none"></div>
         <div class="iet-field">
@@ -403,5 +622,16 @@
     </section>
   </div>
 
+  <div class="iet-modal" id="iet-modal" style="display:none">
+    <div class="iet-modal-box">
+      <div class="iet-modal-head">
+        <span id="iet-modal-title">…</span>
+        <button id="iet-modal-close" class="iet-modal-x" type="button" title="Close">✕</button>
+      </div>
+      <div class="iet-modal-body" id="iet-modal-body"></div>
+    </div>
+  </div>
+
   <input type="file" id="iet-file" accept="image/*" hidden>
+  <input type="file" id="iet-logo-file" accept="image/*" hidden>
 </div>
