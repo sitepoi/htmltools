@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImageEditingTools — Test Harness</title>
+<link rel="stylesheet" href="ImageEditingTools.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1a1d26; color: #fff; font-family: system-ui; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #6c8cff; }
+#th-bar .sep { color: #5a6070; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: system-ui; }
+#th-bar .btn-load { background: #3d5cff; color: #fff; }
+#th-bar .btn-clear { background: #d63030; color: #fff; }
+#th-bar .btn-reload { background: #1a9e65; color: #fff; }
+#th-bar .btn-admin { background: #6c8cff; color: #fff; }
+#th-bar .btn-editor { background: #b87010; color: #fff; }
+#th-bar .btn-viewer { background: #5a6070; color: #fff; }
+#th-bar .hint { color: #5a6070; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-load" id="th-load-ocr-sample">Load OCR Sample</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Role:</span>
+  <button class="btn-admin" id="th-role-admin">Admin</button>
+  <button class="btn-editor" id="th-role-editor">Editor</button>
+  <button class="btn-viewer" id="th-role-viewer">Viewer</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = ReadOnly</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* Mock tool SDK */
+(function() {
+  const STORAGE_KEY = 'iet_test_db';
+  const listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  let _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  _user = {
+    id: 'user-001',
+    name: 'Alex Johnson',
+    email: 'alex@example.com',
+    roles: ['admin', 'editor'],
+    effectiveAccess: { isViewer: true, isEditor: true, isManager: true }
+  };
+
+  function load() {
+    try { const raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  function notifyUserChange() {
+    listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+  }
+
+  window.tool = {
+    getValue() { return _value; },
+    setValue(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange(cb) { listeners.valueChange.push(cb); },
+    getFields() { return Object.assign({}, _fields); },
+    setField(id, value) { _fields[id] = value; },
+    setFields(obj) { Object.assign(_fields, obj); },
+    watchField(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange(cb) { listeners.fieldsChange.push(cb); },
+    param(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly() { return _readOnly; },
+    onReadonlyChange(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser() { return _user; },
+    onUserChange(cb) { listeners.userChange.push(cb); },
+    _setUser(u) { _user = u; notifyUserChange(); },
+    reportValid(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#3d5cff', success: '#1a9e65', warning: '#b87010', error: '#d63030' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    reportMissingParams: function() {},
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    requestUpload(accept, cb) {
+      var inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = accept || 'image/*';
+      inp.style.display = 'none';
+      inp.onchange = function() {
+        var f = inp.files && inp.files[0];
+        if (!f) { cb('no file selected', null); return; }
+        var r = new FileReader();
+        r.onload = function() { cb(null, { name: f.name, url: r.result, size: f.size, type: f.type }); };
+        r.onerror = function() { cb('read failed', null); };
+        r.readAsDataURL(f);
+      };
+      document.body.appendChild(inp);
+      inp.click();
+      setTimeout(function() { document.body.removeChild(inp); }, 30000);
+    },
+    requestFileContent(url, cb) {
+      cb('text extraction not available for images in harness', '');
+    },
+    requestAI(prompt, context, cb) {
+      setTimeout(function() {
+        if (prompt && prompt.indexOf('OCR') !== -1) {
+          cb(null, [
+            'UNICON SAMPLE CAFE',
+            'Fatih Mah. Ornek Sok. No: 12, Istanbul',
+            'Tarih: 2026-08-18 14:32',
+            '----------------------------------------',
+            '2 x Cay                40,00 TL',
+            '1 x Tost               95,00 TL',
+            '1 x Kek                55,00 TL',
+            '----------------------------------------',
+            'TOPLAM: 190,00 TL',
+            'KDV (%8): 14,07 TL',
+            'Tesekkur ederiz!'
+          ].join('\n'));
+        }
+        cb(null, 'Mock AI response.');
+      }, 600);
+    },
+    openUrl: function() {},
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* Embedded HTML fallback */
+const EMBEDDED_HTML = `<div id="app">
+  <header class="iet-header">
+    <div class="iet-brand">
+      <span class="iet-brand-icon">🖼️</span>
+      <div class="iet-brand-text">
+        <strong id="iet-title">Image Editing Tools</strong>
+        <span class="iet-sub">Convert · Resize · Rotate · Compress · Collage · OCR</span>
+      </div>
+    </div>
+    <div class="iet-filechip" id="iet-filechip" style="display:none">
+      <span class="iet-chip" id="iet-file-name">—</span>
+      <span class="iet-chip iet-chip-dim" id="iet-file-dims">—</span>
+    </div>
+    <div class="iet-header-actions">
+      <button id="iet-btn-open" class="iet-btn" type="button">📂 Open</button>
+      <button id="iet-btn-cms" class="iet-btn" type="button" style="display:none" title="Pick a file from CMS storage">☁️ CMS</button>
+      <button id="iet-btn-undo" class="iet-btn" type="button" disabled title="Undo last edit">↩ Undo</button>
+      <button id="iet-btn-reset" class="iet-btn" type="button" disabled title="Back to the original image">↺ Reset</button>
+      <button id="iet-btn-download" class="iet-btn iet-btn-primary" type="button" disabled title="Download the current image">⬇ Download</button>
+      <span class="iet-lock" id="iet-lock" style="display:none">🔒 Read-only</span>
+    </div>
+  </header>
+
+  <nav class="iet-tabs" id="iet-tabs">
+    <button class="iet-tab active" data-tab="convert" type="button">🔁 Convert</button>
+    <button class="iet-tab" data-tab="resize" type="button">📐 Resize</button>
+    <button class="iet-tab" data-tab="crop" type="button">✂️ Crop</button>
+    <button class="iet-tab" data-tab="rotate" type="button">🔄 Rotate</button>
+    <button class="iet-tab" data-tab="filters" type="button">🎨 Filters</button>
+    <button class="iet-tab" data-tab="compress" type="button">🗜️ Compress</button>
+    <button class="iet-tab" data-tab="watermark" type="button">💧 Watermark</button>
+    <button class="iet-tab" data-tab="collage" type="button">🧩 Collage</button>
+    <button class="iet-tab" data-tab="ocr" type="button">🔍 OCR</button>
+  </nav>
+
+  <div class="iet-main">
+    <aside class="iet-side">
+      <div class="iet-pane active" id="pane-convert">
+        <h3 class="iet-pane-title">File type converter</h3>
+        <p class="iet-pane-hint">Opens any image the browser supports (JPG, PNG, GIF, WEBP, BMP, SVG, AVIF…) and saves it as PNG, JPEG or WebP. Animated GIFs keep their first frame.</p>
+        <div class="iet-field">
+          <label for="cnv-format">Output format</label>
+          <select id="cnv-format" class="iet-input">
+            <option value="image/png">PNG — lossless, keeps transparency</option>
+            <option value="image/jpeg" selected>JPEG — small files, no transparency</option>
+            <option value="image/webp">WebP — small files, keeps transparency</option>
+          </select>
+        </div>
+        <div class="iet-field" id="cnv-quality-row">
+          <label for="cnv-quality">Quality <span class="iet-val" id="cnv-quality-val">85</span>%</label>
+          <input type="range" id="cnv-quality" class="iet-range" min="1" max="100" value="85">
+        </div>
+        <div class="iet-field" id="cnv-bg-row" style="display:none">
+          <label for="cnv-bg">Background for transparent areas</label>
+          <input type="color" id="cnv-bg" class="iet-color" value="#ffffff">
+        </div>
+        <div class="iet-est" id="cnv-est" style="display:none"></div>
+        <div class="iet-row iet-wrap">
+          <button id="cnv-download" class="iet-btn iet-btn-primary" type="button">⬇ Convert &amp; download</button>
+          <button id="cnv-use" class="iet-btn" type="button" title="Replace the working image with the converted result">Use result in editor</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-resize">
+        <h3 class="iet-pane-title">Resize</h3>
+        <p class="iet-pane-hint">Change the pixel dimensions. The aspect ratio lock keeps the image from stretching.</p>
+        <div class="iet-row">
+          <div class="iet-field iet-grow">
+            <label for="rsz-w">Width (px)</label>
+            <input type="number" id="rsz-w" class="iet-input" min="1" step="1">
+          </div>
+          <button id="rsz-lock" class="iet-lockbtn" type="button" title="Lock / unlock aspect ratio">🔒</button>
+          <div class="iet-field iet-grow">
+            <label for="rsz-h">Height (px)</label>
+            <input type="number" id="rsz-h" class="iet-input" min="1" step="1">
+          </div>
+        </div>
+        <div class="iet-field">
+          <label for="rsz-pct">Percent of original</label>
+          <input type="number" id="rsz-pct" class="iet-input" min="1" max="2000" step="1" value="100">
+        </div>
+        <div class="iet-chips" id="rsz-presets">
+          <button class="iet-chip-btn" data-pct="25" type="button">25%</button>
+          <button class="iet-chip-btn" data-pct="50" type="button">50%</button>
+          <button class="iet-chip-btn" data-pct="75" type="button">75%</button>
+          <button class="iet-chip-btn" data-pct="100" type="button">100%</button>
+          <button class="iet-chip-btn" data-pct="150" type="button">150%</button>
+          <button class="iet-chip-btn" data-pct="200" type="button">200%</button>
+        </div>
+        <div class="iet-row">
+          <button id="rsz-apply" class="iet-btn iet-btn-primary" type="button">Apply resize</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-crop">
+        <h3 class="iet-pane-title">Crop</h3>
+        <p class="iet-pane-hint">Drag on the preview to select an area, or type exact numbers below.</p>
+        <div class="iet-field">
+          <label>Aspect ratio</label>
+          <div class="iet-chips" id="crop-aspects">
+            <button class="iet-chip-btn active" data-ar="free" type="button">Free</button>
+            <button class="iet-chip-btn" data-ar="1:1" type="button">1:1</button>
+            <button class="iet-chip-btn" data-ar="4:3" type="button">4:3</button>
+            <button class="iet-chip-btn" data-ar="3:2" type="button">3:2</button>
+            <button class="iet-chip-btn" data-ar="16:9" type="button">16:9</button>
+            <button class="iet-chip-btn" data-ar="9:16" type="button">9:16</button>
+          </div>
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field"><label for="crop-x">X</label><input type="number" id="crop-x" class="iet-input" min="0" step="1"></div>
+          <div class="iet-field"><label for="crop-y">Y</label><input type="number" id="crop-y" class="iet-input" min="0" step="1"></div>
+          <div class="iet-field"><label for="crop-w">Width</label><input type="number" id="crop-w" class="iet-input" min="1" step="1"></div>
+          <div class="iet-field"><label for="crop-h">Height</label><input type="number" id="crop-h" class="iet-input" min="1" step="1"></div>
+        </div>
+        <div class="iet-row">
+          <button id="crop-reset-sel" class="iet-btn" type="button">Clear selection</button>
+          <button id="crop-apply" class="iet-btn iet-btn-primary" type="button">Apply crop</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-rotate">
+        <h3 class="iet-pane-title">Rotate &amp; flip</h3>
+        <p class="iet-pane-hint">Quarter turns and mirror flips apply instantly. Fine rotation can tilt the image by any angle.</p>
+        <div class="iet-row iet-wrap">
+          <button id="rot-ccw" class="iet-btn" type="button" title="Rotate 90° left">⟲ 90°</button>
+          <button id="rot-cw" class="iet-btn" type="button" title="Rotate 90° right">⟳ 90°</button>
+          <button id="rot-180" class="iet-btn" type="button" title="Turn upside down">🔃 180°</button>
+          <button id="flip-h" class="iet-btn" type="button" title="Mirror left ↔ right">↔ Flip</button>
+          <button id="flip-v" class="iet-btn" type="button" title="Mirror top ↔ bottom">↕ Flip</button>
+        </div>
+        <div class="iet-field">
+          <label for="rot-angle">Fine rotation <span class="iet-val" id="rot-angle-val">0°</span></label>
+          <input type="range" id="rot-angle" class="iet-range" min="-180" max="180" step="1" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="rot-bg">Corner fill</label>
+          <input type="color" id="rot-bg" class="iet-color" value="#ffffff">
+        </div>
+        <div class="iet-row">
+          <button id="rot-apply-custom" class="iet-btn iet-btn-primary" type="button">Apply fine rotation</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-filters">
+        <h3 class="iet-pane-title">Filters &amp; adjustments</h3>
+        <p class="iet-pane-hint">The preview updates live as you move the sliders. Click "Apply to image" to make it permanent.</p>
+        <div class="iet-field">
+          <label>Quick presets</label>
+          <div class="iet-chips" id="flt-presets">
+            <button class="iet-chip-btn active" data-preset="none" type="button">Original</button>
+            <button class="iet-chip-btn" data-preset="bw" type="button">B&amp;W</button>
+            <button class="iet-chip-btn" data-preset="sepia" type="button">Sepia</button>
+            <button class="iet-chip-btn" data-preset="vintage" type="button">Vintage</button>
+            <button class="iet-chip-btn" data-preset="cool" type="button">Cool</button>
+            <button class="iet-chip-btn" data-preset="warm" type="button">Warm</button>
+            <button class="iet-chip-btn" data-preset="vivid" type="button">Vivid</button>
+            <button class="iet-chip-btn" data-preset="fade" type="button">Fade</button>
+          </div>
+        </div>
+        <div class="iet-field">
+          <label for="flt-brightness">Brightness <span class="iet-val" id="flt-brightness-val">100</span>%</label>
+          <input type="range" id="flt-brightness" class="iet-range" min="50" max="150" value="100">
+        </div>
+        <div class="iet-field">
+          <label for="flt-contrast">Contrast <span class="iet-val" id="flt-contrast-val">100</span>%</label>
+          <input type="range" id="flt-contrast" class="iet-range" min="50" max="150" value="100">
+        </div>
+        <div class="iet-field">
+          <label for="flt-saturate">Saturation <span class="iet-val" id="flt-saturate-val">100</span>%</label>
+          <input type="range" id="flt-saturate" class="iet-range" min="0" max="200" value="100">
+        </div>
+        <div class="iet-field">
+          <label for="flt-hue">Hue shift <span class="iet-val" id="flt-hue-val">0°</span></label>
+          <input type="range" id="flt-hue" class="iet-range" min="-180" max="180" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="flt-blur">Blur <span class="iet-val" id="flt-blur-val">0</span>px</label>
+          <input type="range" id="flt-blur" class="iet-range" min="0" max="10" step="0.5" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="flt-grayscale">Grayscale <span class="iet-val" id="flt-grayscale-val">0</span>%</label>
+          <input type="range" id="flt-grayscale" class="iet-range" min="0" max="100" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="flt-sepia">Sepia <span class="iet-val" id="flt-sepia-val">0</span>%</label>
+          <input type="range" id="flt-sepia" class="iet-range" min="0" max="100" value="0">
+        </div>
+        <div class="iet-field">
+          <label for="flt-invert">Invert <span class="iet-val" id="flt-invert-val">0</span>%</label>
+          <input type="range" id="flt-invert" class="iet-range" min="0" max="100" value="0">
+        </div>
+        <div class="iet-row">
+          <button id="flt-reset" class="iet-btn" type="button">Reset sliders</button>
+          <button id="flt-apply" class="iet-btn iet-btn-primary" type="button">Apply to image</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-compress">
+        <h3 class="iet-pane-title">Compress</h3>
+        <p class="iet-pane-hint">Shrink the file size for email, chat or the web. Set a target size and let the auto-tuner find the best quality.</p>
+        <div class="iet-field">
+          <label for="cmp-format">Format</label>
+          <select id="cmp-format" class="iet-input">
+            <option value="image/jpeg" selected>JPEG</option>
+            <option value="image/webp">WebP</option>
+            <option value="image/png">PNG (ignores quality)</option>
+          </select>
+        </div>
+        <div class="iet-field" id="cmp-quality-row">
+          <label for="cmp-quality">Quality <span class="iet-val" id="cmp-quality-val">85</span>%</label>
+          <input type="range" id="cmp-quality" class="iet-range" min="1" max="100" value="85">
+        </div>
+        <div class="iet-row">
+          <div class="iet-field iet-grow">
+            <label for="cmp-target">Target size (KB)</label>
+            <input type="number" id="cmp-target" class="iet-input" min="1" step="1" placeholder="e.g. 250">
+          </div>
+          <button id="cmp-auto" class="iet-btn iet-btn-fit" type="button" title="Find the quality that gets closest to the target size">🎯 Auto</button>
+        </div>
+        <div class="iet-est" id="cmp-est" style="display:none"></div>
+        <div class="iet-row">
+          <button id="cmp-download" class="iet-btn iet-btn-primary" type="button">⬇ Download compressed</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-watermark">
+        <h3 class="iet-pane-title">Text watermark</h3>
+        <p class="iet-pane-hint">Stamp text over the image — a name, a logo word, a date or a "draft" notice. Change your mind? Just Undo.</p>
+        <div class="iet-field">
+          <label for="wm-text">Text</label>
+          <input type="text" id="wm-text" class="iet-input" maxlength="120" placeholder="© Your Company">
+        </div>
+        <div class="iet-field">
+          <label for="wm-size">Size <span class="iet-val" id="wm-size-val">48</span>px</label>
+          <input type="range" id="wm-size" class="iet-range" min="8" max="220" value="48">
+        </div>
+        <div class="iet-field">
+          <label for="wm-font">Font</label>
+          <select id="wm-font" class="iet-input">
+            <option value="sans" selected>Arial / Helvetica (sans)</option>
+            <option value="serif">Georgia / Times (serif)</option>
+            <option value="mono">Courier (mono)</option>
+            <option value="script">Brush / cursive</option>
+            <option value="impact">Impact (condensed)</option>
+          </select>
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field"><label for="wm-color">Color</label><input type="color" id="wm-color" class="iet-color" value="#ffffff"></div>
+          <div class="iet-field">
+            <label for="wm-opacity">Opacity <span class="iet-val" id="wm-opacity-val">60</span>%</label>
+            <input type="range" id="wm-opacity" class="iet-range" min="0" max="100" value="60">
+          </div>
+        </div>
+        <div class="iet-field">
+          <label>Position</label>
+          <div class="iet-posgrid" id="wm-posgrid">
+            <button class="iet-pos-btn" data-pos="tl" type="button" title="Top left">◤</button>
+            <button class="iet-pos-btn" data-pos="tc" type="button" title="Top center">◥</button>
+            <button class="iet-pos-btn" data-pos="tr" type="button" title="Top right">◥</button>
+            <button class="iet-pos-btn" data-pos="ml" type="button" title="Middle left">◣</button>
+            <button class="iet-pos-btn active" data-pos="mc" type="button" title="Center">●</button>
+            <button class="iet-pos-btn" data-pos="mr" type="button" title="Middle right">◢</button>
+            <button class="iet-pos-btn" data-pos="bl" type="button" title="Bottom left">◣</button>
+            <button class="iet-pos-btn" data-pos="bc" type="button" title="Bottom center">◢</button>
+            <button class="iet-pos-btn" data-pos="br" type="button" title="Bottom right">◥</button>
+          </div>
+        </div>
+        <div class="iet-field">
+          <label for="wm-rot">Tilt <span class="iet-val" id="wm-rot-val">0°</span></label>
+          <input type="range" id="wm-rot" class="iet-range" min="0" max="360" value="0">
+        </div>
+        <div class="iet-row iet-wrap">
+          <label class="iet-check"><input type="checkbox" id="wm-tile"> Tile across image</label>
+          <label class="iet-check"><input type="checkbox" id="wm-shadow" checked> Shadow</label>
+        </div>
+        <div class="iet-row">
+          <button id="wm-apply" class="iet-btn iet-btn-primary" type="button">Apply watermark</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-collage">
+        <h3 class="iet-pane-title">Photo collage</h3>
+        <p class="iet-pane-hint">Combine several images into one frame. Drop images on the slot boxes (or drop them on the preview while this tab is open).</p>
+        <div class="iet-field">
+          <label>Frame layout</label>
+          <div class="iet-layouts" id="col-layouts">
+            <button class="iet-layout-btn active" data-layout="side" type="button"><span class="iet-layout-ic">▯▯</span>Side by side</button>
+            <button class="iet-layout-btn" data-layout="stack" type="button"><span class="iet-layout-ic">▭▭</span>Stacked</button>
+            <button class="iet-layout-btn" data-layout="grid4" type="button"><span class="iet-layout-ic">▦</span>2×2 grid</button>
+            <button class="iet-layout-btn" data-layout="strip3" type="button"><span class="iet-layout-ic">▯▯▯</span>3 strips</button>
+            <button class="iet-layout-btn" data-layout="col3" type="button"><span class="iet-layout-ic">▭▭▭</span>3 rows</button>
+            <button class="iet-layout-btn" data-layout="hero" type="button"><span class="iet-layout-ic">▮▯</span>Hero + 2</button>
+          </div>
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field">
+            <label for="col-aspect">Canvas ratio</label>
+            <select id="col-aspect" class="iet-input">
+              <option value="1:1" selected>Square 1:1</option>
+              <option value="4:3">Landscape 4:3</option>
+              <option value="3:2">Photo 3:2</option>
+              <option value="16:9">Wide 16:9</option>
+            </select>
+          </div>
+          <div class="iet-field">
+            <label for="col-width">Canvas width (px)</label>
+            <input type="number" id="col-width" class="iet-input" min="200" max="8000" step="10" value="1600">
+          </div>
+          <div class="iet-field">
+            <label for="col-gap">Gap <span class="iet-val" id="col-gap-val">8</span>px</label>
+            <input type="range" id="col-gap" class="iet-range" min="0" max="40" value="8">
+          </div>
+          <div class="iet-field">
+            <label for="col-pad">Padding <span class="iet-val" id="col-pad-val">24</span>px</label>
+            <input type="range" id="col-pad" class="iet-range" min="0" max="100" value="24">
+          </div>
+          <div class="iet-field"><label for="col-bg">Background</label><input type="color" id="col-bg" class="iet-color" value="#ffffff"></div>
+        </div>
+        <div class="iet-field">
+          <label>Slots</label>
+          <div id="col-slots" class="iet-slots"></div>
+        </div>
+        <div class="iet-row">
+          <button id="col-build" class="iet-btn iet-btn-primary" type="button">🧩 Build collage</button>
+        </div>
+      </div>
+
+      <div class="iet-pane" id="pane-ocr">
+        <h3 class="iet-pane-title">OCR — text from image</h3>
+        <p class="iet-pane-hint">Load a photo or scan of a document and pull out its text. The built-in engine runs fully in the browser; the AI engine works through the CMS AI gateway.</p>
+        <div class="iet-field">
+          <label for="ocr-lang">Language</label>
+          <select id="ocr-lang" class="iet-input">
+            <option value="eng" selected>English</option>
+            <option value="tur">Türkçe</option>
+            <option value="deu">Deutsch</option>
+            <option value="fra">Français</option>
+            <option value="spa">Español</option>
+            <option value="ara">العربية</option>
+          </select>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="ocr-btn-local" class="iet-btn iet-btn-primary" type="button">🔍 Extract (built-in engine)</button>
+          <button id="ocr-btn-ai" class="iet-btn" type="button">🤖 Extract with AI</button>
+          <button id="ocr-btn-cms" class="iet-btn" type="button" style="display:none">☁️ From CMS</button>
+        </div>
+        <div class="iet-status" id="ocr-status" style="display:none"></div>
+        <div class="iet-field">
+          <label for="ocr-result">Result</label>
+          <textarea id="ocr-result" class="iet-textarea" rows="9" placeholder="Extracted text appears here…"></textarea>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="ocr-copy" class="iet-btn" type="button">📋 Copy</button>
+          <button id="ocr-download" class="iet-btn" type="button">⬇ Save .txt</button>
+          <button id="ocr-clear" class="iet-btn" type="button">🗑 Clear</button>
+        </div>
+      </div>
+    </aside>
+
+    <section class="iet-stage" id="iet-stage">
+      <div class="iet-dropzone" id="iet-drop" role="button" tabindex="0" aria-label="Drop an image here">
+        <div class="iet-drop-ic">🖼️</div>
+        <div class="iet-drop-title" id="iet-drop-title">Drop an image here</div>
+        <div class="iet-drop-sub">or click to browse · paste with Ctrl+V</div>
+        <button class="iet-linkbtn" id="iet-drop-cms" type="button" style="display:none">…or pick a file from CMS storage</button>
+      </div>
+      <div class="iet-canvas-wrap" id="iet-canvas-wrap" style="display:none">
+        <canvas id="iet-preview"></canvas>
+      </div>
+      <div class="iet-stage-meta" id="iet-stage-meta" style="display:none">
+        <span id="iet-meta-dims">—</span>
+        <span id="iet-meta-steps">—</span>
+        <span class="iet-chain-hint">Edits chain together — Undo or Reset anytime</span>
+      </div>
+      <div class="iet-busy" id="iet-busy" style="display:none">
+        <div class="iet-spinner"></div>
+        <span id="iet-busy-text">Working…</span>
+      </div>
+    </section>
+  </div>
+
+  <input type="file" id="iet-file" accept="image/*" hidden>
+</div>`; // END_EMBEDDED_HTML
+</script>
+
+<script>
+/* Dynamic loader with embedded fallback */
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'ImageEditingTools.js';
+    script.onload = function() { status.textContent = 'Ready'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('ImageEditingTools.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'Using embedded HTML (fetch unavailable)';
+      injectHTML(EMBEDDED_HTML);
+    });
+})();
+</script>
+
+<script>
+/* Toolbar + Sample Data + Role switching */
+document.addEventListener('DOMContentLoaded', function() {
+  function makeSampleDataUrl() {
+    var c = document.createElement('canvas');
+    c.width = 1200; c.height = 800;
+    var x = c.getContext('2d');
+    var g = x.createLinearGradient(0, 0, 1200, 800);
+    g.addColorStop(0, '#4338ca');
+    g.addColorStop(0.6, '#7c3aed');
+    g.addColorStop(1, '#0ea5e9');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 1200, 800);
+    x.fillStyle = 'rgba(255,255,255,0.18)';
+    x.beginPath(); x.arc(1020, 140, 160, 0, Math.PI * 2); x.fill();
+    x.beginPath(); x.arc(150, 680, 220, 0, Math.PI * 2); x.fill();
+    x.fillStyle = 'rgba(255,255,255,0.35)';
+    x.fillRect(90, 90, 1020, 120);
+    x.fillStyle = '#ffffff';
+    x.font = 'bold 72px Georgia, serif';
+    x.fillText('Image Editing Tools', 120, 400);
+    x.font = '28px system-ui, sans-serif';
+    x.fillText('SAMPLE IMAGE — 1200 × 800', 120, 452);
+    x.fillText('Resize · Crop · Rotate · Filters · Compress', 120, 500);
+    return c.toDataURL('image/png');
+  }
+  function makeOcrSampleDataUrl() {
+    var c = document.createElement('canvas');
+    c.width = 1000; c.height = 640;
+    var x = c.getContext('2d');
+    x.fillStyle = '#ffffff';
+    x.fillRect(0, 0, 1000, 640);
+    x.fillStyle = '#111111';
+    x.font = 'bold 52px Georgia, serif';
+    x.textAlign = 'center';
+    x.fillText('UNICON SAMPLE CAFE', 500, 110);
+    x.font = '34px Georgia, serif';
+    x.fillText('Fatih Mah. Ornek Sok. No: 12, Istanbul', 500, 170);
+    x.fillText('Tarih: 2026-08-18 14:32', 500, 225);
+    x.beginPath(); x.moveTo(80, 260); x.lineTo(920, 260); x.strokeStyle = '#333'; x.stroke();
+    x.font = '30px "Courier New", monospace';
+    x.textAlign = 'left';
+    x.fillText('2 x Cay                 40,00 TL', 120, 330);
+    x.fillText('1 x Tost                95,00 TL', 120, 390);
+    x.fillText('1 x Kek                 55,00 TL', 120, 450);
+    x.beginPath(); x.moveTo(80, 490); x.lineTo(920, 490); x.stroke();
+    x.font = 'bold 36px "Courier New", monospace';
+    x.fillText('TOPLAM: 190,00 TL', 120, 550);
+    x.font = '26px Georgia, serif';
+    x.fillText('Tesekkur ederiz!', 120, 610);
+    return c.toDataURL('image/png');
+  }
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    if (window.__ietLoadSample) window.__ietLoadSample(makeSampleDataUrl(), 'sample-photo.png');
+    else document.getElementById('th-status').textContent = 'Tool JS not loaded yet';
+  });
+  document.getElementById('th-load-ocr-sample').addEventListener('click', function() {
+    if (window.__ietLoadOcrSample) window.__ietLoadOcrSample(makeOcrSampleDataUrl(), 'sample-receipt.png');
+    else document.getElementById('th-status').textContent = 'Tool JS not loaded yet';
+  });
+  document.getElementById('th-clear').addEventListener('click', function() { window.tool._clearData(); });
+  document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+  document.getElementById('th-role-admin').addEventListener('click', function() {
+    window.tool._setUser({ id: 'user-001', name: 'Alex Johnson', email: 'alex@example.com', roles: ['admin', 'editor'] });
+  });
+  document.getElementById('th-role-editor').addEventListener('click', function() {
+    window.tool._setUser({ id: 'user-002', name: 'Eda Editor', email: 'eda@example.com', roles: ['editor'] });
+  });
+  document.getElementById('th-role-viewer').addEventListener('click', function() {
+    window.tool._setUser({ id: 'user-003', name: 'Veli Viewer', email: 'veli@example.com', roles: ['viewer'] });
+  });
+});
+</script>
+</body>
+</html>
