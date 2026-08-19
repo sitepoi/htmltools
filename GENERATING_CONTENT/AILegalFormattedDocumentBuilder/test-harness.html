@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal Document Builder — Test Harness</title>
+<link rel="stylesheet" href="AILegalFormattedDocumentBuilder.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app { height: calc(100vh - 28px); min-height: 500px; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #1e1b2e; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a78bfa; letter-spacing: 0.5px; }
+#th-bar .sep { color: #6f6790; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #7c3aed; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .btn-dump { background: #0ea5e9; color: #fff; }
+#th-bar .hint { color: #a5a0b8; font-size: 10px; }
+#th-dump-wrap { display: none; max-height: 320px; overflow: auto; background: #0b1220; color: #34d399; font: 11px/1.45 Consolas, monospace; margin: 6px 8px; padding: 10px; border: 1px solid #374151; border-radius: 6px; white-space: pre-wrap; word-break: break-word; }
+#th-dump-wrap .dump-title { color: #9ca3af; margin-bottom: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Legal Document Builder</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Document</button>
+  <button class="btn-ro" id="th-toggle-ro">Toggle Read-Only</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-dump" id="th-dump-btn">📋 Saved JSON</button>
+  <span class="sep">|</span>
+  <span class="hint">Shortcut: Ctrl+Shift+Y (or click 📋)</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready</span>
+</div>
+<div id="th-dump-wrap">
+  <div class="dump-title">Saved value (what tool.setValue sends to the parent CMS object):</div>
+  <span id="th-dump"></span>
+</div>
+
+<!-- TOOL HTML INLINED (mirrors AILegalFormattedDocumentBuilder.html) -->
+<div id="app">
+  <!-- HEADER (slim: logo + formatting + exports) -->
+  <header class="app-header">
+    <div class="app-logo" title="Legal Document Builder">⚖️</div>
+    <div class="fmt-group" title="Document formatting — font, size, line spacing and text color">
+      <select id="fmt-font" class="fmt-select" title="Font family"></select>
+      <select id="fmt-size" class="fmt-select" title="Base font size"></select>
+      <select id="fmt-lh" class="fmt-select" title="Line spacing"></select>
+      <input type="color" id="fmt-color" class="fmt-color" value="#111111" title="Text color">
+    </div>
+    <div class="header-btns">
+      <button class="btn btn-sm btn-outline" id="btn-export-html" title="Download standalone HTML file (everything embedded)">📥 HTML</button>
+      <button class="btn btn-sm btn-outline" id="btn-export-docx" title="Download Microsoft Word document (.docx)">📄 DOCX</button>
+      <button class="btn btn-sm btn-primary" id="btn-export-pdf" title="Export as PDF (A4, printable)">🖨️ PDF</button>
+      <span class="version-badge" id="tool-version" title="Document version — bumps on every AI edit">v1.0.0</span>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Document (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-panel-header">
+        <span>💬 Drafting Assistant</span>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI connection"></span>
+        <button class="btn btn-ghost btn-xs" id="btn-clear-chat" title="Clear this conversation" style="margin-left:auto">🗑</button>
+      </div>
+      <div class="chat-target-chip" id="chat-target-chip" style="display:none" title="The selected part of the document is the AI's only edit target for the next message">
+        🎯 <span id="chat-target-label"></span>
+        <button class="chip-x" id="btn-target-clear" title="Clear target">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">⚖️</div>
+          <h3>Draft a legal document</h3>
+          <p>Describe what you need — <b>an NDA, a service agreement, an employment contract, a lease…</b> — and I'll draft it in Word-document format, section by section.</p>
+          <div class="welcome-prompts" id="welcome-prompts"></div>
+          <p class="welcome-tip">💡 <b>Tip:</b> Select a part of the document on the right, then ask me to change <i>that part only</i>.</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your legal document or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+        <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+        <button class="btn btn-sm btn-stop" id="btn-chat-stop" title="Stop AI" style="display:none">⏹</button>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Document Panel (full height; Components & Settings open as drawers) -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-editors">
+        <!-- Document preview (always visible, full height) -->
+        <div class="content-editor" id="editor-document">
+          <div class="preview-toolbar">
+            <button class="btn btn-sm btn-ghost" id="btn-toggle-edit" title="Edit the document text directly">✏️ Edit</button>
+            <span class="edit-format-bar" id="edit-format-bar" style="display:none">
+              <button class="efb-btn" data-fmt-op="bold" title="Bold"><b>B</b></button>
+              <button class="efb-btn" data-fmt-op="italic" title="Italic"><i>I</i></button>
+              <button class="efb-btn" data-fmt-op="underline" title="Underline"><u>U</u></button>
+              <button class="efb-btn" data-fmt-op="strikeThrough" title="Strikethrough"><s>S</s></button>
+              <label class="efb-color" title="Text color">🎨<input type="color" id="edit-color" value="#111111"></label>
+              <label class="efb-color" title="Highlight">🖍️<input type="color" id="edit-highlight" value="#fef08a"></label>
+              <button class="btn btn-sm btn-outline" id="btn-edit-cancel" title="Discard edits">✕ Discard</button>
+            </span>
+            <button class="btn btn-sm btn-ghost" id="btn-open-components" title="Open the legal component library">🧩 Components</button>
+            <button class="btn btn-sm btn-ghost" id="btn-open-settings" title="Open settings &amp; export">⚙️ Settings &amp; Export</button>
+            <span class="sel-hint" id="sel-target-info">🎯 Select text inside the document to target it for the next AI edit</span>
+            <span class="ro-banner" id="ro-banner" style="display:none">🔒 Read-only mode — ask an editor to make changes</span>
+            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          </div>
+          <div class="doc-stage" id="doc-stage">
+            <iframe id="doc-preview" class="doc-preview" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Document preview"></iframe>
+          </div>
+          <div class="preview-empty" id="preview-empty">
+            <div class="empty-icon">📄</div>
+            <p>Your document will appear here</p>
+            <p class="empty-sub">Describe the document in the chat — e.g. “Draft a service agreement between two companies”.</p>
+          </div>
+        </div>
+
+        <!-- Side drawer: Component library -->
+        <div class="side-drawer" id="drawer-components">
+          <div class="drawer-header">
+            <h2>🧩 Component Library</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-components" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="comp-panel">
+              <p class="drawer-hint">Ready-made blocks for legal documents (agreement clauses, signature pages, schedules, notices…). Click <b>➕ Add</b> to ask the AI to insert one — or mention any component by name in the chat.</p>
+              <input id="comp-search" class="comp-search" placeholder="🔍 Filter components… (e.g. signature, confidentiality, payment)">
+              <div id="components-list" class="components-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side drawer: Settings & export -->
+        <div class="side-drawer" id="drawer-settings">
+          <div class="drawer-header">
+            <h2>⚙️ Settings &amp; Export</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-settings" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="settings-panel">
+              <p class="drawer-hint">One document per tool. Everything — including every component's HTML/CSS/JS — is embedded in the exports, so the files work standalone.</p>
+              <div class="settings-section">
+                <h3>📄 Document</h3>
+                <div id="doc-stats" class="doc-stats">—</div>
+                <div class="settings-row">
+                  <button class="btn btn-outline" id="btn-reset-doc" title="Remove all blocks and start over">🗑 Reset document</button>
+                  <button class="btn btn-outline" id="btn-copy-blocks" title="Copy the blocks JSON (for diagnostics)">📋 Copy Blocks JSON</button>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>📦 Export</h3>
+                <div class="export-row">
+                  <button class="btn btn-primary" id="btn-export-html2">📥 Download .html</button>
+                  <button class="btn btn-primary" id="btn-export-docx2">📄 Download .docx</button>
+                  <button class="btn btn-primary" id="btn-export-pdf2">🖨️ Export PDF</button>
+                </div>
+                <p class="gen-hint">The exported HTML is one complete standalone file (all styles and scripts embedded, printable A4). The DOCX converts the document into a real Word file. The PDF is generated through the CMS export service.</p>
+              </div>
+              <div class="settings-section">
+                <h3>🔌 Parameters &amp; Data</h3>
+                <div class="params-summary" id="params-summary">Loading…</div>
+                <p class="gen-hint">Formatting defaults are configured as tool parameters in the field settings. Chat history is stored in the CMS <b>ai-chat-sessions-uniconbaseapps</b> object type.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'ailegaldoc_test_db';
+  var SESSIONS_KEY = 'ailegaldoc_test_sessions';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'u-test', name: 'Test User', email: 'test@example.com', roles: ['developer'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } };
+  var _fields = { name: 'Sample Legal Document' };
+  var _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch(e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch(e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch(e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, _fields); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return _fields; },
+    setField: function(id, val) { _fields[id] = val; fire('fieldsChange', _fields); },
+    setFields: function(obj) { Object.assign(_fields, obj); fire('fieldsChange', _fields); },
+    watchField: function() {},
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, def) { return name === 'allowAi' ? 'yes' : def; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 200)); },
+    declareParams: function(p) { console.log('declareParams:', p.length, 'params'); },
+    reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function(prompt, context, callback) {
+      console.log('AI REQUEST (batch) — prompt length:', prompt.length);
+      setTimeout(function() { callback(null, generateMockResponse(prompt)); }, 900);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      console.log('AI REQUEST (stream) — prompt length:', prompt.length);
+      var full = generateMockResponse(prompt);
+      var pos = 0;
+      var step = Math.max(8, Math.floor(full.length / 60));
+      var timer = setInterval(function() {
+        var chunk = full.substring(pos, pos + step);
+        pos += step;
+        if (chunk) callbacks.onToken(chunk);
+        if (pos >= full.length) {
+          clearInterval(timer);
+          callbacks.onComplete(full);
+        }
+      }, 25);
+    },
+    requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'reference.pdf', url: 'https://example.com/reference.pdf', size: 2048, type: 'application/pdf' }); }, 500); },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
+    requestObjects: function(action, params, cb) {
+      function loadSess() { try { var raw = localStorage.getItem(SESSIONS_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSess(arr) { try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(arr)); } catch (e) {} }
+      setTimeout(function() {
+        if (action === 'query') {
+          cb(null, { objects: loadSess() });
+        } else if (action === 'create') {
+          var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'Legal Document', _parentObjectId: 'mock-parent', productData: params.productData };
+          var arr = loadSess();
+          arr.unshift(obj);
+          saveSess(arr);
+          cb(null, { object: obj });
+        } else if (action === 'update') {
+          var arr2 = loadSess();
+          for (var si = 0; si < arr2.length; si++) {
+            if (arr2[si].id === params.objectId) {
+              if (params.name) arr2[si].name = params.name;
+              if (params.productData) {
+                arr2[si].productData = arr2[si].productData || {};
+                var oldDcb = arr2[si].productData.data_categoriesBased || {};
+                var newDcb = params.productData.data_categoriesBased || {};
+                arr2[si].productData.data_categoriesBased = Object.assign({}, oldDcb, newDcb);
+              }
+              break;
+            }
+          }
+          saveSess(arr2);
+          cb(null, { ok: true });
+        } else if (action === 'delete') {
+          var arr3 = loadSess().filter(function(s) { return s.id !== params.objectId; });
+          saveSess(arr3);
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 250);
+    },
+    requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename || 'export') + '.pdf', url: '', size: 4096, type: 'application/pdf' }); }, 500); },
+    requestSendEmail: function(opts, cb) { setTimeout(function() { cb(null, { ok: true }); }, 500); }
+  };
+
+  function generateMockResponse(prompt) {
+    // Targeted selection edit → replaceBlock op
+    if (prompt.indexOf('TARGETED EDIT') !== -1) {
+      var m = prompt.match(/TARGETED EDIT[^\n]*#(\d+)/);
+      var idx = m ? parseInt(m[1], 10) : 0;
+      return '{"replaceBlock":' + idx + ',"block":{"type":"clause","data":{"number":"3.1","text":"Updated text as requested by the user — this clause now reflects the requested change, with the revised wording replacing the previous version."}}}\n\nThe targeted part of the document was revised as requested. Other blocks were left untouched.\n\n[[suggest_more]] Refine the wording further\n[[suggest_signatures]] Add signature blocks';
+    }
+    // Full build when document is empty
+    if (prompt.indexOf('The document is EMPTY') !== -1) {
+      return JSON.stringify({
+        blocks: [
+          { type: 'title', data: { text: 'Sample Service Agreement', subtitle: 'Between Alpha Consulting LLC and Beta Manufacturing Inc.', refNo: 'SA-2026-001' } },
+          { type: 'parties-block', data: { heading: 'BETWEEN', parties: [ { name: 'Alpha Consulting LLC', details: 'a limited liability company organized under the laws of Delaware, with offices at 100 Main Street', alias: 'the Service Provider' }, { name: 'Beta Manufacturing Inc.', details: 'a corporation organized under the laws of New York, with offices at 500 Industrial Drive', alias: 'the Client' } ] } },
+          { type: 'recitals', data: { recitals: [ 'the Service Provider is engaged in the business of providing consulting services', 'the Client wishes to retain the Service Provider to provide such services', 'the Parties wish to set out the terms and conditions of their relationship' ] } },
+          { type: 'agreement-word', data: {} },
+          { type: 'section', data: { number: '1', title: 'SERVICES' } },
+          { type: 'clause', data: { number: '1.1', text: 'The Service Provider shall provide the consulting services described in Schedule A (the "Services") with reasonable skill, care and diligence.' } },
+          { type: 'clause', data: { number: '1.2', text: 'The Client shall provide the Service Provider with reasonable access to its personnel, premises and information as necessary for the performance of the Services.' } },
+          { type: 'section', data: { number: '2', title: 'FEES AND PAYMENT' } },
+          { type: 'payment-terms', data: { schedule: [ { item: 'Initial retainer', amount: '5,000', due: 'On signing' }, { item: 'Monthly service fee', amount: '3,500', due: '1st of each month' }, { item: 'Final invoice', amount: 'Balance', due: 'On completion' } ], currency: 'USD' } },
+          { type: 'section', data: { number: '3', title: 'CONFIDENTIALITY' } },
+          { type: 'confidentiality', data: {} },
+          { type: 'section', data: { number: '4', title: 'TERM AND TERMINATION' } },
+          { type: 'termination', data: { noticeDays: 30 } },
+          { type: 'section', data: { number: '5', title: 'GENERAL PROVISIONS' } },
+          { type: 'governing-law', data: { jurisdiction: 'the State of Delaware' } },
+          { type: 'entire-agreement', data: {} },
+          { type: 'severability', data: {} },
+          { type: 'execution-paragraph', data: {} },
+          { type: 'signature-block', data: { parties: [ { name: 'Alpha Consulting LLC', title: 'By: ____________________', extra: 'Title: CEO' }, { name: 'Beta Manufacturing Inc.', title: 'By: ____________________', extra: 'Title: COO' } ] } }
+        ]
+      }) + '\n\nDrafted a complete sample service agreement with parties, recitals, services, fees, confidentiality, termination and general provisions.\n\n[[suggest_nda]] Also draft a mutual NDA as a schedule\n[[suggest_notices]] Add a notices clause with both addresses';
+    }
+    // Chat answer / small refinement
+    var userReq = '';
+    var ur = prompt.indexOf('=== USER REQUEST ===');
+    if (ur !== -1) userReq = prompt.substring(ur + 21, prompt.indexOf('=== OUTPUT CONTRACT ===', ur)).trim();
+    var addMatch = userReq.match(/add a? ["']?(\w[\w -]*)["']? block/i);
+    if (addMatch && prompt.indexOf('CURRENT BLOCKS JSON') !== -1) {
+      var comp = addMatch[1].toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      var known = ['confidentiality', 'termination', 'indemnity', 'force-majeure', 'dispute-resolution', 'governing-law', 'entire-agreement', 'severability', 'waiver', 'assignment', 'counterparts', 'notices', 'signature-block', 'payment-terms', 'amendments', 'amendment'];
+      var type = known.indexOf(comp) !== -1 ? comp : 'clause';
+      return '{"insertAfter":0,"block":{"type":"' + type + '","data":{}}}\n\nInserted a "' + type + '" block into the document.\n\n[[suggest_more]] Continue drafting the next section';
+    }
+    return 'Here is how I would approach that:\n\n1. Add the relevant section with a "section" block.\n2. Fill it with "clause" and "sub-clauses" blocks.\n3. End with "signature-block" and "execution-paragraph" when the document is complete.\n\nTell me the exact change you want and I\u2019ll apply it to the document.\n\n[[suggest_signatures]] Add signature blocks\n[[suggest_governing]] Add governing law clause\n[[suggest_payment]] Add payment terms';
+  }
+
+  window._toolMock = {
+    setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); },
+    getValue: function() { return _value; },
+    clear: function() {
+      _value = null;
+      save();
+      try { localStorage.removeItem(SESSIONS_KEY); } catch (e) {}
+      fire('valueChange', null);
+      location.reload();
+    }
+  };
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="AILegalFormattedDocumentBuilder.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function() {
+  var thStatus = document.getElementById('th-status');
+  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-08-18a';
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool.setValue({
+      version: '1.0.0',
+      title: 'Sample Service Agreement',
+      blocks: [
+        { type: 'title', data: { text: 'Sample Service Agreement', subtitle: 'Between Alpha Consulting LLC and Beta Manufacturing Inc.', refNo: 'SA-2026-001' } },
+        { type: 'parties-block', data: { parties: [ { name: 'Alpha Consulting LLC', details: 'a Delaware limited liability company', alias: 'the Service Provider' }, { name: 'Beta Manufacturing Inc.', details: 'a New York corporation', alias: 'the Client' } ] } },
+        { type: 'recitals', data: { recitals: [ 'the Service Provider provides consulting services', 'the Client wishes to retain the Service Provider', 'the Parties wish to record their agreement' ] } },
+        { type: 'agreement-word', data: {} },
+        { type: 'section', data: { number: '1', title: 'SERVICES' } },
+        { type: 'clause', data: { number: '1.1', text: 'The Service Provider shall provide the consulting services described in Schedule A (the "Services").' } },
+        { type: 'execution-paragraph', data: {} },
+        { type: 'signature-block', data: { parties: [ { name: 'Alpha Consulting LLC', title: 'By: ____________________' }, { name: 'Beta Manufacturing Inc.', title: 'By: ____________________' } ] } }
+      ],
+      settings: { fontFamily: 'Times New Roman', fontSize: '12pt', color: '#111111', lineHeight: '1.6' },
+      activeSessionId: '',
+      chatCache: null,
+      _instanceId: ''
+    });
+    if (thStatus) thStatus.textContent = 'Sample document loaded.';
+  };
+  document.getElementById('th-toggle-ro').onclick = function() {
+    var banner = document.querySelector('#ro-banner');
+    var currentlyRo = banner && banner.style.display !== 'none';
+    window._toolMock.setReadOnly(!currentlyRo);
+    if (thStatus) thStatus.textContent = currentlyRo ? 'Read-only OFF' : 'READ-ONLY ON';
+  };
+  document.getElementById('th-clear').onclick = function() { if (confirm('Clear all test data?')) window._toolMock.clear(); };
+  document.getElementById('th-reload').onclick = function() { location.reload(); };
+
+  // Surface ANY uncaught JS error in the status line (mock callbacks swallow errors silently).
+  window.addEventListener('error', function(e) {
+    if (thStatus) thStatus.textContent = '⚠ JS error: ' + (e && e.message ? e.message : String(e)) + ' — open DevTools console for details.';
+    return false;
+  });
+
+  function thDump() {
+    var json = JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2);
+    console.log('=== DB (saved value) ===');
+    console.log(json);
+    var wrap = document.getElementById('th-dump-wrap');
+    var out = document.getElementById('th-dump');
+    if (wrap && out) {
+      out.textContent = json;
+      wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+      if (wrap.style.display !== 'none') wrap.scrollTop = 0;
+    }
+    if (thStatus) thStatus.textContent = 'Saved JSON dumped — see the panel above the tool (and the console).';
+  }
+  document.getElementById('th-dump-btn').onclick = thDump;
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'Y' || e.key === 'y')) {
+      e.preventDefault();
+      thDump();
+    }
+  });
+})();
+</script>
+</body>
+</html>

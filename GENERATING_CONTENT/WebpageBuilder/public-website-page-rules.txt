@@ -1,301 +1,3 @@
-<div id="app">
-  <!-- DIFF LIBRARY CDN — loaded before all other scripts (developer visual line diff in chat) -->
-  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
-  <!-- HEADER -->
-  <header class="app-header">
-    <div class="header-left">
-      <div class="app-logo">🎨</div>
-      <div class="header-title">
-        <h1>Webpage Builder</h1>
-        <span class="header-sub">AI-First • Chat-Driven • Single-Page Web Design Studio</span>
-      </div>
-    </div>
-    <div class="header-right">
-      <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
-      <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
-      <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
-      <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
-    </div>
-  </header>
-
-  <!-- MAIN LAYOUT: Chat (left) + Studio (right) -->
-  <div class="main-layout">
-    <!-- LEFT: Chat Panel -->
-    <aside class="chat-panel" id="chat-panel">
-      <div class="chat-tab-bar" id="chat-tab-bar">
-        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
-        <button class="chat-tab chat-tab-dev" data-chat-tab="response" style="display:none">📥 Response</button>
-        <button class="chat-tab chat-tab-dev" data-chat-tab="prompt" style="display:none">📤 Prompt</button>
-        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
-        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
-        <span class="chat-panel-badge" id="chat-msg-count">0</span>
-        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
-      </div>
-
-      <div class="chat-tab-content" id="chat-tab-content">
-        <!-- Tab: Chat -->
-        <div class="chat-tab-panel active" data-chat-panel="chat">
-          <div class="chat-messages" id="chat-messages">
-            <div class="chat-welcome">
-              <div class="chat-welcome-icon">🪄</div>
-              <h3>Describe your webpage</h3>
-              <p>Tell me what page you need — <b>a restaurant menu page, a company profile, a product launch page…</b> — and I'll design &amp; build it for you, section by section.</p>
-              <div class="template-gallery" id="template-gallery"></div>
-              <div class="template-view-all"><button id="btn-view-all-templates">View all 8 page templates →</button></div>
-              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — I'll interview you about your page step by step.</p>
-            </div>
-          </div>
-        </div>
-        <!-- Tab: Raw Response (developer only) -->
-        <div class="chat-tab-panel" data-chat-panel="response">
-          <div class="dev-raw-panel-inline">
-            <div class="dev-raw-header">
-              <span class="dev-raw-title">🔧 Raw AI Response</span>
-              <span class="dev-raw-status" id="dev-raw-status"></span>
-            </div>
-            <pre class="dev-raw-content" id="dev-raw-content"></pre>
-          </div>
-        </div>
-        <!-- Tab: Raw Prompt (developer only) -->
-        <div class="chat-tab-panel" data-chat-panel="prompt">
-          <div class="dev-raw-panel-inline">
-            <div class="dev-raw-header">
-              <span class="dev-raw-title">📤 Raw AI Prompt</span>
-              <span class="dev-raw-status" id="dev-prompt-status"></span>
-            </div>
-            <pre class="dev-raw-content" id="dev-prompt-content"></pre>
-          </div>
-        </div>
-        <!-- Tab: Chat History -->
-        <div class="chat-tab-panel" data-chat-panel="history">
-          <div class="session-list" id="session-list">
-            <div class="session-empty">Loading chats…</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="chat-attachment" id="chat-attachment" style="display:none">
-        <span class="attach-icon">📎</span>
-        <span class="attach-name" id="attach-name"></span>
-        <span class="attach-size" id="attach-size"></span>
-        <button class="attach-remove" id="attach-remove" title="Remove attachment">✕</button>
-        <span class="attach-status" id="attach-status"></span>
-      </div>
-      <div class="chat-input-area">
-        <div class="chat-input-toolbar">
-          <button class="btn btn-sm btn-ghost" id="btn-upload" title="Attach a reference file (mockup, logo, spec doc…)">📎 Attach</button>
-          <button class="guided-toggle active" id="btn-agentic-mode" title="Agentic Mode — large requests become a task plan and run step by step (avoids timeouts)">🧠 Agentic</button>
-          <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
-        </div>
-        <div class="chat-input-row">
-          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your webpage or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
-          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
-          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
-        </div>
-      </div>
-    </aside>
-
-    <!-- RIGHT: Studio Panel -->
-    <main class="content-panel" id="content-panel">
-      <div class="content-tabs" id="content-tabs">
-        <button class="ctab active" data-tab="preview">👁️ Preview</button>
-        <button class="ctab" data-tab="suggestions">💡 Suggestions</button>
-        <button class="ctab" data-tab="advanced">🛠️ Advanced</button>
-      </div>
-
-      <div class="content-editors">
-        <!-- Preview -->
-        <div class="content-editor active" id="editor-preview">
-          <div class="preview-toolbar">
-            <div class="device-toggle" id="device-toggle">
-              <button class="dev-btn active" data-device="desktop" title="Desktop view">🖥️</button>
-              <button class="dev-btn" data-device="tablet" title="Tablet view (768px)">📱</button>
-              <button class="dev-btn" data-device="mobile" title="Mobile view (390px)">📲</button>
-            </div>
-            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
-          </div>
-          <div class="preview-stage" id="preview-stage">
-            <div class="preview-frame-wrap" id="preview-frame-wrap">
-              <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups"></iframe>
-            </div>
-            <div class="preview-empty" id="preview-empty">
-              <div class="empty-icon">👁️</div>
-              <p>Your webpage will appear here</p>
-              <p class="empty-sub">Describe your page in the chat to generate it</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Suggestions -->
-        <div class="content-editor" id="editor-suggestions">
-          <div class="sections-panel">
-            <div class="sections-header">
-              <h2>💡 Suggestions</h2>
-              <p>Computed from your current page — these are the sections your page is missing. Click one and the AI adds it with a prompt tailored to your content.</p>
-              <button class="btn btn-sm btn-ghost" id="btn-sections-refresh">↻ Rescan</button>
-            </div>
-            <div id="suggest-page-type" class="suggest-page-type"></div>
-            <div class="quick-add-row" id="quick-add-row" style="display:none">
-              <span class="quick-add-label">Suggested next sections:</span>
-              <div class="qa-chips" id="qa-chips"></div>
-            </div>
-            <div class="skills-block" id="skills-row-wrap">
-              <div class="quick-add-row skills-row-inner">
-                <span class="quick-add-label">🧠 Skills</span>
-                <div class="qa-chips" id="skills-row"></div>
-              </div>
-              <span class="qa-hint">Extra expertise the AI applies when designing. Page-type guidance (menu, pricing, listings…) is added automatically from your content.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Advanced (code, console, compliance, export) -->
-        <div class="content-editor" id="editor-advanced">
-          <div class="adv-subtabs">
-            <button class="advtab" data-advtab="html">📄 HTML</button>
-            <button class="advtab" data-advtab="css">🎨 CSS</button>
-            <button class="advtab" data-advtab="js">⚡ JS</button>
-            <button class="advtab" data-advtab="console">🪲 Console</button>
-            <button class="advtab active" data-advtab="settings">⚙️ Generate &amp; Export</button>
-            <div class="content-actions" id="content-actions" style="display:none">
-              <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
-              <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
-              <button class="btn btn-sm btn-ghost" id="btn-copy-js" title="Copy JS">📋 Copy</button>
-            </div>
-            <button class="btn btn-sm btn-outline adv-compliance-btn" id="btn-compliance-open" title="Run page quality checks">🧪 Compliance</button>
-          </div>
-          <div class="adv-panels">
-
-        <!-- HTML Editor -->
-        <div class="advpanel" id="editor-html">
-          <div class="code-lines" id="html-lines"></div>
-          <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
-        </div>
-        <!-- CSS Editor -->
-        <div class="advpanel" id="editor-css">
-          <div class="code-lines" id="css-lines"></div>
-          <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
-        </div>
-        <!-- JS Editor -->
-        <div class="advpanel" id="editor-js">
-          <div class="code-lines" id="js-lines"></div>
-          <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
-        </div>
-
-        <!-- Console -->
-        <div class="advpanel" id="editor-console">
-          <div class="console-output" id="console-output">
-            <div class="console-empty">🪲 Console output from the preview appears here.<br>Click buttons in the Preview tab and watch for logs and errors.</div>
-          </div>
-          <div class="console-actions">
-            <button class="btn btn-sm btn-ghost" id="btn-console-clear">🗑️ Clear</button>
-            <span class="console-count" id="console-count">0 entries</span>
-          </div>
-        </div>
-
-        <!-- Settings -->
-        <div class="advpanel active" id="editor-settings">
-          <div class="config-scroll">
-            <div class="config-header">
-              <h2>⚙️ Generate & Export</h2>
-              <p>Page identity and SEO metadata live on the parent CMS content record — this tool stores only the page code. Design direction comes from admin parameters and is shared across pages.</p>
-            </div>
-
-            <div class="config-section">
-              <h3>🎨 Design Direction (admin parameters)</h3>
-              <div class="params-summary" id="params-summary">Loading…</div>
-              <p class="gen-hint">These values are configured as tool parameters in the field settings and are shared across pages. Ask an admin to change them — or describe the look you want in the chat and the AI will follow it.</p>
-            </div>
-
-            <div class="config-actions">
-              <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Page (HTML + CSS + JS)</button>
-              <p class="gen-hint">Or just type what you want in the <b>💬 Chat</b> on the left — the AI understands natural language.</p>
-            </div>
-            <div id="gen-status" class="gen-status" style="display:none">
-              <div class="gen-status-icon">⏳</div>
-              <div class="gen-status-text" id="gen-status-text">Generating…</div>
-            </div>
-
-            <div class="config-section">
-              <h3>📦 Export</h3>
-              <div class="export-row">
-                <button class="btn btn-primary" id="btn-export-html">📥 Download .html</button>
-                <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
-                <button class="btn btn-outline" id="btn-export-gw-block" title="Copy the full PublicWebsite page object JSON (data.htmlPage.code + seo + page meta)">📋 Copy Page Object JSON</button>
-                <button class="btn btn-outline" id="btn-export-gw-value" title="Copy the generator output (=== HTML/CSS/JS/SEO/PAGE META sections)">📋 Copy Generator Output</button>
-                <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
-                <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
-              </div>
-              <p class="gen-hint">The downloaded .html file is a complete standalone preview (with a window.gw mock). The <b>page object JSON</b> maps to the PublicWebsite page object (data.htmlPage.code + seo) and the <b>generator output</b> is the raw === HTML/CSS/JS/SEO/PAGE META text.</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Compliance -->
-        <div class="advpanel" id="editor-compliance">
-          <div class="compliance-panel">
-            <div class="compliance-header">
-              <h2>🧪 Page Quality Checker</h2>
-              <p>Automated quality checks — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
-              <div class="compliance-actions">
-                <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
-                <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page">🤖 AI Review</button>
-                <button class="btn btn-outline btn-sm" id="btn-compliance-fix" title="Send failing checks to the AI to fix automatically">🔧 Fix with AI</button>
-              </div>
-            </div>
-            <div class="compliance-score" id="compliance-score"></div>
-            <div class="compliance-list" id="compliance-list">
-              <div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>
-            </div>
-            <div class="ai-review-wrap" id="ai-review-wrap" style="display:none">
-              <div class="ai-review-status" id="ai-review-status"></div>
-              <pre class="ai-review-output" id="ai-review-output"></pre>
-            </div>
-          </div>
-        </div>
-
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- History Modal -->
-  <div class="modal-backdrop" id="modal-backdrop" hidden></div>
-  <div class="modal" id="modal-history" style="display:none">
-    <div class="modal-header"><div><h3>📋 Version History</h3><p class="modal-sub">Every generation is saved as a version. Click ↩️ Restore to go back — the current version is always visible in the header and at the top of the code blocks.</p></div><button class="btn-close" id="btn-close-history">✕</button></div>
-    <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Design your first page!</div></div>
-  </div>
-
-  <!-- Template Detail Modal -->
-  <div class="modal" id="modal-template" style="display:none">
-    <div class="modal-header">
-      <h3 id="tpl-modal-title">📋 Template</h3>
-      <button class="btn-close" id="btn-close-template">✕</button>
-    </div>
-    <div class="template-modal-body">
-      <div class="template-modal-info">
-        <span class="tmi-icon" id="tpl-icon">🚀</span>
-        <div class="tmi-meta">
-          <div class="tmi-title" id="tpl-title">Template Name</div>
-          <div class="tmi-desc" id="tpl-desc">Description</div>
-        </div>
-      </div>
-      <div class="template-prompt-area">
-        <div class="template-prompt-label">✏️ Customize this brief — edit any part, then send to AI:</div>
-        <textarea id="tpl-prompt-text" class="template-prompt-text" spellcheck="false"></textarea>
-      </div>
-      <div class="template-modal-actions">
-        <button class="btn btn-ghost" id="btn-tpl-reset">↺ Reset to Original</button>
-        <button class="btn btn-primary" id="btn-tpl-use">🚀 Send to AI</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- EMBEDDED GENERALWEBSITE PAGE RULES (v1.2) — injected verbatim into AI prompts.
-       The text below is HTML-entity escaped so it can never terminate this script element. -->
-  <script type="text/plain" id="page-guide-source" style="display:none">
 GENERALWEBSITE NEXT-GEN — PAGE GENERATOR RULES v2.0
 ====================================================
 The complete contract an AI page generator must follow to produce pages for
@@ -318,7 +20,7 @@ that run inside the platform exactly as described below.
 Produce EXACTLY three code parts plus optional metadata, in this layout:
 
     === HTML ===
-    &lt;section class="shop-home"&gt; ... body fragment ... &lt;/section&gt;
+    <section class="shop-home"> ... body fragment ... </section>
     === CSS ===
     .shop-home { ... }
     === JS ===
@@ -330,11 +32,11 @@ Produce EXACTLY three code parts plus optional metadata, in this layout:
       "data": { "status": "published", "requireAuth": false } }
 
 Mapping to the CMS page object (Section 2):
-- HTML -&gt; data.htmlPage.code.html
-- CSS  -&gt; data.htmlPage.code.css
-- JS   -&gt; data.htmlPage.code.js
-- SEO  -&gt; the object `seo` section (Section 14)
-- PAGE META -&gt; object fields `name`, `slug`, `meta.language`,
+- HTML -> data.htmlPage.code.html
+- CSS  -> data.htmlPage.code.css
+- JS   -> data.htmlPage.code.js
+- SEO  -> the object `seo` section (Section 14)
+- PAGE META -> object fields `name`, `slug`, `meta.language`,
                `data.status`, `data.requireAuth`
 
 If the page needs an operation or a flow that the user has not confirmed
@@ -353,12 +55,12 @@ Never invent writes instead (Section 9).
 - A PAGE is an object of the site's app type inside the website folder,
   routed by its object-level `slug`:
 
-    slug `home-page`            -&gt; `/`
-    any other slug `&lt;slug&gt;`     -&gt; `/&lt;slug&gt;`
+    slug `home-page`            -> `/`
+    any other slug `<slug>`     -> `/<slug>`
     any object of a registered
-    object type                 -&gt; `/&lt;cmsObjectType&gt;/&lt;id&gt;`   (object detail)
-    template page with slug T   -&gt; `/t/&lt;T&gt;/&lt;contentId&gt;`
-    page with slug `app-&lt;appId&gt;`-&gt; `/app/&lt;appId&gt;/...`       (capability page)
+    object type                 -> `/<cmsObjectType>/<id>`   (object detail)
+    template page with slug T   -> `/t/<T>/<contentId>`
+    page with slug `app-<appId>`-> `/app/<appId>/...`       (capability page)
 
 - Language comes from `meta.language`. There are NO locale path prefixes.
 - Sibling pages = same `contentId`, other languages (hreflang + language
@@ -369,9 +71,9 @@ Never invent writes instead (Section 9).
   `default-header` / `default-footer` objects. Do NOT build your own global
   nav/header/footer unless the request explicitly says so.
 - Object detail pages: any object of a registered public type can carry its
-  own `data.htmlPage.code` and will render it at `/&lt;type&gt;/&lt;id&gt;`.
+  own `data.htmlPage.code` and will render it at `/<type>/<id>`.
 - Template pages: the page object has `data.templateContentType` (which
-  object type supplies the content object). At `/t/&lt;T&gt;/&lt;contentId&gt;` the
+  object type supplies the content object). At `/t/<T>/<contentId>` the
   content object's own htmlPage is rendered when present, else the template
   page's. The content id and template slug are available in JS via
   `gw.getPageParams()` (Section 5).
@@ -385,7 +87,7 @@ Never invent writes instead (Section 9).
   "data": {
     "status": "published",        // OPTIONAL; absent = published.
                                   // Anything else = draft (hidden without
-                                  // preview: ?gw-preview=&lt;previewSecret&gt;).
+                                  // preview: ?gw-preview=<previewSecret>).
     "requireAuth": true,          // OPTIONAL. Anonymous visitors are
                                   // redirected to /p/user/login?returnUrl=...
     "templateContentType": "trips", // TEMPLATE PAGES ONLY
@@ -408,19 +110,19 @@ Never invent writes instead (Section 9).
 3. EMBEDDING CONTRACT (HOW YOUR CODE RUNS) — MOST IMPORTANT SECTION
 ----------------------------------------------------------------------------
 3.1 No document tags
-- NEVER emit `&lt;!DOCTYPE&gt;`, `&lt;html&gt;`, `&lt;head&gt;` or `&lt;body&gt;` tags. Your HTML is
+- NEVER emit `<!DOCTYPE>`, `<html>`, `<head>` or `<body>` tags. Your HTML is
   a PURE BODY FRAGMENT injected into a page container
-  (`&lt;div class="gw-page-content"&gt;`) that sits between the site header and
+  (`<div class="gw-page-content">`) that sits between the site header and
   footer. A full document is a hard error.
 
 3.2 Lifecycle on every load and every SPA navigation
   1. DOMPurify script + gw bootstrap run first (`window.gw` is guaranteed
      to exist when your scripts run).
   2. Your `html` is injected into the container.
-  3. Your `css` is appended to &lt;head&gt; as `&lt;style data-gw-css&gt;`, deduped per
+  3. Your `css` is appended to <head> as `<style data-gw-css>`, deduped per
      page, and removed again on unmount.
   4. Your `js` runs AFTER injection and after a double requestAnimationFrame,
-     inside an IIFE executed via a Blob URL. Embedded &lt;script&gt; tags found in
+     inside an IIFE executed via a Blob URL. Embedded <script> tags found in
      the html are extracted and run first; `code.js` runs last.
   5. The platform then auto-mounts all `[data-gw-app]` islands (idempotent)
      and dispatches `gw:content-ready`.
@@ -443,21 +145,21 @@ Never invent writes instead (Section 9).
   breaks the app shell — but write defensive code anyway.
 
 3.4 Scripts and styles placement rules
-- Put ALL styling in `css`, ALL behavior in `js`. Embedded `&lt;style&gt;` in the
-  html is tolerated (hoisted to head) but avoid it. Embedded `&lt;script&gt;` in
+- Put ALL styling in `css`, ALL behavior in `js`. Embedded `<style>` in the
+  html is tolerated (hoisted to head) but avoid it. Embedded `<script>` in
   the html is extracted and executed — still avoid it; use `js`.
-- EXTERNAL scripts (`&lt;script src="..."&gt;`) in the html are NOT supported.
+- EXTERNAL scripts (`<script src="...">`) in the html are NOT supported.
   Never load frameworks/CDN JS (no jQuery, no React, no lodash). Plain
   vanilla JavaScript only. External images/fonts by absolute URL are fine.
 - Your `css` is injected GLOBALLY into the page (header, footer and other
-  pages share &lt;head&gt; while yours is mounted). Scope everything:
+  pages share <head> while yours is mounted). Scope everything:
   * give your root element a unique class (e.g. `.shop-home`) and prefix
     every selector with it;
   * never style bare `html`, `body`, `*`, `a`, `button`, `h1` globally;
   * avoid generic class names that could collide (`button`, `.row`, `.card`).
 
 3.5 SPA navigation
-- Deep links: `&lt;a data-ic-nav-href="/shop" href="/shop"&gt;Shop&lt;/a&gt;`. The
+- Deep links: `<a data-ic-nav-href="/shop" href="/shop">Shop</a>`. The
   click is intercepted by the SPA router; keep the plain `href` for
   fallback/SEO. Or call `gw.navigate('/shop')` in JS.
 - After SPA navigation to another page, your DOM and styles are removed;
@@ -474,7 +176,7 @@ Never invent writes instead (Section 9).
 ----------------------------------------------------------------------------
 4. HARD GUARDRAILS (violating any of these = invalid output)
 ----------------------------------------------------------------------------
- 1. No &lt;html&gt;, &lt;head&gt;, &lt;body&gt;, &lt;!DOCTYPE&gt; tags. Body fragment only.
+ 1. No <html>, <head>, <body>, <!DOCTYPE> tags. Body fragment only.
  2. No raw client writes. Every write is a CMS-defined operation, a flow,
     a form submit, or a cart call. No direct database/REST/API writes.
  3. No secrets in generated code.
@@ -505,23 +207,23 @@ Context properties: gw.pageId, gw.siteId, gw.folderId, gw.language,
 gw.host, gw.currency.
 
 Routing
-- gw.getPageParams() -&gt; object merging live URL query params + context
+- gw.getPageParams() -> object merging live URL query params + context
   query + pathParams. pathParams by route kind:
-    slug page      -&gt; { slug }
-    object detail  -&gt; { cmsObjectType, id }
-    template page  -&gt; { template, contentId }
-    app page       -&gt; { appId, rest }
+    slug page      -> { slug }
+    object detail  -> { cmsObjectType, id }
+    template page  -> { template, contentId }
+    app page       -> { appId, rest }
 - gw.navigate(path)          SPA navigation to an internal path
 - gw.openUrl(url)            new tab (noopener)
-- gw.onRouteChange(cb)       -&gt; returns unsubscribe function
+- gw.onRouteChange(cb)       -> returns unsubscribe function
 
 Auth
-- gw.getUser() -&gt; { id, email?, roles: string[] } | null
-- gw.isAuthenticated() -&gt; boolean
-- gw.authReady -&gt; Promise (resolves after the initial session load)
-- gw.refreshAuth() -&gt; Promise&lt;user | null&gt;
-- gw.login(returnUrl?) -&gt; full-page redirect to /p/user/login?returnUrl=...
-- gw.logout() -&gt; POST /api/auth/session {action:'logout'}, then '/'
+- gw.getUser() -> { id, email?, roles: string[] } | null
+- gw.isAuthenticated() -> boolean
+- gw.authReady -> Promise (resolves after the initial session load)
+- gw.refreshAuth() -> Promise<user | null>
+- gw.login(returnUrl?) -> full-page redirect to /p/user/login?returnUrl=...
+- gw.logout() -> POST /api/auth/session {action:'logout'}, then '/'
 
 Storage (host-scoped; failures ignored e.g. private mode)
 - gw.storage.get(key) / .set(key, value) / .remove(key)   (localStorage)
@@ -532,7 +234,7 @@ Formatting / UI
 - gw.formatDate(value, locale?)
 - gw.notify(message, { severity: 'info'|'success'|'warning'|'error',
                        duration?, title? })   toast; message shown as TEXT
-- gw.showModal(html, { title?, closeable? }) -&gt; returns close function
+- gw.showModal(html, { title?, closeable? }) -> returns close function
   (html here is admin-authored, trusted)
 - gw.setLoading(bool)                     overlay spinner
 - gw.sanitize(html)                       DOMPurify wrapper (safe fallback)
@@ -546,19 +248,19 @@ Forms
 - gw.forms.submit(form, { formTypeId? })  programmatic submit
 
 Data (read-only; server enforces public access)
-- gw.db.query(params) -&gt; POST /api/data/query. STRICT params:
+- gw.db.query(params) -> POST /api/data/query. STRICT params:
     { cmsObjectType (required), folder?, filters?, search?, orderBy?,
-      orderDir?: 'asc'|'desc', page?, pageSize? (&lt;=200), language?,
+      orderDir?: 'asc'|'desc', page?, pageSize? (<=200), language?,
       relations?, facets? }
-    filters: [ { field, op: '=='|'!='|'&gt;'|'&gt;='|'&lt;'|'&lt;='|'in'|'contains',
+    filters: [ { field, op: '=='|'!='|'>'|'>='|'<'|'<='|'in'|'contains',
                  value } ]
     relations: [ { field, targetType, targetField? } ]
-    -&gt; { items: ObjectRecord[], total, page, pageSize, facets, relations }
-- gw.db.get({ cmsObjectType, objectId }) -&gt; GET /api/data/&lt;type&gt;/&lt;id&gt;
-    404 -&gt; null
+    -> { items: ObjectRecord[], total, page, pageSize, facets, relations }
+- gw.db.get({ cmsObjectType, objectId }) -> GET /api/data/<type>/<id>
+    404 -> null
 - gw.db.operation(operationId, payload, { idempotencyKey? })
-    -&gt; POST /api/data/op    (the ONLY set path, Section 9)
-- gw.db.subscribe({ cmsObjectType?, folder? }, onChange) -&gt; unsubscribe
+    -> POST /api/data/op    (the ONLY set path, Section 9)
+- gw.db.subscribe({ cmsObjectType?, folder? }, onChange) -> unsubscribe
     SSE-first with 5 s polling fallback.
     onChange receives { type: 'added'|'modified'|'removed', object }
     or { type: 'gw-event', event }.
@@ -570,7 +272,7 @@ Apps (island embedding, Section 12)
 - The platform auto-mounts [data-gw-app] elements after your scripts on
   every (re)mount; you normally never call mount yourself.
 - Builtin widget names lazy-load /gw-widgets.js on first use.
-- gw.service(name) -&gt; NOT AVAILABLE (always rejects). Do not use.
+- gw.service(name) -> NOT AVAILABLE (always rejects). Do not use.
 
 Events (window CustomEvents you may listen for)
 - 'gw:ready'            bootstrap installed; detail = page context
@@ -581,7 +283,7 @@ Events (window CustomEvents you may listen for)
 - 'gw:app-error' { name, message | error }
 - 'gw:cart-changed'     cart contents changed
 - 'gw:slot-picked' { slotId, slot }   (slot-picker without bookOperationId)
-- 'ic-navigate' { detail: { href } }  -&gt; SPA router
+- 'ic-navigate' { detail: { href } }  -> SPA router
 
 ObjectRecord shape (what query/get return): { id, slug?, name?,
 cmsObjectType?, typeId?, data?, meta?, seo?, rules?, created?,
@@ -591,23 +293,23 @@ style, e.g. 'data.rows').
 
 Access limits: only object types registered in the site app's
 `cms-settings.objectTypes[]` with rules.publicAccess != 'no' are queryable;
-private/unregistered types -&gt; 403/404. The folder's fieldAllowlist /
+private/unregistered types -> 403/404. The folder's fieldAllowlist /
 publicFields projects fields (id is always kept). Read data with
 `language` filter to match gw.language when available.
 
 ----------------------------------------------------------------------------
 6. FORMS (data-gw-form protocol)
 ----------------------------------------------------------------------------
-&lt;form data-gw-form class="shop-contact"&gt;
-  &lt;label&gt;Name &lt;input type="text" name="name" required&gt;&lt;/label&gt;
-  &lt;label&gt;Email &lt;input type="email" name="email" required&gt;&lt;/label&gt;
-  &lt;textarea name="message" required&gt;&lt;/textarea&gt;
-  &lt;!-- honeypot: hidden via CSS, never a real field --&gt;
-  &lt;input type="text" name="website" class="shop-hp" tabindex="-1"
-         autocomplete="off" aria-hidden="true"&gt;
-  &lt;button type="submit"&gt;Send&lt;/button&gt;
-  &lt;div data-gw-form-status role="status"&gt;&lt;/div&gt;
-&lt;/form&gt;
+<form data-gw-form class="shop-contact">
+  <label>Name <input type="text" name="name" required></label>
+  <label>Email <input type="email" name="email" required></label>
+  <textarea name="message" required></textarea>
+  <!-- honeypot: hidden via CSS, never a real field -->
+  <input type="text" name="website" class="shop-hp" tabindex="-1"
+         autocomplete="off" aria-hidden="true">
+  <button type="submit">Send</button>
+  <div data-gw-form-status role="status"></div>
+</form>
 
 - Bind with: gw.forms.bind();  (idempotent; call once in your js).
 - Honeypot: field named `gw_hp`, `website` or `company`, OR any field with
@@ -616,11 +318,11 @@ publicFields projects fields (id is always kept). Read data with
 - Status element `[data-gw-form-status]` shows busy text ("Submitting…")
   automatically; the form gets class .gw-busy while submitting.
 - Submit payload (JSON): { formTypeId?, submittedAt, gw_hp,
-  values: {&lt;name&gt;: &lt;value string&gt;} }. Files present -&gt; multipart FormData.
+  values: {<name>: <value string>} }. Files present -> multipart FormData.
 - Events: gw:form-success / gw:form-error / gw:form-invalid (bubble —
   listen on the form or window).
 - Server guardrails (design for them): origin check, hashed-IP rate limit,
-  JSON body &lt;= 256 KB, multipart &lt;= 10 MB, honeypot, min fill time 2 s,
+  JSON body <= 256 KB, multipart <= 10 MB, honeypot, min fill time 2 s,
   optional reCAPTCHA (site setting).
 - formTypeId links to a CMS `form-type-definition` object that defines the
   destination table + server hooks. The page can never set destination
@@ -642,7 +344,7 @@ Use gw.db.query / gw.db.get / gw.db.subscribe. Example:
 Rules:
 - Always render in a .then/catch; never block on reads; show loading and
   empty states.
-- Respect pageSize &lt;= 200 (server cap).
+- Respect pageSize <= 200 (server cap).
 - Reads are rate-limited (120/min/IP) and cached server-side; do not poll
   in a loop — use gw.db.subscribe for live updates.
 - Data may be public-typed only; missing/private types throw — handle
@@ -675,7 +377,7 @@ Operations are CMS-authored config objects of the site app type with
 }
 
 Call: gw.db.operation('create-order', payload, { idempotencyKey: '...' })
-      -&gt; POST /api/data/op { operation, payload, idempotencyKey? }
+      -> POST /api/data/op { operation, payload, idempotencyKey? }
 Response: { ok: true, result, idempotent? }
 
 - Value templates in `with`: `payload.x.y`, `user.id`.
@@ -684,7 +386,7 @@ Response: { ok: true, result, idempotent? }
   inside list functions the per-item scope is the ITEM OBJECT itself, e.g.
   sum(payload.items, price * qty).
 - Permission: roles checked against the session-derived caller
-  (anonymous -&gt; roles: []). ownerField restricts to own records.
+  (anonymous -> roles: []). ownerField restricts to own records.
 - Idempotency: pass a stable idempotencyKey per logical action so retries
   replay instead of duplicating (e.g. key = 'order-' + cartId).
 - The page NEVER defines operations. Reference existing operationIds only.
@@ -722,17 +424,17 @@ Rules:
   minLength, maxLength, regex, integer. Unknown rules fail loud — use only
   this subset.
 - amountFormula is evaluated over the accumulated per-step values:
-  `state.steps.&lt;stepId&gt;.&lt;field&gt;` — e.g. 'seats.count * 25',
+  `state.steps.<stepId>.<field>` — e.g. 'seats.count * 25',
   'cart.total + delivery.fee'.
-- Hook payload templates resolve `steps.&lt;stepId&gt;.&lt;field&gt;` and `user.id`.
+- Hook payload templates resolve `steps.<stepId>.<field>` and `user.id`.
 - API (use the checkout-flow widget instead of hand-rolling):
     POST /api/flow/[flowId] { action: 'start' }
-      -&gt; { ok, flowStateId, step }
+      -> { ok, flowStateId, step }
     POST /api/flow/[flowId] { action: 'step', values }
-      -&gt; { ok, flowStateId, nextStep } | 400 { errors }
+      -> { ok, flowStateId, nextStep } | 400 { errors }
     POST /api/flow/[flowId] { action: 'complete' }
-      -&gt; { ok, result: { operations, paymentIntent } }
-- Flow state is SERVER-side in an httpOnly cookie (gw-flow-&lt;sessionKey&gt;).
+      -> { ok, result: { operations, paymentIntent } }
+- Flow state is SERVER-side in an httpOnly cookie (gw-flow-<sessionKey>).
   The client sends NO state and cannot forge steps.
 - paymentIntent is a STUB in the pilots (pi_stub_*). Production checkout:
   POST /api/pay/stripe/intent { flowStateId }.
@@ -741,7 +443,7 @@ Rules:
 10. CART API
 ----------------------------------------------------------------------------
 - GET /api/cart
-    -&gt; { items: [{ cmsObjectType, objectId, name, price, qty }],
+    -> { items: [{ cmsObjectType, objectId, name, price, qty }],
          total, count, cartId }
 - POST /api/cart { action: 'add'|'update'|'remove'|'clear',
                    item: { cmsObjectType, objectId, qty? } }
@@ -757,13 +459,13 @@ Rules:
 ----------------------------------------------------------------------------
 Embed a widget as a div island; config comes from data-gw-config JSON:
 
-    &lt;div data-gw-app="menu"
+    <div data-gw-app="menu"
          data-gw-config='{"cmsObjectType":"menu-items",
-                           "folder":"menu","priceField":"price"}'&gt;&lt;/div&gt;
+                           "folder":"menu","priceField":"price"}'></div>
 
 - Attribute quoting: prefer a single-quoted attribute containing JSON with
   double-quoted strings (as above). If the config must contain apostrophes,
-  use a double-quoted attribute and escape inner quotes as &amp;quot;.
+  use a double-quoted attribute and escape inner quotes as &quot;.
 - Config MUST be valid JSON. No comments, no trailing commas.
 - The platform mounts islands automatically after your scripts; mounting is
   idempotent (no double mounts on SPA re-navigation).
@@ -789,7 +491,7 @@ Builtin widgets (register as data-gw-app names):
                    NOTE: seat data must sit at the top level of the object's
                    data (the widget has no data-fallback in pick()).
   account-dashboard {}   Shows /api/account/profile + /api/account/orders;
-                   sign-in prompt -&gt; gw.login().
+                   sign-in prompt -> gw.login().
   rewards          { cmsObjectType?='rewards', customerField?='customerId',
                      pointsField?='points', limit?=50 }
                    Requires a logged-in user; filters by user.id.
@@ -798,7 +500,7 @@ Builtin widgets (register as data-gw-app names):
                    gw.db.subscribe.
   search-box       { cmsObjectType (req), placeholder?, lang?,
                      titleField?='name' }
-                   Debounced GET /api/search?type=...&amp;q=...&amp;lang=...
+                   Debounced GET /api/search?type=...&q=...&lang=...
 
 Custom islands: in your js, BEFORE or independent of auto-mount:
   gw.apps.register('my-gallery', function (ctx) {
@@ -820,8 +522,8 @@ B) Full shop checkout:
    shows "Completed" you may re-fetch or show order-status.
 
 C) Booking / tickets:
-   slot-picker or seat-map (islands) -&gt; a checkout-flow whose amountFormula
-   references the chosen values (e.g. 'seats.count * 25') -&gt; done-step
+   slot-picker or seat-map (islands) -> a checkout-flow whose amountFormula
+   references the chosen values (e.g. 'seats.count * 25') -> done-step
    operation hook writes the booking. Page JS may collect
    'gw:slot-picked' events into gw.storage and start the flow with them.
 
@@ -863,8 +565,8 @@ Rules:
   other values are ignored. twitterCard: only 'summary' or
   'summary_large_image'.
 - schemaItems produce JSON-LD. `json` is a JSON STRING of the full
-  {"@type": ...} payload (never wrap it in &lt;script&gt;). Missing json -&gt;
-  bare {"@type": "&lt;type&gt;"} entry. No schemaItems -&gt; default WebPage.
+  {"@type": ...} payload (never wrap it in <script>). Missing json ->
+  bare {"@type": "<type>"} entry. No schemaItems -> default WebPage.
 - Use sensible types: WebPage, Product, FAQPage, Organization,
   BlogPosting, Event, BreadcrumbList, ...
 - metaKeywords is a comma-separated string.
@@ -878,7 +580,7 @@ Rules:
 14. THEME / SITE CONTEXT AVAILABLE TO PAGES
 ----------------------------------------------------------------------------
 - Theme colors from default-settings.theme.colors are exposed as CSS
-  variables: --gw-color-&lt;key&gt; (e.g. --gw-color-primary). Custom
+  variables: --gw-color-<key> (e.g. --gw-color-primary). Custom
   theme.cssVariables are exposed as-is. Use them in your CSS instead of
   hard-coding brand colors.
 - theme.cssClasses are applied to the page shell wrapper — do not style
@@ -908,7 +610,7 @@ Rules:
 ----------------------------------------------------------------------------
 16. SELF-CHECK BEFORE RETURNING OUTPUT
 ----------------------------------------------------------------------------
-[ ] Only a body fragment — no &lt;html&gt;/&lt;head&gt;/&lt;body&gt;/&lt;!DOCTYPE&gt;.
+[ ] Only a body fragment — no <html>/<head>/<body>/<!DOCTYPE>.
 [ ] All CSS scoped under my unique page class.
 [ ] JS idempotent (re-runs on SPA nav), no top-level await, vanilla JS.
 [ ] No external scripts, no frameworks, no secrets.
@@ -921,5 +623,3 @@ Rules:
 [ ] SEO section filled (title/description/schema at minimum).
 [ ] No global nav/header/footer (platform chrome exists).
 [ ] Missing operation/flow called out in === CMS CONFIG NEEDED ===.
-</script>
-</div>

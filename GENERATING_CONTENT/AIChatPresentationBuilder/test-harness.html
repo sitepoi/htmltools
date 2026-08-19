@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIChatPresentationBuilder — Test Harness</title>
+<link rel="stylesheet" href="AIChatPresentationBuilder.css">
+<style>
+  /* Harness-only chrome */
+  body { margin: 0; padding: 0; }
+  #th-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px; background: #1e1b2e; color: #e2e8f0; font: 12px system-ui, sans-serif;
+  }
+  #th-bar button {
+    padding: 5px 10px; border: 1px solid #4c4a63; background: #2a2740; color: #e2e8f0;
+    border-radius: 6px; cursor: pointer; font: 11px system-ui, sans-serif;
+  }
+  #th-bar button:hover { background: #3a3657; }
+  #th-status { margin-left: auto; color: #a5a0b8; font-size: 11px; }
+  #th-dump-wrap { display: none; background: #0f172a; color: #7dd3fc; padding: 10px; max-height: 200px; overflow: auto; }
+  #th-dump { font: 11px Consolas, monospace; white-space: pre-wrap; margin: 0; }
+  .tool-host { height: calc(100vh - 52px); overflow: hidden; }
+  .tool-host #app { height: 100%; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 AIChatPresentationBuilder</strong>
+  <button id="th-load-sample">Load sample deck</button>
+  <button id="th-toggle-ro">Toggle read-only</button>
+  <button id="th-dump-btn">Dump saved value</button>
+  <button id="th-clear">Clear all</button>
+  <button id="th-reload">Reload</button>
+  <span id="th-status">Ready</span>
+</div>
+<div id="th-dump-wrap"><pre id="th-dump"></pre></div>
+<div class="tool-host">
+
+<!-- TOOL HTML INLINED -->
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">🎞️</div>
+      <div class="header-title">
+        <h1>Presentation Builder</h1>
+        <span class="header-sub">Chat-driven • Talk to the AI and it builds your slide deck</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="pres-badge" id="pres-badge" title="Slides in this presentation">0 slides</span>
+      <span class="version-badge" id="tool-version" title="Presentation version">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-goto-export" title="Export the standalone presentation">📥 Export</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Studio (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">🎞️</div>
+              <h3>Describe your presentation</h3>
+              <p>Tell me what you want to present — <b>a quarterly report, a product pitch, a training deck, a lecture…</b> — and I'll build the slides for you, one idea per slide.</p>
+              <div class="welcome-hints">
+                <button class="hint-chip" data-hint="Create a 10-slide pitch deck for a mobile app called BloomNotes — problem, solution, features, market, business model, team and next steps.">📱 Product pitch</button>
+                <button class="hint-chip" data-hint="Build a quarterly business review presentation: KPI overview, revenue chart, key wins, challenges, roadmap and Q&amp;A.">📊 Business review</button>
+                <button class="hint-chip" data-hint="Make a training presentation about workplace safety: 5 key rules, common hazards, emergency procedures and a short quiz.">🦺 Training deck</button>
+              </div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> You can also say <b>"add a slide about X"</b> or <b>"replace slide 3 with a chart"</b> — I'll only change what you asked.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your presentation or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Studio Panel -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="present">👁️ Present</button>
+        <button class="ctab" data-tab="slides">🧩 Slides</button>
+        <button class="ctab" data-tab="export">📦 Export</button>
+      </div>
+
+      <div class="content-editors">
+        <!-- Present: deck preview + slide strip -->
+        <div class="content-editor active" id="editor-present">
+          <div class="pres-toolbar">
+            <input class="deck-title-input" id="deck-title-input" placeholder="Presentation title…" title="Presentation title">
+            <span class="pres-toolbar-info" id="slide-counter">0 / 0</span>
+            <button class="btn btn-sm btn-ghost" id="btn-prev" title="Previous slide">◀</button>
+            <button class="btn btn-sm btn-ghost" id="btn-next" title="Next slide">▶</button>
+            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          </div>
+          <div class="pres-stage" id="pres-stage">
+            <div class="pres-frame-wrap" id="pres-frame-wrap">
+              <iframe id="pres-frame" class="pres-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-modals" allowfullscreen title="Presentation preview"></iframe>
+            </div>
+            <div class="pres-empty" id="pres-empty">
+              <div class="empty-icon">🎞️</div>
+              <p>Your presentation will appear here</p>
+              <p class="empty-sub">Describe it in the chat on the left to generate the first slides</p>
+            </div>
+          </div>
+          <div class="slide-strip-wrap">
+            <div class="slide-strip" id="slide-strip"></div>
+          </div>
+        </div>
+
+        <!-- Slides: manage list -->
+        <div class="content-editor" id="editor-slides">
+          <div class="slides-toolbar">
+            <h2>🧩 Slides</h2>
+            <p class="slides-hint">Manage the pages of this presentation. Click ✏️ to edit a slide's components as JSON, or 🤖 to ask the AI about that slide.</p>
+            <button class="btn btn-primary btn-sm" id="btn-add-slide">+ Add Blank Slide</button>
+          </div>
+          <div class="slides-list" id="slides-list"></div>
+        </div>
+
+        <!-- Export: standalone file -->
+        <div class="content-editor" id="editor-export">
+          <div class="config-scroll">
+            <div class="config-header">
+              <h2>📦 Export</h2>
+              <p>Each export is <b>complete and standalone</b> — nothing else needed. HTML keeps the exact interactive design, PPTX opens in PowerPoint as editable slides, and PDF is ready for printing.</p>
+            </div>
+            <div class="export-row">
+              <button class="btn btn-primary" id="btn-export-download">📥 Download .html</button>
+              <button class="btn btn-outline" id="btn-export-pptx">📊 Download .pptx</button>
+              <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
+              <button class="btn btn-outline" id="btn-export-copy">📋 Copy Full HTML</button>
+            </div>
+            <div class="export-info" id="export-info"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirm-overlay" style="display:none">
+    <div class="confirm-box">
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+</div>
+<!-- /TOOL HTML INLINED -->
+
+</div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'aichatpres_test_db';
+  var SESSION_KEY = 'aichatpres_test_sessions';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'u-test', name: 'Test User', email: 'test@example.com', roles: ['developer'] };
+  var _fields = {};
+  var _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch (e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch (e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch (e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, _fields); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return _fields; },
+    setField: function(id, val) { _fields[id] = val; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function() {},
+    onFieldsChange: function() {},
+    param: function(name, def) { return name === 'allowAi' ? 'yes' : def; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return [{ id: 'u1', name: 'Alice' }, { id: 'u2', name: 'Bob' }]; },
+    onPermittedUsersChange: function() {},
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    openObjectDetail: function() {},
+    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 160)); },
+    declareParams: function(p) { console.log('declareParams:', p.length, 'params'); },
+    reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function(prompt, context, callback) {
+      console.log('AI REQUEST (batch) — prompt length:', prompt.length);
+      setTimeout(function() { callback(null, generateMockResponse(prompt)); }, 900);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      console.log('AI REQUEST (stream) — prompt length:', prompt.length);
+      var full = generateMockResponse(prompt);
+      var pos = 0;
+      var step = Math.max(8, Math.floor(full.length / 60));
+      var timer = setInterval(function() {
+        var chunk = full.substring(pos, pos + step);
+        pos += step;
+        if (chunk) callbacks.onToken(chunk);
+        if (pos >= full.length) {
+          clearInterval(timer);
+          callbacks.onComplete(full);
+        }
+      }, 25);
+    },
+    requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'ref.pdf', url: 'https://example.com/ref.pdf', size: 2048, type: 'application/pdf' }); }, 400); },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
+    requestObjects: function(action, params, cb) {
+      function loadSess() { try { var raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSess(arr) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(arr)); } catch (e) {} }
+      setTimeout(function() {
+        if (action === 'query') {
+          cb(null, { objects: loadSess() });
+        } else if (action === 'create') {
+          var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'New Chat', _parentObjectId: 'mock-parent', productData: params.productData };
+          var arr = loadSess();
+          arr.unshift(obj);
+          saveSess(arr);
+          cb(null, { object: obj });
+        } else if (action === 'update') {
+          var arr2 = loadSess();
+          for (var si = 0; si < arr2.length; si++) {
+            if (arr2[si].id === params.objectId) {
+              if (params.name) arr2[si].name = params.name;
+              if (params.productData) {
+                arr2[si].productData = arr2[si].productData || {};
+                var oldDcb = arr2[si].productData.data_categoriesBased || {};
+                var newDcb = params.productData.data_categoriesBased || {};
+                arr2[si].productData.data_categoriesBased = Object.assign({}, oldDcb, newDcb);
+              }
+              break;
+            }
+          }
+          saveSess(arr2);
+          cb(null, { ok: true });
+        } else if (action === 'delete') {
+          var arr3 = loadSess().filter(function(s) { return s.id !== params.objectId; });
+          saveSess(arr3);
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 200);
+    },
+    requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename || 'export') + '.html', url: 'https://example.com/export.html', size: 8192, type: 'text/html' }); }, 500); },
+    requestSendEmail: function(opts, cb) { setTimeout(function() { cb(null, { ok: true }); }, 500); }
+  };
+
+  function generateMockResponse(prompt) {
+    var hasDeck = prompt.indexOf('=== CURRENT DECK ===') !== -1 && /\d+\. \[[a-zA-Z0-9_-]+\]/.test(prompt);
+    if (hasDeck) {
+      var patches = {
+        patches: [
+          { op: 'upsertSlide', slide: { id: 'market', title: 'Market Opportunity', components: [
+            { type: 'heading', data: { text: 'Market Opportunity', kicker: 'TRACTION' } },
+            { type: 'stat-cards', data: { items: [
+              { value: '2.1B', label: 'Market size', icon: '🌍' },
+              { value: '18%', label: 'Annual growth', icon: '📈' },
+              { value: '40%', label: 'Target segment', icon: '🎯' }
+            ] } }
+          ] } }
+        ],
+        summary: 'Added a "Market Opportunity" slide with KPI cards.',
+        suggestions: ['[[suggest_x]] add a revenue bar-chart slide', '[[suggest_x]] add speaker notes to each slide'],
+        slideSuggestions: [{ slideId: 'market', text: 'add a funnel chart' }, { slideId: 'growth', text: 'switch to a line-chart' }]
+      };
+      return JSON.stringify(patches);
+    }
+    var deck = {
+      title: 'BloomNotes — Product Pitch',
+      subtitle: 'From scribbles to organized ideas',
+      author: 'Product Team',
+      deckCss: '.pres-slide{background:linear-gradient(135deg,#f8fafc,#eef2ff)}',
+      deckJs: 'console.log("BloomNotes deck ready");',
+      slides: [
+        { id: 'cover', title: 'Cover', notes: 'Welcome everyone.', components: [
+          { type: 'title-slide', data: { icon: '📱', title: 'BloomNotes', subtitle: 'From scribbles to organized ideas', presenter: 'Product Team', date: '2026' } }
+        ] },
+        { id: 'agenda', title: 'Agenda', components: [
+          { type: 'agenda', data: { items: [ { title: 'The problem' }, { title: 'Our solution' }, { title: 'Market opportunity' }, { title: 'Next steps' } ] } }
+        ] },
+        { id: 'problem', title: 'The Problem', components: [
+          { type: 'heading', data: { text: 'People lose their best ideas', kicker: 'PROBLEM' } },
+          { type: 'bullets', data: { items: [
+            { text: 'Notes live scattered across 6+ apps', icon: '📝' },
+            { text: '42% of ideas are forgotten within a week', icon: '⏳' },
+            { text: 'No simple way to turn notes into plans', icon: '🧩' }
+          ] } }
+        ] },
+        { id: 'solution', title: 'Solution', components: [
+          { type: 'heading', data: { text: 'BloomNotes turns notes into plans', kicker: 'SOLUTION' } },
+          { type: 'stat-cards', data: { items: [
+            { value: '1', label: 'Inbox for everything', icon: '📥' },
+            { value: '3', label: 'Taps to organize', icon: '👆' },
+            { value: '100%', label: 'Works offline', icon: '📡' }
+          ] } }
+        ] },
+        { id: 'growth', title: 'Growth', notes: 'Use this slide to discuss traction.', components: [
+          { type: 'bar-chart', data: { title: 'Monthly active users', items: [
+            { label: 'Jan', value: 12 }, { label: 'Feb', value: 18 }, { label: 'Mar', value: 27 }, { label: 'Apr', value: 45 }
+          ] } }
+        ] },
+        { id: 'quiz', title: 'Quick Check', components: [
+          { type: 'quiz', data: { title: 'Quick check', items: [
+            { question: 'What does BloomNotes turn notes into?', options: ['Plans', 'Emails', 'Spreadsheets'], correct: 0, explanation: 'BloomNotes organizes notes into actionable plans.' }
+          ] } }
+        ] },
+        { id: 'close', title: 'Thanks', components: [
+          { type: 'closing-slide', data: { title: 'Thank You', message: 'Questions welcome', contact: [ { label: 'Email', value: 'hello@bloomnotes.app' }, { label: 'Web', value: 'bloomnotes.app' } ] } }
+        ] }
+      ],
+      summary: 'Created a 7-slide pitch deck for BloomNotes with cover, agenda, problem/solution, a growth chart, a quick-check quiz and a closing slide.',
+      suggestions: ['[[suggest_x]] add a team slide', '[[suggest_x]] make the cover background darker'],
+      slideSuggestions: [{ slideId: 'growth', text: 'add a revenue line-chart' }, { slideId: 'problem', text: 'turn the bullets into cards' }]
+    };
+    return JSON.stringify(deck);
+  }
+
+  window._toolMock = {
+    setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); },
+    getValue: function() { return _value; },
+    clear: function() {
+      _value = null;
+      save();
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      fire('valueChange', null);
+      location.reload();
+    }
+  };
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="AIChatPresentationBuilder.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function() {
+  var thStatus = document.getElementById('th-status');
+  function setStatus(t) { if (thStatus) thStatus.textContent = t; }
+
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool.setValue({
+      pres: {
+        title: 'Sample Deck',
+        subtitle: 'Loaded for testing',
+        author: 'Harness',
+        slides: [
+          { id: 's1', title: 'Intro', notes: 'Say hello.', components: [
+            { type: 'title-slide', data: { title: 'Sample Deck', subtitle: 'A tiny test presentation', icon: '🧪' } }
+          ] },
+          { id: 's2', title: 'Numbers', components: [
+            { type: 'heading', data: { text: 'Key numbers' } },
+            { type: 'big-number', data: { value: 1250, prefix: '+', label: 'users this quarter', icon: '🚀' } }
+          ] }
+        ],
+        deckCss: '',
+        deckJs: ''
+      },
+      activeSlideId: 's1',
+      version: '1.0.0',
+      activeSessionId: '',
+      chatCache: { sessionId: '', messages: [] }
+    });
+    setStatus('Sample deck loaded.');
+  };
+  document.getElementById('th-toggle-ro').onclick = function() {
+    window._toolMock.setReadOnly(!document.body.classList.contains('readonly'));
+    document.body.classList.toggle('readonly');
+    setStatus(document.body.classList.contains('readonly') ? 'READ-ONLY' : 'Ready');
+  };
+  document.getElementById('th-clear').onclick = function() {
+    if (confirm('Clear all test data?')) window._toolMock.clear();
+  };
+  document.getElementById('th-reload').onclick = function() { location.reload(); };
+
+  window.addEventListener('error', function(e) {
+    setStatus('⚠ JS error: ' + (e && e.message ? e.message : String(e)) + ' — see DevTools console.');
+    return false;
+  });
+
+  document.getElementById('th-dump-btn').onclick = function() {
+    var json = JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2);
+    console.log('=== DB (saved value) ===\n' + json);
+    var wrap = document.getElementById('th-dump-wrap');
+    var out = document.getElementById('th-dump');
+    if (wrap && out) {
+      out.textContent = json;
+      wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+    }
+  };
+})();
+</script>
+</body>
+</html>

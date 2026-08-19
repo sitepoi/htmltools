@@ -41,7 +41,11 @@ function slugify(s) {
 var DB = {
   code: { html: '', css: '', js: '' },
   history: [],
-  chatMessages: [],   // in-memory only — never persisted
+  chatMessages: [],   // in-memory — canonical copy in ai-chat-sessions-uniconbaseapps
+  chatCache: { sessionId: '', messages: [] }, // bounded fallback kept IN the record value so chat survives even if session storage fails
+  seo: null,          // === SEO === JSON from the AI (new publicwebsite rules)
+  pageMeta: null,     // === PAGE META === JSON from the AI
+  configNeeded: '',   // === CMS CONFIG NEEDED === notes for the CMS author
   activeSessionId: '',
   version: '1.0.0'
 };
@@ -112,17 +116,22 @@ function getRulesSourceName() {
     var p = tool.param('pageRules', '');
     if (p && String(p).trim().length > 200) return 'Admin parameter (pageRules)';
   } catch (e) {}
-  return 'Built-in (generalwebsite-page-rules.txt v1.2)';
+  return 'Built-in (public-website-page-rules.txt v2.0)';
 }
 
-/* ── Stable instance ID for chat-session isolation ── */
+/* ── Stable instance ID for chat-session isolation ──
+   DETERMINISTIC: derived from the parent record id (no random suffix), so it
+   recomputes the SAME id on every load — sessions can never be orphaned even
+   if the saved value was lost. */
 function _resolveInstanceId() {
   if (DB._instanceId) return DB._instanceId;
-  var parentId = '';
-  try {
-    var m = (window.location.search || '').match(/[?&](?:objectId|recordId)=([^&?#]+)/);
-    if (m) parentId = decodeURIComponent(m[1]);
-  } catch (e) {}
+  var parentId = DB._parentRecordId || '';
+  if (!parentId) {
+    try {
+      var m = (window.location.search || '').match(/[?&](?:objectId|recordId|id)=([^&?#]+)/);
+      if (m) parentId = decodeURIComponent(m[1]);
+    } catch (e) {}
+  }
   if (!parentId) {
     try {
       var f = tool.getFields();
@@ -132,9 +141,11 @@ function _resolveInstanceId() {
   if (!parentId) {
     try { var p = tool.param('objectId', ''); if (p) parentId = String(p); } catch (e) {}
   }
-  var rand = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  DB._instanceId = parentId ? ('rec_' + parentId + '_' + rand) : ('inst_' + rand);
-  persist();
+  if (!parentId) {
+    try { var s = tool.param('recordId', ''); if (s) parentId = String(s); } catch (e) {}
+  }
+  DB._instanceId = parentId ? ('rec_' + parentId) : 'inst_unknown';
+  try { persist(); } catch (e) {}
   return DB._instanceId;
 }
 
@@ -179,7 +190,12 @@ function _parentSeo() {
 
 /* ── Persistence (with automatic patch-version bumping) ── */
 function _dbSnapshot() {
-  return [DB.code.html, DB.code.css, DB.code.js].join('\u0001');
+  return [
+    DB.code.html, DB.code.css, DB.code.js,
+    JSON.stringify(DB.seo || null),
+    JSON.stringify(DB.pageMeta || null),
+    DB.configNeeded || ''
+  ].join('\u0001');
 }
 
 /* ── Version stamping: the current `vX.Y.Z` is kept as the first line of
@@ -210,8 +226,12 @@ function _stampVersionInCode() {
 function _slimValue() {
   return {
     code: { html: DB.code.html, css: DB.code.css, js: DB.code.js },
+    seo: DB.seo || null,
+    pageMeta: DB.pageMeta || null,
+    configNeeded: DB.configNeeded || '',
     version: DB.version,
     activeSessionId: DB.activeSessionId || '',
+    chatCache: { sessionId: _activeSessionId || '', messages: _trimChatCache(DB.chatMessages) },
     _instanceId: DB._instanceId || '',
     _parentRecordId: DB._parentRecordId || ''
   };
@@ -228,9 +248,34 @@ function persist() {
     _lastPersistedSnapshot = _dbSnapshot();
   }
   _aiJustUpdated = false;
+  DB.chatCache = { sessionId: _activeSessionId, messages: _trimChatCache(DB.chatMessages) };
   try { tool.setValue(_slimValue()); } catch (e) {}
   if (_activeSessionId) saveCurrentSession();
   tool.resize();
+}
+
+/* ── Bounded chat cache: last N messages with capped text, kept in the record
+   value so chat survives a refresh even when session storage is misconfigured. ── */
+var CHAT_CACHE_MAX = 20;
+var CHAT_CACHE_TEXT_MAX = 2000;
+function _trimChatCache(list) {
+  var out = [];
+  var msgs = (list && list.messages) ? list.messages : (list || []);
+  var src = msgs.slice ? msgs.slice(-CHAT_CACHE_MAX) : [];
+  for (var i = 0; i < src.length; i++) {
+    var m = src[i];
+    if (!m || typeof m !== 'object') continue;
+    var copy = {
+      role: m.role,
+      text: String(m.text || '').substring(0, CHAT_CACHE_TEXT_MAX),
+      time: m.time
+    };
+    if (m.version) copy.version = m.version;
+    if (m.isError) copy.isError = true;
+    if (m.tasks) copy.tasks = m.tasks;
+    out.push(copy);
+  }
+  return out;
 }
 
 /* ── Semantic version bump (AI updates → minor, manual edits → patch) ── */
@@ -298,10 +343,22 @@ function _onVersionClick() {
 }
 
 /* ── Session CRUD (ai-chat-sessions-uniconbaseapps) ── */
+var _sessionWarnShown = false;
+function _warnSessionStorage(msg) {
+  if (_sessionWarnShown) return;
+  _sessionWarnShown = true;
+  console.warn('[WEBPAGEBUILDER:SESSION] ' + msg);
+  try {
+    showToast('⚠ Chat history storage unavailable — messages are cached inside the record until it is fixed. Check allowObjectCRUD: yes and the ai-chat-sessions-uniconbaseapps object type in field settings.', 'warning');
+  } catch (e) {}
+}
 function loadSessions(callback) {
   try {
     tool.requestObjects('query', { mainObjectType: SESSION_TYPE }, function(err, result) {
-      if (err) { console.warn('[WEBPAGEBUILDER:SESSION] Query error:', err); _sessions = []; }
+      if (err) {
+        _warnSessionStorage('Query error: ' + err);
+        _sessions = [];
+      }
       else {
         var all = (result && result.objects) ? result.objects : [];
         var myId = _resolveInstanceId();
@@ -311,7 +368,11 @@ function loadSessions(callback) {
           var obj = all[i];
           var pd = obj.productData || {};
           var dcb = pd.data_categoriesBased || {};
-          if (dcb._toolInstanceId === myId) _sessions.push(obj);
+          // Deterministic id 'rec_<parent>' also matches legacy 'rec_<parent>_<rand>' ids.
+          if (dcb._toolInstanceId === myId ||
+              (myId !== 'inst_unknown' && dcb._toolInstanceId && String(dcb._toolInstanceId).indexOf(myId) === 0)) {
+            _sessions.push(obj);
+          }
           else if (!dcb._toolInstanceId && obj._parentObjectId && DB._parentRecordId && obj._parentObjectId === DB._parentRecordId) {
             needsStamp.push(obj);
             _sessions.push(obj);
@@ -331,6 +392,7 @@ function loadSessions(callback) {
       if (callback) callback(_sessions);
     });
   } catch (e) {
+    _warnSessionStorage('query threw: ' + e.message);
     _sessions = [];
     _sessionsLoaded = true;
     if (callback) callback([]);
@@ -354,13 +416,14 @@ function createSession(callback) {
         }
       }
     }, function(err, result) {
-      if (err) { console.warn('[WEBPAGEBUILDER:SESSION] Create error:', err); if (callback) callback(null); return; }
+      if (err) { _warnSessionStorage('create error: ' + err); if (callback) callback(null); return; }
       var session = result.object;
       if (session._parentObjectId && !DB._parentRecordId) DB._parentRecordId = session._parentObjectId;
       _sessions.unshift(session);
       if (callback) callback(session);
     });
   } catch (e) {
+    _warnSessionStorage('create threw: ' + e.message);
     if (callback) callback(null);
   }
 }
@@ -386,10 +449,11 @@ function saveCurrentSession(callback) {
       objectId: _activeSessionId,
       productData: { data_categoriesBased: dcb }
     }, function(err, result) {
-      if (err) console.warn('[WEBPAGEBUILDER:SESSION] Save error:', err);
+      if (err) _warnSessionStorage('save error: ' + err);
       if (callback) callback(err ? null : result);
     });
   } catch (e) {
+    _warnSessionStorage('save threw: ' + e.message);
     if (callback) callback(null);
   }
 }
@@ -421,9 +485,24 @@ function switchSession(sessionId) {
   if (session) {
     var pd = session.productData || {};
     var dcb = pd.data_categoriesBased || {};
-    DB.chatMessages = dcb.messages || [];
+    var msgs = (dcb.messages && dcb.messages.length) ? dcb.messages : null;
+    if (msgs) {
+      DB.chatMessages = msgs;
+    } else if (DB.chatCache && DB.chatCache.sessionId === sessionId && DB.chatCache.messages && DB.chatCache.messages.length) {
+      // Session exists but its message list is empty — restore from the
+      // bounded cache and push it into the session object.
+      DB.chatMessages = DB.chatCache.messages.slice();
+      saveCurrentSession();
+    } else {
+      DB.chatMessages = [];
+    }
   } else {
     DB.chatMessages = [];
+    // Session object missing (deleted / storage unavailable) — fall back to
+    // the bounded cache if it belongs to this session.
+    if (DB.chatCache && DB.chatCache.sessionId === sessionId && DB.chatCache.messages && DB.chatCache.messages.length) {
+      DB.chatMessages = DB.chatCache.messages.slice();
+    }
   }
   renderChatMessages();
   renderSessionList();
@@ -829,6 +908,7 @@ function addChatMessage(role, text, extra) {
   if (extra && extra.isError) msg.isError = true;
   DB.chatMessages.push(msg);
   if (DB.chatMessages.length > 500) DB.chatMessages = DB.chatMessages.slice(-500);
+  DB.chatCache = { sessionId: _activeSessionId, messages: _trimChatCache(DB.chatMessages) };
   renderChatMessages();
   updateChatBadge();
   if (_activeSessionId) {
@@ -844,6 +924,13 @@ function addChatMessage(role, text, extra) {
     } else if (!(extra && extra.isError)) {
       autoTitleSession();
     }
+    // Keep the bounded cache in the record value up to date on EVERY message
+    // (the value change is a no-op for the code — the guard re-renders cheaply).
+    try { tool.setValue(_slimValue()); } catch (e) {}
+  } else {
+    // No session object yet — still persist the bounded cache into the
+    // record value so chat survives a refresh no matter what.
+    try { persist(); } catch (e) {}
   }
 }
 
@@ -1341,6 +1428,24 @@ function _appendStreamingToken(token) {
     }
   }
 
+  // New publicwebsite marker style: === HTML === / === CSS === / === JS === /
+  // === SEO === / === PAGE META === (SEO/PAGE META route to the text tab).
+  if (!fenceDetected) {
+    var eqMatch = _streamBuf.match(/===\s*(HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\s*===/i);
+    if (eqMatch) {
+      var eqKind = eqMatch[1].toLowerCase();
+      var eqTab = (eqKind === 'html' || eqKind === 'css' || eqKind === 'js') ? eqKind : 'text';
+      if (eqTab !== _streamCurrentTab) {
+        newTab = eqTab;
+        fenceDetected = 'open-' + eqTab;
+        var eqStartInBuf = eqMatch.index;
+        var tokenStartInBufEq = _streamBuf.length - token.length;
+        splitIdx = eqStartInBuf - tokenStartInBufEq;
+        if (splitIdx < 0) splitIdx = 0;
+      }
+    }
+  }
+
   if (!fenceDetected && _streamCurrentTab !== 'text') {
     var closeMatch = _streamBuf.match(/\n```\s*$/);
     if (closeMatch) {
@@ -1407,6 +1512,7 @@ function _appendStreamingToken(token) {
       .replace(/^\[HTML\]\s*/i, '')
       .replace(/^\[CSS\]\s*/i, '')
       .replace(/^\[JS\]\s*/i, '')
+      .replace(/^===\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\s*===\s*/i, '')
       .replace(/^```(?:html|css|js|javascript)?\s*\n?/i, '');
     if (displayText2) {
       var newPre2 = _streamTabEls[_streamCurrentTab];
@@ -1432,28 +1538,57 @@ function _appendStreamingToken(token) {
   }
 }
 
-/* ── Parse AI response → three code blocks ── */
+/* ── Parse AI response → code sections + SEO + page meta ──
+   New publicwebsite contract: === HTML === / === CSS === / === JS === /
+   === SEO === (JSON) / === PAGE META === (JSON) / === CMS CONFIG NEEDED ===.
+   Legacy [HTML]/[CSS]/[JS] markers and ``` fences are still accepted. ── */
+function _parseSection(text, tag) {
+  var re = new RegExp('===\\s*' + tag + '\\s*===\\s*([\\s\\S]*?)(?=\\n?===\\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\\s*===|$)', 'i');
+  var m = re.exec(text || '');
+  return m ? m[1].replace(/^\n+|\n+$/g, '').trim() : '';
+}
+function _parseJsonLenient(s) {
+  if (!s) return null;
+  var t = String(s).trim();
+  try { return JSON.parse(t); } catch (e1) {}
+  try {
+    t = t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:"'])\/\/.*$/gm, '$1');
+    t = t.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(t);
+  } catch (e2) { return null; }
+}
 function parseGeneratedCode(text) {
-  var r = { html: '', css: '', js: '' };
-  var hm = text.match(/\[HTML\]\s*([\s\S]*?)(?=\[CSS\]|\[JS\]|$)/i);
-  var cm = text.match(/\[CSS\]\s*([\s\S]*?)(?=\[JS\]|$)/i);
-  var jm = text.match(/\[JS\]\s*([\s\S]*?)$/i);
-  if (hm) r.html = hm[1].trim();
-  if (cm) r.css = cm[1].trim();
-  if (jm) r.js = jm[1].trim();
-  if (!r.html || !r.css || !r.js) {
-    var fencePattern = /```(\w*)\s*\n([\s\S]*?)```/g;
-    var fm;
-    while ((fm = fencePattern.exec(text)) !== null) {
-      var lang = (fm[1] || '').toLowerCase();
-      var content = fm[2].trim();
-      if (lang === 'html' && !r.html) r.html = content;
-      else if (lang === 'css' && !r.css) r.css = content;
-      else if ((lang === 'js' || lang === 'javascript') && !r.js) r.js = content;
-      else if (!lang) {
-        if (!r.html) r.html = content;
-        else if (!r.css) r.css = content;
-        else if (!r.js) r.js = content;
+  var r = { html: '', css: '', js: '', seo: null, pageMeta: null, configNeeded: '' };
+  r.html = _parseSection(text, 'HTML');
+  r.css = _parseSection(text, 'CSS');
+  r.js = _parseSection(text, 'JS');
+  r.configNeeded = _parseSection(text, 'CMS CONFIG NEEDED');
+  var seoText = _parseSection(text, 'SEO');
+  var metaText = _parseSection(text, 'PAGE META');
+  if (seoText) r.seo = _parseJsonLenient(seoText);
+  if (metaText) r.pageMeta = _parseJsonLenient(metaText);
+  if (!r.html && !r.css && !r.js) {
+    // Legacy platform markers
+    var hm = text.match(/\[HTML\]\s*([\s\S]*?)(?=\[CSS\]|\[JS\]|$)/i);
+    var cm = text.match(/\[CSS\]\s*([\s\S]*?)(?=\[JS\]|$)/i);
+    var jm = text.match(/\[JS\]\s*([\s\S]*?)$/i);
+    if (hm) r.html = hm[1].trim();
+    if (cm) r.css = cm[1].trim();
+    if (jm) r.js = jm[1].trim();
+    if (!r.html && !r.css && !r.js) {
+      var fencePattern = /```(\w*)\s*\n([\s\S]*?)```/g;
+      var fm;
+      while ((fm = fencePattern.exec(text)) !== null) {
+        var lang = (fm[1] || '').toLowerCase();
+        var content = fm[2].trim();
+        if (lang === 'html' && !r.html) r.html = content;
+        else if (lang === 'css' && !r.css) r.css = content;
+        else if ((lang === 'js' || lang === 'javascript') && !r.js) r.js = content;
+        else if (!lang) {
+          if (!r.html) r.html = content;
+          else if (!r.css) r.css = content;
+          else if (!r.js) r.js = content;
+        }
       }
     }
   }
@@ -1477,12 +1612,15 @@ function _cleanFenceArtifacts(code, lang) {
   return code.trim();
 }
 
-/* Strip leftover [HTML]/[/HTML]/[CSS]/[/CSS]/[JS]/[/JS] marker lines — some
-   models close blocks with [/HTML]-style markers and those lines would
+/* Strip leftover marker lines — old [HTML]/[/HTML] style and new === HTML ===
+   style — some models close blocks with markers and those lines would
    otherwise end up rendered as text in the page. */
 function _cleanBlockMarkers(code) {
   if (!code) return '';
-  return code.replace(/^\s*\[\/?(?:HTML|CSS|JS)\]\s*$/gim, '').replace(/^\n+|\n+$/g, '').trim();
+  return code
+    .replace(/^\s*\[\/?(?:HTML|CSS|JS)\]\s*$/gim, '')
+    .replace(/^\s*===\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\s*===\s*$/gim, '')
+    .replace(/^\n+|\n+$/g, '').trim();
 }
 
 function isCodeLine(line) {
@@ -1513,15 +1651,17 @@ function _stripTrailingMarkdown(code) {
 }
 
 /* Parse ONE agentic step's response. More forgiving than parseGeneratedCode:
-   if no [HTML]/[CSS]/[JS] blocks were found but the answer contains real
-   markup (bare or fenced), treat it as the HTML patch instead of failing. */
+   if no === HTML === / === CSS === / === JS === sections (or legacy blocks)
+   were found but the answer contains real markup (bare or fenced), treat it
+   as the HTML patch instead of failing. */
 function _parseStepOutput(text) {
   var blocks = parseGeneratedCode(text);
   if (blocks.html || blocks.css || blocks.js) return blocks;
   var bare = (text || '')
     .replace(/^\s*```(?:html)?\s*\n?/i, '')
     .replace(/\n?```\s*$/, '')
-    .replace(/^\s*\[\/?(?:HTML|CSS|JS)\]\s*$/gim, '');
+    .replace(/^\s*\[\/?(?:HTML|CSS|JS)\]\s*$/gim, '')
+    .replace(/^\s*===\s*(?:HTML|CSS|JS|SEO|PAGE META|CMS CONFIG NEEDED)\s*===\s*$/gim, '');
   if (/<(section|article|header|footer|aside|nav|div|form|table|ul|ol|figure)\b/i.test(bare)) {
     blocks.html = _stripTrailingMarkdown(bare);
   }
@@ -1788,6 +1928,18 @@ function applyGeneratedCode(code) {
   code.html = _ensureImageSrcs(code.html || '');
   code.js = _sanitizeJs(code.js || '').code;
   var changed = DB.code.html !== (code.html || '') || DB.code.css !== (code.css || '') || DB.code.js !== (code.js || '');
+  if (code.seo && typeof code.seo === 'object') {
+    var seoJson = JSON.stringify(code.seo);
+    if (JSON.stringify(DB.seo || null) !== seoJson) { DB.seo = code.seo; changed = true; }
+  }
+  if (code.pageMeta && typeof code.pageMeta === 'object') {
+    var metaJson = JSON.stringify(code.pageMeta);
+    if (JSON.stringify(DB.pageMeta || null) !== metaJson) { DB.pageMeta = code.pageMeta; changed = true; }
+  }
+  if (code.configNeeded && String(code.configNeeded).trim() !== String(DB.configNeeded || '').trim()) {
+    DB.configNeeded = String(code.configNeeded).trim();
+    changed = true;
+  }
   DB.code.html = code.html || '';
   DB.code.css = code.css || '';
   DB.code.js = code.js || '';
@@ -1973,6 +2125,11 @@ function processAIResponse(raw, hasCode) {
     }
   }
   var finalText = parsed.text;
+  if (code.configNeeded && String(code.configNeeded).trim()) {
+    finalText = (finalText ? finalText + '\n\n' : '') +
+      '🛠️ **CMS CONFIG NEEDED** (for the CMS author — create these in the site app):\n' +
+      '```\n' + String(code.configNeeded).trim() + '\n```';
+  }
   if (!finalText) finalText = hasNewCode ? '✓ Page updated.' : '⚠️ I couldn\'t produce code for that. Please try rephrasing your request.';
   addChatMessage('ai', finalText, extra);
   autoTitleSession();
@@ -2030,13 +2187,13 @@ var SKILLS = [
    These are NOT skills — they are auto-injected into the prompts whenever
    the page content matches the type (no chips, no toggles). ── */
 var PAGE_TYPE_PLAYBOOKS = {
-  restaurant: 'PAGE TYPE — Restaurant / Café:\n- Sensory dish copy; menu grouped by category (starters / mains / desserts) with prices and dietary badges (V, GF).\n- Warm hospitality tone; a clear reservation call-to-action repeated naturally.\n- Imagery: food, dish, coffee, interior (use matching loremflickr keywords).',
-  saas: 'PAGE TYPE — SaaS Landing:\n- Hero with a value proposition and one primary CTA; social proof strip.\n- Feature/benefit framing (outcomes, not specs); 3-tier pricing with a highlighted plan.\n- One CTA per section, repeated; objection-handling FAQ near the bottom.\n- Imagery: technology, computer, office (use matching loremflickr keywords).',
-  product: 'PAGE TYPE — Online Store:\n- Product cards with photo, price badge, sale tag and star rating in a consistent grid.\n- Category/browse structure; wishlist and quick-view (client-side only).\n- Trust and urgency near every buy action: stock hints, guarantee badges, reviews.\n- Imagery: product, store, fashion (use matching loremflickr keywords).',
-  event: 'PAGE TYPE — Event / Conference:\n- Hero with event name, date, venue and a live countdown.\n- Agenda as 3-column day tabs or a timeline; speakers grid with photos and topics.\n- Registration form with ticket types; urgency copy (Early bird ends…).\n- Imagery: concert, audience, stage (use matching loremflickr keywords).',
-  realestate: 'PAGE TYPE — Real Estate Listings:\n- Property cards with photo, price badge and beds/baths/area meta.\n- Search/filter row (location, type, price) filtering listings client-side.\n- Neighborhood highlights, agent cards and a contact call-to-action.\n- Imagery: architecture, house, interior (use matching loremflickr keywords).',
-  portfolio: 'PAGE TYPE — Portfolio Showcase:\n- Case-study layout: large project cards with image, title, category and year.\n- Skills chips, experience timeline and client logos.\n- Strong personal voice; a prominent contact call-to-action.\n- Imagery: design, creative, art (use matching loremflickr keywords).',
-  company: 'PAGE TYPE — Corporate Profile:\n- Mission/vision, values grid, leadership team and a milestones timeline.\n- Stats band (years, clients, projects), client logos, CSR mention.\n- Trustworthy, structured tone; generous whitespace.\n- Imagery: office, business, people (use matching loremflickr keywords).'
+  restaurant: 'PAGE TYPE — Restaurant / Café:\n- Sensory dish copy; menu grouped by category (starters / mains / desserts) with prices and dietary badges (V, GF).\n- Warm hospitality tone; a clear reservation call-to-action repeated naturally.\n- Widgets: menu island (data-gw-app="menu") + cart + checkout-flow {flowId} for ordering — emit === CMS CONFIG NEEDED === for the flow/operation.\n- Imagery: food, dish, coffee, interior (use matching loremflickr keywords).',
+  saas: 'PAGE TYPE — SaaS Landing:\n- Hero with a value proposition and one primary CTA; social proof strip.\n- Feature/benefit framing (outcomes, not specs); 3-tier pricing with a highlighted plan.\n- One CTA per section, repeated; objection-handling FAQ near the bottom.\n- Forms: signup/contact via data-gw-form + honeypot (formTypeId noted in === CMS CONFIG NEEDED ===).\n- Imagery: technology, computer, office (use matching loremflickr keywords).',
+  product: 'PAGE TYPE — Online Store:\n- Product cards with photo, price badge, sale tag and star rating in a consistent grid.\n- Category/browse structure; wishlist and quick-view (client-side only).\n- Trust and urgency near every buy action: stock hints, guarantee badges, reviews.\n- Commerce: menu island (addToCart) + cart + checkout-flow {flowId} with a create-order done-step operation — emit === CMS CONFIG NEEDED ===.\n- Imagery: product, store, fashion (use matching loremflickr keywords).',
+  event: 'PAGE TYPE — Event / Conference:\n- Hero with event name, date, venue and a live countdown.\n- Agenda as 3-column day tabs or a timeline; speakers grid with photos and topics.\n- Registration form with ticket types; urgency copy (Early bird ends…).\n- Booking: slot-picker or seat-map islands + checkout-flow (amountFormula over chosen values) + done-step operation hook — emit === CMS CONFIG NEEDED ===.\n- Imagery: concert, audience, stage (use matching loremflickr keywords).',
+  realestate: 'PAGE TYPE — Real Estate Listings:\n- Property cards with photo, price badge and beds/baths/area meta.\n- Search/filter row (location, type, price) filtering listings client-side.\n- Neighborhood highlights, agent cards and a contact call-to-action.\n- Data: gw.db.query listings from a public object type (register it in the site app); slot-picker island for viewings.\n- Imagery: architecture, house, interior (use matching loremflickr keywords).',
+  portfolio: 'PAGE TYPE — Portfolio Showcase:\n- Case-study layout: large project cards with image, title, category and year.\n- Skills chips, experience timeline and client logos.\n- Strong personal voice; a prominent contact call-to-action.\n- Contact form via data-gw-form + honeypot (formTypeId noted in === CMS CONFIG NEEDED ===).\n- Imagery: design, creative, art (use matching loremflickr keywords).',
+  company: 'PAGE TYPE — Corporate Profile:\n- Mission/vision, values grid, leadership team and a milestones timeline.\n- Stats band (years, clients, projects), client logos, CSR mention.\n- Trustworthy, structured tone; generous whitespace.\n- Contact/career forms via data-gw-form + honeypot (formTypeId noted in === CMS CONFIG NEEDED ===).\n- Imagery: office, business, people (use matching loremflickr keywords).'
 };
 function _pageTypeBlock() {
   var t = _detectPageType(DB.code.html || '');
@@ -2109,10 +2266,15 @@ function buildSettingsSummary() {
     'Active skills: ' + (_activeSkillIds().join(', ') || 'none'),
     '',
     '=== PAGE STRUCTURE GUIDANCE ===',
-    '- Header, navigation and footer are managed by the platform shell (site-wide). Do NOT generate them — output only the page\'s own content sections.',
+    '- The platform injects your output into a page container between the site header/footer — output a BODY FRAGMENT only. Never emit <html>/<head>/<body>/<!DOCTYPE> tags.',
+    '- Site chrome (header/footer) is platform-rendered — never generate your own global nav/header/footer.',
     '- Page sections are decided per request in chat — never apply a fixed default section list.',
-    '- Imagery: use the free keyword image library https://loremflickr.com/<width>/<height>/<keyword1,keyword2> — the URL keywords describe what the photo shows (e.g. restaurant → food,dish; team section → portrait,people; event hero → concert,audience). Always pick keywords relevant to the section and the alt text; keep src/alt/width/height/loading on every <img>.',
-    '- SEO is managed by the CMS content record (seo.metaTitle / seo.metaDesc) — never emit <title>/<meta> tags in your code.'
+    '- CSS is injected GLOBALLY: scope EVERY rule under one unique page class (e.g. .shop-home). Never style bare html/body/*/a/button/h1.',
+    '- JS re-runs on every visit and every SPA navigation: make it idempotent (IIFE + guard for window/document listeners), vanilla JS only, no top-level await, no external <script src> libraries.',
+    '- Use the window.gw SDK: gw.db.query/get for reads, gw.forms.bind() + data-gw-form for forms, gw.db.operation / flows / cart for writes, data-gw-app widgets (menu, cart, checkout-flow, slot-picker, search-box…). Never invent raw writes.',
+    '- Theme: use --gw-color-* CSS variables from site settings instead of hard-coding brand colors; format money with gw.formatCurrency.',
+    '- Imagery: external absolute URLs are fine. Use https://loremflickr.com/<width>/<height>/<keyword1,keyword2> placeholders whose keywords describe the photo (restaurant → food,dish; team → portrait,people). Keep alt/width/height/loading on every <img>.',
+    '- SEO comes from your === SEO === section (mapped to the page object\'s seo field) — never emit <title>/<meta> tags inside the code.'
   ];
   var skills = _skillsBlock();
   if (skills) { parts.push(''); parts.push(skills); }
@@ -2133,10 +2295,10 @@ function buildChatPrompt(userMsg) {
     iparts.push('');
     iparts.push('Continue the interview. Ask the next question. If enough info gathered (4+ answers), summarize and offer to build.');
     iparts.push('');
-    iparts.push('=== GENERALWEBSITE PAGE RULES (for when you generate code) ===');
+    iparts.push('=== PUBLICWEBSITE PAGE RULES (for when you generate code) ===');
     iparts.push(getActiveRules());
     iparts.push('');
-    iparts.push('If the user confirms they want the page built, output [HTML]/[CSS]/[JS] blocks following ALL rules above.');
+    iparts.push('If the user confirms they want the page built, output === HTML === / === CSS === / === JS === / === SEO === / === PAGE META === sections following ALL rules above.');
     return iparts.join('\n');
   }
 
@@ -2162,15 +2324,15 @@ function buildChatPrompt(userMsg) {
 
   if (hasCode) {
     parts.push('=== CURRENT PAGE CODE ===');
-    parts.push('[HTML]\n' + (DB.code.html || '(empty)'));
-    parts.push('[CSS]\n' + (DB.code.css || '(empty)'));
-    parts.push('[JS]\n' + (DB.code.js || '(empty)'));
+    parts.push('=== HTML ===\n' + (DB.code.html || '(empty)'));
+    parts.push('=== CSS ===\n' + (DB.code.css || '(empty)'));
+    parts.push('=== JS ===\n' + (DB.code.js || '(empty)'));
     parts.push('');
     parts.push('=== USER REQUEST ===');
     parts.push(userMsg);
     parts.push('');
-    parts.push('Apply the requested change to the page code above. Output the COMPLETE updated [HTML]/[CSS]/[JS] blocks.');
-    parts.push('Even for small changes, output ALL three complete blocks — never just fragments.');
+    parts.push('Apply the requested change to the page code above. Output the COMPLETE updated === HTML === / === CSS === / === JS === sections (plus === SEO === and === PAGE META === if they should change).');
+    parts.push('Even for small changes, output ALL sections completely — never just fragments.');
     parts.push('Preserve all parts of the page the user did not ask to change.');
     parts.push('If the request would be better served by a new page, rebuild from scratch but keep the brand/content where sensible.');
   } else {
@@ -2183,12 +2345,12 @@ function buildChatPrompt(userMsg) {
     parts.push('Format questions with clickable options like: [[opt1]] First option');
     parts.push('Only generate the page when you have a clear picture of what to design.');
     parts.push('');
-    parts.push('Generate the COMPLETE page from scratch. Output ALL THREE blocks [HTML]/[CSS]/[JS].');
-    parts.push('Follow all GENERALWEBSITE PAGE RULES below.');
+    parts.push('Generate the COMPLETE page from scratch. Output === HTML === / === CSS === / === JS === / === SEO === / === PAGE META === sections.');
+    parts.push('Follow all PUBLICWEBSITE PAGE RULES below.');
   }
 
   parts.push('');
-  parts.push('=== GENERALWEBSITE PAGE RULES (active rules file — FOLLOW STRICTLY) ===');
+  parts.push('=== PUBLICWEBSITE PAGE RULES (active rules file — FOLLOW STRICTLY) ===');
   parts.push(getActiveRules());
   var _typePlaybook = _pageTypeBlock();
   if (_typePlaybook) { parts.push(''); parts.push(_typePlaybook); }
@@ -2199,22 +2361,25 @@ function buildChatPrompt(userMsg) {
   if (_skillsInj) { parts.push(''); parts.push(_skillsInj); }
   parts.push('');
   parts.push('=== OUTPUT CONTRACT ===');
-  parts.push('Output ALL THREE blocks for every code response: [HTML] (body markup only), [CSS] (stylesheet rules only, no <style> tag), [JS] (JavaScript only, no <script> tag).');
-  parts.push('The platform wraps your three blocks into ONE html-code block value: <style>CSS</style> + HTML + <script>JS<\/script>. The [HTML] block must therefore contain NO <style>/<script> tags itself.');
+  parts.push('Output ALL of these sections for every code response: === HTML === (body fragment), === CSS === (scoped rules only), === JS === (idempotent vanilla JS), === SEO === (JSON), === PAGE META === (JSON).');
+  parts.push('The platform injects the HTML fragment into a page container between the site header/footer and appends the CSS to <head> — the HTML block must contain NO <html>/<head>/<body>/<style>/<script> tags.');
+  parts.push('If the page needs an operation or flow that may not exist, STILL generate the page and append === CMS CONFIG NEEDED === with the description of what the CMS author must create.');
   parts.push('CRITICAL COMPLIANCE SELF-CHECK before outputting:');
   parts.push('  - Exactly ONE <h1>, first heading, with the primary keyword. No skipped heading levels.');
-  parts.push('  - Semantic tags (<section>/<article>/<nav>/<header>/<footer>); all <img> have alt, width, height and loading.');
-  parts.push('  - ALL class names prefixed gw- (or page-specific prefix); CSS is global to the page.');
-  parts.push('  - No <html>/<head>/<body>/<!DOCTYPE> tags. No jQuery/Bootstrap/Tailwind. No hardcoded domain URLs. No secrets.');
+  parts.push('  - Semantic landmarks (<section>/<article>/<nav>); all <img> have alt, width, height and loading; labels/aria on inputs; visible focus; contrast.');
+  parts.push('  - ALL CSS scoped under one unique page class prefix (e.g. .shop-home). Never style bare html/body/*/a/button/h1.');
+  parts.push('  - JS idempotent (re-runs on SPA nav): IIFE; guard window/document listeners with window.__xInit; no top-level await; vanilla JS only.');
+  parts.push('  - No external <script src> libraries. No hardcoded host domains in canonical URLs. No secrets.');
+  parts.push('  - Forms: data-gw-form + gw.forms.bind() + honeypot (names gw_hp/website/company reserved) + [data-gw-form-status]. Never auto-submit on load.');
+  parts.push('  - data-gw-config attributes must be VALID JSON (no comments, no trailing commas).');
+  parts.push('  - User/data content rendered with textContent or gw.sanitize — never innerHTML with interpolated values.');
   parts.push('  - Mobile-first: @media queries, 48px tap targets, prefers-reduced-motion, overflow-x:auto on tables.');
-  parts.push('  - JS in one script, wrapped in an IIFE, namespaced under window.MyPage. No DOMContentLoaded needed (scripts run after DOM ready).');
-  parts.push('  - Literal {{ }} or {% %} in code must be wrapped in {% raw %} ... {% endraw %}.');
-  parts.push('  - Size budgets: HTML < 100 KB, CSS < 50 KB, JS < 200 KB. Escape any user-generated data yourself.');
-  parts.push('  - Imagery: every design that needs images (hero, gallery, team, products) MUST include real <img> tags. Use the free keyword image library: https://loremflickr.com/<width>/<height>/<keywords> where the keywords describe the image content itself (food, people, city, nature, technology, concert…) — use different keyword pairs per image so each slot shows a different photo. Always keep alt, width, height and loading attributes. These are design placeholders — real images get swapped in from the website media library before publishing.');
-  parts.push('  - No site-wide header, navigation or footer — the platform shell renders them around your content. Ignore any mention of them in the brief.');
+  parts.push('  - Size budgets: HTML < 100 KB, CSS < 50 KB, JS < 200 KB.');
+  parts.push('  - Imagery: external absolute URLs are fine. Use https://loremflickr.com/<width>/<height>/<keywords> placeholders whose keywords describe the photo (food, people, city, technology, concert…), different keyword pairs per image. Always keep alt, width, height and loading.');
+  parts.push('  - No site-wide header, navigation or footer — the platform shell renders them around your content.');
   parts.push('');
   parts.push('REQUIRED — PLAIN-LANGUAGE SUMMARY AFTER EVERY CODE RESPONSE:');
-  parts.push('After the [JS] block, write a short 2-5 sentence summary for a NON-TECHNICAL user explaining what the page now shows or does — no code jargon.');
+  parts.push('After the code sections, write a short 2-5 sentence summary for a NON-TECHNICAL user explaining what the page now shows or does — no code jargon.');
   parts.push('');
   parts.push('REQUIRED — NEXT-STEP SUGGESTIONS AFTER EVERY CODE RESPONSE:');
   parts.push('Include 3-5 actionable next steps, each on its own line starting with [[suggest_xxx]] followed by an action description.');
@@ -2225,15 +2390,16 @@ function buildChatPrompt(userMsg) {
 
 function buildMinimalPrompt(userMsg) {
   var parts = [
-    'Design a single-page website for the UniconHub GeneralWebsite platform. Output THREE blocks:',
-    '[HTML] body markup only (semantic sections), [CSS] stylesheet rules only, [JS] JavaScript only.',
+    'Design a single-page website for the UniconHub PublicWebsite platform. Output the required sections:',
+    '=== HTML === body fragment only (semantic sections, no document tags), === CSS === scoped rules only, === JS === idempotent vanilla JS, === SEO === JSON, === PAGE META === JSON.',
     'KEY RULES: exactly one <h1>; no skipped heading levels; all <img> have alt/width/height/loading;',
-    'gw- prefixed class names; no <html>/<head>/<body>/<style>/<script> tags in the blocks;',
-    'no jQuery/Bootstrap/Tailwind; mobile-first with @media queries; no hardcoded domains; no secrets;',
-    'no site-wide header/nav/footer (managed by the platform shell);',
+    'every CSS rule scoped under one unique page class; no <html>/<head>/<body>/<style>/<script> tags in the HTML fragment;',
+    'no jQuery/Bootstrap/Tailwind or external script libraries; mobile-first with @media queries; no hardcoded host domains; no secrets;',
+    'no site-wide header/nav/footer (platform shell provides it);',
     'images via https://loremflickr.com/<width>/<height>/<keywords> where the keywords describe the photo (food, people, city, technology…); keep alt/width/height/loading;',
     _thinkingDirective(),
-    'JS wrapped in an IIFE, namespaced under one window object; literal {{ }} or {% %} wrapped in {% raw %}.',
+    'JS idempotent (IIFE + guard), no top-level await; use window.gw SDK for reads/forms/operations/widgets; forms need data-gw-form + honeypot.',
+    'If a needed operation/flow is missing, append === CMS CONFIG NEEDED ===.',
     'Real copy, no lorem ipsum. No placeholders, no TODOs.',
     ''
   ];
@@ -2244,7 +2410,7 @@ function buildMinimalPrompt(userMsg) {
   parts.push('=== USER REQUEST ===');
   parts.push(userMsg);
   parts.push('');
-  parts.push('Generate COMPLETE [HTML]/[CSS]/[JS] blocks.');
+  parts.push('Generate COMPLETE === HTML === / === CSS === / === JS === / === SEO === / === PAGE META === sections.');
   parts.push('If request is vague, ask clarifying questions with [[option_id]] format.');
   return parts.join('\n');
 }
@@ -2390,7 +2556,7 @@ function _shouldPlan(msg, hasCode) {
 
 function _buildPlanPrompt(msg, hasCode) {
   var parts = [];
-  parts.push('You are the PLANNING brain of a single-page website builder (UniconHub GeneralWebsite). The user gave a large request. Break it into a small ORDERED task list so each task can be completed in ONE short answer — no timeouts, incremental build.');
+  parts.push('You are the PLANNING brain of a single-page website builder (UniconHub PublicWebsite). The user gave a large request. Break it into a small ORDERED task list so each task can be completed in ONE short answer — no timeouts, incremental build.');
   parts.push(buildSettingsSummary());
   var skills = _skillsBlock();
   if (skills) { parts.push(''); parts.push(skills); }
@@ -2562,12 +2728,12 @@ function _buildStepPrompt(step, idx, total) {
   parts.push('');
   parts.push('=== OUTPUT CONTRACT (partial edit — NOT the whole page) ===');
   if (step.t === 'edit' || step.t === 'add') {
-    parts.push('Output the new or replacement markup ONLY, wrapped in [HTML] … [/HTML] as a single root <section id="…"> (keep the SAME id when replacing; choose a unique id when adding). gw- prefixed class names.');
-    parts.push('If new rules are needed, add a [CSS] block with ONLY the new/changed rules. If behavior is needed, add a [JS] block with a small self-contained script (IIFE, namespaced under window.MyPage).');
+    parts.push('Output the new or replacement markup ONLY, wrapped in === HTML === … === as a single root <section id="…"> (keep the SAME id when replacing; choose a unique id when adding). Class names must use the page\'s existing unique prefix.');
+    parts.push('If new rules are needed, add a === CSS === block with ONLY the new/changed rules (scoped under the page class). If behavior is needed, add a === JS === block with a small self-contained idempotent script.');
   } else if (step.t === 'style') {
-    parts.push('Output ONLY a [CSS] block with the new/changed rules — not the whole stylesheet.');
+    parts.push('Output ONLY a === CSS === block with the new/changed rules (scoped under the existing page class) — not the whole stylesheet.');
   } else {
-    parts.push('Output ONLY a [JS] block: a small self-contained script (IIFE, namespaced under window.MyPage) implementing the behavior.');
+    parts.push('Output ONLY a === JS === block: a small self-contained IDEMPOTENT script implementing the behavior.');
   }
   parts.push('Never output <style>/<script>/<html>/<head>/<body> tags, site headers/footers, or unrelated page parts. Keep it under ~120 lines. Real copy, no lorem ipsum. Images via https://loremflickr.com/<width>/<height>/<content-keywords> with alt/width/height/loading.');
   return parts.join('\n');
@@ -3136,6 +3302,7 @@ function buildPreviewDoc() {
     '<style>\nhtml{scroll-behavior:smooth}\nsection,[id]{scroll-margin-top:80px}\n' + css + '\n</style></head>' +
     '<body>\n' + html + '\n' +
     scrollScript +
+    _gwPreviewMockScript(lang) + '\n' +
     '<script>\n(function(){var oc={log:console.log,warn:console.warn,error:console.error};function post(l,args){var msg=Array.prototype.slice.call(args).map(function(a){try{return typeof a==="object"?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(" ");try{parent.postMessage({wbConsole:{level:l,msg:msg,time:new Date().toISOString()}},"*")}catch(e){}}console.log=function(){post("log",arguments);oc.log.apply(console,arguments)};console.warn=function(){post("warn",arguments);oc.warn.apply(console,arguments)};console.error=function(){post("error",arguments);oc.error.apply(console,arguments)};window.onerror=function(m){post("error",["Error:",m]);return true};window.addEventListener("keydown",function(e){if(e.ctrlKey&&e.shiftKey&&(e.key==="Y"||e.key==="y")){try{parent.postMessage({wbDump:true},"*")}catch(err){}}});})();\n<\/script>\n' +
     '<script>\n' + js + '\n<\/script>\n</body></html>';
   return doc;
@@ -3490,7 +3657,7 @@ function buildSectionPrompt(kind) {
   lines.push('CONTEXT — keep it consistent:');
   lines.push('- Existing sections: ' + (ctx.existing.length ? ctx.existing.join(', ') : 'none yet — this will be the first section.'));
   lines.push('- Design tokens: ' + ctx.color + ' palette · ' + ctx.typography + ' typography · copy language: ' + ctx.lang + '.');
-  lines.push('- Reuse the existing gw- class naming and follow all GeneralWebsite page rules (one <h1>, semantic tags, alt texts, mobile-first, no site header/footer).');
+  lines.push('- Keep the existing page class prefix and scope all new CSS under it; use unique, prefixed ids; follow all PublicWebsite page rules (body fragment, one <h1>, scoped CSS, idempotent JS, no site header/footer).');
   return lines.join('\n');
 }
 
@@ -3589,34 +3756,37 @@ function gwChecks() {
       }
     },
     {
-      id: 'block-tags', section: '3.5', label: 'No forbidden tags in blocks',
+      id: 'no-document-tags', section: '3.1', label: 'Body fragment only (no document tags)',
       run: function(h, c, j) {
         var bad = [];
-        var hb = h.match(/<(\/?)(html|head|body|style|script)\b[^>]*>/gi);
+        var hb = h.match(/<\/?(html|head|body)\b[^>]*>/gi);
         if (hb) bad = bad.concat(hb);
         if (/<!doctype/i.test(h)) bad.push('<!DOCTYPE>');
-        if (/<style/i.test(c)) bad.push('<style> in CSS block');
-        if (/<script/i.test(j)) bad.push('<script> in JS block');
-        if (bad.length) return { status: 'fail', detail: 'Forbidden tags found: ' + bad.slice(0, 4).join(', ') + ' — <style>/<script> belong inside an html-code block value only, and <html>/<head>/<body>/<!DOCTYPE> never.' };
-        return { status: 'pass', detail: 'Blocks are clean — no <html>/<head>/<body>/<style>/<script> tags.' };
+        if (bad.length) return { status: 'fail', detail: 'Document tags found: ' + bad.slice(0, 4).join(', ') + ' — your HTML is a PURE BODY FRAGMENT injected into the platform container.' };
+        var embedded = [];
+        if (/<style\b/i.test(h)) embedded.push('<style>');
+        if (/<script\b/i.test(h)) embedded.push('<script>');
+        if (embedded.length) return { status: 'warn', detail: embedded.join(', ') + ' embedded in the HTML fragment — tolerated (hoisted) but prefer keeping ALL styling in the CSS section and ALL behavior in the JS section.' };
+        return { status: 'pass', detail: 'Clean body fragment — no <html>/<head>/<body>/<!DOCTYPE> tags.' };
       }
     },
     {
-      id: 'class-prefix', section: '3.5', label: 'Prefixed class names (gw-*)',
+      id: 'css-scope', section: '3.4', label: 'CSS scoped under a page class',
       run: function(h, c) {
-        var classes = _collectClasses(h, c);
-        var prefix = slugify(_parentSlug() || _parentBrand() || 'page');
-        var bad = [];
-        var unprefixed = 0;
-        for (var i = 0; i < classes.length; i++) {
-          var cls = classes[i];
-          if (cls.indexOf('gw-') === 0 || cls.indexOf(prefix + '-') === 0) continue;
-          if (GENERIC_CLASS_NAMES.indexOf(cls) !== -1) bad.push(cls);
-          else unprefixed++;
+        if (!c.trim()) return { status: 'pass', detail: 'No CSS.' };
+        var rootClass = (h.match(/class="([^"\s]+)/) || [])[1];
+        var bare = c.match(/(^|})\s*(html|body|\*|a|button|h1|h2|h3|p|ul|li|img|form|input|table|div)\s*\{/gm);
+        if (bare && bare.length) {
+          var labels = [];
+          for (var bi = 0; bi < bare.length && bi < 4; bi++) {
+            var m2 = bare[bi].match(/(html|body|\*|a|button|h1|h2|h3|p|ul|li|img|form|input|table|div)\s*\{$/);
+            if (m2) labels.push(m2[1]);
+          }
+          return { status: 'fail', detail: 'Bare/global selectors found: ' + labels.join(', ') + ' — CSS is injected GLOBALLY into the page. Scope EVERY rule under your unique page class (e.g. .' + (rootClass || 'shop-home') + ' a { … }).' };
         }
-        if (bad.length) return { status: 'fail', detail: 'Generic unprefixed class names found: .' + bad.slice(0, 5).join(', .') + ' — prefix ALL class names (e.g. gw- or "' + prefix + '-"). CSS is global to the page.' };
-        if (unprefixed) return { status: 'warn', detail: unprefixed + ' class name(s) without the gw- / ' + prefix + '- prefix — CSS is global to the page; prefix them to avoid collisions.' };
-        return { status: 'pass', detail: classes.length + ' class name(s), all prefixed.' };
+        var scoped = (c.match(/\.\s*[a-zA-Z][\w-]*/g) || []).length;
+        if (!scoped) return { status: 'warn', detail: 'No class selectors found — scope all rules under a unique page class to avoid leaking into the site shell.' };
+        return { status: 'pass', detail: 'CSS uses class-scoped selectors — no bare element/global styling.' };
       }
     },
     {
@@ -3661,7 +3831,7 @@ function gwChecks() {
       }
     },
     {
-      id: 'img-source', section: '13', label: 'No hotlinked third-party images',
+      id: 'img-source', section: '3.4', label: 'External images allowed',
       run: function(h) {
         var imgs = _getImgs(h);
         var external = 0;
@@ -3669,40 +3839,80 @@ function gwChecks() {
           var sm = imgs[i].match(/src=["'](https?:\/\/[^"']+)/i);
           if (sm) external++;
         }
-        if (external) return { status: 'warn', detail: external + ' image(s) with absolute external URLs — host images in the website media library before publishing (loremflickr keyword placeholders are fine during design).' };
+        if (external) return { status: 'pass', detail: external + ' external image URL(s) — absolute image URLs are supported by the platform.' };
         if (imgs.length) return { status: 'pass', detail: 'No external image hotlinks.' };
         return { status: 'pass', detail: 'No images used.' };
       }
     },
     {
-      id: 'links-relative', section: '10', label: 'Relative internal links',
+      id: 'links-spa', section: '3.5', label: 'SPA-aware internal links',
       run: function(h) {
-        var abs = (h.match(/href=["']https?:\/\/[^"']+["']/gi) || []);
-        if (abs.length > 4) return { status: 'warn', detail: abs.length + ' absolute hrefs — do NOT hardcode the domain; use relative paths (e.g. href="/about") for internal links.' };
-        if (abs.length) return { status: 'pass', detail: 'Only a few absolute links (external links are OK).' };
-        return { status: 'pass', detail: 'All internal links use relative paths.' };
+        var internal = (h.match(/href=["']\/[^"']*["']/gi) || []).length;
+        var spaNav = (h.match(/data-ic-nav-href/g) || []).length;
+        if (internal > spaNav) return { status: 'warn', detail: internal + ' internal link(s) but only ' + spaNav + ' use data-ic-nav-href — add data-ic-nav-href to internal links (keep href for SEO fallback) or call gw.navigate() so navigation stays SPA-fast.' };
+        var abs = (h.match(/href=["']https?:\/\/[^"']+["']/gi) || []).length;
+        if (abs > 4) return { status: 'warn', detail: abs + ' absolute hrefs — don\'t hard-code the host domain for internal links.' };
+        return { status: 'pass', detail: 'Internal links are SPA-aware and no hard-coded host domains.' };
       }
     },
     {
-      id: 'nunjucks-raw', section: '3.5', label: 'Nunjucks-safe literals',
+      id: 'form-protocol', section: '6', label: 'Forms follow data-gw-form protocol',
+      run: function(h, j) {
+        var forms = (h.match(/<form\b/gi) || []).length;
+        if (!forms) return { status: 'pass', detail: 'No forms on this page.' };
+        var ok = /data-gw-form/.test(h);
+        var hp = /(?:name=["'](?:gw_hp|website|company)["']|data-gw-honeypot)/.test(h);
+        var status = /data-gw-form-status/.test(h);
+        var bind = /gw\.forms\.bind\s*\(/.test(j);
+        var problems = [];
+        if (!ok) problems.push('form lacks data-gw-form');
+        if (!hp) problems.push('no honeypot field (gw_hp/website/company)');
+        if (!status) problems.push('no [data-gw-form-status] element');
+        if (!bind) problems.push('gw.forms.bind() not called in JS');
+        if (problems.length) return { status: 'warn', detail: problems.join('; ') + ' — follow the data-gw-form protocol so submissions reach the CMS form type.' };
+        return { status: 'pass', detail: 'Form follows the data-gw-form protocol (bind + honeypot + status).' };
+      }
+    },
+    {
+      id: 'widget-config', section: '11', label: 'data-gw-config is valid JSON',
+      run: function(h) {
+        var re = /data-gw-config=(["'])([\s\S]*?)\1/g;
+        var m;
+        var bad = 0;
+        while ((m = re.exec(h)) !== null) {
+          var raw = m[2].replace(/&quot;/g, '"');
+          try { JSON.parse(raw); } catch (e) { bad++; }
+        }
+        if (bad) return { status: 'fail', detail: bad + ' data-gw-config attribute(s) are NOT valid JSON — no comments, no trailing commas, double-quoted strings.' };
+        return { status: 'pass', detail: 'All data-gw-config attributes are valid JSON.' };
+      }
+    },
+    {
+      id: 'reserved-names', section: '4', label: 'Honeypot names not used for real fields',
+      run: function(h) {
+        var bad = (h.match(/<(input|textarea|select)\b[^>]*name=["'](?:gw_hp|website|company)["'][^>]*(?!data-gw-honeypot)>/gi) || []);
+        if (bad.length) return { status: 'fail', detail: bad.length + ' real field(s) use reserved honeypot names (gw_hp/website/company) — submissions would be silently dropped.' };
+        return { status: 'pass', detail: 'Reserved honeypot names are not used for real fields.' };
+      }
+    },
+    {
+      id: 'no-document-write', section: '4', label: 'No document.write',
       run: function(h, c, j) {
-        var all = h + '\n' + c + '\n' + j;
-        var hasLiteral = /\{\{|\{%/.test(all);
-        if (!hasLiteral) return { status: 'pass', detail: 'No literal {{ }} or {% %} sequences.' };
-        if (/{%\s*raw\s*%}/.test(all)) return { status: 'pass', detail: 'Literal Nunjucks sequences found but wrapped in {% raw %}.' };
-        return { status: 'fail', detail: 'Literal {{ }} or {% %} found (e.g. client-side templating) — wrap them in {% raw %} ... {% endraw %} or Nunjucks will evaluate them server-side.' };
+        if (/document\.write\s*\(/.test(j)) return { status: 'fail', detail: 'document.write found — it is forbidden on the platform (SPA lifecycles break).' };
+        return { status: 'pass', detail: 'No document.write.' };
       }
     },
     {
-      id: 'no-frameworks', section: '14', label: 'No jQuery / UI framework CDNs',
+      id: 'no-frameworks', section: '3.4', label: 'No external JS libraries / CDN scripts',
       run: function(h, c, j) {
         var all = (h + '\n' + j).toLowerCase();
         var hits = [];
         ['jquery', 'bootstrap', 'tailwind', 'cdn.jsdelivr', 'unpkg', 'cdnjs.cloudflare'].forEach(function(lib) {
           if (all.indexOf(lib) !== -1) hits.push(lib);
         });
-        if (hits.length) return { status: 'fail', detail: 'Forbidden libraries detected: ' + hits.join(', ') + ' — no jQuery, Bootstrap or Tailwind. Use vanilla JS/CSS.' };
-        return { status: 'pass', detail: 'No forbidden framework CDNs.' };
+        if (/<script\b[^>]*\bsrc=/.test(h)) hits.push('external <script src>');
+        if (hits.length) return { status: 'fail', detail: 'Forbidden libraries/scripts detected: ' + hits.join(', ') + ' — plain vanilla JavaScript only; external <script src> is not supported.' };
+        return { status: 'pass', detail: 'No external libraries or CDN scripts.' };
       }
     },
     {
@@ -3715,12 +3925,19 @@ function gwChecks() {
       }
     },
     {
-      id: 'script-namespace', section: '4', label: 'IIFE + namespaced globals',
+      id: 'js-idempotent', section: '3.3', label: 'JS idempotent (SPA re-runs)',
       run: function(h, c, j) {
         if (!j.trim()) return { status: 'pass', detail: 'No JavaScript needed.' };
-        var ok = /^\(function/.test(j.trim()) || /window\.[A-Za-z_$][\w$]*\s*=\s*\{/.test(j);
-        if (ok) return { status: 'pass', detail: 'Script is wrapped in an IIFE and/or uses a single window.* namespace.' };
-        return { status: 'warn', detail: 'Wrap the script in an IIFE and namespace globals under one window object (e.g. window.MyPage = {...}) to avoid global collisions on the live site.' };
+        var iife = /^\(function|^\(\s*function|^;?\(function/.test(j.trim());
+        var guard = /__[A-Za-z_$][\w$]*(Init|Ready|Mounted|Loaded)/.test(j);
+        var winListeners = /(window|document)\.addEventListener/.test(j);
+        var topAwait = /(^|\n)\s*await\s/.test(j);
+        var problems = [];
+        if (!iife && !/\(function/.test(j)) problems.push('not wrapped in an IIFE');
+        if (winListeners && !guard) problems.push('window/document listeners without a __xInit guard (listeners leak across SPA navigations)');
+        if (topAwait) problems.push('top-level await (scripts run in a non-async wrapper)');
+        if (problems.length) return { status: 'warn', detail: problems.join('; ') + ' — your JS re-runs on every SPA navigation.' };
+        return { status: 'pass', detail: 'Script is idempotent (IIFE + guarded listeners, no top-level await).' };
       }
     },
     {
@@ -3731,7 +3948,7 @@ function gwChecks() {
         if (!inner) return { status: 'pass', detail: 'No innerHTML writes of user data.' };
         var hasEsc = /function\s+(esc|escapeHtml|sanitize)\s*\(|\.textContent\s*=/.test(j);
         if (hasEsc) return { status: 'pass', detail: 'innerHTML used but an escape/sanitize helper or textContent is present.' };
-        return { status: 'warn', detail: 'innerHTML writes detected — there is NO sanitization in GeneralWebsite: escape user-generated data yourself before injecting.' };
+        return { status: 'warn', detail: 'innerHTML writes detected — render user/data content with textContent or gw.sanitize(html); never interpolate values into innerHTML.' };
       }
     },
     {
@@ -3759,24 +3976,29 @@ function gwChecks() {
       }
     },
     {
-      id: 'seo-meta', section: '8', label: 'SEO title & description',
+      id: 'seo-section', section: '13', label: 'SEO section present (=== SEO ===)',
       run: function() {
-        var seo = _parentSeo();
-        if (!seo.title && !seo.desc) return { status: 'pass', detail: 'SEO metadata is managed by the CMS content record (seo.metaTitle / seo.metaDesc) and is read from the parent object for the standalone export.' };
+        var seo = DB.seo;
+        if (!seo || typeof seo !== 'object') return { status: 'warn', detail: 'No === SEO === JSON captured yet — ask the AI to add one (metaTitle + metaDesc + schemaItems at minimum).' };
         var problems = [];
-        if (!seo.title) problems.push('parent record has no title');
-        else if (seo.title.length > 60) problems.push('title is ' + seo.title.length + ' chars (> 60)');
-        if (!seo.desc) problems.push('parent record has no meta description');
-        else if (seo.desc.length > 160) problems.push('description is ' + seo.desc.length + ' chars (> 160)');
-        if (problems.length) return { status: 'warn', detail: problems.join('; ') + ' — fix these on the parent CMS record.' };
-        return { status: 'pass', detail: 'Parent record SEO metadata is within limits.' };
+        if (!seo.metaTitle) problems.push('metaTitle missing');
+        else if (String(seo.metaTitle).length > 60) problems.push('metaTitle is ' + String(seo.metaTitle).length + ' chars (> 60)');
+        if (!seo.metaDesc) problems.push('metaDesc missing');
+        else if (String(seo.metaDesc).length > 160) problems.push('metaDesc is ' + String(seo.metaDesc).length + ' chars (> 160)');
+        if (problems.length) return { status: 'warn', detail: problems.join('; ') + '.' };
+        return { status: 'pass', detail: 'SEO section complete (title/description within best-practice limits).' };
       }
     },
     {
-      id: 'pageid-comment', section: '2', label: 'GW-PAGE-ID declaration comment',
-      run: function(h) {
-        if (/GW-PAGE-ID|GW-PARTIAL-ID/.test(h)) return { status: 'pass', detail: 'Declaration comment present (traceability convention).' };
-        return { status: 'warn', detail: 'Add a ' + '<' + '!-- GW-PAGE-ID: your-page-slug --> comment at the top of the html-code value (convention for traceability).' };
+      id: 'page-meta-section', section: '2', label: 'Page meta present (=== PAGE META ===)',
+      run: function() {
+        var pm = DB.pageMeta;
+        if (!pm || typeof pm !== 'object') return { status: 'warn', detail: 'No === PAGE META === JSON captured yet — the platform defaults to published/English; ask the AI to add one (name, slug, meta.language, data.status).' };
+        var problems = [];
+        if (!pm.name && !pm.slug) problems.push('name/slug missing');
+        if (pm.slug && /^(default-settings|default-header|default-footer)$/.test(String(pm.slug))) problems.push('slug is a reserved platform slug');
+        if (problems.length) return { status: 'warn', detail: problems.join('; ') + '.' };
+        return { status: 'pass', detail: 'Page meta captured (slug: ' + (pm.slug || pm.name || '?') + ').' };
       }
     },
     {
@@ -3881,7 +4103,7 @@ function openComplianceTab() {
 
 function buildReviewPrompt() {
   return [
-    'You are a strict compliance reviewer for the UniconHub GeneralWebsite platform.',
+    'You are a strict compliance reviewer for the UniconHub PublicWebsite platform.',
     'Review the generated page code below against EVERY rule in the ACTIVE RULES file.',
     '',
     '=== ACTIVE RULES ===',
@@ -3953,7 +4175,7 @@ function fixWithAi() {
     if (res.results[i].status !== 'pass') fails.push(res.results[i]);
   }
   if (!fails.length) { showToast('All compliance checks already pass! 🎉', 'success'); return; }
-  var lines = ['Please fix the following GeneralWebsite rules-compliance issues in the page:'];
+  var lines = ['Please fix the following PublicWebsite rules-compliance issues in the page:'];
   for (var j = 0; j < fails.length; j++) {
     lines.push('- ' + fails[j].label + ' — ' + fails[j].detail);
   }
@@ -3968,22 +4190,58 @@ function fixWithAi() {
 }
 
 /* ── Full page assembly + export ── */
+/* Minimal window.gw stub injected into the preview iframe AND the standalone
+   download so generated pages (gw.db / gw.forms / widgets) still run outside
+   the real platform. */
+function _gwPreviewMockScript(lang) {
+  return '<script>\n(function(){var L=' + JSON.stringify(lang || 'en') + ';var gw={\n' +
+    'pageId:"preview",siteId:"preview",folderId:"preview",language:L,host:"preview",currency:"USD",\n' +
+    'getPageParams:function(){return {slug:"preview"};},\n' +
+    'navigate:function(){return false;},\n' +
+    'openUrl:function(u){window.open(u,"_blank");},\n' +
+    'onRouteChange:function(){return function(){};},\n' +
+    'getUser:function(){return null;},\n' +
+    'isAuthenticated:function(){return false;},\n' +
+    'authReady:Promise.resolve(null),\n' +
+    'refreshAuth:function(){return Promise.resolve(null);},\n' +
+    'login:function(){return false;},\n' +
+    'logout:function(){return false;},\n' +
+    'storage:{get:function(k){try{return localStorage.getItem("gw_"+k);}catch(e){return null;}},set:function(k,v){try{localStorage.setItem("gw_"+k,String(v));}catch(e){}},remove:function(k){try{localStorage.removeItem("gw_"+k);}catch(e){}}},\n' +
+    'formatCurrency:function(n){return "$"+Number(n||0).toFixed(2);},\n' +
+    'formatDate:function(d){return String(d||"");},\n' +
+    'notify:function(){},\n' +
+    'setLoading:function(){},\n' +
+    'showModal:function(html){var m=document.createElement("div");m.style.cssText="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:99999";m.innerHTML=String(html||"");m.onclick=function(e){if(e.target===m)m.remove();};document.body.appendChild(m);return function(){m.remove();};},\n' +
+    'sanitize:function(s){var d=document.createElement("div");d.textContent=String(s||"");return d.innerHTML;},\n' +
+    'track:function(){},trackPageView:function(){},\n' +
+    'forms:{bind:function(){},submit:function(){return Promise.resolve({ok:true});}},\n' +
+    'db:{query:function(){return Promise.resolve({items:[],total:0,page:1,pageSize:0,facets:{},relations:{}});},get:function(){return Promise.resolve(null);},operation:function(){return Promise.resolve({ok:true,result:{}});},subscribe:function(){return function(){};}},\n' +
+    'apps:{register:function(){},mount:function(){},unmount:function(){}},\n' +
+    'service:function(){return Promise.reject(new Error("gw.service not available"));}\n' +
+    '};\n' +
+    'if(!window.gw){window.gw=gw;}\n' +
+    'window.__gwPreviewMock=true;\n' +
+    'setTimeout(function(){try{window.dispatchEvent(new CustomEvent("gw:ready",{detail:{pageId:"preview"}}));window.dispatchEvent(new CustomEvent("gw:content-ready",{detail:{contentId:"preview"}}));}catch(e){}},0);\n' +
+    '})();\n<\/script>';
+}
 function buildFullPage() {
   var c = DB.code;
-  var seo = _parentSeo();
-  var title = seo.title || 'Webpage';
-  var lang = _p('lang', 'en');
+  var seo = (DB.seo && typeof DB.seo === 'object') ? DB.seo : {};
+  var parentSeo = _parentSeo();
+  var title = seo.metaTitle || parentSeo.title || 'Webpage';
+  var lang = (DB.pageMeta && DB.pageMeta.meta && DB.pageMeta.meta.language) || _p('lang', 'en');
   var fav = '🌐';
   var favSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">' + fav + '</text></svg>';
   var favUri = 'data:image/svg+xml,' + encodeURIComponent(favSvg);
   var meta = '<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + esc(title) + '</title>\n';
-  var seoDesc = seo.desc;
-  var seoKw = seo.keywords;
+  var seoDesc = seo.metaDesc || parentSeo.desc;
+  var seoKw = seo.metaKeywords || parentSeo.keywords;
   if (seoDesc) meta += '<meta name="description" content="' + esc(seoDesc) + '">\n';
   if (seoKw) meta += '<meta name="keywords" content="' + esc(seoKw) + '">\n';
   meta += '<link rel="icon" href="' + favUri + '">\n';
   return '<!DOCTYPE html>\n<html lang="' + esc(lang) + '">\n<head>\n' + meta +
     '<style>\n' + (c.css || '') + '\n</style>\n</head>\n<body>\n' + (c.html || '') + '\n' +
+    _gwPreviewMockScript(lang) + '\n' +
     '<script>\n' + (c.js || '') + '\n<\/script>\n</body>\n</html>';
 }
 
@@ -4054,7 +4312,7 @@ function copyThreeBlocks() {
   var c = el('code-css') ? el('code-css').value.trim() : '';
   var j = el('code-js') ? el('code-js').value.trim() : '';
   if (!h && !c && !j) { showToast('No code yet.', 'warning'); return; }
-  copyToClipboard('[HTML]\n' + h + '\n\n[CSS]\n' + c + '\n\n[JS]\n' + j, 'All three blocks copied!');
+  copyToClipboard('=== HTML ===\n' + h + '\n\n=== CSS ===\n' + c + '\n\n=== JS ===\n' + j, 'All three sections copied!');
 }
 function copyFullPage() {
   var html = el('code-html') ? el('code-html').value.trim() : '';
@@ -4062,34 +4320,38 @@ function copyFullPage() {
   copyToClipboard(buildFullPage(), 'Full page HTML copied!');
 }
 
-/* ── GeneralWebsite html-code block export (rules file Section 3) ── */
-function buildGwHtmlCodeValue() {
-  var h = DB.code.html || '';
-  var c = DB.code.css || '';
-  var j = DB.code.js || '';
-  return ('<' + '!-- GW-PAGE-ID: ' + pageSlug() + ' -->\n') +
-    '<style>\n' + c + '\n</style>\n' +
-    h + '\n' +
-    '<script>\n' + j + '\n<\/script>';
+/* ── PublicWebsite exports: generator output (=== sections) + page object JSON
+   (data.htmlPage.code + seo + page meta, ready for the new platform) ── */
+function buildGeneratorOutputText() {
+  var seo = DB.seo ? JSON.stringify(DB.seo, null, 2) : '{\n  "metaTitle": "",\n  "metaDesc": ""\n}';
+  var pm = DB.pageMeta ? JSON.stringify(DB.pageMeta, null, 2) : '{\n  "name": "Page",\n  "slug": "' + pageSlug() + '",\n  "meta": { "language": "en" }\n}';
+  var out = '=== HTML ===\n' + (DB.code.html || '') + '\n\n=== CSS ===\n' + (DB.code.css || '') + '\n\n=== JS ===\n' + (DB.code.js || '') + '\n\n=== SEO ===\n' + seo + '\n\n=== PAGE META ===\n' + pm;
+  if (DB.configNeeded) out += '\n\n=== CMS CONFIG NEEDED ===\n' + DB.configNeeded;
+  return out;
 }
-function buildGwBlockJson() {
-  var block = {
-    type: 'html-code',
-    meta: { slug: 'gw-' + pageSlug(), name: _parentBrand() || 'Page' },
-    css: '{}',
-    settingsJSON: '{}',
-    fullWidthBlockCss: '{}',
-    value: buildGwHtmlCodeValue()
+function buildPageObjectJson() {
+  var pm = (DB.pageMeta && typeof DB.pageMeta === 'object') ? DB.pageMeta : {};
+  var obj = {
+    name: pm.name || _parentBrand() || 'Page',
+    slug: pm.slug || pageSlug(),
+    meta: { language: (pm.meta && pm.meta.language) || _p('lang', 'en') },
+    data: {
+      status: (pm.data && pm.data.status) || 'published',
+      htmlPage: { code: { html: DB.code.html || '', css: DB.code.css || '', js: DB.code.js || '' } }
+    },
+    seo: DB.seo || {}
   };
-  return JSON.stringify(block, null, 2);
+  if (pm.data && pm.data.requireAuth) obj.data.requireAuth = pm.data.requireAuth;
+  if (pm.data && pm.data.templateContentType) obj.data.templateContentType = pm.data.templateContentType;
+  return JSON.stringify(obj, null, 2);
 }
-function copyGwBlock() {
-  if (!DB.code.html) { showToast('No page to export yet.', 'warning'); return; }
-  copyToClipboard(buildGwBlockJson(), 'GW html-code block copied! Paste into sp_contents.blocks.');
+function copyGeneratorOutput() {
+  if (!DB.code.html && !DB.code.css && !DB.code.js) { showToast('No page to export yet.', 'warning'); return; }
+  copyToClipboard(buildGeneratorOutputText(), 'Generator output copied (=== sections)!');
 }
-function copyGwValue() {
-  if (!DB.code.html) { showToast('No page to export yet.', 'warning'); return; }
-  copyToClipboard(buildGwHtmlCodeValue(), 'GW html-code block value copied!');
+function copyPageObject() {
+  if (!DB.code.html && !DB.code.css && !DB.code.js) { showToast('No page to export yet.', 'warning'); return; }
+  copyToClipboard(buildPageObjectJson(), 'Page object JSON copied (data.htmlPage.code + seo)!');
 }
 
 /* ── History persistence: each snapshot is a SEPARATE object in
@@ -4475,7 +4737,7 @@ function lockUI(ro) {
 }
 
 /* ── Render (restore from saved value) ── */
-var KNOWN_KEYS = ['version', 'activeSessionId', '_instanceId', '_parentRecordId'];
+var KNOWN_KEYS = ['version', 'activeSessionId', 'chatCache', 'seo', 'pageMeta', 'configNeeded', '_instanceId', '_parentRecordId'];
 function render(v) {
   if (v && typeof v === 'object') {
     try {
@@ -4503,6 +4765,22 @@ function render(v) {
     for (var i = 0; i < KNOWN_KEYS.length; i++) {
       var k = KNOWN_KEYS[i];
       if (typeof v[k] !== 'undefined') DB[k] = v[k];
+    }
+    if (v.chatCache && typeof v.chatCache === 'object') {
+      if (Array.isArray(v.chatCache)) {
+        // older shape: bare message array
+        DB.chatCache = { sessionId: '', messages: v.chatCache };
+      } else {
+        DB.chatCache = { sessionId: v.chatCache.sessionId || '', messages: v.chatCache.messages || [] };
+      }
+    }
+    // Prefill chat from the bounded cache BEFORE sessions load — the session
+    // restore below can still override with fresher data.
+    if (!DB.chatMessages.length && DB.chatCache.messages && DB.chatCache.messages.length) {
+      if (!DB.activeSessionId || DB.chatCache.sessionId === DB.activeSessionId || !DB.chatCache.sessionId) {
+        DB.chatMessages = DB.chatCache.messages.slice();
+        updateChatBadge();
+      }
     }
     // One-shot: if the code blocks are missing the version comment, add it
     // and persist once so code and version stay consistent.
@@ -4555,8 +4833,8 @@ function bindEvents() {
 
   el('btn-export-html').onclick = downloadFullPage;
   el('btn-export-pdf').onclick = exportPdf;
-  el('btn-export-gw-block').onclick = copyGwBlock;
-  el('btn-export-gw-value').onclick = copyGwValue;
+  el('btn-export-gw-block').onclick = copyPageObject;
+  el('btn-export-gw-value').onclick = copyGeneratorOutput;
   el('btn-export-copy-full').onclick = copyFullPage;
   el('btn-export-copy-blocks').onclick = copyThreeBlocks;
   el('btn-generate-all').onclick = runFullGeneration;
@@ -4638,7 +4916,7 @@ var _initialized = false;
 tool.onReady(function(val, fields) {
   if (_initialized) { console.warn('[WEBPAGEBUILDER:INIT] Already initialized — skipping'); return; }
   _initialized = true;
-  console.log('[WEBPAGEBUILDER] build 2026-08-15l — agentic results + version stamps + auto-save');
+  console.log('[WEBPAGEBUILDER] build 2026-08-18a — publicwebsite v2 ruleset + resilient chat cache');
 
   _loadSkills();
   _loadAgenticPref();
@@ -4650,20 +4928,24 @@ tool.onReady(function(val, fields) {
   tool.declareOutput({
     type: 'object',
     title: 'WebpageBuilder Value',
-    description: 'Slim saved value: current page code + version + session plumbing. Version snapshots live as separate objects in webpagebuilder-history-uniconbaseapps so this object stays far below the 1 MB Firestore limit. Page identity and SEO live on the parent CMS content record; design direction comes from admin parameters (shared across pages).',
+    description: 'Slim saved value: page code + SEO + page meta + version + session plumbing + a bounded chat cache. Version snapshots live as separate objects in webpagebuilder-history-uniconbaseapps so this object stays far below the 1 MB Firestore limit.',
     properties: {
       code: {
         type: 'object', title: 'Generated Page Code',
-        description: 'The three blocks produced by the AI; assembled into one GeneralWebsite html-code block on export.',
+        description: 'The three code sections produced by the AI (publicwebsite contract: === HTML === / === CSS === / === JS ===), mapped to data.htmlPage.code on the page object.',
         properties: {
-          html: { type: 'string', title: 'HTML', description: 'Body markup only (no html/head/body/style/script tags).' },
-          css: { type: 'string', title: 'CSS', description: 'Stylesheet rules only (hoisted into the html-code <style>).' },
-          js: { type: 'string', title: 'JavaScript', description: 'Page scripts only (appended inside the html-code block).' }
+          html: { type: 'string', title: 'HTML', description: 'Body fragment only (no html/head/body/doctype tags) — injected into the platform page container.' },
+          css: { type: 'string', title: 'CSS', description: 'Scoped stylesheet rules (appended to <head>, removed on unmount).' },
+          js: { type: 'string', title: 'JavaScript', description: 'Idempotent vanilla JS (re-runs on every SPA navigation).' }
         }
       },
+      seo: { type: 'object', title: 'SEO', description: '=== SEO === JSON from the AI (metaTitle, metaDesc, schemaItems, …) — mapped to the page object seo field.' },
+      pageMeta: { type: 'object', title: 'Page Meta', description: '=== PAGE META === JSON from the AI (name, slug, meta.language, data.status, data.requireAuth).' },
+      configNeeded: { type: 'string', title: 'CMS Config Needed', description: '=== CMS CONFIG NEEDED === notes listing the operations/flows the CMS author must create for this page.' },
+      chatCache: { type: 'object', title: 'Chat Cache', description: 'Bounded fallback copy of the last chat messages ({sessionId, messages}) so chat survives even if session storage is unavailable.' },
       version: { type: 'string', title: 'Page Version', description: 'Semantic version of the generated page. AI update → minor bump; manual edit → patch bump.' },
-      activeSessionId: { type: 'string', title: 'Active Chat Session ID', description: 'Document id in ai-chat-sessions-uniconbaseapps (chat transcript is stored there, not here).' },
-      _instanceId: { type: 'string', title: 'Instance ID', description: 'Stable per-instance identifier used to isolate chat sessions.' },
+      activeSessionId: { type: 'string', title: 'Active Chat Session ID', description: 'Document id in ai-chat-sessions-uniconbaseapps (canonical chat transcript).' },
+      _instanceId: { type: 'string', title: 'Instance ID', description: 'Deterministic per-instance identifier (derived from the parent record id) used to isolate chat sessions.' },
       _parentRecordId: { type: 'string', title: 'Parent Record ID', description: 'Parent CMS record id, captured from the first created chat session.' }
     }
   });
@@ -4673,7 +4955,7 @@ tool.onReady(function(val, fields) {
     { name: 'allowFileContent', label: 'Enable File Content Extraction', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Extracts text from uploaded PDFs/DOCX to include in AI prompts.' },
     { name: 'allowExportPdf', label: 'Enable PDF Export', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Enables the Export PDF button in Settings → Export.' },
     { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Chat history is stored in CMS type ai-chat-sessions-uniconbaseapps. Add it to allowedObjectTypes with role: editor, scope: instance.' },
-    { name: 'pageRules', label: 'Page Rules Override', type: 'text', default: '', severity: 'optional', hint: 'Optional: paste the full generalwebsite-page-rules.txt text here to override the built-in rules for every instance of this tool.' },
+    { name: 'pageRules', label: 'Page Rules Override', type: 'text', default: '', severity: 'optional', hint: 'Optional: paste the full public-website-page-rules.txt (v2.0) text here to override the built-in rules for every instance of this tool.' },
     { name: 'colorScheme', label: 'Color Scheme', type: 'text', default: 'indigo', severity: 'optional', hint: 'Site-wide palette shared across pages. Options: emerald | blue | indigo | violet | rose | amber | teal | ocean | forest | sunset | mono.' },
     { name: 'typography', label: 'Typography', type: 'text', default: 'modern-sans', severity: 'optional', hint: 'Site-wide font pairing: modern-sans | elegant-serif | friendly-rounded | tech-mono | editorial.' },
     { name: 'thinkingLevel', label: 'AI Thinking Depth', type: 'text', default: 'balanced', severity: 'optional', hint: 'How much reasoning effort the AI spends per request: quick | balanced | deep. Deeper = more thoughtful structure and copy, but slower. Works best when the AI gateway runs a reasoning-capable model (e.g. DeepSeek V4 Pro).' },

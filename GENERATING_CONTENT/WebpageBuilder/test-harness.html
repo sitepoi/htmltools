@@ -268,12 +268,12 @@ body { padding-top: 28px !important; margin: 0; }
               <div class="export-row">
                 <button class="btn btn-primary" id="btn-export-html">📥 Download .html</button>
                 <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
-                <button class="btn btn-outline" id="btn-export-gw-block" title="Copy a GeneralWebsite html-code block (JSON) ready to paste into sp_contents.blocks">📋 Copy GW html-code Block</button>
-                <button class="btn btn-outline" id="btn-export-gw-value" title="Copy only the combined html-code value (style + markup + script)">📋 Copy GW Block Value</button>
+                <button class="btn btn-outline" id="btn-export-gw-block" title="Copy the full PublicWebsite page object JSON (data.htmlPage.code + seo + page meta)">📋 Copy Page Object JSON</button>
+                <button class="btn btn-outline" id="btn-export-gw-value" title="Copy the generator output (=== HTML/CSS/JS/SEO/PAGE META sections)">📋 Copy Generator Output</button>
                 <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
                 <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
               </div>
-              <p class="gen-hint">The downloaded .html file is a complete standalone webpage. The <b>GW html-code block</b> is the GeneralWebsite format — paste it into a CMS content record's blocks array.</p>
+              <p class="gen-hint">The downloaded .html file is a complete standalone preview (with a window.gw mock). The <b>page object JSON</b> maps to the PublicWebsite page object (data.htmlPage.code + seo) and the <b>generator output</b> is the raw === HTML/CSS/JS/SEO/PAGE META text.</p>
             </div>
           </div>
         </div>
@@ -342,766 +342,631 @@ body { padding-top: 28px !important; margin: 0; }
   <!-- EMBEDDED GENERALWEBSITE PAGE RULES (v1.2) — injected verbatim into AI prompts.
        The text below is HTML-entity escaped so it can never terminate this script element. -->
   <script type="text/plain" id="page-guide-source" style="display:none">
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GENERALWEBSITE-PAGE-RULES.TXT  —  v1.2  (ALIGNED WITH THE ACTUAL CODEBASE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GENERALWEBSITE NEXT-GEN — PAGE GENERATOR RULES v2.0
+====================================================
+The complete contract an AI page generator must follow to produce pages for
+the CURRENT GeneralWebsite platform (recorded 2026-08-17).
 
-WHY v1.2 REPLACES v1.1
-──────────────────────
-v1.1 described an idealized architecture: a `window.gw` SDK, [METADATA]/[HTML]/
-[CSS]/[JS] output blocks, auto-scoped CSS, gw.db()/gw.service()/gw.api(),
-partials and page gating — NONE of which exist in the codebase yet.
+This file REPLACES the legacy `rules-generators-v1.3.txt` and
+`general-website-page-rule-v1.2.txt` (older CMS generations). Everything
+below is grounded in the current code: page object schema, window.gw SDK v2,
+forms engine, data/query API, operations engine, flows engine, cart API and
+the built-in widget library. Do not mix legacy rules into your output.
 
-v1.2 describes what the GeneralWebsite platform ACTUALLY ingests today,
-grounded in the real implementation (verified against the code):
+This document is designed to be pasted into an AI prompt together with the
+user's page request ("build a landing page", "build a menu + checkout shop",
+"build a booking page", ...). The generator must produce HTML, CSS and JS
+that run inside the platform exactly as described below.
 
-  • Content is stored as CMS content records with `blocks[]` (Firestore
-    `sp_contents`), rendered by Next.js SSR (pages/[...param].js →
-    PageBlocks/dynamicPages/PageSSR/MainPageSSR → PageJSX/MainPageJSX →
-    FlatContent).
-  • `html-code` blocks DO execute custom JavaScript and hoist &lt;style&gt;/&lt;link&gt;
-    into &lt;head&gt;.  `html` blocks render raw markup but do NOT execute scripts.
-  • Metadata comes from the content's `seo` field (metaTitle/metaDesc/metaImage).
-  • There is NO window.gw SDK yet.  CMS JavaScript runs unsandboxed with full
-    DOM access (Section 15).
+----------------------------------------------------------------------------
+0. WHAT YOU PRODUCE
+----------------------------------------------------------------------------
+Produce EXACTLY three code parts plus optional metadata, in this layout:
 
-Every capability that the platform does NOT support yet is marked [PLANNED]
-and itemized in the companion document:
-    zHTMLDOCS/generalwebsite-roadmap/generalwebsite-capability-roadmap.html   (how to build them)
+    === HTML ===
+    &lt;section class="shop-home"&gt; ... body fragment ... &lt;/section&gt;
+    === CSS ===
+    .shop-home { ... }
+    === JS ===
+    (function () { ... })();
+    === SEO ===
+    { "metaTitle": "...", "metaDesc": "...", "schemaItems": [ ... ] }
+    === PAGE META ===
+    { "name": "Shop", "slug": "shop", "meta": { "language": "en" },
+      "data": { "status": "published", "requireAuth": false } }
 
-NOTE FOR YOUR UNICONHUB TOOL: generate content in the FORMAT DESCRIBED HERE
-(Section 3).  Do not emit the v1.1 [METADATA]/[CSS]/[JS] block syntax — the
-platform does not parse it.  Section 3.3 shows the exact mapping from the old
-syntax to the real format.
+Mapping to the CMS page object (Section 2):
+- HTML -&gt; data.htmlPage.code.html
+- CSS  -&gt; data.htmlPage.code.css
+- JS   -&gt; data.htmlPage.code.js
+- SEO  -&gt; the object `seo` section (Section 14)
+- PAGE META -&gt; object fields `name`, `slug`, `meta.language`,
+               `data.status`, `data.requireAuth`
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TABLE OF CONTENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If the page needs an operation or a flow that the user has not confirmed
+exists, still generate the page but append:
 
-  1. WHAT GENERALWEBSITE IS
-  2. ONE PAGE MODEL — SEO CONTENT + EMBEDDED WEB APPS
-  3. WHAT YOU DELIVER — THE CMS CONTENT RECORD (the real format)
-  4. HOW YOUR PAGE IS RENDERED (real pipeline, no iframe)
-  5. BLOCK TYPE REFERENCE (what exists today)
-  6. NUNJUCKS TEMPLATING (globals, filters, variables)
-  7. DATA CONNECTIVITY (object lists, forms, payments, email — real APIs)
-  8. SEO REQUIREMENTS FOR PUBLIC PAGES
-  9. PAGE METADATA &amp; STRUCTURED DATA (what is auto-generated)
- 10. ROUTING &amp; DEEP LINKS
- 11. MOBILE RESPONSIVENESS (Mandatory)
- 12. AUTHENTICATION — what exists today (+ planned gating)
- 13. ASSET HANDLING
- 14. PERFORMANCE CONSTRAINTS
- 15. SECURITY MODEL
- 16. TESTING &amp; PREVIEW
- 17. CAPABILITY MATRIX (EXISTS / PARTIAL / PLANNED)
- 18. EXAMPLE: SEO LANDING PAGE (real format)
- APPENDIX A — PLANNED window.gw SDK (future)
- APPENDIX B — FIELD GLOSSARY
+    === CMS CONFIG NEEDED ===
+    { description of the operation/flow the CMS author must create }
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. WHAT GENERALWEBSITE IS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Never invent writes instead (Section 9).
 
-GeneralWebsite (GW) is the Uniconhub system that publishes public websites
-from CMS content.  You generate the INNER CONTENT of a page, stored as a
-content record (or you configure reusable pieces of it), and the platform
-renders it inside a live public website.
+----------------------------------------------------------------------------
+1. THE PAGE MODEL
+----------------------------------------------------------------------------
+- A tenant has apps; each app can host folders (sites). A site is a folder
+  that contains an object with slug `default-settings` (Section 7).
+- A PAGE is an object of the site's app type inside the website folder,
+  routed by its object-level `slug`:
 
-  • Runs NATIVELY in the host page DOM — NEVER inside an iframe.
-  • Inherits the website's theme, global CSS/JS, SEO shell, navigation, footer.
-  • Full SEO — content is SSR-rendered into the page HTML and is indexable.
-  • Server-side Nunjucks templating on all text/html block values.
-  • Custom JavaScript CAN run (via `html-code` blocks) with full DOM access.
-  • Target audience: the general public.
-  • Mobile-responsive is MANDATORY (Section 11).
+    slug `home-page`            -&gt; `/`
+    any other slug `&lt;slug&gt;`     -&gt; `/&lt;slug&gt;`
+    any object of a registered
+    object type                 -&gt; `/&lt;cmsObjectType&gt;/&lt;id&gt;`   (object detail)
+    template page with slug T   -&gt; `/t/&lt;T&gt;/&lt;contentId&gt;`
+    page with slug `app-&lt;appId&gt;`-&gt; `/app/&lt;appId&gt;/...`       (capability page)
 
-You NEVER write &lt;html&gt;, &lt;head&gt;, or &lt;body&gt; tags.  Your output is only inner
-content embedded into an already running page.  [METADATA]/[HTML]/[CSS]/[JS]
-block syntax from v1.1 is NOT supported — see Section 3 for the real format.
+- Language comes from `meta.language`. There are NO locale path prefixes.
+- Sibling pages = same `contentId`, other languages (hreflang + language
+  switcher are handled by the platform).
+- Reserved slugs that are NOT pages: `default-settings`, `default-header`,
+  `default-footer`. Never generate pages with these slugs.
+- The site chrome (header/footer) is rendered by the platform from the
+  `default-header` / `default-footer` objects. Do NOT build your own global
+  nav/header/footer unless the request explicitly says so.
+- Object detail pages: any object of a registered public type can carry its
+  own `data.htmlPage.code` and will render it at `/&lt;type&gt;/&lt;id&gt;`.
+- Template pages: the page object has `data.templateContentType` (which
+  object type supplies the content object). At `/t/&lt;T&gt;/&lt;contentId&gt;` the
+  content object's own htmlPage is rendered when present, else the template
+  page's. The content id and template slug are available in JS via
+  `gw.getPageParams()` (Section 5).
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. ONE PAGE MODEL — SEO CONTENT + EMBEDDED WEB APPS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-There is ONE kind of output: a page composed of CMS blocks.  A page can be
-mostly informational, can contain interactive web applications (booking
-forms, calculators, product catalogs, payment checkout), or can mix both.
-Web apps are just ordinary `html-code` / `dynamic-form` / `object-query-list`
-blocks on the same page.
-
-Informational parts must follow Section 8 (SEO).  Interactive parts only need
-the starred (★) SEO basics and mobile responsiveness.
-
-DECLARATION COMMENT — a generator convention (the platform does NOT parse it,
-it exists for human/agent traceability only):
-
-  &lt;!-- GW-PAGE-ID: your-page-slug --&gt;
-
-For a shared/reusable piece use:
-
-  &lt;!-- GW-PARTIAL-ID: your-partial-name --&gt;
-
-(Partials are implemented today via `shared-content`, `settings-items`,
-`additions-*` and `page-header`/`page-footer` blocks — see Section 3.4.)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. WHAT YOU DELIVER — THE CMS CONTENT RECORD
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-── 3.1 CONTENT RECORD ANATOMY (sp_contents) ───────────────────────────────────
-
-A page is one Firestore content record (collection `sp_contents`-&lt;tenant&gt;):
-
-  {
-    "contentId": "contact-us",          // stable ID = translation group id
-    "slug": "contact-us",               // URL slug (per language)
-    "tenantId": "...",                  // auto
-    "typeId": "...",                    // content type
-    "name": "Contact Us",
-    "meta": {
-      "language": "en",                 // en, es, fr, de, tr, it, pt, nl, pl, ru, sv
-      "category1": "page",              // category1/2/3; category1 === 'blog' ⇒ BlogPosting JSON-LD
-      "category2": "",
-      "category3": "",
-      "status": "enabled",              // 'enabled' | ...
-      "pageOrder": 1,
-      "isVisible": ""                   // 'no' hides the whole content
-    },
-    "seo": {                            // ← this is the [METADATA] of v1.1
-      "metaTitle": "Contact Us | Your Company",        // ≤ 60 chars (company name auto-appended)
-      "metaDesc": "Talk to our team. We reply within one business day.",  // ≤ 160 chars
-      "metaImage": "https://cdn.example.com/og/contact.jpg"               // og:image / featured image
-    },
-    "blocks": [ ... ]                   // Section 3.2
-  }
-
-Translation variants share the same `contentId` and differ in `slug` +
-`meta.language`.  The platform builds hreflang tags and the language switcher
-from these siblings automatically.
-
-── 3.2 BLOCK ANATOMY ──────────────────────────────────────────────────────────
-
-Each block:
-
-  {
-    "type": "html-code",                // 'html' | 'html-code' | 'text' | 'image' | 'json' | 'faq-item'
-    "value": "&lt;section&gt;...&lt;/section&gt;",  // depends on type (see Section 5)
-    "meta": {
-      "slug": "hero",                   // becomes the DOM id of the block wrapper
-      "name": "Hero",
-      "isVisible": "",                  // 'no' hides the block
-      "mobileDesktopVisibility": "",    // hide on mobile/desktop (component-specific)
-      "cssClassNames": "my-hero",       // extra className on html-code wrapper
-      "altText": "", "width": 600, "height": 300,   // image blocks
-      "groupId": ""
-    },
-    "css": "{\"paddingTop\":\"24px\"}",         // JSON string of React inline styles for the wrapper
-    "settingsJSON": "{}",                       // JSON string passed to the block component
-    "fullWidthBlockCss": "{}"                   // JSON string of styles for the full-width wrapper
-  }
-
-IMPORTANT: `css`, `settingsJSON`, `fullWidthBlockCss` must be JSON STRINGS of
-React inline-style objects (camelCase keys), NOT CSS text.
-
-── 3.3 MAPPING FROM THE v1.1 FORMAT TO THE REAL FORMAT ────────────────────────
-
-  v1.1                            →  REAL PLATFORM
-  ──────────────────────────────     ──────────────────────────────────────────
-  [METADATA] title                →  seo.metaTitle
-  [METADATA] description          →  seo.metaDesc
-  [METADATA] og:image             →  seo.metaImage
-  [METADATA] canonical            →  auto-generated from slug (Section 10);
-                                     override: seo.canonicalUrl  [PLANNED]
-  [METADATA] robots noindex       →  seo.noIndex            [PLANNED]
-  [METADATA] keywords             →  seo.keywords           [PLANNED]
-  [METADATA] schema               →  auto JSON-LD (Section 9);
-                                     arbitrary passthrough: seo.structuredDataJson [PLANNED]
-  [HTML] (markup only)            →  block { type: 'html', value: '...' }
-  [HTML] + [JS] + &lt;style&gt;         →  block { type: 'html-code', value: '&lt;style&gt;…&lt;/style&gt;
-                                     &lt;div&gt;…&lt;/div&gt;&lt;script&gt;…&lt;/script&gt;' }
-  [CSS]                           →  block.css (JSON inline styles) and/or a &lt;style&gt;
-                                     tag inside the html-code value (hoisted to &lt;head&gt;)
-  [JS]                            →  &lt;script&gt;…&lt;/script&gt; at the end of an html-code
-                                     block value (executed after the DOM is ready)
-  gw.onReady(cb)                  →  NO SDK YET — see Section 4 (script timing) and
-                                     Appendix A (planned SDK)
-
-── 3.4 REUSABLE PIECES THAT EXIST TODAY ───────────────────────────────────────
-
-  • shared-content — a json block with meta.slug === 'shared-content' and
-    value { "sharedContentId": "&lt;contentId&gt;" } splices another content's
-    blocks into the current page at that position.
-  • settings-items — site-wide content whose `css-variables` / `css-classes`
-    blocks are applied to every page (and compiled into /api/css/[host].css).
-  • additions-inside-head / additions-after-body-start /
-    additions-before-body-end — three fixed contentIds whose html/html-code
-    blocks are injected into the document &lt;head&gt; / after &lt;body&gt; start /
-    before &lt;/body&gt; (site-wide scripts, pixels, cookie banners).
-  • default-header / default-footer — site chrome contents; overridable per
-    page with `page-header` / `page-footer` blocks (meta.slug set, isVisible ≠ 'no').
-  • Partial WITH PARAMETERS ({% include 'x' with {...} %} style) is [PLANNED]
-    — see roadmap P6.
-
-── 3.5 HTML/CSS/JS WRITING RULES FOR GENERATED CODE ────────────────────────────
-
-  ✓ Never emit &lt;html&gt;, &lt;head&gt;, &lt;body&gt;, &lt;style&gt; or &lt;script&gt; outside a block.
-    &lt;style&gt;/&lt;script&gt; are allowed INSIDE an html-code block value only.
-  ✓ Prefix ALL your class names (e.g. `gw-` or page-specific prefix).  CSS
-    injected from html-code is global to the page — there is NO automatic
-    scoping in the platform today.
-  ✓ Block meta.slug becomes the DOM id — keep it unique within the page.
-  ✓ Nunjucks runs over html/html-code/text/markdown values with autoescape
-    OFF.  If your generated markup contains literal `{{ }}` or `{% %}` (e.g.
-    a client-side templating library), wrap it in {% raw %} ... {% endraw %}.
-  ✓ Escape user data yourself — no sanitizer runs anywhere (Section 15).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. HOW YOUR PAGE IS RENDERED (REAL PIPELINE — NO IFRAME)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  1. Request → pages/index.js (home) or pages/[...param].js (everything else).
-     Both call shouldBlockRequest() (bot/traffic filtering), then MainPageSSR.
-  2. MainPageSSR resolves:
-       • language: context.locale, else env &lt;HOSTNAME_WITH_UNDERSCORES&gt;_default_language, else 'en'
-       • route → page id (Section 10)
-       • content by slug (getContentBySlug) → contentId + translation siblings
-       • fetch ids: ['default-header', &lt;pageId&gt;, 'settings-items', 'default-footer']
-         via getModifiedContentsByIds (data/utils/contentUtils.js)
-  3. getModifiedContentsByIds applies the pipeline:
-       • Nunjucks rendering of block values (Section 6)
-       • shared-content splicing
-       • object-query-list expansion (Section 7.1)
-       • i18n block variables
-       • css-classes / css-variables collection and substitution
-       • productData.data_categoriesBased → content.data
-  4. SSR returns props (ssr_contents, ssr_seoMeta, ssr_canonicalUrl,
-     ssr_hreflangTags, ssr_pageMainStructuredData, ssr_variablesForContent, ...).
-  5. MainPageJSX renders MainAppView → Layout1 → for each content → FlatContent,
-     which dispatches each block by `type` (Section 5).
-  6. html-code blocks: InjectedContent (PageBlocks/web/content-components/
-     InjectedContent.js) injects the HTML, hoists &lt;style&gt;/&lt;link rel="stylesheet"&gt;
-     into &lt;head&gt; (deduped), and executes &lt;script&gt; tags sequentially after a
-     double requestAnimationFrame — i.e. after the DOM is ready.  Inline
-     scripts run inside an IIFE (Blob URL) with error-swallowing timers, and
-     top-level named functions are hoisted to window so inline onclick
-     handlers work.  You do NOT need DOMContentLoaded — scripts already run
-     after render.  For SPA navigation re-inits, CMS chrome scripts are
-     re-run via a reinit registry.
-
-  SCRIPT TIMING RULE FOR GENERATED CODE:
-  Put everything in one &lt;script&gt; at the end of the html-code value.  Wrap
-  your code in an IIFE and namespace globals under one window object, e.g.
-  window.MyPage = { init: function(){ ... } }.  There is no gw.onReady yet.
-
-  YOU DO NOT CONTROL:
-  • &lt;title&gt;/&lt;meta&gt;/JSON-LD — they come from the content's seo field + the
-    platform's HeadAndMetaData component (Sections 8–9).
-  • The document shell, site header/footer (unless you use page-header /
-    page-footer / additions-*).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. BLOCK TYPE REFERENCE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  TYPE           VALUE                        RENDERING
-  ──────────     ──────────────────────────   ─────────────────────────────────
-  html           raw HTML string              dangerouslySetInnerHTML.
-                                              Nunjucks-rendered.
-                                              ✗ &lt;script&gt; inside will NOT run.
-                                              ✗ &lt;style&gt; inside will NOT be hoisted.
-                                              Use for static markup only.
-
-  html-code      raw HTML string              InjectedContent: HTML injected,
-                                              &lt;style&gt;/&lt;link&gt; hoisted to &lt;head&gt;,
-                                              &lt;script&gt; executed (sequential).
-                                              Nunjucks-rendered.
-                                              Use when the page needs CSS or JS.
-
-  text           plain text                   rendered as escaped-ish text node.
-
-  image          { url, thumb_url }           next/image; alt/title/width/height
-                                              from meta.altText/meta.width/meta.height.
-
-  json           depends on meta.slug         dispatched to ContentComponentIncluder:
-    meta.slug === 'dynamic-form'                → DynamicForm (Section 7.2)
-    meta.slug === 'enduser-registration-form'   → EndUserRegistration
-    meta.slug === 'object-query-list'           → QueryList (Section 7.1)
-    meta.slug === 'new-uniconhub-company-account' → NewCompanySubDomain
-    meta.slug === 'flexbox-content'             → legacy layout (deprecated)
-    meta.slug === 'shared-content'              → content splicing (Section 3.4)
-    meta.slug === 'i18n'                        → translation variables (Section 6)
-    meta.slug === 'css-variables' / 'css-classes' / 'css-classes-sync-with-components'
-                                                → theme pipeline (Section 3.4)
-    meta.slug === 'page-header' / 'page-footer' → replaces default chrome
-    meta.slug === 'product-listing-component'   → LEGACY, do not use
-                                              (replaced by object-query-list)
-
-  faq-item       { question, answer }         visual rendering TEMPORARILY DISABLED;
-                                              FAQPage JSON-LD is still auto-generated
-                                              from these blocks (Section 9).
-
-  markdown       markdown text                Nunjucks-rendered but NOT displayed by
-                                              FlatContent today — avoid.
-
-  image-gallery  { imageList: [...] }         TEMPORARILY DISABLED — avoid.
-
-  Block meta controls (all types):
-    meta.isVisible === 'no'            → block hidden
-    meta.mobileDesktopVisibility       → hide per device class
-    meta.cssClassNames                 → extra className (html-code)
-    css / fullWidthBlockCss / settingsJSON → see 3.2
-
-  Every page automatically runs the hooks useScrollAnimation, useParallax and
-  useStickyHeader (FlatContent).  Generated code can use the classes they
-  watch: .block-effect-50 / -100 / -150 / -200 (scroll reveal) etc.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6. NUNJUCKS TEMPLATING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Applied server-side (data/utils/templateUtils.js, autoescape: false) to the
-values of html, html-code, text, markdown blocks, to meta.slug/meta.name and
-to seo.metaTitle/metaDesc.
-
-  CONTEXT = whole content record + variablesFromParams + i18n block vars:
-    {{ slug }}, {{ name }}, {{ contentId }}          → content fields
-    {{ company_name }}                               → websiteSettings.texts.companyName
-    {{ templatedContentId }}                         → /t/ template pages
-    {{ current_language }}                           → page language
-    {{ lang_switcher_html }}                         → pre-built language links HTML
-    i18n block vars (Section 5)
-
-  GLOBALS (functions):
-    nextDays(n)  previousDays(n)  previousDate(n, 'YYYY-MM-DD')
-    futureDate(n, 'YYYY-MM-DD')   daysOfMonth(month)  monthsOfYear(year)
-
-  FILTERS:
-    endswith  nl2brSentences  bulletEachSentence  formatDate  linkify
-    formatNumberedList  wrapLinesWithDiv  bulletsToList
-
-  Example:
-    {% for day in nextDays(7) %}
-      &lt;div class="gw-slot"&gt;{{ day | formatDate('ddd, MMM D') }}&lt;/div&gt;
-    {% endfor %}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7. DATA CONNECTIVITY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-── 7.1 OBJECT LISTS — object-query-list (READ) ────────────────────────────────
-
-  json block, meta.slug 'object-query-list', value:
-
-    {
-      "objectQueries": [
-        {
-          "cmsObjectType": "products-uniconbaseapps",
-          "folders": [ { "slug": "summer-collection", "maxCount": 8 } ],
-          "itemTemplateId": "product-card-template"
-        }
-      ],
-      "itemTemplateId": "default-product-card"
+----------------------------------------------------------------------------
+2. PAGE OBJECT SCHEMA
+----------------------------------------------------------------------------
+{
+  "id": "obj-123", "name": "About Us", "slug": "about",
+  "meta": { "language": "en" },
+  "data": {
+    "status": "published",        // OPTIONAL; absent = published.
+                                  // Anything else = draft (hidden without
+                                  // preview: ?gw-preview=&lt;previewSecret&gt;).
+    "requireAuth": true,          // OPTIONAL. Anonymous visitors are
+                                  // redirected to /p/user/login?returnUrl=...
+    "templateContentType": "trips", // TEMPLATE PAGES ONLY
+    "htmlPage": {                  // FIXED field name of the html tool
+      "code": { "html": "...", "css": "...", "js": "..." }
     }
+  },
+  "seo": { ... }                   // Section 14
+}
 
-  The platform loads the objects (om_objects / om_private_objects, respecting
-  the object type's publicAccess + parentTenants) and renders each item with
-  the Nunjucks template stored in the referenced `system-items` object.
-  Inside the item template the item's data is available; the object's
-  productData.data_categoriesBased is copied to `data`.
+- DATA NORMALIZATION: the platform reads `data` first and falls back to the
+  legacy `productData.data_categoriesBased`. You always output `data`.
+- CONTENT IS ONLY `data.htmlPage.code.{html,css,js}`. There is NO block
+  rendering, NO legacy renderers, NO Nunjucks, no cssClassNames/settingsJSON.
+- `data.css` / `data.js` are tolerated as embedded style/script blocks but
+  the canonical fields are `htmlPage.code.css` / `.js`. Always use the
+  canonical fields.
 
-  Object type visibility: rules.publicAccess === 'no' moves objects to a
-  private collection; per-user permissions.{email}.hasPermission further
-  filter reads.
+----------------------------------------------------------------------------
+3. EMBEDDING CONTRACT (HOW YOUR CODE RUNS) — MOST IMPORTANT SECTION
+----------------------------------------------------------------------------
+3.1 No document tags
+- NEVER emit `&lt;!DOCTYPE&gt;`, `&lt;html&gt;`, `&lt;head&gt;` or `&lt;body&gt;` tags. Your HTML is
+  a PURE BODY FRAGMENT injected into a page container
+  (`&lt;div class="gw-page-content"&gt;`) that sits between the site header and
+  footer. A full document is a hard error.
 
-── 7.2 FORMS — dynamic-form (WRITE, no login needed) ──────────────────────────
+3.2 Lifecycle on every load and every SPA navigation
+  1. DOMPurify script + gw bootstrap run first (`window.gw` is guaranteed
+     to exist when your scripts run).
+  2. Your `html` is injected into the container.
+  3. Your `css` is appended to &lt;head&gt; as `&lt;style data-gw-css&gt;`, deduped per
+     page, and removed again on unmount.
+  4. Your `js` runs AFTER injection and after a double requestAnimationFrame,
+     inside an IIFE executed via a Blob URL. Embedded &lt;script&gt; tags found in
+     the html are extracted and run first; `code.js` runs last.
+  5. The platform then auto-mounts all `[data-gw-app]` islands (idempotent)
+     and dispatches `gw:content-ready`.
 
-  json block, meta.slug 'dynamic-form'; the block VALUE is a JSON string with
-  the key `form-type-id` pointing to the form definition:
+3.3 Your JS re-runs on every visit AND every SPA navigation
+- Scripts MUST be idempotent:
+  * Prefer listeners attached to elements inside YOUR html (they die with
+    the DOM on unmount).
+  * If you must use window/document-level listeners, guard them:
+      if (window.__myPageInit) return; window.__myPageInit = true;
+    or remove them via the cleanup you can register (gw.onRouteChange
+    listeners, gw.db.subscribe unsubscribes, widget cleanup functions).
+  * Loop closures: use let/const per iteration. `var` in a loop makes every
+    button act on the LAST item (classic bug).
+- Top-level `function name(...)` declarations are automatically hoisted to
+  `window.name` by the platform. Everything else stays inside the IIFE.
+- NO top-level `await` (your code is wrapped in a non-async function).
+  Use async functions, promises, or `gw.authReady`.
+- A failing script is isolated (reported as `gw:script-error`) and never
+  breaks the app shell — but write defensive code anyway.
 
-    { "form-type-id": "quote-request-form" }
+3.4 Scripts and styles placement rules
+- Put ALL styling in `css`, ALL behavior in `js`. Embedded `&lt;style&gt;` in the
+  html is tolerated (hoisted to head) but avoid it. Embedded `&lt;script&gt;` in
+  the html is extracted and executed — still avoid it; use `js`.
+- EXTERNAL scripts (`&lt;script src="..."&gt;`) in the html are NOT supported.
+  Never load frameworks/CDN JS (no jQuery, no React, no lodash). Plain
+  vanilla JavaScript only. External images/fonts by absolute URL are fine.
+- Your `css` is injected GLOBALLY into the page (header, footer and other
+  pages share &lt;head&gt; while yours is mounted). Scope everything:
+  * give your root element a unique class (e.g. `.shop-home`) and prefix
+    every selector with it;
+  * never style bare `html`, `body`, `*`, `a`, `button`, `h1` globally;
+  * avoid generic class names that could collide (`button`, `.row`, `.card`).
 
-  Form definition = a `system-items` object whose config json block describes:
-    dataDefinitions[]  (field types, validationRules, formulas)
-    destinationTable   (default 'forms'; 'users' stores roles:['customer'])
-    saveType           ('cmsObject' → saves as a CMS object instead)
-    afterSaveApiHooks  (e.g. call /api/email/sendEmail)
+3.5 SPA navigation
+- Deep links: `&lt;a data-ic-nav-href="/shop" href="/shop"&gt;Shop&lt;/a&gt;`. The
+  click is intercepted by the SPA router; keep the plain `href` for
+  fallback/SEO. Or call `gw.navigate('/shop')` in JS.
+- After SPA navigation to another page, your DOM and styles are removed;
+  your scripts re-run on arrival. Everything above applies.
 
-  Capabilities: validation rules, cross-field formulas (moment, axios, xlsx,
-  fuse, context functions), dependent chaining, file upload (react-dropzone →
-  Firebase Storage folder from cmsParams.onlineStorageFolder), multilingual
-  labels.  NO captcha yet [PLANNED].  Form submissions land in the tenant's
-  Firestore `forms` collection (or destinationTable).
+3.6 Content trust rules
+- Your generated HTML is ADMIN content (trusted, injected raw). Anything
+  that comes from DATA or USER INPUT must be escaped: build DOM with
+  `textContent`, never `innerHTML` with interpolated values. Use
+  `gw.sanitize(html)` (DOMPurify) when you must inject HTML strings.
+- Never put secrets, passwords, API keys, tokens, admin URLs or preview
+  secrets into html/css/js.
 
-── 7.3 PAYMENTS (Stripe) ──────────────────────────────────────────────────────
+----------------------------------------------------------------------------
+4. HARD GUARDRAILS (violating any of these = invalid output)
+----------------------------------------------------------------------------
+ 1. No &lt;html&gt;, &lt;head&gt;, &lt;body&gt;, &lt;!DOCTYPE&gt; tags. Body fragment only.
+ 2. No raw client writes. Every write is a CMS-defined operation, a flow,
+    a form submit, or a cart call. No direct database/REST/API writes.
+ 3. No secrets in generated code.
+ 4. No reliance on removed features: blocks, cssClassNames/settingsJSON,
+    legacy JSON renderers, Nunjucks.
+ 5. No external JS libraries or CDN scripts; vanilla JS.
+ 6. No global (unscoped) CSS and no styling of the shell (html/body).
+ 7. Scripts must be idempotent (SPA re-runs) and must not use top-level
+    await.
+ 8. No duplicate/leaking window-level listeners without guards.
+ 9. Field names `gw_hp`, `website`, `company` are RESERVED for honeypots.
+    Never use them for real inputs.
+10. `data-gw-config` must be VALID JSON (no comments, no trailing commas,
+    no single-quoted strings).
+11. Drafts are hidden: set `"status": "published"` (or omit it) unless the
+    user asked for a draft.
+12. Keep ids unique per page and prefixed (the header/footer coexist in the
+    same document): `id="shop-cart-btn"`, not `id="btn"`.
+13. Never auto-submit forms on load (the server rejects submissions faster
+    than 2 s after page load — honeypot timing guard).
+14. Do not use `document.write`, inline `eval` on user data, or
+    `window.open` popups for navigation (use gw.navigate / openUrl).
 
-  Existing API route: /api/pay/stripe/[...param]  (API-key gated)
-    mp  / str-002 → charge via stripe tokens
-    mpfi / str-003 → pay an invoice object (updates paymentStatus)
-  Client: PaymentSelection / PaymentCreditOnline (@stripe/react-stripe-js).
-  The v1.1 gw.service('createPayment') abstraction does NOT exist [PLANNED].
+----------------------------------------------------------------------------
+5. window.gw SDK REFERENCE (the ONLY integration surface)
+----------------------------------------------------------------------------
+Context properties: gw.pageId, gw.siteId, gw.folderId, gw.language,
+gw.host, gw.currency.
 
-── 7.4 EMAIL (AWS SES) ────────────────────────────────────────────────────────
+Routing
+- gw.getPageParams() -&gt; object merging live URL query params + context
+  query + pathParams. pathParams by route kind:
+    slug page      -&gt; { slug }
+    object detail  -&gt; { cmsObjectType, id }
+    template page  -&gt; { template, contentId }
+    app page       -&gt; { appId, rest }
+- gw.navigate(path)          SPA navigation to an internal path
+- gw.openUrl(url)            new tab (noopener)
+- gw.onRouteChange(cb)       -&gt; returns unsubscribe function
 
-  /api/email/sendEmail — nodemailer + AWS SES.  Types: end-user-register,
-  new-form-submitted, your-form-submitted.  Trigger from form hooks.
+Auth
+- gw.getUser() -&gt; { id, email?, roles: string[] } | null
+- gw.isAuthenticated() -&gt; boolean
+- gw.authReady -&gt; Promise (resolves after the initial session load)
+- gw.refreshAuth() -&gt; Promise&lt;user | null&gt;
+- gw.login(returnUrl?) -&gt; full-page redirect to /p/user/login?returnUrl=...
+- gw.logout() -&gt; POST /api/auth/session {action:'logout'}, then '/'
 
-── 7.5 FILE UPLOAD ────────────────────────────────────────────────────────────
+Storage (host-scoped; failures ignored e.g. private mode)
+- gw.storage.get(key) / .set(key, value) / .remove(key)   (localStorage)
+- gw.storage.session.get/set/remove                        (sessionStorage)
 
-  Via form upload fields (Section 7.2) — there is no standalone gw.service
-  ('upload') yet [PLANNED].
+Formatting / UI
+- gw.formatCurrency(amount, currency?)   uses the site currency config
+- gw.formatDate(value, locale?)
+- gw.notify(message, { severity: 'info'|'success'|'warning'|'error',
+                       duration?, title? })   toast; message shown as TEXT
+- gw.showModal(html, { title?, closeable? }) -&gt; returns close function
+  (html here is admin-authored, trusted)
+- gw.setLoading(bool)                     overlay spinner
+- gw.sanitize(html)                       DOMPurify wrapper (safe fallback)
+- gw.track(event, data?) / gw.trackPageView()   guarded analytics no-ops
+  when the site has no gtag/pixel
 
-── 7.6 [PLANNED] — NOT BUILT YET ──────────────────────────────────────────────
+Forms
+- gw.forms.bind(root?)   attaches submit handling to form[data-gw-form]
+                         and form.gw-form. IDEMPOTENT. NOT automatic — call
+                         it once from your js (Section 6).
+- gw.forms.submit(form, { formTypeId? })  programmatic submit
 
-  gw.service('search') (full-text) — fuse.js exists as a dependency; today
-    filtering is only via object-query-list folders/filters.
-  gw.service('exportPdf') — @react-pdf/renderer dependency exists; no route.
-  gw.service('ai') — no AI gateway wired.
-  gw.api() external proxy — no generic proxy route.
-  Native HTML form apps (window.gw.forms → /api/forms/submit) — the planned
-    replacement for dynamic-form: native &lt;form&gt; markup in html-code blocks
-    submitted through one secure endpoint.  See roadmap P0.4.
-  See zHTMLDOCS/generalwebsite-roadmap/generalwebsite-capability-roadmap.html for how to add these.
+Data (read-only; server enforces public access)
+- gw.db.query(params) -&gt; POST /api/data/query. STRICT params:
+    { cmsObjectType (required), folder?, filters?, search?, orderBy?,
+      orderDir?: 'asc'|'desc', page?, pageSize? (&lt;=200), language?,
+      relations?, facets? }
+    filters: [ { field, op: '=='|'!='|'&gt;'|'&gt;='|'&lt;'|'&lt;='|'in'|'contains',
+                 value } ]
+    relations: [ { field, targetType, targetField? } ]
+    -&gt; { items: ObjectRecord[], total, page, pageSize, facets, relations }
+- gw.db.get({ cmsObjectType, objectId }) -&gt; GET /api/data/&lt;type&gt;/&lt;id&gt;
+    404 -&gt; null
+- gw.db.operation(operationId, payload, { idempotencyKey? })
+    -&gt; POST /api/data/op    (the ONLY set path, Section 9)
+- gw.db.subscribe({ cmsObjectType?, folder? }, onChange) -&gt; unsubscribe
+    SSE-first with 5 s polling fallback.
+    onChange receives { type: 'added'|'modified'|'removed', object }
+    or { type: 'gw-event', event }.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-8. SEO REQUIREMENTS FOR PUBLIC PAGES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Apps (island embedding, Section 12)
+- gw.apps.register(name, factory)   idempotent; factory receives
+    { el, config, gw } and may return a cleanup function.
+- gw.apps.mount(root?) / gw.apps.unmount(root?)
+- The platform auto-mounts [data-gw-app] elements after your scripts on
+  every (re)mount; you normally never call mount yourself.
+- Builtin widget names lazy-load /gw-widgets.js on first use.
+- gw.service(name) -&gt; NOT AVAILABLE (always rejects). Do not use.
 
-Mandatory for the content sections of every generated page:
+Events (window CustomEvents you may listen for)
+- 'gw:ready'            bootstrap installed; detail = page context
+- 'gw:content-ready'    page scripts ran; detail { contentId }
+- 'gw:script-error'     a blob script failed; detail { message, filename }
+- 'gw:form-success' {form, data} · 'gw:form-error' {form, error, status?}
+  · 'gw:form-invalid' {form, errors}        (all BUBBLE)
+- 'gw:app-error' { name, message | error }
+- 'gw:cart-changed'     cart contents changed
+- 'gw:slot-picked' { slotId, slot }   (slot-picker without bookOperationId)
+- 'ic-navigate' { detail: { href } }  -&gt; SPA router
 
-  ★ EXACTLY ONE &lt;h1&gt; per page, first heading, containing the primary keyword.
-  ★ Logical heading hierarchy — never skip levels.
-  ★ Semantic HTML5: &lt;article&gt;, &lt;section&gt;, &lt;aside&gt;, &lt;nav&gt;.
-  ★ All images: alt text, width &amp; height, loading="lazy" (below the fold),
-    loading="eager" + fetchpriority="high" for the LCP hero image.
-  ★ Internal links: real &lt;a href="/..."&gt;.  For SPA navigation you may add
-    data-ic-nav-href="/path" — the platform intercepts it for soft navigation.
-  ★ Content visible in the HTML source WITHOUT JavaScript (SSR covers this
-    automatically — never render primary content from client JS only).
+ObjectRecord shape (what query/get return): { id, slug?, name?,
+cmsObjectType?, typeId?, data?, meta?, seo?, rules?, created?,
+lastUpdated?, ... }. Field values live under `data.*`; access nested values
+with dotted paths, e.g. item.data.price (widgets use a `pick(obj,path)`
+style, e.g. 'data.rows').
 
-  Meta (seo field):
-    metaTitle    50–60 chars, primary keyword first (company name is appended
-                 automatically by the platform when &lt; 50 chars)
-    metaDesc     140–160 chars
-    metaImage    absolute URL, 1200×630 recommended
+Access limits: only object types registered in the site app's
+`cms-settings.objectTypes[]` with rules.publicAccess != 'no' are queryable;
+private/unregistered types -&gt; 403/404. The folder's fieldAllowlist /
+publicFields projects fields (id is always kept). Read data with
+`language` filter to match gw.language when available.
 
-  Performance targets: total &lt; 2 MB; LCP &lt; 2.5 s; CLS &lt; 0.1; FID &lt; 100 ms.
-  Mobile-first indexing: ≥ 16 px body text, ≥ 48×48 px tap targets, no
-  horizontal scroll at 320 px.
+----------------------------------------------------------------------------
+6. FORMS (data-gw-form protocol)
+----------------------------------------------------------------------------
+&lt;form data-gw-form class="shop-contact"&gt;
+  &lt;label&gt;Name &lt;input type="text" name="name" required&gt;&lt;/label&gt;
+  &lt;label&gt;Email &lt;input type="email" name="email" required&gt;&lt;/label&gt;
+  &lt;textarea name="message" required&gt;&lt;/textarea&gt;
+  &lt;!-- honeypot: hidden via CSS, never a real field --&gt;
+  &lt;input type="text" name="website" class="shop-hp" tabindex="-1"
+         autocomplete="off" aria-hidden="true"&gt;
+  &lt;button type="submit"&gt;Send&lt;/button&gt;
+  &lt;div data-gw-form-status role="status"&gt;&lt;/div&gt;
+&lt;/form&gt;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-9. PAGE METADATA &amp; STRUCTURED DATA (WHAT IS AUTO-GENERATED)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Bind with: gw.forms.bind();  (idempotent; call once in your js).
+- Honeypot: field named `gw_hp`, `website` or `company`, OR any field with
+  attribute `data-gw-honeypot`. Hide with CSS (.shop-hp { position:
+  absolute; left: -9999px; }). Filled honeypots are silently dropped.
+- Status element `[data-gw-form-status]` shows busy text ("Submitting…")
+  automatically; the form gets class .gw-busy while submitting.
+- Submit payload (JSON): { formTypeId?, submittedAt, gw_hp,
+  values: {&lt;name&gt;: &lt;value string&gt;} }. Files present -&gt; multipart FormData.
+- Events: gw:form-success / gw:form-error / gw:form-invalid (bubble —
+  listen on the form or window).
+- Server guardrails (design for them): origin check, hashed-IP rate limit,
+  JSON body &lt;= 256 KB, multipart &lt;= 10 MB, honeypot, min fill time 2 s,
+  optional reCAPTCHA (site setting).
+- formTypeId links to a CMS `form-type-definition` object that defines the
+  destination table + server hooks. The page can never set destination
+  table or hooks. If the form must land somewhere specific, emit a
+  `=== CMS CONFIG NEEDED ===` note for the CMS author.
+- Do not put honeypot-looking names on real fields; do not submit on load.
 
-HeadAndMetaData (PageBlocks/web/content-components/HeadAndMetaData.js) emits:
+----------------------------------------------------------------------------
+7. DATA READS — static content with data
+----------------------------------------------------------------------------
+Use gw.db.query / gw.db.get / gw.db.subscribe. Example:
 
-  • &lt;title&gt; (truncated 60 + " | companyName"), meta description (160)
-  • og:title/description/image/url/type, twitter:card
-  • canonical (Section 10), hreflang + x-default
-  • favicon set, theme-color, google-site-verification
-  • Dublin Core DC.title/DC.description/DC.creator, last-modified
+  gw.db.query({ cmsObjectType: 'menu-items', folder: 'menu',
+                orderBy: 'name', orderDir: 'asc', pageSize: 50,
+                language: gw.language })
+    .then(function (res) { /* render res.items with textContent */ })
+    .catch(function () { /* show a quiet error state */ });
 
-JSON-LD auto-generated:
-  • WebPage (every page) — headline, description, image, publisher
-  • BlogPosting when meta.category1|2|3 === 'blog' (+ datePublished,
-    mainEntityOfPage)
-  • FAQPage from faq-item blocks
-  • Product + BreadcrumbList on /product/ pages
-  • Organization + SitelinksSearchBox (site-wide)
+Rules:
+- Always render in a .then/catch; never block on reads; show loading and
+  empty states.
+- Respect pageSize &lt;= 200 (server cap).
+- Reads are rate-limited (120/min/IP) and cached server-side; do not poll
+  in a loop — use gw.db.subscribe for live updates.
+- Data may be public-typed only; missing/private types throw — handle
+  gracefully.
+- NEVER write via gw.db. There is no write API except operations.
 
-NOT wired from CMS yet [PLANNED]:
-  seo.noIndex, seo.keywords, seo.canonicalUrl (override), and an arbitrary
-  seo.structuredDataJson passthrough.  Today every CMS page is index,follow
-  and canonical is always auto-derived.
-
-Bot-facing pages (all automatic): sitemap.xml index (+ /p/sitemap/*, per
-object-type sitemaps when objectType.webSettings.sitemapSettings.
-addObjectsToSitemap === 'yes'), robots.txt, feed.xml (blog RSS), llms.txt
-(merge of generated + a CMS 'llms-txt' content), /api/indexnow (pings
-api.indexnow.org).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-10. ROUTING &amp; DEEP LINKS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Real route patterns today (pages/[...param].js):
-
-  /                       → content 'home-page' (per-language siblings)
-  /&lt;slug&gt;                 → page content (multilingual slug lookup)
-  /&lt;objectType&gt;/&lt;id&gt;      → CMS object page (e.g. /products/prod-123)
-  /t/&lt;templateId&gt;/&lt;contentId&gt; → template-based page; template is contentId
-                            pageId, {{ templatedContentId }} variable
-
-  Query params: ?showheader=&amp;showfooter= toggle chrome.
-  SPA navigation: links with data-ic-nav-href are intercepted (InjectedContent).
-
-  NO page-level :param route patterns exist yet (e.g. /blog/:post) [PLANNED].
-  Workarounds today:
-    • object pages already give you /&lt;type&gt;/&lt;id&gt; dynamic URLs;
-    • template pages give you /t/&lt;template&gt;/&lt;contentId&gt; with a Nunjucks
-      variable — ideal for generated detail pages.
-
-  Do NOT hardcode the domain — use relative paths everywhere.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-11. MOBILE RESPONSIVENESS (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Same rules as v1.1 (unchanged — they apply to generated code):
-
-  • Mobile-first CSS; breakpoints 640 / 768 / 1024 / 1280.
-  • Grid/Flexbox, relative units, max-width 1200px containers.
-  • Test 320 / 375 / 414 / 768 / 1024 / 1280 / 1440.
-  • Wide tables: wrap in overflow-x:auto.
-  • Forms: full-width inputs, labels above on mobile.
-  • Images: srcset / &lt;picture&gt;; videos: controls, no autoplay with sound,
-    respect prefers-reduced-motion.
-  • Touch targets ≥ 48×48 px; click/tap primary, hover only as enhancement.
-  • Input types: email/tel/number/date for correct mobile keyboards.
-  • CSS from html-code &lt;style&gt; is global to the page — use media queries and
-    prefixed class names; block-level css JSON handles block layout.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-12. AUTHENTICATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-What exists:
-  • Firebase email/password auth (client SDK, per-tenant app via /api/relay/ras).
-  • Credentials cached in localStorage (email + base64 password) and restored
-    by AuthContext on load.
-  • Roles in the Firestore `users` collection (owner, admin, agent, enduser,
-    customer, ...) — used by admin UI and object permissions.
-  • End-user registration block: enduser-registration-form (creates Firebase
-    auth user + end_user_accounts doc + confirmation email).
-  • Login/logout/reset pages: /p/user/*.
-  • Object-level privacy: rules.publicAccess === 'no' → private collection.
-
-What does NOT exist [PLANNED]:
-  • No CMS-driven page gating (e.g. "require login to view this page").
-    MainPageJSX hardcodes withAuth={false} and SSR never checks auth.
-  • No gw.requireAuth().
-  See roadmap P4 for the plan (client-side gate + meta.requireAuth field).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-13. ASSET HANDLING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  • Images: use the `image` block (value.url) or &lt;img&gt; in html/html-code.
-    Host on Firebase Storage / the website media library — never hotlink
-    third-party images.  next/image optimizes `image` blocks automatically.
-  • Fonts: use the website's font stack.  Do NOT load Google Fonts — custom
-    fonts via additions-* only if required (and always with system fallbacks).
-  • External scripts (chat, maps, social embeds): place in additions-* or in
-    an html-code &lt;script&gt; (external src, loaded sequentially).  Prefer
-    website-level installs (Google Analytics, Google Tag, Meta Pixel, ShareThis
-    are already plug-in slots in website-settings.plugins).
-  • Libraries: the platform has moment, fuse.js, axios, react-pdf, stripe.js
-    in its bundle, but page scripts run in global scope — DO NOT import npm
-    packages from generated code; load extra libraries from CDN via
-    &lt;script src&gt; in an html-code block, or request bundling [PLANNED].
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-14. PERFORMANCE CONSTRAINTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  Budgets (per page): HTML &lt; 100 KB, CSS &lt; 50 KB, JS &lt; 200 KB, images
-  &lt; 1.5 MB, total &lt; 2.5 MB.  Content-only pages should stay well below
-  (~50 KB HTML / 30 KB CSS / 50 KB JS).
-
-  Platform behavior you get for free: SSR, 72 h CDN cache (Cache-Control
-  s-maxage=259200 + stale-while-revalidate), Vercel cache-tags
-  (content-&lt;id&gt;, host-&lt;host&gt;) for purge, PWA service worker (next-pwa),
-  next/image optimization, bot filtering.
-
-  ✗ No jQuery, no UI framework CDNs (Bootstrap/Tailwind), no tight polling,
-    no large JSON payloads, no setInterval &lt; 1 s, no DOM changes outside
-    your block wrapper.
-  ✓ Debounce inputs (300 ms), lazy-load below-fold images, use Intersection
-    Observer (the platform's useScrollAnimation already observes
-    .block-effect-* classes).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-15. SECURITY MODEL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-The REAL model today (differs from v1.1):
-
-  • CMS content is written by trusted tenant admins/tools.  html-code blocks
-    execute arbitrary JavaScript with FULL page privileges (no sandbox).
-    Form formulas are evaluated with new Function().  InjectedContent
-    neutralizes inline onerror handlers and suppresses CMS-script errors,
-    but this is noise control, NOT a security boundary.
-  • There is NO HTML sanitization anywhere.  Generated pages MUST escape
-    user-generated data themselves (Nunjucks autoescape is OFF).  Sanitizing
-    object-list item templates is [PLANNED] (roadmap P3).
-  • Secrets must NEVER be placed in content — API keys live server-side in
-    env vars (Stripe, SES, IndexNow, revalidate secret).  There is no
-    per-page key storage.
-  • State-changing API routes are key-gated (checkAPIKey) and form writes go
-    through Firestore rules.
-  • If a page collects personal data, include a privacy notice / link.
-  • Known hardening backlog (fixes, not features): hardcoded AWS SES
-    credentials in /api/email/sendEmail, hardcoded Stripe fallback key line
-    in /api/pay/stripe, hardcoded API keys in data/utils/apiUtils.js,
-    base64 password in localStorage (see roadmap "housekeeping").
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-16. TESTING &amp; PREVIEW
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  • Preview unpublished content: append ?cms-preview=1 (CMS header/footer
-    render even when status ≠ 'enabled').
-  • ?showheader=&amp;showfooter= to debug chrome.
-  • Localhost bypasses the CDN cache (cacheStatus !== disabled still caches
-    in prod; use websiteSettings.cmsParams.cacheStatus === 'disabled' to
-    disable per tenant).
-
-  Checklist (per generated page):
-  □ No JS console errors (Chrome/Firefox/Safari/Edge)
-  □ 320/375/768/1024 no horizontal scroll
-  □ All images alt + dimensions + load
-  □ One &lt;h1&gt;, correct heading hierarchy
-  □ Content visible with JS disabled (SSR check: view-source)
-  □ seo.metaTitle/metaDesc present; canonical + hreflang correct
-  □ JSON-LD valid (Google Rich Results Test)
-  □ Forms persist to Firestore (check destinationTable)
-  □ After-save hooks fire
-  □ Lighthouse: Perf ≥ 90 content / ≥ 70 interactive; A11y ≥ 90; SEO ≥ 90
-  □ No hardcoded absolute URLs
-  □ Generated scripts namespaced, no global collisions
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-17. CAPABILITY MATRIX
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  ✅ EXISTS — ✅ | PARTIAL — 🔶 | PLANNED — ❌ (see roadmap)
-
-  ✅ Multi-tenant hostname → tenant → Firebase config resolution (/api/relay/ras)
-  ✅ Page by slug, multilingual (11 locales), hreflang + language switcher
-  ✅ Object pages /&lt;type&gt;/&lt;id&gt;; template pages /t/&lt;template&gt;/&lt;contentId&gt;
-  ✅ Nunjucks templating (globals + filters) on block values and seo fields
-  ✅ Raw HTML injection (html blocks) and full JS execution (html-code blocks)
-  ✅ Per-block CSS (css JSON), full-width css, cssClassNames, settingsJSON
-  ✅ Site-wide css-variables / css-classes + /api/css/[host].css stylesheet
-  ✅ Site-wide additions: additions-inside-head / -after-body-start / -before-body-end
-  ✅ SEO: seo.metaTitle/metaDesc/metaImage, canonical, og/twitter, JSON-LD
-     (WebPage/BlogPosting/FAQ/Product/Organization/Breadcrumb/Sitelinks)
-  ✅ Sitemaps, robots.txt, feed.xml, llms.txt, IndexNow
-  ✅ 72 h CDN cache + tagged purge (/api/revalidate)
-  ✅ Forms (dynamic-form): validation, formulas, file upload, hooks → Firestore
-  ✅ Payments (Stripe charge + invoice), email (SES), end-user registration
-  ✅ Analytics plug-ins: GA4 (gtag), Google Tag, Meta Pixel, ShareThis
-  ✅ PWA (next-pwa + /api/manifest), scroll/parallax/sticky hooks on all pages
-  ✅ Bot/traffic blocking (shouldBlockRequest)
-
-  🔶 Shared content splicing (shared-content) — whole-content splice only,
-     no parameters
-  🔶 Search — folder/filter object queries only; no full-text service
-  🔶 Object-level privacy (publicAccess / permissions) — but no PAGE gating
-
-  ❌ window.gw SDK (onReady, pageId, params, storage, track, navigate, notify,
-     showModal, sanitize) — roadmap P2
-  ❌ seo.noIndex / seo.keywords / seo.canonicalUrl / seo.structuredDataJson —
-     roadmap P1
-  ❌ Page gating (requireAuth / meta.requireAuth) — roadmap P4
-  ❌ HTML sanitization of generated/user content — roadmap P3
-  ❌ Partial include with parameters — roadmap P6
-  ❌ Page-level :param route patterns + query params as template variables —
-     roadmap P5
-  ❌ Services: search, exportPdf, ai, external API proxy — roadmap P7–P9
-  ❌ reCAPTCHA on public forms — roadmap P10
-  ❌ Native HTML form endpoint (gw.forms / /api/forms/submit) — roadmap P0.4
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-18. EXAMPLE: SEO LANDING PAGE (REAL FORMAT)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Content record the generator should create (Firestore `sp_contents`):
+----------------------------------------------------------------------------
+8. WRITES THROUGH OPERATIONS (gw.db.operation)
+----------------------------------------------------------------------------
+Operations are CMS-authored config objects of the site app type with
+`data.operationId`:
 
 {
-  "contentId": "summer-sale-2026",
-  "slug": "summer-sale-2026",
-  "name": "Summer Sale 2026",
-  "typeId": "page",
-  "meta": {
-    "language": "en",
-    "category1": "page",
-    "status": "enabled"
-  },
-  "seo": {
-    "metaTitle": "Summer Sale 2026 — Up to 50% Off Outdoor Gear",
-    "metaDesc": "Save big on tents, hiking boots and camping stoves. Free shipping on orders over $75. Sale ends July 31.",
-    "metaImage": "https://cdn.example.com/og/summer-sale-2026.jpg"
-  },
-  "blocks": [
-    {
-      "type": "html-code",
-      "meta": { "slug": "hero", "name": "Hero" },
-      "css": "{\"paddingTop\":\"32px\"}",
-      "value": "&lt;!-- GW-PAGE-ID: summer-sale-2026 --&gt;\n&lt;style&gt;\n  .gw-sale-hero { text-align:center; padding:2rem 1rem; }\n  .gw-sale-hero h1 { font-size:2rem; }\n  @media (min-width:768px){ .gw-sale-hero h1 { font-size:2.5rem; } }\n&lt;/style&gt;\n&lt;section class=\"gw-sale-hero\"&gt;\n  &lt;span&gt;Limited Time&lt;/span&gt;\n  &lt;h1&gt;Summer Sale: Up to 50% Off&lt;/h1&gt;\n  &lt;p&gt;Tents, boots, stoves and more. Ends July 31.&lt;/p&gt;\n  &lt;a href=\"/products?tag=summer-sale\" class=\"gw-sale-cta\"&gt;Shop the Sale →&lt;/a&gt;\n&lt;/section&gt;\n&lt;script&gt;\n(function(){\n  var root = document.getElementById('hero');\n  if (root) { console.log('summer-sale hero ready'); }\n  // No gw SDK yet — use plain DOM APIs. Namespace everything!\n})();\n&lt;/script&gt;"
-    },
-    {
-      "type": "json",
-      "meta": { "slug": "object-query-list", "name": "Featured Deals" },
-      "value": "{ \"objectQueries\": [ { \"cmsObjectType\": \"products-uniconbaseapps\", \"folders\": [ { \"slug\": \"summer-collection\", \"maxCount\": 8 } ], \"itemTemplateId\": \"product-card-template\" } ] }"
-    },
-    { "type": "faq-item", "value": { "question": "How long does shipping take?", "answer": "Free standard shipping (5-7 business days) on orders over $75." } },
-    { "type": "faq-item", "value": { "question": "What is your return policy?", "answer": "Return any unused item within 30 days for a full refund." } },
-    {
-      "type": "json",
-      "meta": { "slug": "dynamic-form", "name": "Get a Quote" },
-      "value": "{ \"form-type-id\": \"quote-request-form\" }"
-    }
+  "operationId": "create-order",
+  "validation": { "required": ["items"],
+                  "properties": { "email": { "type": "string" } } },
+  "permission": { "roles": ["customer"], "ownerField": "customerId" },
+  "formulas": [ { "out": "total",
+                  "code": "sum(payload.items, price * qty)" } ],
+  "writes": [
+    { "targetType": "orders", "mode": "create",
+      "with": { "customerId": "user.id", "total": "payload.total" } },
+    { "targetType": "products", "mode": "update",
+      "by": { "id": "payload.productId" },
+      "fields": { "stock": "decrement" } }
+  ],
+  "hooks": [ { "type": "email" }, { "type": "contextFunction",
+                                      "codeId": "..." } ],
+  "transaction": true
+}
+
+Call: gw.db.operation('create-order', payload, { idempotencyKey: '...' })
+      -&gt; POST /api/data/op { operation, payload, idempotencyKey? }
+Response: { ok: true, result, idempotent? }
+
+- Value templates in `with`: `payload.x.y`, `user.id`.
+- Formula DSL (safe subset): + - * / %, parentheses,
+  sum/count/avg/min/max/round/floor/ceil/abs/str, dotted property paths;
+  inside list functions the per-item scope is the ITEM OBJECT itself, e.g.
+  sum(payload.items, price * qty).
+- Permission: roles checked against the session-derived caller
+  (anonymous -&gt; roles: []). ownerField restricts to own records.
+- Idempotency: pass a stable idempotencyKey per logical action so retries
+  replay instead of duplicating (e.g. key = 'order-' + cartId).
+- The page NEVER defines operations. Reference existing operationIds only.
+  If a needed operation is missing, emit `=== CMS CONFIG NEEDED ===`.
+
+----------------------------------------------------------------------------
+9. FLOWS (multi-step processes: checkout, booking, registration)
+----------------------------------------------------------------------------
+Flows are CMS-authored objects of the site app type with `data.flowId`:
+
+{
+  "flowId": "restaurant-checkout",
+  "steps": [
+    { "id": "cart", "dataDefinitions": [
+        { "field": "notes", "type": "text", "label": "Notes",
+          "required": false } ] },
+    { "id": "delivery", "dataDefinitions": [
+        { "field": "address", "type": "text", "label": "Address",
+          "required": true } ],
+      "validationRules": [
+        { "field": "address", "rule": "minLength", "value": 5,
+          "message": "Address too short" } ] },
+    { "id": "payment", "paymentProvider": "stripe-test",
+      "amountFormula": "cart.total + delivery.fee" },
+    { "id": "done", "hooks": [
+        { "type": "operation", "operationId": "create-order",
+          "payload": { "customerId": "user.id" } } ] }
   ]
 }
 
-NOTES:
-  • &lt;style&gt; and &lt;script&gt; live INSIDE the html-code value.
-  • The declaration comment is a convention only.
-  • faq-item blocks still emit FAQPage JSON-LD (visual rendering is disabled).
-  • An SEO intro section (h2 + text) should be added as an `html` block for
-    crawlable content — the h1 above is the single page heading.
+Rules:
+- The LAST step MUST have id "done" and carries the hooks.
+- dataDefinitions types: text | number | boolean | array | object.
+- Validation rule subset (server-enforced): required, email, min, max,
+  minLength, maxLength, regex, integer. Unknown rules fail loud — use only
+  this subset.
+- amountFormula is evaluated over the accumulated per-step values:
+  `state.steps.&lt;stepId&gt;.&lt;field&gt;` — e.g. 'seats.count * 25',
+  'cart.total + delivery.fee'.
+- Hook payload templates resolve `steps.&lt;stepId&gt;.&lt;field&gt;` and `user.id`.
+- API (use the checkout-flow widget instead of hand-rolling):
+    POST /api/flow/[flowId] { action: 'start' }
+      -&gt; { ok, flowStateId, step }
+    POST /api/flow/[flowId] { action: 'step', values }
+      -&gt; { ok, flowStateId, nextStep } | 400 { errors }
+    POST /api/flow/[flowId] { action: 'complete' }
+      -&gt; { ok, result: { operations, paymentIntent } }
+- Flow state is SERVER-side in an httpOnly cookie (gw-flow-&lt;sessionKey&gt;).
+  The client sends NO state and cannot forge steps.
+- paymentIntent is a STUB in the pilots (pi_stub_*). Production checkout:
+  POST /api/pay/stripe/intent { flowStateId }.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-APPENDIX A — PLANNED window.gw SDK (FUTURE — NOT AVAILABLE YET)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+----------------------------------------------------------------------------
+10. CART API
+----------------------------------------------------------------------------
+- GET /api/cart
+    -&gt; { items: [{ cmsObjectType, objectId, name, price, qty }],
+         total, count, cartId }
+- POST /api/cart { action: 'add'|'update'|'remove'|'clear',
+                   item: { cmsObjectType, objectId, qty? } }
+  'remove' and 'clear' take NO qty.
+- Totals are ALWAYS computed server-side from the stored product price.
+  Never calculate money client-side.
+- Identity is automatic (anon gw-cart cookie or logged-in user).
+- The platform dispatches 'gw:cart-changed' after changes; the built-in
+  cart widget refreshes itself on it.
 
-v1.1 described this SDK as if it existed.  It does not — it is the proposed
-future surface.  Do NOT generate page code that depends on it until it ships.
+----------------------------------------------------------------------------
+11. WIDGETS — READY-MADE ISLANDS (prefer over hand-coding)
+----------------------------------------------------------------------------
+Embed a widget as a div island; config comes from data-gw-config JSON:
 
-Planned surface (see roadmap P2):
-  gw.pageId, gw.language, gw.getPageParams(), gw.getUser(), gw.isAuthenticated(),
-  gw.login(returnUrl), gw.navigate(path), gw.openUrl(url), gw.storage.*,
-  gw.track(event, data), gw.notify(msg, severity), gw.showModal(html, opts),
-  gw.setLoading(bool), gw.sanitize(html)
+    &lt;div data-gw-app="menu"
+         data-gw-config='{"cmsObjectType":"menu-items",
+                           "folder":"menu","priceField":"price"}'&gt;&lt;/div&gt;
 
-Planned service layer (roadmap P7–P9): gw.db.query/get (object reads),
-gw.service('submitForm' | 'createPayment' | 'sendEmail' | 'exportPdf' |
-'search' | 'ai'), gw.api.* proxy.
+- Attribute quoting: prefer a single-quoted attribute containing JSON with
+  double-quoted strings (as above). If the config must contain apostrophes,
+  use a double-quoted attribute and escape inner quotes as &amp;quot;.
+- Config MUST be valid JSON. No comments, no trailing commas.
+- The platform mounts islands automatically after your scripts; mounting is
+  idempotent (no double mounts on SPA re-navigation).
+- Never nest [data-gw-app] islands inside each other.
 
-Once shipped, this document will be re-versioned with the final SDK reference
-and the timing/lifecycle rules (gw.onReady etc.).
+Builtin widgets (register as data-gw-app names):
+  menu             { cmsObjectType (req), folder?, fields?:
+                     [{field,label}], titleField?='name', priceField?='price',
+                     addToCart?=true, limit?=50 }
+                   Lists items via gw.db.query; Add buttons POST /api/cart.
+  cart             {}   Shows GET /api/cart; refreshes on 'gw:cart-changed'.
+  checkout-flow    { flowId (req) }  Renders the flow's dataDefinitions
+                   inputs step by step; Start / Next / "Complete order".
+  slot-picker      { cmsObjectType (req), folder?, labelField?='label',
+                     bookedField?='booked', slotField?='id',
+                     bookOperationId?, limit?=100 }
+                   With bookOperationId: books via gw.db.operation.
+                   Without: dispatches 'gw:slot-picked' { slotId, slot }.
+  seat-map         { cmsObjectType (req), objectId (req),
+                     rowsField?='rows', seatsField?='seats',
+                     bookedField?='booked', seatIdField?='id' }
+                   Loads the object via gw.db.get; renders seat buttons.
+                   NOTE: seat data must sit at the top level of the object's
+                   data (the widget has no data-fallback in pick()).
+  account-dashboard {}   Shows /api/account/profile + /api/account/orders;
+                   sign-in prompt -&gt; gw.login().
+  rewards          { cmsObjectType?='rewards', customerField?='customerId',
+                     pointsField?='points', limit?=50 }
+                   Requires a logged-in user; filters by user.id.
+  order-status     { orderId (req), statusField?='status' }
+                   Reads /api/account/orders + live-updates via
+                   gw.db.subscribe.
+  search-box       { cmsObjectType (req), placeholder?, lang?,
+                     titleField?='name' }
+                   Debounced GET /api/search?type=...&amp;q=...&amp;lang=...
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-APPENDIX B — FIELD GLOSSARY (verified against code)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Custom islands: in your js, BEFORE or independent of auto-mount:
+  gw.apps.register('my-gallery', function (ctx) {
+    var el = ctx.el, config = ctx.config, gw = ctx.gw;
+    // build UI with textContent / createElement
+    return function cleanup() { /* remove listeners */ };
+  });
+Registration is idempotent and re-runs safely on SPA navigation.
 
-  Content: contentId, slug, tenantId, typeId, name, meta{}, seo{}, blocks[],
-            created, lastUpdated
-  meta:    language, category1, category2, category3, status, pageOrder,
-            isVisible
-  seo:     metaTitle, metaDesc, metaImage   (+ [PLANNED] noIndex, keywords,
-            canonicalUrl, structuredDataJson)
-  block:   type, value, meta{}, css, settingsJSON, fullWidthBlockCss
-  block.meta: slug, name, isVisible, mobileDesktopVisibility, cssClassNames,
-            altText, width, height, groupId
-  settings (website-settings): texts.companyName, images.fullLogo,
-            plugins.googleAnalyticsId/googleTagId/facebookPixelId/shareThis,
-            cmsParams.cacheStatus, cmsParams.onlineStorageFolder
-  settings (cms-settings): objectTypes[] (rules.publicAccess, parentTenants,
-            webSettings.sitemapSettings)
-  object:  contentId, id, slug, name, tenantId, cmsObjectType,
-            productData.data_categoriesBased, blocks[], meta.language
+----------------------------------------------------------------------------
+12. E-COMMERCE / BOOKING COOKBOOK (compose, don't invent)
+----------------------------------------------------------------------------
+A) Catalog + cart (no checkout yet):
+   search-box (or gw.db.query list) + menu islands + cart island.
+
+B) Full shop checkout:
+   menu (addToCart) + cart + checkout-flow {flowId: 'shop-checkout'}.
+   The flow's done-step operation hook creates the order; after the widget
+   shows "Completed" you may re-fetch or show order-status.
+
+C) Booking / tickets:
+   slot-picker or seat-map (islands) -&gt; a checkout-flow whose amountFormula
+   references the chosen values (e.g. 'seats.count * 25') -&gt; done-step
+   operation hook writes the booking. Page JS may collect
+   'gw:slot-picked' events into gw.storage and start the flow with them.
+
+D) Account area:
+   Page with data.requireAuth: true + account-dashboard + order-status
+   islands. Anonymous visitors are redirected to login automatically.
+
+E) Static content:
+   Pure HTML + CSS (+ minimal JS). Still respect Section 3/4 (fragment,
+   scoped CSS, idempotent JS, no document tags).
+
+Vertical logic (pricing rules, seat layouts, reward math) lives in CMS
+CONFIG (operations, flows, object data) — the page is UI + configuration.
+Never hard-code business rules into the page beyond presentation.
+
+----------------------------------------------------------------------------
+13. SEO SECTION (=== SEO ===)
+----------------------------------------------------------------------------
+All fields optional:
+{
+  "metaTitle": "...", "metaDesc": "...", "metaRobots": "index, follow",
+  "canonicalUrl": "https://...", "metaImage": "...", "metaAuthor": "...",
+  "metaKeywords": "comma, separated",
+  "ogTitle": "...", "ogDesc": "...", "ogImage": "...", "ogType": "...",
+  "ogUrl": "...",
+  "twitterCard": "...", "twitterSite": "...", "twitterTitle": "...",
+  "twitterCreator": "...", "twitterImage": "...",
+  "sitemapPriority": "0.8", "sitemapChangefreq": "weekly",
+  "schemaItems": [
+    { "id": "opt", "type": "FAQPage",
+      "json": "{\"@type\":\"FAQPage\",\"mainEntity\":[ ... ]}" }
+  ],
+  "aiDescription": "...", "aiEntityType": "...", "aiIntent": "...",
+  "aiKeyTopics": "...", "aiAudience": "..."
+}
+
+Rules:
+- ogType: only 'website' or 'article' are honored by the metadata layer;
+  other values are ignored. twitterCard: only 'summary' or
+  'summary_large_image'.
+- schemaItems produce JSON-LD. `json` is a JSON STRING of the full
+  {"@type": ...} payload (never wrap it in &lt;script&gt;). Missing json -&gt;
+  bare {"@type": "&lt;type&gt;"} entry. No schemaItems -&gt; default WebPage.
+- Use sensible types: WebPage, Product, FAQPage, Organization,
+  BlogPosting, Event, BreadcrumbList, ...
+- metaKeywords is a comma-separated string.
+- metaRobots 'noindex, follow' for gated/requireAuth pages is recommended.
+- sitemapPriority / sitemapChangefreq feed /sitemap.xml. Keep title
+  ~60 chars and description ~155 chars (best practice, not enforced).
+- Canonical/hreflang origin = settings.primaryHost, else request host —
+  do not hard-code a host unless the user confirms it.
+
+----------------------------------------------------------------------------
+14. THEME / SITE CONTEXT AVAILABLE TO PAGES
+----------------------------------------------------------------------------
+- Theme colors from default-settings.theme.colors are exposed as CSS
+  variables: --gw-color-&lt;key&gt; (e.g. --gw-color-primary). Custom
+  theme.cssVariables are exposed as-is. Use them in your CSS instead of
+  hard-coding brand colors.
+- theme.cssClasses are applied to the page shell wrapper — do not style
+  them blindly; scope your own selectors.
+- Currency: use gw.formatCurrency (never format money yourself).
+- Language: gw.language; prefer data-driven text or gw.language checks
+  over hard-coded locales. Static text should match the page's language.
+- headCode / bodyStartCode / bodyEndCode / plugins (analytics) are
+  ADMIN-owned site settings — the generator NEVER emits them.
+
+----------------------------------------------------------------------------
+15. PERFORMANCE, QUALITY AND LIMITS SUMMARY
+----------------------------------------------------------------------------
+- Keep css/js small (a few KB to low tens of KB). No heavy dependencies.
+- Lazy-load images (loading="lazy", width/height to avoid CLS); use
+  absolute URLs or site-relative paths for assets.
+- Reads are rate-limited and cached — batch queries, use pageSize sensibly,
+  use gw.db.subscribe for live views.
+- Accessibility: semantic landmarks (section/article/nav), one clear h1,
+  label or aria-label on every input, button elements for actions, alt
+  text, visible focus, color contrast. This is a hard quality standard.
+- Responsive: mobile-first; the page renders inside a normal site shell.
+- Forms: required attributes for client checks; server rules may differ —
+  design for the server error events.
+- No console noise: never log secrets; keep console output minimal.
+
+----------------------------------------------------------------------------
+16. SELF-CHECK BEFORE RETURNING OUTPUT
+----------------------------------------------------------------------------
+[ ] Only a body fragment — no &lt;html&gt;/&lt;head&gt;/&lt;body&gt;/&lt;!DOCTYPE&gt;.
+[ ] All CSS scoped under my unique page class.
+[ ] JS idempotent (re-runs on SPA nav), no top-level await, vanilla JS.
+[ ] No external scripts, no frameworks, no secrets.
+[ ] All writes go through operations/flows/forms/cart; gw.db is read-only.
+[ ] data-gw-config values are valid JSON.
+[ ] gw.forms.bind() called if the page has data-gw-form forms.
+[ ] Honeypot present on forms; reserved names not used for real fields.
+[ ] User/data content rendered with textContent or gw.sanitize.
+[ ] status: "published" (unless a draft was requested).
+[ ] SEO section filled (title/description/schema at minimum).
+[ ] No global nav/header/footer (platform chrome exists).
+[ ] Missing operation/flow called out in === CMS CONFIG NEEDED ===.
 </script>
 </div>
 
@@ -1217,10 +1082,10 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
       if (taskEnd === -1) taskEnd = prompt.length;
       var taskDesc = taskStart !== -1 ? prompt.substring(taskStart + 12, taskEnd).replace(/^\s+|\s+$/g, '') : 'Update the page';
       if (/spacing|padding|mobile|style/i.test(taskDesc)) {
-        return '[CSS]\n.gw-section { padding: 32px 16px; }\n@media (max-width: 640px) { .gw-section { padding: 24px 12px; } }\n[/CSS]\nStep done.';
+        return '=== CSS ===\n.gw-section { padding: 32px 16px; }\n@media (max-width: 640px) { .gw-section { padding: 24px 12px; } }\n\nStep done.';
       }
       var id = 'gw-' + (taskDesc.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'new');
-      return '[HTML]\n<section id="' + id + '" class="gw-section">\n  <h2>' + taskDesc.replace(/[<>&]/g, '') + '</h2>\n  <p>This section was added by the agentic plan step.</p>\n</section>\n[/HTML]\nStep done.';
+      return '=== HTML ===\n<section id="' + id + '" class="gw-section">\n  <h2>' + taskDesc.replace(/[<>&]/g, '') + '</h2>\n  <p>This section was added by the agentic plan step.</p>\n</section>\n\nStep done.';
     }
     var isChat = prompt.indexOf('=== USER REQUEST ===') !== -1;
     var isRefine = prompt.indexOf('CURRENT PAGE CODE') !== -1;
@@ -1251,7 +1116,7 @@ APPENDIX B — FIELD GLOSSARY (verified against code)
 <script>
 (function() {
   var thStatus = document.getElementById('th-status');
-  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-08-15l';
+  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-08-18a';
   document.getElementById('th-load-sample').onclick = function() {
     // Slim saved value — design direction comes from params, identity from the parent object.
     window.tool.setValue({

@@ -1,0 +1,142 @@
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">🎞️</div>
+      <div class="header-title">
+        <h1>Presentation Builder</h1>
+        <span class="header-sub">Chat-driven • Talk to the AI and it builds your slide deck</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="pres-badge" id="pres-badge" title="Slides in this presentation">0 slides</span>
+      <span class="version-badge" id="tool-version" title="Presentation version">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-goto-export" title="Export the standalone presentation">📥 Export</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Studio (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">🎞️</div>
+              <h3>Describe your presentation</h3>
+              <p>Tell me what you want to present — <b>a quarterly report, a product pitch, a training deck, a lecture…</b> — and I'll build the slides for you, one idea per slide.</p>
+              <div class="welcome-hints">
+                <button class="hint-chip" data-hint="Create a 10-slide pitch deck for a mobile app called BloomNotes — problem, solution, features, market, business model, team and next steps.">📱 Product pitch</button>
+                <button class="hint-chip" data-hint="Build a quarterly business review presentation: KPI overview, revenue chart, key wins, challenges, roadmap and Q&amp;A.">📊 Business review</button>
+                <button class="hint-chip" data-hint="Make a training presentation about workplace safety: 5 key rules, common hazards, emergency procedures and a short quiz.">🦺 Training deck</button>
+              </div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> You can also say <b>"add a slide about X"</b> or <b>"replace slide 3 with a chart"</b> — I'll only change what you asked.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your presentation or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Studio Panel -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="present">👁️ Present</button>
+        <button class="ctab" data-tab="slides">🧩 Slides</button>
+        <button class="ctab" data-tab="export">📦 Export</button>
+      </div>
+
+      <div class="content-editors">
+        <!-- Present: deck preview + slide strip -->
+        <div class="content-editor active" id="editor-present">
+          <div class="pres-toolbar">
+            <input class="deck-title-input" id="deck-title-input" placeholder="Presentation title…" title="Presentation title">
+            <span class="pres-toolbar-info" id="slide-counter">0 / 0</span>
+            <button class="btn btn-sm btn-ghost" id="btn-prev" title="Previous slide">◀</button>
+            <button class="btn btn-sm btn-ghost" id="btn-next" title="Next slide">▶</button>
+            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          </div>
+          <div class="pres-stage" id="pres-stage">
+            <div class="pres-frame-wrap" id="pres-frame-wrap">
+              <iframe id="pres-frame" class="pres-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups allow-modals" allowfullscreen title="Presentation preview"></iframe>
+            </div>
+            <div class="pres-empty" id="pres-empty">
+              <div class="empty-icon">🎞️</div>
+              <p>Your presentation will appear here</p>
+              <p class="empty-sub">Describe it in the chat on the left to generate the first slides</p>
+            </div>
+          </div>
+          <div class="slide-strip-wrap">
+            <div class="slide-strip" id="slide-strip"></div>
+          </div>
+        </div>
+
+        <!-- Slides: manage list -->
+        <div class="content-editor" id="editor-slides">
+          <div class="slides-toolbar">
+            <h2>🧩 Slides</h2>
+            <p class="slides-hint">Manage the pages of this presentation. Click ✏️ to edit a slide's components as JSON, or 🤖 to ask the AI about that slide.</p>
+            <button class="btn btn-primary btn-sm" id="btn-add-slide">+ Add Blank Slide</button>
+          </div>
+          <div class="slides-list" id="slides-list"></div>
+        </div>
+
+        <!-- Export: standalone file -->
+        <div class="content-editor" id="editor-export">
+          <div class="config-scroll">
+            <div class="config-header">
+              <h2>📦 Export</h2>
+              <p>Each export is <b>complete and standalone</b> — nothing else needed. HTML keeps the exact interactive design, PPTX opens in PowerPoint as editable slides, and PDF is ready for printing.</p>
+            </div>
+            <div class="export-row">
+              <button class="btn btn-primary" id="btn-export-download">📥 Download .html</button>
+              <button class="btn btn-outline" id="btn-export-pptx">📊 Download .pptx</button>
+              <button class="btn btn-outline" id="btn-export-pdf">🖨️ Export PDF</button>
+              <button class="btn btn-outline" id="btn-export-copy">📋 Copy Full HTML</button>
+            </div>
+            <div class="export-info" id="export-info"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirm-overlay" style="display:none">
+    <div class="confirm-box">
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Yes, Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+</div>

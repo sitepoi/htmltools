@@ -1,0 +1,132 @@
+<div id="app">
+  <!-- HEADER (slim: logo + formatting + exports) -->
+  <header class="app-header">
+    <div class="app-logo" title="Legal Document Builder">⚖️</div>
+    <div class="fmt-group" title="Document formatting — font, size, line spacing and text color">
+      <select id="fmt-font" class="fmt-select" title="Font family"></select>
+      <select id="fmt-size" class="fmt-select" title="Base font size"></select>
+      <select id="fmt-lh" class="fmt-select" title="Line spacing"></select>
+      <input type="color" id="fmt-color" class="fmt-color" value="#111111" title="Text color">
+    </div>
+    <div class="header-btns">
+      <button class="btn btn-sm btn-outline" id="btn-export-html" title="Download standalone HTML file (everything embedded)">📥 HTML</button>
+      <button class="btn btn-sm btn-outline" id="btn-export-docx" title="Download Microsoft Word document (.docx)">📄 DOCX</button>
+      <button class="btn btn-sm btn-primary" id="btn-export-pdf" title="Export as PDF (A4, printable)">🖨️ PDF</button>
+      <span class="version-badge" id="tool-version" title="Document version — bumps on every AI edit">v1.0.0</span>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Document (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-panel-header">
+        <span>💬 Drafting Assistant</span>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI connection"></span>
+        <button class="btn btn-ghost btn-xs" id="btn-clear-chat" title="Clear this conversation" style="margin-left:auto">🗑</button>
+      </div>
+      <div class="chat-target-chip" id="chat-target-chip" style="display:none" title="The selected part of the document is the AI's only edit target for the next message">
+        🎯 <span id="chat-target-label"></span>
+        <button class="chip-x" id="btn-target-clear" title="Clear target">✕</button>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <div class="chat-welcome">
+          <div class="chat-welcome-icon">⚖️</div>
+          <h3>Draft a legal document</h3>
+          <p>Describe what you need — <b>an NDA, a service agreement, an employment contract, a lease…</b> — and I'll draft it in Word-document format, section by section.</p>
+          <div class="welcome-prompts" id="welcome-prompts"></div>
+          <p class="welcome-tip">💡 <b>Tip:</b> Select a part of the document on the right, then ask me to change <i>that part only</i>.</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your legal document or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+        <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+        <button class="btn btn-sm btn-stop" id="btn-chat-stop" title="Stop AI" style="display:none">⏹</button>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Document Panel (full height; Components & Settings open as drawers) -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-editors">
+        <!-- Document preview (always visible, full height) -->
+        <div class="content-editor" id="editor-document">
+          <div class="preview-toolbar">
+            <button class="btn btn-sm btn-ghost" id="btn-toggle-edit" title="Edit the document text directly">✏️ Edit</button>
+            <span class="edit-format-bar" id="edit-format-bar" style="display:none">
+              <button class="efb-btn" data-fmt-op="bold" title="Bold"><b>B</b></button>
+              <button class="efb-btn" data-fmt-op="italic" title="Italic"><i>I</i></button>
+              <button class="efb-btn" data-fmt-op="underline" title="Underline"><u>U</u></button>
+              <button class="efb-btn" data-fmt-op="strikeThrough" title="Strikethrough"><s>S</s></button>
+              <label class="efb-color" title="Text color">🎨<input type="color" id="edit-color" value="#111111"></label>
+              <label class="efb-color" title="Highlight">🖍️<input type="color" id="edit-highlight" value="#fef08a"></label>
+              <button class="btn btn-sm btn-outline" id="btn-edit-cancel" title="Discard edits">✕ Discard</button>
+            </span>
+            <button class="btn btn-sm btn-ghost" id="btn-open-components" title="Open the legal component library">🧩 Components</button>
+            <button class="btn btn-sm btn-ghost" id="btn-open-settings" title="Open settings &amp; export">⚙️ Settings &amp; Export</button>
+            <span class="sel-hint" id="sel-target-info">🎯 Select text inside the document to target it for the next AI edit</span>
+            <span class="ro-banner" id="ro-banner" style="display:none">🔒 Read-only mode — ask an editor to make changes</span>
+            <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          </div>
+          <div class="doc-stage" id="doc-stage">
+            <iframe id="doc-preview" class="doc-preview" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Document preview"></iframe>
+          </div>
+          <div class="preview-empty" id="preview-empty">
+            <div class="empty-icon">📄</div>
+            <p>Your document will appear here</p>
+            <p class="empty-sub">Describe the document in the chat — e.g. “Draft a service agreement between two companies”.</p>
+          </div>
+        </div>
+
+        <!-- Side drawer: Component library -->
+        <div class="side-drawer" id="drawer-components">
+          <div class="drawer-header">
+            <h2>🧩 Component Library</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-components" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="comp-panel">
+              <p class="drawer-hint">Ready-made blocks for legal documents (agreement clauses, signature pages, schedules, notices…). Click <b>➕ Add</b> to ask the AI to insert one — or mention any component by name in the chat.</p>
+              <input id="comp-search" class="comp-search" placeholder="🔍 Filter components… (e.g. signature, confidentiality, payment)">
+              <div id="components-list" class="components-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side drawer: Settings & export -->
+        <div class="side-drawer" id="drawer-settings">
+          <div class="drawer-header">
+            <h2>⚙️ Settings &amp; Export</h2>
+            <button class="btn btn-ghost btn-sm" id="btn-close-settings" title="Close">✕</button>
+          </div>
+          <div class="drawer-body">
+            <div class="settings-panel">
+              <p class="drawer-hint">One document per tool. Everything — including every component's HTML/CSS/JS — is embedded in the exports, so the files work standalone.</p>
+              <div class="settings-section">
+                <h3>📄 Document</h3>
+                <div id="doc-stats" class="doc-stats">—</div>
+                <div class="settings-row">
+                  <button class="btn btn-outline" id="btn-reset-doc" title="Remove all blocks and start over">🗑 Reset document</button>
+                  <button class="btn btn-outline" id="btn-copy-blocks" title="Copy the blocks JSON (for diagnostics)">📋 Copy Blocks JSON</button>
+                </div>
+              </div>
+              <div class="settings-section">
+                <h3>📦 Export</h3>
+                <div class="export-row">
+                  <button class="btn btn-primary" id="btn-export-html2">📥 Download .html</button>
+                  <button class="btn btn-primary" id="btn-export-docx2">📄 Download .docx</button>
+                  <button class="btn btn-primary" id="btn-export-pdf2">🖨️ Export PDF</button>
+                </div>
+                <p class="gen-hint">The exported HTML is one complete standalone file (all styles and scripts embedded, printable A4). The DOCX converts the document into a real Word file. The PDF is generated through the CMS export service.</p>
+              </div>
+              <div class="settings-section">
+                <h3>🔌 Parameters &amp; Data</h3>
+                <div class="params-summary" id="params-summary">Loading…</div>
+                <p class="gen-hint">Formatting defaults are configured as tool parameters in the field settings. Chat history is stored in the CMS <b>ai-chat-sessions-uniconbaseapps</b> object type.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

@@ -1,0 +1,271 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<div class="bsg-root" id="bsg-root">
+  <header class="bsg-header">
+    <div class="bsg-header-inner">
+      <div class="bsg-brand">
+        <div class="bsg-logo-mark">B</div>
+        <div>
+          <h1>Brand Set Generator</h1>
+          <p>Complete brand identity kit — logo, business cards, favicon, social &amp; document assets</p>
+        </div>
+      </div>
+      <div class="bsg-header-actions">
+        <span class="bsg-save-state" id="save-state">Ready</span>
+        <span class="bsg-role-badge" id="role-badge"></span>
+        <span class="bsg-lock-note" id="lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+    <nav class="bsg-steps" id="steps-nav">
+      <button class="bsg-step active" data-step="1"><span class="num">1</span>Company Profile</button>
+      <button class="bsg-step" data-step="2"><span class="num">2</span>Logo Studio</button>
+      <button class="bsg-step" data-step="3"><span class="num">3</span>Brand Kit</button>
+    </nav>
+  </header>
+
+  <main class="bsg-main">
+    <!-- ============ STEP 1 — COMPANY PROFILE ============ -->
+    <section class="bsg-pane" id="pane-1">
+      <div class="bsg-card">
+        <h2>Tell us about the company</h2>
+        <p class="bsg-hint">Everything else — logo, cards, favicon, guidelines — is generated from these answers.</p>
+        <div class="bsg-form-grid">
+          <div class="bsg-field">
+            <label>Legal company name <span style="color:#dc2626">*</span></label>
+            <input class="bsg-input" id="f-legal-name" placeholder="e.g. Nova Labs Inc." maxlength="80">
+          </div>
+          <div class="bsg-field">
+            <label>Brand name <span style="color:var(--bsg-faint);text-transform:none;font-weight:600">(short — used in the logo)</span></label>
+            <input class="bsg-input" id="f-name" placeholder="e.g. Nova (leave empty to use legal name)" maxlength="60">
+          </div>
+          <div class="bsg-field">
+            <label>Industry</label>
+            <select class="bsg-select" id="f-industry"></select>
+          </div>
+          <div class="bsg-field">
+            <div class="bsg-label-row">
+              <label>Tagline / slogan</label>
+              <button class="bsg-btn-ai" id="btn-ai-tagline">✨ AI tagline ideas</button>
+            </div>
+            <input class="bsg-input" id="f-tagline" placeholder="e.g. Software that ships itself" maxlength="90">
+          </div>
+          <div class="bsg-field wide" id="tagline-ideas" style="display:none"></div>
+        </div>
+
+        <div class="bsg-subgroup">
+          <label>Brand personality</label>
+          <div class="bsg-chips" id="personality-chips"></div>
+        </div>
+
+        <div class="bsg-subgroup">
+          <label>Brand color &amp; palette</label>
+          <div class="bsg-color-row">
+            <span id="brand-swatches" class="bsg-chips"></span>
+            <input type="color" class="bsg-color-input" id="f-color" value="#4f46e5" title="Custom color">
+          </div>
+          <div class="bsg-form-grid" style="margin-top:12px">
+            <div class="bsg-field">
+              <label>Palette style</label>
+              <select class="bsg-select" id="f-palette-style"></select>
+            </div>
+            <div class="bsg-field">
+              <label>Generated palette (click to copy hex)</label>
+              <div class="bsg-palette-preview" id="palette-preview"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bsg-subgroup">
+          <label>Business card details <span style="color:var(--bsg-faint);text-transform:none;font-weight:600">(optional — used on cards &amp; letterhead)</span></label>
+          <div class="bsg-form-grid">
+            <div class="bsg-field"><label>Contact person</label><input class="bsg-input" id="c-person" placeholder="e.g. Jane Doe"></div>
+            <div class="bsg-field"><label>Job title</label><input class="bsg-input" id="c-title" placeholder="e.g. CEO"></div>
+            <div class="bsg-field"><label>Email</label><input class="bsg-input" id="c-email" placeholder="jane@company.com"></div>
+            <div class="bsg-field"><label>Phone</label><input class="bsg-input" id="c-phone" placeholder="+1 555 000 1234"></div>
+            <div class="bsg-field"><label>Website</label><input class="bsg-input" id="c-website" placeholder="company.com"></div>
+            <div class="bsg-field"><label>Address</label><input class="bsg-input" id="c-address" placeholder="123 Main St, City"></div>
+          </div>
+        </div>
+
+        <div class="bsg-step-actions">
+          <button class="bsg-btn bsg-btn-primary" id="btn-step1-next">Continue to Logo Studio →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ STEP 2 — LOGO STUDIO ============ -->
+    <section class="bsg-pane" id="pane-2" style="display:none">
+      <div class="bsg-studio">
+        <div class="bsg-card bsg-studio-controls">
+          <div>
+            <h2>Logo Studio</h2>
+            <p class="bsg-hint">Design the logo — or upload an existing one. All brand assets are generated from it.</p>
+          </div>
+
+          <div class="bsg-source-tabs">
+            <button class="bsg-source-tab active" id="src-builder">🎨 Logo Builder</button>
+            <button class="bsg-source-tab" id="src-upload">📤 Upload a logo</button>
+          </div>
+
+          <div id="builder-controls">
+            <div class="bsg-control-group">
+              <label>Symbol</label>
+              <div class="bsg-seg" id="symbol-type">
+                <button class="bsg-seg-btn active" data-symbol="icon">Icon</button>
+                <button class="bsg-seg-btn" data-symbol="monogram">Monogram</button>
+                <button class="bsg-seg-btn" data-symbol="none">None</button>
+              </div>
+              <div id="icon-picker-wrap" style="margin-top:12px">
+                <input class="bsg-input bsg-icon-search" id="icon-search" placeholder="🔍 Search icons…">
+                <div class="bsg-icon-grid" id="icon-grid"></div>
+              </div>
+              <div id="monogram-wrap" style="display:none;margin-top:12px">
+                <input class="bsg-input" id="f-monogram" placeholder="e.g. NL" maxlength="4" style="text-transform:uppercase;font-weight:700;letter-spacing:2px">
+              </div>
+            </div>
+
+            <div class="bsg-control-group">
+              <label>Layout</label>
+              <div class="bsg-seg" id="layout-type">
+                <button class="bsg-seg-btn active" data-layout="horizontal">Horizontal</button>
+                <button class="bsg-seg-btn" data-layout="stacked">Stacked</button>
+                <button class="bsg-seg-btn" data-layout="emblem">Emblem</button>
+                <button class="bsg-seg-btn" data-layout="mark">Mark only</button>
+              </div>
+            </div>
+
+            <div class="bsg-control-group">
+              <label>Icon container</label>
+              <div class="bsg-seg" id="shape-type">
+                <button class="bsg-seg-btn" data-shape="none">None</button>
+                <button class="bsg-seg-btn active" data-shape="rounded">Rounded</button>
+                <button class="bsg-seg-btn" data-shape="circle">Circle</button>
+                <button class="bsg-seg-btn" data-shape="squircle">Squircle</button>
+              </div>
+            </div>
+
+            <div class="bsg-control-group">
+              <label>Typography</label>
+              <div class="bsg-color-mini-row">
+                <div class="bsg-field"><label>Name font</label><select class="bsg-select" id="f-font"></select></div>
+                <div class="bsg-field"><label>Tagline font</label><select class="bsg-select" id="f-tagfont"></select></div>
+              </div>
+              <div class="bsg-toggle-row" style="margin-top:12px"><input type="checkbox" id="t-upper"> UPPERCASE name</div>
+              <div class="bsg-toggle-row" style="margin-top:8px"><input type="checkbox" id="t-tagline" checked> Show tagline</div>
+              <div class="bsg-toggle-row" style="margin-top:8px"><input type="checkbox" id="t-shadow" checked> Soft shadow on symbol</div>
+            </div>
+
+            <div class="bsg-control-group">
+              <label>Sizing</label>
+              <div class="bsg-range-row"><label>Tracking</label><input type="range" id="r-track" min="0" max="12" step="0.5" value="2"><span class="bsg-range-val" id="track-val">2</span></div>
+              <div class="bsg-range-row" style="margin-top:10px"><label>Symbol size</label><input type="range" id="r-scale" min="60" max="130" step="1" value="100"><span class="bsg-range-val" id="scale-val">100%</span></div>
+            </div>
+
+            <div class="bsg-control-group">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <label style="margin:0">Colors</label>
+                <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="btn-colors-reset">↺ Use palette</button>
+              </div>
+              <div class="bsg-color-mini-row">
+                <div class="bsg-color-mini"><label>Symbol</label><input type="color" class="bsg-color-input" id="f-c-primary" value="#4f46e5"></div>
+                <div class="bsg-color-mini"><label>Text</label><input type="color" class="bsg-color-input" id="f-c-text" value="#0f172a"></div>
+                <div class="bsg-color-mini"><label>Tagline</label><input type="color" class="bsg-color-input" id="f-c-tag" value="#64748b"></div>
+                <div class="bsg-color-mini"><label>Badge bg</label><input type="color" class="bsg-color-input" id="f-c-bg" value="#4f46e5"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="upload-controls" style="display:none">
+            <div class="bsg-upload-drop" id="btn-upload">
+              <div class="bsg-up-icon">⬆️</div>
+              <b>Upload your logo</b>
+              <div style="font-size:12px;margin-top:4px">PNG, JPG or SVG — we generate every other asset from it</div>
+            </div>
+            <div class="bsg-upload-preview" id="upload-preview" style="display:none">
+              <img id="upload-img" alt="Uploaded logo">
+              <div class="bsg-upload-name" id="upload-name"></div>
+            </div>
+            <div class="bsg-control-group">
+              <label>Uploaded logo style</label>
+              <div class="bsg-field"><label>Fit</label><select class="bsg-select" id="f-upload-fit">
+                <option value="plain">Plain (transparent)</option>
+                <option value="badge">White badge (circle)</option>
+                <option value="card">Brand color card</option>
+              </select></div>
+              <div class="bsg-range-row" style="margin-top:12px"><label>Size</label><input type="range" id="r-upload-pad" min="55" max="95" step="1" value="72"><span class="bsg-range-val" id="upload-pad-val">72%</span></div>
+            </div>
+            <button class="bsg-btn bsg-btn-danger bsg-btn-sm" id="btn-upload-remove" style="margin-top:8px">Remove uploaded logo</button>
+          </div>
+        </div>
+
+        <div class="bsg-card bsg-studio-preview">
+          <div class="bsg-preview-toolbar">
+            <div class="bsg-bg-btns">
+              <button class="bsg-bg-btn light active" data-bg="light" title="Light background"></button>
+              <button class="bsg-bg-btn dark" data-bg="dark" title="Dark background"></button>
+              <button class="bsg-bg-btn checker" data-bg="checker" title="Transparent"></button>
+            </div>
+            <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="btn-regenerate">🔄 Rebuild all assets</button>
+          </div>
+          <div class="bsg-preview-stage" id="preview-stage" data-bg="light">
+            <div id="logo-preview"></div>
+          </div>
+          <div class="bsg-preview-caption">Primary logo — live preview</div>
+          <div class="bsg-variants" id="variant-previews"></div>
+        </div>
+      </div>
+      <div class="bsg-step-actions">
+        <button class="bsg-btn bsg-btn-primary" id="btn-step2-next">Continue to Brand Kit →</button>
+      </div>
+    </section>
+
+    <!-- ============ STEP 3 — BRAND KIT ============ -->
+    <section class="bsg-pane" id="pane-3" style="display:none">
+      <div class="bsg-kit-toolbar">
+        <div>
+          <h2>Brand Kit</h2>
+          <p id="kit-subtitle">Every asset below is generated from your logo — download individually or as a ZIP.</p>
+        </div>
+        <div class="bsg-kit-actions">
+          <button class="bsg-btn bsg-btn-primary" id="btn-zip">⬇ Download all (ZIP)</button>
+          <button class="bsg-btn bsg-btn-ghost" id="btn-pdf-guidelines">📄 Guidelines PDF</button>
+          <button class="bsg-btn bsg-btn-ghost" id="btn-copy-json">📋 Copy Brand JSON</button>
+          <button class="bsg-btn bsg-btn-ghost" id="btn-download-json">⬇ brand.json</button>
+        </div>
+      </div>
+      <div class="bsg-kit-layout">
+        <aside class="bsg-kit-side">
+          <div class="bsg-kit-side-title">Asset categories</div>
+          <nav class="bsg-kit-nav" id="kit-nav"></nav>
+        </aside>
+        <div class="bsg-kit-content">
+          <div id="kit-content"></div>
+          <div class="bsg-card bsg-guidelines">
+            <h3 style="font-size:15px">📖 Brand Guidelines</h3>
+            <div class="bsg-guidelines-body" id="guidelines-body"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="bsg-lightbox" id="lightbox" style="display:none">
+    <div class="bsg-lightbox-inner">
+      <div class="bsg-lightbox-bar">
+        <span id="lightbox-title"></span>
+        <div class="bsg-lightbox-actions">
+          <div class="bsg-lb-bg-btns" id="lb-bg-btns" title="Preview background">
+            <button class="bsg-lb-bg checker active" data-lbbg="checker" title="Transparent (checker)"></button>
+            <button class="bsg-lb-bg light" data-lbbg="light" title="White background"></button>
+            <button class="bsg-lb-bg dark" data-lbbg="dark" title="Dark background"></button>
+            <button class="bsg-lb-bg brand" data-lbbg="brand" title="Brand color"></button>
+          </div>
+          <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-svg">⬇ SVG</button>
+          <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-png">🖼 PNG</button>
+          <button class="bsg-btn bsg-btn-ghost bsg-btn-sm" id="lb-download-html" style="display:none">⬇ HTML</button>
+          <button class="bsg-lb-close" id="lb-close" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="bsg-lightbox-stage" id="lightbox-stage"></div>
+    </div>
+  </div>
+</div>

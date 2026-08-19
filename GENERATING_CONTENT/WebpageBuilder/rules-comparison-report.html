@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeneralWebsite Rules Comparison — v1.2 → v2.0 (PublicWebsite)</title>
+<style>
+  :root {
+    --bg: #12121c; --bg2: #1a1a2a; --bg3: #21213a;
+    --text: #e8e8f2; --text2: #a9a9c5; --text3: #737391;
+    --accent: #7c5cff; --accent-light: rgba(124,92,255,.16);
+    --gain: #22c55e; --gain-bg: rgba(34,197,94,.12);
+    --lost: #ef4444; --lost-bg: rgba(239,68,68,.12);
+    --keep: #38bdf8; --keep-bg: rgba(56,189,248,.12);
+    --border: #2c2c44;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.55; padding: 28px 20px 80px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; margin-bottom: 4px; }
+  h1 .v { color: var(--accent); }
+  .sub { color: var(--text2); font-size: 13px; margin-bottom: 22px; }
+  .chips { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 26px; }
+  .chip { padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg2); font-size: 13px; }
+  .chip b { display: block; font-size: 22px; }
+  .chip.gain b { color: var(--gain); } .chip.lost b { color: var(--lost); } .chip.keep b { color: var(--keep); }
+  h2 { font-size: 19px; margin: 30px 0 12px; display: flex; align-items: center; gap: 8px; }
+  h2 .count { font-size: 12px; color: var(--text3); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .card h3 { font-size: 14px; margin-bottom: 6px; }
+  .card.gain h3 { color: var(--gain); } .card.lost h3 { color: var(--lost); } .card.keep h3 { color: var(--keep); }
+  .card p { font-size: 12px; color: var(--text2); }
+  .card code, code { font-family: Consolas, monospace; font-size: 11.5px; color: #ffd479; background: var(--bg3); padding: 1px 5px; border-radius: 5px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text3); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; background: var(--bg2); }
+  td.old { color: var(--text2); }
+  td.new { color: var(--text); }
+  .gone { color: var(--lost); font-weight: 600; }
+  .note { background: var(--accent-light); border: 1px solid var(--accent); border-radius: 12px; padding: 14px 18px; font-size: 13px; margin-top: 26px; }
+  .note h3 { color: var(--accent); font-size: 14px; margin-bottom: 6px; }
+  .note ul { padding-left: 20px; }
+  .legend { display: flex; gap: 18px; font-size: 12px; color: var(--text2); margin: 6px 0 0; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+  .vbadge { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 9px; white-space: nowrap; }
+  .vbadge.no { background: var(--lost-bg); color: var(--lost); border: 1px solid var(--lost); }
+  .vbadge.yes { background: var(--gain-bg); color: var(--gain); border: 1px solid var(--gain); }
+  .vbadge.partial { background: rgba(245,158,11,.14); color: #f59e0b; border: 1px solid #f59e0b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>GeneralWebsite Rules Comparison <span class="v">v1.2 → v2.0</span></h1>
+  <p class="sub">Old ruleset: <code>old----generalwebsite-page-rules.txt</code> (v1.2, legacy platform) · New ruleset: <code>public-website-page-rules.txt</code> (v2.0, "PublicWebsite" publishing app) · Recorded 2026-08-17/18</p>
+
+  <div class="chips">
+    <div class="chip gain"><b>+13</b>Capabilities gained</div>
+    <div class="chip lost"><b>−8</b>Features lost / retired</div>
+    <div class="chip keep"><b>✓17</b>Capabilities kept (evolved)</div>
+  </div>
+
+  <h2>🟢 What we GAINED <span class="count">(new capabilities in v2.0)</span></h2>
+  <div class="grid">
+    <div class="card gain"><h3>1. window.gw SDK v2 — the only integration surface</h3><p>A single documented API for everything: routing (<code>gw.navigate</code>, <code>gw.getPageParams</code>), auth (<code>gw.getUser</code>, <code>gw.login/logout</code>), storage (<code>gw.storage</code>), formatting (<code>gw.formatCurrency/formatDate</code>), toasts (<code>gw.notify</code>), modal (<code>gw.showModal</code>), sanitize (<code>gw.sanitize</code>), analytics (<code>gw.track</code>).</p></div>
+    <div class="card gain"><h3>2. Data reads with filters &amp; live updates</h3><p><code>gw.db.query/get/subscribe</code> — filters (<code>==, !=, &gt;, &gt;=, &lt;, &lt;=, in, contains</code>), relations, facets, pagination (≤200), language scoping, and SSE live updates with a polling fallback. Public types only.</p></div>
+    <div class="card gain"><h3>3. Operations engine — structured, transactional writes</h3><p><code>gw.db.operation</code> with server-side validation, safe formula DSL, role/owner permission checks, multi-target transactional writes, idempotency keys and email/contextFunction hooks. The page only <i>references</i> operations; it can never define them.</p></div>
+    <div class="card gain"><h3>4. Flows — real multi-step processes</h3><p>Checkout, booking, registration as server-authoring configs: steps with dataDefinitions, validation rules, amountFormula, payment steps and done-step hooks. Flow state is server-side (httpOnly cookie) — the client cannot forge steps.</p></div>
+    <div class="card gain"><h3>5. Cart API</h3><p>Server-computed totals, anonymous cart cookie identity, <code>gw:cart-changed</code> events, add/update/remove/clear actions. Money is never calculated client-side.</p></div>
+    <div class="card gain"><h3>6. Built-in widget islands</h3><p>9 ready-made components via <code>&lt;div data-gw-app&gt;</code>: menu, cart, checkout-flow, slot-picker, seat-map, account-dashboard, rewards, order-status, search-box — plus custom islands with <code>gw.apps.register</code>.</p></div>
+    <div class="card gain"><h3>7. First-class SEO output</h3><p>A dedicated <code>=== SEO ===</code> section: metaTitle/Desc/Robots, OpenGraph, Twitter cards, canonical, sitemap priority/frequency and <code>schemaItems</code> JSON-LD (WebPage, Product, FAQPage, Event…).</p></div>
+    <div class="card gain"><h3>8. PAGE META output</h3><p><code>=== PAGE META ===</code> carries name, slug, language, publish status, <code>requireAuth</code> (auto login redirect) and <code>templateContentType</code>. Drafts are hidden without a preview secret.</p></div>
+    <div class="card gain"><h3>9. SPA navigation &amp; router</h3><p><code>data-ic-nav-href</code> deep links with plain <code>href</code> fallback, <code>gw.navigate()</code>, per-page CSS dedup/unmount, and an explicit idempotent script lifecycle on every navigation.</p></div>
+    <div class="card gain"><h3>10. Theme integration</h3><p>Site theme colors exposed as <code>--gw-color-*</code> CSS variables; <code>gw.formatCurrency</code> uses the site's currency config. Brand colors no longer need hard-coding.</p></div>
+    <div class="card gain"><h3>11. Codified security guardrails</h3><p>Honeypot fields (<code>gw_hp</code>/<code>website</code>/<code>company</code>), 2-second anti-bot timing, origin checks, rate limits, reCAPTCHA option, <code>data-gw-config</code> JSON validity, no document.write/top-level await.</p></div>
+    <div class="card gain"><h3>12. Explicit lifecycle contract</h3><p>Precise rules for how code runs: body fragment injection, CSS appended to <code>&lt;head&gt;</code>, JS via Blob URL after double rAF, island auto-mount, <code>gw:content-ready</code> event, script-error isolation.</p></div>
+    <div class="card gain"><h3>13. CMS CONFIG NEEDED escape hatch</h3><p>When an operation/flow the page needs doesn't exist, the generator says so explicitly instead of inventing writes — clear handoff from AI to CMS author.</p></div>
+  </div>
+
+  <h2>🔴 What we LOST <span class="count">(retired in v2.0)</span></h2>
+  <div class="grid">
+    <div class="card lost"><h3>1. The block system</h3><p><code>sp_contents.blocks[]</code>, block types (<code>html</code>, <code>html-code</code>, <code>text</code>, <code>image</code>, <code>json</code>, <code>faq-item</code>), <code>cssClassNames</code>, <code>settingsJSON</code> and <code>fullWidthBlockCss</code> are gone. Content now lives ONLY in <code>data.htmlPage.code.{html,css,js}</code>.</p></div>
+    <div class="card lost"><h3>2. Nunjucks templating</h3><p>Server-side template evaluation of page content is removed. <code>{% raw %}</code> wrapping, block variables and Nunjucks-aware escaping are no longer needed or supported.</p></div>
+    <div class="card lost"><h3>3. Block-level data widgets</h3><p><code>object-query-list</code> (read), <code>dynamic-form</code> (write) and JSON renderer blocks are replaced by the gw.db API, the data-gw-form protocol and island widgets.</p></div>
+    <div class="card lost"><h3>4. gw- class naming convention</h3><p>The mandatory <code>gw-</code> prefix is replaced by a unique page-class scoping rule (<code>.shop-home</code>) — because CSS is injected globally and removed on unmount.</p></div>
+    <div class="card lost"><h3>5. window.MyPage namespace convention</h3><p>No longer required (top-level function declarations are auto-hoisted to <code>window</code> by the platform). Replaced by the stronger idempotency contract.</p></div>
+    <div class="card lost"><h3>6. GW-PAGE-ID traceability comment</h3><p>The <code>GW-PAGE-ID</code>/<code>GW-PARTIAL-ID</code> declaration comment convention is gone (version stamps in the tool cover traceability instead).</p></div>
+    <div class="card lost"><h3>7. Embedded style/script as the primary mechanism</h3><p>In-content <code>&lt;style&gt;</code>/<code>&lt;script&gt;</code> blocks are only <i>tolerated</i> now — the canonical split is <code>code.css</code>/<code>code.js</code>.</p></div>
+    <div class="card lost"><h3>8. Anything-goes JS writes</h3><p>Direct database/REST/API writes from page code are explicitly forbidden. Every write must be an operation, a flow, a form submit or a cart call.</p></div>
+  </div>
+
+  <h2>⚖️ Should we bring them back? <span class="count">(short verdicts)</span></h2>
+  <table class="verdicts">
+    <tr><th style="width:30%">Lost feature</th><th style="width:13%">Verdict</th><th>One-line reason / replacement</th></tr>
+    <tr>
+      <td>1. Block system</td>
+      <td><span class="vbadge no">NO</span></td>
+      <td>HTML fragment does it all. If editors need reusable pieces → add small <code>data.sections</code> composition, not blocks.</td>
+    </tr>
+    <tr>
+      <td>2. Nunjucks</td>
+      <td><span class="vbadge no">NO</span></td>
+      <td>It was a security risk. Template pages (<code>data.templateContentType</code>) already give the "one template → many object pages" flow.</td>
+    </tr>
+    <tr>
+      <td>3. Block data widgets</td>
+      <td><span class="vbadge partial">PARTLY</span></td>
+      <td>Forms already covered by <code>data-gw-form</code>. Add only a generic no-code <code>list</code> widget.</td>
+    </tr>
+    <tr>
+      <td>4. gw- class prefix</td>
+      <td><span class="vbadge partial">PARTLY</span></td>
+      <td>No mandatory prefix. Optional: shared site CSS + reserve <code>gw-</code> for shell components.</td>
+    </tr>
+    <tr>
+      <td>5. window.MyPage namespace</td>
+      <td><span class="vbadge partial">SMALL YES</span></td>
+      <td>Hoisted functions can collide. Add a per-page <code>gw.ns</code> object (tiny change).</td>
+    </tr>
+    <tr>
+      <td>6. GW-PAGE-ID comment</td>
+      <td><span class="vbadge yes">YES</span></td>
+      <td>Auto-inject a page/slug comment — zero author effort, great for support/debug.</td>
+    </tr>
+    <tr>
+      <td>7. Embedded style/script as primary</td>
+      <td><span class="vbadge no">NO</span></td>
+      <td>The <code>code.css/js</code> split is better. Optional: legacy import/normalizer to migrate old pages.</td>
+    </tr>
+    <tr>
+      <td>8. Anything-goes JS writes</td>
+      <td><span class="vbadge no">NEVER</span></td>
+      <td>Removed for security. Operations/flows/forms/cart replace it.</td>
+    </tr>
+  </table>
+  <p style="font-size:12px;color:var(--text2);margin-top:10px"><b>Bottom line:</b> 4 of 8 need nothing; 3 are optional small additions; only 1 (auto page comment) is a clear cheap win. Nothing needs the old mechanisms back as they were.</p>
+
+  <h2>🔵 What we STILL HAVE <span class="count">(kept across both versions)</span></h2>
+  <div class="grid">
+    <div class="card keep"><h3>1. Body-fragment model</h3><p>No <code>&lt;html&gt;</code>/<code>&lt;head&gt;</code>/<code>&lt;body&gt;</code>/<code>&lt;!DOCTYPE&gt;</code> — the page is injected between a platform-rendered header and footer (never generate your own chrome).</p></div>
+    <div class="card keep"><h3>2. SEO &amp; accessibility baseline</h3><p>Exactly one <code>&lt;h1&gt;</code>, logical heading hierarchy, semantic landmarks, alt text, labels on inputs, visible focus and contrast.</p></div>
+    <div class="card keep"><h3>3. Image discipline</h3><p>Alt + width + height on every <code>&lt;img&gt;</code>, lazy loading below the fold, CLS avoidance. (External absolute URLs are now officially fine.)</p></div>
+    <div class="card keep"><h3>4. Mobile-first responsive</h3><p>Mandatory <code>@media</code> queries, 48px tap targets and <code>prefers-reduced-motion</code> support.</p></div>
+    <div class="card keep"><h3>5. Vanilla JS only</h3><p>No jQuery/Bootstrap/Tailwind, no CDN scripts, no frameworks — plain JavaScript, now with explicit idempotency rules.</p></div>
+    <div class="card keep"><h3>6. Security hygiene</h3><p>No secrets in code; user/data content rendered via <code>textContent</code> (now also <code>gw.sanitize</code>); XSS escaping required.</p></div>
+    <div class="card keep"><h3>7. Size budgets</h3><p>HTML &lt; 100 KB, CSS &lt; 50 KB, JS &lt; 200 KB — unchanged.</p></div>
+    <div class="card keep"><h3>8. Multi-language pages</h3><p>Language from <code>meta.language</code>; sibling pages share a contentId; platform handles hreflang and the language switcher.</p></div>
+    <div class="card keep"><h3>9. Site-wide header/footer objects</h3><p><code>default-header</code>/<code>default-footer</code> (and <code>default-settings</code>) remain reserved slugs rendered by the platform.</p></div>
+    <div class="card keep"><h3>10. SEO length guidance</h3><p>~60-char titles, ~155-char descriptions, sitemap feeds — now generated from the <code>=== SEO ===</code> section.</p></div>
+    <div class="card keep"><h3>11. IIFE + scope hygiene</h3><p>Scripts wrapped in IIFEs; global collisions avoided — now with loop-closure warnings (<code>let</code>/<code>const</code> per iteration).</p></div>
+    <div class="card keep"><h3>12. Forms</h3><p>Still available, evolved from <code>dynamic-form</code> blocks to the <code>data-gw-form</code> protocol with honeypots and status elements.</p></div>
+    <div class="card keep"><h3>13. Stripe payments</h3><p>Still supported, evolved from block config to flow payment steps and payment intents (<code>pi_stub_*</code> in pilots).</p></div>
+    <div class="card keep"><h3>14. File uploads</h3><p>Still supported via multipart form submissions (≤10 MB server limit).</p></div>
+    <div class="card keep"><h3>15. Emails</h3><p>Still supported, evolved from AWS SES block config to operation/flow hooks (<code>email</code> hook type).</p></div>
+    <div class="card keep"><h3>16. Routing &amp; deep links</h3><p>Still present, evolved to the SPA router (<code>data-ic-nav-href</code>, <code>gw.navigate</code>) with plain-href SEO fallback.</p></div>
+    <div class="card keep"><h3>17. Read-only public data access</h3><p>Still available, evolved from <code>object-query-list</code> blocks to <code>gw.db.query/get/subscribe</code> with public-type access limits.</p></div>
+  </div>
+
+  <h2>🔄 Side-by-side mapping <span class="count">(old → new)</span></h2>
+  <table>
+    <tr><th>v1.2 (legacy GeneralWebsite)</th><th>v2.0 (PublicWebsite)</th></tr>
+    <tr><td class="old">Output: <code>[HTML] / [CSS] / [JS]</code> markers + Nunjucks blocks</td><td class="new"><code>=== HTML === / === CSS === / === JS === / === SEO === / === PAGE META ===</code> (+ <code>=== CMS CONFIG NEEDED ===</code>)</td></tr>
+    <tr><td class="old">Storage: <code>sp_contents.blocks[]</code> content record</td><td class="new">Page object: <code>data.htmlPage.code.{html,css,js}</code> + <code>seo</code> + name/slug/meta</td></tr>
+    <tr><td class="old">Rendering: Next.js SSR page pipeline</td><td class="new">SPA app: fragment injection + CSS dedup + Blob-URL JS + island auto-mount</td></tr>
+    <tr><td class="old">Templates: Nunjucks <code>{{ }}</code> / <code>{% %}</code></td><td class="new gone">REMOVED — no server-side templating of page content</td></tr>
+    <tr><td class="old">Data reads: <code>object-query-list</code> block</td><td class="new"><code>gw.db.query / get / subscribe</code></td></tr>
+    <tr><td class="old">Data writes: <code>dynamic-form</code> block</td><td class="new">Operations (<code>gw.db.operation</code>) + flows + <code>data-gw-form</code> forms + cart</td></tr>
+    <tr><td class="old">Checkout/multi-step: <i>planned, not built</i></td><td class="new">Flows engine (steps, validation, amountFormula, payment, done hooks)</td></tr>
+    <tr><td class="old">Payments: Stripe block config</td><td class="new">Flow payment step + payment intents</td></tr>
+    <tr><td class="old">Email: AWS SES block config</td><td class="new">Operation/flow email hooks</td></tr>
+    <tr><td class="old">Class naming: mandatory <code>gw-</code> prefix</td><td class="new">Unique page-class scoping (e.g. <code>.shop-home</code>)</td></tr>
+    <tr><td class="old">JS namespace: <code>window.MyPage</code></td><td class="new">Idempotent scripts (IIFE + <code>__xInit</code> guards, no top-level await)</td></tr>
+    <tr><td class="old">Traceability: <code>GW-PAGE-ID</code> comment</td><td class="new gone">REMOVED</td></tr>
+    <tr><td class="old">SEO: parent record <code>seo.metaTitle/metaDesc</code></td><td class="new">AI-produced <code>=== SEO ===</code> JSON incl. OG/Twitter/schema/sitemap</td></tr>
+    <tr><td class="old">Theme: hard-coded palettes</td><td class="new"><code>--gw-color-*</code> CSS variables from site settings</td></tr>
+    <tr><td class="old">Deep links: plain <code>&lt;a href&gt;</code></td><td class="new">SPA router: <code>data-ic-nav-href</code> + <code>gw.navigate</code></td></tr>
+    <tr><td class="old">Assets: relative paths preferred, hotlinks warned</td><td class="new">Absolute external URLs officially supported for images/fonts</td></tr>
+    <tr><td class="old">Anti-spam: basic</td><td class="new">Honeypots, 2 s timing guard, origin check, rate limits, reCAPTCHA option</td></tr>
+  </table>
+
+  <div class="note">
+    <h3>⚙️ What this means for the WebpageBuilder tool (already implemented in build 2026-08-18a)</h3>
+    <ul>
+      <li>Prompts, output contract and minimal/step prompts now demand the <code>=== HTML/CSS/JS/SEO/PAGE META ===</code> layout plus <code>=== CMS CONFIG NEEDED ===</code>.</li>
+      <li>The parser captures SEO and PAGE META JSON (lenient parsing for trailing commas/comments) and stores them in the saved value.</li>
+      <li>The compliance engine ("Page Quality Checker") now enforces v2.0 guardrails: body-fragment-only, scoped CSS, idempotent JS, data-gw-form protocol, valid <code>data-gw-config</code> JSON, reserved honeypot names, no document.write.</li>
+      <li>The preview and the downloaded standalone page inject a minimal <code>window.gw</code> mock so gw-based pages run outside the platform.</li>
+      <li>Exports changed: <b>Copy Page Object JSON</b> (<code>data.htmlPage.code</code> + seo + page meta) and <b>Copy Generator Output</b> (raw <code>===</code> sections). The old GW html-code block export is gone.</li>
+      <li>Page-type playbooks now recommend the right widget islands, flows and operations per page type.</li>
+    </ul>
+  </div>
+
+  <p style="margin-top:26px;font-size:11px;color:var(--text3)">
+    Report generated 2026-08-18 · Sources: old----generalwebsite-page-rules.txt (v1.2) vs public-website-page-rules.txt (v2.0) · WebpageBuilder build 2026-08-18a
+  </p>
+</div>
+</body>
+</html>

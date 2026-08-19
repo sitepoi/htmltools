@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample Export</title>
+<style>html,body{margin:0;padding:0;height:100%;overflow:hidden}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#1e293b}
+#pres-root{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f172a;padding:26px 26px 74px}
+.pres-deck{position:relative;aspect-ratio:16/9;width:100%;max-height:100%;}
+.pres-slide{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,0.45);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s ease,visibility 0s linear .3s}
+.pres-slide.is-active{opacity:1;visibility:visible;pointer-events:auto;z-index:2;transition:opacity .3s ease}
+.pres-slide-inner{flex:1;display:flex;flex-direction:column;overflow:auto;min-height:0;scrollbar-width:thin;position:relative;padding:clamp(22px,3vw,42px)}
+.pres-slide-num{position:absolute;bottom:10px;right:16px;font-size:11px;color:#94a3b8;font-weight:600;z-index:5;pointer-events:none}
+.pres-cover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 72px;box-sizing:border-box;overflow:auto}
+.pres-body{flex:1;padding:0;min-height:0}
+.pres-h1{font-size:clamp(24px,3.6vw,46px);font-weight:800;margin:0;line-height:1.2;letter-spacing:-0.01em}
+.pres-h2{font-size:clamp(20px,2.9vw,34px);font-weight:800;color:#1e293b;margin:0 0 4px;line-height:1.25}
+.pres-h3{font-size:clamp(15px,2vw,22px);font-weight:700;color:#334155;margin:0 0 12px}
+.pres-kicker{font-size:11px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#4f46e5;margin-bottom:6px}
+.pres-muted{color:#94a3b8;font-size:12px}
+.pres-bullets{list-style:none;padding:0;margin:0}
+.pres-bullets li{display:flex;align-items:flex-start;gap:10px;padding:7px 0;color:#334155;font-size:clamp(13px,1.6vw,17px);line-height:1.5}
+.pres-bullet-icon{color:var(--pres-accent,#4f46e5);font-weight:700;flex-shrink:0}
+.pres-cols-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-content:start}
+.pres-cols-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-content:start}
+.pres-cols-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-content:start}
+.pres-figure{margin:0;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}
+.pres-figure img{flex:1;min-height:0;display:block}
+.pres-figure figcaption{text-align:center;padding:6px 8px;background:#fff}
+.pres-table{width:100%;border-collapse:collapse;font-size:13.5px}
+.pres-table th{text-align:left;padding:9px 12px;background:#f1f5f9;font-weight:700;border-bottom:2px solid #e2e8f0}
+.pres-table td{padding:8px 12px;border-bottom:1px solid #e2e8f0;color:#475569}
+.pres-table tr:nth-child(even) td{background:#fafbfc}
+.pres-quote-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:34px 56px;background:linear-gradient(135deg,#eef2ff,#f8fafc);border-radius:14px}
+.pres-quote-mark{font-size:40px;margin-bottom:10px}
+.pres-quote{margin:0;font-size:clamp(17px,2.4vw,28px);font-style:italic;color:#334155;line-height:1.5;max-width:85%;font-family:Georgia,serif}
+.pres-quote-by{margin-top:14px;font-weight:700;color:#4f46e5;font-size:14px}
+.pres-agenda{display:flex;flex-direction:column;gap:10px}
+.pres-agenda-item{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 18px;font-size:clamp(13px,1.6vw,18px);color:#1e293b}
+.pres-agenda-item[data-pres-goto]{cursor:pointer}
+.pres-agenda-item[data-pres-goto]:hover{border-color:#4f46e5;background:#eef2ff}
+.pres-agenda-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#4f46e5;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+.pres-raw{height:100%;display:flex;flex-direction:column}
+.pres-unknown{background:#fef3c7;border:1px dashed #f59e0b;border-radius:10px;padding:12px 16px;color:#92400e;font-size:13px;margin:8px 0}
+.pres-q-radio{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.pres-q-opt{display:block;padding:9px 14px;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;margin-bottom:6px;background:#fafbfc;font-size:13.5px;transition:all .15s}
+.pres-q-opt:hover{border-color:#818cf8;background:#eef2ff}
+.pres-q-radio:checked+.pres-q-opt{border-color:#4f46e5;background:#eef2ff;font-weight:700}
+.pres-q-feedback{display:none;margin-top:10px;padding:12px 15px;background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px}
+.pres-q-radio:checked~.pres-q-feedback{display:block}
+.pres-flip-card{position:relative;width:100%;height:100%;min-height:150px;transition:transform .6s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d}
+.pres-flip-check:checked+.pres-flip-card{transform:rotateY(180deg)}
+.pres-ring-fill{transition:stroke-dashoffset 1.3s ease}
+.pres-tab-btns{display:flex;gap:6px;border-bottom:2px solid #e2e8f0;margin-bottom:12px}
+.pres-tab-btn{padding:8px 16px;border:none;background:transparent;font-family:inherit;font-size:13.5px;font-weight:700;color:#94a3b8;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.pres-tab-btn.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.pres-tab-pane{display:none}
+.pres-tab-pane.active{display:block}
+.pres-spotlight{animation:presSpot 2.6s ease-in-out infinite}
+@keyframes presSpot{0%,100%{box-shadow:0 0 10px rgba(79,70,229,.18);transform:scale(1)}50%{box-shadow:0 0 28px rgba(79,70,229,.4);transform:scale(1.012)}}
+.pres-ui{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;display:flex;align-items:center;gap:4px;background:rgba(15,23,42,.88);backdrop-filter:blur(8px);border:1px solid #334155;border-radius:999px;padding:5px 9px;z-index:50;font-family:system-ui,sans-serif}
+.pres-ui-btn{border:none;background:transparent;color:#cbd5e1;font-size:15px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pres-ui-btn:hover{background:#334155;color:#fff}
+.pres-ui-btn.on{background:#4f46e5;color:#fff}
+.pres-ui-counter{color:#cbd5e1;font-size:12px;font-weight:700;margin:0 6px;min-width:56px;text-align:center}
+.pres-progress{position:fixed;top:0;left:0;height:3px;background:#7c3aed;width:0%;transition:width .3s ease;z-index:60}
+.pres-notes{position:fixed;left:50%;transform:translateX(-50%);bottom:60px;width:min(720px,90vw);max-height:40%;overflow:auto;background:#fef9c3;border:1px solid #facc15;border-radius:12px;padding:14px 18px;display:none;z-index:40;color:#713f12;font-size:14px;line-height:1.6;white-space:pre-wrap;box-shadow:0 12px 32px rgba(0,0,0,.3)}
+@media print{body{background:#fff}#pres-root{position:static;padding:0;height:auto}.pres-deck{aspect-ratio:auto;max-height:none}.pres-slide{position:relative!important;inset:auto!important;opacity:1!important;visibility:visible!important;pointer-events:auto!important;page-break-after:always;border-radius:0;box-shadow:none;width:100%;height:100vh}.pres-slide-inner{overflow:visible}.pres-ui,.pres-progress,.pres-notes,.pres-slide-num{display:none!important}}
+.pres-slide{font-family:Georgia,serif}</style>
+</head>
+<body>
+<div id="pres-root">
+<div class="pres-deck"><section class="pres-slide is-active" data-slide="0"><div class="pres-slide-inner"><div class="pres-cover" style="background:linear-gradient(135deg,#312e81 0%,#4f46e5 45%,#7c3aed 100%)"><div style="font-size:52px;margin-bottom:14px">🎞️</div><h1 class="pres-h1" style="color:#fff">Sample Export</h1><p style="font-size:clamp(14px,1.8vw,22px);color:rgba(255,255,255,0.85);margin-top:12px;max-width:80%">Demo deck</p><div style="margin-top:26px;font-size:13px;color:rgba(255,255,255,0.65)">You · 2026</div></div></div><div class="pres-slide-num">1 / 3</div></section><section class="pres-slide" data-slide="1"><div class="pres-slide-inner"><div style="text-align:left;margin-bottom:6px"><h2 class="pres-h2">Key numbers</h2></div><div class="pres-cols-2"><div style="background:#fff;border:1px solid #e2e8f0;border-top:4px solid #4f46e5;border-radius:12px;padding:16px 18px;text-align:center"><div style="font-size:26px;margin-bottom:4px">👥</div><div style="font-size:30px;font-weight:800;color:#4f46e5;line-height:1.15">1250</div><div style="font-size:12px;color:#64748b;margin-top:4px">Users</div></div><div style="background:#fff;border:1px solid #e2e8f0;border-top:4px solid #059669;border-radius:12px;padding:16px 18px;text-align:center"><div style="font-size:26px;margin-bottom:4px">📈</div><div style="font-size:30px;font-weight:800;color:#059669;line-height:1.15">40%</div><div style="font-size:12px;color:#64748b;margin-top:4px">Growth</div></div></div><div class="pres-body"><div class="pres-quiz-item"><div style="font-weight:700;color:#1e293b;margin-bottom:8px;font-size:14px">1. What is 40% of 10?</div><div class="pres-quiz-opts"><input type="radio" class="pres-q-radio pres-q-correct" name="pmszppb0e1" id="pmszppb0e1-0"><label class="pres-q-opt" for="pmszppb0e1-0">4</label><input type="radio" class="pres-q-radio" name="pmszppb0e1" id="pmszppb0e1-1"><label class="pres-q-opt" for="pmszppb0e1-1">40</label><div class="pres-q-feedback"><div style="font-weight:700;color:#065f46">✅ 4</div></div></div></div></div></div><div class="pres-slide-num">2 / 3</div></section><section class="pres-slide" data-slide="2"><div class="pres-slide-inner"><div class="pres-cover" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)"><div style="font-size:44px;margin-bottom:10px">🙏</div><h1 class="pres-h1" style="color:#fff">Thank You</h1><p style="font-size:clamp(13px,1.7vw,20px);color:rgba(255,255,255,0.85);margin-top:10px;max-width:75%">Questions?</p></div></div><div class="pres-slide-num">3 / 3</div></section></div>
+</div>
+<script>
+var PRES_DATA = {"title":"Sample Export","subtitle":"Demo deck","author":"","notes":["","Mention the 40% growth.",""],"startSlide":1};
+var PRES_RUNTIME = function PRES_RUNTIME(root, data, opts) {
+  opts = opts || {};
+  data = data || {};
+  var deck = root ? root.querySelector('.pres-deck') : null;
+  var slides = deck ? deck.querySelectorAll('.pres-slide') : [];
+  var notes = data.notes || [];
+  var cur = Math.max(0, Math.min(parseInt(data.startSlide, 10) || 0, Math.max(0, slides.length - 1)));
+
+  /* UI chrome */
+  var bar = document.createElement('div');
+  bar.className = 'pres-ui';
+  bar.innerHTML =
+    '<button class="pres-ui-btn" data-act="prev" title="Previous (←)">⏮</button>' +
+    '<button class="pres-ui-btn" data-act="next" title="Next (→)">⏭</button>' +
+    '<span class="pres-ui-counter">1 / ' + slides.length + '</span>' +
+    '<button class="pres-ui-btn" data-act="notes" title="Speaker notes (N)">🗒</button>' +
+    '<button class="pres-ui-btn" data-act="full" title="Fullscreen (F)">⛶</button>';
+  document.body.appendChild(bar);
+  var progress = document.createElement('div');
+  progress.className = 'pres-progress';
+  document.body.appendChild(progress);
+  var notesBox = document.createElement('div');
+  notesBox.className = 'pres-notes';
+  document.body.appendChild(notesBox);
+
+  function fmtNum(el) {
+    var v = parseFloat(el.getAttribute('data-count')) || 0;
+    var target = v;
+    var prefix = el.getAttribute('data-prefix') || '';
+    var suffix = el.getAttribute('data-suffix') || '';
+    var start = null;
+    var dur = 1100;
+    function step(ts) {
+      if (start === null) start = ts;
+      var t = Math.min(1, (ts - start) / dur);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = prefix + Math.round(target * eased) + suffix;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function animateSlide(n) {
+    var slide = slides[n];
+    if (!slide) return;
+    /* count-ups */
+    var counts = slide.querySelectorAll('.pres-count');
+    for (var c = 0; c < counts.length; c++) fmtNum(counts[c]);
+    /* progress rings */
+    var rings = slide.querySelectorAll('.pres-ring-fill');
+    for (var r = 0; r < rings.length; r++) {
+      var off = rings[r].getAttribute('data-off');
+      if (off !== null) rings[r].style.strokeDashoffset = off;
+    }
+    /* bars (width or height mode is explicit in the markup) */
+    var bars = slide.querySelectorAll('.pres-bar-fill');
+    for (var b = 0; b < bars.length; b++) {
+      var w = bars[b].getAttribute('data-width');
+      if (w === null) continue;
+      if (bars[b].getAttribute('data-fill') === 'h') bars[b].style.height = w + '%';
+      else bars[b].style.width = w + '%';
+    }
+  }
+
+  function show(n) {
+    if (!slides.length) return;
+    if (isNaN(n)) n = cur;
+    if (n < 0) n = 0;
+    if (n > slides.length - 1) n = slides.length - 1;
+    cur = n;
+    for (var i = 0; i < slides.length; i++) {
+      slides[i].classList.toggle('is-active', i === cur);
+    }
+    bar.querySelector('.pres-ui-counter').textContent = (cur + 1) + ' / ' + slides.length;
+    progress.style.width = slides.length ? (((cur + 1) / slides.length) * 100) + '%' : '0%';
+    notesBox.textContent = notes[cur] ? ('🗒 Speaker notes — slide ' + (cur + 1) + ':\n\n' + notes[cur]) : '';
+    notesBox.style.display = 'none';
+    var notesBtn = bar.querySelector('[data-act="notes"]');
+    if (notesBtn) notesBtn.classList.remove('on');
+    animateSlide(cur);
+    if (opts.sync && window.parent && window.parent.postMessage) {
+      try { window.parent.postMessage({ pres: { type: 'current', n: cur, count: slides.length } }, '*'); } catch (e) {}
+    }
+  }
+
+  function next() { show(Math.min(cur + 1, slides.length - 1)); }
+  function prev() { show(Math.max(cur - 1, 0)); }
+
+  bar.addEventListener('click', function(e) {
+    var btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'next') next();
+    else if (act === 'prev') prev();
+    else if (act === 'full') {
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+      } catch (err) {}
+    } else if (act === 'notes') {
+      var vis = notesBox.style.display !== 'none';
+      notesBox.style.display = vis ? 'none' : 'block';
+      btn.classList.toggle('on', !vis);
+    }
+  });
+
+  /* tabs + agenda jumps (event delegation) */
+  document.addEventListener('click', function(e) {
+    var tabBtn = e.target.closest('.pres-tab-btn');
+    if (tabBtn) {
+      var wrap = tabBtn.closest('.pres-tabs');
+      if (!wrap) return;
+      var idx = tabBtn.getAttribute('data-tab');
+      var btns = wrap.querySelectorAll('.pres-tab-btn');
+      for (var b = 0; b < btns.length; b++) btns[b].classList.toggle('active', btns[b] === tabBtn);
+      var panes = wrap.querySelectorAll('.pres-tab-pane');
+      for (var p = 0; p < panes.length; p++) panes[p].classList.toggle('active', panes[p].getAttribute('data-pane') === idx);
+      return;
+    }
+    var goto = e.target.closest('[data-pres-goto]');
+    if (goto) {
+      var n = parseInt(goto.getAttribute('data-pres-goto'), 10);
+      if (!isNaN(n)) show(n);
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(slides.length - 1); }
+    else if (e.key === 'f' || e.key === 'F') {
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+      } catch (err) {}
+    }
+    else if (e.key === 'n' || e.key === 'N') {
+      var btn = bar.querySelector('[data-act="notes"]');
+      if (btn) btn.click();
+    }
+  });
+
+  if (opts.sync && window.addEventListener) {
+    window.addEventListener('message', function(ev) {
+      var d = ev && ev.data;
+      if (!d || !d.pres || d.pres.type !== 'goto') return;
+      var n = parseInt(d.pres.n, 10);
+      if (!isNaN(n)) show(n);
+    });
+  }
+
+  /* expose a small API for custom scripts */
+  window.pres = { goto: show, next: next, prev: prev, current: function() { return cur; }, count: slides.length };
+
+  show(data.startSlide ? parseInt(data.startSlide, 10) : 0);
+};
+PRES_RUNTIME(document.getElementById("pres-root"), PRES_DATA, {sync:true});
+</script>
+</body>
+</html>
