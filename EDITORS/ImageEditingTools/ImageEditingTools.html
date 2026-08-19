@@ -19,6 +19,8 @@
       <button id="iet-btn-reset" class="iet-btn" type="button" disabled title="Back to the original image">↺ Reset</button>
       <button id="iet-btn-steps" class="iet-btn" type="button" title="Step history — click a step to jump back">🕘 Steps</button>
       <button id="iet-btn-meta" class="iet-btn" type="button" title="File info and metadata">ℹ️ Info</button>
+      <button id="iet-btn-ai" class="iet-btn" type="button" title="Generate alt-text and a social caption with AI">🤖 AI</button>
+      <button id="iet-btn-print" class="iet-btn" type="button" title="Download a clean print page">🖨 Print</button>
       <button id="iet-btn-copy" class="iet-btn" type="button" title="Copy the image to the clipboard">📋 Copy</button>
       <button id="iet-btn-download" class="iet-btn iet-btn-primary" type="button" disabled title="Download the current image">⬇ Download</button>
       <span class="iet-lock" id="iet-lock" style="display:none">🔒 Read-only</span>
@@ -33,6 +35,7 @@
     <button class="iet-tab" data-tab="frame" type="button">🖼️ Frame</button>
     <button class="iet-tab" data-tab="filters" type="button">🎨 Filters</button>
     <button class="iet-tab" data-tab="annotate" type="button">✏️ Annotate</button>
+    <button class="iet-tab" data-tab="batch" type="button">📦 Batch</button>
     <button class="iet-tab" data-tab="compress" type="button">🗜️ Compress</button>
     <button class="iet-tab" data-tab="watermark" type="button">💧 Watermark</button>
     <button class="iet-tab" data-tab="collage" type="button">🧩 Collage</button>
@@ -70,6 +73,8 @@
           <button id="cnv-favicon" class="iet-btn" type="button" title="16/32/48/64 favicon .ico + 256 px PNG">🧩 Favicon pack</button>
           <button id="cnv-base64" class="iet-btn" type="button" title="Copy the image as a base64 data URL">📄 Base64</button>
           <button id="cnv-html" class="iet-btn" type="button" title="Copy a ready-to-use HTML img snippet">&lt;img&gt; snippet</button>
+          <button id="cnv-pdf" class="iet-btn" type="button" title="Export the image as a printable PDF (needs allowExportPdf)">🖨 PDF</button>
+          <button id="cnv-gif" class="iet-btn" type="button" title="Open an animated GIF and extract any frame">🎞️ GIF frames</button>
         </div>
       </div>
 
@@ -191,6 +196,20 @@
         <h3 class="iet-pane-title">Frame &amp; border studio</h3>
         <p class="iet-pane-hint">Wrap the image in a border, mat and shadow. The Polaroid preset adds a white paper frame with a caption.</p>
         <div class="iet-field">
+          <label>Event template</label>
+          <div class="iet-chips" id="fr-templates">
+            <button class="iet-chip-btn active" data-template="none" type="button">None</button>
+            <button class="iet-chip-btn" data-template="birthday" type="button">🎂 Birthday</button>
+            <button class="iet-chip-btn" data-template="thanks" type="button">🙏 Thank you</button>
+            <button class="iet-chip-btn" data-template="anniversary" type="button">💕 Anniversary</button>
+            <button class="iet-chip-btn" data-template="holiday" type="button">🎄 Holiday</button>
+          </div>
+        </div>
+        <div class="iet-field">
+          <label for="fr-headline">Headline (templates)</label>
+          <input type="text" id="fr-headline" class="iet-input" maxlength="80" placeholder="Happy Birthday!">
+        </div>
+        <div class="iet-field">
           <label>Preset</label>
           <div class="iet-chips" id="fr-presets">
             <button class="iet-chip-btn active" data-frame="none" type="button">Custom</button>
@@ -309,6 +328,7 @@
           <select id="flt-region-mode" class="iet-input">
             <option value="pixelate" selected>Pixelate (mosaic)</option>
             <option value="blur">Blur</option>
+            <option value="portrait">Portrait blur (background)</option>
           </select>
           <div class="iet-row">
             <div class="iet-field iet-grow">
@@ -336,7 +356,18 @@
             <button class="iet-chip-btn" data-tool="ellipse" type="button">◯ Circle</button>
             <button class="iet-chip-btn" data-tool="freehand" type="button">✏️ Freehand</button>
             <button class="iet-chip-btn" data-tool="highlight" type="button">🖍 Highlighter</button>
+            <button class="iet-chip-btn" data-tool="bubble" type="button">💬 Bubble</button>
+            <button class="iet-chip-btn" data-tool="thought" type="button">☁️ Thought</button>
+            <button class="iet-chip-btn" data-tool="emoji" type="button">😀 Emoji</button>
           </div>
+        </div>
+        <div class="iet-field" id="ann-bubble-row" style="display:none">
+          <label for="ann-bubble-text">Bubble text</label>
+          <input type="text" id="ann-bubble-text" class="iet-input" maxlength="120" placeholder="Type what the bubble says…">
+        </div>
+        <div class="iet-field" id="ann-emoji-row" style="display:none">
+          <label>Emoji / sticker</label>
+          <div class="iet-chips" id="ann-emoji-pick"></div>
         </div>
         <div class="iet-grid2">
           <div class="iet-field"><label for="ann-color">Color</label><input type="color" id="ann-color" class="iet-color" value="#ff3b30"></div>
@@ -349,6 +380,46 @@
           <button id="ann-apply" class="iet-btn iet-btn-primary" type="button">✅ Bake marks</button>
           <button id="ann-undo" class="iet-btn" type="button">↩ Remove last</button>
           <button id="ann-clear" class="iet-btn" type="button">🗑 Clear all</button>
+        </div>
+      </div>
+
+      <!-- BATCH -->
+      <div class="iet-pane" id="pane-batch">
+        <h3 class="iet-pane-title">Batch processing</h3>
+        <p class="iet-pane-hint">Run the same pipeline over many files at once and download them as a ZIP. Files never leave your browser.</p>
+        <div class="iet-row">
+          <button id="batch-add" class="iet-btn iet-btn-primary" type="button">📂 Add images…</button>
+          <button id="batch-clear" class="iet-btn" type="button">🗑 Clear</button>
+        </div>
+        <div class="iet-field">
+          <label>Files <span class="iet-val" id="batch-count">0</span></label>
+          <div id="batch-list" class="iet-batch-list"></div>
+        </div>
+        <div class="iet-grid2">
+          <div class="iet-field">
+            <label class="iet-check"><input type="checkbox" id="batch-resize"> Resize</label>
+            <input type="number" id="batch-width" class="iet-input" min="10" max="8000" value="1280" placeholder="Width px">
+          </div>
+          <div class="iet-field">
+            <label class="iet-check"><input type="checkbox" id="batch-watermark"> Watermark</label>
+            <span class="iet-subhint">uses the 💧 Watermark text &amp; settings</span>
+          </div>
+          <div class="iet-field">
+            <label for="batch-format">Format</label>
+            <select id="batch-format" class="iet-input">
+              <option value="image/jpeg" selected>JPEG</option>
+              <option value="image/webp">WebP</option>
+              <option value="image/png">PNG</option>
+            </select>
+          </div>
+          <div class="iet-field">
+            <label for="batch-quality">Quality <span class="iet-val" id="batch-quality-val">85</span>%</label>
+            <input type="range" id="batch-quality" class="iet-range" min="1" max="100" value="85">
+          </div>
+        </div>
+        <div class="iet-status" id="batch-status" style="display:none"></div>
+        <div class="iet-row">
+          <button id="batch-run" class="iet-btn iet-btn-primary" type="button">📦 Process &amp; download ZIP</button>
         </div>
       </div>
 
@@ -435,6 +506,19 @@
         </div>
         <div class="iet-row">
           <button id="wm-apply" class="iet-btn iet-btn-primary" type="button">Apply watermark</button>
+          <button id="wm-place" class="iet-btn" type="button" title="Drag on the preview to position the stamp freely, scroll to resize">🖐 Place on image</button>
+          <button id="wm-ai-suggest" class="iet-btn" type="button" title="Let the AI suggest watermark text">✨ Suggest</button>
+        </div>
+        <div class="iet-field">
+          <label>Photo stamp (date · time · camera)</label>
+          <div class="iet-row iet-wrap">
+            <label class="iet-check"><input type="checkbox" id="wm-stamp-date" checked> Date</label>
+            <label class="iet-check"><input type="checkbox" id="wm-stamp-time" checked> Time</label>
+            <label class="iet-check"><input type="checkbox" id="wm-stamp-camera"> Camera</label>
+          </div>
+          <div class="iet-row">
+            <button id="wm-stamp-apply" class="iet-btn iet-btn-primary" type="button">📷 Apply stamp</button>
+          </div>
         </div>
         <div class="iet-field">
           <button id="wm-meme-toggle" class="iet-btn" type="button">🤣 Meme maker</button>
@@ -533,6 +617,23 @@
           <label>Slots</label>
           <div id="col-slots" class="iet-slots"></div>
         </div>
+        <div class="iet-field">
+          <label>Selected slot <span class="iet-val" id="col-slot-sel-label">— click a slot —</span></label>
+          <div class="iet-row">
+            <div class="iet-field iet-grow">
+              <label for="col-slot-border">Border <span class="iet-val" id="col-slot-border-val">0</span>px</label>
+              <input type="range" id="col-slot-border" class="iet-range" min="0" max="40" value="0">
+            </div>
+            <div class="iet-field iet-grow">
+              <label for="col-slot-radius">Radius <span class="iet-val" id="col-slot-radius-val">0</span>px</label>
+              <input type="range" id="col-slot-radius" class="iet-range" min="0" max="200" value="0">
+            </div>
+          </div>
+          <div class="iet-row">
+            <label for="col-slot-borderc" style="align-self:center;">Border color</label>
+            <input type="color" id="col-slot-borderc" class="iet-color" value="#ffffff">
+          </div>
+        </div>
         <div class="iet-row">
           <button id="col-build" class="iet-btn iet-btn-primary" type="button">🧩 Build collage</button>
         </div>
@@ -563,9 +664,12 @@
           <button id="ocr-btn-local" class="iet-btn iet-btn-primary" type="button">🔍 Extract (built-in engine)</button>
           <button id="ocr-btn-ai" class="iet-btn" type="button">🤖 Extract with AI</button>
           <button id="ocr-btn-cms" class="iet-btn" type="button" style="display:none">☁️ From CMS</button>
+          <button id="ocr-pdf" class="iet-btn" type="button" title="Upload a PDF and extract its text">📄 From PDF</button>
         </div>
         <div class="iet-row iet-wrap">
           <button id="ocr-save" class="iet-btn" type="button" title="Save the current result to history">💾 Save to history</button>
+          <button id="ocr-csv" class="iet-btn" type="button" title="Detect tables/lists in the result and export CSV">📊 Table → CSV</button>
+          <button id="ocr-tsv" class="iet-btn" type="button" title="Detect tables/lists and export TSV">📊 Table → TSV</button>
         </div>
         <div class="iet-field">
           <label for="ocr-search">History (click to reopen)</label>
@@ -595,6 +699,12 @@
       <div class="iet-canvas-wrap" id="iet-canvas-wrap" style="display:none">
         <canvas id="iet-preview"></canvas>
       </div>
+      <div class="iet-restore" id="iet-restore" style="display:none">
+        <span>💾 Last session: <b id="iet-restore-name">—</b></span>
+        <button id="iet-restore-btn" class="iet-zoom-btn" type="button" title="Restore the low-res session preview">Restore</button>
+        <button id="iet-restore-x" class="iet-zoom-btn" type="button" title="Dismiss">✕</button>
+      </div>
+      <div class="iet-workspace" id="iet-workspace" style="display:none"></div>
       <div class="iet-stage-meta" id="iet-stage-meta" style="display:none">
         <div class="iet-viewbar">
           <select id="iet-zoom-preset" class="iet-zoom-select" title="How to show the image">
@@ -610,6 +720,7 @@
           <button id="iet-zoom-pct" class="iet-zoom-btn iet-zoom-pct" type="button" title="Click to fit to window">Fit</button>
           <button id="iet-zoom-in" class="iet-zoom-btn" type="button" title="Zoom in">+</button>
           <button id="iet-zoom-100" class="iet-zoom-btn" type="button" title="Full size (100%)">1:1</button>
+          <button id="iet-compare" class="iet-zoom-btn" type="button" title="Before / after — drag the divider on the preview">⇆</button>
         </div>
         <span id="iet-meta-dims">—</span>
         <span id="iet-meta-steps">—</span>
@@ -634,4 +745,6 @@
 
   <input type="file" id="iet-file" accept="image/*" hidden>
   <input type="file" id="iet-logo-file" accept="image/*" hidden>
+  <input type="file" id="iet-batch-file" accept="image/*" multiple hidden>
+  <input type="file" id="iet-gif-file" accept="image/gif" hidden>
 </div>

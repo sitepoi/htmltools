@@ -7,13 +7,20 @@
 //   • Rotate    — quarter turns, flips, fine rotation, horizon straighten
 //   • Frame     — border / mat / radius / shadow + Polaroid preset
 //   • Filters   — live sliders, presets v2, duotone, vignette, grain,
-//                 auto-enhance, area pixelate/blur
-//   • Annotate  — arrows, boxes, circles, freehand, highlighter
+//                 auto-enhance, area pixelate/blur, portrait blur
+//   • Annotate  — arrows, boxes, circles, freehand, highlighter,
+//                 speech/thought bubbles, emoji stickers
+//   • Batch     — one pipeline over many files, ZIP download
 //   • Compress  — quality slider + auto-tune to a target size
-//   • Watermark — text stamp, pill, meme maker, logo overlay
-//   • Collage   — predefined + custom N×M grid frames
-//   • OCR       — built-in engine or AI gateway + history
-// Editing is chained: undo/redo, step-history jump, keyboard shortcuts.
+//   • Watermark — text stamp, pill, meme, logo, free placement,
+//                 photo stamp (date/time/camera), AI suggestions
+//   • Collage   — predefined + custom N×M frames, drag-reorder slots,
+//                 per-slot borders/radius
+//   • OCR       — built-in engine or AI gateway, history, tables →
+//                 CSV/TSV, PDF text extraction
+// Editing is chained: undo/redo, step-history jump, keyboard shortcuts,
+// before/after compare, multi-image workspace, touch pinch zoom, session
+// thumbnail restore, GIF frame explorer, print/PDF export, AI captions.
 // All edits are local (canvas in memory); only lightweight settings and
 // OCR history persist via tool.setValue(). No CMS object CRUD required.
 // ════════════════════════════════════════════════════════════════
@@ -25,6 +32,14 @@ var MAX_PIXELS = 40 * 1000 * 1000; // 40 MP safety cap
 var MAX_HISTORY = 25;
 var MAX_FILE_BYTES = 40 * 1024 * 1024; // 40 MB
 var ZOOM_STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+var ANNOT_EMOJIS = ['🌟', '❤️', '🔥', '✅', '❗', '💯', '😂', '😍', '🎉', '👍', '⚡', '💡', '📌', '🏷️', '😎', '🦄', '🎂', '🎈', '🚀', '🔔', '💎', '😢'];
+var FRAME_TEMPLATES = {
+  none: null,
+  birthday: { bg: '#fde8f2', accent: '#d63384', icon: '🎂' },
+  thanks: { bg: '#dff5ef', accent: '#0f766e', icon: '🙏' },
+  anniversary: { bg: '#fdeaea', accent: '#b91c1c', icon: '💕' },
+  holiday: { bg: '#e4f5e4', accent: '#15803d', icon: '🎄' }
+};
 var SOCIAL_CROPS = [
   { id: 'ig', label: 'IG 1:1', ar: 1, w: 1080, h: 1080 },
   { id: 'story', label: 'Story 9:16', ar: 9 / 16, w: 1080, h: 1920 },
@@ -128,7 +143,8 @@ var DEFAULTS = {
   colGap: 8, colPad: 24, colBg: '#ffffff',
   wmText: '', wmSize: 48, wmFont: 'sans', wmColor: '#ffffff',
   wmOpacity: 60, wmPos: 'mc', wmRot: 0, wmTile: false, wmShadow: true,
-  rszLock: true, cropAr: 'free', fltPreset: 'none'
+  rszLock: true, cropAr: 'free', fltPreset: 'none',
+  frTemplate: 'none', frHeadline: ''
 };
 
 // ── State ─────────────────────────────────────────────────────
@@ -180,6 +196,24 @@ var _exifData = null;
 var _frPreset = 'none';
 var _ocrHistory = [];     // saved OCR extractions (persisted in settings)
 var _colLayout = 'side';  // collage layout id (buttons set this, no input element)
+var _compare = false;     // before/after split view
+var _compareX = 0.5;      // divider position 0..1 across the image
+var _comparePtr = null;
+var _workspace = [];      // [{canvas, name}] multi-image workspace
+var _batchFiles = [];     // File objects for batch mode
+var _batchBusy = false;
+var _annotEmoji = '🌟';
+var _wmPlace = false;
+var _wmFree = null;       // {x,y} free watermark position in image coords
+var _wmPlacePtr = null;
+var _gifFrames = [];
+var _slotSel = -1;        // selected collage slot index
+var _touch = {};          // pointerId -> {x,y} for pinch
+var _pinch = null;        // {dist, scale, midX, midY, panX, panY}
+var _pinching = false;
+var _restoreThumb = '';
+var _restoreName = '';
+var _frTemplate = 'none';
 
 // ── Small helpers ─────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -349,9 +383,14 @@ function setWorking(c, meta) {
   _socialCrop = null;
   updateSocialChips();
   _exifData = null;
+  _compare = false;
+  _comparePtr = null;
+  el('iet-compare').classList.remove('active');
   _origMeta = meta || { name: 'image', size: 0, type: '' };
   resetZoomState();
   afterImageChange();
+  renderRestoreChip();
+  renderWorkspace();
 }
 function undoWorking() {
   if (!_history.length) { notify('Nothing to undo', 'info'); return; }
@@ -498,6 +537,39 @@ function renderPreview() {
   }
   if (_activeTab === 'crop' && _cropRect) drawCropOverlay(x, src, fit);
   if (_activeTab === 'filters' && _regionRect) drawRegionOverlay(x, src, fit);
+  if (_compare && _orig) {
+    var divX = fit.dx + fit.dw * _compareX;
+    x.save();
+    x.beginPath();
+    x.rect(divX, fit.dy, fit.dx + fit.dw - divX, fit.dh);
+    x.clip();
+    x.drawImage(_orig, fit.dx, fit.dy, fit.dw, fit.dh);
+    x.restore();
+    x.strokeStyle = '#6d7cff';
+    x.lineWidth = 2;
+    x.beginPath();
+    x.moveTo(divX, fit.dy);
+    x.lineTo(divX, fit.dy + fit.dh);
+    x.stroke();
+    x.fillStyle = '#6d7cff';
+    x.beginPath();
+    x.arc(divX, fit.dy + fit.dh / 2, 9, 0, Math.PI * 2);
+    x.fill();
+  }
+  if (_wmPlace && _wmFree && _activeTab === 'watermark') {
+    var wtx = (v('wm-text') || '').trim();
+    if (wtx) {
+      var ws = parseNum(v('wm-size')) * (fit.dw / src.width);
+      x.save();
+      x.globalAlpha = 0.75;
+      x.fillStyle = v('wm-color');
+      x.font = ws + 'px ' + (FONT_STACKS[v('wm-font')] || FONT_STACKS.sans);
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillText(wtx, fit.dx + _wmFree.x / src.width * fit.dw, fit.dy + _wmFree.y / src.height * fit.dh);
+      x.restore();
+    }
+  }
   if (_straightenActive && _lineStart && _lineEnd) drawStraightenLine(x, src, fit);
   if (_activeTab === 'annotate') drawAnnotOverlay(x, src, fit);
   updateZoomUI();
@@ -619,6 +691,102 @@ function wheelZoom(e) {
   var b = el('iet-preview').getBoundingClientRect();
   zoomAt(e.deltaY < 0 ? 1 : -1, e.clientX - b.left, e.clientY - b.top);
 }
+// ── Before / after compare ────────────────────────────────────
+function toggleCompare() {
+  if (!_working) { needImage(); return; }
+  _compare = !_compare;
+  _comparePtr = null;
+  el('iet-compare').classList.toggle('active', _compare);
+  renderPreview();
+}
+function stopCompare() { if (_compare) toggleCompare(); }
+function compareDown(e) {
+  if (!_compare || !_working) return;
+  e.preventDefault();
+  _comparePtr = true;
+  compareMove(e);
+  try { el('iet-preview').setPointerCapture(e.pointerId); } catch (ignore) {}
+}
+function compareMove(e) {
+  if (!_comparePtr || !_working) return;
+  var f = _previewFit;
+  if (!f || !f.dw) return;
+  var b = el('iet-preview').getBoundingClientRect();
+  _compareX = clamp((e.clientX - b.left - f.dx) / f.dw, 0.02, 0.98);
+  renderPreview();
+}
+function compareUp() { _comparePtr = null; }
+// ── Multi-image workspace ─────────────────────────────────────
+function renderWorkspace() {
+  var box = el('iet-workspace');
+  if (!box) return;
+  var has = _workspace.length > 0 || !!_working;
+  box.style.display = has ? 'flex' : 'none';
+  var html = '';
+  for (var i = 0; i < _workspace.length; i++) {
+    html += '<div class="iet-ws-chip" data-i="' + i + '" draggable="true" title="Drag to a collage slot">' +
+      '<span>' + esc(_workspace[i].name) + '</span><span class="x" data-x="' + i + '">✕</span></div>';
+  }
+  if (_working) html += '<button class="iet-ws-add" type="button" title="Add the current image to the workspace">＋ Add current</button>';
+  box.innerHTML = html;
+}
+function wsAddCurrent() {
+  if (!_working) return;
+  _workspace.push({ canvas: cloneCanvas(_working), name: _origMeta.name || 'image' });
+  if (_workspace.length > 12) _workspace.shift();
+  renderWorkspace();
+  notify('Added to workspace', 'success');
+}
+function wsActivate(i) {
+  var w = _workspace[i];
+  if (!w) return;
+  setWorking(cloneCanvas(w.canvas), { name: w.name, size: 0, type: '' });
+  notify('Switched to ' + w.name, 'info');
+}
+function wsRemove(i) {
+  _workspace.splice(i, 1);
+  renderWorkspace();
+}
+// ── Touch pinch zoom / two-finger pan ─────────────────────────
+function touchDown(e) {
+  if (e.pointerType !== 'touch') return false;
+  _touch[e.pointerId] = { x: e.clientX, y: e.clientY };
+  if (Object.keys(_touch).length >= 2) {
+    _pinching = true;
+    _pinch = null;
+    _panPtr = null;
+    _cropPtr = null;
+    _annotPtr = null;
+    return true;
+  }
+  return false;
+}
+function touchPinchMove(e) {
+  _touch[e.pointerId] = { x: e.clientX, y: e.clientY };
+  var keys = Object.keys(_touch);
+  if (keys.length < 2) return;
+  var a = _touch[keys[0]], b = _touch[keys[1]];
+  var dist = Math.sqrt(Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2));
+  var midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
+  if (!_pinch) {
+    _pinch = { dist: Math.max(1, dist), scale: currentScale(), midX: midX, midY: midY, panX: _panX, panY: _panY };
+    return;
+  }
+  if (dist > 1 && _pinch.dist > 0) {
+    _zoomMode = 'zoom';
+    _zoomScale = clamp(_pinch.scale * dist / _pinch.dist, 0.05, 8);
+    _panX = _pinch.panX + (midX - _pinch.midX);
+    _panY = _pinch.panY + (midY - _pinch.midY);
+    renderPreview();
+  }
+}
+function touchUp(e) {
+  delete _touch[e.pointerId];
+  if (Object.keys(_touch).length < 2) {
+    _pinching = false;
+    _pinch = null;
+  }
+}
 
 // ── Header / info ─────────────────────────────────────────────
 function updateHeader() {
@@ -631,6 +799,8 @@ function updateHeader() {
   el('iet-btn-steps').disabled = !has;
   el('iet-btn-meta').disabled = !has;
   el('iet-btn-copy').disabled = !has;
+  el('iet-btn-ai').disabled = !has;
+  el('iet-btn-print').disabled = !has;
   el('iet-meta-dims').textContent = has ? (_working.width + ' × ' + _working.height) : '—';
   el('iet-meta-steps').textContent = has ? ('Step ' + _opIndex + '/' + _opLog.length + ' · original ' + fmtSize(_origMeta.size)) : '—';
   if (has) {
@@ -757,10 +927,13 @@ function switchTab(t) {
   }
   if (t === 'crop') { initCropInputs(); }
   if (t === 'collage') { renderSlotGrid(); }
+  if (t === 'batch') { renderBatchList(); }
   if (t === 'resize') { refreshResizeInputs(); }
+  if (t === 'annotate') { updateAnnotExtras(); }
   if (t === 'filters') { updateFilterLive(); } else { _filterLive = null; }
   if (t !== 'rotate' && _straightenActive) stopStraighten();
   if (t !== 'filters' && _regionActive) stopRegionSelect();
+  if (t !== 'watermark' && _wmPlace) stopWmPlace();
   updateDropTitle();
   updateAllEsts();
   renderPreview();
@@ -1392,6 +1565,25 @@ function applyRegion(r) {
   var strength = Math.round(parseNum(v('flt-region-strength')));
   var c = cloneCanvas(_working);
   var x = c.getContext('2d');
+  if (mode === 'portrait') {
+    var blur = Math.max(2, Math.round(strength / 2));
+    var cx2 = c.width / 2, cy2 = c.height / 2;
+    var rx2 = c.width * 0.42, ry2 = c.height * 0.42;
+    var blurred = cloneCanvas(c);
+    var bx2 = blurred.getContext('2d');
+    bx2.filter = 'blur(' + blur + 'px)';
+    bx2.drawImage(c, 0, 0);
+    x.drawImage(blurred, 0, 0);
+    x.save();
+    x.beginPath();
+    x.ellipse(cx2, cy2, rx2, ry2, 0, 0, Math.PI * 2);
+    x.clip();
+    x.drawImage(c, 0, 0);
+    x.restore();
+    commit(c, 'Portrait blur');
+    notify('Background blurred — subject kept sharp', 'success');
+    return;
+  }
   var rx = Math.max(0, Math.round(r.x)), ry = Math.max(0, Math.round(r.y));
   var rw = Math.min(c.width - rx, Math.round(r.w)), rh = Math.min(c.height - ry, Math.round(r.h));
   if (rw < 2 || rh < 2) return;
@@ -1452,6 +1644,59 @@ function drawMarksOnCtx(x, dx, dy, sx, sy) {
       x.globalAlpha = 1;
       continue;
     }
+    if (m.tool === 'emoji') {
+      x.font = Math.round(m.size * 8) + 'px sans-serif';
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.fillText(m.text, m.x0, m.y0);
+      continue;
+    }
+    if (m.tool === 'bubble' || m.tool === 'thought') {
+      var cx0 = (m.x0 + m.x1) / 2, cy0 = (m.y0 + m.y1) / 2;
+      var rw = Math.max(8, Math.abs(m.x1 - m.x0) / 2), rh = Math.max(8, Math.abs(m.y1 - m.y0) / 2);
+      x.fillStyle = '#ffffff';
+      x.strokeStyle = m.color;
+      x.lineWidth = Math.max(2, m.size / 3);
+      x.beginPath();
+      x.ellipse(cx0, cy0, rw, rh, 0, 0, Math.PI * 2);
+      x.fill();
+      x.stroke();
+      var ang = Math.atan2(m.ty - cy0, m.tx - cx0);
+      if (m.tool === 'thought') {
+        x.fillStyle = '#ffffff';
+        x.strokeStyle = m.color;
+        x.lineWidth = Math.max(1.5, m.size / 5);
+        var tx1 = m.tx, ty1 = m.ty;
+        var r1 = Math.max(3, rw * 0.18);
+        for (var cc = 0; cc < 3; cc++) {
+          x.beginPath();
+          x.arc(tx1, ty1, r1, 0, Math.PI * 2);
+          x.fill();
+          x.stroke();
+          tx1 += Math.cos(ang) * r1 * 2.6;
+          ty1 += Math.sin(ang) * r1 * 2.6;
+          r1 *= 0.72;
+        }
+      } else {
+        x.fillStyle = '#ffffff';
+        x.strokeStyle = m.color;
+        var ex2 = cx0 + Math.cos(ang) * rw, ey2 = cy0 + Math.sin(ang) * rh;
+        var t2 = Math.max(2, m.size / 3);
+        x.beginPath();
+        x.moveTo(m.tx, m.ty);
+        x.lineTo(ex2 - Math.cos(ang - 0.5) * t2 * 3, ey2 - Math.sin(ang - 0.5) * t2 * 3);
+        x.lineTo(ex2 - Math.cos(ang + 0.5) * t2 * 3, ey2 - Math.sin(ang + 0.5) * t2 * 3);
+        x.closePath();
+        x.fill();
+        x.stroke();
+      }
+      x.fillStyle = '#111111';
+      x.textAlign = 'center';
+      x.textBaseline = 'middle';
+      x.font = 'bold ' + Math.max(9, m.size * 1.5) + 'px Arial, Helvetica, sans-serif';
+      if (m.text) x.fillText(m.text, cx0, cy0);
+      continue;
+    }
     x.strokeStyle = m.color;
     x.fillStyle = m.color;
     x.lineWidth = m.size;
@@ -1478,7 +1723,10 @@ function annotDown(e) {
   if (!p) return;
   e.preventDefault();
   var ip = { x: p.x * _working.width, y: p.y * _working.height };
-  _annotMarks.push({ tool: _annotTool, color: v('ann-color'), size: parseNum(v('ann-size')), x0: ip.x, y0: ip.y, x1: ip.x, y1: ip.y, pts: [ip] });
+  var m = { tool: _annotTool, color: v('ann-color'), size: parseNum(v('ann-size')), x0: ip.x, y0: ip.y, x1: ip.x, y1: ip.y, tx: ip.x, ty: ip.y, pts: [ip] };
+  if (_annotTool === 'bubble' || _annotTool === 'thought') m.text = (v('ann-bubble-text') || '').trim();
+  if (_annotTool === 'emoji') m.text = _annotEmoji;
+  _annotMarks.push(m);
   _annotPtr = _annotMarks[_annotMarks.length - 1];
   renderPreview();
 }
@@ -1490,6 +1738,9 @@ function annotMove(e) {
   if (_annotPtr.tool === 'freehand' || _annotPtr.tool === 'highlight') {
     if (_annotPtr.pts.length > 300) return;
     _annotPtr.pts.push(ip);
+  } else if (_annotPtr.tool === 'emoji') {
+    _annotPtr.x0 = ip.x;
+    _annotPtr.y0 = ip.y;
   } else {
     _annotPtr.x1 = ip.x;
     _annotPtr.y1 = ip.y;
@@ -1497,6 +1748,19 @@ function annotMove(e) {
   renderPreview();
 }
 function annotUp() { _annotPtr = null; }
+function renderEmojiPicker() {
+  var box = el('ann-emoji-pick');
+  if (!box) return;
+  var html = '';
+  for (var i = 0; i < ANNOT_EMOJIS.length; i++) {
+    html += '<button class="iet-chip-btn' + (ANNOT_EMOJIS[i] === _annotEmoji ? ' active' : '') + '" data-emoji="' + ANNOT_EMOJIS[i] + '" type="button">' + ANNOT_EMOJIS[i] + '</button>';
+  }
+  box.innerHTML = html;
+}
+function updateAnnotExtras() {
+  el('ann-bubble-row').style.display = (_annotTool === 'bubble' || _annotTool === 'thought') ? 'block' : 'none';
+  el('ann-emoji-row').style.display = (_annotTool === 'emoji') ? 'block' : 'none';
+}
 function bakeAnnotations() {
   if (!_working) { needImage(); return; }
   if (!_annotMarks.length) { notify('Draw something first', 'info'); return; }
@@ -1540,8 +1804,56 @@ function updateFrameChips() {
     chips[i].classList.toggle('active', chips[i].getAttribute('data-frame') === _frPreset);
   }
 }
+function updateFrTemplateChips() {
+  var chips = document.querySelectorAll('#fr-templates .iet-chip-btn');
+  for (var i = 0; i < chips.length; i++) {
+    chips[i].classList.toggle('active', chips[i].getAttribute('data-template') === _frTemplate);
+  }
+}
+function applyEventTemplate() {
+  var tpl = FRAME_TEMPLATES[_frTemplate];
+  if (!tpl) return false;
+  var headline = (v('fr-headline') || '').trim();
+  var caption = (v('fr-caption') || '').trim();
+  var W = _working.width, H = _working.height;
+  var pad = Math.round(Math.min(W, H) * 0.04);
+  var band = Math.round(H * (headline ? 0.17 : 0.06));
+  var capH = caption ? Math.round(H * 0.09) : 0;
+  var outW = W + pad * 2;
+  var outH = band + H + pad + capH;
+  var c = makeCanvas(outW, outH);
+  var x = c.getContext('2d');
+  x.fillStyle = tpl.bg;
+  x.fillRect(0, 0, outW, outH);
+  if (headline) {
+    x.fillStyle = tpl.accent;
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.font = 'bold ' + Math.round(band * 0.42) + 'px Georgia, serif';
+    x.fillText(tpl.icon + ' ' + headline + ' ' + tpl.icon, outW / 2, band / 2, outW - pad);
+  }
+  // photo with white border
+  var ph = band;
+  x.fillStyle = '#ffffff';
+  x.fillRect(pad - 6, ph - 6, W + 12, H + 12);
+  x.drawImage(_working, pad, ph, W, H);
+  if (caption) {
+    x.fillStyle = tpl.accent;
+    x.textAlign = 'center';
+    x.textBaseline = 'middle';
+    x.font = Math.max(13, Math.round(capH * 0.5)) + 'px "Segoe Script", "Brush Script MT", cursive';
+    x.fillText(caption, outW / 2, band + H + pad + capH / 2, outW - pad);
+  }
+  commit(c, 'Frame (' + _frTemplate + ' template)');
+  return true;
+}
 function applyFrame() {
   if (!_working) { needImage(); return; }
+  if (_frTemplate !== 'none' && FRAME_TEMPLATES[_frTemplate]) {
+    applyEventTemplate();
+    notify('Template frame applied', 'success');
+    return;
+  }
   var polaroid = _frPreset === 'polaroid';
   var border = Math.round(parseNum(v('fr-border')));
   var radius = Math.round(parseNum(v('fr-radius')));
@@ -1706,9 +2018,14 @@ function applyWatermark() {
   } else {
     var margin = Math.round(size * 0.7);
     var px, py;
-    var pc = _wmPos.charAt(0), pr = _wmPos.charAt(1);
-    px = pc === 'l' ? margin : (pc === 'r' ? W - margin : W / 2);
-    py = pr === 't' ? margin + size / 2 : (pr === 'b' ? H - margin - size / 2 : H / 2);
+    if (_wmFree) {
+      px = _wmFree.x;
+      py = _wmFree.y;
+    } else {
+      var pc = _wmPos.charAt(0), pr = _wmPos.charAt(1);
+      px = pc === 'l' ? margin : (pc === 'r' ? W - margin : W / 2);
+      py = pr === 't' ? margin + size / 2 : (pr === 'b' ? H - margin - size / 2 : H / 2);
+    }
     x.save();
     x.translate(px, py);
     x.rotate(rot);
@@ -1726,7 +2043,109 @@ function applyWatermark() {
   }
   x.restore();
   commit(c, 'Watermark');
+  if (_wmPlace) stopWmPlace();
   notify('Watermark applied — Undo removes it', 'success');
+}
+// ── Free watermark placement ──────────────────────────────────
+function toggleWmPlace() {
+  if (!_working) { needImage(); return; }
+  _wmPlace = !_wmPlace;
+  _wmPlacePtr = null;
+  el('wm-place').classList.toggle('active', _wmPlace);
+  try { el('iet-preview').style.cursor = _wmPlace ? 'crosshair' : 'grab'; } catch (e) {}
+  renderPreview();
+}
+function stopWmPlace() {
+  if (!_wmPlace) return;
+  _wmPlace = false;
+  _wmPlacePtr = null;
+  el('wm-place').classList.remove('active');
+  try { el('iet-preview').style.cursor = 'grab'; } catch (e) {}
+  renderPreview();
+}
+function wmPlaceDown(e) {
+  if (!_wmPlace || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  e.preventDefault();
+  _wmFree = { x: p.x * _working.width, y: p.y * _working.height };
+  _wmPlacePtr = true;
+  try { el('iet-preview').setPointerCapture(e.pointerId); } catch (ignore) {}
+  renderPreview();
+}
+function wmPlaceMove(e) {
+  if (!_wmPlacePtr || !_working) return;
+  var p = cvPointerPos(e);
+  if (!p) return;
+  _wmFree = { x: p.x * _working.width, y: p.y * _working.height };
+  renderPreview();
+}
+function wmPlaceWheel(e) {
+  if (!_wmPlace || !_working) return;
+  e.preventDefault();
+  var s = parseNum(v('wm-size')) + (e.deltaY < 0 ? 4 : -4);
+  s = clamp(s, 8, 220);
+  setV('wm-size', s);
+  el('wm-size-val').textContent = s + 'px';
+  renderPreview();
+}
+function wmPlaceUp() { _wmPlacePtr = null; }
+// ── Photo stamp (date/time/camera) ────────────────────────────
+function applyPhotoStamp() {
+  if (!_working) { needImage(); return; }
+  var parts = [];
+  var now = new Date();
+  if (checked('wm-stamp-date')) parts.push(now.toLocaleDateString());
+  if (checked('wm-stamp-time')) parts.push(now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }));
+  if (checked('wm-stamp-camera') && _exifData && (_exifData.make || _exifData.model)) {
+    parts.push(((_exifData.make || '') + ' ' + (_exifData.model || '')).trim());
+  }
+  if (!parts.length) { notify('Enable at least one stamp option', 'warning'); return; }
+  var c = cloneCanvas(_working);
+  var x = c.getContext('2d');
+  var size = Math.max(12, Math.round(Math.min(c.width, c.height) / 34));
+  var margin = size;
+  var text = parts.join(' · ');
+  x.font = 'bold ' + size + 'px Arial, Helvetica, sans-serif';
+  x.textAlign = 'right';
+  x.textBaseline = 'bottom';
+  x.lineJoin = 'round';
+  x.lineWidth = Math.max(2, size / 6);
+  x.strokeStyle = 'rgba(0,0,0,0.6)';
+  x.strokeText(text, c.width - margin, c.height - margin);
+  x.fillStyle = '#ffffff';
+  x.fillText(text, c.width - margin, c.height - margin);
+  commit(c, 'Photo stamp');
+  notify('Photo stamp applied', 'success');
+}
+// ── AI watermark suggestion ───────────────────────────────────
+function aiSuggestWatermark() {
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  var fields = '';
+  try {
+    if (typeof tool.getFields === 'function') fields = JSON.stringify(tool.getFields() || {}).slice(0, 800);
+  } catch (e) {}
+  var ctx = 'Current watermark text: ' + v('wm-text') + ' | Parent record fields: ' + fields;
+  tool.requestAI(
+    'Suggest 3 short watermark/brand text ideas (max 4 words each, no emojis). Reply as a numbered list, one per line.',
+    ctx,
+    function (err, resp) {
+      if (err && !resp) { notify('AI failed: ' + err, 'error'); return; }
+      var lines = String(resp || '').split(/\r?\n/).map(function (l) {
+        return l.replace(/^\s*\d+[.)]\s*/, '').trim();
+      }).filter(Boolean);
+      var first = lines[0] || '';
+      if (first) {
+        setV('wm-text', first.slice(0, 120));
+        notify('Suggestion applied: ' + first, 'success');
+      } else {
+        notify('No suggestion received', 'warning');
+      }
+    }
+  );
 }
 // ── Meme maker ────────────────────────────────────────────────
 function applyMeme() {
@@ -1812,8 +2231,8 @@ function slotHtml(i) {
   var body = slot
     ? '<canvas class="iet-slot-thumb" data-thumb="' + i + '"></canvas>'
     : '<div class="iet-slot-empty"><b>＋</b>Add image</div>';
-  return '<div class="iet-slot" data-i="' + i + '">' +
-    '<div class="iet-slot-body" data-i="' + i + '" title="' + (slot ? 'Replace image' : 'Add image') + '">' + body + '</div>' +
+  return '<div class="iet-slot' + (_slotSel === i ? ' selected' : '') + '" data-i="' + i + '">' +
+    '<div class="iet-slot-body" data-i="' + i + '"' + (slot ? ' draggable="true"' : '') + ' title="' + (slot ? 'Drag to reorder · click to select' : 'Add image') + '">' + body + '</div>' +
     '<div class="iet-slot-bar">' +
     '<select class="iet-slot-fit" title="Fit mode">' +
     '<option value="cover"' + (!slot || slot.fit !== 'contain' ? ' selected' : '') + '>Cover</option>' +
@@ -1852,8 +2271,36 @@ function renderSlotThumbs() {
 function addImageToSlot(i, canvas, name) {
   syncSlots();
   if (i < 0 || i >= _slots.length) return;
-  _slots[i] = { canvas: canvas, name: name, fit: 'cover' };
+  _slots[i] = { canvas: canvas, name: name, fit: 'cover', border: 0, radius: 0, borderColor: '#ffffff' };
   renderSlotGrid();
+}
+function selectSlot(i) {
+  if (i < 0 || i >= _slots.length || !_slots[i]) {
+    _slotSel = -1;
+    updateSlotOpts();
+    renderSlotGrid();
+    return;
+  }
+  _slotSel = i;
+  updateSlotOpts();
+  renderSlotGrid();
+}
+function updateSlotOpts() {
+  var slot = _slotSel >= 0 ? _slots[_slotSel] : null;
+  el('col-slot-sel-label').textContent = slot ? ('Slot ' + (_slotSel + 1) + ' — ' + esc(slot.name)) : '— click a slot —';
+  setV('col-slot-border', slot ? slot.border : 0);
+  setV('col-slot-radius', slot ? slot.radius : 0);
+  setV('col-slot-borderc', slot ? slot.borderColor : '#ffffff');
+  el('col-slot-border-val').textContent = (slot ? slot.border : 0) + 'px';
+  el('col-slot-radius-val').textContent = (slot ? slot.radius : 0) + 'px';
+}
+function applySlotOpt(id) {
+  var slot = _slotSel >= 0 ? _slots[_slotSel] : null;
+  if (!slot) return;
+  if (id === 'col-slot-border') slot.border = Math.round(parseNum(v('col-slot-border')));
+  if (id === 'col-slot-radius') slot.radius = Math.round(parseNum(v('col-slot-radius')));
+  if (id === 'col-slot-borderc') slot.borderColor = v('col-slot-borderc');
+  renderSlotThumbs();
 }
 function closestSlot(node) {
   try {
@@ -1893,10 +2340,15 @@ function buildCollage() {
     var rw = Math.max(1, r.w * iw - gap);
     var rh = Math.max(1, r.h * ih - gap);
     x.save();
-    x.beginPath();
-    x.rect(rx, ry, rw, rh);
+    roundRectPath(x, rx, ry, rw, rh, slot.radius || 0);
     x.clip();
     drawFit(x, slot.canvas, rx, ry, rw, rh, slot.fit || 'cover');
+    if ((slot.border || 0) > 0) {
+      x.lineWidth = slot.border;
+      x.strokeStyle = slot.borderColor || '#ffffff';
+      roundRectPath(x, rx + slot.border / 2, ry + slot.border / 2, rw - slot.border, rh - slot.border, Math.max(0, (slot.radius || 0) - slot.border));
+      x.stroke();
+    }
     x.restore();
   }
   commit(c, 'Collage');
@@ -2090,6 +2542,443 @@ function renderOcrHistory() {
       '<span class="iet-oplog-time">' + esc(h.time ? h.time.slice(5, 16).replace('T', ' ') : '') + '</span>' +
       '<button class="iet-slot-btn" data-del="' + idx + '" type="button" title="Delete">✕</button></div>';
   }).join('');
+}
+
+// ── OCR tables (CSV/TSV) + PDF extraction ─────────────────────
+function detectDelimiter(lines) {
+  var candidates = [['\t', /[^\t]\t[^\t]/], ['|', /[^|]\|[^|]/], [';', /[^;];[^;]/], [',', /[^,],[^,]/]];
+  for (var c = 0; c < candidates.length; c++) {
+    var hits = 0;
+    for (var i = 0; i < lines.length; i++) {
+      if (candidates[c][1].test(lines[i])) hits++;
+    }
+    if (hits >= Math.min(3, lines.length) && hits >= Math.ceil(lines.length / 2)) return candidates[c][0];
+  }
+  var sp = 0;
+  for (var j = 0; j < lines.length; j++) {
+    if (/[^ ]  +[^ ]/.test(lines[j])) sp++;
+  }
+  return sp >= Math.min(3, lines.length) ? '  ' : null;
+}
+function ocrToTable() {
+  var text = el('ocr-result').value;
+  if (!text.trim()) { notify('Nothing to convert — extract text first', 'info'); return null; }
+  var lines = String(text).split(/\r?\n/).map(function (l) { return l.replace(/\s+$/, ''); }).filter(Boolean);
+  var delim = detectDelimiter(lines);
+  var rows;
+  if (delim) {
+    rows = lines.map(function (l) {
+      if (delim === '  ') return l.split(/ {2,}/).map(function (c) { return c.trim(); });
+      return l.split(delim).map(function (c) { return c.trim(); });
+    });
+  } else {
+    rows = lines.map(function (l) { return [l.trim()]; });
+  }
+  return rows;
+}
+function tableToCsv(rows, sep) {
+  return rows.map(function (r) {
+    return r.map(function (c) {
+      c = String(c === null || c === undefined ? '' : c);
+      if (/["\n\r]/.test(c) || c.indexOf(sep) !== -1) c = '"' + c.replace(/"/g, '""') + '"';
+      return c;
+    }).join(sep);
+  }).join('\r\n');
+}
+function ocrExportTable(sep) {
+  var rows = ocrToTable();
+  if (!rows || !rows.length) { notify('No lines to export', 'warning'); return; }
+  var csv = tableToCsv(rows, sep);
+  var blob = new Blob([csv], { type: 'text/plain' });
+  triggerDownload(blob, baseName() + '-ocr-table.' + (sep === '\t' ? 'tsv' : 'csv'));
+  notify('Exported ' + rows.length + ' rows', 'success');
+}
+function ocrFromPdf() {
+  if (typeof tool.requestUpload !== 'function') {
+    notify('CMS upload is not enabled (admin must set allowUpload)', 'error');
+    return;
+  }
+  setBusy('Opening the PDF picker…');
+  tool.requestUpload('.pdf', function (err, file) {
+    clearBusy();
+    if (err || !file) { if (err) notify('Upload failed: ' + err, 'error'); return; }
+    if (typeof tool.requestFileContent !== 'function') {
+      notify('Text extraction is not enabled (admin must set allowFileContent)', 'error');
+      return;
+    }
+    ocrStatus('Extracting text from ' + esc(file.name) + '…');
+    tool.requestFileContent(file.url, function (err2, content) {
+      var text = (!err2 && content) ? String(content).slice(0, 20000) : '';
+      if (text.trim()) {
+        el('ocr-result').value = text;
+        ocrStatus('Extracted ' + text.split(/\n/).length + ' lines from the PDF.', 'ok');
+      } else {
+        el('ocr-result').value = '';
+        ocrStatus('No text found in the PDF (scanned image PDFs need OCR). Try the built-in engine on a page screenshot, or AI cleanup below.', 'warn');
+        if (typeof tool.requestAI === 'function' && err2) {
+          notify('PDF is image-based — extract its pages as images and use OCR instead', 'info');
+        }
+      }
+    });
+  });
+}
+// ── GIF frame explorer ────────────────────────────────────────
+function openGifPicker() {
+  el('iet-gif-file').click();
+}
+function decodeGifFrames(buffer, cb) {
+  if (typeof window.ImageDecoder !== 'function') {
+    cb('GIF frame extraction needs a Chromium-based browser (ImageDecoder API).');
+    return;
+  }
+  var decoder;
+  try {
+    decoder = new window.ImageDecoder({ data: buffer, type: 'image/gif' });
+  } catch (e) {
+    cb('Could not decode GIF: ' + e.message);
+    return;
+  }
+  decoder.tracks.ready.then(function () {
+    var track = decoder.tracks.selectedTrack;
+    var count = track && track.frameCount ? Math.min(track.frameCount, 60) : 0;
+    if (!count) { cb('No frames found in this GIF'); return; }
+    var frames = [];
+    var i = 0;
+    (function next() {
+      if (i >= count) { cb(null, frames); return; }
+      decoder.decode({ frameIndex: i }).then(function (result) {
+        try {
+          var img = result.image;
+          var c = makeCanvas(img.displayWidth || img.codedWidth, img.displayHeight || img.codedHeight);
+          c.getContext('2d').drawImage(img, 0, 0);
+          frames.push(c);
+          img.close();
+        } catch (e2) {}
+        i++;
+        next();
+      }, function () {
+        cb(null, frames.length ? frames : null, 'stopped at frame ' + i);
+      });
+    })();
+  }, function (err) {
+    cb('GIF track error: ' + (err && err.message ? err.message : err));
+  });
+}
+function renderGifModal(frames, note) {
+  var html = '';
+  if (note) html += '<div class="iet-status warn">' + esc(note) + '</div>';
+  if (!frames || !frames.length) {
+    html += '<div class="iet-ocr-empty">No frames extracted.</div>';
+    openModal('🎞️ GIF frames', html);
+    return;
+  }
+  for (var i = 0; i < frames.length; i++) {
+    html += '<div class="iet-gif-row" data-i="' + i + '">' +
+      '<span class="iet-gif-label">Frame ' + (i + 1) + ' — ' + frames[i].width + '×' + frames[i].height + '</span>' +
+      '<button class="iet-btn" type="button" data-gif-act="use" title="Make this frame the working image">Use</button>' +
+      '<button class="iet-btn" type="button" data-gif-act="dl" title="Download this frame as PNG">⬇ PNG</button>' +
+      '</div>';
+  }
+  openModal('🎞️ GIF frames (' + frames.length + ') — click Use to edit a frame', html);
+  var rows = document.querySelectorAll('#iet-modal-body .iet-gif-row');
+  var useClick = function (e) {
+    var btn = e.target;
+    while (btn && btn !== el('iet-modal-body') && !(btn.classList && btn.classList.contains('iet-btn'))) btn = btn.parentNode;
+    if (!btn || btn === el('iet-modal-body')) return;
+    var row = btn;
+    while (row && row !== el('iet-modal-body') && !(row.classList && row.classList.contains('iet-gif-row'))) row = row.parentNode;
+    if (!row || row === el('iet-modal-body')) return;
+    var idx = +row.getAttribute('data-i');
+    var act = btn.getAttribute('data-gif-act');
+    if (act === 'use') {
+      var c = frames[idx];
+      setWorking(cloneCanvas(c), { name: baseName() + '-frame' + (idx + 1) + '.png', size: 0, type: 'image/png' });
+      closeModal();
+      notify('Frame ' + (idx + 1) + ' is now the working image', 'success');
+    } else if (act === 'dl') {
+      saveCanvas(frames[idx], baseName() + '-frame' + (idx + 1), 'image/png', 100);
+    }
+  };
+  el('iet-modal-body').addEventListener('click', useClick);
+}
+// ── PDF export + print view ───────────────────────────────────
+function buildPrintHtml() {
+  var mime = 'image/png';
+  var dataUrl;
+  try {
+    dataUrl = _working.toDataURL(mime);
+  } catch (e) {
+    dataUrl = '';
+  }
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(baseName()) + '</title>' +
+    '<style>@page{margin:15mm}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f4f4f4}' +
+    '.wrap{max-width:900px;margin:0 auto;background:#fff;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.15)}' +
+    'h1{font-size:18px;margin:0 0 6px}.meta{color:#777;font-size:12px;margin-bottom:16px}' +
+    'img{max-width:100%;height:auto;display:block}</style></head><body><div class="wrap">' +
+    '<h1>' + esc(baseName()) + '</h1>' +
+    '<div class="meta">' + _working.width + ' × ' + _working.height + ' px · exported ' + new Date().toLocaleString() + '</div>' +
+    '<img src="' + dataUrl + '" alt="' + esc(baseName()) + '">' +
+    '</div></body></html>';
+}
+function exportPdf() {
+  if (!_working) { needImage(); return; }
+  if (typeof tool.requestExportPdf === 'function') {
+    setBusy('Building PDF…');
+    tool.requestExportPdf({
+      html: buildPrintHtml(),
+      filename: baseName() + '-export'
+    }, function (err, file) {
+      clearBusy();
+      if (err || !file) {
+        notify('PDF export failed: ' + (err || 'no file') + ' — downloading a print page instead', 'warning');
+        triggerDownload(new Blob([buildPrintHtml()], { type: 'text/html' }), baseName() + '-print.html');
+        return;
+      }
+      notify('PDF ready — opening in a new tab (press Ctrl+P there to save it)', 'success');
+      try { tool.openUrl(file.url); } catch (e) {}
+    });
+  } else {
+    triggerDownload(new Blob([buildPrintHtml()], { type: 'text/html' }), baseName() + '-print.html');
+    notify('Print page downloaded — open it and press Ctrl+P (admin can enable allowExportPdf for real PDFs)', 'info');
+  }
+}
+function printView() {
+  if (!_working) { needImage(); return; }
+  triggerDownload(new Blob([buildPrintHtml()], { type: 'text/html' }), baseName() + '-print.html');
+  notify('Print page downloaded — open it and press Ctrl+P', 'success');
+}
+// ── AI caption ────────────────────────────────────────────────
+function bindSnippetCopy() {
+  var btn = el('iet-snippet-copy');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var ta = el('iet-snippet');
+    try {
+      ta.focus();
+      ta.select();
+      if (document.execCommand('copy')) notify('Copied to clipboard', 'success');
+      else notify('Copy blocked — select the text and press Ctrl+C', 'warning');
+    } catch (e) { notify('Copy blocked — select the text and press Ctrl+C', 'warning'); }
+  });
+}
+function openAiCaption() {
+  if (!_working) { needImage(); return; }
+  if (typeof tool.requestAI !== 'function') {
+    notify('AI channel is not enabled (admin must set allowAi)', 'error');
+    return;
+  }
+  openModal('🤖 AI caption & alt-text', '<div class="iet-subhint">Asking the AI… (first request may take a moment)</div>');
+  var context = 'Image dimensions: ' + _working.width + '×' + _working.height + ' px. File: ' + esc(_origMeta.name || '') + '.' +
+    (_exifData ? ' Camera: ' + ((_exifData.make || '') + ' ' + (_exifData.model || '')).trim() + '.' : '');
+  try {
+    context += ' The image itself is attached as a base64 JPEG data URL: ' + downscaleForOcr(_working).toDataURL('image/jpeg', 0.7);
+  } catch (e) {}
+  var prompt = [
+    'You are a social media assistant. For the attached/described image:',
+    '1) Write a concise alt-text for accessibility (one sentence).',
+    '2) Write an engaging social media caption (max 2 sentences).',
+    '3) Suggest up to 5 hashtags.',
+    'Format exactly as:',
+    'ALT: …',
+    'CAPTION: …',
+    'TAGS: …'
+  ].join('\n');
+  tool.requestAI(prompt, context, function (err, resp) {
+    if (err && !resp) {
+      openModal('🤖 AI caption', '<div class="iet-status error">AI failed: ' + esc(err) + '</div>');
+      return;
+    }
+    openModal('🤖 AI caption & alt-text',
+      '<textarea class="iet-snippet-textarea" id="iet-snippet" readonly>' + esc(String(resp || '')) + '</textarea>' +
+      '<div class="iet-row" style="margin-top:8px"><button class="iet-btn iet-btn-primary" id="iet-snippet-copy" type="button">📋 Copy</button></div>');
+    bindSnippetCopy();
+  });
+}
+// ── Batch processing ──────────────────────────────────────────
+function loadJSZip(cb) {
+  if (window.JSZip) { cb(null); return; }
+  var url = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+  var s = document.createElement('script');
+  s.src = url;
+  s.onload = function () {
+    if (window.JSZip) cb(null);
+    else cb('ZIP library loaded but no JSZip global');
+  };
+  s.onerror = function () { cb('could not download the ZIP library'); };
+  document.head.appendChild(s);
+}
+function renderBatchList() {
+  var box = el('batch-list');
+  if (!box) return;
+  el('batch-count').textContent = _batchFiles.length;
+  if (!_batchFiles.length) {
+    box.innerHTML = '<div class="iet-ocr-empty">No files yet — add some images.</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < _batchFiles.length; i++) {
+    html += '<div class="iet-batch-item" data-i="' + i + '"><b>' + esc(_batchFiles[i].name) + '</b>' +
+      '<span class="size">' + fmtSize(_batchFiles[i].size) + '</span>' +
+      '<button class="iet-slot-btn" data-del="' + i + '" type="button" title="Remove">✕</button></div>';
+  }
+  box.innerHTML = html;
+}
+function batchAddFiles(files) {
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].type && files[i].type.indexOf('image/') === 0 && _batchFiles.length < 40) _batchFiles.push(files[i]);
+  }
+  renderBatchList();
+}
+function stampWatermarkOn(c) {
+  var text = (v('wm-text') || '').trim();
+  if (!text) return;
+  var size = parseNum(v('wm-size'));
+  var font = FONT_STACKS[v('wm-font')] || FONT_STACKS.sans;
+  var color = v('wm-color');
+  var opacity = parseNum(v('wm-opacity')) / 100;
+  var rot = parseNum(v('wm-rot')) * Math.PI / 180;
+  var x = c.getContext('2d');
+  x.save();
+  x.globalAlpha = opacity;
+  x.fillStyle = color;
+  x.font = size + 'px ' + font;
+  x.textAlign = 'center';
+  x.textBaseline = 'middle';
+  if (checked('wm-shadow')) {
+    x.shadowColor = 'rgba(0,0,0,0.4)';
+    x.shadowBlur = Math.max(2, size / 12);
+    x.shadowOffsetX = Math.max(1, size / 24);
+    x.shadowOffsetY = Math.max(1, size / 24);
+  }
+  x.translate(c.width / 2, c.height / 2);
+  x.rotate(rot);
+  if (checked('wm-pill')) {
+    var tw = x.measureText(text).width;
+    x.fillStyle = 'rgba(0,0,0,0.55)';
+    roundRectPath(x, -tw / 2 - size * 0.45, -size * 0.85, tw + size * 0.9, size * 1.7, size * 0.85);
+    x.fill();
+    x.fillStyle = color;
+  }
+  x.fillText(text, 0, 0);
+  x.restore();
+}
+function runBatch() {
+  if (!_batchFiles.length) { notify('Add some files first', 'warning'); return; }
+  if (_batchBusy) return;
+  _batchBusy = true;
+  var doResize = checked('batch-resize');
+  var targetW = Math.round(parseNum(v('batch-width')));
+  var doWm = checked('batch-watermark');
+  var mime = v('batch-format');
+  var q = (mime === 'image/png') ? undefined : clamp(+v('batch-quality'), 1, 100) / 100;
+  var status = el('batch-status');
+  status.style.display = 'block';
+  status.className = 'iet-status';
+  var jobs = [];
+  var i = 0;
+  function fail(msg) {
+    _batchBusy = false;
+    status.className = 'iet-status error';
+    status.textContent = msg;
+    scheduleResize();
+  }
+  function next() {
+    if (i >= _batchFiles.length) {
+      if (!jobs.length) { fail('Nothing processed'); return; }
+      status.textContent = 'Zipping ' + jobs.length + ' files…';
+      loadJSZip(function (err) {
+        if (err) {
+          status.className = 'iet-status warn';
+          status.textContent = 'ZIP library unavailable — downloading files one by one.';
+          _batchBusy = false;
+          for (var j = 0; j < jobs.length; j++) {
+            triggerDownload(jobs[j].blob, jobs[j].name);
+          }
+          notify('ZIP failed — downloaded files individually', 'warning');
+          scheduleResize();
+          return;
+        }
+        var zip = new window.JSZip();
+        for (var k = 0; k < jobs.length; k++) zip.file(jobs[k].name, jobs[k].blob);
+        zip.generateAsync({ type: 'blob' }).then(function (blob) {
+          _batchBusy = false;
+          status.className = 'iet-status ok';
+          status.textContent = 'Done — ' + jobs.length + ' files.';
+          triggerDownload(blob, baseName() + '-batch.zip');
+          notify('Batch complete — ' + jobs.length + ' files zipped', 'success');
+          scheduleResize();
+        }, function () {
+          fail('ZIP generation failed');
+        });
+      });
+      return;
+    }
+    var f = _batchFiles[i];
+    status.textContent = 'Processing ' + (i + 1) + '/' + _batchFiles.length + ': ' + f.name + '…';
+    fileToCanvas(f, function (e1, src) {
+      if (e1) {
+        i++;
+        jobs.push(null);
+        next();
+        return;
+      }
+      var c = src;
+      if (doResize && targetW > 0 && c.width !== targetW) {
+        var h = Math.max(1, Math.round(c.height * targetW / c.width));
+        var r = makeCanvas(targetW, h);
+        var rx = r.getContext('2d');
+        rx.imageSmoothingEnabled = true;
+        rx.imageSmoothingQuality = 'high';
+        rx.drawImage(c, 0, 0, targetW, h);
+        c = r;
+      }
+      if (doWm) stampWatermarkOn(c);
+      var outName = f.name.replace(/\.[^.]+$/, '') + '.' + extOf(mime);
+      if (c.toBlob) {
+        try {
+          c.toBlob(function (blob) {
+            if (blob) jobs.push({ blob: blob, name: outName });
+            else jobs.push(null);
+            i++;
+            next();
+          }, mime, q);
+          return;
+        } catch (e) {}
+      }
+      try {
+        var u = c.toDataURL(mime, q === undefined ? undefined : q);
+        var b64 = u.slice(u.indexOf(',') + 1);
+        var bin = atob(b64);
+        var arr = new Uint8Array(bin.length);
+        for (var b2 = 0; b2 < bin.length; b2++) arr[b2] = bin.charCodeAt(b2);
+        jobs.push({ blob: new Blob([arr], { type: mime }), name: outName });
+      } catch (e2) { jobs.push(null); }
+      i++;
+      next();
+    });
+  }
+  next();
+}
+// ── Session thumbnail restore ─────────────────────────────────
+function renderRestoreChip() {
+  var box = el('iet-restore');
+  if (!box) return;
+  var show = !!_restoreThumb && !_working;
+  box.style.display = show ? 'flex' : 'none';
+  if (show) el('iet-restore-name').textContent = _restoreName || 'image';
+}
+function restoreSession() {
+  if (!_restoreThumb) return;
+  dataUrlToCanvas(_restoreThumb, function (err, c) {
+    if (err) { notify('Restore failed: ' + err, 'error'); return; }
+    setWorking(c, { name: _restoreName || 'session-image.png', size: 0, type: 'image/png' });
+    notify('Restored the low-res session preview — reopen the original for full quality', 'info');
+  });
+}
+function dismissRestore() {
+  _restoreThumb = '';
+  _restoreName = '';
+  renderRestoreChip();
 }
 
 // ── Download helpers ──────────────────────────────────────────
@@ -2425,6 +3314,7 @@ function collectSettings() {
     wmOpacity: +v('wm-opacity'), wmPos: _wmPos, wmRot: +v('wm-rot'),
     wmTile: checked('wm-tile'), wmShadow: checked('wm-shadow'),
     rszLock: _rszLock, cropAr: _cropAr, fltPreset: _fltPreset,
+    frTemplate: _frTemplate, frHeadline: v('fr-headline'),
     ocrHistory: _ocrHistory
   };
 }
@@ -2469,13 +3359,19 @@ function applySettings(s) {
   _cropAr = s.cropAr || 'free';
   _fltPreset = s.fltPreset || 'none';
   _ocrHistory = Array.isArray(s.ocrHistory) ? s.ocrHistory : [];
+  _frTemplate = s.frTemplate || 'none';
+  setV('fr-headline', s.frHeadline || '');
+  _restoreThumb = s.thumb || '';
+  _restoreName = s.thumbName || '';
   updateControlLabels();
   updateLockBtn();
   updateCropArChips();
   updateWmPosChips();
   updateFilterPresetChips();
   updateColLayoutChips();
+  updateFrTemplateChips();
   renderOcrHistory();
+  renderRestoreChip();
   onCnvFormatChanged();
   onCmpFormatChanged();
 }
@@ -2487,6 +3383,15 @@ function persistSettingsSoon() {
 function persistNow() {
   if (_readOnly) return;
   _settings = collectSettings();
+  if (_working) {
+    try {
+      var th = makeCanvas(160, 160);
+      var tx = th.getContext('2d');
+      tx.drawImage(_working, 0, 0, 160, 160);
+      _settings.thumb = th.toDataURL('image/jpeg', 0.6);
+      _settings.thumbName = _origMeta.name || 'image';
+    } catch (e) {}
+  }
   _saving = true;
   try {
     tool.setValue({ v: 1, settings: _settings, updatedAt: new Date().toISOString() });
@@ -2511,8 +3416,29 @@ function wireEvents() {
   el('iet-btn-reset').addEventListener('click', resetWorking);
   el('iet-btn-steps').addEventListener('click', openOpLog);
   el('iet-btn-meta').addEventListener('click', openMetaModal);
+  el('iet-btn-ai').addEventListener('click', openAiCaption);
+  el('iet-btn-print').addEventListener('click', printView);
   el('iet-btn-copy').addEventListener('click', copyImageToClipboard);
   el('iet-btn-download').addEventListener('click', downloadCurrent);
+  el('iet-compare').addEventListener('click', toggleCompare);
+  // session restore
+  el('iet-restore-btn').addEventListener('click', restoreSession);
+  el('iet-restore-x').addEventListener('click', dismissRestore);
+  // workspace
+  el('iet-workspace').addEventListener('click', function (e) {
+    var node = e.target;
+    while (node && node !== el('iet-workspace') && !(node.classList && (node.classList.contains('iet-ws-chip') || node.classList.contains('iet-ws-add')))) node = node.parentNode;
+    if (!node || node === el('iet-workspace')) return;
+    if (node.classList.contains('iet-ws-add')) { wsAddCurrent(); return; }
+    if (e.target.classList && e.target.classList.contains('x')) { wsRemove(+e.target.getAttribute('data-x')); return; }
+    wsActivate(+node.getAttribute('data-i'));
+  });
+  el('iet-workspace').addEventListener('dragstart', function (e) {
+    var node = e.target;
+    while (node && node !== el('iet-workspace') && !(node.classList && node.classList.contains('iet-ws-chip'))) node = node.parentNode;
+    if (!node || node === el('iet-workspace')) return;
+    try { e.dataTransfer.setData('text/iet-ws', node.getAttribute('data-i')); } catch (e2) {}
+  });
   // modal
   el('iet-modal-close').addEventListener('click', closeModal);
   el('iet-modal').addEventListener('click', function (e) {
@@ -2578,6 +3504,7 @@ function wireEvents() {
     if (e.key === 'Escape') {
       if (_straightenActive) stopStraighten();
       else if (_regionActive) stopRegionSelect();
+      else if (_wmPlace) stopWmPlace();
       else closeModal();
       return;
     }
@@ -2594,6 +3521,7 @@ function wireEvents() {
       case 'r': case 'R': rotate90(1); break;
       case 'c': case 'C': switchTab('crop'); break;
       case 'f': case 'F': switchTab('filters'); break;
+      case 'b': case 'B': switchTab('batch'); break;
       case '+': case '=': zoomAt(1, _viewW / 2, _viewH / 2); break;
       case '-': zoomAt(-1, _viewW / 2, _viewH / 2); break;
       case '0': setZoomScale(1); break;
@@ -2613,6 +3541,42 @@ function wireEvents() {
   el('cnv-favicon').addEventListener('click', faviconPack);
   el('cnv-base64').addEventListener('click', function () { snippetModal('b64'); });
   el('cnv-html').addEventListener('click', function () { snippetModal('html'); });
+  el('cnv-pdf').addEventListener('click', exportPdf);
+  el('cnv-gif').addEventListener('click', openGifPicker);
+  el('iet-gif-file').addEventListener('change', function () {
+    var files = this.files;
+    this.value = '';
+    if (!files || !files.length) return;
+    var f = files[0];
+    setBusy('Decoding GIF frames…');
+    var reader = new FileReader();
+    reader.onload = function () {
+      decodeGifFrames(reader.result, function (err, frames, note) {
+        clearBusy();
+        if (err) { notify(err, 'error'); return; }
+        _gifFrames = frames || [];
+        renderGifModal(_gifFrames, note);
+      });
+    };
+    reader.onerror = function () { clearBusy(); notify('Could not read the GIF', 'error'); };
+    reader.readAsArrayBuffer(f);
+  });
+  // batch
+  el('batch-add').addEventListener('click', function () { el('iet-batch-file').click(); });
+  el('iet-batch-file').addEventListener('change', function () {
+    batchAddFiles(this.files);
+    this.value = '';
+  });
+  el('batch-clear').addEventListener('click', function () { _batchFiles = []; renderBatchList(); });
+  el('batch-quality').addEventListener('input', function () { el('batch-quality-val').textContent = this.value + '%'; });
+  el('batch-list').addEventListener('click', function (e) {
+    var btn = e.target;
+    while (btn && btn !== el('batch-list') && !(btn.classList && btn.classList.contains('iet-slot-btn'))) btn = btn.parentNode;
+    if (!btn || btn === el('batch-list')) return;
+    _batchFiles.splice(+btn.getAttribute('data-del'), 1);
+    renderBatchList();
+  });
+  el('batch-run').addEventListener('click', runBatch);
   // resize
   el('rsz-lock').addEventListener('click', toggleRszLock);
   el('rsz-w').addEventListener('input', onRszWidthChanged);
@@ -2688,7 +3652,16 @@ function wireEvents() {
   el('flt-apply').addEventListener('click', applyFilters);
   el('flt-auto').addEventListener('click', applyAutoEnhance);
   el('flt-duo-apply').addEventListener('click', applyDuotone);
-  el('flt-region-btn').addEventListener('click', toggleRegionSelect);
+  el('flt-region-btn').addEventListener('click', function () {
+    if (v('flt-region-mode') === 'portrait') {
+      applyRegion({ x: 0, y: 0, w: 1, h: 1 });
+    } else {
+      toggleRegionSelect();
+    }
+  });
+  el('flt-region-mode').addEventListener('change', function () {
+    el('flt-region-btn').textContent = (this.value === 'portrait') ? '🌫 Blur background' : '▦ Select area';
+  });
   el('flt-region-strength').addEventListener('input', function () {
     el('flt-region-strength-val').textContent = this.value;
   });
@@ -2699,9 +3672,19 @@ function wireEvents() {
       btn.addEventListener('click', function () {
         _annotTool = btn.getAttribute('data-tool');
         updateAnnotToolChips();
+        updateAnnotExtras();
       });
     })(annTools[at]);
   }
+  renderEmojiPicker();
+  el('ann-emoji-pick').addEventListener('click', function (e) {
+    var btn = e.target;
+    while (btn && btn !== el('ann-emoji-pick') && !(btn.classList && btn.classList.contains('iet-chip-btn'))) btn = btn.parentNode;
+    if (!btn || btn === el('ann-emoji-pick')) return;
+    _annotEmoji = btn.getAttribute('data-emoji');
+    renderEmojiPicker();
+  });
+  el('ann-bubble-text').addEventListener('input', function () {});
   el('ann-size').addEventListener('input', function () { el('ann-size-val').textContent = this.value + 'px'; });
   el('ann-apply').addEventListener('click', bakeAnnotations);
   el('ann-undo').addEventListener('click', annotRemoveLast);
@@ -2716,6 +3699,17 @@ function wireEvents() {
       });
     })(frChips[fc]);
   }
+  var frTpls = document.querySelectorAll('#fr-templates .iet-chip-btn');
+  for (var ft = 0; ft < frTpls.length; ft++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        _frTemplate = btn.getAttribute('data-template');
+        updateFrTemplateChips();
+        persistSettingsSoon();
+      });
+    })(frTpls[ft]);
+  }
+  el('fr-headline').addEventListener('change', persistSettingsSoon);
   el('fr-border').addEventListener('input', function () { el('fr-border-val').textContent = this.value + 'px'; });
   el('fr-radius').addEventListener('input', function () { el('fr-radius-val').textContent = this.value + 'px'; });
   el('fr-mat').addEventListener('input', function () { el('fr-mat-val').textContent = this.value + 'px'; });
@@ -2751,6 +3745,9 @@ function wireEvents() {
     el('wm-rot-val').textContent = this.value + '°';
   });
   el('wm-apply').addEventListener('click', applyWatermark);
+  el('wm-place').addEventListener('click', toggleWmPlace);
+  el('wm-ai-suggest').addEventListener('click', aiSuggestWatermark);
+  el('wm-stamp-apply').addEventListener('click', applyPhotoStamp);
   ['wm-text', 'wm-size', 'wm-font', 'wm-color', 'wm-opacity', 'wm-rot', 'wm-tile', 'wm-shadow', 'wm-pill'].forEach(function (id) {
     el(id).addEventListener('change', persistSettingsSoon);
   });
@@ -2803,23 +3800,35 @@ function wireEvents() {
     while (btn && btn !== slotNode && !(btn.classList && btn.classList.contains('iet-slot-btn'))) btn = btn.parentNode;
     if (btn && btn !== slotNode) {
       var act = btn.getAttribute('data-act');
-      if (act === 'clear') { _slots[i] = null; renderSlotGrid(); }
-      else { _pendingSlot = i; openFilePicker(); }
+      if (act === 'clear') {
+        _slots[i] = null;
+        if (_slotSel === i) selectSlot(-1); else renderSlotGrid();
+      } else { _pendingSlot = i; openFilePicker(); }
     } else if (!_slots[i]) {
       _pendingSlot = i;
       openFilePicker();
+    } else {
+      selectSlot(i);
     }
   });
-  el('col-slots').addEventListener('change', function (e) {
-    if (!e.target || !e.target.classList || !e.target.classList.contains('iet-slot-fit')) return;
+  el('col-slots').addEventListener('dragstart', function (e) {
     var slotNode = closestSlot(e.target);
-    if (!slotNode) return;
-    var i = +slotNode.getAttribute('data-i');
-    if (_slots[i]) { _slots[i].fit = e.target.value; renderSlotThumbs(); }
+    if (!slotNode || !_slots[+slotNode.getAttribute('data-i')]) return;
+    try { e.dataTransfer.setData('text/iet-slot', slotNode.getAttribute('data-i')); } catch (e2) {}
   });
   el('col-slots').addEventListener('dragover', function (e) {
     var s = closestSlot(e.target);
-    if (s) { e.preventDefault(); s.classList.add('dragover'); }
+    if (!s) return;
+    e.preventDefault();
+    if (e.dataTransfer && (e.dataTransfer.types || []).indexOf) {
+      try {
+        if (Array.prototype.indexOf.call(e.dataTransfer.types, 'text/iet-slot') !== -1 ||
+          Array.prototype.indexOf.call(e.dataTransfer.types, 'text/iet-ws') !== -1 ||
+          Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') !== -1) {
+          s.classList.add('dragover');
+        }
+      } catch (e3) { s.classList.add('dragover'); }
+    }
   });
   el('col-slots').addEventListener('dragleave', function (e) {
     var s = closestSlot(e.target);
@@ -2830,8 +3839,47 @@ function wireEvents() {
     if (!s) return;
     e.preventDefault();
     s.classList.remove('dragover');
+    var tgt = +s.getAttribute('data-i');
+    var slotData = '';
+    var wsData = '';
+    try {
+      slotData = e.dataTransfer.getData('text/iet-slot');
+      wsData = e.dataTransfer.getData('text/iet-ws');
+    } catch (e2) {}
+    if (slotData !== '') {
+      var from = +slotData;
+      if (from !== tgt && _slots[from]) {
+        var tmp = _slots[tgt];
+        _slots[tgt] = _slots[from];
+        _slots[from] = tmp;
+        renderSlotGrid();
+        selectSlot(tgt);
+      }
+      return;
+    }
+    if (wsData !== '') {
+      var w = _workspace[+wsData];
+      if (w) addImageToSlot(tgt, cloneCanvas(w.canvas), w.name);
+      return;
+    }
     var f = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
-    if (f) handleFile(f, +s.getAttribute('data-i'));
+    if (f) handleFile(f, tgt);
+  });
+  el('col-slot-border').addEventListener('input', function () {
+    el('col-slot-border-val').textContent = this.value + 'px';
+    applySlotOpt('col-slot-border');
+  });
+  el('col-slot-radius').addEventListener('input', function () {
+    el('col-slot-radius-val').textContent = this.value + 'px';
+    applySlotOpt('col-slot-radius');
+  });
+  el('col-slot-borderc').addEventListener('input', function () { applySlotOpt('col-slot-borderc'); });
+  el('col-slots').addEventListener('change', function (e) {
+    if (!e.target || !e.target.classList || !e.target.classList.contains('iet-slot-fit')) return;
+    var slotNode = closestSlot(e.target);
+    if (!slotNode) return;
+    var i = +slotNode.getAttribute('data-i');
+    if (_slots[i]) { _slots[i].fit = e.target.value; renderSlotThumbs(); }
   });
   ['col-aspect', 'col-width', 'col-bg'].forEach(function (id) {
     el(id).addEventListener('change', function () {
@@ -2848,6 +3896,9 @@ function wireEvents() {
   el('ocr-btn-local').addEventListener('click', runOcrLocal);
   el('ocr-btn-ai').addEventListener('click', runOcrAi);
   el('ocr-btn-cms').addEventListener('click', uploadFromCms);
+  el('ocr-pdf').addEventListener('click', ocrFromPdf);
+  el('ocr-csv').addEventListener('click', function () { ocrExportTable(','); });
+  el('ocr-tsv').addEventListener('click', function () { ocrExportTable('\t'); });
   el('ocr-save').addEventListener('click', saveOcrToHistory);
   el('ocr-search').addEventListener('input', renderOcrHistory);
   el('ocr-history').addEventListener('click', function (e) {
@@ -2882,34 +3933,49 @@ function wireEvents() {
   });
   // preview canvas pointer interaction: mode-specific
   el('iet-preview').addEventListener('pointerdown', function (e) {
-    if (_straightenActive) straightenDown(e);
+    if (touchDown(e)) return;
+    if (_wmPlace) wmPlaceDown(e);
+    else if (_straightenActive) straightenDown(e);
     else if (_regionActive) regionDown(e);
     else if (_activeTab === 'crop') cropDown(e);
     else if (_activeTab === 'annotate') annotDown(e);
+    else if (_compare) compareDown(e);
     else panDown(e);
   });
   el('iet-preview').addEventListener('pointermove', function (e) {
-    if (_straightenActive) straightenMove(e);
+    if (_pinching) { touchPinchMove(e); return; }
+    if (_wmPlace) wmPlaceMove(e);
+    else if (_straightenActive) straightenMove(e);
     else if (_regionActive) regionMove(e);
     else if (_cropPtr) cropMove(e);
     else if (_activeTab === 'annotate') annotMove(e);
+    else if (_comparePtr) compareMove(e);
     else panMove(e);
   });
   el('iet-preview').addEventListener('pointerup', function (e) {
+    touchUp(e);
+    wmPlaceUp();
     straightenUp(e);
     regionUp(e);
     cropUp(e);
     annotUp();
+    compareUp();
     panUp();
   });
   el('iet-preview').addEventListener('pointercancel', function (e) {
+    touchUp(e);
+    wmPlaceUp();
     straightenUp(e);
     regionUp(e);
     cropUp(e);
     annotUp();
+    compareUp();
     panUp();
   });
-  el('iet-preview').addEventListener('wheel', wheelZoom, { passive: false });
+  el('iet-preview').addEventListener('wheel', function (e) {
+    if (_wmPlace && _activeTab === 'watermark') wmPlaceWheel(e);
+    else wheelZoom(e);
+  }, { passive: false });
   // zoom viewer controls
   el('iet-zoom-preset').addEventListener('change', function () {
     var val = this.value;
@@ -2988,6 +4054,7 @@ tool.onReady(function (val) {
   _readOnly = !!tool.isReadOnly();
   updateLock();
   renderSlotGrid();
+  renderWorkspace();
   updateHeader();
   updateDropTitle();
   setupResize();
