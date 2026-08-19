@@ -528,9 +528,24 @@ const EMBEDDED_HTML = `<div id="app">
         <canvas id="iet-preview"></canvas>
       </div>
       <div class="iet-stage-meta" id="iet-stage-meta" style="display:none">
+        <div class="iet-viewbar">
+          <select id="iet-zoom-preset" class="iet-zoom-select" title="How to show the image">
+            <option value="fit" selected>Fit to window</option>
+            <option value="0.25">25%</option>
+            <option value="0.5">50%</option>
+            <option value="1">Full size (100%)</option>
+            <option value="2">200%</option>
+            <option value="4">400%</option>
+            <option value="custom" hidden>Custom</option>
+          </select>
+          <button id="iet-zoom-out" class="iet-zoom-btn" type="button" title="Zoom out">−</button>
+          <button id="iet-zoom-pct" class="iet-zoom-btn iet-zoom-pct" type="button" title="Click to fit to window">Fit</button>
+          <button id="iet-zoom-in" class="iet-zoom-btn" type="button" title="Zoom in">+</button>
+          <button id="iet-zoom-100" class="iet-zoom-btn" type="button" title="Full size (100%)">1:1</button>
+        </div>
         <span id="iet-meta-dims">—</span>
         <span id="iet-meta-steps">—</span>
-        <span class="iet-chain-hint">Edits chain together — Undo or Reset anytime</span>
+        <span class="iet-chain-hint">Scroll = zoom · drag = pan · edits chain (Undo / Reset)</span>
       </div>
       <div class="iet-busy" id="iet-busy" style="display:none">
         <div class="iet-spinner"></div>

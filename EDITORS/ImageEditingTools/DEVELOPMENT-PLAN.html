@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImageEditingTools — Development Plan</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --accent: #4338ca;
+  --accent-2: #6d7cff;
+  --bg: #101218;
+  --panel: #181b24;
+  --panel-2: #1d2130;
+  --border: #2c3245;
+  --text: #dfe3f0;
+  --muted: #8a92a8;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --blue: #38bdf8;
+  --red: #f87171;
+}
+html, body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { padding: 28px 24px 60px; max-width: 1060px; margin: 0 auto; }
+
+header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+header h1 { font-size: 22px; display: flex; align-items: center; gap: 10px; }
+header h1 .ic { font-size: 26px; }
+header .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+header .tools { display: flex; gap: 8px; }
+header .tools button {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+header .tools button:hover { border-color: var(--accent-2); color: #fff; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.stat .num { font-size: 24px; font-weight: 700; }
+.stat .lbl { color: var(--muted); font-size: 11px; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+.stat.done .num { color: var(--green); }
+.stat.prog .num { color: var(--amber); }
+.stat.todo .num { color: var(--blue); }
+.stat.skip .num { color: var(--red); }
+
+.overall { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.overall .bar-wrap { background: var(--panel-2); border-radius: 999px; height: 10px; overflow: hidden; margin-top: 8px; }
+.overall .bar { background: linear-gradient(90deg, var(--accent), var(--green)); height: 100%; width: 0; border-radius: 999px; transition: width 0.3s; }
+.overall .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--muted); }
+.overall .row b { color: var(--text); font-size: 15px; }
+
+.phase-bars { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.pbar { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.pbar .ph { font-size: 11.5px; color: var(--muted); display: flex; justify-content: space-between; }
+.pbar .ph b { color: var(--text); }
+.pbar .bar-wrap { background: var(--panel-2); border-radius: 999px; height: 7px; overflow: hidden; margin-top: 7px; }
+.pbar .bar { background: var(--accent-2); height: 100%; width: 0; border-radius: 999px; transition: width 0.3s; }
+
+.filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+.filters select {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px; font-size: 12.5px; font-family: inherit; cursor: pointer;
+}
+.filters button {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.filters button:hover { border-color: var(--accent-2); }
+.filters .count { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+.feat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; transition: border-color 0.15s; }
+.feat:hover { border-color: #3d4661; }
+.feat-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 4px; flex-wrap: wrap; }
+.feat-id { font-family: ui-monospace, "Cascadia Mono", monospace; font-size: 11px; font-weight: 700; background: #262c3f; color: var(--accent-2); border-radius: 6px; padding: 3px 7px; }
+.feat-title { font-size: 14px; font-weight: 600; flex: 1; min-width: 200px; }
+.badge { font-size: 10.5px; border-radius: 999px; padding: 3px 9px; font-weight: 600; white-space: nowrap; }
+.badge.p1 { background: rgba(34, 197, 94, 0.12); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.35); }
+.badge.p2 { background: rgba(245, 158, 11, 0.12); color: var(--amber); border: 1px solid rgba(245, 158, 11, 0.35); }
+.badge.p3 { background: rgba(248, 113, 113, 0.12); color: var(--red); border: 1px solid rgba(248, 113, 113, 0.35); }
+.badge.cat { background: rgba(109, 124, 255, 0.1); color: var(--accent-2); border: 1px solid rgba(109, 124, 255, 0.3); }
+.feat-desc { color: var(--muted); font-size: 12.5px; line-height: 1.55; padding: 2px 14px 10px 58px; }
+.feat-foot { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.14); flex-wrap: wrap; }
+.feat-foot select {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 6px 10px; font-size: 12px; font-family: inherit; cursor: pointer;
+}
+.feat-foot select[data-status="done"] { border-color: rgba(34,197,94,.5); color: var(--green); }
+.feat-foot select[data-status="inprogress"] { border-color: rgba(245,158,11,.5); color: var(--amber); }
+.feat-foot select[data-status="deferred"] { border-color: rgba(248,113,113,.5); color: var(--red); }
+.feat-note { width: 100%; }
+.feat-note summary { cursor: pointer; color: var(--muted); font-size: 11.5px; user-select: none; padding: 2px 0; }
+.feat-note textarea {
+  width: 100%; min-height: 56px; margin-top: 6px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-family: inherit; font-size: 12px; padding: 8px 10px; resize: vertical;
+}
+.empty { text-align: center; color: var(--muted); padding: 40px 0; font-size: 13px; }
+
+footer { margin-top: 26px; color: var(--muted); font-size: 11.5px; line-height: 1.6; border-top: 1px solid var(--border); padding-top: 14px; }
+footer code { background: var(--panel-2); padding: 1px 6px; border-radius: 5px; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1><span class="ic">🖼️</span> ImageEditingTools — Development Plan</h1>
+    <div class="sub">Interactive feature backlog · generated 2026-08-19 · statuses and notes persist in this browser</div>
+  </div>
+  <div class="tools">
+    <button id="btn-json" title="Copy the full plan as JSON">📋 Copy JSON</button>
+    <button id="btn-reset" title="Clear all statuses and notes">🗑 Reset plan</button>
+  </div>
+</header>
+
+<div class="stats" id="stats"></div>
+<div class="overall">
+  <div class="row"><span>Overall completion</span><b id="overall-pct">0%</b></div>
+  <div class="bar-wrap"><div class="bar" id="overall-bar"></div></div>
+</div>
+<div class="phase-bars" id="phase-bars"></div>
+
+<div class="filters">
+  <select id="f-cat">
+    <option value="all">All categories</option>
+    <option value="A">A — Editing &amp; Geometry</option>
+    <option value="B">B — Filters &amp; Effects</option>
+    <option value="C">C — Text &amp; Watermarks</option>
+    <option value="D">D — OCR &amp; Documents</option>
+    <option value="E">E — Formats &amp; Metadata</option>
+    <option value="F">F — Collage &amp; Frames</option>
+    <option value="G">G — AI-Powered</option>
+    <option value="H">H — Workflow &amp; UX</option>
+  </select>
+  <select id="f-phase">
+    <option value="all">All phases</option>
+    <option value="1">Phase 1 — Quick wins</option>
+    <option value="2">Phase 2 — Deeper builds</option>
+    <option value="3">Phase 3 — AI &amp; research</option>
+  </select>
+  <select id="f-status">
+    <option value="all">All statuses</option>
+    <option value="notstarted">Not started</option>
+    <option value="inprogress">In progress</option>
+    <option value="done">Done</option>
+    <option value="deferred">Deferred</option>
+  </select>
+  <button id="f-clear">Reset filters</button>
+  <span class="count" id="f-count"></span>
+</div>
+
+<div id="list"></div>
+
+<footer>
+  <b>Maintainer notes</b><br>
+  • Add a feature: append an entry to the <code>FEATURES</code> array (id, cat, phase, title, desc) — the page re-renders automatically.<br>
+  • Statuses &amp; notes are stored under <code>localStorage["iet_devplan_v1"]</code>; "Copy JSON" exports the plan + progress for sharing.<br>
+  • Phase guide: <b>P1</b> = small canvas/UI wins, <b>P2</b> = multi-day builds, <b>P3</b> = needs the AI gateway / research first.<br>
+  • When a feature ships in <code>ImageEditingTools.js</code>, mark it <b>Done</b> here so the plan stays the single source of truth.
+</footer>
+
+<script>
+const KEY = 'iet_devplan_v1';
+
+const CATS = {
+  A: 'Editing & Geometry',
+  B: 'Filters & Effects',
+  C: 'Text & Watermarks',
+  D: 'OCR & Documents',
+  E: 'Formats & Metadata',
+  F: 'Collage & Frames',
+  G: 'AI-Powered',
+  H: 'Workflow & UX'
+};
+const PHASES = { 1: 'Phase 1 — Quick wins', 2: 'Phase 2 — Deeper builds', 3: 'Phase 3 — AI & research' };
+const STATUSES = [
+  { id: 'notstarted', label: 'Not started' },
+  { id: 'inprogress', label: 'In progress' },
+  { id: 'done', label: 'Done' },
+  { id: 'deferred', label: 'Deferred' }
+];
+
+const FEATURES = [
+  // A — Editing & Geometry
+  { id: 'A1', cat: 'A', phase: 1, title: 'Redo stack', desc: 'Full Undo / Redo history (the tool currently only undoes). Symmetric, capped at 25 steps, keyboard Ctrl+Z / Ctrl+Shift+Z.' },
+  { id: 'A2', cat: 'A', phase: 1, title: 'Social-size crop presets', desc: 'One-tap crop ratios + exact pixels: Instagram 1:1 (1080), Story 9:16, YouTube 16:9, Facebook cover 820×312, LinkedIn banner 1584×396.' },
+  { id: 'A3', cat: 'A', phase: 1, title: 'Circular crop / avatar rounder', desc: 'Crop to a circle with transparent corners, optional colored ring — great for profile pictures and team avatars.' },
+  { id: 'A4', cat: 'A', phase: 1, title: 'Frame & border studio', desc: 'Rounded corners, border color/width, inner mat, drop shadow. Polaroid-style frame as a preset.' },
+  { id: 'A5', cat: 'A', phase: 1, title: 'Straighten (horizon drag)', desc: 'Drag a line across the horizon on the preview; the image auto-rotates so that line becomes level.' },
+  { id: 'A6', cat: 'A', phase: 2, title: 'Batch mode', desc: 'Pick many files at once, apply the same pipeline (resize + watermark + convert), download all as a ZIP.' },
+  { id: 'A7', cat: 'A', phase: 2, title: 'Before / after compare slider', desc: 'Split-screen slider that wipes between the original and the edited image — great for quality checks.' },
+  { id: 'A8', cat: 'A', phase: 2, title: 'Multi-image workspace', desc: 'Keep several images open as tabs/chips inside the tool, switch the active one, drag images between collage slots.' },
+
+  // B — Filters & Effects
+  { id: 'B1', cat: 'B', phase: 1, title: 'Preset pack v2', desc: 'Duotone, Film, Neon, Kodak, Drama, Noir presets on top of the current 8.' },
+  { id: 'B2', cat: 'B', phase: 1, title: 'Custom duotone', desc: 'Pick two colors; the image is remapped from dark→color1 to light→color2 (gradient map).' },
+  { id: 'B3', cat: 'B', phase: 1, title: 'Vignette & grain', desc: 'Vignette strength/softness sliders and a film-grain slider for texture.' },
+  { id: 'B4', cat: 'B', phase: 1, title: 'Pixelate / mosaic blur', desc: 'Blur or pixelate a selected area — hide faces, license plates or sensitive numbers before sharing.' },
+  { id: 'B5', cat: 'B', phase: 1, title: 'Annotate', desc: 'Draw arrows, circles, rectangles, highlights and freehand marks with color/size controls (screenshot-style).' },
+  { id: 'B6', cat: 'B', phase: 1, title: 'Auto-enhance', desc: 'One-click levels stretch + saturation boost + sharpen, with before/after size unchanged.' },
+  { id: 'B7', cat: 'B', phase: 2, title: 'Portrait blur', desc: 'Blur everything outside a draggable center oval — fake depth-of-field for product/people shots.' },
+  { id: 'B8', cat: 'B', phase: 2, title: 'Sticker & emoji library', desc: 'Draggable, resizable emoji/sticker overlays (built-in pack, no network needed).' },
+
+  // C — Text & Watermarks
+  { id: 'C1', cat: 'C', phase: 2, title: 'Editable text layers', desc: 'After stamping, drag/scale/rotate text again before committing — true text layer editing.' },
+  { id: 'C2', cat: 'C', phase: 1, title: 'Meme maker', desc: 'Top and bottom Impact-font captions with white stroke — instant meme format.' },
+  { id: 'C3', cat: 'C', phase: 2, title: 'Speech & thought bubbles', desc: 'Comic-style bubbles with draggable tails for fun annotations.' },
+  { id: 'C4', cat: 'C', phase: 1, title: 'Logo overlay', desc: 'Upload a transparent PNG logo, snap it to a corner with margin + opacity controls, reuse via settings.' },
+  { id: 'C5', cat: 'C', phase: 2, title: 'Timestamp & camera stamp', desc: 'Stamp capture date/time, camera make/model from the file metadata (or "now" for CMS uploads).' },
+  { id: 'C6', cat: 'C', phase: 1, title: 'Text box with pill background', desc: 'Multi-line watermark on a rounded semi-transparent pill — readable on any photo.' },
+
+  // D — OCR & Documents
+  { id: 'D1', cat: 'D', phase: 1, title: 'OCR history', desc: 'Save every extraction (text + thumbnail + date), reopen from a list, search across extractions.' },
+  { id: 'D2', cat: 'D', phase: 1, title: 'More OCR languages', desc: 'Add chi_sim, jpn, kor, rus, ita, por to the built-in engine language list.' },
+  { id: 'D3', cat: 'D', phase: 2, title: 'Structured extraction', desc: 'Detect tables and lists; output CSV/TSV for spreadsheet paste.' },
+  { id: 'D4', cat: 'D', phase: 2, title: 'PDF text extraction', desc: 'Accept PDFs: requestFileContent for text-based PDFs + AI cleanup of layout artifacts.' },
+  { id: 'D5', cat: 'D', phase: 3, title: 'Translate extracted text', desc: 'One-click translation of OCR results through the AI gateway (e.g. Turkish receipt → English).' },
+
+  // E — Formats & Metadata
+  { id: 'E1', cat: 'E', phase: 2, title: 'GIF frame explorer', desc: 'Show every frame of an animated GIF as a filmstrip; save any single frame as PNG/JPG.' },
+  { id: 'E2', cat: 'E', phase: 1, title: 'Favicon / ICO pack', desc: 'Generate 16/32/48/64 PNG set + real .ico for websites from one image.' },
+  { id: 'E3', cat: 'E', phase: 1, title: 'Metadata viewer & privacy strip', desc: 'Show EXIF (camera, date, GPS) and strip all metadata on export to protect privacy.' },
+  { id: 'E4', cat: 'E', phase: 1, title: 'Base64 / HTML snippet export', desc: 'Copy the image as a base64 data URL or a ready <img> HTML snippet for emails/webpages.' },
+  { id: 'E5', cat: 'E', phase: 2, title: 'PDF export', desc: 'Export one or several images to a printable PDF via tool.requestExportPdf.' },
+  { id: 'E6', cat: 'E', phase: 3, title: 'AVIF / HEIC support guidance', desc: 'Detect browser capabilities, convert where supported, otherwise suggest a conversion path.' },
+
+  // F — Collage & Frames
+  { id: 'F1', cat: 'F', phase: 1, title: 'Custom N×M grid collage', desc: 'Configurable rows × columns grid (2×3, 3×3, 4×4…) on top of the six built-in frames.' },
+  { id: 'F2', cat: 'F', phase: 2, title: 'Drag-to-reorder slots', desc: 'Drag thumbnails between slots to rearrange the collage before building.' },
+  { id: 'F3', cat: 'F', phase: 1, title: 'Polaroid style', desc: 'White photo-paper borders with a hand-written-style caption under each slot.' },
+  { id: 'F4', cat: 'F', phase: 2, title: 'Event templates', desc: 'Birthday / thank-you / anniversary / holiday backgrounds with headline text slots.' },
+  { id: 'F5', cat: 'F', phase: 3, title: 'Auto-collage (AI layout)', desc: 'Feed N photos to the AI gateway and get the best layout suggestion back.' },
+  { id: 'F6', cat: 'F', phase: 2, title: 'Per-slot borders & radius', desc: 'Individual border color/width and corner radius per collage slot.' },
+
+  // G — AI-Powered
+  { id: 'G1', cat: 'G', phase: 2, title: 'AI alt-text & captions', desc: 'Generate accessibility alt-text and social captions for the edited image via requestAI (image described by user or vision-capable model).' },
+  { id: 'G2', cat: 'G', phase: 2, title: 'AI watermark suggestions', desc: 'Suggest watermark text/slogans from the company name or tool settings.' },
+  { id: 'G3', cat: 'G', phase: 3, title: 'AI background removal guide', desc: 'If the gateway has a vision model: send the image and get step-by-step removal guidance or a cutout plan.' },
+  { id: 'G4', cat: 'G', phase: 3, title: 'AI enhance / restore advice', desc: 'Ask the AI for per-photo enhancement recipes (contrast, sharpening, noise) applied by our filters.' },
+  { id: 'G5', cat: 'G', phase: 3, title: 'AI metadata writer', desc: 'Titles, descriptions and tags for images uploaded to the CMS object store.' },
+
+  // H — Workflow & UX
+  { id: 'H1', cat: 'H', phase: 1, title: 'Keyboard shortcuts', desc: 'Z undo · Shift+Z redo · R rotate 90° · C crop tab · +/− zoom · Esc fit · D download.' },
+  { id: 'H2', cat: 'H', phase: 1, title: 'Session operation log', desc: 'A running list of every applied edit with timestamps — click to jump back to that step.' },
+  { id: 'H3', cat: 'H', phase: 2, title: 'Touch gestures', desc: 'Pinch to zoom, two-finger pan for tablets and touch screens.' },
+  { id: 'H4', cat: 'H', phase: 1, title: 'Copy image to clipboard', desc: 'Copy the current result straight to the clipboard for pasting into chat/email (with graceful fallback).' },
+  { id: 'H5', cat: 'H', phase: 2, title: 'Print view', desc: 'Clean print layout with size/paper hints via the browser print dialog.' },
+  { id: 'H6', cat: 'H', phase: 2, title: 'Session thumbnail restore', desc: 'Save a small compressed preview + settings in the CMS field value so a reopened record shows where you left off.' },
+  { id: 'H7', cat: 'H', phase: 3, title: 'Project save / load', desc: 'Export the whole edit session as an op-list JSON and re-apply it to the original later.' }
+];
+
+/* ── state ── */
+let state = load();
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return {};
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+function st(id) { return state[id] ? state[id].status : 'notstarted'; }
+function note(id) { return state[id] ? (state[id].note || '') : ''; }
+
+/* ── render ── */
+function $id(id) { return document.getElementById(id); }
+
+function renderStats() {
+  const total = FEATURES.length;
+  const counts = { notstarted: 0, inprogress: 0, done: 0, deferred: 0 };
+  FEATURES.forEach(function (f) { counts[st(f.id)]++; });
+  const pct = total ? Math.round(counts.done / total * 100) : 0;
+  $id('stats').innerHTML =
+    card(total, 'Total features', '') +
+    card(counts.notstarted, 'Not started', 'todo') +
+    card(counts.inprogress, 'In progress', 'prog') +
+    card(counts.done, 'Done', 'done') +
+    card(counts.deferred, 'Deferred', 'skip');
+  $id('overall-pct').textContent = pct + '%';
+  $id('overall-bar').style.width = pct + '%';
+  let ph = '';
+  [1, 2, 3].forEach(function (p) {
+    const items = FEATURES.filter(function (f) { return f.phase === p; });
+    const done = items.filter(function (f) { return st(f.id) === 'done'; }).length;
+    const p2 = items.length ? Math.round(done / items.length * 100) : 0;
+    ph += '<div class="pbar"><div class="ph"><span>' + PHASES[p] + '</span><b>' + done + ' / ' + items.length + '</b></div>' +
+      '<div class="bar-wrap"><div class="bar" style="width:' + p2 + '%"></div></div></div>';
+  });
+  $id('phase-bars').innerHTML = ph;
+}
+function card(num, label, cls) {
+  return '<div class="stat ' + cls + '"><div class="num">' + num + '</div><div class="lbl">' + label + '</div></div>';
+}
+
+function renderList() {
+  const fCat = $id('f-cat').value;
+  const fPhase = $id('f-phase').value;
+  const fStatus = $id('f-status').value;
+  const items = FEATURES.filter(function (f) {
+    if (fCat !== 'all' && f.cat !== fCat) return false;
+    if (fPhase !== 'all' && String(f.phase) !== fPhase) return false;
+    if (fStatus !== 'all' && st(f.id) !== fStatus) return false;
+    return true;
+  });
+  $id('f-count').textContent = items.length + ' / ' + FEATURES.length + ' shown';
+  if (!items.length) {
+    $id('list').innerHTML = '<div class="empty">No features match the current filters.</div>';
+    return;
+  }
+  $id('list').innerHTML = items.map(function (f) {
+    const cur = st(f.id);
+    return '<div class="feat" data-id="' + f.id + '">' +
+      '<div class="feat-head">' +
+      '<span class="feat-id">' + f.id + '</span>' +
+      '<span class="feat-title">' + f.title + '</span>' +
+      '<span class="badge p' + f.phase + '">' + PHASES[f.phase].replace('Phase ', 'P') + '</span>' +
+      '<span class="badge cat">' + CATS[f.cat] + '</span>' +
+      '</div>' +
+      '<div class="feat-desc">' + f.desc + '</div>' +
+      '<div class="feat-foot">' +
+      '<select class="f-status-sel" data-id="' + f.id + '" data-status="' + cur + '">' +
+      STATUSES.map(function (s) {
+        return '<option value="' + s.id + '"' + (cur === s.id ? ' selected' : '') + '>' + s.label + '</option>';
+      }).join('') +
+      '</select>' +
+      '<details class="feat-note"><summary>📝 Notes</summary><textarea class="f-note" data-id="' + f.id + '" placeholder="Implementation notes, blockers, links…">' + escHtml(note(f.id)) + '</textarea></details>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+}
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ── events ── */
+$id('list').addEventListener('change', function (e) {
+  if (!e.target.classList || !e.target.classList.contains('f-status-sel')) return;
+  const id = e.target.getAttribute('data-id');
+  if (!state[id]) state[id] = {};
+  state[id].status = e.target.value;
+  e.target.setAttribute('data-status', e.target.value);
+  save();
+  renderStats();
+});
+$id('list').addEventListener('input', function (e) {
+  if (!e.target.classList || !e.target.classList.contains('f-note')) return;
+  const id = e.target.getAttribute('data-id');
+  if (!state[id]) state[id] = {};
+  state[id].note = e.target.value;
+  save();
+});
+['f-cat', 'f-phase', 'f-status'].forEach(function (id) {
+  $id(id).addEventListener('change', renderList);
+});
+$id('f-clear').addEventListener('click', function () {
+  $id('f-cat').value = 'all';
+  $id('f-phase').value = 'all';
+  $id('f-status').value = 'all';
+  renderList();
+});
+$id('btn-reset').addEventListener('click', function () {
+  if (!window.confirm('Clear ALL statuses and notes for this plan?')) return;
+  state = {};
+  save();
+  renderStats();
+  renderList();
+});
+$id('btn-json').addEventListener('click', function () {
+  const out = {
+    tool: 'ImageEditingTools',
+    generated: '2026-08-19',
+    total: FEATURES.length,
+    categories: CATS,
+    phases: PHASES,
+    progress: state,
+    features: FEATURES
+  };
+  const txt = JSON.stringify(out, null, 2);
+  navigator.clipboard.writeText(txt).then(function () {
+    window.alert('Plan JSON copied to clipboard');
+  }, function () {
+    window.prompt('Copy the plan JSON:', txt);
+  });
+});
+
+renderStats();
+renderList();
+</script>
+</body>
+</html>

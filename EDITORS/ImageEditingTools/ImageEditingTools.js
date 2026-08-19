@@ -21,6 +21,7 @@ var MIME_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
 var MAX_PIXELS = 40 * 1000 * 1000; // 40 MP safety cap
 var MAX_HISTORY = 25;
 var MAX_FILE_BYTES = 40 * 1024 * 1024; // 40 MB
+var ZOOM_STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
 var OCR_PROMPT = [
   'You are an OCR (optical character recognition) assistant. The image to read is attached as a base64 data URL.',
@@ -137,6 +138,11 @@ var _cnvEstTimer = null;
 var _cmpEstTimer = null;
 var _readOnly = false;
 var _resizeObs = null;
+var _zoomMode = 'fit';      // 'fit' = fit to window, 'zoom' = explicit scale
+var _zoomScale = 1;         // 1 = full size (100%)
+var _panX = 0, _panY = 0;   // pan offsets in CSS px
+var _viewW = 0, _viewH = 0; // last preview viewport size
+var _panPtr = null;         // {x, y, px, py} while panning
 
 // ── Small helpers ─────────────────────────────────────────────
 function el(id) { return document.getElementById(id); }
@@ -295,6 +301,7 @@ function setWorking(c, meta) {
   _working = c;
   _history = [];
   _origMeta = meta || { name: 'image', size: 0, type: '' };
+  resetZoomState();
   afterImageChange();
 }
 function undoWorking() {
@@ -306,6 +313,7 @@ function resetWorking() {
   if (!_orig) { needImage(); return; }
   pushHistory();
   _working = cloneCanvas(_orig);
+  resetZoomState();
   afterImageChange();
   notify('Back to the original image', 'success');
 }
@@ -351,8 +359,30 @@ function drawCropOverlay(x, src, fit) {
   x.strokeRect(px, py, pw, ph);
   x.restore();
 }
+function previewSrc() {
+  return (_activeTab === 'ocr') ? (_ocrCanvas || _working) : _working;
+}
+function previewHasImage() { return !!previewSrc(); }
+function resetZoomState() {
+  _zoomMode = 'fit';
+  _zoomScale = 1;
+  _panX = 0;
+  _panY = 0;
+  _panPtr = null;
+}
+function resetZoom() {
+  resetZoomState();
+  renderPreview();
+}
+function clampPan(cw, ch) {
+  var f = _previewFit;
+  if (!f) return;
+  var m = 48; // keep at least 48 px of image visible on each axis
+  if (f.dw <= cw) _panX = 0; else _panX = clamp(_panX, cw - f.dw - m, m);
+  if (f.dh <= ch) _panY = 0; else _panY = clamp(_panY, ch - f.dh - m, m);
+}
 function renderPreview() {
-  var src = (_activeTab === 'ocr') ? (_ocrCanvas || _working) : _working;
+  var src = previewSrc();
   if (!src) { showStage(false); return; }
   showStage(true);
   var wrap = el('iet-canvas-wrap');
@@ -360,6 +390,8 @@ function renderPreview() {
   var rect = wrap.getBoundingClientRect();
   var cw = Math.max(40, Math.floor(rect.width));
   var ch = Math.max(40, Math.floor(rect.height));
+  _viewW = cw;
+  _viewH = ch;
   var dpr = Math.min(window.devicePixelRatio || 1, 2);
   var pw = Math.floor(cw * dpr), ph = Math.floor(ch * dpr);
   if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
@@ -370,7 +402,20 @@ function renderPreview() {
   x.clearRect(0, 0, cw, ch);
   x.fillStyle = '#14161c';
   x.fillRect(0, 0, cw, ch);
-  var fit = fitRect(src.width, src.height, cw - 32, ch - 32);
+  var fit;
+  if (_zoomMode === 'zoom') {
+    var dw = Math.max(1, src.width * _zoomScale);
+    var dh = Math.max(1, src.height * _zoomScale);
+    fit = { dx: (cw - dw) / 2 + _panX, dy: (ch - dh) / 2 + _panY, dw: dw, dh: dh };
+    _previewFit = fit;
+    clampPan(cw, ch);
+    fit.dx = (cw - fit.dw) / 2 + _panX;
+    fit.dy = (ch - fit.dh) / 2 + _panY;
+  } else {
+    _panX = 0;
+    _panY = 0;
+    fit = fitRect(src.width, src.height, cw - 32, ch - 32);
+  }
   _previewFit = fit;
   drawChecker(x, fit.dx, fit.dy, fit.dw, fit.dh);
   if (_filterLive) { try { x.filter = _filterLive; } catch (e) {} }
@@ -379,6 +424,91 @@ function renderPreview() {
   x.drawImage(src, fit.dx, fit.dy, fit.dw, fit.dh);
   x.filter = 'none';
   if (_activeTab === 'crop' && _cropRect) drawCropOverlay(x, src, fit);
+  updateZoomUI();
+}
+// ── Zoom / pan viewer controls ────────────────────────────────
+function currentScale() {
+  var src = previewSrc();
+  var f = _previewFit;
+  if (!src || !f || !f.dw) return 1;
+  return (_zoomMode === 'fit') ? f.dw / src.width : _zoomScale;
+}
+function nextScale(s, dir) {
+  var i;
+  if (dir > 0) {
+    for (i = 0; i < ZOOM_STEPS.length; i++) {
+      if (ZOOM_STEPS[i] > s * 1.001) return ZOOM_STEPS[i];
+    }
+    return Math.min(8, s * 1.5);
+  }
+  for (i = ZOOM_STEPS.length - 1; i >= 0; i--) {
+    if (ZOOM_STEPS[i] < s * 0.999) return ZOOM_STEPS[i];
+  }
+  return Math.max(0.05, s / 1.5);
+}
+function zoomAt(dir, cx, cy) {
+  var src = previewSrc();
+  var f = _previewFit;
+  if (!src || !f || !f.dw) return;
+  var oldScale = currentScale();
+  // image-space point under the cursor
+  var ix = (cx - f.dx) / f.dw;
+  var iy = (cy - f.dy) / f.dh;
+  _zoomScale = clamp(nextScale(oldScale, dir), 0.05, 8);
+  _zoomMode = 'zoom';
+  var dw = src.width * _zoomScale;
+  var dh = src.height * _zoomScale;
+  _panX = cx - ix * dw - (_viewW - dw) / 2;
+  _panY = cy - iy * dh - (_viewH - dh) / 2;
+  renderPreview();
+}
+function setZoomScale(scale) {
+  if (!previewHasImage()) return;
+  _zoomMode = 'zoom';
+  _zoomScale = clamp(scale, 0.05, 8);
+  _panX = 0;
+  _panY = 0;
+  renderPreview();
+}
+function updateZoomUI() {
+  var pct = el('iet-zoom-pct');
+  var sel = el('iet-zoom-preset');
+  if (!pct || !sel) return;
+  var src = previewSrc();
+  var f = _previewFit;
+  if (!src || !f) return;
+  if (_zoomMode === 'fit') {
+    sel.value = 'fit';
+    pct.textContent = 'Fit';
+    return;
+  }
+  var s = currentScale();
+  pct.textContent = Math.round(s * 100) + '%';
+  var exact = String(Math.round(s * 100) / 100);
+  if (exact === '0.25' || exact === '0.5' || exact === '1' || exact === '2' || exact === '4') {
+    sel.value = exact;
+  } else {
+    sel.value = 'custom';
+  }
+}
+function panDown(e) {
+  if (!previewHasImage()) return;
+  e.preventDefault();
+  _panPtr = { x: e.clientX, y: e.clientY, px: _panX, py: _panY };
+  try { el('iet-preview').setPointerCapture(e.pointerId); } catch (ignore) {}
+}
+function panMove(e) {
+  if (!_panPtr) return;
+  _panX = _panPtr.px + (e.clientX - _panPtr.x);
+  _panY = _panPtr.py + (e.clientY - _panPtr.y);
+  renderPreview();
+}
+function panUp() { _panPtr = null; }
+function wheelZoom(e) {
+  if (!previewHasImage()) return;
+  e.preventDefault();
+  var b = el('iet-preview').getBoundingClientRect();
+  zoomAt(e.deltaY < 0 ? 1 : -1, e.clientX - b.left, e.clientY - b.top);
 }
 
 // ── Header / info ─────────────────────────────────────────────
@@ -477,6 +607,9 @@ function switchTab(t) {
   renderPreview();
   scheduleResize();
   persistSettingsSoon();
+  try {
+    el('iet-preview').style.cursor = (t === 'crop') ? 'crosshair' : 'grab';
+  } catch (e) {}
 }
 function updateDropTitle() {
   var title = el('iet-drop-title');
@@ -1605,11 +1738,32 @@ function wireEvents() {
     el('ocr-result').value = '';
     el('ocr-status').style.display = 'none';
   });
-  // crop pointer interaction on the preview canvas
-  el('iet-preview').addEventListener('pointerdown', cropDown);
-  el('iet-preview').addEventListener('pointermove', cropMove);
-  el('iet-preview').addEventListener('pointerup', cropUp);
-  el('iet-preview').addEventListener('pointercancel', cropUp);
+  // preview canvas pointer interaction: crop drag OR pan, plus wheel zoom
+  el('iet-preview').addEventListener('pointerdown', function (e) {
+    if (_activeTab === 'crop') cropDown(e); else panDown(e);
+  });
+  el('iet-preview').addEventListener('pointermove', function (e) {
+    if (_cropPtr) cropMove(e); else panMove(e);
+  });
+  el('iet-preview').addEventListener('pointerup', function (e) {
+    cropUp(e);
+    panUp();
+  });
+  el('iet-preview').addEventListener('pointercancel', function (e) {
+    cropUp(e);
+    panUp();
+  });
+  el('iet-preview').addEventListener('wheel', wheelZoom, { passive: false });
+  // zoom viewer controls
+  el('iet-zoom-preset').addEventListener('change', function () {
+    var val = this.value;
+    if (val === 'fit') resetZoom();
+    else if (val !== 'custom') setZoomScale(parseFloat(val));
+  });
+  el('iet-zoom-out').addEventListener('click', function () { zoomAt(-1, _viewW / 2, _viewH / 2); });
+  el('iet-zoom-in').addEventListener('click', function () { zoomAt(1, _viewW / 2, _viewH / 2); });
+  el('iet-zoom-pct').addEventListener('click', resetZoom);
+  el('iet-zoom-100').addEventListener('click', function () { setZoomScale(1); });
   // stage visibility of CMS buttons
   var canUpload = typeof tool.requestUpload === 'function';
   el('iet-btn-cms').style.display = canUpload ? '' : 'none';
