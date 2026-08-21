@@ -98,7 +98,7 @@
 
 <script>
 (function () {
-  var KEY = 'newsgen_devplan_v3';
+  var KEY = 'newsgen_devplan_v4';
   var CATS = { A: 'editorial', B: 'components', C: 'engagement', D: 'ai-workflow', E: 'publishing', F: 'safety', G: 'quality' };
   var FEATURES = [
     // ── A · Editorial intelligence ──
@@ -236,9 +236,18 @@
   // C5 chapter progress, C6 animated/toggle charts, D2 source manager, D3 fact-check,
   // D5/D6 history+diff, D8 draft-from-URL, E4 social preview, E6 editor notify,
   // F1 review workflow, F2 image credits, G2 perf meter, G3 component tests.
+  // Phase 3 shipped 2026-08-19: A5 language variants, B6 interactive widgets
+  // (quiz, heatstrip, annotated map, org chart, video compare), B7 scrollytelling,
+  // C2 aggregate reactions (CMS operation), C3 comments hook (form bound),
+  // C7 story quiz with shareable result, D4 agentic multi-step builds,
+  // D7 A/B variant composer, E1 one-click page object create,
+  // E3 related stories picker, E5 email newsletter edition,
+  // E7 scheduled publish passthrough, F3 style/cliché lint + AI style review,
+  // G4 prompt optimizer with prompt lab votes.
   var SHIPPED = ['A1', 'A4', 'B1', 'B2', 'C1', 'D1', 'E2', 'F4', 'G1',
     'A2', 'A3', 'A6', 'B3', 'B4', 'B5', 'C4', 'C5', 'C6', 'D2', 'D3',
-    'D5', 'D6', 'D8', 'E4', 'E6', 'F1', 'F2', 'G2', 'G3'];
+    'D5', 'D6', 'D8', 'E4', 'E6', 'F1', 'F2', 'G2', 'G3',
+    'A5', 'B6', 'B7', 'C2', 'C3', 'C7', 'D4', 'D7', 'E1', 'E3', 'E5', 'E7', 'F3', 'G4'];
   SHIPPED.forEach(function (id) {
     if (state[id] === undefined) state[id] = 'done';
   });

@@ -45,7 +45,12 @@ function loadLessonDocData(lesson, callback) {
     objectId: lesson.lessonDocId
   }, function(err, result) {
     if (err || !result || !result.object) {
-      // Fall back to main doc data silently
+      // Fall back to main doc data, but make the misconfiguration visible.
+      if (!window._lessonDocLoadWarned) {
+        window._lessonDocLoadWarned = true;
+        console.warn('[SelfPaced] lesson doc load failed for "' + lesson.lessonDocId + '":', err);
+        tool.notify('⚠️ Could not load the lesson document. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
+      }
       if (callback) callback(null, lesson);
       return;
     }
@@ -67,6 +72,31 @@ function loadLessonDocData(lesson, callback) {
     } catch(e) {
       // Parse error — fall back to main doc
       if (callback) callback(null, lesson);
+    }
+  });
+}
+
+/** One-time startup probe: verify the tool can read lesson docs via CRUD.
+ *  If not, the field's allowedObjectTypes is missing the lesson-doc type —
+ *  show the admin exactly what to add. */
+function probeLessonDocAccess() {
+  if (window._lessonDocProbeDone || typeof tool.requestObjects !== 'function') return;
+  window._lessonDocProbeDone = true;
+  var all = getAllLessonsInOrder();
+  var probeId = null;
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].lesson && all[i].lesson.lessonDocId) { probeId = all[i].lesson.lessonDocId; break; }
+  }
+  if (!probeId) return;
+  tool.requestObjects('get', {
+    mainObjectType: LESSON_DOC_TYPE,
+    objectId: probeId
+  }, function(err, result) {
+    if (err || !result || !result.object) {
+      console.warn('[SelfPaced] lesson doc probe FAILED:', err);
+      tool.notify('⚠️ Lesson documents are not readable from this tool. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
+    } else {
+      console.log('[SelfPaced] lesson doc probe OK');
     }
   });
 }
@@ -2096,6 +2126,7 @@ function loadCurriculum(callback) {
       }
     }
     if (callback) callback();
+    probeLessonDocAccess();  // diagnose missing lesson-doc CRUD config once
     renderCurrentView();
     updateProgressBar();
     tool.resize();

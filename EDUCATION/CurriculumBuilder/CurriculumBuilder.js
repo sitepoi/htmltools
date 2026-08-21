@@ -41,12 +41,13 @@ var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
 
-/* ── Lesson Document CRUD (Phase 1: dual-write for backward compat) ──
-   Heavy lesson content (presentation HTML, study data, flashcards, quiz)
-   is mirrored to separate CMS objects of type curriculum-lessons-uniconbase.
-   This keeps the main curriculum document small while the student tool
-   still reads from the main doc. Phase 2 will switch the student tool to
-   read lesson docs directly.
+/* ── Lesson Document CRUD (Phase 2: heavy content lives in lesson docs) ──
+   Heavy lesson content (notes, HTML code, study data, presentation HTML,
+   flashcards, quiz, source links) is stored ONLY in separate CMS objects of
+   type curriculum-lessons-uniconbase. The main curriculum document keeps
+   only light metadata (title, order, minutes, file URLs, lessonDocId) so it
+   never approaches the Firestore 1MB document limit. The student tool
+   already reads heavy content from the lesson docs via lessonDocId.
 
    REQUIRED CMS ADMIN CONFIG (Field Group → settings.allowedObjectTypes):
      { mainObjectType: 'curriculum-lessons-uniconbase',
@@ -80,6 +81,77 @@ function extractHeavyLessonData(les) {
     sourceUrls: les.sourceUrls || null,
     hiddenSections: les.hiddenSections || null
   };
+}
+
+/* ── 1MB Guard: heavy lesson content lives in lesson docs, NOT the main doc ──
+   The main curriculum document must stay under Firestore's 1MB limit.
+   These helpers keep only light metadata in the main doc and mirror heavy
+   fields (content, htmlCode, studyHtmlData, presentationHtml, flashcards,
+   quiz, sourceUrls) exclusively to curriculum-lessons-uniconbase docs. */
+var HEAVY_LESSON_FIELDS = ['content', 'htmlCode', 'studyHtmlData', 'presentationHtml', 'flashcards', 'quiz', 'sourceUrls'];
+
+function hasHeavyLessonFields(les) {
+  for (var i = 0; i < HEAVY_LESSON_FIELDS.length; i++) {
+    if (les[HEAVY_LESSON_FIELDS[i]]) return true;
+  }
+  return false;
+}
+
+function stripHeavyLessonFields(les) {
+  for (var i = 0; i < HEAVY_LESSON_FIELDS.length; i++) {
+    delete les[HEAVY_LESSON_FIELDS[i]];
+  }
+  return les;
+}
+
+/** One-time-per-page-load migration: move legacy heavy content out of the
+ *  main curriculum document into per-lesson docs (fixes the Firestore 1MB
+ *  limit error on the main doc). Only strips lessons whose doc copy is
+ *  confirmed to exist — on doc failure the heavy content stays put. */
+function migrateLessonsToDocsIfNeeded() {
+  if (window._lessonsMigratedOnce) return;
+  if (!canUseLessonDocs()) { window._lessonsMigratedOnce = true; return; }
+  if (tool.isReadOnly && tool.isReadOnly()) return; // retry when editable
+  var work = [];
+  for (var si = 0; si < sections.length; si++) {
+    var lessons = sections[si].lessons || [];
+    for (var li = 0; li < lessons.length; li++) {
+      if (hasHeavyLessonFields(lessons[li])) work.push({ si: si, li: li });
+    }
+  }
+  if (work.length === 0) { window._lessonsMigratedOnce = true; return; }
+  window._lessonsMigratedOnce = true;
+  console.log('[CurriculumBuilder] migrating ' + work.length + ' heavy lesson(s) to lesson docs...');
+
+  var remaining = work.length;
+  var anyFailed = false;
+  function finishMigration() {
+    for (var si2 = 0; si2 < sections.length; si2++) {
+      var ls = sections[si2].lessons || [];
+      for (var li2 = 0; li2 < ls.length; li2++) {
+        var les = ls[li2];
+        if (les._keepHeavy) { delete les._keepHeavy; continue; }
+        if (les.lessonDocId && hasHeavyLessonFields(les)) stripHeavyLessonFields(les);
+      }
+    }
+    saveCurriculum();
+    if (anyFailed) {
+      tool.notify('⚠️ Curriculum shrunk, but some lesson docs failed to save — those lessons keep their content in the main document.', 'warning');
+    } else {
+      tool.notify('✅ Curriculum optimized: heavy lesson content moved to lesson docs.', 'success');
+    }
+  }
+  for (var w = 0; w < work.length; w++) {
+    (function(wk) {
+      var lesson = sections[wk.si].lessons[wk.li];
+      saveLessonDoc(lesson, function(err, docId) {
+        if (docId) lesson.lessonDocId = docId;
+        if (err) { anyFailed = true; lesson._keepHeavy = true; }
+        remaining--;
+        if (remaining <= 0) finishMigration();
+      });
+    })(work[w]);
+  }
 }
 
 /** Create or update a lesson doc. Returns lessonDocId via callback. */
@@ -2228,6 +2300,21 @@ function loadCurriculum(val) {
   updateIdBadge();
   renderSections();
   tool.resize();
+  // One-time per page load: move legacy heavy content out of the main doc
+  // into lesson docs (fixes the Firestore 1MB limit error on the main doc).
+  setTimeout(function() { migrateLessonsToDocsIfNeeded(); }, 50);
+}
+
+/** Ask the parent form to commit the record to Firestore now (if the CMS
+ *  supports it via the allowRequestSave field setting). Silent otherwise. */
+function requestParentSave() {
+  try {
+    if (typeof tool.requestSave === 'function') {
+      tool.requestSave(function(err, ok) {
+        if (err || !ok) console.warn('requestSave rejected:', err || 'denied');
+      });
+    }
+  } catch(e) {}
 }
 
 function saveCurriculum(callback) {
@@ -2241,6 +2328,7 @@ function saveCurriculum(callback) {
   // Ensure CMS validation passes
   tool.reportValid(true, '');
   tool.setValue(data);
+  requestParentSave();  // immediate Firestore commit when the CMS allows it
   // Re-render immediately (onValueChange may only fire for external changes)
   renderSections();
   if (callback) callback(null);
@@ -2628,34 +2716,44 @@ function saveLessonFromEditor() {
     if (editingLessonIdx !== null && sec.lessons[editingLessonIdx]) {
       lessonData.id = sec.lessons[editingLessonIdx].id;
       lessonData.lessonDocId = sec.lessons[editingLessonIdx].lessonDocId || null;
-      sec.lessons[editingLessonIdx] = lessonData;
-    } else {
-      sec.lessons.push(lessonData);
     }
     var savedSectionIdx = editingDirectSectionIdx;  // capture before clearing
     var savedLessonId = lessonData.id;
+    // Place the lesson in the section immediately (heavy for now — the lesson
+    // doc sync below strips it from the main doc once the copy is confirmed).
+    sec.lessons = sec.lessons.filter(function(l) { return l.id !== savedLessonId; });
+    sec.lessons.push(lessonData);
     hideSubModal('lesson-editor-panel');
     editingDirectSectionIdx = null;
-    saveCurriculum(function(err) {
-      if (err) return;
-      // Phase 1: mirror heavy content to separate lesson doc
-      saveLessonDoc(lessonData, function(docErr, docId) {
-        if (docId) {
-          // Update the lessonDocId in the CURRENT sections array (not the potentially
-          // orphaned lessonData reference — onValueChange may have replaced sections)
-          var sec2 = sections[savedSectionIdx];
-          if (sec2 && sec2.lessons) {
-            for (var ul = 0; ul < sec2.lessons.length; ul++) {
-              if (sec2.lessons[ul].id === savedLessonId) {
-                sec2.lessons[ul].lessonDocId = docId;
-                break;
-              }
-            }
-          }
-          // Re-save main doc with the lessonDocId reference
-          saveCurriculum();
+
+    if (!canUseLessonDocs()) {
+      saveCurriculum();
+      tool.notify('⚠️ Lesson doc storage unavailable — lesson content stays in the main document.', 'warning');
+      tool.notify('Lesson saved! ✅', 'success');
+      return;
+    }
+
+    saveLessonDoc(lessonData, function(docErr, docId) {
+      if (docId) lessonData.lessonDocId = docId;
+      if (docErr) {
+        // Keep heavy content in the main doc as fallback (already there).
+        tool.notify('⚠️ Lesson doc save failed — lesson content stays in the main document.', 'warning');
+      } else {
+        // Heavy content is now safe in the lesson doc — strip it from the main doc.
+        stripHeavyLessonFields(lessonData);
+      }
+      // Ensure the lesson is present in the CURRENT sections array
+      // (onValueChange may have replaced `sections` during the async call).
+      var secNow = sections[savedSectionIdx];
+      if (secNow) {
+        if (!secNow.lessons) secNow.lessons = [];
+        var found = false;
+        for (var f = 0; f < secNow.lessons.length; f++) {
+          if (secNow.lessons[f].id === savedLessonId) { found = true; break; }
         }
-      });
+        if (!found) secNow.lessons.push(lessonData);
+      }
+      saveCurriculum();
       tool.notify('Lesson saved! ✅', 'success');
     });
     return;
@@ -2672,17 +2770,22 @@ function saveLessonFromEditor() {
 
   hideSubModal('lesson-editor-panel');
   renderLessonsEditorList();
-  // Phase 1: mirror heavy content to separate lesson doc (fire-and-forget)
+
+  if (!canUseLessonDocs()) {
+    tool.notify('⚠️ Lesson doc storage unavailable — lesson content stays in the main document.', 'warning');
+    tool.notify('Lesson saved! ✅', 'success');
+    return;
+  }
+
+  // Mirror heavy content to the lesson doc; once confirmed, strip it from
+  // the main-doc copy so the main curriculum document stays under 1MB.
   saveLessonDoc(lessonData, function(docErr, docId) {
-    if (docId && !lessonData.lessonDocId) {
-      lessonData.lessonDocId = docId;
-      // Update the lesson in editingLessons with the doc ID
-      for (var ui = 0; ui < editingLessons.length; ui++) {
-        if (editingLessons[ui].id === lessonData.id) {
-          editingLessons[ui].lessonDocId = docId;
-          break;
-        }
-      }
+    if (docId) lessonData.lessonDocId = docId;
+    if (docErr) {
+      tool.notify('⚠️ Lesson doc save failed — lesson content stays in the main document.', 'warning');
+    } else {
+      stripHeavyLessonFields(lessonData);
+      renderLessonsEditorList();
     }
   });
   tool.notify('Lesson saved! ✅', 'success');
@@ -2781,14 +2884,22 @@ function autoSaveCurrentLesson() {
   targetLesson.htmlDocUrls = editingHtmlDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHtmlDocUrls)) : null;
   targetLesson.hiddenDocUrls = editingHiddenDocUrls.length > 0 ? JSON.parse(JSON.stringify(editingHiddenDocUrls)) : null;
 
-  // Persist to CMS (deep-clone sections to avoid reference issues)
-  tool.reportValid(true, '');
-  tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
-  // Phase 1: mirror heavy content to separate lesson doc (fire-and-forget)
+  // Mirror heavy content to the lesson doc, then strip it from the main-doc
+  // copy so the main curriculum document never approaches the 1MB Firestore
+  // limit. If lesson docs are unavailable or the write fails, the heavy
+  // content stays in the main document as a fallback.
+  if (!canUseLessonDocs()) {
+    tool.reportValid(true, '');
+    tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
+    requestParentSave();
+    updateAllVisToggles();
+    return;
+  }
   var autoSaveLessonId = targetLesson.id;
   saveLessonDoc(targetLesson, function(docErr, docId) {
     if (docId && !targetLesson.lessonDocId) {
-      // Find the lesson in the CURRENT sections array and update its lessonDocId
+      targetLesson.lessonDocId = docId;
+      // Update the lessonDocId on the CURRENT sections copy too
       for (var si = 0; si < sections.length; si++) {
         var slessons = sections[si].lessons;
         if (!slessons) continue;
@@ -2799,11 +2910,17 @@ function autoSaveCurrentLesson() {
           }
         }
       }
-      // Re-save main doc with the new lessonDocId reference
-      tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
     }
+    if (docErr) {
+      console.warn('autoSaveCurrentLesson: lesson doc save failed, heavy content kept in main doc:', docErr);
+    } else {
+      stripHeavyLessonFields(targetLesson);
+    }
+    tool.reportValid(true, '');
+    tool.setValue(JSON.parse(JSON.stringify({ sections: sections })));
+    requestParentSave();
+    updateAllVisToggles();
   });
-  updateAllVisToggles();
 }
 
 /* ── Direct Lesson Management (from main view, bypasses section modal) ── */
