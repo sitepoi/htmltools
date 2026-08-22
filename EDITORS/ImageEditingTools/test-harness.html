@@ -207,13 +207,14 @@ const EMBEDDED_HTML = `<div id="app">
       <!-- CONVERT -->
       <div class="iet-pane active" id="pane-convert">
         <h3 class="iet-pane-title">File type converter</h3>
-        <p class="iet-pane-hint">Opens any image the browser supports (JPG, PNG, GIF, WEBP, BMP, SVG, AVIF…) and saves it as PNG, JPEG or WebP. Animated GIFs keep their first frame.</p>
+        <p class="iet-pane-hint">Opens any image the browser supports (JPG, PNG, GIF, WEBP, BMP, SVG…) and saves it as PNG, JPEG, WebP or AVIF (where supported). Animated GIFs keep their first frame. HEIC (iPhone) files need a converter first — most browsers can't open them.</p>
         <div class="iet-field">
           <label for="cnv-format">Output format</label>
           <select id="cnv-format" class="iet-input">
             <option value="image/png">PNG — lossless, keeps transparency</option>
             <option value="image/jpeg" selected>JPEG — small files, no transparency</option>
             <option value="image/webp">WebP — small files, keeps transparency</option>
+            <option value="image/avif">AVIF — smallest (browser-dependent)</option>
           </select>
         </div>
         <div class="iet-field" id="cnv-quality-row">
@@ -235,6 +236,10 @@ const EMBEDDED_HTML = `<div id="app">
           <button id="cnv-html" class="iet-btn" type="button" title="Copy a ready-to-use HTML img snippet">&lt;img&gt; snippet</button>
           <button id="cnv-pdf" class="iet-btn" type="button" title="Export the image as a printable PDF (needs allowExportPdf)">🖨 PDF</button>
           <button id="cnv-gif" class="iet-btn" type="button" title="Open an animated GIF and extract any frame">🎞️ GIF frames</button>
+        </div>
+        <div class="iet-row iet-wrap">
+          <button id="cnv-save-proj" class="iet-btn" type="button" title="Download the whole edit session (image + steps + settings) as a JSON project">💾 Save project</button>
+          <button id="cnv-load-proj" class="iet-btn" type="button" title="Reopen a saved project JSON">📂 Load project</button>
         </div>
       </div>
 
@@ -482,6 +487,8 @@ const EMBEDDED_HTML = `<div id="app">
         </div>
         <div class="iet-row iet-wrap">
           <button id="flt-auto" class="iet-btn" type="button" title="Analyze the image and adjust brightness, contrast and color automatically">✨ Auto enhance</button>
+          <button id="flt-advice" class="iet-btn" type="button" title="Ask the AI for a per-photo enhancement recipe and apply it to the sliders">🩹 Enhance recipe</button>
+          <button id="flt-bg-guide" class="iet-btn" type="button" title="Get a step-by-step background removal plan for this image">🧹 BG removal guide</button>
         </div>
         <div class="iet-field">
           <label>Blur / pixelate an area</label>
@@ -795,6 +802,7 @@ const EMBEDDED_HTML = `<div id="app">
           </div>
         </div>
         <div class="iet-row">
+          <button id="col-ai" class="iet-btn" type="button" title="Ask the AI to propose a layout for your photos">✨ AI layout</button>
           <button id="col-build" class="iet-btn iet-btn-primary" type="button">🧩 Build collage</button>
         </div>
       </div>
@@ -830,6 +838,19 @@ const EMBEDDED_HTML = `<div id="app">
           <button id="ocr-save" class="iet-btn" type="button" title="Save the current result to history">💾 Save to history</button>
           <button id="ocr-csv" class="iet-btn" type="button" title="Detect tables/lists in the result and export CSV">📊 Table → CSV</button>
           <button id="ocr-tsv" class="iet-btn" type="button" title="Detect tables/lists and export TSV">📊 Table → TSV</button>
+          <button id="ocr-tr" class="iet-btn" type="button" title="Translate the extracted text with AI">🌐 Translate</button>
+        </div>
+        <div class="iet-field">
+          <label for="ocr-tr-lang">Translate to</label>
+          <select id="ocr-tr-lang" class="iet-input">
+            <option value="English" selected>English</option>
+            <option value="Turkish">Türkçe</option>
+            <option value="German">Deutsch</option>
+            <option value="French">Français</option>
+            <option value="Spanish">Español</option>
+            <option value="Arabic">العربية</option>
+            <option value="Russian">Русский</option>
+          </select>
         </div>
         <div class="iet-field">
           <label for="ocr-search">History (click to reopen)</label>
@@ -907,6 +928,7 @@ const EMBEDDED_HTML = `<div id="app">
   <input type="file" id="iet-logo-file" accept="image/*" hidden>
   <input type="file" id="iet-batch-file" accept="image/*" multiple hidden>
   <input type="file" id="iet-gif-file" accept="image/gif" hidden>
+  <input type="file" id="iet-project-file" accept=".json,application/json" hidden>
 </div>
 `; // END_EMBEDDED_HTML
 </script>
