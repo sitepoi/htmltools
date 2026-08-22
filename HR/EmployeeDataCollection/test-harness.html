@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payroll Employee Collector - Test Harness</title>
+<title>Employee Data Collection - Test Harness</title>
 <link rel="stylesheet" href="EmployeeDataCollection.css">
 <style>
 body { padding-top: 34px !important; margin: 0; }
@@ -21,7 +21,7 @@ body { padding-top: 34px !important; margin: 0; }
 </head>
 <body>
 <div id="th-bar">
-  <strong>TEST HARNESS - Canada Summer Jobs - Employee Data Collection</strong><span class="sep">|</span>
+  <strong>TEST HARNESS - Employee Data Collection</strong><span class="sep">|</span>
   <button class="btn-load" id="th-load-sample">Load Sample Data</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>
@@ -158,11 +158,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
     <!-- ── Header ── -->\
     <header class="pec-header">\
       <div class="pec-brand">\
-        <span class="pec-badge" id="pec-companyBadge">\
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="15" x2="15" y2="15"/></svg>\
-          <span id="pec-companyName">Canada Summer Jobs</span>\
-        </span>\
-        <h1>Canada Summer Jobs &mdash; <span class="pec-thin">Employee Data Collection</span></h1>\
+        <h1>Employee <span class="pec-thin">Data Collection</span></h1>\
       </div>\
       <div class="pec-header-msg">\
         <p>Please complete all sections below. Your information is used solely for payroll and HR purposes. Fields marked <span class="pec-required-star">*</span> are required.</p>\
@@ -187,6 +183,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
       <h2 class="pec-section-title">\
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>\
         Personal Information\
+        <span class="pec-section-status" data-section="personal"></span>\
       </h2>\
       <div class="pec-grid pec-grid-2">\
         <div class="pec-field">\
@@ -206,13 +203,19 @@ var EMBEDDED_HTML = '<!-- ══════════════════
           <input type="date" id="pec-startDate">\
         </div>\
       </div>\
-      <div class="pec-photo-id-upload">\
-        <p class="pec-section-hint">Upload a clear photo of your government-issued ID to verify your full legal name.</p>\
-        <button class="pec-btn pec-btn-outline pec-btn-sm" id="pec-uploadPhotoId">\
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>\
-          Upload Photo ID <span class="pec-required-star">*</span>\
-        </button>\
-        <span class="pec-photo-id-status" id="pec-photoIdStatus"></span>\
+      <div class="pec-template-row pending" id="pec-photoIdRow">\
+        <div class="pec-template-icon">\
+          <span class="pec-check-icon todo" id="pec-photoIdIcon">!</span>\
+        </div>\
+        <div class="pec-template-info">\
+          <div class="pec-template-name">Government-Issued Photo ID <span class="pec-required-star">*</span></div>\
+          <div class="pec-template-status-pending" id="pec-photoIdStatus"><span class="pec-status-pill wait">Pending upload</span></div>\
+        </div>\
+        <div class="pec-template-actions">\
+          <button class="pec-template-btn upload" id="pec-uploadPhotoId" title="Upload photo ID">Upload</button>\
+          <button class="pec-template-btn view" id="pec-photoIdView" data-open-url="#" style="display:none" title="Download uploaded photo ID">View</button>\
+          <button class="pec-template-btn remove" id="pec-photoIdRemove" data-remove="photoId" style="display:none" title="Remove uploaded photo ID">✕</button>\
+        </div>\
       </div>\
     </section>\
 \
@@ -223,6 +226,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
       <h2 class="pec-section-title">\
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>\
         Contact Information\
+        <span class="pec-section-status" data-section="contact"></span>\
       </h2>\
       <div class="pec-grid pec-grid-2">\
         <div class="pec-field pec-span-2">\
@@ -274,6 +278,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
       <h2 class="pec-section-title">\
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="22" height="18" rx="2"/><line x1="6" y1="8" x2="6" y2="8.01"/><line x1="10" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="10" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="6" y2="16.01"/><line x1="10" y1="16" x2="14" y2="16"/></svg>\
         Banking &amp; Direct Deposit\
+        <span class="pec-section-status" data-section="banking"></span>\
       </h2>\
       <p class="pec-section-hint">For payroll direct deposit. You can attach a void cheque below instead of filling this manually.</p>\
       <div class="pec-grid pec-grid-2">\
@@ -303,6 +308,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
       <h2 class="pec-section-title">\
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12l2 2 4-4"/></svg>\
         Documents &amp; Forms\
+        <span class="pec-section-status" data-section="documents"></span>\
       </h2>\
       <p class="pec-section-hint">Download each blank form, fill it out, sign it, and upload the completed version. Required forms are marked <span class="pec-required-star">*</span>.</p>\
       <div class="pec-doc-templates" id="pec-docTemplates">\
@@ -341,6 +347,7 @@ var EMBEDDED_HTML = '<!-- ══════════════════
       <h2 class="pec-section-title">\
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>\
         Additional Information\
+        <span class="pec-section-status" data-section="custom"></span>\
       </h2>\
       <div class="pec-grid pec-grid-2" id="pec-customFieldsGrid"></div>\
     </section>\

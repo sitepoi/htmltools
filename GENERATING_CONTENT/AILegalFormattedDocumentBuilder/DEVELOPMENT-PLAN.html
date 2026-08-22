@@ -112,7 +112,7 @@ footer { margin-top: 26px; font-size: 11px; color: var(--text3); text-align: cen
   </div>
 
   <div id="list"></div>
-  <footer>Development plan for AILegalFormattedDocumentBuilder · generated 2026-08-18 · Phase-1 (24 items) applied 2026-08-19 · statuses &amp; notes persist locally</footer>
+  <footer>Development plan for AILegalFormattedDocumentBuilder · generated 2026-08-18 · Phase-1 (24 items) + Phase-2 (24 items) applied 2026-08-19 · statuses &amp; notes persist locally</footer>
 </div>
 
 <script>
@@ -318,7 +318,15 @@ var DEFAULTS = {
     E3: 'Done', E5: 'Done',
     F1: 'Done', F2: 'Done', F3: 'Done', F4: 'Done',
     G1: 'Done', G2: 'Done', G4: 'Done',
-    H1: 'Done', H2: 'Done'
+    H1: 'Done', H2: 'Done',
+    A3: 'Done', A4: 'Done', A5: 'Done', A6: 'Done', A7: 'Done',
+    B5: 'Done', B6: 'Done', B7: 'Done',
+    C2: 'Done', C4: 'Done', C5: 'Done', C6: 'Done',
+    D1: 'Done', D3: 'Done', D4: 'Done',
+    E1: 'Done', E2: 'Done',
+    F5: 'Done', F6: 'Done',
+    G3: 'Done', G5: 'Done', G6: 'Done',
+    H3: 'Done', H4: 'Done'
   },
   notes: {
     A1: APPLIED_NOTE + ' — “🪄 Guided interview” button in the chat welcome panel and under the input; AI asks one question at a time, then drafts.',
@@ -344,7 +352,31 @@ var DEFAULTS = {
     G2: APPLIED_NOTE + ' — “🧪 Quality Lint” runs drafting checks (empty clauses, [placeholders], orphaned numbers…) with a “🔧 Fix with AI” action.',
     G4: APPLIED_NOTE + ' — Flesch readability per paragraph in Settings; one click asks the AI to simplify the hardest paragraphs.',
     H1: APPLIED_NOTE + ' — “💾 Staged” chip shows unsaved local changes and reminds to Save in the parent CMS record.',
-    H2: APPLIED_NOTE + ' — live storage meter in Settings showing KB used vs the 1 MB CMS budget.'
+    H2: APPLIED_NOTE + ' — live storage meter in Settings showing KB used vs the 1 MB CMS budget.',
+    A3: APPLIED_NOTE + ' — per-document-type requirement map (DOC_REQUIREMENTS); Settings → “🧩 Gap Analysis” lists missing essential clauses with a one-click AI fix.',
+    A4: APPLIED_NOTE + ' — “🧾 Plain language” button in chat rewrites the whole document (or the targeted block only) in plain modern language.',
+    A5: APPLIED_NOTE + ' — Settings → “🌍 Translate”: pick a language and the AI translates the whole document keeping blocks, numbering and formatting.',
+    A6: APPLIED_NOTE + ' — variant contract: the AI returns {"variants":[{"label","op"}]} and the tool renders pick-one chips in the chat; the chosen variant applies as a block op.',
+    A7: APPLIED_NOTE + ' — question mode: when a chat message ends with “?”, the prompt switches to answer-from-document-with-citations and forbids JSON/document changes.',
+    B5: APPLIED_NOTE + ' — Settings → “🔎 Find & Replace”: per-block match list with counts and a replace-all across every string field.',
+    B6: APPLIED_NOTE + ' — toolbar zoom 🔍−/🔍＋ (60%–200%, scales the preview pages) and ⛶ Focus mode that collapses the chat for a full-width document.',
+    B7: APPLIED_NOTE + ' — “📑 Nav” side panel listing sections/subsection/schedules/exhibits; click jumps to that block in the preview (scroll + flash outline).',
+    C2: APPLIED_NOTE + ' — 11 new components: non-compete, non-solicitation, IP assignment, GDPR/DPA, letter of intent, settlement agreement, software license, privacy policy, cookie policy, affidavit, deed (58 total).',
+    C4: APPLIED_NOTE + ' — “📑 Defined Terms” registry: terms from definitions blocks + “Term” means patterns, with usage counts and 📍 jump-to-first-use.',
+    C5: APPLIED_NOTE + ' — “📌 My Clauses”: save any block (💾 in the Outline), insert it at the end of the document, delete — persisted in the record (max 20).',
+    C6: APPLIED_NOTE + ' — “📇 Party Contact Book” in localStorage (shared across your documents on this device): save parties from the document, re-use via the AI.',
+    D1: APPLIED_NOTE + ' — block comments: 💬 per block in the Outline drawer with author/time, resolve/reopen, delete; persisted in the record.',
+    D3: APPLIED_NOTE + ' — approval workflow: Draft → In Review → Approved select in Settings, toolbar status chip, change log, approving is role-gated (admin/manager/editor).',
+    D4: APPLIED_NOTE + ' — “📧 Send for Signature”: emails the standalone HTML document as an attachment via tool.requestSendEmail (graceful fallback when unavailable).',
+    E1: APPLIED_NOTE + ' — “📤 Upload file…” imports .docx/.pdf/.txt/.md: requestUpload → requestFileContent → AI conversion into blocks JSON.',
+    E2: APPLIED_NOTE + ' — smart paste in edit mode: Word clipboard HTML is cleaned (mso styles/classes/unsafe tags stripped) before insertion.',
+    F5: APPLIED_NOTE + ' — “📝 Download .md” exports the document as Markdown (headings, clauses, lists, tables, signatures).',
+    F6: APPLIED_NOTE + ' — “🕘 Version History”: snapshots after AI edits/manual saves/imports (max 8), side-by-side block diff, restore.',
+    G3: APPLIED_NOTE + ' — per-type rules injected into AI prompts (typeRulesBlock) and checked after every change; “📏 Type Rules” checklist in Settings.',
+    G5: APPLIED_NOTE + ' — “🚨 Risk review” asks the AI to review from each party’s perspective and flag one-sided clauses (also the /risk macro).',
+    G6: APPLIED_NOTE + ' — “♿ Accessibility” checks: contrast ratio, title presence, heading order, missing img alt, font size.',
+    H3: APPLIED_NOTE + ' — “💬 Export chat transcript” downloads the full conversation as Markdown.',
+    H4: APPLIED_NOTE + ' — prompt macros: /addsign /plain /formal /fixvars /number /risk /summary /translate — chips above the input + Settings list; extra context after the command is appended.'
   }
 };
 var state = { statuses: {}, notes: {} };

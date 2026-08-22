@@ -507,6 +507,30 @@ body {
 .manager-lessons-table tr:hover td { background: #f8fafc; }
 .table-actions { display: flex; gap: 4px; }
 
+/* ── Media chips (lesson list Media column) ── */
+.media-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: 8px; padding: 2px 8px 2px 3px; margin: 1px 6px 1px 0;
+  white-space: nowrap; vertical-align: middle;
+}
+.media-chip:hover { border-color: var(--primary); background: #eef2ff; }
+.media-chip-icon {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 16px; line-height: 1; padding: 2px 3px;
+}
+.media-chip-badge {
+  position: absolute; top: -6px; right: -6px;
+  min-width: 14px; height: 14px; padding: 0 3px;
+  border-radius: 8px; background: #4f46e5; color: #fff;
+  font-size: 9px; font-weight: 700; line-height: 14px; text-align: center;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+.media-chip-label {
+  font-size: 10px; font-weight: 600; color: #64748b; letter-spacing: 0.2px;
+}
+.media-chip:hover .media-chip-label { color: #3730a3; }
+
 /* ── Lessons Editor (in modal) ── */
 .lessons-editor-header {
   display: flex; align-items: center; justify-content: space-between;

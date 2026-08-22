@@ -1,0 +1,149 @@
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">✈️</div>
+      <div class="header-title">
+        <h1>Travel Planner</h1>
+        <span class="header-sub">Chat-driven • Describe your trip and the AI builds the full plan</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="tp-badge" id="tp-day-badge" title="Number of planned days">0 days</span>
+      <span class="tp-badge" id="tp-budget-badge" title="Trip budget" style="display:none"></span>
+      <span class="version-badge" id="tool-version" title="Plan version">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-goto-export" title="Export or share the travel plan">📥 Export</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Plan (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">✈️</div>
+              <h3>Where are we going?</h3>
+              <p>Tell me about your trip — <b>destination, dates, who's traveling, budget and style</b> — and I'll plan it day by day: stays, transport, activities, meals, packing list, budget and more.</p>
+              <div class="welcome-hints">
+                <button class="hint-chip" data-hint="Plan a 7-day family trip to Istanbul for 4 (kids 6 and 9), mid budget, with kid-friendly activities and a Bosphorus boat day.">👨‍👩‍👧‍👦 Family city trip</button>
+                <button class="hint-chip" data-hint="3-day solo city break in Paris, foodie style, hotel near Le Marais, one full day for museums and one for walking neighborhoods.">🎒 Solo city break</button>
+                <button class="hint-chip" data-hint="5-day friends roadtrip along the California coast from Los Angeles to San Francisco, surf stops, coastal hikes and local food.">🚗 Friends roadtrip</button>
+                <button class="hint-chip" data-hint="10-day Japan trip for 2 with a rail pass: Tokyo, Kyoto and Osaka, budget style, temples, street food and day trips.">🗾 Couple adventure</button>
+              </div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> After the plan is built you can say <b>"add a beach day"</b>, <b>"change day 2 to more museums"</b>, <b>"make it cheaper"</b> or <b>"add a packing list"</b> — I'll only change what you asked.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-target-chip" id="chat-target-chip" style="display:none">
+          <span>🎯 <b id="chat-target-label">Day</b> — the next AI message edits only this day</span>
+          <button id="btn-target-clear" title="Clear target">✕</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your trip or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Plan Panel -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="itinerary">🗺️ Itinerary</button>
+        <button class="ctab" data-tab="essentials">🧳 Essentials</button>
+        <button class="ctab" data-tab="export">📦 Export</button>
+      </div>
+
+      <div class="content-editors">
+        <!-- Itinerary: trip header + day cards -->
+        <div class="content-editor active" id="editor-itinerary">
+          <div class="trip-toolbar">
+            <input class="trip-title-input" id="trip-title-input" placeholder="Trip title…" title="Trip title (editable)">
+            <span class="trip-meta-line" id="trip-meta-line"></span>
+            <button class="btn btn-sm btn-outline" id="btn-add-day" title="Add a blank day at the end">+ Day</button>
+            <button class="btn btn-sm btn-ghost" id="btn-export-quick" title="Go to Export">📥</button>
+          </div>
+          <div class="itinerary-scroll" id="itinerary-scroll">
+            <div class="itinerary-empty" id="itinerary-empty">
+              <div class="empty-icon">🗺️</div>
+              <p>Your travel plan will appear here</p>
+              <p class="empty-sub">Describe your trip in the chat on the left to generate the first days</p>
+            </div>
+            <div class="days-wrap" id="days-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Essentials: sections (packing, budget, documents…) -->
+        <div class="content-editor" id="editor-essentials">
+          <div class="essentials-toolbar">
+            <h2>🧳 Essentials</h2>
+            <p class="essentials-hint">Packing lists, budget breakdown, documents, local tips, phrases, emergency info, flights and key places — all generated by the AI. Ask for them in the chat, e.g. <b>"add a packing list"</b> or <b>"show the budget breakdown"</b>.</p>
+          </div>
+          <div class="essentials-scroll" id="essentials-scroll">
+            <div class="essentials-empty" id="essentials-empty">
+              <div class="empty-icon">🧳</div>
+              <p>No extras yet</p>
+              <p class="empty-sub">Ask the AI for a packing list, budget breakdown, documents checklist, local tips, key phrases, emergency info or flights</p>
+            </div>
+            <div class="sections-grid" id="sections-grid"></div>
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="content-editor" id="editor-export">
+          <div class="export-scroll">
+            <div class="export-header">
+              <h2>📦 Export &amp; share</h2>
+              <p>Everything below works without leaving the tool. The PDF is created from a print-ready page — use your browser's <b>Print → Save as PDF</b>.</p>
+            </div>
+            <div class="export-row">
+              <button class="btn btn-outline" id="btn-export-copy-json">📋 Copy Plan JSON</button>
+              <button class="btn btn-outline" id="btn-export-download-json">📥 Download .json</button>
+              <button class="btn btn-primary" id="btn-export-pdf">🖨️ Print / PDF</button>
+              <button class="btn btn-outline" id="btn-export-copy-text">📄 Copy text itinerary</button>
+              <button class="btn btn-outline" id="btn-export-email">✉️ Email plan</button>
+            </div>
+            <div class="export-info" id="export-info"></div>
+            <div class="import-box">
+              <label class="import-label" for="import-json">Import plan (replaces the current plan)</label>
+              <textarea class="import-textarea" id="import-json" rows="8" spellcheck="false" placeholder='Paste a plan JSON here: {"title":"…","days":[…],"sections":[…]}'></textarea>
+              <div class="import-actions"><button class="btn btn-outline btn-sm" id="btn-import-json">📥 Import</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirm-overlay" style="display:none">
+    <div class="confirm-box">
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Yes</button>
+      </div>
+    </div>
+  </div>
+</div>

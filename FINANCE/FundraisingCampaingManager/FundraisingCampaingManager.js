@@ -66,6 +66,45 @@ var pendingImportRows = null;
 var pendingPasteRows = null;
 var AVATAR_COLORS = ['#2563eb','#7c3aed','#16a34a','#d97706','#0d9488','#dc2626','#ea580c','#8b5cf6','#059669','#c2410c'];
 
+/* ── FULLSCREEN (real browser fullscreen — hides CMS chrome) ── */
+function isFullscreenActive() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+function syncFullscreenBtn() {
+  var b = el('btn-fullscreen');
+  if (!b) return;
+  b.innerHTML = isFullscreenActive() ? '⤡' : '⛶';
+  b.title = isFullscreenActive() ? 'Exit fullscreen (Ctrl+Shift+F)' : 'Fullscreen — hides CMS header (Ctrl+Shift+F)';
+}
+
+function toggleFullscreen() {
+  if (isFullscreenActive()) {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+    else if (document.msExitFullscreen) document.msExitFullscreen();
+    return;
+  }
+  var root = document.documentElement;
+  var started = false;
+  try {
+    if (root.requestFullscreen) {
+      started = true;
+      var p = root.requestFullscreen();
+      if (p && typeof p.catch === 'function') p.catch(function () { fullscreenBlocked(); });
+    } else if (root.webkitRequestFullscreen) { started = true; root.webkitRequestFullscreen(); }
+    else if (root.mozRequestFullScreen) { started = true; root.mozRequestFullScreen(); }
+    else if (root.msRequestFullscreen) { started = true; root.msRequestFullscreen(); }
+  } catch (e) { started = false; }
+  if (!started) fullscreenBlocked();
+}
+
+function fullscreenBlocked() {
+  tool.notify('Fullscreen not allowed in this embed — opening the tool in a new tab instead', 'info');
+  try { tool.openUrl(window.location.href); } catch (e) {}
+}
+
 /* ── LIVE SYNC (cross-session updates) ──
    Other instances of this tool call tool.setValue() → the CMS fires
    tool.onValueChange() here. We re-render and flash a LIVE indicator. */
@@ -687,6 +726,12 @@ function bindEvents() {
   el('btn-view-dashboard').addEventListener('click', function () { switchView('dashboard'); });
   el('btn-view-manage').addEventListener('click', function () { switchView('manage'); });
 
+  // Fullscreen (real browser fullscreen — covers the CMS header too)
+  el('btn-fullscreen').addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', syncFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenBtn);
+  syncFullscreenBtn();
+
   el('btn-add-donation').addEventListener('click', openAddModal);
   el('btn-set-target').addEventListener('click', showTargetEditor);
   el('btn-import').addEventListener('click', openImport);
@@ -795,6 +840,11 @@ function bindEvents() {
     if (e.key === 'V' && e.ctrlKey && e.shiftKey) {
       e.preventDefault();
       switchView(currentView === 'dashboard' ? 'manage' : 'dashboard');
+    }
+    // Ctrl+Shift+F = toggle fullscreen
+    if (e.key === 'F' && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      toggleFullscreen();
     }
   });
 

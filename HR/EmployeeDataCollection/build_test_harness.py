@@ -21,7 +21,7 @@ harness = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Payroll Employee Collector - Test Harness</title>
+<title>Employee Data Collection - Test Harness</title>
 <link rel="stylesheet" href="EmployeeDataCollection.css">
 <style>
 body { padding-top: 34px !important; margin: 0; }
@@ -39,7 +39,7 @@ body { padding-top: 34px !important; margin: 0; }
 </head>
 <body>
 <div id="th-bar">
-  <strong>TEST HARNESS - Canada Summer Jobs - Employee Data Collection</strong><span class="sep">|</span>
+  <strong>TEST HARNESS - Employee Data Collection</strong><span class="sep">|</span>
   <button class="btn-load" id="th-load-sample">Load Sample Data</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>

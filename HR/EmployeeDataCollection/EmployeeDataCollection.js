@@ -273,10 +273,7 @@
     renderStatusBanner();
     updateProgress();
     updateSINLabel();
-
-    // Company name
-    var cnEl = $("#pec-companyName");
-    if (cnEl) cnEl.textContent = getCompanyName() + " — Employee Data Collection";
+    updateSectionBadges();
 
     // Employee ident (from user info)
     updateEmployeeIdent();
@@ -350,6 +347,66 @@
     var label = $("#pec-progressLabel");
     if (fill) fill.style.width = pct + "%";
     if (label) label.textContent = pct + "% complete";
+  }
+
+  /* ---- Per-section completion badges ---- */
+  function sectionComplete(key) {
+    var td = DB.documents.templateDocs || {};
+    function hasDoc(id) { return td[id] && td[id].url; }
+    switch (key) {
+      case "personal":
+        return !!(DB.personal.fullName.trim() &&
+                  DB.personal.sin.trim() &&
+                  DB.personal.dob &&
+                  DB.personal.startDate &&
+                  DB.documents.photoId && DB.documents.photoId.url);
+      case "contact":
+        return !!(DB.contact.address.trim() &&
+                  DB.contact.city.trim() &&
+                  DB.contact.province.trim() &&
+                  DB.contact.phone.trim() &&
+                  DB.contact.email.trim() &&
+                  DB.contact.emergencyContact.trim() &&
+                  DB.contact.emergencyPhone.trim());
+      case "banking":
+        var bankFilled = !!(DB.banking.bankName.trim() &&
+                            DB.banking.transitNumber.trim() &&
+                            DB.banking.institutionNumber.trim() &&
+                            DB.banking.accountNumber.trim());
+        var ddTemplateUploaded = getDocumentTemplates().some(function (t) {
+          return (t.category === "Banking" || t.name.indexOf("Direct Deposit") > -1) && hasDoc(t.id);
+        });
+        return bankFilled || ddTemplateUploaded;
+      case "documents":
+        var required = getDocumentTemplates().filter(function (t) { return t.required; });
+        if (required.length === 0) return true;
+        return required.every(function (t) { return hasDoc(t.id); });
+      case "custom":
+        var reqCustom = getCustomFields().filter(function (f) { return f.required; });
+        if (reqCustom.length === 0) return true;
+        return reqCustom.every(function (f) {
+          var v = DB.customFields ? DB.customFields[f.id] : undefined;
+          return v !== undefined && v !== null && v !== "" && v !== false;
+        });
+      default:
+        return true;
+    }
+  }
+
+  function updateSectionBadges() {
+    var badges = $$(".pec-section-status");
+    badges.forEach(function (b) {
+      var key = b.getAttribute("data-section");
+      if (key === "custom") {
+        var section = $("#sec-customFields");
+        var hidden = section && (section.style.display === "none" || section.offsetParent === null);
+        if (hidden) { b.style.display = "none"; return; }
+        b.style.display = "";
+      }
+      var ok = sectionComplete(key);
+      b.className = "pec-section-status " + (ok ? "complete" : "incomplete");
+      b.textContent = ok ? "✓ Complete" : "Incomplete";
+    });
   }
 
   /* ---- Status banner ---- */
@@ -434,17 +491,39 @@
   /* ── Document Rendering ── */
 
   function renderPhotoIdStatus() {
-    var el = $("#pec-photoIdStatus");
-    if (!el) return;
+    var row = $("#pec-photoIdRow");
+    if (!row) return;
     var doc = DB.documents.photoId;
-    if (doc && doc.url) {
-      el.innerHTML = '<span style="color:var(--pec-green)">✅ Uploaded: </span>' +
-        '<button class="pec-link-btn" data-open-url="' + esc(doc.url) + '">' + esc(doc.name) + '</button> ' +
-        '<span style="font-size:11px;color:#888">(' + fmtSize(doc.size) + ')</span> ' +
-        '<button class="pec-doc-btn danger" data-remove="photoId">✕</button>';
-    } else {
-      el.innerHTML = '<span style="color:var(--pec-red-soft);font-size:12px">⚠ Not uploaded — required to verify your identity</span>';
+    var isUploaded = !!(doc && doc.url);
+
+    row.className = "pec-template-row " + (isUploaded ? "uploaded" : "pending");
+
+    var icon = $("#pec-photoIdIcon");
+    if (icon) {
+      icon.className = "pec-check-icon " + (isUploaded ? "done" : "todo");
+      icon.textContent = isUploaded ? "✓" : "!";
     }
+
+    var status = $("#pec-photoIdStatus");
+    if (status) {
+      if (isUploaded) {
+        status.className = "pec-template-status-ok";
+        status.innerHTML = '<span class="pec-status-pill ok">Uploaded</span> ' + esc(doc.name) + ' (' + fmtSize(doc.size) + ')';
+      } else {
+        status.className = "pec-template-status-pending";
+        status.innerHTML = '<span class="pec-status-pill wait">Pending upload</span>';
+      }
+    }
+
+    var uploadBtn = $("#pec-uploadPhotoId");
+    var viewBtn = $("#pec-photoIdView");
+    var removeBtn = $("#pec-photoIdRemove");
+    if (uploadBtn) uploadBtn.style.display = (!readOnly && !isUploaded) ? "" : "none";
+    if (viewBtn) {
+      viewBtn.style.display = (!readOnly && isUploaded) ? "" : "none";
+      if (doc && doc.url) viewBtn.setAttribute("data-open-url", doc.url);
+    }
+    if (removeBtn) removeBtn.style.display = (!readOnly && isUploaded) ? "" : "none";
   }
 
   /* ── Document Templates (config-driven) ── */
@@ -473,28 +552,33 @@
         var uploadedDoc = DB.documents.templateDocs && DB.documents.templateDocs[dt.id];
         var isUploaded = uploadedDoc && uploadedDoc.url;
 
-        html += '<div class="pec-template-row">';
+        html += '<div class="pec-template-row ' + (isUploaded ? 'uploaded' : 'pending') + '">';
         html += '<div class="pec-template-icon">';
         html += isUploaded
           ? '<span class="pec-check-icon done">✓</span>'
-          : '<span class="pec-check-icon todo">○</span>';
+          : '<span class="pec-check-icon todo">!</span>';
         html += '</div>';
         html += '<div class="pec-template-info">';
         html += '<div class="pec-template-name">' + esc(dt.name);
         if (dt.required) html += ' <span class="pec-required-star">*</span>';
         html += '</div>';
         if (isUploaded) {
-          html += '<div class="pec-template-status-ok">✅ ' + esc(uploadedDoc.name) + ' (' + fmtSize(uploadedDoc.size) + ')</div>';
+          html += '<div class="pec-template-status-ok"><span class="pec-status-pill ok">Uploaded</span> ' + esc(uploadedDoc.name) + ' (' + fmtSize(uploadedDoc.size) + ')</div>';
         } else {
-          html += '<div class="pec-template-status-pending">Not yet uploaded</div>';
+          html += '<div class="pec-template-status-pending"><span class="pec-status-pill wait">Pending upload</span></div>';
         }
         html += '</div>';
         if (!readOnly) {
+          var hasTemplate = dt.templateUrl && dt.templateUrl !== "#";
           html += '<div class="pec-template-actions">';
-          html += '<button class="pec-template-link download" data-open-url="' + esc(dt.templateUrl || "#") + '">📄 Download empty template</button>';
+          if (hasTemplate) {
+            html += '<button class="pec-template-btn download" data-open-url="' + esc(dt.templateUrl) + '" title="Download empty template">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+              'Template</button>';
+          }
           if (isUploaded) {
-            html += '<button class="pec-template-btn view" data-open-url="' + esc(uploadedDoc.url) + '">View</button>';
-            html += '<button class="pec-template-btn remove" data-remove-template="' + esc(dt.id) + '">✕</button>';
+            html += '<button class="pec-template-btn view" data-open-url="' + esc(uploadedDoc.url) + '" title="Download filled / uploaded document">View</button>';
+            html += '<button class="pec-template-btn remove" data-remove-template="' + esc(dt.id) + '" title="Remove uploaded document">✕</button>';
           } else {
             html += '<button class="pec-template-btn upload" data-upload-template="' + esc(dt.id) + '" data-accept="' + esc(dt.accept) + '">Upload</button>';
           }
@@ -589,6 +673,38 @@
 
   /* ── Upload Helpers ── */
 
+  /* Friendly file naming: "Person Full Name - Document Label.ext" */
+  function currentEmployeeName() {
+    var n = (DB && DB.personal && DB.personal.fullName) ? DB.personal.fullName.trim() : "";
+    if (!n) {
+      try {
+        var u = tool.getUser();
+        if (u && u.name) n = u.name;
+      } catch (e) {}
+    }
+    return n || "Employee";
+  }
+
+  function friendlyFileName(label, originalName) {
+    var person = String(currentEmployeeName())
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9 .'-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    var cleanLabel = String(label || "Document")
+      .replace(/[\\/:*?"<>|]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    var ext = "";
+    if (originalName && originalName.indexOf(".") > -1) {
+      var parts = originalName.split(".");
+      var cand = parts.pop();
+      if (cand && /^[a-zA-Z0-9]{1,6}$/.test(cand)) ext = "." + cand.toLowerCase();
+    }
+    return (person + " - " + cleanLabel + ext).substring(0, 180);
+  }
+
   function doUpload(accept, callback) {
     if (typeof tool.requestUpload !== "function") {
       notify("File upload is not available. The CMS admin must enable allowUpload in tool params.", "warning");
@@ -608,9 +724,11 @@
   function uploadAndStorePhotoId() {
     doUpload(".jpg,.jpeg,.png,.pdf", function (err, file) {
       if (err) return;
+      var friendly = friendlyFileName("Photo ID", file.name);
       DB.documents.photoId = {
         id: genDocId(),
-        name: file.name,
+        name: friendly,
+        originalName: file.name,
         url: file.url,
         size: file.size,
         type: file.type,
@@ -619,7 +737,7 @@
       readForm();
       persist();
       writeForm();
-      notify("Photo ID uploaded: " + file.name, "success");
+      notify("Photo ID uploaded: " + friendly, "success");
       resize();
     });
   }
@@ -627,10 +745,16 @@
   function uploadTemplateDoc(templateId, accept) {
     doUpload(accept, function (err, file) {
       if (err) return;
+      var label = "Document";
+      getDocumentTemplates().forEach(function (t) {
+        if (t.id === templateId) label = t.name;
+      });
+      var friendly = friendlyFileName(label, file.name);
       if (!DB.documents.templateDocs) DB.documents.templateDocs = {};
       DB.documents.templateDocs[templateId] = {
         id: genDocId(),
-        name: file.name,
+        name: friendly,
+        originalName: file.name,
         url: file.url,
         size: file.size,
         type: file.type,
@@ -638,7 +762,7 @@
       };
       persist();
       writeForm();
-      notify("Document uploaded: " + file.name, "success");
+      notify("Document uploaded: " + friendly, "success");
       resize();
     });
   }
@@ -646,9 +770,11 @@
   function uploadPersonalAgreementDoc() {
     doUpload(".pdf,.docx,.jpg,.jpeg,.png", function (err, file) {
       if (err) return;
+      var friendly = friendlyFileName("Personal Agreement", file.name);
       var docEntry = {
         id: genDocId(),
-        name: file.name,
+        name: friendly,
+        originalName: file.name,
         url: file.url,
         size: file.size,
         type: file.type,
@@ -659,7 +785,7 @@
       DB.documents.personalAgreements.push(docEntry);
       persist();
       writeForm();
-      notify("Agreement uploaded: " + file.name, "success");
+      notify("Agreement uploaded: " + friendly, "success");
       resize();
     });
   }
@@ -667,9 +793,11 @@
   function uploadOtherDocument() {
     doUpload(".pdf,.docx,.jpg,.jpeg,.png,.txt,.csv,.xlsx", function (err, file) {
       if (err) return;
+      var friendly = friendlyFileName("Other Document", file.name);
       var docEntry = {
         id: genDocId(),
-        name: file.name,
+        name: friendly,
+        originalName: file.name,
         url: file.url,
         size: file.size,
         type: file.type,
@@ -679,7 +807,7 @@
       DB.documents.otherDocs.push(docEntry);
       persist();
       writeForm();
-      notify("Document uploaded: " + file.name, "success");
+      notify("Document uploaded: " + friendly, "success");
       resize();
     });
   }

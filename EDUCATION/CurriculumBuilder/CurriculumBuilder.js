@@ -97,7 +97,55 @@ function hasHeavyLessonFields(les) {
   return false;
 }
 
+/** Count items in a value that can be an array or a JSON-string array */
+function countList(val) {
+  if (!val) return 0;
+  if (Array.isArray(val)) return val.length;
+  if (typeof val === 'string') {
+    try {
+      var parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed.length : 0;
+    } catch (e) { return val.length > 0 ? 1 : 0; }
+  }
+  return 0;
+}
+
+/** Count quiz questions in either array or JSON-string form */
+function countQuizQuestions(quiz) {
+  return countList(quiz);
+}
+
+/** Count flashcards in either array or JSON-string form */
+function countFlashcards(flashcards) {
+  return countList(flashcards);
+}
+
+/** True when a lesson has real (non-empty) notes/rich text content */
+function hasLessonNotes(les) {
+  return !!(les.content && String(les.content).replace(/<[^>]*>/g, '').trim());
+}
+
+/** True when a lesson has generated study content (htmlCode / studyHtmlData) */
+function hasLessonStudyContent(les) {
+  return !!((les.htmlCode && String(les.htmlCode).length > 20) ||
+            (les.studyHtmlData && String(les.studyHtmlData).length > 20));
+}
+
+/** Compute and set lightweight summary fields so the main doc's lesson list
+ *  can show quiz/media counts even after heavy fields are stripped. */
+function writeLessonSummaryFields(les) {
+  les.quizCount = countQuizQuestions(les.quiz);
+  les.flashcardCount = countFlashcards(les.flashcards);
+  les.sourceUrlCount = countList(les.sourceUrls);
+  les.hasNotes = hasLessonNotes(les);
+  les.hasStudyContent = hasLessonStudyContent(les);
+  les.hasPresentation = !!(les.presentationHtml && String(les.presentationHtml).length > 20);
+  return les;
+}
+
 function stripHeavyLessonFields(les) {
+  // Persist lightweight summary fields before removing the heavy originals.
+  writeLessonSummaryFields(les);
   for (var i = 0; i < HEAVY_LESSON_FIELDS.length; i++) {
     delete les[HEAVY_LESSON_FIELDS[i]];
   }
@@ -154,6 +202,57 @@ function migrateLessonsToDocsIfNeeded() {
   }
 }
 
+/** One-time-per-page-load backfill: lessons stripped by the PRE-summary
+ *  migration have no quizCount/flashcardCount/etc. in the main doc, so the
+ *  list can't show counts. Read each such lesson's doc and persist the
+ *  summary fields. Failed reads are skipped (retried on next load). */
+function backfillLessonSummariesIfNeeded() {
+  if (window._summariesBackfilledOnce) return;
+  if (!canUseLessonDocs()) { window._summariesBackfilledOnce = true; return; }
+  if (tool.isReadOnly && tool.isReadOnly()) return; // retry when editable
+  var work = [];
+  for (var si = 0; si < sections.length; si++) {
+    var lessons = sections[si].lessons || [];
+    for (var li = 0; li < lessons.length; li++) {
+      var les = lessons[li];
+      if (les.lessonDocId && les.quizCount === undefined) work.push({ si: si, li: li, id: les.id });
+    }
+  }
+  if (work.length === 0) { window._summariesBackfilledOnce = true; return; }
+  window._summariesBackfilledOnce = true;
+  console.log('[CurriculumBuilder] backfilling summary fields for ' + work.length + ' lesson(s)...');
+
+  var remaining = work.length;
+  var changed = false;
+  for (var w = 0; w < work.length; w++) {
+    (function(wk) {
+      var sec = sections[wk.si];
+      var current = sec && sec.lessons ? sec.lessons[wk.li] : null;
+      if (!current || current.id !== wk.id || !current.lessonDocId) {
+        remaining--;
+        if (remaining === 0 && changed) saveCurriculum();
+        return;
+      }
+      loadLessonDoc(current, function(err, merged) {
+        remaining--;
+        if (!err && merged) {
+          // Summaries come from doc data; heavy fields are already safe in
+          // the doc, so strip them from the main-doc copy too.
+          writeLessonSummaryFields(merged);
+          stripHeavyLessonFields(merged);
+          var secNow = sections[wk.si];
+          if (secNow && secNow.lessons && secNow.lessons[wk.li] && secNow.lessons[wk.li].id === wk.id) {
+            secNow.lessons[wk.li] = merged;
+            changed = true;
+          }
+        }
+        // On failure leave summary fields unset so the next load retries.
+        if (remaining === 0 && changed) saveCurriculum();
+      });
+    })(work[w]);
+  }
+}
+
 /** Create or update a lesson doc. Returns lessonDocId via callback. */
 function saveLessonDoc(lessonObj, callback) {
   if (!canUseLessonDocs()) {
@@ -203,7 +302,7 @@ function loadLessonDoc(lessonObj, callback) {
     if (err || !result || !result.object) {
       // Fall back to data in the main doc
       console.warn('Lesson doc load failed, using main doc data:', err);
-      if (callback) callback(null, lessonObj);
+      if (callback) callback(err || new Error('lesson doc not found'), lessonObj);
       return;
     }
     try {
@@ -223,7 +322,7 @@ function loadLessonDoc(lessonObj, callback) {
       if (callback) callback(null, merged);
     } catch(e) {
       console.warn('Lesson doc parse error, using main doc data:', e);
-      if (callback) callback(null, lessonObj);
+      if (callback) callback(e, lessonObj);
     }
   });
 }
@@ -239,27 +338,69 @@ function deleteLessonDoc(lessonDocId) {
   });
 }
 
-/** Open a lesson doc in the CMS object viewer (new tab) */
+/** True only when the current user has the 'developer' role.
+ *  Admin alone does NOT qualify — the Firestore doc link is developer-only. */
+function isDeveloper() {
+  try {
+    var user = tool.getUser();
+    var roles = (user && user.roles) ? user.roles.map(function(r) { return String(r).toLowerCase(); }) : [];
+    return roles.indexOf('developer') !== -1;
+  } catch (e) { return false; }
+}
+
+/** Resolve the tenant CMS origin for doc links. The tool runs in a sandboxed
+ *  iframe where window.location.origin is 'null', so the link must start with
+ *  the tenant subdomain of the parent CMS page instead:
+ *  1. window.location.ancestorOrigins[0] (the top-level CMS origin)
+ *  2. document.referrer origin
+ *  3. explicit tenantBaseUrl parameter */
+function getTenantOrigin() {
+  try {
+    if (window.location && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+      return window.location.ancestorOrigins[0].replace(/\/+$/, '');
+    }
+  } catch (e) { /* ignore */ }
+  try {
+    var ref = document.referrer;
+    if (ref) {
+      var m = ref.match(/^(https?:\/\/[^/]+)/i);
+      if (m) return m[1];
+    }
+  } catch (e) { /* ignore */ }
+  var fallback = tool.param('tenantBaseUrl', '');
+  if (fallback) return fallback.replace(/\/+$/, '');
+  return '';
+}
+
+/** Open a lesson's Firestore document in the CMS viewer (new tab).
+ *  The URL starts with the tenant subdomain origin, not this iframe's origin. */
 function openLessonDocUrl(lessonDocId) {
   if (!lessonDocId) return;
+  var origin = getTenantOrigin();
+  if (!origin) {
+    tool.notify('Could not determine the tenant URL. Set the "tenantBaseUrl" parameter.', 'warning');
+    return;
+  }
   var template = tool.param('lessonDocUrlTemplate', '');
   var url;
   if (template) {
-    url = template.replace('__ID__', lessonDocId).replace('__TYPE__', LESSON_DOC_TYPE).replace('__ORIGIN__', window.location.origin);
+    url = template.replace('__ID__', lessonDocId).replace('__TYPE__', LESSON_DOC_TYPE).replace('__ORIGIN__', origin);
   } else {
-    // Default: CMS admin object viewer
-    url = window.location.origin + '/admin/objects/' + LESSON_DOC_TYPE + '/' + lessonDocId;
+    // Default: CMS Firestore object viewer for the lesson doc
+    url = origin + '/admin/objects/' + LESSON_DOC_TYPE + '/' + lessonDocId;
   }
   tool.openUrl(url);
 }
 
-/** Show/hide the 📄 lesson doc link in the editor heading */
+/** Show/hide the 📄 lesson doc link in the editor heading (developer only) */
 function updateLessonEditorDocLink(lessonObj) {
   var heading = el('lesson-editor-heading');
   if (!heading) return;
   // Remove existing link if any
   var existing = heading.querySelector('.lesson-doc-link');
   if (existing) existing.remove();
+  // Developer role only — admins without the developer role don't see the link
+  if (!isDeveloper()) return;
   // Add link if lesson has a doc ID
   var docId = lessonObj && lessonObj.lessonDocId;
   if (docId) {
@@ -2227,6 +2368,38 @@ function hasLessonVideo(les) {
   return les.youtubeUrls && Array.isArray(les.youtubeUrls) && les.youtubeUrls.length > 0;
 }
 
+/** Build the Media column for a lesson row: labeled icon chips with a count
+ *  badge on the icon's edge, so it's easy to see exactly what is inside. */
+function buildMediaSummary(les) {
+  var chips = [];
+  function chip(icon, count, label) {
+    var badge = (count === null || count === undefined) ? '' : '<span class="media-chip-badge">' + count + '</span>';
+    return '<span class="media-chip" title="' + label + (count ? ': ' + count : '') + '">' +
+      '<span class="media-chip-icon">' + icon + badge + '</span>' +
+      '<span class="media-chip-label">' + label + '</span></span>';
+  }
+  var videoCount = (les.youtubeUrls && Array.isArray(les.youtubeUrls)) ? les.youtubeUrls.length : 0;
+  if (videoCount > 0) chips.push(chip('🎬', videoCount, 'Videos'));
+  var presCount = countList(les.presentationPdfUrls);
+  if (presCount > 0) chips.push(chip('📊', presCount, 'Slides'));
+  var studyCount = countList(les.studyDocPdfUrls);
+  if (studyCount > 0) chips.push(chip('📖', studyCount, 'Docs'));
+  var wsCount = countList(les.worksheetPdfUrls);
+  if (wsCount > 0) chips.push(chip('📝', wsCount, 'Sheets'));
+  var akCount = countList(les.answerKeyPdfUrls);
+  if (akCount > 0) chips.push(chip('🔑', akCount, 'Keys'));
+  var hdCount = countList(les.htmlDocUrls);
+  if (hdCount > 0) chips.push(chip('🌐', hdCount, 'Web'));
+  if (les.hasStudyContent || hasLessonStudyContent(les)) chips.push(chip('🧠', null, 'Study'));
+  if (les.hasPresentation || (les.presentationHtml && String(les.presentationHtml).length > 20)) chips.push(chip('🎞️', null, 'Pres.'));
+  var fcCount = les.flashcardCount || countFlashcards(les.flashcards);
+  if (fcCount > 0) chips.push(chip('🃏', fcCount, 'Cards'));
+  if (les.hasNotes || hasLessonNotes(les)) chips.push(chip('📄', null, 'Notes'));
+  var srcCount = les.sourceUrlCount || countList(les.sourceUrls);
+  if (srcCount > 0) chips.push(chip('🔗', srcCount, 'Links'));
+  return chips.length ? chips.join('') : '—';
+}
+
 /* ── URL Transform: Storage → Hosting proxy (same fix as the Student tool) ──
    Firebase Storage download URLs aren't reliably readable cross-origin.
    The Cloud Function at /files/** streams the file server-side with proper
@@ -2301,8 +2474,13 @@ function loadCurriculum(val) {
   renderSections();
   tool.resize();
   // One-time per page load: move legacy heavy content out of the main doc
-  // into lesson docs (fixes the Firestore 1MB limit error on the main doc).
-  setTimeout(function() { migrateLessonsToDocsIfNeeded(); }, 50);
+  // into lesson docs (fixes the Firestore 1MB limit error on the main doc),
+  // then backfill list summary counts for lessons stripped before summary
+  // fields existed (they have no quizCount in the main doc).
+  setTimeout(function() {
+    migrateLessonsToDocsIfNeeded();
+    setTimeout(function() { backfillLessonSummariesIfNeeded(); }, 800);
+  }, 50);
 }
 
 /** Ask the parent form to commit the record to Firestore now (if the CMS
@@ -2391,13 +2569,10 @@ function renderSections() {
           '<table class="manager-lessons-table"><thead><tr><th>#</th><th>Lesson</th><th>Min</th><th>Media</th><th>Quiz</th><th>Actions</th></tr></thead><tbody>' +
           lessonsSorted.map(function(les, li) {
             var lesRealIdx = (s.lessons || []).indexOf(les);
-            var media = (hasLessonVideo(les)?'🎬':'') + (les.presentationPdfUrls&&les.presentationPdfUrls.length?'📊':'') + (les.studyDocPdfUrls&&les.studyDocPdfUrls.length?'📖':'') + (les.worksheetPdfUrls&&les.worksheetPdfUrls.length?'📝':'') || '—';
-            var studyHtmlIndicator = (les.htmlCode && les.htmlCode.length > 20) ? '<span title="Study Content generated">🌐</span>' : '';
-            var flashcardIndicator = (les.flashcards && (Array.isArray(les.flashcards) ? les.flashcards.length : (typeof les.flashcards === 'string' && les.flashcards.length > 10)) ? '<span title="Flashcards generated">🃏</span>' : '');
-            var quizIndicator = (les.quiz && les.quiz.length ? '✅ ' + les.quiz.length + ' Q' : '—');
-            var extraMedia = [studyHtmlIndicator, flashcardIndicator].filter(Boolean).join('');
-            if (extraMedia) media = (media === '—' ? '' : media + ' ') + extraMedia;
-            var docLinkBtn = les.lessonDocId ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
+            var media = buildMediaSummary(les);
+            var quizCount = les.quizCount || countQuizQuestions(les.quiz);
+            var quizIndicator = quizCount > 0 ? '✅ ' + quizCount + ' Q' : '—';
+            var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
             return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
               '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les-sec="' + realIdx + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les-sec="' + realIdx + ':' + lesRealIdx + '">🗑</button></div></td></tr>';
           }).join('') + '</tbody></table>'
@@ -2550,7 +2725,7 @@ function renderLessonsEditorList() {
             (les.presentationPdfUrls && les.presentationPdfUrls.length ? ' · 📊' : '') +
             (les.studyDocPdfUrls && les.studyDocPdfUrls.length ? ' · 📖' : '') +
             (les.worksheetPdfUrls && les.worksheetPdfUrls.length ? ' · 📝' : '') +
-            (les.quiz && les.quiz.length ? ' · 📝 Quiz' : '') +
+            ((les.quizCount || countQuizQuestions(les.quiz)) > 0 ? ' · 📝 ' + (les.quizCount || countQuizQuestions(les.quiz)) + ' Q' : '') +
           '</div>' +
         '</div>' +
         '<div class="lesson-editor-item-actions">' +
@@ -4397,7 +4572,8 @@ tool.onReady(function(val, fields) {
   tool.declareParams([
     { name: 'builderObjectId', label: 'contentId (for display)', type: 'text', default: '', severity: 'goodToHave', hint: 'Optional: set to this CMS object\'s contentId. Displays in header for copying to the Student tool\'s curriculumSourceId.' },
     { name: 'managerRole', label: 'Manager Role(s)', type: 'text', default: 'admin,editor', severity: 'goodToHave', hint: 'Comma-separated roles that can manage the curriculum.' },
-    { name: 'lessonDocUrlTemplate', label: 'Lesson Doc URL Template', type: 'text', default: '', severity: 'optional', hint: 'URL template for opening lesson Firestore docs. Use __ID__ for lessonDocId, __TYPE__ for object type, __ORIGIN__ for current origin. Leave empty for default CMS object viewer URL.' }
+    { name: 'lessonDocUrlTemplate', label: 'Lesson Doc URL Template', type: 'text', default: '', severity: 'optional', hint: 'URL template for opening lesson Firestore docs. Use __ID__ for lessonDocId, __TYPE__ for object type, __ORIGIN__ for the tenant subdomain origin (auto-detected). Leave empty for the default: <tenant origin>/admin/objects/<type>/<id>.' },
+    { name: 'tenantBaseUrl', label: 'Tenant Base URL', type: 'text', default: '', severity: 'optional', hint: 'Optional fallback for doc links when the tenant subdomain cannot be auto-detected from the parent page. Example: https://yourtenant.uniconbase.com' }
   ]);
 
   updateIdBadge();

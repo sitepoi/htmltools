@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TravelPlanner — Test Harness</title>
+<link rel="stylesheet" href="TravelPlanner.css">
+<style>
+  /* Harness-only chrome */
+  body { margin: 0; padding: 0; }
+  #th-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px; background: #0f172a; color: #e2e8f0; font: 12px system-ui, sans-serif;
+  }
+  #th-bar button {
+    padding: 5px 10px; border: 1px solid #4c4a63; background: #2a2740; color: #e2e8f0;
+    border-radius: 6px; cursor: pointer; font: 11px system-ui, sans-serif;
+  }
+  #th-bar button:hover { background: #3a3657; }
+  #th-status { margin-left: auto; color: #a5a0b8; font-size: 11px; }
+  #th-dump-wrap { display: none; background: #0f172a; color: #7dd3fc; padding: 10px; max-height: 200px; overflow: auto; }
+  #th-dump { font: 11px Consolas, monospace; white-space: pre-wrap; margin: 0; }
+  .tool-host { height: calc(100vh - 52px); overflow: hidden; }
+  .tool-host #app { height: 100%; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TravelPlanner</strong>
+  <button id="th-load-sample">Load sample trip</button>
+  <button id="th-toggle-ro">Toggle read-only</button>
+  <button id="th-dump-btn">Dump saved value</button>
+  <button id="th-clear">Clear all</button>
+  <button id="th-reload">Reload</button>
+  <span id="th-status">Ready</span>
+</div>
+<div id="th-dump-wrap"><pre id="th-dump"></pre></div>
+<div class="tool-host">
+
+<!-- TOOL HTML INLINED -->
+<div id="app">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-logo">✈️</div>
+      <div class="header-title">
+        <h1>Travel Planner</h1>
+        <span class="header-sub">Chat-driven • Describe your trip and the AI builds the full plan</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="tp-badge" id="tp-day-badge" title="Number of planned days">0 days</span>
+      <span class="tp-badge" id="tp-budget-badge" title="Trip budget" style="display:none"></span>
+      <span class="version-badge" id="tool-version" title="Plan version">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-goto-export" title="Export or share the travel plan">📥 Export</button>
+    </div>
+  </header>
+
+  <!-- MAIN LAYOUT: Chat (left) + Plan (right) -->
+  <div class="main-layout">
+    <!-- LEFT: Chat Panel -->
+    <aside class="chat-panel" id="chat-panel">
+      <div class="chat-tab-bar" id="chat-tab-bar">
+        <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
+        <button class="chat-tab" data-chat-tab="history">📋 Chats</button>
+        <span class="chat-status-dot" id="chat-conn-status" title="AI Connection"></span>
+        <span class="chat-panel-badge" id="chat-msg-count">0</span>
+        <button class="btn btn-sm btn-ghost" id="btn-new-session" title="New Chat Session" style="margin-left:auto;font-size:14px;padding:2px 6px">+</button>
+      </div>
+
+      <div class="chat-tab-content" id="chat-tab-content">
+        <!-- Tab: Chat -->
+        <div class="chat-tab-panel active" data-chat-panel="chat">
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">✈️</div>
+              <h3>Where are we going?</h3>
+              <p>Tell me about your trip — <b>destination, dates, who's traveling, budget and style</b> — and I'll plan it day by day: stays, transport, activities, meals, packing list, budget and more.</p>
+              <div class="welcome-hints">
+                <button class="hint-chip" data-hint="Plan a 7-day family trip to Istanbul for 4 (kids 6 and 9), mid budget, with kid-friendly activities and a Bosphorus boat day.">👨‍👩‍👧‍👦 Family city trip</button>
+                <button class="hint-chip" data-hint="3-day solo city break in Paris, foodie style, hotel near Le Marais, one full day for museums and one for walking neighborhoods.">🎒 Solo city break</button>
+                <button class="hint-chip" data-hint="5-day friends roadtrip along the California coast from Los Angeles to San Francisco, surf stops, coastal hikes and local food.">🚗 Friends roadtrip</button>
+                <button class="hint-chip" data-hint="10-day Japan trip for 2 with a rail pass: Tokyo, Kyoto and Osaka, budget style, temples, street food and day trips.">🗾 Couple adventure</button>
+              </div>
+              <p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> After the plan is built you can say <b>"add a beach day"</b>, <b>"change day 2 to more museums"</b>, <b>"make it cheaper"</b> or <b>"add a packing list"</b> — I'll only change what you asked.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Tab: Chat History -->
+        <div class="chat-tab-panel" data-chat-panel="history">
+          <div class="session-list" id="session-list">
+            <div class="session-empty">Loading chats…</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="chat-target-chip" id="chat-target-chip" style="display:none">
+          <span>🎯 <b id="chat-target-label">Day</b> — the next AI message edits only this day</span>
+          <button id="btn-target-clear" title="Clear target">✕</button>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chat-input" class="chat-input" rows="2" placeholder="Describe your trip or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
+          <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: Plan Panel -->
+    <main class="content-panel" id="content-panel">
+      <div class="content-tabs" id="content-tabs">
+        <button class="ctab active" data-tab="itinerary">🗺️ Itinerary</button>
+        <button class="ctab" data-tab="essentials">🧳 Essentials</button>
+        <button class="ctab" data-tab="export">📦 Export</button>
+      </div>
+
+      <div class="content-editors">
+        <!-- Itinerary: trip header + day cards -->
+        <div class="content-editor active" id="editor-itinerary">
+          <div class="trip-toolbar">
+            <input class="trip-title-input" id="trip-title-input" placeholder="Trip title…" title="Trip title (editable)">
+            <span class="trip-meta-line" id="trip-meta-line"></span>
+            <button class="btn btn-sm btn-outline" id="btn-add-day" title="Add a blank day at the end">+ Day</button>
+            <button class="btn btn-sm btn-ghost" id="btn-export-quick" title="Go to Export">📥</button>
+          </div>
+          <div class="itinerary-scroll" id="itinerary-scroll">
+            <div class="itinerary-empty" id="itinerary-empty">
+              <div class="empty-icon">🗺️</div>
+              <p>Your travel plan will appear here</p>
+              <p class="empty-sub">Describe your trip in the chat on the left to generate the first days</p>
+            </div>
+            <div class="days-wrap" id="days-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Essentials: sections (packing, budget, documents…) -->
+        <div class="content-editor" id="editor-essentials">
+          <div class="essentials-toolbar">
+            <h2>🧳 Essentials</h2>
+            <p class="essentials-hint">Packing lists, budget breakdown, documents, local tips, phrases, emergency info, flights and key places — all generated by the AI. Ask for them in the chat, e.g. <b>"add a packing list"</b> or <b>"show the budget breakdown"</b>.</p>
+          </div>
+          <div class="essentials-scroll" id="essentials-scroll">
+            <div class="essentials-empty" id="essentials-empty">
+              <div class="empty-icon">🧳</div>
+              <p>No extras yet</p>
+              <p class="empty-sub">Ask the AI for a packing list, budget breakdown, documents checklist, local tips, key phrases, emergency info or flights</p>
+            </div>
+            <div class="sections-grid" id="sections-grid"></div>
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="content-editor" id="editor-export">
+          <div class="export-scroll">
+            <div class="export-header">
+              <h2>📦 Export &amp; share</h2>
+              <p>Everything below works without leaving the tool. The PDF is created from a print-ready page — use your browser's <b>Print → Save as PDF</b>.</p>
+            </div>
+            <div class="export-row">
+              <button class="btn btn-outline" id="btn-export-copy-json">📋 Copy Plan JSON</button>
+              <button class="btn btn-outline" id="btn-export-download-json">📥 Download .json</button>
+              <button class="btn btn-primary" id="btn-export-pdf">🖨️ Print / PDF</button>
+              <button class="btn btn-outline" id="btn-export-copy-text">📄 Copy text itinerary</button>
+              <button class="btn btn-outline" id="btn-export-email">✉️ Email plan</button>
+            </div>
+            <div class="export-info" id="export-info"></div>
+            <div class="import-box">
+              <label class="import-label" for="import-json">Import plan (replaces the current plan)</label>
+              <textarea class="import-textarea" id="import-json" rows="8" spellcheck="false" placeholder='Paste a plan JSON here: {"title":"…","days":[…],"sections":[…]}'></textarea>
+              <div class="import-actions"><button class="btn btn-outline btn-sm" id="btn-import-json">📥 Import</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- CONFIRM DIALOG -->
+  <div class="confirm-overlay" id="confirm-overlay" style="display:none">
+    <div class="confirm-box">
+      <div class="confirm-message" id="confirm-message"></div>
+      <div class="confirm-actions">
+        <button class="btn btn-outline" id="btn-confirm-no">Cancel</button>
+        <button class="btn btn-danger" id="btn-confirm-yes">Yes</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /TOOL HTML INLINED -->
+
+</div>
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var STORAGE_KEY = 'travelplanner_test_db';
+  var SESSION_KEY = 'travelplanner_test_sessions';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'u-test', name: 'Test User', email: 'test@example.com', roles: ['developer'] };
+  var _fields = {};
+  var _value = null;
+  function load() { try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; } catch (e) { _value = null; } }
+  function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(_value)); } catch (e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch (e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, _fields); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return _fields; },
+    setField: function(id, val) { _fields[id] = val; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function() {},
+    onFieldsChange: function() {},
+    param: function(name, def) {
+      if (name === 'allowAi') return 'yes';
+      if (name === 'allowExportPdf') return 'yes';
+      if (name === 'allowSendEmail') return 'yes';
+      if (name === 'defaultCurrency') return 'USD';
+      return def;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return [{ id: 'u1', name: 'Alice' }, { id: 'u2', name: 'Bob' }]; },
+    onPermittedUsersChange: function() {},
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
+    resize: function() {},
+    openUrl: function(url) { console.log('OPEN URL:', url); window.open(url, '_blank'); },
+    openObjectDetail: function() {},
+    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 160)); },
+    declareParams: function(p) { console.log('declareParams:', p.length, 'params'); },
+    reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
+    requestAI: function(prompt, context, callback) {
+      console.log('AI REQUEST (batch) — prompt length:', prompt.length);
+      setTimeout(function() { callback(null, generateMockResponse(prompt)); }, 900);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      console.log('AI REQUEST (stream) — prompt length:', prompt.length);
+      var full = generateMockResponse(prompt);
+      var pos = 0;
+      var step = Math.max(8, Math.floor(full.length / 50));
+      var timer = setInterval(function() {
+        var chunk = full.substring(pos, pos + step);
+        pos += step;
+        if (chunk) callbacks.onToken(chunk);
+        if (pos >= full.length) {
+          clearInterval(timer);
+          callbacks.onComplete(full);
+        }
+      }, 20);
+    },
+    requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'guide.pdf', url: 'https://example.com/guide.pdf', size: 2048, type: 'application/pdf' }); }, 400); },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
+    requestObjects: function(action, params, cb) {
+      function loadSess() { try { var raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSess(arr) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(arr)); } catch (e) {} }
+      setTimeout(function() {
+        if (action === 'query') {
+          cb(null, { objects: loadSess() });
+        } else if (action === 'create') {
+          var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'New Chat', _parentObjectId: 'mock-parent', productData: params.productData };
+          var arr = loadSess();
+          arr.unshift(obj);
+          saveSess(arr);
+          cb(null, { object: obj });
+        } else if (action === 'update') {
+          var arr2 = loadSess();
+          for (var si = 0; si < arr2.length; si++) {
+            if (arr2[si].id === params.objectId) {
+              if (params.name) arr2[si].name = params.name;
+              if (params.productData) {
+                arr2[si].productData = arr2[si].productData || {};
+                var oldDcb = arr2[si].productData.data_categoriesBased || {};
+                var newDcb = params.productData.data_categoriesBased || {};
+                arr2[si].productData.data_categoriesBased = Object.assign({}, oldDcb, newDcb);
+              }
+              break;
+            }
+          }
+          saveSess(arr2);
+          cb(null, { ok: true });
+        } else if (action === 'delete') {
+          var arr3 = loadSess().filter(function(s) { return s.id !== params.objectId; });
+          saveSess(arr3);
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 200);
+    },
+    requestExportPdf: function(opts, cb) { setTimeout(function() { cb(null, { name: (opts.filename || 'export') + '.html', url: 'https://example.com/export.html', size: 8192, type: 'text/html' }); }, 500); },
+    requestSendEmail: function(opts, cb) { console.log('SEND EMAIL to:', opts.to, 'subject:', opts.subject); setTimeout(function() { cb(null, { ok: true }); }, 500); }
+  };
+
+  function SAMPLE_PLAN() {
+    return {
+      title: 'Istanbul Family Week',
+      destination: 'Istanbul',
+      country: 'Türkiye',
+      startDate: '2026-09-14',
+      endDate: '2026-09-20',
+      travelers: { type: 'family', count: 4, names: ['Mina', 'Ali', 'Zeynep', 'Emre'], notes: 'kids 6 and 9' },
+      budget: { total: 2400, currency: 'EUR' },
+      style: 'mixed',
+      days: [
+        { day: 1, date: '2026-09-14', title: 'Arrival & Sultanahmet', components: [
+          { type: 'transport', data: { mode: 'flight', from: 'Berlin', to: 'Istanbul (IST)', departure: '09:10', arrival: '13:20', ref: 'TK1724', cost: 420, booking: 'Turkish Airlines', notes: 'Family check-in, one checked bag each' } },
+          { type: 'transport', data: { mode: 'taxi', from: 'IST Airport', to: 'Sultanahmet hotel', departure: '13:45', cost: 35, notes: 'Use the official taxi rank' } },
+          { type: 'stay', data: { name: 'Sultan Hostel & Guesthouse', type: 'hotel', checkIn: '15:00', address: 'Sultanahmet', cost: 520, rating: 4, notes: 'Family room, breakfast included' } },
+          { type: 'meal', data: { meal: 'dinner', name: 'Pide & kebab', place: 'Sultanahmet Köftecisi', cuisine: 'Turkish', cost: 30, kidFriendly: true } },
+          { type: 'activity', data: { title: 'Evening walk — Blue Mosque courtyard', time: '19:30', duration: '1 h', location: 'Sultanahmet Square', cost: 0, tips: ['Dress modestly for the mosque'] } }
+        ] },
+        { day: 2, date: '2026-09-15', title: 'Old city classics', components: [
+          { type: 'meal', data: { meal: 'breakfast', name: 'Turkish breakfast', place: 'Hotel terrace', cost: 0, kidFriendly: true } },
+          { type: 'activity', data: { title: 'Hagia Sophia', time: '09:30', duration: '1.5 h', location: 'Sultanahmet', cost: 25, booking: 'Online timed ticket', tags: ['history', 'kids'], tips: ['Audio guide for kids'] } },
+          { type: 'activity', data: { title: 'Basilica Cistern', time: '11:30', duration: '1 h', cost: 22, tags: ['history'] } },
+          { type: 'meal', data: { meal: 'lunch', name: 'Lahmacun', place: 'Historical food street', cuisine: 'Turkish', cost: 20, kidFriendly: true } },
+          { type: 'activity', data: { title: 'Topkapı Palace', time: '14:00', duration: '2.5 h', cost: 36, tags: ['history', 'museum'], tips: ['Harem ticket extra — worth it'] } },
+          { type: 'meal', data: { meal: 'dinner', name: 'Grilled fish', place: 'Eminönü', cost: 40 } }
+        ] },
+        { day: 3, date: '2026-09-16', title: 'Bosphorus & bazaars', components: [
+          { type: 'activity', data: { title: 'Bosphorus ferry cruise', time: '10:00', duration: '2 h', location: 'Eminönü pier', cost: 28, booking: 'Public ferry Şehir Hatları', tags: ['kids', 'boat'], tips: ['Grab seats on the right side for Europe views'] } },
+          { type: 'meal', data: { meal: 'lunch', name: 'Fish sandwich (balık ekmek)', place: 'Eminönü boats', cost: 18, kidFriendly: true } },
+          { type: 'activity', data: { title: 'Grand Bazaar & Spice Bazaar', time: '14:00', duration: '2 h', cost: 0, tags: ['shopping'], tips: ['Bargain — start at half price'] } },
+          { type: 'freeTime', data: { title: 'Rest at hotel / play at Gülhane Park', duration: '2 h', suggestions: ['Ice cream at Gülhane', 'Playground near the palace'] } },
+          { type: 'meal', data: { meal: 'dinner', name: 'Meze platter', place: 'Karaköy', cuisine: 'Turkish', cost: 45 } }
+        ] }
+      ],
+      sections: [
+        { type: 'packing', data: { items: [
+          { name: 'Passports', category: 'Documents', essential: true },
+          { name: 'e-Visa printouts', category: 'Documents', essential: true, note: 'Turkey e-visa for 2 adults' },
+          { name: 'Comfortable walking shoes', category: 'Clothing', essential: true },
+          { name: 'Sun hats', category: 'Clothing', essential: true, note: 'Sunny in September' },
+          { name: 'Kid snacks for flights', category: 'Kids' },
+          { name: 'Power bank', category: 'Electronics' }
+        ] } },
+        { type: 'budget', data: { currency: 'EUR', items: [
+          { label: 'Flights (round trip)', amount: 1680, category: 'Transport' },
+          { label: 'Hotel 6 nights', amount: 520, category: 'Stay' },
+          { label: 'Food & drinks', amount: 350, category: 'Food' },
+          { label: 'Activities & tickets', amount: 250, category: 'Activities' },
+          { label: 'Local transport & taxis', amount: 100, category: 'Transport' },
+          { label: 'Buffer', amount: 200, category: 'Other' }
+        ], notes: 'Well under the 2400 EUR target.' } },
+        { type: 'documents', data: { items: [
+          { name: 'Passports (valid 6+ months)', status: 'ready' },
+          { name: 'e-Visa', status: 'ready', note: 'Apply at evisa.gov.tr' },
+          { name: 'Travel insurance', status: 'pending', note: 'Family policy' }
+        ] } },
+        { type: 'tips', data: { items: [
+          { title: 'Istanbulkart', text: 'One transit card for all ferries, trams and metro. Buy at any machine.' },
+          { title: 'Mosque etiquette', text: 'Headscarves for women, shoes off, no visits during prayer times.' },
+          { title: 'Tipping', text: '10% in restaurants is appreciated; taxi drivers do not expect tips.' }
+        ] } },
+        { type: 'phrases', data: { language: 'Turkish', items: [
+          { phrase: 'Merhaba', translation: 'Hello', phonetic: 'mehr-hah-bah' },
+          { phrase: 'Teşekkürler', translation: 'Thank you', phonetic: 'teh-shehk-kewr-lehr' },
+          { phrase: 'Ne kadar?', translation: 'How much?', phonetic: 'neh kah-dahr' }
+        ] } },
+        { type: 'emergency', data: { items: [
+          { title: 'General emergency', text: 'Police / ambulance / fire', phone: '112' },
+          { title: 'Tourist police', phone: '0212 527 4503' }
+        ] } },
+        { type: 'flights', data: { items: [
+          { direction: 'outbound', airline: 'Turkish Airlines', flightNo: 'TK1724', from: 'Berlin', to: 'Istanbul', departure: '2026-09-14 09:10', arrival: '2026-09-14 13:20', cost: 840, booking: 'TK1724' },
+          { direction: 'return', airline: 'Turkish Airlines', flightNo: 'TK1727', from: 'Istanbul', to: 'Berlin', departure: '2026-09-20 19:30', arrival: '2026-09-20 21:45', cost: 840, booking: 'TK1727' }
+        ] } },
+        { type: 'map', data: { points: [
+          { label: 'Hagia Sophia', lat: 41.0086, lng: 28.9802, note: 'Day 2 morning' },
+          { label: 'Eminönü ferry pier', lat: 41.0175, lng: 28.9733, note: 'Bosphorus cruise' },
+          { label: 'Grand Bazaar', lat: 41.0107, lng: 28.9679 }
+        ] } }
+      ]
+    };
+  }
+
+  function generateMockResponse(prompt) {
+    var req = '';
+    var m = /=== USER REQUEST ===\r?\n([\s\S]*?)(?:\r?\n\r?\n=== |\r?\n=== )/.exec(prompt);
+    if (m) req = m[1].trim();
+
+    if (prompt.indexOf('NO DAYS YET') !== -1) {
+      var plan = SAMPLE_PLAN();
+      return JSON.stringify({
+        plan: plan,
+        summary: 'Created a 3-day Istanbul family plan with stays, transport, activities, meals and all essentials (packing, budget, documents, tips, phrases, emergency, flights, map).',
+        suggestions: ['[[suggest_x]] add a day trip to the Princes Islands', '[[suggest_x]] add more kid-friendly meals to day 3', '[[suggest_x]] make the budget more detailed']
+      });
+    }
+
+    if (/edit|change|update|add|remove|replace|packing|budget|cheaper|move|delete|day/i.test(req)) {
+      return JSON.stringify({
+        patches: [
+          { op: 'meta', title: 'Istanbul Family Week', style: 'mixed' },
+          { op: 'upsertDay', day: { day: 4, date: '2026-09-17', title: 'Princes Islands day trip', components: [
+            { type: 'transport', data: { mode: 'ferry', from: 'Kadıköy', to: 'Büyükada', departure: '09:00', arrival: '10:20', cost: 12, notes: 'Frequent ferries' } },
+            { type: 'activity', data: { title: 'Bike tour around Büyükada', time: '11:00', duration: '2 h', cost: 15, tags: ['kids', 'outdoor'] } },
+            { type: 'meal', data: { meal: 'lunch', name: 'Seafood by the harbor', place: 'Büyükada', cost: 35, kidFriendly: true } },
+            { type: 'freeTime', data: { title: 'Beach time & ice cream', duration: '2 h' } }
+          ] } },
+          { op: 'section', type: 'tips', data: { items: [
+            { title: 'Ferry apps', text: 'Check sehirhatlari schedules the evening before.' },
+            { title: 'Island bikes', text: 'Rent bikes right at the pier — hills get steep past the square.' }
+          ] } }
+        ],
+        summary: 'Added a Princes Islands day trip (day 4) and refreshed the tips.',
+        suggestions: ['[[suggest_x]] add a Turkish bath evening', '[[suggest_x]] add a ferry schedule note to day 4']
+      });
+    }
+
+    return 'Here are a few ideas for your trip:\n\n• **Accommodation:** stay near the old town so you can walk to the highlights.\n• **Pace:** keep afternoons flexible for the kids.\n• **Food:** try a different regional dish each evening.\n\nTell me the destination and dates and I\'ll build the full day-by-day plan.\n\n[[suggest_x]] Plan a 4-day family trip to Rome\n[[suggest_x]] Plan a beach week in Antalya\n[[suggest_x]] Plan a weekend city break for 2';
+  }
+
+  window._toolMock = {
+    setReadOnly: function(ro) { _readOnly = ro; fire('readonlyChange', ro); },
+    getValue: function() { return _value; },
+    clear: function() {
+      _value = null;
+      save();
+      try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+      fire('valueChange', null);
+      location.reload();
+    }
+  };
+})();
+</script>
+
+<!-- TOOL JS -->
+<script src="TravelPlanner.js"></script>
+
+<!-- HARNESS CONTROLS -->
+<script>
+(function() {
+  var thStatus = document.getElementById('th-status');
+  function setStatus(t) { if (thStatus) thStatus.textContent = t; }
+
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool.setValue({
+      plan: window._samplePlanForHarness ? window._samplePlanForHarness() : null,
+      version: '1.0.0',
+      activeSessionId: '',
+      chatCache: { sessionId: '', messages: [] }
+    });
+    setStatus('Sample trip loaded.');
+  };
+  window._samplePlanForHarness = function() {
+    /* minimal re-declaration: reuse the mock's SAMPLE_PLAN via re-eval is not
+       reachable from here, so we grab a compact inline sample. */
+    return {
+      title: 'Istanbul Family Week',
+      destination: 'Istanbul', country: 'Türkiye',
+      startDate: '2026-09-14', endDate: '2026-09-20',
+      travelers: { type: 'family', count: 4, names: ['Mina', 'Ali', 'Zeynep', 'Emre'], notes: 'kids 6 and 9' },
+      budget: { total: 2400, currency: 'EUR' },
+      style: 'mixed',
+      days: [
+        { day: 1, date: '2026-09-14', title: 'Arrival & Sultanahmet', components: [
+          { type: 'transport', data: { mode: 'flight', from: 'Berlin', to: 'Istanbul (IST)', departure: '09:10', arrival: '13:20', ref: 'TK1724', cost: 420 } },
+          { type: 'stay', data: { name: 'Sultan Hostel & Guesthouse', type: 'hotel', checkIn: '15:00', cost: 520, rating: 4 } },
+          { type: 'meal', data: { meal: 'dinner', name: 'Pide & kebab', place: 'Sultanahmet Köftecisi', cuisine: 'Turkish', cost: 30, kidFriendly: true } }
+        ] },
+        { day: 2, date: '2026-09-15', title: 'Old city classics', components: [
+          { type: 'activity', data: { title: 'Hagia Sophia', time: '09:30', duration: '1.5 h', cost: 25, tags: ['history'] } },
+          { type: 'activity', data: { title: 'Topkapı Palace', time: '14:00', duration: '2.5 h', cost: 36 } },
+          { type: 'meal', data: { meal: 'dinner', name: 'Grilled fish', place: 'Eminönü', cost: 40 } }
+        ] }
+      ],
+      sections: [
+        { type: 'packing', data: { items: [
+          { name: 'Passports', category: 'Documents', essential: true },
+          { name: 'Comfortable walking shoes', category: 'Clothing', essential: true }
+        ] } },
+        { type: 'budget', data: { currency: 'EUR', items: [
+          { label: 'Flights', amount: 1680, category: 'Transport' },
+          { label: 'Hotel', amount: 520, category: 'Stay' }
+        ] } },
+        { type: 'phrases', data: { language: 'Turkish', items: [
+          { phrase: 'Merhaba', translation: 'Hello', phonetic: 'mehr-hah-bah' }
+        ] } },
+        { type: 'map', data: { points: [
+          { label: 'Hagia Sophia', lat: 41.0086, lng: 28.9802 }
+        ] } }
+      ]
+    };
+  };
+
+  document.getElementById('th-toggle-ro').onclick = function() {
+    window._toolMock.setReadOnly(!document.body.classList.contains('readonly'));
+    document.body.classList.toggle('readonly');
+    setStatus(document.body.classList.contains('readonly') ? 'READ-ONLY' : 'Ready');
+  };
+  document.getElementById('th-clear').onclick = function() {
+    if (confirm('Clear all test data?')) window._toolMock.clear();
+  };
+  document.getElementById('th-reload').onclick = function() { location.reload(); };
+
+  window.addEventListener('error', function(e) {
+    setStatus('⚠ JS error: ' + (e && e.message ? e.message : String(e)) + ' — see DevTools console.');
+    return false;
+  });
+
+  document.getElementById('th-dump-btn').onclick = function() {
+    var json = JSON.stringify(window._toolMock ? window._toolMock.getValue() : {}, null, 2);
+    console.log('=== DB (saved value) ===\n' + json);
+    var wrap = document.getElementById('th-dump-wrap');
+    var out = document.getElementById('th-dump');
+    if (wrap && out) {
+      out.textContent = json;
+      wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+    }
+  };
+})();
+</script>
+</body>
+</html>
