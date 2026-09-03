@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Görev Tanımı — Dış İlişkiler ve Fon Geliştirme Sorumlusu</title>
+<title>Görev Tanımı - Dış İlişkiler ve Fon Geliştirme Sorumlusu</title>
 <style>
   :root {
     --ink: #1a2433;
@@ -167,9 +167,41 @@
     padding-top: 14px;
   }
 
+  /* ---------- Editable form fields (printable) ---------- */
+  input.doc-field {
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+    padding: 0 2px 2px;
+    outline: none;
+  }
+  input.doc-field:hover { border-bottom-color: var(--muted); }
+  input.doc-field:focus {
+    border-bottom-color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 2px 2px 0 0;
+  }
+  input.doc-field::placeholder {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .sig-line input.doc-field { margin: 0 3px; }
+  .sig-line .doc-field-name { width: 150px; }
+  .sig-line .doc-field-date { width: 100px; }
+  .approval-note .doc-field-place { width: 170px; }
+  .approval-note .doc-field-date { width: 110px; }
+
   /* ---------- Print ---------- */
   @media print {
     body { background: #fff; }
+    input.doc-field {
+      background: transparent;
+      border-bottom: 1px solid #999;
+    }
     .page {
       margin: 0;
       border: none;
@@ -191,7 +223,7 @@
     <div class="org-name">CentreCanada Newcomer Services Society</div>
     <div class="doc-title">Görev Tanımı</div>
     <div class="doc-subtitle">Dış İlişkiler ve Fon Geliştirme Sorumlusu</div>
-    <div class="doc-eng">(External Relations &amp; Fund Development Officer — Outreach &amp; Fundraising)</div>
+    <div class="doc-eng">(External Relations &amp; Fund Development Officer - Outreach &amp; Fundraising)</div>
     <div class="doc-meta">
       Belge No: <span class="placeholder">JD-2026-01</span> |
       Yürürlük Tarihi: <span class="placeholder">15 Eylül 2026</span> |
@@ -204,17 +236,17 @@
     <p>
       <strong>Dış İlişkiler ve Fon Geliştirme Sorumlusu</strong>, CentreCanada Newcomer Services
       Society'nin dış ilişkilerinden ve fon kaynaklarının geliştirilmesinden sorumludur. Aşağıdaki
-      özet, pozisyonun kapsamının hızlı bir haritasıdır — eksik bir ana başlık olup olmadığı
+      özet, pozisyonun kapsamının hızlı bir haritasıdır - eksik bir ana başlık olup olmadığı
       buradan kolayca görülebilir.
     </p>
     <ul>
-      <li><strong>Diyalog ve Toplum İlişkileri</strong> — farklı topluluklar, toplum kesimleri ve liderleriyle tanışma; insani ilişki ve dostluk bağları kurma; tanışma / yemekli etkinlikler düzenleme.</li>
-      <li><strong>Dış İletişim ve Networking</strong> — kurumun dışarıyla olan tüm iletişimi; kurumun temsili, tanıtımı ve davetler.</li>
-      <li><strong>Fon Geliştirme</strong> — grant, fundraising ve bağış kampanyaları; fon kaynaklarının araştırılması ve başvuruların hazırlanması.</li>
-      <li><strong>Kurumsal Ortaklıklar</strong> — başka kurum ve işletmelerle sponsorluk, iş birliği ve partnerlik kurulması.</li>
-      <li><strong>Departmanlara Grant Desteği</strong> — diğer birimlerin işlerini anlayarak ihtiyaç duydukları grant başvurularının hazırlanması.</li>
-      <li><strong>E-posta Yönetimi ve Koordinasyon</strong> — gelen e-postaların ilgilisine göre yönetilmesi ve yönlendirilmesi; hiçbir talebin sahipsiz kalmaması; birimlerle uyum içinde çalışma.</li>
-      <li><strong>Gönüllü ve Ekip Yönetimi</strong> — gönüllü ekiplerle çalışma ve onları organize etme; gerektiğinde işe alınan çalışanları bu kapsamda yönetme.</li>
+      <li><strong>Diyalog ve Toplum İlişkileri</strong> - farklı topluluklar, toplum kesimleri ve liderleriyle tanışma; insani ilişki ve dostluk bağları kurma; tanışma / yemekli etkinlikler düzenleme.</li>
+      <li><strong>Dış İletişim ve Networking</strong> - kurumun dışarıyla olan tüm iletişimi; kurumun temsili, tanıtımı ve davetler.</li>
+      <li><strong>Fon Geliştirme</strong> - grant, fundraising ve bağış kampanyaları; fon kaynaklarının araştırılması ve başvuruların hazırlanması.</li>
+      <li><strong>Kurumsal Ortaklıklar</strong> - başka kurum ve işletmelerle sponsorluk, iş birliği ve partnerlik kurulması.</li>
+      <li><strong>Departmanlara Grant Desteği</strong> - diğer birimlerin işlerini anlayarak ihtiyaç duydukları grant başvurularının hazırlanması.</li>
+      <li><strong>E-posta Yönetimi ve Koordinasyon</strong> - gelen e-postaların ilgilisine göre yönetilmesi ve yönlendirilmesi; hiçbir talebin sahipsiz kalmaması; birimlerle uyum içinde çalışma.</li>
+      <li><strong>Gönüllü ve Ekip Yönetimi</strong> - bu görev tanımında anlatılan işlere destek veren gönüllülerle çalışma ve onları organize etme; ileride bu alandaki işler için işe alınabilecek ek personelin bu kapsamda koordinasyonu.</li>
     </ul>
     <div class="highlight-box">
       Bu görev tanımı, kurum ile çalışan arasındaki iş sözleşmesinin / anlaşmasının bir parçasını
@@ -244,7 +276,7 @@
 
     <h3>C. Fon Geliştirme (Grant ve Fundraising)</h3>
     <ul>
-      <li>CentreCanada'nın programlarına uygun <strong>fon kaynaklarını araştırmak</strong> (devlet programları, vakıflar, kurumsal/topluluk fonları — NHSP, United Way, Vancouver Foundation, Community Gaming Grants ve benzerleri).</li>
+      <li>CentreCanada'nın programlarına uygun <strong>fon kaynaklarını araştırmak</strong> (devlet programları, vakıflar, kurumsal/topluluk fonları - NHSP, United Way, Vancouver Foundation, Community Gaming Grants ve benzerleri).</li>
       <li><strong>Grant başvurularını ve niyet mektuplarını</strong> (letter of interest) hazırlamak, düzenlemek ve zamanında göndermek.</li>
       <li><strong>Fundraising etkinlikleri</strong> ve bağış (pledge) kampanyaları geliştirmek ve yönetmek.</li>
       <li>Grant son tarihlerini ve <strong>raporlama yükümlülüklerini</strong> takip etmek; alınan fonlar için ilerleme / sonuç raporları hazırlamak.</li>
@@ -274,10 +306,16 @@
     </ul>
 
     <h3>G. Gönüllü ve Ekip Yönetimi</h3>
+    <p>
+      Netlik açısından: bu başlık, bu görev tanımında anlatılan çalışmalarla ilgilidir.
+      Kastedilen, <strong>bu alandaki işlere destek veren gönüllüler</strong> ve ileride
+      <strong>bu kapsamda işe alınabilecek ek personeldir</strong>. Kurumun genelindeki tüm
+      gönüllülerin veya personelin yönetimi bu rolün sorumluluğunda değildir.
+    </p>
     <ul>
-      <li>Bu görevleri yürütürken <strong>öncelikle gönüllü (volunteer) ekiplerle çalışmak</strong> ve onları organize edip çalıştırmak.</li>
-      <li>Gönüllüler arasında görev dağılımı yapmak, onları yönlendirmek ve takip etmek.</li>
-      <li>Gerekirse işe alınan çalışanları da <strong>bu kapsamdaki işlerde yönetmek</strong>.</li>
+      <li>Bu görevleri yürütürken <strong>öncelikle bu alandaki gönüllü (volunteer) ekiplerle çalışmak</strong> ve onları organize edip çalıştırmak.</li>
+      <li>Bu gönüllüler arasında görev dağılımı yapmak, onları yönlendirmek ve takip etmek.</li>
+      <li>İleride bu alandaki işler için ek personel alınması durumunda, onların çalışmalarını da <strong>bu kapsamda koordine etmek ve yönlendirmek</strong>.</li>
       <li>Etkinlik ve kampanyalarda ekip üyeleriyle uyum içinde çalışmak.</li>
     </ul>
   </section>
@@ -298,7 +336,7 @@
       <li>Hiçbir talebin <strong>sahipsiz kalmamasını</strong> sağlamak ve yönlendirilen işleri takip etmek.</li>
       <li>Kurumun misyonunu, etkisini ve ihtiyaçlarını anlatan <strong>sunum ve materyaller</strong> hazırlamak.</li>
       <li>Grant başvurularının durumunu (gönderildi / beklemede / onaylandı / reddedildi) bir <strong>takip tablosunda</strong> güncel tutmak.</li>
-      <li>Öncelikle <strong>gönüllü ekiplerle çalışmak ve onları organize edip yönlendirmek</strong>; gerektiğinde işe alınan çalışanları bu kapsamdaki işlerde yönetmek; tüm departmanlarla uyum içinde çalışmak.</li>
+      <li>Öncelikle <strong>bu alandaki gönüllü ekiplerle çalışmak ve onları organize edip yönlendirmek</strong>; ileride bu kapsamda işe alınabilecek ek personelin çalışmalarını bu işlerde koordine etmek; tüm departmanlarla uyum içinde çalışmak.</li>
       <li>Fon ve outreach faaliyetleriyle ilgili <strong>yasal, etik ve şeffaflık</strong> gerekliliklerine uymak.</li>
     </ol>
   </section>
@@ -311,7 +349,7 @@
       <tr><td>Departman</td><td>Kurumsal İletişim / Development / Outreach</td></tr>
       <tr><td>Çalışma Şekli</td><td>Tam zamanlı, Kontratlı</td></tr>
       <tr><td>Çalışma Saatleri</td><td>Haftada 35–40 saat; etkinlikler için zaman zaman akşam / hafta sonu çalışma gerekebilir</td></tr>
-      <tr><td>Lokasyon / Seyahat</td><td>Ofisten — Burnaby / New Westminster, BC; gerektiğinde saha ve etkinlik ziyaretleri</td></tr>
+      <tr><td>Lokasyon / Seyahat</td><td>Ofisten - Burnaby / New Westminster, BC; gerektiğinde saha ve etkinlik ziyaretleri</td></tr>
       <tr><td>Ücret</td><td>Aylık 5.000 CAD</td></tr>
       <tr><td>Başlangıç Tarihi</td><td>15 Eylül 2026</td></tr>
       <tr><td>Süre</td><td>En az 2 yıl (belirli bir bitiş tarihi yoktur)</td></tr>
@@ -350,7 +388,7 @@
       <li>Grant ve fundraising faaliyetleriyle <strong>fon kaynaklarını geliştirmek</strong> ve hedeflere ulaşmak.</li>
       <li>Diğer departmanların grant başvurularını <strong>işlerini anlayarak ve zamanında</strong> hazırlamak.</li>
       <li>Dışarıdan gelen e-postaları doğru şekilde yönetmek ve <strong>hiçbir talebi sahipsiz bırakmamak</strong>.</li>
-      <li>Gönüllü ekipleri ve gerektiğinde çalışanları <strong>bu kapsamdaki işlerde etkili şekilde organize edip yönetmek</strong>.</li>
+      <li>Bu alandaki gönüllü ekipleri ve ileride bu kapsamda işe alınabilecek ek personeli <strong>etkili şekilde organize edip yönetmek</strong>.</li>
       <li>Haftalık ve aylık raporları <strong>zamanında ve doğru</strong> şekilde sunmak.</li>
       <li>Kurumun misyonunu ve değerlerini tüm etkileşimlerde <strong>sadakatle</strong> temsil etmek.</li>
     </ul>
@@ -367,15 +405,15 @@
 
     <div class="signature-block">
       <div class="sig-col">
-        <div class="sig-line"><span class="sig-role">Çalışan</span>Ad Soyad / İmza · Tarih</div>
+        <div class="sig-line"><span class="sig-role">Çalışan</span><input type="text" class="doc-field doc-field-name" placeholder="Ad Soyad" aria-label="Çalışan ad soyad"> / İmza · <input type="text" class="doc-field doc-field-date" placeholder="Tarih" aria-label="Tarih"></div>
       </div>
       <div class="sig-col">
-        <div class="sig-line"><span class="sig-role">Kurum Adına</span>Ad Soyad, Unvan / İmza · Tarih</div>
+        <div class="sig-line"><span class="sig-role">Kurum Adına</span><input type="text" class="doc-field doc-field-name" placeholder="Ad Soyad, Unvan" aria-label="Kurum adına ad soyad, unvan"> / İmza · <input type="text" class="doc-field doc-field-date" placeholder="Tarih" aria-label="Tarih"></div>
       </div>
     </div>
 
     <div class="approval-note">
-      Yer: <span class="placeholder">______________________</span> &nbsp;&nbsp; Tarih: <span class="placeholder">______________________</span>
+      Yer: <input type="text" class="doc-field doc-field-place" placeholder="______________________" aria-label="Yer"> &nbsp;&nbsp; Tarih: <input type="text" class="doc-field doc-field-date" placeholder="______________________" aria-label="Tarih">
       &nbsp;&nbsp;·&nbsp;&nbsp; Bu belge, karşılıklı yazılı mutabakatla gözden geçirilebilir ve güncellenebilir.
     </div>
   </section>

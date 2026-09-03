@@ -10,11 +10,13 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-var sections = [];               // sections array from curriculum
-var editingSectionIdx = null;    // Index being edited in sections array
+var sections = [];               // section tree from curriculum (sections can nest via `children`)
+var editingSectionIdx = null;    // Index being edited in editingSectionParent
+var editingSectionParent = null; // Array that holds the section being edited (sections or a parent's children)
 var editingLessons = [];         // Temp array for lessons within the section being edited
 var editingLessonIdx = null;     // Index being edited in editingLessons
-var editingDirectSectionIdx = null; // When editing a lesson directly from main view (not via modal)
+var editingDirectSection = null; // Section object when editing a lesson directly from main view (not via modal)
+var bulkGenRunning = false;      // True while a bulk AI generation run is in progress
 var editingQuizQuestions = [];
 var editingSourceLinks = [];
 var editingYoutubeUrls = [];
@@ -40,6 +42,99 @@ var editingPdfType = null;
 var QUIZ_SETS = 3;
 var QUIZ_PER_SET = 5;
 var LESSON_DOC_TYPE = 'curriculum-lessons-uniconbase';
+
+/* ── Section Tree Helpers ──
+   Sections can nest to any depth: { id, title, order, lessons:[], children:[] }.
+   Lessons can live on ANY section or subsection node. Flat legacy data
+   (no `children` property) keeps working unchanged. */
+
+/** Depth-first traversal of the section tree: fn(section, parentArray, indexInParent, depth) */
+function eachSection(fn) {
+  function walk(arr, depth) {
+    if (!arr) return;
+    for (var i = 0; i < arr.length; i++) {
+      var s = arr[i];
+      fn(s, arr, i, depth);
+      walk(s.children, depth + 1);
+    }
+  }
+  walk(sections, 0);
+}
+
+/** Find a section anywhere in the tree by id. Returns { section, parentArr, index, depth } or null. */
+function findSectionById(id) {
+  var found = null;
+  eachSection(function(s, arr, i, depth) {
+    if (!found && s.id === id) found = { section: s, parentArr: arr, index: i, depth: depth };
+  });
+  return found;
+}
+
+/** Flat list of every lesson in the tree: { section, lesson, li, depth } */
+function collectAllLessons() {
+  var out = [];
+  eachSection(function(s, arr, i, depth) {
+    var lessons = s.lessons || [];
+    for (var li = 0; li < lessons.length; li++) {
+      out.push({ section: s, lesson: lessons[li], li: li, depth: depth });
+    }
+  });
+  return out;
+}
+
+/** Index of a lesson by id inside a section's lessons array (-1 when missing) */
+function indexOfLessonById(lessonsArr, lessonId) {
+  if (!lessonsArr) return -1;
+  for (var i = 0; i < lessonsArr.length; i++) {
+    if (lessonsArr[i].id === lessonId) return i;
+  }
+  return -1;
+}
+
+/** Replace a lesson by id inside a section object (used after async saves) */
+function replaceLessonInSection(section, lessonId, newLesson) {
+  if (!section || !section.lessons) return false;
+  for (var i = 0; i < section.lessons.length; i++) {
+    if (section.lessons[i].id === lessonId) {
+      section.lessons[i] = newLesson;
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Collect every lesson id in a section's subtree (for bulk generation scopes) */
+function collectSubtreeLessons(section) {
+  var out = [];
+  function walk(s) {
+    if (!s) return;
+    var lessons = s.lessons || [];
+    for (var li = 0; li < lessons.length; li++) {
+      out.push({ section: s, lesson: lessons[li], li: li });
+    }
+    var kids = s.children || [];
+    for (var k = 0; k < kids.length; k++) walk(kids[k]);
+  }
+  walk(section);
+  return out;
+}
+
+/** Count lessons in a subtree (sorted by order per level) */
+function countSubtreeLessons(section) {
+  return collectSubtreeLessons(section).length;
+}
+
+/** Collect all lesson doc ids in a section's subtree (for delete cleanup) */
+function collectSubtreeLessonDocIds(section) {
+  var ids = [];
+  collectSubtreeLessons(section).forEach(function(r) {
+    if (r.lesson.lessonDocId) ids.push(r.lesson.lessonDocId);
+  });
+  return ids;
+}
+
+/** Sort helper: by order asc */
+function byOrder(a, b) { return (a.order || 9999) - (b.order || 9999); }
 
 /* ── Lesson Document CRUD (Phase 2: heavy content lives in lesson docs) ──
    Heavy lesson content (notes, HTML code, study data, presentation HTML,
@@ -161,12 +256,9 @@ function migrateLessonsToDocsIfNeeded() {
   if (!canUseLessonDocs()) { window._lessonsMigratedOnce = true; return; }
   if (tool.isReadOnly && tool.isReadOnly()) return; // retry when editable
   var work = [];
-  for (var si = 0; si < sections.length; si++) {
-    var lessons = sections[si].lessons || [];
-    for (var li = 0; li < lessons.length; li++) {
-      if (hasHeavyLessonFields(lessons[li])) work.push({ si: si, li: li });
-    }
-  }
+  collectAllLessons().forEach(function(ref) {
+    if (hasHeavyLessonFields(ref.lesson)) work.push(ref);
+  });
   if (work.length === 0) { window._lessonsMigratedOnce = true; return; }
   window._lessonsMigratedOnce = true;
   console.log('[CurriculumBuilder] migrating ' + work.length + ' heavy lesson(s) to lesson docs...');
@@ -174,13 +266,11 @@ function migrateLessonsToDocsIfNeeded() {
   var remaining = work.length;
   var anyFailed = false;
   function finishMigration() {
-    for (var si2 = 0; si2 < sections.length; si2++) {
-      var ls = sections[si2].lessons || [];
-      for (var li2 = 0; li2 < ls.length; li2++) {
-        var les = ls[li2];
-        if (les._keepHeavy) { delete les._keepHeavy; continue; }
-        if (les.lessonDocId && hasHeavyLessonFields(les)) stripHeavyLessonFields(les);
-      }
+    for (var w2 = 0; w2 < work.length; w2++) {
+      var wk = work[w2];
+      var lesson = wk.lesson;
+      if (lesson._keepHeavy) { delete lesson._keepHeavy; continue; }
+      if (lesson.lessonDocId && hasHeavyLessonFields(lesson)) stripHeavyLessonFields(lesson);
     }
     saveCurriculum();
     if (anyFailed) {
@@ -191,10 +281,9 @@ function migrateLessonsToDocsIfNeeded() {
   }
   for (var w = 0; w < work.length; w++) {
     (function(wk) {
-      var lesson = sections[wk.si].lessons[wk.li];
-      saveLessonDoc(lesson, function(err, docId) {
-        if (docId) lesson.lessonDocId = docId;
-        if (err) { anyFailed = true; lesson._keepHeavy = true; }
+      saveLessonDoc(wk.lesson, function(err, docId) {
+        if (docId) wk.lesson.lessonDocId = docId;
+        if (err) { anyFailed = true; wk.lesson._keepHeavy = true; }
         remaining--;
         if (remaining <= 0) finishMigration();
       });
@@ -211,13 +300,9 @@ function backfillLessonSummariesIfNeeded() {
   if (!canUseLessonDocs()) { window._summariesBackfilledOnce = true; return; }
   if (tool.isReadOnly && tool.isReadOnly()) return; // retry when editable
   var work = [];
-  for (var si = 0; si < sections.length; si++) {
-    var lessons = sections[si].lessons || [];
-    for (var li = 0; li < lessons.length; li++) {
-      var les = lessons[li];
-      if (les.lessonDocId && les.quizCount === undefined) work.push({ si: si, li: li, id: les.id });
-    }
-  }
+  collectAllLessons().forEach(function(ref) {
+    if (ref.lesson.lessonDocId && ref.lesson.quizCount === undefined) work.push(ref);
+  });
   if (work.length === 0) { window._summariesBackfilledOnce = true; return; }
   window._summariesBackfilledOnce = true;
   console.log('[CurriculumBuilder] backfilling summary fields for ' + work.length + ' lesson(s)...');
@@ -226,9 +311,8 @@ function backfillLessonSummariesIfNeeded() {
   var changed = false;
   for (var w = 0; w < work.length; w++) {
     (function(wk) {
-      var sec = sections[wk.si];
-      var current = sec && sec.lessons ? sec.lessons[wk.li] : null;
-      if (!current || current.id !== wk.id || !current.lessonDocId) {
+      var current = wk.lesson;
+      if (!current || !current.lessonDocId) {
         remaining--;
         if (remaining === 0 && changed) saveCurriculum();
         return;
@@ -240,11 +324,10 @@ function backfillLessonSummariesIfNeeded() {
           // the doc, so strip them from the main-doc copy too.
           writeLessonSummaryFields(merged);
           stripHeavyLessonFields(merged);
-          var secNow = sections[wk.si];
-          if (secNow && secNow.lessons && secNow.lessons[wk.li] && secNow.lessons[wk.li].id === wk.id) {
-            secNow.lessons[wk.li] = merged;
-            changed = true;
-          }
+          // Resolve the CURRENT tree copy (sections may have been refreshed).
+          var found = findSectionById(wk.section.id);
+          var targetSec = found ? found.section : wk.section;
+          if (replaceLessonInSection(targetSec, current.id, merged)) changed = true;
         }
         // On failure leave summary fields unset so the next load retries.
         if (remaining === 0 && changed) saveCurriculum();
@@ -2470,6 +2553,19 @@ function hideConfirm() {
 
 function loadCurriculum(val) {
   sections = (val && val.sections) ? val.sections : [];
+  window.__curriculumLastVal = val;  // inspectable from the browser console
+  if (isDeveloper()) {
+    var totalLessons = collectAllLessons().length;
+    var sectionCount = 0;
+    eachSection(function() { sectionCount++; });
+    console.log('[CurriculumBuilder] loadCurriculum: ' + sectionCount + ' section(s), ' + totalLessons + ' lesson(s) total');
+    eachSection(function(sec, arr, i, depth) {
+      console.log('  ' + '  '.repeat(depth) + 'section "' + (sec.title || '?') + '" id=' + (sec.id || '?') + ' order=' + (sec.order || '?') + ' lessons=' + ((sec.lessons || []).length) + ' children=' + ((sec.children || []).length));
+      for (var lj = 0; lj < (sec.lessons || []).length; lj++) {
+        console.log('    ' + '  '.repeat(depth) + 'lesson[' + lj + '] ' + (sec.lessons[lj].title || '?') + ' order=' + (sec.lessons[lj].order || '?'));
+      }
+    });
+  }
   updateIdBadge();
   renderSections();
   tool.resize();
@@ -2540,114 +2636,132 @@ function updateIdBadge() {
    ═══════════════════════════════════════════ */
 
 function renderSections() {
-  var sorted = sections.slice().sort(function(a, b) { return (a.order || 9999) - (b.order || 9999); });
-  el('manager-section-count').textContent = sorted.length + ' section(s)';
+  var allSections = [];
+  eachSection(function(s) { allSections.push(s); });
+  el('manager-section-count').textContent = allSections.length + ' section(s)';
   var container = el('sections-list');
   var empty = el('sections-empty');
 
-  if (sorted.length === 0) {
+  if (allSections.length === 0) {
     container.innerHTML = '';
     empty.style.display = '';
   } else {
     empty.style.display = 'none';
-    container.innerHTML = sorted.map(function(s, idx) {
-      var realIdx = sections.indexOf(s);
-      var lessonsSorted = (s.lessons || []).slice().sort(function(a,b){ return (a.order||9999)-(b.order||9999); });
-      return '<div class="manager-section-card">' +
-        '<div class="manager-section-header">' +
-          '<div class="manager-section-header-left">' +
-            '<strong>' + esc(s.title || 'Untitled') + '</strong>' +
-            '<span class="section-meta">' + (s.lessons ? s.lessons.length : 0) + ' lesson(s) | Order: ' + (s.order || '—') + '</span>' +
-          '</div>' +
-          '<div class="manager-section-actions">' +
-            '<button class="btn btn-sm btn-primary" data-add-les-sec="' + realIdx + '">+ Add Lesson</button>' +
-            '<button class="btn btn-sm btn-outline" data-edit-sec="' + realIdx + '">✏️ Edit Section</button>' +
-            '<button class="btn btn-sm btn-danger" data-del-sec="' + realIdx + '">🗑 Delete</button>' +
-          '</div>' +
-        '</div>' +
-        (lessonsSorted.length > 0 ?
-          '<table class="manager-lessons-table"><thead><tr><th>#</th><th>Lesson</th><th>Min</th><th>Media</th><th>Quiz</th><th>Actions</th></tr></thead><tbody>' +
-          lessonsSorted.map(function(les, li) {
-            var lesRealIdx = (s.lessons || []).indexOf(les);
-            var media = buildMediaSummary(les);
-            var quizCount = les.quizCount || countQuizQuestions(les.quiz);
-            var quizIndicator = quizCount > 0 ? '✅ ' + quizCount + ' Q' : '—';
-            var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
-            return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
-              '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les-sec="' + realIdx + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les-sec="' + realIdx + ':' + lesRealIdx + '">🗑</button></div></td></tr>';
-          }).join('') + '</tbody></table>'
-          : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
-        ) +
-      '</div>';
-    }).join('');
-
-    // Bind Add Lesson per section
-    var addLesBtns = container.querySelectorAll('[data-add-les-sec]');
-    for (var k = 0; k < addLesBtns.length; k++) {
-      addLesBtns[k].addEventListener('click', function(e) {
-        e.stopPropagation();
-        startAddLessonDirect(parseInt(this.getAttribute('data-add-les-sec')));
-      });
-    }
-    // Bind edit section
-    var editBtns = container.querySelectorAll('[data-edit-sec]');
-    for (var i = 0; i < editBtns.length; i++) {
-      editBtns[i].addEventListener('click', function(e) {
-        e.stopPropagation();
-        openSectionEditor(parseInt(this.getAttribute('data-edit-sec')));
-      });
-    }
-    // Bind delete section
-    var delBtns = container.querySelectorAll('[data-del-sec]');
-    for (var j = 0; j < delBtns.length; j++) {
-      delBtns[j].addEventListener('click', function(e) {
-        e.stopPropagation();
-        deleteSection(parseInt(this.getAttribute('data-del-sec')));
-      });
-    }
-    // Bind edit lesson (direct from main view)
-    var editLesBtns = container.querySelectorAll('[data-edit-les-sec]');
-    for (var l = 0; l < editLesBtns.length; l++) {
-      editLesBtns[l].addEventListener('click', function(e) {
-        e.stopPropagation();
-        var parts = this.getAttribute('data-edit-les-sec').split(':');
-        editLessonDirect(parseInt(parts[0]), parseInt(parts[1]));
-      });
-    }
-    // Bind delete lesson (direct from main view)
-    var delLesBtns = container.querySelectorAll('[data-del-les-sec]');
-    for (var m = 0; m < delLesBtns.length; m++) {
-      delLesBtns[m].addEventListener('click', function(e) {
-        e.stopPropagation();
-        var parts = this.getAttribute('data-del-les-sec').split(':');
-        deleteLessonDirect(parseInt(parts[0]), parseInt(parts[1]));
-      });
-    }
-    // Bind open lesson doc buttons
-    var docBtns = container.querySelectorAll('[data-open-doc]');
-    for (var n = 0; n < docBtns.length; n++) {
-      docBtns[n].addEventListener('click', function(e) {
-        e.stopPropagation();
-        openLessonDocUrl(this.getAttribute('data-open-doc'));
-      });
-    }
+    container.innerHTML = renderSectionTreeHtml(sections, 0);
+    bindSectionTreeEvents(container);
   }
   tool.resize();
+}
+
+/** Recursive section-tree HTML. Children are indented per depth level. */
+function renderSectionTreeHtml(arr, depth) {
+  if (!arr || !arr.length) return '';
+  var sorted = arr.slice().sort(byOrder);
+  var html = '';
+  for (var i = 0; i < sorted.length; i++) {
+    html += sectionCardHtml(sorted[i], depth);
+    html += renderSectionTreeHtml(sorted[i].children, depth + 1);
+  }
+  return depth > 0 ? '<div class="manager-children">' + html + '</div>' : html;
+}
+
+/** HTML for one section/subsection card (with its own lessons) */
+function sectionCardHtml(s, depth) {
+  var secId = esc(s.id || '');
+  var lessonsSorted = (s.lessons || []).slice().sort(byOrder);
+  var childCount = (s.children || []).length;
+  var titlePrefix = depth > 0 ? '↳ ' : '';
+  return '<div class="manager-section-card">' +
+    '<div class="manager-section-header">' +
+      '<div class="manager-section-header-left">' +
+        '<strong>' + titlePrefix + esc(s.title || 'Untitled') + '</strong>' +
+        '<span class="section-meta">' + (s.lessons ? s.lessons.length : 0) + ' lesson(s)' + (childCount ? ' | ' + childCount + ' subsection(s)' : '') + ' | Order: ' + (s.order || '—') + '</span>' +
+      '</div>' +
+      '<div class="manager-section-actions">' +
+        '<button class="btn btn-sm btn-primary" data-add-les="' + secId + '">+ Add Lesson</button>' +
+        '<button class="btn btn-sm btn-outline" data-add-subsec="' + secId + '">+ Add Subsection</button>' +
+        '<button class="btn btn-sm btn-outline" data-edit-sec="' + secId + '">✏️ Edit</button>' +
+        '<button class="btn btn-sm btn-danger" data-del-sec="' + secId + '">🗑 Delete</button>' +
+        '<button class="btn btn-sm btn-gen" data-gen-sec="' + secId + '" title="Serially generate missing AI content (Study Content, Slides, Flashcards, Quiz) for every lesson in this section and its subsections — already-filled content is skipped">🚀 Generate All</button>' +
+      '</div>' +
+    '</div>' +
+    (lessonsSorted.length > 0 ?
+      '<table class="manager-lessons-table"><thead><tr><th>#</th><th>Lesson</th><th>Min</th><th>Media</th><th>Quiz</th><th>Actions</th></tr></thead><tbody>' +
+      lessonsSorted.map(function(les, li) {
+        var lesRealIdx = (s.lessons || []).indexOf(les);
+        var media = buildMediaSummary(les);
+        var quizCount = les.quizCount || countQuizQuestions(les.quiz);
+        var quizIndicator = quizCount > 0 ? '✅ ' + quizCount + ' Q' : '—';
+        var docLinkBtn = (isDeveloper() && les.lessonDocId) ? '<button class="btn btn-sm" data-open-doc="' + esc(les.lessonDocId) + '" title="Open lesson Firestore document in new tab" style="padding:2px 8px;font-size:11px;border:1px solid #c4b5fd;border-radius:4px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-family:inherit">📄</button>' : '';
+        return '<tr><td>'+(li+1)+'</td><td><strong>'+esc(les.title||'Untitled')+'</strong> ' + docLinkBtn + '</td><td>'+(les.estimatedMinutes||'—')+'</td><td>'+media+'</td><td>'+quizIndicator+'</td>' +
+          '<td><div class="table-actions"><button class="btn btn-sm btn-outline" data-edit-les="' + secId + ':' + lesRealIdx + '">✏️</button><button class="btn btn-sm btn-danger" data-del-les="' + secId + ':' + lesRealIdx + '">🗑</button><button class="btn btn-sm btn-gen" data-gen-les="' + secId + ':' + lesRealIdx + '" title="Serially generate missing AI content for this lesson — already-filled content is skipped">🚀</button></div></td></tr>';
+      }).join('') + '</tbody></table>'
+      : '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">No lessons yet. Click "+ Add Lesson" above to add one.</div>'
+    ) +
+  '</div>';
+}
+
+/** Wire up all buttons inside the rendered section tree */
+function bindSectionTreeEvents(container) {
+  function each(selector, fn) {
+    var nodes = container.querySelectorAll(selector);
+    for (var i = 0; i < nodes.length; i++) {
+      (function(node) {
+        node.addEventListener('click', function(e) {
+          e.stopPropagation();
+          fn.call(node, e);
+        });
+      })(nodes[i]);
+    }
+  }
+  each('[data-add-les]', function() { startAddLessonDirect(this.getAttribute('data-add-les')); });
+  each('[data-add-subsec]', function() { openSectionEditor(null, this.getAttribute('data-add-subsec')); });
+  each('[data-edit-sec]', function() { openSectionEditor(this.getAttribute('data-edit-sec'), null); });
+  each('[data-del-sec]', function() { deleteSection(this.getAttribute('data-del-sec')); });
+  each('[data-gen-sec]', function() { startBulkForSection(this.getAttribute('data-gen-sec')); });
+  each('[data-edit-les]', function() {
+    var parts = this.getAttribute('data-edit-les').split(':');
+    editLessonDirect(parts[0], parseInt(parts[1]));
+  });
+  each('[data-del-les]', function() {
+    var parts = this.getAttribute('data-del-les').split(':');
+    deleteLessonDirect(parts[0], parseInt(parts[1]));
+  });
+  each('[data-gen-les]', function() {
+    var parts = this.getAttribute('data-gen-les').split(':');
+    startBulkForLesson(parts[0], parseInt(parts[1]));
+  });
+  each('[data-open-doc]', function() { openLessonDocUrl(this.getAttribute('data-open-doc')); });
 }
 
 /* ═══════════════════════════════════════════
    SECTION EDITOR MODAL
    ═══════════════════════════════════════════ */
 
-function openSectionEditor(idx) {
-  editingSectionIdx = idx;
+function openSectionEditor(sectionId, parentSectionId) {
+  editingSectionParent = sections;
+  editingSectionIdx = null;
   editingLessons = [];
-  if (idx !== null && sections[idx]) {
-    var s = sections[idx];
+  if (sectionId) {
+    var found = findSectionById(sectionId);
+    if (!found) return;
+    editingSectionParent = found.parentArr;
+    editingSectionIdx = found.index;
+    var s = found.section;
     el('edit-section-title').value = s.title || '';
     el('edit-section-order').value = typeof s.order === 'number' ? s.order : '';
     editingLessons = JSON.parse(JSON.stringify(s.lessons || []));
-    el('modal-title').textContent = 'Edit Section';
+    el('modal-title').textContent = found.depth > 0 ? 'Edit Subsection' : 'Edit Section';
+  } else if (parentSectionId) {
+    var parent = findSectionById(parentSectionId);
+    if (!parent) return;
+    if (!parent.section.children) parent.section.children = [];
+    editingSectionParent = parent.section.children;
+    editingSectionIdx = null;
+    el('edit-section-title').value = '';
+    el('edit-section-order').value = editingSectionParent.length + 1;
+    editingLessons = [];
+    el('modal-title').textContent = 'Add Subsection to "' + (parent.section.title || 'Section') + '"';
   } else {
     el('edit-section-title').value = '';
     el('edit-section-order').value = sections.length + 1;
@@ -2665,6 +2779,7 @@ function openSectionEditor(idx) {
 function closeSectionEditor() {
   el('modal-overlay').style.display = 'none';
   editingSectionIdx = null;
+  editingSectionParent = null;
   editingLessons = [];
   hideSubModal('lesson-editor-panel');
 }
@@ -2681,9 +2796,13 @@ function saveSection() {
     lessons: editingLessons.slice()
   };
 
-  if (editingSectionIdx !== null && sections[editingSectionIdx]) {
-    sectionData.id = sections[editingSectionIdx].id;
-    sections[editingSectionIdx] = sectionData;
+  if (editingSectionIdx !== null && editingSectionParent && editingSectionParent[editingSectionIdx]) {
+    var existing = editingSectionParent[editingSectionIdx];
+    sectionData.id = existing.id;
+    if (existing.children && existing.children.length) sectionData.children = existing.children; // preserve subsections
+    editingSectionParent[editingSectionIdx] = sectionData;
+  } else if (editingSectionParent) {
+    editingSectionParent.push(sectionData);
   } else {
     sections.push(sectionData);
   }
@@ -2695,10 +2814,21 @@ function saveSection() {
   });
 }
 
-function deleteSection(idx) {
-  var name = sections[idx] ? (sections[idx].title || 'this section') : 'this section';
-  sandboxConfirm('Delete "' + name + '" and ALL its lessons? This cannot be undone.', function() {
-    sections.splice(idx, 1);
+function deleteSection(sectionId) {
+  var found = findSectionById(sectionId);
+  if (!found) return;
+  var s = found.section;
+  var lessonCount = countSubtreeLessons(s);
+  var childCount = (s.children || []).length;
+  var msg = 'Delete "' + (s.title || 'this section') + '"';
+  if (lessonCount) msg += ' and its ' + lessonCount + ' lesson(s)';
+  if (childCount) msg += ' and ' + childCount + ' subsection(s)';
+  msg += '? This cannot be undone.';
+  sandboxConfirm(msg, function() {
+    found.parentArr.splice(found.index, 1);
+    // Clean up lesson docs for the whole subtree
+    var docIds = collectSubtreeLessonDocIds(s);
+    for (var d = 0; d < docIds.length; d++) deleteLessonDoc(docIds[d]);
     saveCurriculum(function(err) {
       if (err) return;
       tool.notify('Section deleted.', 'info');
@@ -2758,6 +2888,7 @@ function renderLessonsEditorList() {
    ═══════════════════════════════════════════ */
 
 function startAddLesson() {
+  editingDirectSection = null;  // ensure direct mode is off
   editingLessonIdx = null;
   el('edit-lesson-title').value = '';
   el('edit-lesson-order').value = editingLessons.length + 1;
@@ -2884,22 +3015,22 @@ function saveLessonFromEditor() {
     lessonDocId: null  // populated by saveLessonDoc below
   };
 
-  // Direct mode: save to sections[editingDirectSectionIdx].lessons and persist immediately
-  if (editingDirectSectionIdx !== null) {
-    var sec = sections[editingDirectSectionIdx];
+  // Direct mode: save to editingDirectSection.lessons and persist immediately
+  if (editingDirectSection) {
+    var sec = editingDirectSection;
     if (!sec.lessons) sec.lessons = [];
     if (editingLessonIdx !== null && sec.lessons[editingLessonIdx]) {
       lessonData.id = sec.lessons[editingLessonIdx].id;
       lessonData.lessonDocId = sec.lessons[editingLessonIdx].lessonDocId || null;
     }
-    var savedSectionIdx = editingDirectSectionIdx;  // capture before clearing
+    var savedSectionId = sec.id;  // capture before clearing
     var savedLessonId = lessonData.id;
     // Place the lesson in the section immediately (heavy for now — the lesson
     // doc sync below strips it from the main doc once the copy is confirmed).
     sec.lessons = sec.lessons.filter(function(l) { return l.id !== savedLessonId; });
     sec.lessons.push(lessonData);
     hideSubModal('lesson-editor-panel');
-    editingDirectSectionIdx = null;
+    editingDirectSection = null;
 
     if (!canUseLessonDocs()) {
       saveCurriculum();
@@ -2917,9 +3048,10 @@ function saveLessonFromEditor() {
         // Heavy content is now safe in the lesson doc — strip it from the main doc.
         stripHeavyLessonFields(lessonData);
       }
-      // Ensure the lesson is present in the CURRENT sections array
+      // Ensure the lesson is present in the CURRENT tree copy
       // (onValueChange may have replaced `sections` during the async call).
-      var secNow = sections[savedSectionIdx];
+      var foundNow = findSectionById(savedSectionId);
+      var secNow = foundNow ? foundNow.section : sec;
       if (secNow) {
         if (!secNow.lessons) secNow.lessons = [];
         var found = false;
@@ -2968,7 +3100,7 @@ function saveLessonFromEditor() {
 
 function cancelLessonEditor() {
   hideSubModal('lesson-editor-panel');
-  editingDirectSectionIdx = null;
+  editingDirectSection = null;
 }
 
 /** Update ALL per-tab visibility toggle buttons */
@@ -3012,8 +3144,9 @@ function autoSaveCurrentLesson() {
   // Determine which lesson and where it lives
   var targetLesson = null;
   var targetArray = null;
-  if (editingDirectSectionIdx !== null) {
-    var sec = sections[editingDirectSectionIdx];
+  if (editingDirectSection) {
+    var foundSec = findSectionById(editingDirectSection.id);
+    var sec = foundSec ? foundSec.section : editingDirectSection;
     if (!sec) return;
     if (!sec.lessons) sec.lessons = [];
     targetArray = sec.lessons;
@@ -3074,17 +3207,10 @@ function autoSaveCurrentLesson() {
   saveLessonDoc(targetLesson, function(docErr, docId) {
     if (docId && !targetLesson.lessonDocId) {
       targetLesson.lessonDocId = docId;
-      // Update the lessonDocId on the CURRENT sections copy too
-      for (var si = 0; si < sections.length; si++) {
-        var slessons = sections[si].lessons;
-        if (!slessons) continue;
-        for (var li = 0; li < slessons.length; li++) {
-          if (slessons[li].id === autoSaveLessonId) {
-            slessons[li].lessonDocId = docId;
-            break;
-          }
-        }
-      }
+      // Update the lessonDocId on the CURRENT tree copy too
+      collectAllLessons().forEach(function(r) {
+        if (r.lesson.id === autoSaveLessonId) r.lesson.lessonDocId = docId;
+      });
     }
     if (docErr) {
       console.warn('autoSaveCurrentLesson: lesson doc save failed, heavy content kept in main doc:', docErr);
@@ -3100,11 +3226,14 @@ function autoSaveCurrentLesson() {
 
 /* ── Direct Lesson Management (from main view, bypasses section modal) ── */
 
-function startAddLessonDirect(sectionIdx) {
-  editingDirectSectionIdx = sectionIdx;
+function startAddLessonDirect(sectionId) {
+  var found = findSectionById(sectionId);
+  if (!found) return;
+  editingDirectSection = found.section;
+  editingSectionIdx = null;  // ensure modal mode is off
   editingLessonIdx = null;
   el('edit-lesson-title').value = '';
-  el('edit-lesson-order').value = (sections[sectionIdx].lessons || []).length + 1;
+  el('edit-lesson-order').value = (editingDirectSection.lessons || []).length + 1;
   el('edit-lesson-minutes').value = '';
   editingYoutubeUrls = []; editingYoutubeIdx = null;
   renderYoutubeEditorList();
@@ -3132,14 +3261,16 @@ function startAddLessonDirect(sectionIdx) {
   switchLessonEditorTab('info');
   updateAllVisToggles();
   updateLessonEditorDocLink(null);  // clear doc link for new lesson
-  el('lesson-editor-heading').textContent = 'Add Lesson to ' + (sections[sectionIdx].title || 'Section');
+  el('lesson-editor-heading').textContent = 'Add Lesson to ' + (editingDirectSection.title || 'Section');
 }
 
-function editLessonDirect(sectionIdx, lessonIdx) {
-  editingDirectSectionIdx = sectionIdx;
+function editLessonDirect(sectionId, lessonIdx) {
+  var found = findSectionById(sectionId);
+  if (!found) return;
+  editingDirectSection = found.section;
+  editingSectionIdx = null;
   editingLessonIdx = lessonIdx;
-  var sec = sections[sectionIdx];
-  var les = sec.lessons && sec.lessons[lessonIdx];
+  var les = editingDirectSection.lessons && editingDirectSection.lessons[lessonIdx];
   if (!les) return;
   // Phase 1: try to load heavy content from lesson doc, fall back to main doc
   loadLessonDoc(les, function(err, enrichedLes) {
@@ -3147,8 +3278,10 @@ function editLessonDirect(sectionIdx, lessonIdx) {
   });
 }
 
-function deleteLessonDirect(sectionIdx, lessonIdx) {
-  var sec = sections[sectionIdx];
+function deleteLessonDirect(sectionId, lessonIdx) {
+  var found = findSectionById(sectionId);
+  if (!found) return;
+  var sec = found.section;
   var les = sec.lessons && sec.lessons[lessonIdx];
   var name = les ? (les.title || 'this lesson') : 'this lesson';
   var docId = les ? les.lessonDocId : null;
@@ -3161,6 +3294,151 @@ function deleteLessonDirect(sectionIdx, lessonIdx) {
       tool.notify('Lesson deleted.', 'info');
     });
   });
+}
+
+/* ═══════════════════════════════════════════
+   BULK SERIAL AI GENERATION
+   Runs the four AI generators one after another for a scope of lessons.
+   Each generator is skipped when its target field is already filled.
+   ═══════════════════════════════════════════ */
+
+var BULK_GEN_STEPS = [
+  { name: 'Study Content', filled: function() {
+      return !!((editingHtmlCode && editingHtmlCode.length > 20) ||
+                (editingStudyHtmlData && editingStudyHtmlData.components && editingStudyHtmlData.components.length > 0));
+    }, run: function(cb) { generateHtmlFromPdf(cb); } },
+  { name: 'Presentation Slides', filled: function() {
+      return !!(editingPresentationHtml && editingPresentationHtml.length > 50);
+    }, run: function(cb) { generatePresentationFromPdf(cb); } },
+  { name: 'Flashcards', filled: function() {
+      return editingFlashcards.length > 0;
+    }, run: function(cb) { generateFlashcardsFromPdf(cb); } },
+  { name: 'Quiz Questions', filled: function() {
+      return editingQuizQuestions.length > 0;
+    }, run: function(cb) { generateQuizFromPdf(cb); } }
+];
+
+/** Lesson refs for an entire curriculum (all top-level sections + subsections) */
+function bulkRefsForCurriculum() {
+  var refs = [];
+  for (var si = 0; si < sections.length; si++) {
+    collectSubtreeLessons(sections[si]).forEach(function(r) {
+      refs.push({ sectionId: r.section.id, lessonId: r.lesson.id });
+    });
+  }
+  return refs;
+}
+
+/** Lesson refs for a section and its whole subtree */
+function bulkRefsForSection(sectionId) {
+  var found = findSectionById(sectionId);
+  if (!found) return [];
+  var refs = [];
+  collectSubtreeLessons(found.section).forEach(function(r) {
+    refs.push({ sectionId: r.section.id, lessonId: r.lesson.id });
+  });
+  return refs;
+}
+
+/** Single-lesson refs */
+function bulkRefsForLesson(sectionId, li) {
+  var found = findSectionById(sectionId);
+  if (!found || !found.section.lessons || !found.section.lessons[li]) return [];
+  return [{ sectionId: sectionId, lessonId: found.section.lessons[li].id }];
+}
+
+function startBulkForSection(sectionId) {
+  var found = findSectionById(sectionId);
+  runBulkGeneration(bulkRefsForSection(sectionId), found ? '"' + found.section.title + '"' : 'section');
+}
+
+function startBulkForLesson(sectionId, li) {
+  runBulkGeneration(bulkRefsForLesson(sectionId, li), 'lesson');
+}
+
+function startBulkForCurriculum() {
+  runBulkGeneration(bulkRefsForCurriculum(), 'curriculum');
+}
+
+/** Serial bulk generation: open each lesson, run the four AI steps one by
+ *  one, skip steps whose fields are already filled, then move to the next
+ *  lesson. Safe against concurrent runs (guarded by bulkGenRunning). */
+function runBulkGeneration(refs, scopeLabel) {
+  if (!refs || refs.length === 0) { tool.notify('No lessons in this scope.', 'info'); return; }
+  if (bulkGenRunning) { tool.notify('A bulk generation is already running — please wait for it to finish.', 'warning'); return; }
+  if (tool.isReadOnly()) { tool.notify('Cannot generate — the form is in read-only mode.', 'warning'); return; }
+  bulkGenRunning = true;
+  var queue = refs.slice();
+  var total = queue.length;
+  var done = 0;
+  var skipped = 0;
+
+  function finishAll() {
+    bulkGenRunning = false;
+    cancelLessonEditor();
+    renderSections();
+    var msg = '✅ Bulk generation finished: ' + done + ' of ' + total + ' lesson(s) processed';
+    if (skipped > 0) msg += ' — ' + skipped + ' skipped (no base PDFs)';
+    tool.notify(msg + '.', 'success');
+  }
+
+  function nextLesson() {
+    if (!queue.length) { finishAll(); return; }
+    var ref = queue.shift();
+    var found = findSectionById(ref.sectionId);
+    var section = found ? found.section : null;
+    if (!section) { nextLesson(); return; }
+    var li = indexOfLessonById(section.lessons, ref.lessonId);
+    if (li === -1) { nextLesson(); return; }
+    var lesson = section.lessons[li];
+
+    editingDirectSection = section;
+    editingSectionIdx = null;
+    editingLessonIdx = li;
+
+    // Base-content guard: AI generation needs source PDFs. The PDF URL arrays
+    // are light fields on the lesson, so check BEFORE loading the lesson doc
+    // or opening the editor — no PDFs means the run doesn't start for this lesson.
+    var basePdfs = (lesson.presentationPdfUrls || []).length +
+                   (lesson.studyDocPdfUrls || []).length +
+                   (lesson.worksheetPdfUrls || []).length;
+    if (basePdfs === 0) {
+      tool.notify('⏭️ ' + (lesson.title || 'Lesson') + ' has no PDFs to generate from — skipped.', 'info');
+      skipped++;
+      done++;
+      nextLesson();
+      return;
+    }
+
+    loadLessonDoc(lesson, function(err, enriched) {
+      populateEditorFromLesson(enriched || lesson);
+      if (el('lesson-editor-heading')) {
+        el('lesson-editor-heading').textContent = '🤖 Auto-generating: ' + (lesson.title || 'Lesson') + ' (' + (done + 1) + '/' + total + ')';
+      }
+      runStepsForLesson(0, function() {
+        done++;
+        nextLesson();
+      });
+    });
+  }
+
+  function runStepsForLesson(stepIdx, lessonDone) {
+    if (stepIdx >= BULK_GEN_STEPS.length) { lessonDone(); return; }
+    var step = BULK_GEN_STEPS[stepIdx];
+    if (step.filled()) {
+      // Field already filled — never regenerate
+      setTimeout(function() { runStepsForLesson(stepIdx + 1, lessonDone); }, 50);
+      return;
+    }
+    tool.notify('🤖 ' + (el('edit-lesson-title').value || 'Lesson') + ': ' + step.name + '…', 'info');
+    step.run(function(err) {
+      if (err) tool.notify('⚠️ ' + step.name + ' skipped: ' + err, 'warning');
+      setTimeout(function() { runStepsForLesson(stepIdx + 1, lessonDone); }, 150);
+    });
+  }
+
+  tool.notify('🚀 Bulk generation started: ' + total + ' lesson(s) in ' + (scopeLabel || 'scope') + '. Keep this page open.', 'info');
+  nextLesson();
 }
 
 /* ═══════════════════════════════════════════
@@ -3565,7 +3843,7 @@ function showGenerateInfo(show) {
   if (show) setTimeout(function() { showGenerateInfo(false); }, 4000);
 }
 
-function generateQuizFromPdf() {
+function generateQuizFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
@@ -3575,6 +3853,7 @@ function generateQuizFromPdf() {
   if (allUrls.length === 0) {
     showGenerateInfo(true);
     tool.notify('No PDFs added yet. Add PDFs to Presentation, Study Documents, or Worksheets first.', 'warning');
+    if (onDone) onDone('no-pdfs');
     return;
   }
 
@@ -3600,6 +3879,7 @@ function generateQuizFromPdf() {
           if (!combinedText || combinedText.length < 50) {
             updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
             tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            if (onDone) onDone('no-text');
             return;
           }
           generateWithAI(combinedText);
@@ -3642,20 +3922,23 @@ function generateQuizFromPdf() {
           var msg = '✅ Generated ' + questions.length + ' questions & auto-saved!';
           if (questions.length < 15) msg += ' Generated fewer than 15 — you can add more manually.';
           tool.notify(msg, 'success');
+          if (onDone) onDone(null);
         } catch(e) {
           tool.notify('Response could not be parsed. See console.', 'error');
           console.error('Quiz gen parse error:', e, 'Raw:', fullResponse);
+          if (onDone) onDone(e);
         }
       },
       onError: function(err) {
         updateGenerateButtons({ disabled: false, text: '🤖 Generate Quiz Questions from PDFs' });
         tool.notify('Generation failed: ' + err, 'error');
+        if (onDone) onDone(err);
       }
     });
   }
 }
 
-function generateHtmlFromPdf() {
+function generateHtmlFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
@@ -3666,6 +3949,7 @@ function generateHtmlFromPdf() {
     tool.notify('No PDFs added yet. Add PDFs to Presentation, Study Documents, or Worksheets first.', 'warning');
     var infoEl = el('generate-html-info-v2');
     if (infoEl) { infoEl.style.display = ''; setTimeout(function() { infoEl.style.display = 'none'; }, 4000); }
+    if (onDone) onDone('no-pdfs');
     return;
   }
 
@@ -3690,6 +3974,7 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
           if (!combinedText || combinedText.length < 50) {
             if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
             tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            if (onDone) onDone('no-text');
             return;
           }
           generateHtmlWithAI(combinedText);
@@ -3914,6 +4199,7 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
             var summary = Object.keys(compTypes).map(function(k) { return k + '×' + compTypes[k]; }).join(', ');
             autoSaveCurrentLesson();
             tool.notify('✅ Study content generated with ' + obj.components.length + ' components & auto-saved! (' + summary + ')', 'success');
+            if (onDone) onDone(null);
             return;
           }
         } catch(e) { /* fall through */ }
@@ -3926,6 +4212,7 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
         }
         if (html.length < 20) {
           tool.notify('Generated too little content. Try again with more PDFs.', 'warning');
+          if (onDone) onDone('too-little');
           return;
         }
         editingHtmlCode = html;
@@ -3946,10 +4233,12 @@ tool.notify('Reading ' + allUrls.length + ' PDF(s) for study content generation.
           msg += ' 💡 ' + stillVisible.length + ' source PDF(s) are still visible to students — use the 👁 toggle in the Documents tab to hide them.';
         }
         tool.notify(msg, 'success');
+        if (onDone) onDone(null);
       },
       onError: function(err) {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🤖 Generate from PDFs'; }
         tool.notify('Generation failed: ' + err, 'error');
+        if (onDone) onDone(err);
       }
     });
   }
@@ -4054,7 +4343,7 @@ function showFlashcardInlineEditor(idx, rowEl) {
 }
 
 /** AI: Generate flashcards from PDFs */
-function generateFlashcardsFromPdf() {
+function generateFlashcardsFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
@@ -4063,6 +4352,7 @@ function generateFlashcardsFromPdf() {
 
   if (allUrls.length === 0) {
     tool.notify('No PDFs added yet. Add PDFs first.', 'warning');
+    if (onDone) onDone('no-pdfs');
     return;
   }
 
@@ -4085,6 +4375,7 @@ function generateFlashcardsFromPdf() {
           if (!combinedText || combinedText.length < 50) {
             if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
             tool.notify('Could not extract enough text.', 'warning');
+            if (onDone) onDone('no-text');
             return;
           }
           var prompt = 'You are an expert flashcard creator. Generate 15-25 high-quality flashcards from the document content below. Return ONLY a JSON array — no markdown, no intro.\n\nEach flashcard must have this structure:\n{\n  "front": "Question, term, or prompt",\n  "back": "Answer, definition, or explanation",\n  "type": "term|question|code|concept|image",\n  "difficulty": "easy|medium|hard",\n  "category": "short category label (e.g. Aerodynamics, Regulations, Weather)",\n  "hint": "brief memory hint (optional, omit if not helpful)"\n}\n\nRULES:\n• Vary types: ~40% term (vocabulary definitions), ~30% question (test understanding), ~15% concept (big ideas), ~10% code (if applicable), ~5% image (visual identification)\n• Vary difficulty: ~30% easy, ~40% medium, ~30% hard\n• Group related cards under the same category label (3-5 unique categories)\n• Back answers must be thorough — complete definitions/explanations, not one word\n• Use hints only for genuinely tricky cards where a small clue helps without giving away the answer\n• Professional/educational tone matching the source material\n\nDocument:\n"""\n' + combinedText.substring(0, 12000) + '\n"""\n\nSTART WITH: [{"front":';
@@ -4117,14 +4408,17 @@ function generateFlashcardsFromPdf() {
                 renderFlashcardsEditorList();
                 autoSaveCurrentLesson();
                 tool.notify('✅ Generated ' + cards.length + ' flashcards & auto-saved!', 'success');
+                if (onDone) onDone(null);
               } catch(e) {
                 tool.notify('Could not parse flashcards. Try again.', 'error');
                 console.error('Flashcard parse error:', e, fullResponse);
+                if (onDone) onDone(e);
               }
             },
             onError: function(err) {
               if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🃏 Generate Flashcards'; }
               tool.notify('Generation failed: ' + err, 'error');
+              if (onDone) onDone(err);
             }
           });
         }
@@ -4134,7 +4428,7 @@ function generateFlashcardsFromPdf() {
 }
 
 /** AI: Generate presentation slides from PDFs */
-function generatePresentationFromPdf() {
+function generatePresentationFromPdf(onDone) {
   var allUrls = [];
   allUrls = allUrls.concat(editingPresentationPdfUrls);
   allUrls = allUrls.concat(editingStudyDocPdfUrls);
@@ -4142,6 +4436,7 @@ function generatePresentationFromPdf() {
 
   if (allUrls.length === 0) {
     tool.notify('No PDFs added yet. Add PDFs to Presentation Slides or Study Documents first.', 'warning');
+    if (onDone) onDone('no-pdfs');
     return;
   }
 
@@ -4163,6 +4458,7 @@ function generatePresentationFromPdf() {
           if (!combinedText || combinedText.length < 50) {
             if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
             tool.notify('Could not extract enough text from the PDFs.', 'warning');
+            if (onDone) onDone('no-text');
             return;
           }
           generatePresWithAI(combinedText);
@@ -4238,6 +4534,7 @@ function generatePresentationFromPdf() {
         }
         if (raw.length < 50) {
           tool.notify('Generated too little content. Try again.', 'warning');
+          if (onDone) onDone('too-little');
           return;
         }
         editingPresentationHtml = raw;
@@ -4245,10 +4542,12 @@ function generatePresentationFromPdf() {
         updatePresentationPreview();
         autoSaveCurrentLesson();
         tool.notify('✅ Presentation generated & auto-saved! ' + (raw.match(/pres-slide/g)||[]).length + ' slides', 'success');
+        if (onDone) onDone(null);
       },
       onError: function(err) {
         if (genBtn) { genBtn.disabled = false; genBtn.textContent = '🎞️ Generate Presentation'; }
         tool.notify('Generation failed: ' + err, 'error');
+        if (onDone) onDone(err);
       }
     });
   }
@@ -4411,7 +4710,9 @@ function showLoading(show) { el('loading-overlay').style.display = show ? '' : '
    ═══════════════════════════════════════════ */
 
 function bindEvents() {
-  el('btn-add-section').addEventListener('click', function() { openSectionEditor(null); });
+  el('btn-add-section').addEventListener('click', function() { openSectionEditor(null, null); });
+  var btnGenAllCurr = el('btn-generate-all-curriculum');
+  if (btnGenAllCurr) btnGenAllCurr.addEventListener('click', function() { startBulkForCurriculum(); });
   el('btn-modal-close').addEventListener('click', closeSectionEditor);
   el('btn-modal-cancel').addEventListener('click', closeSectionEditor);
   el('btn-modal-save').addEventListener('click', saveSection);

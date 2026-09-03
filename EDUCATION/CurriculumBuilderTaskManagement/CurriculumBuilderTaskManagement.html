@@ -1,0 +1,63 @@
+<div id="cbt-app" class="cbt-app">
+
+  <div class="cbt-stats" id="cbt-stats"></div>
+
+  <nav class="cbt-tabs" id="cbt-tabs">
+    <button class="cbt-tab active" data-tab="tasks">🌳 Outline</button>
+    <button class="cbt-tab" data-tab="grid">📊 Lessons</button>
+    <button class="cbt-tab" data-tab="reports">📈 Reports</button>
+  </nav>
+
+  <section class="cbt-pane active" id="pane-tasks">
+    <div class="cbt-toolbar">
+      <div class="cbt-quickadd">
+        <button class="cbt-btn cbt-btn-primary" id="btn-add-section" title="Add a new top-level section">＋ Section</button>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-std-tasks" title="Edit the standard tasks added under lessons">⚙ Std tasks</button>
+      </div>
+      <div class="cbt-filterrow">
+        <input id="cbt-search" type="text" placeholder="🔍 Search tasks...">
+        <select id="cbt-filter-status" title="Filter by status">
+          <option value="">All statuses</option>
+          <option value="todo">⬜ To do</option>
+          <option value="progress">🚧 In progress</option>
+          <option value="review">🔍 In review</option>
+          <option value="done">✅ Done</option>
+          <option value="blocked">🚫 Blocked</option>
+        </select>        <select id="cbt-filter-member" title="Filter by assignee"></select>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-only-overdue" title="Show only overdue tasks">⚠ Overdue</button>
+        <span class="cbt-spacer"></span>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-undo" title="Nothing to undo">↶ Undo</button>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-expand-all" title="Expand all sections">⊞ Expand all</button>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-collapse-all" title="Collapse all sections">⊟ Collapse all</button>
+      </div>
+    </div>
+    <div class="cbt-tree" id="cbt-tree"></div>
+  </section>
+
+  <section class="cbt-pane" id="pane-grid">
+    <div class="cbt-grid-hint"><span class="cbt-grid-hint-text">One row per lesson — one column per standard task. Click a cell to change its status, hover a row or section and click ↗ to jump to it in the outline. <span id="cbt-grid-summary"></span></span><span class="cbt-grid-hint-actions"><button class="cbt-btn cbt-btn-ghost cbt-btn-xs" id="btn-grid-expand-all" title="Expand all sections">⊞ Expand all</button><button class="cbt-btn cbt-btn-ghost cbt-btn-xs" id="btn-grid-collapse-all" title="Collapse all sections">⊟ Collapse all</button></span></div>
+    <div class="cbt-grid-wrap" id="cbt-grid"></div>
+  </section>
+
+  <section class="cbt-pane" id="pane-reports">
+    <div class="cbt-reports-head">
+      <div class="cbt-reports-title">Curriculum progress report</div>
+      <div class="cbt-reports-actions">
+        <button class="cbt-btn cbt-btn-ghost" id="btn-export-csv" title="Download all tasks as CSV">⬇ CSV</button>
+        <button class="cbt-btn cbt-btn-ghost" id="btn-export-pdf" title="Export a printable report">🖨 PDF report</button>
+      </div>
+    </div>
+    <div class="cbt-reports" id="cbt-reports"></div>
+  </section>
+
+  <div class="cbt-modal-overlay" id="cbt-modal" hidden>
+    <div class="cbt-modal">
+      <div class="cbt-modal-head">
+        <div class="cbt-modal-title" id="cbt-modal-title"></div>
+        <button class="cbt-modal-x" id="cbt-modal-close" title="Close">✕</button>
+      </div>
+      <div class="cbt-modal-body" id="cbt-modal-body"></div>
+    </div>
+  </div>
+
+</div>

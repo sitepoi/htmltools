@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Curriculum Task Manager — Test Harness</title>
+<link rel="stylesheet" href="CurriculumBuilderTaskManagement.css">
+<style>
+body { padding-top: 34px !important; margin: 0; background: #eef0f7; }
+#app-container { min-height: calc(100vh - 34px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #818cf8; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar select { font-size: 10px; padding: 3px 6px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #e6edf5; }
+#th-bar .btn-load { background: #4f46e5; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Curriculum Task Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Curriculum</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Role:</span>
+  <select id="th-role">
+    <option value="admin" selected>admin</option>
+    <option value="editor">editor</option>
+    <option value="viewer">viewer</option>
+    <option value="none">logged-out</option>
+  </select>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'cbt_test_db_v1';
+  var TEAM_KEY = 'cbt_test_team';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [], permittedUsersChange: [] };
+  var _readOnly = false, _fields = {}, _value = null;
+
+  var DEFAULT_TEAM = [
+    { id: 'u_mina', name: 'Mina Demir', email: 'mina@school.org' },
+    { id: 'u_ali', name: 'Ali Kaya', email: 'ali@school.org' },
+    { id: 'u_sara', name: 'Sara Yildiz', email: 'sara@school.org' },
+    { id: 'u_admin', name: 'Admin User', email: 'admin@school.org' }
+  ];
+
+  function loadTeam() {
+    try { return JSON.parse(localStorage.getItem(TEAM_KEY)) || DEFAULT_TEAM; }
+    catch(e) { return DEFAULT_TEAM; }
+  }
+  function currentUser() {
+    var role = document.getElementById('th-role').value;
+    if (role === 'none') return null;
+    if (role === 'admin') return { id: 'u_admin', name: 'Admin User', email: 'admin@school.org', roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true }, locale: 'en' };
+    if (role === 'editor') return { id: 'u_ali', name: 'Ali Kaya', email: 'ali@school.org', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false }, locale: 'en' };
+    return { id: 'u_mina', name: 'Mina Demir', email: 'mina@school.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false }, locale: 'en' };
+  }
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return currentUser(); },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    _refreshUser: function() { listeners.userChange.forEach(function(cb) { try { cb(currentUser()); } catch(e) {} }); },
+    getPermittedUsers: function() { return loadTeam(); },
+    onPermittedUsersChange: function(cb) { listeners.permittedUsersChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function() {},
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#4f46e5', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2600);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    openUrl: function(url) {
+      if (url === 'exported') { this.notify('Report file downloaded to your browser', 'info'); return; }
+      try { window.open(url, '_blank'); } catch(e) { console.log('openUrl:', url); }
+    },
+    requestSave: function(cb) {
+      setTimeout(function() { cb(null, true); }, 100);
+    },
+    requestExportPdf: function(opts, cb) {
+      var filename = (opts.filename || 'export') + '.html';
+      var blob = new Blob(['<!doctype html><html><head><meta charset="utf-8"><title>Report</title></head><body>' + (opts.html || '') + '</body></html>'], { type: 'text/html' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { cb(null, { name: filename, url: 'exported', size: (opts.html || '').length, type: 'text/html' }); }, 100);
+    },
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('Curriculum DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.getElementById('th-role').addEventListener('change', function() {
+    window.tool._refreshUser();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003cdiv class=\"cbt-stats\" id=\"cbt-stats\">\u003c/div>\r\n\r\n  \u003cnav class=\"cbt-tabs\" id=\"cbt-tabs\">\r\n    \u003cbutton class=\"cbt-tab active\" data-tab=\"tasks\">🌳 Outline\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"grid\">📊 Lessons\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"reports\">📈 Reports\u003c/button>\r\n  \u003c/nav>\r\n\r\n  \u003csection class=\"cbt-pane active\" id=\"pane-tasks\">\r\n    \u003cdiv class=\"cbt-toolbar\">\r\n      \u003cdiv class=\"cbt-quickadd\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-primary\" id=\"btn-add-section\" title=\"Add a new top-level section\">＋ Section\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-std-tasks\" title=\"Edit the standard tasks added under lessons\">⚙ Std tasks\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-filterrow\">\r\n        \u003cinput id=\"cbt-search\" type=\"text\" placeholder=\"🔍 Search tasks...\">\r\n        \u003cselect id=\"cbt-filter-status\" title=\"Filter by status\">\r\n          \u003coption value=\"\">All statuses\u003c/option>\r\n          \u003coption value=\"todo\">⬜ To do\u003c/option>\r\n          \u003coption value=\"progress\">🚧 In progress\u003c/option>\r\n          \u003coption value=\"review\">🔍 In review\u003c/option>\r\n          \u003coption value=\"done\">✅ Done\u003c/option>\r\n          \u003coption value=\"blocked\">🚫 Blocked\u003c/option>\r\n        \u003c/select>        \u003cselect id=\"cbt-filter-member\" title=\"Filter by assignee\">\u003c/select>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-only-overdue\" title=\"Show only overdue tasks\">⚠ Overdue\u003c/button>\r\n        \u003cspan class=\"cbt-spacer\">\u003c/span>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-undo\" title=\"Nothing to undo\">↶ Undo\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-tree\" id=\"cbt-tree\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-grid\">\r\n    \u003cdiv class=\"cbt-grid-hint\">\u003cspan class=\"cbt-grid-hint-text\">One row per lesson — one column per standard task. Click a cell to change its status, hover a row or section and click ↗ to jump to it in the outline. \u003cspan id=\"cbt-grid-summary\">\u003c/span>\u003c/span>\u003cspan class=\"cbt-grid-hint-actions\">\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\u003c/span>\u003c/div>\r\n    \u003cdiv class=\"cbt-grid-wrap\" id=\"cbt-grid\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-reports\">\r\n    \u003cdiv class=\"cbt-reports-head\">\r\n      \u003cdiv class=\"cbt-reports-title\">Curriculum progress report\u003c/div>\r\n      \u003cdiv class=\"cbt-reports-actions\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-csv\" title=\"Download all tasks as CSV\">⬇ CSV\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-pdf\" title=\"Export a printable report\">🖨 PDF report\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-reports\" id=\"cbt-reports\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003cdiv class=\"cbt-modal-overlay\" id=\"cbt-modal\" hidden>\r\n    \u003cdiv class=\"cbt-modal\">\r\n      \u003cdiv class=\"cbt-modal-head\">\r\n        \u003cdiv class=\"cbt-modal-title\" id=\"cbt-modal-title\">\u003c/div>\r\n        \u003cbutton class=\"cbt-modal-x\" id=\"cbt-modal-close\" title=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-modal-body\" id=\"cbt-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n\u003c/div>\r\n";
+</script>
+
+<script>
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Ready — click "Load Sample Curriculum" to test';
+    var script = document.createElement('script');
+    script.src = 'CurriculumBuilderTaskManagement.js';
+    script.onload = function() { status.textContent = 'Ready ✓'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 1500);
+
+  fetch('CurriculumBuilderTaskManagement.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      /* Fallback already triggered by timer */
+    });
+})();
+</script>
+
+<script>
+/* ── Sample Data Generator ── */
+(function() {
+  var today = new Date();
+  function dateISO(offsetDays) {
+    var d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offsetDays);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function mk(id, title, status, opts, children) {
+    opts = opts || {};
+    return {
+      id: id, title: title, status: status,
+      due: opts.due || '',
+      memberId: opts.memberId || '',
+      notes: opts.notes || '',
+      doneAt: status === 'done' ? new Date().toISOString() : null,
+      createdAt: new Date().toISOString(),
+      children: children || []
+    };
+  }
+
+  function generateSampleData() {
+    return {
+      version: 1,
+      title: 'Grade 7 Science Curriculum',
+      settings: { standardTasks: ['Lesson plan', 'Worksheet', 'Quiz', 'Answer key'] },
+      ui: { tab: 'tasks', collapsed: [] },
+      members: [
+        { id: 'u_mina', name: 'Mina Demir', email: 'mina@school.org', source: 'cms' },
+        { id: 'u_ali', name: 'Ali Kaya', email: 'ali@school.org', source: 'cms' },
+        { id: 'u_sara', name: 'Sara Yildiz', email: 'sara@school.org', source: 'cms' }
+      ],
+      nodes: [
+        mk('sec-intro', 'Introduction & Lab Safety', 'progress', {}, [
+          mk('t-safety', 'Lesson plan', 'done', { memberId: 'u_ali', due: dateISO(-6), notes: 'Include fire extinguisher and eye-wash station maps.' }),
+          mk('t-equipment', 'Worksheet', 'done', { memberId: 'u_sara', due: dateISO(-4) }),
+          mk('t-squiz', 'Quiz', 'review', { memberId: 'u_ali', due: dateISO(2) }),
+          mk('t-ikey', 'Answer key', 'todo', { memberId: 'u_mina', due: dateISO(10) })
+        ]),
+        mk('sec-bio', 'Biology', 'progress', {}, [
+          mk('sub-cells', 'Unit 1 — Cells', 'progress', {}, [
+            mk('ch-cells', 'Cells & Life', 'progress', {}, [
+              mk('t-poster', 'Lesson plan', 'done', { memberId: 'u_mina', due: dateISO(-2) }),
+              mk('t-micro', 'Worksheet', 'progress', { memberId: 'u_ali', due: dateISO(0) }),
+              mk('t-cquiz', 'Quiz', 'review', { memberId: 'u_mina', due: dateISO(5) }),
+              mk('t-flash', 'Answer key', 'todo', { memberId: 'u_sara', due: dateISO(9) })
+            ])
+          ]),
+          mk('sub-body', 'Unit 2 — Body Systems', 'todo', {}, [
+            mk('ch-body', 'Human Body Systems', 'todo', {}, [
+              mk('t-digest', 'Lesson plan', 'todo', { due: dateISO(14) }),
+              mk('t-circ', 'Worksheet', 'todo', { memberId: 'u_ali', due: dateISO(18) }),
+              mk('t-btest', 'Quiz', 'blocked', { due: dateISO(12), notes: 'Waiting for the lab results from the Cells unit.' }),
+              mk('t-bkey', 'Answer key', 'todo', { due: dateISO(20) })
+            ])
+          ])
+        ]),
+        mk('sec-phy', 'Physics', 'progress', {}, [
+          mk('ch-forces', 'Forces & Motion', 'progress', {}, [
+            mk('t-fexp', 'Lesson plan', 'done', { memberId: 'u_mina', due: dateISO(-5) }),
+            mk('t-graphs', 'Worksheet', 'progress', { memberId: 'u_ali', due: dateISO(-2), notes: 'Students struggled with negative velocity — add one extra worked example.' }),
+            mk('t-friction', 'Quiz', 'todo', { memberId: 'u_sara', due: dateISO(7) }),
+            mk('t-fkey', 'Answer key', 'todo', { due: dateISO(8) })
+          ])
+        ]),
+        mk('sec-chem', 'Chemistry', 'todo', {}, [
+          mk('ch-matter', 'Matter & Mixtures', 'blocked', {}, [
+            mk('t-states', 'Lesson plan', 'blocked', { memberId: 'u_sara', due: dateISO(3), notes: 'Blocked until the lab kit arrives.' }),
+            mk('t-mixture', 'Worksheet', 'todo', { due: dateISO(21) }),
+            mk('t-mquiz', 'Quiz', 'todo', { due: dateISO(22) }),
+            mk('t-mkey', 'Answer key', 'todo', { due: dateISO(23) })
+          ])
+        ])
+      ]
+    };
+  }
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(generateSampleData());
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+})();
+</script>
+</body>
+</html>
