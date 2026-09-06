@@ -10,6 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
+window._spDebugBoot = Date.now(); // tool-side diagnostics: timestamps relative to load
 var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
@@ -21,6 +22,7 @@ var quizSubmitted = false;
 var activeStudyTab = 0;                 // remember which tab is open across re-renders
 var _suppressNextValueChange = false;   // skip onValueChange reload after our own save
 var _lastSavedJson = null;              // JSON of our last internal save (to tell internal vs external changes apart)
+var _lastSavedAt = 0;                   // timestamp of our last internal save (stale-echo protection)
 var availableCurriculums = []; // Cached list of Builder objects for the setup picker
 
 /* ── Constants ── */
@@ -563,7 +565,10 @@ function isLessonAccessible(sectionId, lessonId) {
   for (var i = 0; i < targetIdx; i++) {
     var prevProg = getLessonProgress(all[i].sectionId, all[i].lessonId);
     if (mgmtType === 'supervised') {
-      if (prevProg.supervisorStatus !== 'approved' && prevProg.status !== 'completed') return false;
+      // Supervised courses are ALWAYS gated: a lesson unlocks only after the
+      // supervisor approves it (approval also flips status to completed).
+      // A completed-looking status without approval does NOT unlock the next.
+      if (prevProg.supervisorStatus !== 'approved') return false;
     } else {
       if (prevProg.status !== 'completed') return false;
     }
@@ -652,7 +657,11 @@ function findSaveTriggers() {
 
 function saveProgress(immediate, onDone) {
   var data = { config: CONFIG, progress: PROGRESS };
+  try {
+    console.log('[SelfPaced] saveProgress immediate=' + !!immediate + ' progressSections=' + Object.keys(PROGRESS || {}).length + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
+  } catch(e) {}
   _lastSavedJson = JSON.stringify(data || null);
+  _lastSavedAt = Date.now();
   _suppressNextValueChange = true;
   var readOnly = false;
   try { readOnly = !!(tool.isReadOnly && tool.isReadOnly()); } catch(e) {}
@@ -671,6 +680,22 @@ function saveProgress(immediate, onDone) {
           if (ok) {
             result.saved = true;
             console.log('[SelfPaced] requestSave accepted — Firestore write dispatched');
+            // Watchdog: after a successful save request, poll the PARENT's
+            // value for 20s. If the parent form is ever reverted to a
+            // different progress (an external writer re-staging old data),
+            // this catches it with exact timing.
+            var snap = JSON.stringify(PROGRESS || null);
+            var started = Date.now();
+            var iv = setInterval(function() {
+              if (Date.now() - started > 20000) { clearInterval(iv); return; }
+              var v = null;
+              try { v = tool.getValue(); } catch(e) {}
+              var cur = JSON.stringify(v && v.progress ? v.progress : null);
+              if (cur !== snap) {
+                clearInterval(iv);
+                console.warn('[SelfPaced] EXTERNAL CHANGE DETECTED ' + (Date.now() - started) + 'ms after save — parent value progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + cur.length);
+              }
+            }, 2500);
           } else {
             result.saveError = err || 'denied — enable "Allow Save Request" in the field settings';
             console.log('[SelfPaced] requestSave rejected:', result.saveError);
@@ -751,8 +776,11 @@ function scheduleQuizAutoSave() {
 function renderSections() {
   var grid = el('section-group-grid');
   var empty = el('sections-empty');
-  var searchTerm = (el('search-input').value || '').toLowerCase();
-  var filterStatus = el('filter-status').value;
+  if (!grid) return; // DOM not ready (e.g., stale tool HTML snapshot) — bail gracefully
+  var searchInput = el('search-input');
+  var filterEl = el('filter-status');
+  var searchTerm = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase();
+  var filterStatus = filterEl ? filterEl.value : 'all';
   var sorted = getSortedSections();
 
   var filtered = sorted.filter(function(s) {
@@ -767,16 +795,18 @@ function renderSections() {
 
   if (filtered.length === 0) {
     grid.innerHTML = '';
-    empty.style.display = '';
-    if (sorted.length === 0) {
-      empty.querySelector('.empty-title').textContent = 'No sections available yet';
-      empty.querySelector('.empty-desc').textContent = 'A manager needs to add curriculum sections first.';
-    } else {
-      empty.querySelector('.empty-title').textContent = 'No matching sections';
-      empty.querySelector('.empty-desc').textContent = 'Try adjusting your search or filter.';
+    if (empty) {
+      empty.style.display = '';
+      if (sorted.length === 0) {
+        empty.querySelector('.empty-title').textContent = 'No sections available yet';
+        empty.querySelector('.empty-desc').textContent = 'A manager needs to add curriculum sections first.';
+      } else {
+        empty.querySelector('.empty-title').textContent = 'No matching sections';
+        empty.querySelector('.empty-desc').textContent = 'Try adjusting your search or filter.';
+      }
     }
   } else {
-    empty.style.display = 'none';
+    if (empty) empty.style.display = 'none';
     grid.innerHTML = filtered.map(function(s) {
       var summary = getSectionProgressSummary(s.id);
       var accessible = isSectionAccessible(s.id);
@@ -1046,7 +1076,14 @@ function renderLessonDetail() {
           html += '<button class="btn btn-outline" id="btn-mark-inprogress-inline">📖 Mark In Progress</button>';
         } else {
           var completeLabel = (mgmtTypeNav === 'supervised') ? '✓ Mark Complete & Submit for Review' : '✓ Mark Complete';
-          html += '<button class="btn btn-success" id="btn-mark-complete-inline">' + completeLabel + '</button>';
+          // Gate: a lesson with quiz questions can only be marked complete
+          // after the student has a passing result (≥60%). No quiz = no gate.
+          var quizGatePassed = !hasQuiz || prog.quizPassed === true || (typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE);
+          if (quizGatePassed) {
+            html += '<button class="btn btn-success" id="btn-mark-complete-inline">' + completeLabel + '</button>';
+          } else {
+            html += '<button class="btn btn-success" id="btn-mark-complete-inline" disabled title="Pass the quiz with at least ' + MIN_PASS_SCORE + '% before marking this lesson complete">' + completeLabel + '</button>';
+          }
         }
         html += '<button class="btn btn-outline" id="btn-next-lesson-inline"' + (!getNextLesson(section.id, lesson.id) || (getNextLesson(section.id, lesson.id) && !isLessonAccessible(getNextLesson(section.id, lesson.id).sectionId, getNextLesson(section.id, lesson.id).lessonId)) ? ' disabled' : '') + '>Next →</button>';
         html += '</div>';
@@ -1872,7 +1909,13 @@ function openSection(sectionId) {
 function openLesson(sectionId, lessonId) {
   // Flush any pending debounced saves before navigating to a new lesson
   flushPendingSaves();
-  if (!isLessonAccessible(sectionId, lessonId)) { tool.notify('🔒 You must complete all previous lessons first.', 'warning'); return; }
+  if (!isLessonAccessible(sectionId, lessonId)) {
+    var lockMsg = (CONFIG.managementType === 'supervised')
+      ? '🔒 Previous lessons must be approved by your supervisor before continuing.'
+      : '🔒 You must complete all previous lessons first.';
+    tool.notify(lockMsg, 'warning');
+    return;
+  }
   activeStudyTab = 0; // new lesson starts on the first tab
   currentView = 'lesson-detail'; currentSectionId = sectionId; currentLessonId = lessonId;
   el('view-sections').style.display = 'none';
@@ -1938,7 +1981,9 @@ function markComplete() {
 
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
   var mgmtType = CONFIG.managementType || 'self_paced';
-  var newStatus = (mgmtType === 'supervised' && hasQuiz) ? 'pending_review' : 'completed';
+  // Supervised courses ALWAYS require supervisor approval — even lessons with
+  // no quiz questions submit for review instead of completing directly.
+  var newStatus = (mgmtType === 'supervised') ? 'pending_review' : 'completed';
   // Preserve quiz score + answers instead of wiping them on completion
   var existingProg = getLessonProgress(currentSectionId, currentLessonId);
   var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
@@ -2187,6 +2232,9 @@ function findSectionsInObject(obj, fieldName) {
 }
 
 function loadData(val) {
+  try {
+    console.log('[SelfPaced] loadData progressSections=' + (val && val.progress ? Object.keys(val.progress).length : 0) + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
+  } catch(e) {}
   // Load config (object-level, set by admin per object)
   if (val && val.config && typeof val.config === 'object') {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
@@ -2429,6 +2477,7 @@ function renderSupervisorPanel() {
   // Gather stats
   var totalLessons = all.length;
   var completed = 0, inProgress = 0, notStarted = 0, pendingReview = 0;
+  var scoreSum = 0, scoreCount = 0; // quiz-score stats for completed lessons
   var pendingItems = [];
   var sectionStats = {}; // sectionId → { title, total, completed, inProgress, notStarted, pendingReview }
   for (var i = 0; i < all.length; i++) {
@@ -2442,12 +2491,16 @@ function renderSupervisorPanel() {
     sectionStats[sid].total++;
     var lessonEntry = { lessonId: lid, title: les ? les.title : 'Unknown', status: prog.status, score: prog.score };
     sectionStats[sid].lessons.push(lessonEntry);
-    if (prog.status === 'completed') { completed++; sectionStats[sid].completed++; }
+    if (prog.status === 'completed') {
+      completed++; sectionStats[sid].completed++;
+      if (typeof prog.score === 'number') { scoreSum += prog.score; scoreCount++; }
+    }
     else if (prog.status === 'pending_review') { pendingReview++; sectionStats[sid].pendingReview++; pendingItems.push({ sectionId: sid, lessonId: lid, sectionTitle: secTitle, lessonTitle: les ? les.title : '', score: prog.score }); }
     else if (prog.status === 'in_progress' || prog.status === 'studying') { inProgress++; sectionStats[sid].inProgress++; }
     else { notStarted++; sectionStats[sid].notStarted++; }
   }
   var overallPct = totalLessons > 0 ? Math.round((completed / totalLessons) * 100) : 0;
+  var avgScore = scoreCount > 0 ? Math.round(scoreSum / scoreCount) : null;
 
   var panel = document.createElement('div');
   panel.id = 'supervisor-panel';
@@ -2459,7 +2512,7 @@ function renderSupervisorPanel() {
   // Overall progress ring
   html += '<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 16px">';
   html += '<svg width="44" height="44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + (2*Math.PI*18) + '" stroke-dashoffset="' + (2*Math.PI*18*(1-overallPct/100)) + '" transform="rotate(-90,22,22)"/><text x="22" y="22" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:800;fill:#f1f5f9">' + overallPct + '%</text></svg>';
-  html += '<div style="color:#f1f5f9;font-size:12px;line-height:1.4"><strong>' + completed + '</strong> done<br><span style="color:#94a3b8">' + inProgress + ' active · ' + notStarted + ' new</span></div>';
+  html += '<div style="color:#f1f5f9;font-size:12px;line-height:1.5"><strong>' + completed + '</strong> done<br><span style="color:#94a3b8">' + inProgress + ' active · ' + notStarted + ' new</span><br><span style="color:#fbbf24;font-weight:800">★ ' + (avgScore !== null ? avgScore + '%' : '—') + '</span> <span style="color:#94a3b8">avg score · ' + scoreCount + ' lesson' + (scoreCount === 1 ? '' : 's') + '</span></div>';
   html += '</div></div>';
 
   // ── Quick stats bar ──
@@ -2487,12 +2540,23 @@ function renderSupervisorPanel() {
     if (ss.inProgress > 0) html += '<div style="width:' + (ss.inProgress/ss.total*100) + '%;height:100%;background:#f59e0b"></div>';
     if (ss.pendingReview > 0) html += '<div style="width:' + (ss.pendingReview/ss.total*100) + '%;height:100%;background:#ef4444"></div>';
     html += '</div>';
-    // Lesson status dots
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">';
+    // Lesson chips with per-lesson score so the supervisor sees every result
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">';
     for (var li = 0; li < ss.lessons.length; li++) {
       var l = ss.lessons[li];
       var dot = l.status === 'completed' ? '🟢' : l.status === 'pending_review' ? '🟡' : l.status === 'in_progress' || l.status === 'studying' ? '🔵' : '⚪';
-      html += '<span title="' + esc(l.title) + ' — ' + (l.status === 'completed' ? 'Done' + (typeof l.score==='number'?' ('+l.score+'%)':'') : l.status === 'pending_review' ? 'Pending review' : l.status === 'in_progress'||l.status==='studying' ? 'In progress' : 'Not started') + '" style="font-size:14px;cursor:default">' + dot + '</span>';
+      var statusText = l.status === 'completed' ? 'Done' : l.status === 'pending_review' ? 'Pending review' : l.status === 'in_progress' || l.status === 'studying' ? 'In progress' : 'Not started';
+      var scoreTxt = '';
+      if (typeof l.score === 'number') {
+        var scColor = l.score >= MIN_PASS_SCORE ? '#065f46' : l.score >= 40 ? '#92400e' : '#991b1b';
+        scoreTxt = ' <span style="color:' + scColor + ';font-weight:700">' + l.score + '%</span>';
+      } else if (l.status === 'completed') {
+        scoreTxt = ' <span style="color:#94a3b8">no score</span>';
+      }
+      html += '<span style="display:inline-flex;align-items:center;gap:0;background:#f8fafc;border:1px solid var(--border);border-radius:10px;overflow:hidden;white-space:nowrap">' +
+        '<span title="' + esc(l.title) + ' — ' + statusText + (typeof l.score === 'number' ? ' · ' + l.score + '%' : '') + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;font-size:11px;font-weight:600;cursor:default">' + dot + ' ' + esc(l.title) + scoreTxt + '</span>' +
+        '<button data-sup-reset-les="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" title="Reset this lesson and ALL lessons after it back to Not Started — forces the student to rework them as if never opened" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">↺</button>' +
+        '</span>';
     }
     html += '</div></div>';
   }
@@ -2545,6 +2609,34 @@ function renderSupervisorPanel() {
     if (resetBtn) {
       resetBtn.addEventListener('click', resetAllProgress);
     }
+    // Per-lesson reset: two-click confirm (native confirm() is unreliable in sandboxed iframes)
+    var resetLesBtns = panel.querySelectorAll('[data-sup-reset-les]');
+    for (var rl = 0; rl < resetLesBtns.length; rl++) {
+      (function(btn) {
+        btn.addEventListener('click', function() {
+          if (this.getAttribute('data-arm') === '1') {
+            this.removeAttribute('data-arm');
+            this.textContent = '↺';
+            var parts = this.getAttribute('data-sup-reset-les').split('|');
+            resetLessonProgress(parts[0], parts[1]);
+            return;
+          }
+          this.setAttribute('data-arm', '1');
+          this.textContent = '❓';
+          this.style.color = '#991b1b';
+          this.style.fontWeight = '700';
+          var self = this;
+          setTimeout(function() {
+            if (self.getAttribute('data-arm') === '1') {
+              self.removeAttribute('data-arm');
+              self.textContent = '↺';
+              self.style.color = '#94a3b8';
+              self.style.fontWeight = '400';
+            }
+          }, 3500);
+        });
+      })(resetLesBtns[rl]);
+    }
   }, 50);
 }
 
@@ -2571,6 +2663,63 @@ function supervisorAction(sectionId, lessonId, decision, notes) {
   saveProgress(true, function(res) { reportSaveResult(res, 'Supervisor decision saved'); });
 }
 
+/** Reset a lesson AND all lessons after it back to "Not Started" (as if never
+ *  opened). Used by supervisors to force rework of lessons completed under
+ *  old errors (e.g., completions without quiz scores). Sequential reset keeps
+ *  the course chain consistent — later old approvals can't be skipped past. */
+function resetLessonProgress(sectionId, lessonId) {
+  if (!isAdmin()) { tool.notify('Only supervisors can reset lesson progress.', 'warning'); return; }
+  // Prevent stale debounced auto-saves (quiz answers / flashcards) from
+  // re-creating the progress entries we are about to delete.
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; }
+  var all = getAllLessonsInOrder();
+  var startIdx = -1;
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].sectionId === sectionId && all[i].lessonId === lessonId) { startIdx = i; break; }
+  }
+  if (startIdx === -1) return;
+  var resetCount = 0;
+  for (var j = startIdx; j < all.length; j++) {
+    var sid = all[j].sectionId;
+    var lid = all[j].lessonId;
+    if (PROGRESS[sid] && PROGRESS[sid][lid]) {
+      delete PROGRESS[sid][lid];
+      if (Object.keys(PROGRESS[sid]).length === 0) delete PROGRESS[sid];
+      resetCount++;
+    }
+  }
+  // Save and VERIFY the staged value really matches the reset state.
+  // If the form value doesn't match after the save (staging failure or a
+  // stale value winning), re-stage once and warn loudly otherwise — the
+  // reset must not be silently lost.
+  function saveReset(retry) {
+    saveProgress(true, function(res) {
+      reportSaveResult(res, 'Lesson progress reset');
+      var expected = JSON.stringify({ config: CONFIG, progress: PROGRESS });
+      var actual = '';
+      try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
+      if (actual !== expected) {
+        if (retry) {
+          console.warn('[SelfPaced] reset staging mismatch — re-staging (attempt 2)');
+          saveReset(false);
+        } else {
+          tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error');
+        }
+      } else {
+        console.log('[SelfPaced] reset staged and verified');
+      }
+    });
+  }
+  saveReset(true);
+  renderSupervisorPanel();
+  updateProgressBar();
+  if (currentView === 'sections') renderSections();
+  else if (currentView === 'lessons') renderLessons();
+  else if (currentView === 'lesson-detail') renderLessonDetail();
+  tool.notify('🔄 Reset ' + resetCount + ' lesson(s) back to Not Started.', 'success');
+}
+
 /** Show/hide the supervisor dashboard panel */
 function toggleDashboard() {
   CONFIG.dashboardVisible = !CONFIG.dashboardVisible;
@@ -2584,8 +2733,23 @@ function toggleDashboard() {
 function resetAllProgress() {
   if (!isAdmin()) { tool.notify('Only admins can reset progress.', 'warning'); return; }
   if (!confirm('This will reset ALL lesson progress for this student back to "Not Started".\n\nThis action cannot be undone. Continue?')) return;
+  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
+  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; }
   PROGRESS = {};
-  saveProgress(true, function(res) { reportSaveResult(res, 'Progress reset'); });
+  // Save + verify, retrying once if the staged value doesn't match the reset.
+  function saveResetAll(retry) {
+    saveProgress(true, function(res) {
+      reportSaveResult(res, 'Progress reset');
+      var expected = JSON.stringify({ config: CONFIG, progress: PROGRESS });
+      var actual = '';
+      try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
+      if (actual !== expected) {
+        if (retry) { console.warn('[SelfPaced] reset-all staging mismatch — re-staging'); saveResetAll(false); }
+        else { tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error'); }
+      }
+    });
+  }
+  saveResetAll(true);
   renderSupervisorPanel();
   updateProgressBar();
   if (currentView === 'sections') renderSections();
@@ -2659,8 +2823,38 @@ tool.onReady(function(val, fields) {
   }
 
   tool.onValueChange(function(v) {
-    var internal = _suppressNextValueChange && JSON.stringify(v || null) === _lastSavedJson;
+    var vJson = JSON.stringify(v || null);
+    try {
+      console.log('[SelfPaced] onValueChange progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + vJson.length + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
+    } catch(e) {}
+    var internal = _suppressNextValueChange && vJson === _lastSavedJson;
     _suppressNextValueChange = false;
+    // Stale-echo protection: if the parent echoes a value that differs from
+    // our MOST RECENT save shortly after we saved (e.g., an older snapshot
+    // racing a supervisor reset), keep OUR newest state and re-stage it —
+    // otherwise deleted progress would be resurrected.
+    if (!internal && _lastSavedJson && (Date.now() - _lastSavedAt) < 3000) {
+      var ours = null;
+      try { ours = JSON.parse(_lastSavedJson); } catch(e) {}
+      if (ours && ours.progress && v && v.progress && JSON.stringify(ours.progress) !== JSON.stringify(v.progress)) {
+        console.warn('[SelfPaced] stale external value ignored — keeping the most recent save');
+        loadData(ours);
+        _lastSavedJson = JSON.stringify(ours || null);
+        _suppressNextValueChange = true;
+        try { tool.setValue(ours); } catch(e) {}
+        if (CONFIG.curriculumSourceId && currentView !== 'setup') {
+          loadCurriculum(function() {
+            updateProgressBar();
+            renderCurrentView();
+            tool.resize();
+          });
+        } else {
+          renderCurrentView();
+          updateProgressBar();
+        }
+        return;
+      }
+    }
     loadData(v);
     // Our own saveProgress() — the caller already re-rendered the view.
     // Skip the heavy curriculum reload so the active tab stays put and
