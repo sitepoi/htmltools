@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fiziki Dersanecilik - İş Planı (Kanada)</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --ok: #2f855a;
+    --ok-soft: #ecf7f0;
+    --warn: #b7791f;
+    --warn-soft: #fdf6ea;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  /* ---------- Table of contents ---------- */
+  .toc {
+    background: #f5f8fb;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 22px;
+    margin-bottom: 30px;
+  }
+  .toc-title {
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .toc ol {
+    list-style: none;
+    columns: 2;
+    column-gap: 36px;
+    margin: 0;
+  }
+  .toc li {
+    font-size: 12.5px;
+    margin-bottom: 5px;
+    break-inside: avoid;
+  }
+  .toc a {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  .toc-num {
+    display: inline-block;
+    min-width: 22px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 28px; }
+
+  h2 {
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    margin-top: 34px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 {
+    font-size: 14px;
+    color: var(--ink);
+    margin: 18px 0 6px;
+  }
+  h4 {
+    font-size: 13px;
+    color: var(--ink);
+    margin: 14px 0 4px;
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  ul, ol { margin: 0 0 12px 22px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  li strong { color: var(--ink); }
+
+  .doc-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+
+  /* ---------- Callout boxes ---------- */
+  .box {
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+  .box-info {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+  }
+  .box-ok {
+    background: var(--ok-soft);
+    border-left: 4px solid var(--ok);
+  }
+  .box-warn {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+  }
+  .box strong { color: var(--ink); }
+
+  /* ---------- KPI cards ---------- */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 14px 0 18px;
+  }
+  .kpi {
+    background: #f5f8fb;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .kpi-value {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+  .kpi-label {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 10px 0 16px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+  td.num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  tr.total td {
+    background: #f5f8fb;
+    font-weight: 700;
+  }
+  tr.neg td.num.neg { color: #c0392b; }
+  tr.pos td.num.pos { color: var(--ok); }
+
+  /* ---------- SWOT ---------- */
+  .swot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+  .swot {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .swot h4 {
+    margin-top: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .swot ul { margin: 0 0 0 18px; }
+  .swot li { font-size: 12.5px; margin-bottom: 4px; }
+  .swot-s h4 { color: var(--ok); }
+  .swot-w h4 { color: #c0392b; }
+  .swot-o h4 { color: var(--accent); }
+  .swot-t h4 { color: var(--warn); }
+
+  /* ---------- Footer ---------- */
+  .doc-footer {
+    margin-top: 40px;
+    border-top: 1px dashed var(--line);
+    padding-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    section, h2, h3, table, .box, .kpi, .swot { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+    .toc { display: none; }
+    a { color: var(--ink); text-decoration: none; }
+  }
+  @media (max-width: 700px) {
+    .page { padding: 28px 18px 40px; }
+    .toc ol { columns: 1; }
+    .swot-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">UniconHub - Eğitim Girişimi</div>
+    <div class="doc-title">Fiziki Dersanecilik İş Planı</div>
+    <div class="doc-subtitle">Akademik Destek + Danışmanlık + Ortam: Charity Çatısı Altında Kendini Finanse Eden Hibrit Eğitim Merkezi</div>
+    <div class="doc-meta">
+      Belge No: DSN-BP-001 |
+      Tarih: 6 Eylül 2026 |
+      Versiyon: 1.1 (çalışma taslağı)
+    </div>
+  </header>
+
+  <p class="doc-note">
+    Bu belge yaşayan bir taslaktır - bölümler üzerinde birlikte geliştirilecektir. Tüm parasal tutarlar
+    Kanada Doları (CAD) cinsinden planlama varsayımıdır ve yer/şehir kararlarıyla birlikte doğrulanacaktır.
+    Temel varsayımlar: kar amacı gütmeyen model - merkezler bir hayır kurumu (charity) çatısı altında işler,
+    kurumun Toronto, Vancouver ve Edmonton'daki mekanları <strong>kira ödenmeden</strong> kullanılır ve
+    programın ürettiği fazla charity'ye gelir olarak aktarılır.
+  </p>
+
+  <nav class="toc">
+    <div class="toc-title">İçindekiler</div>
+    <ol>
+      <li><a href="#s1"><span class="toc-num">1.</span>Yönetici Özeti</a></li>
+      <li><a href="#s2"><span class="toc-num">2.</span>Sorun Analizi</a></li>
+      <li><a href="#s3"><span class="toc-num">3.</span>Mevcut Durumumuz</a></li>
+      <li><a href="#s4"><span class="toc-num">4.</span>Çözüm: Üç Ayaklı Model</a></li>
+      <li><a href="#s5"><span class="toc-num">5.</span>Sınav ve Değerlendirme Sistemi</a></li>
+      <li><a href="#s6"><span class="toc-num">6.</span>Teknoloji ve Takip Altyapısı</a></li>
+      <li><a href="#s7"><span class="toc-num">7.</span>Pazar ve Rekabet</a></li>
+      <li><a href="#s8"><span class="toc-num">8.</span>Ürünler ve Fiyatlandırma</a></li>
+      <li><a href="#s9"><span class="toc-num">9.</span>Yer İhtiyacı ve Mekan Stratejisi</a></li>
+      <li><a href="#s10"><span class="toc-num">10.</span>Öğretmen ve Personel</a></li>
+      <li><a href="#s11"><span class="toc-num">11.</span>Mali Plan</a></li>
+      <li><a href="#s12"><span class="toc-num">12.</span>Gelir-Gider Akışı ve Mevsimsellik</a></li>
+      <li><a href="#s13"><span class="toc-num">13.</span>Büyüme Potansiyeli</a></li>
+      <li><a href="#s14"><span class="toc-num">14.</span>Riskler ve Önlemler</a></li>
+      <li><a href="#s15"><span class="toc-num">15.</span>Güçlü Yönler, Zayıflıklar, Fırsatlar</a></li>
+      <li><a href="#s16"><span class="toc-num">16.</span>Yol Haritası ve Sonraki Adımlar</a></li>
+      <li><a href="#s17"><span class="toc-num">17.</span>Açık Sorular</a></li>
+    </ol>
+  </nav>
+
+  <!-- ================= 1. Yönetici Özeti ================= -->
+  <section id="s1">
+    <h2>1. Yönetici Özeti</h2>
+    <p>
+      Türkiye'deki dershaneler sabit bir hedefe - üniversite ve fen lisesi sınavlarına - öğrenci hazırlayarak
+      geniş talep görür. Kanada'da ise merkezi bir üniversite giriş sınavı yoktur; bu yüzden klasik dershane
+      modeli burada <strong>aynen kurulamaz</strong>. Ama ihtiyaç ortadan kalkmaz, sadece biçim değiştirir:
+      öğrencilerin <strong>okul notlarını yükseltecek akademik desteğe</strong>, <strong>üniversite / college /
+      trades / IB / AP arasında yol gösteren danışmanlığa</strong> ve <strong>çalışma düzeni sağlayan bir
+      ortama</strong> ihtiyacı vardır.
+    </p>
+    <p>
+      Bu plan, bu üç ihtiyacı tek çatı altında birleştiren <strong>hibrit bir akademik başarı merkezi</strong>
+      kurmayı önermektedir: charity'nin mevcut mekanlarında fiziki merkez (hafta içi okul sonrası + hafta sonu) +
+      mevcut online altyapımız (canlı dersler, SelfPacedEducation, CurriculumBuilder) + güçlü bir danışmanlık ve
+      veli raporlama hattı. Model kar amacı gütmez: <strong>bir hayır kurumu çatısı altında işler ve ürettiği
+      fazlayı kuruma gelir olarak aktarır</strong>. Toronto, Vancouver ve Edmonton'da kurumun mekanları kira
+      ödenmeden kullanılabileceği için en büyük maliyet kalemi (kira) sıfırdır. Modelin ilham kaynağı Kumon'un
+      veli ile entegre çalışan, tutmuş olduğu kanıtlanmış işleyişidir; farkımız ise kapsamdır: Kumon tekrar ve
+      çalışma sayfaları üzerine kuruludur, biz okul müfredatına bağlı destek, sınav hazırlığı, yol danışmanlığı
+      ve teknoloji tabanlı takip sunarız.
+    </p>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-value">~50 öğr.</div><div class="kpi-label">Şehir başı aylık başabaş noktası</div></div>
+      <div class="kpi"><div class="kpi-value">$0 kira</div><div class="kpi-label">Charity mekanları - Toronto, Vancouver, Edmonton</div></div>
+      <div class="kpi"><div class="kpi-value">$35-45K</div><div class="kpi-label">Şehir başı kurulum bütçesi</div></div>
+      <div class="kpi"><div class="kpi-value">1,5-2 yıl</div><div class="kpi-label">Yatırım geri dönüşü (baz senaryo)</div></div>
+      <div class="kpi"><div class="kpi-value">$300/ay</div><div class="kpi-label">Öğrenci başı ortalama gelir</div></div>
+      <div class="kpi"><div class="kpi-value">3 şehir</div><div class="kpi-label">Hazır mekanlarla büyüme potansiyeli</div></div>
+    </div>
+    <div class="box box-info">
+      <strong>Tek cümlelik özet:</strong> Kanada'da sınav yok, hedef yok; biz her öğrenciye <strong>kendi hedefini
+      buldurup ona göre hazırlayan</strong>, okul başarısı, sınav kültürü, yol danışmanlığı ve veli takibini
+      tek çatıda veren fiziki + online eğitim merkezi kuruyoruz. Kira yükü yok: charity'nin üç şehirdeki
+      mekanlarını kullanıyor, ürettiğimiz fazlayı kuruma gelir olarak geri veriyoruz.
+    </div>
+  </section>
+
+  <!-- ================= 2. Sorun Analizi ================= -->
+  <section id="s2">
+    <h2>2. Sorun Analizi</h2>
+    <h3>2.1 Türkiye modeli ile Kanada gerçeği arasındaki fark</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Boyut</th><th>Türkiye'de dershane</th><th>Kanada'da karşılığı</th></tr>
+        <tr><td>Hedef</td><td>TYT/AYT, LGS - tek ve sabit sınav</td><td>Merkezi giriş sınavı yok; kabul okul notlarına (ör. Ontario'da top-6) ve başvuru dosyasına dayalı</td></tr>
+        <tr><td>Motivasyon kaynağı</td><td>Sınav yaklaşıyor, dershane rotayı çiziyor</td><td>Hedef belirsiz; öğrenci "neden çalışıyorum" sorusuna cevapsız</td></tr>
+        <tr><td>Öğrenci takibi</td><td>Deneme sınavları, dershane sıralamaları</td><td>Parçalı: özel ders, okul rapor kartı, aile gözlemi - tek elden takip yok</td></tr>
+        <tr><td>Veli ilişkisi</td><td>Dönemlik veli toplantıları</td><td>Kumon modeli gösteriyor ki veli entegrasyonu başarının anahtarı</td></tr>
+        <tr><td>Karar noktaları</td><td>Alan seçimi, tercih listesi</td><td>Daha erken ve daha çok: IB/AP mi, üniversite mi college mı, bachelor mı master mı, trades mi - 8. sınıftan itibaren kararlar başlıyor</td></tr>
+      </table>
+    </div>
+
+    <h3>2.2 Tespit ettiğimiz somut sorunlar</h3>
+    <ul>
+      <li><strong>S1 - Sabit hedef yok:</strong> Türkiye'deki gibi herkesin çalıştığı ortak bir sınav olmayınca çocukların ve ailelerin tutunacağı bir "rota" oluşmuyor. Çalışma isteği dalgalanıyor.</li>
+      <li><strong>S2 - Kabul sistemi anlaşılmıyor:</strong> Üniversite kabulünün okul notlarına (Ontario'da en iyi 6 ders - top-6, ders ön koşulları), 11-12. sınıf performansına ve program bazlı ek kriterlere dayandığı ailelerce net bilinmiyor. 9-10. sınıfta düşen notların kapıyı nasıl kapattığı geç fark ediliyor.</li>
+      <li><strong>S3 - Yol ayrımları erken ve desteksiz:</strong> Üniversite mi, college ve trade programları mı, IB/AP'ye lisede girilir mi, bachelor mu yoksa sonrasında master mı - bu kararlar 8-11. sınıf aralığında veriliyor ve çoğu aile bilgiye erişemediği için şansa bırakıyor.</li>
+      <li><strong>S4 - Okul derslerine parçalı destek:</strong> Okul notu talebi yüksek ama mevcut seçenekler ya pahalı birebir özel ders (saati $40-80) ya da koordinasyonsuz online kaynaklar. Notu asıl belirleyen okul müfredatına sistematik destek veren bir kurum yok.</li>
+      <li><strong>S5 - Veli görünürlüğü düşük:</strong> Kumon'un başarısı veliyle entegre ilerleyişinde. Çocuğuna dışarıdan destek aldıran velilerin çoğu çocuğun gerçek seviyesini ve ilerlemesini göremiyor; gördüğü tek şey faturalar.</li>
+      <li><strong>S6 - Sınav kültürü eksik ve kendi sınavlarımız "neden" sorusuna takılıyor:</strong> Ayda bir online deneme, 2 ayda bir fiziki deneme yapıyoruz; CEMC (Waterloo) yarışmalarını hedef seçtik ama herkesin ilgisini çekmiyor ve çoğu çocuk bu denemeleri niye yaptığını anlamıyor. Sınavın kendisi değil, sınavın <strong>anlamı</strong> eksik.</li>
+      <li><strong>S7 - Ortam ve akran grubu yok:</strong> Evde ders çalışma disiplini kurmak zor; çocukların birlikte çalıştığı, ciddiye alındığı fiziki bir mekan ihtiyacı var.</li>
+      <li><strong>S8 - Göçmen aileler için sistem rehberliği yok:</strong> Türk ve diğer göçmen topluluklar Kanada eğitim sisteminin diline ve mantığına hakim değil; "bizdeki gibi dershane" arayan ailelere çevirisini ve yol haritasını sunacak kurum eksik.</li>
+    </ul>
+
+    <h3>2.3 Sonuç</h3>
+    <p>
+      Pazar boşluğu şudur: <strong>herkes tek parça satıyor</strong> - biri matematik çalıştırıyor, biri İngilizce,
+      biri danışmanlık veriyor, biri online ders satıyor. <strong>Kimse öğrenciyi bütün olarak takip etmiyor.</strong>
+      Okul notunu, sınav hedefini, yol kararını, veli iletişimini ve ortamı tek merkezde birleştiren kurum yok.
+      Bizim modelimiz tam bu boşluğu dolduruyor.
+    </p>
+  </section>
+
+  <!-- ================= 3. Mevcut Durumumuz ================= -->
+  <section id="s3">
+    <h2>3. Mevcut Durumumuz - Çıkış Noktamız</h2>
+    <p>Bu plan sıfırdan değil, halihazırda işleyen bir yapının üzerine kuruluyor:</p>
+    <ul>
+      <li><strong>Online matematik dersleri:</strong> Halihazırda devam eden canlı online matematik derslerimiz ve mevcut öğrenci/veli tabanımız var. Fiziki merkez açıldığında bu kitle ilk kayıt dalgasıdır.</li>
+      <li><strong>Deneme sınavı deneyimi:</strong> Ayda bir online deneme ve 2 ayda bir fiziki deneme sınavı düzenliyoruz. Fiziki deneme operasyonu, salon yönetimi, sınav güvenliği ve değerlendirme süreçlerini fiilen denemiş durumdayız.</li>
+      <li><strong>CEMC (Waterloo) hedefi:</strong> Gauss, Pascal, Cayley, Fermat, Euclid yarışmalarını hedef takvimi olarak belirledik. Bu hedef doğru ama tek başına herkese hitap etmiyor - planın 5. bölümü bu hedefi daha geniş bir sisteme yerleştiriyor.</li>
+      <li><strong>Teknolojik altyapı:</strong> SelfPacedEducation (bölüm bazlı kendi hızında öğrenme platformu) ve CurriculumBuilder (müfredat inşa ve takip sistemi) bu iş için tasarlanmış hazır altyapımız. Merkezin "dijital iskeleti" maliyetsiz sayılabilir.</li>
+      <li><strong>Kumon gözlemi:</strong> Kumon'un veliyle entegre, tekrar temelli modeli Kanada'da tutmuş durumda. Bu, veli katılımının satın alınabilir bir değer olduğunu doğrulayan canlı bir kanıttır - biz bu değeri daha geniş kapsamda sunacağız.</li>
+      <li><strong>Mekan avantajı:</strong> Merkezler bir hayır kurumu (charity) çatısı altında işleyecek. Kurumun Toronto, Vancouver ve Edmonton'daki mekanları kira ödenmeden kullanılacak; kurumun desteği, destekçi ağı ve gönüllü havuzu da hazır. Yeter ki proje iyi ve çalışır bir model olsun.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>Eksik olan parça artık çözülebilir:</strong> fiziki ayak. Online ders ve denemeler öğrenciyi
+      "bağlamıyor"; danışmanlık ve ortam yüz yüze gerekiyor. Charity'nin hazır mekanları sayesinde bu ayak
+      en küçük maliyetle kurulabilir; bu plan, mevcut online yapının üzerine fiziki merkezin nasıl
+      ekleneceğini anlatıyor.
+    </div>
+  </section>
+
+  <!-- ================= 4. Çözüm: Üç Ayaklı Model ================= -->
+  <section id="s4">
+    <h2>4. Çözüm: Üç Ayaklı Model</h2>
+    <p>
+      Önerimiz klasik bir dershane değil, <strong>Akademik Başarı Merkezi</strong> konsepti. Her öğrenci üç
+      ayak üzerinde takip edilir:
+    </p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Ayak</th><th>Ne yapıyoruz</th><th>Somut çıktı</th></tr>
+        <tr>
+          <td><strong>1. Akademik Destek</strong></td>
+          <td>Okul müfredatına bağlı grup dersleri (öncelik matematik, sonra fen), ödev desteği, eksik konu kapatma, okul sınavlarına hazırlık</td>
+          <td>Okul notlarında ölçülebilir yükseliş; ders ön koşulları korunmuş olur</td>
+        </tr>
+        <tr>
+          <td><strong>2. Danışmanlık</strong></td>
+          <td>Giriş değerlendirmesi + bireysel öğrenme planı (ILP); 8. sınıftan itibaren yol haritası: üniversite / college / trades / IB / AP seçenekleri; ders seçimi, başvuru ve burs danışmanlığı</td>
+          <td>Her ailenin elinde yazılı, güncellenen bir yol haritası</td>
+        </tr>
+        <tr>
+          <td><strong>3. Ortam</strong></td>
+          <td>Fiziki merkezde çalışma salonu, deneme sınavları, çalışma grupları, akran topluluğu; disiplin ve aidiyet</td>
+          <td>Evde kurulamayan çalışma düzeni; düzenli devam eden öğrenci topluluğu</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>4.1 Öğrenci yolculuğu nasıl işler</h3>
+    <ol>
+      <li><strong>Giriş değerlendirmesi:</strong> Kayıtta akademik seviye testi + hedef görüşmesi (aile ile birlikte). Çocuğun seviyesi ve ailenin hedefi yazılı hale gelir.</li>
+      <li><strong>Bireysel Öğrenme Planı (ILP):</strong> Seviyeye göre sınıf yerleşimi + haftalık program + 6 aylık hedefler. Plan veliyle paylaşılır, ayda bir güncellenir.</li>
+      <li><strong>Haftalık döngü:</strong> Haftada 2-3 merkez oturumu (grup dersi + çalışma saati) + SelfPacedEducation'da kendi hızında modül + gerekiyorsa online canlı ders.</li>
+      <li><strong>Ölçüm döngüsü:</strong> Ayda bir online deneme, 2 ayda bir fiziki deneme (bkz. Bölüm 5) + her ünite sonunda mini değerlendirme.</li>
+      <li><strong>Veli döngüsü:</strong> Haftalık kısa rapor (e-posta/portal), ayda bir 15 dakikalık veli toplantısı, dönemde bir tam durum raporu.</li>
+      <li><strong>Danışmanlık döngüsü:</strong> 8. sınıftan itibaren dönemde bir yol haritası görüşmesi; 11-12. sınıfta başvuru döneminde aktif dosya takibi.</li>
+    </ol>
+
+    <h3>4.2 Kumon modelinden ne alıyoruz, neyi farklı yapıyoruz</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th></th><th>Kumon</th><th>Biz</th></tr>
+        <tr><td>Çekirdek yöntem</td><td>Kendi hızında tekrar çalışma sayfaları</td><td>Okul müfredatına bağlı anlatım + pratik + teknoloji destekli modüller</td></tr>
+        <tr><td>Kapsam</td><td>Matematik ve okuma (temel beceriler)</td><td>Matematik + fen + okul dersleri + sınav hazırlığı + danışmanlık</td></tr>
+        <tr><td>Veli entegrasyonu</td><td>Güçlü (günlük ev ödevi takibi)</td><td>Aynı güçte ama daha ileri: haftalık rapor, aylık toplantı, portal</td></tr>
+        <tr><td>Hedef</td><td>Beceri geliştirme</td><td>Okul notu + yol kararı + sınav başarısı - hepsi</td></tr>
+        <tr><td>Esneklik</td><td>Standart paket</td><td>Paketli ama öğrenciye göre özelleştirilen program</td></tr>
+        <tr><td>Fiziki + online</td><td>Sadece merkez</td><td>Merkez + canlı online + self-paced platform</td></tr>
+      </table>
+    </div>
+    <div class="box box-ok">
+      <strong>Konumlandırma cümlesi:</strong> "Kumon'un veli disiplini + dershanenin hedef yönetimi + Kanada
+      sisteminin danışmanlığı, tek merkezde." Veliler için: <strong>çocuğunuzun eğitim kararlarını birlikte
+      yönettiğiniz bir ekip</strong>; öğrenciler için: <strong>neden çalıştığını bilen bir topluluk</strong>.
+    </div>
+
+    <h3>4.3 Kar amacı gütmeyen yapı nasıl çalışır</h3>
+    <ul>
+      <li><strong>Kurumsal çatı:</strong> Merkez, mevcut bir hayır kurumunun (charity) programı olarak işler; ayrı bir şirket kuruluşu gerekmez. Gelirler önce programın giderlerini karşılar, kalan fazla charity'ye aktarılır ve kurumun diğer programlarını finanse eder.</li>
+      <li><strong>Destekçi mantığı:</strong> Bağışçıya anlatılacak hikaye güçlüdür: "bir defalık küçük bir kurulumla, kendini finanse eden ve kuruma sürekli gelir üreten bir eğitim programı". Kira olmadığı için bağışın neredeyse tamamı programın kendisine gider.</li>
+      <li><strong>Fiyat esnekliği ve burs:</strong> Piyasa fiyatını ödeyebilen aileler tam ücret öder; ihtiyaç sahibi aileler için indirimli/burslu kontenjan ayrılır (charity misyonuyla birebir uyumlu). Burs fonu bağış ve hibelerle beslenir.</li>
+      <li><strong>Vergi/muhasebe notu:</strong> Kayıtlı charity ise program gelirlerinin gelir vergisi ve HST/GST muamelesi, hizmet bedeli mi bağış mı olduğu muhasebeciyle netleştirilmelidir (bkz. Bölüm 17, açık sorular).</li>
+    </ul>
+  </section>
+
+  <!-- ================= 5. Sınav Sistemi ================= -->
+  <section id="s5">
+    <h2>5. Sınav ve Değerlendirme Sistemi</h2>
+    <p>
+      Yaşadığımız "çocuklar denemeyi niye yaptığını anlamıyor" sorununun kökü, sınavın tek başına hedef
+      yapılması. Çözümümüz: <strong>sınavı hedef değil, araç yapmak</strong> ve her öğrenciye kendi rotasına
+      uygun ölçümü sunmak.
+    </p>
+    <h3>5.1 Dört katmanlı değerlendirme piramidi</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Katman</th><th>Ne</th><th>Sıklık</th><th>Kimin için / neden</th></tr>
+        <tr><td><strong>1. İç değerlendirme</strong></td><td>İşlenen konulardan mini sınavlar, okul sınavlarına paralel deneme</td><td>Her ünite sonu + okul sınav dönemleri öncesi</td><td>Herkes - "okulda başarılı olmak" en somut hedef; not yükselince sınavın anlamı kendiliğinden kurulur</td></tr>
+        <tr><td><strong>2. Aylık online deneme</strong></td><td>Mevcut online denemelerimiz, gelişim takibi</td><td>Ayda 1</td><td>Herkes - ilerleme ölçümü, eksik konu tespiti, raporlar veliye gider</td></tr>
+        <tr><td><strong>3. Fiziki deneme</strong></td><td>Merkezde salon sınavı, gerçek sınav koşulları</td><td>2 ayda 1</td><td>Herkes - sınav kası, süre yönetimi, "sınavda olma" tecrübesi; açılış konuşmasında ve sonuç görüşmesinde "neden yapıyoruz" her seferinde anlatılır</td></tr>
+        <tr><td><strong>4. CEMC yarışma merdiveni</strong></td><td>Gauss (7-8), Pascal/Cayley/Fermat (9-11), Euclid (12)</td><td>Yıllık takvim</td><td>Matematikte ilerlemek isteyenler - burs, özgeçmiş, özgüven; Waterloo burs ve kabul süreçlerinde değerli</td></tr>
+      </table>
+    </div>
+    <h3>5.2 "Neden" sorununu çözen uygulamalar</h3>
+    <ul>
+      <li><strong>Kayıtta hedef görüşmesi:</strong> Her öğrenciyle (ve ailesiyle) 3 soru: "Neredesin, nereye gitmek istiyorsun, seni ne engeller?" Her değerlendirme bu hedefe bağlanır.</li>
+      <li><strong>Sınav sonrası birebir yorum:</strong> Deneme sonuçları sadece puan değil; "bir sonraki adımın ne" ile verilir. Puan artışı kişisel hedefe çevrilir.</li>
+      <li><strong>Seviye ve rozet sistemi:</strong> CEMC sonuçları, iç değerlendirme skorları ve okul notları bir "gelişim karne"sinde birleşir; görünür ilerleme motivasyonu taşır.</li>
+      <li><strong>CEMC gönüllü bir yol, zorunluluk değil:</strong> İlgisi olan için merdiven; ilgisi olmayan için asıl hedef okul notu ve yol kararı. Herkes kendi kulvarında ölçülür.</li>
+      <li><strong>Alternatif kulvarlar da ölçülür:</strong> Trades yoluna yönelenler için çıraklık/Red Seal matematik denemeleri, IB/AP adayları için hazırbulunuşluk değerlendirmeleri.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 6. Teknoloji ================= -->
+  <section id="s6">
+    <h2>6. Teknoloji ve Takip Altyapısı</h2>
+    <p>Bu bölüm bizim rakiplerimize göre en büyük avantajımızdır - altyapı çoğunlukla hazırdır.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Bileşen</th><th>Mevcut mu</th><th>Merkezdeki görevi</th></tr>
+        <tr><td><strong>SelfPacedEducation</strong></td><td>Var</td><td>Öğrenciye ödev olarak verilen konu modülleri; öğretmen dersini anlatır, platform pratiği ve takibi taşır; her öğrenci kendi hızında ilerler, öğretmen ekranda kimin nerede takıldığını görür</td></tr>
+        <tr><td><strong>CurriculumBuilder</strong></td><td>Var</td><td>Merkezin müfredat iskeleti: dönemlik konu haritası, ünite-ünite takip, değerlendirme takvimi; her öğrencinin ILP'si bu haritaya bağlanır</td></tr>
+        <tr><td><strong>Online canlı ders</strong></td><td>Var</td><td>Kar fırtınası, tatil, uzak aileler ve yaz dönemi için süreklilik; merkeze gelemeyen öğrenci programdan kopmaz</td></tr>
+        <tr><td><strong>Veli portalı (raporlama)</strong></td><td>Kısmen / geliştirilecek</td><td>Haftalık ilerleme, deneme sonuçları, devam takibi, öğretmen notları tek ekranda veliye</td></tr>
+        <tr><td><strong>Kayıt/CRM ve ödeme</strong></td><td>Yeni</td><td>Kayıt formu, otomatik aylık tahsilat (pre-authorized), fatura, bekleme listesi</td></tr>
+      </table>
+    </div>
+    <div class="box box-info">
+      <strong>Veri notu:</strong> Öğrenci verisi toplarken PIPEDA (federal) ve eyalet gizlilik kurallarına uyulmalı;
+      veli onayı, veri saklama ve imha politikası merkezin ilk gününden belgelenir. Bu aynı zamanda pazarlama
+      malzememizdir: "çocuğunuzun verisi güvende".
+    </div>
+  </section>
+
+  <!-- ================= 7. Pazar ve Rekabet ================= -->
+  <section id="s7">
+    <h2>7. Pazar ve Rekabet</h2>
+    <h3>7.1 Hedef segmentler</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Segment</th><th>Yaş</th><th>İhtiyaç</th><th>Öncelik</th></tr>
+        <tr><td>İlköğretim sonu (4-8. sınıf)</td><td>9-13</td><td>Matematik temeli, çalışma alışkanlığı, okul desteği</td><td>Yüksek - merkezin doluluk tabanı</td></tr>
+        <tr><td>Lise (9-12. sınıf)</td><td>14-18</td><td>Okul notları, ders seçimi, üniversite/college başvurusu</td><td>Yüksek - en çok ödemeye istekli grup</td></tr>
+        <tr><td>IB / AP adayları</td><td>15-18</td><td>Program hazırlığı, ders desteği, sınav pratiği</td><td>Orta - fiyat hassasiyeti düşük</td></tr>
+        <tr><td>Trades yolu</td><td>16-25</td><td>Çıraklık matematik, Red Seal hazırlık, GED</td><td>Orta - farklılaştırıcı niş</td></tr>
+        <tr><td>Göçmen aileler (Türk ve diğer)</td><td>Tümü</td><td>Sistem rehberliği + ana dil desteği + aidiyet</td><td>Yüksek - sadık ve referans üreten kitle</td></tr>
+      </table>
+    </div>
+    <h3>7.2 Pazar büyüklüğü (sıra hesabı - yer seçimiyle doğrulanacak)</h3>
+    <p>
+      300 bin nüfuslu bir havzada yaklaşık 35-45 bin okul çağı çocuğu bulunur. Araştırmalar ailelerin kabaca
+      %8-12'sinin çocuğu için okul dışı akademik desteğe bütçe ayırdığını gösteriyor. Bu, havzada 3.000-5.000
+      potansiyel öğrenci demektir. Hedefimiz 2 yılda bu pazarın sadece %3-4'üne ulaşmaktır (şehir başı 120-160
+      öğrenci) - ulaşılabilir ve muhafazakar bir penetrasyondur. Mekan hazır olduğu için bu hesap Toronto,
+      Vancouver ve Edmonton'un üçü için de geçerlidir; merkezler 10-15 dakikalık sürüş mesafesindeki okulları
+      hedefler.
+    </p>
+    <h3>7.3 Rekabet haritası</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Oyuncu</th><th>Model</th><th>Yaklaşık fiyat/ay</th><th>Zayıf yönü (bizim fırsatımız)</th></tr>
+        <tr><td>Kumon</td><td>Çalışma sayfası tekrarı, matematik + okuma</td><td>$150-200</td><td>Danışmanlık yok, okul müfredatına bağlı değil, esnek değil</td></tr>
+        <tr><td>Mathnasium</td><td>Değerlendirme bazlı matematik</td><td>$300-450</td><td>Tek ders; yol danışmanlığı ve sınav kültürü yok</td></tr>
+        <tr><td>Sylvan Learning</td><td>Geniş akademik destek</td><td>$400-600</td><td>Pahalı; kişisel ilgi sınırlı, kurumsal ve soğuk</td></tr>
+        <tr><td>Oxford Learning</td><td>Bilişsel beceri odaklı</td><td>$400-500</td><td>Okul notu ve başvuru odağı zayıf</td></tr>
+        <tr><td>Birebir özel ders / Tutor Doctor</td><td>Evde 1:1</td><td>$40-80/saat</td><td>Çok pahalı, koordinesiz, takip ve rapor yok</td></tr>
+        <tr><td>Ücretsiz online (Khan vb.)</td><td>Video + alıştırma</td><td>$0</td><td>Disiplin, takip ve insan teması yok - veli bunu tek başına yürütemiyor</td></tr>
+      </table>
+    </div>
+    <h3>7.4 Farklılaşma özeti</h3>
+    <ul>
+      <li>Tek merkezde <strong>ders + danışmanlık + sınav + ortam + teknoloji</strong> - hiçbir rakip bu bileşimin tamamını sunmuyor.</li>
+      <li><strong>Yol danışmanlığı</strong> (üniversite/college/trades/IB/AP) rakiplerin neredeyse hiçbirinde yok; bizim için çekirdek ürün.</li>
+      <li><strong>Türkçe/iki dilli hizmet</strong> göçmen toplulukta güven avantajı; sistem çevirisi ve rehberlik ana dilde.</li>
+      <li><strong>Teknoloji entegrasyonu</strong> ile daha az öğretmen saatiyle daha iyi takip - maliyet avantajı ve ölçeklenebilirlik.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 8. Ürünler ve Fiyatlandırma ================= -->
+  <section id="s8">
+    <h2>8. Ürünler ve Fiyatlandırma</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Paket</th><th>Kapsam</th><th>Fiyat/ay (CAD)</th></tr>
+        <tr><td><strong>Okul Desteği</strong> (4-8. sınıf)</td><td>Haftada 2 grup oturumu + ödev desteği + haftalık veli raporu</td><td class="num">$260</td></tr>
+        <tr><td><strong>Merkez Program</strong> (6-12. sınıf)</td><td>Haftada 2 oturum + ayda 1 online deneme + 2 ayda 1 fiziki deneme + ILP + haftalık rapor</td><td class="num">$320</td></tr>
+        <tr><td><strong>Plus</strong></td><td>Merkez Program + 3. oturum + aylık veli toplantısı + dönemlik yol danışmanlığı</td><td class="num">$420</td></tr>
+        <tr><td><strong>Premium</strong></td><td>Plus + sınırsız oturum (kapasite dahilinde) + aylık birebir danışmanlık + veli portalı tam erişim</td><td class="num">$560</td></tr>
+        <tr><td>Birebir ek ders</td><td>1:1, saatlik</td><td class="num">$60/saat</td></tr>
+        <tr><td>IB / AP grup hazırlığı</td><td>Haftada 1 oturum, program odaklı</td><td class="num">$340</td></tr>
+        <tr><td>Trades hazırlığı</td><td>Çıraklık matematik / Red Seal / GED grup veya 1:1</td><td class="num">$280-420</td></tr>
+        <tr><td>Danışmanlık (tek sefer)</td><td>Yol haritası görüşmesi + yazılı rapor</td><td class="num">$150</td></tr>
+        <tr><td>Yaz kampı</td><td>Haftalık yarım gün programı</td><td class="num">$240/hafta</td></tr>
+      </table>
+    </div>
+    <ul>
+      <li><strong>Kayıt ücreti:</strong> $50 tek seferlik (değerlendirme + materyal). Kardeş indirimi: %10. Yıllık peşin ödeme: 1 ay ücretsiz.</li>
+      <li><strong>Ortalama gelir varsayımı (ARPU):</strong> ~$300/ay - plan hesapları bu değeri kullanır.</li>
+      <li><strong>Kapasite hesabı:</strong> 4 sınıf x 8 öğrenci = 32 eş zamanlı koltuk; hafta içi 3 akşam periyodu + hafta sonu 2 periyot = 5 periyot/gün. Tam dolulukta ~160 öğrenci, %80 dolulukla rahat hedef ~130 öğrenci. 110-130 aralığı tek merkezin sağlıklı kapasitesidir.</li>
+      <li><strong>Fiyat doğrulaması:</strong> Lansman öncesi seçilen havzada rakip fiyat taraması + veli anketi yapılacak; tablodaki fiyatlar bu tarama ile ±%10 revize edilebilir.</li>
+      <li><strong>Charity ve burslu kontenjan:</strong> Kar amacı gütmeyen yapı sayesinde ihtiyaç sahibi aileler için indirimli/burslu kontenjan ayrılır; burs fonu bağışlarla beslenir. Bu, hem misyona hem de topluluk içindeki güvene hizmet eder (bkz. 4.3).</li>
+    </ul>
+  </section>
+
+  <!-- ================= 9. Yer İhtiyacı ================= -->
+  <section id="s9">
+    <h2>9. Yer İhtiyacı ve Mekan Stratejisi</h2>
+    <div class="box box-ok">
+      <strong>En büyük maliyet kalemi ortadan kalktı:</strong> Merkezler, hayır kurumunun Toronto, Vancouver ve
+      Edmonton'daki mekanlarında <strong>kira ödenmeden</strong> hizmet verecek. Bu bölümde "nereden mekan
+      kiralayalım" sorusu yerine "hazır mekanları nasıl değerlendirir, hangi sırayla açar ve en verimli şekilde
+      kullanırız" sorularına cevap arıyoruz.
+    </div>
+    <h3>9.1 Mekanda aranan bölümler</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Alan</th><th>Büyüklük</th><th>Not</th></tr>
+        <tr><td>3-4 derslik</td><td>3-4 x 18-25 m²</td><td>8-10 öğrenci + 1 öğretmen; beyaz tahta, ekran/projektör</td></tr>
+        <tr><td>Çalışma salonu</td><td>30-40 m²</td><td>Bireysel çalışma masaları; "ortam" ayağının kalbi - çok amaçlı salon olarak da kullanılabilir</td></tr>
+        <tr><td>Danışmanlık odası</td><td>10-12 m²</td><td>Veli ve yol haritası görüşmeleri; küçük bir ofis de olabilir</td></tr>
+        <tr><td>Resepsiyon + bekleme</td><td>10-15 m²</td><td>Mevcut giriş/güvenlik alanı kullanılabilir</td></tr>
+        <tr><td>Kilitli depo</td><td>6-10 m²</td><td>Sınav evrakı, materyal - güvenlik şart</td></tr>
+        <tr class="total"><td>Toplam (programa ayrılan bölüm)</td><td class="num">150-250 m²</td><td>(yaklaşık 1.600-2.600 ft²)</td></tr>
+      </table>
+    </div>
+    <h3>9.2 Aday şehirler ve mekanlar</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Şehir</th><th>Avantajları</th><th>Dikkat edilecekler</th></tr>
+        <tr>
+          <td><strong>Toronto</strong></td>
+          <td>Kanada'nın en büyük Türk topluluğu; yoğun okul ve üniversite ağı (UofT, York, TMU, Waterloo çevresi); göçmen veli tabanı geniş</td>
+          <td>Rekabet en yoğun pazar; mekanın okul havzasına ve toplu taşımaya uzaklığı kontrol edilmeli</td>
+        </tr>
+        <tr>
+          <td><strong>Vancouver</strong></td>
+          <td>Büyüyen göçmen nüfus; UBC/SFU çevresi; akademik destek talebi yüksek, dersane tipi kurum az</td>
+          <td>Mekanın hafta sonu/akşam erişimi kritik; yaşam maliyeti öğretmen ücretlerine yansır</td>
+        </tr>
+        <tr>
+          <td><strong>Edmonton</strong></td>
+          <td>Güçlü Türk topluluğu; Alberta Üniversitesi var; yaşam ve personel maliyeti görece düşük; topluluk içi referans ağı kuvvetli</td>
+          <td>Havza daha dağınık olabilir - mekanın araba erişimine yakınlığı önemli</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      Üç şehirde de mekan hazır olduğu için büyüme sorusu "nereden mekan buluruz" değil, "hangi şehirdeki
+      mekan en uygun koşullara sahip ve hangi sırayla açalım" sorusudur. Önerimiz: pilot şehirde modeli
+      doğrulamak, ardından aynı playbook'u diğer iki şehre kopyalamak (bkz. Bölüm 16).
+    </p>
+    <h3>9.3 Mekan değerlendirme kriterleri (charity mekanları için)</h3>
+    <ol>
+      <li><strong>Kullanım saatleri:</strong> Kritik saatler hafta içi 15:30-20:30 ve hafta sonu sabah-akşam. Mekanın bu saatlerde düzenli olarak boş olması şart; charity'nin diğer etkinlikleriyle çakışma takvimi yazılı hale getirilir (yıllık program protokolü).</li>
+      <li><strong>Okullara yakınlık:</strong> 10-15 dakika mesafede 3-4 okul bulunması; öğrenci akışı okul çıkışında gerçekleşir.</li>
+      <li><strong>Erişim:</strong> Toplu taşıma ve velilerin bırakıp alabileceği park alanı; akşam saatlerinde güvenli ve aydınlık ortam.</li>
+      <li><strong>Donanım durumu:</strong> Mevcut masa/sandalye/beyaz tahta ne kadarı kullanılabilir? Ne kadar uyarlama (bölme, akustik, depo) gerekir? Kurulum bütçesi buna göre keskinleşir.</li>
+      <li><strong>İnternet ve altyapı:</strong> Yeterli bant genişliği (canlı online ders + platform erişimi için) ve priz/şarj altyapısı.</li>
+      <li><strong>Tabela ve görünürlük:</strong> Program adının görünür olmasına charity izin veriyor mu; ayrı program markası kullanılacak mı (bkz. Bölüm 17)?</li>
+    </ol>
+    <h3>9.4 Uygunluk notları</h3>
+    <ul>
+      <li>İmar (zoning): mekanın eğitim/öğretim kullanımına uygunluğu ve yangın kapasitesi doğrulanmalı - charity'nin mevcut kullanımı çoğunlukla yeterli olur ama yazılı kontrol şart.</li>
+      <li>İş yeri ruhsatı gerekip gerekmediği belediyeye sorulmalı (charity çatısı altında farklılık gösterebilir).</li>
+      <li>Çocuklarla çalışma: tüm personel sabıka kaydı (Vulnerable Sector Check), çocuk koruma ve yalnız kalma (rule of two) prosedürleri.</li>
+      <li>Sigorta: charity'nin genel sorumluluk poliçesinin bu programı kapsayıp kapsamadığı kontrol edilmeli; gerekirse ek poliçe.</li>
+      <li>Program ile charity arasında yazılı bir kullanım/mutabakat belgesi (MoU): mekan, saatler, gelir-gider paylaşımı, veri ve marka hakları netleştirilir.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 10. Öğretmen ve Personel ================= -->
+  <section id="s10">
+    <h2>10. Öğretmen ve Personel İhtiyacı</h2>
+    <h3>10.1 Lansman ekibi (ilk 6 ay)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Rol</th><th>Süre</th><th>Saat ücreti</th><th>Aylık maliyet</th><th>Sorumluluk</th></tr>
+        <tr><td>Yönetici öğretmen / şehir koordinatörü (kurucu/ortak olabilir)</td><td>Tam zamanlı</td><td>Maaş $4.800/ay</td><td class="num">$4.800</td><td>Müfredat, öğretmen eğitimi, kalite, danışmanlık süreçleri</td></tr>
+        <tr><td>2 kısmi zamanlı öğretmen (matematik/fen)</td><td>20 saat/hafta</td><td>$27/saat</td><td class="num">~$4.680</td><td>Akşam ve hafta sonu grup dersleri</td></tr>
+        <tr><td>Danışman (kariyer/başvuru)</td><td>10 saat/hafta</td><td>$32/saat</td><td class="num">~$1.390</td><td>Yol haritaları, 11-12. sınıf dosyaları, burs takibi</td></tr>
+        <tr><td>Resepsiyon/idari</td><td>30 saat/hafta</td><td>$20/saat</td><td class="num">~$2.600</td><td>Kayıt, ödeme, devam takibi, veli iletişimi</td></tr>
+      </table>
+    </div>
+    <h3>10.2 Büyüme ile personel planı (şehir başına)</h3>
+    <ul>
+      <li><strong>60+ öğrenci:</strong> 3. kısmi zamanlı öğretmen eklenir; danışman haftada 15 saate çıkar.</li>
+      <li><strong>100+ öğrenci:</strong> 4. öğretmen + ikinci idari; danışman tam zamanlıya geçer (2. yıl).</li>
+      <li><strong>150+ öğrenci:</strong> Fen bilgisi öğretmeni ve İngilizce/okuma öğretmeni eklenir; müdür yardımcısı rolü doğar.</li>
+      <li><strong>Her şehir aynı merdiveni izler:</strong> Toronto, Vancouver ve Edmonton'da kadro yukarıdaki eşiklerle büyür; merkezi kadro (10.4) şehirler arasında paylaşılır.</li>
+    </ul>
+    <h3>10.3 Nitelik ve işe alım notları</h3>
+    <ul>
+      <li>Ontario'da özel eğitim merkezlerinde OCT sertifikası zorunlu değildir ancak tercih sebebidir; matematik bölümü mezunu üniversite öğrencileri/yüksek lisans öğrencileri akşam kadrosu için güçlü ve ekonomik kaynaktır.</li>
+      <li>Tüm personel için zorunlu: sabıka kaydı, referans kontrolü, deneme dersi gözlemi, öğretim yöntemi eğitimi (merkez içi 1 hafta).</li>
+      <li>İki dilli (Türkçe + İngilizce) öğretmenler göçmen segmenti için farklılaştırıcıdır.</li>
+      <li>Akşam/hafta sonu mesaisi iş modelinin doğasıdır; iş ilanları ve sözleşmeler buna göre net yazılır.</li>
+    </ul>
+    <h3>10.4 Üç şehirli yapı: merkezi kadro + yerel kadro</h3>
+    <ul>
+      <li><strong>Merkezi kadro (tek, online çalışabilir):</strong> müfredat koordinatörü, platform/teknoloji yöneticisi, online danışman(lar), muhasebe. Giderleri şehirler arasında paylaştırılır - şehir başına maliyet düşer.</li>
+      <li><strong>Yerel kadro (şehir başına):</strong> 1 koordinatör öğretmen + kısmi zamanlı öğretmenler + resepsiyon/idari. Dersler yüz yüze, ölçme ve takip ortak platformdan yürür.</li>
+      <li><strong>Charity gönüllüleri:</strong> Kurumun gönüllü havuzu veli iletişimi, etkinlik, deneme gözetmenliği gibi rollerde kullanılır - hem maliyet avantajı hem topluluk bağı.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 11. Mali Plan ================= -->
+  <section id="s11">
+    <h2>11. Mali Plan</h2>
+    <p class="doc-note">
+      Tüm tutarlar CAD cinsinden planlama varsayımıdır; şehir başına hesaplanmıştır ve mekan/ücret
+      seviyeleriyle birlikte güncellenecektir. Baz senaryo muhafazakardır. Kira $0'dır - mekanlar
+      charity'ye aittir (bkz. Bölüm 9).
+    </p>
+    <h3>11.1 Başlangıç yatırımı (şehir başına)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Kalem</th><th class="num">Tutar (CAD)</th><th>Not</th></tr>
+        <tr><td>Kira güvencesi / depozito</td><td class="num">$0</td><td>Charity mekanı - kira yok</td></tr>
+        <tr><td>Mekan uyarlama (beyaz tahta, bölme/akustik, kilitli depo, yönlendirme)</td><td class="num">$5.000-15.000</td><td>Mekanın mevcut durumuna göre en geniş aralık</td></tr>
+        <tr><td>Mobilya (masa, sandalye, dolaplar - mevcutlardan sonra eksikler)</td><td class="num">$8.000</td><td>Charity mekanındaki mevcut mobilya önce kullanılır</td></tr>
+        <tr><td>Teknoloji (ekran, bilgisayar, yazıcı, ağ)</td><td class="num">$6.000</td><td>Platform altyapımız zaten mevcut</td></tr>
+        <tr><td>Eğitim materyali ve müfredat basımı</td><td class="num">$3.000</td><td>Ölçme paketleri, deneme arşivi; sonraki şehirlerde paylaşılır</td></tr>
+        <tr><td>Ruhsat, hukuk, sigorta katkısı</td><td class="num">$2.000</td><td>Charity çatısı altında sadece program payı</td></tr>
+        <tr><td>Marka, web sitesi, lansman pazarlaması</td><td class="num">$7.000</td><td>İlk şehirde tam; sonraki şehirlerde marka zaten hazır</td></tr>
+        <tr><td>Beklenmeyenler (~%10)</td><td class="num">$4.000</td><td>Tampon</td></tr>
+        <tr class="total"><td>Kurulum toplamı (ilk şehir)</td><td class="num">~$35.000-45.000</td><td>Sonraki şehirler: ~$25.000-35.000</td></tr>
+      </table>
+    </div>
+    <h3>11.2 Aylık sabit giderler (şehir başına, açılış sonrası)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Kalem</th><th class="num">Aylık (CAD)</th></tr>
+        <tr><td>Kira</td><td class="num">$0</td></tr>
+        <tr><td>Ortak gider katkısı (elektrik, su, ısıtma - charity payı)</td><td class="num">$600</td></tr>
+        <tr><td>İnternet, telefon, yazılım</td><td class="num">$350</td></tr>
+        <tr><td>Yerel koordinatör öğretmen maaşı</td><td class="num">$4.800</td></tr>
+        <tr><td>İdari/resepsiyon (kısmi zamanlı)</td><td class="num">$2.200</td></tr>
+        <tr><td>Pazarlama</td><td class="num">$800</td></tr>
+        <tr><td>Sigorta katkısı</td><td class="num">$200</td></tr>
+        <tr><td>Muhasebe payı</td><td class="num">$150</td></tr>
+        <tr><td>Temizlik ve bakım payı</td><td class="num">$300</td></tr>
+        <tr><td>Muhtelif</td><td class="num">$400</td></tr>
+        <tr class="total"><td>Toplam sabit</td><td class="num">~$9.800</td></tr>
+      </table>
+    </div>
+    <h3>11.3 Öğrenci başı değişken maliyet</h3>
+    <ul>
+      <li>Bir grup dersi: 8 öğrenci, haftada 3 saat, ayda ~13 saat öğretmen zamanı. Saat ücreti $27 ile sınıf başı ~$351/ay, öğrenci başı <strong>~$44/ay</strong>.</li>
+      <li>Materyal, deneme basımı, raporlama zamanı: öğrenci başı <strong>~$36/ay</strong>.</li>
+      <li><strong>Toplam değişken: ~$80/öğrenci/ay.</strong> Katkı payı: $300 - $80 = <strong>$220/öğrenci/ay</strong>.</li>
+    </ul>
+    <h3>11.4 Başabaş noktası</h3>
+    <div class="box box-ok">
+      Aylık başabaş = ~$9.800 sabit / $220 katkı payı = <strong>~45-50 öğrenci</strong>. Kira olmadığı için
+      başabaş küçük ve hızlı ulaşılır (planın 6-7. ayı); sonrasında her ek öğrenci doğrudan charity'ye akan
+      fazlaya dönüşür.
+    </div>
+    <h3>11.5 Üç yıllık projeksiyon (şehir başına, baz senaryo)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th></th><th class="num">Yıl 1</th><th class="num">Yıl 2</th><th class="num">Yıl 3</th></tr>
+        <tr><td>Ortalama öğrenci sayısı</td><td class="num">55</td><td class="num">140</td><td class="num">170</td></tr>
+        <tr><td>Gelir ($300 ARPU)</td><td class="num">$198.000</td><td class="num">$504.000</td><td class="num">$612.000</td></tr>
+        <tr><td>Değişken maliyet ($80/öğr.)</td><td class="num">-$52.800</td><td class="num">-$134.400</td><td class="num">-$163.200</td></tr>
+        <tr><td>Sabit maliyet</td><td class="num">-$110.000</td><td class="num">-$120.000</td><td class="num">-$126.000</td></tr>
+        <tr class="total pos"><td>Faaliyet sonucu (charity'ye fazla)</td><td class="num pos">+$35.200</td><td class="num pos">+$249.600</td><td class="num pos">+$322.800</td></tr>
+        <tr><td>Kurulum yatırımı</td><td class="num">-$45.000</td><td class="num">-</td><td class="num">-</td></tr>
+        <tr class="total"><td>Kümülatif nakit</td><td class="num neg">-$9.800</td><td class="num pos">+$239.800</td><td class="num pos">+$562.600</td></tr>
+      </table>
+    </div>
+    <ul>
+      <li>Yıl 1 sabit maliyette 2 ay açılış öncesi hafif yük varsayılmıştır (10 tam ay x $10.000 + 2 kısmi ay).</li>
+      <li>Yıl 2 sabit ~$10.000/ay; yıl 3'te artan pazarlama ve idari destekle ~$10.500/ay.</li>
+      <li><strong>Yatırım geri dönüşü: ~14-18 ay.</strong> Kira olmadığı için model ilk yıldan itibaren charity'ye pozitif katkı verir.</li>
+      <li>Bu tablo tek şehir içindir. Toronto, Vancouver ve Edmonton'da aynı yapı tekrarlandıkça her şehir ayrı hesap olarak işler; merkezi giderler (platform, müfredat, online danışmanlık) şehirler arasında paylaşıldıkça şehir başı sonuç daha da iyileşir.</li>
+    </ul>
+    <h3>11.6 Senaryolar (şehir başına, yıl 3 faaliyet sonucu)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Senaryo</th><th>Varsayım</th><th class="num">Yıl 3 sonucu</th></tr>
+        <tr><td>Kötümser</td><td>ARPU $270, ortalama 110 öğrenci, sabit giderler +%10</td><td class="num pos">+$112.000</td></tr>
+        <tr><td>Baz</td><td>ARPU $300, ortalama 170 öğrenci</td><td class="num pos">+$323.000</td></tr>
+        <tr><td>İyimser</td><td>ARPU $330, ortalama 200 öğrenci + yaz kampı geliri</td><td class="num pos">+$474.000</td></tr>
+      </table>
+    </div>
+    <p class="doc-note">
+      Kira yükü olmadığı için <strong>kötümser senaryoda bile model zarar etmez</strong> - charity yönetimi ve
+      bağışçılar için en güçlü güvence budur. Yeni şehir açılışı ancak pilot şehirde baz senaryonun
+      gerçekleşmesiyle yapılır.
+    </p>
+    <h3>11.7 Finansman seçenekleri</h3>
+    <ul>
+      <li><strong>Charity bütçesi veya destekçi bağışı:</strong> Kurulum ihtiyacı şehir başına yalnızca $35-45K - kurumun mevcut bütçesinden tahsis veya hedefli bir bağış kampanyasıyla kolayca karşılanır; krediye gerek kalmamalıdır.</li>
+      <li><strong>Bağışçı kampanyası:</strong> "X şehrinde kendini finanse eden bir eğitim merkezi kuruyoruz - kurulumu bağışlayın, 2. yıldan itibaren program kuruma net gelir üretsin" hikayesi güçlü ve ölçülebilirdir.</li>
+      <li><strong>Hibeler:</strong> Gençlik eğitimi, yeni göçmen uyumu ve STEM/matematik programları için federal/eyalet/belediye hibeleri araştırılacak (şehir seçimiyle birlikte).</li>
+      <li><strong>Erken kayıt kampanyası:</strong> Açılıştan önce yıllık peşin ödeme indirimi ile ön gelir (nakit akışı köprüsü).</li>
+    </ul>
+  </section>
+
+  <!-- ================= 12. Gelir-Gider Akışı ================= -->
+  <section id="s12">
+    <h2>12. Gelir-Gider Akışı ve Mevsimsellik</h2>
+    <h3>12.1 Yıl içi döngü</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Dönem</th><th>Gelir karakteri</th><th>Gider karakteri</th><th>Aksiyon</th></tr>
+        <tr><td>Eylül-Ekim</td><td>Zirve: yeni kayıt dalgası, kayıt ücretleri</td><td>Pazarlama yoğun, materyal alımı</td><td>Lansman kampanyaları, okul açılış etkinlikleri</td></tr>
+        <tr><td>Kasım-Aralık</td><td>Sabit abonelik geliri; Aralık sonu tatil yavaşlaması</td><td>Normal</td><td>Ara tatil atölyeleri, erken yıl sonu veli raporları</td></tr>
+        <tr><td>Ocak</td><td>İkinci zirve: sınav dönemi kaygısıyla kayıt</td><td>Normal</td><td>"Dönem sonu sınavlarına hazırlık" kampanyası</td></tr>
+        <tr><td>Şubat-Mayıs</td><td>Güçlü: CEMC takvimi, okul finalleri, üniversite başvuru dönemi</td><td>Deneme sınavı maliyetleri</td><td>Yarışma kampanyaları, başvuru danışmanlığı zirvesi</td></tr>
+        <tr><td>Haziran</td><td>Düşüş başlar: okullar kapanıyor</td><td>Normal</td><td>Yaz kampı erken kayıt indirimleri</td></tr>
+        <tr><td>Temmuz-Ağustos</td><td>Dip: abonelikler azalır; kamp ve online modül geliriyle dengelenir</td><td>Azaltılabilir (derslik kullanımı düşer)</td><td>Yaz kampları + SelfPacedEducation yaz paketi + öğretmen izin planlaması</td></tr>
+      </table>
+    </div>
+    <h3>12.2 Nakit akışı kuralları</h3>
+    <ul>
+      <li><strong>Otomatik tahsilat:</strong> Aylık ödemeler pre-authorized debit/kredi kartı ile ayın 1'inde çekilir; tahsilat riski minimize edilir.</li>
+      <li><strong>Öğretmen saatleri talebe göre esner:</strong> Kısmi zamanlı kadro dönemlik sözleşmelerle çalışır - düşük sezonda saatler daralır, gider geliri takip eder.</li>
+      <li><strong>3 aylık işletme tamponu:</strong> Her şehir hesabında 3 aylık sabit gider (~$30.000) tampon tutulur; mevsimsellik şoklarını emer.</li>
+      <li><strong>Yaz stratejisi:</strong> Temmuz-Ağustos'ta merkez "kamp + online yaz paketi" moduna geçer; kira zaten olmadığı için sabit gider zaten düşüktür, öğretmen ve pazarlama gideri de daralır.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 13. Büyüme ================= -->
+  <section id="s13">
+    <h2>13. Büyüme Potansiyeli</h2>
+    <h3>13.1 Aşamalı büyüme planı</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Aşama</th><th>Zaman</th><th>Kapsam</th><th>Hedef</th></tr>
+        <tr><td><strong>Aşama 1 - Pilot şehir</strong></td><td>0-9 ay</td><td>Tek şehirde matematik odaklı açılış; hibrit model; playbook yazılır</td><td>110 öğrenci, başabaş (6-7. ay), model doğrulaması</td></tr>
+        <tr><td><strong>Aşama 2 - 2. ve 3. şehir</strong></td><td>9-24 ay</td><td>Vancouver ve Edmonton'da aynı model, hazır mekanlar; merkezi kadro paylaşılır; kurulum şehir başına ~$25-35K</td><td>Şehir başı 110+ öğrenci; 3 şehir toplamında 300+ öğrenci</td></tr>
+        <tr><td><strong>Aşama 3 - Kapsam genişletme</strong></td><td>18-36 ay</td><td>Fen + İngilizce/okuma eklenir; danışmanlık ayrı ürün hattı; trades ve IB/AP programları derinleşir</td><td>Şehir başı 160-180 öğrenci; charity'ye yıllık ~$300K+ fazla</td></tr>
+        <tr><td><strong>Aşama 4 - Platform ekonomisi</strong></td><td>3-5. yıl</td><td>SelfPacedEducation + CurriculumBuilder paketini diğer charity'lere, okullara ve topluluk kuruluşlarına lisanslama</td><td>Tekrar eden gelir; coğrafyadan bağımsız büyüme</td></tr>
+        <tr><td><strong>Aşama 5 - Ağ etkisi</strong></td><td>5+ yıl</td><td>Yeni şehirlerde yeni charity iş birlikleri - "program paketi + hazır mekan" modeli (franchise yerine charity dünyasına uygun ortaklık)</td><td>Marka değeri, ağ etkisi, kurum için kalıcı gelir</td></tr>
+      </table>
+    </div>
+    <h3>13.2 Büyümenin motorları</h3>
+    <ul>
+      <li><strong>Referans sistemi:</strong> Memnun veli en güçlü pazarlamadır; kayıt ücretinde referans indirimi yapısı kurulur.</li>
+      <li><strong>Online bacak:</strong> Fiziki merkezin kapasitesi dolduğunda bile online ders ve self-paced paketlerle aynı şehir dışında büyüme sürer.</li>
+      <li><strong>Okul ve topluluk iş birlikleri:</strong> Okul aile birlikleri, cami/dernek toplulukları, göçmen hizmet kuruluşları ile ücretsiz seminerler (yol haritası akşamları) - düşük maliyetli tanıtım ve güven.</li>
+      <li><strong>Veri:</strong> Her öğrencinin ilerleme verisi, öğretim kalitemizin kanıtıdır; "ortalama not artışımız X" pazarlamanın çekirdeği olur.</li>
+      <li><strong>Charity ağı:</strong> Kurumun topluluk bağları, gönüllüleri ve destekçileri her şehirde hazır tanıtım kanalıdır; açılış duyuruları bu ağ üzerinden maliyetsiz yayılır.</li>
+      <li><strong>Hibe ve bağış kanalları:</strong> Burs fonu ve program büyütme için gençlik/yeni göçmen eğitim hibeleri düzenli gelir kaynağı olabilir.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 14. Riskler ================= -->
+  <section id="s14">
+    <h2>14. Riskler ve Önlemler</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Risk</th><th>Olasılık</th><th>Etki</th><th>Önlem</th></tr>
+        <tr><td>Kayıt ramp'ı beklenenden yavaş</td><td>Orta</td><td>Yüksek</td><td>Mevcut online öğrenci tabanıyla ön kayıt; lansmandan önce 20-30 kayıt hedefi; 3 aylık nakit tamponu</td></tr>
+        <tr><td>Öğretmen devri / iyi öğretmen bulamama</td><td>Orta</td><td>Yüksek</td><td>Üniversite matematik bölümleriyle ilişki; merkez içi eğitim programı (öğretmen merkeze bağımlı kalmaz); adil ücret + düzenli program</td></tr>
+        <tr><td>Mekan çakışması / kullanım saatleri (charity mekanı başka etkinliklerde de kullanılır)</td><td>Orta</td><td>Orta</td><td>Charity ile yıllık mekan kullanım protokolü (MoU); ders takvimi dönem başında sabitlenir; kritik saatler (15:30-20:30 + hafta sonu) yazılı olarak rezerve edilir</td></tr>
+        <tr><td>Charity yönetim/öncelik değişikliği</td><td>Düşük</td><td>Yüksek</td><td>Yazılı program anlaşması; programın kendi geliriyle bağımsızlaşması; veri, marka ve birikmiş materyal haklarının netleştirilmesi</td></tr>
+        <tr><td>Üç şehri aynı anda yönetme zorluğu</td><td>Orta</td><td>Orta</td><td>Aşamalı açılış (pilot → çoğaltma); merkezi sistemler + şehir başına yerel koordinatör; haftalık merkezi rutin toplantılar</td></tr>
+        <tr><td>Büyük oyuncuların agresif rekabeti (Kumon, Mathnasium açılması)</td><td>Orta</td><td>Orta</td><td>Onların sunmadığı danışmanlık + teknoloji + topluluk bağını derinleştir; sadakat programları</td></tr>
+        <tr><td>Mevsimsellik (yaz düşüşü)</td><td>Kesin</td><td>Orta</td><td>Yaz kampları, online yaz paketi, öğretmen saatlerinin daraltılması</td></tr>
+        <tr><td>Regülasyon / sigorta / veri gizliliği</td><td>Düşük</td><td>Orta</td><td>Açılış öncesi hukuk ve sigorta danışmanlığı; PIPEDA uyumlu veri politikası; sabıka kaydı prosedürleri</td></tr>
+        <tr><td>Kurucuya bağımlılık (key person)</td><td>Orta</td><td>Yüksek</td><td>Operasyon playbook'u yazılı; yönetici öğretmen ikinci adam olarak yetiştirilir; süreçler teknolojiye bağlanır</td></tr>
+        <tr><td>Ekonomik daralma (aileler bütçe kısar)</td><td>Düşük</td><td>Orta</td><td>Eğitim yarı zorunlu harcamadır; esnek paketler (sadece online, sadece deneme üyeliği) ile alt fiyat noktaları korunur; charity burs fonu devreye girer</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 15. SWOT ================= -->
+  <section id="s15">
+    <h2>15. Güçlü Yönler, Zayıflıklar, Fırsatlar, Tehditler</h2>
+    <div class="swot-grid">
+      <div class="swot swot-s">
+        <h4>Güçlü yönler</h4>
+        <ul>
+          <li>Çalışan online ders işi ve mevcut öğrenci/veli tabanı</li>
+          <li>Hazır teknoloji: SelfPacedEducation + CurriculumBuilder</li>
+          <li>Deneme sınavı operasyon deneyimi (online + fiziki)</li>
+          <li>İki dilli hizmet ve göçmen topluluk güveni</li>
+          <li>Türkiye dershane deneyiminden gelen hedef yönetimi kültürü</li>
+          <li>Rakiplerde olmayan danışmanlık boyutu</li>
+          <li>Kira yükü yok - 3 şehirde hazır charity mekanı</li>
+          <li>Charity'nin kurumsal güveni, topluluk ağı, destekçi ve gönüllü havuzu</li>
+          <li>Kar amacı gütmeyen kimlik: fiyat esnekliği, burs imkanı, hibe erişimi</li>
+        </ul>
+      </div>
+      <div class="swot swot-w">
+        <h4>Zayıf yönler</h4>
+        <ul>
+          <li>Kanada'da fiziki eğitim merkezi işletme deneyimi yeni</li>
+          <li>Marka bilinirliği sıfırdan kurulacak</li>
+          <li>Okul müfredatına tam uyum için müfredat çalışması gerekli</li>
+          <li>Başlangıçta tek kişiye bağımlı yönetim</li>
+          <li>Mekan kullanım saatleri charity programlarıyla paylaşımlı - tam esneklik yok</li>
+          <li>Charity karar mekanizmaları bazen yavaş işleyebilir</li>
+          <li>Kurulum bütçesi küçük ama yine de charity onayı ve tahsisi gerekir</li>
+        </ul>
+      </div>
+      <div class="swot swot-o">
+        <h4>Fırsatlar</h4>
+        <ul>
+          <li>Merkezi sınavsız sistemde "rehber" eksiği - boş konumlandırma</li>
+          <li>Trades yolu: hükümetin teşvik ettiği, hizmet verilmeyen niş</li>
+          <li>IB/AP büyüyen segmenti</li>
+          <li>Online platformun lisanslanabilir varlık olması</li>
+          <li>Kumon modelinin kanıtlanmış ama dar olması - geliştirilmiş kopya için alan var</li>
+          <li>Göçmen toplulukta ağızdan ağıza hızlı yayılım</li>
+          <li>3 şehirde hazır mekan - hızlı ve ucuz yayılım</li>
+          <li>Hibe ve bağış kanalları (gençlik, yeni göçmen eğitim fonları)</li>
+          <li>Bağışçıya anlatılacak güçlü hikaye: kendini finanse eden, kuruma gelir üreten program</li>
+        </ul>
+      </div>
+      <div class="swot swot-t">
+        <h4>Tehditler</h4>
+        <ul>
+          <li>Kumon/Mathnasium gibi franchise ağlarının ölçeği</li>
+          <li>Okulların ücretsiz tutor programları</li>
+          <li>AI tabanlı özel ders araçlarının gelişmesi (fiyat baskısı)</li>
+          <li>Öğretmen ücretleri ve genel enflasyon</li>
+          <li>Ekonomik daralmada eğitim harcamalarının kısılması</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box box-info">
+      <strong>Stratejik çıkarım:</strong> Güçlü yönlerimizi (teknoloji + danışmanlık + topluluk) tehditlerin
+      boş bıraktığı alana (bütünsel takip, trades, göçmen rehberliği) sürmek; zayıflıklarımızı da ilk yılın
+      tek görevi haline getirmek (müfredat uyumu, playbook, marka).
+    </div>
+  </section>
+
+  <!-- ================= 16. Yol Haritası ================= -->
+  <section id="s16">
+    <h2>16. Yol Haritası ve Sonraki Adımlar</h2>
+    <h3>16.1 24 aylık takvim</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Aşama</th><th>Süre</th><th>Kritik işler</th><th>Çıkış koşulu</th></tr>
+        <tr><td><strong>0 - Hazırlık</strong></td><td>Ay 0-2</td><td>Charity ile program mutabakatı (MoU), 3 şehirdeki mekanların değerlendirilmesi, pilot şehir seçimi, rakip fiyat taraması, ruhsat/sigorta kontrolü, ön kayıt kampanyası, öğretmen işe alımı</td><td>MoU imzalandı, pilot şehir ve mekan netleşti, 20-30 ön kayıt alındı</td></tr>
+        <tr><td><strong>1 - Açılış</strong></td><td>Ay 2-3</td><td>Mekan uyarlama (küçük ölçekli), donanım, müfredat uyumu, merkez içi öğretmen eğitimi, açılış etkinliği</td><td>İlk ders verildi</td></tr>
+        <tr><td><strong>2 - Doğrulama</strong></td><td>Ay 3-9</td><td>Mevcut online aileler + charity topluluk ağıyla 30-60 öğrenciye ulaş; veli raporlama döngüsünü oturt; değerlendirme sistemini işlet; playbook'u yaz</td><td>60 öğrenci, %85+ aylık devam oranı</td></tr>
+        <tr><td><strong>3 - Başabaş ve ötesi</strong></td><td>Ay 6-12</td><td>Genel pazara açıl; fen ve İngilizce dersleri ekle; okul iş birlikleri; yaz kampı döngüsü</td><td>50+ öğrenci ile aylık başabaş aşıldı; 110 öğrenci hedefi</td></tr>
+        <tr><td><strong>4 - 2. ve 3. şehir</strong></td><td>Ay 12-24</td><td>Vancouver ve Edmonton açılışları (hazır mekan, düşük kurulum); merkezi kadro paylaşımı; danışmanlık ayrı ürün hattı; trades ve IB/AP büyümesi</td><td>Şehir başı 110+ öğrenci; charity'ye düzenli fazla; playbook şehirlerde doğrulandı</td></tr>
+      </table>
+    </div>
+    <h3>16.2 İlk 30 gün - hemen başlanacaklar</h3>
+    <ol>
+      <li>Charity yönetimiyle program görüşmesi: mutabakat (MoU) taslağı, gelir-gider paylaşımı, mekan saatleri.</li>
+      <li>Üç şehirdeki mekanların değerlendirilmesi (Toronto, Vancouver, Edmonton): bölümler, boş saatler, okul havzası, donanım - Bölüm 9.3 kriterleriyle puanlama.</li>
+      <li>Rakip fiyat ve ürün taraması (Kumon, Mathnasium, Sylvan, özel ders ilanları) - üç şehir için.</li>
+      <li>Mevcut online velilerimize kısa anket: "fiziki merkez açılsa" ilgi ve fiyat beklentisi (şehir bazlı).</li>
+      <li>Pilot şehir kararı ve marka adı/konumlandırma çalışması.</li>
+      <li>Kaba mali modelin mekan verileriyle güncellenmesi (bu belgenin 11. bölümü).</li>
+      <li>Muhasebe danışmanlığı: charity çatısında gelirlerin vergi/HST muamelesi, sigorta kapsamı.</li>
+    </ol>
+  </section>
+
+  <!-- ================= 17. Açık Sorular ================= -->
+  <section id="s17">
+    <h2>17. Açık Sorular - Birlikte Karar Vereceklerimiz</h2>
+    <p>Bu belge canlı bir çalışma dokümanıdır. Aşağıdaki kararlar verildikçe ilgili bölümler güncellenecektir:</p>
+    <ol>
+      <li><strong>Charity kimliği ve yapı:</strong> Hangi kurum; kayıtlı charity (CRA) statüsü nedir; kurul onayı ve bütçe süreci nasıl işler?</li>
+      <li><strong>Açılış sırası:</strong> Pilot şehir hangisi (öneri: Toronto)? Üç şehir aşamalı mı açılacak, hangi aralıklarla?</li>
+      <li><strong>Mekan detayları:</strong> Her şehirdeki mekanın bölümleri, boş gün/saatleri, derslik sayısı ve donanımı - 9.3 kriterleriyle değerlendirme tablosu doldurulacak.</li>
+      <li><strong>Gelir modeli:</strong> Piyasa fiyatı + burslu kontenjan oranı ne olacak; fazla nasıl ve ne oranda charity'ye aktarılacak?</li>
+      <li><strong>Vergi/muhasebe:</strong> Program gelirlerinin gelir vergisi ve HST/GST muamelesi; ücret mi bağış mı sorusu muhasebeciyle netleştirilecek.</li>
+      <li><strong>Sigorta:</strong> Charity'nin sorumluluk poliçesi programı kapsıyor mu, ek poliçe gerekir mi?</li>
+      <li><strong>Marka:</strong> Charity adıyla mı, ayrı bir program adıyla mı anılacağız; "dersane" kelimesini pazarda nasıl çevireceğiz?</li>
+      <li><strong>Burs fonu:</strong> Bağışlar burs havuzuna mı, genel bütçeye mi gidecek; burs kriterleri ne olacak?</li>
+      <li><strong>Gönüllü kullanımı:</strong> Charity gönüllüleri hangi rollerde kullanılacak (gözetmen, etkinlik, veli iletişimi)?</li>
+      <li><strong>Hedef kitle önceliği:</strong> İlk yıl ağırlık göçmen/Türk toplulukta mı, genel pazarda mı?</li>
+      <li><strong>Ders kapsamı:</strong> İlk yıl sadece matematik mi, matematik + fen mi? İngilizce ne zaman devreye girer?</li>
+      <li><strong>Fiyat noktası:</strong> Tarama sonrası $260-560 bandında nereye konumlanacağız (orta mı, premium mu)?</li>
+      <li><strong>Veli portalı:</strong> Mevcut platformların hangisi portal olarak sunulacak, neleri gösterecek?</li>
+      <li><strong>Yaz modeli:</strong> Kamp + online paket mi, yoksa kısaltılmış takvim mi?</li>
+      <li><strong>Ölçme başarısı:</strong> Merkezin başarısını neyle ilan edeceğiz - okul not artışı mı, CEMC dereceleri mi, kayıt devamı mı? (Üçünün karışımı için hedef rakamlar belirlenecek.)</li>
+      <li><strong>Müfredat uyumu:</strong> Eyalet curriculum dokümanlarına (Ontario, BC, Alberta) uyum çalışmasını kim yapacak, hangi derslerden başlayacağız?</li>
+    </ol>
+    <div class="box box-warn">
+      <strong>Not:</strong> Kararlar verildikçe bu belgede ilgili bölümün yanına karar ve tarih işlenir;
+      versiyon numarası artırılır (1.0 → 1.1 ...). Böylece belge, merkezin açılışına kadar yaşayan tek
+      gerçek kaynağı olur.
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    Belge: dersane-is-plani.html - Versiyon 1.1 - Güncelleme: 6 Eylül 2026 - UniconHub Eğitim Girişimi.
+    Bu belge dahili planlama amaçlıdır; finansal rakamlar doğrulanması gereken varsayımlardır.
+  </footer>
+
+</div>
+</body>
+</html>
