@@ -10,7 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-window._spDebugBoot = Date.now(); // tool-side diagnostics: timestamps relative to load
+window._spTraceBoot = Date.now(); // trace timestamps (ms since tool load)
 var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
@@ -50,7 +50,6 @@ function loadLessonDocData(lesson, callback) {
       // Fall back to main doc data, but make the misconfiguration visible.
       if (!window._lessonDocLoadWarned) {
         window._lessonDocLoadWarned = true;
-        console.warn('[SelfPaced] lesson doc load failed for "' + lesson.lessonDocId + '":', err);
         tool.notify('⚠️ Could not load the lesson document. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
       }
       if (callback) callback(null, lesson);
@@ -95,10 +94,7 @@ function probeLessonDocAccess() {
     objectId: probeId
   }, function(err, result) {
     if (err || !result || !result.object) {
-      console.warn('[SelfPaced] lesson doc probe FAILED:', err);
       tool.notify('⚠️ Lesson documents are not readable from this tool. Add { "mainObjectType": "curriculum-lessons-uniconbase", "role": "editor", "scope": "shared", "targetCollection": "private" } to this field\'s allowedObjectTypes.', 'warning');
-    } else {
-      console.log('[SelfPaced] lesson doc probe OK');
     }
   });
 }
@@ -121,33 +117,6 @@ function isAdmin() {
     if (r === 'developer' || r === 'owner') return true;
   }
   return false;
-}
-
-/** Debug: log what the CMS sandbox tells us about the current user. */
-function debugLogUser() {
-  try {
-    var user = tool.getUser();
-    console.log('[SelfPaced] tool.getUser():', JSON.stringify(user, null, 2));
-    console.log('[SelfPaced] effectiveAccess:', user ? (user.effectiveAccess || 'none') : 'null');
-    console.log('[SelfPaced] isAdmin():', isAdmin());
-  } catch(e) {
-    console.log('[SelfPaced] tool.getUser() threw:', e);
-  }
-}
-
-/** Diagnostic: log the SDK save capability so admins can verify the
- *  "Allow Save Request" setting is active. */
-function probeToolApi() {
-  try {
-    console.log('[SelfPaced] tool API keys:', Object.keys(tool || {}).join(', '));
-    console.log('[SelfPaced] tool.isReadOnly():', tool.isReadOnly ? tool.isReadOnly() : '(not available)');
-    console.log('[SelfPaced] tool.requestSave available:', typeof tool.requestSave === 'function');
-    console.log('[SelfPaced] allowRequestSave param:', tool.param ? tool.param('allowRequestSave', '(unset)') : '(no param API)');
-    console.log('[SelfPaced] save-like SDK methods found:', findSaveTriggers().join(', ') || '(none)');
-    console.log('[SelfPaced] current stored value:', (JSON.stringify(tool.getValue ? tool.getValue() : null) || '').slice(0, 400));
-  } catch(e) {
-    console.log('[SelfPaced] probeToolApi threw:', e);
-  }
 }
 
 /* ── URL Transform: Storage → Hosting proxy ── */
@@ -318,7 +287,6 @@ function renderPdfIntoContainer(containerId, url) {
       });
     })
     .catch(function(err) {
-      console.error('PDF render error:', err);
       container.innerHTML = '';
       var errBox = document.createElement('div');
       errBox.className = 'pdf-canvas-error';
@@ -482,7 +450,6 @@ function renderHtmlDocIntoContainer(containerId, url) {
       tool.resize();
     })
     .catch(function(err) {
-      console.error('HTML doc render error:', err);
       container.innerHTML = '<div class="pdf-canvas-error"><div>⚠️ Could not load document.</div><a onclick="tool.openUrl(\'' + url + '\')">↗ Open in New Tab</a></div>';
       tool.resize();
     });
@@ -641,25 +608,8 @@ function getPrevLesson(sectionId, lessonId) {
  *  saveProgress(immediate) stages on every call; when immediate=true
  *  (Submit Answers, Mark Complete, …) it also fires requestSave and reports
  *  the true outcome. We never claim "saved" unless the save was accepted. */
-function findSaveTriggers() {
-  var found = [];
-  try {
-    var keys = Object.keys(tool || {});
-    for (var i = 0; i < keys.length; i++) {
-      var k = keys[i];
-      if (/save|commit|persist|flush/i.test(k) && typeof tool[k] === 'function' && found.indexOf(k) === -1) {
-        found.push(k);
-      }
-    }
-  } catch(e) {}
-  return found;
-}
-
 function saveProgress(immediate, onDone) {
   var data = { config: CONFIG, progress: PROGRESS };
-  try {
-    console.log('[SelfPaced] saveProgress immediate=' + !!immediate + ' progressSections=' + Object.keys(PROGRESS || {}).length + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
-  } catch(e) {}
   _lastSavedJson = JSON.stringify(data || null);
   _lastSavedAt = Date.now();
   _suppressNextValueChange = true;
@@ -676,40 +626,22 @@ function saveProgress(immediate, onDone) {
   if (immediate) {
     if (typeof tool.requestSave === 'function') {
       try {
+        console.log('[SP-TRACE] → calling parent save (requestSave) progressSections=' + Object.keys(PROGRESS || {}).length + ' jsonLen=' + _lastSavedJson.length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
         tool.requestSave(function(err, ok) {
+          console.log('[SP-TRACE] → parent save callback ok=' + !!ok + ' err=' + (err || '(none)') + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
           if (ok) {
             result.saved = true;
-            console.log('[SelfPaced] requestSave accepted — Firestore write dispatched');
-            // Watchdog: after a successful save request, poll the PARENT's
-            // value for 20s. If the parent form is ever reverted to a
-            // different progress (an external writer re-staging old data),
-            // this catches it with exact timing.
-            var snap = JSON.stringify(PROGRESS || null);
-            var started = Date.now();
-            var iv = setInterval(function() {
-              if (Date.now() - started > 20000) { clearInterval(iv); return; }
-              var v = null;
-              try { v = tool.getValue(); } catch(e) {}
-              var cur = JSON.stringify(v && v.progress ? v.progress : null);
-              if (cur !== snap) {
-                clearInterval(iv);
-                console.warn('[SelfPaced] EXTERNAL CHANGE DETECTED ' + (Date.now() - started) + 'ms after save — parent value progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + cur.length);
-              }
-            }, 2500);
           } else {
             result.saveError = err || 'denied — enable "Allow Save Request" in the field settings';
-            console.log('[SelfPaced] requestSave rejected:', result.saveError);
           }
           if (onDone) onDone(result);
         });
         return;
       } catch(e) {
         result.saveError = String(e);
-        console.log('[SelfPaced] requestSave threw:', e);
       }
     } else {
       result.saveError = 'CMS does not support requestSave — update the CMS or enable "Save on Change" on the field.';
-      console.log('[SelfPaced] requestSave not available');
     }
   }
   if (onDone) onDone(result);
@@ -718,7 +650,6 @@ function saveProgress(immediate, onDone) {
 /** Report a save outcome honestly — "Saved ✓" only when the parent CMS
  *  accepted the save request (real Firestore commit dispatched). */
 function reportSaveResult(res, successPrefix) {
-  console.log('[SelfPaced] save result:', JSON.stringify(res || null));
   var st = el('quiz-save-status-inline');
   if (res.readOnly) {
     var m1 = '⚠️ Could not save — the page is read-only. Ask an admin to save the record.';
@@ -2232,9 +2163,6 @@ function findSectionsInObject(obj, fieldName) {
 }
 
 function loadData(val) {
-  try {
-    console.log('[SelfPaced] loadData progressSections=' + (val && val.progress ? Object.keys(val.progress).length : 0) + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
-  } catch(e) {}
   // Load config (object-level, set by admin per object)
   if (val && val.config && typeof val.config === 'object') {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
@@ -2701,13 +2629,10 @@ function resetLessonProgress(sectionId, lessonId) {
       try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
       if (actual !== expected) {
         if (retry) {
-          console.warn('[SelfPaced] reset staging mismatch — re-staging (attempt 2)');
           saveReset(false);
         } else {
           tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error');
         }
-      } else {
-        console.log('[SelfPaced] reset staged and verified');
       }
     });
   }
@@ -2744,7 +2669,7 @@ function resetAllProgress() {
       var actual = '';
       try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
       if (actual !== expected) {
-        if (retry) { console.warn('[SelfPaced] reset-all staging mismatch — re-staging'); saveResetAll(false); }
+        if (retry) { saveResetAll(false); }
         else { tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error'); }
       }
     });
@@ -2785,6 +2710,7 @@ function toggleDarkMode() {
    ═══════════════════════════════════════════ */
 
 tool.onReady(function(val, fields) {
+  console.log('[SP-TRACE] ← initial value from parent (onReady) progressSections=' + (val && val.progress ? Object.keys(val.progress).length : 0) + ' jsonLen=' + JSON.stringify(val || null).length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') el('loading-overlay').style.display = 'none';
   }, 12000);
@@ -2811,10 +2737,9 @@ tool.onReady(function(val, fields) {
 
   // Load config from object data (set by admin via setup screen)
   loadData(val);
+  console.log('[SP-TRACE] initial load applied progressSections=' + Object.keys(PROGRESS || {}).length + ' jsonLen=' + JSON.stringify({ config: CONFIG, progress: PROGRESS }).length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
   updateRoleBadge(tool.getUser());
   bindEvents();
-  debugLogUser();         // log CMS user identity to browser console
-  probeToolApi();         // log SDK save capability + settings (see console)
 
   // Dark mode init
   if (localStorage.getItem('sp-dark-mode') === '1') {
@@ -2824,9 +2749,7 @@ tool.onReady(function(val, fields) {
 
   tool.onValueChange(function(v) {
     var vJson = JSON.stringify(v || null);
-    try {
-      console.log('[SelfPaced] onValueChange progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + vJson.length + ' at=' + (Date.now() - window._spDebugBoot) + 'ms');
-    } catch(e) {}
+    console.log('[SP-TRACE] ← value from parent progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + vJson.length + ' msSinceLastSave=' + (Date.now() - _lastSavedAt) + ' matchesLastSave=' + (vJson === _lastSavedJson) + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
     var internal = _suppressNextValueChange && vJson === _lastSavedJson;
     _suppressNextValueChange = false;
     // Stale-echo protection: if the parent echoes a value that differs from
@@ -2837,7 +2760,7 @@ tool.onReady(function(val, fields) {
       var ours = null;
       try { ours = JSON.parse(_lastSavedJson); } catch(e) {}
       if (ours && ours.progress && v && v.progress && JSON.stringify(ours.progress) !== JSON.stringify(v.progress)) {
-        console.warn('[SelfPaced] stale external value ignored — keeping the most recent save');
+        console.log('[SP-TRACE] ← OLDER DATA from parent ignored — keeping newest save (parentSections=' + Object.keys(v.progress).length + ', oursSections=' + Object.keys(ours.progress).length + ')');
         loadData(ours);
         _lastSavedJson = JSON.stringify(ours || null);
         _suppressNextValueChange = true;
