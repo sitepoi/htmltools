@@ -479,16 +479,23 @@ function hasLessonVideo(les) {
    ═══════════════════════════════════════════ */
 
 function getSortedSections() {
-  return SECTIONS.slice().sort(function(a, b) {
-    return (a.order || 9999) - (b.order || 9999);
-  });
+  return SECTIONS
+    .filter(function(s) { return !!s && typeof s === 'object'; })
+    .slice().sort(function(a, b) {
+      return (a.order || 9999) - (b.order || 9999);
+    });
 }
 
 function getLessons(section) {
-  var lessons = section.lessons || [];
-  return lessons.slice().sort(function(a, b) {
-    return (a.order || 9999) - (b.order || 9999);
-  });
+  // Guard against corrupted section data: null entries or lessons without an
+  // id must never break rendering (a throwing render is what left the lesson
+  // list frozen on the previous section's lessons).
+  var lessons = (section && Array.isArray(section.lessons)) ? section.lessons : [];
+  return lessons
+    .filter(function(l) { return !!l && typeof l === 'object' && !!l.id; })
+    .slice().sort(function(a, b) {
+      return (a.order || 9999) - (b.order || 9999);
+    });
 }
 
 function getAllLessonsInOrder() {
@@ -520,6 +527,15 @@ function getOverallProgressPct() {
 }
 
 function isLessonAccessible(sectionId, lessonId) {
+  var mgmtType = (CONFIG.managementType || 'self_paced');
+  // A lesson the student already finished is NEVER locked, regardless of
+  // what older/legacy progress entries around it look like. (Fixes completed
+  // lessons appearing as "Locked" when an earlier lesson still has a legacy
+  // status like pending_review-with-approval or studying.)
+  var own = getLessonProgress(sectionId, lessonId);
+  if (own.status === 'completed') return true;
+  if (mgmtType === 'supervised' && own.supervisorStatus === 'approved') return true;
+
   var all = getAllLessonsInOrder();
   var targetIdx = -1;
   for (var i = 0; i < all.length; i++) {
@@ -527,15 +543,13 @@ function isLessonAccessible(sectionId, lessonId) {
   }
   if (targetIdx === -1) return false;
   if (targetIdx === 0) return true;
-  // Check management type: supervised requires previous lesson approved, self-paced requires completed
-  var mgmtType = (CONFIG.managementType || 'self_paced');
+  // Check management type: supervised requires previous lesson approved,
+  // self-paced requires completed. Legacy-friendly: an already completed
+  // lesson counts as unlocked even if its approval flag is missing.
   for (var i = 0; i < targetIdx; i++) {
     var prevProg = getLessonProgress(all[i].sectionId, all[i].lessonId);
     if (mgmtType === 'supervised') {
-      // Supervised courses are ALWAYS gated: a lesson unlocks only after the
-      // supervisor approves it (approval also flips status to completed).
-      // A completed-looking status without approval does NOT unlock the next.
-      if (prevProg.supervisorStatus !== 'approved') return false;
+      if (prevProg.supervisorStatus !== 'approved' && prevProg.status !== 'completed') return false;
     } else {
       if (prevProg.status !== 'completed') return false;
     }
@@ -706,7 +720,6 @@ function scheduleQuizAutoSave() {
 
 function renderSections() {
   var grid = el('section-group-grid');
-  var empty = el('sections-empty');
   if (!grid) return; // DOM not ready (e.g., stale tool HTML snapshot) — bail gracefully
   var searchInput = el('search-input');
   var filterEl = el('filter-status');
@@ -725,19 +738,13 @@ function renderSections() {
   });
 
   if (filtered.length === 0) {
-    grid.innerHTML = '';
-    if (empty) {
-      empty.style.display = '';
-      if (sorted.length === 0) {
-        empty.querySelector('.empty-title').textContent = 'No sections available yet';
-        empty.querySelector('.empty-desc').textContent = 'A manager needs to add curriculum sections first.';
-      } else {
-        empty.querySelector('.empty-title').textContent = 'No matching sections';
-        empty.querySelector('.empty-desc').textContent = 'Try adjusting your search or filter.';
-      }
-    }
+    // #sections-empty is a CHILD of #section-group-grid — writing innerHTML
+    // destroys it, so display-toggle updates stop working after the first
+    // render. Render the empty state as fresh HTML every time instead.
+    var emptyTitle = sorted.length === 0 ? 'No sections available yet' : 'No matching sections';
+    var emptyDesc = sorted.length === 0 ? 'A manager needs to add curriculum sections first.' : 'Try adjusting your search or filter.';
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-title">' + emptyTitle + '</div><div class="empty-desc">' + emptyDesc + '</div></div>';
   } else {
-    if (empty) empty.style.display = 'none';
     grid.innerHTML = filtered.map(function(s) {
       var summary = getSectionProgressSummary(s.id);
       var accessible = isSectionAccessible(s.id);
@@ -780,16 +787,21 @@ function renderLessons() {
   if (infoProgress) infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed';
 
   var list = el('lesson-list');
-  var empty = el('lessons-empty');
-  if (!list || !empty) return;
+  if (!list) return;
 
   if (lessons.length === 0) {
-    list.innerHTML = '';
-    empty.style.display = '';
+    // #lessons-empty is a CHILD of #lesson-list — the first non-empty
+    // innerHTML write destroys it, so render the empty state as HTML.
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-title">No lessons in this section</div><div class="empty-desc">A manager needs to add lessons to this section.</div></div>';
   } else {
-    empty.style.display = 'none';
-    list.innerHTML = lessons.map(function(les, idx) {
-      var prog = getLessonProgress(section.id, les.id);
+    // Build all cards first, then assign ONCE. Even if the data contains
+    // anything unexpected, the container is ALWAYS replaced — the previous
+    // section's cards must never stay visible under this section's header.
+    var cardsHtml = '';
+    try {
+      cardsHtml = lessons.map(function(les, idx) {
+        if (!les || !les.id) return '';
+        var prog = getLessonProgress(section.id, les.id);
       var lock = !isLessonAccessible(section.id, les.id);
       // Status key drives icon + badge. pending_review / studying must NOT
       // fall back to "Not Started" (the old maps lacked those two keys).
@@ -817,8 +829,12 @@ function renderLessons() {
           '</div>' +
         '</div>' +
         '<span class="lesson-card-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
-      '</div>';
-    }).join('');
+        '</div>';
+      }).join('');
+    } catch(e) {
+      cardsHtml = '';
+    }
+    list.innerHTML = cardsHtml || '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not list lessons</div><div class="empty-desc">The section data is incomplete. Please contact your administrator.</div></div>';
   }
   updateProgressBar();
 }
@@ -830,8 +846,11 @@ function renderLessons() {
 function renderLessonDetail() {
   var section = findSection(currentSectionId);
   if (!section) { showSections(); return; }
-  // Use enriched lesson from lesson doc if available, else fall back to main doc data
-  var lesson = window._currentEnrichedLesson || findLesson(section, currentLessonId);
+  // Use the enriched lesson ONLY when it belongs to the lesson being shown —
+  // re-renders (onValueChange, study timer) must not reuse a copy left over
+  // from another lesson.
+  var enriched = (window._currentEnrichedKey === currentSectionId + '|' + currentLessonId) ? window._currentEnrichedLesson : null;
+  var lesson = enriched || findLesson(section, currentLessonId);
   if (!lesson) { openSection(currentSectionId); return; }
 
   var prog = getLessonProgress(section.id, lesson.id);
@@ -1234,20 +1253,47 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
   } else if (activeQuestions.length > 0 && !isCompleted) {
     html += '<div class="quiz-set-label">Question Set ' + (currentSet + 1) + ' of ' + QUIZ_SETS + '</div>';
     html += activeQuestions.map(function(q, qi) {
+      var myAnswer = (wasSubmitted && typeof quizAnswers[qi] === 'number') ? quizAnswers[qi] : -1;
       var opts = (q.options || []).map(function(opt, oi) {
         var selected = quizAnswers[qi] === oi;
         var correctClass = '';
-        if (wasSubmitted) { if (oi === q.answer) correctClass = ' correct'; else if (selected && oi !== q.answer) correctClass = ' incorrect'; }
-        return '<label class="quiz-option' + (selected ? ' selected' : '') + correctClass + '"><input type="radio" name="q' + qi + '" value="' + oi + '" ' + (selected ? 'checked' : '') + ' ' + (wasSubmitted ? 'disabled' : '') + '><span>' + esc(opt) + '</span></label>';
-      }).join('');
-      var expHtml = '';
-      if (isCompleted && q.explanation_correct) expHtml += '<div class="quiz-explanation correct">✅ ' + esc(q.explanation_correct) + '</div>';
-      if (wasSubmitted && q.explanations_incorrect && Array.isArray(q.explanations_incorrect)) {
-        for (var ei = 0; ei < q.explanations_incorrect.length; ei++) {
-          if (q.explanations_incorrect[ei] && ei !== q.answer) expHtml += '<div class="quiz-explanation incorrect">❌ Option ' + (ei+1) + ': ' + esc(q.explanations_incorrect[ei]) + '</div>';
+        var tagHtml = '';
+        if (wasSubmitted) {
+          if (oi === q.answer) {
+            correctClass = ' correct';
+            tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Correct answer</span>';
+          } else if (selected && oi !== q.answer) {
+            correctClass = ' incorrect';
+            tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
+          }
         }
+        return '<label class="quiz-option' + (selected ? ' selected' : '') + correctClass + '"><input type="radio" name="q' + qi + '" value="' + oi + '" ' + (selected ? 'checked' : '') + ' ' + (wasSubmitted ? 'disabled' : '') + '><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
+      }).join('');
+      var statusHtml = '';
+      var expHtml = '';
+      if (wasSubmitted) {
+        if (myAnswer === q.answer) {
+          statusHtml = '<span class="quiz-q-status q-status-correct">✓ Answered correctly</span>';
+        } else if (myAnswer !== -1) {
+          statusHtml = '<span class="quiz-q-status q-status-wrong">✗ Answered incorrectly</span>';
+        } else {
+          statusHtml = '<span class="quiz-q-status q-status-empty">◌ Not answered</span>';
+        }
+        var expParts = [];
+        if (q.explanation_correct) expParts.push('<div class="exp-entry">' + esc(q.explanation_correct) + '</div>');
+        if (myAnswer !== -1 && myAnswer !== q.answer && q.explanations_incorrect && Array.isArray(q.explanations_incorrect) && q.explanations_incorrect[myAnswer]) {
+          expParts.push('<div class="exp-entry exp-wrong">Why option ' + (myAnswer + 1) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
+        }
+        if (expParts.length) expHtml = '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div>' + expParts.join('') + '</div>';
+      } else if (isCompleted && q.explanation_correct) {
+        expHtml = '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div><div class="exp-entry">' + esc(q.explanation_correct) + '</div></div>';
       }
-      return '<div class="quiz-question"><div class="quiz-q-text">' + (qi+1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + opts + expHtml + '</div>';
+      return '<div class="quiz-question' + (wasSubmitted ? ' q-result' : '') + '">' +
+        '<div class="quiz-question-main">' +
+          '<div class="quiz-q-text">' + (qi+1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + opts +
+        '</div>' +
+        (expHtml ? '<div class="quiz-question-aside">' + expHtml + '</div>' : '') +
+      '</div>';
     }).join('');
 
     if (!wasSubmitted) {
@@ -1256,26 +1302,36 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     } else if (!isCompleted && !isStudying) {
       var score = calcQuizScore(activeQuestions, prog.quizAnswers);
       var passed = score >= MIN_PASS_SCORE;
-      html += '<div class="quiz-result ' + (passed ? 'pass' : 'fail') + '" style="display:block">Quiz ' + (passed ? 'passed' : 'failed') + ' — Score: ' + score + '%' + (passed ? '' : ' (need ' + MIN_PASS_SCORE + '%)') + '</div>';
-      html += '<span id="quiz-save-status-inline" style="display:block;text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px"></span>';
-      if (passed) {
-        var mgmtTypeQ = CONFIG.managementType || 'self_paced';
-        html += '<div style="text-align:center;padding:12px 16px;background:var(--primary-bg);border-radius:8px;font-size:13px;color:var(--primary-dark);margin-top:12px">✅ Great! Next step: open the <strong>Finish</strong> tab and click <strong>“' + (mgmtTypeQ === 'supervised' ? 'Mark Complete & Submit for Review' : 'Mark Complete') + '”</strong> to save your completion.</div>';
+      if (isAdmin()) {
+        // Supervisor view: all three sets with the student's results.
+        var lastAttemptIdx = 0;
+        if (prog.quizAttempts && Array.isArray(prog.quizAttempts) && prog.quizAttempts.length > 0) {
+          var lastAtt = prog.quizAttempts[prog.quizAttempts.length - 1];
+          if (typeof lastAtt.setIndex === 'number') lastAttemptIdx = lastAtt.setIndex;
+        }
+        html += renderQuizSetsTabs(quizData, prog, lastAttemptIdx);
+      } else {
+        html += '<div class="quiz-result ' + (passed ? 'pass' : 'fail') + '" style="display:block">Quiz ' + (passed ? 'passed' : 'failed') + ' — Score: ' + score + '%' + (passed ? '' : ' (need ' + MIN_PASS_SCORE + '%)') + '</div>';
+        html += '<span id="quiz-save-status-inline" style="display:block;text-align:center;font-size:12px;color:var(--text-muted);margin-top:8px"></span>';
+        if (passed) {
+          var mgmtTypeQ = CONFIG.managementType || 'self_paced';
+          html += '<div style="text-align:center;padding:12px 16px;background:var(--primary-bg);border-radius:8px;font-size:13px;color:var(--primary-dark);margin-top:12px">✅ Great! Next step: open the <strong>Finish</strong> tab and click <strong>“' + (mgmtTypeQ === 'supervised' ? 'Mark Complete & Submit for Review' : 'Mark Complete') + '”</strong> to save your completion.</div>';
+        }
+        if (!passed && currentSet < QUIZ_SETS - 1) html += '<div class="quiz-actions"><button class="btn btn-outline" id="btn-retry-quiz-inline">🔄 Retry Quiz</button></div>';
       }
-      if (!passed && currentSet < QUIZ_SETS - 1) html += '<div class="quiz-actions"><button class="btn btn-outline" id="btn-retry-quiz-inline">🔄 Retry Quiz</button></div>';
     }
   } else if (isCompleted) {
-    html += '<div class="quiz-set-label">✅ Quiz Completed — All Sets Passed</div>';
-    html += quizData.map(function(q, qi) {
-      var myAnswer = prog.quizAnswers && typeof prog.quizAnswers[qi] === 'number' ? prog.quizAnswers[qi] : -1;
-      var optsHTML = (q.options || []).map(function(opt, oi) {
-        var cls = oi === q.answer ? ' correct' : (oi === myAnswer && oi !== q.answer ? ' incorrect' : '');
-        return '<label class="quiz-option' + cls + '" style="cursor:default"><input type="radio" disabled ' + (oi === myAnswer ? 'checked' : '') + '><span>' + esc(opt) + (oi === q.answer ? ' ✓' : '') + '</span></label>';
-      }).join('');
-      var exp = q.explanation_correct ? '<div class="quiz-explanation correct">✅ ' + esc(q.explanation_correct) + '</div>' : '';
-      return '<div class="quiz-question"><div class="quiz-q-text">' + (qi+1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + optsHTML + exp + '</div>';
-    }).join('');
-    html += '<div class="quiz-result pass" style="display:block">✅ Quiz passed! Final score: ' + (typeof prog.score === 'number' ? prog.score + '%' : '—') + '</div>';
+    // ── Completed quiz view ──
+    // Students see ONLY the question set they answered and passed.
+    // Supervisors (admins) see three tabs — one per set — with per-set scores.
+    var passedSet = getQuizPassedSetIndex(prog);
+    if (isAdmin()) {
+      html += renderQuizSetsTabs(quizData, prog, passedSet);
+    } else {
+      html += '<div class="quiz-set-label">✅ Quiz Completed — Set ' + (passedSet + 1) + ' of ' + QUIZ_SETS + ' Passed</div>';
+      html += renderQuizSetHtml(quizData, passedSet, prog.quizAnswers, true);
+      html += '<div class="quiz-result pass" style="display:block">✅ Quiz passed! Final score: ' + (typeof prog.score === 'number' ? prog.score + '%' : '—') + '</div>';
+    }
   }
 
   // Bind interactions after render
@@ -1316,6 +1372,129 @@ function calcQuizScore(quizData, answers) {
   for (var i = 0; i < quizData.length; i++) { if (answers[i] === quizData[i].answer) correct++; }
   return quizData.length > 0 ? Math.round((correct / quizData.length) * 100) : 0;
 }
+
+/** Determine which question set (0-based) the student passed — stored on
+ *  completion or derived from the last quiz attempt. */
+function getQuizPassedSetIndex(prog) {
+  if (prog && typeof prog.currentSet === 'number') {
+    return Math.max(0, Math.min(QUIZ_SETS - 1, prog.currentSet));
+  }
+  if (prog && prog.quizAttempts && Array.isArray(prog.quizAttempts) && prog.quizAttempts.length > 0) {
+    var last = prog.quizAttempts[prog.quizAttempts.length - 1];
+    if (typeof last.setIndex === 'number') return Math.max(0, Math.min(QUIZ_SETS - 1, last.setIndex));
+  }
+  return 0;
+}
+
+/** Latest score recorded for a question set, or null if never attempted. */
+function quizAttemptScoreForSet(prog, setIndex) {
+  if (prog && prog.quizAttempts && Array.isArray(prog.quizAttempts)) {
+    for (var i = prog.quizAttempts.length - 1; i >= 0; i--) {
+      if (prog.quizAttempts[i].setIndex === setIndex && typeof prog.quizAttempts[i].score === 'number') {
+        return prog.quizAttempts[i].score;
+      }
+    }
+  }
+  return null;
+}
+
+/** HTML for one question set. answers is the student's set-relative answer map
+ *  (or null when the set was never answered). showResults highlights
+ *  correct/incorrect options and the student's selection. */
+function renderQuizSetHtml(quizData, setIndex, answers, showResults) {
+  var setStart = setIndex * QUIZ_PER_SET;
+  var setEnd = Math.min(setStart + QUIZ_PER_SET, quizData.length);
+  var setQuestions = quizData.slice(setStart, setEnd);
+  if (!setQuestions.length) {
+    return '<div class="quiz-set-label">⚠️ This set has no questions.</div>';
+  }
+  return setQuestions.map(function(q, qi) {
+    var myAnswer = (showResults && answers && typeof answers[qi] === 'number') ? answers[qi] : -1;
+    // Per-question outcome pill so Correct / Incorrect / Not answered is
+    // obvious at a glance — not just a subtle radio state.
+    var statusHtml = '';
+    if (showResults) {
+      if (myAnswer === q.answer) {
+        statusHtml = '<span class="quiz-q-status q-status-correct">✓ Answered correctly</span>';
+      } else if (myAnswer !== -1) {
+        statusHtml = '<span class="quiz-q-status q-status-wrong">✗ Answered incorrectly</span>';
+      } else {
+        statusHtml = '<span class="quiz-q-status q-status-empty">◌ Not answered</span>';
+      }
+    }
+    var optsHTML = (q.options || []).map(function(opt, oi) {
+      var cls = '';
+      var tagHtml = '';
+      if (oi === q.answer) {
+        cls = ' correct';
+        tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Correct answer</span>';
+      } else if (showResults && myAnswer !== -1 && oi === myAnswer) {
+        cls = ' incorrect';
+        tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
+      }
+      return '<label class="quiz-option' + cls + '" style="cursor:default"><input type="radio" disabled ' + (oi === myAnswer ? 'checked' : '') + '><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
+    }).join('');
+    // Explanation in a neutral side panel (right column on desktop) so it
+    // reads as a note, not as another option.
+    var expParts = [];
+    if (q.explanation_correct) expParts.push('<div class="exp-entry">' + esc(q.explanation_correct) + '</div>');
+    if (showResults && myAnswer !== -1 && myAnswer !== q.answer && q.explanations_incorrect && Array.isArray(q.explanations_incorrect) && q.explanations_incorrect[myAnswer]) {
+      expParts.push('<div class="exp-entry exp-wrong">Why option ' + (myAnswer + 1) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
+    }
+    var expHtml = expParts.length ? '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div>' + expParts.join('') + '</div>' : '';
+    return '<div class="quiz-question q-result">' +
+      '<div class="quiz-question-main">' +
+        '<div class="quiz-q-text">' + (qi + 1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + optsHTML +
+      '</div>' +
+      (expHtml ? '<div class="quiz-question-aside">' + expHtml + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+/** Supervisor tabbed view: all question sets with per-set scores and the
+ *  student's answers highlighted on the set they answered. */
+function renderQuizSetsTabs(quizData, prog, answeredSetIndex) {
+  var answeredSet = Math.max(0, Math.min(QUIZ_SETS - 1, answeredSetIndex || 0));
+  var containerId = 'sup-quiz-sets-' + genId();
+  var html = '<div id="' + containerId + '">';
+  html += '<div class="quiz-set-label">👁️ Supervisor view — ' + QUIZ_SETS + ' question sets</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  for (var s = 0; s < QUIZ_SETS; s++) {
+    var sc = quizAttemptScoreForSet(prog, s);
+    var pass = (typeof sc === 'number' && sc >= MIN_PASS_SCORE);
+    var label = 'Set ' + (s + 1) + (typeof sc === 'number' ? ' · ' + sc + '%' : ' · not attempted');
+    var active = s === answeredSet;
+    html += '<button data-sup-quiz-tab="' + s + '" onclick="window.spSupQuizTab(\'' + containerId + '\',' + s + ')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid ' + (active ? '#4f46e5' : '#e2e8f0') + ';background:' + (active ? '#eef2ff' : '#fff') + ';color:#1e293b;cursor:pointer;font-family:inherit">' + (pass ? '✅ ' : '📝 ') + label + '</button>';
+  }
+  html += '</div>';
+  for (var v = 0; v < QUIZ_SETS; v++) {
+    var vScore = quizAttemptScoreForSet(prog, v);
+    var answeredHere = (v === answeredSet);
+    html += '<div data-sup-quiz-pane="' + v + '" style="' + (v === answeredSet ? '' : 'display:none') + '">';
+    html += '<div class="quiz-set-label">Question Set ' + (v + 1) + ' of ' + QUIZ_SETS + (typeof vScore === 'number' ? ' — Score: ' + vScore + '%' : ' — Not attempted') + '</div>';
+    html += renderQuizSetHtml(quizData, v, answeredHere ? prog.quizAnswers : null, answeredHere);
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+/** Switch the active set tab in the supervisor quiz view. */
+window.spSupQuizTab = function(containerId, setIndex) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var tabs = container.querySelectorAll('[data-sup-quiz-tab]');
+  for (var t = 0; t < tabs.length; t++) {
+    var active = parseInt(tabs[t].getAttribute('data-sup-quiz-tab')) === setIndex;
+    tabs[t].style.border = '1px solid ' + (active ? '#4f46e5' : '#e2e8f0');
+    tabs[t].style.background = active ? '#eef2ff' : '#fff';
+  }
+  var panes = container.querySelectorAll('[data-sup-quiz-pane]');
+  for (var p = 0; p < panes.length; p++) {
+    var paneIdx = parseInt(panes[p].getAttribute('data-sup-quiz-pane'));
+    panes[p].style.display = (paneIdx === setIndex) ? '' : 'none';
+  }
+};
 
 /** Render flashcards as enhanced flip-card grid with categories, difficulty, progress tracking */
 function renderFlashcardsInFlow(flashcards, prog, sectionId, lessonId) {
@@ -1856,8 +2035,14 @@ function openLesson(sectionId, lessonId) {
   var section = findSection(sectionId);
   var lesson = section ? findLesson(section, lessonId) : null;
   el('app-title').textContent = '📖 ' + (lesson ? (lesson.title || 'Lesson') : 'Lesson');
-  // Phase 2: load heavy content from lesson doc (fallback to main doc data)
+  // Phase 2: load heavy content from lesson doc (fallback to main doc data).
+  // Clear the previous lesson's enriched copy IMMEDIATELY — a stale global
+  // is what made section-2 lessons open with section-1 content.
+  window._currentEnrichedLesson = null;
+  window._currentEnrichedKey = sectionId + '|' + lessonId;
   loadLessonDocData(lesson, function(err, enrichedLesson) {
+    // Async race guard: the user may already have moved to another lesson.
+    if (window._currentEnrichedKey !== sectionId + '|' + lessonId) return;
     window._currentEnrichedLesson = enrichedLesson || lesson;
     renderLessonDetail();
     window.scrollTo(0, 0);
@@ -1920,7 +2105,7 @@ function markComplete() {
   var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
   var prevAnswers = (existingProg.quizAnswers && typeof existingProg.quizAnswers === 'object') ? JSON.parse(JSON.stringify(existingProg.quizAnswers)) : {};
   var prevAttempts = (existingProg.quizAttempts && Array.isArray(existingProg.quizAttempts)) ? JSON.parse(JSON.stringify(existingProg.quizAttempts)) : [];
-  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: existingProg.quizPassed === true, quizSubmitted: true, flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: null, supervisorNotes: '' };
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: existingProg.quizPassed === true, quizSubmitted: true, currentSet: (typeof existingProg.currentSet === 'number' ? existingProg.currentSet : 0), flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: null, supervisorNotes: '' };
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
@@ -1971,7 +2156,7 @@ function submitQuiz(quizData) {
       quizPassed: true,
       completedAt: prev.completedAt || null,
       quizAttempts: attempts,
-      currentSet: 0,
+      currentSet: currentSet,
       studyUntil: null,
       quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
       quizSubmitted: true,

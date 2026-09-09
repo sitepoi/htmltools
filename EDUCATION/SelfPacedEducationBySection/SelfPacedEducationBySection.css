@@ -525,6 +525,34 @@ body.dark .flashcard-content { color: #e2e8f0; }
 .quiz-explanation.correct { background: var(--success-light); color: #065f46; border-left: 3px solid var(--success); }
 .quiz-explanation.incorrect { background: var(--danger-light); color: #991b1b; border-left: 3px solid var(--danger); }
 
+/* ── Quiz Result Card: options on the left, explanation panel on the right ── */
+.quiz-question.q-result { display: flex; flex-direction: column; gap: 12px; }
+.quiz-question-main { flex: 1.6 1 0; min-width: 0; }
+.quiz-question-aside { flex: 1 1 0; min-width: 0; }
+@media (min-width: 960px) {
+  .quiz-question.q-result { flex-direction: row; align-items: flex-start; }
+}
+
+/* Per-question outcome pill (Correct / Incorrect / Not answered) */
+.quiz-q-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 999px; margin-bottom: 10px; }
+.q-status-correct { background: var(--success-light); color: #065f46; border: 1px solid #6ee7b7; }
+.q-status-wrong { background: var(--danger-light); color: #991b1b; border: 1px solid #fca5a5; }
+.q-status-empty { background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* In-option tags: makes "correct answer" vs "your answer" unmistakable */
+.quiz-opt-text { flex: 1; }
+.quiz-opt-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tag-correct { background: #059669; color: #ffffff; }
+.tag-wrong { background: #dc2626; color: #ffffff; }
+
+/* Explanation panel — neutral side card, clearly not an answer option */
+.quiz-explanation-box { background: var(--surface-alt); border: 1px dashed #cbd5e1; border-radius: var(--radius-lg); padding: 12px 14px; font-size: 13px; line-height: 1.6; }
+.quiz-explanation-box .exp-label { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--primary); margin-bottom: 6px; }
+.quiz-explanation-box .exp-entry { color: #475569; }
+.quiz-explanation-box .exp-wrong { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); color: #991b1b; }
+body.dark .quiz-explanation-box { border-color: #64748b; }
+body.dark .quiz-explanation-box .exp-entry { color: #cbd5e1; }
+
 /* ── Quiz Difficulty Badge ── */
 .quiz-difficulty { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; margin-left: 6px; vertical-align: middle; }
 .difficulty-easy { background: var(--success-light); color: #065f46; }
