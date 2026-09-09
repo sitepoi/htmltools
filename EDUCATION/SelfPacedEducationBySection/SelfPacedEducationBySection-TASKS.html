@@ -82,7 +82,7 @@
     <div class="meta">
       <span>📁 Folder: HTMLBasedTools / EDUCATION / SelfPacedEducationBySection</span>
       <span>📅 Updated: 2026-09-09</span>
-      <span>⚙️ Key constants: QUIZ_SETS=3 · QUIZ_PER_SET=5 · MIN_PASS_SCORE=60 · STUDY_WAIT_MIN=30</span>
+      <span>⚙️ Key constants: QUIZ_SETS=3 max · QUIZ_PER_SET=5 target · layout derived from content (getQuizSetLayout) · MIN_PASS_SCORE=60 · STUDY_WAIT_MIN=30</span>
       <span>🧠 Quiz design: 3 sets × 5 questions — passing ANY ONE set at ≥60% is enough</span>
     </div>
   </header>
@@ -106,7 +106,8 @@
     <tr><td>T24</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Course &amp; section grading: total points, averages, 60% course/section gates, Course Grade panel</td></tr>
     <tr><td>T25</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Data-loss audit &amp; fixes: Mark In Progress no longer wipes lesson results</td></tr>
     <tr><td>T26</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Submitted quiz no longer rendered twice for admin viewers</td></tr>
-    <tr><td>T4</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Guard empty quiz sets for lessons with fewer than 15 questions (3×5 retry-pool design is intentional — pass ONE set)</td></tr>
+    <tr><td>T27</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Activity log + progress report: completion timestamps, daily list &amp; chart for student and supervisor</td></tr>
+    <tr><td>T4</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Flexible quiz set layout derived from content — no empty sets for any quiz length</td></tr>
     <tr><td>T5</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Study countdown re-renders the whole lesson every 30 s (PDFs re-fetched, wasted bandwidth)</td></tr>
     <tr><td>T6</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>PDFs render eagerly for ALL tabs and re-fetch on every re-render</td></tr>
     <tr><td>T7</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>Answer Key tab is visible to students before the quiz is passed</td></tr>
@@ -251,6 +252,19 @@
     <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow()</code> submitted branch</span></div>
   </div>
 
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T27</span>
+      <span class="task-title">Activity log &amp; progress report (completion dates, daily list, chart)</span>
+      <span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Request</span><span class="val">Record the date/time when a lesson is completed and report it: a log of what happened when, a daily completion list and a chart — visible to the student and the supervisor.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Append-only <code>activityLog</code> per lesson (<code>completed</code> / <code>submitted</code> / <code>approved</code> / <code>rejected</code> / <code>quiz_passed</code> / <code>quiz_attempt</code> / <code>reopened</code>). <code>completedAt</code> is still set on every completion. Student sees a Progress Report panel (summary chips + 14-day bar chart + grouped daily list) on the Sections view; the supervisor dashboard shows the same report. Legacy completions are backfilled from <code>completedAt</code> for display only — no stored data changed.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>logLessonEvent</code>, <code>getAllActivityEvents</code>, <code>getDailyCompletionStats</code>, <code>buildActivityReportHtml</code>, <code>renderProgressReport</code>, <code>markComplete</code>, <code>markInProgress</code>, <code>submitQuiz</code>, <code>supervisorAction</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">Mark Complete records a timestamp; reopening and completing again adds a NEW entry (history kept). Both student and supervisor see the daily list + chart.</span></div>
+  </div>
+
   <h2 class="section">🔴 P0 — Bugs that block students (develop first)</h2>
 
 
@@ -260,15 +274,15 @@
       <span class="task-id">T4</span>
       <span class="task-title">Guard empty quiz sets for short quizzes (the 3×5 retry-pool design is intentional)</span>
       <span class="badge b-bug">BUG</span><span class="badge b-p0">P0</span>
-      <input type="checkbox">
+      <input type="checkbox" checked>
     </div>
-    <div class="row"><span class="lbl">Design note</span><span class="val">3 sets × 5 questions is intentional: the student may answer ANY set, and passing one set at ≥60% is enough (see T3). The sets are retry pools — there is no requirement to answer all 15 questions.</span></div>
-    <div class="row"><span class="lbl">Problem</span><span class="val">The set count is hardcoded, so a lesson with fewer than 15 questions produces partial or empty sets ("Set 3 of 3" with 0 questions). If the active set is empty, the student scores 0% and can get stuck in study mode; the retry button can also disappear on the last set.</span></div>
+    <div class="row"><span class="lbl">Design note</span><span class="val">The retry-pool design is intentional: the student may answer ANY set, and passing one set at ≥60% is enough (see T3). There is no requirement to answer all questions. The pool layout now adapts to the content — 15 questions still gives the classic 3 × 5.</span></div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The set count was hardcoded, so a lesson with fewer than 15 questions produced partial or empty sets ("Set 3 of 3" with 0 questions). An empty active set could trap a student in study mode, and the retry button could disappear on the last set.</span></div>
     <div class="row"><span class="lbl">Why it matters</span><span class="val">Short quizzes are common, and an empty set silently traps a student.</span></div>
-    <div class="row"><span class="lbl">Benefit</span><span class="val">Any quiz length works correctly and every set is non-empty.</span></div>
-    <div class="row"><span class="lbl">Solution</span><span class="val">Derive the set count from the data: <code>Math.ceil(quizData.length / QUIZ_PER_SET)</code>. Clamp <code>currentSet</code> on load, skip empty sets when advancing, and adapt the supervisor view to the real set count.</span></div>
-    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow</code>, <code>submitQuiz</code>, <code>getQuizPassedSetIndex</code>, <code>renderQuizSetsTabs</code></span></div>
-    <div class="row"><span class="lbl">Acceptance</span><span class="val">A 6-question quiz shows 2 sets (5 + 1); failing set 1 moves to set 2; no empty set can ever be rendered or scored.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Any quiz length works correctly, every set is non-empty, and every question in the content is used.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val"><code>getQuizSetLayout(n)</code>: <code>sets = min(3, max(1, ceil(n/5)))</code>, <code>perSet = ceil(n/sets)</code>. Clamp <code>currentSet</code>/<code>setIndex</code> everywhere, guard <code>submitQuiz</code> against empty sets, always show Retry on fail, and adapt the supervisor view to the real set count. ✅ DONE</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow</code>, <code>submitQuiz</code>, <code>getQuizPassedSetIndex</code>, <code>renderQuizSetsTabs</code>, <code>renderQuizSetHtml</code>, <code>markComplete</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">15 questions → 3 × 5 (unchanged). 6 questions → 2 sets of 3. 7 questions → 2 sets (4 + 3). 20 questions → 3 sets (7 + 7 + 6). No empty set can ever be rendered or scored; failing always moves to a valid set.</span></div>
   </div>
 
   <div class="task p0">

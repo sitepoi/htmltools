@@ -837,8 +837,172 @@ function renderCourseGrade() {
   panel.innerHTML = html;
 }
 
+/* ═══════════════════════════════════════════
+   ACTIVITY LOG & PROGRESS REPORT
+   ═══════════════════════════════════════════ */
+/** Append an event to a lesson's activity log (bounded at 200 entries).
+ *  Events are append-only: reopening and completing a lesson again adds NEW
+ *  entries — the completion history is never overwritten. */
+function logLessonEvent(sectionId, lessonId, type, detail) {
+  if (!sectionId || !lessonId) return;
+  if (!PROGRESS[sectionId]) PROGRESS[sectionId] = {};
+  if (!PROGRESS[sectionId][lessonId]) PROGRESS[sectionId][lessonId] = {};
+  var entry = PROGRESS[sectionId][lessonId];
+  if (!entry.activityLog || !Array.isArray(entry.activityLog)) entry.activityLog = [];
+  entry.activityLog.push({ type: type, at: new Date().toISOString(), detail: (detail === undefined ? null : detail) });
+  if (entry.activityLog.length > 200) entry.activityLog = entry.activityLog.slice(entry.activityLog.length - 200);
+}
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+/** Flat, time-sorted list of ALL logged activity across lessons. Legacy
+ *  records with a completedAt date but no log get a synthesized completion
+ *  event (display-only backfill — stored student data is never changed). */
+function getAllActivityEvents() {
+  var events = [];
+  var all = getAllLessonsInOrder();
+  for (var i = 0; i < all.length; i++) {
+    var sid = all[i].sectionId;
+    var lid = all[i].lessonId;
+    var p = getLessonProgress(sid, lid);
+    var title = (all[i].lesson && all[i].lesson.title) ? all[i].lesson.title : 'Lesson';
+    var log = (p.activityLog && Array.isArray(p.activityLog)) ? p.activityLog : [];
+    var hasCompletion = false;
+    for (var j = 0; j < log.length; j++) {
+      events.push({ sectionId: sid, lessonId: lid, sectionTitle: all[i].sectionName, lessonTitle: title, type: log[j].type, at: log[j].at, detail: log[j].detail });
+      if (log[j].type === 'completed' || log[j].type === 'approved') hasCompletion = true;
+    }
+    if (!hasCompletion && p.completedAt && (p.status === 'completed' || p.supervisorStatus === 'approved')) {
+      events.push({ sectionId: sid, lessonId: lid, sectionTitle: all[i].sectionName, lessonTitle: title, type: 'completed', at: p.completedAt, detail: (typeof p.score === 'number' ? p.score : null) });
+    }
+  }
+  events.sort(function(a, b) {
+    var ta = new Date(a.at).getTime(), tb = new Date(b.at).getTime();
+    if (isNaN(ta)) return 1;
+    if (isNaN(tb)) return -1;
+    return tb - ta;
+  });
+  return events;
+}
+
+/** Group completion events by local calendar day (newest day first). */
+function getDailyCompletionStats(events) {
+  var byDay = {};
+  for (var i = 0; i < events.length; i++) {
+    var e = events[i];
+    if (e.type !== 'completed') continue;
+    var d = new Date(e.at);
+    if (isNaN(d.getTime())) continue;
+    var key = d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    if (!byDay[key]) byDay[key] = { dateKey: key, date: d, items: [] };
+    byDay[key].items.push(e);
+  }
+  var keys = Object.keys(byDay).sort().reverse();
+  var days = [];
+  for (var k = 0; k < keys.length; k++) {
+    var g = byDay[keys[k]];
+    g.items.sort(function(a, b) {
+      var ta = new Date(a.at).getTime(), tb = new Date(b.at).getTime();
+      if (isNaN(ta)) return 1;
+      if (isNaN(tb)) return -1;
+      return tb - ta;
+    });
+    g.count = g.items.length;
+    days.push(g);
+  }
+  return days;
+}
+
+function timeLabel(iso) {
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Daily completions bar chart + grouped list. Shown on the student Sections
+ *  view and (compact) inside the supervisor dashboard. */
+function buildActivityReportHtml(compact) {
+  var events = getAllActivityEvents();
+  var days = getDailyCompletionStats(events);
+  var total = 0, best = null;
+  for (var i = 0; i < days.length; i++) {
+    total += days[i].count;
+    if (!best || days[i].count > best.count) best = days[i];
+  }
+
+  var html = '<div class="rp-panel' + (compact ? ' rp-compact' : '') + '">';
+  html += '<div class="rp-head"><span class="rp-title">📈 ' + (compact ? 'Activity Report' : 'Progress Report') + '</span>' +
+    '<span class="rp-sub">Lesson completions per day</span></div>';
+
+  if (days.length === 0) {
+    html += '<div class="rp-empty">No lessons completed yet — every completion is recorded here with its date and time.</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // ── Summary chips ──
+  var last = days[0].items[0];
+  var lastTxt = last ? last.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + timeLabel(last.at) : '—';
+  var bestTxt = best ? best.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' (' + best.count + ')' : '—';
+  html += '<div class="rp-chips">' +
+    '<span class="rp-chip">✅ <strong>' + total + '</strong> completion' + (total !== 1 ? 's' : '') + '</span>' +
+    '<span class="rp-chip">📅 <strong>' + days.length + '</strong> active day' + (days.length !== 1 ? 's' : '') + '</span>' +
+    '<span class="rp-chip">🏆 Best day: <strong>' + esc(bestTxt) + '</strong></span>' +
+    '<span class="rp-chip">⏱️ Last: <strong>' + esc(lastTxt) + '</strong></span>' +
+  '</div>';
+
+  // ── Bar chart: last 14 calendar days (zero days shown as empty bars) ──
+  var countByKey = {};
+  for (var c = 0; c < days.length; c++) countByKey[days[c].dateKey] = days[c].count;
+  var maxCount = Math.max(1, best ? best.count : 1);
+  html += '<div class="rp-chart">';
+  var today = new Date();
+  for (var d = 13; d >= 0; d--) {
+    var day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - d);
+    var key = day.getFullYear() + '-' + pad2(day.getMonth() + 1) + '-' + pad2(day.getDate());
+    var count = countByKey[key] || 0;
+    var h = count > 0 ? Math.round(8 + (count / maxCount) * 76) : 4;
+    var dayLabel = day.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    html += '<div class="rp-bar-col" title="' + esc(dayLabel + ' — ' + count + ' lesson' + (count !== 1 ? 's' : '')) + '">' +
+      (count > 0 ? '<span class="rp-bar-val">' + count + '</span>' : '') +
+      '<div class="rp-bar' + (count === 0 ? ' rp-bar-zero' : '') + '" style="height:' + h + 'px"></div>' +
+      '<span class="rp-bar-day">' + esc(dayLabel) + '</span></div>';
+  }
+  html += '</div>';
+
+  // ── Daily list ──
+  html += '<div class="rp-list">';
+  var maxDays = compact ? 10 : 30;
+  for (var di = 0; di < days.length && di < maxDays; di++) {
+    var g = days[di];
+    var dateTxt = g.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    html += '<div class="rp-day">';
+    html += '<div class="rp-day-head"><span>📅 ' + esc(dateTxt) + '</span><span class="rp-day-count">' + g.count + ' lesson' + (g.count !== 1 ? 's' : '') + '</span></div>';
+    for (var it = 0; it < g.items.length; it++) {
+      var e = g.items[it];
+      html += '<div class="rp-item">' + esc(timeLabel(e.at)) + ' · ' + esc(e.lessonTitle) + ' <span class="rp-item-sec">(' + esc(e.sectionTitle) + ')</span>' +
+        (typeof e.detail === 'number' ? ' <span class="rp-item-score">' + e.detail + '%</span>' : '') + '</div>';
+    }
+    html += '</div>';
+  }
+  if (days.length > maxDays) html += '<div class="rp-more">+ ' + (days.length - maxDays) + ' more day' + (days.length - maxDays !== 1 ? 's' : '') + ' in the log</div>';
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
+/** Student-facing report on the Sections view. */
+function renderProgressReport() {
+  var panel = el('progress-report-panel');
+  if (!panel) return;
+  if (!CONFIG.curriculumSourceId) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  panel.innerHTML = buildActivityReportHtml(false);
+}
+
 function renderSections() {
   renderCourseGrade();
+  renderProgressReport();
   var grid = el('section-group-grid');
   if (!grid) return; // DOM not ready (e.g., stale tool HTML snapshot) — bail gracefully
   var searchInput = el('search-input');
@@ -943,6 +1107,11 @@ function renderLessons() {
       var iconClass = stKey;
       var badgeClass = 'status-' + stKey;
       var scoreHtml = typeof prog.score === 'number' ? ' · Score: ' + prog.score + '%' : '';
+      var doneDateHtml = '';
+      if (prog.status === 'completed' && prog.completedAt) {
+        var doneD = new Date(prog.completedAt);
+        if (!isNaN(doneD.getTime())) doneDateHtml = '<span>🏁 ' + doneD.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + '</span>';
+      }
 
       return '<div class="lesson-card' + (lock ? ' locked' : '') + '"' +
         (lock ? '' : ' onclick="openLesson(\'' + esc(section.id) + '\',\'' + esc(les.id) + '\')"') + '>' +
@@ -955,7 +1124,7 @@ function renderLessons() {
             (les.presentationPdfUrls && les.presentationPdfUrls.length ? '<span>📊 Pres.</span>' : '') +
             (les.studyDocPdfUrls && les.studyDocPdfUrls.length ? '<span>📖 Study</span>' : '') +
             (les.worksheetPdfUrls && les.worksheetPdfUrls.length ? '<span>📝 WS</span>' : '') +
-            (les.quiz && les.quiz.length ? '<span>📝 Quiz</span>' : '') + scoreHtml +
+            (les.quiz && les.quiz.length ? '<span>📝 Quiz</span>' : '') + scoreHtml + doneDateHtml +
           '</div>' +
         '</div>' +
         '<span class="lesson-card-badge ' + badgeClass + '">' + badgeLabel + '</span>' +
@@ -1539,11 +1708,29 @@ function toggleStudyStep(stepId) {
    QUIZ IN STUDY FLOW
    ═══════════════════════════════════════════ */
 
+/* ── Flexible retry-pool layout ──
+   The set count and set size are derived from the actual content, so any quiz
+   length works and no set is ever empty:
+     sets   = min(QUIZ_SETS, max(1, ceil(n / QUIZ_PER_SET)))   (1..3 sets)
+     perSet = ceil(n / sets)
+   The classic 15-question pool stays exactly 3 × 5. Shorter quizzes use fewer
+   sets; longer quizzes keep up to 3 sets and grow the set size so every
+   question in the content is used. */
+function getQuizSetLayout(quizLength) {
+  var n = typeof quizLength === 'number' ? Math.max(0, quizLength) : 0;
+  if (n <= 0) return { sets: 0, perSet: 0 };
+  var sets = Math.min(QUIZ_SETS, Math.max(1, Math.ceil(n / QUIZ_PER_SET)));
+  var perSet = Math.ceil(n / sets);
+  return { sets: sets, perSet: perSet };
+}
+
 function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
+  var layout = getQuizSetLayout(quizData.length);
   var currentSet = typeof prog.currentSet === 'number' ? prog.currentSet : 0;
-  if (currentSet >= QUIZ_SETS) currentSet = QUIZ_SETS - 1;
-  var setStart = currentSet * QUIZ_PER_SET;
-  var setEnd = Math.min(setStart + QUIZ_PER_SET, quizData.length);
+  if (currentSet < 0) currentSet = 0;
+  if (layout.sets > 0 && currentSet >= layout.sets) currentSet = layout.sets - 1;
+  var setStart = currentSet * layout.perSet;
+  var setEnd = Math.min(setStart + layout.perSet, quizData.length);
   var activeQuestions = quizData.slice(setStart, setEnd);
 
   var isStudying = prog.status === 'studying';
@@ -1577,7 +1764,7 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     // already includes the legend AND the answered set with results —
     // rendering the questions again up here would display them twice.
     var adminSetsView = isAdmin() && wasSubmitted;
-    html += '<div class="quiz-set-label">Question Set ' + (currentSet + 1) + ' of ' + QUIZ_SETS + '</div>';
+    html += '<div class="quiz-set-label">Question Set ' + (currentSet + 1) + ' of ' + layout.sets + '</div>';
     if (wasSubmitted && !adminSetsView) html += renderQuizLegend();
     if (!adminSetsView) html += activeQuestions.map(function(q, qi) {
       var myAnswer = (wasSubmitted && typeof quizAnswers[qi] === 'number') ? quizAnswers[qi] : -1;
@@ -1651,15 +1838,19 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
           var mgmtTypeQ = CONFIG.managementType || 'self_paced';
           html += '<div style="text-align:center;padding:12px 16px;background:var(--primary-bg);border-radius:8px;font-size:13px;color:var(--primary-dark);margin-top:12px">✅ Great! Next step: open the <strong>Finish</strong> tab and click <strong>“' + (mgmtTypeQ === 'supervised' ? 'Mark Complete & Submit for Review' : 'Mark Complete') + '”</strong> to save your completion.</div>';
         }
-        if (!passed && currentSet < QUIZ_SETS - 1) html += '<div class="quiz-actions"><button class="btn btn-outline" id="btn-retry-quiz-inline">🔄 Retry Quiz</button></div>';
+        // T4: failing always advances to a valid next set (wrapping), so the
+        // retry button must never disappear — even on the last set.
+        if (!passed) html += '<div class="quiz-actions"><button class="btn btn-outline" id="btn-retry-quiz-inline">🔄 Retry Quiz</button></div>';
       }
     }
   } else if (isCompleted) {
     // ── Completed quiz view ──
     // Students see ONLY the question set they answered and passed.
-    // Supervisors (admins) see three tabs — one per set — with per-set scores.
-    var passedSet = getQuizPassedSetIndex(prog);
-    if (isAdmin()) {
+    // Supervisors (admins) see one tab per set — with per-set scores.
+    var passedSet = getQuizPassedSetIndex(prog, layout.sets);
+    if (layout.sets <= 0) {
+      html += '<div class="quiz-set-label">✅ Lesson completed — this quiz currently has no questions.</div>';
+    } else if (isAdmin()) {
       html += renderQuizSetsTabs(quizData, prog, passedSet);
     } else if (typeof prog.score !== 'number') {
       // Legacy completion: no score was recorded (older tool version). Keep
@@ -1667,7 +1858,7 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
       html += '<div class="quiz-set-label">✅ Lesson completed — no quiz score recorded (older version)</div>';
       html += '<div style="text-align:center;padding:12px 16px;color:var(--text-muted);font-size:13px">This lesson was finished before quiz scores were tracked, so there is nothing to show here. No action needed.</div>';
     } else {
-      html += '<div class="quiz-set-label">✅ Quiz Completed — Set ' + (passedSet + 1) + ' of ' + QUIZ_SETS + ' Passed</div>';
+      html += '<div class="quiz-set-label">✅ Quiz Completed — Set ' + (passedSet + 1) + ' of ' + layout.sets + ' Passed</div>';
       html += renderQuizLegend();
       html += renderQuizSetHtml(quizData, passedSet, prog.quizAnswers, true);
       html += '<div class="quiz-result pass" style="display:block">✅ Quiz passed! Final score: ' + (typeof prog.score === 'number' ? prog.score + '%' : '—') + '</div>';
@@ -1724,13 +1915,16 @@ function isQuizPassed(prog) {
 
 /** Determine which question set (0-based) the student passed — stored on
  *  completion or derived from the last quiz attempt. */
-function getQuizPassedSetIndex(prog) {
+function getQuizPassedSetIndex(prog, setCount) {
+  // Clamp to the CURRENT layout so legacy set indices can never point past
+  // the last real set (e.g. content was shortened after the lesson finished).
+  var maxSet = (typeof setCount === 'number' && setCount > 0) ? setCount - 1 : QUIZ_SETS - 1;
   if (prog && typeof prog.currentSet === 'number') {
-    return Math.max(0, Math.min(QUIZ_SETS - 1, prog.currentSet));
+    return Math.max(0, Math.min(maxSet, prog.currentSet));
   }
   if (prog && prog.quizAttempts && Array.isArray(prog.quizAttempts) && prog.quizAttempts.length > 0) {
     var last = prog.quizAttempts[prog.quizAttempts.length - 1];
-    if (typeof last.setIndex === 'number') return Math.max(0, Math.min(QUIZ_SETS - 1, last.setIndex));
+    if (typeof last.setIndex === 'number') return Math.max(0, Math.min(maxSet, last.setIndex));
   }
   return 0;
 }
@@ -1760,8 +1954,12 @@ function renderQuizLegend() {
  *  (or null when the set was never answered). showResults highlights
  *  correct/incorrect options and the student's selection. */
 function renderQuizSetHtml(quizData, setIndex, answers, showResults) {
-  var setStart = setIndex * QUIZ_PER_SET;
-  var setEnd = Math.min(setStart + QUIZ_PER_SET, quizData.length);
+  var layout = getQuizSetLayout(quizData ? quizData.length : 0);
+  if (layout.sets <= 0 || setIndex < 0 || setIndex >= layout.sets) {
+    return '<div class="quiz-set-label">⚠️ This set has no questions.</div>';
+  }
+  var setStart = setIndex * layout.perSet;
+  var setEnd = Math.min(setStart + layout.perSet, quizData.length);
   var setQuestions = quizData.slice(setStart, setEnd);
   if (!setQuestions.length) {
     return '<div class="quiz-set-label">⚠️ This set has no questions.</div>';
@@ -1820,13 +2018,15 @@ function renderQuizSetHtml(quizData, setIndex, answers, showResults) {
 /** Supervisor tabbed view: all question sets with per-set scores and the
  *  student's answers highlighted on the set they answered. */
 function renderQuizSetsTabs(quizData, prog, answeredSetIndex) {
-  var answeredSet = Math.max(0, Math.min(QUIZ_SETS - 1, answeredSetIndex || 0));
+  var layout = getQuizSetLayout(quizData ? quizData.length : 0);
+  if (layout.sets <= 0) return '<div class="quiz-set-label">⚠️ This quiz has no questions.</div>';
+  var answeredSet = Math.max(0, Math.min(layout.sets - 1, answeredSetIndex || 0));
   var containerId = 'sup-quiz-sets-' + genId();
   var html = '<div id="' + containerId + '">';
-  html += '<div class="quiz-set-label">👁️ Supervisor view — ' + QUIZ_SETS + ' question sets</div>';
+  html += '<div class="quiz-set-label">👁️ Supervisor view — ' + layout.sets + ' question set' + (layout.sets === 1 ? '' : 's') + '</div>';
   html += renderQuizLegend();
   html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
-  for (var s = 0; s < QUIZ_SETS; s++) {
+  for (var s = 0; s < layout.sets; s++) {
     var sc = quizAttemptScoreForSet(prog, s);
     var pass = (typeof sc === 'number' && sc >= MIN_PASS_SCORE);
     var label = 'Set ' + (s + 1) + (typeof sc === 'number' ? ' · ' + sc + '%' : ' · not attempted');
@@ -1834,11 +2034,11 @@ function renderQuizSetsTabs(quizData, prog, answeredSetIndex) {
     html += '<button data-sup-quiz-tab="' + s + '" onclick="window.spSupQuizTab(\'' + containerId + '\',' + s + ')" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid ' + (active ? '#4f46e5' : '#e2e8f0') + ';background:' + (active ? '#eef2ff' : '#fff') + ';color:#1e293b;cursor:pointer;font-family:inherit">' + (pass ? '✅ ' : '📝 ') + label + '</button>';
   }
   html += '</div>';
-  for (var v = 0; v < QUIZ_SETS; v++) {
+  for (var v = 0; v < layout.sets; v++) {
     var vScore = quizAttemptScoreForSet(prog, v);
     var answeredHere = (v === answeredSet);
     html += '<div data-sup-quiz-pane="' + v + '" style="' + (v === answeredSet ? '' : 'display:none') + '">';
-    html += '<div class="quiz-set-label">Question Set ' + (v + 1) + ' of ' + QUIZ_SETS + (typeof vScore === 'number' ? ' — Score: ' + vScore + '%' : ' — Not attempted') + '</div>';
+    html += '<div class="quiz-set-label">Question Set ' + (v + 1) + ' of ' + layout.sets + (typeof vScore === 'number' ? ' — Score: ' + vScore + '%' : ' — Not attempted') + '</div>';
     html += renderQuizSetHtml(quizData, v, answeredHere ? prog.quizAnswers : null, answeredHere);
     html += '</div>';
   }
@@ -2459,14 +2659,17 @@ function markComplete() {
   }
 
   if (hasQuiz && !quizSubmitted) {
-    // The quiz is a 3-set retry pool: the student only ever sees the CURRENT
-    // 5-question set, and passing any ONE set (≥ MIN_PASS_SCORE %) is enough
-    // to complete the lesson. Never demand answers beyond the visible set.
+    // Retry-pool quiz: the student only ever sees the CURRENT question set,
+    // and passing any ONE set (≥ MIN_PASS_SCORE %) is enough to complete the
+    // lesson. The set layout comes from the content (see getQuizSetLayout).
+    // Never demand answers beyond the visible set.
     var progQ = getLessonProgress(currentSectionId, currentLessonId);
+    var layoutQ = getQuizSetLayout(quizData.length);
     var curSetQ = typeof progQ.currentSet === 'number' ? progQ.currentSet : 0;
-    if (curSetQ >= QUIZ_SETS) curSetQ = QUIZ_SETS - 1;
-    var setStartQ = curSetQ * QUIZ_PER_SET;
-    var visibleCount = Math.min(QUIZ_PER_SET, Math.max(0, quizData.length - setStartQ));
+    if (curSetQ < 0) curSetQ = 0;
+    if (curSetQ >= layoutQ.sets) curSetQ = layoutQ.sets - 1;
+    var setStartQ = curSetQ * layoutQ.perSet;
+    var visibleCount = Math.min(layoutQ.perSet, Math.max(0, quizData.length - setStartQ));
     var answeredCount = 0;
     for (var qi = 0; qi < visibleCount; qi++) { if (typeof quizAnswers[qi] === 'number') answeredCount++; }
     if (answeredCount < visibleCount) {
@@ -2492,7 +2695,9 @@ function markComplete() {
   var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
   var prevAnswers = (existingProg.quizAnswers && typeof existingProg.quizAnswers === 'object') ? JSON.parse(JSON.stringify(existingProg.quizAnswers)) : {};
   var prevAttempts = (existingProg.quizAttempts && Array.isArray(existingProg.quizAttempts)) ? JSON.parse(JSON.stringify(existingProg.quizAttempts)) : [];
-  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: isQuizPassed(existingProg), quizSubmitted: true, currentSet: (typeof existingProg.currentSet === 'number' ? existingProg.currentSet : 0), flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: (existingProg.supervisorStatus || null), supervisorNotes: (existingProg.supervisorNotes || '') };
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: isQuizPassed(existingProg), quizSubmitted: true, currentSet: (typeof existingProg.currentSet === 'number' ? existingProg.currentSet : 0), flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], activityLog: (existingProg.activityLog && Array.isArray(existingProg.activityLog)) ? JSON.parse(JSON.stringify(existingProg.activityLog)) : [], supervisorStatus: (existingProg.supervisorStatus || null), supervisorNotes: (existingProg.supervisorNotes || '') };
+  // Reportable completion log: record WHEN this completion happened.
+  logLessonEvent(currentSectionId, currentLessonId, newStatus === 'pending_review' ? 'submitted' : 'completed', prevScore);
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
@@ -2527,10 +2732,13 @@ function markInProgress() {
     quizSubmitted: false,
     currentSet: typeof prevEntry.currentSet === 'number' ? prevEntry.currentSet : 0,
     studyUntil: null,
+    activityLog: (prevEntry.activityLog && Array.isArray(prevEntry.activityLog)) ? prevEntry.activityLog.slice() : [],
     flashcardMastered: (prevEntry.flashcardMastered && Array.isArray(prevEntry.flashcardMastered)) ? JSON.parse(JSON.stringify(prevEntry.flashcardMastered)) : [],
     supervisorStatus: prevEntry.supervisorStatus || null,
     supervisorNotes: prevEntry.supervisorNotes || ''
   };
+  // Keep the activity log — reopening is recorded, previous completions kept.
+  logLessonEvent(currentSectionId, currentLessonId, 'reopened', null);
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
@@ -2540,11 +2748,21 @@ function markInProgress() {
 
 function submitQuiz(quizData) {
   var prog = getLessonProgress(currentSectionId, currentLessonId);
+  var layoutS = getQuizSetLayout(quizData.length);
   var currentSet = typeof prog.currentSet === 'number' ? prog.currentSet : 0;
-  if (currentSet >= QUIZ_SETS) currentSet = QUIZ_SETS - 1;
-  var setStart = currentSet * QUIZ_PER_SET;
-  var setEnd = Math.min(setStart + QUIZ_PER_SET, quizData.length);
+  if (currentSet < 0) currentSet = 0;
+  if (currentSet >= layoutS.sets) currentSet = layoutS.sets - 1;
+  var setStart = currentSet * layoutS.perSet;
+  var setEnd = Math.min(setStart + layoutS.perSet, quizData.length);
   var activeQuestions = quizData.slice(setStart, setEnd);
+  // T4 guard: never score an empty set. If legacy progress points past the
+  // end of the current layout, fall back to the first set.
+  if (!activeQuestions.length && quizData.length > 0) {
+    currentSet = 0;
+    setStart = 0;
+    setEnd = Math.min(layoutS.perSet, quizData.length);
+    activeQuestions = quizData.slice(setStart, setEnd);
+  }
   var score = calcQuizScore(activeQuestions, quizAnswers);
   var passed = score >= MIN_PASS_SCORE;
   var attempts = (prog.quizAttempts && Array.isArray(prog.quizAttempts)) ? prog.quizAttempts.slice() : [];
@@ -2567,13 +2785,14 @@ function submitQuiz(quizData) {
       studyUntil: null,
       quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
       quizSubmitted: true,
+      activityLog: (prev.activityLog && Array.isArray(prev.activityLog)) ? prev.activityLog.slice() : [],
       flashcardMastered: prev.flashcardMastered || [],
       supervisorStatus: prev.supervisorStatus || null,
       supervisorNotes: prev.supervisorNotes || ''
     };
   } else {
     var nextSet = currentSet + 1;
-    if (nextSet >= QUIZ_SETS) nextSet = 0;
+    if (nextSet >= layoutS.sets) nextSet = 0;
     PROGRESS[currentSectionId][currentLessonId] = {
       status: 'studying',
       score: score,
@@ -2584,12 +2803,14 @@ function submitQuiz(quizData) {
       studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(),
       quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
       quizSubmitted: true,
+      activityLog: (prev.activityLog && Array.isArray(prev.activityLog)) ? prev.activityLog.slice() : [],
       flashcardMastered: prev.flashcardMastered || [],
       supervisorStatus: prev.supervisorStatus || null,
       supervisorNotes: prev.supervisorNotes || ''
     };
   }
 
+  logLessonEvent(currentSectionId, currentLessonId, passed ? 'quiz_passed' : 'quiz_attempt', score);
   quizSubmitted = true;
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
@@ -2842,6 +3063,8 @@ function showSetup() {
       el('progress-bar-wrap').style.display = 'none';
       var gp0 = el('course-grade-panel');
       if (gp0) gp0.style.display = 'none';
+      var rp0 = el('progress-report-panel');
+      if (rp0) rp0.style.display = 'none';
       el('app-title').textContent = '📚 Self-Paced Learning';
       el('section-group-grid').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No course configured yet</div><div class="empty-desc">Please contact your administrator to set up the course curriculum.</div></div>';
       tool.resize();
@@ -3087,6 +3310,9 @@ function renderSupervisorPanel() {
   }
   html += '</div>';
 
+  // ── Activity report: daily completion log + chart (supervisor view) ──
+  html += '<div style="padding:14px 20px;border-top:1px solid var(--border)">' + buildActivityReportHtml(true) + '</div>';
+
   // ── Pending review actions (supervised mode only) ──
   var mgmtType = CONFIG.managementType || 'self_paced';
   if (pendingItems.length > 0 && mgmtType === 'supervised') {
@@ -3182,6 +3408,7 @@ function supervisorAction(sectionId, lessonId, decision, notes) {
     p.completedAt = null;
     tool.notify('Lesson rejected. Student will see your feedback. 📝', 'info');
   }
+  logLessonEvent(sectionId, lessonId, decision === 'approved' ? 'approved' : 'rejected', null);
   renderSupervisorPanel();
   updateProgressBar();
   if (currentView === 'lessons') renderLessons();
