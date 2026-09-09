@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Paced Education — Task Management Board</title>
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b;
+    --primary: #4f46e5; --primary-bg: #eef2ff;
+    --success: #059669; --success-bg: #d1fae5;
+    --danger: #dc2626; --danger-bg: #fee2e2;
+    --warning: #d97706; --warning-bg: #fef3c7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; font-size: 14px;
+    padding-bottom: 80px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 20px; }
+  header.hero {
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border-radius: 16px; padding: 28px 30px; color: #f1f5f9; margin-bottom: 24px;
+  }
+  header.hero h1 { font-size: 22px; letter-spacing: -0.3px; margin-bottom: 6px; }
+  header.hero .sub { font-size: 13px; color: #94a3b8; }
+  header.hero .meta { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 12px; color: #cbd5e1; }
+  .legend { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0 24px; font-size: 12px; }
+  .legend span { padding: 4px 12px; border-radius: 20px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .b-p0 { background: var(--danger-bg); color: #991b1b; }
+  .b-p1 { background: var(--warning-bg); color: #92400e; }
+  .b-p2 { background: var(--primary-bg); color: var(--primary); }
+  .b-done { background: var(--success-bg); color: #065f46; }
+  .b-bug { background: var(--danger-bg); color: #991b1b; }
+  .b-ux { background: #e0e7ff; color: #4338ca; }
+  .b-perf { background: #fce7f3; color: #be185d; }
+  .b-clean { background: var(--surface-alt, #f1f5f9); color: #475569; }
+  h2.section {
+    font-size: 16px; margin: 28px 0 12px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--border); letter-spacing: -0.2px;
+  }
+  table.summary { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  table.summary th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 10px 14px; background: #f1f5f9; border-bottom: 1px solid var(--border); }
+  table.summary td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  table.summary tr:last-child td { border-bottom: none; }
+  table.summary tr:hover td { background: #fafbfc; }
+  .task {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .task.done { border-left: 4px solid var(--success); }
+  .task.p0 { border-left: 4px solid var(--danger); }
+  .task.p1 { border-left: 4px solid var(--warning); }
+  .task.p2 { border-left: 4px solid var(--primary-light, #818cf8); }
+  .task-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .task-id { font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
+  .task-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 200px; }
+  .task input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--success); flex-shrink: 0; }
+  .task .row { margin-bottom: 8px; }
+  .task .row .lbl {
+    display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--muted); width: 110px; vertical-align: top; padding-top: 2px;
+  }
+  .task .row .val { display: inline-block; width: calc(100% - 120px); vertical-align: top; }
+  code {
+    background: #f1f5f9; border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 6px; font-size: 12px; font-family: Consolas, Menlo, monospace;
+  }
+  .note { background: var(--primary-bg); border: 1px solid #c7d2fe; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: var(--primary); margin-top: 28px; }
+  .footer { margin-top: 28px; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>📋 Self-Paced Education by Section — Task Management Board</h1>
+    <div class="sub">Improvement backlog for the student tool. Each task is developed ONE BY ONE, verified (node --check) and republished.</div>
+    <div class="meta">
+      <span>📁 Folder: HTMLBasedTools / EDUCATION / SelfPacedEducationBySection</span>
+      <span>📅 Updated: 2026-09-09</span>
+      <span>⚙️ Key constants: QUIZ_SETS=3 · QUIZ_PER_SET=5 · MIN_PASS_SCORE=60 · STUDY_WAIT_MIN=30</span>
+      <span>🧠 Quiz design: 3 sets × 5 questions — passing ANY ONE set at ≥60% is enough</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span>🔴 P0 — bug that blocks students</span>
+    <span>🟠 P1 — high-value UX / correctness</span>
+    <span>🔵 P2 — polish &amp; cleanup</span>
+    <span>✅ Done</span>
+  </div>
+
+  <h2 class="section">📊 Summary</h2>
+  <table class="summary">
+    <tr><th>ID</th><th>Priority</th><th>Status</th><th>Title</th></tr>
+    <tr><td>T1</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Stable tab rail — no up/down jumping when switching tabs</td></tr>
+    <tr><td>T2</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Quiz tab subtitle no longer shows the total question count</td></tr>
+    <tr><td>T3</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Mark Complete checks only the current 5-question set — passing any ONE set (≥60%) is enough</td></tr>
+    <tr><td>T21</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Finish summary showed "Failed" at 100% — pass/fail is now derived from the score itself</td></tr>
+    <tr><td>T22</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Finish tab redesigned: score ring, attempt dots, flashcard mastery dot-grid, checkpoints</td></tr>
+    <tr><td>T23</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Legacy completions without quiz score handled neutrally — no student data changed</td></tr>
+    <tr><td>T24</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Course &amp; section grading: total points, averages, 60% course/section gates, Course Grade panel</td></tr>
+    <tr><td>T25</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Data-loss audit &amp; fixes: Mark In Progress no longer wipes lesson results</td></tr>
+    <tr><td>T26</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Submitted quiz no longer rendered twice for admin viewers</td></tr>
+    <tr><td>T4</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Guard empty quiz sets for lessons with fewer than 15 questions (3×5 retry-pool design is intentional — pass ONE set)</td></tr>
+    <tr><td>T5</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Study countdown re-renders the whole lesson every 30 s (PDFs re-fetched, wasted bandwidth)</td></tr>
+    <tr><td>T6</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>PDFs render eagerly for ALL tabs and re-fetch on every re-render</td></tr>
+    <tr><td>T7</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>Answer Key tab is visible to students before the quiz is passed</td></tr>
+    <tr><td>T8</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>Locked lesson cards give no feedback when clicked</td></tr>
+    <tr><td>T9</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>Mark Complete has no confirmation and auto-navigates 800 ms later</td></tr>
+    <tr><td>T10</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>No "Continue where you left off" — returning students must hunt for the next lesson</td></tr>
+    <tr><td>T13</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>Stale-echo protection (3 s window) can swallow a supervisor's save (no optimistic concurrency)</td></tr>
+    <tr><td>T11</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>"Reset All Progress" uses native confirm() — unreliable in sandboxed iframes</td></tr>
+    <tr><td>T12</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Dead code cleanup: duplicate presNav, unused presExportPdf, broken fallback branch in renderSetup</td></tr>
+    <tr><td>T14</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Status label shows a leading " | " pipe with nothing before it</td></tr>
+    <tr><td>T15</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>PDF zoom re-renders every page from scratch on each zoom step</td></tr>
+    <tr><td>T16</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Header progress bar counts only completed lessons</td></tr>
+    <tr><td>T17</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Finish summary "attempts" counts across ALL sets — label it clearly</td></tr>
+    <tr><td>T18</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Supervisor dashboard lesson chips are not clickable</td></tr>
+    <tr><td>T19</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Keyboard/focus accessibility for tabs, quiz options and flashcards</td></tr>
+    <tr><td>T20</td><td><span class="badge b-p2">P2</span></td><td>⏳ Backlog</td><td>Prev/Next buttons don't show which lesson they lead to</td></tr>
+  </table>
+
+  <h2 class="section">✅ Recently completed</h2>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T1</span>
+      <span class="task-title">Stable tab rail — no up/down jumping when switching tabs</span>
+      <span class="badge b-ux">UX</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Clicking a tab restored an absolute scroll offset saved on a different tab. Because tabs have very different content heights, the restored position got clamped to the new content's bottom — the page visibly jumped up and down with each click.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Navigation felt broken and disorienting; students lost their place and trust in the tool.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Every tab switch now lands in the same deterministic position (study content top, right under the sticky header). The rail and content stay visually stable no matter how tall each tab is.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Removed per-tab scroll memory; <code>activateTab</code> always calls <code>alignScrollToStudyFlow()</code>. Same-lesson re-renders (countdown refresh, quiz submit) restore the exact previous reading position instead of re-aligning.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>activateTab</code> / <code>alignScrollToStudyFlow</code> in SelfPacedEducationBySection.js (~line 1150)</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T2</span>
+      <span class="task-title">Quiz tab subtitle no longer shows the total question count</span>
+      <span class="badge b-ux">UX</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The quiz rail tab showed "(15 questions)" but the student only sees 5 questions per attempt (sets of 5). Misleading information.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Students expected 15 questions and were confused when only 5 appeared.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Honest, calm labeling: the tab now reads "Test your knowledge".</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Subtitle changed to <code>'Test your knowledge'</code>.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">steps tab-subtitle builder in <code>renderLessonDetail</code> (~line 980)</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T3</span>
+      <span class="task-title">Mark Complete checks only the current 5-question set — passing any ONE set (≥60%) is enough</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>markComplete()</code> checked the FULL quiz (e.g. all 15 questions) before allowing completion — but the quiz is intentionally a 3-set retry pool and the student only ever sees the current 5-question set. The requirement was impossible to satisfy.</span></div>
+    <div class="row"><span class="lbl">Design rule</span><span class="val">Any set can be answered. Passing ONE set with ≥60% is enough to complete the lesson — the other sets exist only as retry opportunities. There is no need to answer all 15 questions.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">The completion gate now matches exactly what the student sees; no dead ends and no impossible requirement.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">The completeness check now loops only over the CURRENT set (same <code>setStart .. setEnd</code> range as <code>submitQuiz</code>). If the set is answered, the quiz is submitted and — when that set passes — the lesson completes in the SAME click. When it fails, the student gets the normal study guidance.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>markComplete()</code> — the <code>hasQuiz &amp;&amp; !quizSubmitted</code> branch</span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">15-question quiz: answer the visible 5, click Mark Complete → the set is submitted; ≥60% completes the lesson immediately, &lt;60% starts study time. The "answer all questions" error is gone.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T21</span>
+      <span class="task-title">Finish summary showed "Failed" even at 100% score</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The Progress Summary pill only trusted the stored <code>quizPassed</code> flag — "Score 100% · 2 attempts · Failed" appeared whenever that flag was missing or stale, even though the score itself proves the quiz was passed.</span></div>
+    <div class="row"><span class="lbl">Design rule</span><span class="val">One passed set is enough: a stored score ≥60% IS a pass, with or without the flag.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">The summary can never contradict the score again; legacy and partially-updated records display correctly.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">New <code>isQuizPassed(prog)</code> helper (flag OR score ≥60%) used in the Finish summary, the Mark Complete gate, the hint text and the completion flow. Inconsistent records are self-healed: <code>quizPassed</code> is set whenever the stored score is ≥60%.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderLessonDetail()</code> finish rows + <code>markComplete()</code> + new <code>isQuizPassed</code> helper</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T22</span>
+      <span class="task-title">Finish tab summary redesigned — visual "Lesson Summary" card</span>
+      <span class="badge b-ux">UX</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The old summary was two plain text rows — no visual sense of how the student ended the lesson.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">A professional, glanceable end-of-lesson report backed only by real tracked data.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">New <code>renderFinishSummary()</code>: status pill + completion date; quiz score ring with per-attempt dots (hover shows attempt/set/score), best score and study-timer note; flashcard progress bar + one circle per card (green = "I know this", hollow = not yet, hover shows card text); and a checkpoint list (started → quiz passed → completed / awaiting approval).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderFinishSummary()</code> + finish-tab CSS block</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T23</span>
+      <span class="task-title">Legacy completions without quiz score — handled without changing student data</span>
+      <span class="badge b-ux">UX</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Lessons completed by older tool versions may have no quiz score. The UI showed contradictory states ("Needs retry" next to "Lesson completed ✓", fake "Quiz passed — score —"). Resetting them forced students to redo work.</span></div>
+    <div class="row"><span class="lbl">Decision</span><span class="val">Grandfather them: these completions stay valid. No progress data is modified — only the display is fixed.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Students keep their completed lessons; the UI is honest and consistent; supervisors can spot legacy completions at a glance.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Finish summary shows a neutral "Completed — no score recorded" pill + explanation and a neutral gray checkpoint; the Quiz tab explains "nothing to show here"; the supervisor dashboard marks them "⚠ no score" in amber.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderFinishSummary()</code>, <code>renderQuizInFlow()</code> completed branch, <code>renderSupervisorPanel()</code></span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T24</span>
+      <span class="task-title">Course &amp; section grading — points, averages and 60% gates</span>
+      <span class="badge b-ux">FEATURE</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Scores existed per lesson only — there was no course-level visibility, no total points, and sections unlocked without any grade requirement.</span></div>
+    <div class="row"><span class="lbl">Rules</span><span class="val">No score counts as 0. Course passes at 60% average; each section unlocks the next at 60% average; lessons keep the existing 60% quiz gate.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Students and supervisors see exactly where they stand (points, averages, pass status) and grade gates are consistent at every level.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val"><code>getSectionScore()</code> / <code>getCourseScore()</code> helpers; a Course Grade panel (average ring, points bar, per-section bars, pass pill); section cards and section info bar show averages; section unlock enforces 60% with specific lock-reason messages; progress bar and Finish tab report course standing.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">scoring helpers, <code>renderCourseGrade()</code>, <code>getSectionLockReason()</code>, <code>isSectionAccessible()</code>, <code>renderFinishSummary()</code></span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T25</span>
+      <span class="task-title">Data-loss audit — Mark In Progress wiped lesson results</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>markInProgress()</code> replaced the whole progress entry with <code>{status:'in_progress'}</code> — deleting the score, quiz attempts, answers, flashcard mastery and supervisor feedback, and dropping the course/section average. <code>submitQuiz()</code> (fail branch) and <code>markComplete()</code> also dropped supervisor notes.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">No user action can ever silently delete a lesson's results again; reopening a lesson keeps everything.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">All three write paths now preserve every existing field and only change what the action is supposed to change. Mark In Progress keeps results and reopens the quiz (quizSubmitted=false) without resetting the score.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>markInProgress()</code>, <code>submitQuiz()</code>, <code>markComplete()</code></span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T26</span>
+      <span class="task-title">Submitted quiz rendered twice for admin viewers</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">After submitting, the quiz tab rendered the answered question set once at the top and a second time inside the supervisor sets view (for viewers with manager access) — the same questions and answers appeared twice.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">One clean view: students see the result list, admins see the supervisor sets panel — never both stacked.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">The top-level question rendering (and its legend) is skipped when the admin sets view will be shown instead.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow()</code> submitted branch</span></div>
+  </div>
+
+  <h2 class="section">🔴 P0 — Bugs that block students (develop first)</h2>
+
+
+
+  <div class="task p0">
+    <div class="task-head">
+      <span class="task-id">T4</span>
+      <span class="task-title">Guard empty quiz sets for short quizzes (the 3×5 retry-pool design is intentional)</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-p0">P0</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Design note</span><span class="val">3 sets × 5 questions is intentional: the student may answer ANY set, and passing one set at ≥60% is enough (see T3). The sets are retry pools — there is no requirement to answer all 15 questions.</span></div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The set count is hardcoded, so a lesson with fewer than 15 questions produces partial or empty sets ("Set 3 of 3" with 0 questions). If the active set is empty, the student scores 0% and can get stuck in study mode; the retry button can also disappear on the last set.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Short quizzes are common, and an empty set silently traps a student.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Any quiz length works correctly and every set is non-empty.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Derive the set count from the data: <code>Math.ceil(quizData.length / QUIZ_PER_SET)</code>. Clamp <code>currentSet</code> on load, skip empty sets when advancing, and adapt the supervisor view to the real set count.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow</code>, <code>submitQuiz</code>, <code>getQuizPassedSetIndex</code>, <code>renderQuizSetsTabs</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">A 6-question quiz shows 2 sets (5 + 1); failing set 1 moves to set 2; no empty set can ever be rendered or scored.</span></div>
+  </div>
+
+  <div class="task p0">
+    <div class="task-head">
+      <span class="task-id">T5</span>
+      <span class="task-title">Study countdown re-renders the whole lesson every 30 seconds</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-p0">P0</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">While a student is in "study time", <code>renderQuizInFlow</code> calls <code>setTimeout(renderLessonDetail, 30000)</code>. Each re-render rebuilds every tab, re-fetches every PDF/HTML doc, and resets in-tab state (flipped flashcards, zoom levels). Scroll position is now preserved (fixed this session) but the rebuild itself is still heavy and causes flicker.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Bandwidth waste on mobile, visible flicker every 30 s, loss of in-tab UI state, and repeated network load for every PDF in the lesson.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Studying becomes smooth and cheap; the countdown still updates live.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Replace the full re-render with a live countdown: update the "⏳ ~N min remaining" text in place via a 1-minute interval. Re-render only when the state actually changes (timer expired, answers submitted).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderQuizInFlow</code> — <code>isStudying &amp;&amp; studyRemaining &gt; 0</code> branch</span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">During study time, the countdown text updates with no re-fetch (DevTools network tab stays quiet) and no scroll/flicker change.</span></div>
+  </div>
+
+  <h2 class="section">🟠 P1 — High-value UX &amp; correctness</h2>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T6</span>
+      <span class="task-title">PDFs render eagerly for ALL tabs and re-fetch on every re-render</span>
+      <span class="badge b-perf">PERF</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>renderLessonDetail</code> queues every PDF in every tab for immediate rendering — even tabs the student never opens — and the bytes are fetched again on every re-render.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Lesson open is slow and data-heavy; on weak connections PDFs may never finish, and every internal re-render multiplies the cost.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Fast lesson open, far less bandwidth, same experience once a tab is opened.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Lazy-render PDFs on first activation of their tab, and cache fetched buffers / PDF.js documents per URL in memory (invalidate when the URL list changes).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderPdfIntoContainer</code> + the <code>window._pdfRenderQueue</code> flow</span></div>
+  </div>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T7</span>
+      <span class="task-title">Answer Key tab is visible to students before the quiz is passed</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The 🔑 Answer Key step is rendered like any other document tab, so a student can open the answers before attempting the quiz.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Quizzes measure nothing if the answers are one tab away; managers would have to manually hide keys per lesson.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Quiz integrity by default, while still letting managers unhide keys intentionally (the existing <code>hiddenDocUrls</code> list stays respected).</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Show the Answer Key step only when the lesson is <code>completed</code> / <code>pending_review</code> (or the viewer is an admin). Keep it hidden during studying.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">step building in <code>renderLessonDetail</code> (<code>answerKeyPdfs</code> branch)</span></div>
+  </div>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T8</span>
+      <span class="task-title">Locked lesson cards give no feedback when clicked</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Locked cards are not clickable and do nothing — a student who clicks one gets no explanation of WHY it is locked or what to do next.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Dead clicks create frustration and support questions.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Every click gives guidance: "Complete the previous lesson first".</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Give locked cards a click handler that shows a toast (same wording as <code>openLesson</code>'s lock message).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderLessons()</code></span></div>
+  </div>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T9</span>
+      <span class="task-title">Mark Complete has no confirmation and auto-navigates 800 ms later</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">One click on "Mark Complete" finalizes the lesson and automatically jumps to the next lesson/section 800 ms later. No chance to review, and accidental clicks finalize progress.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Completing a lesson is a meaningful, hard-to-undo action (supervisors may have to reset it).</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Deliberate completion, less accidental state, no surprise navigation.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Inline two-step confirm (button turns into "Confirm? ✓" for a few seconds, same pattern as the supervisor reset), and replace the forced auto-navigation with a "Next lesson →" prompt button.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>markComplete()</code> + Finish tab buttons in <code>renderLessonDetail</code></span></div>
+  </div>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T10</span>
+      <span class="task-title">No "Continue where you left off" for returning students</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">When a student returns, they must scan section cards and lesson lists to find the first unfinished lesson.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Returning is the most common session start; friction here is felt every day.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">One click resumes exactly where the student stopped.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">A "▶ Continue where you left off" hero button on the sections view that opens the first accessible lesson with status ≠ completed (or the next lesson after the last completed one).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderSections()</code> + a small header block in the HTML</span></div>
+  </div>
+
+  <div class="task p1">
+    <div class="task-head">
+      <span class="task-id">T13</span>
+      <span class="task-title">Stale-echo protection can swallow a supervisor's save (no optimistic concurrency)</span>
+      <span class="badge b-bug">RISK</span><span class="badge b-p1">P1</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>onValueChange</code> ignores any parent value that differs from our last save within a 3-second window. If a supervisor approves/rejects a lesson in that window (or the student and supervisor are on the record simultaneously), the newer supervisor data can be overwritten by the stale-echo rule.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Supervisor decisions are the highest-value data on the record — silently losing one erodes trust.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Student saves and supervisor actions can never silently clobber each other.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Add a lightweight <code>baseVersion</code> (or <code>updatedAt</code>) to the stored progress. Accept incoming parent data when it is newer than our own; reject-and-re-stage only when it is provably older. (Topic was parked in an earlier session — revisit with this design.)</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>onValueChange</code> stale-echo block + <code>saveProgress()</code></span></div>
+  </div>
+
+  <h2 class="section">🔵 P2 — Polish &amp; cleanup</h2>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T11</span>
+      <span class="task-title">"Reset All Progress" uses native confirm()</span>
+      <span class="badge b-clean">CLEAN</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>resetAllProgress()</code> calls <code>confirm()</code>, which is unreliable in sandboxed iframes — the codebase already uses a two-click arm pattern for per-lesson reset.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">A destructive action with a confirmation dialog that may never appear.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Consistent, reliable safety across all destructive actions.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Reuse the two-click arm pattern (button → "❓ Are you sure?" → second click executes).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>resetAllProgress()</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T12</span>
+      <span class="task-title">Dead code cleanup</span>
+      <span class="badge b-clean">CLEAN</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">1) <code>window.presNav</code> is defined twice (the first copy is dead). 2) <code>window.presExportPdf</code> is never used. 3) In <code>renderSetup</code>, the fallback branch that creates the management-type select appends only the <code>&lt;label&gt;</code> element and drops the <code>&lt;select&gt;</code> — harmless today only because the HTML already contains the select.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Dead and broken code makes future changes risky and the file harder to read.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">A smaller, honest codebase with no hidden traps.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Delete the first <code>presNav</code>, delete <code>presExportPdf</code>, and fix the fallback branch to append the full fragment (label + select) via a wrapper element.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">presentation section + <code>renderSetup()</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T14</span>
+      <span class="task-title">Status label shows a leading " | " pipe with nothing before it</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val"><code>statusExtra</code> is built as <code>' | Score: 80%'</code> and placed next to the badge even when there is no other text before the pipe.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Looks like a rendering bug to users.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Clean status line.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Join non-empty parts with " · " and only show separators between real values.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderLessonDetail()</code> — <code>statusExtra</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T15</span>
+      <span class="task-title">PDF zoom re-renders every page from scratch on each zoom step</span>
+      <span class="badge b-perf">PERF</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Each ➕ / ➖ click destroys all canvases and re-renders the full document at the new scale.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Zooming a 30-page PDF is janky and CPU-heavy.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Instant, smooth zoom.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Render once at the highest needed scale and apply CSS <code>transform: scale()</code> (with width/height compensation) for zoom steps.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderAllPages</code> / zoom buttons in <code>renderPdfIntoContainer</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T16</span>
+      <span class="task-title">Header progress bar counts only completed lessons</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The overall percentage ignores in-progress/studying lessons, so a student halfway through several lessons still sees a very low number — demotivating and slightly inaccurate.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Progress display should reflect real effort.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">A more honest, encouraging progress indicator.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Segmented bar (completed = green, in progress/studying = amber) or weighted percentage (completed 100%, in-progress 50%).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>updateProgressBar()</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T17</span>
+      <span class="task-title">Finish summary "attempts" counts across ALL sets — label it clearly</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The Quiz row in the Finish tab shows e.g. "2 attempts", but attempts are stored across all question sets — the number can surprise students who only attempted one set.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Summary numbers should be self-explanatory.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">No ambiguity in the student's progress summary.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Label it "N attempts (all sets)" or show per-set attempt counts.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">Finish summary rows in <code>renderLessonDetail()</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T18</span>
+      <span class="task-title">Supervisor dashboard lesson chips are not clickable</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The supervisor can see per-lesson status chips in the dashboard, but cannot click a chip to open that lesson and review the student's work.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Reviewing a lesson currently requires manual navigation.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">One-click review of any student lesson from the dashboard.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Make chip titles open <code>openLesson(sectionId, lessonId)</code> (admin view already renders quiz results).</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderSupervisorPanel()</code></span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T19</span>
+      <span class="task-title">Keyboard / focus accessibility</span>
+      <span class="badge b-ux">A11Y</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">Tab buttons, quiz options and flashcards rely on mouse; visible focus rings are inconsistent and some controls are divs with click handlers.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Keyboard-only and assistive-tech users cannot complete lessons.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">The whole learning flow works without a mouse.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Focus-visible styles, semantic buttons, Enter/Space handling on card elements, radio-group labels.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">CSS + <code>renderLessonDetail</code> quiz/flashcard markup</span></div>
+  </div>
+
+  <div class="task p2">
+    <div class="task-head">
+      <span class="task-id">T20</span>
+      <span class="task-title">Prev/Next buttons don't show which lesson they lead to</span>
+      <span class="badge b-ux">UX</span><span class="badge b-p2">P2</span>
+      <input type="checkbox">
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">"← Previous" and "Next →" give no hint about the target lesson.</span></div>
+    <div class="row"><span class="lbl">Why it matters</span><span class="val">Students navigate blindly, especially across section boundaries.</span></div>
+    <div class="row"><span class="lbl">Benefit</span><span class="val">Confident navigation.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Add the target lesson title to the button text or as a tooltip.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val">Finish tab nav buttons in <code>renderLessonDetail()</code></span></div>
+  </div>
+
+  <div class="note">
+    <strong>📌 How we work:</strong> tasks are developed ONE BY ONE in priority order (P0 → P1 → P2).
+    After each task: <code>node --check SelfPacedEducationBySection.js</code> must pass, the change is reported here (checkbox ticked, status updated), and the tool is republished in the CMS for testing.
+  </div>
+
+  <div class="footer">Self-Paced Education by Section · task board generated from a full code review · 2026-09-09</div>
+</div>
+</body>
+</html>

@@ -557,34 +557,40 @@ function isLessonAccessible(sectionId, lessonId) {
   return true;
 }
 
-function isSectionAccessible(sectionId) {
+/** Human-readable reason a section is locked, or null when it is open.
+ *  Two rules: every previous section must be fully finished, AND each
+ *  previous section must average ≥ MIN_PASS_SCORE (no score counts as 0). */
+function getSectionLockReason(sectionId) {
   var section = findSection(sectionId);
-  if (!section) return false;
-  var lessons = getLessons(section);
-  if (lessons.length > 0) return isLessonAccessible(sectionId, lessons[0].id);
-  // Empty section (no lessons added yet): it must NOT be treated as always
-  // open — apply the same chain rule as a lesson. It stays locked until
-  // every earlier section's lessons are finished (previous empty sections
-  // contribute nothing to the chain).
+  if (!section) return 'Section not found.';
   var mgmtType = (CONFIG.managementType || 'self_paced');
   var sortedSections = getSortedSections();
   var sectionIdx = -1;
   for (var i = 0; i < sortedSections.length; i++) {
     if (sortedSections[i].id === sectionId) { sectionIdx = i; break; }
   }
-  if (sectionIdx <= 0) return true; // first section is always open
+  if (sectionIdx <= 0) return null; // first section is always open
   for (var j = 0; j < sectionIdx; j++) {
-    var prevLessons = getLessons(sortedSections[j]);
+    var prevSection = sortedSections[j];
+    var prevLessons = getLessons(prevSection);
+    if (prevLessons.length === 0) continue; // empty sections contribute nothing
     for (var k = 0; k < prevLessons.length; k++) {
-      var prevProg = getLessonProgress(sortedSections[j].id, prevLessons[k].id);
-      if (mgmtType === 'supervised') {
-        if (prevProg.supervisorStatus !== 'approved' && prevProg.status !== 'completed') return false;
-      } else {
-        if (prevProg.status !== 'completed') return false;
-      }
+      var prevProg = getLessonProgress(prevSection.id, prevLessons[k].id);
+      var done = mgmtType === 'supervised'
+        ? (prevProg.supervisorStatus === 'approved' || prevProg.status === 'completed')
+        : (prevProg.status === 'completed');
+      if (!done) return 'Complete all lessons in “' + (prevSection.title || 'the previous section') + '” first.';
+    }
+    var prevScore = getSectionScore(prevSection.id);
+    if (prevScore.average < MIN_PASS_SCORE) {
+      return '“' + (prevSection.title || 'The previous section') + '” averages ' + prevScore.average + '% — ' + MIN_PASS_SCORE + '% is required to unlock the next section.';
     }
   }
-  return true;
+  return null;
+}
+
+function isSectionAccessible(sectionId) {
+  return getSectionLockReason(sectionId) === null;
 }
 
 function getSectionProgressSummary(sectionId) {
@@ -601,6 +607,40 @@ function getSectionProgressSummary(sectionId) {
   var total = lessons.length;
   var status = total === 0 ? 'not_started' : completed === total ? 'completed' : (completed + active) > 0 ? 'in_progress' : 'not_started';
   return { status: status, completed: completed, total: total };
+}
+
+/* ═══════════════════════════════════════════
+   COURSE & SECTION SCORING
+   ═══════════════════════════════════════════ */
+/** A lesson's score counts as 0 when nothing was recorded (business rule:
+ *  "no score means 0"). */
+function getLessonScoreValue(prog) {
+  return typeof prog.score === 'number' ? prog.score : 0;
+}
+
+/** Section score: { total (max points), points (collected), average % }. */
+function getSectionScore(sectionId) {
+  var lessons = getLessons(findSection(sectionId));
+  if (!lessons.length) return { total: 0, points: 0, average: 0 };
+  var points = 0;
+  for (var i = 0; i < lessons.length; i++) {
+    points += getLessonScoreValue(getLessonProgress(sectionId, lessons[i].id));
+  }
+  return { total: lessons.length * 100, points: points, average: Math.round(points / lessons.length) };
+}
+
+/** Course score across ALL lessons: total points, collected points,
+ *  average % and completion counts. Missing scores count as 0. */
+function getCourseScore() {
+  var all = getAllLessonsInOrder();
+  if (!all.length) return { total: 0, points: 0, average: 0, completed: 0, lessonCount: 0 };
+  var points = 0, completed = 0;
+  for (var i = 0; i < all.length; i++) {
+    var p = getLessonProgress(all[i].sectionId, all[i].lessonId);
+    points += getLessonScoreValue(p);
+    if (p.status === 'completed') completed++;
+  }
+  return { total: all.length * 100, points: points, average: Math.round(points / all.length), completed: completed, lessonCount: all.length };
 }
 
 function findSection(sectionId) {
@@ -740,7 +780,65 @@ function scheduleQuizAutoSave() {
    RENDER: SECTION GROUPS LIST
    ═══════════════════════════════════════════ */
 
+/** Professional course-grade panel: average ring, points collected,
+ *  per-section average bars and pass status. Shown on the sections view. */
+function renderCourseGrade() {
+  var panel = el('course-grade-panel');
+  if (!panel) return;
+  if (!CONFIG.curriculumSourceId) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  var cs = getCourseScore();
+  var allDone = cs.lessonCount > 0 && cs.completed === cs.lessonCount;
+  var passed = cs.average >= MIN_PASS_SCORE;
+  var statusTxt, statusCls;
+  if (cs.lessonCount === 0) { statusTxt = 'No lessons yet'; statusCls = 'grade-st-fresh'; }
+  else if (allDone && passed) { statusTxt = 'Course passed ✓'; statusCls = 'grade-st-pass'; }
+  else if (allDone) { statusTxt = 'Finished below ' + MIN_PASS_SCORE + '%'; statusCls = 'grade-st-fail'; }
+  else { statusTxt = 'In progress'; statusCls = 'grade-st-progress'; }
+
+  var ringColor = cs.lessonCount === 0 ? '#94a3b8' : (passed ? '#059669' : (cs.average >= 40 ? '#d97706' : '#dc2626'));
+  var rr = 34, rc = 2 * Math.PI * rr;
+  var ringPct = Math.max(0, Math.min(100, cs.average));
+
+  var html = '<div class="grade-panel">';
+  html += '<div class="grade-head"><div class="grade-head-title">🎓 Course Grade</div><span class="grade-pill ' + statusCls + '">' + statusTxt + '</span></div>';
+  html += '<div class="grade-body">';
+  html += '<svg class="grade-ring" viewBox="0 0 84 84" width="84" height="84" aria-hidden="true">' +
+    '<circle cx="42" cy="42" r="' + rr + '" fill="none" stroke="var(--border)" stroke-width="9"/>' +
+    '<circle cx="42" cy="42" r="' + rr + '" fill="none" stroke="' + ringColor + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + rc.toFixed(2) + '" stroke-dashoffset="' + (rc * (1 - ringPct / 100)).toFixed(2) + '" transform="rotate(-90,42,42)"/>' +
+    '<text x="42" y="43" text-anchor="middle" dominant-baseline="central" class="grade-ring-text">' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + '</text></svg>';
+  html += '<div class="grade-stats">';
+  html += '<div class="grade-stat"><span class="grade-stat-label">Course average</span><span class="grade-stat-value">' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + ' <span class="grade-stat-note">(need ' + MIN_PASS_SCORE + '% to pass)</span></span></div>';
+  html += '<div class="grade-stat"><span class="grade-stat-label">Points collected</span><span class="grade-stat-value">' + cs.points + ' <span class="grade-stat-note">of ' + cs.total + ' points</span></span></div>';
+  html += '<div class="grade-bar"><div class="grade-bar-fill" style="width:' + (cs.total > 0 ? Math.round(cs.points / cs.total * 100) : 0) + '%"></div></div>';
+  html += '</div>';
+  html += '<div class="grade-side"><div class="grade-side-num">' + cs.completed + '<span> /' + cs.lessonCount + '</span></div><div class="grade-side-label">lessons done</div></div>';
+  html += '</div>';
+
+  var sorted = getSortedSections();
+  if (sorted.length > 0) {
+    html += '<div class="grade-sections">';
+    for (var i = 0; i < sorted.length; i++) {
+      var s = sorted[i];
+      var sc = getSectionScore(s.id);
+      if (sc.total === 0) continue;
+      var sPass = sc.average >= MIN_PASS_SCORE;
+      html += '<div class="grade-section-row">' +
+        '<span class="grade-section-name">' + esc(s.title || 'Section ' + (i + 1)) + '</span>' +
+        '<div class="grade-section-bar"><div class="grade-section-fill' + (sPass ? '' : ' below') + '" style="width:' + sc.average + '%"></div></div>' +
+        '<span class="grade-section-val">' + sc.average + '%</span>' +
+      '</div>';
+    }
+    html += '</div>';
+  }
+  html += '<div class="grade-note">ℹ️ Every lesson counts toward your average — lessons without a score count as 0. Each section unlocks the next one at ' + MIN_PASS_SCORE + '% average, and the course is passed at ' + MIN_PASS_SCORE + '% overall.</div>';
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
 function renderSections() {
+  renderCourseGrade();
   var grid = el('section-group-grid');
   if (!grid) return; // DOM not ready (e.g., stale tool HTML snapshot) — bail gracefully
   var searchInput = el('search-input');
@@ -774,7 +872,9 @@ function renderSections() {
       var statusLabel = { not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed' }[summary.status] || 'Not Started';
       var statusClass = 'status-' + (locked ? 'locked' : summary.status);
       var lessonsCount = summary.total;
-      var lockHtml = locked ? '<div class="section-group-card-lock">🔒 Complete previous sections first</div>' : '';
+      var secScore = getSectionScore(s.id);
+      var lockReason = locked ? getSectionLockReason(s.id) : '';
+      var lockHtml = locked ? '<div class="section-group-card-lock" title="' + esc(lockReason || '') + '">🔒 ' + esc(lockReason || 'Complete previous sections first') + '</div>' : '';
       var idx = sorted.indexOf(s) + 1;
       return '<div class="section-group-card' + (locked ? ' locked' : '') + '"' +
         (locked ? '' : ' onclick="openSection(\'' + esc(s.id) + '\')"') + ' data-id="' + esc(s.id) + '">' +
@@ -786,6 +886,7 @@ function renderSections() {
         '<div class="section-group-card-meta">' +
           (lessonsCount > 0 ? '<span>📚 ' + lessonsCount + ' lesson' + (lessonsCount !== 1 ? 's' : '') + '</span>' : '<span>📚 No lessons yet</span>') +
           '<span>✅ ' + (summary.total > 0 ? summary.completed + '/' + summary.total + ' done' : '—') + '</span>' +
+          (lessonsCount > 0 ? '<span>📊 Avg ' + secScore.average + '%</span>' : '') +
         '</div>' + lockHtml +
       '</div>';
     }).join('');
@@ -806,7 +907,14 @@ function renderLessons() {
   var infoTitle = el('section-info-title');
   if (infoTitle) infoTitle.textContent = '📁 ' + (section.title || 'Section');
   var infoProgress = el('section-info-progress');
-  if (infoProgress) infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed';
+  if (infoProgress) {
+    if (summary.total === 0) {
+      infoProgress.textContent = 'No lessons yet';
+    } else {
+      var secScore = getSectionScore(section.id);
+      infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed · Section avg ' + secScore.average + '% · ' + secScore.points + '/' + secScore.total + ' pts';
+    }
+  }
 
   var list = el('lesson-list');
   if (!list) return;
@@ -859,6 +967,145 @@ function renderLessons() {
     list.innerHTML = cardsHtml || '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Could not list lessons</div><div class="empty-desc">The section data is incomplete. Please contact your administrator.</div></div>';
   }
   updateProgressBar();
+}
+
+/* ═══════════════════════════════════════════
+   FINISH TAB: LESSON SUMMARY CARD
+   ═══════════════════════════════════════════ */
+/** Professional end-of-lesson summary: status pill + completion date, quiz
+ *  score ring with per-attempt history dots, a flashcard mastery dot-grid
+ *  with progress bar, and a checkpoint list. Everything shown is backed by
+ *  real tracked progress — nothing is invented. */
+function renderFinishSummary(prog, hasQuiz, hasFlashcards, flashcards) {
+  var html = '';
+  var statusLabel = { completed: 'Completed', pending_review: 'Awaiting Review', studying: 'Study & Retry', in_progress: 'In Progress', not_started: 'Not Started' }[prog.status] || 'Not Started';
+  var statusCls = { completed: 'finish-st-completed', pending_review: 'finish-st-pending', studying: 'finish-st-studying', in_progress: 'finish-st-progress' }[prog.status] || 'finish-st-fresh';
+  html += '<div class="finish-summary">';
+  html += '<div class="finish-sum-head">📋 Lesson Summary</div>';
+  html += '<div class="finish-top"><span class="finish-status-pill ' + statusCls + '">' + statusLabel + '</span>';
+  if (prog.status === 'completed' && prog.completedAt) {
+    var cd = new Date(prog.completedAt);
+    if (!isNaN(cd.getTime())) {
+      var dateTxt = cd.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+      html += '<span class="finish-completed-date">🏁 Completed ' + esc(dateTxt) + '</span>';
+    }
+  }
+  html += '</div>';
+
+  // ── Quiz ──
+  // Legacy completions: lessons finished by older tool versions can be
+  // "completed" without a recorded quiz score. They stay completed (no data
+  // is changed) and are displayed neutrally — never as failed / needs retry.
+  var isLegacyCompletion = prog.status === 'completed' && typeof prog.score !== 'number';
+  if (hasQuiz) {
+    var score = typeof prog.score === 'number' ? prog.score : null;
+    var attempts = (prog.quizAttempts && Array.isArray(prog.quizAttempts)) ? prog.quizAttempts : [];
+    var passed = isQuizPassed(prog);
+    var ringColor = score === null ? '#94a3b8' : (passed ? '#059669' : '#d97706');
+    var quizStatus = isLegacyCompletion ? 'Completed — no score recorded' : (score === null ? 'Not attempted yet' : (passed ? 'Passed ✓' : 'Needs retry'));
+    var quizStatusCls = (isLegacyCompletion || score === null) ? 'finish-st-fresh' : (passed ? 'finish-st-completed' : 'finish-st-studying');
+    html += '<div class="finish-block">';
+    html += '<div class="finish-block-title">📝 Quiz</div>';
+    html += '<div class="finish-quiz-row">';
+    var ringPct = score !== null ? score : 0;
+    var rr = 30, rc = 2 * Math.PI * rr;
+    html += '<svg class="finish-ring" viewBox="0 0 72 72" width="72" height="72" aria-hidden="true">' +
+      '<circle cx="36" cy="36" r="' + rr + '" fill="none" stroke="var(--border)" stroke-width="7"/>' +
+      '<circle cx="36" cy="36" r="' + rr + '" fill="none" stroke="' + ringColor + '" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + rc.toFixed(2) + '" stroke-dashoffset="' + (rc * (1 - ringPct / 100)).toFixed(2) + '" transform="rotate(-90,36,36)"/>' +
+      '<text x="36" y="37" text-anchor="middle" dominant-baseline="central" class="finish-ring-text">' + (score !== null ? score + '%' : '—') + '</text></svg>';
+    html += '<div class="finish-quiz-meta">';
+    html += '<span class="finish-pill ' + quizStatusCls + '">' + quizStatus + '</span>';
+    if (attempts.length > 0) {
+      html += '<div class="finish-attempts"><span class="finish-attempts-label">Attempts</span><span class="finish-attempt-dots">';
+      for (var ai = 0; ai < attempts.length; ai++) {
+        var at = attempts[ai];
+        var atPass = typeof at.score === 'number' && at.score >= MIN_PASS_SCORE;
+        var tt = 'Attempt ' + (ai + 1) + ' · ' + (typeof at.score === 'number' ? at.score + '%' : '—') + (typeof at.setIndex === 'number' ? ' · Set ' + (at.setIndex + 1) : '');
+        html += '<span class="finish-attempt-dot ' + (atPass ? 'fa-pass' : 'fa-fail') + '" title="' + esc(tt) + '"></span>';
+      }
+      html += '</span></div>';
+    }
+    var best = null;
+    for (var bi = 0; bi < attempts.length; bi++) {
+      var bs = attempts[bi].score;
+      if (typeof bs === 'number' && (best === null || bs > best)) best = bs;
+    }
+    if (best !== null) html += '<div class="finish-meta-line">Best score: <strong>' + best + '%</strong></div>';
+    if (isLegacyCompletion) html += '<div class="finish-meta-line">This lesson was completed before quiz scores were tracked.</div>';
+    if (prog.status === 'studying' && prog.studyUntil) {
+      var su = new Date(prog.studyUntil);
+      var mins = Math.ceil((su - new Date()) / 60000);
+      if (mins > 0) html += '<div class="finish-meta-line">⏳ Next quiz attempt available in ~' + mins + ' min</div>';
+    }
+    html += '</div></div></div>';
+  }
+
+  // ── Flashcards: mastery dot-grid ──
+  if (hasFlashcards && flashcards && flashcards.length > 0) {
+    var mastered = (prog.flashcardMastered && Array.isArray(prog.flashcardMastered)) ? prog.flashcardMastered : [];
+    var total = flashcards.length;
+    var mCount = mastered.length;
+    var fPct = Math.round(mCount / total * 100);
+    html += '<div class="finish-block">';
+    html += '<div class="finish-block-title">🃏 Flashcards</div>';
+    html += '<div class="finish-meta-line"><strong>' + mCount + '</strong> of ' + total + ' marked “I know this”</div>';
+    html += '<div class="finish-bar"><div class="finish-bar-fill" style="width:' + fPct + '%"></div></div>';
+    var MAX_DOTS = 50;
+    html += '<div class="finish-dots">';
+    for (var fi = 0; fi < total && fi < MAX_DOTS; fi++) {
+      var card = flashcards[fi];
+      var frontTxt = card ? (card.front || card.q || card.term || 'Card ' + (fi + 1)) : ('Card ' + (fi + 1));
+      var isM = mastered.indexOf(fi) !== -1;
+      html += '<span class="finish-dot' + (isM ? ' mastered' : '') + '" title="' + esc((fi + 1) + '. ' + frontTxt + (isM ? ' — mastered ✓' : ' — not yet')) + '"></span>';
+    }
+    if (total > MAX_DOTS) html += '<span class="finish-dot-more">+' + (total - MAX_DOTS) + ' more</span>';
+    html += '</div>';
+    html += '<div class="finish-legend"><span class="finish-dot mastered"></span> “I know this” <span class="finish-dot"></span> Not yet</div>';
+    html += '</div>';
+  }
+
+  // ── Checkpoints ──
+  var started = prog.status !== 'not_started';
+  var qDone = hasQuiz ? isQuizPassed(prog) : null;
+  var finished = prog.status === 'completed';
+  var awaiting = prog.status === 'pending_review';
+  html += '<div class="finish-block">';
+  html += '<div class="finish-block-title">🚦 Checkpoints</div>';
+  html += '<div class="finish-check' + (started ? ' done' : '') + '"><span class="finish-check-ic">' + (started ? '✓' : '·') + '</span> Lesson started</div>';
+  if (qDone !== null) {
+    if (isLegacyCompletion) {
+      // Neutral third state — not failed, not pending, just not recorded.
+      html += '<div class="finish-check"><span class="finish-check-ic">·</span> Quiz — completed without score (legacy)</div>';
+    } else if (qDone) {
+      html += '<div class="finish-check done"><span class="finish-check-ic">✓</span> Quiz passed (≥' + MIN_PASS_SCORE + '%)</div>';
+    } else {
+      html += '<div class="finish-check pending"><span class="finish-check-ic">…</span> Quiz passed (≥' + MIN_PASS_SCORE + '%)</div>';
+    }
+  }
+  if (awaiting) {
+    html += '<div class="finish-check pending"><span class="finish-check-ic">⏳</span> Submitted — awaiting supervisor approval</div>';
+  } else {
+    html += '<div class="finish-check' + (finished ? ' done' : '') + '"><span class="finish-check-ic">' + (finished ? '✓' : '·') + '</span> Lesson completed</div>';
+  }
+  html += '</div>';
+
+  // ── Course standing: total points + average across the whole course ──
+  var cs = getCourseScore();
+  html += '<div class="finish-block">';
+  html += '<div class="finish-block-title">🎓 Course Standing</div>';
+  html += '<div class="finish-meta-line">Average <strong>' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + '</strong> · Points <strong>' + cs.points + ' / ' + cs.total + '</strong> · ' + cs.completed + ' of ' + cs.lessonCount + ' lessons done</div>';
+  var csDone = cs.lessonCount > 0 && cs.completed === cs.lessonCount;
+  var courseLine = '';
+  if (cs.lessonCount === 0) courseLine = 'No lessons yet.';
+  else if (csDone && cs.average >= MIN_PASS_SCORE) courseLine = '🎉 Course passed — average ' + cs.average + '%.';
+  else if (csDone) courseLine = '⚠️ Course finished below ' + MIN_PASS_SCORE + '% — improve scores to pass.';
+  else if (cs.average >= MIN_PASS_SCORE) courseLine = '✅ On track — course average at or above ' + MIN_PASS_SCORE + '%.';
+  else courseLine = '🎯 Aim for ' + MIN_PASS_SCORE + '% course average to pass the course.';
+  html += '<div class="finish-meta-line">' + courseLine + '</div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
 }
 
 /* ═══════════════════════════════════════════
@@ -929,6 +1176,14 @@ function renderLessonDetail() {
   if (quizData && typeof quizData === 'string') { try { quizData = JSON.parse(quizData); } catch(e) { quizData = null; } }
   var hasQuiz = quizData && Array.isArray(quizData) && quizData.length > 0;
 
+  // Self-heal legacy/inconsistent records: a stored score ≥ MIN_PASS_SCORE
+  // means the quiz WAS passed even if the quizPassed flag is missing.
+  // (Without this, the Finish summary could show "Score 100% · Failed".)
+  if (hasQuiz && typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE && prog.quizPassed !== true) {
+    prog.quizPassed = true;
+    saveProgress(); // silent stage — the next explicit action persists it
+  }
+
   var steps = [];
   var stepNum = 0;
 
@@ -962,12 +1217,24 @@ function renderLessonDetail() {
   var html = '';
   window._pdfRenderQueue = [];
 
-  // Build tab bar (shown on desktop, hidden on mobile)
+  // Build tab bar (shown on desktop, hidden on mobile). Each tab gets a small
+  // one-line subtitle describing what is inside the step.
   var tabsHtml = '';
   if (steps.length > 0) {
     tabsHtml = '<div class="study-tabs"><div class="study-tabs-inner">';
     for (var ti = 0; ti < steps.length; ti++) {
-      tabsHtml += '<button class="study-tab-btn" data-tab-step="' + ti + '"><span class="study-tab-badge">' + steps[ti].num + '</span>' + steps[ti].icon + ' ' + esc(steps[ti].title) + '</button>';
+      var stp = steps[ti];
+      var stpSub = '';
+      if (stp.type === 'video') stpSub = stp.videoIds.length + ' video' + (stp.videoIds.length !== 1 ? 's' : '');
+      else if (stp.type === 'pdfs') stpSub = stp.pdfUrls.length + ' file' + (stp.pdfUrls.length !== 1 ? 's' : '');
+      else if (stp.type === 'htmlDoc') stpSub = stp.htmlDocUrls.length + ' web doc' + (stp.htmlDocUrls.length !== 1 ? 's' : '');
+      else if (stp.type === 'htmlCode') stpSub = 'Study guide';
+      else if (stp.type === 'presentation') stpSub = 'Slideshow';
+      else if (stp.type === 'flashcards') stpSub = (stp.flashcards ? stp.flashcards.length : 0) + ' cards';
+      else if (stp.type === 'html') stpSub = 'Reading notes';
+      else if (stp.type === 'quiz') stpSub = 'Test your knowledge';
+      else if (stp.type === 'nav') stpSub = 'Summary & finish';
+      tabsHtml += '<button class="study-tab-btn" data-tab-step="' + ti + '"><span class="study-tab-badge">' + stp.num + '</span><span class="study-tab-text"><span class="study-tab-title">' + stp.icon + ' ' + esc(stp.title) + '</span>' + (stpSub ? '<span class="study-tab-sub">' + esc(stpSub) + '</span>' : '') + '</span></button>';
     }
     tabsHtml += '</div></div>';
   }
@@ -1040,6 +1307,8 @@ function renderLessonDetail() {
         // Completion step — final action to finish the lesson
         var mgmtTypeNav = CONFIG.managementType || 'self_paced';
         var isAwaitingReview = prog.status === 'pending_review';
+        // ── Professional lesson summary at the top of the Finish tab ──
+        html += renderFinishSummary(prog, hasQuiz, hasFlashcards, flashcards);
         html += '<div class="quiz-nav-actions">';
         html += '<button class="btn btn-outline" id="btn-prev-lesson-inline"' + (!getPrevLesson(section.id, lesson.id) ? ' disabled' : '') + '>← Previous</button>';
         if (isAwaitingReview) {
@@ -1050,7 +1319,7 @@ function renderLessonDetail() {
           var completeLabel = (mgmtTypeNav === 'supervised') ? '✓ Mark Complete & Submit for Review' : '✓ Mark Complete';
           // Gate: a lesson with quiz questions can only be marked complete
           // after the student has a passing result (≥60%). No quiz = no gate.
-          var quizGatePassed = !hasQuiz || prog.quizPassed === true || (typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE);
+          var quizGatePassed = !hasQuiz || isQuizPassed(prog);
           if (quizGatePassed) {
             html += '<button class="btn btn-success" id="btn-mark-complete-inline">' + completeLabel + '</button>';
           } else {
@@ -1062,7 +1331,7 @@ function renderLessonDetail() {
         if (!hasQuiz && !isAwaitingReview && prog.status !== 'completed') {
           html += '<div style="text-align:center;padding:14px 0 0;color:var(--text-muted);font-size:13px">📭 There are no questions for this lesson — review the materials, then click Mark Complete.</div>';
         }
-        if (hasQuiz && !isAwaitingReview && prog.status !== 'completed' && prog.quizPassed !== true && !(typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE)) {
+        if (hasQuiz && !isAwaitingReview && prog.status !== 'completed' && !isQuizPassed(prog)) {
           html += '<div style="text-align:center;padding:14px 0 0;color:var(--warning);font-size:13px">📝 You must pass the quiz in the Quiz tab before you can mark this lesson complete.</div>';
         }
       }
@@ -1071,6 +1340,14 @@ function renderLessonDetail() {
     }
     html += '</div>';
   }
+  // Same-lesson re-render (study-timer refresh, quiz submit, supervisor
+  // actions) must keep the student's reading position. Opening a DIFFERENT
+  // lesson starts fresh at the top. The saved scroll is restored right after
+  // the default tab is activated in the wiring block below.
+  var _renderKey = currentSectionId + '|' + currentLessonId;
+  var _preRenderScroll = window.scrollY || document.documentElement.scrollTop || 0;
+  window._spKeepScrollOnRender = (window._spLastRenderKey === _renderKey) ? _preRenderScroll : null;
+  window._spLastRenderKey = _renderKey;
   flowEl.innerHTML = html;
 
   // Initialize all flashcard containers (progress bars, filter state)
@@ -1102,8 +1379,10 @@ function renderLessonDetail() {
   setTimeout(function() {
     var allSteps = flowEl.querySelectorAll('.study-step');
     var expanded = false;
-    if ((prog.status === 'completed' || prog.status === 'pending_review' || prog.status === 'studying') && hasQuiz) {
-      // Open the quiz tab on submitted/completed lessons so results are visible
+    if ((prog.status === 'completed' || prog.status === 'pending_review') && hasQuiz) {
+      // Open the quiz tab only on completed / awaiting-review lessons so the
+      // results are immediately visible. Studying (failed) lessons start on
+      // the first tab — the student should study the materials first.
       for (var es = 0; es < allSteps.length; es++) {
         if (steps[es] && steps[es].type === 'quiz') { allSteps[es].classList.add('expanded'); expanded = true; activeStudyTab = es; break; }
       }
@@ -1116,33 +1395,47 @@ function renderLessonDetail() {
       var tabBtns = tabBar.querySelectorAll('.study-tab-btn');
       var stepEls = flowEl.querySelectorAll('.study-step');
 
-      // Click a tab → show only that step's content, preserving scroll per tab
+      // Click a tab → show only that step's content. The viewport is ALWAYS
+      // re-aligned to the top of the study content on a tab switch, so the
+      // page never jumps up and down with the height of each tab's content.
       var activeStepIdx = -1; // -1 so first activateTab(0) actually runs
-      var tabScrollPositions = {}; // remember scrollTop per tab
+      /** Align the study content right below the sticky header/tab bar.
+       *  Deterministic position on every switch — the rail and the content
+       *  stay visually stable no matter how tall the new tab is.
+       *  On mobile (accordion, no tab bar) the scroll is left alone. */
+      function alignScrollToStudyFlow() {
+        var tabBarCheck = flowEl.querySelector('.study-tabs');
+        if (tabBarCheck && getComputedStyle(tabBarCheck).display === 'none') return;
+        var flowScrollEl = el('study-flow');
+        if (!flowScrollEl) return;
+        var rect = flowScrollEl.getBoundingClientRect();
+        var currentY = window.scrollY || document.documentElement.scrollTop || 0;
+        var flowTop = rect.top + currentY;
+        window.scrollTo(0, Math.max(0, flowTop - 90));
+      }
       function activateTab(idx) {
         if (activeStepIdx === idx) return;
-        // Save scroll position of current tab
         if (stepEls[activeStepIdx]) {
-          tabScrollPositions[activeStepIdx] = window.scrollY || document.documentElement.scrollTop;
           stepEls[activeStepIdx].classList.remove('active-tab');
         }
         activeStepIdx = idx;
         activeStudyTab = idx; // remember across re-renders
         if (stepEls[idx]) {
           stepEls[idx].classList.add('active-tab');
-          // Restore scroll position for this tab
-          if (typeof tabScrollPositions[idx] === 'number') {
-            setTimeout(function() {
-              window.scrollTo(0, tabScrollPositions[idx]);
-            }, 50);
-          } else {
-            // First time opening this tab — scroll to top
-            window.scrollTo(0, 0);
-          }
+          // Never restore an absolute scroll offset saved on another tab —
+          // tab heights differ, so a "restored" position clamps to the new
+          // content bottom and makes the page jump. Always re-align instead.
+          alignScrollToStudyFlow();
         }
         // Update tab styling
         for (var tb2 = 0; tb2 < tabBtns.length; tb2++) {
           tabBtns[tb2].classList.toggle('active', tb2 === idx);
+        }
+        // Keep the active tab in view — the tablet bar scrolls horizontally
+        // and the desktop rail scrolls internally if needed. block:'nearest'
+        // guarantees the window itself is never scrolled by this call.
+        if (tabBtns[idx] && typeof tabBtns[idx].scrollIntoView === 'function') {
+          tabBtns[idx].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
         }
         tool.resize();
       }
@@ -1154,6 +1447,13 @@ function renderLessonDetail() {
       // Restore the tab the student was on (defaults to first tab)
       var defaultTab = (typeof activeStudyTab === 'number' && activeStudyTab >= 0 && activeStudyTab < tabBtns.length) ? activeStudyTab : 0;
       activateTab(defaultTab);
+      // Same-lesson re-render (e.g., the study-countdown refresh or a quiz
+      // submit) must keep the reading position exactly where it was — the
+      // re-align above is only for real tab clicks.
+      if (window._spKeepScrollOnRender && typeof window._spKeepScrollOnRender === 'number') {
+        window.scrollTo(0, window._spKeepScrollOnRender);
+        window._spKeepScrollOnRender = null;
+      }
     }
   }, 50);
 
@@ -1273,9 +1573,13 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     html += '<div class="quiz-study-timer"><div class="quiz-study-icon">📚</div><div class="quiz-study-title">Study Time</div><div class="quiz-study-desc">Review the materials above for at least <strong>' + STUDY_WAIT_MIN + ' minutes</strong> before your next attempt.</div><div class="quiz-study-countdown">⏳ ~' + studyRemaining + ' min remaining</div><div class="quiz-study-attempts">Best score so far: ' + (typeof prog.score === 'number' ? prog.score + '%' : '—') + '</div></div>';
     setTimeout(function() { renderLessonDetail(); }, 30000);
   } else if (activeQuestions.length > 0 && !isCompleted) {
+    // Admins who already submitted get the supervisor sets view below, which
+    // already includes the legend AND the answered set with results —
+    // rendering the questions again up here would display them twice.
+    var adminSetsView = isAdmin() && wasSubmitted;
     html += '<div class="quiz-set-label">Question Set ' + (currentSet + 1) + ' of ' + QUIZ_SETS + '</div>';
-    if (wasSubmitted) html += renderQuizLegend();
-    html += activeQuestions.map(function(q, qi) {
+    if (wasSubmitted && !adminSetsView) html += renderQuizLegend();
+    if (!adminSetsView) html += activeQuestions.map(function(q, qi) {
       var myAnswer = (wasSubmitted && typeof quizAnswers[qi] === 'number') ? quizAnswers[qi] : -1;
       var opts = (q.options || []).map(function(opt, oi) {
         var selected = quizAnswers[qi] === oi;
@@ -1357,6 +1661,11 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     var passedSet = getQuizPassedSetIndex(prog);
     if (isAdmin()) {
       html += renderQuizSetsTabs(quizData, prog, passedSet);
+    } else if (typeof prog.score !== 'number') {
+      // Legacy completion: no score was recorded (older tool version). Keep
+      // the lesson completed and explain honestly — never fake a score.
+      html += '<div class="quiz-set-label">✅ Lesson completed — no quiz score recorded (older version)</div>';
+      html += '<div style="text-align:center;padding:12px 16px;color:var(--text-muted);font-size:13px">This lesson was finished before quiz scores were tracked, so there is nothing to show here. No action needed.</div>';
     } else {
       html += '<div class="quiz-set-label">✅ Quiz Completed — Set ' + (passedSet + 1) + ' of ' + QUIZ_SETS + ' Passed</div>';
       html += renderQuizLegend();
@@ -1402,6 +1711,15 @@ function calcQuizScore(quizData, answers) {
   var correct = 0;
   for (var i = 0; i < quizData.length; i++) { if (answers[i] === quizData[i].answer) correct++; }
   return quizData.length > 0 ? Math.round((correct / quizData.length) * 100) : 0;
+}
+
+/** One passed set is enough: a stored score ≥ MIN_PASS_SCORE counts as passed
+ *  even when the quizPassed flag is missing or stale (legacy records and
+ *  partially-updated progress entries). The score is the source of truth. */
+function isQuizPassed(prog) {
+  if (!prog) return false;
+  if (prog.quizPassed === true) return true;
+  return typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE;
 }
 
 /** Determine which question set (0-based) the student passed — stored on
@@ -2052,7 +2370,11 @@ function showSections() {
 function openSection(sectionId) {
   // Flush any pending debounced saves before navigating away
   flushPendingSaves();
-  if (!isSectionAccessible(sectionId)) { tool.notify('🔒 You must complete all previous sections first.', 'warning'); return; }
+  if (!isSectionAccessible(sectionId)) {
+    var lockReason = getSectionLockReason(sectionId);
+    tool.notify(lockReason ? '🔒 ' + lockReason : '🔒 You must complete all previous sections first.', 'warning');
+    return;
+  }
   currentView = 'lessons'; currentSectionId = sectionId; currentLessonId = null;
   el('view-sections').style.display = 'none';
   el('view-lessons').style.display = '';
@@ -2130,18 +2452,34 @@ function markComplete() {
 
   if (hasQuiz && quizSubmitted) {
     var prog = getLessonProgress(currentSectionId, currentLessonId);
-    if (prog.status !== 'completed' && prog.quizPassed !== true && !(typeof prog.score === 'number' && prog.score >= MIN_PASS_SCORE)) {
+    if (prog.status !== 'completed' && !isQuizPassed(prog)) {
       tool.notify('You must pass the quiz (≥' + MIN_PASS_SCORE + '%) before completing this lesson.', 'warning');
       return;
     }
   }
 
   if (hasQuiz && !quizSubmitted) {
-    var allAnswered = true;
-    for (var qi = 0; qi < quizData.length; qi++) { if (typeof quizAnswers[qi] !== 'number') { allAnswered = false; break; } }
-    if (!allAnswered) { tool.notify('Please answer all quiz questions before marking complete.', 'warning'); return; }
+    // The quiz is a 3-set retry pool: the student only ever sees the CURRENT
+    // 5-question set, and passing any ONE set (≥ MIN_PASS_SCORE %) is enough
+    // to complete the lesson. Never demand answers beyond the visible set.
+    var progQ = getLessonProgress(currentSectionId, currentLessonId);
+    var curSetQ = typeof progQ.currentSet === 'number' ? progQ.currentSet : 0;
+    if (curSetQ >= QUIZ_SETS) curSetQ = QUIZ_SETS - 1;
+    var setStartQ = curSetQ * QUIZ_PER_SET;
+    var visibleCount = Math.min(QUIZ_PER_SET, Math.max(0, quizData.length - setStartQ));
+    var answeredCount = 0;
+    for (var qi = 0; qi < visibleCount; qi++) { if (typeof quizAnswers[qi] === 'number') answeredCount++; }
+    if (answeredCount < visibleCount) {
+      tool.notify('Please answer all ' + visibleCount + ' questions in the current quiz set before marking complete.', 'warning');
+      return;
+    }
     submitQuiz(quizData);
-    return;
+    // One click is enough when the just-submitted set passed: continue into
+    // the completion logic below. A failed set already showed study guidance.
+    var afterProg = getLessonProgress(currentSectionId, currentLessonId);
+    if (!isQuizPassed(afterProg)) {
+      return;
+    }
   }
 
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
@@ -2154,7 +2492,7 @@ function markComplete() {
   var prevScore = typeof existingProg.score === 'number' ? existingProg.score : null;
   var prevAnswers = (existingProg.quizAnswers && typeof existingProg.quizAnswers === 'object') ? JSON.parse(JSON.stringify(existingProg.quizAnswers)) : {};
   var prevAttempts = (existingProg.quizAttempts && Array.isArray(existingProg.quizAttempts)) ? JSON.parse(JSON.stringify(existingProg.quizAttempts)) : [];
-  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: existingProg.quizPassed === true, quizSubmitted: true, currentSet: (typeof existingProg.currentSet === 'number' ? existingProg.currentSet : 0), flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: null, supervisorNotes: '' };
+  PROGRESS[currentSectionId][currentLessonId] = { status: newStatus, score: prevScore, completedAt: new Date().toISOString(), quizAttempts: prevAttempts, quizAnswers: prevAnswers, quizPassed: isQuizPassed(existingProg), quizSubmitted: true, currentSet: (typeof existingProg.currentSet === 'number' ? existingProg.currentSet : 0), flashcardMastered: (existingProg.flashcardMastered && Array.isArray(existingProg.flashcardMastered)) ? JSON.parse(JSON.stringify(existingProg.flashcardMastered)) : [], supervisorStatus: (existingProg.supervisorStatus || null), supervisorNotes: (existingProg.supervisorNotes || '') };
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
@@ -2172,12 +2510,32 @@ function markComplete() {
 function markInProgress() {
   if (!currentSectionId || !currentLessonId) return;
   if (!PROGRESS[currentSectionId]) PROGRESS[currentSectionId] = {};
-  PROGRESS[currentSectionId][currentLessonId] = { status: 'in_progress' };
+  var prevEntry = PROGRESS[currentSectionId][currentLessonId] || {};
+  // SAFETY: Mark In Progress must only REOPEN the lesson. It must never wipe
+  // the student's results — an older version replaced the whole entry with
+  // {status:'in_progress'} and silently deleted the score, quiz attempts,
+  // answers, flashcard mastery and supervisor feedback (which also dropped
+  // the course/section average). Everything is preserved here; only the
+  // lesson reopens (quizSubmitted=false so the quiz can be answered again).
+  PROGRESS[currentSectionId][currentLessonId] = {
+    status: 'in_progress',
+    score: typeof prevEntry.score === 'number' ? prevEntry.score : null,
+    quizPassed: prevEntry.quizPassed === true,
+    completedAt: prevEntry.completedAt || null,
+    quizAttempts: (prevEntry.quizAttempts && Array.isArray(prevEntry.quizAttempts)) ? prevEntry.quizAttempts : [],
+    quizAnswers: (prevEntry.quizAnswers && typeof prevEntry.quizAnswers === 'object') ? JSON.parse(JSON.stringify(prevEntry.quizAnswers)) : {},
+    quizSubmitted: false,
+    currentSet: typeof prevEntry.currentSet === 'number' ? prevEntry.currentSet : 0,
+    studyUntil: null,
+    flashcardMastered: (prevEntry.flashcardMastered && Array.isArray(prevEntry.flashcardMastered)) ? JSON.parse(JSON.stringify(prevEntry.flashcardMastered)) : [],
+    supervisorStatus: prevEntry.supervisorStatus || null,
+    supervisorNotes: prevEntry.supervisorNotes || ''
+  };
   if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
   renderLessonDetail();
   updateProgressBar();
   saveProgress(true, function(res) { reportSaveResult(res, 'Status changed'); });
-  tool.notify('Lesson moved back to In Progress.', 'info');
+  tool.notify('Lesson moved back to In Progress. Previous results are kept.', 'info');
 }
 
 function submitQuiz(quizData) {
@@ -2226,7 +2584,9 @@ function submitQuiz(quizData) {
       studyUntil: new Date(Date.now() + STUDY_WAIT_MIN * 60 * 1000).toISOString(),
       quizAnswers: JSON.parse(JSON.stringify(quizAnswers)),
       quizSubmitted: true,
-      flashcardMastered: prev.flashcardMastered || []
+      flashcardMastered: prev.flashcardMastered || [],
+      supervisorStatus: prev.supervisorStatus || null,
+      supervisorNotes: prev.supervisorNotes || ''
     };
   }
 
@@ -2427,10 +2787,11 @@ function updateProgressBar() {
   var all = getAllLessonsInOrder();
   var completed = 0;
   for (var i = 0; i < all.length; i++) { if (getLessonProgress(all[i].sectionId, all[i].lessonId).status === 'completed') completed++; }
+  var cs = getCourseScore();
   var fill = el('progress-bar-fill');
   var text = el('progress-bar-text');
   if (fill) fill.style.width = pct + '%';
-  if (text) text.textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)';
+  if (text) text.textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)' + (all.length > 0 ? ' · Course avg ' + cs.average + '%' : '');
 }
 
 function showLoading(show) { el('loading-overlay').style.display = show ? '' : 'none'; }
@@ -2479,6 +2840,8 @@ function showSetup() {
       el('view-lessons').style.display = 'none';
       el('view-lesson-detail').style.display = 'none';
       el('progress-bar-wrap').style.display = 'none';
+      var gp0 = el('course-grade-panel');
+      if (gp0) gp0.style.display = 'none';
       el('app-title').textContent = '📚 Self-Paced Learning';
       el('section-group-grid').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No course configured yet</div><div class="empty-desc">Please contact your administrator to set up the course curriculum.</div></div>';
       tool.resize();
@@ -2713,7 +3076,7 @@ function renderSupervisorPanel() {
         var scColor = l.score >= MIN_PASS_SCORE ? '#065f46' : l.score >= 40 ? '#92400e' : '#991b1b';
         scoreTxt = ' <span style="color:' + scColor + ';font-weight:700">' + l.score + '%</span>';
       } else if (l.status === 'completed') {
-        scoreTxt = ' <span style="color:#94a3b8">no score</span>';
+        scoreTxt = ' <span style="color:#b45309;font-weight:700">⚠ no score</span>';
       }
       html += '<span style="display:inline-flex;align-items:center;gap:0;background:#f8fafc;border:1px solid var(--border);border-radius:10px;overflow:hidden;white-space:nowrap">' +
         '<span title="' + esc(l.title) + ' — ' + statusText + (typeof l.score === 'number' ? ' · ' + l.score + '%' : '') + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;font-size:11px;font-weight:600;cursor:default">' + dot + ' ' + esc(l.title) + scoreTxt + '</span>' +
