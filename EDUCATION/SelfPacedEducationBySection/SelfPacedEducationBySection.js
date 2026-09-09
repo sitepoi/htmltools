@@ -561,8 +561,30 @@ function isSectionAccessible(sectionId) {
   var section = findSection(sectionId);
   if (!section) return false;
   var lessons = getLessons(section);
-  if (lessons.length === 0) return true;
-  return isLessonAccessible(sectionId, lessons[0].id);
+  if (lessons.length > 0) return isLessonAccessible(sectionId, lessons[0].id);
+  // Empty section (no lessons added yet): it must NOT be treated as always
+  // open — apply the same chain rule as a lesson. It stays locked until
+  // every earlier section's lessons are finished (previous empty sections
+  // contribute nothing to the chain).
+  var mgmtType = (CONFIG.managementType || 'self_paced');
+  var sortedSections = getSortedSections();
+  var sectionIdx = -1;
+  for (var i = 0; i < sortedSections.length; i++) {
+    if (sortedSections[i].id === sectionId) { sectionIdx = i; break; }
+  }
+  if (sectionIdx <= 0) return true; // first section is always open
+  for (var j = 0; j < sectionIdx; j++) {
+    var prevLessons = getLessons(sortedSections[j]);
+    for (var k = 0; k < prevLessons.length; k++) {
+      var prevProg = getLessonProgress(sortedSections[j].id, prevLessons[k].id);
+      if (mgmtType === 'supervised') {
+        if (prevProg.supervisorStatus !== 'approved' && prevProg.status !== 'completed') return false;
+      } else {
+        if (prevProg.status !== 'completed') return false;
+      }
+    }
+  }
+  return true;
 }
 
 function getSectionProgressSummary(sectionId) {
@@ -762,8 +784,8 @@ function renderSections() {
         '</div>' +
         '<div class="section-group-card-title">' + esc(s.title || 'Untitled') + '</div>' +
         '<div class="section-group-card-meta">' +
-          '<span>📚 ' + lessonsCount + ' lesson' + (lessonsCount !== 1 ? 's' : '') + '</span>' +
-          '<span>✅ ' + summary.completed + '/' + summary.total + ' done</span>' +
+          (lessonsCount > 0 ? '<span>📚 ' + lessonsCount + ' lesson' + (lessonsCount !== 1 ? 's' : '') + '</span>' : '<span>📚 No lessons yet</span>') +
+          '<span>✅ ' + (summary.total > 0 ? summary.completed + '/' + summary.total + ' done' : '—') + '</span>' +
         '</div>' + lockHtml +
       '</div>';
     }).join('');
@@ -1252,22 +1274,31 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
     setTimeout(function() { renderLessonDetail(); }, 30000);
   } else if (activeQuestions.length > 0 && !isCompleted) {
     html += '<div class="quiz-set-label">Question Set ' + (currentSet + 1) + ' of ' + QUIZ_SETS + '</div>';
+    if (wasSubmitted) html += renderQuizLegend();
     html += activeQuestions.map(function(q, qi) {
       var myAnswer = (wasSubmitted && typeof quizAnswers[qi] === 'number') ? quizAnswers[qi] : -1;
       var opts = (q.options || []).map(function(opt, oi) {
         var selected = quizAnswers[qi] === oi;
-        var correctClass = '';
-        var tagHtml = '';
-        if (wasSubmitted) {
-          if (oi === q.answer) {
-            correctClass = ' correct';
-            tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Correct answer</span>';
-          } else if (selected && oi !== q.answer) {
-            correctClass = ' incorrect';
-            tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
-          }
+        var letter = String.fromCharCode(65 + oi);
+        if (!wasSubmitted) {
+          // Interactive answer sheet: radio + letter chip
+          return '<label class="quiz-option' + (selected ? ' selected' : '') + '"><input type="radio" name="q' + qi + '" value="' + oi + '" ' + (selected ? 'checked' : '') + '><span class="quiz-opt-letter">' + letter + '</span><span class="quiz-opt-text">' + esc(opt) + '</span></label>';
         }
-        return '<label class="quiz-option' + (selected ? ' selected' : '') + correctClass + '"><input type="radio" name="q' + qi + '" value="' + oi + '" ' + (selected ? 'checked' : '') + ' ' + (wasSubmitted ? 'disabled' : '') + '><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
+        // Result view: three visually distinct states
+        var stateClass = '';
+        var tagHtml = '';
+        if (selected && oi === q.answer) {
+          stateClass = ' state-correct';
+          tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Your answer</span>';
+        } else if (selected && oi !== q.answer) {
+          stateClass = ' state-wrong';
+          tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
+        } else if (oi === q.answer) {
+          // The real answer the student did NOT pick — informational, not an achievement
+          stateClass = ' state-answer';
+          tagHtml = '<span class="quiz-opt-tag tag-answer">Correct answer</span>';
+        }
+        return '<label class="quiz-option' + stateClass + '" style="cursor:default"><span class="quiz-opt-letter">' + letter + '</span><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
       }).join('');
       var statusHtml = '';
       var expHtml = '';
@@ -1282,16 +1313,15 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
         var expParts = [];
         if (q.explanation_correct) expParts.push('<div class="exp-entry">' + esc(q.explanation_correct) + '</div>');
         if (myAnswer !== -1 && myAnswer !== q.answer && q.explanations_incorrect && Array.isArray(q.explanations_incorrect) && q.explanations_incorrect[myAnswer]) {
-          expParts.push('<div class="exp-entry exp-wrong">Why option ' + (myAnswer + 1) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
+          expParts.push('<div class="exp-entry exp-wrong">Why option ' + String.fromCharCode(65 + myAnswer) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
         }
         if (expParts.length) expHtml = '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div>' + expParts.join('') + '</div>';
       } else if (isCompleted && q.explanation_correct) {
         expHtml = '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div><div class="exp-entry">' + esc(q.explanation_correct) + '</div></div>';
       }
+      var qHead = '<div class="quiz-q-head"><span class="quiz-q-num">' + (qi + 1) + '</span><div class="quiz-q-text">' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + '</div>';
       return '<div class="quiz-question' + (wasSubmitted ? ' q-result' : '') + '">' +
-        '<div class="quiz-question-main">' +
-          '<div class="quiz-q-text">' + (qi+1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + opts +
-        '</div>' +
+        '<div class="quiz-question-main">' + qHead + opts + '</div>' +
         (expHtml ? '<div class="quiz-question-aside">' + expHtml + '</div>' : '') +
       '</div>';
     }).join('');
@@ -1329,6 +1359,7 @@ function renderQuizInFlow(quizData, prog, sectionId, lessonId) {
       html += renderQuizSetsTabs(quizData, prog, passedSet);
     } else {
       html += '<div class="quiz-set-label">✅ Quiz Completed — Set ' + (passedSet + 1) + ' of ' + QUIZ_SETS + ' Passed</div>';
+      html += renderQuizLegend();
       html += renderQuizSetHtml(quizData, passedSet, prog.quizAnswers, true);
       html += '<div class="quiz-result pass" style="display:block">✅ Quiz passed! Final score: ' + (typeof prog.score === 'number' ? prog.score + '%' : '—') + '</div>';
     }
@@ -1398,6 +1429,15 @@ function quizAttemptScoreForSet(prog, setIndex) {
   return null;
 }
 
+/** Compact legend explaining the three answer states shown in quiz results. */
+function renderQuizLegend() {
+  return '<div class="quiz-legend">' +
+    '<span class="quiz-legend-item"><span class="quiz-legend-dot dot-correct"></span>Your answer — correct</span>' +
+    '<span class="quiz-legend-item"><span class="quiz-legend-dot dot-wrong"></span>Your answer — wrong</span>' +
+    '<span class="quiz-legend-item"><span class="quiz-legend-dot dot-answer"></span>Correct answer you missed</span>' +
+  '</div>';
+}
+
 /** HTML for one question set. answers is the student's set-relative answer map
  *  (or null when the set was never answered). showResults highlights
  *  correct/incorrect options and the student's selection. */
@@ -1423,28 +1463,36 @@ function renderQuizSetHtml(quizData, setIndex, answers, showResults) {
       }
     }
     var optsHTML = (q.options || []).map(function(opt, oi) {
-      var cls = '';
+      var stateClass = '';
       var tagHtml = '';
-      if (oi === q.answer) {
-        cls = ' correct';
-        tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Correct answer</span>';
-      } else if (showResults && myAnswer !== -1 && oi === myAnswer) {
-        cls = ' incorrect';
-        tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
+      if (showResults && myAnswer !== -1 && oi === myAnswer) {
+        if (myAnswer === q.answer) {
+          // Student picked this and it was correct → green achievement style
+          stateClass = ' state-correct';
+          tagHtml = '<span class="quiz-opt-tag tag-correct">✓ Your answer</span>';
+        } else {
+          stateClass = ' state-wrong';
+          tagHtml = '<span class="quiz-opt-tag tag-wrong">✗ Your answer</span>';
+        }
+      } else if (oi === q.answer) {
+        // The real answer the student did NOT pick (wrong or unanswered) →
+        // informational blue, clearly NOT an achievement of the student.
+        stateClass = ' state-answer';
+        tagHtml = '<span class="quiz-opt-tag tag-answer">Correct answer</span>';
       }
-      return '<label class="quiz-option' + cls + '" style="cursor:default"><input type="radio" disabled ' + (oi === myAnswer ? 'checked' : '') + '><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
+      return '<label class="quiz-option' + stateClass + '" style="cursor:default"><span class="quiz-opt-letter">' + String.fromCharCode(65 + oi) + '</span><span class="quiz-opt-text">' + esc(opt) + '</span>' + tagHtml + '</label>';
     }).join('');
     // Explanation in a neutral side panel (right column on desktop) so it
     // reads as a note, not as another option.
     var expParts = [];
     if (q.explanation_correct) expParts.push('<div class="exp-entry">' + esc(q.explanation_correct) + '</div>');
     if (showResults && myAnswer !== -1 && myAnswer !== q.answer && q.explanations_incorrect && Array.isArray(q.explanations_incorrect) && q.explanations_incorrect[myAnswer]) {
-      expParts.push('<div class="exp-entry exp-wrong">Why option ' + (myAnswer + 1) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
+      expParts.push('<div class="exp-entry exp-wrong">Why option ' + String.fromCharCode(65 + myAnswer) + ' is wrong: ' + esc(q.explanations_incorrect[myAnswer]) + '</div>');
     }
     var expHtml = expParts.length ? '<div class="quiz-explanation-box"><div class="exp-label">💡 Explanation</div>' + expParts.join('') + '</div>' : '';
     return '<div class="quiz-question q-result">' +
       '<div class="quiz-question-main">' +
-        '<div class="quiz-q-text">' + (qi + 1) + '. ' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + optsHTML +
+        '<div class="quiz-q-head"><span class="quiz-q-num">' + (qi + 1) + '</span><div class="quiz-q-text">' + esc(q.question) + (q.difficulty ? ' <span class="quiz-difficulty difficulty-' + q.difficulty + '">' + q.difficulty + '</span>' : '') + '</div>' + statusHtml + '</div>' + optsHTML +
       '</div>' +
       (expHtml ? '<div class="quiz-question-aside">' + expHtml + '</div>' : '') +
     '</div>';
@@ -1458,6 +1506,7 @@ function renderQuizSetsTabs(quizData, prog, answeredSetIndex) {
   var containerId = 'sup-quiz-sets-' + genId();
   var html = '<div id="' + containerId + '">';
   html += '<div class="quiz-set-label">👁️ Supervisor view — ' + QUIZ_SETS + ' question sets</div>';
+  html += renderQuizLegend();
   html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
   for (var s = 0; s < QUIZ_SETS; s++) {
     var sc = quizAttemptScoreForSet(prog, s);

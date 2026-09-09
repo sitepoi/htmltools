@@ -525,6 +525,19 @@ body.dark .flashcard-content { color: #e2e8f0; }
 .quiz-explanation.correct { background: var(--success-light); color: #065f46; border-left: 3px solid var(--success); }
 .quiz-explanation.incorrect { background: var(--danger-light); color: #991b1b; border-left: 3px solid var(--danger); }
 
+/* ── Quiz Result Legend ── */
+.quiz-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+  padding: 10px 14px; margin-bottom: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-size: 12px; color: var(--text-muted);
+}
+.quiz-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.quiz-legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+.quiz-legend-dot.dot-correct { background: #059669; }
+.quiz-legend-dot.dot-wrong { background: #dc2626; }
+.quiz-legend-dot.dot-answer { background: #3b82f6; }
+
 /* ── Quiz Result Card: options on the left, explanation panel on the right ── */
 .quiz-question.q-result { display: flex; flex-direction: column; gap: 12px; }
 .quiz-question-main { flex: 1.6 1 0; min-width: 0; }
@@ -533,23 +546,59 @@ body.dark .flashcard-content { color: #e2e8f0; }
   .quiz-question.q-result { flex-direction: row; align-items: flex-start; }
 }
 
+/* Question header: number chip + question text + outcome pill */
+.quiz-q-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.quiz-q-num {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface-alt); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.quiz-q-head .quiz-q-text { flex: 1; min-width: 0; margin-bottom: 0; }
+.quiz-q-head .quiz-q-status { flex-shrink: 0; margin: 2px 0 0; }
+
 /* Per-question outcome pill (Correct / Incorrect / Not answered) */
-.quiz-q-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 999px; margin-bottom: 10px; }
+.quiz-q-status { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
 .q-status-correct { background: var(--success-light); color: #065f46; border: 1px solid #6ee7b7; }
 .q-status-wrong { background: var(--danger-light); color: #991b1b; border: 1px solid #fca5a5; }
 .q-status-empty { background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border); }
 
-/* In-option tags: makes "correct answer" vs "your answer" unmistakable */
-.quiz-opt-text { flex: 1; }
-.quiz-opt-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-.tag-correct { background: #059669; color: #ffffff; }
-.tag-wrong { background: #dc2626; color: #ffffff; }
+/* Answer options: letter chip + text + state tag */
+.quiz-option { position: relative; }
+.quiz-opt-letter {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--surface-alt); color: var(--text-muted);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+}
+.quiz-opt-text { flex: 1; min-width: 0; }
+.quiz-opt-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+
+/* Student picked this and it was correct → green achievement style */
+.quiz-option.state-correct { border-color: #34d399; background: var(--success-light); font-weight: 500; }
+.quiz-option.state-correct .quiz-opt-letter { background: var(--success); color: #ffffff; }
+.tag-correct { background: var(--success); color: #ffffff; }
+/* Student picked this and it was wrong → red */
+.quiz-option.state-wrong { border-color: #f87171; background: var(--danger-light); }
+.quiz-option.state-wrong .quiz-opt-letter { background: var(--danger); color: #ffffff; }
+.tag-wrong { background: var(--danger); color: #ffffff; }
+/* The real answer the student did NOT pick → informational blue, not an achievement */
+.quiz-option.state-answer { border-color: #93c5fd; background: #eff6ff; }
+.quiz-option.state-answer .quiz-opt-letter { background: #3b82f6; color: #ffffff; }
+.tag-answer { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
 
 /* Explanation panel — neutral side card, clearly not an answer option */
 .quiz-explanation-box { background: var(--surface-alt); border: 1px dashed #cbd5e1; border-radius: var(--radius-lg); padding: 12px 14px; font-size: 13px; line-height: 1.6; }
 .quiz-explanation-box .exp-label { font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--primary); margin-bottom: 6px; }
 .quiz-explanation-box .exp-entry { color: #475569; }
 .quiz-explanation-box .exp-wrong { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); color: #991b1b; }
+
+/* Dark mode */
+body.dark .quiz-legend { background: #1e293b; }
+body.dark .quiz-option.state-correct { background: #064e3b; border-color: #059669; }
+body.dark .quiz-option.state-wrong { background: #450a0a; border-color: #dc2626; }
+body.dark .quiz-option.state-answer { background: #172554; border-color: #3b82f6; }
+body.dark .tag-answer { background: #1e3a8a; color: #93c5fd; border-color: #3b82f6; }
 body.dark .quiz-explanation-box { border-color: #64748b; }
 body.dark .quiz-explanation-box .exp-entry { color: #cbd5e1; }
 
