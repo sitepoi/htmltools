@@ -558,8 +558,11 @@ function isLessonAccessible(sectionId, lessonId) {
 }
 
 /** Human-readable reason a section is locked, or null when it is open.
- *  Two rules: every previous section must be fully finished, AND each
- *  previous section must average ≥ MIN_PASS_SCORE (no score counts as 0). */
+ *  Rules: every previous section must be fully finished, AND the previous
+ *  section must average ≥ MIN_PASS_SCORE over its RECORDED scores only
+ *  (no-score lessons are ignored). A section with no recorded scores at all
+ *  does NOT unlock automatically — the supervisor must resend a lesson or
+ *  set a score. Pure-content sections unlock by completion alone. */
 function getSectionLockReason(sectionId) {
   var section = findSection(sectionId);
   if (!section) return 'Section not found.';
@@ -581,7 +584,15 @@ function getSectionLockReason(sectionId) {
         : (prevProg.status === 'completed');
       if (!done) return 'Complete all lessons in “' + (prevSection.title || 'the previous section') + '” first.';
     }
-    var prevScore = getSectionScore(prevSection.id);
+    var prevScore = getSectionScoreInfo(prevSection.id);
+    // Pure-content sections (no quiz data anywhere) unlock by completion.
+    if (prevScore.assessmentLessons === 0) continue;
+    // Only the scores that exist are averaged. A section with NO recorded
+    // scores must NOT unlock automatically — the supervisor should resend a
+    // lesson (↺) or set a score (🎯) so at least one real result exists.
+    if (prevScore.scoredLessons === 0) {
+      return 'No quiz scores were recorded for “' + (prevSection.title || 'the previous section') + '” — please contact your supervisor.';
+    }
     if (prevScore.average < MIN_PASS_SCORE) {
       return '“' + (prevSection.title || 'The previous section') + '” averages ' + prevScore.average + '% — ' + MIN_PASS_SCORE + '% is required to unlock the next section.';
     }
@@ -612,35 +623,71 @@ function getSectionProgressSummary(sectionId) {
 /* ═══════════════════════════════════════════
    COURSE & SECTION SCORING
    ═══════════════════════════════════════════ */
-/** A lesson's score counts as 0 when nothing was recorded (business rule:
- *  "no score means 0"). */
+/** Does this lesson have quiz questions inline in the main curriculum doc?
+ *  (Quiz content can also live in a separate lesson document.) */
+function lessonHasQuiz(lesson) {
+  if (!lesson) return false;
+  var quiz = lesson.quiz;
+  if (quiz && typeof quiz === 'string') { try { quiz = JSON.parse(quiz); } catch(e) { quiz = null; } }
+  return !!(quiz && Array.isArray(quiz) && quiz.length > 0);
+}
+
+/** Might this lesson have quiz questions? True when quiz questions are inline
+ *  OR the lesson uses a lesson document (the quiz may be stored there). Used
+ *  only to tell assessment sections apart from pure-content sections. */
+function lessonMayHaveQuiz(lesson) {
+  return lessonHasQuiz(lesson) || !!(lesson && lesson.lessonDocId);
+}
+
+/** A lesson's score value for averages. A supervisor override (Set Score)
+ *  wins; otherwise a missing score counts as 0 (business rule). */
 function getLessonScoreValue(prog) {
+  if (prog && typeof prog.scoreOverride === 'number') return Math.max(0, Math.min(100, prog.scoreOverride));
   return typeof prog.score === 'number' ? prog.score : 0;
 }
 
-/** Section score: { total (max points), points (collected), average % }. */
-function getSectionScore(sectionId) {
+/** Section score over lessons that HAVE a recorded score (or supervisor
+ *  override). No-score lessons are IGNORED — the average always reflects the
+ *  scores that actually exist (per review: only available scores count). */
+function getSectionScoreInfo(sectionId) {
   var lessons = getLessons(findSection(sectionId));
-  if (!lessons.length) return { total: 0, points: 0, average: 0 };
-  var points = 0;
+  var points = 0, scoredLessons = 0, assessmentLessons = 0;
   for (var i = 0; i < lessons.length; i++) {
-    points += getLessonScoreValue(getLessonProgress(sectionId, lessons[i].id));
+    if (lessonMayHaveQuiz(lessons[i])) assessmentLessons++;
+    var p = getLessonProgress(sectionId, lessons[i].id);
+    if (typeof p.score === 'number' || typeof p.scoreOverride === 'number') {
+      scoredLessons++;
+      points += getLessonScoreValue(p);
+    }
   }
-  return { total: lessons.length * 100, points: points, average: Math.round(points / lessons.length) };
+  return { total: scoredLessons * 100, points: points, average: scoredLessons > 0 ? Math.round(points / scoredLessons) : 0, scoredLessons: scoredLessons, assessmentLessons: assessmentLessons, lessonCount: lessons.length };
 }
 
-/** Course score across ALL lessons: total points, collected points,
- *  average % and completion counts. Missing scores count as 0. */
+/** Section score summary (compatible shape for the UI). */
+function getSectionScore(sectionId) {
+  var info = getSectionScoreInfo(sectionId);
+  return { total: info.total, points: info.points, average: info.average };
+}
+
+/** Course score over lessons with recorded scores: total points, collected
+ *  points, average %, completion counts. No-score lessons are ignored. */
 function getCourseScore() {
   var all = getAllLessonsInOrder();
-  if (!all.length) return { total: 0, points: 0, average: 0, completed: 0, lessonCount: 0 };
-  var points = 0, completed = 0;
+  if (!all.length) return { total: 0, points: 0, average: 0, completed: 0, lessonCount: 0, scoredLessons: 0, assessmentLessons: 0, completedScoreless: 0 };
+  var points = 0, completed = 0, scoredLessons = 0, assessmentLessons = 0, completedScoreless = 0;
   for (var i = 0; i < all.length; i++) {
     var p = getLessonProgress(all[i].sectionId, all[i].lessonId);
-    points += getLessonScoreValue(p);
-    if (p.status === 'completed') completed++;
+    if (p.status === 'completed') {
+      completed++;
+      if (typeof p.score !== 'number' && typeof p.scoreOverride !== 'number' && lessonMayHaveQuiz(all[i].lesson)) completedScoreless++;
+    }
+    if (lessonMayHaveQuiz(all[i].lesson)) assessmentLessons++;
+    if (typeof p.score === 'number' || typeof p.scoreOverride === 'number') {
+      scoredLessons++;
+      points += getLessonScoreValue(p);
+    }
   }
-  return { total: all.length * 100, points: points, average: Math.round(points / all.length), completed: completed, lessonCount: all.length };
+  return { total: scoredLessons * 100, points: points, average: scoredLessons > 0 ? Math.round(points / scoredLessons) : 0, completed: completed, lessonCount: all.length, scoredLessons: scoredLessons, assessmentLessons: assessmentLessons, completedScoreless: completedScoreless };
 }
 
 function findSection(sectionId) {
@@ -790,14 +837,16 @@ function renderCourseGrade() {
 
   var cs = getCourseScore();
   var allDone = cs.lessonCount > 0 && cs.completed === cs.lessonCount;
-  var passed = cs.average >= MIN_PASS_SCORE;
+  var hasScores = cs.scoredLessons > 0;
+  var passed = hasScores && cs.average >= MIN_PASS_SCORE;
   var statusTxt, statusCls;
   if (cs.lessonCount === 0) { statusTxt = 'No lessons yet'; statusCls = 'grade-st-fresh'; }
   else if (allDone && passed) { statusTxt = 'Course passed ✓'; statusCls = 'grade-st-pass'; }
+  else if (allDone && !hasScores) { statusTxt = 'Finished — no scores recorded'; statusCls = 'grade-st-fresh'; }
   else if (allDone) { statusTxt = 'Finished below ' + MIN_PASS_SCORE + '%'; statusCls = 'grade-st-fail'; }
   else { statusTxt = 'In progress'; statusCls = 'grade-st-progress'; }
 
-  var ringColor = cs.lessonCount === 0 ? '#94a3b8' : (passed ? '#059669' : (cs.average >= 40 ? '#d97706' : '#dc2626'));
+  var ringColor = !hasScores ? '#94a3b8' : (passed ? '#059669' : (cs.average >= 40 ? '#d97706' : '#dc2626'));
   var rr = 34, rc = 2 * Math.PI * rr;
   var ringPct = Math.max(0, Math.min(100, cs.average));
 
@@ -807,10 +856,10 @@ function renderCourseGrade() {
   html += '<svg class="grade-ring" viewBox="0 0 84 84" width="84" height="84" aria-hidden="true">' +
     '<circle cx="42" cy="42" r="' + rr + '" fill="none" stroke="var(--border)" stroke-width="9"/>' +
     '<circle cx="42" cy="42" r="' + rr + '" fill="none" stroke="' + ringColor + '" stroke-width="9" stroke-linecap="round" stroke-dasharray="' + rc.toFixed(2) + '" stroke-dashoffset="' + (rc * (1 - ringPct / 100)).toFixed(2) + '" transform="rotate(-90,42,42)"/>' +
-    '<text x="42" y="43" text-anchor="middle" dominant-baseline="central" class="grade-ring-text">' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + '</text></svg>';
+    '<text x="42" y="43" text-anchor="middle" dominant-baseline="central" class="grade-ring-text">' + (hasScores ? cs.average + '%' : '—') + '</text></svg>';
   html += '<div class="grade-stats">';
-  html += '<div class="grade-stat"><span class="grade-stat-label">Course average</span><span class="grade-stat-value">' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + ' <span class="grade-stat-note">(need ' + MIN_PASS_SCORE + '% to pass)</span></span></div>';
-  html += '<div class="grade-stat"><span class="grade-stat-label">Points collected</span><span class="grade-stat-value">' + cs.points + ' <span class="grade-stat-note">of ' + cs.total + ' points</span></span></div>';
+  html += '<div class="grade-stat"><span class="grade-stat-label">Course average</span><span class="grade-stat-value">' + (hasScores ? cs.average + '%' : '—') + (hasScores ? ' <span class="grade-stat-note">(need ' + MIN_PASS_SCORE + '% to pass)</span>' : '') + '</span></div>';
+  html += '<div class="grade-stat"><span class="grade-stat-label">Points collected</span><span class="grade-stat-value">' + (hasScores ? cs.points + ' <span class="grade-stat-note">of ' + cs.total + ' points</span>' : '—') + '</span></div>';
   html += '<div class="grade-bar"><div class="grade-bar-fill" style="width:' + (cs.total > 0 ? Math.round(cs.points / cs.total * 100) : 0) + '%"></div></div>';
   html += '</div>';
   html += '<div class="grade-side"><div class="grade-side-num">' + cs.completed + '<span> /' + cs.lessonCount + '</span></div><div class="grade-side-label">lessons done</div></div>';
@@ -832,7 +881,11 @@ function renderCourseGrade() {
     }
     html += '</div>';
   }
-  html += '<div class="grade-note">ℹ️ Every lesson counts toward your average — lessons without a score count as 0. Each section unlocks the next one at ' + MIN_PASS_SCORE + '% average, and the course is passed at ' + MIN_PASS_SCORE + '% overall.</div>';
+  var gradeNote = 'ℹ️ Only recorded scores are averaged — lessons without a score are ignored. Each section unlocks the next one at ' + MIN_PASS_SCORE + '% average, and the course is passed at ' + MIN_PASS_SCORE + '% overall.';
+  if (cs.completedScoreless > 0) {
+    gradeNote += ' ⚠️ ' + cs.completedScoreless + ' completed lesson' + (cs.completedScoreless !== 1 ? 's' : '') + ' have no recorded score — a supervisor can resend the lesson (↺) or set the score (🎯).';
+  }
+  html += '<div class="grade-note">' + gradeNote + '</div>';
   html += '</div>';
   panel.innerHTML = html;
 }
@@ -919,6 +972,40 @@ function timeLabel(iso) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+/** One-time data repair: if a lesson lost its score but saved quiz attempts
+ *  still exist, restore the best attempt score (and the pass flag)
+ *  automatically. Honest recovery — it restores real recorded results, never
+ *  invents new ones. Runs after the curriculum loads. */
+function recoverScoresFromAttempts() {
+  var all = getAllLessonsInOrder();
+  if (all.length === 0) return;
+  var recovered = 0;
+  for (var i = 0; i < all.length; i++) {
+    var sid = all[i].sectionId;
+    var lid = all[i].lessonId;
+    var p = getLessonProgress(sid, lid);
+    if (p.status === 'not_started') continue;
+    if (typeof p.score === 'number' || typeof p.scoreOverride === 'number') continue;
+    var attempts = (p.quizAttempts && Array.isArray(p.quizAttempts)) ? p.quizAttempts : [];
+    var best = null;
+    for (var a = 0; a < attempts.length; a++) {
+      if (typeof attempts[a].score === 'number' && (best === null || attempts[a].score > best)) best = attempts[a].score;
+    }
+    if (best !== null) {
+      if (!PROGRESS[sid]) PROGRESS[sid] = {};
+      if (!PROGRESS[sid][lid]) PROGRESS[sid][lid] = {};
+      PROGRESS[sid][lid].score = best;
+      if (best >= MIN_PASS_SCORE) PROGRESS[sid][lid].quizPassed = true;
+      logLessonEvent(sid, lid, 'score_recovered', best);
+      recovered++;
+    }
+  }
+  if (recovered > 0) {
+    saveProgress(); // silent stage — the next explicit action persists it
+    tool.notify('🩹 Recovered ' + recovered + ' quiz score' + (recovered !== 1 ? 's' : '') + ' from saved attempt history.', 'info');
+  }
+}
+
 /** Daily completions bar chart + grouped list. Shown on the student Sections
  *  view and (compact) inside the supervisor dashboard. */
 function buildActivityReportHtml(compact) {
@@ -942,7 +1029,8 @@ function buildActivityReportHtml(compact) {
 
   // ── Summary chips ──
   var last = days[0].items[0];
-  var lastTxt = last ? last.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + timeLabel(last.at) : '—';
+  var lastDate = last ? new Date(last.at) : null;
+  var lastTxt = (lastDate && !isNaN(lastDate.getTime())) ? lastDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' · ' + timeLabel(last.at) : '—';
   var bestTxt = best ? best.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' (' + best.count + ')' : '—';
   html += '<div class="rp-chips">' +
     '<span class="rp-chip">✅ <strong>' + total + '</strong> completion' + (total !== 1 ? 's' : '') + '</span>' +
@@ -1050,7 +1138,7 @@ function renderSections() {
         '<div class="section-group-card-meta">' +
           (lessonsCount > 0 ? '<span>📚 ' + lessonsCount + ' lesson' + (lessonsCount !== 1 ? 's' : '') + '</span>' : '<span>📚 No lessons yet</span>') +
           '<span>✅ ' + (summary.total > 0 ? summary.completed + '/' + summary.total + ' done' : '—') + '</span>' +
-          (lessonsCount > 0 ? '<span>📊 Avg ' + secScore.average + '%</span>' : '') +
+          (secScore.total > 0 ? '<span>📊 Avg ' + secScore.average + '%</span>' : '') +
         '</div>' + lockHtml +
       '</div>';
     }).join('');
@@ -1076,7 +1164,7 @@ function renderLessons() {
       infoProgress.textContent = 'No lessons yet';
     } else {
       var secScore = getSectionScore(section.id);
-      infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed · Section avg ' + secScore.average + '% · ' + secScore.points + '/' + secScore.total + ' pts';
+      infoProgress.textContent = summary.completed + ' of ' + summary.total + ' lessons completed' + (secScore.total > 0 ? ' · Section avg ' + secScore.average + '% · ' + secScore.points + '/' + secScore.total + ' pts' : '');
     }
   }
 
@@ -1106,7 +1194,10 @@ function renderLessons() {
       var badgeLabel = badgeMap[stKey] || 'Not Started';
       var iconClass = stKey;
       var badgeClass = 'status-' + stKey;
-      var scoreHtml = typeof prog.score === 'number' ? ' · Score: ' + prog.score + '%' : '';
+      var dispScore = null, dispOverride = false;
+      if (typeof prog.scoreOverride === 'number') { dispScore = prog.scoreOverride; dispOverride = true; }
+      else if (typeof prog.score === 'number') dispScore = prog.score;
+      var scoreHtml = dispScore !== null ? ' · Score: ' + dispScore + '%' + (dispOverride ? ' 🎯' : '') : '';
       var doneDateHtml = '';
       if (prog.status === 'completed' && prog.completedAt) {
         var doneD = new Date(prog.completedAt);
@@ -1200,6 +1291,7 @@ function renderFinishSummary(prog, hasQuiz, hasFlashcards, flashcards) {
       if (typeof bs === 'number' && (best === null || bs > best)) best = bs;
     }
     if (best !== null) html += '<div class="finish-meta-line">Best score: <strong>' + best + '%</strong></div>';
+    if (typeof prog.scoreOverride === 'number') html += '<div class="finish-meta-line">🎯 Score set by supervisor: <strong>' + prog.scoreOverride + '%</strong></div>';
     if (isLegacyCompletion) html += '<div class="finish-meta-line">This lesson was completed before quiz scores were tracked.</div>';
     if (prog.status === 'studying' && prog.studyUntil) {
       var su = new Date(prog.studyUntil);
@@ -1262,10 +1354,11 @@ function renderFinishSummary(prog, hasQuiz, hasFlashcards, flashcards) {
   var cs = getCourseScore();
   html += '<div class="finish-block">';
   html += '<div class="finish-block-title">🎓 Course Standing</div>';
-  html += '<div class="finish-meta-line">Average <strong>' + (cs.lessonCount > 0 ? cs.average + '%' : '—') + '</strong> · Points <strong>' + cs.points + ' / ' + cs.total + '</strong> · ' + cs.completed + ' of ' + cs.lessonCount + ' lessons done</div>';
+  html += '<div class="finish-meta-line">Average <strong>' + (cs.scoredLessons > 0 ? cs.average + '%' : '—') + '</strong> · Points <strong>' + (cs.scoredLessons > 0 ? cs.points + ' / ' + cs.total : '—') + '</strong> · ' + cs.completed + ' of ' + cs.lessonCount + ' lessons done</div>';
   var csDone = cs.lessonCount > 0 && cs.completed === cs.lessonCount;
   var courseLine = '';
   if (cs.lessonCount === 0) courseLine = 'No lessons yet.';
+  else if (csDone && cs.scoredLessons === 0) courseLine = '⚠️ Course finished with no recorded scores — contact your supervisor.';
   else if (csDone && cs.average >= MIN_PASS_SCORE) courseLine = '🎉 Course passed — average ' + cs.average + '%.';
   else if (csDone) courseLine = '⚠️ Course finished below ' + MIN_PASS_SCORE + '% — improve scores to pass.';
   else if (cs.average >= MIN_PASS_SCORE) courseLine = '✅ On track — course average at or above ' + MIN_PASS_SCORE + '%.';
@@ -2916,6 +3009,7 @@ function loadCurriculum(callback) {
         }
       }
     }
+    recoverScoresFromAttempts(); // restore lost scores from saved attempt history
     if (callback) callback();
     probeLessonDocAccess();  // diagnose missing lesson-doc CRUD config once
     renderCurrentView();
@@ -3012,7 +3106,8 @@ function updateProgressBar() {
   var fill = el('progress-bar-fill');
   var text = el('progress-bar-text');
   if (fill) fill.style.width = pct + '%';
-  if (text) text.textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)' + (all.length > 0 ? ' · Course avg ' + cs.average + '%' : '');
+  var csTxt = (cs.scoredLessons > 0) ? ' · Course avg ' + cs.average + '%' : '';
+  if (text) text.textContent = pct + '% Complete (' + completed + ' of ' + all.length + ' lessons)' + csTxt;
 }
 
 function showLoading(show) { el('loading-overlay').style.display = show ? '' : 'none'; }
@@ -3237,7 +3332,7 @@ function renderSupervisorPanel() {
     var secTitle = sec ? sec.title : 'Unknown Section';
     if (!sectionStats[sid]) sectionStats[sid] = { title: secTitle, total: 0, completed: 0, inProgress: 0, notStarted: 0, pendingReview: 0, lessons: [] };
     sectionStats[sid].total++;
-    var lessonEntry = { lessonId: lid, title: les ? les.title : 'Unknown', status: prog.status, score: prog.score };
+    var lessonEntry = { lessonId: lid, title: les ? les.title : 'Unknown', status: prog.status, score: prog.score, scoreOverride: prog.scoreOverride };
     sectionStats[sid].lessons.push(lessonEntry);
     if (prog.status === 'completed') {
       completed++; sectionStats[sid].completed++;
@@ -3295,14 +3390,18 @@ function renderSupervisorPanel() {
       var dot = l.status === 'completed' ? '🟢' : l.status === 'pending_review' ? '🟡' : l.status === 'in_progress' || l.status === 'studying' ? '🔵' : '⚪';
       var statusText = l.status === 'completed' ? 'Done' : l.status === 'pending_review' ? 'Pending review' : l.status === 'in_progress' || l.status === 'studying' ? 'In progress' : 'Not started';
       var scoreTxt = '';
-      if (typeof l.score === 'number') {
+      if (typeof l.scoreOverride === 'number') {
+        scoreTxt = ' <span style="color:#065f46;font-weight:700">🎯 ' + l.scoreOverride + '%</span>';
+      } else if (typeof l.score === 'number') {
         var scColor = l.score >= MIN_PASS_SCORE ? '#065f46' : l.score >= 40 ? '#92400e' : '#991b1b';
         scoreTxt = ' <span style="color:' + scColor + ';font-weight:700">' + l.score + '%</span>';
       } else if (l.status === 'completed') {
         scoreTxt = ' <span style="color:#b45309;font-weight:700">⚠ no score</span>';
       }
+      var scoreTitleTxt = (typeof l.scoreOverride === 'number' ? ' · score ' + l.scoreOverride + '% (set by supervisor)' : (typeof l.score === 'number' ? ' · ' + l.score + '%' : ''));
       html += '<span style="display:inline-flex;align-items:center;gap:0;background:#f8fafc;border:1px solid var(--border);border-radius:10px;overflow:hidden;white-space:nowrap">' +
-        '<span title="' + esc(l.title) + ' — ' + statusText + (typeof l.score === 'number' ? ' · ' + l.score + '%' : '') + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;font-size:11px;font-weight:600;cursor:default">' + dot + ' ' + esc(l.title) + scoreTxt + '</span>' +
+        '<span title="' + esc(l.title) + ' — ' + statusText + esc(scoreTitleTxt) + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;font-size:11px;font-weight:600;cursor:default">' + dot + ' ' + esc(l.title) + scoreTxt + '</span>' +
+        '<button data-sup-set-score="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" title="Set or adjust this lesson\'s score (supervisor override — counts in section and course averages)" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">🎯</button>' +
         '<button data-sup-reset-les="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" title="Reset this lesson and ALL lessons after it back to Not Started — forces the student to rework them as if never opened" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">↺</button>' +
         '</span>';
     }
@@ -3360,6 +3459,18 @@ function renderSupervisorPanel() {
     if (resetBtn) {
       resetBtn.addEventListener('click', resetAllProgress);
     }
+    // Per-lesson Set Score: supervisor override for lost/legacy scores.
+    var setScoreBtns = panel.querySelectorAll('[data-sup-set-score]');
+    for (var ss2 = 0; ss2 < setScoreBtns.length; ss2++) {
+      setScoreBtns[ss2].addEventListener('click', function() {
+        var parts = this.getAttribute('data-sup-set-score').split('|');
+        var val = prompt('Set the score for this lesson (0–100). This overrides missing or old quiz scores in the section and course averages:');
+        if (val === null) return;
+        var n = parseInt(val);
+        if (isNaN(n) || n < 0 || n > 100) { tool.notify('Please enter a number between 0 and 100.', 'warning'); return; }
+        supervisorSetScore(parts[0], parts[1], n);
+      });
+    }
     // Per-lesson reset: two-click confirm (native confirm() is unreliable in sandboxed iframes)
     var resetLesBtns = panel.querySelectorAll('[data-sup-reset-les]');
     for (var rl = 0; rl < resetLesBtns.length; rl++) {
@@ -3413,6 +3524,22 @@ function supervisorAction(sectionId, lessonId, decision, notes) {
   updateProgressBar();
   if (currentView === 'lessons') renderLessons();
   saveProgress(true, function(res) { reportSaveResult(res, 'Supervisor decision saved'); });
+}
+
+/** Supervisor sets/adjusts a lesson's score (override). Counts in the section
+ *  and course averages, is logged, and never touches the student's real quiz
+ *  result. This is the precise remedy for lost score data. */
+function supervisorSetScore(sectionId, lessonId, value) {
+  if (!isAdmin()) { tool.notify('Only supervisors can adjust scores.', 'warning'); return; }
+  if (!PROGRESS[sectionId]) PROGRESS[sectionId] = {};
+  if (!PROGRESS[sectionId][lessonId]) PROGRESS[sectionId][lessonId] = {};
+  PROGRESS[sectionId][lessonId].scoreOverride = value;
+  logLessonEvent(sectionId, lessonId, 'score_set', value);
+  renderSupervisorPanel();
+  updateProgressBar();
+  if (currentView === 'lessons') renderLessons();
+  else if (currentView === 'sections') renderSections();
+  saveProgress(true, function(res) { reportSaveResult(res, 'Score set to ' + value + '%'); });
 }
 
 /** Reset a lesson AND all lessons after it back to "Not Started" (as if never

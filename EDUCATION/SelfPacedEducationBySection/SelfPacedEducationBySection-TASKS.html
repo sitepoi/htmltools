@@ -107,6 +107,8 @@
     <tr><td>T25</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Data-loss audit &amp; fixes: Mark In Progress no longer wipes lesson results</td></tr>
     <tr><td>T26</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Submitted quiz no longer rendered twice for admin viewers</td></tr>
     <tr><td>T27</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Activity log + progress report: completion timestamps, daily list &amp; chart for student and supervisor</td></tr>
+    <tr><td>T28</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Lost-score recovery: auto-restore from attempts, supervisor Set Score (grandfather rule revised by T29)</td></tr>
+    <tr><td>T29</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Grading revision: average only recorded scores, no auto-unlock when scoreless, dashboard crash fix</td></tr>
     <tr><td>T4</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Flexible quiz set layout derived from content — no empty sets for any quiz length</td></tr>
     <tr><td>T5</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Study countdown re-renders the whole lesson every 30 s (PDFs re-fetched, wasted bandwidth)</td></tr>
     <tr><td>T6</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>PDFs render eagerly for ALL tabs and re-fetch on every re-render</td></tr>
@@ -263,6 +265,32 @@
     <div class="row"><span class="lbl">Solution</span><span class="val">Append-only <code>activityLog</code> per lesson (<code>completed</code> / <code>submitted</code> / <code>approved</code> / <code>rejected</code> / <code>quiz_passed</code> / <code>quiz_attempt</code> / <code>reopened</code>). <code>completedAt</code> is still set on every completion. Student sees a Progress Report panel (summary chips + 14-day bar chart + grouped daily list) on the Sections view; the supervisor dashboard shows the same report. Legacy completions are backfilled from <code>completedAt</code> for display only — no stored data changed.</span></div>
     <div class="row"><span class="lbl">Location</span><span class="val"><code>logLessonEvent</code>, <code>getAllActivityEvents</code>, <code>getDailyCompletionStats</code>, <code>buildActivityReportHtml</code>, <code>renderProgressReport</code>, <code>markComplete</code>, <code>markInProgress</code>, <code>submitQuiz</code>, <code>supervisorAction</code></span></div>
     <div class="row"><span class="lbl">Acceptance</span><span class="val">Mark Complete records a timestamp; reopening and completing again adds a NEW entry (history kept). Both student and supervisor see the daily list + chart.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T28</span>
+      <span class="task-title">Lost quiz scores no longer block the next section</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">A student completed a section but its quiz scores were lost. The section gate (60% average, missing score = 0) locked the next section, and the only remedy was reopening lessons for a retake — discouraging for the student.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Three layers: (1) auto-recovery — scores lost while attempt history survived are restored from the best recorded attempt at load; (2) grandfathering — a section whose lessons are all completed but have NO recorded scores unlocks by completion alone (display-only rule, no student data changed); (3) supervisor tool — a 🎯 Set Score button per lesson records a supervisor override counted in section/course averages. Also: quiz-less lessons are excluded from average denominators.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>recoverScoresFromAttempts</code>, <code>getSectionLockReason</code>, <code>getSectionScoreInfo</code>, <code>getCourseScore</code>, <code>lessonHasQuiz</code>, <code>supervisorSetScore</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">The affected student's next section unlocks automatically on load (with a recovery notice if attempts existed). Supervisors can fill precise scores from the dashboard chips.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T29</span>
+      <span class="task-title">Grading revision: available scores only + dashboard crash fix</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problems</span><span class="val">(1) Supervisor dashboard crashed: <code>buildActivityReportHtml</code> read <code>toLocaleDateString</code> on the event object instead of its timestamp. (2) Course Grade showed 0% / 0 of 0 for students with real scores because the average counted only inline-quiz lessons (quiz content lives in lesson docs). (3) The T28 grandfather rule auto-unlocked scoreless sections — too permissive.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Averages now use ONLY the scores that exist (recorded scores or supervisor overrides); no-score lessons are ignored. A section with no recorded scores at all does NOT unlock — the supervisor can resend a lesson (↺) or use 🎯 Set Score. Pure-content sections still unlock by completion. The missing-score explanation in the grade panel appears only when completed lessons really lack scores.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>buildActivityReportHtml</code>, <code>getSectionScoreInfo</code>, <code>getCourseScore</code>, <code>getSectionLockReason</code>, <code>lessonMayHaveQuiz</code>, <code>recoverScoresFromAttempts</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">Dashboard opens; course grade reflects real scores; a fully scoreless section stays locked with a supervisor message; one ≥60% score in a section is enough to pass it.</span></div>
   </div>
 
   <h2 class="section">🔴 P0 — Bugs that block students (develop first)</h2>
