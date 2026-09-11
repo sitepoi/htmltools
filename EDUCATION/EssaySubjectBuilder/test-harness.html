@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Essay Subject Builder — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="EssaySubjectBuilder.css">
+<style>
+body { padding-top: 34px !important; margin: 0; }
+#app-container { height: calc(100vh - 34px); overflow: hidden; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a5b4fc; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #4f46e5; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-role { background: #334155; color: #e2e8f0; }
+#th-bar .btn-role.active { background: #4f46e5; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Essay Subject Builder</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Role:</span>
+  <button class="btn-role active" id="th-role-editor">Editor</button>
+  <button class="btn-role" id="th-role-admin">Admin</button>
+  <button class="btn-role" id="th-role-viewer">Viewer</button>
+  <button class="btn-role" id="th-role-none">None</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'essay_subject_builder_test_db';
+  var OBJECTS_KEY = 'essay_subject_builder_test_objects';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  var HARNESS_USERS = {
+    admin:  { id: 'u_teacher', name: 'Ms. Rodriguez', email: 'teacher@school.org', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    editor: { id: 'u_student', name: 'Ali Student', email: 'ali.student@school.org', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    viewer: { id: 'u_visitor', name: 'Visitor', email: 'visitor@school.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } }
+  };
+
+  var SAMPLE_DEFINITION = {
+    version: 1,
+    subject: 'The Importance of Reading in the Digital Age',
+    instructions: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+    language: 'English',
+    minimumWordCount: 300,
+    rubrics: [
+      { id: 'contentIdeas', name: 'Content & Ideas', weight: 25, builtIn: true, description: 'Depth and relevance of the ideas, originality of thought, engagement with the subject, and development of the main argument.' },
+      { id: 'organizationStructure', name: 'Organization & Structure', weight: 18, builtIn: true, description: 'Clear introduction, body and conclusion; logical paragraphing; smooth transitions; coherent overall flow.' },
+      { id: 'evidenceArgumentation', name: 'Evidence & Argumentation', weight: 18, builtIn: true, description: 'Claims supported with examples, facts or reasoning; quality of the arguments; critical thinking; counter-arguments considered.' },
+      { id: 'languageStyle', name: 'Language & Style', weight: 12, builtIn: true, description: 'Word choice and vocabulary, sentence variety, tone and register, clarity and precision of expression.' },
+      { id: 'grammarMechanics', name: 'Grammar & Mechanics', weight: 10, builtIn: true, description: 'Grammar, punctuation, spelling, capitalization and formatting consistency.' },
+      { id: 'persuasiveAppeal', name: 'Persuasive Appeal', weight: 10, builtIn: false, description: 'How convincingly the essay persuades the reader; strength of the call to action and emotional and logical appeal.' },
+      { id: 'useOfEvidence', name: 'Use of Evidence', weight: 7, builtIn: false, description: 'How well the essay integrates specific examples, quotes, facts and data to support every claim.' }
+    ],
+    definitionId: '',
+    savedAt: null,
+    savedDefinitionVersion: 0
+  };
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+  function loadDefinitionObjects() {
+    try { var raw = localStorage.getItem(OBJECTS_KEY); return raw ? JSON.parse(raw) : []; }
+    catch(e) { return []; }
+  }
+  function saveDefinitionObjects(list) { try { localStorage.setItem(OBJECTS_KEY, JSON.stringify(list)); } catch(e) {} }
+
+  _user = HARNESS_USERS.editor;
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var defaults = {
+        allowObjectCRUD: 'yes',
+        definitionsObjectType: 'essay-subject-definitions-uniconbaseapps'
+      };
+      var fromUrl = new URLSearchParams(window.location.search).get(name);
+      if (fromUrl !== null && fromUrl !== '') return fromUrl;
+      if (Object.prototype.hasOwnProperty.call(defaults, name)) return defaults[name];
+      return fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return [HARNESS_USERS.admin, HARNESS_USERS.editor, HARNESS_USERS.viewer]; },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function(missing, message) {
+      console.warn('[Missing params]', message, missing);
+      this.notify(message, 'warning');
+    },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    },
+    resize: function() {},
+    openUrl: function(url) {},
+    openObjectDetail: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    requestSave: function(callback) { setTimeout(function() { callback(null, true); }, 100); },
+    requestObjects: function(action, params, callback) {
+      setTimeout(function() {
+        var objects = loadDefinitionObjects();
+        if (action === 'create') {
+          var createdObject = {
+            id: 'def_' + Date.now().toString(36),
+            _id: 'def_' + Date.now().toString(36),
+            name: params.name,
+            cmsObjectType: params.mainObjectType,
+            productData: params.productData,
+            created: new Date().toISOString(),
+            updated: new Date().toISOString()
+          };
+          objects.push(createdObject);
+          saveDefinitionObjects(objects);
+          console.log('[mock requestObjects create]', createdObject.id, createdObject.name);
+          callback(null, { object: createdObject });
+        } else if (action === 'update') {
+          var foundObject = null;
+          for (var i = 0; i < objects.length; i++) if (objects[i].id === params.objectId) { foundObject = objects[i]; break; }
+          if (!foundObject) { callback('Object not found: ' + params.objectId, null); return; }
+          if (params.productData) foundObject.productData = params.productData;
+          if (params.name) foundObject.name = params.name;
+          foundObject.updated = new Date().toISOString();
+          saveDefinitionObjects(objects);
+          console.log('[mock requestObjects update]', foundObject.id);
+          callback(null, { ok: true });
+        } else if (action === 'get') {
+          var matchedObject = null;
+          for (var j = 0; j < objects.length; j++) if (objects[j].id === params.objectId) { matchedObject = objects[j]; break; }
+          callback(null, { object: matchedObject });
+        } else if (action === 'query') {
+          callback(null, { objects: objects });
+        } else {
+          callback('Unknown action: ' + action, null);
+        }
+      }, 150);
+    },
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function() {
+      save(JSON.parse(JSON.stringify(SAMPLE_DEFINITION)));
+      window.location.reload();
+    },
+    _clearData: function() {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(OBJECTS_KEY);
+      window.location.reload();
+    },
+    _setUserRole: function(role) {
+      _user = HARNESS_USERS[role] || null;
+      listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() {
+      console.log('Essay Subject Builder DB:', JSON.parse(JSON.stringify(_value)));
+      console.log('Essay Subject Builder objects:', loadDefinitionObjects());
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+
+  function setRoleButtons(activeId) {
+    ['th-role-editor', 'th-role-admin', 'th-role-viewer', 'th-role-none'].forEach(function(btnId) {
+      document.getElementById(btnId).classList.toggle('active', btnId === activeId);
+    });
+  }
+  document.getElementById('th-role-editor').addEventListener('click', function() { window.tool._setUserRole('editor'); setRoleButtons('th-role-editor'); });
+  document.getElementById('th-role-admin').addEventListener('click', function() { window.tool._setUserRole('admin'); setRoleButtons('th-role-admin'); });
+  document.getElementById('th-role-viewer').addEventListener('click', function() { window.tool._setUserRole('viewer'); setRoleButtons('th-role-viewer'); });
+  document.getElementById('th-role-none').addEventListener('click', function() { window.tool._setUserRole(null); setRoleButtons('th-role-none'); });
+  document.getElementById('th-load-sample').addEventListener('click', function() { window.tool._loadSampleData(); });
+  document.getElementById('th-clear').addEventListener('click', function() { window.tool._clearData(); });
+  document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
+
+  var pageQuery = new URLSearchParams(window.location.search);
+  if (pageQuery.get('sample') === '1' && !localStorage.getItem(STORAGE_KEY)) {
+    window.tool._loadSampleData();
+  }
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = '<div id="esb-app" class="esb-app"><header class="esb-topbar"><div class="esb-topbar-title"><span class="esb-logo">✍️</span><div class="esb-title-block"><div class="esb-title-main">Essay Subject Builder</div><div class="esb-title-sub">One essay subject definition for the Essay Writing Educator</div></div></div><div class="esb-topbar-right"><button class="esb-btn esb-btn-primary esb-write-only" id="esb-save-definition-button" data-act="save-definition">💾 Save Definition</button></div></header><main class="esb-scroll"><div class="esb-page"><section class="esb-card"><h2 class="esb-card-title">📝 Assignment</h2><p class="esb-card-sub">What the student will write. These values are shown to the student and sent to the evaluator when it loads this definition.</p><div class="esb-field"><label class="esb-label" for="esb-subject-input">Essay subject <span class="esb-required">required</span></label><input class="esb-input" id="esb-subject-input" type="text" maxlength="200" placeholder="e.g. The Importance of Reading in the Digital Age"><div class="esb-hint">Shown to the student at the top of the writing page.</div></div><div class="esb-field"><label class="esb-label" for="esb-instructions-input">Instructions</label><textarea class="esb-input esb-textarea" id="esb-instructions-input" rows="4" maxlength="2000" placeholder="e.g. Write a persuasive essay of at least 300 words explaining why reading still matters. Use a clear introduction, body paragraphs with examples, and a strong conclusion."></textarea><div class="esb-hint">Required length, structure, style, citation rules - anything the student must follow.</div></div><div class="esb-field-row"><div class="esb-field"><label class="esb-label" for="esb-language-input">Language</label><input class="esb-input" id="esb-language-input" type="text" maxlength="40" placeholder="English"></div><div class="esb-field"><label class="esb-label" for="esb-minimum-words-input">Minimum words</label><input class="esb-input" id="esb-minimum-words-input" type="number" min="0" max="100000" step="50" placeholder="0"><div class="esb-hint">0 means no minimum. The evaluator warns the student below this length.</div></div></div></section><section class="esb-card"><div class="esb-card-head"><h2 class="esb-card-title">⚖️ Evaluation Rubrics</h2><span class="esb-weight-summary" id="esb-weight-summary"></span></div><p class="esb-card-sub">The system base rubric always applies. Subject rubrics are added on top of it. The total weight must equal exactly 100% before the definition can be saved.</p><div class="esb-rubric-group"><div class="esb-group-label">System base rubric <span class="esb-badge">system</span></div><div id="esb-base-rubric-list"></div></div><div class="esb-rubric-group"><div class="esb-group-label">Subject rubrics <span class="esb-badge esb-badge-subject">subject</span></div><div id="esb-subject-rubric-list"></div><div class="esb-subject-rubric-actions"><button class="esb-btn esb-btn-ghost esb-write-only" data-act="add-subject-rubric">＋ Add Subject Rubric</button></div></div><div class="esb-rubric-actions"><button class="esb-btn esb-btn-danger-ghost esb-write-only" data-act="restore-base-weights">↺ Restore Base Weights</button></div></section><section class="esb-card"><h2 class="esb-card-title">🔗 Definition</h2><p class="esb-card-sub">Save the subject as a CMS definition, then point an Essay Writing Educator field at it.</p><div id="esb-definition-status"></div><div class="esb-card-actions"><button class="esb-btn esb-btn-ghost esb-write-only" data-act="copy-definition-json">📋 Copy Definition JSON</button></div></section></div></main><div class="esb-modal-overlay" id="esb-modal-overlay"><div class="esb-modal" role="dialog" aria-modal="true"><div class="esb-modal-head"><h3 id="esb-modal-title">Modal</h3><button class="esb-modal-close" data-act="close-modal" aria-label="Close">✕</button></div><div class="esb-modal-body" id="esb-modal-body"></div></div></div></div>';
+</script>
+
+<script>
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'EssaySubjectBuilder.js';
+    script.onload = function() { status.textContent = 'Ready - load sample data, edit rubrics, then Save Definition'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('EssaySubjectBuilder.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      // Fallback already triggered by timer
+    });
+})();
+</script>
+</body>
+</html>

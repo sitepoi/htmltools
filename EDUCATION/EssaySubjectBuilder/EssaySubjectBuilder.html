@@ -1,0 +1,87 @@
+<div id="esb-app" class="esb-app">
+  <header class="esb-topbar">
+    <div class="esb-topbar-title">
+      <span class="esb-logo">✍️</span>
+      <div class="esb-title-block">
+        <div class="esb-title-main">Essay Subject Builder</div>
+        <div class="esb-title-sub">One essay subject definition for the Essay Writing Educator</div>
+      </div>
+    </div>
+    <div class="esb-topbar-right">
+      <button class="esb-btn esb-btn-primary esb-write-only" id="esb-save-definition-button" data-act="save-definition">💾 Save Definition</button>
+    </div>
+  </header>
+
+  <main class="esb-scroll">
+    <div class="esb-page">
+
+      <section class="esb-card">
+        <h2 class="esb-card-title">📝 Assignment</h2>
+        <p class="esb-card-sub">What the student will write. These values are shown to the student and sent to the evaluator when it loads this definition.</p>
+        <div class="esb-field">
+          <label class="esb-label" for="esb-subject-input">Essay subject <span class="esb-required">required</span></label>
+          <input class="esb-input" id="esb-subject-input" type="text" maxlength="200" placeholder="e.g. The Importance of Reading in the Digital Age">
+          <div class="esb-hint">Shown to the student at the top of the writing page.</div>
+        </div>
+        <div class="esb-field">
+          <label class="esb-label" for="esb-instructions-input">Instructions</label>
+          <textarea class="esb-input esb-textarea" id="esb-instructions-input" rows="4" maxlength="2000" placeholder="e.g. Write a persuasive essay of at least 300 words explaining why reading still matters. Use a clear introduction, body paragraphs with examples, and a strong conclusion."></textarea>
+          <div class="esb-hint">Required length, structure, style, citation rules - anything the student must follow.</div>
+        </div>
+        <div class="esb-field-row">
+          <div class="esb-field">
+            <label class="esb-label" for="esb-language-input">Language</label>
+            <input class="esb-input" id="esb-language-input" type="text" maxlength="40" placeholder="English">
+          </div>
+          <div class="esb-field">
+            <label class="esb-label" for="esb-minimum-words-input">Minimum words</label>
+            <input class="esb-input" id="esb-minimum-words-input" type="number" min="0" max="100000" step="50" placeholder="0">
+            <div class="esb-hint">0 means no minimum. The evaluator warns the student below this length.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="esb-card">
+        <div class="esb-card-head">
+          <h2 class="esb-card-title">⚖️ Evaluation Rubrics</h2>
+          <span class="esb-weight-summary" id="esb-weight-summary"></span>
+        </div>
+        <p class="esb-card-sub">The system base rubric always applies. Subject rubrics are added on top of it. The total weight must equal exactly 100% before the definition can be saved.</p>
+        <div class="esb-rubric-group">
+          <div class="esb-group-label">System base rubric <span class="esb-badge">system</span></div>
+          <div id="esb-base-rubric-list"></div>
+        </div>
+        <div class="esb-rubric-group">
+          <div class="esb-group-label">Subject rubrics <span class="esb-badge esb-badge-subject">subject</span></div>
+          <div id="esb-subject-rubric-list"></div>
+          <div class="esb-subject-rubric-actions">
+            <button class="esb-btn esb-btn-ghost esb-write-only" data-act="add-subject-rubric">＋ Add Subject Rubric</button>
+          </div>
+        </div>
+        <div class="esb-rubric-actions">
+          <button class="esb-btn esb-btn-danger-ghost esb-write-only" data-act="restore-base-weights">↺ Restore Base Weights</button>
+        </div>
+      </section>
+
+      <section class="esb-card">
+        <h2 class="esb-card-title">🔗 Definition</h2>
+        <p class="esb-card-sub">Save the subject as a CMS definition, then point an Essay Writing Educator field at it.</p>
+        <div id="esb-definition-status"></div>
+        <div class="esb-card-actions">
+          <button class="esb-btn esb-btn-ghost esb-write-only" data-act="copy-definition-json">📋 Copy Definition JSON</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div class="esb-modal-overlay" id="esb-modal-overlay">
+    <div class="esb-modal" role="dialog" aria-modal="true">
+      <div class="esb-modal-head">
+        <h3 id="esb-modal-title">Modal</h3>
+        <button class="esb-modal-close" data-act="close-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="esb-modal-body" id="esb-modal-body"></div>
+    </div>
+  </div>
+</div>

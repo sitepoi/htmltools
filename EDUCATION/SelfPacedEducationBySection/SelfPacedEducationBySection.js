@@ -10,8 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-window._spTraceBoot = Date.now(); // trace timestamps (ms since tool load)
-var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false }; // Object-level config (set by admin per object)
+var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false, studentName: '' }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
 var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail' | 'setup'
@@ -24,6 +23,8 @@ var _suppressNextValueChange = false;   // skip onValueChange reload after our o
 var _lastSavedJson = null;              // JSON of our last internal save (to tell internal vs external changes apart)
 var _lastSavedAt = 0;                   // timestamp of our last internal save (stale-echo protection)
 var availableCurriculums = []; // Cached list of Builder objects for the setup picker
+var currentRoleView = 'supervisor'; // supervisors only: 'supervisor' | 'student'
+var currentStudentTab = 'course';   // student view sub-tab: 'course' | 'dashboard' | 'report'
 
 /* ── Constants ── */
 var SECTIONS_TYPE = 'curriculum-builder-uniconbaseapps';
@@ -733,6 +734,11 @@ function getPrevLesson(sectionId, lessonId) {
  *  the true outcome. We never claim "saved" unless the save was accepted. */
 function saveProgress(immediate, onDone) {
   var data = { config: CONFIG, progress: PROGRESS };
+  // Remember the student's name so supervisors see WHO owns this record.
+  if (!isAdmin()) {
+    var _sName = getUserDisplayName();
+    if (_sName) CONFIG.studentName = _sName;
+  }
   _lastSavedJson = JSON.stringify(data || null);
   _lastSavedAt = Date.now();
   _suppressNextValueChange = true;
@@ -749,9 +755,7 @@ function saveProgress(immediate, onDone) {
   if (immediate) {
     if (typeof tool.requestSave === 'function') {
       try {
-        console.log('[SP-TRACE] → calling parent save (requestSave) progressSections=' + Object.keys(PROGRESS || {}).length + ' jsonLen=' + _lastSavedJson.length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
         tool.requestSave(function(err, ok) {
-          console.log('[SP-TRACE] → parent save callback ok=' + !!ok + ' err=' + (err || '(none)') + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
           if (ok) {
             result.saved = true;
           } else {
@@ -1006,9 +1010,9 @@ function recoverScoresFromAttempts() {
   }
 }
 
-/** Daily completions bar chart + grouped list. Shown on the student Sections
- *  view and (compact) inside the supervisor dashboard. */
-function buildActivityReportHtml(compact) {
+/** Daily completions bar chart + grouped list. Shown in the shared Activity
+ *  Report tab (Student view), identical for students and supervisors. */
+function buildActivityReportHtml() {
   var events = getAllActivityEvents();
   var days = getDailyCompletionStats(events);
   var total = 0, best = null;
@@ -1017,8 +1021,8 @@ function buildActivityReportHtml(compact) {
     if (!best || days[i].count > best.count) best = days[i];
   }
 
-  var html = '<div class="rp-panel' + (compact ? ' rp-compact' : '') + '">';
-  html += '<div class="rp-head"><span class="rp-title">📈 ' + (compact ? 'Activity Report' : 'Progress Report') + '</span>' +
+  var html = '<div class="rp-panel">';
+  html += '<div class="rp-head"><span class="rp-title">📈 Activity Report</span>' +
     '<span class="rp-sub">Lesson completions per day</span></div>';
 
   if (days.length === 0) {
@@ -1060,7 +1064,7 @@ function buildActivityReportHtml(compact) {
 
   // ── Daily list ──
   html += '<div class="rp-list">';
-  var maxDays = compact ? 10 : 30;
+  var maxDays = 30;
   for (var di = 0; di < days.length && di < maxDays; di++) {
     var g = days[di];
     var dateTxt = g.date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -1085,12 +1089,77 @@ function renderProgressReport() {
   if (!panel) return;
   if (!CONFIG.curriculumSourceId) { panel.style.display = 'none'; return; }
   panel.style.display = '';
-  panel.innerHTML = buildActivityReportHtml(false);
+  panel.innerHTML = buildActivityReportHtml();
+}
+
+/** The slim header only exists for the back button on inner pages (lesson
+ *  list / lesson detail). On the sections view there is no top line at all —
+ *  the dark-mode toggle lives on the tab line instead. */
+function applyHeaderVisibility() {
+  var hdr = el('app-header');
+  var back = el('btn-back');
+  var showBack = (currentView === 'lessons' || currentView === 'lesson-detail');
+  if (hdr) hdr.style.display = showBack ? '' : 'none';
+  if (back) back.style.display = showBack ? '' : 'none';
+}
+
+/* ── View tabs: supervisor/student role view + student sub-tabs ── */
+function applyViewVisibility() {
+  var admin = isAdmin();
+  var hasCourse = !!CONFIG.curriculumSourceId;
+  var inSetup = currentView === 'setup';
+  var roleBar = el('role-tabs');
+  var studentBar = el('student-tabs');
+  var showSup = admin && currentRoleView === 'supervisor' && currentView === 'sections' && hasCourse;
+
+  applyHeaderVisibility();
+  if (roleBar) roleBar.style.display = (admin && hasCourse && !inSetup) ? '' : 'none';
+  if (studentBar) studentBar.style.display = (hasCourse && !inSetup && currentView === 'sections' && !showSup) ? '' : 'none';
+  // Supervisors already get the dark toggle on the role-tab line — hide the
+  // duplicate on the student sub-tab line while both bars are visible.
+  var stuDarkBtn = el('btn-dark-mode-stu');
+  if (stuDarkBtn) stuDarkBtn.style.display = admin ? 'none' : '';
+  if (inSetup) { tool.resize(); return; }
+
+  var rSup = el('tab-role-supervisor');
+  var rStu = el('tab-role-student');
+  if (rSup) rSup.classList.toggle('active', showSup);
+  if (rStu) { rStu.classList.toggle('active', admin && !showSup); rStu.textContent = '🎓 Student View' + (CONFIG.studentName ? ' — ' + CONFIG.studentName : ''); }
+
+  var supPanel = el('supervisor-panel');
+  if (supPanel) supPanel.style.display = showSup ? '' : 'none';
+  if (currentView === 'sections') {
+    var sectionsView = el('view-sections');
+    var progressWrap = el('progress-bar-wrap');
+    if (sectionsView) sectionsView.style.display = showSup ? 'none' : '';
+    if (progressWrap) progressWrap.style.display = showSup ? 'none' : '';
+  }
+  if (showSup) { tool.resize(); return; }
+  if (currentView !== 'sections') { tool.resize(); return; }
+
+  var tab = currentStudentTab;
+  var tCourse = el('tab-student-course');
+  var tDash = el('tab-student-dashboard');
+  var tReport = el('tab-student-report');
+  if (tCourse) tCourse.classList.toggle('active', tab === 'course');
+  if (tDash) tDash.classList.toggle('active', tab === 'dashboard');
+  if (tReport) tReport.classList.toggle('active', tab === 'report');
+
+  var toolbar = el('sections-toolbar');
+  var grid = el('section-group-grid');
+  var gradePanel = el('course-grade-panel');
+  var reportPanel = el('progress-report-panel');
+  if (toolbar) toolbar.style.display = (tab === 'course') ? '' : 'none';
+  if (grid) grid.style.display = (tab === 'course') ? '' : 'none';
+  if (gradePanel) gradePanel.style.display = (tab === 'dashboard') ? '' : 'none';
+  if (reportPanel) reportPanel.style.display = (tab === 'report') ? '' : 'none';
+  tool.resize();
 }
 
 function renderSections() {
   renderCourseGrade();
   renderProgressReport();
+  applyViewVisibility();
   var grid = el('section-group-grid');
   if (!grid) return; // DOM not ready (e.g., stale tool HTML snapshot) — bail gracefully
   var searchInput = el('search-input');
@@ -2653,7 +2722,7 @@ function showSections() {
   el('view-sections').style.display = '';
   el('view-lessons').style.display = 'none';
   el('view-lesson-detail').style.display = 'none';
-  el('btn-back').style.display = 'none';
+  applyHeaderVisibility();
   el('app-title').textContent = '📚 Self-Paced Learning';
   el('search-input').value = ''; el('filter-status').value = 'all';
   renderSections();
@@ -2672,7 +2741,7 @@ function openSection(sectionId) {
   el('view-sections').style.display = 'none';
   el('view-lessons').style.display = '';
   el('view-lesson-detail').style.display = 'none';
-  el('btn-back').style.display = '';
+  applyHeaderVisibility();
   var section = findSection(sectionId);
   el('app-title').textContent = '📁 ' + (section ? (section.title || 'Section') : 'Section');
   renderLessons();
@@ -2695,7 +2764,7 @@ function openLesson(sectionId, lessonId) {
   el('view-sections').style.display = 'none';
   el('view-lessons').style.display = 'none';
   el('view-lesson-detail').style.display = '';
-  el('btn-back').style.display = '';
+  applyHeaderVisibility();
   var section = findSection(sectionId);
   var lesson = section ? findLesson(section, lessonId) : null;
   el('app-title').textContent = '📖 ' + (lesson ? (lesson.title || 'Lesson') : 'Lesson');
@@ -3077,6 +3146,7 @@ function loadData(val) {
     CONFIG.curriculumSourceId = val.config.curriculumSourceId || '';
     CONFIG.managementType = val.config.managementType || 'self_paced';
     CONFIG.dashboardVisible = val.config.dashboardVisible !== undefined ? val.config.dashboardVisible : false;
+    CONFIG.studentName = val.config.studentName || '';
   }
   // Legacy: also check tool param for backward compat
   if (!CONFIG.curriculumSourceId) {
@@ -3111,6 +3181,14 @@ function updateProgressBar() {
 }
 
 function showLoading(show) { el('loading-overlay').style.display = show ? '' : 'none'; }
+
+/* ── Current user display name (for view labels) ── */
+function getUserDisplayName() {
+  var u = null;
+  try { u = tool.getUser(); } catch(e) {}
+  if (u && (u.name || u.displayName || u.email)) return String(u.name || u.displayName || u.email);
+  return '';
+}
 
 /* ── Role badge ── */
 function updateRoleBadge(user) {
@@ -3156,11 +3234,16 @@ function showSetup() {
       el('view-lessons').style.display = 'none';
       el('view-lesson-detail').style.display = 'none';
       el('progress-bar-wrap').style.display = 'none';
+      var rbar0 = el('role-tabs');
+      if (rbar0) rbar0.style.display = 'none';
+      var sbar0 = el('student-tabs');
+      if (sbar0) sbar0.style.display = 'none';
       var gp0 = el('course-grade-panel');
       if (gp0) gp0.style.display = 'none';
       var rp0 = el('progress-report-panel');
       if (rp0) rp0.style.display = 'none';
       el('app-title').textContent = '📚 Self-Paced Learning';
+      applyHeaderVisibility();
       el('section-group-grid').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No course configured yet</div><div class="empty-desc">Please contact your administrator to set up the course curriculum.</div></div>';
       tool.resize();
       return;
@@ -3173,9 +3256,14 @@ function showSetup() {
   el('view-lessons').style.display = 'none';
   el('view-lesson-detail').style.display = 'none';
   el('view-setup').style.display = '';
-  el('btn-back').style.display = 'none';
-  el('btn-change-course').style.display = 'none';
+  applyHeaderVisibility();
+  var ccBtn = el('btn-change-course');
+  if (ccBtn) ccBtn.style.display = 'none';
   el('progress-bar-wrap').style.display = 'none';
+  var rbar2 = el('role-tabs');
+  if (rbar2) rbar2.style.display = 'none';
+  var sbar2 = el('student-tabs');
+  if (sbar2) sbar2.style.display = 'none';
   el('app-title').textContent = '⚙️ Course Setup';
 
   fetchAvailableCurriculums(function() {
@@ -3233,6 +3321,7 @@ function cancelSetup() {
     el('progress-bar-wrap').style.display = '';
     currentView = 'sections';
     el('app-title').textContent = '📚 Self-Paced Learning';
+    applyHeaderVisibility();
     updateAdminUI();
     renderSections();
     updateProgressBar();
@@ -3283,16 +3372,6 @@ function saveSetupConfig() {
 
 /** Show/hide admin-only controls */
 function updateAdminUI() {
-  var changeBtn = el('btn-change-course');
-  if (changeBtn) {
-    changeBtn.style.display = (isAdmin() && CONFIG.curriculumSourceId) ? '' : 'none';
-  }
-  // Dashboard toggle — visible for admins when curriculum is loaded
-  var dashBtn = el('btn-toggle-dashboard');
-  if (dashBtn) {
-    dashBtn.style.display = (isAdmin() && CONFIG.curriculumSourceId) ? '' : 'none';
-    dashBtn.textContent = (CONFIG.dashboardVisible !== false) ? '📊 Hide Dashboard' : '📊 Dashboard';
-  }
   // Disable save button in setup if not admin
   var saveBtn = el('btn-setup-save');
   if (saveBtn && currentView === 'setup') {
@@ -3305,6 +3384,7 @@ function updateAdminUI() {
   }
   // Render supervisor panel if in supervised mode
   renderSupervisorPanel();
+  applyViewVisibility();
 }
 
 /** Supervisor panel — admin dashboard showing full course progress + pending reviews */
@@ -3312,7 +3392,6 @@ function renderSupervisorPanel() {
   var existing = el('supervisor-panel');
   if (existing) existing.remove();
   if (!isAdmin()) return;
-  if (CONFIG.dashboardVisible === false) return;
 
   var all = getAllLessonsInOrder();
   if (all.length === 0) return;
@@ -3351,12 +3430,14 @@ function renderSupervisorPanel() {
 
   // ── Header ──
   var html = '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
-  html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📊</span><div><div style="font-weight:700;color:#f1f5f9;font-size:15px">Supervisor Dashboard</div><div style="font-size:11px;color:#94a3b8">' + esc(CONFIG.managementType === 'supervised' ? '🛡️ Supervised' : '🚀 Self-Paced') + ' · ' + totalLessons + ' lessons in ' + Object.keys(sectionStats).length + ' section(s)</div></div></div>';
+  html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📊</span><div><div style="font-weight:700;color:#f1f5f9;font-size:15px">Supervisor Dashboard' + (CONFIG.studentName ? ' — ' + esc(CONFIG.studentName) : '') + '</div><div style="font-size:11px;color:#94a3b8">' + esc(CONFIG.managementType === 'supervised' ? '🛡️ Supervised' : '🚀 Self-Paced') + ' · ' + totalLessons + ' lessons in ' + Object.keys(sectionStats).length + ' section(s)' + '</div></div></div>';
   // Overall progress ring
   html += '<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 16px">';
   html += '<svg width="44" height="44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + (2*Math.PI*18) + '" stroke-dashoffset="' + (2*Math.PI*18*(1-overallPct/100)) + '" transform="rotate(-90,22,22)"/><text x="22" y="22" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:800;fill:#f1f5f9">' + overallPct + '%</text></svg>';
   html += '<div style="color:#f1f5f9;font-size:12px;line-height:1.5"><strong>' + completed + '</strong> done<br><span style="color:#94a3b8">' + inProgress + ' active · ' + notStarted + ' new</span><br><span style="color:#fbbf24;font-weight:800">★ ' + (avgScore !== null ? avgScore + '%' : '—') + '</span> <span style="color:#94a3b8">avg score · ' + scoreCount + ' lesson' + (scoreCount === 1 ? '' : 's') + '</span></div>';
-  html += '</div></div>';
+  html += '</div>';
+  html += '<button data-sup-change-course title="Change which curriculum this module uses" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🔄 Change Course</button>';
+  html += '</div>';
 
   // ── Quick stats bar ──
   html += '<div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface-alt);align-items:center">';
@@ -3401,16 +3482,13 @@ function renderSupervisorPanel() {
       var scoreTitleTxt = (typeof l.scoreOverride === 'number' ? ' · score ' + l.scoreOverride + '% (set by supervisor)' : (typeof l.score === 'number' ? ' · ' + l.score + '%' : ''));
       html += '<span style="display:inline-flex;align-items:center;gap:0;background:#f8fafc;border:1px solid var(--border);border-radius:10px;overflow:hidden;white-space:nowrap">' +
         '<span title="' + esc(l.title) + ' — ' + statusText + esc(scoreTitleTxt) + '" style="display:inline-flex;align-items:center;gap:4px;padding:2px 4px 2px 9px;font-size:11px;font-weight:600;cursor:default">' + dot + ' ' + esc(l.title) + scoreTxt + '</span>' +
-        '<button data-sup-set-score="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" title="Set or adjust this lesson\'s score (supervisor override — counts in section and course averages)" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">🎯</button>' +
+        '<button data-sup-set-score="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" data-sup-cur="' + (typeof l.scoreOverride === 'number' ? l.scoreOverride : (typeof l.score === 'number' ? l.score : '')) + '" title="Set or adjust this lesson\'s score (supervisor override — counts in section and course averages)" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">🎯</button>' +
         '<button data-sup-reset-les="' + esc(secIds[si]) + '|' + esc(l.lessonId) + '" title="Reset this lesson and ALL lessons after it back to Not Started — forces the student to rework them as if never opened" style="border:none;border-left:1px solid var(--border);background:transparent;color:#94a3b8;font-size:11px;padding:2px 6px;cursor:pointer;font-family:inherit;line-height:1.4">↺</button>' +
         '</span>';
     }
     html += '</div></div>';
   }
   html += '</div>';
-
-  // ── Activity report: daily completion log + chart (supervisor view) ──
-  html += '<div style="padding:14px 20px;border-top:1px solid var(--border)">' + buildActivityReportHtml(true) + '</div>';
 
   // ── Pending review actions (supervised mode only) ──
   var mgmtType = CONFIG.managementType || 'self_paced';
@@ -3432,10 +3510,17 @@ function renderSupervisorPanel() {
 
   panel.innerHTML = html;
 
-  var header = document.querySelector('.app-header');
-  if (header && header.parentNode) {
-    header.parentNode.insertBefore(panel, header.nextSibling);
+  // Place the dashboard below the view tabs, above the student content.
+  var viewSectionsEl = el('view-sections');
+  if (viewSectionsEl && viewSectionsEl.parentNode) {
+    viewSectionsEl.parentNode.insertBefore(panel, viewSectionsEl);
+  } else {
+    var header = document.querySelector('.app-header');
+    if (header && header.parentNode) {
+      header.parentNode.insertBefore(panel, header.nextSibling);
+    }
   }
+  applyViewVisibility();
 
   // Wire approve/reject/reset buttons
   setTimeout(function() {
@@ -3450,25 +3535,39 @@ function renderSupervisorPanel() {
     for (var r = 0; r < rejectBtns.length; r++) {
       rejectBtns[r].addEventListener('click', function() {
         var parts = this.getAttribute('data-sup-reject').split('|');
-        var notes = prompt('Rejection reason / feedback for the student:');
-        if (notes === null) return;
-        supervisorAction(parts[0], parts[1], 'rejected', notes || 'Please review and resubmit.');
+        openDrawer({
+          title: '✕ Reject Lesson',
+          desc: 'Write the feedback the student will see:',
+          inputType: 'text', placeholder: 'Please review and resubmit.',
+          onConfirm: function(notes) {
+            supervisorAction(parts[0], parts[1], 'rejected', notes || 'Please review and resubmit.');
+          }
+        });
       });
     }
     var resetBtn = panel.querySelector('[data-sup-reset-all]');
     if (resetBtn) {
       resetBtn.addEventListener('click', resetAllProgress);
     }
-    // Per-lesson Set Score: supervisor override for lost/legacy scores.
+    var changeCourseBtn = panel.querySelector('[data-sup-change-course]');
+    if (changeCourseBtn) changeCourseBtn.addEventListener('click', function() { showSetup(); });
+    // Per-lesson Set Score: supervisor override for lost/legacy scores
+    // (uses the in-page drawer — prompt() is blocked in the sandbox).
     var setScoreBtns = panel.querySelectorAll('[data-sup-set-score]');
     for (var ss2 = 0; ss2 < setScoreBtns.length; ss2++) {
       setScoreBtns[ss2].addEventListener('click', function() {
         var parts = this.getAttribute('data-sup-set-score').split('|');
-        var val = prompt('Set the score for this lesson (0–100). This overrides missing or old quiz scores in the section and course averages:');
-        if (val === null) return;
-        var n = parseInt(val);
-        if (isNaN(n) || n < 0 || n > 100) { tool.notify('Please enter a number between 0 and 100.', 'warning'); return; }
-        supervisorSetScore(parts[0], parts[1], n);
+        var cur = this.getAttribute('data-sup-cur') || '';
+        openDrawer({
+          title: '🎯 Set Score',
+          desc: 'Enter a score for this lesson (0–100). It overrides missing or old quiz scores in the section and course averages.',
+          inputType: 'number', min: 0, max: 100, placeholder: '0–100', value: cur,
+          onConfirm: function(val) {
+            var n = parseInt(val);
+            if (isNaN(n) || n < 0 || n > 100) { tool.notify('Please enter a number between 0 and 100.', 'warning'); return; }
+            supervisorSetScore(parts[0], parts[1], n);
+          }
+        });
       });
     }
     // Per-lesson reset: two-click confirm (native confirm() is unreliable in sandboxed iframes)
@@ -3596,42 +3695,95 @@ function resetLessonProgress(sectionId, lessonId) {
   tool.notify('🔄 Reset ' + resetCount + ' lesson(s) back to Not Started.', 'success');
 }
 
-/** Show/hide the supervisor dashboard panel */
-function toggleDashboard() {
-  CONFIG.dashboardVisible = !CONFIG.dashboardVisible;
-  var dashBtn = el('btn-toggle-dashboard');
-  dashBtn.textContent = CONFIG.dashboardVisible ? '📊 Hide Dashboard' : '📊 Dashboard';
-  saveProgress(true);
-  renderSupervisorPanel();
-}
-
 /** Reset all student progress back to Not Started (admin only) */
 function resetAllProgress() {
   if (!isAdmin()) { tool.notify('Only admins can reset progress.', 'warning'); return; }
-  if (!confirm('This will reset ALL lesson progress for this student back to "Not Started".\n\nThis action cannot be undone. Continue?')) return;
-  if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
-  if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; }
-  PROGRESS = {};
-  // Save + verify, retrying once if the staged value doesn't match the reset.
-  function saveResetAll(retry) {
-    saveProgress(true, function(res) {
-      reportSaveResult(res, 'Progress reset');
-      var expected = JSON.stringify({ config: CONFIG, progress: PROGRESS });
-      var actual = '';
-      try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
-      if (actual !== expected) {
-        if (retry) { saveResetAll(false); }
-        else { tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error'); }
+  // confirm() is blocked in the sandbox — use the in-page drawer instead.
+  openDrawer({
+    title: '🗑 Reset All Progress',
+    desc: 'This will reset ALL lesson progress for this student back to "Not Started". This action cannot be undone. Continue?',
+    hideInput: true,
+    confirmLabel: '⚠️ Yes, Reset All',
+    onConfirm: function() {
+      if (window._quizStageTimer) { clearTimeout(window._quizStageTimer); window._quizStageTimer = null; }
+      if (window._sfcSaveTimer) { clearTimeout(window._sfcSaveTimer); window._sfcSaveTimer = null; }
+      PROGRESS = {};
+      // Save + verify, retrying once if the staged value doesn't match the reset.
+      function saveResetAll(retry) {
+        saveProgress(true, function(res) {
+          reportSaveResult(res, 'Progress reset');
+          var expected = JSON.stringify({ config: CONFIG, progress: PROGRESS });
+          var actual = '';
+          try { actual = JSON.stringify(tool.getValue() || null); } catch(e) {}
+          if (actual !== expected) {
+            if (retry) { saveResetAll(false); }
+            else { tool.notify('⚠️ Reset could not be recorded in the form. Try again, then click the CMS Save button.', 'error'); }
+          }
+        });
       }
-    });
+      saveResetAll(true);
+      renderSupervisorPanel();
+      updateProgressBar();
+      if (currentView === 'sections') renderSections();
+      else if (currentView === 'lessons') renderLessons();
+      else if (currentView === 'lesson-detail') renderLessonDetail();
+      tool.notify('All progress has been reset.', 'success');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
+   CUSTOM DRAWER
+   prompt()/confirm() are BLOCKED in the CMS sandboxed iframe ("allow-modals"
+   is not set), so supervisor inputs use this in-page drawer instead.
+   ═══════════════════════════════════════════ */
+var _drawerCb = null; // pending onConfirm(value) callback
+
+function openDrawer(opts) {
+  var overlay = el('drawer-overlay');
+  if (!overlay) return;
+  var title = el('drawer-title');
+  var desc = el('drawer-desc');
+  var input = el('drawer-input');
+  var err = el('drawer-error');
+  var saveBtn = el('drawer-save');
+  if (!title || !desc || !input) return;
+  _drawerCb = (typeof opts.onConfirm === 'function') ? opts.onConfirm : null;
+  title.textContent = opts.title || '';
+  desc.textContent = opts.desc || '';
+  input.type = opts.inputType || 'text';
+  if (opts.min !== undefined) input.min = opts.min; else input.removeAttribute('min');
+  if (opts.max !== undefined) input.max = opts.max; else input.removeAttribute('max');
+  input.value = (opts.value !== undefined && opts.value !== null) ? String(opts.value) : '';
+  input.placeholder = opts.placeholder || '';
+  input.style.display = opts.hideInput ? 'none' : '';
+  if (saveBtn) saveBtn.textContent = opts.confirmLabel || '💾 Save';
+  err.style.display = 'none';
+  overlay.style.display = 'flex';
+  if (!opts.hideInput) setTimeout(function() { try { input.focus(); } catch(e) {} }, 50);
+  tool.resize();
+}
+
+function closeDrawer() {
+  var overlay = el('drawer-overlay');
+  if (overlay) overlay.style.display = 'none';
+  _drawerCb = null;
+  tool.resize();
+}
+
+function drawerConfirm() {
+  var input = el('drawer-input');
+  var err = el('drawer-error');
+  if (!_drawerCb) { closeDrawer(); return; }
+  var cb = _drawerCb;
+  var hidden = input && input.style.display === 'none';
+  var val = input ? input.value.trim() : '';
+  if (!hidden && !val) {
+    if (err) { err.textContent = 'Please enter a value.'; err.style.display = ''; }
+    return;
   }
-  saveResetAll(true);
-  renderSupervisorPanel();
-  updateProgressBar();
-  if (currentView === 'sections') renderSections();
-  else if (currentView === 'lessons') renderLessons();
-  else if (currentView === 'lesson-detail') renderLessonDetail();
-  tool.notify('All progress has been reset.', 'success');
+  closeDrawer();
+  cb(val);
 }
 
 /* ═══════════════════════════════════════════
@@ -3644,16 +3796,46 @@ function bindEvents() {
   el('filter-status').addEventListener('change', function() { renderSections(); });
   el('btn-setup-save').addEventListener('click', saveSetupConfig);
   el('btn-setup-cancel').addEventListener('click', cancelSetup);
-  el('btn-change-course').addEventListener('click', function() { showSetup(); });
-  el('btn-toggle-dashboard').addEventListener('click', toggleDashboard);
-  el('btn-dark-mode').addEventListener('click', toggleDarkMode);
+  var darkBtns = document.querySelectorAll('[data-dark-toggle]');
+  for (var di = 0; di < darkBtns.length; di++) darkBtns[di].addEventListener('click', toggleDarkMode);
+  // View tabs: supervisor role switch + student sub-tabs
+  var rSupBtn = el('tab-role-supervisor');
+  if (rSupBtn) rSupBtn.addEventListener('click', function() { currentRoleView = 'supervisor'; showSections(); applyViewVisibility(); });
+  var rStuBtn = el('tab-role-student');
+  if (rStuBtn) rStuBtn.addEventListener('click', function() { currentRoleView = 'student'; showSections(); applyViewVisibility(); });
+  var stCourseBtn = el('tab-student-course');
+  if (stCourseBtn) stCourseBtn.addEventListener('click', function() { currentStudentTab = 'course'; applyViewVisibility(); });
+  var stDashBtn = el('tab-student-dashboard');
+  if (stDashBtn) stDashBtn.addEventListener('click', function() { currentStudentTab = 'dashboard'; applyViewVisibility(); });
+  var stReportBtn = el('tab-student-report');
+  if (stReportBtn) stReportBtn.addEventListener('click', function() { currentStudentTab = 'report'; applyViewVisibility(); });
+  // Custom drawer controls (replace blocked prompt()/confirm())
+  var dClose = el('drawer-close');
+  if (dClose) dClose.addEventListener('click', closeDrawer);
+  var dBackdrop = el('drawer-backdrop');
+  if (dBackdrop) dBackdrop.addEventListener('click', closeDrawer);
+  var dCancel = el('drawer-cancel');
+  if (dCancel) dCancel.addEventListener('click', closeDrawer);
+  var dSave = el('drawer-save');
+  if (dSave) dSave.addEventListener('click', drawerConfirm);
+  var dInput = el('drawer-input');
+  if (dInput) dInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') drawerConfirm(); });
 }
 
 /* ── Dark Mode ── */
+/** Keep every dark-mode toggle (slim header + tab lines) in sync. */
+function syncDarkToggleLabels() {
+  var isDark = document.body.classList.contains('dark');
+  var toggles = document.querySelectorAll('[data-dark-toggle]');
+  for (var i = 0; i < toggles.length; i++) {
+    toggles[i].textContent = isDark ? '☀️' : '🌙';
+  }
+}
+
 function toggleDarkMode() {
   var isDark = document.body.classList.toggle('dark');
   localStorage.setItem('sp-dark-mode', isDark ? '1' : '0');
-  el('btn-dark-mode').textContent = isDark ? '☀️' : '🌙';
+  syncDarkToggleLabels();
 }
 
 /* ═══════════════════════════════════════════
@@ -3661,7 +3843,6 @@ function toggleDarkMode() {
    ═══════════════════════════════════════════ */
 
 tool.onReady(function(val, fields) {
-  console.log('[SP-TRACE] ← initial value from parent (onReady) progressSections=' + (val && val.progress ? Object.keys(val.progress).length : 0) + ' jsonLen=' + JSON.stringify(val || null).length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') el('loading-overlay').style.display = 'none';
   }, 12000);
@@ -3688,19 +3869,26 @@ tool.onReady(function(val, fields) {
 
   // Load config from object data (set by admin via setup screen)
   loadData(val);
-  console.log('[SP-TRACE] initial load applied progressSections=' + Object.keys(PROGRESS || {}).length + ' jsonLen=' + JSON.stringify({ config: CONFIG, progress: PROGRESS }).length + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
+  // Capture the student's name as soon as a student opens the tool, so the
+  // supervisor's "Student View" tab can show it even before the first save.
+  if (!isAdmin()) {
+    var _bootName = getUserDisplayName();
+    if (_bootName && CONFIG.studentName !== _bootName) {
+      CONFIG.studentName = _bootName;
+      saveProgress(); // silent stage — committed on the next CMS save
+    }
+  }
   updateRoleBadge(tool.getUser());
   bindEvents();
 
   // Dark mode init
   if (localStorage.getItem('sp-dark-mode') === '1') {
     document.body.classList.add('dark');
-    el('btn-dark-mode').textContent = '☀️';
   }
+  syncDarkToggleLabels();
 
   tool.onValueChange(function(v) {
     var vJson = JSON.stringify(v || null);
-    console.log('[SP-TRACE] ← value from parent progressSections=' + (v && v.progress ? Object.keys(v.progress).length : 0) + ' jsonLen=' + vJson.length + ' msSinceLastSave=' + (Date.now() - _lastSavedAt) + ' matchesLastSave=' + (vJson === _lastSavedJson) + ' at=' + (Date.now() - window._spTraceBoot) + 'ms');
     var internal = _suppressNextValueChange && vJson === _lastSavedJson;
     _suppressNextValueChange = false;
     // Stale-echo protection: if the parent echoes a value that differs from
@@ -3711,7 +3899,6 @@ tool.onReady(function(val, fields) {
       var ours = null;
       try { ours = JSON.parse(_lastSavedJson); } catch(e) {}
       if (ours && ours.progress && v && v.progress && JSON.stringify(ours.progress) !== JSON.stringify(v.progress)) {
-        console.log('[SP-TRACE] ← OLDER DATA from parent ignored — keeping newest save (parentSections=' + Object.keys(v.progress).length + ', oursSections=' + Object.keys(ours.progress).length + ')');
         loadData(ours);
         _lastSavedJson = JSON.stringify(ours || null);
         _suppressNextValueChange = true;

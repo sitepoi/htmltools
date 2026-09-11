@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Essay Writing Educator — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="EssayWritingEducator.css">
+<style>
+body { padding-top: 34px !important; margin: 0; }
+#app-container { height: calc(100vh - 34px); overflow: hidden; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a5b4fc; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #4f46e5; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-role { background: #334155; color: #e2e8f0; }
+#th-bar .btn-role.active { background: #4f46e5; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — Essay Writing Educator</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-load" id="th-load-definition">Load Definition</button>
+  <button class="btn-clear" id="th-clear-definition">Clear Definition</button>
+  <span class="sep">|</span>
+  <span class="hint">Role:</span>
+  <button class="btn-role active" id="th-role-editor">Student</button>
+  <button class="btn-role" id="th-role-admin">Teacher</button>
+  <button class="btn-role" id="th-role-viewer">Viewer</button>
+  <button class="btn-role" id="th-role-none">None</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'essay_writing_educator_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+
+  var HARNESS_USERS = {
+    admin:  { id: 'u_teacher', name: 'Ms. Rodriguez', email: 'teacher@school.org', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    editor: { id: 'u_student', name: 'Ali Student', email: 'ali.student@school.org', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    viewer: { id: 'u_visitor', name: 'Visitor', email: 'visitor@school.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } }
+  };
+
+  var BASE_RUBRICS_MOCK = [
+    { id: 'contentIdeas', name: 'Content & Ideas', weight: 30, builtIn: true, description: 'Depth and relevance of the ideas, originality of thought, engagement with the subject, and development of the main argument.' },
+    { id: 'organizationStructure', name: 'Organization & Structure', weight: 20, builtIn: true, description: 'Clear introduction, body and conclusion; logical paragraphing; smooth transitions; coherent overall flow.' },
+    { id: 'evidenceArgumentation', name: 'Evidence & Argumentation', weight: 20, builtIn: true, description: 'Claims supported with examples, facts or reasoning; quality of the arguments; critical thinking; counter-arguments considered.' },
+    { id: 'languageStyle', name: 'Language & Style', weight: 15, builtIn: true, description: 'Word choice and vocabulary, sentence variety, tone and register, clarity and precision of expression.' },
+    { id: 'grammarMechanics', name: 'Grammar & Mechanics', weight: 15, builtIn: true, description: 'Grammar, punctuation, spelling, capitalization and formatting consistency.' }
+  ];
+
+  var SAMPLE_ESSAY_PARAGRAPHS = [
+    'The Importance of Reading in the Digital Age',
+    'In an era dominated by short videos and endless scrolling, reading remains one of the most powerful habits a young person can build. Reading is not simply a school activity; it is a lifelong tool that shapes the way we think, communicate, and understand the world. When students read regularly, they expand their vocabulary, learn to follow complex arguments, and develop the patience required for deep thought.',
+    'The first major benefit of reading is the growth of vocabulary and language skills. Every book introduces hundreds of new words in context, and unlike a memorized word list, these words come with meaning, emotion, and examples. This natural learning process strengthens both writing and speaking. A student who reads widely can express an idea in several different ways, choose precise words, and avoid repetition. Teachers consistently observe that strong readers become strong writers, because they have absorbed the rhythm and structure of good sentences.',
+    'Reading also builds empathy. When we read a novel, we live inside the mind of another person, sometimes from another country or another century. We feel their fears, share their hopes, and understand their choices. Psychologists call this experience theory of mind, and research shows that regular readers score higher on tests of emotional understanding. In a world where disagreements often turn hostile, this ability to see through another persons eyes is more valuable than ever.',
+    'Finally, reading trains focus and critical thinking. A well-written argument forces the reader to weigh evidence, question assumptions, and form independent conclusions. These are exactly the skills needed to resist misinformation online and to make thoughtful decisions in real life. While screens reward quick reactions, books reward sustained attention, and that attention is the foundation of all deep learning.',
+    'In conclusion, reading is not an outdated hobby. It builds vocabulary, empathy, focus, and critical thinking, the very skills the digital age demands. Schools and families should protect time for books, and students should see reading not as homework, but as training for life.'
+  ];
+
+  var SAMPLE_ESSAY_HTML = '<h2>' + SAMPLE_ESSAY_PARAGRAPHS[0] + '</h2>' +
+    SAMPLE_ESSAY_PARAGRAPHS.slice(1).map(function (paragraph) { return '<p>' + paragraph + '</p>'; }).join('');
+
+  var SUBJECT_DEFINITION_SAMPLE = {
+    id: 'def_sample',
+    _id: 'def_sample',
+    name: 'Reading in the Digital Age',
+    cmsObjectType: 'essay-subject-definitions-uniconbaseapps',
+    productData: {
+      data_categoriesBased: {
+        subject: 'The Importance of Reading in the Digital Age',
+        instructions: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+        language: 'English',
+        minimumWordCount: 300,
+        rubrics: [
+          { id: 'contentIdeas', name: 'Content & Ideas', weight: 25, builtIn: true, description: 'Depth and relevance of the ideas, originality of thought, engagement with the subject, and development of the main argument.' },
+          { id: 'organizationStructure', name: 'Organization & Structure', weight: 18, builtIn: true, description: 'Clear introduction, body and conclusion; logical paragraphing; smooth transitions; coherent overall flow.' },
+          { id: 'evidenceArgumentation', name: 'Evidence & Argumentation', weight: 18, builtIn: true, description: 'Claims supported with examples, facts or reasoning; quality of the arguments; critical thinking; counter-arguments considered.' },
+          { id: 'languageStyle', name: 'Language & Style', weight: 12, builtIn: true, description: 'Word choice and vocabulary, sentence variety, tone and register, clarity and precision of expression.' },
+          { id: 'grammarMechanics', name: 'Grammar & Mechanics', weight: 10, builtIn: true, description: 'Grammar, punctuation, spelling, capitalization and formatting consistency.' },
+          { id: 'persuasiveAppeal', name: 'Persuasive Appeal', weight: 10, builtIn: false, description: 'How convincingly the essay persuades the reader; strength of the call to action and emotional and logical appeal.' },
+          { id: 'useOfEvidence', name: 'Use of Evidence', weight: 7, builtIn: false, description: 'How well the essay integrates specific examples, quotes, facts and data to support every claim.' }
+        ],
+        baseRubricVersion: 'ewe-base-v1',
+        updatedAt: '2026-09-10T10:00:00.000Z',
+        builtBy: { userId: 'u_teacher', userName: 'Ms. Rodriguez' }
+      }
+    }
+  };
+
+  function buildSampleEvaluation() {
+    var scoresByRubric = [92, 84, 80, 78, 76];
+    return {
+      id: 'evaluation_sample',
+      evaluatedAt: new Date().toISOString(),
+      essayWordCount: 314,
+      subjectSnapshot: 'The Importance of Reading in the Digital Age',
+      instructionsSnapshot: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+      requestedBy: 'Ali Student',
+      totalScore: 83.5,
+      overallSummary: 'This is a well-organized essay that addresses the subject directly and sustains its argument from the introduction to the conclusion. The writer demonstrates solid control of paragraph structure and uses clear topic sentences that guide the reader. The central claim is supported with relevant examples, and the tone remains appropriately academic throughout. The essay would benefit from more specific evidence in the middle paragraphs and tighter word choice in a few places.',
+      overallStrengths: [
+        'Clear thesis and consistent focus on the assigned subject.',
+        'Logical paragraph structure with effective transitions.',
+        'Confident closing paragraph that reinforces the main argument.'
+      ],
+      overallWeaknesses: [
+        'Evidence in the middle paragraphs is somewhat general; specific examples would strengthen it.',
+        'Several sentences begin the same way, which flattens the rhythm.'
+      ],
+      nextSteps: [
+        'Add one concrete example or statistic to each body paragraph.',
+        'Vary sentence openings and lengths in the final revision pass.',
+        'Read the essay aloud to catch rhythm and repetition issues.'
+      ],
+      rubricResults: BASE_RUBRICS_MOCK.map(function (rubric, index) {
+        return {
+          rubricId: rubric.id,
+          rubricName: rubric.name,
+          weight: rubric.weight,
+          score: scoresByRubric[index],
+          comment: 'In "' + rubric.name + '", the essay shows clear command of the subject. Specific sentences such as "Reading is not simply a school activity" anchor the argument well. To strengthen this area further, connect each paragraph back to the prompt and vary the sentence openings.',
+          strengths: ['Clear and focused treatment of ' + rubric.name.toLowerCase() + ' throughout the essay.'],
+          suggestions: [
+            'Add one more specific example or statistic to deepen this section.',
+            'Tie the closing sentence of each paragraph explicitly back to the essay subject.'
+          ]
+        };
+      }),
+      rawResponse: null
+    };
+  }
+
+  function buildSampleEvaluations() {
+    var firstScoresByRubric = [72, 64, 60, 58, 56];
+    var earlierEvaluation = {
+      id: 'evaluation_sample_1',
+      evaluatedAt: new Date(Date.now() - 86400000).toISOString(),
+      essayWordCount: 298,
+      subjectSnapshot: 'The Importance of Reading in the Digital Age',
+      instructionsSnapshot: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+      requestedBy: 'Ali Student',
+      totalScore: 63.5,
+      overallSummary: 'This early draft has a clear structure and a promising thesis, but the body paragraphs stay mostly on the surface. The main idea is visible, yet the supporting evidence is thin and the sentences repeat the same openings. The conclusion works well and shows what this essay can become with revision.',
+      overallStrengths: [
+        'A clear thesis is present from the first paragraph.',
+        'The overall paragraph order is logical.'
+      ],
+      overallWeaknesses: [
+        'Body paragraphs need concrete examples and statistics.',
+        'Sentence openings are repetitive.'
+      ],
+      nextSteps: [
+        'Add one concrete example to each body paragraph.',
+        'Vary the sentence openings.',
+        'Expand the conclusion with a final thought.'
+      ],
+      rubricResults: BASE_RUBRICS_MOCK.map(function (rubric, index) {
+        return {
+          rubricId: rubric.id,
+          rubricName: rubric.name,
+          weight: rubric.weight,
+          score: firstScoresByRubric[index],
+          comment: 'In "' + rubric.name + '", the draft is a solid start. The main idea is present, but the supporting details need more depth. Revise this area by adding specific examples and connecting each point back to the thesis.',
+          strengths: ['A workable foundation in ' + rubric.name.toLowerCase() + '.'],
+          suggestions: [
+            'Add specific examples or statistics.',
+            'Connect every paragraph back to the essay subject.'
+          ]
+        };
+      }),
+      rawResponse: null
+    };
+    return [earlierEvaluation, buildSampleEvaluation()];
+  }
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  function mockAiResponseText() {
+    var state = _value || {};
+    var rubrics = (state.rubrics && state.rubrics.length) ? state.rubrics : BASE_RUBRICS_MOCK;
+    var evaluationIndex = (state.evaluations || []).length;
+    var scoreOffset = evaluationIndex * 4;
+    var rubricResults = rubrics.map(function(rubric, i) {
+      var score = Math.max(58, Math.min(97, 86 - i * 6 + scoreOffset));
+      return {
+        rubricName: rubric.name,
+        score: score,
+        comment: 'In "' + rubric.name + '", the essay shows clear command of the subject. Specific sentences such as "Reading is not simply a school activity" anchor the argument well. The paragraph structure supports the point, and the closing lines return to the thesis effectively. To strengthen this area further, connect each paragraph back to the prompt and vary the sentence openings.',
+        strengths: [
+          'Clear and focused treatment of ' + rubric.name.toLowerCase() + ' throughout the essay.',
+          'Concrete examples support the main claims effectively.',
+          'Each paragraph opens and closes with purpose.'
+        ],
+        suggestions: [
+          'Add one more specific example or statistic to deepen this section.',
+          'Vary the sentence rhythm so short, punchy sentences alternate with longer ones.',
+          'Tie the closing sentence of each paragraph explicitly back to the essay subject.'
+        ]
+      };
+    });
+    return JSON.stringify({
+      overallSummary: 'This is a well-organized essay that addresses the subject directly and sustains its argument from the introduction to the conclusion. The writer demonstrates solid control of paragraph structure and uses clear topic sentences that guide the reader. The central claim is supported with relevant examples, and the tone remains appropriately academic throughout. The essay would benefit from more specific evidence in the middle paragraphs, a stronger counter-argument to show critical balance, and tighter word choice in several places where general terms could be replaced with precise vocabulary. Overall, this is strong work with clear potential to reach the highest band with targeted revision.',
+      overallStrengths: [
+        'Clear thesis and consistent focus on the assigned subject.',
+        'Logical paragraph structure with effective transitions.',
+        'Good balance of general claims and supporting examples.',
+        'Confident closing paragraph that reinforces the main argument.'
+      ],
+      overallWeaknesses: [
+        'Evidence in the middle paragraphs is somewhat general; specific examples would strengthen it.',
+        'A counter-argument is mentioned but never directly engaged.',
+        'Several sentences begin the same way, which flattens the rhythm.',
+        'Some word choices are vague where precise vocabulary would be sharper.'
+      ],
+      nextSteps: [
+        'Add one concrete example or statistic to each body paragraph.',
+        'Write a short counter-argument paragraph and respond to it.',
+        'Vary sentence openings and lengths in the final revision pass.',
+        'Replace three vague words with precise alternatives.',
+        'Read the essay aloud to catch rhythm and repetition issues.'
+      ],
+      rubricResults: rubricResults
+    });
+  }
+
+  _user = HARNESS_USERS.editor;
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var defaults = {
+        essaySubject: 'The Importance of Reading in the Digital Age',
+        essayInstructions: 'Write a persuasive essay of at least 300 words explaining why reading still matters in the digital age. Use a clear introduction, body paragraphs with examples, and a strong conclusion.',
+        essayLanguage: 'English',
+        minimumWordCount: '300',
+        allowAi: 'yes',
+        subjectDefinitionId: '',
+        subjectDefinitionJson: '',
+        subjectDefinitionsType: 'essay-subject-definitions-uniconbaseapps'
+      };
+      var fromUrl = new URLSearchParams(window.location.search).get(name);
+      if (fromUrl !== null && fromUrl !== '') return fromUrl;
+      if (Object.prototype.hasOwnProperty.call(defaults, name)) return defaults[name];
+      return fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() { return [HARNESS_USERS.admin, HARNESS_USERS.editor, HARNESS_USERS.viewer]; },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function(missing, message) {
+      console.warn('[Missing params]', message, missing);
+      this.notify(message, 'warning');
+    },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+    },
+    resize: function() {},
+    openUrl: function(url) {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    requestSave: function(callback) { setTimeout(function() { callback(null, true); }, 100); },
+    requestObjects: function(action, params, callback) {
+      setTimeout(function() {
+        if (action === 'get' && params.mainObjectType === 'essay-subject-definitions-uniconbaseapps') {
+          if (params.objectId === 'def_missing') { callback('Definition object not found', null); return; }
+          var copy = JSON.parse(JSON.stringify(SUBJECT_DEFINITION_SAMPLE));
+          copy.id = params.objectId;
+          copy._id = params.objectId;
+          console.log('[mock requestObjects get]', params.objectId);
+          callback(null, { object: copy });
+        } else {
+          callback('requestObjects not mocked for action: ' + action, null);
+        }
+      }, 200);
+    },
+    requestAI: function(prompt, context, callback) {
+      console.log('[mock requestAI]', prompt.slice(0, 120) + '...');
+      setTimeout(function() { callback(null, mockAiResponseText()); }, 500);
+    },
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function() {
+      save({
+        version: 2,
+        essay: { html: SAMPLE_ESSAY_HTML, lastEditedAt: new Date().toISOString() },
+        rubrics: JSON.parse(JSON.stringify(BASE_RUBRICS_MOCK)),
+        evaluations: buildSampleEvaluations()
+      });
+      window.location.reload();
+    },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _setUserRole: function(role) {
+      _user = HARNESS_USERS[role] || null;
+      listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('Essay Writing Educator DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+
+  function setRoleButtons(activeId) {
+    ['th-role-editor', 'th-role-admin', 'th-role-viewer', 'th-role-none'].forEach(function(btnId) {
+      document.getElementById(btnId).classList.toggle('active', btnId === activeId);
+    });
+  }
+  document.getElementById('th-role-editor').addEventListener('click', function() { window.tool._setUserRole('editor'); setRoleButtons('th-role-editor'); });
+  document.getElementById('th-role-admin').addEventListener('click', function() { window.tool._setUserRole('admin'); setRoleButtons('th-role-admin'); });
+  document.getElementById('th-role-viewer').addEventListener('click', function() { window.tool._setUserRole('viewer'); setRoleButtons('th-role-viewer'); });
+  document.getElementById('th-role-none').addEventListener('click', function() { window.tool._setUserRole(null); setRoleButtons('th-role-none'); });
+  document.getElementById('th-load-definition').addEventListener('click', function() { window.location.search = '?subjectDefinitionId=def_sample'; });
+  document.getElementById('th-clear-definition').addEventListener('click', function() { window.location.search = ''; });
+
+  var pageQuery = new URLSearchParams(window.location.search);
+  if (pageQuery.get('sample') === '1' && !localStorage.getItem(STORAGE_KEY)) {
+    window.tool._loadSampleData();
+  }
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = "\u003cdiv id=\"ewe-app\" class=\"ewe-app\">\r\n  \u003cdiv class=\"ewe-stage\">\r\n    \u003cheader class=\"ewe-topbar\">\r\n      \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-btn-small\" data-act=\"toggle-rubrics\">⚖️ Rubrics\u003c/button>\r\n      \u003cdiv class=\"ewe-topbar-right\">\r\n        \u003cbutton class=\"ewe-score-chip ewe-score-chip-hidden\" id=\"ewe-score-chip\" data-act=\"toggle-evaluation\" title=\"Open the full evaluation\">\r\n          \u003cspan class=\"ewe-score-chip-dot\" id=\"ewe-score-chip-dot\">\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-value\" id=\"ewe-score-chip-value\">0\u003c/span>\r\n          \u003cspan class=\"ewe-score-chip-scale\">/ 100\u003c/span>\r\n        \u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-primary ewe-write-only\" id=\"ewe-evaluate-button\" data-act=\"evaluate\">✨ Evaluate My Essay\u003c/button>\r\n      \u003c/div>\r\n    \u003c/header>\r\n\r\n    \u003cmain class=\"ewe-writing-area\">\r\n      \u003carticle class=\"ewe-page\">\r\n        \u003cdiv class=\"ewe-assignment\">\r\n          \u003cdiv class=\"ewe-subject-line\" id=\"ewe-subject-line\">\u003c/div>\r\n          \u003cdiv class=\"ewe-instructions-line\" id=\"ewe-instructions-line\">\u003c/div>\r\n          \u003cdiv class=\"ewe-assignment-meta\" id=\"ewe-assignment-meta\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-format-bar\">\r\n          \u003cselect class=\"ewe-format-select ewe-format-paragraph\" id=\"ewe-format-paragraph\" title=\"Paragraph style\">\r\n            \u003coption value=\"p\">Normal text\u003c/option>\r\n            \u003coption value=\"h2\">Heading\u003c/option>\r\n            \u003coption value=\"h3\">Subheading\u003c/option>\r\n            \u003coption value=\"blockquote\">Quote\u003c/option>\r\n          \u003c/select>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-bold\" id=\"ewe-format-bold\" data-act=\"format-bold\" title=\"Bold (Ctrl+B)\">B\u003c/button>\r\n          \u003cbutton class=\"ewe-format-btn ewe-format-italic\" id=\"ewe-format-italic\" data-act=\"format-italic\" title=\"Italic (Ctrl+I)\">I\u003c/button>\r\n          \u003cspan class=\"ewe-format-sep\">\u003c/span>\r\n          \u003cselect class=\"ewe-format-select ewe-format-size\" id=\"ewe-format-size\" title=\"Font size\">\r\n            \u003coption value=\"2\">Small\u003c/option>\r\n            \u003coption value=\"3\" selected>Normal\u003c/option>\r\n            \u003coption value=\"4\">Large\u003c/option>\r\n          \u003c/select>\r\n        \u003c/div>\r\n        \u003cdiv class=\"ewe-editor\" id=\"ewe-editor\" contenteditable=\"true\" spellcheck=\"true\">\u003c/div>\r\n        \u003cdiv class=\"ewe-page-meta\">\u003cspan id=\"ewe-word-count\">0 words\u003c/span>\u003c/div>\r\n      \u003c/article>\r\n      \u003cp class=\"ewe-motto\">You write, we evaluate, we never touch your essay, you make all the improvement while improving yourself.\u003c/p>\r\n    \u003c/main>\r\n  \u003c/div>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-rubrics-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">⚖️ Evaluation Rubrics\u003c/h2>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\">\r\n      \u003cspan class=\"ewe-weight-summary\" id=\"ewe-weight-summary\">\u003c/span>\r\n      \u003cp class=\"ewe-rubric-intro\">Each rubric contributes its weight to the final 100-point score. The teacher can customize these criteria.\u003c/p>\r\n      \u003cdiv id=\"ewe-definition-rubric-block\">\u003c/div>\r\n      \u003cdiv id=\"ewe-rubric-list\">\u003c/div>\r\n      \u003cdiv class=\"ewe-card-actions ewe-rubric-actions\">\r\n        \u003cbutton class=\"ewe-btn ewe-btn-ghost ewe-admin-only\" data-act=\"add-rubric\">＋ Add Rubric\u003c/button>\r\n        \u003cbutton class=\"ewe-btn ewe-btn-danger-ghost ewe-admin-only\" id=\"btn-reset-rubrics\" data-act=\"reset-rubrics\">↺ Reset to Base\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003caside class=\"ewe-panel\" id=\"ewe-eval-panel\" aria-hidden=\"true\">\r\n    \u003cdiv class=\"ewe-panel-head\">\r\n      \u003ch2 class=\"ewe-panel-title\">🏆 Evaluation\u003c/h2>\r\n      \u003cspan class=\"ewe-eval-count-chip\" id=\"ewe-eval-count-chip\">\u003c/span>\r\n      \u003cbutton class=\"ewe-panel-close\" data-act=\"close-panel\" aria-label=\"Close panel\">✕\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"ewe-panel-body\" id=\"ewe-eval-body\">\u003c/div>\r\n  \u003c/aside>\r\n\r\n  \u003cdiv class=\"ewe-modal-overlay\" id=\"ewe-modal-overlay\">\r\n    \u003cdiv class=\"ewe-modal\" role=\"dialog\" aria-modal=\"true\">\r\n      \u003cdiv class=\"ewe-modal-head\">\r\n        \u003ch3 id=\"ewe-modal-title\">Modal\u003c/h3>\r\n        \u003cbutton class=\"ewe-modal-close\" data-act=\"close-modal\" aria-label=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"ewe-modal-body\" id=\"ewe-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\u003c/div>";
+</script>
+
+<script>
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'EssayWritingEducator.js';
+    script.onload = function() { status.textContent = 'Ready'; openRequestedPanel(); };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function openRequestedPanel() {
+    var pageQuery = new URLSearchParams(window.location.search);
+    var panelName = pageQuery.get('panel');
+    if (panelName !== 'evaluation' && panelName !== 'rubrics') return;
+    setTimeout(function() {
+      try {
+        window.togglePanel(panelName);
+        if (pageQuery.get('view') === 'progress') {
+          window.activeEvaluationView = 'progress';
+          window.renderEvaluationPanel();
+        }
+        if (pageQuery.get('menu') === '1') {
+          window.versionMenuOpen = true;
+          window.renderEvaluationPanel();
+        }
+      } catch (error) {}
+    }, 700);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    if (EMBEDDED_HTML) {
+      status.textContent = 'Using embedded HTML (file:// mode)';
+      injectHTML(EMBEDDED_HTML);
+    } else {
+      status.textContent = 'Embedded HTML missing - regenerate the harness';
+    }
+  }, 2000);
+
+  fetch('EssayWritingEducator.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() {
+      // Fallback already triggered by timer
+    });
+})();
+</script>
+</body>
+</html>

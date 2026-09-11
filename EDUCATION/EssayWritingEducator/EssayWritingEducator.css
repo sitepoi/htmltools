@@ -1,0 +1,412 @@
+/* Essay Writing Educator - UniconHub CMS html-tool */
+.ewe-app {
+  font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  color: #1e293b;
+  background: #f2f4f9;
+  line-height: 1.5;
+  font-size: 14px;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ewe-app *, .ewe-app *::before, .ewe-app *::after { box-sizing: border-box; }
+.ewe-app p { margin: 0 0 8px; }
+
+/* ── Stage (slides left when a panel opens) ── */
+.ewe-stage {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  transition: transform .32s cubic-bezier(.4, 0, .2, 1);
+}
+.ewe-app.ewe-panel-open .ewe-stage { transform: translateX(-230px); }
+
+/* ── Top bar ── */
+.ewe-topbar {
+  position: relative; z-index: 20; flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  height: 52px; padding: 0 16px;
+  background: rgba(255, 255, 255, .94); backdrop-filter: blur(6px);
+  border-bottom: 1px solid #e5e9f2;
+}
+.ewe-topbar-right { display: flex; align-items: center; gap: 10px; }
+
+/* ── Buttons ── */
+.ewe-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid transparent; border-radius: 9px; padding: 8px 14px;
+  font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.ewe-btn:disabled { opacity: .55; cursor: not-allowed; }
+.ewe-btn-primary { background: #4f46e5; color: #ffffff; }
+.ewe-btn-primary:hover:not(:disabled) { background: #4338ca; }
+.ewe-btn-ghost { background: #ffffff; color: #334155; border-color: #d8dee9; }
+.ewe-btn-ghost:hover:not(:disabled) { background: #f1f5f9; }
+.ewe-btn-danger-ghost { background: #ffffff; color: #dc2626; border-color: #fecaca; }
+.ewe-btn-danger-ghost:hover:not(:disabled) { background: #fef2f2; }
+.ewe-btn-small { padding: 5px 12px; font-size: 12px; }
+.ewe-write-only, .ewe-admin-only { display: none !important; }
+.ewe-can-write .ewe-write-only { display: inline-flex !important; }
+.ewe-role-admin .ewe-admin-only { display: inline-flex !important; }
+
+/* ── Compact score chip ── */
+.ewe-score-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid #e5e9f2; background: #ffffff; border-radius: 999px;
+  padding: 5px 12px; font-family: inherit; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ewe-score-chip:hover { border-color: #c7d2fe; box-shadow: 0 2px 8px rgba(79, 70, 229, .14); }
+.ewe-score-chip-hidden { display: none; }
+.ewe-score-chip-dot { width: 9px; height: 9px; border-radius: 50%; background: #cbd5e1; }
+.ewe-score-chip-dot.ewe-tone-excellent { background: #16a34a; }
+.ewe-score-chip-dot.ewe-tone-good { background: #2563eb; }
+.ewe-score-chip-dot.ewe-tone-fair { background: #d97706; }
+.ewe-score-chip-dot.ewe-tone-poor { background: #dc2626; }
+.ewe-score-chip-value { font-size: 13px; font-weight: 800; color: #334155; }
+.ewe-score-chip-value.ewe-tone-excellent { color: #16a34a; }
+.ewe-score-chip-value.ewe-tone-good { color: #2563eb; }
+.ewe-score-chip-value.ewe-tone-fair { color: #d97706; }
+.ewe-score-chip-value.ewe-tone-poor { color: #dc2626; }
+.ewe-score-chip-scale { font-size: 12px; font-weight: 600; color: #94a3b8; }
+
+/* ── Writing area (page is a flex column; only the editor scrolls) ── */
+.ewe-writing-area {
+  flex: 1; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; padding: 26px 18px 26px;
+}
+.ewe-page {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  max-width: 780px; width: 100%; margin: 0 auto;
+  background: #ffffff; border: 1px solid #e5e9f2; border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, .05); overflow: hidden;
+}
+.ewe-motto {
+  flex: 0 0 auto; width: 100%; text-align: center;
+  font-size: 12.5px; color: #94a3b8; margin: 14px 0 0; line-height: 1.6;
+}
+
+/* ── Assignment block ── */
+.ewe-assignment { flex: 0 0 auto; padding: 18px 24px 14px; border-bottom: 1px solid #f1f5f9; }
+.ewe-subject-line { font-size: 17px; font-weight: 700; color: #0f172a; line-height: 1.4; }
+.ewe-instructions-line { margin-top: 6px; font-size: 13px; color: #64748b; white-space: pre-wrap; }
+.ewe-assignment-meta { margin-top: 8px; font-size: 12px; color: #94a3b8; }
+.ewe-alert { border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.ewe-alert-warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+.ewe-alert code { background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+
+/* ── Format toolbar ── */
+.ewe-format-bar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  padding: 8px 16px; border-bottom: 1px solid #eef1f6; background: #fbfcfe;
+}
+.ewe-format-select {
+  font-family: inherit; font-size: 12.5px; color: #334155;
+  border: 1px solid #d8dee9; border-radius: 7px; padding: 5px 8px;
+  background: #ffffff; cursor: pointer; outline: none;
+}
+.ewe-format-select:disabled { opacity: .5; cursor: not-allowed; }
+.ewe-format-select:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, .12); }
+.ewe-format-paragraph { width: 128px; }
+.ewe-format-size { width: 84px; }
+.ewe-format-sep { width: 1px; height: 20px; background: #e2e8f0; margin: 0 6px; }
+.ewe-format-btn {
+  width: 30px; height: 30px; border-radius: 7px; border: 1px solid transparent;
+  background: transparent; color: #475569; font-size: 14px; cursor: pointer;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+.ewe-format-btn:hover:not(:disabled) { background: #eef1f6; }
+.ewe-format-btn.ewe-on { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.ewe-format-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ewe-format-bold { font-weight: 800; }
+.ewe-format-italic { font-style: italic; }
+
+/* ── Rich text editor (scrolls inside; the toolbar above it stays visible) ── */
+.ewe-editor {
+  position: relative; flex: 1; min-height: 0; overflow-y: auto;
+  padding: 18px 24px 44px;
+  font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.8;
+  color: #1e293b; outline: none; caret-color: #4f46e5; word-break: break-word;
+}
+.ewe-editor[contenteditable="false"] { color: #475569; }
+.ewe-editor p { margin: 0 0 12px; }
+.ewe-editor h2 { font-size: 24px; font-weight: 700; margin: 20px 0 10px; color: #0f172a; }
+.ewe-editor h3 { font-size: 19px; font-weight: 700; margin: 16px 0 8px; color: #1e293b; }
+.ewe-editor blockquote {
+  margin: 12px 0; padding: 4px 16px; border-left: 3px solid #c7d2fe;
+  color: #475569; font-style: italic;
+}
+.ewe-editor.ewe-editor-empty::before {
+  content: "Start writing your essay…";
+  position: absolute; top: 18px; left: 24px; color: #a3adbc; pointer-events: none;
+}
+
+/* ── Page meta (word count) ── */
+.ewe-page-meta {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 10px 24px; border-top: 1px solid #f1f5f9; background: #fbfcfe;
+}
+.ewe-page-meta span { font-size: 12px; color: #94a3b8; }
+.ewe-page-meta span.ewe-word-warn { color: #b45309; font-weight: 600; }
+
+/* ── Side panels ── */
+.ewe-panel {
+  position: fixed; top: 52px; right: 0; bottom: 0; z-index: 30;
+  width: min(460px, 94vw); display: flex; flex-direction: column;
+  background: #ffffff; border-left: 1px solid #e5e9f2;
+  box-shadow: -14px 0 34px rgba(15, 23, 42, .08);
+  transform: translateX(105%); transition: transform .32s cubic-bezier(.4, 0, .2, 1);
+}
+.ewe-panel.ewe-open { transform: translateX(0); }
+.ewe-panel-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px; border-bottom: 1px solid #eef1f6; flex: 0 0 auto;
+}
+.ewe-panel-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0; }
+.ewe-panel-head .ewe-eval-count-chip { margin-left: auto; }
+.ewe-panel-close {
+  width: 28px; height: 28px; border-radius: 7px; border: 1px solid #d8dee9;
+  background: #ffffff; color: #475569; font-size: 13px; cursor: pointer;
+}
+.ewe-panel-close:hover { background: #f1f5f9; }
+.ewe-panel-body { flex: 1; overflow: auto; padding: 16px 18px 30px; }
+
+/* ── Rubric list ── */
+.ewe-weight-summary { font-size: 12px; font-weight: 700; }
+.ewe-weight-ok { color: #15803d; }
+.ewe-weight-warn { color: #b45309; }
+.ewe-rubric-intro { font-size: 12.5px; color: #64748b; margin: 10px 0 6px; }
+.ewe-definition-note {
+  font-size: 12.5px; color: #3730a3; background: #eef2ff; border: 1px solid #c7d2fe;
+  border-radius: 10px; padding: 9px 12px; margin: 6px 0 10px;
+}
+.ewe-definition-note-ok { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+.ewe-rubric-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+}
+.ewe-rubric-row:last-child { border-bottom: none; }
+.ewe-rubric-row-main { flex: 1; min-width: 0; }
+.ewe-rubric-name { font-size: 13.5px; font-weight: 700; color: #0f172a; }
+.ewe-rubric-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+  background: #eef2ff; color: #4338ca; border-radius: 5px; padding: 1px 6px; vertical-align: 1px;
+}
+.ewe-rubric-badge-custom { background: #fdf4ff; color: #a21caf; }
+.ewe-rubric-desc { font-size: 12.5px; color: #64748b; margin-top: 2px; }
+.ewe-rubric-weight {
+  font-size: 13px; font-weight: 700; color: #334155;
+  background: #f1f5f9; border-radius: 8px; padding: 3px 9px; white-space: nowrap;
+}
+.ewe-rubric-buttons { display: flex; gap: 6px; }
+.ewe-icon-btn {
+  width: 28px; height: 28px; border-radius: 7px; border: 1px solid #d8dee9;
+  background: #ffffff; color: #475569; font-size: 13px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ewe-icon-btn:hover { background: #f1f5f9; }
+.ewe-empty-small { font-size: 13px; color: #64748b; padding: 8px 0; }
+.ewe-card-actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.ewe-rubric-actions { border-top: 1px solid #f1f5f9; padding-top: 12px; }
+
+/* ── Evaluation panel ── */
+.ewe-eval-count-chip {
+  font-size: 12px; font-weight: 600; color: #64748b;
+  background: #f1f5f9; border-radius: 999px; padding: 3px 10px;
+}
+.ewe-empty-state { text-align: center; padding: 30px 10px; color: #64748b; }
+.ewe-empty-icon { font-size: 34px; margin-bottom: 8px; }
+.ewe-empty-state h3 { margin: 0 0 6px; font-size: 15px; color: #334155; }
+.ewe-empty-state p { font-size: 13px; max-width: 420px; margin: 0 auto; }
+
+.ewe-version-select { position: relative; margin-bottom: 14px; }
+.ewe-version-select-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 1px solid #d8dee9; border-radius: 10px; background: #ffffff;
+  padding: 8px 12px; cursor: pointer; font-family: inherit; text-align: left;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ewe-version-select-btn:hover { border-color: #c7d2fe; box-shadow: 0 2px 8px rgba(79, 70, 229, .1); }
+.ewe-version-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 46px; padding: 3px 8px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 800; color: #ffffff;
+}
+.ewe-version-badge.ewe-tone-excellent { background: #16a34a; }
+.ewe-version-badge.ewe-tone-good { background: #2563eb; }
+.ewe-version-badge.ewe-tone-fair { background: #d97706; }
+.ewe-version-badge.ewe-tone-poor { background: #dc2626; }
+.ewe-version-label { font-size: 13px; font-weight: 700; color: #0f172a; }
+.ewe-version-date { font-size: 12px; color: #64748b; margin-left: auto; white-space: nowrap; }
+.ewe-version-caret { color: #94a3b8; font-size: 12px; transition: transform .15s; }
+.ewe-version-select-btn.ewe-open .ewe-version-caret { transform: rotate(180deg); }
+.ewe-version-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 5;
+  background: #ffffff; border: 1px solid #e5e9f2; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .14);
+  max-height: 260px; overflow-y: auto; padding: 6px;
+}
+.ewe-version-option {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: none; background: transparent; border-radius: 9px;
+  padding: 8px 10px; cursor: pointer; font-family: inherit; text-align: left;
+}
+.ewe-version-option:hover { background: #f1f5f9; }
+.ewe-version-option-active { background: #eef2ff; }
+.ewe-version-option-label { font-size: 12.5px; font-weight: 600; color: #334155; }
+.ewe-version-option-date { font-size: 12px; color: #64748b; margin-left: auto; }
+.ewe-version-option-check { color: #4f46e5; font-weight: 800; font-size: 13px; }
+
+.ewe-score-summary { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+.ewe-ring { width: 118px; height: 118px; flex: 0 0 auto; }
+.ewe-ring-track { fill: none; stroke: #e2e8f0; stroke-width: 10; }
+.ewe-ring-fill {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: 60px 60px;
+  transition: stroke-dasharray .6s ease;
+}
+.ewe-tone-excellent { stroke: #16a34a; }
+.ewe-tone-good { stroke: #2563eb; }
+.ewe-tone-fair { stroke: #d97706; }
+.ewe-tone-poor { stroke: #dc2626; }
+.ewe-ring-value { font-size: 28px; font-weight: 800; fill: #0f172a; font-family: inherit; }
+.ewe-ring-caption { font-size: 10px; fill: #64748b; font-family: inherit; }
+.ewe-score-info { min-width: 0; }
+.ewe-score-badge {
+  display: inline-block; border-radius: 8px; padding: 4px 10px;
+  font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 6px;
+}
+.ewe-score-badge.ewe-tone-excellent { background: #16a34a; }
+.ewe-score-badge.ewe-tone-good { background: #2563eb; }
+.ewe-score-badge.ewe-tone-fair { background: #d97706; }
+.ewe-score-badge.ewe-tone-poor { background: #dc2626; }
+.ewe-score-meta { font-size: 12px; color: #64748b; }
+.ewe-score-subject {
+  margin-top: 6px; font-size: 12px; color: #4338ca; background: #eef2ff;
+  border-radius: 6px; padding: 3px 8px; display: inline-block;
+}
+.ewe-score-delta { margin-top: 6px; font-size: 12px; font-weight: 700; }
+.ewe-delta-up { color: #16a34a; }
+.ewe-delta-down { color: #dc2626; }
+.ewe-delta-same { color: #64748b; }
+
+.ewe-section-title {
+  font-size: 12px; font-weight: 700; color: #334155;
+  text-transform: uppercase; letter-spacing: .5px; margin: 18px 0 8px;
+}
+.ewe-section-title.ewe-good { color: #15803d; }
+.ewe-section-title.ewe-bad { color: #b91c1c; }
+.ewe-summary-text { font-size: 13.5px; color: #334155; white-space: pre-wrap; }
+
+.ewe-feedback-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .ewe-feedback-grid { grid-template-columns: 1fr; } }
+.ewe-strengths, .ewe-weaknesses, .ewe-suggestions {
+  margin: 0; padding-left: 20px; font-size: 13.5px;
+}
+.ewe-strengths li, .ewe-weaknesses li, .ewe-suggestions li { margin-bottom: 6px; }
+.ewe-strengths li::marker { color: #16a34a; }
+.ewe-weaknesses li::marker { color: #dc2626; }
+.ewe-suggestions li::marker { color: #4f46e5; font-weight: 700; }
+
+/* ── Rubric result cards ── */
+.ewe-rubric-result {
+  border: 1px solid #e5e9f2; border-radius: 12px; padding: 13px 14px; margin-bottom: 12px;
+}
+.ewe-rubric-result-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ewe-rubric-result-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+.ewe-rubric-result-meta { font-size: 12px; color: #64748b; margin-left: auto; }
+.ewe-rubric-result-score { font-size: 13px; font-weight: 700; }
+.ewe-rubric-result-score.ewe-tone-excellent { color: #16a34a; }
+.ewe-rubric-result-score.ewe-tone-good { color: #2563eb; }
+.ewe-rubric-result-score.ewe-tone-fair { color: #d97706; }
+.ewe-rubric-result-score.ewe-tone-poor { color: #dc2626; }
+.ewe-score-bar { height: 8px; border-radius: 999px; background: #eef1f6; margin: 10px 0; overflow: hidden; }
+.ewe-score-bar-fill { height: 100%; border-radius: 999px; }
+.ewe-score-bar-fill.ewe-tone-excellent { background: #16a34a; }
+.ewe-score-bar-fill.ewe-tone-good { background: #2563eb; }
+.ewe-score-bar-fill.ewe-tone-fair { background: #d97706; }
+.ewe-score-bar-fill.ewe-tone-poor { background: #dc2626; }
+.ewe-rubric-result-comment { font-size: 13.5px; color: #334155; white-space: pre-wrap; margin: 0 0 10px; }
+.ewe-mini-label { font-size: 12px; font-weight: 700; color: #4f46e5; margin: 8px 0 4px; }
+
+/* ── Modal ── */
+.ewe-modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 60;
+  background: rgba(15, 23, 42, 0.45); align-items: center; justify-content: center; padding: 20px;
+}
+.ewe-modal-overlay.ewe-open { display: flex; }
+.ewe-modal {
+  width: min(520px, 94vw); background: #ffffff; border-radius: 14px;
+  padding: 18px 20px; max-height: 85vh; overflow: auto;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+}
+.ewe-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ewe-modal-head h3 { margin: 0; font-size: 15px; color: #0f172a; }
+.ewe-modal-close {
+  width: 28px; height: 28px; border-radius: 7px; border: 1px solid #d8dee9;
+  background: #ffffff; color: #475569; font-size: 13px; cursor: pointer;
+}
+.ewe-modal-close:hover { background: #f1f5f9; }
+.ewe-form-row { margin-bottom: 12px; }
+.ewe-form-row label {
+  display: block; font-size: 12.5px; font-weight: 600; color: #334155; margin-bottom: 6px;
+}
+.ewe-form-row input, .ewe-form-row textarea {
+  width: 100%; padding: 9px 11px; border: 1px solid #d8dee9; border-radius: 9px;
+  font-family: inherit; font-size: 13.5px; color: #1e293b; outline: none; background: #ffffff;
+}
+.ewe-form-row input:focus, .ewe-form-row textarea:focus {
+  border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+.ewe-form-hint { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+.ewe-form-hint.ewe-form-hint-error { color: #dc2626; font-weight: 600; }
+.ewe-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.ewe-modal-hint { font-size: 12.5px; color: #64748b; }
+.ewe-copy-area {
+  width: 100%; min-height: 180px; margin-top: 10px; padding: 10px;
+  font-family: Consolas, Menlo, monospace; font-size: 12.5px; line-height: 1.5;
+  border: 1px solid #d8dee9; border-radius: 9px; color: #1e293b; resize: vertical;
+}
+.ewe-raw-response {
+  background: #f8fafc; border: 1px solid #eef1f6; border-radius: 10px;
+  padding: 12px; font-size: 12px; white-space: pre-wrap; word-break: break-word;
+  max-height: 300px; overflow: auto;
+}
+
+/* ── Progress charts ── */
+.ewe-eval-tabs { display: flex; gap: 6px; margin-bottom: 14px; background: #f1f5f9; border-radius: 10px; padding: 4px; }
+.ewe-eval-tab {
+  flex: 1; border: none; background: transparent; border-radius: 8px; padding: 6px 10px;
+  font-size: 12.5px; font-weight: 600; color: #64748b; cursor: pointer; font-family: inherit;
+}
+.ewe-eval-tab-active { background: #ffffff; color: #4338ca; box-shadow: 0 1px 3px rgba(15, 23, 42, .08); }
+.ewe-chart-card { border: 1px solid #e5e9f2; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; background: #ffffff; }
+.ewe-chart-title { font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+.ewe-chart-svg { display: block; width: 100%; height: auto; }
+.ewe-chart-grid { stroke: #eef1f6; stroke-width: 1; }
+.ewe-chart-tick { font-size: 9px; fill: #94a3b8; font-family: inherit; }
+.ewe-chart-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ewe-chart-dot { stroke: #ffffff; stroke-width: 1.5; }
+.ewe-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
+.ewe-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: #475569; }
+.ewe-legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+.ewe-progress-summary {
+  font-size: 13px; color: #334155; background: #f8fafc; border: 1px solid #eef1f6;
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
+}
+.ewe-progress-summary .ewe-delta-up, .ewe-progress-summary .ewe-delta-down { font-weight: 700; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .ewe-writing-area { padding: 14px 10px 14px; }
+  .ewe-editor { padding: 14px 16px 34px; }
+  .ewe-editor.ewe-editor-empty::before { left: 16px; }
+  .ewe-assignment { padding: 14px 16px 12px; }
+  .ewe-format-bar { padding: 8px 10px; }
+  .ewe-topbar { padding: 0 10px; }
+  .ewe-app.ewe-panel-open .ewe-stage { transform: translateX(-160px); }
+}
+

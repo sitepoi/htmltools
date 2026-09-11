@@ -1218,3 +1218,27 @@ body.dark .pres-fullscreen { background: #0f172a !important; }
 .rp-empty { text-align: center; color: var(--text-muted); font-size: 12px; padding: 16px; }
 .rp-more { text-align: center; font-size: 11px; color: var(--text-muted); padding-top: 4px; }
 .rp-compact .rp-chart { min-height: 90px; }
+
+/* ── Custom drawer (replaces prompt()/confirm() in sandboxed iframes) ── */
+.drawer-overlay { position: fixed; inset: 0; z-index: 10002; display: flex; align-items: flex-end; justify-content: center; }
+.drawer-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.45); }
+.drawer-panel { position: relative; width: 100%; max-width: 460px; background: var(--surface); border-radius: 16px 16px 0 0; box-shadow: 0 -8px 32px rgba(0,0,0,0.22); padding: 16px 20px 20px; animation: drawer-slide-up 0.18s ease; }
+@keyframes drawer-slide-up { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.drawer-title { font-weight: 700; font-size: 15px; color: var(--text); }
+.drawer-close { border: none; background: transparent; color: var(--text-muted); font-size: 16px; cursor: pointer; padding: 4px 8px; font-family: inherit; }
+.drawer-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.drawer-input { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 14px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; background: var(--surface); color: var(--text); font-family: inherit; }
+.drawer-input:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+.drawer-error { margin-top: 8px; font-size: 12px; color: #dc2626; }
+.drawer-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ── View tabs (supervisor role switch + student sub-tabs) ── */
+.view-tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px 0; }
+.view-tab { border: 1px solid var(--border, #e2e8f0); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.view-tab:hover { border-color: var(--primary-light); color: var(--primary); }
+.view-tab.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.view-tab-action { margin-left: auto; padding: 6px 12px; }
+
+/* ── Slim utility header (title, dashboard & change-course buttons removed) ── */
+.app-header.app-header-util { padding: 6px 16px; box-shadow: none; }

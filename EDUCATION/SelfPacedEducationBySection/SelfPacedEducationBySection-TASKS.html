@@ -109,6 +109,11 @@
     <tr><td>T27</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Activity log + progress report: completion timestamps, daily list &amp; chart for student and supervisor</td></tr>
     <tr><td>T28</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Lost-score recovery: auto-restore from attempts, supervisor Set Score (grandfather rule revised by T29)</td></tr>
     <tr><td>T29</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Grading revision: average only recorded scores, no auto-unlock when scoreless, dashboard crash fix</td></tr>
+    <tr><td>T30</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Custom drawer replaces prompt()/confirm() — sandboxed iframe blocks native modals</td></tr>
+    <tr><td>T31</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>View tabs: Supervisor/Student role switch + Course/Dashboard/Activity sub-tabs, merged activity report</td></tr>
+    <tr><td>T32</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Header cleanup: title bar &amp; dashboard toggle removed, Change Course moved into Supervisor view, names shown in views/tabs</td></tr>
+    <tr><td>T33</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Dark-mode toggle moved onto the view-tab line, top bar removed, student name captured on student load for the Student View tab</td></tr>
+    <tr><td>T34</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Debug SP-TRACE logs removed; supervisor dashboard title now shows the student name</td></tr>
     <tr><td>T4</td><td><span class="badge b-done">DONE</span></td><td>✅ Done (this session)</td><td>Flexible quiz set layout derived from content — no empty sets for any quiz length</td></tr>
     <tr><td>T5</td><td><span class="badge b-p0">P0</span></td><td>⏳ Backlog</td><td>Study countdown re-renders the whole lesson every 30 s (PDFs re-fetched, wasted bandwidth)</td></tr>
     <tr><td>T6</td><td><span class="badge b-p1">P1</span></td><td>⏳ Backlog</td><td>PDFs render eagerly for ALL tabs and re-fetch on every re-render</td></tr>
@@ -291,6 +296,71 @@
     <div class="row"><span class="lbl">Solution</span><span class="val">Averages now use ONLY the scores that exist (recorded scores or supervisor overrides); no-score lessons are ignored. A section with no recorded scores at all does NOT unlock — the supervisor can resend a lesson (↺) or use 🎯 Set Score. Pure-content sections still unlock by completion. The missing-score explanation in the grade panel appears only when completed lessons really lack scores.</span></div>
     <div class="row"><span class="lbl">Location</span><span class="val"><code>buildActivityReportHtml</code>, <code>getSectionScoreInfo</code>, <code>getCourseScore</code>, <code>getSectionLockReason</code>, <code>lessonMayHaveQuiz</code>, <code>recoverScoresFromAttempts</code></span></div>
     <div class="row"><span class="lbl">Acceptance</span><span class="val">Dashboard opens; course grade reflects real scores; a fully scoreless section stays locked with a supervisor message; one ≥60% score in a section is enough to pass it.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T30</span>
+      <span class="task-title">Supervisor inputs moved from prompt() to an in-page drawer</span>
+      <span class="badge b-bug">BUG</span><span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Problem</span><span class="val">The CMS iframe is sandboxed without <code>allow-modals</code>, so <code>prompt()</code> (🎯 Set Score, ✕ Reject feedback) and <code>confirm()</code> (🗑 Reset All) were silently ignored — 🎯 did nothing and the reset could never run.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">New in-page drawer (backdrop + panel, Enter to confirm, click-outside to cancel): 🎯 Set Score prefills the current value and validates 0–100; ✕ Reject asks for feedback text; 🗑 Reset All shows a confirm drawer with a destructive action button.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>openDrawer</code>, <code>closeDrawer</code>, <code>drawerConfirm</code>, <code>renderSupervisorPanel</code> wiring, <code>resetAllProgress</code>, HTML <code>#drawer-overlay</code>, CSS <code>.drawer-*</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">🎯 opens a drawer, validates the number, saves and logs the override. ✕ Reject and 🗑 Reset All work from the same drawer.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T31</span>
+      <span class="task-title">View tabs: Supervisor/Student switch + Course/Dashboard/Activity sub-tabs</span>
+      <span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Request</span><span class="val">The page scrolled too much because the supervisor dashboard and the student panels (grade + activity report) were all stacked. Add top tabs: supervisors get 🛡️ Supervisor View / 🎓 Student View; the Student View has 📚 Course (default) / 📊 Dashboard / 📈 Activity Report sub-tabs. The supervisor's activity report and the student's progress report were the same component — merged into one Activity Report.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val"><code>applyViewVisibility()</code> toggles the role tabs (admin-only) and the sub-tabs; each sub-tab shows exactly one panel (Course: toolbar + section grid · Dashboard: Course Grade panel · Activity Report: merged report). The supervisor dashboard no longer embeds its own activity report and is inserted below the tabs, above the student content. Students never see the role tabs.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>applyViewVisibility</code>, <code>renderSections</code>, <code>renderSupervisorPanel</code>, <code>renderProgressReport</code>, <code>buildActivityReportHtml</code>, HTML tab bars, CSS <code>.view-tabs</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">Supervisors see the two role tabs and can flip between dashboard and student view; the student view opens on Course; the Activity Report appears once, identically for both roles.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T32</span>
+      <span class="task-title">Header cleanup: no title bar, Change Course inside Supervisor view, names in views</span>
+      <span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Request</span><span class="val">Remove the top bar that only shows "Self-Paced Learning"; drop the Hide Dashboard toggle (the dashboard is a tab now); move Change Course into the Supervisor view; show the supervisor name in the Supervisor view and the student name in the Student View tab.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">Header reduced to a slim utility bar (← back + 🌙 dark mode, title hidden). The dashboard toggle and its state gate were removed — the panel always renders for supervisors. A 🔄 Change Course button lives in the dashboard header. The student's name is remembered in config on their saves and shown in the 🎓 Student View tab and the dashboard subtitle; the supervisor's name appears next to "Supervisor Dashboard".</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>getUserDisplayName</code>, <code>saveProgress</code> (studentName), <code>loadData</code>, <code>renderSupervisorPanel</code>, <code>applyViewVisibility</code>, HTML header, CSS <code>.app-header-util</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">No title bar and no Hide Dashboard button; Change Course works from the Supervisor view; names appear in the dashboard and the Student View tab.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T33</span>
+      <span class="task-title">Dark-mode toggle on the tab line, top bar removed, student name captured at load</span>
+      <span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Request</span><span class="val">The top line only held the light/dark toggle — move it onto the same line as the Supervisor/Student view tabs and remove the top bar. The Student View tab must show the student name when a supervisor is viewing (students never see those role tabs anyway).</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">The header now appears only on inner pages for the ← back button (<code>applyHeaderVisibility()</code>). Dark-mode buttons with <code>data-dark-toggle</code> sit at the end of the role-tab line and the student sub-tab line (only one shows at a time; the sub-tab copy is hidden for supervisors), all kept in sync by <code>syncDarkToggleLabels()</code>. The student name is captured from the session user as soon as a non-admin opens the tool — not only on their first save — so the 🎓 Student View — [name] tab is populated for supervisors.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>applyHeaderVisibility</code>, <code>syncDarkToggleLabels</code>, <code>toggleDarkMode</code>, <code>applyViewVisibility</code>, <code>bindEvents</code>, tool.onReady (name capture), HTML tab bars, CSS <code>.view-tab-action</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">No top line on the sections view; 🌙 sits on the tab line for supervisors and students; the Student View tab shows the student's name for supervisors; dark mode stays in sync everywhere and still works on inner pages.</span></div>
+  </div>
+
+  <div class="task done">
+    <div class="task-head">
+      <span class="task-id">T34</span>
+      <span class="task-title">Debug logs removed; supervisor dashboard title shows the student name</span>
+      <span class="badge b-done">DONE</span>
+      <input type="checkbox" checked disabled>
+    </div>
+    <div class="row"><span class="lbl">Request</span><span class="val">Remove the debug logs added while diagnosing problems, and fix the supervisor dashboard title: it showed the supervisor's name (which looked like a student name) — it must show the STUDENT name instead, no supervisor name.</span></div>
+    <div class="row"><span class="lbl">Solution</span><span class="val">All <code>[SP-TRACE]</code> console logs (requestSave, onReady, onValueChange, stale-echo guard) and the <code>_spTraceBoot</code> timing variable were deleted. The dashboard title now reads “Supervisor Dashboard — [student name]” from <code>CONFIG.studentName</code>, and the redundant 👤 student name was removed from the subtitle since it is in the title.</span></div>
+    <div class="row"><span class="lbl">Location</span><span class="val"><code>renderSupervisorPanel</code> (header), <code>saveProgress</code>, <code>tool.onReady</code>, <code>tool.onValueChange</code></span></div>
+    <div class="row"><span class="lbl">Acceptance</span><span class="val">No console logs emitted by the tool; the supervisor dashboard title shows the student's name (when known).</span></div>
   </div>
 
   <h2 class="section">🔴 P0 — Bugs that block students (develop first)</h2>

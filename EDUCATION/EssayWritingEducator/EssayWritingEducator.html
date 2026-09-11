@@ -1,0 +1,81 @@
+<div id="ewe-app" class="ewe-app">
+  <div class="ewe-stage">
+    <header class="ewe-topbar">
+      <button class="ewe-btn ewe-btn-ghost ewe-btn-small" data-act="toggle-rubrics">⚖️ Rubrics</button>
+      <div class="ewe-topbar-right">
+        <button class="ewe-score-chip ewe-score-chip-hidden" id="ewe-score-chip" data-act="toggle-evaluation" title="Open the full evaluation">
+          <span class="ewe-score-chip-dot" id="ewe-score-chip-dot"></span>
+          <span class="ewe-score-chip-value" id="ewe-score-chip-value">0</span>
+          <span class="ewe-score-chip-scale">/ 100</span>
+        </button>
+        <button class="ewe-btn ewe-btn-primary ewe-write-only" id="ewe-evaluate-button" data-act="evaluate">✨ Evaluate My Essay</button>
+      </div>
+    </header>
+
+    <main class="ewe-writing-area">
+      <article class="ewe-page">
+        <div class="ewe-assignment">
+          <div class="ewe-subject-line" id="ewe-subject-line"></div>
+          <div class="ewe-instructions-line" id="ewe-instructions-line"></div>
+          <div class="ewe-assignment-meta" id="ewe-assignment-meta"></div>
+        </div>
+        <div class="ewe-format-bar">
+          <select class="ewe-format-select ewe-format-paragraph" id="ewe-format-paragraph" title="Paragraph style">
+            <option value="p">Normal text</option>
+            <option value="h2">Heading</option>
+            <option value="h3">Subheading</option>
+            <option value="blockquote">Quote</option>
+          </select>
+          <span class="ewe-format-sep"></span>
+          <button class="ewe-format-btn ewe-format-bold" id="ewe-format-bold" data-act="format-bold" title="Bold (Ctrl+B)">B</button>
+          <button class="ewe-format-btn ewe-format-italic" id="ewe-format-italic" data-act="format-italic" title="Italic (Ctrl+I)">I</button>
+          <span class="ewe-format-sep"></span>
+          <select class="ewe-format-select ewe-format-size" id="ewe-format-size" title="Font size">
+            <option value="2">Small</option>
+            <option value="3" selected>Normal</option>
+            <option value="4">Large</option>
+          </select>
+        </div>
+        <div class="ewe-editor" id="ewe-editor" contenteditable="true" spellcheck="true"></div>
+        <div class="ewe-page-meta"><span id="ewe-word-count">0 words</span></div>
+      </article>
+      <p class="ewe-motto">You write, we evaluate, we never touch your essay, you make all the improvement while improving yourself.</p>
+    </main>
+  </div>
+
+  <aside class="ewe-panel" id="ewe-rubrics-panel" aria-hidden="true">
+    <div class="ewe-panel-head">
+      <h2 class="ewe-panel-title">⚖️ Evaluation Rubrics</h2>
+      <button class="ewe-panel-close" data-act="close-panel" aria-label="Close panel">✕</button>
+    </div>
+    <div class="ewe-panel-body">
+      <span class="ewe-weight-summary" id="ewe-weight-summary"></span>
+      <p class="ewe-rubric-intro">Each rubric contributes its weight to the final 100-point score. The teacher can customize these criteria.</p>
+      <div id="ewe-definition-rubric-block"></div>
+      <div id="ewe-rubric-list"></div>
+      <div class="ewe-card-actions ewe-rubric-actions">
+        <button class="ewe-btn ewe-btn-ghost ewe-admin-only" data-act="add-rubric">＋ Add Rubric</button>
+        <button class="ewe-btn ewe-btn-danger-ghost ewe-admin-only" id="btn-reset-rubrics" data-act="reset-rubrics">↺ Reset to Base</button>
+      </div>
+    </div>
+  </aside>
+
+  <aside class="ewe-panel" id="ewe-eval-panel" aria-hidden="true">
+    <div class="ewe-panel-head">
+      <h2 class="ewe-panel-title">🏆 Evaluation</h2>
+      <span class="ewe-eval-count-chip" id="ewe-eval-count-chip"></span>
+      <button class="ewe-panel-close" data-act="close-panel" aria-label="Close panel">✕</button>
+    </div>
+    <div class="ewe-panel-body" id="ewe-eval-body"></div>
+  </aside>
+
+  <div class="ewe-modal-overlay" id="ewe-modal-overlay">
+    <div class="ewe-modal" role="dialog" aria-modal="true">
+      <div class="ewe-modal-head">
+        <h3 id="ewe-modal-title">Modal</h3>
+        <button class="ewe-modal-close" data-act="close-modal" aria-label="Close">✕</button>
+      </div>
+      <div class="ewe-modal-body" id="ewe-modal-body"></div>
+    </div>
+  </div>
+</div>

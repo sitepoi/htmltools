@@ -1,17 +1,29 @@
 <div id="app">
-  <!-- HEADER -->
-  <header class="app-header">
+  <!-- UTILITY BAR — appears only on inner pages for the ← back button. On the
+       sections view there is no top line: the dark-mode toggle lives on the tab line. -->
+  <header class="app-header app-header-util" id="app-header">
     <div class="header-left">
       <button class="btn-icon" id="btn-back" title="Back" style="display:none">←</button>
-      <h1 class="app-title" id="app-title">📚 Self-Paced Learning</h1>
+      <h1 class="app-title" id="app-title" style="display:none">📚 Self-Paced Learning</h1>
     </div>
     <div class="header-right">
-      <button class="btn btn-sm btn-outline" id="btn-dark-mode" title="Toggle dark mode">🌙</button>
-      <button class="btn btn-sm btn-outline" id="btn-toggle-dashboard" style="display:none" title="Toggle supervisor dashboard">📊 Dashboard</button>
-      <button class="btn btn-sm btn-outline" id="btn-change-course" style="display:none" title="Change curriculum">🔄 Change Course</button>
-      <span class="role-badge" id="role-badge"></span>
+      <button class="btn btn-sm btn-outline" id="btn-dark-mode" data-dark-toggle title="Toggle dark mode">🌙</button>
     </div>
   </header>
+
+  <!-- VIEW TABS: role switch (supervisors only) + dark mode on the same line -->
+  <div class="view-tabs" id="role-tabs" style="display:none">
+    <button class="view-tab active" id="tab-role-supervisor">🛡️ Supervisor View</button>
+    <button class="view-tab" id="tab-role-student">🎓 Student View</button>
+    <button class="view-tab view-tab-action" id="btn-dark-mode-role" data-dark-toggle title="Toggle dark mode">🌙</button>
+  </div>
+  <!-- STUDENT SUB-TABS (dark mode on the same line for students) -->
+  <div class="view-tabs" id="student-tabs" style="display:none">
+    <button class="view-tab active" id="tab-student-course">📚 Course</button>
+    <button class="view-tab" id="tab-student-dashboard">📊 Dashboard</button>
+    <button class="view-tab" id="tab-student-report">📈 Activity Report</button>
+    <button class="view-tab view-tab-action" id="btn-dark-mode-stu" data-dark-toggle title="Toggle dark mode">🌙</button>
+  </div>
 
   <!-- PROGRESS BAR -->
   <div class="progress-bar-wrap" id="progress-bar-wrap">
@@ -46,7 +58,7 @@
 
   <!-- SECTION GROUPS VIEW -->
   <div id="view-sections" class="view">
-    <div class="toolbar">
+    <div class="toolbar" id="sections-toolbar">
       <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
       <select class="filter-select" id="filter-status">
         <option value="all">All Sections</option>
@@ -105,5 +117,25 @@
   <div class="loading-overlay" id="loading-overlay" style="display:none">
     <div class="spinner"></div>
     <span>Loading...</span>
+  </div>
+
+  <!-- CUSTOM DRAWER (the sandboxed iframe blocks prompt()/confirm() — this replaces them) -->
+  <div class="drawer-overlay" id="drawer-overlay" style="display:none">
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <div class="drawer-panel" role="dialog" aria-modal="true">
+      <div class="drawer-head">
+        <span class="drawer-title" id="drawer-title"></span>
+        <button class="drawer-close" id="drawer-close" title="Close">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-desc" id="drawer-desc"></div>
+        <input class="drawer-input" id="drawer-input" type="text" autocomplete="off">
+        <div class="drawer-error" id="drawer-error" style="display:none"></div>
+      </div>
+      <div class="drawer-actions">
+        <button class="btn btn-outline" id="drawer-cancel">Cancel</button>
+        <button class="btn btn-primary" id="drawer-save">💾 Save</button>
+      </div>
+    </div>
   </div>
 </div>

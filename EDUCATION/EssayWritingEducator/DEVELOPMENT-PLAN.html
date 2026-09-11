@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Essay Writing Educator - Feature Ideas & Roadmap</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --accent: #4f46e5;
+    --green: #16a34a;
+    --amber: #d97706;
+    --red: #dc2626;
+    --blue: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px; line-height: 1.55;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header.plan-header { border-bottom: 3px solid var(--accent); padding-bottom: 14px; margin-bottom: 18px; }
+  header.plan-header h1 { margin: 0 0 4px; font-size: 26px; }
+  header.plan-header .sub { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 8px; font-size: 15px; }
+  .about p, .about li { color: #334155; }
+  .about ul { margin: 6px 0; padding-left: 20px; }
+  .about li { margin-bottom: 4px; }
+  .req-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .req-chip {
+    background: #eef2ff; color: #4338ca; border: 1px solid #e0e7ff;
+    border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600;
+  }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .stat-box {
+    flex: 1; min-width: 150px; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .stat-box .num { font-size: 22px; font-weight: 800; color: var(--accent); }
+  .stat-box .lbl { font-size: 12px; color: var(--muted); }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .controls input[type=text] {
+    flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid var(--line);
+    border-radius: 9px; font: inherit; outline: none;
+  }
+  .controls input[type=text]:focus { border-color: var(--accent); }
+  .controls select {
+    padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px;
+    font: inherit; background: var(--card); cursor: pointer;
+  }
+  .cat-chips { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .cat-chip {
+    border: 1px solid var(--line); background: var(--card); color: #334155;
+    border-radius: 999px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .cat-chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .feature {
+    display: grid; grid-template-columns: 64px 1fr 170px; gap: 14px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 12px;
+  }
+  @media (max-width: 760px) { .feature { grid-template-columns: 56px 1fr; } .feature .side { grid-column: 1 / -1; } }
+  .imp {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding-top: 2px;
+  }
+  .imp .score {
+    width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; font-weight: 800; color: #fff;
+  }
+  .imp .of-ten { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .imp-9 { background: var(--accent); }
+  .imp-8 { background: #6d5df1; }
+  .imp-6 { background: var(--blue); }
+  .imp-5 { background: #0891b2; }
+  .imp-4 { background: var(--amber); }
+  .imp-3 { background: #b45309; }
+  .imp-2 { background: var(--red); }
+  .imp-1 { background: #991b1b; }
+
+  .feature .body .topline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .fid { font-size: 11px; font-weight: 800; color: var(--accent); letter-spacing: .4px; }
+  .cat-badge {
+    font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+    background: #f1f5f9; color: #475569; border-radius: 5px; padding: 1px 8px;
+  }
+  .diff {
+    font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+    border-radius: 5px; padding: 1px 8px;
+  }
+  .diff-Easy { background: #f0fdf4; color: var(--green); border: 1px solid #bbf7d0; }
+  .diff-Medium { background: #fffbeb; color: var(--amber); border: 1px solid #fde68a; }
+  .diff-Hard { background: #fef2f2; color: var(--red); border: 1px solid #fecaca; }
+  .req-badge {
+    font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 1px 8px;
+    background: #eef2ff; color: #4338ca;
+  }
+  .feature h3 { margin: 0 0 4px; font-size: 14.5px; }
+  .feature .desc { margin: 0 0 6px; color: #334155; }
+  .feature .benefits { margin: 0; padding-left: 18px; color: #475569; font-size: 13px; }
+  .feature .benefits li { margin-bottom: 2px; }
+  .bench { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .bench b { color: #334155; }
+
+  .feature .side { display: flex; flex-direction: column; gap: 8px; }
+  .side label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .side select, .side textarea {
+    width: 100%; border: 1px solid var(--line); border-radius: 8px;
+    font: inherit; font-size: 12.5px; padding: 6px 8px; background: #fbfcfe; outline: none;
+  }
+  .side select:focus, .side textarea:focus { border-color: var(--accent); }
+  .side textarea { min-height: 52px; resize: vertical; }
+
+  .empty-note { text-align: center; color: var(--muted); padding: 30px; }
+
+  footer { margin-top: 24px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="plan-header">
+    <h1>Essay Writing Educator - Feature Ideas &amp; Roadmap</h1>
+    <p class="sub">A description document and idea list for the UniconHub CMS html-tool. Importance is scored out of 10, benefits and difficulty are explained for every idea.</p>
+  </header>
+
+  <section class="card about">
+    <h2>What the tool is today</h2>
+    <p>The Essay Writing Educator is a single-essay-per-student html-tool. A teacher or CMS admin defines the essay subject and instructions through field parameters. The student writes the essay in a centered, page-like rich text editor (paragraph styles, bold, italic, font size). An evaluation service scores the essay against weighted rubrics and returns a score out of 100 with extremely detailed feedback: an overall summary, strengths, weaknesses, per-rubric scores, comments and prioritized improvement suggestions. The evaluation service never rewrites or edits the student text - it only suggests.</p>
+    <ul>
+      <li>Five base rubrics (Content &amp; Ideas 30%, Organization 20%, Evidence 20%, Language 15%, Grammar 15%) plus teacher-defined custom rubrics, weights must total 100%.</li>
+      <li>Rubrics and Evaluation open as animated right-side panels; the editor slides left when they open.</li>
+      <li>A compact score chip in the top bar shows the latest score and opens the full evaluation.</li>
+      <li>Feedback tab: version dropdown (score badge + version number + date), grade band, score ring, rubric breakdown, strengths, weaknesses, next steps, copy-all-suggestions.</li>
+      <li>Progress tab: overall score line chart and per-rubric line chart showing improvement between versions.</li>
+      <li>Evaluation history is stored in the record value; teacher-only rubric management.</li>
+    </ul>
+    <p>Core requirements this roadmap serves:</p>
+    <div class="req-chips" id="req-chips"></div>
+  </section>
+
+  <section class="stats" id="stats-bar"></section>
+
+  <div class="controls">
+    <input type="text" id="search-input" placeholder="Search ideas...">
+    <select id="difficulty-filter">
+      <option value="all">All difficulties</option>
+      <option value="Easy">Easy</option>
+      <option value="Medium">Medium</option>
+      <option value="Hard">Hard</option>
+    </select>
+    <select id="status-filter">
+      <option value="all">All statuses</option>
+      <option value="Planned">Planned</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Done">Done</option>
+      <option value="Skipped">Skipped</option>
+    </select>
+    <select id="sort-select">
+      <option value="importance">Sort: importance (high first)</option>
+      <option value="id">Sort: by ID</option>
+    </select>
+    <div class="cat-chips" id="cat-chips"></div>
+  </div>
+
+  <section id="features"></section>
+
+  <div class="card">
+    <h2>How to read this list</h2>
+    <div class="legend">
+      <span><b>Importance</b>: 9-10 = do next, strong requirement fit; 7-8 = high value; 5-6 = nice to have; 1-4 = later or optional.</span>
+      <span><b>Difficulty</b>: Easy = hours, Medium = a day, Hard = multiple days or needs new infrastructure.</span>
+      <span><b>Status</b> is saved in this browser (localStorage) - use it to plan sprints. Notes are per-idea.</span>
+    </div>
+  </div>
+
+  <footer>
+    Prepared for the Essay Writing Educator tool. This document changes nothing in the tool code - it is a planning aid only. Ideas benchmarked against: Grammarly, Turnitin Feedback Studio, Gradescope, CoGrader, EssayGrader, Writable, NoRedInk, Kaizena, Google Docs, Hemingway Editor, Duolingo, Canvas/Blackboard.
+  </footer>
+</div>
+
+<script>
+/* Data + rendering for the idea list. Persists status/notes to localStorage. */
+var STORAGE_KEY = 'essaywriter_ideas_v1';
+
+var REQUIREMENTS = [
+  { id: 'score', label: 'Score out of 100' },
+  { id: 'rubrics', label: 'Weighted rubrics + custom criteria' },
+  { id: 'neverTouch', label: 'Never edits the essay text' },
+  { id: 'oneEssay', label: 'One essay per student' },
+  { id: 'history', label: 'Improvement history + charts' },
+  { id: 'teacher', label: 'Teacher control' },
+  { id: 'cms', label: 'CMS integration' }
+];
+
+var CATEGORIES = [
+  { id: 'A', name: 'Writing & Editor UX' },
+  { id: 'B', name: 'Evaluation & Feedback Depth' },
+  { id: 'C', name: 'Rubrics & Assessment Control' },
+  { id: 'D', name: 'Progress & Analytics' },
+  { id: 'E', name: 'Teacher & Instructor Tools' },
+  { id: 'F', name: 'Student Guidance & Learning' },
+  { id: 'G', name: 'CMS Integration & Automation' },
+  { id: 'H', name: 'Quality, Performance & Accessibility' }
+];
+
+var FEATURES = [
+  /* ── A: Writing & Editor UX ── */
+  { id: 'A1', cat: 'A', title: 'Undo / Redo for the editor',
+    importance: 9, difficulty: 'Medium', benchmark: 'Google Docs, Grammarly Editor',
+    requirement: 'oneEssay',
+    description: 'Add Undo and Redo buttons plus Ctrl+Z / Ctrl+Y. The editor stores formatted HTML, so a snapshot-based history is needed: push a snapshot before every formatting action and debounce typing, then restore by replacing the editor content.',
+    benefits: ['Students recover from accidental deletions and bad formatting instantly', 'Protects the only copy of the essay, which is critical in a one-essay-per-student tool', 'Removes fear of experimenting with formatting'] },
+  { id: 'A2', cat: 'A', title: 'Auto-save indicator chip',
+    importance: 8, difficulty: 'Easy', benchmark: 'Google Docs "Saved" indicator',
+    requirement: 'oneEssay',
+    description: 'A tiny chip in the top bar showing "Saving..." then "Saved at 14:32". Tracks the debounced persist and the requestSave acknowledgement, turning amber when the CMS form rejected an auto-save.',
+    benefits: ['The student always knows the work is safe', 'Surfaces the allowRequestSave warning only when it matters', 'Builds trust in the CMS persistence layer'] },
+  { id: 'A3', cat: 'A', title: 'Minimum-word progress bar',
+    importance: 7, difficulty: 'Easy', benchmark: 'Writable word counters',
+    requirement: 'score',
+    description: 'When minimumWordCount is configured, show a progress bar that fills from 0 to 100 percent as the student approaches the minimum, with color stages (red, amber, green).',
+    benefits: ['The student sees the distance to the assignment requirement at a glance', 'Fewer blocked evaluations caused by the minimum-word gate', 'Motivates steady writing'] },
+  { id: 'A4', cat: 'A', title: 'Focus mode',
+    importance: 6, difficulty: 'Medium', benchmark: 'iA Writer, Calmly Writer',
+    requirement: 'oneEssay',
+    description: 'A toggle that dims the chrome, hides the motto, widens the page and centers the editor for distraction-free writing. One key (for example F11-like shortcut or Esc) returns to normal.',
+    benefits: ['Deeper concentration for long writing sessions', 'Feels like a real writing application', 'Simple to implement with a body class'] },
+  { id: 'A5', cat: 'A', title: 'Spellcheck toggle and error count',
+    importance: 6, difficulty: 'Easy', benchmark: 'Grammarly browser extension',
+    requirement: 'score',
+    description: 'Keep the browser spellcheck underline, add a toggle to disable it for exams, and show a small "N misspelled words" counter so the student knows what the Grammar rubric will catch.',
+    benefits: ['Mechanics errors are caught before evaluation', 'The counter is a gentle nudge to self-correct', 'Teachers can disable it for timed work'] },
+  { id: 'A6', cat: 'A', title: 'Heading outline mini-map',
+    importance: 5, difficulty: 'Easy', benchmark: 'Google Docs document outline',
+    requirement: 'oneEssay',
+    description: 'A small popover listing all headings in the essay; clicking one scrolls the editor to it. Useful once essays pass 500 words.',
+    benefits: ['Fast navigation in long essays', 'Reinforces good heading structure, which the Organization rubric rewards'] },
+  { id: 'A7', cat: 'A', title: 'Dark mode',
+    importance: 4, difficulty: 'Medium', benchmark: 'Google Docs, Word',
+    requirement: 'oneEssay',
+    description: 'A dark palette for the whole tool (page, panels, editor) toggled from the top bar and remembered across loads.',
+    benefits: ['Comfortable evening writing', 'Accessibility for light-sensitive users'] },
+
+  /* ── B: Evaluation & Feedback Depth ── */
+  { id: 'B1', cat: 'B', title: 'Live streaming evaluation',
+    importance: 8, difficulty: 'Medium', benchmark: 'ChatGPT token streaming',
+    requirement: 'score',
+    description: 'Use requestAIStream so the evaluation appears token by token in the panel (or a live "Evaluating..." bubble) instead of a silent 30-60 second wait. Falls back to requestAI when streaming is unavailable.',
+    benefits: ['Long evaluations feel instant instead of frozen', 'The student watches the reasoning arrive, which builds trust in the score', 'The SDK already supports streaming, so it is mostly UI work'] },
+  { id: 'B2', cat: 'B', title: 'Per-suggestion copy buttons',
+    importance: 7, difficulty: 'Easy', benchmark: 'Grammarly suggestion cards',
+    requirement: 'neverTouch',
+    description: 'A small copy icon on every suggestion and every "next step" so the student can copy one item, not just all of them. Copied text goes to the clipboard - never into the essay.',
+    benefits: ['The student applies one idea at a time', 'Respects the never-touch principle by construction'] },
+  { id: 'B3', cat: 'B', title: 'Sentence-level highlights in an annotated view',
+    importance: 9, difficulty: 'Hard', benchmark: 'Turnitin Feedback Studio, Grammarly highlights',
+    requirement: 'neverTouch',
+    description: 'The evaluation prompt asks the model to return the exact sentences it quotes. The tool then renders a read-only copy of the essay with those sentences underlined, colored by the rubric that referenced them. Clicking an underline jumps to the matching feedback card.',
+    benefits: ['Feedback is tied to the exact text instead of floating generalities', 'The strongest differentiator versus generic graders', 'Still never edits the essay - the annotated view is a separate read-only layer'] },
+  { id: 'B4', cat: 'B', title: 'Side-by-side version comparison',
+    importance: 8, difficulty: 'Hard', benchmark: 'GitHub diff view, Writable revision compare',
+    requirement: 'history',
+    description: 'A diff view between the essay text at two versions (word-level additions in green, deletions in red). The student picks any two evaluations to compare.',
+    benefits: ['The student sees exactly what changed between attempts', 'Makes the improvement history tangible', 'Pairs perfectly with the existing progress charts'] },
+  { id: 'B5', cat: 'B', title: 'Local readability and style metrics',
+    importance: 8, difficulty: 'Medium', benchmark: 'Hemingway Editor',
+    requirement: 'score',
+    description: 'Compute locally, without any service: Flesch reading ease, average sentence length, longest sentence, passive voice ratio, most repeated words. Show them in a small metrics card near the word count.',
+    benefits: ['Objective numbers complement the rubric scores', 'Instant, free and private (no extra evaluation call)', 'Gives the Language and Grammar rubrics concrete targets'] },
+  { id: 'B6', cat: 'B', title: 'Checkable next-steps checklist',
+    importance: 7, difficulty: 'Easy', benchmark: 'Trello-style task cards',
+    requirement: 'history',
+    description: 'Each evaluation saves its nextSteps; render them as checkboxes the student ticks while revising. The checklist resets for the new version after the next evaluation.',
+    benefits: ['Turns feedback into a concrete revision plan', 'A visible "what I fixed" trail feeds the improvement story'] },
+  { id: 'B7', cat: 'B', title: 'Rubric-specific model sentences',
+    importance: 5, difficulty: 'Medium', benchmark: 'NoRedInk model texts',
+    requirement: 'neverTouch',
+    description: 'For each weak rubric, the evaluation asks for one model sentence that demonstrates the skill. Model sentences are shown only inside the feedback panel as examples, never inserted into the essay.',
+    benefits: ['Shows "what better looks like" without rewriting for the student', 'Keeps the never-touch promise intact'] },
+  { id: 'B8', cat: 'B', title: 'Read-aloud audio summary',
+    importance: 3, difficulty: 'Hard', benchmark: 'Read&Write, Immersive Reader',
+    requirement: 'oneEssay',
+    description: 'Use the browser SpeechSynthesis API to read the overall summary and next steps aloud.',
+    benefits: ['Accessibility for students who absorb feedback better by listening', 'Useful on mobile'] },
+
+  /* ── C: Rubrics & Assessment Control ── */
+  { id: 'C1', cat: 'C', title: 'Rubric preset library',
+    importance: 8, difficulty: 'Medium', benchmark: 'Turnitin rubric banks, CoGrader templates',
+    requirement: 'rubrics',
+    description: 'Built-in one-click presets: persuasive essay, narrative essay, argumentative essay, expository essay, lab report, book review. Each preset replaces the rubric list with appropriate criteria and weights that sum to 100.',
+    benefits: ['The teacher sets up an assignment in seconds instead of typing criteria', 'More consistent scoring across classes', 'Presets can still be edited after applying'] },
+  { id: 'C2', cat: 'C', title: 'Per-rubric enable / disable toggle',
+    importance: 6, difficulty: 'Easy', benchmark: 'Gradescope rubric toggles',
+    requirement: 'rubrics',
+    description: 'Each rubric gets an on/off switch. Disabled rubrics keep their weight definition but are excluded from the next evaluation, and the total rebalances automatically.',
+    benefits: ['One rubric set can serve several assignments', 'Lets the teacher focus an evaluation on a single skill (for example only Grammar)'] },
+  { id: 'C3', cat: 'C', title: 'Custom score scales per rubric',
+    importance: 5, difficulty: 'Medium', benchmark: 'Gradescope points per criterion',
+    requirement: 'score',
+    description: 'Allow a rubric to define its own max points (for example 0-20) while the final score still normalizes to 100. The panel shows both the raw points and the normalized contribution.',
+    benefits: ['Matches how many schools already grade each criterion', 'The 0-100 headline score stays for the progress charts'] },
+  { id: 'C4', cat: 'C', title: 'Rubric JSON import / export',
+    importance: 6, difficulty: 'Easy', benchmark: 'CoGrader rubric sharing',
+    requirement: 'rubrics',
+    description: 'Buttons to copy the rubric list as JSON and to paste a JSON list back. Useful for the teacher to duplicate the same criteria across many student records or share with colleagues.',
+    benefits: ['Reuse instead of retyping', 'A plain JSON text is CMS-friendly and needs no new storage'] },
+  { id: 'C5', cat: 'C', title: 'Custom grade-band thresholds',
+    importance: 5, difficulty: 'Easy', benchmark: 'Local grading schemes',
+    requirement: 'score',
+    description: 'A parameter or teacher setting that replaces the built-in A-F bands (90/80/70/60) with custom thresholds and labels, for example a 100-point school scale.',
+    benefits: ['The grade badge matches the school system', 'One small change, visible everywhere the grade appears'] },
+  { id: 'C6', cat: 'C', title: 'Comment bank for the teacher',
+    importance: 5, difficulty: 'Medium', benchmark: 'Turnitin QuickMarks',
+    requirement: 'teacher',
+    description: 'The teacher saves reusable short comments (for example "Thesis needs focus") and inserts them into a teacher note attached to the current evaluation.',
+    benefits: ['Faster human feedback on top of the service feedback', 'Consistent wording across students'] },
+  { id: 'C7', cat: 'C', title: 'Live weight rebalance helper',
+    importance: 7, difficulty: 'Easy', benchmark: 'Slider-based weight editors',
+    requirement: 'rubrics',
+    description: 'When weights do not total 100, a "Fit to 100" button proportionally scales all weights to exactly 100, with a preview of the new values before applying.',
+    benefits: ['Removes weight math errors, the most common teacher mistake', 'The weight warning becomes a one-click fix'] },
+
+  /* ── D: Progress & Analytics ── */
+  { id: 'D1', cat: 'D', title: 'Radar chart of the rubric profile',
+    importance: 8, difficulty: 'Medium', benchmark: 'Writable progress radar',
+    requirement: 'history',
+    description: 'A pure-SVG radar/spider chart comparing the latest rubric scores (and optionally the first version as an overlay) so the shape of strengths and weaknesses is visible in one glance.',
+    benefits: ['Strengths and gaps become instantly visible', 'A second chart type complements the line charts', 'No library needed, consistent with the existing SVG approach'] },
+  { id: 'D2', cat: 'D', title: 'Word count growth chart',
+    importance: 6, difficulty: 'Easy', benchmark: 'Writing analytics apps',
+    requirement: 'history',
+    description: 'A small bar chart of the essay word count at each evaluation, drawn with the same SVG helper as the score charts.',
+    benefits: ['Shows effort growth alongside score growth', 'Reassures students that length is not the only thing changing'] },
+  { id: 'D3', cat: 'D', title: 'Per-rubric average and best score table',
+    importance: 7, difficulty: 'Easy', benchmark: 'Gradescope statistics',
+    requirement: 'history',
+    description: 'A compact table under the charts: for each rubric, the average score across versions, the best version and its number, and the trend arrow.',
+    benefits: ['Identifies persistent weak areas that line charts can hide', 'Data for the "what to revise next" decision'] },
+  { id: 'D4', cat: 'D', title: 'Export progress report PDF',
+    importance: 8, difficulty: 'Medium', benchmark: 'School report cards',
+    requirement: 'history',
+    description: 'A "Download report" button builds a clean one-page summary (scores over versions, charts, latest strengths and next steps) and exports it with requestExportPdf. Useful for parents and parent-teacher meetings.',
+    benefits: ['Shareable evidence of improvement', 'Reuses existing chart and summary renderers', 'Teachers can attach it to emails'] },
+  { id: 'D5', cat: 'D', title: 'Achievement badges',
+    importance: 5, difficulty: 'Medium', benchmark: 'Duolingo streaks',
+    requirement: 'history',
+    description: 'Small earned badges shown in the Progress tab: First Evaluation, +10 Improvement, Reached 80, Reached 90, Three Versions. Purely decorative and computed locally.',
+    benefits: ['Gamifies the revise-evaluate loop', 'Celebrates effort, not just the final score'] },
+  { id: 'D6', cat: 'D', title: 'Goal setter with per-rubric gap',
+    importance: 7, difficulty: 'Easy', benchmark: 'NoRedInk goal mode',
+    requirement: 'history',
+    description: 'The student picks a target score (for example 85). The Progress tab shows the gap and, per rubric, how many more points that rubric must gain to reach the goal, based on its weight.',
+    benefits: ['Concrete goal-setting instead of vague "do better"', 'Turns the weighted math into a personal plan'] },
+  { id: 'D7', cat: 'D', title: 'Score trajectory projection',
+    importance: 3, difficulty: 'Medium', benchmark: 'Fitness tracking apps',
+    requirement: 'history',
+    description: 'A simple linear trend line extended one or two versions ahead, shown dashed on the overall chart.',
+    benefits: ['Motivating when the trend is upward', 'A natural conversation starter for teacher feedback'] },
+
+  /* ── E: Teacher & Instructor Tools ── */
+  { id: 'E1', cat: 'E', title: 'Teacher dashboard across all students',
+    importance: 9, difficulty: 'Hard', benchmark: 'Gradescope and CoGrader dashboards',
+    requirement: 'teacher',
+    description: 'A separate CMS object type (for example essay-evaluator-summaries-uniconbaseapps) where every evaluation also writes a light summary row. A teacher-facing variant of the tool or a CMS Object Manager view then lists all students with latest scores and trend arrows. Requires requestObjects authorization settings.',
+    benefits: ['The single-essay-per-student model scales to a whole class', 'Class-level oversight without opening each record', 'Enables the CSV export and notifications below'] },
+  { id: 'E2', cat: 'E', title: 'Teacher final grade override and lock',
+    importance: 8, difficulty: 'Easy', benchmark: 'Canvas gradebook overrides',
+    requirement: 'teacher',
+    description: 'The teacher can set a manual final score and a short note. Once locked, the score chip shows the teacher score with a lock icon, while the service evaluations stay visible underneath.',
+    benefits: ['The teacher keeps the final say', 'Grade disputes have an audit trail (service score vs final score)'] },
+  { id: 'E3', cat: 'E', title: 'Teacher margin comments',
+    importance: 9, difficulty: 'Hard', benchmark: 'Google Docs comments, Kaizena audio notes',
+    requirement: 'neverTouch',
+    description: 'A read-only annotated layer where the teacher attaches comments to selected text in the essay. Comments render as margin bubbles; the student text itself is never modified.',
+    benefits: ['Human feedback lands exactly where it applies', 'Complements the service evaluation without duplicating it', 'Respects the never-touch principle - comments live outside the essay content'] },
+  { id: 'E4', cat: 'E', title: 'Submission lock after deadline',
+    importance: 7, difficulty: 'Medium', benchmark: 'Canvas / Blackboard due dates',
+    requirement: 'teacher',
+    description: 'A deadline parameter. After the deadline, the editor becomes read-only for students while the teacher retains full access. The lock shows a friendly "submitted on..." note.',
+    benefits: ['Fair deadlines for timed assignments', 'Prevents last-minute rewrites after grading starts'] },
+  { id: 'E5', cat: 'E', title: 'Email the evaluation results',
+    importance: 6, difficulty: 'Easy', benchmark: 'CoGrader email delivery',
+    requirement: 'teacher',
+    description: 'A button that sends the latest evaluation summary (score, band, top next steps) by email with requestSendEmail, optionally attaching the progress report PDF from D4.',
+    benefits: ['Results reach students and parents in their inbox', 'Uses an existing SDK channel, low effort'] },
+  { id: 'E6', cat: 'E', title: 'Originality / similarity screening',
+    importance: 6, difficulty: 'Hard', benchmark: 'Turnitin similarity reports',
+    requirement: 'teacher',
+    description: 'Compare the essay against known sources. The sandbox forbids external fetch calls, so this needs a CMS bridge service or an approved API through the parent window. Listed for completeness; it is the hardest item in the list.',
+    benefits: ['Academic integrity signal for teachers', 'A differentiator if the CMS later offers a screening service'] },
+  { id: 'E7', cat: 'E', title: 'Export class CSV',
+    importance: 5, difficulty: 'Easy', benchmark: 'LMS gradebook exports',
+    requirement: 'teacher',
+    description: 'With E1 in place, a CSV export of student, version count, first score, latest score and trend, downloadable for the school gradebook.',
+    benefits: ['Zero retyping into spreadsheets', 'One-click reporting to administration'] },
+
+  /* ── F: Student Guidance & Learning ── */
+  { id: 'F1', cat: 'F', title: 'Ask questions about my feedback',
+    importance: 8, difficulty: 'Medium', benchmark: 'ChatGPT follow-up, CoGrader chat',
+    requirement: 'score',
+    description: 'A small input under each evaluation: "Ask about this feedback". The question is sent with the evaluation as context, and the answer appears as a short Q&A card under the feedback. Uses the existing evaluation channel.',
+    benefits: ['Feedback becomes a conversation, not a verdict', 'Clears up "what does this mean?" moments without the teacher', 'Reuses the current channel, moderate effort'] },
+  { id: 'F2', cat: 'F', title: 'Pre-writing outline builder',
+    importance: 7, difficulty: 'Medium', benchmark: 'Writable outline mode',
+    requirement: 'oneEssay',
+    description: 'An optional first step where the student drafts a thesis and three main points before writing. A lightweight evaluation of the outline gives early guidance on structure.',
+    benefits: ['Better first drafts, fewer failed evaluations', 'Trains planning, the highest-value writing habit'] },
+  { id: 'F3', cat: 'F', title: 'Revision plan generator',
+    importance: 7, difficulty: 'Medium', benchmark: 'CoGrader action plans',
+    requirement: 'neverTouch',
+    description: 'One click turns all suggestions and next steps into an ordered revision plan grouped by rubric, with estimated effort (small / medium / large). The plan is a list the student follows - nothing is applied automatically.',
+    benefits: ['Feedback becomes an actionable sequence', 'Fits the never-touch philosophy: the plan guides, the student writes'] },
+  { id: 'F4', cat: 'F', title: 'Suggested resources per weak rubric',
+    importance: 5, difficulty: 'Medium', benchmark: 'NoRedInk practice links',
+    requirement: 'teacher',
+    description: 'Each rubric can carry an optional help URL or mini-lesson text (configured by the teacher). When a rubric scores low, its card shows the linked resource.',
+    benefits: ['Just-in-time learning targeted at the actual gap', 'The teacher curates the material once'] },
+  { id: 'F5', cat: 'F', title: 'Rubric explainer in student language',
+    importance: 5, difficulty: 'Easy', benchmark: 'Turnitin student rubric view',
+    requirement: 'rubrics',
+    description: 'Each rubric row gets an expandable "What this means" block with plain-language examples and a "what a strong essay does here" line, editable by the teacher.',
+    benefits: ['Students understand what is being scored before they write', 'Reduces "why did I lose points" confusion'] },
+  { id: 'F6', cat: 'F', title: 'Model essays library',
+    importance: 5, difficulty: 'Medium', benchmark: 'Turnitin exemplar banks',
+    requirement: 'teacher',
+    description: 'The teacher can store one or two model essays (as rich text) per subject, shown read-only in the Rubrics panel as references.',
+    benefits: ['Exemplars set expectations instantly', 'Students learn by reading strong work'] },
+  { id: 'F7', cat: 'F', title: '"Strengthen this sentence" examples',
+    importance: 4, difficulty: 'Hard', benchmark: 'Grammarly rewrite suggestions',
+    requirement: 'neverTouch',
+    description: 'For a selected sentence, show one example of a stronger version inside the feedback panel. The example is never inserted into the essay; the student rewrites in their own words.',
+    benefits: ['Concrete models for weak sentences', 'The never-touch promise stays intact because examples stay in the panel'] },
+
+  /* ── G: CMS Integration & Automation ── */
+  { id: 'G1', cat: 'G', title: 'Move evaluation history to its own CMS object type',
+    importance: 8, difficulty: 'Hard', benchmark: 'Firestore subcollections pattern',
+    requirement: 'history',
+    description: 'Evaluations currently live inside the record value, which is capped by the Firestore 1MB document limit. Store each evaluation as a separate object of a per-instance CMS type (scope instance) and keep only light metadata in the record value. Migrates existing histories on first load.',
+    benefits: ['Unlimited improvement history - the core promise of the Progress tab', 'Prevents future save failures on very active essays', 'Evaluations become centrally queryable and auditable'] },
+  { id: 'G2', cat: 'G', title: 'Notify the teacher on new evaluations',
+    importance: 5, difficulty: 'Medium', benchmark: 'CoGrader notifications',
+    requirement: 'teacher',
+    description: 'After each evaluation, notify the teacher through the CMS (a notification or an email to a configured address) that a student submitted a new version.',
+    benefits: ['The teacher reviews work while it is fresh', 'Closes the loop between student effort and teacher attention'] },
+  { id: 'G3', cat: 'G', title: 'Auto-evaluate on save option',
+    importance: 4, difficulty: 'Medium', benchmark: 'Continuous assessment tools',
+    requirement: 'history',
+    description: 'A field setting that automatically runs an evaluation whenever the essay is saved and enough time has passed since the last one.',
+    benefits: ['A hands-off improvement trail for self-paced students', 'Builds the chart data without repeated clicks'] },
+  { id: 'G4', cat: 'G', title: 'Open the parent CMS record',
+    importance: 3, difficulty: 'Easy', benchmark: 'CMS object detail links',
+    requirement: 'cms',
+    description: 'A teacher-only link that opens the parent CMS record with openObjectDetail for quick access to student info fields.',
+    benefits: ['Faster navigation between the essay and the student record'] },
+  { id: 'G5', cat: 'G', title: 'Parent / guardian read-only summary view',
+    importance: 5, difficulty: 'Easy', benchmark: 'Parent portals in LMSs',
+    requirement: 'teacher',
+    description: 'When a viewer opens the record, they see a simplified read-only summary: latest score, trend, and the teacher note - without the full feedback detail. Implemented as a role-based view.',
+    benefits: ['Parents see progress without overwhelming detail', 'Uses the existing viewer role, no new permissions'] },
+  { id: 'G6', cat: 'G', title: 'Scheduled evaluation',
+    importance: 3, difficulty: 'Medium', benchmark: 'Scheduled reports',
+    requirement: 'cms',
+    description: 'A date-time parameter: the tool offers the evaluation automatically on that date (for example the assignment deadline) so the submitted state is captured on time.',
+    benefits: ['Consistent snapshots at the deadline', 'Removes the "forgot to evaluate" edge case'] },
+
+  /* ── H: Quality, Performance & Accessibility ── */
+  { id: 'H1', cat: 'H', title: 'Accessibility pass',
+    importance: 7, difficulty: 'Medium', benchmark: 'WCAG 2.1 AA',
+    requirement: 'oneEssay',
+    description: 'ARIA labels on the panels, dropdown and toolbar; focus management for the modal and the version menu; visible focus rings; keyboard access to every action; screen-reader announcements for score updates.',
+    benefits: ['Every student can use the tool, including assistive-technology users', 'Better keyboard flow helps everyone', 'Future-proofs the UI for stricter CMS standards'] },
+  { id: 'H2', cat: 'H', title: 'Multi-tab conflict detection',
+    importance: 6, difficulty: 'Medium', benchmark: 'Google Docs presence',
+    requirement: 'oneEssay',
+    description: 'When onValueChange delivers a value that differs from the local essay while the student is typing, show a gentle "The essay changed in another tab" notice and offer to keep the local draft or reload.',
+    benefits: ['Prevents silent overwrites when the same record is open twice', 'Peace of mind on shared classroom computers'] },
+  { id: 'H3', cat: 'H', title: 'Render performance for long essays',
+    importance: 7, difficulty: 'Medium', benchmark: 'Editor performance budgets',
+    requirement: 'oneEssay',
+    description: 'Keep typing cheap: update only the word count and save state on each keystroke, and avoid full re-renders while the editor has focus. Move heavy renders (charts, panels) to when they are opened.',
+    benefits: ['Smooth typing even in 2,000-word essays', 'Lower battery and CPU use on school laptops'] },
+  { id: 'H4', cat: 'H', title: 'Storage budget meter',
+    importance: 7, difficulty: 'Easy', benchmark: 'Firestore 1MB document limits',
+    requirement: 'history',
+    description: 'Estimate the JSON size of the saved value and show a small meter near the footer (or only for teachers). Warn when the record approaches the 1MB CMS document limit, and point to G1 as the long-term fix.',
+    benefits: ['Surfaces save failures before they happen', 'Pairs with G1 to make the history unlimited'] },
+  { id: 'H5', cat: 'H', title: 'UI localization (Turkish labels)',
+    importance: 5, difficulty: 'Medium', benchmark: 'Localized learning apps',
+    requirement: 'oneEssay',
+    description: 'A label dictionary and a language parameter so all UI strings (buttons, tabs, hints) can be shown in Turkish, with English as the default.',
+    benefits: ['Students work in their stronger language', 'The essay and evaluation content stay in the essay language'] },
+  { id: 'H6', cat: 'H', title: 'Right-to-left support',
+    importance: 2, difficulty: 'Medium', benchmark: 'RTL-ready editors',
+    requirement: 'oneEssay',
+    description: 'Add dir="auto" handling and mirrored layout so essays in Arabic or similar languages display and edit correctly.',
+    benefits: ['Opens the tool to more languages', 'A small CSS and attribute pass once the layout is stable'] },
+  { id: 'H7', cat: 'H', title: 'Print-friendly essay and feedback',
+    importance: 5, difficulty: 'Easy', benchmark: 'Print stylesheets',
+    requirement: 'teacher',
+    description: 'A print stylesheet and a Print button so the essay plus the latest evaluation renders cleanly on paper for grading or parent signatures.',
+    benefits: ['Paper workflows stay possible', 'One click from screen to page'] }
+];
+
+/* ── State ── */
+var ideaState = { statuses: {}, notes: {} };
+
+function loadIdeaState() {
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      ideaState.statuses = parsed.statuses || {};
+      ideaState.notes = parsed.notes || {};
+    }
+  } catch (error) {}
+}
+
+function saveIdeaState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(ideaState)); } catch (error) {}
+}
+
+function statusOf(id) { return ideaState.statuses[id] || 'Planned'; }
+function notesOf(id) { return ideaState.notes[id] || ''; }
+
+/* ── Filters state ── */
+var activeCategory = 'all';
+var searchText = '';
+var activeDifficulty = 'all';
+var activeStatus = 'all';
+var activeSort = 'importance';
+
+function categoryNameOf(id) {
+  for (var i = 0; i < CATEGORIES.length; i++) {
+    if (CATEGORIES[i].id === id) return CATEGORIES[i].name;
+  }
+  return '';
+}
+
+function escapeHtml(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function importanceClass(score) {
+  if (score >= 9) return 'imp-9';
+  if (score >= 8) return 'imp-8';
+  if (score >= 6) return 'imp-6';
+  if (score >= 5) return 'imp-5';
+  if (score >= 4) return 'imp-4';
+  if (score >= 3) return 'imp-3';
+  if (score >= 2) return 'imp-2';
+  return 'imp-1';
+}
+
+function requirementLabel(id) {
+  for (var i = 0; i < REQUIREMENTS.length; i++) {
+    if (REQUIREMENTS[i].id === id) return REQUIREMENTS[i].label;
+  }
+  return '';
+}
+
+/* ── Rendering ── */
+function renderRequirementChips() {
+  var container = document.getElementById('req-chips');
+  container.innerHTML = REQUIREMENTS.map(function (req) {
+    return '<span class="req-chip">' + escapeHtml(req.label) + '</span>';
+  }).join('');
+}
+
+function renderStats() {
+  var total = FEATURES.length;
+  var importanceSum = FEATURES.reduce(function (sum, feature) { return sum + feature.importance; }, 0);
+  var highPriority = FEATURES.filter(function (feature) { return feature.importance >= 8; }).length;
+  var easy = FEATURES.filter(function (feature) { return feature.difficulty === 'Easy'; }).length;
+  var medium = FEATURES.filter(function (feature) { return feature.difficulty === 'Medium'; }).length;
+  var hard = FEATURES.filter(function (feature) { return feature.difficulty === 'Hard'; }).length;
+  var planned = FEATURES.filter(function (feature) { return statusOf(feature.id) === 'Planned'; }).length;
+  var inProgress = FEATURES.filter(function (feature) { return statusOf(feature.id) === 'In Progress'; }).length;
+  var done = FEATURES.filter(function (feature) { return statusOf(feature.id) === 'Done'; }).length;
+  document.getElementById('stats-bar').innerHTML =
+    '<div class="stat-box"><div class="num">' + total + '</div><div class="lbl">Ideas collected</div></div>' +
+    '<div class="stat-box"><div class="num">' + importanceSum + '</div><div class="lbl">Total importance points</div></div>' +
+    '<div class="stat-box"><div class="num">' + highPriority + '</div><div class="lbl">High priority (8+)</div></div>' +
+    '<div class="stat-box"><div class="num">' + easy + ' / ' + medium + ' / ' + hard + '</div><div class="lbl">Easy / Medium / Hard</div></div>' +
+    '<div class="stat-box"><div class="num">' + planned + ' / ' + inProgress + ' / ' + done + '</div><div class="lbl">Planned / In progress / Done</div></div>';
+}
+
+function renderCategoryChips() {
+  var chips = [{ id: 'all', name: 'All' }].concat(CATEGORIES);
+  document.getElementById('cat-chips').innerHTML = chips.map(function (category) {
+    return '<button class="cat-chip' + (activeCategory === category.id ? ' active' : '') + '" data-cat="' + category.id + '">' +
+      escapeHtml(category.name) + '</button>';
+  }).join('');
+}
+
+function featureMatches(feature) {
+  if (activeCategory !== 'all' && feature.cat !== activeCategory) return false;
+  if (activeDifficulty !== 'all' && feature.difficulty !== activeDifficulty) return false;
+  if (activeStatus !== 'all' && statusOf(feature.id) !== activeStatus) return false;
+  if (searchText) {
+    var haystack = (feature.id + ' ' + feature.title + ' ' + feature.description + ' ' +
+      feature.benchmark + ' ' + feature.benefits.join(' ')).toLowerCase();
+    if (haystack.indexOf(searchText) === -1) return false;
+  }
+  return true;
+}
+
+function renderFeatures() {
+  var list = FEATURES.filter(featureMatches);
+  if (activeSort === 'importance') {
+    list.sort(function (a, b) { return b.importance - a.importance || (a.id < b.id ? -1 : 1); });
+  } else {
+    list.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+  }
+  var container = document.getElementById('features');
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-note">No ideas match the current filters.</div>';
+    return;
+  }
+  container.innerHTML = list.map(function (feature) {
+    var benefits = feature.benefits.map(function (benefit) {
+      return '<li>' + escapeHtml(benefit) + '</li>';
+    }).join('');
+    return '<article class="feature" data-fid="' + feature.id + '">' +
+      '<div class="imp"><span class="score ' + importanceClass(feature.importance) + '">' + feature.importance + '</span><span class="of-ten">/10 importance</span></div>' +
+      '<div class="body">' +
+        '<div class="topline">' +
+          '<span class="fid">' + feature.id + '</span>' +
+          '<span class="cat-badge">' + escapeHtml(categoryNameOf(feature.cat)) + '</span>' +
+          '<span class="diff diff-' + feature.difficulty + '">' + feature.difficulty + '</span>' +
+          '<span class="req-badge">' + escapeHtml(requirementLabel(feature.requirement)) + '</span>' +
+        '</div>' +
+        '<h3>' + escapeHtml(feature.title) + '</h3>' +
+        '<p class="desc">' + escapeHtml(feature.description) + '</p>' +
+        '<ul class="benefits">' + benefits + '</ul>' +
+        '<div class="bench"><b>Benchmark:</b> ' + escapeHtml(feature.benchmark) + '</div>' +
+      '</div>' +
+      '<div class="side">' +
+        '<div><label for="st-' + feature.id + '">Status</label>' +
+        '<select id="st-' + feature.id + '" data-status-id="' + feature.id + '">' +
+          '<option value="Planned"' + (statusOf(feature.id) === 'Planned' ? ' selected' : '') + '>Planned</option>' +
+          '<option value="In Progress"' + (statusOf(feature.id) === 'In Progress' ? ' selected' : '') + '>In Progress</option>' +
+          '<option value="Done"' + (statusOf(feature.id) === 'Done' ? ' selected' : '') + '>Done</option>' +
+          '<option value="Skipped"' + (statusOf(feature.id) === 'Skipped' ? ' selected' : '') + '>Skipped</option>' +
+        '</select></div>' +
+        '<div><label for="nt-' + feature.id + '">Notes</label>' +
+        '<textarea id="nt-' + feature.id + '" data-note-id="' + feature.id + '" placeholder="Planning notes...">' + escapeHtml(notesOf(feature.id)) + '</textarea></div>' +
+      '</div>' +
+    '</article>';
+  }).join('');
+}
+
+function bindControls() {
+  document.getElementById('search-input').addEventListener('input', function (event) {
+    searchText = event.target.value.trim().toLowerCase();
+    renderFeatures();
+  });
+  document.getElementById('difficulty-filter').addEventListener('change', function (event) {
+    activeDifficulty = event.target.value;
+    renderFeatures();
+  });
+  document.getElementById('status-filter').addEventListener('change', function (event) {
+    activeStatus = event.target.value;
+    renderFeatures();
+  });
+  document.getElementById('sort-select').addEventListener('change', function (event) {
+    activeSort = event.target.value;
+    renderFeatures();
+  });
+  document.getElementById('cat-chips').addEventListener('click', function (event) {
+    var chip = event.target;
+    if (chip && chip.getAttribute && chip.getAttribute('data-cat')) {
+      activeCategory = chip.getAttribute('data-cat');
+      renderCategoryChips();
+      renderFeatures();
+    }
+  });
+  document.getElementById('features').addEventListener('change', function (event) {
+    var target = event.target;
+    if (target && target.getAttribute && target.getAttribute('data-status-id')) {
+      ideaState.statuses[target.getAttribute('data-status-id')] = target.value;
+      saveIdeaState();
+      renderStats();
+    }
+  });
+  var noteTimer = null;
+  document.getElementById('features').addEventListener('input', function (event) {
+    var target = event.target;
+    if (target && target.getAttribute && target.getAttribute('data-note-id')) {
+      clearTimeout(noteTimer);
+      var noteId = target.getAttribute('data-note-id');
+      noteTimer = setTimeout(function () {
+        ideaState.notes[noteId] = target.value;
+        saveIdeaState();
+      }, 400);
+    }
+  });
+}
+
+loadIdeaState();
+renderRequirementChips();
+renderStats();
+renderCategoryChips();
+renderFeatures();
+bindControls();
+</script>
+</body>
+</html>
