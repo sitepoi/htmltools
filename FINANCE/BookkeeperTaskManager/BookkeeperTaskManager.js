@@ -193,6 +193,13 @@
     return pad2(dateObject.getDate()) + " " + MONTHS_SHORT[dateObject.getMonth()] + " " + pad2(dateObject.getHours()) + ":" + pad2(dateObject.getMinutes());
   }
 
+  function localDateOfIsoDateTime(isoDateTimeString) {
+    if (!isoDateTimeString) return "";
+    var dateObject = new Date(isoDateTimeString);
+    if (isNaN(dateObject.getTime())) return "";
+    return isoOfDate(dateObject);
+  }
+
   function tryNotify(message, severity) {
     try { tool.notify(message, severity || "success"); } catch (error) {}
   }
@@ -343,7 +350,7 @@
       year: new Date().getFullYear(),
       definitions: [],
       statuses: {},
-      ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "" }
+      ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "", dashMonth: "year" }
     };
   }
 
@@ -391,11 +398,12 @@
       database.statuses = rawValue.statuses;
     }
     if (rawValue.ui && typeof rawValue.ui === "object" && !Array.isArray(rawValue.ui)) {
-      database.ui.tab = (rawValue.ui.tab === "year" || rawValue.ui.tab === "defs") ? rawValue.ui.tab : "board";
+      database.ui.tab = (rawValue.ui.tab === "year" || rawValue.ui.tab === "defs" || rawValue.ui.tab === "dashboard") ? rawValue.ui.tab : "board";
       database.ui.scope = (rawValue.ui.scope === "today" || rawValue.ui.scope === "week" || rawValue.ui.scope === "month") ? rawValue.ui.scope : "week";
       database.ui.statusFilter = String(rawValue.ui.statusFilter || "all");
       database.ui.category = String(rawValue.ui.category || "all");
       database.ui.search = String(rawValue.ui.search || "");
+      database.ui.dashMonth = (typeof rawValue.ui.dashMonth === "number" && rawValue.ui.dashMonth >= 0 && rawValue.ui.dashMonth <= 11) ? rawValue.ui.dashMonth : "year";
     }
     return database;
   }
@@ -1218,6 +1226,9 @@
       var boardData = buildBoardData();
       renderRibbon(boardData.stats);
       renderBoardPane(boardData);
+    } else if (tab === "dashboard") {
+      renderRibbon(buildYearStats(DB.year));
+      renderDashboardPane();
     } else if (tab === "year") {
       renderRibbon(buildYearStats(DB.year));
       renderYearPane();
@@ -1266,7 +1277,7 @@
     });
     byId("bktTabDefs").style.display = canAdminister() ? "" : "none";
     byId("bktScopeRow").style.display = tab === "board" ? "" : "none";
-    byId("bktYearRow").style.display = (tab === "year" || tab === "defs") ? "" : "none";
+    byId("bktYearRow").style.display = (tab === "year" || tab === "defs" || tab === "dashboard") ? "" : "none";
     byId("bktYearLabel").textContent = String(DB.year);
     queryAll(".bkt-scope-chip").forEach(function (scopeChip) {
       scopeChip.classList.toggle("active", scopeChip.getAttribute("data-scope") === (DB.ui.scope || "week"));
@@ -1277,6 +1288,7 @@
     }
     fillFilterSelects();
     byId("bktPaneBoard").style.display = tab === "board" ? "" : "none";
+    byId("bktPaneDashboard").style.display = tab === "dashboard" ? "" : "none";
     byId("bktPaneYear").style.display = tab === "year" ? "" : "none";
     byId("bktPaneDefs").style.display = tab === "defs" ? "" : "none";
     var adminVisible = canAdminister() ? "" : "none";
@@ -1439,6 +1451,284 @@
   }
 
   /* ============================================================
+     DASHBOARD
+     ============================================================ */
+
+  function completionDateOf(entry) {
+    if (!entry) return "";
+    return entry.completedAt || entry.confirmedAt || "";
+  }
+
+  function formatPercent(numerator, denominator) {
+    if (!denominator) return "%0";
+    var value = numerator * 100 / denominator;
+    if (value > 0 && value < 1) return "%" + (Math.round(value * 10) / 10);
+    return "%" + Math.round(value);
+  }
+
+  function buildDashboardData() {
+    var year = DB.year;
+    var today = todayIsoString();
+    var dailyOverdueCutoff = addDaysToIso(today, -7);
+    var upcomingCutoff = addDaysToIso(today, 7);
+    var months = [];
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      months.push({ monthIndex: monthIndex, total: 0, completed: 0, onTime: 0, timed: 0, awaiting: 0, inProgress: 0, overdue: 0 });
+    }
+    var categoryMap = {};
+    var split = { routine: { total: 0, completed: 0 }, adhoc: { total: 0, completed: 0 } };
+    var activity = [];
+    var overall = { total: 0, completed: 0, onTime: 0, timed: 0, awaiting: 0, inProgress: 0, overdue: 0, upcoming7: 0 };
+
+    DB.definitions.forEach(function (definition) {
+      var isAdhoc = definition.taskType === "adHoc";
+      var category = categoryMap[definition.category];
+      if (!category) {
+        category = categoryMap[definition.category] = { label: categoryLabelOf(definition.category), total: 0, completed: 0, overdue: 0 };
+      }
+      var latestOpenOverdueDue = "";
+      occurrenceDatesForDefinition(definition, year, true).forEach(function (dueDate) {
+        var entry = statusEntryFor(occurrenceKey(definition.id, dueDate));
+        var status = entry ? entry.status : "pending";
+        var monthData = months[parseInt(dueDate.slice(5, 7), 10) - 1];
+        var bucket = isAdhoc ? split.adhoc : split.routine;
+        monthData.total++;
+        overall.total++;
+        category.total++;
+        bucket.total++;
+        if (isFinishedStatus(status)) {
+          monthData.completed++;
+          overall.completed++;
+          category.completed++;
+          bucket.completed++;
+          var completedDate = completionDateOf(entry);
+          if (completedDate) {
+            overall.timed++;
+            monthData.timed++;
+            if (localDateOfIsoDateTime(completedDate) <= dueDate) {
+              monthData.onTime++;
+              overall.onTime++;
+            }
+          }
+        } else if (status === "awaitingConfirmation") {
+          overall.awaiting++;
+          monthData.awaiting++;
+        } else if (status === "inProgress") {
+          overall.inProgress++;
+          monthData.inProgress++;
+        }
+        if (dueDate < today && isOpenStatus(status)) {
+          if (definition.frequency === "daily") {
+            if (dueDate >= dailyOverdueCutoff) {
+              overall.overdue++;
+              monthData.overdue++;
+              category.overdue++;
+            }
+          } else if (isAdhoc) {
+            overall.overdue++;
+            monthData.overdue++;
+            category.overdue++;
+          } else {
+            if (dueDate > latestOpenOverdueDue) latestOpenOverdueDue = dueDate;
+          }
+        }
+        if (isOpenStatus(status) && dueDate >= today && dueDate <= upcomingCutoff) overall.upcoming7++;
+        if (entry && Array.isArray(entry.log)) {
+          entry.log.forEach(function (logItem) {
+            if (logItem.at) activity.push({ title: definition.title, dueDate: dueDate, status: logItem.status, at: logItem.at, by: logItem.by || "" });
+          });
+        }
+      });
+      if (latestOpenOverdueDue) {
+        overall.overdue++;
+        months[parseInt(latestOpenOverdueDue.slice(5, 7), 10) - 1].overdue++;
+        category.overdue++;
+      }
+    });
+
+    activity.sort(function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; });
+    activity = activity.slice(0, 12);
+
+    var categories = Object.keys(categoryMap).map(function (id) { return categoryMap[id]; });
+    categories.sort(function (a, b) { return b.total - a.total; });
+
+    return { year: year, months: months, categories: categories, split: split, activity: activity, overall: overall };
+  }
+
+  function dashCardHtml(className, valueHtml, label, subHtml) {
+    return '<div class="bkt-dash-card ' + className + '">' +
+      '<div class="bkt-dash-value">' + valueHtml + "</div>" +
+      '<div class="bkt-dash-label">' + label + "</div>" +
+      '<div class="bkt-dash-sub">' + subHtml + "</div></div>";
+  }
+
+  function buildMonthChartSvg(months) {
+    var width = 660;
+    var height = 252;
+    var left = 46;
+    var right = 8;
+    var top = 16;
+    var bottom = 30;
+    var plotWidth = width - left - right;
+    var plotHeight = height - top - bottom;
+    var maxTotal = 1;
+    months.forEach(function (monthData) { if (monthData.total > maxTotal) maxTotal = monthData.total; });
+    var html = '<svg viewBox="0 0 ' + width + " " + height + '" role="img" aria-label="Month-by-month completion chart">';
+    for (var grid = 0; grid <= 4; grid++) {
+      var gridY = top + plotHeight - (plotHeight * grid / 4);
+      var gridValue = Math.round(maxTotal * grid / 4);
+      html += '<line class="bkt-gridline" x1="' + left + '" y1="' + gridY + '" x2="' + (width - right) + '" y2="' + gridY + '"></line>';
+      html += '<text class="bkt-axis-label" x="' + (left - 7) + '" y="' + (gridY + 4) + '" text-anchor="end">' + gridValue + "</text>";
+    }
+    var slotWidth = plotWidth / 12;
+    var barWidth = Math.min(18, slotWidth * 0.5);
+    months.forEach(function (monthData, index) {
+      var centerX = left + slotWidth * index + slotWidth / 2;
+      var totalHeight = monthData.total ? plotHeight * monthData.total / maxTotal : 0;
+      var doneHeight = monthData.completed ? plotHeight * monthData.completed / maxTotal : 0;
+      var barX = centerX - barWidth / 2;
+      html += '<rect class="bkt-bar-total" x="' + barX + '" y="' + (top + plotHeight - totalHeight) + '" width="' + barWidth + '" height="' + totalHeight + '" rx="2">' +
+        "<title>" + MONTHS_FULL[monthData.monthIndex] + ": " + monthData.completed + " of " + monthData.total + " completed</title></rect>";
+      html += '<rect class="bkt-bar-done" x="' + barX + '" y="' + (top + plotHeight - doneHeight) + '" width="' + barWidth + '" height="' + doneHeight + '" rx="2">' +
+        "<title>" + MONTHS_FULL[monthData.monthIndex] + ": " + monthData.completed + " of " + monthData.total + " completed</title></rect>";
+      html += '<text class="bkt-axis-label" x="' + centerX + '" y="' + (height - 9) + '" text-anchor="middle">' + MONTHS_SHORT[monthData.monthIndex] + "</text>";
+    });
+    var segments = [];
+    var currentSegment = [];
+    months.forEach(function (monthData, index) {
+      if (!monthData.total) {
+        if (currentSegment.length) { segments.push(currentSegment); currentSegment = []; }
+        return;
+      }
+      var centerX = left + slotWidth * index + slotWidth / 2;
+      var rate = monthData.onTime / monthData.total;
+      var lineY = top + plotHeight - plotHeight * rate;
+      currentSegment.push(Math.round(centerX) + "," + Math.round(lineY));
+    });
+    if (currentSegment.length) segments.push(currentSegment);
+    segments.forEach(function (segmentPoints) {
+      html += '<polyline class="bkt-line-ontime" points="' + segmentPoints.join(" ") + '"></polyline>';
+    });
+    months.forEach(function (monthData, index) {
+      if (!monthData.total) return;
+      var centerX = left + slotWidth * index + slotWidth / 2;
+      var rate = monthData.onTime / monthData.total;
+      var lineY = top + plotHeight - plotHeight * rate;
+      html += '<circle class="bkt-dot-ontime" cx="' + Math.round(centerX) + '" cy="' + Math.round(lineY) + '" r="3">' +
+        "<title>" + MONTHS_FULL[monthData.monthIndex] + " on-time rate: " + Math.round(rate * 100) + "%</title></circle>";
+    });
+    html += "</svg>";
+    return html;
+  }
+
+  function buildCategoryRowsHtml(categories) {
+    return categories.map(function (category) {
+      var percentage = category.total ? Math.round(category.completed * 100 / category.total) : 0;
+      return '<div class="bkt-cat-row">' +
+        '<div class="bkt-cat-label">' + escapeHtml(category.label) + "</div>" +
+        '<div class="bkt-cat-bar-wrap"><div class="bkt-cat-fill" style="width:' + percentage + '%"></div></div>' +
+        '<div class="bkt-cat-counts">' + category.completed + " / " + category.total +
+        (category.overdue ? ' · <span class="bkt-cat-overdue">' + category.overdue + " overdue</span>" : "") +
+        "</div></div>";
+    }).join("");
+  }
+
+  function buildSplitHtml(split) {
+    function splitCardHtml(bucket, label) {
+      var percentage = bucket.total ? Math.round(bucket.completed * 100 / bucket.total) : 0;
+      return '<div class="bkt-split-card">' +
+        '<div class="bkt-split-title">' + label + "</div>" +
+        '<div class="bkt-split-value">' + bucket.completed + ' <span class="bkt-split-of">/ ' + bucket.total + " · %" + percentage + "</span></div>" +
+        '<div class="bkt-split-bar"><div class="bkt-split-fill" style="width:' + percentage + '%"></div></div>' +
+        "</div>";
+    }
+    return splitCardHtml(split.routine, "Routine Tasks") + splitCardHtml(split.adhoc, "Ad-hoc Tasks");
+  }
+
+  function buildActivityHtml(activity) {
+    if (!activity.length) return '<div class="bkt-empty" style="padding:18px">No activity recorded yet.</div>';
+    return activity.map(function (item) {
+      return '<div class="bkt-act-row st-' + item.status + '">' +
+        '<span class="bkt-status-pill">' + escapeHtml(statusLabelOf(item.status)) + "</span>" +
+        '<div class="bkt-act-main">' +
+        '<div class="bkt-act-title">' + escapeHtml(item.title) + "</div>" +
+        '<div class="bkt-act-meta">' + escapeHtml(formatDateShort(item.dueDate)) + " · " + escapeHtml(item.by) + " · " + formatDateTime(item.at) + "</div>" +
+        "</div></div>";
+    }).join("");
+  }
+
+  function buildDashMonthChipsHtml(dashMonth) {
+    var html = '<button type="button" class="bkt-scope-chip' + (dashMonth === "year" ? " active" : "") + '" data-act="dash-month" data-month="year">Year</button>';
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      html += '<button type="button" class="bkt-scope-chip' + (dashMonth === monthIndex ? " active" : "") + '" data-act="dash-month" data-month="' + monthIndex + '">' + MONTHS_SHORT[monthIndex] + "</button>";
+    }
+    return html;
+  }
+
+  function buildMonthTableHtml(months, dashMonth) {
+    var html = '<table class="bkt-month-table"><thead><tr>' +
+      "<th>Month</th><th class=\"num\">Due</th><th class=\"num\">Completed</th><th class=\"num\">%</th><th class=\"num\">On Time</th><th class=\"num\">Overdue</th>" +
+      "</tr></thead><tbody>";
+    months.forEach(function (monthData) {
+      var selected = dashMonth === monthData.monthIndex;
+      html += '<tr class="bkt-month-click' + (selected ? " bkt-month-selected" : "") + '" data-act="dash-month" data-month="' + monthData.monthIndex + '">' +
+        '<td class="bkt-mt-month">' + MONTHS_FULL[monthData.monthIndex] + "</td>" +
+        '<td class="num">' + monthData.total + "</td>" +
+        '<td class="num">' + monthData.completed + "</td>" +
+        '<td class="num">' + formatPercent(monthData.completed, monthData.total) + "</td>" +
+        '<td class="num">' + monthData.onTime + "</td>" +
+        '<td class="num' + (monthData.overdue ? " bkt-mt-over" : "") + '">' + monthData.overdue + "</td>" +
+        "</tr>";
+    });
+    html += "</tbody></table>";
+    return html;
+  }
+
+  function renderDashboardPane() {
+    var dashboardData = buildDashboardData();
+    var overall = dashboardData.overall;
+    var dashMonth = DB.ui.dashMonth;
+    var isMonthView = dashMonth !== "year";
+    var monthSource = isMonthView ? dashboardData.months[dashMonth] : null;
+    if (isMonthView && monthSource) {
+      byId("bktDashCards").innerHTML =
+        dashCardHtml("card-done", String(monthSource.completed), "Completed", "of " + monthSource.total + " · " + formatPercent(monthSource.completed, monthSource.total)) +
+        dashCardHtml("card-ontime", formatPercent(monthSource.onTime, monthSource.timed), "On Time", monthSource.onTime + " of " + monthSource.timed + " completed on time") +
+        dashCardHtml("card-wait", String(monthSource.awaiting), "Awaiting Confirmation", "waiting for admin approval") +
+        dashCardHtml("card-progress", String(monthSource.inProgress), "In Progress", "currently being worked on") +
+        dashCardHtml("card-overdue", String(monthSource.overdue), "Overdue", "past due and not finished") +
+        dashCardHtml("card-late", String(Math.max(monthSource.timed - monthSource.onTime, 0)), "Late Completions", "finished after their due date");
+    } else {
+      byId("bktDashCards").innerHTML =
+        dashCardHtml("card-done", String(overall.completed), "Completed", "of " + overall.total + " · " + formatPercent(overall.completed, overall.total)) +
+        dashCardHtml("card-ontime", formatPercent(overall.onTime, overall.timed), "On Time", overall.onTime + " of " + overall.timed + " completed on time") +
+        dashCardHtml("card-wait", String(overall.awaiting), "Awaiting Confirmation", "waiting for admin approval") +
+        dashCardHtml("card-progress", String(overall.inProgress), "In Progress", "currently being worked on") +
+        dashCardHtml("card-overdue", String(overall.overdue), "Overdue", "past due and not finished") +
+        dashCardHtml("card-upcoming", String(overall.upcoming7), "Upcoming 7 Days", "due in the next 7 days");
+    }
+    byId("bktDashSummaryLabel").textContent = isMonthView ? MONTHS_FULL[dashMonth] + " " + DB.year : "All Year · " + DB.year;
+    byId("bktDashMonthChips").innerHTML = buildDashMonthChipsHtml(dashMonth);
+    byId("bktDashMonthTable").innerHTML = buildMonthTableHtml(dashboardData.months, dashMonth);
+    byId("bktDashYearLabel").textContent = String(DB.year);
+    byId("bktDashMonthChart").innerHTML = buildMonthChartSvg(dashboardData.months) +
+      '<div class="bkt-chart-legend">' +
+      '<span class="bkt-legend-item"><i class="bkt-legend-swatch bkt-swatch-done"></i>Completed</span>' +
+      '<span class="bkt-legend-item"><i class="bkt-legend-swatch bkt-swatch-total"></i>Total due</span>' +
+      '<span class="bkt-legend-item"><i class="bkt-legend-line"></i>On-time rate</span>' +
+      "</div>";
+    byId("bktDashCategories").innerHTML = dashboardData.categories.length
+      ? buildCategoryRowsHtml(dashboardData.categories)
+      : '<div class="bkt-empty" style="padding:18px">No category data.</div>';
+    byId("bktDashActivity").innerHTML = buildActivityHtml(dashboardData.activity);
+    byId("bktDashSplit").innerHTML = buildSplitHtml(dashboardData.split);
+    var hasDefinitions = DB.definitions.length > 0;
+    byId("bktDashEmpty").style.display = hasDefinitions ? "none" : "";
+    byId("bktDashContent").style.display = hasDefinitions ? "" : "none";
+    if (!hasDefinitions) byId("bktDashEmpty").innerHTML = emptyMessageHtml();
+  }
+
+  /* ============================================================
      EVENTS
      ============================================================ */
 
@@ -1463,6 +1753,11 @@
       toggleDayCompletion(actionElement.getAttribute("data-def"), actionElement.getAttribute("data-date"));
     } else if (action === "note") {
       openNoteModal(actionElement.getAttribute("data-key"));
+    } else if (action === "dash-month") {
+      var monthValue = actionElement.getAttribute("data-month");
+      DB.ui.dashMonth = monthValue === "year" ? "year" : clampInt(monthValue, 0, 11);
+      persistDatabase();
+      renderAll();
     } else if (action === "expand") {
       var definitionId = actionElement.getAttribute("data-id");
       _expandedGroups[definitionId] = !_expandedGroups[definitionId];

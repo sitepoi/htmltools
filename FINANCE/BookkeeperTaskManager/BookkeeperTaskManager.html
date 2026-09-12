@@ -46,6 +46,7 @@
 
     <div class="bkt-tabs" id="bktTabs">
       <button class="bkt-tab active" data-act="tab" data-tab="board">Task Board</button>
+      <button class="bkt-tab" data-act="tab" data-tab="dashboard">Dashboard</button>
       <button class="bkt-tab" data-act="tab" data-tab="year">Year Plan</button>
       <button class="bkt-tab bkt-tab-admin" data-act="tab" data-tab="defs" id="bktTabDefs" style="display:none">Task Definitions</button>
     </div>
@@ -90,6 +91,49 @@
         <div id="bktBoardList"></div>
       </div>
       <div class="bkt-empty" id="bktBoardEmpty" style="display:none"></div>
+    </div>
+
+    <div class="bkt-pane" id="bktPaneDashboard" style="display:none">
+      <div class="bkt-empty" id="bktDashEmpty" style="display:none"></div>
+      <div id="bktDashContent">
+        <div class="bkt-section">
+          <div class="bkt-section-head">
+            <span class="bkt-section-title">Summary</span>
+            <span class="bkt-section-sub" id="bktDashSummaryLabel"></span>
+          </div>
+          <div class="bkt-dash-cards" id="bktDashCards"></div>
+        </div>
+        <div class="bkt-section">
+          <div class="bkt-section-head bkt-dash-month-head">
+            <span class="bkt-section-title">Monthly Breakdown</span>
+            <div class="bkt-scope-row" id="bktDashMonthChips"></div>
+          </div>
+          <div id="bktDashMonthTable"></div>
+        </div>
+        <div class="bkt-dash-grid">
+          <div class="bkt-section">
+            <div class="bkt-section-head">
+              <span class="bkt-section-title">Month-by-Month Completion</span>
+              <span class="bkt-section-sub" id="bktDashYearLabel"></span>
+            </div>
+            <div class="bkt-chart" id="bktDashMonthChart"></div>
+          </div>
+          <div class="bkt-section">
+            <div class="bkt-section-head"><span class="bkt-section-title">By Category</span></div>
+            <div id="bktDashCategories"></div>
+          </div>
+        </div>
+        <div class="bkt-dash-grid">
+          <div class="bkt-section">
+            <div class="bkt-section-head"><span class="bkt-section-title">Recent Activity</span></div>
+            <div id="bktDashActivity"></div>
+          </div>
+          <div class="bkt-section">
+            <div class="bkt-section-head"><span class="bkt-section-title">Routine vs Ad-hoc</span></div>
+            <div class="bkt-split-row" id="bktDashSplit"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="bkt-pane" id="bktPaneYear" style="display:none">
