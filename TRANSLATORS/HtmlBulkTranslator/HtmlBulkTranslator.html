@@ -1,0 +1,97 @@
+<div class="hbt-app" id="hbtApp">
+
+  <header class="hbt-header">
+    <div class="hbt-brand">
+      <span class="hbt-badge">🌐</span>
+      <div class="hbt-title-wrap">
+        <h1>HTML Bulk Translator</h1>
+        <p>One HTML document translated into many languages, one at a time. Text is extracted to JSON, AI translates the JSON, and this tool rebuilds each language version.</p>
+      </div>
+    </div>
+    <div class="hbt-head-side">
+      <span class="hbt-save-state" id="hbtSaveState"></span>
+      <span class="hbt-role-badge" id="hbtRoleBadge"></span>
+    </div>
+  </header>
+
+  <!-- STEP 1: SOURCE DOCUMENT -->
+  <section class="hbt-card">
+    <div class="hbt-card-head">
+      <h2><span class="hbt-step-num">1</span> Source HTML Document</h2>
+      <span class="hbt-meta" id="hbtSourceMeta"></span>
+    </div>
+    <div class="hbt-source-tools">
+      <button type="button" class="hbt-btn hbt-btn-outline" id="hbtBtnLoadFile">📄 Load .html file</button>
+      <button type="button" class="hbt-btn hbt-btn-ghost" id="hbtBtnSample">Use sample document</button>
+      <button type="button" class="hbt-btn hbt-btn-ghost" id="hbtBtnClearSource">Clear</button>
+    </div>
+    <textarea id="hbtSourceInput" class="hbt-source-input" spellcheck="false" placeholder="Paste your HTML document here..."></textarea>
+    <div class="hbt-extract-row">
+      <button type="button" class="hbt-btn hbt-btn-outline" id="hbtBtnExtract">🔍 Extract texts</button>
+      <span class="hbt-extract-info" id="hbtExtractInfo"></span>
+      <span class="hbt-meta hbt-size-estimate" id="hbtSizeEstimate"></span>
+    </div>
+  </section>
+
+  <!-- STEP 2: TARGET LANGUAGES -->
+  <section class="hbt-card">
+    <div class="hbt-card-head">
+      <h2><span class="hbt-step-num">2</span> Target Languages</h2>
+      <span class="hbt-meta" id="hbtLangCount"></span>
+    </div>
+    <div class="hbt-lang-quick" id="hbtLangQuick"></div>
+    <div class="hbt-lang-input-row">
+      <input type="text" id="hbtLangInput" placeholder="Type a language and press Enter, e.g. French" maxlength="60">
+      <button type="button" class="hbt-btn hbt-btn-outline" id="hbtBtnAddLang">+ Add</button>
+    </div>
+    <div class="hbt-lang-chips" id="hbtLangChips"></div>
+  </section>
+
+  <!-- STEP 3: TRANSLATE -->
+  <section class="hbt-card">
+    <div class="hbt-card-head">
+      <h2><span class="hbt-step-num">3</span> Translate</h2>
+      <span class="hbt-meta" id="hbtRunStatus"></span>
+    </div>
+    <div class="hbt-run-tools">
+      <button type="button" class="hbt-btn hbt-btn-primary" id="hbtBtnStart">▶ Start Translation</button>
+      <button type="button" class="hbt-btn hbt-btn-danger" id="hbtBtnCancel">✕ Cancel</button>
+      <button type="button" class="hbt-btn hbt-btn-outline" id="hbtBtnRetry">↻ Retry failed</button>
+      <button type="button" class="hbt-btn hbt-btn-ghost" id="hbtBtnReset">Reset results</button>
+    </div>
+    <div class="hbt-progress-track"><div class="hbt-progress-fill" id="hbtProgressFill"></div></div>
+    <div class="hbt-lang-list" id="hbtLangList"></div>
+  </section>
+
+  <!-- STEP 4: RESULTS -->
+  <section class="hbt-card" id="hbtResultsCard">
+    <div class="hbt-card-head">
+      <h2><span class="hbt-step-num">4</span> Translated Documents</h2>
+      <span class="hbt-meta" id="hbtResultsMeta"></span>
+    </div>
+    <div class="hbt-run-tools">
+      <button type="button" class="hbt-btn hbt-btn-outline" id="hbtBtnDownloadAll">⬇ Download all (.zip)</button>
+    </div>
+    <div id="hbtResults"></div>
+  </section>
+
+  <!-- COPY FALLBACK MODAL -->
+  <div class="hbt-overlay" id="hbtCopyOverlay" style="display:none">
+    <div class="hbt-modal">
+      <div class="hbt-modal-head">
+        <h3>Copy content</h3>
+        <button type="button" class="hbt-icon-btn" id="hbtCopyClose">&times;</button>
+      </div>
+      <div class="hbt-modal-body">
+        <p class="hbt-modal-hint">Clipboard access was blocked. Select the text below and copy it manually.</p>
+        <textarea id="hbtCopyText" class="hbt-copy-textarea" readonly></textarea>
+      </div>
+      <div class="hbt-modal-actions">
+        <button type="button" class="hbt-btn hbt-btn-primary" id="hbtCopyDone">Done</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>

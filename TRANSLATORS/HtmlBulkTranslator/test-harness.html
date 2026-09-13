@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HtmlBulkTranslator — Test Harness</title>
+<link rel="stylesheet" href="HtmlBulkTranslator.css">
+<style>
+body { padding-top: 32px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 32px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-toggle-ro { background: #d97706; color: #fff; }
+#th-bar .btn-toggle-role { background: #7c3aed; color: #fff; }
+#th-bar .btn-toggle-ai { background: #0ea5e9; color: #fff; }
+#th-bar .btn-dump { background: #2563eb; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>🧪 TEST HARNESS — HtmlBulkTranslator</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-toggle-ro" id="th-ro">Toggle Read-Only</button>
+  <button class="btn-toggle-role" id="th-role">Cycle Role</button>
+  <button class="btn-toggle-ai" id="th-aifail">AI Fails: OFF</button>
+  <button class="btn-dump" id="th-dump">Dump DB</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">EDIT MODE (admin)</span>
+  <span class="sep">|</span>
+  <span id="th-last-notify" class="hint"></span>
+</div>
+<div id="th-notify-log" style="display:none"></div>
+
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK for HtmlBulkTranslator ── */
+(function() {
+  window.onerror = function(message, source, line, column) {
+    try {
+      document.getElementById('th-last-notify').textContent = 'JS-ERROR: ' + message + ' @' + line + ':' + column;
+    } catch(e) {}
+  };
+  var STORAGE_KEY = 'hbt_test_db';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _aiAlwaysFail = false;
+  var _saveCount = 0;
+  var _user = null;
+  var _value = null;
+  var _uploadedContent = '';
+
+  var ROLES = [
+    { id: 'u_admin', name: 'Demo Admin', email: 'admin@example.org', roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    { id: 'u_editor', name: 'Demo Editor', email: 'editor@example.org', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    { id: 'u_viewer', name: 'Demo Viewer', email: 'viewer@example.org', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } },
+    null
+  ];
+  var _roleIndex = 0;
+  _user = ROLES[0];
+  (function() {
+    var initQuery = new URLSearchParams(window.location.search);
+    if (initQuery.get('ro') === '1') _readOnly = true;
+    if (initQuery.get('aifail') === '1') _aiAlwaysFail = true;
+    if (initQuery.get('role') === 'editor') _user = ROLES[1];
+    else if (initQuery.get('role') === 'viewer') _user = ROLES[2];
+    else if (initQuery.get('role') === 'none') _user = ROLES[3];
+  })();
+
+  var SAMPLE_SOURCE_HTML = [
+    '<div class="hero">',
+    '  <h1>Welcome to GreenLeaf Gardens</h1>',
+    '  <p>Organic produce delivered fresh to your door every week.</p>',
+    '  <a href="/order" title="Start your order">Order Now</a>',
+    '  <img src="banner.jpg" alt="A basket of fresh vegetables">',
+    '</div>',
+    '<section class="features">',
+    '  <h2>Why choose us</h2>',
+    '  <ul>',
+    '    <li>Certified organic since 2008</li>',
+    '    <li>Free delivery on orders over $50</li>',
+    '    <li>Cancel or pause your plan anytime</li>',
+    '  </ul>',
+    '  <p>Join more than 12,000 happy customers.</p>',
+    '  <button type="button">Subscribe today</button>',
+    '  <form>',
+    '    <input type="text" placeholder="Enter your email address">',
+    '    <button type="submit">Sign Up</button>',
+    '  </form>',
+    '</section>'
+  ].join('\n');
+
+  var FULL_DOCUMENT_SAMPLE_HTML = [
+    '<!DOCTYPE html>',
+    '<html>',
+    '<head>',
+    '<meta charset="utf-8">',
+    '<meta name="description" content="GreenLeaf Gardens delivers organic produce weekly.">',
+    '<title>GreenLeaf Gardens - Fresh Organic Produce</title>',
+    '</head>',
+    '<body>',
+    '<h1>Welcome to GreenLeaf Gardens</h1>',
+    '<p>Fresh vegetables delivered to your door.</p>',
+    '<input type="submit" value="Order Now">',
+    '</body>',
+    '</html>'
+  ].join('\n');
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  function updateStatusLine() {
+    var label = (_readOnly ? 'READ-ONLY' : 'EDIT MODE') + ' (' + (_user ? _user.roles.join('/') : 'no user') + ')';
+    document.getElementById('th-status').textContent = label;
+  }
+
+  /* Fake translator: parse the JSON ARRAY from the prompt, then append a
+     language tag to every text so the result is visibly "translated". */
+  function mockTranslate(prompt) {
+    var language = 'Unknown';
+    var languageMatch = prompt.match(/Target language:\s*([^\n]+?)\./);
+    if (languageMatch) language = languageMatch[1];
+    var marker = 'JSON ARRAY:';
+    var markerIndex = prompt.indexOf(marker);
+    if (markerIndex === -1) throw new Error('no JSON ARRAY marker in prompt');
+    var arrayText = prompt.slice(markerIndex + marker.length).trim();
+    var startIndex = arrayText.indexOf('[');
+    var endIndex = arrayText.lastIndexOf(']');
+    if (startIndex === -1 || endIndex === -1) throw new Error('no array in prompt');
+    var items = JSON.parse(arrayText.slice(startIndex, endIndex + 1));
+    var translatedItems = items.map(function(item) {
+      return { id: item.id, text: item.text + ' [' + language + ']' };
+    });
+    return JSON.stringify(translatedItems);
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return {}; },
+    setField: function() {},
+    setFields: function() {},
+    watchField: function() {},
+    onFieldsChange: function() {},
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) {
+      _readOnly = v;
+      updateStatusLine();
+      listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} });
+    },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    _setUser: function(u) {
+      _user = u;
+      updateStatusLine();
+      listeners.userChange.forEach(function(cb) { try { cb(u); } catch(e) {} });
+    },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      try {
+        document.getElementById('th-last-notify').textContent = severity + ': ' + message;
+        var logEl = document.getElementById('th-notify-log');
+        if (logEl) logEl.textContent = (logEl.textContent ? logEl.textContent + ' | ' : '') + severity + ': ' + message;
+      } catch(e) {}
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2600);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function(entries) { console.log('[declareParams]', entries.map(function(e) { return e.name; }).join(', ')); },
+    reportMissingParams: function(missing, message) { console.warn('[reportMissingParams]', message, missing); },
+    getPermittedUsers: function() { return []; },
+    onPermittedUsersChange: function() {},
+    requestAI: function(prompt, context, cb) {
+      try {
+        var langMatch = prompt.match(/Target language:\s*([^\n]+?)\./);
+        document.getElementById('th-last-notify').textContent = 'AI-CALL ' + (langMatch ? langMatch[1] : '?') + ' len=' + prompt.length;
+      } catch(e) {}
+      setTimeout(function() {
+        if (_aiAlwaysFail) { cb('mock AI failure (toggle)', null); return; }
+        try { cb(null, mockTranslate(prompt)); }
+        catch(err) { cb('mock translate error: ' + err.message, null); }
+      }, 450);
+    },
+    requestAIStream: function(prompt, context, callbacks) {
+      setTimeout(function() {
+        if (_aiAlwaysFail) { if (callbacks.onError) callbacks.onError('mock AI failure'); return; }
+        try {
+          var full = mockTranslate(prompt);
+          if (callbacks.onToken) callbacks.onToken(full);
+          if (callbacks.onComplete) callbacks.onComplete(full);
+        } catch(err) {
+          if (callbacks.onError) callbacks.onError('mock translate error: ' + err.message);
+        }
+      }, 450);
+    },
+    requestUpload: function(accept, cb) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = accept || '.html,.htm';
+      input.addEventListener('change', function() {
+        var file = input.files && input.files[0];
+        if (!file) { cb('no file selected', null); return; }
+        var reader = new FileReader();
+        reader.onload = function() {
+          _uploadedContent = String(reader.result || '');
+          cb(null, { name: file.name, url: 'mock://uploaded-file', size: file.size, type: file.type || 'text/html' });
+        };
+        reader.onerror = function() { cb('read failed', null); };
+        reader.readAsText(file);
+      });
+      input.click();
+    },
+    requestFileContent: function(url, cb) {
+      setTimeout(function() {
+        if (url === 'mock://uploaded-file') { cb(null, _uploadedContent); }
+        else { cb('unknown file url ' + url, null); }
+      }, 120);
+    },
+    requestExportPdf: function(options, cb) { cb('export pdf not available in harness', null); },
+    requestSendEmail: function(options, cb) { cb('send email not available in harness', null); },
+    requestObjects: function(action, params, cb) { cb('requestObjects not available in harness', null); },
+    requestSave: function(cb) {
+      setTimeout(function() {
+        if (_readOnly) { cb('form is read-only', false); return; }
+        _saveCount++;
+        console.log('[requestSave] accepted, count=' + _saveCount);
+        cb(null, true);
+      }, 40);
+    },
+    openUrl: function(url) { window.open(url, '_blank'); },
+    openObjectDetail: function() {},
+    onReady: function(cb) {
+      load();
+      updateStatusLine();
+      cb(_value, {});
+    },
+    _loadSample: function() {
+      save({
+        version: 1,
+        source: { html: SAMPLE_SOURCE_HTML, fileName: 'sample-page.html', updatedAt: new Date().toISOString() },
+        languages: ['French', 'German', 'Spanish', 'Turkish', 'Arabic'],
+        translations: {},
+        flags: { languagesSeeded: true },
+        updatedAt: new Date().toISOString()
+      });
+      window.location.reload();
+    },
+    _loadFullDocumentSample: function() {
+      save({
+        version: 1,
+        source: { html: FULL_DOCUMENT_SAMPLE_HTML, fileName: 'full-page.html', updatedAt: new Date().toISOString() },
+        languages: ['French', 'German'],
+        translations: {},
+        flags: { languagesSeeded: true },
+        updatedAt: new Date().toISOString()
+      });
+      window.location.reload();
+    },
+    _clearData: function() {
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.reload();
+    },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _cycleRole: function() {
+      _roleIndex = (_roleIndex + 1) % ROLES.length;
+      this._setUser(ROLES[_roleIndex]);
+    },
+    _toggleAiFail: function() {
+      _aiAlwaysFail = !_aiAlwaysFail;
+      document.getElementById('th-aifail').textContent = 'AI Fails: ' + (_aiAlwaysFail ? 'ON' : 'OFF');
+    },
+    _dump: function() {
+      console.log('HBT saved value:', JSON.parse(JSON.stringify(_value || {})));
+      console.log('HBT requestSave count:', _saveCount);
+      console.log('HBT current user:', JSON.parse(JSON.stringify(_user)));
+    }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Inlined tool HTML (regenerated by hbt-embed.cjs after HTML edits) ── */
+(function() {
+var EMBEDDED_HTML = "\u003cdiv class=\"hbt-app\" id=\"hbtApp\">\r\n\r\n  \u003cheader class=\"hbt-header\">\r\n    \u003cdiv class=\"hbt-brand\">\r\n      \u003cspan class=\"hbt-badge\">🌐\u003c/span>\r\n      \u003cdiv class=\"hbt-title-wrap\">\r\n        \u003ch1>HTML Bulk Translator\u003c/h1>\r\n        \u003cp>One HTML document translated into many languages, one at a time. Text is extracted to JSON, AI translates the JSON, and this tool rebuilds each language version.\u003c/p>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-head-side\">\r\n      \u003cspan class=\"hbt-save-state\" id=\"hbtSaveState\">\u003c/span>\r\n      \u003cspan class=\"hbt-role-badge\" id=\"hbtRoleBadge\">\u003c/span>\r\n    \u003c/div>\r\n  \u003c/header>\r\n\r\n  \u003c!-- STEP 1: SOURCE DOCUMENT -->\r\n  \u003csection class=\"hbt-card\">\r\n    \u003cdiv class=\"hbt-card-head\">\r\n      \u003ch2>\u003cspan class=\"hbt-step-num\">1\u003c/span> Source HTML Document\u003c/h2>\r\n      \u003cspan class=\"hbt-meta\" id=\"hbtSourceMeta\">\u003c/span>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-source-tools\">\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-outline\" id=\"hbtBtnLoadFile\">📄 Load .html file\u003c/button>\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-ghost\" id=\"hbtBtnSample\">Use sample document\u003c/button>\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-ghost\" id=\"hbtBtnClearSource\">Clear\u003c/button>\r\n    \u003c/div>\r\n    \u003ctextarea id=\"hbtSourceInput\" class=\"hbt-source-input\" spellcheck=\"false\" placeholder=\"Paste your HTML document here...\">\u003c/textarea>\r\n    \u003cdiv class=\"hbt-extract-row\">\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-outline\" id=\"hbtBtnExtract\">🔍 Extract texts\u003c/button>\r\n      \u003cspan class=\"hbt-extract-info\" id=\"hbtExtractInfo\">\u003c/span>\r\n      \u003cspan class=\"hbt-meta hbt-size-estimate\" id=\"hbtSizeEstimate\">\u003c/span>\r\n    \u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003c!-- STEP 2: TARGET LANGUAGES -->\r\n  \u003csection class=\"hbt-card\">\r\n    \u003cdiv class=\"hbt-card-head\">\r\n      \u003ch2>\u003cspan class=\"hbt-step-num\">2\u003c/span> Target Languages\u003c/h2>\r\n      \u003cspan class=\"hbt-meta\" id=\"hbtLangCount\">\u003c/span>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-lang-quick\" id=\"hbtLangQuick\">\u003c/div>\r\n    \u003cdiv class=\"hbt-lang-input-row\">\r\n      \u003cinput type=\"text\" id=\"hbtLangInput\" placeholder=\"Type a language and press Enter, e.g. French\" maxlength=\"60\">\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-outline\" id=\"hbtBtnAddLang\">+ Add\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-lang-chips\" id=\"hbtLangChips\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003c!-- STEP 3: TRANSLATE -->\r\n  \u003csection class=\"hbt-card\">\r\n    \u003cdiv class=\"hbt-card-head\">\r\n      \u003ch2>\u003cspan class=\"hbt-step-num\">3\u003c/span> Translate\u003c/h2>\r\n      \u003cspan class=\"hbt-meta\" id=\"hbtRunStatus\">\u003c/span>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-run-tools\">\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-primary\" id=\"hbtBtnStart\">▶ Start Translation\u003c/button>\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-danger\" id=\"hbtBtnCancel\">✕ Cancel\u003c/button>\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-outline\" id=\"hbtBtnRetry\">↻ Retry failed\u003c/button>\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-ghost\" id=\"hbtBtnReset\">Reset results\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-progress-track\">\u003cdiv class=\"hbt-progress-fill\" id=\"hbtProgressFill\">\u003c/div>\u003c/div>\r\n    \u003cdiv class=\"hbt-lang-list\" id=\"hbtLangList\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003c!-- STEP 4: RESULTS -->\r\n  \u003csection class=\"hbt-card\" id=\"hbtResultsCard\">\r\n    \u003cdiv class=\"hbt-card-head\">\r\n      \u003ch2>\u003cspan class=\"hbt-step-num\">4\u003c/span> Translated Documents\u003c/h2>\r\n      \u003cspan class=\"hbt-meta\" id=\"hbtResultsMeta\">\u003c/span>\r\n    \u003c/div>\r\n    \u003cdiv class=\"hbt-run-tools\">\r\n      \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-outline\" id=\"hbtBtnDownloadAll\">⬇ Download all (.zip)\u003c/button>\r\n    \u003c/div>\r\n    \u003cdiv id=\"hbtResults\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003c!-- COPY FALLBACK MODAL -->\r\n  \u003cdiv class=\"hbt-overlay\" id=\"hbtCopyOverlay\" style=\"display:none\">\r\n    \u003cdiv class=\"hbt-modal\">\r\n      \u003cdiv class=\"hbt-modal-head\">\r\n        \u003ch3>Copy content\u003c/h3>\r\n        \u003cbutton type=\"button\" class=\"hbt-icon-btn\" id=\"hbtCopyClose\">&times;\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"hbt-modal-body\">\r\n        \u003cp class=\"hbt-modal-hint\">Clipboard access was blocked. Select the text below and copy it manually.\u003c/p>\r\n        \u003ctextarea id=\"hbtCopyText\" class=\"hbt-copy-textarea\" readonly>\u003c/textarea>\r\n      \u003c/div>\r\n      \u003cdiv class=\"hbt-modal-actions\">\r\n        \u003cbutton type=\"button\" class=\"hbt-btn hbt-btn-primary\" id=\"hbtCopyDone\">Done\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n\u003c/div>\r\n\r\n\u003cscript src=\"https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js\">\u003c/script>";
+  document.getElementById("app-container").innerHTML = EMBEDDED_HTML;
+})();
+</script>
+
+<script src="HtmlBulkTranslator.js"></script>
+
+<script>
+/* ── Test harness controls ── */
+document.getElementById('th-load-sample').addEventListener('click', function() {
+  window.tool._loadSample();
+});
+document.getElementById('th-clear').addEventListener('click', function() {
+  if (confirm('Clear ALL data? This cannot be undone.')) window.tool._clearData();
+});
+document.getElementById('th-reload').addEventListener('click', function() {
+  window.location.reload();
+});
+document.getElementById('th-ro').addEventListener('click', function() {
+  window.tool._toggleReadOnly();
+});
+document.getElementById('th-role').addEventListener('click', function() {
+  window.tool._cycleRole();
+});
+document.getElementById('th-aifail').addEventListener('click', function() {
+  window.tool._toggleAiFail();
+});
+document.getElementById('th-dump').addEventListener('click', function() {
+  window.tool._dump();
+  window.tool.notify('DB dumped to console (F12)', 'info');
+});
+
+/* QA helpers: ?sample=1 loads the sample when nothing is saved, ?fulldoc=1 loads
+   a full HTML document sample, ?autorun=1 clicks Start Translation shortly after
+   boot (for headless verification). */
+(function() {
+  var query = new URLSearchParams(window.location.search);
+  if (!localStorage.getItem('hbt_test_db')) {
+    if (query.get('fulldoc') === '1') { window.tool._loadFullDocumentSample(); return; }
+    if (query.get('sample') === '1') { window.tool._loadSample(); return; }
+  }
+  if (query.get('autorun') === '1') {
+    var report = function(text) {
+      try { document.getElementById('th-last-notify').textContent = text; } catch(e) {}
+    };
+    setTimeout(function() {
+      var startButton = document.getElementById('hbtBtnStart');
+      if (startButton && !startButton.disabled) {
+        startButton.click();
+        report('AUTORUN-CLICKED');
+      } else {
+        report('AUTORUN-BLOCKED disabled=' + (startButton ? startButton.disabled : 'no-button'));
+      }
+      setTimeout(function() {
+        var statusEl = document.getElementById('hbtRunStatus');
+        var extractEl = document.getElementById('hbtExtractInfo');
+        report('T+1500 status=' + (statusEl ? statusEl.textContent : '?') + ' extract=' + (extractEl ? extractEl.textContent : '?'));
+      }, 1500);
+      setTimeout(function() {
+        var statusEl = document.getElementById('hbtRunStatus');
+        var extractEl = document.getElementById('hbtExtractInfo');
+        report('T+8000 status=' + (statusEl ? statusEl.textContent : '?') + ' extract=' + (extractEl ? extractEl.textContent : '?'));
+      }, 8000);
+    }, 500);
+  }
+})();
+</script>
+</body></html>

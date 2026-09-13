@@ -32,7 +32,7 @@
       </div>
       <div class="bkt-stat bkt-st-wait">
         <div class="bkt-stat-value" id="bktStatWaiting">0</div>
-        <div class="bkt-stat-label">Awaiting Confirmation</div>
+        <div class="bkt-stat-label">Open Requests</div>
       </div>
       <div class="bkt-stat bkt-st-over">
         <div class="bkt-stat-value" id="bktStatOverdue">0</div>
@@ -74,7 +74,7 @@
     <div class="bkt-pane" id="bktPaneBoard">
       <div class="bkt-section" id="bktApprovalSection" style="display:none">
         <div class="bkt-section-head">
-          <span class="bkt-section-title">Awaiting Approval</span>
+          <span class="bkt-section-title">Open Requests</span>
           <span class="bkt-section-badge" id="bktApprovalCount">0</span>
         </div>
         <div id="bktApprovalList"></div>
@@ -251,16 +251,42 @@
   <div class="bkt-modal-overlay" id="bktAdminModal" style="display:none">
     <div class="bkt-modal bkt-modal-sm">
       <div class="bkt-modal-head">
-        <h3>Send Back</h3>
+        <h3>Respond to Request</h3>
         <button class="bkt-icon-btn" id="bktAdminClose" aria-label="Close">×</button>
       </div>
       <div class="bkt-modal-body">
         <div class="bkt-note-context" id="bktAdminContext"></div>
-        <textarea id="bktAdminText" rows="3" placeholder="Why was the task sent back? Short explanation..." style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;resize:vertical;min-height:72px"></textarea>
+        <select id="bktResponseStatus" style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;margin-bottom:8px"></select>
+        <textarea id="bktAdminText" rows="3" placeholder="Your response / reason (optional)..." style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;resize:vertical;min-height:72px"></textarea>
       </div>
       <div class="bkt-modal-actions">
-        <button class="bkt-btn bkt-btn-danger" id="bktAdminSave">Send Back</button>
+        <button class="bkt-btn bkt-btn-primary" id="bktAdminSave">Submit Response</button>
         <button class="bkt-btn bkt-btn-ghost" id="bktAdminCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bkt-modal-overlay" id="bktRequestModal" style="display:none">
+    <div class="bkt-modal">
+      <div class="bkt-modal-head">
+        <h3>Task Requests</h3>
+        <button class="bkt-icon-btn" id="bktRequestClose" aria-label="Close">×</button>
+      </div>
+      <div class="bkt-modal-body">
+        <div class="bkt-note-context" id="bktRequestContext"></div>
+        <div id="bktRequestList"></div>
+        <div class="bkt-req-form" id="bktRequestForm">
+          <div class="bkt-req-form-title">New Request</div>
+          <select id="bktRequestType">
+            <option value="approval">Approval Request - I need authorization (e.g. make a payment)</option>
+            <option value="information">Information Request - I need details to complete this</option>
+          </select>
+          <textarea id="bktRequestText" rows="3" placeholder="What do you need? Example: please approve this payment before I proceed..."></textarea>
+          <button class="bkt-btn bkt-btn-primary" id="bktRequestSubmit">Submit Request</button>
+        </div>
+      </div>
+      <div class="bkt-modal-actions">
+        <button class="bkt-btn bkt-btn-ghost" id="bktRequestCancel">Close</button>
       </div>
     </div>
   </div>

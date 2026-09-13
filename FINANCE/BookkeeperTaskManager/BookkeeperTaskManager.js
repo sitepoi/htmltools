@@ -47,9 +47,7 @@
   var TASK_STATUSES = {
     pending: "Not Started",
     inProgress: "In Progress",
-    done: "Completed",
-    awaitingConfirmation: "Awaiting Confirmation",
-    confirmed: "Confirmed"
+    done: "Completed"
   };
 
   var TASK_CATEGORIES = [
@@ -90,10 +88,7 @@
     { id: "active", label: "Active" },
     { id: "pending", label: "Not Started" },
     { id: "inProgress", label: "In Progress" },
-    { id: "done", label: "Completed" },
-    { id: "awaitingConfirmation", label: "Awaiting Confirmation" },
-    { id: "confirmed", label: "Confirmed" },
-    { id: "completed", label: "Finished" }
+    { id: "done", label: "Completed" }
   ];
 
   /* ============================================================
@@ -109,10 +104,10 @@
   var _savingNow = false;
   var _lastStagedJson = null;
   var _warnedAutosave = false;
-  var _confirmModeEnabled = null;
   var _editDefinitionId = null;
   var _noteKey = null;
-  var _adminKey = null;
+  var _requestTaskKey = null;
+  var _respondRequestId = null;
   var _confirmYesCallback = null;
   var _expandedGroups = {};
 
@@ -243,7 +238,7 @@
   }
 
   function statusLabelOf(status) { return TASK_STATUSES[status] || TASK_STATUSES.pending; }
-  function isFinishedStatus(status) { return status === "done" || status === "confirmed"; }
+  function isFinishedStatus(status) { return status === "done"; }
   function isOpenStatus(status) { return status === "pending" || status === "inProgress"; }
 
   function occurrenceKey(definitionId, dueDate) { return definitionId + "|" + dueDate; }
@@ -256,7 +251,10 @@
 
   function currentStatusOf(key) {
     var entry = statusEntryFor(key);
-    return (entry && TASK_STATUSES[entry.status]) ? entry.status : "pending";
+    if (!entry) return "pending";
+    if (entry.status === "awaitingConfirmation") return "inProgress";
+    if (entry.status === "confirmed") return "done";
+    return TASK_STATUSES[entry.status] ? entry.status : "pending";
   }
 
   function ensureStatusEntry(key) {
@@ -332,24 +330,17 @@
     });
   }
 
-  function confirmModeEnabled() {
-    if (_confirmModeEnabled === null) {
-      try { _confirmModeEnabled = String(tool.param("confirmMode", "no")) === "yes"; }
-      catch (error) { _confirmModeEnabled = false; }
-    }
-    return _confirmModeEnabled;
-  }
-
   /* ============================================================
      DATABASE
      ============================================================ */
 
   function defaultDatabase() {
     return {
-      version: 1,
+      version: 2,
       year: new Date().getFullYear(),
       definitions: [],
       statuses: {},
+      requests: {},
       ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "", dashMonth: "year" }
     };
   }
@@ -395,7 +386,39 @@
       database.definitions = rawValue.definitions.map(normalizeDefinition).filter(function (definition) { return !!definition; });
     }
     if (rawValue.statuses && typeof rawValue.statuses === "object" && !Array.isArray(rawValue.statuses)) {
-      database.statuses = rawValue.statuses;
+      database.statuses = {};
+      Object.keys(rawValue.statuses).forEach(function (key) {
+        var entry = rawValue.statuses[key];
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return;
+        var migratedEntry = {};
+        Object.keys(entry).forEach(function (field) { migratedEntry[field] = entry[field]; });
+        if (migratedEntry.status === "awaitingConfirmation") migratedEntry.status = "inProgress";
+        if (migratedEntry.status === "confirmed") migratedEntry.status = "done";
+        database.statuses[key] = migratedEntry;
+      });
+    }
+    if (rawValue.requests && typeof rawValue.requests === "object" && !Array.isArray(rawValue.requests)) {
+      database.requests = {};
+      Object.keys(rawValue.requests).forEach(function (requestId) {
+        var request = rawValue.requests[requestId];
+        if (!request || typeof request !== "object" || Array.isArray(request)) return;
+        if (request.type !== "approval" && request.type !== "information") return;
+        if (!request.taskKey) return;
+        database.requests[String(requestId)] = {
+          id: String(request.id || requestId),
+          taskKey: String(request.taskKey),
+          title: String(request.title || ""),
+          dueDate: String(request.dueDate || ""),
+          type: request.type,
+          message: String(request.message || ""),
+          status: (request.status === "approved" || request.status === "declined" || request.status === "answered") ? request.status : "open",
+          createdAt: String(request.createdAt || ""),
+          createdBy: String(request.createdBy || ""),
+          response: String(request.response || ""),
+          respondedAt: String(request.respondedAt || ""),
+          respondedBy: String(request.respondedBy || "")
+        };
+      });
     }
     if (rawValue.ui && typeof rawValue.ui === "object" && !Array.isArray(rawValue.ui)) {
       database.ui.tab = (rawValue.ui.tab === "year" || rawValue.ui.tab === "defs" || rawValue.ui.tab === "dashboard") ? rawValue.ui.tab : "board";
@@ -485,35 +508,26 @@
     var parts = key.split("|");
     var definition = findDefinitionById(parts[0]);
     if (!definition) return;
-    var effectiveStatus = newStatus;
-    if (newStatus === "done" && confirmModeEnabled()) effectiveStatus = "awaitingConfirmation";
     var entry = ensureStatusEntry(key);
     var timestamp = nowIsoDateTime();
     var userName = currentUserDisplayName();
-    entry.status = effectiveStatus;
+    entry.status = newStatus;
     entry.updatedAt = timestamp;
     entry.updatedBy = userName;
-    if (effectiveStatus === "done") {
+    if (newStatus === "done") {
       entry.completedAt = timestamp;
       entry.completedBy = userName;
     }
-    if (effectiveStatus === "confirmed") {
-      entry.confirmedAt = timestamp;
-      entry.confirmedBy = userName;
-    }
-    if (effectiveStatus === "pending") {
-      delete entry.confirmedAt;
-      delete entry.confirmedBy;
+    if (newStatus === "pending") {
+      delete entry.completedAt;
+      delete entry.completedBy;
       delete entry.adminNote;
     }
-    entry.log.push({ status: effectiveStatus, at: timestamp, by: userName });
+    entry.log.push({ status: newStatus, at: timestamp, by: userName });
     if (entry.log.length > 12) entry.log.shift();
     persistDatabase();
     renderAll();
-    if (effectiveStatus === "confirmed") tryNotify("Task approved", "success");
-    else if (effectiveStatus === "awaitingConfirmation" && newStatus === "done") tryNotify("Task completed and sent for approval", "info");
-    else if (effectiveStatus === "awaitingConfirmation") tryNotify("Task sent for approval", "info");
-    else if (effectiveStatus === "done") tryNotify("Task completed", "success");
+    if (newStatus === "done") tryNotify("Task completed", "success");
   }
 
   function toggleDayCompletion(definitionId, dateIso) {
@@ -545,6 +559,94 @@
     persistDatabase();
     renderAll();
     tryNotify("Task sent back", "warning");
+  }
+
+  /* ============================================================
+     REQUESTS (approval / information)
+     ============================================================ */
+
+  function requestTypeLabelOf(type) {
+    return type === "information" ? "Information Request" : "Approval Request";
+  }
+
+  function requestStatusLabelOf(status) {
+    if (status === "approved") return "Approved";
+    if (status === "declined") return "Declined";
+    if (status === "answered") return "Answered";
+    return "Open";
+  }
+
+  function requestsForTask(taskKey) {
+    var list = [];
+    Object.keys(DB.requests).forEach(function (requestId) {
+      var request = DB.requests[requestId];
+      if (request && request.taskKey === taskKey) list.push(request);
+    });
+    list.sort(function (a, b) { return a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0; });
+    return list;
+  }
+
+  function openRequestsForTask(taskKey) {
+    return requestsForTask(taskKey).filter(function (request) { return request.status === "open"; });
+  }
+
+  function collectOpenRequests() {
+    var list = [];
+    Object.keys(DB.requests).forEach(function (requestId) {
+      var request = DB.requests[requestId];
+      if (request && request.status === "open") list.push(request);
+    });
+    list.sort(function (a, b) { return a.createdAt < b.createdAt ? -1 : 1; });
+    return list;
+  }
+
+  function countOpenRequestsForDueRange(rangeStart, rangeEnd) {
+    var count = 0;
+    Object.keys(DB.requests).forEach(function (requestId) {
+      var request = DB.requests[requestId];
+      if (request && request.status === "open" && request.dueDate >= rangeStart && request.dueDate <= rangeEnd) count++;
+    });
+    return count;
+  }
+
+  function countOpenRequestsForYear(year) {
+    return countOpenRequestsForDueRange(year + "-01-01", year + "-12-31");
+  }
+
+  function createRequest(taskKey, type, message) {
+    var parts = taskKey.split("|");
+    var definition = findDefinitionById(parts[0]);
+    if (!definition || !message.trim()) return;
+    var request = {
+      id: uniqueId(),
+      taskKey: taskKey,
+      title: definition.title,
+      dueDate: parts[1] || "",
+      type: type === "information" ? "information" : "approval",
+      message: message.trim(),
+      status: "open",
+      createdAt: nowIsoDateTime(),
+      createdBy: currentUserDisplayName(),
+      response: "",
+      respondedAt: "",
+      respondedBy: ""
+    };
+    DB.requests[request.id] = request;
+    persistDatabase();
+    renderAll();
+    tryNotify(requestTypeLabelOf(request.type) + " submitted", "info");
+  }
+
+  function respondToRequest(requestId, responseStatus, responseText) {
+    var request = DB.requests[requestId];
+    if (!request || request.status !== "open") return;
+    request.status = responseStatus;
+    request.response = responseText.trim();
+    request.respondedAt = nowIsoDateTime();
+    request.respondedBy = currentUserDisplayName();
+    persistDatabase();
+    renderAll();
+    tryNotify("Response sent", "success");
   }
 
   /* ============================================================
@@ -787,26 +889,84 @@
     closeNoteModal();
   }
 
-  function openAdminModal(key) {
-    if (!canAdminister()) return;
-    _adminKey = key;
-    var parts = key.split("|");
+  function buildRequestListItemHtml(request) {
+    var itemHtml = '<div class="bkt-req-item">' +
+      '<div class="bkt-req-item-head">' +
+      '<span class="bkt-req-type req-' + request.type + '">' + escapeHtml(requestTypeLabelOf(request.type)) + "</span>" +
+      '<span class="bkt-req-status reqs-' + request.status + '">' + escapeHtml(requestStatusLabelOf(request.status)) + "</span>" +
+      "</div>" +
+      '<div class="bkt-req-message">' + escapeHtml(request.message) + "</div>" +
+      '<div class="bkt-req-meta">' + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>";
+    if (request.response) {
+      itemHtml += '<div class="bkt-req-response"><strong>Response:</strong> ' + escapeHtml(request.response) +
+        ' <span class="bkt-req-meta">(' + escapeHtml(request.respondedBy) + " · " + formatDateTime(request.respondedAt) + ")</span></div>";
+    }
+    if (canAdminister() && request.status === "open") {
+      itemHtml += '<button type="button" class="bkt-mini-btn bkt-mb-confirm" data-act="respond-request" data-id="' + escapeHtml(request.id) + '">Respond</button>';
+    }
+    itemHtml += "</div>";
+    return itemHtml;
+  }
+
+  function renderRequestListForTask(taskKey) {
+    var requests = requestsForTask(taskKey);
+    byId("bktRequestList").innerHTML = requests.length
+      ? requests.map(buildRequestListItemHtml).join("")
+      : '<div class="bkt-empty" style="padding:14px">No requests for this task yet.</div>';
+  }
+
+  function openRequestModal(taskKey) {
+    var parts = taskKey.split("|");
     var definition = findDefinitionById(parts[0]);
     if (!definition) return;
-    byId("bktAdminContext").innerHTML = noteContextHtml(definition, parts[1]);
+    _requestTaskKey = taskKey;
+    byId("bktRequestContext").innerHTML = noteContextHtml(definition, parts[1]);
+    byId("bktRequestText").value = "";
+    byId("bktRequestType").value = "approval";
+    renderRequestListForTask(taskKey);
+    byId("bktRequestForm").style.display = canWork() ? "" : "none";
+    byId("bktRequestModal").style.display = "flex";
+  }
+
+  function closeRequestModal() {
+    _requestTaskKey = null;
+    byId("bktRequestModal").style.display = "none";
+  }
+
+  function submitRequestFromModal() {
+    if (!_requestTaskKey) return;
+    var message = byId("bktRequestText").value.trim();
+    if (!message) return;
+    createRequest(_requestTaskKey, byId("bktRequestType").value, message);
+    byId("bktRequestText").value = "";
+    renderRequestListForTask(_requestTaskKey);
+  }
+
+  function openRespondModal(requestId) {
+    if (!canAdminister()) return;
+    var request = DB.requests[requestId];
+    if (!request || request.status !== "open") return;
+    _respondRequestId = requestId;
+    byId("bktAdminContext").innerHTML = "<strong>" + escapeHtml(request.title) + "</strong>" +
+      escapeHtml(requestTypeLabelOf(request.type) + " · " + formatDateShort(request.dueDate)) +
+      "<br>" + escapeHtml(request.message);
     byId("bktAdminText").value = "";
+    var responseOptions = request.type === "information"
+      ? '<option value="answered">Answer and Resolve</option>'
+      : '<option value="approved">Approve</option><option value="declined">Decline</option>';
+    byId("bktResponseStatus").innerHTML = responseOptions;
     byId("bktAdminModal").style.display = "flex";
   }
 
-  function closeAdminModal() {
-    _adminKey = null;
+  function closeRespondModal() {
+    _respondRequestId = null;
     byId("bktAdminModal").style.display = "none";
   }
 
-  function saveAdminNoteFromModal() {
-    if (!_adminKey) return;
-    sendOccurrenceBack(_adminKey, byId("bktAdminText").value.trim());
-    closeAdminModal();
+  function saveRespondFromModal() {
+    if (!_respondRequestId) return;
+    respondToRequest(_respondRequestId, byId("bktResponseStatus").value, byId("bktAdminText").value.trim());
+    closeRespondModal();
   }
 
   function openConfirmModal(message, yesCallback) {
@@ -821,7 +981,7 @@
   }
 
   function closeTopOverlay() {
-    var overlays = [byId("bktConfirmModal"), byId("bktAdminModal"), byId("bktNoteModal"), byId("bktDefModal")];
+    var overlays = [byId("bktConfirmModal"), byId("bktAdminModal"), byId("bktRequestModal"), byId("bktNoteModal"), byId("bktDefModal")];
     for (var i = 0; i < overlays.length; i++) {
       if (overlays[i] && overlays[i].style.display !== "none") {
         overlays[i].style.display = "none";
@@ -843,18 +1003,16 @@
     return haystack.indexOf(searchText) !== -1;
   }
 
-  function matchesStatusFilterFor(entry) {
+  function matchesStatusFilterFor(status) {
     var statusFilter = DB.ui.statusFilter || "all";
     if (statusFilter === "all") return true;
-    var status = entry ? entry.status : "pending";
     if (statusFilter === "active") return isOpenStatus(status);
-    if (statusFilter === "completed") return isFinishedStatus(status);
     return status === statusFilter;
   }
 
-  function matchesRowFilters(definition, entry) {
+  function matchesRowFilters(definition, status) {
     if (!matchesSearchAndCategory(definition)) return false;
-    return matchesStatusFilterFor(entry);
+    return matchesStatusFilterFor(status);
   }
 
   /* ============================================================
@@ -880,30 +1038,12 @@
       if (status === "pending") {
         html += miniButtonHtml("status", "inProgress", "Start", key, "bkt-mb-start");
         html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
-        html += miniButtonHtml("status", "awaitingConfirmation", "Request Approval", key, "bkt-mb-wait");
       } else if (status === "inProgress") {
         html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
-        html += miniButtonHtml("status", "awaitingConfirmation", "Request Approval", key, "bkt-mb-wait");
-      } else if (status === "done") {
-        html += miniButtonHtml("status", "awaitingConfirmation", "Request Approval", key, "bkt-mb-wait");
-        if (!canAdminister()) html += miniButtonHtml("reset", "", "Reset", key, "");
-      }
-    }
-    if (canAdminister()) {
-      if (status === "done" || status === "awaitingConfirmation") {
-        html += miniButtonHtml("status", "confirmed", "Confirm", key, "bkt-mb-confirm");
-      }
-      if (status === "awaitingConfirmation") {
-        html += miniButtonHtml("send-back", "", "Send Back", key, "bkt-mb-warn");
-      }
-      if (status === "confirmed") {
-        html += miniButtonHtml("status", "done", "Remove Confirmation", key, "");
-        html += miniButtonHtml("reset", "", "Reset", key, "");
       } else if (status === "done") {
         html += miniButtonHtml("reset", "", "Reset", key, "");
       }
-    }
-    if (canWork() || canAdminister()) {
+      html += miniButtonHtml("open-requests", "", "Request", key, "");
       html += miniButtonHtml("note", "", "Note", key, "");
     }
     return html;
@@ -912,10 +1052,11 @@
   function buildOccurrenceRowHtml(definition, dueDate) {
     var key = occurrenceKey(definition.id, dueDate);
     var entry = statusEntryFor(key);
-    var status = entry ? entry.status : "pending";
+    var status = currentStatusOf(key);
     var today = todayIsoString();
     var isOverdue = dueDate < today && isOpenStatus(status);
     var isAdhoc = definition.taskType === "adHoc";
+    var openRequestCount = openRequestsForTask(key).length;
     var html = '<div class="bkt-row st-' + status + (isOverdue ? " bkt-overdue" : "") + '">';
     html += '<span class="bkt-status-pill">' + escapeHtml(statusLabelOf(status)) + "</span>";
     html += '<div class="bkt-row-main">';
@@ -926,6 +1067,10 @@
     if (!isAdhoc) html += '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency)) + "</span>";
     html += '<span class="bkt-prio-dot p-' + (definition.priority || "medium") + '" title="Priority: ' + escapeHtml(PRIORITY_LABELS[definition.priority] || "Medium") + '"></span>';
     html += '<span class="bkt-due">' + (isOverdue ? "Overdue · " : "") + escapeHtml(dueLabelOf(definition, dueDate)) + "</span>";
+    if (openRequestCount) {
+      html += '<button type="button" class="bkt-req-chip" data-act="open-requests" data-key="' + escapeHtml(key) + '">' +
+        openRequestCount + " open request" + (openRequestCount > 1 ? "s" : "") + "</button>";
+    }
     if (entry && entry.updatedBy && entry.updatedAt) {
       html += '<span class="bkt-updated">' + escapeHtml(entry.updatedBy) + " · " + formatDateTime(entry.updatedAt) + "</span>";
     }
@@ -949,8 +1094,6 @@
       var dotClass = "bkt-dot";
       if (status === "done") { dotClass += " bkt-dot-done"; completedCount++; }
       else if (status === "inProgress") dotClass += " bkt-dot-progress";
-      else if (status === "awaitingConfirmation") dotClass += " bkt-dot-wait";
-      else if (status === "confirmed") { dotClass += " bkt-dot-confirmed"; completedCount++; }
       if (dateIso === today) dotClass += " bkt-dot-today";
       if (canWork()) dotClass += " bkt-clickable";
       dotsHtml += '<button type="button" class="' + dotClass + '"' +
@@ -985,8 +1128,8 @@
       }
     } else {
       occurrences.forEach(function (dueDate) {
-        var entry = statusEntryFor(occurrenceKey(definition.id, dueDate));
-        if (!matchesStatusFilterFor(entry)) return;
+        var occurrenceKeyValue = occurrenceKey(definition.id, dueDate);
+        if (!matchesStatusFilterFor(currentStatusOf(occurrenceKeyValue))) return;
         bodyHtml += buildOccurrenceRowHtml(definition, dueDate);
       });
     }
@@ -1069,8 +1212,8 @@
     sortRowItems(regularRows);
     sortRowItems(adhocRows);
     var overdueRows = collectOverdueRows(scope, rangeStart);
-    var approvalRows = collectApprovalRows(todayYear);
     var stats = computeBoardStats(regularRows, adhocRows, dayStrips, overdueRows, todayYear, todayMonth);
+    stats.waiting = countOpenRequestsForDueRange(rangeStart, rangeEnd);
     return {
       scope: scope,
       rangeStart: rangeStart,
@@ -1079,7 +1222,6 @@
       adhocRows: adhocRows,
       dayStrips: dayStrips,
       overdueRows: overdueRows,
-      approvalRows: approvalRows,
       stats: stats
     };
   }
@@ -1133,21 +1275,6 @@
     return list;
   }
 
-  function collectApprovalRows(year) {
-    var list = [];
-    DB.definitions.forEach(function (definition) {
-      occurrenceDatesForDefinition(definition, year, false).forEach(function (dueDate) {
-        var key = occurrenceKey(definition.id, dueDate);
-        if (currentStatusOf(key) === "awaitingConfirmation") list.push({ definition: definition, dueDate: dueDate });
-      });
-    });
-    list.sort(function (a, b) {
-      if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
-      return a.definition.title.localeCompare(b.definition.title, "tr");
-    });
-    return list;
-  }
-
   function computeBoardStats(regularRows, adhocRows, dayStrips, overdueRows, year, monthIndex) {
     var stats = { total: 0, completed: 0, inProgress: 0, waiting: 0, overdue: 0 };
     var today = todayIsoString();
@@ -1156,7 +1283,6 @@
       var status = currentStatusOf(occurrenceKey(row.definition.id, row.dueDate));
       if (isFinishedStatus(status)) stats.completed++;
       else if (status === "inProgress") stats.inProgress++;
-      else if (status === "awaitingConfirmation") stats.waiting++;
       if (row.dueDate < today && isOpenStatus(status)) stats.overdue++;
     }
     regularRows.forEach(addRow);
@@ -1168,7 +1294,6 @@
         var status = currentStatusOf(occurrenceKey(definition.id, isoOfDate(new Date(year, monthIndex, day))));
         if (isFinishedStatus(status)) stats.completed++;
         else if (status === "inProgress") stats.inProgress++;
-        else if (status === "awaitingConfirmation") stats.waiting++;
       }
     });
     overdueRows.forEach(function (row) {
@@ -1187,10 +1312,10 @@
         var status = currentStatusOf(occurrenceKey(definition.id, dueDate));
         if (isFinishedStatus(status)) stats.completed++;
         else if (status === "inProgress") stats.inProgress++;
-        else if (status === "awaitingConfirmation") stats.waiting++;
         if (dueDate < today && isOpenStatus(status)) stats.overdue++;
       });
     });
+    stats.waiting = countOpenRequestsForYear(year);
     return stats;
   }
 
@@ -1324,20 +1449,31 @@
     byId("bktProgressPct").textContent = "%" + percentage;
   }
 
+  function buildRequestInboxRowHtml(request) {
+    return '<div class="bkt-req-row">' +
+      '<span class="bkt-req-type req-' + request.type + '">' + escapeHtml(requestTypeLabelOf(request.type)) + "</span>" +
+      '<div class="bkt-req-main">' +
+      '<div class="bkt-req-title">' + escapeHtml(request.title) + "</div>" +
+      '<div class="bkt-req-meta">' + escapeHtml(formatDateShort(request.dueDate)) + " · " + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>" +
+      '<div class="bkt-req-message">' + escapeHtml(request.message) + "</div>" +
+      "</div>" +
+      '<div class="bkt-row-actions"><button type="button" class="bkt-mini-btn bkt-mb-confirm" data-act="respond-request" data-id="' + escapeHtml(request.id) + '">Respond</button></div>' +
+      "</div>";
+  }
+
   function renderBoardPane(boardData) {
+    var openRequests = collectOpenRequests();
     var approvalSection = byId("bktApprovalSection");
-    if (canAdminister() && boardData.approvalRows.length) {
+    if (canAdminister() && openRequests.length) {
       approvalSection.style.display = "";
-      byId("bktApprovalCount").textContent = String(boardData.approvalRows.length);
-      byId("bktApprovalList").innerHTML = boardData.approvalRows.map(function (row) {
-        return buildOccurrenceRowHtml(row.definition, row.dueDate);
-      }).join("");
+      byId("bktApprovalCount").textContent = String(openRequests.length);
+      byId("bktApprovalList").innerHTML = openRequests.map(buildRequestInboxRowHtml).join("");
     } else {
       approvalSection.style.display = "none";
     }
 
     var filteredOverdue = boardData.overdueRows.filter(function (row) {
-      return matchesRowFilters(row.definition, statusEntryFor(occurrenceKey(row.definition.id, row.dueDate)));
+      return matchesRowFilters(row.definition, currentStatusOf(occurrenceKey(row.definition.id, row.dueDate)));
     });
     var overdueSection = byId("bktOverdueSection");
     if (filteredOverdue.length) {
@@ -1358,10 +1494,10 @@
       }
     });
     var filteredRegular = boardData.regularRows.filter(function (row) {
-      return matchesRowFilters(row.definition, statusEntryFor(occurrenceKey(row.definition.id, row.dueDate)));
+      return matchesRowFilters(row.definition, currentStatusOf(occurrenceKey(row.definition.id, row.dueDate)));
     });
     var filteredAdhoc = boardData.adhocRows.filter(function (row) {
-      return matchesRowFilters(row.definition, statusEntryFor(occurrenceKey(row.definition.id, row.dueDate)));
+      return matchesRowFilters(row.definition, currentStatusOf(occurrenceKey(row.definition.id, row.dueDate)));
     });
     var listHtml = "";
     if (regularHtmlParts.length || filteredRegular.length) {
@@ -1382,7 +1518,7 @@
     byId("bktBoardList").innerHTML = listHtml;
     byId("bktBoardSection").style.display = listHtml ? "" : "none";
     byId("bktBoardSub").textContent = scopeRangeText(boardData.scope, boardData.rangeStart, boardData.rangeEnd);
-    var hasAnything = listHtml !== "" || filteredOverdue.length > 0 || (canAdminister() && boardData.approvalRows.length > 0);
+    var hasAnything = listHtml !== "" || filteredOverdue.length > 0 || (canAdminister() && openRequests.length > 0);
     byId("bktBoardEmpty").style.display = hasAnything ? "none" : "";
     if (!hasAnything) byId("bktBoardEmpty").innerHTML = emptyMessageHtml();
   }
@@ -1473,12 +1609,12 @@
     var upcomingCutoff = addDaysToIso(today, 7);
     var months = [];
     for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-      months.push({ monthIndex: monthIndex, total: 0, completed: 0, onTime: 0, timed: 0, awaiting: 0, inProgress: 0, overdue: 0 });
+      months.push({ monthIndex: monthIndex, total: 0, completed: 0, onTime: 0, timed: 0, inProgress: 0, openRequests: 0, overdue: 0 });
     }
     var categoryMap = {};
     var split = { routine: { total: 0, completed: 0 }, adhoc: { total: 0, completed: 0 } };
     var activity = [];
-    var overall = { total: 0, completed: 0, onTime: 0, timed: 0, awaiting: 0, inProgress: 0, overdue: 0, upcoming7: 0 };
+    var overall = { total: 0, completed: 0, onTime: 0, timed: 0, inProgress: 0, openRequests: 0, overdue: 0, upcoming7: 0 };
 
     DB.definitions.forEach(function (definition) {
       var isAdhoc = definition.taskType === "adHoc";
@@ -1510,9 +1646,6 @@
               overall.onTime++;
             }
           }
-        } else if (status === "awaitingConfirmation") {
-          overall.awaiting++;
-          monthData.awaiting++;
         } else if (status === "inProgress") {
           overall.inProgress++;
           monthData.inProgress++;
@@ -1548,6 +1681,14 @@
 
     activity.sort(function (a, b) { return a.at < b.at ? 1 : a.at > b.at ? -1 : 0; });
     activity = activity.slice(0, 12);
+
+    Object.keys(DB.requests).forEach(function (requestId) {
+      var request = DB.requests[requestId];
+      if (!request || request.status !== "open" || !request.dueDate) return;
+      if (request.dueDate.slice(0, 4) !== String(year)) return;
+      overall.openRequests++;
+      months[parseInt(request.dueDate.slice(5, 7), 10) - 1].openRequests++;
+    });
 
     var categories = Object.keys(categoryMap).map(function (id) { return categoryMap[id]; });
     categories.sort(function (a, b) { return b.total - a.total; });
@@ -1694,7 +1835,7 @@
       byId("bktDashCards").innerHTML =
         dashCardHtml("card-done", String(monthSource.completed), "Completed", "of " + monthSource.total + " · " + formatPercent(monthSource.completed, monthSource.total)) +
         dashCardHtml("card-ontime", formatPercent(monthSource.onTime, monthSource.timed), "On Time", monthSource.onTime + " of " + monthSource.timed + " completed on time") +
-        dashCardHtml("card-wait", String(monthSource.awaiting), "Awaiting Confirmation", "waiting for admin approval") +
+        dashCardHtml("card-wait", String(monthSource.openRequests), "Open Requests", "approval or information requests waiting") +
         dashCardHtml("card-progress", String(monthSource.inProgress), "In Progress", "currently being worked on") +
         dashCardHtml("card-overdue", String(monthSource.overdue), "Overdue", "past due and not finished") +
         dashCardHtml("card-late", String(Math.max(monthSource.timed - monthSource.onTime, 0)), "Late Completions", "finished after their due date");
@@ -1702,7 +1843,7 @@
       byId("bktDashCards").innerHTML =
         dashCardHtml("card-done", String(overall.completed), "Completed", "of " + overall.total + " · " + formatPercent(overall.completed, overall.total)) +
         dashCardHtml("card-ontime", formatPercent(overall.onTime, overall.timed), "On Time", overall.onTime + " of " + overall.timed + " completed on time") +
-        dashCardHtml("card-wait", String(overall.awaiting), "Awaiting Confirmation", "waiting for admin approval") +
+        dashCardHtml("card-wait", String(overall.openRequests), "Open Requests", "approval or information requests waiting") +
         dashCardHtml("card-progress", String(overall.inProgress), "In Progress", "currently being worked on") +
         dashCardHtml("card-overdue", String(overall.overdue), "Overdue", "past due and not finished") +
         dashCardHtml("card-upcoming", String(overall.upcoming7), "Upcoming 7 Days", "due in the next 7 days");
@@ -1768,8 +1909,10 @@
       requestDefinitionDelete(actionElement.getAttribute("data-id"));
     } else if (action === "reset") {
       setOccurrenceStatus(actionElement.getAttribute("data-key"), "pending");
-    } else if (action === "send-back") {
-      openAdminModal(actionElement.getAttribute("data-key"));
+    } else if (action === "open-requests") {
+      openRequestModal(actionElement.getAttribute("data-key"));
+    } else if (action === "respond-request") {
+      openRespondModal(actionElement.getAttribute("data-id"));
     }
   }
 
@@ -1821,9 +1964,13 @@
     byId("bktNoteCancel").addEventListener("click", closeNoteModal);
     byId("bktNoteSave").addEventListener("click", saveNoteFromModal);
 
-    byId("bktAdminClose").addEventListener("click", closeAdminModal);
-    byId("bktAdminCancel").addEventListener("click", closeAdminModal);
-    byId("bktAdminSave").addEventListener("click", saveAdminNoteFromModal);
+    byId("bktAdminClose").addEventListener("click", closeRespondModal);
+    byId("bktAdminCancel").addEventListener("click", closeRespondModal);
+    byId("bktAdminSave").addEventListener("click", saveRespondFromModal);
+
+    byId("bktRequestClose").addEventListener("click", closeRequestModal);
+    byId("bktRequestCancel").addEventListener("click", closeRequestModal);
+    byId("bktRequestSubmit").addEventListener("click", submitRequestFromModal);
 
     byId("bktConfirmClose").addEventListener("click", closeConfirmModal);
     byId("bktConfirmNo").addEventListener("click", closeConfirmModal);
@@ -1870,21 +2017,10 @@
           year: { type: "number", description: "Year of the yearly plan" },
           definitions: { type: "array", description: "Task definitions (routine and ad-hoc)" },
           statuses: { type: "object", description: "Status records for task occurrences" },
+          requests: { type: "object", description: "Approval and information requests attached to tasks" },
           ui: { type: "object", description: "Interface state" }
         }
       });
-    } catch (error) {}
-    try {
-      tool.declareParams([
-        {
-          name: "confirmMode",
-          label: "Mandatory Approval Mode",
-          type: "toggle",
-          default: "no",
-          severity: "optional",
-          hint: "yes: when the bookkeeper marks a task \"Complete\", it automatically becomes \"Awaiting Confirmation\". no: tasks go to approval only via \"Request Approval\"."
-        }
-      ]);
     } catch (error) {}
     try { tool.reportValid(true, ""); } catch (error) {}
   }
