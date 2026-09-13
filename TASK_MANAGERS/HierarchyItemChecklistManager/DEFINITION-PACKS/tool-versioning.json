@@ -1,0 +1,89 @@
+{
+  "pack": "tool-versioning",
+  "name": "Tool Version Tracking (Software)",
+  "description": "Version-driven tracking for a tools project: workspace folders and tools as the hierarchy, each version as the checklist unit, with the four standard deliverables every version ships (code, help document, marketing content, next-version plan).",
+  "version": 1,
+  "tool": "HierarchyItemChecklistManager",
+  "terminology": {
+    "section": "Category",
+    "subsection": "Tool",
+    "lesson": "Version",
+    "task": "Deliverable",
+    "sectionIcon": "🗂",
+    "subsectionIcon": "🧰",
+    "lessonIcon": "🔖"
+  },
+  "standardTasks": ["Code the version", "Help document", "Marketing content", "Development plan for next version"],
+  "sampleTree": [
+    {
+      "id": "cat-task",
+      "title": "TASK_MANAGERS",
+      "children": [
+        {
+          "id": "tool-hicm",
+          "title": "HierarchyItemChecklistManager",
+          "children": [
+            {
+              "id": "hicm-v1",
+              "title": "v1",
+              "children": [
+                { "id": "hicm-v1-code", "title": "Code the version" },
+                { "id": "hicm-v1-help", "title": "Help document" },
+                { "id": "hicm-v1-marketing", "title": "Marketing content" },
+                { "id": "hicm-v1-plan", "title": "Development plan for next version" }
+              ]
+            },
+            {
+              "id": "hicm-v2",
+              "title": "v2",
+              "children": [
+                { "id": "hicm-v2-code", "title": "Code the version" },
+                { "id": "hicm-v2-help", "title": "Help document" },
+                { "id": "hicm-v2-marketing", "title": "Marketing content" },
+                { "id": "hicm-v2-plan", "title": "Development plan for next version" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tool-rtm",
+          "title": "RecurringTaskManager",
+          "children": [
+            {
+              "id": "rtm-v1",
+              "title": "v1",
+              "children": [
+                { "id": "rtm-v1-code", "title": "Code the version" },
+                { "id": "rtm-v1-help", "title": "Help document" },
+                { "id": "rtm-v1-marketing", "title": "Marketing content" },
+                { "id": "rtm-v1-plan", "title": "Development plan for next version" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat-edu",
+      "title": "EDUCATION",
+      "children": [
+        {
+          "id": "tool-essay",
+          "title": "EssayWritingEducator",
+          "children": [
+            {
+              "id": "essay-v1",
+              "title": "v1",
+              "children": [
+                { "id": "essay-v1-code", "title": "Code the version" },
+                { "id": "essay-v1-help", "title": "Help document" },
+                { "id": "essay-v1-marketing", "title": "Marketing content" },
+                { "id": "essay-v1-plan", "title": "Development plan for next version" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

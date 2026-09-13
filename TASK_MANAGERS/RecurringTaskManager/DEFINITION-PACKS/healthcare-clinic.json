@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Healthcare Clinic",
+  "description": "Starter pack for clinic and medical office administration: sterilization logs, equipment checks, supply control and license renewals.",
+  "categories": [
+    { "id": "sterilization", "label": "Sterilization and Infection Control" },
+    { "id": "equipment", "label": "Equipment and Calibration" },
+    { "id": "supplies", "label": "Supplies and Inventory" },
+    { "id": "licensing", "label": "Licensing and Certifications" },
+    { "id": "safety", "label": "Safety and Emergency" },
+    { "id": "admin", "label": "Clinic Administration" }
+  ],
+  "definitions": [
+    { "title": "Daily sterilization cycle log", "category": "sterilization", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Run and record the autoclave cycles with results.", "steps": ["Run the daily test cycle", "Log load contents and results", "File the strip or digital record"] },
+    { "title": "Daily fridge and vaccine temperature log", "category": "sterilization", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Record fridge, freezer and vaccine storage temperatures twice a day." },
+    { "title": "Weekly autoclave spore test", "category": "sterilization", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "high", "note": "Send the weekly biological indicator and file the result." },
+    { "title": "Weekly supply count", "category": "supplies", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 4, "priority": "medium", "note": "Count consumables and place the supplier order." },
+    { "title": "Monthly expiry check", "category": "supplies", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Check medications and supplies for expiring stock and rotate." },
+    { "title": "Monthly equipment calibration check", "category": "equipment", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "medium", "note": "Verify calibration stickers on clinical equipment." },
+    { "title": "Quarterly emergency kit drill", "category": "safety", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "medium", "note": "Check emergency kits, oxygen and defibrillator readiness." },
+    { "title": "Staff CPR recertification", "category": "licensing", "taskType": "regular", "frequency": "yearly", "monthOfYear": 6, "dayOfMonth": 15, "priority": "high", "note": "Book CPR recertification for all clinical staff before expiry." },
+    { "title": "Clinic license renewal", "category": "licensing", "taskType": "regular", "frequency": "yearly", "monthOfYear": 12, "dayOfMonth": 1, "priority": "high", "note": "Renew the clinic license and display the new certificate." },
+    { "title": "Biohazard waste contract review", "category": "safety", "taskType": "regular", "frequency": "yearly", "monthOfYear": 11, "dayOfMonth": 10, "priority": "medium", "note": "Review the biohazard waste disposal contract and compliance reports." },
+    { "title": "Monthly patient feedback review", "category": "admin", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "low", "note": "Review feedback and complaints and decide follow-ups." },
+    { "title": "Ad-hoc equipment repair", "category": "equipment", "taskType": "adHoc", "dueDate": "", "priority": "high", "note": "One-off equipment repair or service call - set the due date when creating it." }
+  ]
+}

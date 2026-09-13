@@ -63,10 +63,26 @@ JSON starter packs for the recurring task manager. Import one to set up a segmen
 
 ## Packs in this folder
 
+All 16 packs are ready and import cleanly (validated against the tool's import parser):
+
 - `bookkeeping.json` - the default bookkeeper pack (24 tasks, 13 categories).
 - `facility-ops.json` - building operations, safety systems and compliance.
 - `restaurant-ops.json` - food service opening, closing, safety and licenses.
 - `property-management.json` - rent collection, maintenance, inspections and leases.
+- `compliance-safety.json` - compliance and safety officers: walkthroughs, training, permits, drills.
+- `healthcare-clinic.json` - clinic administration: sterilization logs, equipment, supplies, licenses.
+- `accounting-firm.json` - accounting practice: client filings, payroll runs, trust account, tax season.
+- `law-firm.json` - legal practice: court deadlines, limitation periods, trust accounting, compliance.
+- `nonprofit-operations.json` - churches, charities and associations: governance, fundraising, grants, volunteers.
+- `human-resources.json` - HR and people operations: payroll, onboarding, reviews, compliance, benefits.
+- `education-administration.json` - schools and academies: terms, exams, accreditation, safety.
+- `transport-logistics.json` - fleets and transport: inspections, maintenance, driver compliance, registrations.
+- `agriculture-farming.json` - farms: livestock, crops, equipment, chemical compliance, insurance.
+- `retail-store.json` - retail: opening and closing checklists, stock, shrink review, licenses.
+- `small-business.json` - small business owners: finances, tax obligations, marketing, operations.
+- `personal-household.json` - personal use: chores, home maintenance, bills, health, yearly obligations.
+
+Each pack has its own categories, so importing one fully re-skins the tool for that segment.
 
 ## Making your own pack
 

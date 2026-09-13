@@ -1,0 +1,28 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Human Resources",
+  "description": "Starter pack for HR and people operations: payroll cycles, onboarding, reviews, compliance and benefits.",
+  "categories": [
+    { "id": "payroll", "label": "Payroll" },
+    { "id": "onboarding", "label": "Onboarding and Offboarding" },
+    { "id": "reviews", "label": "Reviews and Performance" },
+    { "id": "compliance", "label": "Compliance and Policies" },
+    { "id": "benefits", "label": "Benefits" },
+    { "id": "admin", "label": "People Administration" }
+  ],
+  "definitions": [
+    { "title": "Daily attendance and leave log check", "category": "admin", "taskType": "regular", "frequency": "daily", "priority": "medium", "note": "Review attendance and leave requests and flag gaps." },
+    { "title": "Weekly new hire onboarding check", "category": "onboarding", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "medium", "note": "Check the onboarding checklist of every new starter this week." },
+    { "title": "Biweekly payroll processing", "category": "payroll", "taskType": "regular", "frequency": "biweekly", "dayOfWeek": 3, "priority": "high", "note": "Process hours, wages, deductions and net pay.", "steps": ["Collect timesheets and approve hours", "Run payroll and bank file", "Send payslips and file remittance summaries"] },
+    { "title": "Monthly payroll remittance", "category": "payroll", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 15, "priority": "high", "note": "Remit source deductions and employer portions on time." },
+    { "title": "Monthly probation review scan", "category": "reviews", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "medium", "note": "List employees whose probation ends this month and book the review." },
+    { "title": "Quarterly performance review cycle prep", "category": "reviews", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "medium", "note": "Prepare review forms and manager reminders for the cycle." },
+    { "title": "Quarterly benefits audit", "category": "benefits", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 20, "priority": "medium", "note": "Compare benefit enrolments against payroll and fix gaps." },
+    { "title": "Workplace policy review", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 1, "dayOfMonth": 15, "priority": "high", "note": "Review the employee handbook and workplace policies with legal advice." },
+    { "title": "Employment agreement expiry scan", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 1, "dayOfMonth": 20, "priority": "high", "note": "Scan fixed-term agreements and work permits expiring this year." },
+    { "title": "Employee handbook update", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 6, "dayOfMonth": 30, "priority": "medium", "note": "Update the handbook and collect signed acknowledgements." },
+    { "title": "Training plan preparation", "category": "reviews", "taskType": "regular", "frequency": "yearly", "monthOfYear": 9, "dayOfMonth": 15, "priority": "medium", "note": "Build next year's training plan from review outputs." },
+    { "title": "Ad-hoc employee relations case", "category": "admin", "taskType": "adHoc", "dueDate": "", "priority": "high", "note": "Open and track an employee relations case - set the due date when creating it." },
+    { "title": "Ad-hoc job posting", "category": "admin", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "Post a job opening and run the hiring pipeline." }
+  ]
+}

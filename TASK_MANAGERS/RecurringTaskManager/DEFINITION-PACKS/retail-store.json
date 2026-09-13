@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Retail Store",
+  "description": "Starter pack for retail stores: opening and closing checklists, stock control, shrink review and licenses.",
+  "categories": [
+    { "id": "opening", "label": "Opening Duties" },
+    { "id": "closing", "label": "Closing Duties" },
+    { "id": "stock", "label": "Stock and Merchandising" },
+    { "id": "safety", "label": "Safety" },
+    { "id": "compliance", "label": "Licenses and Compliance" },
+    { "id": "admin", "label": "Store Administration" }
+  ],
+  "definitions": [
+    { "title": "Opening checklist", "category": "opening", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Complete before opening.", "steps": ["Disarm and check the store", "Check tills and floats", "Check displays and cleanliness"] },
+    { "title": "Closing checklist", "category": "closing", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Complete after closing.", "steps": ["Count tills and secure the safe", "Check back doors and alarm", "Log anything left for the morning shift"] },
+    { "title": "Weekly stock take", "category": "stock", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 6, "priority": "medium", "note": "Count fast-moving stock and place replenishment orders." },
+    { "title": "Weekly merchandising refresh", "category": "stock", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "medium", "note": "Refresh displays and promotional end-caps for the week." },
+    { "title": "Monthly price and planogram audit", "category": "stock", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "medium", "note": "Check shelf prices against the planogram and correct gaps." },
+    { "title": "Monthly fire and alarm test", "category": "safety", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Test the fire alarm, emergency lights and extinguishers." },
+    { "title": "Quarterly shrink review", "category": "admin", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "medium", "note": "Compare stock loss against sales and investigate patterns." },
+    { "title": "Business license renewal", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 12, "dayOfMonth": 1, "priority": "high", "note": "Renew the business license before year end." },
+    { "title": "Lease renewal review", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 9, "dayOfMonth": 15, "priority": "high", "note": "Review the lease terms and decide renewal or negotiation." },
+    { "title": "Ad-hoc equipment repair", "category": "admin", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "Repair or service call for store equipment - set the due date when creating it." }
+  ]
+}

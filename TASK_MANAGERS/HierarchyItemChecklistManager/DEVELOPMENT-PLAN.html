@@ -214,6 +214,7 @@
 
   <footer>
     Generated as a planning document - no tool code changes. Decide the order together, then we implement one idea at a time with the same verification routine (static checks, smoke tests, headless browser proof).
+    The task list is maintained through the chat: when an idea is completed, the plan file is updated here (status + applied list), so no in-page controls are needed.
   </footer>
 </div>
 
@@ -232,11 +233,11 @@
   var IDEAS = [
     /* ---- N. Naming & Packaging ---- */
     { id: "N1", cat: "naming", title: "Configurable terminology (labels and icons)",
-      value: 10, effort: "m", req: "pure code", status: "proposed",
+      value: 10, effort: "m", req: "pure code", status: "applied",
       desc: "Make Section / Sub-section / Lesson / Task editable labels (plus the tab names Outline / Lessons / Reports and the empty-state hints), with sensible icon choices. Saved data keeps working exactly as before; only display text changes.",
       benefit: "The single biggest unlock: a store manager, HR lead or course producer sees their own words (Store / Region / Checklist / Step) and instantly accepts the tool." },
     { id: "N2", cat: "naming", title: "Definition packs: one import per vertical",
-      value: 9, effort: "m", req: "pure code", status: "proposed",
+      value: 9, effort: "m", req: "pure code", status: "applied",
       desc: "A pack JSON holding terminology, icons, the standard-task template and a small sample tree. One-click import builds a ready-to-use program (same pattern as RecurringTaskManager's DEFINITION-PACKS folder). First packs: course production, franchise rollout, HR onboarding.",
       benefit: "Setup drops from an hour of typing to a one-click import; demoing the tool per vertical becomes instant." },
     { id: "N3", cat: "naming", title: "Export the whole program as JSON",
@@ -385,7 +386,9 @@
     "Lesson and section names in the grid are not links; hovering shows a small arrow icon that jumps to the outline.",
     "Assignee avatar circles removed from grid rows - assignments live in the outline and reports.",
     "Grid cell clicks are hardened: synthetic clicks, press/release mismatches and rapid double-clicks are ignored.",
-    "Default title is My Program; sample data is Grade 7 Science Program."
+    "Default title is My Program; sample data is Grade 7 Science Program.",
+    "N1 applied (2026-09-13): configurable terminology - a Terms button edits the Section / Sub-section / Lesson / Task labels and the folder/unit icons; the first definition pack (curriculum) lives in DEFINITION-PACKS/curriculum.json.",
+    "N2 applied (2026-09-13): definition-pack import - the Import pack button parses a pack JSON (terminology, standard tasks, sample tree), replaces the current program with a confirmation and is undoable; DEFINITION-PACKS now holds curriculum, franchise-rollout and hr-onboarding packs."
   ];
 
   var sortMode = "value";
@@ -466,6 +469,7 @@
           '<span class="badge ' + effortClass(idea.effort) + '">' + effortLabel(idea.effort) + " effort</span>" +
           '<span class="badge b-req">' + (idea.req === "pure code" ? "pure code" : (idea.req === "cms" ? "needs CMS" : "needs CMS + AI")) + "</span>" +
           (idea.simp ? '<span class="badge b-simp">simplification</span>' : "") +
+          (idea.status === "applied" ? '<span class="badge b-status" style="background:#f0fdf4;color:#15803d;">Applied</span>' : "") +
           "</div>" +
           '<div class="idea-desc">' + escapeHtml(idea.desc) + "</div>" +
           '<div class="idea-value"><strong>Why:</strong> ' + escapeHtml(idea.benefit) + "</div>" +
@@ -476,8 +480,14 @@
 
     var appliedHtml = "";
     if (statusFilter === "all" && activeCat === "all" && !searchText) {
-      appliedHtml = '<div class="cat-head">Already applied (recent)</div>' +
-        '<div class="intro"><ul>' + APPLIED_NOTES.map(function (note) { return "<li>" + escapeHtml(note) + "</li>"; }).join("") + "</ul></div>";
+      var appliedIdeas = IDEAS.filter(function (idea) { return idea.status === "applied"; });
+      appliedHtml = '<div class="cat-head">Already applied (recent)</div>';
+      if (appliedIdeas.length) {
+        appliedHtml += '<div class="intro"><ul>' + appliedIdeas.map(function (idea) {
+          return "<li><strong>" + escapeHtml(idea.id) + " - " + escapeHtml(idea.title) + "</strong></li>";
+        }).join("") + "</ul></div>";
+      }
+      appliedHtml += '<div class="intro"><strong>Work notes:</strong><ul>' + APPLIED_NOTES.map(function (note) { return "<li>" + escapeHtml(note) + "</li>"; }).join("") + "</ul></div>";
     }
     byId("list").innerHTML = html + appliedHtml;
   }

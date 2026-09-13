@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Transport and Logistics",
+  "description": "Starter pack for transport and fleet operations: vehicle inspections, maintenance intervals, driver compliance and registrations.",
+  "categories": [
+    { "id": "vehicles", "label": "Vehicles and Maintenance" },
+    { "id": "drivers", "label": "Drivers and Compliance" },
+    { "id": "safety", "label": "Safety" },
+    { "id": "compliance", "label": "Registrations and Filings" },
+    { "id": "routes", "label": "Routes and Schedules" },
+    { "id": "admin", "label": "Operations Administration" }
+  ],
+  "definitions": [
+    { "title": "Daily pre-trip inspection log", "category": "vehicles", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Complete and file the pre-trip inspection for every vehicle.", "steps": ["Walk around and check tires and lights", "Check fluids, brakes and mirrors", "File the inspection report"] },
+    { "title": "Daily post-trip inspection log", "category": "vehicles", "taskType": "regular", "frequency": "daily", "priority": "medium", "note": "File post-trip checks and report any defect found." },
+    { "title": "Weekly tire and fluid check", "category": "vehicles", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "medium", "note": "Check tire pressure, tread and fluid levels across the fleet." },
+    { "title": "Monthly vehicle maintenance service", "category": "vehicles", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "high", "note": "Perform scheduled maintenance and file the service records." },
+    { "title": "Monthly fuel and mileage report", "category": "admin", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 3, "priority": "medium", "note": "Compile fuel use and mileage per vehicle and flag outliers." },
+    { "title": "Quarterly driver license check", "category": "drivers", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "high", "note": "Verify every driver's license and medical certificate status." },
+    { "title": "Quarterly insurance certificate review", "category": "compliance", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 20, "priority": "medium", "note": "Check insurance certificates for all vehicles and trailers." },
+    { "title": "Registry filings and abstracts", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 3, "dayOfMonth": 31, "priority": "high", "note": "File annual registry forms and driver abstracts." },
+    { "title": "Vehicle registration renewals", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 12, "dayOfMonth": 1, "priority": "high", "note": "Renew vehicle registrations before expiry." },
+    { "title": "Hazardous materials training refresher", "category": "safety", "taskType": "regular", "frequency": "yearly", "monthOfYear": 6, "dayOfMonth": 15, "priority": "high", "note": "Run the annual hazmat and safety refresher and file attendance." },
+    { "title": "Ad-hoc breakdown report", "category": "vehicles", "taskType": "adHoc", "dueDate": "", "priority": "high", "note": "Breakdown or defect report - set the due date when creating it." },
+    { "title": "Ad-hoc route change", "category": "routes", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "Temporary route change or detour planning." }
+  ]
+}

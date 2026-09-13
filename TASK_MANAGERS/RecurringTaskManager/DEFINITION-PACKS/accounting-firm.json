@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Accounting Firm",
+  "description": "Starter pack for an accounting or bookkeeping practice: client filing deadlines, payroll runs, trust account rules and tax season.",
+  "categories": [
+    { "id": "filings", "label": "Client Filings and Deadlines" },
+    { "id": "payroll", "label": "Client Payroll" },
+    { "id": "bookkeeping", "label": "Client Bookkeeping" },
+    { "id": "trust", "label": "Trust and Compliance" },
+    { "id": "admin", "label": "Firm Administration" }
+  ],
+  "definitions": [
+    { "title": "Daily client bank feed review", "category": "bookkeeping", "taskType": "regular", "frequency": "daily", "priority": "medium", "note": "Review client bank feeds and clear duplicates." },
+    { "title": "Weekly deadline review", "category": "filings", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "high", "note": "Scan all client filing deadlines for the next 30 days and flag at-risk ones." },
+    { "title": "Weekly billing and time entry", "category": "admin", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 4, "priority": "high", "note": "Enter time and raise client invoices." },
+    { "title": "Biweekly client payroll runs", "category": "payroll", "taskType": "regular", "frequency": "biweekly", "dayOfWeek": 4, "priority": "high", "note": "Process client payroll batches and send remittance reports.", "steps": ["Collect hours from clients", "Run payroll and bank file", "Send payslips and remittance summaries"] },
+    { "title": "Monthly close for monthly clients", "category": "bookkeeping", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "high", "note": "Close the previous month for monthly bookkeeping clients." },
+    { "title": "Monthly trust account reconciliation", "category": "trust", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "high", "note": "Reconcile the trust account and file the working papers." },
+    { "title": "Monthly client GST/HST returns", "category": "filings", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 28, "priority": "medium", "note": "File monthly GST/HST clients." },
+    { "title": "Quarterly client GST/HST returns", "category": "filings", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 28, "priority": "medium", "note": "File quarterly GST/HST clients." },
+    { "title": "Quarterly instalment review", "category": "filings", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "medium", "note": "Review corporate and personal tax instalments for clients." },
+    { "title": "T4 and T5 slip preparation", "category": "filings", "taskType": "regular", "frequency": "yearly", "monthOfYear": 2, "dayOfMonth": 28, "priority": "high", "note": "Prepare and file T4, T4A and T5 slips for all clients." },
+    { "title": "Personal tax season preparation", "category": "filings", "taskType": "regular", "frequency": "yearly", "monthOfYear": 3, "dayOfMonth": 15, "priority": "high", "note": "Checklist review of the tax season pipeline and staffing." },
+    { "title": "Engagement letter renewals", "category": "admin", "taskType": "regular", "frequency": "yearly", "monthOfYear": 1, "dayOfMonth": 15, "priority": "medium", "note": "Renew engagement letters and service scopes for all clients." },
+    { "title": "Ad-hoc new client onboarding", "category": "admin", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "Onboard a new client - set the due date when creating it." }
+  ]
+}

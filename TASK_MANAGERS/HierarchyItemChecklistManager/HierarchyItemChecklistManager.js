@@ -118,7 +118,10 @@
 			title: "My Program",
 			nodes: [],
 			members: [],
-			settings: { standardTasks: ["Lesson plan", "Worksheet", "Quiz"] },
+			settings: {
+				standardTasks: ["Lesson plan", "Worksheet", "Quiz"],
+				terms: { section: "Section", subsection: "Sub-section", lesson: "Lesson", task: "Task", sectionIcon: "📁", subsectionIcon: "📂", lessonIcon: "📖" }
+			},
 			ui: { tab: "tasks", collapsed: [], gridCollapsed: [] }
 		};
 		if (v && typeof v === "object") {
@@ -130,6 +133,17 @@
 			if (v.settings && Array.isArray(v.settings.standardTasks)) {
 				d.settings.standardTasks = v.settings.standardTasks.map(function (s) { return String(s).trim(); }).filter(Boolean);
 				if (!d.settings.standardTasks.length) d.settings.standardTasks = ["Lesson plan", "Worksheet", "Quiz"];
+			}
+			if (v.settings && v.settings.terms && typeof v.settings.terms === "object") {
+				var t = d.settings.terms;
+				["section", "subsection", "lesson", "task"].forEach(function (k) {
+					var x = String(v.settings.terms[k] || "").trim();
+					if (x) t[k] = x.slice(0, 40);
+				});
+				["sectionIcon", "subsectionIcon", "lessonIcon"].forEach(function (k) {
+					var x = String(v.settings.terms[k] || "").trim();
+					if (x) t[k] = x.slice(0, 4);
+				});
 			}
 			if (v.ui && typeof v.ui === "object") {
 				d.ui.tab = (v.ui.tab === "grid" || v.ui.tab === "reports") ? v.ui.tab : "tasks";
@@ -656,6 +670,8 @@
 		if (fs) fs.value = _filters.status;
 		var ob = el("btn-only-overdue");
 		if (ob) ob.classList.toggle("cbt-on", !!_filters.overdue);
+		var bas = el("btn-add-section");
+		if (bas) { bas.textContent = "＋ " + terms().section; bas.title = "Add a new top-level " + terms().section.toLowerCase(); }
 		updateUndoBtn();
 	}
 
@@ -732,13 +748,24 @@
 		var kids = p.children || [];
 		return kids.length > 0 && kids.every(function (c) { return !(c.children || []).length; });
 	}
+	function terms() {
+		return DB.settings.terms || { section: "Section", subsection: "Sub-section", lesson: "Lesson", task: "Task", sectionIcon: "📁", subsectionIcon: "📂", lessonIcon: "📖" };
+	}
+	function termLabel(kind) { var t = terms(); return t[kind] || kind; }
+	function termPlural(kind) { return termLabel(kind) + "s"; }
+	function termIcon(kind) {
+		if (kind === "section") return terms().sectionIcon || "📁";
+		if (kind === "subsection") return terms().subsectionIcon || "📂";
+		if (kind === "lesson") return terms().lessonIcon || "📖";
+		return "";
+	}
 	function rowHtml(n, depth, hasKids, collapsed, st) {
 		var canW = canWrite();
 		var pct = st.pct || 0;
 		var eff = effStatus(n);
 		var doneCls = !hasKids && eff === "done";
 		var kind = nodeKind(n, depth);
-		var ico = kind === "section" ? "📁" : kind === "subsection" ? "📂" : kind === "lesson" ? "📖" : (eff === "done" ? "✅" : "▫");
+		var ico = kind === "section" ? termIcon("section") : kind === "subsection" ? termIcon("subsection") : kind === "lesson" ? termIcon("lesson") : (eff === "done" ? "✅" : "▫");
 		var rowCls = "cbt-row" + (depth === 0 ? " cbt-row-root" : "") + (isOverdueLeaf(n) ? " cbt-row-overdue" : "");
 		var stdLeaf = isStdTaskLeaf(n);
 		var html = '<div class="' + rowCls + '" data-id="' + n.id + '" draggable="' + (canW ? "true" : "false") + '">';
@@ -746,7 +773,7 @@
 		html += hasKids
 			? '<button class="cbt-toggle' + (collapsed ? "" : " open") + '" data-act="toggle" title="Expand / collapse">▶</button>'
 			: '<span class="cbt-toggle-spacer"></span>';
-		html += '<span class="cbt-row-ico" title="' + (kind === "section" ? "Section" : kind === "subsection" ? "Sub-section" : kind === "lesson" ? "Lesson" : "Task") + '">' + ico + "</span>";
+		html += '<span class="cbt-row-ico" title="' + esc(termLabel(kind)) + '">' + ico + "</span>";
 		if (hasKids) html += derivedPillHtml(n);
 		else html += statusSelectHtml(n, canW);
 		html += '<span class="cbt-row-title' + (doneCls ? " cbt-done" : "") + '" data-act="' + (hasKids ? "toggle" : "rename") + '" title="' + (hasKids ? "Click to expand / collapse — double-click to rename" : "Click or double-click to rename") + '">' + esc(n.title);
@@ -862,7 +889,7 @@
 	}
 	function emptyTreeHtml(active) {
 		if (active) return '<div class="cbt-empty"><div class="cbt-empty-ic">🔍</div><h3>No matching tasks</h3><p>Nothing matches the current search or filters.</p></div>';
-		return '<div class="cbt-empty"><div class="cbt-empty-ic">🗂️</div><h3>Start building your program</h3><p>Add sections, then sub-sections and lessons under them. Use the ＋ button on any folder to add the next level — with 📋 std ON the new item becomes a lesson with its standard tasks.</p><button class="cbt-btn cbt-btn-primary" data-act="add-section">＋ Add first section</button></div>';
+		return '<div class="cbt-empty"><div class="cbt-empty-ic">🗂️</div><h3>Start building your program</h3><p>Add ' + termPlural("section").toLowerCase() + ', then ' + termPlural("subsection").toLowerCase() + ' and ' + termPlural("lesson").toLowerCase() + ' under them. Use the ＋ button on any folder to add the next level — with 📋 std ON the new item becomes a ' + terms().lesson.toLowerCase() + ' with its standard tasks.</p><button class="cbt-btn cbt-btn-primary" data-act="add-section">＋ Add first ' + terms().section.toLowerCase() + '</button></div>';
 	}
 	function renderTree() {
 		var tree = el("cbt-tree");
@@ -967,7 +994,7 @@
 		var rst = _nodeStats[node.id] || {};
 		var ds = statusById(effStatus(node));
 		var collapsed = DB.ui.gridCollapsed.indexOf(node.id) > -1;
-		var ico = depth === 0 ? "📁" : "📂";
+		var ico = depth === 0 ? termIcon("section") : termIcon("subsection");
 		var html = '<div class="cbt-grid-sec-head' + (depth > 0 ? " cbt-grid-sec-sub" : "") + '" style="padding-left:' + (gridIndent(depth) + 2) + 'px">';
 		html += '<button class="cbt-grid-toggle' + (collapsed ? "" : " open") + '" data-act="gridtoggle" data-id="' + node.id + '" title="Collapse / expand this section">▶</button>';
 		html += '<span class="cbt-sec-name cbt-grid-sec-name">' + ico + " " + esc(node.title) + '</span><span class="cbt-grid-go" data-act="reveal" data-id="' + node.id + '" title="Open in outline">↗</span><span class="cbt-derived st-' + ds.id + '">' + ds.icon + " " + ds.label + '</span><span class="cbt-sec-count">' + (rst.done || 0) + "/" + (rst.leaves || 0) + " tasks · " + (rst.pct || 0) + "%</span></div>";
@@ -985,7 +1012,7 @@
 			out.push(gridSecHeadHtml(n, depth));
 			if (DB.ui.gridCollapsed.indexOf(n.id) === -1) {
 				if (kids.length) gridBlockHtml(kids, depth + 1, cols, out, rowIdx);
-				else out.push('<div class="cbt-grid-note" style="margin:6px 0 2px">No lessons under this section yet.</div>');
+				else out.push('<div class="cbt-grid-note" style="margin:6px 0 2px">No ' + termPlural("lesson").toLowerCase() + ' under this ' + terms().section.toLowerCase() + ' yet.</div>');
 			}
 			out.push("</div>");
 		});
@@ -997,15 +1024,15 @@
 		var std = standardTasks();
 		var units = gridUnits();
 		var sum = el("cbt-grid-summary");
-		if (sum) sum.textContent = units.length + " lesson" + (units.length === 1 ? "" : "s") + " in " + DB.nodes.length + " section" + (DB.nodes.length === 1 ? "" : "s");
+		if (sum) sum.textContent = units.length + " " + (units.length === 1 ? terms().lesson : termPlural("lesson")) + " in " + DB.nodes.length + " " + (DB.nodes.length === 1 ? terms().section : termPlural("section"));
 		if (!DB.nodes.length) { box.innerHTML = emptyTreeHtml(false); return; }
 		var html = "";
-		if (!std.length) html += '<div class="cbt-grid-note">Define <b>standard tasks</b> with ⚙ Std tasks — then every lesson gets one column per task here.</div>';
+		if (!std.length) html += '<div class="cbt-grid-note">Define <b>standard tasks</b> with ⚙ Std tasks — then every ' + terms().lesson.toLowerCase() + ' gets one column per ' + terms().task.toLowerCase() + ' here.</div>';
 		if (!units.length) {
-			html += '<div class="cbt-empty"><div class="cbt-empty-ic">📖</div><h3>No lessons yet</h3><p>Lessons are items that directly contain tasks. Use the ＋ button on a section or sub-section with 📋 std ON to create them.</p></div>';
+			html += '<div class="cbt-empty"><div class="cbt-empty-ic">' + termIcon("lesson") + '</div><h3>No ' + termPlural("lesson").toLowerCase() + ' yet</h3><p>' + termPlural("lesson") + ' are items that directly contain ' + termPlural("task").toLowerCase() + '. Use the ＋ button on a ' + terms().section.toLowerCase() + ' or ' + terms().subsection.toLowerCase() + ' with 📋 std ON to create them.</p></div>';
 		} else {
 			var cols = gridCols(std.length);
-			html += '<div class="cbt-grid-head" style="grid-template-columns:' + cols + '"><span class="cbt-grid-hname">Lesson</span><span class="cbt-grid-sp">Progress</span>';
+			html += '<div class="cbt-grid-head" style="grid-template-columns:' + cols + '"><span class="cbt-grid-hname">' + esc(terms().lesson) + '</span><span class="cbt-grid-sp">Progress</span>';
 			std.forEach(function (t) { html += '<span class="cbt-grid-hcell" title="' + esc(t) + '"><span class="cbt-grid-hico">' + stdTaskIcon(t) + '</span><span class="cbt-grid-htxt">' + esc(t) + "</span></span>"; });
 			html += '<span class="cbt-grid-hcell" title="Other tasks"><span class="cbt-grid-hico">＋</span><span class="cbt-grid-htxt">Other</span></span></div>';
 			var body = [];
@@ -1132,7 +1159,7 @@
 
 		/* sections + team */
 		html += '<div class="cbt-rep-grid"' + (canAdmin() ? "" : ' style="grid-template-columns:1fr"') + '>';
-		html += '<div class="cbt-rpanel"><h3>📚 Section progress</h3>';
+		html += '<div class="cbt-rpanel"><h3>📚 ' + esc(terms().section) + ' progress</h3>';
 		S.roots.forEach(function (r) {
 			var st = _nodeStats[r.node.id] || {};
 			var ds = statusById(effStatus(r.node));
@@ -1240,7 +1267,7 @@
 		h += "<tr>" + th("Overall progress") + th("Overdue") + th("Due today") + td("") + td("") + td("") + "</tr>";
 		h += "<tr>" + td(S.pct + "%") + td(t.overdue) + td(t.dueToday) + td("") + td("") + td("") + "</tr>";
 		h += "</table>";
-		h += '<h2 style="font-size:16px;margin:0 0 10px">Section progress</h2>';
+		h += '<h2 style="font-size:16px;margin:0 0 10px">' + esc(terms().section) + ' progress</h2>';
 		if (!S.roots.length) h += '<p style="color:#64748b;font-size:13px">No sections yet.</p>';
 		S.roots.forEach(function (r) {
 			var st = _nodeStats[r.node.id] || {};
@@ -1398,11 +1425,11 @@
 		notify("Task updated", "success");
 	}
 	function openStdTasksModal() {
-		var html = '<div class="cbt-field"><label>One task per line — added under every new lesson</label>';
+		var html = '<div class="cbt-field"><label>One ' + terms().task.toLowerCase() + ' per line — added under every new ' + terms().lesson.toLowerCase() + '</label>';
 		html += '<textarea id="st-tasks" style="min-height:150px">' + esc(standardTasks().join("\n")) + "</textarea></div>";
-		html += '<div class="cbt-field-hint" style="margin-top:8px">These tasks are added when you create a lesson with the 📋 std option ON, and via the 📋 button on any item. Sections and sub-sections never get them automatically.</div>';
+		html += '<div class="cbt-field-hint" style="margin-top:8px">These ' + termPlural("task").toLowerCase() + ' are added when you create a ' + terms().lesson.toLowerCase() + ' with the 📋 std option ON, and via the 📋 button on any item. ' + termPlural("section") + ' and ' + termPlural("subsection").toLowerCase() + ' never get them automatically.</div>';
 		html += '<div class="cbt-modal-foot"><button class="cbt-btn cbt-btn-ghost" id="btn-st-cancel">Cancel</button><button class="cbt-btn cbt-btn-primary" id="btn-st-save">💾 Save</button></div>';
-		openModal("📋 Standard lesson tasks", html, function () {
+		openModal("📋 Standard task template", html, function () {
 			var c = el("btn-st-cancel");
 			if (c) c.onclick = closeModal;
 			var s = el("btn-st-save");
@@ -1416,6 +1443,131 @@
 				renderAll();
 				scheduleSave();
 				notify("Standard tasks saved", "success");
+			};
+		});
+	}
+	function openTermsModal() {
+		var t = terms();
+		function field(label, id, val, max) {
+			return '<div class="cbt-field"><label>' + label + '</label><input type="text" id="' + id + '" maxlength="' + (max || 40) + '" value="' + esc(val) + '"></div>';
+		}
+		var html = '<div class="cbt-field-hint" style="margin-bottom:10px">These words and icons are used in rows, the grid, buttons and hints. Existing data keeps working — only the display changes.</div>';
+		html += '<div class="cbt-form-grid">';
+		html += field("Top folder label", "tf-section", t.section);
+		html += field("Nested folder label", "tf-subsection", t.subsection);
+		html += field("Checklist unit label", "tf-lesson", t.lesson);
+		html += field("Smallest item label", "tf-task", t.task);
+		html += field("Top folder icon", "tf-ic-section", t.sectionIcon, 4);
+		html += field("Nested folder icon", "tf-ic-subsection", t.subsectionIcon, 4);
+		html += field("Unit icon", "tf-ic-lesson", t.lessonIcon, 4);
+		html += "</div>";
+		html += '<div class="cbt-modal-foot"><button class="cbt-btn cbt-btn-ghost" id="btn-tf-cancel">Cancel</button><button class="cbt-btn cbt-btn-primary" id="btn-tf-save">💾 Save</button></div>';
+		openModal("⚙ Terminology", html, function () {
+			var c = el("btn-tf-cancel");
+			if (c) c.onclick = closeModal;
+			var s = el("btn-tf-save");
+			if (s) s.onclick = function () {
+				var map = { section: "tf-section", subsection: "tf-subsection", lesson: "tf-lesson", task: "tf-task", sectionIcon: "tf-ic-section", subsectionIcon: "tf-ic-subsection", lessonIcon: "tf-ic-lesson" };
+				for (var k in map) {
+					var inp = el(map[k]);
+					if (!inp) continue;
+					var v = inp.value.trim();
+					if (v) t[k] = k.indexOf("Icon") > -1 ? v.slice(0, 4) : v.slice(0, 40);
+				}
+				closeModal();
+				renderAll();
+				scheduleSave();
+				notify("Terminology saved", "success");
+			};
+		});
+	}
+
+	/* ── Definition packs (import) ── */
+	function parseDefinitionPack(text) {
+		var t = String(text || "").trim();
+		t = t.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+		var start = t.indexOf("{");
+		var end = t.lastIndexOf("}");
+		if (start < 0 || end <= start) return { error: "No JSON object found - paste the whole pack JSON." };
+		var body = t.slice(start, end + 1);
+		var obj = null;
+		try { obj = JSON.parse(body); }
+		catch (e) {
+			try { obj = JSON.parse(body.replace(/,\s*([}\]])/g, "$1")); }
+			catch (e2) { obj = null; }
+		}
+		if (!obj || typeof obj !== "object") return { error: "The JSON is not valid." };
+		return { pack: obj };
+	}
+	function packNode(x) {
+		if (!x || typeof x !== "object" || !x.title) return null;
+		var title = String(x.title).trim().slice(0, 120);
+		if (!title) return null;
+		var n = makeNode(title);
+		if (Array.isArray(x.children)) n.children = x.children.map(packNode).filter(Boolean);
+		if (!n.children.length) {
+			if (x.status && statusById(x.status)) n.status = x.status;
+			if (x.due && /^\d{4}-\d{2}-\d{2}$/.test(String(x.due))) n.due = String(x.due);
+			if (x.memberId) n.memberId = String(x.memberId);
+			if (x.notes) n.notes = String(x.notes).slice(0, 2000);
+		}
+		return n;
+	}
+	function applyDefinitionPack(pack) {
+		var t = terms();
+		var pt = (pack && typeof pack.terminology === "object") ? pack.terminology : {};
+		["section", "subsection", "lesson", "task"].forEach(function (k) {
+			var x = String(pt[k] || "").trim();
+			if (x) t[k] = x.slice(0, 40);
+		});
+		["sectionIcon", "subsectionIcon", "lessonIcon"].forEach(function (k) {
+			var x = String(pt[k] || "").trim();
+			if (x) t[k] = x.slice(0, 4);
+		});
+		DB.settings.terms = t;
+		if (Array.isArray(pack.standardTasks)) {
+			var st = pack.standardTasks.map(function (s) { return String(s).trim(); }).filter(Boolean).slice(0, 20);
+			if (st.length) DB.settings.standardTasks = st;
+		}
+		return Array.isArray(pack.sampleTree) ? pack.sampleTree.map(packNode).filter(Boolean) : [];
+	}
+	function doImportPack() {
+		var ta = el("ip-json");
+		if (!ta) return;
+		var parsed = parseDefinitionPack(ta.value);
+		if (parsed.error) { notify(parsed.error, "warning"); return; }
+		var pack = parsed.pack;
+		var wasEmpty = !DB.nodes.length;
+		pushUndo("Import pack");
+		var nodes = [];
+		try { nodes = applyDefinitionPack(pack); }
+		catch (e) { _undoStack.pop(); updateUndoBtn(); notify("The pack could not be applied: " + e.message, "warning"); return; }
+		if (!nodes.length) notify("The pack has no sample tree - terminology and standard tasks were applied.", "info");
+		DB.nodes = nodes;
+		if (wasEmpty && pack.name) DB.title = String(pack.name).trim().slice(0, 80);
+		closeModal();
+		computeStats();
+		renderAll();
+		scheduleSave();
+		var total = 0;
+		(function walk(list) { list.forEach(function (n) { total++; if (n.children && n.children.length) walk(n.children); }); })(DB.nodes);
+		notify("Pack imported - " + total + " item" + (total === 1 ? "" : "s") + " ready", "success");
+	}
+	function openImportModal() {
+		var html = '<div class="cbt-field-hint" style="margin-bottom:10px">Paste a definition pack JSON. Importing replaces the current tree, standard tasks and terminology (undoable). Ready-made packs: curriculum, franchise rollout, HR onboarding.</div>';
+		html += '<textarea id="ip-json" style="min-height:180px" placeholder=\'{\n  "pack": "curriculum",\n  "name": "...",\n  "terminology": { ... },\n  "standardTasks": [ ... ],\n  "sampleTree": [ ... ]\n}\'></textarea>';
+		html += '<div class="cbt-modal-foot"><button class="cbt-btn cbt-btn-ghost" id="btn-ip-cancel">Cancel</button><button class="cbt-btn cbt-btn-danger" id="btn-ip-import">📥 Import (replaces current program)</button></div>';
+		openModal("📥 Import definition pack", html, function () {
+			var c = el("btn-ip-cancel");
+			if (c) c.onclick = closeModal;
+			var b = el("btn-ip-import");
+			if (b) b.onclick = function () {
+				if (DB.nodes.length && !b.classList.contains("cbt-confirm")) {
+					b.classList.add("cbt-confirm");
+					b.textContent = "Sure? This replaces your current program";
+					return;
+				}
+				doImportPack();
 			};
 		});
 	}
@@ -1502,6 +1654,10 @@
 		if (bas) bas.onclick = function () { if (canWrite()) addSection(); };
 		var bst = el("btn-std-tasks");
 		if (bst) bst.onclick = function () { if (canWrite()) openStdTasksModal(); };
+		var btr = el("btn-terms");
+		if (btr) btr.onclick = function () { if (canWrite()) openTermsModal(); };
+		var bim = el("btn-import");
+		if (bim) bim.onclick = function () { if (canWrite()) openImportModal(); };
 		var s = el("cbt-search");
 		if (s) s.addEventListener("input", function () { renderTree(); });
 		var fs = el("cbt-filter-status");

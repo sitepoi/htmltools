@@ -1,0 +1,82 @@
+{
+  "pack": "franchise-rollout",
+  "name": "Franchise Rollout (Business)",
+  "description": "Opening new locations: regions and cities as folders, each store as the checklist unit, with the standard pre-opening steps every store must complete.",
+  "version": 1,
+  "tool": "HierarchyItemChecklistManager",
+  "terminology": {
+    "section": "Region",
+    "subsection": "City",
+    "lesson": "Store",
+    "task": "Step",
+    "sectionIcon": "🗺",
+    "subsectionIcon": "🏙",
+    "lessonIcon": "🏬"
+  },
+  "standardTasks": ["Lease signed", "Permits", "Hiring", "Training", "Fixtures", "Soft open", "Grand opening"],
+  "sampleTree": [
+    {
+      "id": "reg-west",
+      "title": "West Region",
+      "children": [
+        {
+          "id": "city-portland",
+          "title": "Portland",
+          "children": [
+            {
+              "id": "st-pdx01",
+              "title": "Store 01 - Downtown",
+              "children": [
+                { "id": "pdx1-lease", "title": "Lease signed" },
+                { "id": "pdx1-permits", "title": "Permits" },
+                { "id": "pdx1-hiring", "title": "Hiring" },
+                { "id": "pdx1-training", "title": "Training" },
+                { "id": "pdx1-fixtures", "title": "Fixtures" },
+                { "id": "pdx1-soft", "title": "Soft open" },
+                { "id": "pdx1-grand", "title": "Grand opening" }
+              ]
+            },
+            {
+              "id": "st-pdx02",
+              "title": "Store 02 - Waterfront",
+              "children": [
+                { "id": "pdx2-lease", "title": "Lease signed" },
+                { "id": "pdx2-permits", "title": "Permits" },
+                { "id": "pdx2-hiring", "title": "Hiring" },
+                { "id": "pdx2-training", "title": "Training" },
+                { "id": "pdx2-fixtures", "title": "Fixtures" },
+                { "id": "pdx2-soft", "title": "Soft open" },
+                { "id": "pdx2-grand", "title": "Grand opening" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "reg-east",
+      "title": "East Region",
+      "children": [
+        {
+          "id": "city-atlanta",
+          "title": "Atlanta",
+          "children": [
+            {
+              "id": "st-atl01",
+              "title": "Store 01 - Midtown",
+              "children": [
+                { "id": "atl1-lease", "title": "Lease signed" },
+                { "id": "atl1-permits", "title": "Permits" },
+                { "id": "atl1-hiring", "title": "Hiring" },
+                { "id": "atl1-training", "title": "Training" },
+                { "id": "atl1-fixtures", "title": "Fixtures" },
+                { "id": "atl1-soft", "title": "Soft open" },
+                { "id": "atl1-grand", "title": "Grand opening" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
