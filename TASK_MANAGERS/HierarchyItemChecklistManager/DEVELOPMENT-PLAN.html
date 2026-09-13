@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hierarchy Item Checklist Manager - Development Plan</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #4f46e5;
+    --accent-d: #4338ca;
+    --high: #16a34a;
+    --mid: #d97706;
+    --low: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #f4f6f8;
+  }
+  header {
+    background: #0f172a;
+    color: #e6edf5;
+    padding: 18px 28px;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+  header .sub { margin-top: 5px; font-size: 12.5px; color: #9aa8ba; }
+  header .sub strong { color: #a5b4fc; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 24px 48px; }
+  .intro {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin: 3px 0; }
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat {
+    flex: 1;
+    min-width: 130px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .stat .num { font-size: 20px; font-weight: 800; color: var(--accent-d); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .filters input[type=search] {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  .filters select {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    background: #fff;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 100px;
+    padding: 6px 13px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .idea {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .score {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+  }
+  .score.s-high { background: var(--high); }
+  .score.s-mid { background: var(--mid); }
+  .score.s-low { background: var(--low); }
+  .idea-body { flex: 1; min-width: 0; }
+  .idea-title { font-size: 14.5px; font-weight: 700; }
+  .idea-id { color: var(--muted); font-size: 12px; font-weight: 600; margin-right: 6px; }
+  .badges { margin: 6px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .b-cat { background: #ecfdf5; color: #047857; }
+  .b-eff-s { background: #f0fdf4; color: #166534; }
+  .b-eff-m { background: #fffbeb; color: #b45309; }
+  .b-eff-l { background: #fef2f2; color: #b91c1c; }
+  .b-req { background: #eef2ff; color: #4338ca; }
+  .b-simp { background: #fdf2f8; color: #be185d; }
+  .b-status { background: #f1f5f9; color: #475569; }
+  .idea-desc { font-size: 13px; color: #334155; line-height: 1.55; }
+  .idea-value { font-size: 12.5px; color: #0f766e; margin-top: 6px; }
+  .idea-value strong { color: #0f766e; }
+  .cat-head {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    margin: 18px 0 8px;
+  }
+  .note-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #78350f;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .applied { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; background: #fff; border: 1px dashed var(--line); border-radius: 10px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Hierarchy Item Checklist Manager - Development Plan</h1>
+  <div class="sub">Idea backlog with value scores, effort and requirements - so we can decide <strong>what to apply</strong> and <strong>in which order</strong>.</div>
+</header>
+<div class="wrap">
+
+  <div class="intro">
+    How to read this plan:
+    <ul>
+      <li><strong>Value</strong> = the colored score box on each card (1-10). 8-10 green = high impact, 6-7 amber = worthwhile, 1-5 gray = nice to have.</li>
+      <li><strong>Effort</strong> = Small (hours), Medium (a day or two), Large (multi-day or needs a decision).</li>
+      <li><strong>Requirement</strong> = "pure code" means we can build it inside this tool. "CMS" means the parent CMS must cooperate (permissions, storage, notifications, file access). "CMS-AI" means the CMS must provide an AI endpoint because this tool sandbox cannot call the network itself.</li>
+      <li>Use the filters to sort by value, to see only one category, or only simplification ideas.</li>
+    </ul>
+  </div>
+
+  <div class="note-box">
+    <strong>Name history (kept for reference):</strong> this tool was originally named
+    <strong>CurriculumBuilderTaskManagement</strong> (built 2026-09-02 in EDUCATION/, moved to TASK_MANAGERS/ and renamed
+    <strong>HierarchyItemChecklistManager</strong> on 2026-09-13).<br>
+    <strong>The engine's real identity:</strong> a checklist template that repeats over <strong>items</strong> - every unit in a hierarchy gets the same steps, everything is watched on one matrix, and statuses roll up from the bottom.
+    That is what separates it from RecurringTaskManager, where the same idea repeats over <strong>time</strong> instead of over items.
+  </div>
+
+  <div class="note-box" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3;">
+    <strong>About AI in this tool:</strong> the html-tool sandbox has no network access (no fetch, no API keys), so the tool itself cannot call an AI model.
+    AI is still possible when the <strong>parent CMS provides an AI assist endpoint</strong> (the CMS calls the model and returns text to the tool, the tool only displays it).
+    That is why every AI idea below is marked CMS-AI. The highest-value AI idea is creating a whole program from an outline, because setup time is the biggest onboarding cost for this tool.
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="filters">
+    <input type="search" id="fSearch" placeholder="Search ideas...">
+    <select id="fSort">
+      <option value="value">Sort: Value</option>
+      <option value="id">Sort: ID</option>
+      <option value="effort">Sort: Effort</option>
+    </select>
+    <select id="fStatus">
+      <option value="all">All statuses</option>
+      <option value="proposed">Proposed</option>
+      <option value="applied">Applied</option>
+    </select>
+  </div>
+  <div class="filters" id="catChips"></div>
+
+  <div id="list"></div>
+
+  <footer>
+    Generated as a planning document - no tool code changes. Decide the order together, then we implement one idea at a time with the same verification routine (static checks, smoke tests, headless browser proof).
+  </footer>
+</div>
+
+<script>
+(function () {
+  var CATEGORIES = [
+    { id: "naming", label: "Naming & Packaging" },
+    { id: "template", label: "Template & Data" },
+    { id: "workflow", label: "Workflow & Collaboration" },
+    { id: "ux", label: "UX & Simplification" },
+    { id: "reports", label: "Reports & Insights" },
+    { id: "governance", label: "Governance & Reliability" },
+    { id: "ai", label: "AI Assistance" }
+  ];
+
+  var IDEAS = [
+    /* ---- N. Naming & Packaging ---- */
+    { id: "N1", cat: "naming", title: "Configurable terminology (labels and icons)",
+      value: 10, effort: "m", req: "pure code", status: "proposed",
+      desc: "Make Section / Sub-section / Lesson / Task editable labels (plus the tab names Outline / Lessons / Reports and the empty-state hints), with sensible icon choices. Saved data keeps working exactly as before; only display text changes.",
+      benefit: "The single biggest unlock: a store manager, HR lead or course producer sees their own words (Store / Region / Checklist / Step) and instantly accepts the tool." },
+    { id: "N2", cat: "naming", title: "Definition packs: one import per vertical",
+      value: 9, effort: "m", req: "pure code", status: "proposed",
+      desc: "A pack JSON holding terminology, icons, the standard-task template and a small sample tree. One-click import builds a ready-to-use program (same pattern as RecurringTaskManager's DEFINITION-PACKS folder). First packs: course production, franchise rollout, HR onboarding.",
+      benefit: "Setup drops from an hour of typing to a one-click import; demoing the tool per vertical becomes instant." },
+    { id: "N3", cat: "naming", title: "Export the whole program as JSON",
+      value: 8, effort: "s", req: "pure code", status: "proposed",
+      desc: "A button that downloads the entire value (tree, template, assignments, ui state) as a JSON file. Doubles as a backup and as the source format for definition packs.",
+      benefit: "Portability and backup; users stop fearing vendor lock-in, which matters for careful buyers (finance, compliance, nonprofits)." },
+
+    /* ---- T. Template & Data ---- */
+    { id: "T1", cat: "template", title: "Per-section standard-task templates",
+      value: 9, effort: "l", req: "pure code", status: "proposed",
+      desc: "Each section or sub-section defines its own checklist template; the grid renders columns per section instead of one global set. A unit inherits the template of the nearest ancestor that defines one.",
+      benefit: "One tool can run a mixed program (courses plus compliance items, different steps each) - the second biggest unlock after N1." },
+    { id: "T2", cat: "template", title: "Bulk create units from a pasted outline",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "A modal where you paste an indented text outline or CSV; each line becomes a section, sub-section or unit, and every unit gets the standard tasks automatically.",
+      benefit: "Migrating a 100-unit program from a spreadsheet becomes a paste, not an afternoon of clicking." },
+    { id: "T3", cat: "template", title: "Reorder template steps",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "Up/down controls in the Std tasks modal so the column order in the grid can be arranged without retyping the list.",
+      benefit: "Columns match the real order work happens in, which makes the grid easier to read." },
+    { id: "T4", cat: "template", title: "Due-offset on template steps",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Each template step can carry a relative due offset (for example Quiz = +5 days). New units stamp their step due dates automatically from a start date.",
+      benefit: "Every unit gets a realistic schedule without manual date entry." },
+    { id: "T5", cat: "template", title: "Help text per template step",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "An optional description per standard task, shown as a tooltip on the column header and in the edit modal.",
+      benefit: "New team members learn what each step means without asking." },
+
+    /* ---- W. Workflow & Collaboration ---- */
+    { id: "W1", cat: "workflow", title: "Assign by template column",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "On the grid header, an assign action per column: assign every 'Worksheet' task across all units to one person in one click.",
+      benefit: "A very common real pattern (one person owns all quizzes); today it takes one assignment per unit." },
+    { id: "W2", cat: "workflow", title: "Filter and search the grid",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "A small filter row on the Lessons tab: text search on unit names plus an assignee filter, hiding non-matching rows.",
+      benefit: "With 100+ units, the matrix becomes scannable again for one person or one topic." },
+    { id: "W3", cat: "workflow", title: "Open an item from its grid cell",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "A small control on each cell (or a double-click) that jumps to that exact item's edit modal in the outline.",
+      benefit: "Grid for the big picture, outline for detail - with a one-click bridge between them." },
+    { id: "W4", cat: "workflow", title: "Reorder units and sections inside the grid",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Drag rows and section heads in the Lessons tab to reorder (the outline already supports it).",
+      benefit: "Program managers reorder in the view where they plan; no tab switching." },
+    { id: "W5", cat: "workflow", title: "Multi-select cells in the grid",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Click-drag or checkbox-select several cells, then set one status for all of them (for example mark a whole column done).",
+      benefit: "Bulk updates without a spreadsheet; especially useful at the end of a week." },
+    { id: "W6", cat: "workflow", title: "Mark all done on a section row",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "A small action on each section head: set every open task under it to done with one click and a confirm.",
+      benefit: "Quick close-out when a whole section finishes at once." },
+
+    /* ---- U. UX & Simplification ---- */
+    { id: "U1", cat: "ux", title: "Keyboard navigation in the grid",
+      value: 7, effort: "m", req: "pure code", status: "proposed",
+      desc: "Arrow keys move between cells, Enter cycles the status, the cell in focus is highlighted.",
+      benefit: "Power users update an entire program without touching the mouse." },
+    { id: "U2", cat: "ux", title: "Hide the Other column when it is empty",
+      value: 6, effort: "s", req: "pure code", status: "proposed", simp: true,
+      desc: "When no unit has non-template tasks, the Other column disappears until it is needed again.",
+      benefit: "One less column of empty dots in the common case." },
+    { id: "U3", cat: "ux", title: "Sticky first column on small screens",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "When the grid scrolls horizontally on narrow screens, the unit name column stays visible while cells scroll under it.",
+      benefit: "Mobile users keep the row context while checking cells." },
+    { id: "U4", cat: "ux", title: "Compact grid density toggle",
+      value: 5, effort: "s", req: "pure code", status: "proposed", simp: true,
+      desc: "A toggle between the current comfortable spacing and a denser view with smaller cells for very large programs.",
+      benefit: "More units on screen when the program grows past a hundred rows." },
+    { id: "U5", cat: "ux", title: "Rename from the grid",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "Double-click a unit or section name in the grid to rename inline, like the outline.",
+      benefit: "Small fixes without switching tabs." },
+
+    /* ---- R. Reports & Insights ---- */
+    { id: "R1", cat: "reports", title: "Report per template step, grouped by section",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "The standard-task progress panel gains a section breakdown (after T1: per-section templates), showing where each step is blocked.",
+      benefit: "Managers see exactly which part of which section needs attention." },
+    { id: "R2", cat: "reports", title: "Blocked reasons summary",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "A report listing all blocked items with their notes, so the reasons for blockage are visible in one place.",
+      benefit: "Blocked notes are where the real obstacles live; today they are scattered across rows." },
+    { id: "R3", cat: "reports", title: "Export the matrix as CSV",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "A CSV export in matrix shape: one row per unit, one column per template step, plus status, assignee and due date.",
+      benefit: "Spreadsheet-minded stakeholders get the familiar format without manual copying." },
+    { id: "R4", cat: "reports", title: "Week-over-week completion delta",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "A small line in the reports showing how many items moved to done this week versus last week.",
+      benefit: "The trend matters more than the raw number; shows recovery or slowdown early." },
+
+    /* ---- G. Governance & Reliability ---- */
+    { id: "G1", cat: "governance", title: "Change log: who set which status when",
+      value: 7, effort: "m", req: "pure code", status: "proposed",
+      desc: "A lightweight per-item activity trail (user, status change, timestamp) shown in the edit modal, capped to keep the stored value small.",
+      benefit: "Answers 'who finished this and when' - the question managers ask most, and the first step toward audit readiness." },
+    { id: "G2", cat: "governance", title: "Warn on duplicate step titles in a unit",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "The grid matches children to template columns by title; a duplicate title makes matching ambiguous. Warn (or auto-match the first) when two children share a name.",
+      benefit: "Prevents silently wrong cells when someone adds a task with a name that already exists." },
+    { id: "G3", cat: "governance", title: "Import validation with a clear error report",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "When importing a definition pack or outline (N2, T2), validate the input and list every problem line instead of failing silently.",
+      benefit: "Imports become trustworthy enough for non-technical admins." },
+    { id: "G4", cat: "governance", title: "Read-only detail view for viewers",
+      value: 5, effort: "s", req: "pure code", status: "applied",
+      desc: "Viewers can explore the whole program but cannot change anything (banner plus hidden edit controls).",
+      benefit: "Safe sharing with stakeholders who only need to see progress." },
+
+    /* ---- A. AI Assistance ---- */
+    { id: "A1", cat: "ai", title: "Create a program from an outline",
+      value: 9, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "Paste a syllabus, catalog or rollout plan; the CMS sends it to an AI model that returns the section / sub-section / unit tree with the standard tasks attached. The user reviews and confirms before it is created.",
+      benefit: "Setup - the biggest onboarding cost - drops from hours to a paste and a review." },
+    { id: "A2", cat: "ai", title: "Suggest a checklist template for a unit type",
+      value: 8, effort: "m", req: "cms-ai", status: "proposed",
+      desc: "Describe the unit ('video course production', 'store opening') and get a suggested standard-task list to accept or edit.",
+      benefit: "First-time users get a well-shaped template instead of starting from three defaults." },
+    { id: "A3", cat: "ai", title: "Program health summary",
+      value: 7, effort: "m", req: "cms-ai", status: "proposed",
+      desc: "The CMS generates a short natural-language summary from the data: '12 of 40 lessons are blocked, most waiting on worksheets; 3 sections are fully done.'",
+      benefit: "A management-ready paragraph with zero manual writing." },
+    { id: "A4", cat: "ai", title: "Draft notes for template steps",
+      value: 6, effort: "m", req: "cms-ai", status: "proposed",
+      desc: "A 'draft note' button on a task that fills the notes field with a helpful description of what good completion looks like.",
+      benefit: "Consistent guidance without the admin writing it by hand." },
+    { id: "A5", cat: "ai", title: "Suggest assignees from past patterns",
+      value: 5, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "Based on who completed similar tasks in the past, propose assignees when a new unit is created.",
+      benefit: "Less clicking during setup; the user always confirms." }
+  ];
+
+  var APPLIED_NOTES = [
+    "Renamed from CurriculumBuilderTaskManagement to HierarchyItemChecklistManager (2026-09-13) - folder, files, harness and analysis document updated; the old name is kept in this plan for reference.",
+    "Terminology: Section / Sub-section / Lesson / Task with role-based icons; the grid tab is Lessons and rows are lessons (units).",
+    "Team comes only from the CMS permitted-users list - no in-tool team management.",
+    "Auto-save on every change via tool.requestSave - no Save button.",
+    "Header removed entirely - the CMS object name is the identity; the progress ring lives in the stats ribbon (ring + Tasks + Done + In progress + In review).",
+    "Toolbar is one line; the quick-add bar and the Lesson button were removed (a row's plus with std ON creates a lesson with its standard tasks).",
+    "Standard tasks are leaves: they have only edit and delete controls, cannot contain sub-items, and cannot be duplicated or reordered.",
+    "Lesson rows never collapse (they have nothing below them); only sections and sub-sections collapse, and Collapse all acts on sections only.",
+    "Lesson and section names in the grid are not links; hovering shows a small arrow icon that jumps to the outline.",
+    "Assignee avatar circles removed from grid rows - assignments live in the outline and reports.",
+    "Grid cell clicks are hardened: synthetic clicks, press/release mismatches and rapid double-clicks are ignored.",
+    "Default title is My Program; sample data is Grade 7 Science Program."
+  ];
+
+  var sortMode = "value";
+  var activeCat = "all";
+  var statusFilter = "all";
+  var searchText = "";
+
+  function byId(id) { return document.getElementById(id); }
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function scoreClass(value) { return value >= 8 ? "s-high" : (value >= 6 ? "s-mid" : "s-low"); }
+  function effortClass(effort) { return effort === "s" ? "b-eff-s" : (effort === "m" ? "b-eff-m" : "b-eff-l"); }
+  function effortLabel(effort) { return effort === "s" ? "Small" : (effort === "m" ? "Medium" : "Large"); }
+  function categoryLabel(id) {
+    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].id === id) return CATEGORIES[i].label;
+    return id;
+  }
+
+  function renderStats() {
+    var total = IDEAS.length;
+    var applied = IDEAS.filter(function (idea) { return idea.status === "applied"; }).length;
+    var sum = 0;
+    IDEAS.forEach(function (idea) { sum += idea.value; });
+    var avg = total ? (sum / total).toFixed(1) : "0";
+    var simplifications = IDEAS.filter(function (idea) { return idea.simp; }).length;
+    byId("statsRow").innerHTML =
+      '<div class="stat"><div class="num">' + total + '</div><div class="lbl">Ideas</div></div>' +
+      '<div class="stat"><div class="num">' + avg + '</div><div class="lbl">Avg value</div></div>' +
+      '<div class="stat"><div class="num">' + simplifications + '</div><div class="lbl">Simplifications</div></div>' +
+      '<div class="stat"><div class="num">' + applied + '</div><div class="lbl">Already applied</div></div>';
+  }
+
+  function renderCatChips() {
+    var html = '<button type="button" class="chip' + (activeCat === "all" ? " active" : "") + '" data-cat="all">All</button>';
+    CATEGORIES.forEach(function (category) {
+      html += '<button type="button" class="chip' + (activeCat === category.id ? " active" : "") + '" data-cat="' + category.id + '">' +
+        escapeHtml(category.label) + "</button>";
+    });
+    byId("catChips").innerHTML = html;
+    Array.prototype.forEach.call(byId("catChips").querySelectorAll(".chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        activeCat = chip.getAttribute("data-cat");
+        render();
+      });
+    });
+  }
+
+  function render() {
+    renderCatChips();
+    renderStats();
+    var list = IDEAS.slice();
+    if (statusFilter !== "all") list = list.filter(function (idea) { return idea.status === statusFilter; });
+    if (activeCat !== "all") list = list.filter(function (idea) { return idea.cat === activeCat; });
+    if (searchText) {
+      list = list.filter(function (idea) {
+        return (idea.title + " " + idea.desc + " " + idea.benefit).toLowerCase().indexOf(searchText) > -1;
+      });
+    }
+    if (sortMode === "value") list.sort(function (a, b) { return b.value - a.value; });
+    else if (sortMode === "effort") list.sort(function (a, b) { return a.effort.localeCompare(b.effort); });
+    else list.sort(function (a, b) { return a.id.localeCompare(b.id); });
+
+    var html = "";
+    var shownCategories = [];
+    CATEGORIES.forEach(function (category) {
+      var categoryIdeas = list.filter(function (idea) { return idea.cat === category.id; });
+      if (!categoryIdeas.length) return;
+      html += '<div class="cat-head">' + escapeHtml(category.label) + "</div>";
+      categoryIdeas.forEach(function (idea) {
+        html += '<div class="idea">' +
+          '<div class="score ' + scoreClass(idea.value) + '">' + idea.value + "</div>" +
+          '<div class="idea-body">' +
+          '<div class="idea-title"><span class="idea-id">' + escapeHtml(idea.id) + "</span>" + escapeHtml(idea.title) + "</div>" +
+          '<div class="badges">' +
+          '<span class="badge b-cat">' + escapeHtml(categoryLabel(idea.cat)) + "</span>" +
+          '<span class="badge ' + effortClass(idea.effort) + '">' + effortLabel(idea.effort) + " effort</span>" +
+          '<span class="badge b-req">' + (idea.req === "pure code" ? "pure code" : (idea.req === "cms" ? "needs CMS" : "needs CMS + AI")) + "</span>" +
+          (idea.simp ? '<span class="badge b-simp">simplification</span>' : "") +
+          "</div>" +
+          '<div class="idea-desc">' + escapeHtml(idea.desc) + "</div>" +
+          '<div class="idea-value"><strong>Why:</strong> ' + escapeHtml(idea.benefit) + "</div>" +
+          "</div></div>";
+      });
+    });
+    if (!list.length) html = '<div class="empty">No ideas match the current filters.</div>';
+
+    var appliedHtml = "";
+    if (statusFilter === "all" && activeCat === "all" && !searchText) {
+      appliedHtml = '<div class="cat-head">Already applied (recent)</div>' +
+        '<div class="intro"><ul>' + APPLIED_NOTES.map(function (note) { return "<li>" + escapeHtml(note) + "</li>"; }).join("") + "</ul></div>";
+    }
+    byId("list").innerHTML = html + appliedHtml;
+  }
+
+  byId("fSearch").addEventListener("input", function () {
+    searchText = this.value.trim().toLowerCase();
+    render();
+  });
+  byId("fSort").addEventListener("change", function () {
+    sortMode = this.value;
+    render();
+  });
+  byId("fStatus").addEventListener("change", function () {
+    statusFilter = this.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

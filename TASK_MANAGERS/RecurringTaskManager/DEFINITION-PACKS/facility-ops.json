@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Facility Operations",
+  "description": "Starter pack for facility and building operations: daily walkthroughs, preventive maintenance cycles, safety checks and compliance renewals.",
+  "categories": [
+    { "id": "maintenance", "label": "Preventive Maintenance" },
+    { "id": "safety", "label": "Safety Systems" },
+    { "id": "inspections", "label": "Inspections and Compliance" },
+    { "id": "vendors", "label": "Vendors and Service Contracts" },
+    { "id": "admin", "label": "Operations Administration" }
+  ],
+  "definitions": [
+    { "title": "Daily building walkthrough", "category": "maintenance", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Walk the site, check doors, lighting, water leaks and general condition.", "steps": ["Walk the exterior and check doors and locks", "Check common areas for leaks, smells or damage", "Log anything unusual in the chat for the day"] },
+    { "title": "Open and close checklist", "category": "admin", "taskType": "regular", "frequency": "daily", "priority": "medium", "note": "Opening and closing duties for the building.", "steps": ["Open: unlock, switch lights, check heating", "Close: walk through, switch off, lock up"] },
+    { "title": "Weekly equipment check", "category": "maintenance", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "medium", "note": "Test pumps, generators and water heaters briefly and note any noise or faults." },
+    { "title": "Monthly fire extinguisher inspection", "category": "safety", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Check pressure gauges, seals, pin and accessibility of every extinguisher.", "steps": ["Check gauge is in the green zone", "Check safety pin and tamper seal", "Confirm clear access and signed inspection tag"] },
+    { "title": "Monthly HVAC filter check", "category": "maintenance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "medium", "note": "Inspect and replace air filters as needed." },
+    { "title": "Monthly water temperature check", "category": "safety", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Record hot water temperature at outlets to prevent legionella risk." },
+    { "title": "Quarterly fire alarm test", "category": "safety", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 10, "priority": "high", "note": "Full alarm test with the fire panel log and any contractor." },
+    { "title": "Quarterly generator test", "category": "maintenance", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 10, "priority": "medium", "note": "Run the backup generator under load for 30 minutes and record the result." },
+    { "title": "Emergency lighting test", "category": "safety", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 10, "priority": "medium", "note": "Simulate a power cut and check that all emergency lights and exit signs work." },
+    { "title": "Pest control visit", "category": "vendors", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 15, "priority": "medium", "note": "Vendor visit - verify service report and file it." },
+    { "title": "Annual insurance review", "category": "inspections", "taskType": "regular", "frequency": "yearly", "monthOfYear": 11, "dayOfMonth": 15, "priority": "high", "note": "Review building and liability insurance coverage and renewals before year end." },
+    { "title": "Annual fire safety certificate renewal", "category": "inspections", "taskType": "regular", "frequency": "yearly", "monthOfYear": 3, "dayOfMonth": 20, "priority": "high", "note": "Book the annual fire inspection and file the certificate." },
+    { "title": "Ad-hoc repair request", "category": "maintenance", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "One-off repair or vendor call - set the due date when creating it." }
+  ]
+}

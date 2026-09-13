@@ -260,6 +260,7 @@
       <li><strong>Hibe (Grant) Takibi</strong> - hibelerin finansal açıdan takibi; hibe miktarlarının, harcanan ve kalan kısımların izlenmesi; haftalık ve aylık raporların üretilmesi.</li>
       <li><strong>Hayır Kurumu Yükümlülükleri ve T3010</strong> - CRA hayır kurumu gereklilikleri için verilerin toplanması ve raporların hazırlanması; T3010 beyannamesinin baştan sona öğrenilmesi ve QuickBooks kayıtlarının bu verilerin kolayca çıkarılabileceği şekilde düzenlenmesi.</li>
       <li><strong>Yıl Sonu ve Denetim Desteği</strong> - yıl sonu kapanış işlemleri ve mali denetim / inceleme hazırlığı; dış muhasebeciyle koordinasyon.</li>
+      <li><strong>Görev Yönetimi (BookkeeperTaskManager)</strong> - tüm işlerin kurumun BookkeeperTaskManager uygulaması üzerinden takip edilmesi; görevlerin durumlarının güncellenmesi ve tamamlanması.</li>
     </ul>
     <div class="highlight-box">
       Bu görev tanımı, kurum ile çalışan arasındaki iş sözleşmesinin / anlaşmasının bir parçasını
@@ -375,11 +376,15 @@
       <li><strong>Reimbursement'ları takip etmek ve ödemek</strong>: çalışan ve gönüllülerin harcama geri ödemelerini makbuz karşılığında işlemek; ödemelerini zamanında yapmak.</li>
     </ul>
 
-    <h3>N. Görev Takibi ve Çalışma Saatleri</h3>
+    <h3>N. Görev Takibi ve Çalışma Saatleri (BookkeeperTaskManager)</h3>
     <ul>
-      <li><strong>Bookkeeping task management uygulamasını aktif olarak kullanmak</strong>: tüm görevleri bu uygulama üzerinden takip etmek ve tamamlamak.</li>
-      <li>Yapılan görevleri <strong>task management sisteminde tamamlandı olarak işaretlemek</strong>; durumu her zaman güncel tutmak.</li>
-      <li><strong>Çalışma saatlerini doldurmak</strong>: çalışılan saatleri düzenli olarak sisteme girmek.</li>
+      <li><strong>BookkeeperTaskManager uygulamasını günlük çalışma platformu olarak aktif kullanmak</strong>: tüm görevleri bu uygulama üzerinden takip etmek, güncellemek ve tamamlamak.</li>
+      <li>Görevleri uygulamadaki <strong>Task Board (görev tahtası)</strong> üzerinden izlemek; durumlarını <strong>bekliyor / devam ediyor / tamamlandı</strong> olarak güncel tutmak ve tamamlamaları tamamlayan kişi ve tarih ile işaretlemek.</li>
+      <li>Görev tanımlarından (rutin: günlük, haftalık, iki haftalık, aylık, üç aylık, yıllık; ad-hoc) <strong>otomatik üretilen görevleri</strong> zamanında tamamlamak; geciken (overdue) görevlerin birikmesine izin vermemek.</li>
+      <li>Uygulama üzerinden <strong>onay talepleri ve bilgi talepleri</strong> göndermek (ör. bir ödeme için onay istemek); yönetici yanıtlarını takip etmek ve talepler sonuçlanana kadar işi sürdürmek.</li>
+      <li>Görevlere <strong>not ve açıklamalar eklemek</strong>; işlem geçmişini (history) düzenli ve güncel tutmak.</li>
+      <li><strong>Dashboard ve Year Plan görünümlerini</strong> kullanarak tamamlanma oranını, aylık kırılımları, kategori bazlı durumu ve yıllık görev planını izlemek.</li>
+      <li><strong>Çalışma saatlerini doldurmak</strong>: çalışılan saatleri düzenli olarak uygulamaya girmek.</li>
     </ul>
   </section>
 
@@ -404,8 +409,10 @@
       <li>Bankadan yapılması gereken <strong>ödemeleri göndermek</strong> (çekle yapılamayan ödemeler).</li>
       <li><strong>Nakit ödemeleri</strong> onay sonrasında yapmak ve kaydetmek.</li>
       <li><strong>Reimbursement'ları takip etmek</strong> ve ödemelerini yapmak.</li>
-      <li>Bookkeeping <strong>task management uygulamasını aktif kullanmak</strong>; tüm görevleri oradan takip edip tamamlamak.</li>
-      <li><strong>Çalışma saatlerini doldurmak</strong> ve tamamlanan görevleri task management sisteminde işaretlemek.</li>
+      <li><strong>BookkeeperTaskManager uygulamasını aktif kullanmak</strong>; tüm görevleri Task Board üzerinden takip edip tamamlamak.</li>
+      <li>Görevleri <strong>bekliyor / devam ediyor / tamamlandı</strong> durumlarıyla güncellemek; tamamlamaları kayıt altına almak.</li>
+      <li>Geciken (overdue) görevleri gününde tamamlamak; <strong>onay ve bilgi taleplerini</strong> uygulama üzerinden gönderip sonuçlanana kadar takip etmek.</li>
+      <li><strong>Çalışma saatlerini doldurmak</strong>; görev notlarını ve işlem geçmişini güncel tutmak.</li>
       <li>Fatura, makbuz ve belgeleri <strong>dijital ve fiziki olarak arşivlemek</strong>.</li>
       <li>Executive Director için <strong>aylık mali tabloları</strong> hazırlamak ve sunmak.</li>
       <li><strong>Bütçe karşılaştırmalarını</strong> yapmak ve sapmaları raporlamak.</li>
@@ -434,12 +441,14 @@
     <p>
       Görevler iki ana grupta tanımlanır: <strong>Rutin (düzenli) görevler</strong> ve
       <strong>ad-hoc (düzensiz / ihtiyaca göre) görevler</strong>. Rutin görevler aşağıdaki
-      sıklıklarla tekrarlanır:
+      sıklıklarla tekrarlanır. Bu takvim, <strong>BookkeeperTaskManager</strong> uygulamasındaki
+      görev tanımlarıyla eşleşir; Task Board'daki görevler bu tanımlardan otomatik olarak üretilir
+      ve uygulama üzerinden takip edilir.
     </p>
 
     <h3>A. Rutin (Düzenli) Görevler</h3>
     <ul>
-      <li><strong>Günlük:</strong> nakit tahsilat ve ödemelerin kaydı, gelen fatura ve e-postaların işlenmesi, task management sistemindeki görevlerin güncellenmesi.</li>
+      <li><strong>Günlük:</strong> nakit tahsilat ve ödemelerin kaydı, gelen fatura ve e-postaların işlenmesi, BookkeeperTaskManager'daki görevlerin güncellenmesi.</li>
       <li><strong>Haftalık:</strong> pledge raporu, çalışma saatlerinin doldurulması, haftalık rapor, bekleyen fatura ve ödeme listesinin gözden geçirilmesi.</li>
       <li><strong>İki haftalık (Biweekly):</strong> bordro (payroll) işlemleri ve payroll kaynaklı devlet ödemeleri.</li>
       <li><strong>Aylık:</strong> banka ve kredi kartı mutabakatları, aylık mali tablolar, departman bütçe raporları, hibe raporları ve aylık düzenli ödemeler (kiralar, burslar, çalışan fonları vb.).</li>
@@ -467,7 +476,7 @@
     <h2>5. Pozisyon Detayları</h2>
     <table class="meta-table">
       <tr><td>Unvan</td><td>Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</td></tr>
-      <tr><td>Bağlı Olduğu Kişi</td><td>Executive Director</td></tr>
+      <tr><td>Bağlı Olduğu Kişi</td><td>Executive Director ve Mali Heyet'ten belirlenecek bir temsilci</td></tr>
       <tr><td>Departman</td><td>Muhasebe / Finans</td></tr>
       <tr><td>Çalışma Şekli</td><td><span class="placeholder">Yarı zamanlı / Tam zamanlı, Kontratlı</span></td></tr>
       <tr><td>Çalışma Saatleri</td><td><span class="placeholder">Haftada ____ saat</span>; ay sonu ve beyanname dönemlerinde esneklik gerekebilir</td></tr>
@@ -483,7 +492,7 @@
     <ul>
       <li><strong>Eğitim:</strong> <span class="placeholder">Muhasebe, işletme, finans veya ilgili bir alanda diploma / sertifika veya eşdeğer deneyim</span>.</li>
       <li><strong>Deneyim:</strong> <strong>Defter tutma, borç-alacak takibi, mutabakat ve finansal raporlama</strong> alanlarında deneyim tercih edilir; kâr amacı gütmeyen kuruluş deneyimi avantajdır.</li>
-      <li><strong>Yazılım:</strong> <strong>QuickBooks</strong> hâkimiyeti; ileri düzey <strong>Excel</strong> (tablo, formül, pivot) becerisi. Kurum içi geliştirilen programları (bookkeeping task management vb.) kullanma ve hızlı öğrenme becerisi.</li>
+      <li><strong>Yazılım:</strong> <strong>QuickBooks</strong> hâkimiyeti; ileri düzey <strong>Excel</strong> (tablo, formül, pivot) becerisi. Kurum içi geliştirilen programları (<strong>BookkeeperTaskManager</strong> vb.) kullanma ve hızlı öğrenme becerisi.</li>
       <li><strong>Bordro (Payroll):</strong> Kanada bordro esasları (kaynak kesintileri, T4, ROE) konusunda bilgi sahibi olmak veya hızlı öğrenebilmek.</li>
       <li><strong>Mevzuat Bilgisi:</strong> Kanada defter tutma esasları ve CRA gereklilikleri (kaynak kesintileri, GST/HST, PST) hakkında bilgi sahibi olmak veya hızlı öğrenebilmek.</li>
       <li><strong>Hayır Kurumu Mevzuatı:</strong> <strong>T3010 beyannamesini ve CRA bağış makbuzu (receipting) kurallarını</strong> öğrenmeye istekli olmak; QuickBooks hesap planını bu gerekliliklere göre kurgulayabilmek. Kâr amacı gütmeyen / hayır kurumu muhasebesi deneyimi güçlü bir avantajdır.</li>
@@ -496,12 +505,22 @@
 
   <section>
     <h2>7. Takip ve Raporlama</h2>
-    <p>Bu rol Executive Director tarafından yakından takip edilecektir:</p>
+    <p>
+      Bu rol, yürüttüğü tüm işleri <strong>Executive Director'a</strong> ve
+      <strong>Mali Heyet üyeleri arasından belirlenecek bir kişiye</strong> raporlar. Rolün
+      işlerinin kritik önemi nedeniyle Executive Director'a düzenli ve zamanında raporlama
+      yapılması esastır; raporlar aynı zamanda Mali Heyet'ten belirlenen irtibat kişisiyle de
+      paylaşılır.
+    </p>
     <ul>
-      <li><strong>Haftalık:</strong> O hafta tamamlanan kayıtlar, bekleyen fatura ve ödemeler, mutabakat durumu, <strong>hibelerin harcanan / kalan durumu</strong>, <strong>task management sistemindeki görev durumu</strong> ve dikkat gerektiren konuların kısa bir özeti.</li>
+      <li><strong>Haftalık:</strong> O hafta tamamlanan kayıtlar, bekleyen fatura ve ödemeler, mutabakat durumu, <strong>hibelerin harcanan / kalan durumu</strong>, <strong>BookkeeperTaskManager'daki görev durumu</strong> ve dikkat gerektiren konuların kısa bir özeti.</li>
       <li><strong>Aylık:</strong> Banka ve kredi kartı mutabakatları, aylık mali tablolar, bütçe karşılaştırması, <strong>departman bazında bütçe gerçekleşme / kalan raporları</strong>, <strong>hibe raporları</strong>, nakit durumu ve bir sonraki ay için önceliklerin gözden geçirildiği kapsamlı bir değerlendirme.</li>
     </ul>
-    <p class="placeholder">[Not: Haftalık raporun formatı (yazılı özet / e-posta / kısa doküman) ve aylık değerlendirmenin yüz yüze mi yoksa yazılı mı olacağı birlikte netleştirilecektir.]</p>
+    <p>
+      Tüm görev takibi ve raporlamalar, kurum tarafından sağlanan yazılımlar
+      (BookkeeperTaskManager ve diğer kurum içi araçlar) üzerinden yürütülür; raporlar bu
+      sistemler aracılığıyla paylaşılır.
+    </p>
   </section>
 
   <section>
@@ -515,7 +534,7 @@
       <li>Bordroları (payroll) <strong>zamanında ve doğru</strong> yapmak; payroll kaynaklı devlet ödemelerini son tarihlerinde göndermek.</li>
       <li>WorkSafeBC <strong>bildirim ve prim ödemelerini</strong> son tarihlerine uyarak yapmak.</li>
       <li>Reimbursement'ları <strong>makbuz karşılığında ve zamanında</strong> ödemek.</li>
-      <li>Bookkeeping task management uygulamasını <strong>aktif ve güncel</strong> kullanmak; çalışma saatlerini düzenli doldurmak.</li>
+      <li>BookkeeperTaskManager uygulamasını <strong>aktif ve güncel</strong> kullanmak; görevleri durumlarıyla işaretlemek ve çalışma saatlerini düzenli doldurmak.</li>
       <li>Nakit tahsilat ve harcamaları <strong>eksiksiz ve gününde</strong> kaydetmek.</li>
       <li>Pledge takibini güncel tutmak; <strong>haftalık raporları zamanında</strong> hazırlayıp gruplarla paylaşmak.</li>
       <li>Departman bütçelerini <strong>gerçekleşme ve kalan tutarlarıyla</strong> güncel tutmak; aylık bütçe raporlarını zamanında sunmak.</li>
@@ -552,6 +571,70 @@
       Yer: <input type="text" class="doc-field doc-field-place" placeholder="______________________" aria-label="Yer"> &nbsp;&nbsp; Tarih: <input type="text" class="doc-field doc-field-date" placeholder="______________________" aria-label="Tarih">
       &nbsp;&nbsp;·&nbsp;&nbsp; Bu belge, karşılıklı yazılı mutabakatla gözden geçirilebilir ve güncellenebilir.
     </div>
+  </section>
+
+  <section>
+    <h2>10. Periyodik Görev Listesi (Özet)</h2>
+    <p>
+      Aşağıdaki liste, bu görev tanımında yer alan sorumlulukların periyodik özetidir. Bu liste
+      <strong>burada yazılanlarla sınırlı değildir</strong>; görevlerin güncel ve tam listesi
+      <strong>BookkeeperTaskManager</strong> uygulamasındaki görev tanımlarında yer alır ve Mali
+      Heyet'in kararları doğrultusunda güncellenir.
+    </p>
+
+    <h3>Günlük Görevler</h3>
+    <ul>
+      <li>Nakit tahsilat ve ödemelerin gününde makbuz karşılığında kaydedilmesi.</li>
+      <li>Gelen faturaların, e-postaların ve mali taleplerin işlenmesi.</li>
+      <li>Küçük kasa (petty cash) işlemlerinin kaydı.</li>
+      <li>BookkeeperTaskManager'daki görevlerin güncellenmesi; tamamlanan görevlerin işaretlenmesi.</li>
+      <li>Çalışma saatlerinin doldurulması.</li>
+    </ul>
+
+    <h3>Haftalık Görevler</h3>
+    <ul>
+      <li>Haftalık pledge raporunun hazırlanması (kimin ne kadar verdiği, ne kadar kaldığı) ve ilgili gruplarla paylaşılması.</li>
+      <li>Bekleyen fatura ve ödeme listesinin gözden geçirilmesi.</li>
+      <li>Onaylı satıcı ödemelerinin çalıştırılması.</li>
+      <li>Haftalık raporun Executive Director'a ve Mali Heyet temsilcisine sunulması.</li>
+    </ul>
+
+    <h3>İki Haftalık (Biweekly) Görevler</h3>
+    <ul>
+      <li>Bordro (payroll) işlemlerinin yapılması: saatler, ücretler, kesintiler ve net ödemeler.</li>
+      <li>Payroll kaynaklı devlet ödemelerinin bankadan gönderilmesi (kaynak kesintileri: CPP, EI, vergi).</li>
+    </ul>
+
+    <h3>Aylık Görevler</h3>
+    <ul>
+      <li>Tüm banka hesaplarının ve kredi kartlarının ekstrelerle mutabakatı.</li>
+      <li>Aylık mali tabloların hazırlanması: gelir-gider, bütçe karşılaştırması, nakit durumu.</li>
+      <li>Departman bazında bütçe gerçekleşme / kalan raporlarının hazırlanması.</li>
+      <li>Hibelerin harcanan / kalan raporlarının hazırlanması.</li>
+      <li>Aylık düzenli ödemelerin yapılması: kiralar, öğrenci bursları ve takviyeleri, çalışan fonları.</li>
+      <li>Reimbursement'ların işlenmesi ve ödenmesi.</li>
+      <li>GST/HST ve PST beyannameleri (kurumun beyan dönemine göre).</li>
+      <li>Aylık değerlendirme raporunun Executive Director'a ve Mali Heyet temsilcisine sunulması.</li>
+    </ul>
+
+    <h3>Üç Aylık (Quarterly) Görevler</h3>
+    <ul>
+      <li>Üç aylık döneme tabi ise GST/HST ve PST beyannamelerinin hazırlanması ve ödenmesi.</li>
+      <li>Yönetim kurulu ve komiteler için mali özetlerin derlenmesi.</li>
+      <li>Bütçelerin gözden geçirilmesi ve sapmaların raporlanması.</li>
+      <li>Dönemsel WorkSafeBC bildirimleri (döneme göre).</li>
+    </ul>
+
+    <h3>Yıllık Görevler</h3>
+    <ul>
+      <li>Yıl sonu kapanış işlemleri ve dış muhasebeci / denetçi ile koordinasyon.</li>
+      <li>T4/T4A özetlerinin hazırlanması ve gönderimi.</li>
+      <li>T3010 taslak veri setinin ve destekleyici raporların hazırlanması.</li>
+      <li>Mali denetim / inceleme için belgelerin hazırlanması.</li>
+      <li>WorkSafeBC yıllık bildirimi ve prim mutabakatı.</li>
+      <li>Yıllık bütçe döngüsü için mali verilerin hazırlanması.</li>
+      <li>Belge saklama sürelerinin kontrolü ve arşivlerin düzenlenmesi.</li>
+    </ul>
   </section>
 
 </div>

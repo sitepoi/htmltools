@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Property Management",
+  "description": "Starter pack for landlords and property managers: rent collection cycles, maintenance schedules, inspections and lease renewal tracking.",
+  "categories": [
+    { "id": "rent", "label": "Rent Collection" },
+    { "id": "maintenance", "label": "Maintenance" },
+    { "id": "inspections", "label": "Inspections" },
+    { "id": "compliance", "label": "Compliance and Licenses" },
+    { "id": "vendors", "label": "Vendors and Contracts" }
+  ],
+  "definitions": [
+    { "title": "Monthly rent collection", "category": "rent", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Collect rent from all units and log who paid and who is outstanding.", "steps": ["Check bank for incoming rent payments", "Mark each unit paid or outstanding", "Send reminders to outstanding tenants"] },
+    { "title": "Rent deposit reconciliation", "category": "rent", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "medium", "note": "Reconcile collected rent against the unit list and note any shortfalls." },
+    { "title": "Monthly smoke alarm test", "category": "compliance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Test smoke and CO alarms in common areas (and in units per local rules) and log results." },
+    { "title": "Seasonal HVAC service", "category": "maintenance", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 10, "priority": "medium", "note": "Filter replacement and heating or cooling service before each season." },
+    { "title": "Gutter and drain clearing", "category": "maintenance", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 20, "priority": "medium", "note": "Clear gutters and storm drains; check roof condition in the fall visit." },
+    { "title": "Grounds and snow maintenance", "category": "maintenance", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 5, "priority": "medium", "note": "Weekly grounds check; in winter confirm snow clearing and ice treatment." },
+    { "title": "Quarterly unit inspection", "category": "inspections", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "high", "note": "Inspect each unit with proper notice and log the condition report.", "steps": ["Send entry notice to tenants", "Walk each unit with the checklist", "Log photos and notes per unit"] },
+    { "title": "Annual fire safety inspection", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 3, "dayOfMonth": 20, "priority": "high", "note": "Book and file the annual fire and building safety inspection." },
+    { "title": "Insurance policy review", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 11, "dayOfMonth": 10, "priority": "high", "note": "Review building and liability insurance coverage before renewal." },
+    { "title": "Lease expiry review", "category": "rent", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 20, "priority": "medium", "note": "Check leases expiring in the next 90 days and decide renewals or notices." },
+    { "title": "Vendor contract review", "category": "vendors", "taskType": "regular", "frequency": "yearly", "monthOfYear": 1, "dayOfMonth": 15, "priority": "medium", "note": "Review cleaning, elevator, HVAC and landscaping contracts for renewal or renegotiation." },
+    { "title": "Ad-hoc tenant repair request", "category": "maintenance", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "Tenant repair or emergency call - set the due date when creating it." }
+  ]
+}

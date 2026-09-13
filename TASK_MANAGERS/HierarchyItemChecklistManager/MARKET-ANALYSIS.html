@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Analysis - Hierarchy Item Checklist Manager</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-soft: #eef2ff;
+    --line: #e5e7eb;
+    --good: #1e7e4f;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 64px;
+    background: #f3f4f6;
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 44px 52px 56px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+  .doc-header { border-bottom: 3px solid var(--accent); padding-bottom: 18px; margin-bottom: 26px; }
+  .doc-header .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .doc-header h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+  .doc-header .sub { color: var(--muted); font-size: 15px; margin: 0; }
+  .doc-header .meta {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  h2 {
+    font-size: 21px;
+    margin: 34px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h2 .num {
+    flex: none;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: var(--accent); }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  strong { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); color: var(--accent); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fef6ec; }
+  .callout.good { border-left-color: var(--good); background: #edf7f1; }
+  .two-col { display: flex; gap: 18px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 260px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12.5px;
+    color: #374151;
+  }
+  .toc { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .score { display: inline-block; width: 26px; height: 26px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; text-align: center; line-height: 26px; }
+  .score.high { background: #1e7e4f; }
+  .score.med { background: #b45309; }
+  .score.low { background: #6b7280; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border: none; max-width: 100%; padding: 20px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <div class="kicker">Product Research - Market Analysis</div>
+    <h1>Hierarchy Item Checklist Manager: Markets, Users and Customers</h1>
+    <p class="sub">Who benefits from a hierarchical breakdown tool with per-unit template checklists, a one-screen progress matrix and rollup reporting - and what already exists on the market.</p>
+    <div class="meta">
+      <span>Prepared: 13 September 2026</span>
+      <span>Subject tool: HierarchyItemChecklistManager engine (UniconHub html-tool)</span>
+      <span>Status: research document - no code changes</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol style="margin: 6px 0 0;">
+      <li><a href="#s1">What the tool actually is</a></li>
+      <li><a href="#s2">Today's user: the curriculum builder</a></li>
+      <li><a href="#s3">Who else would benefit - market segments</a></li>
+      <li><a href="#s4">Why it wins over generic task managers</a></li>
+      <li><a href="#s5">Customer types and how it could be sold</a></li>
+      <li><a href="#s6">Similar tools on the market</a></li>
+      <li><a href="#s7">Positioning: the gap this tool fills</a></li>
+      <li><a href="#s8">Why people will not use it - objections and fixes</a></li>
+      <li><a href="#s9">Recommendation</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>What the tool actually is</h2>
+  <p>Under the hood, the tool is a <strong>template-matrix program tracker</strong>. The engine is entirely general-purpose: an arbitrary-depth hierarchy of items, where the items that sit at the bottom of the tree are tracked against one shared checklist template, and everything is watched from a single grid. Only the content layer - the names Section / Sub-section / Lesson / Task, the icons, and the default template (Lesson plan, Worksheet, Quiz, Answer key) - is curriculum-specific.</p>
+  <div class="two-col">
+    <div>
+      <h3>Core engine capabilities</h3>
+      <ul>
+        <li>A hierarchy where every level is an item: folders (sections, sub-sections) contain units, units contain the actual work items</li>
+        <li>A configurable <strong>standard task template</strong> applied to every unit - each new unit automatically gets the same set of child items</li>
+        <li>The <strong>matrix view</strong>: one row per unit, one column per template step, each cell a clickable status square</li>
+        <li>Status cycles on cells with one click (To do / In progress / In review / Done / Blocked)</li>
+        <li>Derived statuses: folders and units inherit their status from their children - no manual parent updates ever</li>
+        <li>Rollup completion percentages at every level, plus a dashboard ring and counts</li>
+        <li>Assignees pulled from the CMS permitted-users list, assignable per item or per branch</li>
+        <li>Due dates, overdue warnings, filters, undo, CSV and printable PDF reports</li>
+        <li>Team performance table (admin-only) and per-section progress bars</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What it is not</h3>
+      <ul>
+        <li>Not a project manager: no Gantt charts, dependencies, sprints or resource planning</li>
+        <li>Not a recurring-obligation tracker: it tracks the delivery of one program, not a repeating calendar of duties (that is the RecurringTaskManager pattern)</li>
+        <li>Not a kanban board: columns are template steps, not workflow lanes, and items are fixed to their unit</li>
+        <li>Not an evidence/audit system: items carry notes and completion stamps, but no per-item conversation thread or history log</li>
+      </ul>
+      <div class="callout">
+        The defining feature: <strong>one template, applied to a hundred units, watched from one grid.</strong> Create a unit and its checklist appears; click a cell and the whole branch re-computes its progress automatically.
+      </div>
+    </div>
+  </div>
+
+  <h2 id="s2"><span class="num">2</span>Today's user: the curriculum builder</h2>
+  <p>The current instance serves an education team building a curriculum. Its content maps the shape of course production: sections organize the program, sub-sections group related lessons, and every lesson is delivered against the same four-step template - Lesson plan, Worksheet, Quiz, Answer key. The grid shows every lesson of every section at once, colored by status, and the outline gives the tree view for daily work.</p>
+  <p>That user is the first beachhead, but it is only one instance of a much larger pattern: <strong>any program where many similar units must each complete the same small set of steps, and one person needs the whole picture on a single screen</strong>.</p>
+
+  <h2 id="s3"><span class="num">3</span>Who else would benefit - market segments</h2>
+  <p>Scored by fit: how well the "many units × one template × one matrix" pattern, derived statuses and per-item assignees match the segment's real work.</p>
+
+  <table>
+    <tr>
+      <th style="width: 70px;">Fit</th>
+      <th style="width: 200px;">Segment</th>
+      <th>Repeating-unit work they actually do</th>
+      <th>Why the matrix pattern fits</th>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Online course and e-learning production</td>
+      <td>Dozens of lessons per course, each needing scripting, recording, editing, quizzes</td>
+      <td>Same template per lesson; producers need the whole course on one screen.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Corporate L&amp;D and training academies</td>
+      <td>Course catalogs, onboarding curricula, compliance training tracks</td>
+      <td>Catalog = units × the same production steps; managers watch rollups.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Content and editorial operations</td>
+      <td>Articles, videos, landing pages - each passing outline / draft / review / publish</td>
+      <td>One editorial template per content type, one matrix for the whole quarter.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Franchise and multi-site rollout</td>
+      <td>Every store or location runs the same setup checklist</td>
+      <td>Store = unit, checklist = template; HQ sees every location at once.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Onboarding and HR programs</td>
+      <td>Every new hire or role change follows the same checklist</td>
+      <td>New hire = unit; HR tracks a cohort as one matrix.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Compliance and audit readiness</td>
+      <td>Each business unit or requirement has the same evidence checklist</td>
+      <td>Unit = audit area; derived statuses show where the program is blocked.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Certification and accreditation programs</td>
+      <td>Per-candidate or per-standard evidence tracking</td>
+      <td>Same evidence steps per candidate; reviewers need the full cohort view.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Implementation and client-delivery teams</td>
+      <td>Every client goes through the same onboarding/rollout steps</td>
+      <td>Client = unit; consultants watch every client from one grid.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Publishing and localization</td>
+      <td>Each title passes the same steps, then repeats per language</td>
+      <td>Title or language = unit; template keeps steps consistent.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Events and campaigns</td>
+      <td>Every event follows the same preparation checklist</td>
+      <td>Event = unit; a season of events becomes one readable grid.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">6</span></td>
+      <td>Nonprofit program reporting</td>
+      <td>Per-grant or per-program deliverable checklists</td>
+      <td>Fits, but reporting deadlines are more calendar-shaped (see RecurringTaskManager).</td>
+    </tr>
+    <tr>
+      <td><span class="score med">6</span></td>
+      <td>Product launches and release readiness</td>
+      <td>Each launch follows the same readiness checklist</td>
+      <td>Fits, though launches also carry dependency logic the tool does not model.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">5</span></td>
+      <td>Personal study plans and household projects</td>
+      <td>One-off or small checklists</td>
+      <td>Works, but consumer habit and list apps already cover it; hard to monetize.</td>
+    </tr>
+  </table>
+
+  <div class="callout good">
+    <strong>Common thread across the top segments:</strong> a manager running a <strong>program of many similar units</strong>, each with a <strong>known, repeating set of steps</strong>, who needs <strong>aggregate visibility</strong> (who is behind, what is blocked, where the program stands) more than a personal to-do list.
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>Why it wins over generic task managers</h2>
+  <table>
+    <tr>
+      <th>Need</th>
+      <th>Generic task manager (Todoist, To Do, Asana, Trello)</th>
+      <th>This tool</th>
+    </tr>
+    <tr>
+      <td>Every unit gets the same checklist</td>
+      <td>Copy lists manually per item, or set up automation - both brittle</td>
+      <td>The template is native: create a unit and its steps appear</td>
+    </tr>
+    <tr>
+      <td>See 100 units against their steps at once</td>
+      <td>Boards show one dimension; a 100-item matrix is a spreadsheet, not a view</td>
+      <td>The grid is the primary screen: units as rows, steps as colored cells</td>
+    </tr>
+    <tr>
+      <td>Progress rolls up automatically</td>
+      <td>Completion percentages are per-list at best, never per-branch</td>
+      <td>Every folder derives status and percent from its children automatically</td>
+    </tr>
+    <tr>
+      <td>Change a status with one click</td>
+      <td>Open a card, open a dropdown, pick a value</td>
+      <td>Click the cell - the status cycles and the branch updates</td>
+    </tr>
+    <tr>
+      <td>Assign the smallest unit, then report per person</td>
+      <td>Possible but config-heavy; team views are separate</td>
+      <td>Per-item assignee selects plus an admin-only team performance table</td>
+    </tr>
+    <tr>
+      <td>Setup burden</td>
+      <td>Boards, lists, labels, rules to configure</td>
+      <td>One section button, one inline add, one editable template - and it is built</td>
+    </tr>
+  </table>
+
+  <h2 id="s5"><span class="num">5</span>Customer types and how it could be sold</h2>
+  <ul>
+    <li><strong>End-user subscriptions (B2B):</strong> L&amp;D departments, e-learning studios, franchise operators and HR teams pay per workspace. They buy outcomes: nothing falls through the cracks, the whole program is visible, reports are one click.</li>
+    <li><strong>Vertical editions:</strong> the same engine, re-skinned and re-seeded - CourseOps edition, Franchise Rollout edition, Onboarding edition, Audit Readiness edition. Each edition is mainly a different default template and terminology.</li>
+    <li><strong>Agencies and consultancies (B2B2B):</strong> L&amp;D agencies, content studios and implementation consultants run one instance per client program and watch all clients from the dashboard.</li>
+    <li><strong>Platform-embedded (B2B2C):</strong> inside UniconHub it sells as one CMS tool among many - "the program matrix" layer next to RecurringTaskManager (recurring obligations), PaymentsManagement and the finance tools. Together they cover obligation-plus-delivery.</li>
+    <li><strong>Public sector and nonprofits:</strong> grant-funded programs and accreditation bodies need per-program checklists with rollup evidence and team visibility - a natural niche.</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Prerequisite for every path above:</strong> the terminology must become configurable - "Section / Sub-section / Lesson / Task" blocks every non-education buyer. The template (standard tasks) is already editable, which is the biggest lever; naming, icons and a neutral product name are the remaining content-layer changes. The engine needs no changes.
+  </div>
+
+  <h2 id="s6"><span class="num">6</span>Similar tools on the market</h2>
+  <p>Yes - but nothing combines its four strengths (template-per-unit, one-screen matrix, derived statuses, per-item assignees with rollup reporting) in one lightweight package. Competitors cluster into four groups:</p>
+
+  <h3>Group A - General task managers</h3>
+  <p><strong>Todoist, TickTick, Microsoft To Do, Asana, Trello, Notion.</strong> All can model lists and boards. Weaknesses for this use case: no native "every unit gets this template" pattern, no unit × step matrix view, no derived parent statuses, and team rollups need configuration. They are also project-shaped, which is the wrong mental model for a program of similar units.</p>
+
+  <h3>Group B - Spreadsheets (the real incumbent)</h3>
+  <p><strong>Excel and Google Sheets status grids.</strong> This is what most target users run today: rows are units, columns are steps, cells are colored. Weaknesses: no derived statuses or rollups without formulas someone must maintain, no per-cell assignees tied to identity, no click-to-cycle (manual editing), no CMS permissions, no one-click reports. The tool must beat the spreadsheet by being <em>easier than maintaining the spreadsheet</em>.</p>
+
+  <h3>Group C - Checklist and process tools</h3>
+  <p><strong>Process Street, Trainual, Manifestly.</strong> They run checklists and SOPs - conceptually close, because a template repeated per run is their core. Weaknesses: they are run-shaped (start a run, complete it sequentially), not matrix-shaped; there is no many-units-at-once grid, no hierarchy rollups, and they carry process documentation weight this tool deliberately avoids.</p>
+
+  <h3>Group D - Vertical, industry-locked tools (the closest competitors)</h3>
+  <table>
+    <tr>
+      <th style="width: 220px;">Tool / category</th>
+      <th>What it does</th>
+      <th>Overlap and gap vs this tool</th>
+    </tr>
+    <tr>
+      <td>Airtable and Notion templates (course trackers, content pipelines, rollout trackers)</td>
+      <td>Build-your-own relational matrices</td>
+      <td>Same shape, but everything is DIY: no native derived statuses, click-to-cycle, CMS identities or one-click reports</td>
+    </tr>
+    <tr>
+      <td>LMS authoring and administration (Moodle, Canvas, Articulate)</td>
+      <td>Course content and delivery</td>
+      <td>Delivery-side; they do not track the production checklist of building the course</td>
+    </tr>
+    <tr>
+      <td>Editorial calendars (CoSchedule, Trello editorial boards)</td>
+      <td>Content scheduling pipelines</td>
+      <td>Date-driven pipelines; no per-content-type template matrix</td>
+    </tr>
+    <tr>
+      <td>Onboarding tools (BambooHR task lists, Sapling)</td>
+      <td>Per-hire checklist automation</td>
+      <td>Exactly the pattern, but HR-locked and part of a heavier HRIS</td>
+    </tr>
+    <tr>
+      <td>Franchise and store ops (Zenput, Jolt)</td>
+      <td>Per-store checklist compliance</td>
+      <td>Close to the matrix pattern, but single vertical, recurring-compliance focus</td>
+    </tr>
+    <tr>
+      <td>Construction punch lists (Procore and similar)</td>
+      <td>Per-unit defect and completion tracking</td>
+      <td>Matrix-shaped but site-locked and construction-heavy</td>
+    </tr>
+    <tr>
+      <td>Accreditation and audit prep</td>
+      <td>Spreadsheets and SharePoint lists</td>
+      <td>No dedicated lightweight tool - mostly an open opportunity</td>
+    </tr>
+  </table>
+
+  <h2 id="s7"><span class="num">7</span>Positioning: the gap this tool fills</h2>
+  <div class="two-col">
+    <div>
+      <h3>The gap</h3>
+      <ul>
+        <li>Task managers are built for one-off projects, not programs of identical units</li>
+        <li>Spreadsheets hold the matrix but none of the intelligence - no derived statuses, no identity, no rollups</li>
+        <li>Checklist tools run one instance at a time and hide the whole-program view</li>
+        <li>Vertical tools nail one industry but lock you into it</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The position</h3>
+      <div class="callout good">
+        <strong>"The program matrix":</strong> template your steps once, roll them out to every unit, watch the whole program from one grid, and drill into any unit - with progress that computes itself.
+      </div>
+      <p>One-line pitches per audience: "every course in your catalog, four steps, one screen" (L&amp;D), "every store, the same checklist, one grid" (franchise), "every new hire, every step, tracked" (HR), "every audit area, one status board" (compliance).</p>
+    </div>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>Why people will not use it - objections and fixes</h2>
+  <p>Honest negative assessment. Every objection below is a real adoption blocker, ranked by how likely it is to stop someone from using the tool, with the fix that addresses it.</p>
+  <table>
+    <tr>
+      <th style="width: 70px;">Severity</th>
+      <th style="width: 230px;">Objection</th>
+      <th>Why it blocks adoption</th>
+      <th>What to do about it</th>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"The labels say Section / Lesson - that is not my world"</td>
+      <td>A store manager or HR lead sees education vocabulary and concludes the tool is not for them, regardless of the engine.</td>
+      <td>Make terminology and icons configurable (field settings): Section/Sub-section/Lesson/Task become Store/Region/Checklist/Step or Program/Track/Course/Item. This is the single biggest unlock.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"A spreadsheet already does this"</td>
+      <td>For one person with 30 rows, a colored spreadsheet feels familiar and free.</td>
+      <td>Lead with what the sheet cannot do: derived statuses and rollups without formulas, per-cell assignees from real CMS users, one-click status cycling, team reports. Demo the "100 units, 4 steps" grid.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"My work is not 100 similar units"</td>
+      <td>Unique, one-off or dependency-driven work gets little value and will be abandoned.</td>
+      <td>Do not sell to project teams. Target unit-heavy programs only (segments scored 7-9 in section 3) and show the ad-hoc "other tasks" column in demos.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"We already use Asana / Notion / Airtable"</td>
+      <td>Teams will not run two overlapping tools.</td>
+      <td>Position as complementary: "your project tool plans the project; this tool runs the program's unit checklist". Offer CSV import as the migration bridge.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Only one template for the whole program"</td>
+      <td>A mixed program (courses plus compliance items, different steps each) does not fit one global template.</td>
+      <td>Add per-section standard-task templates - columns change per section in the grid. This is the second biggest capability unlock and a natural roadmap item.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No per-item history or conversation"</td>
+      <td>Notes and completion stamps exist, but there is no dated activity log or chat per item - weaker for audit-style buyers.</td>
+      <td>Position as a delivery tracker, not an evidence system (evidence is the RecurringTaskManager pattern). Add a lightweight change log later: who set which status when.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Setting up 100 units takes too long"</td>
+      <td>Creating every lesson or store by hand is real onboarding effort.</td>
+      <td>Definition packs per vertical (a ready-made tree plus template, imported in one step), plus the existing multi-add, nested quick-entry and duplicate features.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"It does not handle recurring work"</td>
+      <td>Obligations that repeat every week or month belong elsewhere.</td>
+      <td>Pair with RecurringTaskManager: obligations run there, delivery programs run here. Sell them as a set inside the CMS.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"The grid is cramped on a phone"</td>
+      <td>Matrix views are desktop-first; heavy mobile users will struggle.</td>
+      <td>The outline already wraps responsively and the grid scrolls horizontally. Keep mobile as a monitoring view, desktop as the working view.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"Too simple for a serious program"</td>
+      <td>Buyers may assume missing depth because the UI is intentionally minimal.</td>
+      <td>That is the position, not a defect: one template, one grid, no project ceremony. Show the reports and team view as the depth.</td>
+    </tr>
+  </table>
+
+  <h2 id="s9"><span class="num">9</span>Recommendation</h2>
+  <ol>
+    <li><strong>Keep the engine, make the vocabulary configurable.</strong> Editable labels and icons for Section / Sub-section / Lesson / Task, plus a neutral product name (for example ProgramMatrix or UnitTracker). This alone opens every non-education segment.</li>
+    <li><strong>Add per-section templates.</strong> The grid already renders columns from the standard-task list; letting each section define its own list turns one matrix into a real multi-program dashboard.</li>
+    <li><strong>Pick two beachhead segments.</strong> The strongest matches are e-learning production and corporate L&amp;D (the current user's world, slightly widened), then franchise/multi-site rollout and HR onboarding.</li>
+    <li><strong>Ship definition packs.</strong> One import per vertical that pre-loads the template, a sample tree and terminology - the same playbook as RecurringTaskManager's DEFINITION-PACKS folder.</li>
+    <li><strong>Sell the matrix screenshot.</strong> The pitch is one image: a hundred units, four steps, every cell colored, progress computed. Marketing should lead with that grid, not with features.</li>
+    <li><strong>Treat the current curriculum instance as reference customer number one</strong> and produce a before-and-after case study from it.</li>
+  </ol>
+  <p style="color: var(--muted); font-size: 13px; margin-top: 28px;">Prepared as a research document. Product names mentioned are for market context only and belong to their respective owners. No code changes were made.</p>
+
+</div>
+</body>
+</html>

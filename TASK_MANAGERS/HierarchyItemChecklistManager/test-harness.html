@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Curriculum Task Manager — Test Harness</title>
-<link rel="stylesheet" href="CurriculumBuilderTaskManagement.css">
+<title>Hierarchy Item Checklist Manager — Test Harness</title>
+<link rel="stylesheet" href="HierarchyItemChecklistManager.css">
 <style>
 body { padding-top: 34px !important; margin: 0; background: #eef0f7; }
 #app-container { min-height: calc(100vh - 34px); }
@@ -22,8 +22,8 @@ body { padding-top: 34px !important; margin: 0; background: #eef0f7; }
 </head>
 <body>
 <div id="th-bar">
-  <strong>TEST HARNESS — Curriculum Task Manager</strong><span class="sep">|</span>
-  <button class="btn-load" id="th-load-sample">Load Sample Curriculum</button>
+  <strong>TEST HARNESS — Hierarchy Item Checklist Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Program</button>
   <button class="btn-clear" id="th-clear">Clear All</button>
   <button class="btn-reload" id="th-reload">Reload</button>
   <span class="sep">|</span>
@@ -133,7 +133,7 @@ body { padding-top: 34px !important; margin: 0; background: #eef0f7; }
     _loadSampleData: function(data) { save(data); window.location.reload(); },
     _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
     _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
-    _dump: function() { console.log('Curriculum DB:', JSON.parse(JSON.stringify(_value))); }
+    _dump: function() { console.log('Program DB:', JSON.parse(JSON.stringify(_value))); }
   };
 
   document.getElementById('th-role').addEventListener('change', function() {
@@ -149,7 +149,7 @@ body { padding-top: 34px !important; margin: 0; background: #eef0f7; }
 
 <script>
 /* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
-var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003cdiv class=\"cbt-stats\" id=\"cbt-stats\">\u003c/div>\r\n\r\n  \u003cnav class=\"cbt-tabs\" id=\"cbt-tabs\">\r\n    \u003cbutton class=\"cbt-tab active\" data-tab=\"tasks\">🌳 Outline\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"grid\">📊 Lessons\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"reports\">📈 Reports\u003c/button>\r\n  \u003c/nav>\r\n\r\n  \u003csection class=\"cbt-pane active\" id=\"pane-tasks\">\r\n    \u003cdiv class=\"cbt-toolbar\">\r\n      \u003cdiv class=\"cbt-quickadd\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-primary\" id=\"btn-add-section\" title=\"Add a new top-level section\">＋ Section\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-std-tasks\" title=\"Edit the standard tasks added under lessons\">⚙ Std tasks\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-filterrow\">\r\n        \u003cinput id=\"cbt-search\" type=\"text\" placeholder=\"🔍 Search tasks...\">\r\n        \u003cselect id=\"cbt-filter-status\" title=\"Filter by status\">\r\n          \u003coption value=\"\">All statuses\u003c/option>\r\n          \u003coption value=\"todo\">⬜ To do\u003c/option>\r\n          \u003coption value=\"progress\">🚧 In progress\u003c/option>\r\n          \u003coption value=\"review\">🔍 In review\u003c/option>\r\n          \u003coption value=\"done\">✅ Done\u003c/option>\r\n          \u003coption value=\"blocked\">🚫 Blocked\u003c/option>\r\n        \u003c/select>        \u003cselect id=\"cbt-filter-member\" title=\"Filter by assignee\">\u003c/select>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-only-overdue\" title=\"Show only overdue tasks\">⚠ Overdue\u003c/button>\r\n        \u003cspan class=\"cbt-spacer\">\u003c/span>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-undo\" title=\"Nothing to undo\">↶ Undo\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-tree\" id=\"cbt-tree\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-grid\">\r\n    \u003cdiv class=\"cbt-grid-hint\">\u003cspan class=\"cbt-grid-hint-text\">One row per lesson — one column per standard task. Click a cell to change its status, hover a row or section and click ↗ to jump to it in the outline. \u003cspan id=\"cbt-grid-summary\">\u003c/span>\u003c/span>\u003cspan class=\"cbt-grid-hint-actions\">\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\u003c/span>\u003c/div>\r\n    \u003cdiv class=\"cbt-grid-wrap\" id=\"cbt-grid\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-reports\">\r\n    \u003cdiv class=\"cbt-reports-head\">\r\n      \u003cdiv class=\"cbt-reports-title\">Curriculum progress report\u003c/div>\r\n      \u003cdiv class=\"cbt-reports-actions\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-csv\" title=\"Download all tasks as CSV\">⬇ CSV\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-pdf\" title=\"Export a printable report\">🖨 PDF report\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-reports\" id=\"cbt-reports\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003cdiv class=\"cbt-modal-overlay\" id=\"cbt-modal\" hidden>\r\n    \u003cdiv class=\"cbt-modal\">\r\n      \u003cdiv class=\"cbt-modal-head\">\r\n        \u003cdiv class=\"cbt-modal-title\" id=\"cbt-modal-title\">\u003c/div>\r\n        \u003cbutton class=\"cbt-modal-x\" id=\"cbt-modal-close\" title=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-modal-body\" id=\"cbt-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n\u003c/div>\r\n";
+var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003cdiv class=\"cbt-stats\" id=\"cbt-stats\">\u003c/div>\r\n\r\n  \u003cnav class=\"cbt-tabs\" id=\"cbt-tabs\">\r\n    \u003cbutton class=\"cbt-tab active\" data-tab=\"tasks\">🌳 Outline\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"grid\">📊 Lessons\u003c/button>\r\n    \u003cbutton class=\"cbt-tab\" data-tab=\"reports\">📈 Reports\u003c/button>\r\n  \u003c/nav>\r\n\r\n  \u003csection class=\"cbt-pane active\" id=\"pane-tasks\">\r\n    \u003cdiv class=\"cbt-toolbar\">\r\n      \u003cdiv class=\"cbt-quickadd\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-primary\" id=\"btn-add-section\" title=\"Add a new top-level section\">＋ Section\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-std-tasks\" title=\"Edit the standard tasks added under lessons\">⚙ Std tasks\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-filterrow\">\r\n        \u003cinput id=\"cbt-search\" type=\"text\" placeholder=\"🔍 Search tasks...\">\r\n        \u003cselect id=\"cbt-filter-status\" title=\"Filter by status\">\r\n          \u003coption value=\"\">All statuses\u003c/option>\r\n          \u003coption value=\"todo\">⬜ To do\u003c/option>\r\n          \u003coption value=\"progress\">🚧 In progress\u003c/option>\r\n          \u003coption value=\"review\">🔍 In review\u003c/option>\r\n          \u003coption value=\"done\">✅ Done\u003c/option>\r\n          \u003coption value=\"blocked\">🚫 Blocked\u003c/option>\r\n        \u003c/select>        \u003cselect id=\"cbt-filter-member\" title=\"Filter by assignee\">\u003c/select>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-only-overdue\" title=\"Show only overdue tasks\">⚠ Overdue\u003c/button>\r\n        \u003cspan class=\"cbt-spacer\">\u003c/span>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-undo\" title=\"Nothing to undo\">↶ Undo\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-tree\" id=\"cbt-tree\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-grid\">\r\n    \u003cdiv class=\"cbt-grid-hint\">\u003cspan class=\"cbt-grid-hint-text\">One row per lesson — one column per standard task. Click a cell to change its status, hover a row or section and click ↗ to jump to it in the outline. \u003cspan id=\"cbt-grid-summary\">\u003c/span>\u003c/span>\u003cspan class=\"cbt-grid-hint-actions\">\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-expand-all\" title=\"Expand all sections\">⊞ Expand all\u003c/button>\u003cbutton class=\"cbt-btn cbt-btn-ghost cbt-btn-xs\" id=\"btn-grid-collapse-all\" title=\"Collapse all sections\">⊟ Collapse all\u003c/button>\u003c/span>\u003c/div>\r\n    \u003cdiv class=\"cbt-grid-wrap\" id=\"cbt-grid\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003csection class=\"cbt-pane\" id=\"pane-reports\">\r\n    \u003cdiv class=\"cbt-reports-head\">\r\n      \u003cdiv class=\"cbt-reports-title\">Program progress report\u003c/div>\r\n      \u003cdiv class=\"cbt-reports-actions\">\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-csv\" title=\"Download all tasks as CSV\">⬇ CSV\u003c/button>\r\n        \u003cbutton class=\"cbt-btn cbt-btn-ghost\" id=\"btn-export-pdf\" title=\"Export a printable report\">🖨 PDF report\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n    \u003cdiv class=\"cbt-reports\" id=\"cbt-reports\">\u003c/div>\r\n  \u003c/section>\r\n\r\n  \u003cdiv class=\"cbt-modal-overlay\" id=\"cbt-modal\" hidden>\r\n    \u003cdiv class=\"cbt-modal\">\r\n      \u003cdiv class=\"cbt-modal-head\">\r\n        \u003cdiv class=\"cbt-modal-title\" id=\"cbt-modal-title\">\u003c/div>\r\n        \u003cbutton class=\"cbt-modal-x\" id=\"cbt-modal-close\" title=\"Close\">✕\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"cbt-modal-body\" id=\"cbt-modal-body\">\u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n\u003c/div>\r\n";
 </script>
 
 <script>
@@ -158,9 +158,9 @@ var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003c
   var container = document.getElementById('app-container');
 
   function loadJS() {
-    status.textContent = 'Ready — click "Load Sample Curriculum" to test';
+    status.textContent = 'Ready — click "Load Sample Program" to test';
     var script = document.createElement('script');
-    script.src = 'CurriculumBuilderTaskManagement.js';
+    script.src = 'HierarchyItemChecklistManager.js';
     script.onload = function() { status.textContent = 'Ready ✓'; };
     script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
     document.body.appendChild(script);
@@ -177,7 +177,7 @@ var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003c
     injectHTML(EMBEDDED_HTML);
   }, 1500);
 
-  fetch('CurriculumBuilderTaskManagement.html')
+  fetch('HierarchyItemChecklistManager.html')
     .then(function(resp) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.text();
@@ -217,7 +217,7 @@ var EMBEDDED_HTML = "\u003cdiv id=\"cbt-app\" class=\"cbt-app\">\r\n\r\n  \u003c
   function generateSampleData() {
     return {
       version: 1,
-      title: 'Grade 7 Science Curriculum',
+      title: 'Grade 7 Science Program',
       settings: { standardTasks: ['Lesson plan', 'Worksheet', 'Quiz', 'Answer key'] },
       ui: { tab: 'tasks', collapsed: [] },
       members: [

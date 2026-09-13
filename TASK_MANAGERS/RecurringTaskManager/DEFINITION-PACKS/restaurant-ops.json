@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "bkt-pack-v1",
+  "name": "Restaurant Operations",
+  "description": "Starter pack for restaurant and food-service operations: opening and closing checklists, food safety logs, inventory counts and license renewals.",
+  "categories": [
+    { "id": "opening", "label": "Opening Duties" },
+    { "id": "closing", "label": "Closing Duties" },
+    { "id": "food-safety", "label": "Food Safety" },
+    { "id": "inventory", "label": "Inventory and Orders" },
+    { "id": "maintenance", "label": "Equipment and Maintenance" },
+    { "id": "compliance", "label": "Licenses and Compliance" }
+  ],
+  "definitions": [
+    { "title": "Opening checklist", "category": "opening", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Complete before first guests arrive.", "steps": ["Turn on equipment and check temperatures", "Check dining room and restrooms are clean", "Verify staff arrival and station assignment"] },
+    { "title": "Closing checklist", "category": "closing", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Complete after the last guests leave.", "steps": ["Clean stations and store food properly", "Record waste in the log", "Count the till and lock the safe", "Switch off equipment and alarm"] },
+    { "title": "Cooler and freezer temperature log", "category": "food-safety", "taskType": "regular", "frequency": "daily", "priority": "high", "note": "Record cooler, freezer and hot-hold temperatures twice a day.", "steps": ["Morning reading: coolers and freezers", "Evening reading: coolers and freezers", "Note any unit outside the safe range"] },
+    { "title": "Weekly line check", "category": "food-safety", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "high", "note": "Full food safety walkthrough: dates, labels, storage order, cleaning." },
+    { "title": "Weekly inventory count", "category": "inventory", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 6, "priority": "medium", "note": "Count stock and compare with usage; prepare the supplier order list." },
+    { "title": "Supplier order", "category": "inventory", "taskType": "regular", "frequency": "weekly", "dayOfWeek": 0, "priority": "medium", "note": "Place the weekly order with suppliers before the cutoff time." },
+    { "title": "Grease trap service", "category": "maintenance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "high", "note": "Confirm the grease trap service report and file it." },
+    { "title": "Hood and exhaust cleaning", "category": "maintenance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 5, "priority": "high", "note": "Verify the hood and exhaust cleaning certificate." },
+    { "title": "Monthly pest control", "category": "compliance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 10, "priority": "medium", "note": "Pest control visit - file the service report." },
+    { "title": "Fire extinguisher check", "category": "compliance", "taskType": "regular", "frequency": "monthly", "dayOfMonth": 1, "priority": "high", "note": "Check gauges, seals and access on all extinguishers." },
+    { "title": "Quarterly health inspection prep", "category": "compliance", "taskType": "regular", "frequency": "quarterly", "dayOfMonth": 15, "priority": "high", "note": "Self-inspection with the health checklist and fix findings before the inspector arrives." },
+    { "title": "Food handler certification renewal", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 4, "dayOfMonth": 15, "priority": "high", "note": "Check staff certifications and book renewals before expiry." },
+    { "title": "Business and liquor license renewal", "category": "compliance", "taskType": "regular", "frequency": "yearly", "monthOfYear": 12, "dayOfMonth": 1, "priority": "high", "note": "Renew business and liquor licenses before year end." },
+    { "title": "Ad-hoc equipment repair", "category": "maintenance", "taskType": "adHoc", "dueDate": "", "priority": "medium", "note": "One-off repair call - set the due date when creating it." }
+  ]
+}

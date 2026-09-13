@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recurring Task Manager - Development Plan</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #0d9488;
+    --accent-d: #0f766e;
+    --high: #16a34a;
+    --mid: #d97706;
+    --low: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #f4f6f8;
+  }
+  header {
+    background: #0f172a;
+    color: #e6edf5;
+    padding: 18px 28px;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+  header .sub { margin-top: 5px; font-size: 12.5px; color: #9aa8ba; }
+  header .sub strong { color: #2dd4bf; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 24px 48px; }
+  .intro {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin: 3px 0; }
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat {
+    flex: 1;
+    min-width: 130px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .stat .num { font-size: 20px; font-weight: 800; color: var(--accent-d); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .filters input[type=search] {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  .filters select {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    background: #fff;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 100px;
+    padding: 6px 13px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .idea {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .score {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+  }
+  .score.s-high { background: var(--high); }
+  .score.s-mid { background: var(--mid); }
+  .score.s-low { background: var(--low); }
+  .idea-body { flex: 1; min-width: 0; }
+  .idea-title { font-size: 14.5px; font-weight: 700; }
+  .idea-id { color: var(--muted); font-size: 12px; font-weight: 600; margin-right: 6px; }
+  .badges { margin: 6px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .b-cat { background: #ecfdf5; color: #047857; }
+  .b-eff-s { background: #f0fdf4; color: #166534; }
+  .b-eff-m { background: #fffbeb; color: #b45309; }
+  .b-eff-l { background: #fef2f2; color: #b91c1c; }
+  .b-req { background: #eef2ff; color: #4338ca; }
+  .b-simp { background: #fdf2f8; color: #be185d; }
+  .b-status { background: #f1f5f9; color: #475569; }
+  .idea-desc { font-size: 13px; color: #334155; line-height: 1.55; }
+  .idea-value { font-size: 12.5px; color: #0f766e; margin-top: 6px; }
+  .idea-value strong { color: #0f766e; }
+  .cat-head {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    margin: 18px 0 8px;
+  }
+  .note-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #78350f;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .applied { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; background: #fff; border: 1px dashed var(--line); border-radius: 10px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Recurring Task Manager - Development Plan</h1>
+  <div class="sub">Idea backlog with value scores, effort and requirements - so we can decide <strong>what to apply</strong> and <strong>in which order</strong>.</div>
+</header>
+<div class="wrap">
+
+  <div class="intro">
+    How to read this plan:
+    <ul>
+      <li><strong>Value</strong> = the colored score box on each card (1-10). 8-10 green = high impact, 6-7 amber = worthwhile, 1-5 gray = nice to have.</li>
+      <li><strong>Effort</strong> = Small (hours), Medium (a day or two), Large (multi-day or needs a decision).</li>
+      <li><strong>Requirement</strong> = "pure code" means we can build it inside this tool. "CMS" means the parent CMS must cooperate (permissions, storage, notifications, file access). "CMS-AI" means the CMS must provide an AI endpoint because this tool sandbox cannot call the network itself.</li>
+      <li>Use the filters to sort by value, to see only one category, or only simplification ideas.</li>
+    </ul>
+  </div>
+
+  <div class="note-box">
+    <strong>About AI in this tool:</strong> the html-tool sandbox has no network access (no fetch, no API keys), so the tool itself cannot call an AI model.
+    AI is still possible when the <strong>parent CMS provides an AI assist endpoint</strong> (the CMS calls the model and returns text to the tool, the tool only displays it).
+    That is why every AI idea below is marked CMS-AI. The highest-value AI ideas are conversation summaries and a "what was left behind" summary, because managers and operators read those weekly.
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="filters">
+    <input type="search" id="fSearch" placeholder="Search ideas...">
+    <select id="fSort">
+      <option value="value">Sort: Value</option>
+      <option value="id">Sort: ID</option>
+      <option value="effort">Sort: Effort</option>
+    </select>
+    <select id="fStatus">
+      <option value="all">All statuses</option>
+      <option value="proposed">Proposed</option>
+      <option value="applied">Applied</option>
+    </select>
+  </div>
+  <div class="filters" id="catChips"></div>
+
+  <div id="list"></div>
+
+  <footer>
+    Generated as a planning document - no tool code changes. Decide the order together, then we implement one idea at a time with the same verification routine (static checks, smoke tests, headless browser proof).
+  </footer>
+</div>
+
+<script>
+(function () {
+  var CATEGORIES = [
+    { id: "data", label: "Data & Reports" },
+    { id: "ai", label: "AI Assistance" },
+    { id: "workflow", label: "Workflow & Collaboration" },
+    { id: "ux", label: "UX & Simplification" },
+    { id: "governance", label: "Governance & Reliability" },
+    { id: "visuals", label: "Visualizations & Insights" }
+  ];
+
+  var IDEAS = [
+    /* ---- A. Data & Reports ---- */
+    { id: "A1", cat: "data", title: "Month-over-month missed-work comparison card on the Dashboard",
+      value: 5, effort: "m", req: "pure code", status: "proposed",
+      desc: "A compact card comparing the current month against last month, framed around the work itself: which tasks were left incomplete, which recurring tasks were skipped in both months (a systematic miss), and the completed counts. Shows an up/down arrow for the missed-work count only, never a 'performance score'.",
+      benefit: "Not a performance monitor - it catches tasks that are silently skipped every month. If a task is missed in two consecutive months, that is a process problem worth a conversation." },
+    { id: "A2", cat: "data", title: "Year Plan: per-definition year summary chips",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "On each Year Plan group header show tiny chips like 'best month: March', 'worst month: August' computed from history.",
+      benefit: "Quick insight into seasonality of each recurring task." },
+    { id: "A3", cat: "data", title: "Missed-day heatmap per task",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "A GitHub-style heatmap for a daily task inside its Year Plan group: color intensity = how many days were missed in that week.",
+      benefit: "Visually obvious problem periods instead of scanning 365 dots." },
+    { id: "A4", cat: "data", title: "Per-category monthly report table",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "A dashboard section showing one row per category: due, completed, on time, left behind. Reuses existing category aggregation.",
+      benefit: "The bookkeeper reports to management by category; this builds that report automatically." },
+    { id: "A5", cat: "data", title: "Export monthly summary as CSV",
+      value: 6, effort: "m", req: "cms", status: "proposed",
+      desc: "A button that asks the CMS to download the month summary as a CSV file (the sandbox itself cannot write files).",
+      benefit: "Management often wants a spreadsheet; removes manual retyping." },
+    { id: "A6", cat: "data", title: "Completion streak counter",
+      value: 4, effort: "s", req: "pure code", status: "proposed",
+      desc: "Show 'streak: 12 days' on the dashboard for consecutive days with all daily tasks completed.",
+      benefit: "Light gamification; encourages daily checking." },
+
+    /* ---- B. AI Assistance ---- */
+    { id: "B1", cat: "ai", title: "AI conversation summary in the task drawer",
+      value: 8, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "A 'Summarize' button above the conversation. The CMS sends the message history to an AI model and returns a short summary pinned at the top of the conversation.",
+      benefit: "Long conversations become readable in seconds; the person who opens a task weeks later sees context instantly." },
+    { id: "B2", cat: "ai", title: "AI 'what is left behind' weekly summary",
+      value: 8, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "The CMS generates a short natural-language summary from this tool's monthly data (e.g. 'August: bank reconciliation was missed twice, all weekly reports were done').",
+      benefit: "A management-ready paragraph with zero manual writing." },
+    { id: "B3", cat: "ai", title: "AI-drafted request text",
+      value: 6, effort: "m", req: "cms-ai", status: "proposed",
+      desc: "In the New Request form, a 'Draft for me' button fills a polite request message from the task title, due date and note.",
+      benefit: "Saves typing; consistent request tone." },
+    { id: "B4", cat: "ai", title: "AI anomaly detection",
+      value: 5, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "The CMS analyzes completion trends and highlights tasks whose completion rate is dropping over months.",
+      benefit: "Early warning before a task quietly becomes a problem." },
+    { id: "B5", cat: "ai", title: "AI-suggested board order",
+      value: 4, effort: "l", req: "cms-ai", status: "proposed",
+      desc: "Sort today's list by AI-computed urgency (overdue days, priority, request count, streak risk).",
+      benefit: "Saves the bookkeeper from deciding what to do first." },
+
+    /* ---- C. Workflow & Collaboration ---- */
+    { id: "C1", cat: "workflow", title: "Reminders when a task is overdue N days",
+      value: 9, effort: "l", req: "cms", status: "proposed",
+      desc: "The CMS sends a notification (email or CMS inbox) when a routine task stays open past its due date by a configurable number of days.",
+      benefit: "The single biggest reliability win for a bookkeeping process; nothing can silently slip." },
+    { id: "C2", cat: "workflow", title: "Attachment or link field on tasks",
+      value: 7, effort: "m", req: "cms", status: "proposed",
+      desc: "A field where the user pastes a link to the related document (bank statement, invoice scan) shown in the drawer.",
+      benefit: "Evidence lives with the task instead of somewhere else." },
+    { id: "C3", cat: "workflow", title: "Undo last action",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "After checking a day or changing a status, show a small 'Undo' toast for a few seconds.",
+      benefit: "Fixes mis-clicks instantly; mis-clicks are common with 31-dot strips." },
+    { id: "C4", cat: "workflow", title: "Bulk actions on a strip",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "A small menu per strip: 'mark all weekdays done', 'mark this week done', 'clear month'.",
+      benefit: "Faster back-filling when the bookkeeper starts using the tool mid-month." },
+    { id: "C5", cat: "workflow", title: "Mentions in conversation",
+      value: 4, effort: "m", req: "pure code", status: "proposed",
+      desc: "Typing @name in a conversation message highlights that person and the message is visually marked 'mentions you'.",
+      benefit: "Draws the right person's attention in a shared drawer." },
+    { id: "C6", cat: "workflow", title: "Print-friendly month view",
+      value: 5, effort: "m", req: "pure code", status: "proposed",
+      desc: "A clean printable layout of one month (strips + left behind) via browser print styles.",
+      benefit: "Paper backup for meetings with management." },
+    { id: "C7", cat: "workflow", title: "Chat: unread badge per task",
+      value: 7, effort: "m", req: "pure code", status: "proposed",
+      desc: "Track who has read which chat messages and show a red 'unseen' badge on rows and tabs for the current user.",
+      benefit: "Directly answers 'which tasks need my attention' without opening every drawer." },
+    { id: "C8", cat: "workflow", title: "Chat: reply to a specific message",
+      value: 5, effort: "l", req: "pure code", status: "proposed",
+      desc: "A reply action on each message that quotes the original message inside the new one.",
+      benefit: "Keeps long chats readable when several topics are discussed on one task." },
+    { id: "C9", cat: "workflow", title: "Chat: edit your own recent messages",
+      value: 4, effort: "s", req: "pure code", status: "proposed",
+      desc: "Allow the author to edit their own message for a short window after sending; edits are marked 'edited'.",
+      benefit: "Fixes typos and wrong numbers without extra correction messages." },
+    { id: "C10", cat: "workflow", title: "Per-task guide link (video or document)",
+      value: 5, effort: "s", req: "cms", status: "proposed",
+      desc: "A definition field holding a link to a training video or procedure document; the drawer shows a 'Guide' button that opens it through the CMS.",
+      benefit: "Difficult tasks get an instant 'how to' without the admin retyping the procedure." },
+
+    /* ---- D. UX & Simplification ---- */
+    { id: "D1", cat: "ux", title: "Remove the per-row Details button",
+      value: 6, effort: "s", req: "pure code", status: "applied", simp: true,
+      desc: "The whole row already opens the drawer. Keep only Start / Complete / Request on the row and delete the Details button.",
+      benefit: "One less button on every row with zero lost capability." },
+    { id: "D2", cat: "ux", title: "Move Request button into the drawer only",
+      value: 5, effort: "s", req: "pure code", status: "applied", simp: true,
+      desc: "Requests are created from an inline form inside the drawer (type + message + Send). The old request popup was removed; converting a chat message to a request prefills the inline form.",
+      benefit: "Rows become scannable; the drawer is the single place for task communication." },
+    { id: "D3", cat: "ux", title: "Hide 'Load Default Tasks' once definitions exist",
+      value: 5, effort: "s", req: "pure code", status: "applied", simp: true,
+      desc: "The seed button was removed entirely - administrators create their own definitions.",
+      benefit: "Removes a rarely used admin button from everyday view." },
+    { id: "D4", cat: "ux", title: "Remove the priority dot from rows",
+      value: 4, effort: "s", req: "pure code", status: "applied", simp: true,
+      desc: "Priority already exists in the drawer and in sorting. The tiny colored dot on rows adds noise.",
+      benefit: "Cleaner rows; sorting by priority keeps the practical effect." },
+    { id: "D5", cat: "ux", title: "Collapse the ribbon on small screens",
+      value: 4, effort: "s", req: "pure code", status: "proposed", simp: true,
+      desc: "On narrow widths the five stat cards shrink into a single progress line.",
+      benefit: "Board remains usable on a half-screen window." },
+    { id: "D6", cat: "ux", title: "Merge note into the conversation as a pinned message",
+      value: 7, effort: "l", req: "pure code", status: "applied", simp: true,
+      desc: "One 'Chat' column instead of Note + Conversation. The note became the first pinned bubble (editable in place, attributed like other messages). While merging, the chat was upgraded: each message can be marked Important / To discuss / To solve (cycling Mark button) and any message can be converted into a request with its text prefilled.",
+      benefit: "Two similar inputs became one capable chat; flagged messages and convert-to-request turn chat into a work queue." },
+    { id: "D7", cat: "ux", title: "Keyboard shortcuts for the board",
+      value: 7, effort: "m", req: "pure code", status: "proposed",
+      desc: "C = complete/uncomplete selected task, arrows = move between occurrences in the drawer, Esc already closes overlays.",
+      benefit: "Power users check an entire month without touching the mouse." },
+    { id: "D8", cat: "ux", title: "Collapse year groups to the current quarter by default",
+      value: 3, effort: "s", req: "pure code", status: "proposed", simp: true,
+      desc: "In the Year Plan, keep January-March and October-December groups collapsed; expand only the current quarter.",
+      benefit: "Less scrolling in the Year Plan." },
+
+    /* ---- E. Governance & Reliability ---- */
+    { id: "E1", cat: "governance", title: "Longer status history retention",
+      value: 5, effort: "m", req: "cms", status: "proposed",
+      desc: "The log is capped at 12 entries. Offer per-tool retention (keep 90 days of history) with the CMS providing storage quota.",
+      benefit: "Better audit story for a financial process." },
+    { id: "E2", cat: "governance", title: "Finer roles: request-only vs status-edit",
+      value: 6, effort: "m", req: "cms", status: "proposed",
+      desc: "A role that can open tasks, write notes and send requests but cannot change statuses (pure review role).",
+      benefit: "Separation of duties - important for financial controls." },
+    { id: "E3", cat: "governance", title: "Backup / export full database button",
+      value: 6, effort: "m", req: "cms", status: "proposed",
+      desc: "Download the whole tool value as a JSON file through the CMS for off-platform backup.",
+      benefit: "Insurance against accidental data loss." },
+    { id: "E4", cat: "governance", title: "Confirm before clearing a whole month",
+      value: 4, effort: "s", req: "pure code", status: "proposed",
+      desc: "If bulk clear actions arrive (C4), they must show a confirm dialog naming the month.",
+      benefit: "Protects months of recorded work from one wrong click." },
+
+    /* ---- V. Visualizations & Insights ---- */
+    { id: "V1", cat: "visuals", title: "Year heatmap (GitHub-style completion grid)",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "A 365-day grid on the Dashboard: one square per day colored by status (done green, in progress amber, late red, missed gray). Pure SVG like the existing month chart.",
+      benefit: "One glance shows where work actually happens and where it clusters - the most useful single view for a cadence tool." },
+    { id: "V2", cat: "visuals", title: "'Where does it break?' report",
+      value: 9, effort: "m", req: "pure code", status: "applied",
+      desc: "Top 5 tasks completed late most often, top 5 most-missed days, most-overdue categories - computed from existing history.",
+      benefit: "Directly answers 'what should be improved': a task late every month = wrong due date or owner; a task with many messages = friction worth a process fix." },
+    { id: "V3", cat: "visuals", title: "Weekday workload profile",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "A bar showing how many tasks fall on each weekday for the open year.",
+      benefit: "Shows if Friday is overloaded (reshuffle definitions) or if weekends carry hidden work." },
+    { id: "V4", cat: "visuals", title: "On-time trend sparkline",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "Week-by-week on-time percentage as a small line chart with a goal line.",
+      benefit: "The trend matters more than the raw number - shows recovery or decay early." },
+    { id: "V5", cat: "visuals", title: "Streaks and gaps widgets",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "'9 days in a row complete' and 'longest gap: 6 days' style cards per task and overall.",
+      benefit: "Small motivational and diagnostic signals; gaps flag forgotten stretches immediately." },
+    { id: "V6", cat: "visuals", title: "Late-by task table",
+      value: 8, effort: "s", req: "pure code", status: "proposed",
+      desc: "Average days overdue per task, sorted worst-first, with completion counts.",
+      benefit: "Instantly flags the definitions whose schedule is unrealistic and needs moving." },
+    { id: "V7", cat: "visuals", title: "Suggestions panel (rule-based nudges)",
+      value: 9, effort: "m", req: "pure code", status: "applied",
+      desc: "Rule-based suggestions computed from data: 'Payroll processing was late 7 of 12 times - consider moving it one day earlier', '3 messages piled up on bank reconciliation - split it into steps'. Can be upgraded to an AI advisor when the CMS provides an AI endpoint.",
+      benefit: "The 'make the job better' layer - turns the visualizations into concrete, actionable next steps." }
+  ];
+
+  var APPLIED_NOTES = [
+    "Right-side task drawer with two columns and per-occurrence conversation, requests, note and history.",
+    "Year calendar strips for weekly, biweekly and monthly tasks; month accordions as 12 compact tabs with completion percent for daily and weekly tasks.",
+    "Prominent dates next to every task title (equal importance to the title).",
+    "Named and date-timed attributions on conversation messages, requests, answers and notes.",
+    "Days-overdue counters on overdue rows.",
+    "Last Month scope on the board: completed summary + Left Behind list + ribbon label.",
+    "Stable Prev/Next occurrence navigation in the drawer header.",
+    "Conversation message counters on task rows, day strips, calendar strips and accordion month heads.",
+    "Board tabs (All / Routine / Ad-hoc / Overdue / Requests) instead of one long column.",
+    "Merged Note + Conversation into one Chat column with a pinned note, message markers (Important / To discuss / To solve) and convert-message-to-request.",
+    "Strip Details button on day strips, year calendar strips and month accordions expands an overview of the selected month with per-occurrence status, steps, messages and notes (no separate day drawer needed).",
+    "Month panel day checkboxes show the day number inside, and the cells plus the details glyph are larger.",
+    "Reports tab with a professional menu: Late Tasks / Missed Days / Overdue Categories - the V2 where-does-it-break diagnostics with intro guidance and ranked tables.",
+    "Suggestions report (V7): rule-based nudges computed from the year's data (late-prone tasks, message-heavy tasks, left-behind tasks, breaking weekdays, overloaded categories), plus an optional AI month review via the Get AI Suggestions button when the CMS provides an AI endpoint.",
+    "Chat storage split: all conversation messages live in one separate CMS object per instance (recurring-task-chats-uniconbaseapps), loaded once at startup and updated on chat changes - the main document keeps only statuses and counters.",
+    "Categories and starter content moved to JSON: DB.categories (13 bookkeeping defaults kept), definition packs in the DEFINITION-PACKS folder (bookkeeping, facility-ops, restaurant-ops, property-management) with a schema README.",
+    "Admin import/export of definitions: paste or upload a pack JSON, pick the year, optionally start fresh; export copies or downloads the pack JSON.",
+    "One-year horizon: year navigation removed - the tool manages a single year, and a new year starts via export and import.",
+    "Simplifications applied: no row Details button, requests inline in the drawer (popup removed), seed loader removed, priority dots removed, Collapse All / Expand All in the Year Plan.",
+    "Bookkeeper guidance: step-by-step checklists per task definition (checked per occurrence in the drawer) + estimated time field + instructions."
+  ];
+
+  var sortMode = "value";
+  var activeCat = "all";
+  var statusFilter = "all";
+  var searchText = "";
+
+  function byId(id) { return document.getElementById(id); }
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function scoreClass(value) { return value >= 8 ? "s-high" : (value >= 6 ? "s-mid" : "s-low"); }
+  function effortClass(effort) { return effort === "s" ? "b-eff-s" : (effort === "m" ? "b-eff-m" : "b-eff-l"); }
+  function effortLabel(effort) { return effort === "s" ? "Small" : (effort === "m" ? "Medium" : "Large"); }
+  function categoryLabel(id) {
+    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].id === id) return CATEGORIES[i].label;
+    return id;
+  }
+
+  function renderStats() {
+    var total = IDEAS.length;
+    var applied = IDEAS.filter(function (idea) { return idea.status === "applied"; }).length;
+    var sum = 0;
+    IDEAS.forEach(function (idea) { sum += idea.value; });
+    var avg = total ? (sum / total).toFixed(1) : "0";
+    var simplifications = IDEAS.filter(function (idea) { return idea.simp; }).length;
+    byId("statsRow").innerHTML =
+      '<div class="stat"><div class="num">' + total + '</div><div class="lbl">Ideas</div></div>' +
+      '<div class="stat"><div class="num">' + avg + '</div><div class="lbl">Avg value</div></div>' +
+      '<div class="stat"><div class="num">' + simplifications + '</div><div class="lbl">Simplifications</div></div>' +
+      '<div class="stat"><div class="num">' + applied + '</div><div class="lbl">Already applied</div></div>';
+  }
+
+  function renderCatChips() {
+    var html = '<button type="button" class="chip' + (activeCat === "all" ? " active" : "") + '" data-cat="all">All</button>';
+    CATEGORIES.forEach(function (category) {
+      html += '<button type="button" class="chip' + (activeCat === category.id ? " active" : "") + '" data-cat="' + category.id + '">' +
+        escapeHtml(category.label) + "</button>";
+    });
+    byId("catChips").innerHTML = html;
+    Array.prototype.forEach.call(byId("catChips").querySelectorAll(".chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        activeCat = chip.getAttribute("data-cat");
+        render();
+      });
+    });
+  }
+
+  function render() {
+    renderCatChips();
+    renderStats();
+    var list = IDEAS.slice();
+    if (statusFilter !== "all") list = list.filter(function (idea) { return idea.status === statusFilter; });
+    if (activeCat !== "all") list = list.filter(function (idea) { return idea.cat === activeCat; });
+    if (searchText) {
+      list = list.filter(function (idea) {
+        return (idea.title + " " + idea.desc + " " + idea.benefit).toLowerCase().indexOf(searchText) > -1;
+      });
+    }
+    if (sortMode === "value") list.sort(function (a, b) { return b.value - a.value; });
+    else if (sortMode === "effort") list.sort(function (a, b) { return a.effort.localeCompare(b.effort); });
+    else list.sort(function (a, b) { return a.id.localeCompare(b.id); });
+
+    var html = "";
+    var shownCategories = [];
+    CATEGORIES.forEach(function (category) {
+      var categoryIdeas = list.filter(function (idea) { return idea.cat === category.id; });
+      if (!categoryIdeas.length) return;
+      html += '<div class="cat-head">' + escapeHtml(category.label) + "</div>";
+      categoryIdeas.forEach(function (idea) {
+        html += '<div class="idea">' +
+          '<div class="score ' + scoreClass(idea.value) + '">' + idea.value + "</div>" +
+          '<div class="idea-body">' +
+          '<div class="idea-title"><span class="idea-id">' + escapeHtml(idea.id) + "</span>" + escapeHtml(idea.title) + "</div>" +
+          '<div class="badges">' +
+          '<span class="badge b-cat">' + escapeHtml(categoryLabel(idea.cat)) + "</span>" +
+          '<span class="badge ' + effortClass(idea.effort) + '">' + effortLabel(idea.effort) + " effort</span>" +
+          '<span class="badge b-req">' + (idea.req === "pure code" ? "pure code" : (idea.req === "cms" ? "needs CMS" : "needs CMS + AI")) + "</span>" +
+          (idea.simp ? '<span class="badge b-simp">simplification</span>' : "") +
+          "</div>" +
+          '<div class="idea-desc">' + escapeHtml(idea.desc) + "</div>" +
+          '<div class="idea-value"><strong>Why:</strong> ' + escapeHtml(idea.benefit) + "</div>" +
+          "</div></div>";
+      });
+    });
+    if (!list.length) html = '<div class="empty">No ideas match the current filters.</div>';
+
+    var appliedHtml = "";
+    if (statusFilter === "all" && activeCat === "all" && !searchText) {
+      appliedHtml = '<div class="cat-head">Already applied (recent)</div>' +
+        '<div class="intro"><ul>' + APPLIED_NOTES.map(function (note) { return "<li>" + escapeHtml(note) + "</li>"; }).join("") + "</ul></div>";
+    }
+    byId("list").innerHTML = html + appliedHtml;
+  }
+
+  byId("fSearch").addEventListener("input", function () {
+    searchText = this.value.trim().toLowerCase();
+    render();
+  });
+  byId("fSort").addEventListener("change", function () {
+    sortMode = this.value;
+    render();
+  });
+  byId("fStatus").addEventListener("change", function () {
+    statusFilter = this.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

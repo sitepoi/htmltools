@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recurring Task Manager - Test Harness</title>
+<link rel="stylesheet" href="RecurringTaskManager.css">
+<style>
+body { margin: 0; padding-top: 34px !important; }
+#app-container { min-height: calc(100vh - 34px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-ro { background: #d97706; color: #fff; }
+#th-bar .btn-role { background: #7c3aed; color: #fff; }
+#th-bar .btn-dump { background: #2563eb; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+#th-toasts { position: fixed; right: 14px; bottom: 14px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; font-family: system-ui; font-size: 12px; }
+#th-toasts div { background: #1f2937; color: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS - Recurring Task Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-ro" id="th-ro">Read-Only: Off</button>
+  <button class="btn-role" id="th-role">Role: Admin</button>
+  <button class="btn-dump" id="th-dump">DB Dump</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = toggle read-only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = DB dump</span>
+</div>
+
+<div id="app-container"></div>
+<div id="th-toasts"></div>
+
+<script>
+/* ---- Mock tool SDK (setValue-only persistence) ---- */
+(function () {
+  var STORAGE_KEY = "bkt_test_db";
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _value = null;
+  var _readOnly = false;
+  var _roleIndex = 0;
+
+  var USERS = [
+    { id: "u-admin", name: "Sarah Chen", email: "sarah@example.org", roles: ["admin"] },
+    { id: "u-book", name: "Michael Reed", email: "michael@example.org", roles: ["editor"] },
+    { id: "u-view", name: "Alice Lee", email: "alice@example.org", roles: ["viewer"] },
+    null
+  ];
+  var ROLE_LABELS = ["Admin", "Bookkeeper", "Viewer", "No Session"];
+  var _user = USERS[0];
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch (error) { _value = null; }
+  }
+
+  function save(value) {
+    _value = value;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) {}
+  }
+
+  function pad2(value) { return value < 10 ? "0" + value : String(value); }
+  function isoOfDate(dateObject) { return dateObject.getFullYear() + "-" + pad2(dateObject.getMonth() + 1) + "-" + pad2(dateObject.getDate()); }
+  function addDaysIso(isoString, dayCount) {
+    var parts = isoString.split("-");
+    var dateObject = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    dateObject.setDate(dateObject.getDate() + dayCount);
+    return isoOfDate(dateObject);
+  }
+
+  function toast(message) {
+    var container = document.getElementById("th-toasts");
+    var item = document.createElement("div");
+    item.textContent = message;
+    container.appendChild(item);
+    setTimeout(function () { if (item.parentNode) item.parentNode.removeChild(item); }, 2600);
+  }
+
+  function buildSampleDatabase() {
+    var today = isoOfDate(new Date());
+    var now = new Date().toISOString();
+    var database = {
+      version: 1,
+      year: parseInt(today.slice(0, 4), 10),
+      definitions: [
+        { id: "seed-01", title: "Record cash receipts and payments", category: "cash", taskType: "regular", frequency: "daily", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: "", priority: "high", note: "Record cash collections against receipts on the same day.", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-02", title: "Process incoming invoices", category: "payables", taskType: "regular", frequency: "daily", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: "", priority: "medium", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-03", title: "Update task statuses", category: "tracking", taskType: "regular", frequency: "daily", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: "", priority: "low", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-04", title: "Weekly pledge report", category: "cash", taskType: "regular", frequency: "weekly", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: "", priority: "medium", note: "Prepare the weekly pledge report and share it with the groups.", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-05", title: "Enter work hours", category: "tracking", taskType: "regular", frequency: "weekly", dayOfWeek: 4, dayOfMonth: 1, monthOfYear: 12, dueDate: "", priority: "medium", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-10", title: "Bank account reconciliation", category: "reconciliation", taskType: "regular", frequency: "monthly", dayOfWeek: 0, dayOfMonth: 5, monthOfYear: 12, dueDate: "", priority: "high", note: "Compare all bank accounts with statements every month.", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-11", title: "Credit card reconciliation", category: "reconciliation", taskType: "regular", frequency: "monthly", dayOfWeek: 0, dayOfMonth: 5, monthOfYear: 12, dueDate: "", priority: "high", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-12", title: "Monthly financial statements", category: "reporting", taskType: "regular", frequency: "monthly", dayOfWeek: 0, dayOfMonth: 8, monthOfYear: 12, dueDate: "", priority: "high", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-16", title: "GST/HST return", category: "payroll", taskType: "regular", frequency: "quarterly", dayOfWeek: 0, dayOfMonth: 15, monthOfYear: 12, dueDate: "", priority: "high", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "seed-20", title: "Year-end closing", category: "yearend", taskType: "regular", frequency: "yearly", dayOfWeek: 0, dayOfMonth: 31, monthOfYear: 12, dueDate: "", priority: "high", note: "", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "ad-01", title: "Board request: purchase a printer", category: "purchases", taskType: "adHoc", frequency: "", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: addDaysIso(today, -1), priority: "high", note: "Purchase after approval and record it.", createdAt: now, createdBy: "Sarah Chen" },
+        { id: "ad-02", title: "Audit document preparation", category: "yearend", taskType: "adHoc", frequency: "", dayOfWeek: 0, dayOfMonth: 1, monthOfYear: 12, dueDate: addDaysIso(today, 5), priority: "medium", note: "", createdAt: now, createdBy: "Sarah Chen" }
+      ],
+      statuses: {},
+      requests: {},
+      ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "" }
+    };
+    function entry(status, actor) {
+      var entryObject = { status: status, updatedAt: now, updatedBy: actor, log: [{ status: status, at: now, by: actor }] };
+      if (status === "done") { entryObject.completedAt = now; entryObject.completedBy = actor; }
+      return entryObject;
+    }
+    var thisMonth = today.slice(0, 8);
+    database.statuses["seed-01|" + today] = entry("done", "Michael Reed");
+    database.statuses["seed-01|" + today].messages = [
+      { at: now, by: "Michael Reed", text: "Recorded today's cash. Two receipts are missing signatures." },
+      { at: now, by: "Sarah Chen", text: "Thanks. I will follow up with the donors about the signatures." }
+    ];
+    database.statuses["seed-02|" + today] = entry("inProgress", "Michael Reed");
+    database.statuses["seed-01|" + addDaysIso(today, -1)] = entry("pending", "");
+    database.statuses["seed-02|" + addDaysIso(today, -2)] = entry("done", "Michael Reed");
+    database.statuses["seed-04|" + today] = entry("inProgress", "Michael Reed");
+    database.statuses["seed-10|" + thisMonth + "05"] = entry("done", "Michael Reed");
+    database.statuses["seed-11|" + thisMonth + "05"] = entry("done", "Sarah Chen");
+    database.statuses["seed-03|" + today] = entry("pending", "");
+    database.requests["req-1"] = {
+      id: "req-1",
+      taskKey: "ad-01|" + addDaysIso(today, -1),
+      title: "Board request: purchase a printer",
+      dueDate: addDaysIso(today, -1),
+      type: "approval",
+      message: "Please approve purchasing this printer before I proceed with the vendor.",
+      status: "open",
+      createdAt: now,
+      createdBy: "Michael Reed",
+      response: "",
+      respondedAt: "",
+      respondedBy: ""
+    };
+    database.requests["req-2"] = {
+      id: "req-2",
+      taskKey: "seed-12|" + thisMonth + "08",
+      title: "Monthly financial statements",
+      dueDate: thisMonth + "08",
+      type: "information",
+      message: "I need the department split for the income report before I can complete it.",
+      status: "open",
+      createdAt: now,
+      createdBy: "Michael Reed",
+      response: "",
+      respondedAt: "",
+      respondedBy: ""
+    };
+    database.requests["req-3"] = {
+      id: "req-3",
+      taskKey: "seed-10|" + thisMonth + "05",
+      title: "Bank account reconciliation",
+      dueDate: thisMonth + "05",
+      type: "information",
+      message: "Which accounts should I reconcile first?",
+      status: "answered",
+      createdAt: now,
+      createdBy: "Michael Reed",
+      response: "Start with the chequing account.",
+      respondedAt: now,
+      respondedBy: "Sarah Chen"
+    };
+    database.requests["req-4"] = {
+      id: "req-4",
+      taskKey: "seed-16|" + thisMonth + "15",
+      title: "GST/HST return",
+      dueDate: thisMonth + "15",
+      type: "support",
+      message: "I need help preparing the GST/HST return this period.",
+      status: "open",
+      createdAt: now,
+      createdBy: "Michael Reed",
+      response: "",
+      respondedAt: "",
+      respondedBy: ""
+    };
+    return database;
+  }
+
+  var tool = {
+    onReady: function (callback) { load(); _readyCallback = callback; fireReady(); },
+    getValue: function () { return _value; },
+    setValue: function (value) {
+      save(value);
+      listeners.valueChange.forEach(function (listener) { try { listener(value); } catch (error) {} });
+    },
+    onValueChange: function (callback) { listeners.valueChange.push(callback); },
+    getFields: function () { return {}; },
+    watchField: function () {},
+    setField: function () {},
+    setFields: function () {},
+    onFieldsChange: function () {},
+    param: function (name, defaultValue) { return defaultValue; },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (callback) { listeners.readonlyChange.push(callback); },
+    getUser: function () { return _user; },
+    onUserChange: function (callback) { listeners.userChange.push(callback); },
+    getPermittedUsers: function () { return []; },
+    onPermittedUsersChange: function () {},
+    reportValid: function () {},
+    notify: function (message, severity) { toast((severity || "") + ": " + message); },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    reportMissingParams: function () {},
+    requestSave: function (callback) { if (callback) callback(null, true); },
+    openUrl: function () {},
+    openObjectDetail: function () {},
+    requestObjects: function (operation, payload, callback) {
+      var storeKey = "rtm_harness_objects";
+      var store = {};
+      try { store = JSON.parse(localStorage.getItem(storeKey) || "{}"); } catch (error) { store = {}; }
+      if (operation === "get") {
+        setTimeout(function () { callback(null, store[payload.objectId] || null); }, 30);
+        return;
+      }
+      var created = { id: payload.objectId, productData: payload.productData };
+      store[payload.objectId] = created;
+      localStorage.setItem(storeKey, JSON.stringify(store));
+      setTimeout(function () { callback(null, created); }, 30);
+    },
+    requestAI: function (payload, callback) {
+      setTimeout(function () {
+        var suggestions = [
+          { text: "Move the tasks that keep breaking to earlier weekdays so they get done before the busy days.", reason: "The missed-day report shows work piling up at the end of the week." },
+          { text: "Add step checklists to the tasks with the most messages - they need clearer instructions.", reason: "Messages usually mean the process is not documented." },
+          { text: "Review the overdue categories and move one task per week out of the busiest category.", reason: "Overdue work concentrates in a single category." }
+        ];
+        callback(null, JSON.stringify({ suggestions: suggestions }));
+      }, 200);
+    },
+    _toggleReadOnly: function () {
+      _readOnly = !_readOnly;
+      document.getElementById("th-ro").textContent = "Read-Only: " + (_readOnly ? "On" : "Off");
+      listeners.readonlyChange.forEach(function (listener) { try { listener(_readOnly); } catch (error) {} });
+    },
+    _cycleRole: function () {
+      _roleIndex = (_roleIndex + 1) % USERS.length;
+      _user = USERS[_roleIndex];
+      document.getElementById("th-role").textContent = "Role: " + ROLE_LABELS[_roleIndex];
+      listeners.userChange.forEach(function (listener) { try { listener(_user); } catch (error) {} });
+    },
+    _loadSample: function () {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSampleDatabase()));
+      location.reload();
+    },
+    _clear: function () {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    },
+    _dump: function () {
+      console.log("=== BOOKKEEPER DB DUMP ===");
+      console.log(JSON.stringify(_value, null, 2));
+      toast("DB dumped to console");
+    }
+  };
+
+  var _readyCallback = null;
+  function fireReady() {
+    if (_readyCallback && document.getElementById("app-container")) {
+      var callback = _readyCallback;
+      _readyCallback = null;
+      callback(_value, {});
+    }
+  }
+
+  window.tool = tool;
+  window.__fireThReady = fireReady;
+
+  /* QA query params: ?sample=1 preloads sample data, ?role=bookkeeper|admin|viewer presets the user,
+     ?scope=today|week|month and ?tab=board|year|defs preset the view */
+  try {
+    var queryString = location.search || "";
+    if (/[?&]sample=1/.test(queryString)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildSampleDatabase()));
+    }
+    var viewPreset = {};
+    if (/[?&]scope=/.test(queryString)) {
+      var scopeMatch = queryString.match(/[?&]scope=([a-zA-Z]+)/);
+      if (scopeMatch) viewPreset.scope = scopeMatch[1];
+    }
+    if (/[?&]tab=/.test(queryString)) {
+      var tabMatch = queryString.match(/[?&]tab=([a-z]+)/);
+      if (tabMatch) viewPreset.tab = tabMatch[1];
+    }
+    if (/[?&]boardtab=/.test(queryString)) {
+      var boardTabMatch = queryString.match(/[?&]boardtab=([a-z]+)/);
+      if (boardTabMatch) viewPreset.boardTab = boardTabMatch[1];
+    }
+    if (/[?&]report=/.test(queryString)) {
+      var reportMatch = queryString.match(/[?&]report=([a-z-]+)/);
+      if (reportMatch) viewPreset.report = reportMatch[1];
+    }
+    if (Object.keys(viewPreset).length) {
+      var storedDatabase = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || { ui: {} };
+      storedDatabase.ui = storedDatabase.ui || {};
+      if (viewPreset.scope) storedDatabase.ui.scope = viewPreset.scope;
+      if (viewPreset.tab) storedDatabase.ui.tab = viewPreset.tab;
+      if (viewPreset.boardTab) storedDatabase.ui.boardTab = viewPreset.boardTab;
+      if (viewPreset.report) storedDatabase.ui.report = viewPreset.report;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedDatabase));
+    }
+    if (/[?&]role=bookkeeper/.test(queryString)) { _user = USERS[1]; _roleIndex = 1; }
+    if (/[?&]role=admin/.test(queryString)) { _user = USERS[0]; _roleIndex = 0; }
+    if (/[?&]role=viewer/.test(queryString)) { _user = USERS[2]; _roleIndex = 2; }
+    if (/[?&]drawer=1/.test(queryString)) {
+      setTimeout(function () {
+        var padDate = function (value) { return value < 10 ? "0" + value : String(value); };
+        var nowDate = new Date();
+        var todayIso = nowDate.getFullYear() + "-" + padDate(nowDate.getMonth() + 1) + "-" + padDate(nowDate.getDate());
+        var taskRow = document.querySelector('.bkt-row-main[data-key="seed-01|' + todayIso + '"]') ||
+          document.querySelector('.bkt-row-main[data-act="open-task"]');
+        if (taskRow) taskRow.click();
+      }, 400);
+    }
+    if (/[?&]ai=1/.test(queryString)) {
+      setTimeout(function () {
+        var aiButton = document.getElementById('bktAiSuggestBtn');
+        if (aiButton) aiButton.click();
+      }, 600);
+    }
+  } catch (error) {}
+  var roleButton = document.getElementById("th-role");
+  if (roleButton) roleButton.textContent = "Role: " + ROLE_LABELS[_roleIndex];
+})();
+</script>
+
+<script>
+/* ---- Inline tool HTML (generated placeholder) ---- */
+var EMBEDDED_HTML = "\u003cdiv class=\"bkt\">\r\n  \u003cdiv class=\"bkt-wrap\">\r\n\r\n    \u003cdiv class=\"bkt-lock-banner\" id=\"bktLockBanner\" style=\"display:none\">\u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-ribbon\">\r\n      \u003cdiv class=\"bkt-stat\">\r\n        \u003cdiv class=\"bkt-stat-value\" id=\"bktStatTotal\">0\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\">Tasks\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-stat bkt-st-done\">\r\n        \u003cdiv class=\"bkt-stat-value\" id=\"bktStatDone\">0\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\">Completed\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-stat bkt-st-progress\">\r\n        \u003cdiv class=\"bkt-stat-value\" id=\"bktStatProgress\">0\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\">In Progress\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-stat bkt-st-wait\">\r\n        \u003cdiv class=\"bkt-stat-value\" id=\"bktStatWaiting\">0\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\">Open Requests\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-stat bkt-st-over\">\r\n        \u003cdiv class=\"bkt-stat-value\" id=\"bktStatOverdue\">0\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\" id=\"bktStatOverdueLabel\">Overdue\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-stat bkt-st-bar\">\r\n        \u003cdiv class=\"bkt-progress-wrap\">\u003cdiv class=\"bkt-progress-bar\" id=\"bktProgressBar\" style=\"width:0%\">\u003c/div>\u003c/div>\r\n        \u003cdiv class=\"bkt-stat-label\">\u003cspan id=\"bktProgressPct\">%0\u003c/span> complete\u003c/div>\r\n      \u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-tabs\" id=\"bktTabs\">\r\n      \u003cbutton class=\"bkt-tab active\" data-act=\"tab\" data-tab=\"board\">Task Board\u003c/button>\r\n      \u003cbutton class=\"bkt-tab\" data-act=\"tab\" data-tab=\"dashboard\">Dashboard\u003c/button>\r\n      \u003cbutton class=\"bkt-tab\" data-act=\"tab\" data-tab=\"reports\">Reports\u003c/button>\r\n      \u003cbutton class=\"bkt-tab\" data-act=\"tab\" data-tab=\"year\">Year Plan\u003c/button>\r\n      \u003cbutton class=\"bkt-tab bkt-tab-admin\" data-act=\"tab\" data-tab=\"defs\" id=\"bktTabDefs\" style=\"display:none\">Task Definitions\u003c/button>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-toolbar\">\r\n      \u003cdiv class=\"bkt-scope-row\" id=\"bktScopeRow\">\r\n        \u003cbutton class=\"bkt-scope-chip\" data-act=\"scope\" data-scope=\"today\">Today\u003c/button>\r\n        \u003cbutton class=\"bkt-scope-chip\" data-act=\"scope\" data-scope=\"week\">This Week\u003c/button>\r\n        \u003cbutton class=\"bkt-scope-chip\" data-act=\"scope\" data-scope=\"month\">This Month\u003c/button>\r\n        \u003cbutton class=\"bkt-scope-chip\" data-act=\"scope\" data-scope=\"lastMonth\">Last Month\u003c/button>\r\n        \u003cspan class=\"bkt-scope-hint\" id=\"bktScopeHint\">\u003c/span>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-year-row\" id=\"bktYearRow\" style=\"display:none\">\r\n        \u003cspan class=\"bkt-year-label\" id=\"bktYearLabel\">\u003c/span>\r\n        \u003cspan class=\"bkt-year-hint\">Yearly task plan and ad-hoc tasks - one year at a time\u003c/span>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-filter-row\">\r\n        \u003cinput type=\"search\" id=\"bktSearch\" class=\"bkt-search\" placeholder=\"Search tasks...\">\r\n        \u003cselect id=\"bktCatFilter\" class=\"bkt-select\">\u003c/select>\r\n        \u003cselect id=\"bktStatusFilter\" class=\"bkt-select\">\u003c/select>\r\n      \u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-pane\" id=\"bktPaneBoard\">\r\n      \u003cdiv class=\"bkt-board-tabs\" id=\"bktBoardTabs\">\r\n        \u003cbutton class=\"bkt-board-tab active\" data-act=\"board-tab\" data-tab=\"all\">All \u003cspan class=\"bkt-tab-count\" id=\"bktTabAllCount\">0\u003c/span>\u003c/button>\r\n        \u003cbutton class=\"bkt-board-tab\" data-act=\"board-tab\" data-tab=\"routine\">Routine \u003cspan class=\"bkt-tab-count\" id=\"bktTabRoutineCount\">0\u003c/span>\u003c/button>\r\n        \u003cbutton class=\"bkt-board-tab\" data-act=\"board-tab\" data-tab=\"adhoc\">Ad-hoc \u003cspan class=\"bkt-tab-count\" id=\"bktTabAdhocCount\">0\u003c/span>\u003c/button>\r\n        \u003cbutton class=\"bkt-board-tab\" data-act=\"board-tab\" data-tab=\"overdue\">\u003cspan class=\"bkt-tab-label\" id=\"bktTabOverdueLabel\">Overdue\u003c/span> \u003cspan class=\"bkt-tab-count\" id=\"bktTabOverdueCount\">0\u003c/span>\u003c/button>\r\n        \u003cbutton class=\"bkt-board-tab\" data-act=\"board-tab\" data-tab=\"requests\" id=\"bktBoardTabRequests\" style=\"display:none\">Requests \u003cspan class=\"bkt-tab-count\" id=\"bktTabRequestsCount\">0\u003c/span>\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-section\" id=\"bktApprovalSection\" style=\"display:none\">\r\n        \u003cdiv class=\"bkt-section-head\">\r\n          \u003cspan class=\"bkt-section-title\">Open Requests\u003c/span>\r\n          \u003cspan class=\"bkt-section-badge\" id=\"bktApprovalCount\">0\u003c/span>\r\n          \u003cdiv class=\"bkt-req-filters\" id=\"bktRequestFilterChips\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv id=\"bktApprovalList\">\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-section\" id=\"bktOverdueSection\" style=\"display:none\">\r\n        \u003cdiv class=\"bkt-section-head\">\u003cspan class=\"bkt-section-title\" id=\"bktOverdueTitle\">Overdue\u003c/span>\u003c/div>\r\n        \u003cdiv id=\"bktOverdueList\">\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-section\" id=\"bktBoardSection\">\r\n        \u003cdiv class=\"bkt-section-head\">\r\n          \u003cspan class=\"bkt-section-title\" id=\"bktBoardTitle\">Tasks\u003c/span>\r\n          \u003cspan class=\"bkt-section-sub\" id=\"bktBoardSub\">\u003c/span>\r\n        \u003c/div>\r\n        \u003cdiv id=\"bktBoardList\">\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-empty\" id=\"bktBoardEmpty\" style=\"display:none\">\u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-pane\" id=\"bktPaneDashboard\" style=\"display:none\">\r\n      \u003cdiv class=\"bkt-empty\" id=\"bktDashEmpty\" style=\"display:none\">\u003c/div>\r\n      \u003cdiv id=\"bktDashContent\">\r\n        \u003cdiv class=\"bkt-section\">\r\n          \u003cdiv class=\"bkt-section-head\">\r\n            \u003cspan class=\"bkt-section-title\">Summary\u003c/span>\r\n            \u003cspan class=\"bkt-section-sub\" id=\"bktDashSummaryLabel\">\u003c/span>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-dash-cards\" id=\"bktDashCards\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-section\">\r\n          \u003cdiv class=\"bkt-section-head bkt-dash-month-head\">\r\n            \u003cspan class=\"bkt-section-title\">Monthly Breakdown\u003c/span>\r\n            \u003cdiv class=\"bkt-scope-row\" id=\"bktDashMonthChips\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv id=\"bktDashMonthTable\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-dash-grid\">\r\n          \u003cdiv class=\"bkt-section\">\r\n            \u003cdiv class=\"bkt-section-head\">\r\n              \u003cspan class=\"bkt-section-title\">Month-by-Month Completion\u003c/span>\r\n              \u003cspan class=\"bkt-section-sub\" id=\"bktDashYearLabel\">\u003c/span>\r\n            \u003c/div>\r\n            \u003cdiv class=\"bkt-chart\" id=\"bktDashMonthChart\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-section\">\r\n            \u003cdiv class=\"bkt-section-head\">\u003cspan class=\"bkt-section-title\">By Category\u003c/span>\u003c/div>\r\n            \u003cdiv id=\"bktDashCategories\">\u003c/div>\r\n          \u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-dash-grid\">\r\n          \u003cdiv class=\"bkt-section\">\r\n            \u003cdiv class=\"bkt-section-head\">\u003cspan class=\"bkt-section-title\">Recent Activity\u003c/span>\u003c/div>\r\n            \u003cdiv id=\"bktDashActivity\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-section\">\r\n            \u003cdiv class=\"bkt-section-head\">\u003cspan class=\"bkt-section-title\">Routine vs Ad-hoc\u003c/span>\u003c/div>\r\n            \u003cdiv class=\"bkt-split-row\" id=\"bktDashSplit\">\u003c/div>\r\n          \u003c/div>\r\n        \u003c/div>\r\n      \u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-pane\" id=\"bktPaneReports\" style=\"display:none\">\r\n      \u003cdiv class=\"bkt-reports-menu\" id=\"bktReportsMenu\">\r\n        \u003cbutton class=\"bkt-report-item active\" data-act=\"report-menu\" data-report=\"breakdown-tasks\">Late Tasks\u003c/button>\r\n        \u003cbutton class=\"bkt-report-item\" data-act=\"report-menu\" data-report=\"breakdown-days\">Missed Days\u003c/button>\r\n        \u003cbutton class=\"bkt-report-item\" data-act=\"report-menu\" data-report=\"breakdown-categories\">Overdue Categories\u003c/button>\r\n        \u003cbutton class=\"bkt-report-item\" data-act=\"report-menu\" data-report=\"suggestions\">Suggestions\u003c/button>\r\n        \u003cspan class=\"bkt-report-hint\">Where does it break? - diagnostic reports that show which tasks, days and categories need attention.\u003c/span>\r\n      \u003c/div>\r\n      \u003cdiv id=\"bktReportContent\">\u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-pane\" id=\"bktPaneYear\" style=\"display:none\">\r\n      \u003cdiv class=\"bkt-year-tools\">\r\n        \u003cbutton type=\"button\" class=\"bkt-mini-btn\" data-act=\"year-expand-all\">Expand All\u003c/button>\r\n        \u003cbutton type=\"button\" class=\"bkt-mini-btn\" data-act=\"year-collapse-all\">Collapse All\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv id=\"bktYearList\">\u003c/div>\r\n      \u003cdiv class=\"bkt-empty\" id=\"bktYearEmpty\" style=\"display:none\">\u003c/div>\r\n    \u003c/div>\r\n\r\n    \u003cdiv class=\"bkt-pane\" id=\"bktPaneDefs\" style=\"display:none\">\r\n      \u003cdiv class=\"bkt-def-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-primary\" id=\"bktBtnNewDef\">+ New Task\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" id=\"bktBtnExportDefs\" data-act=\"export-defs\">Export Definitions\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" id=\"bktBtnImportDefs\" data-act=\"import-defs\">Import Definitions\u003c/button>\r\n        \u003cspan class=\"bkt-def-hint\">Task definitions can only be edited by administrators. Tasks on the board are generated automatically from these definitions. Use import and export to start a new year or a new segment from a definition pack.\u003c/span>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-section\">\r\n        \u003cdiv class=\"bkt-section-head\">\r\n          \u003cspan class=\"bkt-section-title\">Routine Tasks\u003c/span>\r\n          \u003cspan class=\"bkt-section-sub\" id=\"bktDefsRegularCount\">\u003c/span>\r\n        \u003c/div>\r\n        \u003cdiv id=\"bktDefsRegular\">\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-section\">\r\n        \u003cdiv class=\"bkt-section-head\">\r\n          \u003cspan class=\"bkt-section-title\">Ad-hoc Tasks\u003c/span>\r\n          \u003cspan class=\"bkt-section-sub\" id=\"bktDefsAdhocCount\">\u003c/span>\r\n        \u003c/div>\r\n        \u003cdiv id=\"bktDefsAdhoc\">\u003c/div>\r\n      \u003c/div>\r\n    \u003c/div>\r\n\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-modal-overlay\" id=\"bktDefModal\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-modal\">\r\n      \u003cdiv class=\"bkt-modal-head\">\r\n        \u003ch3 id=\"bktDefModalTitle\">New Task\u003c/h3>\r\n        \u003cbutton class=\"bkt-icon-btn\" id=\"bktDefClose\" aria-label=\"Close\">×\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-body\">\r\n        \u003cdiv class=\"bkt-form-grid\">\r\n          \u003cdiv class=\"bkt-field bkt-field-full\">\r\n            \u003clabel for=\"bktDefTitle\">Task Name \u003cspan class=\"bkt-req\">*\u003c/span>\u003c/label>\r\n            \u003cinput type=\"text\" id=\"bktDefTitle\" maxlength=\"160\" placeholder=\"e.g. Bank account reconciliation\">\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-full\">\r\n            \u003clabel for=\"bktDefCategory\">Category\u003c/label>\r\n            \u003cselect id=\"bktDefCategory\">\u003c/select>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-full\">\r\n            \u003clabel>Task Type\u003c/label>\r\n            \u003cdiv class=\"bkt-radio-row\">\r\n              \u003clabel class=\"bkt-radio\">\u003cinput type=\"radio\" name=\"bktDefType\" id=\"bktDefTypeRegular\" checked> Routine (recurring)\u003c/label>\r\n              \u003clabel class=\"bkt-radio\">\u003cinput type=\"radio\" name=\"bktDefType\" id=\"bktDefTypeAdhoc\"> Ad-hoc (one-off)\u003c/label>\r\n            \u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-full\" id=\"bktDefFreqRow\">\r\n            \u003clabel for=\"bktDefFreq\">Frequency\u003c/label>\r\n            \u003cselect id=\"bktDefFreq\">\u003c/select>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\" id=\"bktDefWeekdayRow\">\r\n            \u003clabel for=\"bktDefWeekday\">Weekday\u003c/label>\r\n            \u003cselect id=\"bktDefWeekday\">\u003c/select>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\" id=\"bktDefDayRow\">\r\n            \u003clabel for=\"bktDefDay\">Day of Month\u003c/label>\r\n            \u003cinput type=\"number\" id=\"bktDefDay\" min=\"1\" max=\"31\" value=\"1\">\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\" id=\"bktDefMonthRow\">\r\n            \u003clabel for=\"bktDefMonth\">Month\u003c/label>\r\n            \u003cselect id=\"bktDefMonth\">\u003c/select>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\" id=\"bktDefDueRow\">\r\n            \u003clabel for=\"bktDefDueDate\">Date \u003cspan class=\"bkt-req\">*\u003c/span>\u003c/label>\r\n            \u003cinput type=\"date\" id=\"bktDefDueDate\">\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\">\r\n            \u003clabel for=\"bktDefPriority\">Priority\u003c/label>\r\n            \u003cselect id=\"bktDefPriority\">\u003c/select>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-full\">\r\n            \u003clabel for=\"bktDefNote\">Description / Instructions\u003c/label>\r\n            \u003ctextarea id=\"bktDefNote\" rows=\"3\" placeholder=\"Short description of how to do this task...\">\u003c/textarea>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-full\">\r\n            \u003clabel for=\"bktDefSteps\">Step-by-step Checklist (one step per line, optional)\u003c/label>\r\n            \u003ctextarea id=\"bktDefSteps\" rows=\"4\" placeholder=\"1. Download the bank statement&#10;2. Match every transaction&#10;3. Save the reconciliation file\">\u003c/textarea>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-field bkt-field-half\">\r\n            \u003clabel for=\"bktDefTime\">Estimated Time (optional)\u003c/label>\r\n            \u003cinput type=\"text\" id=\"bktDefTime\" maxlength=\"40\" placeholder=\"e.g. 30 min, 2 hours\">\r\n          \u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-form-error\" id=\"bktDefError\" style=\"display:none\">\u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-primary\" id=\"bktDefSave\">Save\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" id=\"bktDefCancel\">Cancel\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-danger bkt-btn-right\" id=\"bktDefDelete\" style=\"display:none\">Delete\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-drawer-overlay\" id=\"bktTaskDrawer\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-drawer\">\r\n      \u003cdiv class=\"bkt-drawer-head\">\r\n        \u003cdiv class=\"bkt-drawer-head-main\">\r\n          \u003cdiv class=\"bkt-drawer-title\" id=\"bktDrawerTitle\">\u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-date\" id=\"bktDrawerDate\">\u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-sub\" id=\"bktDrawerSub\">\u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-actions\" id=\"bktDrawerActions\">\u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-drawer-head-side\">\r\n          \u003cdiv class=\"bkt-drawer-nav\" id=\"bktDrawerNav\">\u003c/div>\r\n          \u003cbutton class=\"bkt-icon-btn\" id=\"bktDrawerClose\" aria-label=\"Close\">×\u003c/button>\r\n        \u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-drawer-body\">\r\n        \u003cdiv class=\"bkt-drawer-col bkt-drawer-col-side\">\r\n          \u003cdiv class=\"bkt-drawer-section\">\r\n            \u003cdiv class=\"bkt-drawer-section-title\">Details\u003c/div>\r\n            \u003cdiv id=\"bktDrawerDetails\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-section\">\r\n            \u003cdiv class=\"bkt-drawer-section-title\">Steps\u003c/div>\r\n            \u003cdiv id=\"bktDrawerSteps\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-section\">\r\n            \u003cdiv class=\"bkt-drawer-section-title\">Requests\u003c/div>\r\n            \u003cdiv class=\"bkt-req-inline\" id=\"bktReqInlineForm\">\r\n              \u003cselect id=\"bktReqInlineType\">\r\n                \u003coption value=\"approval\">Approval - I need authorization (e.g. make a payment)\u003c/option>\r\n                \u003coption value=\"information\">Information - I need details to complete this\u003c/option>\r\n                \u003coption value=\"support\">Support - I need help with this task\u003c/option>\r\n              \u003c/select>\r\n              \u003ctextarea id=\"bktReqInlineText\" rows=\"2\" maxlength=\"2000\" placeholder=\"What do you need? Example: please approve this payment before I proceed...\">\u003c/textarea>\r\n              \u003cbutton class=\"bkt-btn bkt-btn-primary bkt-btn-sm\" id=\"bktReqInlineSend\">Send Request\u003c/button>\r\n            \u003c/div>\r\n            \u003cdiv id=\"bktDrawerRequests\">\u003c/div>\r\n          \u003c/div>\r\n          \u003cdiv class=\"bkt-drawer-section\">\r\n            \u003cdiv class=\"bkt-drawer-section-title\">History\u003c/div>\r\n            \u003cdiv class=\"bkt-log\" id=\"bktDrawerHistory\">\u003c/div>\r\n          \u003c/div>\r\n        \u003c/div>\r\n        \u003cdiv class=\"bkt-drawer-col bkt-drawer-col-conv\">\r\n          \u003cdiv class=\"bkt-drawer-section bkt-drawer-section-conv\">\r\n            \u003cdiv class=\"bkt-drawer-section-title\">Chat\u003c/div>\r\n            \u003cdiv class=\"bkt-pin-note\" id=\"bktPinNote\">\u003c/div>\r\n            \u003cdiv class=\"bkt-conv-list\" id=\"bktConvList\">\u003c/div>\r\n            \u003cdiv class=\"bkt-conv-input-row\" id=\"bktConvInputRow\">\r\n              \u003cinput type=\"text\" id=\"bktConvInput\" placeholder=\"Write a message about this task...\" maxlength=\"1000\">\r\n              \u003cbutton class=\"bkt-btn bkt-btn-primary bkt-btn-sm\" id=\"bktConvSend\">Send\u003c/button>\r\n            \u003c/div>\r\n          \u003c/div>\r\n        \u003c/div>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-modal-overlay\" id=\"bktAdminModal\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-modal bkt-modal-sm\">\r\n      \u003cdiv class=\"bkt-modal-head\">\r\n        \u003ch3>Respond to Request\u003c/h3>\r\n        \u003cbutton class=\"bkt-icon-btn\" id=\"bktAdminClose\" aria-label=\"Close\">×\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-body\">\r\n        \u003cdiv class=\"bkt-note-context\" id=\"bktAdminContext\">\u003c/div>\r\n        \u003cselect id=\"bktResponseStatus\" style=\"width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;margin-bottom:8px\">\u003c/select>\r\n        \u003ctextarea id=\"bktAdminText\" rows=\"3\" placeholder=\"Your response / reason (optional)...\" style=\"width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;resize:vertical;min-height:72px\">\u003c/textarea>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-primary\" id=\"bktAdminSave\">Submit Response\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" id=\"bktAdminCancel\">Cancel\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-modal-overlay\" id=\"bktConfirmModal\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-modal bkt-modal-sm\">\r\n      \u003cdiv class=\"bkt-modal-head\">\r\n        \u003ch3>Confirm\u003c/h3>\r\n        \u003cbutton class=\"bkt-icon-btn\" id=\"bktConfirmClose\" aria-label=\"Close\">×\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-body\">\r\n        \u003cp id=\"bktConfirmMsg\" style=\"font-size:13.5px\">Are you sure?\u003c/p>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-danger\" id=\"bktConfirmYes\">Yes\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" id=\"bktConfirmNo\">Cancel\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-modal-overlay\" id=\"bktExportModal\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-modal\">\r\n      \u003cdiv class=\"bkt-modal-head\">\r\n        \u003ch3>Export Definitions\u003c/h3>\r\n        \u003cbutton class=\"bkt-icon-btn\" data-act=\"export-close\" aria-label=\"Close\">×\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-body\">\r\n        \u003cp style=\"font-size:13px;color:#6b7280;margin:0 0 8px\">This JSON pack contains the categories and task definitions (not the status history). Import it into another instance to start a new year or set up the same segment.\u003c/p>\r\n        \u003ctextarea id=\"bktExportText\" rows=\"14\" readonly style=\"width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:10px 12px;font-size:12px;font-family:ui-monospace,Consolas,monospace;resize:vertical;min-height:220px\">\u003c/textarea>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-primary\" data-act=\"export-copy\">Copy JSON\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" data-act=\"export-download\">Download .json\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" data-act=\"export-close\">Close\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n  \u003cdiv class=\"bkt-modal-overlay\" id=\"bktImportModal\" style=\"display:none\">\r\n    \u003cdiv class=\"bkt-modal\">\r\n      \u003cdiv class=\"bkt-modal-head\">\r\n        \u003ch3>Import Definitions\u003c/h3>\r\n        \u003cbutton class=\"bkt-icon-btn\" data-act=\"import-cancel\" aria-label=\"Close\">×\u003c/button>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-body\">\r\n        \u003cp style=\"font-size:13px;color:#6b7280;margin:0 0 8px\">Paste a definition pack JSON (ready-made packs per segment live in the DEFINITION-PACKS folder), or choose a .json file. Importing replaces the current definitions and categories.\u003c/p>\r\n        \u003cinput type=\"file\" id=\"bktImportFile\" accept=\".json,application/json\" style=\"margin-bottom:8px;font-size:13px\">\r\n        \u003ctextarea id=\"bktImportText\" rows=\"12\" placeholder='Paste JSON here, e.g. {\"schemaVersion\":\"bkt-pack-v1\",\"categories\":[...],\"definitions\":[...]}' style=\"width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:10px 12px;font-size:12px;font-family:ui-monospace,Consolas,monospace;resize:vertical;min-height:180px\">\u003c/textarea>\r\n        \u003cdiv style=\"display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap\">\r\n          \u003clabel style=\"font-size:13px\">Year\r\n            \u003cinput type=\"number\" id=\"bktImportYear\" min=\"2000\" max=\"2100\" style=\"width:90px;border:1.5px solid #d5d8dc;border-radius:8px;padding:6px 10px;font-size:13.5px;margin-left:6px\">\r\n          \u003c/label>\r\n          \u003clabel style=\"font-size:13px;display:flex;align-items:center;gap:6px\">\r\n            \u003cinput type=\"checkbox\" id=\"bktImportClear\" checked> Start fresh: clear status history, conversations and requests\r\n          \u003c/label>\r\n        \u003c/div>\r\n      \u003c/div>\r\n      \u003cdiv class=\"bkt-modal-actions\">\r\n        \u003cbutton class=\"bkt-btn bkt-btn-primary\" data-act=\"import-confirm\">Import\u003c/button>\r\n        \u003cbutton class=\"bkt-btn bkt-btn-ghost\" data-act=\"import-cancel\">Cancel\u003c/button>\r\n      \u003c/div>\r\n    \u003c/div>\r\n  \u003c/div>\r\n\r\n\u003c/div>\r\n";
+(function () {
+  var container = document.getElementById("app-container");
+  if (EMBEDDED_HTML && EMBEDDED_HTML !== "__BKT_EMBED__") container.innerHTML = EMBEDDED_HTML;
+  if (window.__fireThReady) window.__fireThReady();
+})();
+</script>
+
+<script src="RecurringTaskManager.js"></script>
+
+<script>
+/* ---- Harness controls ---- */
+document.getElementById("th-load").addEventListener("click", function () { window.tool._loadSample(); });
+document.getElementById("th-clear").addEventListener("click", function () { window.tool._clear(); });
+document.getElementById("th-reload").addEventListener("click", function () { location.reload(); });
+document.getElementById("th-ro").addEventListener("click", function () { window.tool._toggleReadOnly(); });
+document.getElementById("th-role").addEventListener("click", function () { window.tool._cycleRole(); });
+document.getElementById("th-dump").addEventListener("click", function () { window.tool._dump(); });
+document.addEventListener("keydown", function (event) {
+  if (event.ctrlKey && event.shiftKey && event.key === "R") { event.preventDefault(); window.tool._toggleReadOnly(); }
+  if (event.ctrlKey && event.shiftKey && event.key === "D") { event.preventDefault(); window.tool._dump(); }
+});
+</script>
+</body>
+</html>

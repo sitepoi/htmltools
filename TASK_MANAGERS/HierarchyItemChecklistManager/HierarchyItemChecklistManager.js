@@ -1,5 +1,5 @@
-/* ── CurriculumBuilderTaskManagement ─────────────────
-   Curriculum building task manager for the UniconHub CMS.
+/* ── HierarchyItemChecklistManager ──────────────────
+   Hierarchy item checklist manager for the UniconHub CMS.
    Hierarchical task tree (sections / sub-sections / lessons / tasks),
    statuses, assignees, priorities, due dates, effort estimates,
    weighted completion percentage and team reporting.
@@ -71,7 +71,7 @@
 	function slugify(s) {
 		try { s = String(s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, ""); } catch (e) { }
 		s = s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-		return s || "curriculum";
+		return s || "items";
 	}
 	function downloadBlob(name, text, mime) {
 		try {
@@ -115,14 +115,14 @@
 	function normalizeDB(v) {
 		var d = {
 			version: 1,
-			title: "My Curriculum",
+			title: "My Program",
 			nodes: [],
 			members: [],
 			settings: { standardTasks: ["Lesson plan", "Worksheet", "Quiz"] },
 			ui: { tab: "tasks", collapsed: [], gridCollapsed: [] }
 		};
 		if (v && typeof v === "object") {
-			d.title = String(v.title || "") || (String(tool.param("defaultTitle", "") || "") || "My Curriculum");
+			d.title = String(v.title || "") || (String(tool.param("defaultTitle", "") || "") || "My Program");
 			d.nodes = Array.isArray(v.nodes) ? v.nodes.map(normalizeNode) : [];
 			d.members = Array.isArray(v.members) ? v.members.filter(function (m) { return m && m.id && m.source === "cms"; }).map(function (m) {
 				return { id: String(m.id), name: String(m.name || m.id), email: String(m.email || ""), source: "cms" };
@@ -862,7 +862,7 @@
 	}
 	function emptyTreeHtml(active) {
 		if (active) return '<div class="cbt-empty"><div class="cbt-empty-ic">🔍</div><h3>No matching tasks</h3><p>Nothing matches the current search or filters.</p></div>';
-		return '<div class="cbt-empty"><div class="cbt-empty-ic">🎓</div><h3>Start building your curriculum</h3><p>Add sections, then sub-sections and lessons under them. Use the ＋ button on any folder to add the next level — with 📋 std ON the new item becomes a lesson with its standard tasks.</p><button class="cbt-btn cbt-btn-primary" data-act="add-section">＋ Add first section</button></div>';
+		return '<div class="cbt-empty"><div class="cbt-empty-ic">🗂️</div><h3>Start building your program</h3><p>Add sections, then sub-sections and lessons under them. Use the ＋ button on any folder to add the next level — with 📋 std ON the new item becomes a lesson with its standard tasks.</p><button class="cbt-btn cbt-btn-primary" data-act="add-section">＋ Add first section</button></div>';
 	}
 	function renderTree() {
 		var tree = el("cbt-tree");
@@ -1232,7 +1232,7 @@
 		h += '<div style="font-family:Arial,Helvetica,sans-serif;color:#1e293b;max-width:920px;margin:0 auto;padding:28px 20px">';
 		h += '<div style="border-bottom:3px solid #4f46e5;padding-bottom:14px;margin-bottom:18px">';
 		h += '<h1 style="margin:0;font-size:24px">' + esc(DB.title) + "</h1>";
-		h += '<p style="margin:6px 0 0;color:#64748b;font-size:13px">Curriculum progress report — generated ' + esc(new Date().toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })) + "</p>";
+		h += '<p style="margin:6px 0 0;color:#64748b;font-size:13px">Program progress report — generated ' + esc(new Date().toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })) + "</p>";
 		h += "</div>";
 		h += '<table style="width:100%;border-collapse:collapse;margin-bottom:22px">';
 		h += "<tr>" + th("Total tasks") + th("Done") + th("In progress") + th("In review") + th("Blocked") + th("To do") + "</tr>";
@@ -1429,7 +1429,7 @@
 			banner = document.createElement("div");
 			banner.id = "cbt-ro-banner";
 			banner.className = "cbt-ro-banner";
-			banner.textContent = "🔒 View only — you can explore this curriculum but not edit it.";
+			banner.textContent = "🔒 View only — you can explore this program but not edit it.";
 			app.insertBefore(banner, app.firstChild);
 		} else if (!_readOnly && banner && banner.parentNode) {
 			banner.parentNode.removeChild(banner);
@@ -1672,7 +1672,7 @@
 			}
 		});
 		tool.declareParams([
-			{ name: "defaultTitle", label: "Default Curriculum Title", type: "text", default: "My Curriculum", hint: "Shown when this record has no saved title yet.", severity: "optional" },
+			{ name: "defaultTitle", label: "Default Program Title", type: "text", default: "My Program", hint: "Shown when this record has no saved title yet.", severity: "optional" },
 			{ name: "inProgressPercent", label: "In-Progress %", type: "number", default: "50", hint: "Completion percentage credited to tasks marked In progress (0-100).", severity: "optional" },
 			{ name: "reviewPercent", label: "In-Review %", type: "number", default: "75", hint: "Completion percentage credited to tasks marked In review (0-100).", severity: "optional" }
 		]);

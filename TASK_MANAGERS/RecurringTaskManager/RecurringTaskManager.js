@@ -1,5 +1,5 @@
 /* ============================================================
-   Bookkeeper Task Manager - JS
+   Recurring Task Manager - JS
    Uniconhub CMS html-tool.
    Yearly task plan (routine + ad-hoc) for a bookkeeper with a
    confirmation workflow between the bookkeeper and administration.
@@ -66,6 +66,26 @@
     { id: "tracking", label: "Task Tracking and Work Hours" }
   ];
 
+  function defaultCategoryList() {
+    return TASK_CATEGORIES.map(function (category) {
+      return { id: category.id, label: category.label };
+    });
+  }
+
+  function sanitizeCategoryList(rawList) {
+    var seenIds = {};
+    var result = [];
+    (rawList || []).forEach(function (rawCategory) {
+      if (!rawCategory || typeof rawCategory !== "object") return;
+      var categoryId = String(rawCategory.id || "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+      var label = String(rawCategory.label || "").trim();
+      if (!categoryId || !label || seenIds[categoryId]) return;
+      seenIds[categoryId] = true;
+      result.push({ id: categoryId, label: label });
+    });
+    return result;
+  }
+
   var TASK_FREQUENCIES = [
     { id: "daily", label: "Daily" },
     { id: "weekly", label: "Weekly" },
@@ -78,8 +98,8 @@
   var PRIORITY_IDS = ["high", "medium", "low"];
   var PRIORITY_LABELS = { high: "High", medium: "Medium", low: "Low" };
 
-  var DAYS_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var DAYS_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var DAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   var MONTHS_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -101,15 +121,28 @@
   var _user = null;
   var _noIdentity = false;
   var _saveTimer = null;
+  var _saveRetryTimer = null;
   var _savingNow = false;
+  var _dirty = false;
   var _lastStagedJson = null;
   var _warnedAutosave = false;
   var _editDefinitionId = null;
-  var _noteKey = null;
-  var _requestTaskKey = null;
+  var _drawerKey = null;
+  var _chatStore = { chats: {} };
+  var _chatStoreLoaded = false;
+  var _chatStoreDirty = false;
+  var _chatStoreTimer = null;
+  var _chatExternal = false;
+  var _aiSuggestions = null;
+  var _aiSuggestionsMonth = null;
+  var _aiSuggestBusy = false;
+  var CHAT_OBJECT_TYPE = "recurring-task-chats-uniconbaseapps";
+  var _pinEditing = null;
   var _respondRequestId = null;
   var _confirmYesCallback = null;
   var _expandedGroups = {};
+  var _openMonthByDefinition = {};
+  var _openStripDetails = {};
 
   /* ============================================================
      HELPERS
@@ -151,6 +184,10 @@
     return isoOfDate(dateObject);
   }
 
+  function daysBetweenIso(fromIso, toIso) {
+    return Math.round((parseDateIso(toIso).getTime() - parseDateIso(fromIso).getTime()) / 86400000);
+  }
+
   /* 0 = Pazartesi ... 6 = Pazar */
   function weekdayIndex(dateObject) { return (dateObject.getDay() + 6) % 7; }
 
@@ -158,6 +195,10 @@
     var copy = new Date(dateObject);
     copy.setDate(copy.getDate() - weekdayIndex(copy));
     return copy;
+  }
+
+  function isoWeekStartOf(isoString) {
+    return isoOfDate(startOfWeekDate(parseDateIso(isoString)));
   }
 
   function daysInMonthOf(year, monthIndex) { return new Date(year, monthIndex + 1, 0).getDate(); }
@@ -181,11 +222,19 @@
     return DAYS_SHORT[weekdayIndex(dateObject)] + ", " + dateObject.getDate() + " " + MONTHS_SHORT[dateObject.getMonth()];
   }
 
+  function formatDateLongFull(isoString) {
+    if (!isoString) return "";
+    var dateObject = parseDateIso(isoString);
+    return DAYS_FULL[weekdayIndex(dateObject)] + ", " + dateObject.getDate() + " " + MONTHS_FULL[dateObject.getMonth()] + " " + dateObject.getFullYear();
+  }
+
   function formatDateTime(isoDateTimeString) {
     if (!isoDateTimeString) return "";
     var dateObject = new Date(isoDateTimeString);
     if (isNaN(dateObject.getTime())) return "";
-    return pad2(dateObject.getDate()) + " " + MONTHS_SHORT[dateObject.getMonth()] + " " + pad2(dateObject.getHours()) + ":" + pad2(dateObject.getMinutes());
+    var label = pad2(dateObject.getDate()) + " " + MONTHS_SHORT[dateObject.getMonth()];
+    if (dateObject.getFullYear() !== new Date().getFullYear()) label += " " + dateObject.getFullYear();
+    return label + " " + pad2(dateObject.getHours()) + ":" + pad2(dateObject.getMinutes());
   }
 
   function localDateOfIsoDateTime(isoDateTimeString) {
@@ -211,10 +260,11 @@
   }
 
   function categoryLabelOf(categoryId) {
-    for (var i = 0; i < TASK_CATEGORIES.length; i++) {
-      if (TASK_CATEGORIES[i].id === categoryId) return TASK_CATEGORIES[i].label;
+    var categories = DB && Array.isArray(DB.categories) ? DB.categories : [];
+    for (var i = 0; i < categories.length; i++) {
+      if (categories[i].id === categoryId) return categories[i].label;
     }
-    return categoryId || "Kategorisiz";
+    return categoryId || "Uncategorized";
   }
 
   function frequencyLabelOf(frequencyId) {
@@ -336,12 +386,13 @@
 
   function defaultDatabase() {
     return {
-      version: 2,
+      version: 3,
       year: new Date().getFullYear(),
       definitions: [],
+      categories: defaultCategoryList(),
       statuses: {},
       requests: {},
-      ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "", dashMonth: "year" }
+      ui: { tab: "board", scope: "week", statusFilter: "all", category: "all", search: "", dashMonth: "year", requestFilter: "all", boardTab: "all", report: "breakdown-tasks" }
     };
   }
 
@@ -372,6 +423,10 @@
       dueDate: /^\d{4}-\d{2}-\d{2}$/.test(String(rawDefinition.dueDate || "")) ? rawDefinition.dueDate : "",
       priority: PRIORITY_IDS.indexOf(rawDefinition.priority) > -1 ? rawDefinition.priority : "medium",
       note: String(rawDefinition.note || ""),
+      timeEstimate: String(rawDefinition.timeEstimate || ""),
+      steps: Array.isArray(rawDefinition.steps)
+        ? rawDefinition.steps.map(function (rawStep) { return String(rawStep || "").trim(); }).filter(function (step) { return !!step; }).slice(0, 12)
+        : [],
       createdAt: rawDefinition.createdAt || nowIsoDateTime(),
       createdBy: String(rawDefinition.createdBy || "")
     };
@@ -382,8 +437,13 @@
     if (!rawValue || typeof rawValue !== "object" || Array.isArray(rawValue)) return database;
     if (typeof rawValue.version === "number") database.version = rawValue.version;
     if (typeof rawValue.year === "number") database.year = clampInt(rawValue.year, 2000, 2100);
+    if (typeof rawValue.chatObjectId === "string" && rawValue.chatObjectId) database.chatObjectId = rawValue.chatObjectId;
     if (Array.isArray(rawValue.definitions)) {
       database.definitions = rawValue.definitions.map(normalizeDefinition).filter(function (definition) { return !!definition; });
+    }
+    if (Array.isArray(rawValue.categories)) {
+      database.categories = sanitizeCategoryList(rawValue.categories);
+      if (!database.categories.length) database.categories = defaultCategoryList();
     }
     if (rawValue.statuses && typeof rawValue.statuses === "object" && !Array.isArray(rawValue.statuses)) {
       database.statuses = {};
@@ -402,7 +462,7 @@
       Object.keys(rawValue.requests).forEach(function (requestId) {
         var request = rawValue.requests[requestId];
         if (!request || typeof request !== "object" || Array.isArray(request)) return;
-        if (request.type !== "approval" && request.type !== "information") return;
+        if (request.type !== "approval" && request.type !== "information" && request.type !== "support") return;
         if (!request.taskKey) return;
         database.requests[String(requestId)] = {
           id: String(request.id || requestId),
@@ -421,25 +481,38 @@
       });
     }
     if (rawValue.ui && typeof rawValue.ui === "object" && !Array.isArray(rawValue.ui)) {
-      database.ui.tab = (rawValue.ui.tab === "year" || rawValue.ui.tab === "defs" || rawValue.ui.tab === "dashboard") ? rawValue.ui.tab : "board";
-      database.ui.scope = (rawValue.ui.scope === "today" || rawValue.ui.scope === "week" || rawValue.ui.scope === "month") ? rawValue.ui.scope : "week";
+      database.ui.tab = (rawValue.ui.tab === "year" || rawValue.ui.tab === "defs" || rawValue.ui.tab === "dashboard" || rawValue.ui.tab === "reports") ? rawValue.ui.tab : "board";
+      database.ui.scope = (rawValue.ui.scope === "today" || rawValue.ui.scope === "week" || rawValue.ui.scope === "month" || rawValue.ui.scope === "lastMonth") ? rawValue.ui.scope : "week";
       database.ui.statusFilter = String(rawValue.ui.statusFilter || "all");
       database.ui.category = String(rawValue.ui.category || "all");
       database.ui.search = String(rawValue.ui.search || "");
       database.ui.dashMonth = (typeof rawValue.ui.dashMonth === "number" && rawValue.ui.dashMonth >= 0 && rawValue.ui.dashMonth <= 11) ? rawValue.ui.dashMonth : "year";
+      database.ui.requestFilter = (rawValue.ui.requestFilter === "approval" || rawValue.ui.requestFilter === "information" || rawValue.ui.requestFilter === "support") ? rawValue.ui.requestFilter : "all";
+      database.ui.boardTab = (rawValue.ui.boardTab === "tasks" || rawValue.ui.boardTab === "all" || rawValue.ui.boardTab === "routine" || rawValue.ui.boardTab === "adhoc" || rawValue.ui.boardTab === "overdue" || rawValue.ui.boardTab === "requests") ? (rawValue.ui.boardTab === "tasks" ? "all" : rawValue.ui.boardTab) : "all";
+      database.ui.report = (rawValue.ui.report === "breakdown-tasks" || rawValue.ui.report === "breakdown-days" || rawValue.ui.report === "breakdown-categories" || rawValue.ui.report === "suggestions") ? rawValue.ui.report : "breakdown-tasks";
     }
     return database;
   }
 
   function persistDatabase() {
+    _dirty = true;
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(function () {
-      _savingNow = true;
-      _lastStagedJson = JSON.stringify(DB);
-      try { tool.setValue(DB); } catch (error) {}
-      _savingNow = false;
-      requestParentSave();
-    }, 400);
+    _saveTimer = setTimeout(flushPendingSave, 250);
+  }
+
+  function flushPendingSave() {
+    clearTimeout(_saveTimer);
+    if (!_dirty || readOnly) return;
+    _dirty = false;
+    var snapshot = JSON.stringify(DB);
+    _savingNow = true;
+    _lastStagedJson = snapshot;
+    try { tool.setValue(DB); } catch (error) {}
+    _savingNow = false;
+    requestParentSave();
+    if (snapshot.length > 800000) {
+      tryNotify("Stored data is approaching the 1 MB field limit (" + Math.round(snapshot.length / 1024) + " KB). Ask an administrator to clear old history to keep saving safely.", "warning");
+    }
   }
 
   function requestParentSave() {
@@ -452,6 +525,11 @@
             _warnedAutosave = true;
             tryNotify("Automatic save was rejected. Make sure the CMS field setting allowRequestSave is 'yes'; otherwise save the form manually.", "warning");
           }
+          clearTimeout(_saveRetryTimer);
+          _saveRetryTimer = setTimeout(function () {
+            _warnedAutosave = false;
+            flushPendingSave();
+          }, 10000);
         }
       });
     } catch (ignored) {}
@@ -540,8 +618,10 @@
   function saveOccurrenceNote(key, noteText) {
     var entry = ensureStatusEntry(key);
     entry.note = noteText;
-    entry.updatedAt = nowIsoDateTime();
-    entry.updatedBy = currentUserDisplayName();
+    entry.noteBy = currentUserDisplayName();
+    entry.noteAt = nowIsoDateTime();
+    entry.updatedAt = entry.noteAt;
+    entry.updatedBy = entry.noteBy;
     persistDatabase();
     renderAll();
   }
@@ -566,7 +646,9 @@
      ============================================================ */
 
   function requestTypeLabelOf(type) {
-    return type === "information" ? "Information Request" : "Approval Request";
+    if (type === "information") return "Information Request";
+    if (type === "support") return "Support Request";
+    return "Approval Request";
   }
 
   function requestStatusLabelOf(status) {
@@ -622,7 +704,7 @@
       taskKey: taskKey,
       title: definition.title,
       dueDate: parts[1] || "",
-      type: type === "information" ? "information" : "approval",
+      type: type === "information" || type === "support" ? type : "approval",
       message: message.trim(),
       status: "open",
       createdAt: nowIsoDateTime(),
@@ -743,6 +825,188 @@
     });
   }
 
+  /* ============================================================
+     DEFINITION PACKS: import / export categories and definitions as JSON
+     ============================================================ */
+
+  function buildDefinitionPackJson() {
+    var pack = {
+      schemaVersion: "bkt-pack-v1",
+      name: "Task pack - " + String(DB.year),
+      description: "Task definitions and categories exported from the recurring task manager.",
+      year: DB.year,
+      categories: (DB.categories || []).map(function (category) {
+        return { id: category.id, label: category.label };
+      }),
+      definitions: DB.definitions.map(function (definition) {
+        return {
+          title: definition.title,
+          category: definition.category,
+          taskType: definition.taskType,
+          frequency: definition.frequency,
+          dayOfWeek: definition.dayOfWeek,
+          dayOfMonth: definition.dayOfMonth,
+          monthOfYear: definition.monthOfYear,
+          dueDate: definition.dueDate,
+          priority: definition.priority,
+          note: definition.note,
+          timeEstimate: definition.timeEstimate || "",
+          steps: (definition.steps || []).slice()
+        };
+      })
+    };
+    return JSON.stringify(pack, null, 2);
+  }
+
+  function parseDefinitionPack(rawText) {
+    if (!rawText || typeof rawText !== "string") return null;
+    var text = rawText.trim();
+    if (text.indexOf("```") === 0) {
+      text = text.replace(/^```[a-zA-Z]*\s*/, "");
+      text = text.replace(/\s*```\s*$/, "");
+    }
+    var startIndex = text.indexOf("{");
+    var endIndex = text.lastIndexOf("}");
+    if (startIndex === -1 || endIndex <= startIndex) return null;
+    var parsed = null;
+    try { parsed = JSON.parse(text.slice(startIndex, endIndex + 1)); } catch (error) { return null; }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (!Array.isArray(parsed.definitions)) return null;
+    var packCategories = Array.isArray(parsed.categories) ? sanitizeCategoryList(parsed.categories) : [];
+    return {
+      name: String(parsed.name || "").trim(),
+      description: String(parsed.description || "").trim(),
+      year: (typeof parsed.year === "number" && parsed.year >= 2000 && parsed.year <= 2100) ? parsed.year : null,
+      categories: packCategories.length ? packCategories : null,
+      definitions: parsed.definitions
+    };
+  }
+
+  function applyDefinitionPack(pack, yearOverride, clearHistory) {
+    if (!pack || !Array.isArray(pack.definitions) || !pack.definitions.length) {
+      tryNotify("Nothing to import: the pack has no task definitions", "error");
+      return false;
+    }
+    var newDefinitions = pack.definitions.map(function (rawDefinition) {
+      var normalized = normalizeDefinition(rawDefinition);
+      if (normalized) normalized.id = uniqueId();
+      return normalized;
+    }).filter(function (definition) { return !!definition; });
+    if (!newDefinitions.length) {
+      tryNotify("Nothing to import: no valid task definitions found", "error");
+      return false;
+    }
+    if (pack.categories) DB.categories = pack.categories;
+    var newYear = (typeof yearOverride === "number" && yearOverride >= 2000 && yearOverride <= 2100)
+      ? yearOverride
+      : (pack.year != null ? pack.year : DB.year);
+    DB.definitions = newDefinitions;
+    DB.year = newYear;
+    if (clearHistory) {
+      DB.statuses = {};
+      DB.requests = {};
+    }
+    persistDatabase();
+    renderAll();
+    tryNotify("Imported " + newDefinitions.length + " task definition(s) for " + newYear, "success");
+    return true;
+  }
+
+  function openExportModal() {
+    byId("bktExportText").value = buildDefinitionPackJson();
+    byId("bktExportModal").style.display = "";
+  }
+
+  function closeExportModal() {
+    byId("bktExportModal").style.display = "none";
+  }
+
+  function openImportModal() {
+    byId("bktImportText").value = "";
+    byId("bktImportYear").value = String(DB.year);
+    byId("bktImportClear").checked = true;
+    byId("bktImportFile").value = "";
+    byId("bktImportModal").style.display = "";
+  }
+
+  function closeImportModal() {
+    byId("bktImportModal").style.display = "none";
+  }
+
+  function downloadPackFile() {
+    var jsonText = buildDefinitionPackJson();
+    var fileName = "task-pack-" + String(DB.year) + ".json";
+    try {
+      var blob = new Blob([jsonText], { type: "application/json" });
+      var blobUrl = URL.createObjectURL(blob);
+      var anchor = document.createElement("a");
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      try { URL.revokeObjectURL(blobUrl); } catch (error) {}
+      tryNotify("Downloaded " + fileName, "success");
+    } catch (error) {
+      openExportModal();
+      tryNotify("Download unavailable here - copy the JSON and save it as " + fileName, "info");
+    }
+  }
+
+  function copyPackToClipboard() {
+    var textArea = byId("bktExportText");
+    textArea.select();
+    var copied = false;
+    try { copied = document.execCommand("copy"); } catch (error) { copied = false; }
+    if (copied) tryNotify("Definitions JSON copied", "success");
+    else tryNotify("Copy blocked - select the text manually and copy", "info");
+  }
+
+  function confirmImportFromModal() {
+    var pack = parseDefinitionPack(byId("bktImportText").value);
+    if (!pack) {
+      tryNotify("Could not read the JSON - check the content and try again", "error");
+      return;
+    }
+    var rawYear = parseInt(byId("bktImportYear").value, 10);
+    var yearOverride = (isNaN(rawYear) || rawYear < 2000 || rawYear > 2100) ? null : rawYear;
+    var clearHistory = byId("bktImportClear").checked === true;
+    var message = "Import " + pack.definitions.length + " task definition(s)" + (pack.name ? " from '" + pack.name + "'" : "") +
+      " for year " + (yearOverride != null ? yearOverride : (pack.year != null ? pack.year : DB.year)) + "? This replaces the current definitions" +
+      (clearHistory ? " and clears all status history, conversations and requests." : " but keeps the status history.");
+    openConfirmModal(message, function () {
+      closeImportModal();
+      applyDefinitionPack(pack, yearOverride, clearHistory);
+    });
+  }
+
+  function importPackFromFile(file) {
+    if (!file) return;
+    if (typeof tool.requestUpload !== "function" || typeof tool.requestFileContent !== "function") {
+      tryNotify("File reading is not available here - paste the JSON into the box instead", "info");
+      return;
+    }
+    tool.requestUpload({ accept: ".json,application/json" }, function (uploadError, uploadResult) {
+      if (uploadError || !uploadResult) {
+        tryNotify("Upload failed - paste the JSON into the box instead", "error");
+        return;
+      }
+      var uploadedId = typeof uploadResult === "string" ? uploadResult : (uploadResult.fileId || uploadResult.id);
+      if (!uploadedId) {
+        tryNotify("Upload failed - paste the JSON into the box instead", "error");
+        return;
+      }
+      tool.requestFileContent({ fileId: uploadedId }, function (readError, content) {
+        if (readError || !content) {
+          tryNotify("Could not read the file - paste the JSON into the box instead", "error");
+          return;
+        }
+        byId("bktImportText").value = String(content);
+        tryNotify("File loaded - review the content and press Import", "info");
+      });
+    });
+  }
+
   function deleteDefinitionById(definitionId) {
     var index = -1;
     for (var i = 0; i < DB.definitions.length; i++) {
@@ -774,7 +1038,7 @@
     var definition = definitionId ? findDefinitionById(definitionId) : null;
     byId("bktDefModalTitle").textContent = definition ? "Edit Task" : "New Task";
     byId("bktDefTitle").value = definition ? definition.title : "";
-    byId("bktDefCategory").value = definition ? definition.category : TASK_CATEGORIES[0].id;
+    byId("bktDefCategory").value = definition ? definition.category : (DB.categories && DB.categories.length ? DB.categories[0].id : "");
     var isAdhoc = definition ? definition.taskType === "adHoc" : false;
     byId("bktDefTypeRegular").checked = !isAdhoc;
     byId("bktDefTypeAdhoc").checked = isAdhoc;
@@ -785,6 +1049,8 @@
     byId("bktDefDueDate").value = definition ? definition.dueDate : todayIsoString();
     byId("bktDefPriority").value = definition ? definition.priority : "medium";
     byId("bktDefNote").value = definition ? definition.note : "";
+    byId("bktDefSteps").value = (definition && Array.isArray(definition.steps)) ? definition.steps.join("\n") : "";
+    byId("bktDefTime").value = definition ? (definition.timeEstimate || "") : "";
     byId("bktDefError").style.display = "none";
     byId("bktDefDelete").style.display = definition ? "" : "none";
     refreshDefinitionModalFields();
@@ -827,7 +1093,9 @@
       monthOfYear: clampInt(parseInt(byId("bktDefMonth").value, 10) || 12, 1, 12),
       dueDate: isAdhoc ? dueDate : "",
       priority: byId("bktDefPriority").value,
-      note: byId("bktDefNote").value.trim()
+      note: byId("bktDefNote").value.trim(),
+      timeEstimate: byId("bktDefTime").value.trim(),
+      steps: byId("bktDefSteps").value.split("\n").map(function (stepLine) { return stepLine.trim(); }).filter(function (stepLine) { return !!stepLine; }).slice(0, 12)
     };
     var wasEditing = !!_editDefinitionId;
     var editedDefinition = wasEditing ? findDefinitionById(_editDefinitionId) : null;
@@ -866,27 +1134,311 @@
     return "<strong>" + escapeHtml(definition.title) + "</strong>" + escapeHtml(dueLabelOf(definition, dueDate));
   }
 
-  function openNoteModal(key) {
-    _noteKey = key;
-    var parts = key.split("|");
+  var MESSAGE_MARKERS = [null, "important", "discuss", "solve"];
+  var MESSAGE_MARKER_LABELS = { important: "Important", discuss: "To discuss", solve: "To solve" };
+
+  function nextMarker(currentMarker) {
+    var index = MESSAGE_MARKERS.indexOf(currentMarker || null);
+    return MESSAGE_MARKERS[(index + 1) % MESSAGE_MARKERS.length];
+  }
+
+  /* ============================================================
+     CHAT STORE: one separate document per instance holds all chats
+     ============================================================ */
+
+  function chatObjectAvailable() {
+    return typeof tool.requestObjects === "function";
+  }
+
+  function chatObjectId() {
+    if (!DB.chatObjectId) {
+      DB.chatObjectId = "rtm-chat-" + uniqueId();
+      persistDatabase();
+    }
+    return DB.chatObjectId;
+  }
+
+  function chatBucketFor(taskKey, createBucket) {
+    var bucket = _chatStore.chats[taskKey];
+    if (!bucket && createBucket) bucket = _chatStore.chats[taskKey] = { messages: [] };
+    return bucket || null;
+  }
+
+  function chatMessagesFor(taskKey) {
+    if (_chatExternal) {
+      var bucket = chatBucketFor(taskKey, false);
+      return (bucket && Array.isArray(bucket.messages)) ? bucket.messages : [];
+    }
+    var entry = statusEntryFor(taskKey);
+    return (entry && Array.isArray(entry.messages)) ? entry.messages : [];
+  }
+
+  function persistChatStoreSoon() {
+    _chatStoreDirty = true;
+    clearTimeout(_chatStoreTimer);
+    _chatStoreTimer = setTimeout(flushChatStore, 250);
+  }
+
+  function flushChatStore() {
+    clearTimeout(_chatStoreTimer);
+    if (!_chatStoreDirty || !_chatExternal) return;
+    _chatStoreDirty = false;
+    try {
+      tool.requestObjects("update", {
+        mainObjectType: CHAT_OBJECT_TYPE,
+        objectId: chatObjectId(),
+        productData: { data_categoriesBased: { chats: _chatStore.chats } }
+      }, function (error) {
+        if (error) _chatStoreDirty = true;
+      });
+    } catch (error) {
+      _chatStoreDirty = true;
+    }
+  }
+
+  function adoptLegacyMessagesIntoChatStore() {
+    var adoptedCount = 0;
+    Object.keys(DB.statuses).forEach(function (taskKey) {
+      var entry = DB.statuses[taskKey];
+      if (!entry || !Array.isArray(entry.messages) || !entry.messages.length) return;
+      var bucket = chatBucketFor(taskKey, true);
+      entry.messages.forEach(function (message) { bucket.messages.push(message); });
+      if (bucket.messages.length > 200) bucket.messages = bucket.messages.slice(-200);
+      delete entry.messages;
+      adoptedCount++;
+    });
+    return adoptedCount;
+  }
+
+  function loadChatStore(doneCallback) {
+    if (!chatObjectAvailable()) {
+      _chatExternal = false;
+      _chatStoreLoaded = true;
+      if (doneCallback) doneCallback();
+      return;
+    }
+    _chatExternal = true;
+    try {
+      tool.requestObjects("get", {
+        mainObjectType: CHAT_OBJECT_TYPE,
+        objectId: chatObjectId()
+      }, function (error, chatObject) {
+        var chatsValue = null;
+        if (chatObject) {
+          var source = chatObject.productData && chatObject.productData.data_categoriesBased ? chatObject.productData.data_categoriesBased : chatObject;
+          if (source && source.chats && typeof source.chats === "object") chatsValue = source.chats;
+        }
+        if (!chatsValue) {
+          try {
+            tool.requestObjects("create", {
+              mainObjectType: CHAT_OBJECT_TYPE,
+              objectId: chatObjectId(),
+              productData: { data_categoriesBased: { chats: {} } }
+            }, function () {});
+          } catch (createError) {}
+          chatsValue = {};
+        }
+        _chatStore.chats = {};
+        Object.keys(chatsValue).forEach(function (taskKey) {
+          var bucket = chatsValue[taskKey];
+          if (bucket && Array.isArray(bucket.messages)) {
+            _chatStore.chats[taskKey] = { messages: bucket.messages.slice(0, 200) };
+          }
+        });
+        var adoptedCount = adoptLegacyMessagesIntoChatStore();
+        _chatStoreLoaded = true;
+        if (adoptedCount) {
+          _chatStoreDirty = true;
+          flushChatStore();
+          persistDatabase();
+        }
+        if (doneCallback) doneCallback();
+      });
+    } catch (error) {
+      _chatExternal = false;
+      _chatStoreLoaded = true;
+      if (doneCallback) doneCallback();
+    }
+  }
+
+  function buildConversationHtml(key) {
+    var messages = chatMessagesFor(key);
+    if (!messages.length) return '<div class="bkt-conv-empty">No messages yet. Write the first message about this task.</div>';
+    var currentName = currentUserDisplayName();
+    return messages.map(function (message, messageIndex) {
+      var isMine = message.by === currentName;
+      var markerBadge = message.marker
+        ? '<span class="bkt-msg-marker marker-' + escapeHtml(message.marker) + '">' + escapeHtml(MESSAGE_MARKER_LABELS[message.marker] || message.marker) + "</span>"
+        : "";
+      var messageActions = canWork()
+        ? '<div class="bkt-msg-actions">' +
+          '<button type="button" class="bkt-msg-act" data-act="msg-mark" data-idx="' + messageIndex + '" title="Mark this message: cycles through Important - To discuss - To solve - none">' +
+          (message.marker ? "Change mark" : "Mark") + "</button>" +
+          '<button type="button" class="bkt-msg-act" data-act="msg-to-request" data-idx="' + messageIndex + '" title="Turn this message into a request">→ Request</button>' +
+          "</div>"
+        : "";
+      return '<div class="bkt-conv-msg' + (isMine ? " bkt-conv-mine" : "") + '">' +
+        '<div class="bkt-conv-meta">' + escapeHtml(message.by) + " · " + formatDateTime(message.at) + markerBadge + "</div>" +
+        '<div class="bkt-conv-bubble' + (message.marker ? " bubble-" + escapeHtml(message.marker) : "") + '">' + escapeHtml(message.text) + messageActions + "</div></div>";
+    }).join("");
+  }
+
+  function buildPinnedNoteHtml(entry, taskKey) {
+    if (_pinEditing === taskKey) {
+      return '<div class="bkt-pin-edit">' +
+        '<textarea id="bktPinEditText" rows="3" maxlength="2000" placeholder="Pin the most important note about this task..."></textarea>' +
+        '<div class="bkt-pin-edit-actions">' +
+        '<button type="button" class="bkt-btn bkt-btn-primary bkt-btn-sm" data-act="pin-save">Save Note</button>' +
+        '<button type="button" class="bkt-btn bkt-btn-outline bkt-btn-sm" data-act="pin-cancel">Cancel</button>' +
+        "</div></div>";
+    }
+    if (entry && entry.note) {
+      return '<div class="bkt-pin-note-box">' +
+        '<div class="bkt-pin-head"><span class="bkt-pin-badge">Pinned</span>' +
+        '<span class="bkt-note-meta">' + escapeHtml(entry.noteBy || "") + (entry.noteAt ? " · " + formatDateTime(entry.noteAt) : "") + "</span>" +
+        (canWork() ? '<button type="button" class="bkt-mini-btn" data-act="pin-edit">Edit</button>' : "") +
+        "</div>" +
+        '<div class="bkt-pin-text">' + escapeHtml(entry.note) + "</div></div>";
+    }
+    return canWork()
+      ? '<button type="button" class="bkt-btn bkt-btn-outline bkt-btn-sm" data-act="pin-edit">+ Pin a note</button>'
+      : "";
+  }
+
+  function addConversationMessage(key, text) {
+    if (!canWork()) return;
+    var trimmed = String(text || "").trim();
+    if (!trimmed) return;
+    var message = { at: nowIsoDateTime(), by: currentUserDisplayName(), text: trimmed.slice(0, 1000) };
+    if (_chatExternal) {
+      var bucket = chatBucketFor(key, true);
+      bucket.messages.push(message);
+      if (bucket.messages.length > 200) bucket.messages.shift();
+      persistChatStoreSoon();
+    } else {
+      var entry = ensureStatusEntry(key);
+      if (!Array.isArray(entry.messages)) entry.messages = [];
+      entry.messages.push(message);
+      if (entry.messages.length > 200) entry.messages.shift();
+      persistDatabase();
+    }
+    renderAll();
+  }
+
+  function buildDrawerDetailsHtml(definition, dueDate) {
+    var isAdhoc = definition.taskType === "adHoc";
+    var html = '<div class="bkt-detail-row"><span class="bkt-detail-label">Category</span><span class="bkt-detail-value">' + escapeHtml(categoryLabelOf(definition.category)) + "</span></div>" +
+      '<div class="bkt-detail-row"><span class="bkt-detail-label">Type</span><span class="bkt-detail-value">' + (isAdhoc ? "Ad-hoc" : "Routine") + "</span></div>" +
+      '<div class="bkt-detail-row"><span class="bkt-detail-label">Schedule</span><span class="bkt-detail-value">' + escapeHtml(scheduleTextOf(definition)) + "</span></div>" +
+      '<div class="bkt-detail-row"><span class="bkt-detail-label">Due</span><span class="bkt-detail-value">' + escapeHtml(formatDateLong(dueDate)) + "</span></div>" +
+      '<div class="bkt-detail-row"><span class="bkt-detail-label">Priority</span><span class="bkt-detail-value">' + escapeHtml(PRIORITY_LABELS[definition.priority] || "Medium") + "</span></div>";
+    if (definition.timeEstimate) {
+      html += '<div class="bkt-detail-row"><span class="bkt-detail-label">Estimated Time</span><span class="bkt-detail-value">' + escapeHtml(definition.timeEstimate) + "</span></div>";
+    }
+    if (definition.note) {
+      html += '<div class="bkt-drawer-instructions"><strong>Instructions</strong><br>' + escapeHtml(definition.note) + "</div>";
+    }
+    return html;
+  }
+
+  function buildStepsHtml(definition, entry) {
+    var steps = definition.steps || [];
+    if (!steps.length) return "";
+    var checklistDone = (entry && Array.isArray(entry.checklistDone)) ? entry.checklistDone : [];
+    var doneCount = 0;
+    var stepRows = "";
+    steps.forEach(function (step, stepIndex) {
+      var isDone = !!checklistDone[stepIndex];
+      if (isDone) doneCount++;
+      stepRows += '<button type="button" class="bkt-step' + (isDone ? " bkt-step-done" : "") + '"' +
+        (canWork() ? ' data-act="step-toggle" data-step="' + stepIndex + '"' : "") +
+        ' title="' + (canWork() ? "Click to mark done" : "") + '">' +
+        '<span class="bkt-step-check">' + (isDone ? "✓" : "") + "</span>" +
+        '<span class="bkt-step-text">' + escapeHtml(step) + "</span>" +
+        "</button>";
+    });
+    return '<div class="bkt-steps-progress">' + doneCount + " of " + steps.length + " steps done</div>" +
+      '<div class="bkt-steps">' + stepRows + "</div>";
+  }
+
+  function renderTaskDrawerContent(taskKey) {
+    var parts = taskKey.split("|");
     var definition = findDefinitionById(parts[0]);
     if (!definition) return;
-    var entry = statusEntryFor(key);
-    byId("bktNoteContext").innerHTML = noteContextHtml(definition, parts[1]);
-    byId("bktNoteText").value = (entry && entry.note) ? entry.note : "";
-    byId("bktNoteLog").innerHTML = buildLogHtml(entry);
-    byId("bktNoteModal").style.display = "flex";
+    var dueDate = parts[1] || "";
+    var entry = statusEntryFor(taskKey);
+    var status = currentStatusOf(taskKey);
+    var isDrawerOverdue = dueDate && dueDate < todayIsoString() && isOpenStatus(status);
+    byId("bktDrawerTitle").textContent = definition.title;
+    var drawerDateElement = byId("bktDrawerDate");
+    drawerDateElement.className = "bkt-drawer-date" + (isDrawerOverdue ? " bkt-drawer-date-overdue" : "");
+    drawerDateElement.textContent = (definition.taskType === "adHoc" ? "Due " : "") + formatDateLongFull(dueDate);
+    byId("bktDrawerSub").innerHTML =
+      '<span class="bkt-status-pill">' + escapeHtml(statusLabelOf(status)) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency) || "Ad-hoc") + "</span>";
+    byId("bktDrawerActions").innerHTML = buildStatusButtonsHtml(taskKey, status);
+    byId("bktDrawerNav").innerHTML = buildDrawerNavButtonsHtml(taskKey);
+    byId("bktDrawerDetails").innerHTML = buildDrawerDetailsHtml(definition, dueDate);
+    byId("bktDrawerSteps").innerHTML = buildStepsHtml(definition, entry);
+    byId("bktPinNote").innerHTML = buildPinnedNoteHtml(entry, taskKey);
+    if (_pinEditing === taskKey) {
+      byId("bktPinEditText").value = (entry && entry.note) ? entry.note : "";
+    }
+    byId("bktConvList").innerHTML = buildConversationHtml(taskKey);
+    try { byId("bktConvList").scrollTop = byId("bktConvList").scrollHeight; } catch (error) {}
+    byId("bktConvInput").value = "";
+    byId("bktConvInputRow").style.display = canWork() ? "" : "none";
+    var requests = requestsForTask(taskKey);
+    byId("bktDrawerRequests").innerHTML = requests.length
+      ? requests.map(buildRequestListItemHtml).join("")
+      : '<div class="bkt-conv-empty">No requests for this task.</div>';
+    byId("bktReqInlineForm").style.display = canWork() ? "" : "none";
+    byId("bktDrawerHistory").innerHTML = buildLogHtml(entry);
   }
 
-  function closeNoteModal() {
-    _noteKey = null;
-    byId("bktNoteModal").style.display = "none";
+  function openTaskDrawer(taskKey) {
+    _drawerKey = taskKey;
+    renderTaskDrawerContent(taskKey);
+    byId("bktTaskDrawer").style.display = "flex";
   }
 
-  function saveNoteFromModal() {
-    if (!_noteKey) return;
-    saveOccurrenceNote(_noteKey, byId("bktNoteText").value.trim());
-    closeNoteModal();
+  function closeTaskDrawer() {
+    _drawerKey = null;
+    byId("bktTaskDrawer").style.display = "none";
+  }
+
+  function drawerOccurrenceKeysAround(taskKey) {
+    var parts = taskKey.split("|");
+    var definition = findDefinitionById(parts[0]);
+    if (!definition || definition.taskType === "adHoc") return { list: [], index: -1 };
+    var baseYear = parseInt((parts[1] || "").slice(0, 4), 10);
+    if (isNaN(baseYear)) return { list: [], index: -1 };
+    var list = [];
+    for (var yearOffset = -1; yearOffset <= 1; yearOffset++) {
+      var year = baseYear + yearOffset;
+      if (year < 2000 || year > 2100) continue;
+      occurrenceDatesForDefinition(definition, year, true).forEach(function (dateIso) {
+        list.push(occurrenceKey(definition.id, dateIso));
+      });
+    }
+    return { list: list, index: list.indexOf(taskKey) };
+  }
+
+  function buildDrawerNavButtonsHtml(taskKey) {
+    var navInfo = drawerOccurrenceKeysAround(taskKey);
+    if (!navInfo.list.length || navInfo.index < 0) return "";
+    var html = '<button type="button" class="bkt-mini-btn" data-act="drawer-nav" data-dir="prev" data-key="' + escapeHtml(taskKey) + '"' +
+      (navInfo.index === 0 ? " disabled" : "") + '>◀ Prev</button>' +
+      '<button type="button" class="bkt-mini-btn" data-act="drawer-nav" data-dir="next" data-key="' + escapeHtml(taskKey) + '"' +
+      (navInfo.index === navInfo.list.length - 1 ? " disabled" : "") + '>Next ▶</button>' +
+      '<span class="bkt-drawer-occ-info">' + (navInfo.index + 1) + " of " + navInfo.list.length + "</span>";
+    return html;
+  }
+
+  function sendConversationFromInput() {
+    if (!_drawerKey) return;
+    addConversationMessage(_drawerKey, byId("bktConvInput").value);
   }
 
   function buildRequestListItemHtml(request) {
@@ -896,10 +1448,10 @@
       '<span class="bkt-req-status reqs-' + request.status + '">' + escapeHtml(requestStatusLabelOf(request.status)) + "</span>" +
       "</div>" +
       '<div class="bkt-req-message">' + escapeHtml(request.message) + "</div>" +
-      '<div class="bkt-req-meta">' + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>";
+      '<div class="bkt-req-meta">By ' + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>";
     if (request.response) {
-      itemHtml += '<div class="bkt-req-response"><strong>Response:</strong> ' + escapeHtml(request.response) +
-        ' <span class="bkt-req-meta">(' + escapeHtml(request.respondedBy) + " · " + formatDateTime(request.respondedAt) + ")</span></div>";
+      itemHtml += '<div class="bkt-req-response">' + escapeHtml(request.response) +
+        '<div class="bkt-req-meta">Response by ' + escapeHtml(request.respondedBy) + " · " + formatDateTime(request.respondedAt) + "</div></div>";
     }
     if (canAdminister() && request.status === "open") {
       itemHtml += '<button type="button" class="bkt-mini-btn bkt-mb-confirm" data-act="respond-request" data-id="' + escapeHtml(request.id) + '">Respond</button>';
@@ -908,38 +1460,12 @@
     return itemHtml;
   }
 
-  function renderRequestListForTask(taskKey) {
-    var requests = requestsForTask(taskKey);
-    byId("bktRequestList").innerHTML = requests.length
-      ? requests.map(buildRequestListItemHtml).join("")
-      : '<div class="bkt-empty" style="padding:14px">No requests for this task yet.</div>';
-  }
-
-  function openRequestModal(taskKey) {
-    var parts = taskKey.split("|");
-    var definition = findDefinitionById(parts[0]);
-    if (!definition) return;
-    _requestTaskKey = taskKey;
-    byId("bktRequestContext").innerHTML = noteContextHtml(definition, parts[1]);
-    byId("bktRequestText").value = "";
-    byId("bktRequestType").value = "approval";
-    renderRequestListForTask(taskKey);
-    byId("bktRequestForm").style.display = canWork() ? "" : "none";
-    byId("bktRequestModal").style.display = "flex";
-  }
-
-  function closeRequestModal() {
-    _requestTaskKey = null;
-    byId("bktRequestModal").style.display = "none";
-  }
-
-  function submitRequestFromModal() {
-    if (!_requestTaskKey) return;
-    var message = byId("bktRequestText").value.trim();
-    if (!message) return;
-    createRequest(_requestTaskKey, byId("bktRequestType").value, message);
-    byId("bktRequestText").value = "";
-    renderRequestListForTask(_requestTaskKey);
+  function sendInlineRequest() {
+    if (!_drawerKey || !canWork()) return;
+    var requestMessage = byId("bktReqInlineText").value.trim();
+    if (!requestMessage) return;
+    createRequest(_drawerKey, byId("bktReqInlineType").value, requestMessage);
+    byId("bktReqInlineText").value = "";
   }
 
   function openRespondModal(requestId) {
@@ -949,11 +1475,12 @@
     _respondRequestId = requestId;
     byId("bktAdminContext").innerHTML = "<strong>" + escapeHtml(request.title) + "</strong>" +
       escapeHtml(requestTypeLabelOf(request.type) + " · " + formatDateShort(request.dueDate)) +
-      "<br>" + escapeHtml(request.message);
+      '<div class="bkt-req-meta">Requested by ' + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>" +
+      '<div class="bkt-req-message">' + escapeHtml(request.message) + "</div>";
     byId("bktAdminText").value = "";
-    var responseOptions = request.type === "information"
-      ? '<option value="answered">Answer and Resolve</option>'
-      : '<option value="approved">Approve</option><option value="declined">Decline</option>';
+    var responseOptions = request.type === "approval"
+      ? '<option value="approved">Approve</option><option value="declined">Decline</option>'
+      : '<option value="answered">Answer and Resolve</option>';
     byId("bktResponseStatus").innerHTML = responseOptions;
     byId("bktAdminModal").style.display = "flex";
   }
@@ -981,7 +1508,7 @@
   }
 
   function closeTopOverlay() {
-    var overlays = [byId("bktConfirmModal"), byId("bktAdminModal"), byId("bktRequestModal"), byId("bktNoteModal"), byId("bktDefModal")];
+    var overlays = [byId("bktConfirmModal"), byId("bktAdminModal"), byId("bktDefModal"), byId("bktExportModal"), byId("bktImportModal"), byId("bktTaskDrawer")];
     for (var i = 0; i < overlays.length; i++) {
       if (overlays[i] && overlays[i].style.display !== "none") {
         overlays[i].style.display = "none";
@@ -1032,24 +1559,30 @@
       (statusTarget ? ' data-status="' + statusTarget + '"' : "") + ">" + label + "</button>";
   }
 
-  function buildActionButtonsHtml(key, status) {
+  function buildStatusButtonsHtml(key, status) {
     var html = "";
-    if (canWork()) {
-      if (status === "pending") {
-        html += miniButtonHtml("status", "inProgress", "Start", key, "bkt-mb-start");
-        html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
-      } else if (status === "inProgress") {
-        html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
-      } else if (status === "done") {
-        html += miniButtonHtml("reset", "", "Reset", key, "");
-      }
-      html += miniButtonHtml("open-requests", "", "Request", key, "");
-      html += miniButtonHtml("note", "", "Note", key, "");
+    if (!canWork()) return html;
+    if (status === "pending") {
+      html += miniButtonHtml("status", "inProgress", "Start", key, "bkt-mb-start");
+      html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
+    } else if (status === "inProgress") {
+      html += miniButtonHtml("status", "done", "Complete", key, "bkt-mb-done");
+    } else if (status === "done") {
+      html += miniButtonHtml("reset", "", "Reset", key, "");
     }
     return html;
   }
 
-  function buildOccurrenceRowHtml(definition, dueDate) {
+  function buildActionButtonsHtml(key, status) {
+    return buildStatusButtonsHtml(key, status);
+  }
+
+  function rowDateLabelOf(definition, dueDate) {
+    if (definition.taskType === "adHoc") return "Due " + formatDateShort(dueDate);
+    return formatDateMedium(dueDate);
+  }
+
+  function buildOccurrenceRowHtml(definition, dueDate, summaryText) {
     var key = occurrenceKey(definition.id, dueDate);
     var entry = statusEntryFor(key);
     var status = currentStatusOf(key);
@@ -1057,25 +1590,40 @@
     var isOverdue = dueDate < today && isOpenStatus(status);
     var isAdhoc = definition.taskType === "adHoc";
     var openRequestCount = openRequestsForTask(key).length;
+    var overdueSuffix = "";
+    if (isOverdue) {
+      var overdueDays = daysBetweenIso(dueDate, today);
+      overdueSuffix = " · " + overdueDays + (overdueDays === 1 ? " day overdue" : " days overdue");
+    }
     var html = '<div class="bkt-row st-' + status + (isOverdue ? " bkt-overdue" : "") + '">';
     html += '<span class="bkt-status-pill">' + escapeHtml(statusLabelOf(status)) + "</span>";
-    html += '<div class="bkt-row-main">';
-    html += '<div class="bkt-row-title">' + escapeHtml(definition.title) + "</div>";
+    html += '<div class="bkt-row-main" data-act="open-task" data-key="' + escapeHtml(key) + '">';
+    html += '<div class="bkt-row-title">' + escapeHtml(definition.title) +
+      '<span class="bkt-row-date' + (isOverdue ? " bkt-row-date-overdue" : "") + '">' + escapeHtml(rowDateLabelOf(definition, dueDate) + overdueSuffix) + "</span>" +
+      (summaryText ? '<span class="bkt-row-missed">' + escapeHtml(summaryText) + "</span>" : "") +
+      "</div>";
     html += '<div class="bkt-row-meta">';
     html += '<span class="bkt-type-chip ' + (isAdhoc ? "type-adhoc" : "type-regular") + '">' + (isAdhoc ? "Ad-hoc" : "Routine") + "</span>";
     html += '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>";
     if (!isAdhoc) html += '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency)) + "</span>";
-    html += '<span class="bkt-prio-dot p-' + (definition.priority || "medium") + '" title="Priority: ' + escapeHtml(PRIORITY_LABELS[definition.priority] || "Medium") + '"></span>';
-    html += '<span class="bkt-due">' + (isOverdue ? "Overdue · " : "") + escapeHtml(dueLabelOf(definition, dueDate)) + "</span>";
     if (openRequestCount) {
-      html += '<button type="button" class="bkt-req-chip" data-act="open-requests" data-key="' + escapeHtml(key) + '">' +
+      html += '<button type="button" class="bkt-req-chip" data-act="open-task" data-key="' + escapeHtml(key) + '">' +
         openRequestCount + " open request" + (openRequestCount > 1 ? "s" : "") + "</button>";
+    }
+    var messageCount = messageCountForKey(key);
+    if (messageCount) {
+      html += '<button type="button" class="bkt-req-chip bkt-msg-chip" data-act="open-task" data-key="' + escapeHtml(key) + '" title="Open conversation">' +
+        messageCount + " message" + (messageCount > 1 ? "s" : "") + "</button>";
     }
     if (entry && entry.updatedBy && entry.updatedAt) {
       html += '<span class="bkt-updated">' + escapeHtml(entry.updatedBy) + " · " + formatDateTime(entry.updatedAt) + "</span>";
     }
     html += "</div>";
-    if (entry && entry.note) html += '<div class="bkt-row-note">' + escapeHtml(entry.note) + "</div>";
+    if (entry && entry.note) {
+      html += '<div class="bkt-row-note">' + escapeHtml(entry.note) +
+        (entry.noteBy ? '<span class="bkt-note-meta"> - ' + escapeHtml(entry.noteBy) + " · " + formatDateTime(entry.noteAt) + "</span>" : "") +
+        "</div>";
+    }
     if (entry && entry.adminNote) html += '<div class="bkt-row-note bkt-note-admin">Admin: ' + escapeHtml(entry.adminNote) + "</div>";
     html += "</div>";
     html += '<div class="bkt-row-actions">' + buildActionButtonsHtml(key, status) + "</div>";
@@ -1083,31 +1631,243 @@
     return html;
   }
 
+  function buildOccurrenceDetailListHtml(definition, dates) {
+    var today = todayIsoString();
+    var steps = definition.steps || [];
+    var rowsHtml = dates.map(function (dateIso) {
+      var key = occurrenceKey(definition.id, dateIso);
+      var status = currentStatusOf(key);
+      var entry = statusEntryFor(key);
+      var messageCount = messageCountForKey(key);
+      var checklistDone = (entry && Array.isArray(entry.checklistDone)) ? entry.checklistDone : [];
+      var stepsDone = 0;
+      steps.forEach(function (step, stepIndex) { if (checklistDone[stepIndex]) stepsDone++; });
+      return '<button type="button" class="bkt-sd-row' + (dateIso === today ? " bkt-sd-today" : "") + '" data-act="open-task" data-key="' + escapeHtml(key) + '">' +
+        '<span class="bkt-sd-date">' + escapeHtml(formatDateMedium(dateIso)) + "</span>" +
+        '<span class="bkt-sd-status s-' + status + '">' + escapeHtml(statusLabelOf(status)) + "</span>" +
+        (steps.length ? '<span class="bkt-sd-steps">' + stepsDone + "/" + steps.length + " steps</span>" : "") +
+        (messageCount ? '<span class="bkt-sd-msgs">' + messageCount + " message" + (messageCount > 1 ? "s" : "") + "</span>" : "") +
+        (entry && entry.note ? '<span class="bkt-sd-note">note</span>' : "") +
+        "</button>";
+    }).join("");
+    return '<div class="bkt-strip-detail">' + rowsHtml + "</div>";
+  }
+
+  function stripDetailToggleHtml(definitionId, year, monthIndex, label, titleText) {
+    var detailKey = definitionId + "|" + year + "-" + (monthIndex == null ? "cal" : monthIndex);
+    return '<button type="button" class="bkt-mini-btn bkt-strip-details' + (_openStripDetails[detailKey] ? " active" : "") + '" data-act="strip-detail" data-def="' + escapeHtml(definitionId) + '" data-year="' + year + '"' +
+      (monthIndex == null ? "" : ' data-month="' + monthIndex + '"') +
+      ' title="' + escapeHtml(titleText) + '">' + label + "</button>";
+  }
+
+  function cellTooltipText(dateIso, definition, status) {
+    return formatDateMedium(dateIso) + " - " + definition.title + " - " + statusLabelOf(status) +
+      " (click to check, ▸ or Ctrl+Click for details)";
+  }
+
+  function cellDetailsButtonHtml(cellKey, titleText) {
+    return '<button type="button" class="bkt-cell-details" data-act="open-task" data-key="' + escapeHtml(cellKey) +
+      '" title="Open details: ' + escapeHtml(titleText) + '">▸</button>';
+  }
+
+  function messageCountForKey(key) {
+    return chatMessagesFor(key).length;
+  }
+
+  function messageCountForDates(definition, dates) {
+    var total = 0;
+    dates.forEach(function (dateIso) {
+      total += messageCountForKey(occurrenceKey(definition.id, dateIso));
+    });
+    return total;
+  }
+
   function buildDayStripHtml(definition, year, monthIndex, compact) {
     var dayCount = daysInMonthOf(year, monthIndex);
     var today = todayIsoString();
     var completedCount = 0;
+    var stripDates = [];
     var dotsHtml = "";
     for (var day = 1; day <= dayCount; day++) {
       var dateIso = isoOfDate(new Date(year, monthIndex, day));
+      stripDates.push(dateIso);
       var status = currentStatusOf(occurrenceKey(definition.id, dateIso));
       var dotClass = "bkt-dot";
       if (status === "done") { dotClass += " bkt-dot-done"; completedCount++; }
       else if (status === "inProgress") dotClass += " bkt-dot-progress";
       if (dateIso === today) dotClass += " bkt-dot-today";
       if (canWork()) dotClass += " bkt-clickable";
-      dotsHtml += '<button type="button" class="' + dotClass + '"' +
+      dotsHtml += '<span class="bkt-cell-wrap">' +
+        '<button type="button" class="' + dotClass + '"' +
         (canWork() ? ' data-act="toggle-day" data-def="' + escapeHtml(definition.id) + '" data-date="' + dateIso + '"' : "") +
-        ' title="' + escapeHtml(formatDateMedium(dateIso) + " · " + statusLabelOf(status)) + '"></button>';
+        ' title="' + escapeHtml(cellTooltipText(dateIso, definition, status)) + '"></button>' +
+        cellDetailsButtonHtml(occurrenceKey(definition.id, dateIso), definition.title) +
+        "</span>";
     }
+    var stripIncludesToday = year === parseInt(today.slice(0, 4), 10) && monthIndex === parseInt(today.slice(5, 7), 10) - 1;
+    var detailOpen = !!_openStripDetails[definition.id + "|" + year + "-" + monthIndex];
     var headHtml = '<div class="bkt-strip-head">' +
       '<span class="bkt-strip-title">' + escapeHtml(definition.title) + "</span>" +
       (compact ? "" : '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>") +
       '<span class="bkt-strip-count"><strong>' + completedCount + "</strong> / " + dayCount + " days completed</span>" +
-      (canWork() && !compact ? '<span class="bkt-strip-hint">click days to mark them</span>' : "") +
+      (messageCountForDates(definition, stripDates) ? '<span class="bkt-strip-msgs">' + messageCountForDates(definition, stripDates) + " message" + (messageCountForDates(definition, stripDates) === 1 ? "" : "s") + "</span>" : "") +
+      (canWork() && !compact ? '<span class="bkt-strip-hint">click days to mark them - hover a day for ▸ details</span>' : "") +
+      stripDetailToggleHtml(definition.id, year, monthIndex, "Details", "Show every day of this month with status, messages and notes") +
       "</div>";
     return '<div class="bkt-strip' + (compact ? " bkt-strip-compact" : "") + '">' + headHtml +
-      '<div class="bkt-dots' + (compact ? " bkt-dots-compact" : "") + '">' + dotsHtml + "</div></div>";
+      '<div class="bkt-dots' + (compact ? " bkt-dots-compact" : "") + '">' + dotsHtml + "</div>" +
+      (detailOpen ? buildOccurrenceDetailListHtml(definition, stripDates) : "") +
+      "</div>";
+  }
+
+  function buildYearCalendarStripHtml(definition, year) {
+    var occurrences = occurrenceDatesForDefinition(definition, year, true);
+    var today = todayIsoString();
+    var unitWord = definition.frequency === "monthly" ? "month" : "week";
+    var finishedCount = 0;
+    occurrences.forEach(function (dueDate) {
+      if (isFinishedStatus(currentStatusOf(occurrenceKey(definition.id, dueDate)))) finishedCount++;
+    });
+    var monthsHtml = "";
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      var cellsHtml = "";
+      occurrences.forEach(function (dueDate) {
+        if (parseInt(dueDate.slice(5, 7), 10) - 1 !== monthIndex) return;
+        var status = currentStatusOf(occurrenceKey(definition.id, dueDate));
+        var cellClass = "bkt-cal-cell";
+        if (status === "done") cellClass += " bkt-cal-done";
+        else if (status === "inProgress") cellClass += " bkt-cal-progress";
+        var isTodayCell = definition.frequency === "monthly"
+          ? dueDate.slice(0, 7) === today.slice(0, 7)
+          : isoWeekStartOf(dueDate) === isoWeekStartOf(today);
+        if (isTodayCell) cellClass += " bkt-cal-today";
+        if (canWork()) cellClass += " bkt-clickable";
+        cellsHtml += '<span class="bkt-cell-wrap">' +
+          '<button type="button" class="' + cellClass + '"' +
+          (canWork() ? ' data-act="toggle-day" data-def="' + escapeHtml(definition.id) + '" data-date="' + dueDate + '"' : "") +
+          ' title="' + escapeHtml(cellTooltipText(dueDate, definition, status)) + '">' +
+          parseInt(dueDate.slice(8, 10), 10) + "</button>" +
+          cellDetailsButtonHtml(occurrenceKey(definition.id, dueDate), definition.title) +
+          "</span>";
+      });
+      monthsHtml += '<div class="bkt-cal-month">' +
+        '<div class="bkt-cal-month-label">' + MONTHS_SHORT[monthIndex] + "</div>" +
+        '<div class="bkt-cal-cells">' + cellsHtml + "</div>" +
+        "</div>";
+    }
+    var calDetailOpen = !!_openStripDetails[definition.id + "|" + year + "-cal"];
+    var headHtml = '<div class="bkt-strip-head">' +
+      '<span class="bkt-strip-title">' + escapeHtml(definition.title) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency)) + "</span>" +
+      '<span class="bkt-strip-count"><strong>' + finishedCount + "</strong> / " + occurrences.length + " " + unitWord + (occurrences.length === 1 ? "" : "s") + " completed</span>" +
+      (messageCountForDates(definition, occurrences) ? '<span class="bkt-strip-msgs">' + messageCountForDates(definition, occurrences) + " message" + (messageCountForDates(definition, occurrences) === 1 ? "" : "s") + "</span>" : "") +
+      (canWork() ? '<span class="bkt-strip-hint">click a ' + unitWord + " to check it</span>" : "") +
+      stripDetailToggleHtml(definition.id, year, null, "Details", "Show every month with status, messages and notes") +
+      "</div>";
+    return '<div class="bkt-strip">' + headHtml + '<div class="bkt-cal">' + monthsHtml + "</div>" +
+      (calDetailOpen ? buildOccurrenceDetailListHtml(definition, occurrences) : "") +
+      "</div>";
+  }
+
+  function buildMonthAccordionHtml(definition, year) {
+    var occurrences = occurrenceDatesForDefinition(definition, year, true);
+    var isDaily = definition.frequency === "daily";
+    var unitWord = isDaily ? "day" : "week";
+    var today = todayIsoString();
+    var todayYear = parseInt(today.slice(0, 4), 10);
+    var currentMonthIndex = parseInt(today.slice(5, 7), 10) - 1;
+    var defaultOpenMonth = todayYear === year ? currentMonthIndex : 0;
+    var openMonth = Object.prototype.hasOwnProperty.call(_openMonthByDefinition, definition.id)
+      ? _openMonthByDefinition[definition.id]
+      : defaultOpenMonth;
+    var finishedTotal = 0;
+    occurrences.forEach(function (dueDate) {
+      if (isFinishedStatus(currentStatusOf(occurrenceKey(definition.id, dueDate)))) finishedTotal++;
+    });
+    var monthTabsData = [];
+    var openPanelHtml = "";
+    var openMonthDates = [];
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      var monthDates = [];
+      occurrences.forEach(function (dueDate) {
+        if (parseInt(dueDate.slice(5, 7), 10) - 1 === monthIndex) monthDates.push(dueDate);
+      });
+      var monthFinished = 0;
+      var cellsHtml = "";
+      monthDates.forEach(function (dueDate) {
+        var cellKey = occurrenceKey(definition.id, dueDate);
+        var status = currentStatusOf(cellKey);
+        if (isFinishedStatus(status)) monthFinished++;
+        var isTodayCell = isDaily
+          ? dueDate === today
+          : isoWeekStartOf(dueDate) === isoWeekStartOf(today);
+        if (isDaily) {
+          var dotClass = "bkt-dot";
+          if (status === "done") dotClass += " bkt-dot-done";
+          else if (status === "inProgress") dotClass += " bkt-dot-progress";
+          if (isTodayCell) dotClass += " bkt-dot-today";
+          if (canWork()) dotClass += " bkt-clickable";
+          cellsHtml += '<span class="bkt-cell-wrap">' +
+            '<button type="button" class="' + dotClass + '"' +
+            (canWork() ? ' data-act="toggle-day" data-def="' + escapeHtml(definition.id) + '" data-date="' + dueDate + '"' : "") +
+            ' title="' + escapeHtml(cellTooltipText(dueDate, definition, status)) + '">' + parseInt(dueDate.slice(8, 10), 10) + "</button>" +
+            cellDetailsButtonHtml(cellKey, definition.title) +
+            "</span>";
+        } else {
+          var weekClass = "bkt-acc-week";
+          if (status === "done") weekClass += " bkt-acc-done";
+          else if (status === "inProgress") weekClass += " bkt-acc-progress";
+          if (isTodayCell) weekClass += " bkt-acc-today";
+          if (canWork()) weekClass += " bkt-clickable";
+          cellsHtml += '<span class="bkt-cell-wrap">' +
+            '<button type="button" class="' + weekClass + '"' +
+            (canWork() ? ' data-act="toggle-day" data-def="' + escapeHtml(definition.id) + '" data-date="' + dueDate + '"' : "") +
+            ' title="' + escapeHtml(cellTooltipText(dueDate, definition, status)) + '">' +
+            '<span class="bkt-acc-dow">' + DAYS_SHORT[weekdayIndex(parseDateIso(dueDate))] + "</span>" +
+            '<span class="bkt-acc-day">' + parseInt(dueDate.slice(8, 10), 10) + "</span>" +
+            "</button>" +
+            cellDetailsButtonHtml(cellKey, definition.title) +
+            "</span>";
+        }
+      });
+      var isOpen = monthIndex === openMonth;
+      var monthPercentage = monthDates.length ? Math.round(monthFinished * 100 / monthDates.length) : 0;
+      var isCurrentMonth = todayYear === year && monthIndex === currentMonthIndex;
+      var monthMessages = messageCountForDates(definition, monthDates);
+      monthTabsData.push({ monthIndex: monthIndex, monthPercentage: monthPercentage, isCurrentMonth: isCurrentMonth, isOpen: isOpen });
+      if (isOpen) {
+        openMonthDates = monthDates;
+        openPanelHtml = '<div class="bkt-acc-open-head">' +
+          '<span class="bkt-acc-open-name">' + MONTHS_FULL[monthIndex] + " " + year + "</span>" +
+          '<span class="bkt-acc-open-count"><strong>' + monthFinished + "</strong> / " + monthDates.length + " " + unitWord + (monthDates.length === 1 ? "" : "s") + "</span>" +
+          (monthMessages ? '<span class="bkt-acc-msgs">' + monthMessages + " message" + (monthMessages === 1 ? "" : "s") + "</span>" : "") +
+          "</div>" +
+          '<div class="bkt-acc-body">' + cellsHtml + "</div>";
+      }
+    }
+    var tabsHtml = "";
+    monthTabsData.forEach(function (tabData) {
+      tabsHtml += '<button type="button" class="bkt-acc-tab' + (tabData.isOpen ? " active" : "") + (tabData.isCurrentMonth ? " bkt-acc-current" : "") + '" data-act="month-toggle" data-def="' + escapeHtml(definition.id) + '" data-month="' + tabData.monthIndex + '" title="' + escapeHtml(MONTHS_FULL[tabData.monthIndex] + " - " + tabData.monthPercentage + "% complete") + '">' +
+        '<span class="bkt-acc-tab-name">' + MONTHS_SHORT[tabData.monthIndex] + "</span>" +
+        '<span class="bkt-acc-tab-pct">' + tabData.monthPercentage + "%</span>" +
+        "</button>";
+    });
+    var monthsPanel = '<div class="bkt-acc-tabs">' + tabsHtml + "</div>" +
+      (openPanelHtml || '<div class="bkt-acc-closed">Click a month above to see its ' + unitWord + "s.</div>");
+    var headHtml = '<div class="bkt-strip-head">' +
+      '<span class="bkt-strip-title">' + escapeHtml(definition.title) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>" +
+      '<span class="bkt-chip">' + escapeHtml(frequencyLabelOf(definition.frequency)) + "</span>" +
+      '<span class="bkt-strip-count"><strong>' + finishedTotal + "</strong> / " + occurrences.length + " " + unitWord + (occurrences.length === 1 ? "" : "s") + " completed</span>" +
+      (messageCountForDates(definition, occurrences) ? '<span class="bkt-strip-msgs">' + messageCountForDates(definition, occurrences) + " message" + (messageCountForDates(definition, occurrences) === 1 ? "" : "s") + "</span>" : "") +
+      (canWork() ? '<span class="bkt-strip-hint">click a ' + unitWord + " to check it - hover for ▸ details</span>" : "") +
+      stripDetailToggleHtml(definition.id, year, null, "Details", "Show every " + unitWord + " of the selected month with status, messages and notes") +
+      "</div>";
+    var accDetailOpen = !!_openStripDetails[definition.id + "|" + year + "-cal"];
+    return '<div class="bkt-strip">' + headHtml + '<div class="bkt-acc">' + monthsPanel + "</div>" +
+      (accDetailOpen ? buildOccurrenceDetailListHtml(definition, openMonthDates.length ? openMonthDates : occurrences) : "") +
+      "</div>";
   }
 
   function buildYearGroupHtml(definition, year) {
@@ -1120,12 +1880,10 @@
     var percentage = totalCount ? Math.round(finishedCount * 100 / totalCount) : 0;
     var expanded = !!_expandedGroups[definition.id];
     var bodyHtml = "";
-    if (definition.frequency === "daily") {
-      for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
-        bodyHtml += '<div style="font-size:11.5px;font-weight:700;color:#687384;margin:10px 0 3px;text-transform:uppercase;letter-spacing:.05em">' +
-          MONTHS_FULL[monthIndex] + "</div>";
-        bodyHtml += buildDayStripHtml(definition, year, monthIndex, true);
-      }
+    if (definition.frequency === "daily" || definition.frequency === "weekly" || definition.frequency === "biweekly") {
+      bodyHtml += buildMonthAccordionHtml(definition, year);
+    } else if (definition.frequency === "monthly") {
+      bodyHtml += buildYearCalendarStripHtml(definition, year);
     } else {
       occurrences.forEach(function (dueDate) {
         var occurrenceKeyValue = occurrenceKey(definition.id, dueDate);
@@ -1157,7 +1915,6 @@
     html += '<span class="bkt-type-chip ' + (isAdhoc ? "type-adhoc" : "type-regular") + '">' + (isAdhoc ? "Ad-hoc" : "Routine") + "</span>";
     html += '<span class="bkt-chip">' + escapeHtml(categoryLabelOf(definition.category)) + "</span>";
     html += '<span class="bkt-schedule-chip">' + escapeHtml(scheduleTextOf(definition)) + "</span>";
-    html += '<span class="bkt-prio-dot p-' + (definition.priority || "medium") + '" title="Priority: ' + escapeHtml(PRIORITY_LABELS[definition.priority] || "Medium") + '"></span>';
     if (isOverdue) html += '<span class="bkt-chip" style="color:#dc2626;background:#fef2f2">Overdue</span>';
     html += "</div>";
     if (definition.note) html += '<div class="bkt-def-note">' + escapeHtml(definition.note) + "</div>";
@@ -1185,34 +1942,73 @@
     } else if (scope === "week") {
       rangeStart = isoOfDate(startOfWeekDate(new Date()));
       rangeEnd = addDaysToIso(rangeStart, 6);
+    } else if (scope === "lastMonth") {
+      rangeStart = isoOfDate(new Date(todayYear, todayMonth - 1, 1));
+      rangeEnd = isoOfDate(new Date(todayYear, todayMonth, 0));
     } else {
       rangeStart = isoOfDate(new Date(todayYear, todayMonth, 1));
       rangeEnd = isoOfDate(new Date(todayYear, todayMonth, daysInMonthOf(todayYear, todayMonth)));
     }
+    var rangeYear = parseInt(rangeStart.slice(0, 4), 10);
+    var rangeMonth = parseInt(rangeStart.slice(5, 7), 10) - 1;
     var regularRows = [];
     var adhocRows = [];
     var dayStrips = [];
+    var leftBehindRows = [];
     DB.definitions.forEach(function (definition) {
       if (definition.taskType === "adHoc") {
         if (definition.dueDate && definition.dueDate >= rangeStart && definition.dueDate <= rangeEnd) {
-          adhocRows.push({ definition: definition, dueDate: definition.dueDate });
+          if (scope === "lastMonth") {
+            if (isFinishedStatus(currentStatusOf(occurrenceKey(definition.id, definition.dueDate)))) {
+              adhocRows.push({ definition: definition, dueDate: definition.dueDate });
+            } else {
+              leftBehindRows.push({ definition: definition, dueDate: definition.dueDate });
+            }
+          } else {
+            adhocRows.push({ definition: definition, dueDate: definition.dueDate });
+          }
         }
         return;
       }
-      if (definition.frequency === "daily" && scope === "month") {
+      if (definition.frequency === "daily" && (scope === "month" || scope === "lastMonth")) {
         dayStrips.push(definition);
+        if (scope === "lastMonth") {
+          var missedDates = [];
+          var dayCount = daysInMonthOf(rangeYear, rangeMonth);
+          for (var day = 1; day <= dayCount; day++) {
+            var dateIso = isoOfDate(new Date(rangeYear, rangeMonth, day));
+            if (isOpenStatus(currentStatusOf(occurrenceKey(definition.id, dateIso)))) missedDates.push(dateIso);
+          }
+          if (missedDates.length) {
+            leftBehindRows.push({
+              definition: definition,
+              dueDate: missedDates[missedDates.length - 1],
+              missedSummary: true,
+              missedCount: missedDates.length
+            });
+          }
+        }
         return;
       }
-      occurrenceDatesForDefinition(definition, todayYear, false).forEach(function (dueDate) {
+      occurrenceDatesForDefinition(definition, rangeYear, false).forEach(function (dueDate) {
         if (dueDate >= rangeStart && dueDate <= rangeEnd) {
-          regularRows.push({ definition: definition, dueDate: dueDate });
+          if (scope === "lastMonth") {
+            if (isFinishedStatus(currentStatusOf(occurrenceKey(definition.id, dueDate)))) {
+              regularRows.push({ definition: definition, dueDate: dueDate });
+            } else {
+              leftBehindRows.push({ definition: definition, dueDate: dueDate });
+            }
+          } else {
+            regularRows.push({ definition: definition, dueDate: dueDate });
+          }
         }
       });
     });
     sortRowItems(regularRows);
     sortRowItems(adhocRows);
-    var overdueRows = collectOverdueRows(scope, rangeStart);
-    var stats = computeBoardStats(regularRows, adhocRows, dayStrips, overdueRows, todayYear, todayMonth);
+    sortRowItems(leftBehindRows);
+    var overdueRows = scope === "lastMonth" ? leftBehindRows : collectOverdueRows(scope, rangeStart);
+    var stats = computeBoardStats(regularRows, adhocRows, dayStrips, overdueRows, rangeYear, rangeMonth);
     stats.waiting = countOpenRequestsForDueRange(rangeStart, rangeEnd);
     return {
       scope: scope,
@@ -1279,6 +2075,7 @@
     var stats = { total: 0, completed: 0, inProgress: 0, waiting: 0, overdue: 0 };
     var today = todayIsoString();
     function addRow(row) {
+      if (row.missedSummary) return; // daily summary rows are informational; the day strips count the days
       stats.total++;
       var status = currentStatusOf(occurrenceKey(row.definition.id, row.dueDate));
       if (isFinishedStatus(status)) stats.completed++;
@@ -1327,6 +2124,7 @@
     if (scope === "today") return "Today · " + formatDateMedium(todayIsoString());
     if (scope === "week") return "This Week · " + formatDateShort(rangeStart) + " - " + formatDateShort(rangeEnd);
     var monthIndex = parseInt(rangeStart.slice(5, 7), 10) - 1;
+    if (scope === "lastMonth") return "Last Month · " + MONTHS_FULL[monthIndex] + " " + rangeStart.slice(0, 4);
     return "This Month · " + MONTHS_FULL[monthIndex] + " " + rangeStart.slice(0, 4);
   }
 
@@ -1343,7 +2141,6 @@
   function renderAll() {
     if (!ROOT || !DB) return;
     if (DB.ui.tab === "defs" && !canAdminister()) DB.ui.tab = "board";
-    renderRoleAndUser();
     renderLockBanner();
     renderToolbar();
     var tab = DB.ui.tab || "board";
@@ -1354,6 +2151,9 @@
     } else if (tab === "dashboard") {
       renderRibbon(buildYearStats(DB.year));
       renderDashboardPane();
+    } else if (tab === "reports") {
+      renderRibbon(buildYearStats(DB.year));
+      renderReportsPane();
     } else if (tab === "year") {
       renderRibbon(buildYearStats(DB.year));
       renderYearPane();
@@ -1361,25 +2161,8 @@
       renderRibbon(buildYearStats(DB.year));
       renderDefinitionsPane();
     }
+    if (_drawerKey) renderTaskDrawerContent(_drawerKey);
     try { tool.resize(); } catch (error) {}
-  }
-
-  function renderRoleAndUser() {
-    var badge = byId("bktRoleBadge");
-    if (canAdminister()) {
-      badge.className = "bkt-role-badge role-admin";
-      badge.textContent = "Admin";
-    } else if (canWork()) {
-      badge.className = "bkt-role-badge role-bookkeeper";
-      badge.textContent = "Bookkeeper";
-    } else {
-      badge.className = "bkt-role-badge role-viewer";
-      badge.textContent = "Viewer";
-    }
-    var nameElement = byId("bktUserName");
-    if (_user && _user.name) nameElement.textContent = _user.name;
-    else if (_noIdentity) nameElement.textContent = "CMS session";
-    else nameElement.textContent = "—";
   }
 
   function renderLockBanner() {
@@ -1414,17 +2197,19 @@
     fillFilterSelects();
     byId("bktPaneBoard").style.display = tab === "board" ? "" : "none";
     byId("bktPaneDashboard").style.display = tab === "dashboard" ? "" : "none";
+    byId("bktPaneReports").style.display = tab === "reports" ? "" : "none";
     byId("bktPaneYear").style.display = tab === "year" ? "" : "none";
     byId("bktPaneDefs").style.display = tab === "defs" ? "" : "none";
     var adminVisible = canAdminister() ? "" : "none";
     byId("bktBtnNewDef").style.display = adminVisible;
-    byId("bktBtnSeed").style.display = adminVisible;
+    byId("bktBtnExportDefs").style.display = adminVisible;
+    byId("bktBtnImportDefs").style.display = adminVisible;
   }
 
   function fillFilterSelects() {
     var categorySelect = byId("bktCatFilter");
     var categoryOptions = '<option value="all">All Categories</option><option value="">Uncategorized</option>';
-    TASK_CATEGORIES.forEach(function (category) {
+    (DB.categories || []).forEach(function (category) {
       categoryOptions += '<option value="' + escapeHtml(category.id) + '">' + escapeHtml(category.label) + "</option>";
     });
     categorySelect.innerHTML = categoryOptions;
@@ -1444,53 +2229,74 @@
     byId("bktStatProgress").textContent = String(stats.inProgress);
     byId("bktStatWaiting").textContent = String(stats.waiting);
     byId("bktStatOverdue").textContent = String(stats.overdue);
+    byId("bktStatOverdueLabel").textContent = (DB.ui.tab === "board" && DB.ui.scope === "lastMonth") ? "Left Behind" : "Overdue";
     var percentage = stats.total ? Math.round(stats.completed * 100 / stats.total) : 0;
     byId("bktProgressBar").style.width = percentage + "%";
     byId("bktProgressPct").textContent = "%" + percentage;
   }
 
   function buildRequestInboxRowHtml(request) {
-    return '<div class="bkt-req-row">' +
+    return '<div class="bkt-req-row req-' + request.type + '">' +
       '<span class="bkt-req-type req-' + request.type + '">' + escapeHtml(requestTypeLabelOf(request.type)) + "</span>" +
       '<div class="bkt-req-main">' +
       '<div class="bkt-req-title">' + escapeHtml(request.title) + "</div>" +
-      '<div class="bkt-req-meta">' + escapeHtml(formatDateShort(request.dueDate)) + " · " + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>" +
+      '<div class="bkt-req-meta">' + escapeHtml(formatDateShort(request.dueDate)) + " · Requested by " + escapeHtml(request.createdBy) + " · " + formatDateTime(request.createdAt) + "</div>" +
       '<div class="bkt-req-message">' + escapeHtml(request.message) + "</div>" +
       "</div>" +
       '<div class="bkt-row-actions"><button type="button" class="bkt-mini-btn bkt-mb-confirm" data-act="respond-request" data-id="' + escapeHtml(request.id) + '">Respond</button></div>' +
       "</div>";
   }
 
+  function buildRequestFilterChipsHtml(openRequests, activeFilter) {
+    var typeOptions = [
+      { id: "all", label: "All" },
+      { id: "approval", label: "Approval" },
+      { id: "information", label: "Information" },
+      { id: "support", label: "Support" }
+    ];
+    var counts = { all: openRequests.length, approval: 0, information: 0, support: 0 };
+    openRequests.forEach(function (request) { counts[request.type] = (counts[request.type] || 0) + 1; });
+    return typeOptions.map(function (typeOption) {
+      return '<button type="button" class="bkt-scope-chip bkt-req-filter-chip' + (activeFilter === typeOption.id ? " active" : "") + '" data-act="request-filter" data-filter="' + typeOption.id + '">' +
+        escapeHtml(typeOption.label) + ' <span class="bkt-chip-count">' + counts[typeOption.id] + "</span>" +
+        "</button>";
+    }).join("");
+  }
+
   function renderBoardPane(boardData) {
     var openRequests = collectOpenRequests();
+    var requestFilter = DB.ui.requestFilter || "all";
+    var filteredOpenRequests = requestFilter === "all"
+      ? openRequests
+      : openRequests.filter(function (request) { return request.type === requestFilter; });
+
+    /* Render all three lists; the active board tab decides which is visible. */
     var approvalSection = byId("bktApprovalSection");
     if (canAdminister() && openRequests.length) {
-      approvalSection.style.display = "";
-      byId("bktApprovalCount").textContent = String(openRequests.length);
-      byId("bktApprovalList").innerHTML = openRequests.map(buildRequestInboxRowHtml).join("");
-    } else {
-      approvalSection.style.display = "none";
+      byId("bktApprovalCount").textContent = String(filteredOpenRequests.length);
+      byId("bktRequestFilterChips").innerHTML = buildRequestFilterChipsHtml(openRequests, requestFilter);
+      byId("bktApprovalList").innerHTML = filteredOpenRequests.length
+        ? filteredOpenRequests.map(buildRequestInboxRowHtml).join("")
+        : '<div class="bkt-empty" style="padding:16px">No open requests of this type.</div>';
     }
 
     var filteredOverdue = boardData.overdueRows.filter(function (row) {
       return matchesRowFilters(row.definition, currentStatusOf(occurrenceKey(row.definition.id, row.dueDate)));
     });
-    var overdueSection = byId("bktOverdueSection");
-    if (filteredOverdue.length) {
-      overdueSection.style.display = "";
-      byId("bktOverdueList").innerHTML = filteredOverdue.map(function (row) {
-        return buildOccurrenceRowHtml(row.definition, row.dueDate);
-      }).join("");
-    } else {
-      overdueSection.style.display = "none";
-    }
+    byId("bktOverdueTitle").textContent = boardData.scope === "lastMonth" ? "Left Behind Last Month" : "Overdue";
+    byId("bktOverdueList").innerHTML = filteredOverdue.map(function (row) {
+      var summaryText = row.missedSummary
+        ? row.missedCount + (row.missedCount === 1 ? " day left incomplete" : " days left incomplete")
+        : null;
+      return buildOccurrenceRowHtml(row.definition, row.dueDate, summaryText);
+    }).join("");
 
-    var todayYear = parseInt(todayIsoString().slice(0, 4), 10);
-    var todayMonth = parseInt(todayIsoString().slice(5, 7), 10) - 1;
+    var stripYear = parseInt(boardData.rangeStart.slice(0, 4), 10);
+    var stripMonth = parseInt(boardData.rangeStart.slice(5, 7), 10) - 1;
     var regularHtmlParts = [];
     boardData.dayStrips.forEach(function (definition) {
       if (matchesSearchAndCategory(definition)) {
-        regularHtmlParts.push(buildDayStripHtml(definition, todayYear, todayMonth, false));
+        regularHtmlParts.push(buildDayStripHtml(definition, stripYear, stripMonth, false));
       }
     });
     var filteredRegular = boardData.regularRows.filter(function (row) {
@@ -1499,28 +2305,58 @@
     var filteredAdhoc = boardData.adhocRows.filter(function (row) {
       return matchesRowFilters(row.definition, currentStatusOf(occurrenceKey(row.definition.id, row.dueDate)));
     });
-    var listHtml = "";
-    if (regularHtmlParts.length || filteredRegular.length) {
-      listHtml += '<div class="bkt-section-head"><span class="bkt-section-title">Routine Tasks</span>' +
-        '<span class="bkt-section-sub">' + (regularHtmlParts.length + filteredRegular.length) + " tasks</span></div>";
-      listHtml += regularHtmlParts.join("");
-      listHtml += filteredRegular.map(function (row) {
-        return buildOccurrenceRowHtml(row.definition, row.dueDate);
-      }).join("");
-    }
-    if (filteredAdhoc.length) {
-      listHtml += '<div class="bkt-section-head"><span class="bkt-section-title">Ad-hoc Tasks</span>' +
-        '<span class="bkt-section-sub">' + filteredAdhoc.length + " tasks</span></div>";
-      listHtml += filteredAdhoc.map(function (row) {
-        return buildOccurrenceRowHtml(row.definition, row.dueDate);
-      }).join("");
-    }
+    var routineHtml = regularHtmlParts.join("") + filteredRegular.map(function (row) {
+      return buildOccurrenceRowHtml(row.definition, row.dueDate);
+    }).join("");
+    var adhocHtml = filteredAdhoc.map(function (row) {
+      return buildOccurrenceRowHtml(row.definition, row.dueDate);
+    }).join("");
+
+    var boardTab = DB.ui.boardTab || "all";
+    if (boardTab === "requests" && !canAdminister()) boardTab = "all";
+    var routineCount = regularHtmlParts.length + filteredRegular.length;
+    var adhocCount = filteredAdhoc.length;
+    byId("bktTabAllCount").textContent = String(routineCount + adhocCount);
+    byId("bktTabRoutineCount").textContent = String(routineCount);
+    byId("bktTabAdhocCount").textContent = String(adhocCount);
+    byId("bktTabOverdueCount").textContent = String(filteredOverdue.length);
+    byId("bktTabRequestsCount").textContent = String(openRequests.length);
+    byId("bktTabOverdueLabel").textContent = boardData.scope === "lastMonth" ? "Left Behind" : "Overdue";
+    byId("bktBoardTabRequests").style.display = canAdminister() ? "" : "none";
+    queryAll(".bkt-board-tab").forEach(function (tabButton) {
+      tabButton.classList.toggle("active", tabButton.getAttribute("data-tab") === boardTab);
+    });
+
+    var showRoutine = boardTab === "all" || boardTab === "routine";
+    var showAdhoc = boardTab === "all" || boardTab === "adhoc";
+    var listHtml = (showRoutine ? routineHtml : "") + (showAdhoc ? adhocHtml : "");
     byId("bktBoardList").innerHTML = listHtml;
-    byId("bktBoardSection").style.display = listHtml ? "" : "none";
-    byId("bktBoardSub").textContent = scopeRangeText(boardData.scope, boardData.rangeStart, boardData.rangeEnd);
-    var hasAnything = listHtml !== "" || filteredOverdue.length > 0 || (canAdminister() && openRequests.length > 0);
-    byId("bktBoardEmpty").style.display = hasAnything ? "none" : "";
-    if (!hasAnything) byId("bktBoardEmpty").innerHTML = emptyMessageHtml();
+    byId("bktBoardSection").style.display = (boardTab === "all" || boardTab === "routine" || boardTab === "adhoc") && listHtml ? "" : "none";
+    var visibleCount = (showRoutine ? routineCount : 0) + (showAdhoc ? adhocCount : 0);
+    if (boardTab === "routine") byId("bktBoardTitle").textContent = boardData.scope === "lastMonth" ? "Completed Last Month" : "Routine Tasks";
+    else if (boardTab === "adhoc") byId("bktBoardTitle").textContent = "Ad-hoc Tasks";
+    else byId("bktBoardTitle").textContent = boardData.scope === "lastMonth" ? "Last Month Tasks" : "All Tasks";
+    byId("bktBoardSub").textContent = visibleCount + (visibleCount === 1 ? " task" : " tasks") + " · " + scopeRangeText(boardData.scope, boardData.rangeStart, boardData.rangeEnd);
+    approvalSection.style.display = boardTab === "requests" && canAdminister() && openRequests.length ? "" : "none";
+    var overdueSection = byId("bktOverdueSection");
+    overdueSection.style.display = boardTab === "overdue" && filteredOverdue.length ? "" : "none";
+
+    var hasTabContent;
+    var emptyMessage;
+    if (boardTab === "overdue") {
+      hasTabContent = filteredOverdue.length > 0;
+      emptyMessage = boardData.scope === "lastMonth"
+        ? "<strong>Nothing was left behind</strong>Everything from last month was completed."
+        : "<strong>No overdue items</strong>Nothing is overdue in this view.";
+    } else if (boardTab === "requests") {
+      hasTabContent = canAdminister() && openRequests.length > 0;
+      emptyMessage = "<strong>No open requests</strong>No approval, information or support requests are waiting.";
+    } else {
+      hasTabContent = listHtml !== "";
+      emptyMessage = emptyMessageHtml();
+    }
+    byId("bktBoardEmpty").style.display = hasTabContent ? "none" : "";
+    if (!hasTabContent) byId("bktBoardEmpty").innerHTML = emptyMessage;
   }
 
   function renderYearPane() {
@@ -1553,6 +2389,9 @@
     }
     regularDefinitions.forEach(function (definition) {
       if (!matchesSearchAndCategory(definition)) return;
+      if (definition.frequency === "daily" || definition.frequency === "weekly" || definition.frequency === "biweekly" || definition.frequency === "monthly") {
+        if (!Object.prototype.hasOwnProperty.call(_expandedGroups, definition.id)) _expandedGroups[definition.id] = true;
+      }
       html += buildYearGroupHtml(definition, year);
     });
     byId("bktYearList").innerHTML = html;
@@ -1614,7 +2453,7 @@
     var categoryMap = {};
     var split = { routine: { total: 0, completed: 0 }, adhoc: { total: 0, completed: 0 } };
     var activity = [];
-    var overall = { total: 0, completed: 0, onTime: 0, timed: 0, inProgress: 0, openRequests: 0, overdue: 0, upcoming7: 0 };
+    var overall = { total: 0, completed: 0, onTime: 0, timed: 0, inProgress: 0, openRequests: 0, openRequestsByType: { approval: 0, information: 0, support: 0 }, overdue: 0, upcoming7: 0 };
 
     DB.definitions.forEach(function (definition) {
       var isAdhoc = definition.taskType === "adHoc";
@@ -1687,6 +2526,7 @@
       if (!request || request.status !== "open" || !request.dueDate) return;
       if (request.dueDate.slice(0, 4) !== String(year)) return;
       overall.openRequests++;
+      if (overall.openRequestsByType[request.type] !== undefined) overall.openRequestsByType[request.type]++;
       months[parseInt(request.dueDate.slice(5, 7), 10) - 1].openRequests++;
     });
 
@@ -1835,7 +2675,7 @@
       byId("bktDashCards").innerHTML =
         dashCardHtml("card-done", String(monthSource.completed), "Completed", "of " + monthSource.total + " · " + formatPercent(monthSource.completed, monthSource.total)) +
         dashCardHtml("card-ontime", formatPercent(monthSource.onTime, monthSource.timed), "On Time", monthSource.onTime + " of " + monthSource.timed + " completed on time") +
-        dashCardHtml("card-wait", String(monthSource.openRequests), "Open Requests", "approval or information requests waiting") +
+        dashCardHtml("card-wait", String(monthSource.openRequests), "Open Requests", "waiting for a response") +
         dashCardHtml("card-progress", String(monthSource.inProgress), "In Progress", "currently being worked on") +
         dashCardHtml("card-overdue", String(monthSource.overdue), "Overdue", "past due and not finished") +
         dashCardHtml("card-late", String(Math.max(monthSource.timed - monthSource.onTime, 0)), "Late Completions", "finished after their due date");
@@ -1843,7 +2683,8 @@
       byId("bktDashCards").innerHTML =
         dashCardHtml("card-done", String(overall.completed), "Completed", "of " + overall.total + " · " + formatPercent(overall.completed, overall.total)) +
         dashCardHtml("card-ontime", formatPercent(overall.onTime, overall.timed), "On Time", overall.onTime + " of " + overall.timed + " completed on time") +
-        dashCardHtml("card-wait", String(overall.openRequests), "Open Requests", "approval or information requests waiting") +
+        dashCardHtml("card-wait", String(overall.openRequests), "Open Requests",
+          overall.openRequestsByType.approval + " approval · " + overall.openRequestsByType.information + " info · " + overall.openRequestsByType.support + " support") +
         dashCardHtml("card-progress", String(overall.inProgress), "In Progress", "currently being worked on") +
         dashCardHtml("card-overdue", String(overall.overdue), "Overdue", "past due and not finished") +
         dashCardHtml("card-upcoming", String(overall.upcoming7), "Upcoming 7 Days", "due in the next 7 days");
@@ -1870,10 +2711,323 @@
   }
 
   /* ============================================================
+     REPORTS: where does it break?
+     ============================================================ */
+
+  function buildBreakdownData() {
+    var year = DB.year;
+    var today = todayIsoString();
+    var lateTasks = {};
+    var missedWeekdays = [0, 0, 0, 0, 0, 0, 0];
+    var overdueCategories = {};
+    DB.definitions.forEach(function (definition) {
+      occurrenceDatesForDefinition(definition, year, true).forEach(function (dueDate) {
+        var key = occurrenceKey(definition.id, dueDate);
+        var entry = statusEntryFor(key);
+        var status = currentStatusOf(key);
+        if (entry && isFinishedStatus(status) && entry.completedAt) {
+          var completedDate = localDateOfIsoDateTime(entry.completedAt);
+          if (completedDate > dueDate) {
+            var late = lateTasks[definition.id];
+            if (!late) late = lateTasks[definition.id] = { title: definition.title, category: definition.category, count: 0, lateDaysTotal: 0 };
+            late.count++;
+            late.lateDaysTotal += daysBetweenIso(dueDate, completedDate);
+          }
+          return;
+        }
+        if (dueDate >= today) return;
+        if (!entry || isOpenStatus(status)) {
+          missedWeekdays[weekdayIndex(parseDateIso(dueDate))]++;
+          var categoryEntry = overdueCategories[definition.category];
+          if (!categoryEntry) categoryEntry = overdueCategories[definition.category] = { label: categoryLabelOf(definition.category), count: 0, overdueDaysTotal: 0 };
+          categoryEntry.count++;
+          categoryEntry.overdueDaysTotal += daysBetweenIso(dueDate, today);
+        }
+      });
+    });
+    var lateTaskList = Object.keys(lateTasks).map(function (definitionId) { return lateTasks[definitionId]; })
+      .sort(function (left, right) { return right.count - left.count || right.lateDaysTotal - left.lateDaysTotal; })
+      .slice(0, 5);
+    var missedWeekdayList = missedWeekdays.map(function (count, weekdayIndexValue) {
+      return { weekday: weekdayIndexValue, label: DAYS_FULL[weekdayIndexValue], count: count };
+    })
+      .filter(function (weekdayItem) { return weekdayItem.count > 0; })
+      .sort(function (left, right) { return right.count - left.count || left.weekday - right.weekday; })
+      .slice(0, 5);
+    var overdueCategoryList = Object.keys(overdueCategories).map(function (categoryId) { return overdueCategories[categoryId]; })
+      .sort(function (left, right) { return right.count - left.count || right.overdueDaysTotal - left.overdueDaysTotal; })
+      .slice(0, 5);
+    return { lateTasks: lateTaskList, missedWeekdays: missedWeekdayList, overdueCategories: overdueCategoryList };
+  }
+
+  function renderReportsPane() {
+    var reportId = DB.ui.report || "breakdown-tasks";
+    queryAll(".bkt-report-item").forEach(function (reportItem) {
+      reportItem.classList.toggle("active", reportItem.getAttribute("data-report") === reportId);
+    });
+    var breakdownData = buildBreakdownData();
+    if (reportId === "breakdown-days") {
+      byId("bktReportContent").innerHTML = renderMissedDaysReport(breakdownData.missedWeekdays);
+    } else if (reportId === "breakdown-categories") {
+      byId("bktReportContent").innerHTML = renderOverdueCategoriesReport(breakdownData.overdueCategories);
+    } else if (reportId === "suggestions") {
+      byId("bktReportContent").innerHTML = renderSuggestionsPanel();
+    } else {
+      byId("bktReportContent").innerHTML = renderLateTasksReport(breakdownData.lateTasks);
+    }
+  }
+
+  function reportSectionHtml(sectionTitle, sectionSub, introText, rowsHtml, emptyText) {
+    return '<div class="bkt-section">' +
+      '<div class="bkt-section-head">' +
+      '<span class="bkt-section-title">' + sectionTitle + "</span>" +
+      '<span class="bkt-section-sub">' + sectionSub + "</span>" +
+      "</div>" +
+      '<p class="bkt-report-intro">' + introText + "</p>" +
+      (rowsHtml
+        ? '<table class="bkt-report-table">' +
+          "<thead><tr><th>#</th><th>" + sectionTitle + "</th><th style=\"text-align:right\">Count</th><th style=\"text-align:right\">Detail</th></tr></thead>" +
+          "<tbody>" + rowsHtml + "</tbody></table>"
+        : '<div class="bkt-empty" style="padding:18px">' + emptyText + "</div>") +
+      "</div>";
+  }
+
+  function renderLateTasksReport(lateTaskList) {
+    var rowsHtml = lateTaskList.map(function (lateTask, index) {
+      return "<tr>" +
+        '<td class="bkt-report-rank">' + (index + 1) + "</td>" +
+        '<td class="bkt-report-name">' + escapeHtml(lateTask.title) + "</td>" +
+        '<td class="bkt-report-num bkt-report-bad">' + lateTask.count + " time" + (lateTask.count === 1 ? "" : "s") + " late</td>" +
+        '<td class="bkt-report-num">avg ' + Math.round(lateTask.lateDaysTotal / lateTask.count) + " days late</td>" +
+        "</tr>";
+    }).join("");
+    return reportSectionHtml(
+      "Late Tasks",
+      String(DB.year),
+      "Tasks most often completed after their due date. If a task is regularly late, its schedule, owner or checklist is probably wrong - move the due date or split it into steps.",
+      rowsHtml,
+      "All clear - no task has been completed late this year."
+    );
+  }
+
+  function renderMissedDaysReport(missedWeekdayList) {
+    var rowsHtml = missedWeekdayList.map(function (weekdayItem, index) {
+      return "<tr>" +
+        '<td class="bkt-report-rank">' + (index + 1) + "</td>" +
+        '<td class="bkt-report-name">' + weekdayItem.label + "</td>" +
+        '<td class="bkt-report-num">' + weekdayItem.count + " task" + (weekdayItem.count === 1 ? "" : "s") + "</td>" +
+        '<td class="bkt-report-num">open past due on this weekday</td>' +
+        "</tr>";
+    }).join("");
+    return reportSectionHtml(
+      "Missed Days",
+      String(DB.year),
+      "Weekdays that most often end with work still open past its due date. A weekday that always breaks means too much is scheduled for that day.",
+      rowsHtml,
+      "All clear - nothing is open past its due date."
+    );
+  }
+
+  function renderOverdueCategoriesReport(overdueCategoryList) {
+    var rowsHtml = overdueCategoryList.map(function (categoryItem, index) {
+      return "<tr>" +
+        '<td class="bkt-report-rank">' + (index + 1) + "</td>" +
+        '<td class="bkt-report-name">' + escapeHtml(categoryItem.label) + "</td>" +
+        '<td class="bkt-report-num bkt-report-bad">' + categoryItem.count + " task" + (categoryItem.count === 1 ? "" : "s") + " overdue</td>" +
+        '<td class="bkt-report-num">' + categoryItem.overdueDaysTotal + " total days overdue</td>" +
+        "</tr>";
+    }).join("");
+    return reportSectionHtml(
+      "Overdue Categories",
+      String(DB.year),
+      "Categories with the most unfinished overdue work. A category that keeps breaking may need more time, more people or fewer tasks in it.",
+      rowsHtml,
+      "All clear - no category has overdue work."
+    );
+  }
+
+  /* ============================================================
+     SUGGESTIONS: rule-based nudges + optional AI month review
+     ============================================================ */
+
+  function buildRuleSuggestions() {
+    var today = todayIsoString();
+    var suggestions = [];
+    DB.definitions.forEach(function (definition) {
+      var completedCount = 0;
+      var lateCount = 0;
+      var messageTotal = 0;
+      var messageHeavyDays = 0;
+      var leftBehindCount = 0;
+      occurrenceDatesForDefinition(definition, DB.year, true).forEach(function (dueDate) {
+        var key = occurrenceKey(definition.id, dueDate);
+        var entry = statusEntryFor(key);
+        var status = currentStatusOf(key);
+        var messageCount = messageCountForKey(key);
+        if (messageCount) {
+          messageTotal += messageCount;
+          if (messageCount >= 3) messageHeavyDays++;
+        }
+        if (entry && isFinishedStatus(status) && entry.completedAt) {
+          completedCount++;
+          if (localDateOfIsoDateTime(entry.completedAt) > dueDate) lateCount++;
+          return;
+        }
+        if (dueDate < today && (!entry || isOpenStatus(status))) leftBehindCount++;
+      });
+      if (completedCount >= 3 && lateCount >= 2 && lateCount / completedCount >= 0.5) {
+        suggestions.push({
+          severity: "high",
+          text: '"' + definition.title + '" was late ' + lateCount + " of " + completedCount + " completed times - consider moving its due date one day earlier or splitting it into steps."
+        });
+      }
+      if (messageHeavyDays >= 2 || messageTotal >= 8) {
+        suggestions.push({
+          severity: "medium",
+          text: messageTotal + ' messages piled up on "' + definition.title + '" - document the process as steps so the work needs fewer back-and-forth notes.'
+        });
+      }
+      if (leftBehindCount >= 3) {
+        suggestions.push({
+          severity: "high",
+          text: '"' + definition.title + '" has ' + leftBehindCount + " occurrences left behind this year - check its schedule or ask for help."
+        });
+      }
+    });
+    var breakdownData = buildBreakdownData();
+    breakdownData.missedWeekdays.forEach(function (weekdayItem) {
+      suggestions.push({
+        severity: "medium",
+        text: weekdayItem.label + " keeps breaking (" + weekdayItem.count + " task(s) left open past due) - move some work off " + weekdayItem.label + "."
+      });
+    });
+    breakdownData.overdueCategories.slice(0, 2).forEach(function (categoryItem) {
+      suggestions.push({
+        severity: "medium",
+        text: '"' + categoryItem.label + '" has ' + categoryItem.count + " overdue task(s) (" + categoryItem.overdueDaysTotal + " total days) - review the workload in this category."
+      });
+    });
+    return suggestions.slice(0, 6);
+  }
+
+  function renderSuggestionsPanel() {
+    var suggestions = buildRuleSuggestions();
+    var currentMonthIndex = parseInt(todayIsoString().slice(5, 7), 10) - 1;
+    var monthOptions = "";
+    for (var monthIndex = 0; monthIndex < 12; monthIndex++) {
+      monthOptions += '<option value="' + monthIndex + '"' + (monthIndex === currentMonthIndex ? " selected" : "") + ">" + MONTHS_FULL[monthIndex] + "</option>";
+    }
+    var listHtml = suggestions.length
+      ? suggestions.map(function (suggestion) {
+          return '<div class="bkt-suggest-item bkt-suggest-' + suggestion.severity + '">' +
+            '<span class="bkt-suggest-dot"></span>' +
+            '<span class="bkt-suggest-text">' + escapeHtml(suggestion.text) + "</span></div>";
+        }).join("")
+      : '<div class="bkt-empty" style="padding:18px">All clear - nothing needs attention right now. Well done.</div>';
+    var aiHtml = "";
+    if (Array.isArray(_aiSuggestions) && _aiSuggestions.length) {
+      aiHtml = '<div class="bkt-suggest-ai-head">AI review' +
+        (_aiSuggestionsMonth != null ? " of " + MONTHS_FULL[_aiSuggestionsMonth] : "") + "</div>" +
+        _aiSuggestions.map(function (suggestion) {
+          return '<div class="bkt-suggest-item bkt-suggest-ai">' +
+            '<span class="bkt-suggest-badge">AI</span>' +
+            '<span class="bkt-suggest-text">' + escapeHtml(suggestion.text) +
+            (suggestion.reason ? '<span class="bkt-suggest-reason">' + escapeHtml(suggestion.reason) + "</span>" : "") +
+            "</span></div>";
+        }).join("");
+    }
+    return '<div class="bkt-section">' +
+      '<div class="bkt-section-head">' +
+      '<span class="bkt-section-title">Suggestions</span>' +
+      '<span class="bkt-section-sub">' + DB.year + "</span>" +
+      "</div>" +
+      '<p class="bkt-report-intro">Concrete next steps computed from this year\'s data. Work through them top to bottom - each one names a task, day or category and what to change.</p>' +
+      listHtml +
+      '<div class="bkt-ai-row">' +
+      '<span class="bkt-ai-label">Get a second opinion:</span>' +
+      '<select id="bktSuggestMonth">' + monthOptions + "</select>" +
+      '<button type="button" class="bkt-btn bkt-btn-primary bkt-btn-sm" data-act="ai-suggest" id="bktAiSuggestBtn">' + (_aiSuggestBusy ? "Thinking..." : "Get AI Suggestions for the Month") + "</button>" +
+      "</div>" +
+      '<div id="bktAiSuggestions">' + aiHtml + "</div>" +
+      "</div>";
+  }
+
+  function parseAiSuggestions(rawText) {
+    if (!rawText || typeof rawText !== "string") return null;
+    var text = rawText.trim();
+    if (text.indexOf("```") === 0) {
+      text = text.replace(/^```[a-zA-Z]*\s*/, "");
+      text = text.replace(/\s*```\s*$/, "");
+    }
+    var list = null;
+    var arrayStart = text.indexOf("[");
+    var arrayEnd = text.lastIndexOf("]");
+    if (arrayStart > -1 && arrayEnd > arrayStart) {
+      try { list = JSON.parse(text.slice(arrayStart, arrayEnd + 1)); } catch (error) { list = null; }
+    }
+    if (!Array.isArray(list)) {
+      var objectStart = text.indexOf("{");
+      var objectEnd = text.lastIndexOf("}");
+      if (objectStart > -1 && objectEnd > objectStart) {
+        try {
+          var objectValue = JSON.parse(text.slice(objectStart, objectEnd + 1));
+          if (objectValue && Array.isArray(objectValue.suggestions)) list = objectValue.suggestions;
+        } catch (error) { list = null; }
+      }
+    }
+    if (!Array.isArray(list)) return null;
+    return list.map(function (item) {
+      return {
+        text: String(item && item.text ? item.text : "").trim(),
+        reason: String(item && item.reason ? item.reason : "").trim()
+      };
+    }).filter(function (item) { return item.text; }).slice(0, 6);
+  }
+
+  function requestAiSuggestions() {
+    if (_aiSuggestBusy) return;
+    if (typeof tool.requestAI !== "function") {
+      tryNotify("AI suggestions are not available in this environment - the rule-based suggestions above still apply.", "info");
+      return;
+    }
+    var monthIndex = clampInt(parseInt(byId("bktSuggestMonth").value, 10), 0, 11);
+    _aiSuggestBusy = true;
+    renderReportsPane();
+    var monthData = buildDashboardData().months[monthIndex];
+    var promptLines = [
+      "You are a friendly work advisor reviewing one month of a recurring task calendar for year " + DB.year + ".",
+      "Month reviewed: " + MONTHS_FULL[monthIndex],
+      "Month numbers: " + monthData.total + " occurrences due, " + monthData.completed + " completed (" + monthData.onTime + " on time), " + monthData.overdue + " left behind, " + monthData.openRequests + " open requests.",
+      "Rule-based findings we already computed:"
+    ];
+    buildRuleSuggestions().forEach(function (suggestion, index) {
+      promptLines.push((index + 1) + ". " + suggestion.text);
+    });
+    promptLines.push("Based on this, write 3-5 concrete suggestions that help this person get the recurring job done better (rescheduling, checklists, communication, workload).");
+    promptLines.push('Respond ONLY with JSON: {"suggestions":[{"text":"...","reason":"..."}]}');
+    tool.requestAI({ prompt: promptLines.join("\n") }, function (error, response) {
+      _aiSuggestBusy = false;
+      if (error) {
+        tryNotify("AI review failed - the rule-based suggestions above still apply.", "error");
+        renderReportsPane();
+        return;
+      }
+      var parsed = parseAiSuggestions(response);
+      if (parsed && parsed.length) {
+        _aiSuggestions = parsed;
+        _aiSuggestionsMonth = monthIndex;
+      } else {
+        tryNotify("The AI response could not be read - showing the rule-based suggestions only.", "info");
+      }
+      renderReportsPane();
+    });
+  }
+
+  /* ============================================================
      EVENTS
      ============================================================ */
 
-  function handleActionClick(actionElement) {
+  function handleActionClick(actionElement, event) {
     var action = actionElement.getAttribute("data-act");
     if (action === "tab") {
       DB.ui.tab = actionElement.getAttribute("data-tab");
@@ -1883,15 +3037,14 @@
       DB.ui.scope = actionElement.getAttribute("data-scope");
       persistDatabase();
       renderAll();
-    } else if (action === "year-nav") {
-      var delta = parseInt(actionElement.getAttribute("data-nav"), 10);
-      DB.year = clampInt(DB.year + delta, 2000, 2100);
-      persistDatabase();
-      renderAll();
     } else if (action === "status") {
       setOccurrenceStatus(actionElement.getAttribute("data-key"), actionElement.getAttribute("data-status"));
     } else if (action === "toggle-day") {
-      toggleDayCompletion(actionElement.getAttribute("data-def"), actionElement.getAttribute("data-date"));
+      if (event && (event.ctrlKey || event.metaKey)) {
+        openTaskDrawer(occurrenceKey(actionElement.getAttribute("data-def"), actionElement.getAttribute("data-date")));
+      } else {
+        toggleDayCompletion(actionElement.getAttribute("data-def"), actionElement.getAttribute("data-date"));
+      }
     } else if (action === "note") {
       openNoteModal(actionElement.getAttribute("data-key"));
     } else if (action === "dash-month") {
@@ -1899,9 +3052,20 @@
       DB.ui.dashMonth = monthValue === "year" ? "year" : clampInt(monthValue, 0, 11);
       persistDatabase();
       renderAll();
+    } else if (action === "report-menu") {
+      DB.ui.report = actionElement.getAttribute("data-report") || "breakdown-tasks";
+      persistDatabase();
+      renderAll();
+    } else if (action === "ai-suggest") {
+      requestAiSuggestions();
     } else if (action === "expand") {
       var definitionId = actionElement.getAttribute("data-id");
       _expandedGroups[definitionId] = !_expandedGroups[definitionId];
+      renderAll();
+    } else if (action === "month-toggle") {
+      var monthDefinitionId = actionElement.getAttribute("data-def");
+      var monthIndexValue = parseInt(actionElement.getAttribute("data-month"), 10);
+      _openMonthByDefinition[monthDefinitionId] = (_openMonthByDefinition[monthDefinitionId] === monthIndexValue) ? -1 : monthIndexValue;
       renderAll();
     } else if (action === "def-edit") {
       openDefinitionModal(actionElement.getAttribute("data-id"));
@@ -1909,10 +3073,96 @@
       requestDefinitionDelete(actionElement.getAttribute("data-id"));
     } else if (action === "reset") {
       setOccurrenceStatus(actionElement.getAttribute("data-key"), "pending");
-    } else if (action === "open-requests") {
-      openRequestModal(actionElement.getAttribute("data-key"));
+    } else if (action === "open-task") {
+      openTaskDrawer(actionElement.getAttribute("data-key"));
     } else if (action === "respond-request") {
       openRespondModal(actionElement.getAttribute("data-id"));
+    } else if (action === "drawer-nav") {
+      var navDirection = actionElement.getAttribute("data-dir");
+      var navInfo = drawerOccurrenceKeysAround(actionElement.getAttribute("data-key"));
+      if (navInfo.index >= 0) {
+        var newIndex = navInfo.index + (navDirection === "next" ? 1 : -1);
+        if (newIndex >= 0 && newIndex < navInfo.list.length) {
+          _drawerKey = navInfo.list[newIndex];
+          renderTaskDrawerContent(_drawerKey);
+        }
+      }
+    } else if (action === "request-filter") {
+      DB.ui.requestFilter = actionElement.getAttribute("data-filter");
+      persistDatabase();
+      renderAll();
+    } else if (action === "board-tab") {
+      DB.ui.boardTab = actionElement.getAttribute("data-tab");
+      persistDatabase();
+      renderAll();
+    } else if (action === "msg-mark") {
+      if (!_drawerKey || !canWork()) return;
+      var markedIndex = parseInt(actionElement.getAttribute("data-idx"), 10);
+      var markedMessages = chatMessagesFor(_drawerKey);
+      if (markedMessages[markedIndex]) {
+        markedMessages[markedIndex].marker = nextMarker(markedMessages[markedIndex].marker);
+        if (_chatExternal) persistChatStoreSoon();
+        else persistDatabase();
+        renderAll();
+      }
+    } else if (action === "msg-to-request") {
+      if (!_drawerKey) return;
+      var convertedIndex = parseInt(actionElement.getAttribute("data-idx"), 10);
+      var convertedMessages = chatMessagesFor(_drawerKey);
+      if (convertedMessages[convertedIndex]) {
+        byId("bktReqInlineText").value = convertedMessages[convertedIndex].text;
+        try { byId("bktReqInlineText").focus(); } catch (error) {}
+      }
+    } else if (action === "strip-detail") {
+      var detailKey = actionElement.getAttribute("data-def") + "|" + actionElement.getAttribute("data-year") + "-" +
+        (actionElement.getAttribute("data-month") != null ? actionElement.getAttribute("data-month") : "cal");
+      _openStripDetails[detailKey] = !_openStripDetails[detailKey];
+      renderAll();
+    } else if (action === "year-collapse-all") {
+      DB.definitions.forEach(function (collapseDefinition) {
+        _expandedGroups[collapseDefinition.id] = false;
+      });
+      renderAll();
+    } else if (action === "year-expand-all") {
+      DB.definitions.forEach(function (expandDefinition) {
+        _expandedGroups[expandDefinition.id] = true;
+      });
+      renderAll();
+    } else if (action === "export-defs") {
+      openExportModal();
+    } else if (action === "import-defs") {
+      openImportModal();
+    } else if (action === "import-confirm") {
+      confirmImportFromModal();
+    } else if (action === "import-cancel") {
+      closeImportModal();
+    } else if (action === "export-close") {
+      closeExportModal();
+    } else if (action === "export-copy") {
+      copyPackToClipboard();
+    } else if (action === "export-download") {
+      downloadPackFile();
+    } else if (action === "step-toggle") {
+      if (!_drawerKey || !canWork()) return;
+      var stepIndex = parseInt(actionElement.getAttribute("data-step"), 10);
+      if (isNaN(stepIndex)) return;
+      var stepEntry = ensureStatusEntry(_drawerKey);
+      if (!Array.isArray(stepEntry.checklistDone)) stepEntry.checklistDone = [];
+      stepEntry.checklistDone[stepIndex] = !stepEntry.checklistDone[stepIndex];
+      persistDatabase();
+      renderAll();
+    } else if (action === "pin-edit") {
+      if (!_drawerKey || !canWork()) return;
+      _pinEditing = _drawerKey;
+      renderAll();
+    } else if (action === "pin-cancel") {
+      _pinEditing = null;
+      renderAll();
+    } else if (action === "pin-save") {
+      if (!_drawerKey || !canWork()) return;
+      var pinText = byId("bktPinEditText").value.trim();
+      _pinEditing = null;
+      saveOccurrenceNote(_drawerKey, pinText);
     }
   }
 
@@ -1924,9 +3174,25 @@
         target.style.display = "none";
         return;
       }
+      if (target.classList.contains("bkt-drawer-overlay")) {
+        target.style.display = "none";
+        _drawerKey = null;
+        return;
+      }
       var actionElement = target.closest ? target.closest("[data-act]") : null;
-      if (actionElement) handleActionClick(actionElement);
+      if (actionElement) handleActionClick(actionElement, event);
     });
+
+    /* Flush pending changes when the page is hidden or closed - never lose data */
+    if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+      window.addEventListener("pagehide", function () { flushPendingSave(); flushChatStore(); });
+      window.addEventListener("beforeunload", function () { flushPendingSave(); flushChatStore(); });
+    }
+    if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "hidden") { flushPendingSave(); flushChatStore(); }
+      });
+    }
 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") closeTopOverlay();
@@ -1949,7 +3215,6 @@
     });
 
     byId("bktBtnNewDef").addEventListener("click", function () { openDefinitionModal(null); });
-    byId("bktBtnSeed").addEventListener("click", seedDefaultDefinitions);
     byId("bktDefClose").addEventListener("click", closeDefinitionModal);
     byId("bktDefCancel").addEventListener("click", closeDefinitionModal);
     byId("bktDefSave").addEventListener("click", saveDefinitionFromModal);
@@ -1960,17 +3225,16 @@
     byId("bktDefTypeAdhoc").addEventListener("change", refreshDefinitionModalFields);
     byId("bktDefFreq").addEventListener("change", refreshDefinitionModalFields);
 
-    byId("bktNoteClose").addEventListener("click", closeNoteModal);
-    byId("bktNoteCancel").addEventListener("click", closeNoteModal);
-    byId("bktNoteSave").addEventListener("click", saveNoteFromModal);
+    byId("bktDrawerClose").addEventListener("click", closeTaskDrawer);
+    byId("bktConvSend").addEventListener("click", sendConversationFromInput);
+    byId("bktConvInput").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") sendConversationFromInput();
+    });
+    byId("bktReqInlineSend").addEventListener("click", sendInlineRequest);
 
     byId("bktAdminClose").addEventListener("click", closeRespondModal);
     byId("bktAdminCancel").addEventListener("click", closeRespondModal);
     byId("bktAdminSave").addEventListener("click", saveRespondFromModal);
-
-    byId("bktRequestClose").addEventListener("click", closeRequestModal);
-    byId("bktRequestCancel").addEventListener("click", closeRequestModal);
-    byId("bktRequestSubmit").addEventListener("click", submitRequestFromModal);
 
     byId("bktConfirmClose").addEventListener("click", closeConfirmModal);
     byId("bktConfirmNo").addEventListener("click", closeConfirmModal);
@@ -1980,9 +3244,13 @@
       if (callback) callback();
     });
 
+    byId("bktImportFile").addEventListener("change", function () {
+      importPackFromFile(this.files && this.files[0]);
+    });
+
     /* Fill the definition form selects */
     var categoryOptions = "";
-    TASK_CATEGORIES.forEach(function (category) {
+    (DB.categories || []).forEach(function (category) {
       categoryOptions += '<option value="' + escapeHtml(category.id) + '">' + escapeHtml(category.label) + "</option>";
     });
     byId("bktDefCategory").innerHTML = categoryOptions;
@@ -2014,8 +3282,10 @@
         type: "object",
         properties: {
           version: { type: "number" },
-          year: { type: "number", description: "Year of the yearly plan" },
+          year: { type: "number", description: "Year of the yearly plan (one year at a time)" },
           definitions: { type: "array", description: "Task definitions (routine and ad-hoc)" },
+          categories: { type: "array", description: "Task categories (id and label), imported and exported in definition packs" },
+          chatObjectId: { type: "string", description: "Id of the separate chat document holding all conversation messages" },
           statuses: { type: "object", description: "Status records for task occurrences" },
           requests: { type: "object", description: "Approval and information requests attached to tasks" },
           ui: { type: "object", description: "Interface state" }
@@ -2036,6 +3306,7 @@
     try { readOnly = tool.isReadOnly() === true; } catch (error) { readOnly = false; }
     wireEvents();
     declareToolContract();
+    loadChatStore(function () { renderAll(); });
     refreshIdentity();
     renderAll();
     startIdentityPolling();

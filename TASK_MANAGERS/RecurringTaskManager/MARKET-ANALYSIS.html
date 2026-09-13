@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Analysis - Recurring and Ad-Hoc Task Manager</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf1f7;
+    --line: #e5e7eb;
+    --good: #1e7e4f;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 64px;
+    background: #f3f4f6;
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 44px 52px 56px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+  .doc-header { border-bottom: 3px solid var(--accent); padding-bottom: 18px; margin-bottom: 26px; }
+  .doc-header .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .doc-header h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+  .doc-header .sub { color: var(--muted); font-size: 15px; margin: 0; }
+  .doc-header .meta {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  h2 {
+    font-size: 21px;
+    margin: 34px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h2 .num {
+    flex: none;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: var(--accent); }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  strong { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); color: var(--accent); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fef6ec; }
+  .callout.good { border-left-color: var(--good); background: #edf7f1; }
+  .two-col { display: flex; gap: 18px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 260px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12.5px;
+    color: #374151;
+  }
+  .toc { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .score { display: inline-block; width: 26px; height: 26px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; text-align: center; line-height: 26px; }
+  .score.high { background: #1e7e4f; }
+  .score.med { background: #b45309; }
+  .score.low { background: #6b7280; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border: none; max-width: 100%; padding: 20px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <div class="kicker">Product Research - Market Analysis</div>
+    <h1>Recurring and Ad-Hoc Task Manager: Markets, Users and Customers</h1>
+    <p class="sub">Who benefits from a cadence-first task tool with per-occurrence records, chat, checklists and a request channel - and what already exists on the market.</p>
+    <div class="meta">
+      <span>Prepared: 13 September 2026</span>
+      <span>Subject tool: RecurringTaskManager engine (UniconHub html-tool)</span>
+      <span>Status: research document - no code changes</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol style="margin: 6px 0 0;">
+      <li><a href="#s1">What the tool actually is</a></li>
+      <li><a href="#s2">Today's user: the bookkeeper</a></li>
+      <li><a href="#s3">Who else would benefit - market segments</a></li>
+      <li><a href="#s4">Why it wins over generic task managers</a></li>
+      <li><a href="#s5">Customer types and how it could be sold</a></li>
+      <li><a href="#s6">Similar tools on the market</a></li>
+      <li><a href="#s7">Positioning: the gap this tool fills</a></li>
+      <li><a href="#s8">Why people will not use it - objections and fixes</a></li>
+      <li><a href="#s9">Recommendation</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>What the tool actually is</h2>
+  <p>Under the hood, the tool is a <strong>cadence-first task manager</strong>: it schedules work on repeating cycles and records what happened on each occurrence. The engine is entirely general-purpose; only the seed content (24 bookkeeping task definitions, 13 finance categories, role labels) is bookkeeping-specific.</p>
+  <div class="two-col">
+    <div>
+      <h3>Core engine capabilities</h3>
+      <ul>
+        <li>Frequencies: daily, weekly, biweekly, monthly, quarterly, yearly - anchored to day-of-week, day-of-month or month-of-year</li>
+        <li>Ad-hoc one-off tasks with a due date</li>
+        <li>Per-occurrence status (Not Started / In Progress / Done), not just per-task</li>
+        <li>A conversation thread, pinned note and checklist steps attached to <strong>each occurrence</strong> (every single day of a daily task has its own history)</li>
+        <li>Request channel: approval / information / support requests with responses, per task</li>
+        <li>Year plan with 12 month tabs and completion percentages, dashboard with month-by-month on-time statistics, overdue tracking</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What it is not</h3>
+      <ul>
+        <li>Not a project manager: no Gantt charts, dependencies, sprints or resource planning</li>
+        <li>Not a habit tracker: occurrences carry business records, notes and approvals</li>
+        <li>Not a calendar clone: the task is the first-class object, dates are derived from cadence rules</li>
+      </ul>
+      <div class="callout">
+        The defining feature: a task that repeats 365 times a year keeps 365 separate histories - each day can have its own note, message thread, checklist progress and request trail.
+      </div>
+    </div>
+  </div>
+
+  <h2 id="s2"><span class="num">2</span>Today's user: the bookkeeper</h2>
+  <p>The current instance serves a bookkeeper in a nonprofit-like organization. Its seed content maps the recurring obligations of the role: daily cash and invoice entries, weekly reports, biweekly payroll and government remittances, monthly reconciliations and financial statements, quarterly GST/HST and PST returns, yearly T4/T3010 filings and audit support.</p>
+  <p>That user profile is the first beachhead, but it is only one instance of a much larger pattern: <strong>any role whose job is a repeating calendar of obligations with evidence per cycle</strong>.</p>
+
+  <h2 id="s3"><span class="num">3</span>Who else would benefit - market segments</h2>
+  <p>Scored by fit: how well the recurring-plus-ad-hoc pattern, per-occurrence records and the request channel match the segment's real work.</p>
+
+  <table>
+    <tr>
+      <th style="width: 70px;">Fit</th>
+      <th style="width: 200px;">Segment</th>
+      <th>Recurring and ad-hoc work they actually do</th>
+      <th>Why they need per-occurrence records</th>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Operations and facility management</td>
+      <td>Daily walkthroughs, weekly equipment checks, monthly filter or fire-system tests, quarterly inspections, ad-hoc repairs</td>
+      <td>Inspectors and insurers ask "show me the log". Each occurrence must carry notes and who did it.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Compliance and safety officers</td>
+      <td>Permit renewals, training refreshers, incident follow-ups, audit evidence collection</td>
+      <td>Regulators demand evidence per cycle; the chat doubles as the audit trail.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Property managers and landlords</td>
+      <td>Monthly rent collection, seasonal HVAC and gutter maintenance, lease expiries, ad-hoc tenant requests</td>
+      <td>Per-unit history and a request channel map exactly to tenant communication.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Restaurants and retail chains</td>
+      <td>Opening and closing checklists, weekly inventory counts, health-inspection prep, franchise store audits</td>
+      <td>Managers verify that a checklist was actually done per day per location, not just planned.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Healthcare and clinic administration</td>
+      <td>Sterilization schedules, equipment calibration, vaccine stock checks, license renewals, ad-hoc incidents</td>
+      <td>Clinical compliance needs dated, attributed records per cycle.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Accounting, legal and tax practices</td>
+      <td>Filing deadline calendars per client, monthly closes, engagement checklists, ad-hoc client requests</td>
+      <td>Missed filing deadlines cost money; per-client occurrence history protects the firm.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Churches, charities and associations</td>
+      <td>Weekly pledge reports, event cycles, grant reporting cadences, volunteer schedules</td>
+      <td>Multiple part-time volunteers need one shared record per cycle; the current bookkeeper instance already targets this world.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>HR and people operations</td>
+      <td>Payroll cycles, probation reviews, work-permit expiries, onboarding checklists, ad-hoc employee requests</td>
+      <td>Each employee's recurring touchpoints need their own conversation trail.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Education administration</td>
+      <td>Term schedules, attendance checks, exam cycles, report-card cycles, accreditation evidence</td>
+      <td>Accreditation audits mirror financial audits: evidence per cycle.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Transport and logistics</td>
+      <td>Vehicle inspections, maintenance intervals by mileage or date, license and insurance renewals, ad-hoc repairs</td>
+      <td>Safety regulators require per-vehicle maintenance logs.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">6</span></td>
+      <td>Agriculture and food production</td>
+      <td>Feeding and vaccination schedules, field checks, harvest cycles, ad-hoc equipment fixes</td>
+      <td>Quality programs (GlobalGAP-style) demand dated records.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">6</span></td>
+      <td>Small business owners without staff</td>
+      <td>Tax deposits, inventory counts, insurance renewals, seasonal campaigns, ad-hoc everything</td>
+      <td>They run on obligation lists and hate project-management overhead.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">5</span></td>
+      <td>Personal and household use</td>
+      <td>Chores, maintenance, medication, bill payments</td>
+      <td>Real, but consumer habit apps already cover it; monetization is harder.</td>
+    </tr>
+  </table>
+
+  <div class="callout good">
+    <strong>Common thread across the top segments:</strong> a role that must <strong>prove</strong> something was done, on a <strong>fixed calendar</strong>, with <strong>notes and approvals per cycle</strong>. That is exactly the bookkeeper's world, repeated in operations, compliance, property, healthcare and professional services.
+  </div>
+
+  <h2 id="s4"><span class="num">4</span>Why it wins over generic task managers</h2>
+  <table>
+    <tr>
+      <th>Need</th>
+      <th>Generic task manager (Todoist, To Do, Asana)</th>
+      <th>This tool</th>
+    </tr>
+    <tr>
+      <td>Repeat every 2nd Friday, or every 15th of the month, or every June</td>
+      <td>Recurring rules exist but are shallow; exceptions and history handling vary</td>
+      <td>Cadence is the native model; day-of-week, day-of-month and month-of-year anchors</td>
+    </tr>
+    <tr>
+      <td>History per occurrence (what happened on Tuesday 3rd vs Thursday 5th)</td>
+      <td>Recurring tasks share one task record; per-day history is lost or awkward</td>
+      <td>Every occurrence keeps its own status, note, chat and checklist state</td>
+    </tr>
+    <tr>
+      <td>Ask for approval or information on a specific day's work</td>
+      <td>Comments exist, but no structured request and response channel</td>
+      <td>Built-in approval / information / support requests with responses and history</td>
+    </tr>
+    <tr>
+      <td>Step-by-step guidance inside the task (how to close the month)</td>
+      <td>Subtasks at best; no per-occurrence checklist state</td>
+      <td>Per-definition steps, checked off per occurrence</td>
+    </tr>
+    <tr>
+      <td>Year view with completion percentages per month</td>
+      <td>Calendar views show dots; no obligation math</td>
+      <td>12 month tabs with percent complete, on-time statistics, overdue caps</td>
+    </tr>
+    <tr>
+      <td>Setup burden</td>
+      <td>Boards, projects, labels, filters to configure</td>
+      <td>Create a definition with a cadence and it schedules itself</td>
+    </tr>
+  </table>
+
+  <h2 id="s5"><span class="num">5</span>Customer types and how it could be sold</h2>
+  <ul>
+    <li><strong>End-user subscriptions (B2B):</strong> facility firms, property managers, clinics and restaurants pay per workspace or per seat. They buy outcomes: no missed inspections, audit-ready logs, fewer surprises.</li>
+    <li><strong>Vertical editions:</strong> the same engine, re-skinned and re-seeded - FacilityOps edition, Compliance edition, Property edition. The 13 hardcoded categories become per-edition settings.</li>
+    <li><strong>Agencies and consultancies (B2B2B):</strong> accountants, safety consultants and property managers could run this for their clients - each client gets one tool instance, the consultant watches the dashboards.</li>
+    <li><strong>Platform-embedded (B2B2C):</strong> in the UniconHub context, it sells as one CMS tool among many; the pitch is "the recurring-obligation layer" next to PaymentsManagement and the other finance tools.</li>
+    <li><strong>Public-sector and nonprofits:</strong> grant-funded organizations must prove cadence (pledge reports, audits). Grant reporting already exists in the seed content - a strong niche fit.</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Prerequisite for every path above:</strong> the bookkeeping content must become configurable - editable categories, seed definitions as an optional sample, and a neutral default name (for example RecurringTaskManager). The engine needs no changes; the content layer does.
+  </div>
+
+  <h2 id="s6"><span class="num">6</span>Similar tools on the market</h2>
+  <p>Yes - but nothing combines all four of its strengths (cadence-first, per-occurrence history, chat and request channel, obligation math) in one lightweight package. Competitors cluster into four groups:</p>
+
+  <h3>Group A - General task managers with recurring features</h3>
+  <p><strong>Todoist, TickTick, Microsoft To Do, Google Tasks, Any.do, Things 3.</strong> All support repeating tasks ("every 2nd Friday", "every month on the 15th") and are excellent personal tools. Weaknesses for this use case: one shared record per recurring task, so per-day history, notes and approvals blur together; no approval workflow; no per-month obligation statistics. TickTick adds habits, which moves it toward Group B.</p>
+
+  <h3>Group B - Habit trackers</h3>
+  <p><strong>Habitica, Streaks, HabitBull, Everyday.</strong> They track daily and weekly repetition beautifully, with streaks and calendars. Weaknesses: built for personal streaks, not business records - no per-occurrence notes depth, no request channel, no team oversight or audit trail.</p>
+
+  <h3>Group C - Project management suites with recurring rules</h3>
+  <p><strong>Asana, ClickUp, Trello (with add-ons), Notion (templates), Monday.</strong> Recurring tasks and automation exist and scale to teams. Weaknesses: they are project-shaped - boards, lists, dependencies, views - so a 365-occurrence obligation becomes heavy to configure, and per-occurrence history still collapses into one task. Overkill for a role that needs a repeating checklist plus evidence.</p>
+
+  <h3>Group D - Vertical, industry-locked tools (the real competitors)</h3>
+  <table>
+    <tr>
+      <th style="width: 220px;">Tool / category</th>
+      <th>What it does</th>
+      <th>Overlap and gap vs this tool</th>
+    </tr>
+    <tr>
+      <td>Maintenance management (CMMS): UpKeep, Fiix, Limble</td>
+      <td>Scheduled preventive maintenance, work orders, asset history</td>
+      <td>Same cadence-plus-log idea, but locked to assets and maintenance workflows; heavy and industry-priced</td>
+    </tr>
+    <tr>
+      <td>Restaurant and retail ops: Jolt, Zenput, Squadle</td>
+      <td>Store checklists, audits, food-safety logs per location</td>
+      <td>Exactly the recurring checklist pattern, but only for stores; no general tasks</td>
+    </tr>
+    <tr>
+      <td>Legal deadline docketing: LawToolBox and court-rule calendars</td>
+      <td>Deadline calculations per case with reminders</td>
+      <td>Cadence-first with per-case records, but law-only and jurisdiction-locked</td>
+    </tr>
+    <tr>
+      <td>Tax and accounting deadline calendars (built into accounting suites)</td>
+      <td>Filing date reminders per entity</td>
+      <td>Shallow: reminders, not working logs with chat and approvals</td>
+    </tr>
+    <tr>
+      <td>Property management: RentRedi, Buildium modules</td>
+      <td>Rent collection, maintenance requests, tenant communication</td>
+      <td>Same request-channel idea, but locked to rental workflows</td>
+    </tr>
+    <tr>
+      <td>Cleaning and janitorial: Swept</td>
+      <td>Per-location cleaning schedules and proof-of-work logs</td>
+      <td>Cadence plus proof per cycle, single vertical only</td>
+    </tr>
+    <tr>
+      <td>Church and nonprofit ops: Planning Center, generic event tools</td>
+      <td>Volunteer scheduling, service planning</td>
+      <td>People-scheduling focus; recurring obligation logging is secondary</td>
+    </tr>
+    <tr>
+      <td>School and accreditation ops</td>
+      <td>Term calendars, compliance spreadsheets</td>
+      <td>Mostly spreadsheets and calendars - no per-cycle evidence trail</td>
+    </tr>
+  </table>
+
+  <h2 id="s7"><span class="num">7</span>Positioning: the gap this tool fills</h2>
+  <div class="two-col">
+    <div>
+      <h3>The gap</h3>
+      <ul>
+        <li>Task managers treat recurrence as a feature, not the model - per-day history collapses</li>
+        <li>Habit trackers are personal, not business-grade</li>
+        <li>Vertical tools nail one industry but lock you into it</li>
+        <li>Spreadsheets and calendars hold the data but carry no chat, no approvals, no obligation math</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The position</h3>
+      <div class="callout good">
+        <strong>"The recurring-obligation workbench":</strong> cadence-first scheduling, a dated record of every occurrence, conversation and approval per cycle, and month-by-month completion math - light enough for one person, auditable enough for a team.
+      </div>
+      <p>One-line pitches per audience: "prove every inspection happened" (ops), "never miss a filing" (accounting), "audit-ready logs without spreadsheets" (nonprofits).</p>
+    </div>
+  </div>
+
+  <h2 id="s8"><span class="num">8</span>Why people will not use it - objections and fixes</h2>
+  <p>Honest negative assessment. Every objection below is a real adoption blocker, ranked by how likely it is to stop someone from using the tool, with the fix that addresses it.</p>
+  <table>
+    <tr>
+      <th style="width: 70px;">Severity</th>
+      <th style="width: 230px;">Objection</th>
+      <th>Why it blocks adoption</th>
+      <th>What to do about it</th>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"No mobile app, no push reminders"</td>
+      <td>A daily task tool competes for attention with the phone. If the user has to remember to open a web page, the tool fails silently - which is the worst possible failure for an obligation tracker.</td>
+      <td>Ship daily or weekly digests and due-today notifications through the CMS email channel (the SDK already supports sending email). Later: a PWA wrapper with browser notifications.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"My work is not that repetitive"</td>
+      <td>Creative, project-based or irregular roles get little value and will abandon it. Marketing it as a general task manager would set the wrong expectation.</td>
+      <td>Do not sell to everyone. Target obligation-heavy roles only (the segments scored 7-9 in section 3), and show the ad-hoc side alongside recurring tasks in demos.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"We already use Asana / Trello / Notion"</td>
+      <td>Teams will not run two overlapping tools. A direct fight with entrenched project suites is lost before it starts.</td>
+      <td>Position as complementary: "your project tool plans projects, this tool runs your repeating obligations". Offer one-click JSON import from a spreadsheet as the migration bridge.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Spreadsheets are free and we already have one"</td>
+      <td>For a solo user, a shared spreadsheet feels familiar and costs nothing. The tool looks like extra work at first glance.</td>
+      <td>Lead the sales story with the two things sheets cannot do: dated per-occurrence conversation and the approval/request channel. Demo the audit question: "who did the 14th of March check and what did they note?"</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Setting up all our tasks takes too long"</td>
+      <td>Entering 20-30 recurring definitions with schedules is real onboarding effort, and most users quit during setup.</td>
+      <td>Definition packs fix this (see the DEFINITION-PACKS folder): one JSON import per segment pre-loads categories, tasks, schedules, notes and step checklists. Export from one instance, import into the next.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Only one year at a time"</td>
+      <td>Users who want multi-year history comparison in one place will find the single-year horizon limiting.</td>
+      <td>This is intentional by design: one clean year per instance, no year-switch confusion. New year = export the pack, import into a fresh instance with the next year number. Document this flow clearly.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No integrations with our other systems"</td>
+      <td>Accounting software, Slack, email - the tool is a data island today, so double entry appears.</td>
+      <td>Use the platform layer for notifications and email; plan read-only exports (CSV per month) and later webhooks for status changes.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"It feels single-person, not a team tool"</td>
+      <td>No assignments, no per-user dashboards - teams with multiple workers will outgrow it.</td>
+      <td>The request channel is the team bridge for now. Roadmap: assignees on definitions, per-user completion boards, manager overview.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"Vendor lock-in - our records are trapped"</td>
+      <td>Data-portability fears stop careful buyers (finance, compliance, nonprofits).</td>
+      <td>Already solved: full JSON export of definitions and categories. Add status-history export so every occurrence record is portable too.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"It looks like a calendar, not a task manager"</td>
+      <td>First impression confusion; users may expect event-style editing.</td>
+      <td>Onboarding hints already explain click-to-check; a 60-second guided tour on first run plus the definition packs remove most friction.</td>
+    </tr>
+  </table>
+
+  <h2 id="s9"><span class="num">9</span>Recommendation</h2>
+  <ol>
+    <li><strong>Keep the engine, make the content configurable.</strong> Editable categories, optional seed definitions, neutral naming (RecurringTaskManager as the product name; Bookkeeper edition as one instance).</li>
+    <li><strong>Pick one beachhead segment.</strong> The strongest matches are operations/facility compliance, property management, or restaurant chain ops - each has buyers who already pay for vertical tools.</li>
+    <li><strong>Sell the evidence, not the to-do list.</strong> The differentiator is the per-occurrence record plus request channel - marketing should lead with audit trails and approval flow, not checkboxes.</li>
+    <li><strong>Treat the current bookkeeper instance as reference customer number one</strong> and produce a screenshot-and-numbers case study from it.</li>
+  </ol>
+  <p style="color: var(--muted); font-size: 13px; margin-top: 28px;">Prepared as a research document. Product names mentioned are for market context only and belong to their respective owners. No code changes were made.</p>
+
+</div>
+</body>
+</html>

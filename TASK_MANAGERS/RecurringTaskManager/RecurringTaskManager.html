@@ -1,20 +1,6 @@
 <div class="bkt">
   <div class="bkt-wrap">
 
-    <header class="bkt-header">
-      <div class="bkt-brand">
-        <span class="bkt-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h18M3 12h18M3 19h10"/><path d="M17 16l2.5 2.5L23 15"/></svg>
-          Bookkeeping
-        </span>
-        <h1>Bookkeeper <span class="bkt-thin">Task Board</span></h1>
-      </div>
-      <div class="bkt-user-area">
-        <span class="bkt-role-badge" id="bktRoleBadge">—</span>
-        <span class="bkt-user-name" id="bktUserName">—</span>
-      </div>
-    </header>
-
     <div class="bkt-lock-banner" id="bktLockBanner" style="display:none"></div>
 
     <div class="bkt-ribbon">
@@ -36,7 +22,7 @@
       </div>
       <div class="bkt-stat bkt-st-over">
         <div class="bkt-stat-value" id="bktStatOverdue">0</div>
-        <div class="bkt-stat-label">Overdue</div>
+        <div class="bkt-stat-label" id="bktStatOverdueLabel">Overdue</div>
       </div>
       <div class="bkt-stat bkt-st-bar">
         <div class="bkt-progress-wrap"><div class="bkt-progress-bar" id="bktProgressBar" style="width:0%"></div></div>
@@ -47,6 +33,7 @@
     <div class="bkt-tabs" id="bktTabs">
       <button class="bkt-tab active" data-act="tab" data-tab="board">Task Board</button>
       <button class="bkt-tab" data-act="tab" data-tab="dashboard">Dashboard</button>
+      <button class="bkt-tab" data-act="tab" data-tab="reports">Reports</button>
       <button class="bkt-tab" data-act="tab" data-tab="year">Year Plan</button>
       <button class="bkt-tab bkt-tab-admin" data-act="tab" data-tab="defs" id="bktTabDefs" style="display:none">Task Definitions</button>
     </div>
@@ -56,13 +43,12 @@
         <button class="bkt-scope-chip" data-act="scope" data-scope="today">Today</button>
         <button class="bkt-scope-chip" data-act="scope" data-scope="week">This Week</button>
         <button class="bkt-scope-chip" data-act="scope" data-scope="month">This Month</button>
+        <button class="bkt-scope-chip" data-act="scope" data-scope="lastMonth">Last Month</button>
         <span class="bkt-scope-hint" id="bktScopeHint"></span>
       </div>
       <div class="bkt-year-row" id="bktYearRow" style="display:none">
-        <button class="bkt-year-btn" data-act="year-nav" data-nav="-1" aria-label="Previous year">‹</button>
         <span class="bkt-year-label" id="bktYearLabel"></span>
-        <button class="bkt-year-btn" data-act="year-nav" data-nav="1" aria-label="Next year">›</button>
-        <span class="bkt-year-hint">Yearly task plan and ad-hoc tasks</span>
+        <span class="bkt-year-hint">Yearly task plan and ad-hoc tasks - one year at a time</span>
       </div>
       <div class="bkt-filter-row">
         <input type="search" id="bktSearch" class="bkt-search" placeholder="Search tasks...">
@@ -72,15 +58,23 @@
     </div>
 
     <div class="bkt-pane" id="bktPaneBoard">
+      <div class="bkt-board-tabs" id="bktBoardTabs">
+        <button class="bkt-board-tab active" data-act="board-tab" data-tab="all">All <span class="bkt-tab-count" id="bktTabAllCount">0</span></button>
+        <button class="bkt-board-tab" data-act="board-tab" data-tab="routine">Routine <span class="bkt-tab-count" id="bktTabRoutineCount">0</span></button>
+        <button class="bkt-board-tab" data-act="board-tab" data-tab="adhoc">Ad-hoc <span class="bkt-tab-count" id="bktTabAdhocCount">0</span></button>
+        <button class="bkt-board-tab" data-act="board-tab" data-tab="overdue"><span class="bkt-tab-label" id="bktTabOverdueLabel">Overdue</span> <span class="bkt-tab-count" id="bktTabOverdueCount">0</span></button>
+        <button class="bkt-board-tab" data-act="board-tab" data-tab="requests" id="bktBoardTabRequests" style="display:none">Requests <span class="bkt-tab-count" id="bktTabRequestsCount">0</span></button>
+      </div>
       <div class="bkt-section" id="bktApprovalSection" style="display:none">
         <div class="bkt-section-head">
           <span class="bkt-section-title">Open Requests</span>
           <span class="bkt-section-badge" id="bktApprovalCount">0</span>
+          <div class="bkt-req-filters" id="bktRequestFilterChips"></div>
         </div>
         <div id="bktApprovalList"></div>
       </div>
       <div class="bkt-section" id="bktOverdueSection" style="display:none">
-        <div class="bkt-section-head"><span class="bkt-section-title">Overdue</span></div>
+        <div class="bkt-section-head"><span class="bkt-section-title" id="bktOverdueTitle">Overdue</span></div>
         <div id="bktOverdueList"></div>
       </div>
       <div class="bkt-section" id="bktBoardSection">
@@ -136,7 +130,22 @@
       </div>
     </div>
 
+    <div class="bkt-pane" id="bktPaneReports" style="display:none">
+      <div class="bkt-reports-menu" id="bktReportsMenu">
+        <button class="bkt-report-item active" data-act="report-menu" data-report="breakdown-tasks">Late Tasks</button>
+        <button class="bkt-report-item" data-act="report-menu" data-report="breakdown-days">Missed Days</button>
+        <button class="bkt-report-item" data-act="report-menu" data-report="breakdown-categories">Overdue Categories</button>
+        <button class="bkt-report-item" data-act="report-menu" data-report="suggestions">Suggestions</button>
+        <span class="bkt-report-hint">Where does it break? - diagnostic reports that show which tasks, days and categories need attention.</span>
+      </div>
+      <div id="bktReportContent"></div>
+    </div>
+
     <div class="bkt-pane" id="bktPaneYear" style="display:none">
+      <div class="bkt-year-tools">
+        <button type="button" class="bkt-mini-btn" data-act="year-expand-all">Expand All</button>
+        <button type="button" class="bkt-mini-btn" data-act="year-collapse-all">Collapse All</button>
+      </div>
       <div id="bktYearList"></div>
       <div class="bkt-empty" id="bktYearEmpty" style="display:none"></div>
     </div>
@@ -144,8 +153,9 @@
     <div class="bkt-pane" id="bktPaneDefs" style="display:none">
       <div class="bkt-def-actions">
         <button class="bkt-btn bkt-btn-primary" id="bktBtnNewDef">+ New Task</button>
-        <button class="bkt-btn bkt-btn-outline" id="bktBtnSeed">Load Default Tasks</button>
-        <span class="bkt-def-hint">Task definitions can only be edited by administrators. Tasks on the board are generated automatically from these definitions.</span>
+        <button class="bkt-btn bkt-btn-ghost" id="bktBtnExportDefs" data-act="export-defs">Export Definitions</button>
+        <button class="bkt-btn bkt-btn-ghost" id="bktBtnImportDefs" data-act="import-defs">Import Definitions</button>
+        <span class="bkt-def-hint">Task definitions can only be edited by administrators. Tasks on the board are generated automatically from these definitions. Use import and export to start a new year or a new segment from a definition pack.</span>
       </div>
       <div class="bkt-section">
         <div class="bkt-section-head">
@@ -178,7 +188,7 @@
             <input type="text" id="bktDefTitle" maxlength="160" placeholder="e.g. Bank account reconciliation">
           </div>
           <div class="bkt-field bkt-field-full">
-            <label for="bktDefCategory">Kategori</label>
+            <label for="bktDefCategory">Category</label>
             <select id="bktDefCategory"></select>
           </div>
           <div class="bkt-field bkt-field-full">
@@ -216,6 +226,14 @@
             <label for="bktDefNote">Description / Instructions</label>
             <textarea id="bktDefNote" rows="3" placeholder="Short description of how to do this task..."></textarea>
           </div>
+          <div class="bkt-field bkt-field-full">
+            <label for="bktDefSteps">Step-by-step Checklist (one step per line, optional)</label>
+            <textarea id="bktDefSteps" rows="4" placeholder="1. Download the bank statement&#10;2. Match every transaction&#10;3. Save the reconciliation file"></textarea>
+          </div>
+          <div class="bkt-field bkt-field-half">
+            <label for="bktDefTime">Estimated Time (optional)</label>
+            <input type="text" id="bktDefTime" maxlength="40" placeholder="e.g. 30 min, 2 hours">
+          </div>
         </div>
         <div class="bkt-form-error" id="bktDefError" style="display:none"></div>
       </div>
@@ -227,23 +245,59 @@
     </div>
   </div>
 
-  <div class="bkt-modal-overlay" id="bktNoteModal" style="display:none">
-    <div class="bkt-modal bkt-modal-sm">
-      <div class="bkt-modal-head">
-        <h3>Note</h3>
-        <button class="bkt-icon-btn" id="bktNoteClose" aria-label="Close">×</button>
-      </div>
-      <div class="bkt-modal-body">
-        <div class="bkt-note-context" id="bktNoteContext"></div>
-        <textarea id="bktNoteText" rows="4" placeholder="Note about this task..." style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:8px 12px;font-size:13.5px;resize:vertical;min-height:84px"></textarea>
-        <div class="bkt-log">
-          <div class="bkt-log-title">History</div>
-          <div id="bktNoteLog"></div>
+  <div class="bkt-drawer-overlay" id="bktTaskDrawer" style="display:none">
+    <div class="bkt-drawer">
+      <div class="bkt-drawer-head">
+        <div class="bkt-drawer-head-main">
+          <div class="bkt-drawer-title" id="bktDrawerTitle"></div>
+          <div class="bkt-drawer-date" id="bktDrawerDate"></div>
+          <div class="bkt-drawer-sub" id="bktDrawerSub"></div>
+          <div class="bkt-drawer-actions" id="bktDrawerActions"></div>
+        </div>
+        <div class="bkt-drawer-head-side">
+          <div class="bkt-drawer-nav" id="bktDrawerNav"></div>
+          <button class="bkt-icon-btn" id="bktDrawerClose" aria-label="Close">×</button>
         </div>
       </div>
-      <div class="bkt-modal-actions">
-        <button class="bkt-btn bkt-btn-primary" id="bktNoteSave">Save</button>
-        <button class="bkt-btn bkt-btn-ghost" id="bktNoteCancel">Close</button>
+      <div class="bkt-drawer-body">
+        <div class="bkt-drawer-col bkt-drawer-col-side">
+          <div class="bkt-drawer-section">
+            <div class="bkt-drawer-section-title">Details</div>
+            <div id="bktDrawerDetails"></div>
+          </div>
+          <div class="bkt-drawer-section">
+            <div class="bkt-drawer-section-title">Steps</div>
+            <div id="bktDrawerSteps"></div>
+          </div>
+          <div class="bkt-drawer-section">
+            <div class="bkt-drawer-section-title">Requests</div>
+            <div class="bkt-req-inline" id="bktReqInlineForm">
+              <select id="bktReqInlineType">
+                <option value="approval">Approval - I need authorization (e.g. make a payment)</option>
+                <option value="information">Information - I need details to complete this</option>
+                <option value="support">Support - I need help with this task</option>
+              </select>
+              <textarea id="bktReqInlineText" rows="2" maxlength="2000" placeholder="What do you need? Example: please approve this payment before I proceed..."></textarea>
+              <button class="bkt-btn bkt-btn-primary bkt-btn-sm" id="bktReqInlineSend">Send Request</button>
+            </div>
+            <div id="bktDrawerRequests"></div>
+          </div>
+          <div class="bkt-drawer-section">
+            <div class="bkt-drawer-section-title">History</div>
+            <div class="bkt-log" id="bktDrawerHistory"></div>
+          </div>
+        </div>
+        <div class="bkt-drawer-col bkt-drawer-col-conv">
+          <div class="bkt-drawer-section bkt-drawer-section-conv">
+            <div class="bkt-drawer-section-title">Chat</div>
+            <div class="bkt-pin-note" id="bktPinNote"></div>
+            <div class="bkt-conv-list" id="bktConvList"></div>
+            <div class="bkt-conv-input-row" id="bktConvInputRow">
+              <input type="text" id="bktConvInput" placeholder="Write a message about this task..." maxlength="1000">
+              <button class="bkt-btn bkt-btn-primary bkt-btn-sm" id="bktConvSend">Send</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -266,31 +320,6 @@
     </div>
   </div>
 
-  <div class="bkt-modal-overlay" id="bktRequestModal" style="display:none">
-    <div class="bkt-modal">
-      <div class="bkt-modal-head">
-        <h3>Task Requests</h3>
-        <button class="bkt-icon-btn" id="bktRequestClose" aria-label="Close">×</button>
-      </div>
-      <div class="bkt-modal-body">
-        <div class="bkt-note-context" id="bktRequestContext"></div>
-        <div id="bktRequestList"></div>
-        <div class="bkt-req-form" id="bktRequestForm">
-          <div class="bkt-req-form-title">New Request</div>
-          <select id="bktRequestType">
-            <option value="approval">Approval Request - I need authorization (e.g. make a payment)</option>
-            <option value="information">Information Request - I need details to complete this</option>
-          </select>
-          <textarea id="bktRequestText" rows="3" placeholder="What do you need? Example: please approve this payment before I proceed..."></textarea>
-          <button class="bkt-btn bkt-btn-primary" id="bktRequestSubmit">Submit Request</button>
-        </div>
-      </div>
-      <div class="bkt-modal-actions">
-        <button class="bkt-btn bkt-btn-ghost" id="bktRequestCancel">Close</button>
-      </div>
-    </div>
-  </div>
-
   <div class="bkt-modal-overlay" id="bktConfirmModal" style="display:none">
     <div class="bkt-modal bkt-modal-sm">
       <div class="bkt-modal-head">
@@ -303,6 +332,50 @@
       <div class="bkt-modal-actions">
         <button class="bkt-btn bkt-btn-danger" id="bktConfirmYes">Yes</button>
         <button class="bkt-btn bkt-btn-ghost" id="bktConfirmNo">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bkt-modal-overlay" id="bktExportModal" style="display:none">
+    <div class="bkt-modal">
+      <div class="bkt-modal-head">
+        <h3>Export Definitions</h3>
+        <button class="bkt-icon-btn" data-act="export-close" aria-label="Close">×</button>
+      </div>
+      <div class="bkt-modal-body">
+        <p style="font-size:13px;color:#6b7280;margin:0 0 8px">This JSON pack contains the categories and task definitions (not the status history). Import it into another instance to start a new year or set up the same segment.</p>
+        <textarea id="bktExportText" rows="14" readonly style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:10px 12px;font-size:12px;font-family:ui-monospace,Consolas,monospace;resize:vertical;min-height:220px"></textarea>
+      </div>
+      <div class="bkt-modal-actions">
+        <button class="bkt-btn bkt-btn-primary" data-act="export-copy">Copy JSON</button>
+        <button class="bkt-btn bkt-btn-ghost" data-act="export-download">Download .json</button>
+        <button class="bkt-btn bkt-btn-ghost" data-act="export-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bkt-modal-overlay" id="bktImportModal" style="display:none">
+    <div class="bkt-modal">
+      <div class="bkt-modal-head">
+        <h3>Import Definitions</h3>
+        <button class="bkt-icon-btn" data-act="import-cancel" aria-label="Close">×</button>
+      </div>
+      <div class="bkt-modal-body">
+        <p style="font-size:13px;color:#6b7280;margin:0 0 8px">Paste a definition pack JSON (ready-made packs per segment live in the DEFINITION-PACKS folder), or choose a .json file. Importing replaces the current definitions and categories.</p>
+        <input type="file" id="bktImportFile" accept=".json,application/json" style="margin-bottom:8px;font-size:13px">
+        <textarea id="bktImportText" rows="12" placeholder='Paste JSON here, e.g. {"schemaVersion":"bkt-pack-v1","categories":[...],"definitions":[...]}' style="width:100%;border:1.5px solid #d5d8dc;border-radius:8px;padding:10px 12px;font-size:12px;font-family:ui-monospace,Consolas,monospace;resize:vertical;min-height:180px"></textarea>
+        <div style="display:flex;gap:14px;align-items:center;margin-top:10px;flex-wrap:wrap">
+          <label style="font-size:13px">Year
+            <input type="number" id="bktImportYear" min="2000" max="2100" style="width:90px;border:1.5px solid #d5d8dc;border-radius:8px;padding:6px 10px;font-size:13.5px;margin-left:6px">
+          </label>
+          <label style="font-size:13px;display:flex;align-items:center;gap:6px">
+            <input type="checkbox" id="bktImportClear" checked> Start fresh: clear status history, conversations and requests
+          </label>
+        </div>
+      </div>
+      <div class="bkt-modal-actions">
+        <button class="bkt-btn bkt-btn-primary" data-act="import-confirm">Import</button>
+        <button class="bkt-btn bkt-btn-ghost" data-act="import-cancel">Cancel</button>
       </div>
     </div>
   </div>
