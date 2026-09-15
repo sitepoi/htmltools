@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SR&ED 2024-25 Technical Narrative - OpusChart</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  /* ---------- Editing toolbar ---------- */
+  .doc-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .doc-toolbar button {
+    font-family: inherit;
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--accent);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .doc-toolbar button:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  #editStatusLabel {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-right: auto;
+  }
+  .edit-hint {
+    font-size: 12.5px;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 24px;
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 28px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+
+  p[contenteditable="true"]:hover {
+    outline: 1px dashed var(--line);
+    outline-offset: 4px;
+    border-radius: 2px;
+  }
+  p[contenteditable="true"]:focus {
+    outline: 1px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 2px;
+    background: #fbfdff;
+  }
+
+  .placeholder {
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    .doc-toolbar, .edit-hint { display: none; }
+    p[contenteditable="true"]:hover,
+    p[contenteditable="true"]:focus { outline: none; background: transparent; }
+    section, h2, p { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">SR&amp;ED Technical Narrative - Working Copy</div>
+    <div class="doc-title">OpusChart</div>
+    <div class="doc-subtitle">Tax year 2024-25 - T661 Part 2</div>
+    <div class="doc-meta">
+      Transcribed from: SR&amp;ED(24-25)OpusChart_Version.docx
+      <span>|</span>
+      Version 1.0
+    </div>
+  </header>
+
+  <div class="doc-toolbar">
+    <span id="editStatusLabel">Changes save automatically in this browser</span>
+    <button type="button" id="saveNowButton">Save now</button>
+    <button type="button" id="resetButton">Reset to original</button>
+    <button type="button" id="downloadButton">Download updated file</button>
+    <button type="button" id="printButton">Print / PDF</button>
+  </div>
+  <div class="edit-hint">
+    Click any paragraph to edit it. Edits are saved automatically in this browser.
+    The original Word document is unchanged.
+  </div>
+
+  <div id="editableDocumentRoot">
+
+    <section>
+      <h2>240 - Scientific or Technological Objectives</h2>
+      <p contenteditable="true" class="placeholder">To be completed before filing.</p>
+    </section>
+
+    <section>
+      <h2>242 - Scientific or Technological Uncertainties</h2>
+      <p contenteditable="true">The continued development of OpusChart was driven by the challenges of managing resource allocation, project profitability, and operational planning within a professional services environment. CPA firms operate with limited resources whose availability must be balanced across multiple projects while considering vacations, holidays, utilization targets, billing rates, budget constraints, and engagement deadlines. Existing project management and scheduling tools provided basic planning capabilities but could not dynamically combine resource allocation, financial forecasting, profitability tracking, and role-based workflow management in a way that satisfied our operational requirements. As a result, significant manual effort was still required to reconcile project capacity, resource availability, and financial performance. We could not identify an available solution that addressed these requirements within a single integrated platform.</p>
+      <p contenteditable="true">One major uncertainty was whether resource availability, project budgets, hourly rates, utilization percentages, and profitability calculations could remain synchronized as projects evolved. Changes to assignments, project dates, vacations, company types, and billing rates often affected multiple calculations simultaneously. It was unclear whether a system could automatically recalculate budgets, remaining balances, project costs, and resource utilization without introducing inconsistencies or inaccurate forecasts.</p>
+      <p contenteditable="true">Another uncertainty involved managing increasingly complex permission and workflow structures. The platform needed to support administrators, resource managers, project managers, financial managers, readonly users, and other role combinations, each with different responsibilities and access levels. The challenge was determining whether permissions could be enforced consistently across budgeting, resource allocation, billing, reporting, and project management functions without creating conflicts or unintended access to sensitive information.</p>
+      <p contenteditable="true">Additional uncertainty arose from automating subscription management, licensing controls, invoice generation, refund approvals, and integration with external payment systems. We needed to determine whether billing events, company licensing status, resource usage statistics, and financial workflows could remain synchronized while reducing manual intervention.</p>
+      <p contenteditable="true">Finally, we began exploring AI-assisted project analysis and resource recommendations. It was uncertain whether AI-generated insights could provide meaningful and reliable assistance within a resource planning environment where project requirements, availability constraints, and utilization targets frequently change.</p>
+    </section>
+
+    <section>
+      <h2>244 - Work Performed (Systematic Investigation)</h2>
+      <p contenteditable="true">To address the uncertainty around resource allocation and financial forecasting, we investigated multiple approaches for synchronizing resource availability, project budgets, utilization percentages, and profitability calculations. Early implementations produced inconsistent results when project assignments changed, vacations were added, hourly rates were modified, or project timelines were adjusted. Budget consumption and remaining balances did not always recalculate correctly, particularly when resources had multiple assignments or changing billing rates over time. We tested alternative calculation models, revised database queries, and validated outputs against real project scenarios to determine how resource costs, utilization, and project profitability could be calculated accurately as project conditions changed. Additional testing was performed on group-based hourly rates, company-specific billing structures, and date-based rate changes to ensure calculations remained consistent across different engagement types.</p>
+      <p contenteditable="true">We also investigated the challenges of maintaining synchronized resource planning data across multiple workflow components. Vacations, local holidays, resource availability, project assignments, and utilization dashboards all relied on interconnected calculations. During testing, changes in one area often produced unexpected results elsewhere, such as incorrect utilization percentages, missing resources, duplicated project records, or inaccurate dashboard totals. We evaluated different synchronization strategies, filtering methods, and update sequences to determine how changes could propagate throughout the system without creating conflicting information. Repeated validation was required to ensure project timelines, vacation schedules, and resource allocations remained consistent under changing conditions.</p>
+      <p contenteditable="true">Another major area of investigation involved permission management and workflow controls. As the platform expanded, new roles including project managers, resource managers, financial managers, administrators, and readonly users required increasingly complex permission rules. Initial implementations exposed conflicts where users could access functions outside their responsibilities or were incorrectly restricted from performing required actions. We developed centralized permission controls and repeatedly tested role combinations across budgeting, resource allocation, billing, reporting, and project management functions. Additional investigation was required to determine how readonly restrictions, activation and deactivation controls, and license-based access limitations could be enforced consistently throughout the application.</p>
+      <p contenteditable="true">We also investigated automation of billing and subscription workflows. Integration with Stripe introduced challenges involving invoice generation, refund approvals, payment events, company licensing, and resource usage tracking. Early testing revealed inconsistencies between subscription status, invoice records, refund requests, and license enforcement. We tested different synchronization methods between Stripe events and internal application records, refined approval workflows, and validated billing calculations against actual resource usage data. Automated invoice generation and refund processing were repeatedly tested to confirm financial records remained accurate under various edge cases.</p>
+      <p contenteditable="true">In addition, we explored the feasibility of AI-assisted project analysis and resource recommendations. Initial prototype work focused on integrating OpenAI services and evaluating whether project information could be analyzed to generate useful recommendations. Early testing highlighted challenges around relevance, consistency, and reliability of generated outputs. We experimented with different integration approaches, prompt structures, and data inputs to assess whether meaningful recommendations could be produced within a professional services resource-planning environment.</p>
+      <p contenteditable="true">Throughout development, numerous issues involving budget calculations, utilization reporting, dashboard accuracy, licensing controls, project synchronization, resource visibility, and billing workflows served as validation checkpoints for the broader architecture. Each inconsistency, failed calculation, or synchronization issue provided insight that guided further refinement. Through repeated cycles of testing, debugging, and verification, we improved the reliability of resource planning, financial forecasting, permission management, and billing automation within OpusChart.</p>
+    </section>
+
+    <section>
+      <h2>246 - Scientific or Technological Advancements</h2>
+      <p contenteditable="true">The development work on OpusChart resulted in several advancements in resource planning, financial forecasting, and operational management for professional services organizations. One advancement was the creation of a more integrated resource management framework capable of combining project assignments, vacations, local holidays, utilization targets, hourly rates, and budget calculations within a single planning environment. By improving synchronization between these components, we established a more reliable method for forecasting resource capacity, project costs, and remaining budget balances while reducing inconsistencies caused by changing project conditions.</p>
+      <p contenteditable="true">Another advancement was achieved in financial planning and profitability management. Through the introduction of project budgeting, group-based hourly rates, company-specific billing structures, and automated cost calculations, we developed a framework that more accurately estimated project spending and profitability as resource assignments evolved. This reduced the need for manual reconciliation between resource schedules and project budgets.</p>
+      <p contenteditable="true">We also advanced permission management and workflow controls. Centralized permission logic, readonly access controls, role-specific functionality, and license-based restrictions provided a more scalable approach to managing administrators, project managers, resource managers, financial managers, and other user types while reducing risks associated with conflicting permissions and unauthorized actions.</p>
+      <p contenteditable="true">Additional advancements were achieved in billing and subscription automation. Integration with Stripe, automated invoice generation, refund approval workflows, company licensing controls, and resource usage tracking created a more reliable process for managing subscription services and financial operations while reducing manual intervention.</p>
+      <p contenteditable="true">We also initiated exploration of AI-assisted project analysis and resource recommendations. Early prototype integrations demonstrated the potential for AI-generated insights to support resource planning and project management decisions.</p>
+      <p contenteditable="true">While the platform became significantly more capable in resource planning, budgeting, permission management, and billing automation, uncertainties remain. Scalability of resource forecasting under larger workloads, synchronization of complex financial calculations across changing project conditions, and the reliability of AI-generated recommendations continue to present technical challenges that are still being investigated.</p>
+    </section>
+
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var editableDocumentRoot = document.getElementById('editableDocumentRoot');
+  var editStatusLabel = document.getElementById('editStatusLabel');
+  var storageKey = 'sred_narrative_opuschart_v1';
+  var downloadFileName = 'SRED-24-25-OpusChart.html';
+  var autosaveTimer = null;
+
+  function setStatus(message) {
+    if (editStatusLabel) { editStatusLabel.textContent = message; }
+  }
+
+  function saveEditsNow() {
+    if (!editableDocumentRoot) { return; }
+    try {
+      localStorage.setItem(storageKey, editableDocumentRoot.innerHTML);
+      setStatus('Saved ' + new Date().toLocaleTimeString());
+    } catch (error) {
+      setStatus('Could not save in this browser');
+    }
+  }
+
+  function scheduleAutosave() {
+    setStatus('Unsaved changes...');
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveEditsNow, 400);
+  }
+
+  function restoreSavedEdits() {
+    try {
+      var savedContent = localStorage.getItem(storageKey);
+      if (savedContent && editableDocumentRoot) {
+        editableDocumentRoot.innerHTML = savedContent;
+        setStatus('Previous edits loaded');
+      } else {
+        setStatus('Changes save automatically in this browser');
+      }
+    } catch (error) {
+      setStatus('Changes save automatically in this browser');
+    }
+  }
+
+  function resetToOriginal() {
+    var userConfirmed = window.confirm('Discard all edits and restore the original transcription?');
+    if (!userConfirmed) { return; }
+    try { localStorage.removeItem(storageKey); } catch (error) { /* ignore */ }
+    window.location.reload();
+  }
+
+  function downloadUpdatedDocument() {
+    var currentMarkup = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var blob = new Blob([currentMarkup], { type: 'text/html' });
+    var downloadLink = document.createElement('a');
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.download = downloadFileName;
+    downloadLink.click();
+    setTimeout(function () { URL.revokeObjectURL(downloadLink.href); }, 2000);
+  }
+
+  function wireDocumentButtons() {
+    var saveButton = document.getElementById('saveNowButton');
+    var resetButton = document.getElementById('resetButton');
+    var downloadButton = document.getElementById('downloadButton');
+    var printButton = document.getElementById('printButton');
+    if (saveButton) { saveButton.addEventListener('click', saveEditsNow); }
+    if (resetButton) { resetButton.addEventListener('click', resetToOriginal); }
+    if (downloadButton) { downloadButton.addEventListener('click', downloadUpdatedDocument); }
+    if (printButton) { printButton.addEventListener('click', function () { window.print(); }); }
+    if (editableDocumentRoot) { editableDocumentRoot.addEventListener('input', scheduleAutosave); }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    restoreSavedEdits();
+    wireDocumentButtons();
+  });
+})();
+</script>
+</body>
+</html>
