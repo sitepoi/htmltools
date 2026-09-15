@@ -637,6 +637,7 @@ tr:hover td { background: var(--surface2); }
 }
 
 .modal-confirm { width: 400px; }
+#modal-activity { width: 760px; }
 
 @keyframes modalIn {
 	from { opacity: 0; transform: scale(0.95) translateY(10px); }
@@ -1032,6 +1033,7 @@ body.readonly .nav-item {
 .line-item-row .li-desc { flex: 2; min-width: 0; }
 .line-item-row .li-cost-wrap { flex: 1; min-width: 0; }
 .line-item-row .li-status { width: 110px; flex-shrink: 0; }
+.line-item-row .li-cat { width: 130px; flex-shrink: 0; }
 .line-item-row .li-del {
 	flex-shrink: 0;
 	width: 30px;
@@ -1057,6 +1059,41 @@ body.readonly .nav-item {
 /* ── Amount cell ── */
 .amount-cell { font-family: var(--mono); font-weight: 600; text-align: right; white-space: nowrap; }
 .amount-sub { font-size: 10px; font-weight: 400; color: var(--text3); display: block; }
+
+/* ── Table totals row ── */
+.table-total-row td { font-weight: 700; border-top: 2px solid var(--border); }
+
+/* ── Budget totals row ── */
+.budget-totals-row {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin: 4px 0 14px;
+}
+.budget-total {
+	flex: 1;
+	min-width: 120px;
+	padding: 10px 14px;
+	background: var(--surface3);
+	border: 1px solid var(--border);
+	border-radius: var(--r3);
+}
+.budget-total .bt-label {
+	display: block;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	color: var(--text3);
+	margin-bottom: 4px;
+}
+.budget-total .bt-value {
+	font-family: var(--mono);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--text);
+}
+.budget-total.bt-over .bt-value { color: var(--red); }
 
 /* ── Phase Stepper ── */
 .phase-stepper {

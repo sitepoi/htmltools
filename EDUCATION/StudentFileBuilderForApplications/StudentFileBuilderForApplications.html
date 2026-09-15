@@ -1,0 +1,296 @@
+<div id="app">
+	<div class="ro-banner" id="ro-banner" style="display:none">
+		<span>🔒 Read-only mode — you are viewing this student's application file.</span>
+	</div>
+	<div class="ro-banner view-banner" id="view-banner" style="display:none">
+		<span>🧭 Mentor view — student content is read-only. You can request more data and leave feedback.</span>
+	</div>
+
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<div class="brand-icon">🎓</div>
+			<div class="brand-name">StudentFile</div>
+			<div class="brand-sub">Application Prep</div>
+		</div>
+		<nav class="nav">
+			<div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+			<div class="nav-item" data-page="profile"><span class="nav-icon">👤</span>Student Profile</div>
+			<div class="nav-item" data-page="applications"><span class="nav-icon">🎯</span>Applications<span class="nav-badge" id="nav-apps-count">0</span></div>
+			<div class="nav-item" data-page="portfolio"><span class="nav-icon">🎨</span>Portfolio<span class="nav-badge" id="nav-portfolio-count">0</span></div>
+			<div class="nav-item" data-page="achievements"><span class="nav-icon">🏆</span>Achievements<span class="nav-badge" id="nav-ach-count">0</span></div>
+			<div class="nav-item" data-page="grades"><span class="nav-icon">📚</span>Grades &amp; Scores<span class="nav-badge" id="nav-grades-count">0</span></div>
+			<div class="nav-item" data-page="references"><span class="nav-icon">💌</span>References<span class="nav-badge" id="nav-refs-count">0</span></div>
+			<div class="nav-item" data-page="documents"><span class="nav-icon">📄</span>Documents<span class="nav-badge" id="nav-docs-count">0</span></div>
+			<div class="nav-item" data-page="requests"><span class="nav-icon">📥</span>Requests<span class="nav-badge" id="nav-requests-count">0</span></div>
+			<div class="nav-item" data-page="mentor"><span class="nav-icon">🧭</span>Mentor</div>
+		</nav>
+		<div class="sidebar-foot">
+			<div class="foot-card">
+				<div class="foot-label">Overall Readiness</div>
+				<div class="foot-value" id="sidebar-readiness">0%</div>
+				<div class="progress"><div class="progress-fill" id="sidebar-readiness-bar" style="width:0%"></div></div>
+			</div>
+		</div>
+	</aside>
+
+	<main class="main">
+		<header class="topbar">
+			<div class="topbar-titles">
+				<div class="page-title" id="page-title">Dashboard</div>
+				<div class="page-sub" id="page-sub">One student, every application, fully prepared.</div>
+			</div>
+			<div class="topbar-actions">
+				<div class="view-toggle" id="view-toggle">
+					<button class="view-btn" data-view="student">👤 Student</button>
+					<button class="view-btn" data-view="mentor">🧭 Mentor</button>
+				</div>
+				<button class="btn btn-outline" id="btn-export">📤 Export Summary</button>
+				<button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>
+			</div>
+		</header>
+
+		<!-- DASHBOARD -->
+		<section id="sec-dashboard" class="section active">
+			<div class="stats-grid" id="dash-stats"></div>
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Applications</h3><button class="btn btn-sm btn-primary" id="dash-add-app" data-action="add-app">+ Add</button></div>
+					<div id="dash-apps"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>Upcoming Deadlines</h3></div>
+					<div id="dash-deadlines"></div>
+				</div>
+			</div>
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Open Data Requests</h3><button class="btn btn-sm btn-ghost" id="dash-goto-requests">View all</button></div>
+					<div id="dash-requests"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>Recent Mentor Notes</h3><button class="btn btn-sm btn-ghost" id="dash-goto-notes">View all</button></div>
+					<div id="dash-notes"></div>
+				</div>
+			</div>
+		</section>
+
+		<!-- PROFILE -->
+		<section id="sec-profile" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Student Information</h3><span class="panel-hint">Saved automatically as you type.</span></div>
+				<div class="form-grid">
+					<div class="field">
+						<label>First Name</label>
+						<input type="text" id="pf-first" placeholder="e.g. Ada">
+					</div>
+					<div class="field">
+						<label>Last Name</label>
+						<input type="text" id="pf-last" placeholder="e.g. Lovelace">
+					</div>
+					<div class="field">
+						<label>School</label>
+						<input type="text" id="pf-school" placeholder="Current school">
+					</div>
+					<div class="field">
+						<label>Grade / Year Level</label>
+						<input type="text" id="pf-grade" list="grade-levels" placeholder="e.g. Grade 12 / IB2">
+						<datalist id="grade-levels">
+							<option value="Grade 5"><option value="Grade 6"><option value="Grade 7"><option value="Grade 8"><option value="Grade 9"><option value="Grade 10"><option value="Grade 11"><option value="Grade 12">
+							<option value="IB1"><option value="IB2"><option value="A-Levels Year 1"><option value="A-Levels Year 2">
+							<option value="Trade School Year 1"><option value="Apprenticeship Year 1">
+						</datalist>
+					</div>
+					<div class="field">
+						<label>Date of Birth</label>
+						<input type="date" id="pf-dob">
+					</div>
+					<div class="field">
+						<label>Email</label>
+						<input type="email" id="pf-email" placeholder="student@example.com">
+					</div>
+					<div class="field">
+						<label>Phone</label>
+						<input type="text" id="pf-phone" placeholder="+1 555-0101">
+					</div>
+					<div class="field field-full">
+						<label>Address</label>
+						<input type="text" id="pf-address" placeholder="Street, City, Country">
+					</div>
+				</div>
+			</div>
+			<div class="panel">
+				<div class="panel-head"><h3>Mentor / Counselor</h3></div>
+				<div class="form-grid">
+					<div class="field">
+						<label>Mentor Name</label>
+						<input type="text" id="pf-mentor-name" placeholder="e.g. Dr. Grace Hopper">
+					</div>
+					<div class="field">
+						<label>Mentor Email</label>
+						<input type="email" id="pf-mentor-email" placeholder="mentor@example.com">
+					</div>
+					<div class="field field-full">
+						<label>Target Programs / Fields of Interest</label>
+						<textarea id="pf-programs" rows="2" placeholder="e.g. Computer Science, Business, Medicine, Architecture..."></textarea>
+					</div>
+					<div class="field field-full">
+						<label>Interests &amp; Strengths</label>
+						<textarea id="pf-interests" rows="2" placeholder="e.g. Robotics, debate, community service, painting..."></textarea>
+					</div>
+					<div class="field field-full">
+						<label>Notes</label>
+						<textarea id="pf-notes" rows="2" placeholder="Any extra context the mentor should know."></textarea>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- APPLICATIONS -->
+		<section id="sec-applications" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Application Files</h3>
+					<button class="btn btn-primary" id="btn-add-app" data-action="add-app">+ Add Application</button>
+				</div>
+				<p class="panel-hint">General application files per pathway — university, college, IB and other. Add target schools and link the achievements, portfolio and references that support each one.</p>
+				<div id="apps-grid" class="apps-grid"></div>
+			</div>
+		</section>
+
+		<!-- PORTFOLIO -->
+		<section id="sec-portfolio" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Portfolio</h3>
+					<button class="btn btn-primary" id="btn-add-portfolio" data-action="add-portfolio">+ Add Portfolio Item</button>
+				</div>
+				<p class="panel-hint">Projects, essays, research and creative work — with their content and supporting evidence files.</p>
+				<div class="chip-row" id="portfolio-filter"></div>
+				<div id="portfolio-grid" class="cards-grid"></div>
+			</div>
+		</section>
+
+		<!-- ACHIEVEMENTS -->
+		<section id="sec-achievements" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Achievements &amp; Activities</h3>
+					<button class="btn btn-primary" id="btn-add-ach" data-action="add-ach">+ Add Achievement</button>
+				</div>
+				<p class="panel-hint">Awards, competitions, leadership, community service, sports, arts — anything that supports the application.</p>
+				<div class="chip-row" id="ach-filter"></div>
+				<div id="ach-grid" class="cards-grid"></div>
+			</div>
+		</section>
+
+		<!-- GRADES -->
+		<section id="sec-grades" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Grades &amp; Scores</h3>
+					<button class="btn btn-primary" id="btn-add-grade" data-action="add-grade">+ Add Grade</button>
+				</div>
+				<p class="panel-hint">Subject grades, predicted scores and standardized test results.</p>
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Subject / Test</th>
+								<th>Type</th>
+								<th>Score</th>
+								<th>Term / Year</th>
+								<th>Notes</th>
+								<th class="th-actions"></th>
+							</tr>
+						</thead>
+						<tbody id="grades-body"></tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<!-- REFERENCES -->
+		<section id="sec-references" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>References &amp; Recommendation Letters</h3>
+					<button class="btn btn-primary" id="btn-add-ref" data-action="add-ref">+ Add Referee</button>
+				</div>
+				<p class="panel-hint">Track who will write each letter, request status and delivery.</p>
+				<div id="refs-grid" class="cards-grid"></div>
+			</div>
+		</section>
+
+		<!-- DOCUMENTS -->
+		<section id="sec-documents" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Supporting Documents</h3>
+					<button class="btn btn-primary" id="btn-upload-doc" data-action="upload-doc">📎 Upload File</button>
+				</div>
+				<p class="panel-hint">Transcripts, certificates, portfolios, essays and any supporting files.</p>
+				<div id="docs-grid" class="cards-grid"></div>
+			</div>
+		</section>
+
+		<!-- REQUESTS -->
+		<section id="sec-requests" class="section">
+			<div class="panel">
+				<div class="panel-head">
+					<h3>Data Requests</h3>
+					<button class="btn btn-primary" id="btn-add-request" data-action="add-request">+ New Request</button>
+				</div>
+				<p class="panel-hint">The mentor requests missing data and evidence; the student fulfills the request. Both can reply in the conversation.</p>
+				<div id="requests-list" class="cards-grid"></div>
+			</div>
+		</section>
+
+		<!-- MENTOR -->
+		<section id="sec-mentor" class="section">
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Mentor Notes</h3><button class="btn btn-sm btn-primary" id="btn-add-note" data-action="add-note">+ Add Note</button></div>
+					<div id="notes-list"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>AI Mentor Assistant</h3></div>
+					<div class="ai-box" id="ai-box">
+						<div class="ai-messages" id="ai-messages">
+							<div class="ai-msg ai-msg-bot">Ask me for guidance — e.g. "What is still missing for Emma's university applications?"</div>
+						</div>
+						<div class="ai-inputrow">
+							<textarea id="ai-input" rows="2" placeholder="Ask the AI mentor..."></textarea>
+							<button class="btn btn-primary" id="ai-send">Ask</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+	<div class="modal" id="modal">
+		<div class="modal-header">
+			<h3 id="modal-title">Title</h3>
+			<button class="btn btn-icon modal-close" id="modal-close">✕</button>
+		</div>
+		<div class="modal-body" id="modal-body"></div>
+		<div class="modal-footer" id="modal-footer"></div>
+	</div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay">
+	<div class="drawer" id="drawer">
+		<div class="drawer-header">
+			<div class="drawer-title-wrap">
+				<h3 id="drawer-title">Application</h3>
+				<div class="drawer-sub" id="drawer-sub"></div>
+			</div>
+			<button class="btn btn-icon" id="drawer-close">✕</button>
+		</div>
+		<div class="drawer-body" id="drawer-body"></div>
+	</div>
+</div>

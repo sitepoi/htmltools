@@ -57,12 +57,13 @@ let isReviewing = false;
 /* ── Phase ── */
 function getPhase() { return DB.grant.phase || 'drafting'; }
 function setPhase(p) {
-	if (DB.grant.phase === p) return;
+	const changed = DB.grant.phase !== p;
 	DB.grant.phase = p;
-	// Instant UI: just toggle body class + stepper dots (CSS handles nav visibility)
+	// Always sync the body class (CSS controls nav/Expenses/Reports visibility) — critical on first load
 	document.body.className = document.body.className.replace(/phase-\S+/g, '');
 	document.body.classList.add('phase-' + p);
 	updatePhaseStepper();
+	if (!changed) return;
 	// Refresh dashboard stats only (lightweight — no full DOM rebuild)
 	refreshDashboardStats();
 	// Persist the phase change
@@ -77,8 +78,9 @@ function refreshDashboardStats() {
 	const g = getGrant();
 	const cur = getCurrency();
 	const totalBudget = getTotalBudget();
-	const totalSpent = getTotalSpent();
-	const remaining = totalBudget - totalSpent;
+	const totalUsed = getTotalUsed();
+	const liCount = DB.activities.reduce((s, a) => s + ((a.lineItems && a.lineItems.length) || 0), 0);
+	const remaining = totalBudget - totalUsed;
 	const phase = getPhase();
 	const isPreApproval = phase === 'drafting' || phase === 'applied';
 	const actCount = DB.activities.length;
@@ -86,7 +88,7 @@ function refreshDashboardStats() {
 	const catCount = DB.budgetCategories.length;
 	const docCount = DB.documents.length;
 	const ongoingActs = DB.activities.filter(a => a.status === 'in-progress').length;
-	const utilizationPct = getBudgetUtilizationPct();
+	const utilizationPct = getBudgetCommitPct();
 
 	// Update phase badge in subtitle
 	const phaseBadge = `<span class="badge badge-${phase === 'drafting' ? 'low' : phase === 'applied' ? 'medium' : phase === 'approved' ? 'in-progress' : 'completed'}">${phase.charAt(0).toUpperCase() + phase.slice(1)}</span>`;
@@ -100,8 +102,8 @@ function refreshDashboardStats() {
 	if (el('dash-stats')) {
 		el('dash-stats').innerHTML = `
 			<div class="stat-card accent"><div class="stat-label">Total Budget</div><div class="stat-value">${fmtCurrency(totalBudget, cur)}</div><div class="stat-sub">${catCount} budget categories</div></div>
-			<div class="stat-card ${isPreApproval ? 'purple' : (remaining >= 0 ? 'green' : 'red')}"><div class="stat-label">${isPreApproval ? 'Planned Activities' : 'Total Spent'}</div><div class="stat-value">${isPreApproval ? actCount : fmtCurrency(totalSpent, cur)}</div><div class="stat-sub">${isPreApproval ? ongoingActs + ' in progress' : expCount + ' expenses recorded'}</div></div>
-			<div class="stat-card ${isPreApproval ? 'blue' : (remaining >= 0 ? 'blue' : 'red')}"><div class="stat-label">${isPreApproval ? 'Documents' : 'Remaining'}</div><div class="stat-value">${isPreApproval ? docCount : fmtCurrency(Math.abs(remaining), cur)}</div><div class="stat-sub">${isPreApproval ? 'attached to application' : (remaining >= 0 ? (remaining === totalBudget ? 'No spending yet' : utilPctText(utilizationPct)) : 'OVER BUDGET!')}</div></div>
+			<div class="stat-card ${isPreApproval ? 'purple' : (remaining >= 0 ? 'green' : 'red')}"><div class="stat-label">${isPreApproval ? 'Planned Activities' : 'Total Used'}</div><div class="stat-value">${isPreApproval ? actCount : fmtCurrency(totalUsed, cur)}</div><div class="stat-sub">${isPreApproval ? ongoingActs + ' in progress' : actCount + ' activities · ' + liCount + ' line items · ' + expCount + ' expenses'}</div></div>
+			<div class="stat-card ${isPreApproval ? 'blue' : (remaining >= 0 ? 'blue' : 'red')}"><div class="stat-label">${isPreApproval ? 'Documents' : 'Remaining'}</div><div class="stat-value">${isPreApproval ? docCount : (remaining < 0 ? '-' : '') + fmtCurrency(Math.abs(remaining), cur)}</div><div class="stat-sub">${isPreApproval ? 'attached to application' : (remaining >= 0 ? (remaining === totalBudget ? 'No costs yet' : utilPctText(utilizationPct)) : 'OVER BUDGET!')}</div></div>
 			<div class="stat-card ${isPreApproval ? 'amber' : 'purple'}"><div class="stat-label">Phase</div><div class="stat-value" style="font-size:20px">${phase === 'drafting' ? '📝' : phase === 'applied' ? '📤' : phase === 'approved' ? '✅' : '🏁'}</div><div class="stat-sub">${phase === 'drafting' ? 'Preparing application' : phase === 'applied' ? 'Awaiting decision' : phase === 'approved' ? 'Active execution' : 'Completed'}</div></div>`;
 	}
 
@@ -116,7 +118,7 @@ function refreshDashboardStats() {
 
 	// Update budget bar labels
 	if (el('dash-budget-bar')) el('dash-budget-bar').style.width = utilizationPct + '%';
-	if (el('dash-budget-spent')) el('dash-budget-spent').textContent = isPreApproval ? 'Budget planned: ' + fmtCurrency(totalBudget, cur) : fmtCurrency(totalSpent, cur) + ' spent';
+	if (el('dash-budget-spent')) el('dash-budget-spent').textContent = isPreApproval ? 'Budget planned: ' + fmtCurrency(totalBudget, cur) : fmtCurrency(totalUsed, cur) + ' used';
 	if (el('dash-budget-remaining')) el('dash-budget-remaining').textContent = isPreApproval ? 'Ready for allocation' : fmtCurrency(Math.max(0, remaining), cur) + ' remaining';
 
 	// Refresh category bars if approved
@@ -177,6 +179,12 @@ function render(val) {
 		if (!Array.isArray(DB.applicationQA)) DB.applicationQA = [];
 		if (!DB.checklist || typeof DB.checklist !== 'object') DB.checklist = {};
 	}
+	// Migrate legacy line items: give them the activity's category if they have none
+	DB.activities.forEach(a => {
+		if (a.category && Array.isArray(a.lineItems) && a.lineItems.length > 0) {
+			a.lineItems.forEach(li => { if (!li.category) li.category = a.category; });
+		}
+	});
 	if (DB._theme) applyTheme(DB._theme);
 	updatePhaseStepper();
 	setPhase(getPhase());
@@ -225,14 +233,19 @@ function updateNavBadges() {
 /* ── Grant helpers ── */
 function getGrant() { return DB.grant || {}; }
 function getCurrency() { return getGrant().currency || 'USD'; }
-function getTotalBudget() {
+function getGrantBudget() {
 	const g = getGrant();
 	const phase = g.phase || 'drafting';
-	// Phase-aware budget: use approved budget if available, otherwise target/total
+	// Phase-aware grant-only budget: use approved budget if available, otherwise target/total
 	if (phase === 'approved' || phase === 'closed') {
 		return Number(g.approvedBudget) || Number(g.totalBudget) || Number(g.targetBudget) || 0;
 	}
 	return Number(g.targetBudget) || Number(g.totalBudget) || 0;
+}
+
+function getTotalBudget() {
+	// Total Project Budget = Grant Funding + Other Funding (matches Grant Setup breakdown)
+	return getGrantBudget() + (Number(getGrant().otherFunding) || 0);
 }
 
 function getActiveBudgetLabel() {
@@ -289,11 +302,29 @@ function refreshBudgetSummary() {
 
 function getTotalAllocated() { return DB.budgetCategories.reduce((s, c) => s + (Number(c.allocated) || 0), 0); }
 function getTotalSpent() { return DB.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0); }
-function getRemaining() { return getTotalBudget() - getTotalSpent(); }
+function getRemaining() { return getTotalBudget() - getTotalUsed(); }
 function getSpentForCategory(catId) { return DB.expenses.filter(e => e.category === catId).reduce((s, e) => s + (Number(e.amount) || 0), 0); }
 function getSpentForActivity(actId) { return DB.expenses.filter(e => e.activityId === actId).reduce((s, e) => s + (Number(e.amount) || 0), 0); }
 function getLineItemsTotal(items) { return (items || []).reduce((s, li) => s + (Number(li.cost) || 0), 0); }
-function getActivityBudget(a) { const li = a.lineItems; return (li && li.length > 0) ? getLineItemsTotal(li) : (Number(a.budgetAllocated) || 0); }
+function getActivityBudget(a) { return Number(a.budgetAllocated) || 0; }
+function getActivityPlannedTotal(a) {
+	if (a.lineItems && a.lineItems.length > 0) return getLineItemsTotal(a.lineItems);
+	return getActivityBudget(a);
+}
+function getPlannedForCategory(catId) {
+	let sum = 0;
+	DB.activities.forEach(a => {
+		if (a.lineItems && a.lineItems.length > 0) {
+			a.lineItems.forEach(li => { if ((li.category || a.category) === catId) sum += Number(li.cost) || 0; });
+		} else if (a.category === catId) {
+			sum += getActivityBudget(a);
+		}
+	});
+	return sum;
+}
+function getTotalActivityBudget() { return DB.activities.reduce((s, a) => s + getActivityPlannedTotal(a), 0); }
+function getTotalUsed() { return getTotalActivityBudget() + getTotalSpent(); }
+function getUsedForCategory(catId) { return getPlannedForCategory(catId) + getSpentForCategory(catId); }
 function getCategoryById(id) { return DB.budgetCategories.find(c => c.id === id) || null; }
 function getActivityById(id) { return DB.activities.find(a => a.id === id) || null; }
 
@@ -301,6 +332,12 @@ function getBudgetUtilizationPct() {
 	const budget = getTotalBudget();
 	if (budget <= 0) return 0;
 	return Math.min(100, (getTotalSpent() / budget) * 100);
+}
+
+function getBudgetCommitPct() {
+	const budget = getTotalBudget();
+	if (budget <= 0) return 0;
+	return Math.min(100, (getTotalUsed() / budget) * 100);
 }
 
 // Safe element value setter — silently skips missing elements
@@ -346,14 +383,15 @@ function openQuickInput(title, label, placeholder, cb) {
 function renderDashboard() {
 	const g = getGrant();
 	const totalBudget = getTotalBudget();
-	const totalSpent = getTotalSpent();
-	const remaining = totalBudget - totalSpent;
+	const totalUsed = getTotalUsed();
+	const liCount = DB.activities.reduce((s, a) => s + ((a.lineItems && a.lineItems.length) || 0), 0);
+	const remaining = totalBudget - totalUsed;
 	const actCount = DB.activities.length;
 	const expCount = DB.expenses.length;
 	const catCount = DB.budgetCategories.length;
 	const docCount = DB.documents.length;
 	const ongoingActs = DB.activities.filter(a => a.status === 'in-progress').length;
-	const utilizationPct = getBudgetUtilizationPct();
+	const utilizationPct = getBudgetCommitPct();
 	const cur = getCurrency();
 	const phase = getPhase();
 	const isPreApproval = phase === 'drafting' || phase === 'applied';
@@ -372,14 +410,14 @@ function renderDashboard() {
 			<div class="stat-sub">${catCount} budget categories</div>
 		</div>
 		<div class="stat-card ${isPreApproval ? 'purple' : (remaining >= 0 ? 'green' : 'red')}">
-			<div class="stat-label">${isPreApproval ? 'Planned Activities' : 'Total Spent'}</div>
-			<div class="stat-value">${isPreApproval ? actCount : fmtCurrency(totalSpent, cur)}</div>
-			<div class="stat-sub">${isPreApproval ? ongoingActs + ' in progress' : expCount + ' expenses recorded'}</div>
+			<div class="stat-label">${isPreApproval ? 'Planned Activities' : 'Total Used'}</div>
+			<div class="stat-value">${isPreApproval ? actCount : fmtCurrency(totalUsed, cur)}</div>
+			<div class="stat-sub">${isPreApproval ? ongoingActs + ' in progress' : actCount + ' activities · ' + liCount + ' line items · ' + expCount + ' expenses'}</div>
 		</div>
 		<div class="stat-card ${isPreApproval ? 'blue' : (remaining >= 0 ? 'blue' : 'red')}">
 			<div class="stat-label">${isPreApproval ? 'Documents' : 'Remaining'}</div>
-			<div class="stat-value">${isPreApproval ? docCount : fmtCurrency(Math.abs(remaining), cur)}</div>
-			<div class="stat-sub">${isPreApproval ? 'attached to application' : (remaining >= 0 ? (remaining === totalBudget ? 'No spending yet' : utilPctText(utilizationPct)) : 'OVER BUDGET!')}</div>
+			<div class="stat-value">${isPreApproval ? docCount : (remaining < 0 ? '-' : '') + fmtCurrency(Math.abs(remaining), cur)}</div>
+			<div class="stat-sub">${isPreApproval ? 'attached to application' : (remaining >= 0 ? (remaining === totalBudget ? 'No costs yet' : utilPctText(utilizationPct)) : 'OVER BUDGET!')}</div>
 		</div>
 		<div class="stat-card ${isPreApproval ? 'amber' : 'purple'}">
 			<div class="stat-label">Phase</div>
@@ -399,7 +437,7 @@ function renderDashboard() {
 
 	// Budget bar — always visible but label changes
 	el('dash-budget-bar').style.width = utilizationPct + '%';
-	el('dash-budget-spent').textContent = isPreApproval ? 'Budget planned: ' + fmtCurrency(totalBudget, cur) : fmtCurrency(totalSpent, cur) + ' spent';
+	el('dash-budget-spent').textContent = isPreApproval ? 'Budget planned: ' + fmtCurrency(totalBudget, cur) : fmtCurrency(totalUsed, cur) + ' used';
 	el('dash-budget-remaining').textContent = isPreApproval ? 'Ready for allocation' : fmtCurrency(Math.max(0, remaining), cur) + ' remaining';
 
 	// Hide/show bottom row based on phase
@@ -461,16 +499,16 @@ function renderDashboardCategories(cur) {
 	} else {
 		const maxAlloc = Math.max(...DB.budgetCategories.map(c => Number(c.allocated) || 0), 1);
 		el('dash-category-breakdown').innerHTML = DB.budgetCategories.map(c => {
-			const spent = getSpentForCategory(c.id);
+			const used = getUsedForCategory(c.id);
 			const alloc = Number(c.allocated) || 0;
-			const spentPct = alloc > 0 ? Math.min(100, (spent / alloc) * 100) : 0;
+			const usedPct = alloc > 0 ? Math.min(100, (used / alloc) * 100) : 0;
 			return `<div class="category-bar-row">
 				<div class="category-bar-color" style="background:${c.color || '#0d9488'}"></div>
 				<div class="category-bar-label">${esc(c.name)}</div>
 				<div class="category-bar-track">
-					<div class="category-bar-fill" style="width:${spentPct}%;background:${c.color || '#0d9488'}"></div>
+					<div class="category-bar-fill" style="width:${usedPct}%;background:${c.color || '#0d9488'}"></div>
 				</div>
-				<div class="category-bar-amount">${fmtCurrency(spent, cur)} / ${fmtCurrency(alloc, cur)}</div>
+				<div class="category-bar-amount">${fmtCurrency(used, cur)} / ${fmtCurrency(alloc, cur)}</div>
 			</div>`;
 		}).join('');
 	}
@@ -492,7 +530,7 @@ function getChecklistState() {
 	const st = DB.checklist || {};
 	return {
 		grant_name: !!(g.name && g.funder),
-		budget_set: !!(Number(g.totalBudget) > 0),
+		budget_set: getTotalBudget() > 0,
 		categories: DB.budgetCategories.length > 0,
 		activities: DB.activities.length >= 2,
 		problem_stmt: !!(g.problem && g.problem.length > 20),
@@ -1199,18 +1237,24 @@ function renderActivities() {
 	if (filtered.length === 0) {
 		tbody.innerHTML = '<tr><td class="table-empty" colspan="7">No activities found</td></tr>';
 	} else {
+		const totalBudget = getTotalBudget();
+		const totalActBudget = getTotalActivityBudget();
 		tbody.innerHTML = filtered.map(a => {
 			const spent = getSpentForActivity(a.id);
 			const alloc = getActivityBudget(a);
+			const est = Number(a.estimatedBudget) || 0;
 			const liCount = (a.lineItems && a.lineItems.length) || 0;
 			const liDone = a.lineItems ? a.lineItems.filter(li => li.status === 'completed').length : 0;
+			const subs = [];
+			if (est > 0) subs.push('Est. ' + fmtCurrency(est, cur));
+			if (liCount > 0) subs.push(liCount + ' items' + (liDone > 0 ? ' · ' + liDone + ' done' : ''));
 			return `<tr>
 				<td>
 					<div style="font-weight:600">${esc(a.name)}</div>
 					<div style="font-size:11px;color:var(--text3)">${esc((a.description || '').slice(0, 60))}${(a.description || '').length > 60 ? '...' : ''}</div>
 				</td>
 				<td style="white-space:nowrap;font-size:12px">${fmtDateShort(a.startDate)} → ${fmtDateShort(a.endDate)}</td>
-				<td class="amount-cell">${fmtCurrency(spent, cur)}<span style="font-weight:400;color:var(--text3)"> / ${fmtCurrency(alloc, cur)}</span>${liCount > 0 ? `<span class="amount-sub">${liCount} items${liDone > 0 ? ' · ' + liDone + ' done' : ''}</span>` : ''}</td>
+				<td class="amount-cell">${fmtCurrency(spent, cur)}<span style="font-weight:400;color:var(--text3)"> / ${fmtCurrency(alloc, cur)}</span>${subs.length ? `<span class="amount-sub">${subs.join(' · ')}</span>` : ''}</td>
 				<td style="text-align:center">${a.expectedAttendees || '—'}</td>
 				<td><span class="badge badge-${a.priority || 'medium'}">${a.priority || 'medium'}</span></td>
 				<td><span class="badge badge-${a.status || 'planned'}">${(a.status || 'planned').replace('-', ' ')}</span></td>
@@ -1219,7 +1263,12 @@ function renderActivities() {
 					<button class="btn btn-ghost btn-xs" data-action="delete-activity" data-id="${a.id}" style="color:var(--red)">Del</button>
 				</td>
 			</tr>`;
-		}).join('');
+		}).join('') + `
+			<tr class="table-total-row">
+				<td colspan="2">Total Planned (all activities)</td>
+				<td class="amount-cell">${fmtCurrency(totalActBudget, cur)}</td>
+				<td colspan="4" style="font-size:11px;font-weight:400;color:var(--text3)">of ${fmtCurrency(totalBudget, cur)} total project budget${totalActBudget > totalBudget ? ' <span class="text-red">⚠ exceeds budget</span>' : ''}</td>
+			</tr>`;
 	}
 
 	tool.resize();
@@ -1247,13 +1296,6 @@ function openActivityModal(id) {
 	setVal('f-act-outcomes', a ? (a.outcomes || '') : '');
 	setVal('f-act-lessons', a ? (a.lessons || '') : '');
 
-	// Populate category dropdown
-	const catSelect = el('f-act-category');
-	if (catSelect) {
-		catSelect.innerHTML = '<option value="">Select category...</option>' + DB.budgetCategories.map(c => `<option value="${c.id}" ${a && a.category === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
-		if (a) catSelect.value = a.category || '';
-	}
-
 	// Line items
 	const hasLineItems = a && a.lineItems && a.lineItems.length > 0;
 	lineItemsBuffer = hasLineItems ? a.lineItems.map(li => ({...li})) : [];
@@ -1275,23 +1317,27 @@ function renderLineItems() {
 	if (lineItemsBuffer.length === 0) {
 		container.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:4px 0">No line items yet — add them below or just use the Budget field above.</div>';
 	} else {
-		container.innerHTML = lineItemsBuffer.map((li, i) => `
+		container.innerHTML = lineItemsBuffer.map((li, i) => {
+			const catOptions = '<option value="">— no category —</option>' + DB.budgetCategories.map(c => `<option value="${c.id}" ${li.category === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+			return `
 			<div class="line-item-row" data-li-index="${i}">
 				<input type="text" class="form-input li-desc" value="${esc(li.description || '')}" placeholder="Item description" onchange="updateLineItem(${i},'description',this.value)">
 				<div class="input-with-prefix li-cost-wrap"><span class="input-prefix">$</span><input type="number" class="form-input li-cost-input" value="${li.cost || ''}" placeholder="0.00" min="0" step="0.01" onchange="updateLineItem(${i},'cost',this.value)"></div>
+				<select class="form-input li-cat" onchange="updateLineItem(${i},'category',this.value)">${catOptions}</select>
 				<select class="form-input li-status" onchange="updateLineItem(${i},'status',this.value)">
 					<option value="planned" ${li.status === 'planned' ? 'selected' : ''}>Planned</option>
 					<option value="in-progress" ${li.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
 					<option value="completed" ${li.status === 'completed' ? 'selected' : ''}>Done</option>
 				</select>
 				<button class="btn btn-ghost btn-xs li-del" onclick="removeLineItem(${i})" title="Remove">×</button>
-			</div>`).join('');
+			</div>`;
+		}).join('');
 	}
 	refreshLineItemsTotal();
 }
 
 function addLineItem() {
-	lineItemsBuffer.push({ id: genId(), description: '', cost: 0, status: 'planned' });
+	lineItemsBuffer.push({ id: genId(), description: '', cost: 0, status: 'planned', category: '' });
 	renderLineItems();
 	if (el('f-act-auto-sum').checked) {
 		el('f-act-budget').readOnly = true;
@@ -1373,11 +1419,10 @@ function saveActivity() {
 		budgetAllocated: finalBudget,
 		estimatedBudget: parseFloat(getVal('f-act-estimated-budget', '0')) || 0,
 		expectedAttendees: parseInt(getVal('f-act-attendees', '0')) || 0,
-		category: getVal('f-act-category'),
 		priority: getVal('f-act-priority'),
 		status: getVal('f-act-status'),
 		lineItems: lineItemsBuffer.length > 0 ? lineItemsBuffer.map(li => ({
-			id: li.id, description: li.description || '', cost: Number(li.cost) || 0, status: li.status || 'planned'
+			id: li.id, description: li.description || '', cost: Number(li.cost) || 0, status: li.status || 'planned', category: li.category || ''
 		})) : [],
 		actualAttendees: parseInt(getVal('f-act-actual-attendees', '0')) || 0,
 		completionPct: parseInt(getVal('f-act-completion', '0')) || 0,
@@ -1394,6 +1439,26 @@ function saveActivity() {
 
 	closeAllModals();
 	persist();
+
+	// Cross-check the saved budget against categories and total project budget
+	const cur = getCurrency();
+	const totalBudget = getTotalBudget();
+	const totalPlanned = getTotalActivityBudget();
+	const warnings = [];
+	if (totalPlanned > totalBudget) warnings.push(`Total planned activities (${fmtCurrency(totalPlanned, cur)}) exceed the project budget (${fmtCurrency(totalBudget, cur)})`);
+	const touchedCats = new Set();
+	if (data.lineItems && data.lineItems.length > 0) {
+		data.lineItems.forEach(li => { if (li.category) touchedCats.add(li.category); });
+	}
+	touchedCats.forEach(catId => {
+		const cat = getCategoryById(catId);
+		const plannedInCat = getPlannedForCategory(catId);
+		if (cat && Number(cat.allocated) > 0 && plannedInCat > Number(cat.allocated)) {
+			warnings.push(`"${cat.name}" planned (${fmtCurrency(plannedInCat, cur)}) exceeds its allocation (${fmtCurrency(Number(cat.allocated), cur)})`);
+		}
+	});
+	if (warnings.length) tool.notify('⚠ ' + warnings.join('\n'), 'warning');
+
 	renderActivities();
 	tool.notify(id ? 'Activity updated' : 'Activity added', 'success');
 }
@@ -1428,11 +1493,11 @@ function renderBudget() {
 		tbody.innerHTML = '<tr><td class="table-empty" colspan="6">No budget categories defined. Add categories to allocate your grant budget.</td></tr>';
 	} else {
 		tbody.innerHTML = DB.budgetCategories.map((c, i) => {
-			const spent = getSpentForCategory(c.id);
 			const alloc = Number(c.allocated) || 0;
-			const remaining = alloc - spent;
-			const pct = alloc > 0 ? Math.min(100, (spent / alloc) * 100) : 0;
-			const overBudget = spent > alloc;
+			const used = getUsedForCategory(c.id);
+			const remaining = alloc - used;
+			const pct = alloc > 0 ? Math.min(100, (used / alloc) * 100) : 0;
+			const overBudget = used > alloc;
 			return `<tr>
 				<td>
 					<div style="display:flex;align-items:center;gap:8px">
@@ -1441,7 +1506,7 @@ function renderBudget() {
 					</div>
 				</td>
 				<td class="amount-cell">${fmtCurrency(alloc, cur)}</td>
-				<td class="amount-cell">${fmtCurrency(spent, cur)}</td>
+				<td class="amount-cell${overBudget ? ' text-red' : ''}">${fmtCurrency(used, cur)}${overBudget ? ' ⚠' : ''}</td>
 				<td class="amount-cell ${overBudget ? 'text-red' : 'text-green'}">${fmtCurrency(remaining, cur)}${overBudget ? ' ⚠' : ''}</td>
 				<td>
 					<div style="display:flex;align-items:center;gap:8px">
@@ -1461,7 +1526,15 @@ function renderBudget() {
 
 	// Budget summary bars
 	const unallocated = totalBudget - totalAllocated;
+	const totalUsed = getTotalUsed();
+	const remainingBudget = totalBudget - totalUsed;
 	el('budget-summary-bars').innerHTML = `
+		<div class="budget-totals-row">
+			<div class="budget-total"><span class="bt-label">Project Budget</span><span class="bt-value">${fmtCurrency(totalBudget, cur)}</span></div>
+			<div class="budget-total${totalAllocated > totalBudget ? ' bt-over' : ''}"><span class="bt-label">Allocated</span><span class="bt-value">${fmtCurrency(totalAllocated, cur)}</span></div>
+			<div class="budget-total${totalUsed > totalBudget ? ' bt-over' : ''}"><span class="bt-label">Used (Total)</span><span class="bt-value">${fmtCurrency(totalUsed, cur)}</span></div>
+			<div class="budget-total${remainingBudget < 0 ? ' bt-over' : ''}"><span class="bt-label">Remaining</span><span class="bt-value">${remainingBudget < 0 ? '-' : ''}${fmtCurrency(Math.abs(remainingBudget), cur)}</span></div>
+		</div>
 		<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:8px">
 			<div style="flex:1;min-width:200px">
 				<div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:600;margin-bottom:8px">Budget Allocation</div>
@@ -1479,8 +1552,8 @@ function renderBudget() {
 				</div>
 			</div>
 			<div style="text-align:right;min-width:140px">
-				<div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Total Spent</div>
-				<div style="font-size:22px;font-weight:800;color:${totalSpent > totalBudget ? 'var(--red)' : 'var(--text)'}">${fmtCurrency(totalSpent, cur)}</div>
+				<div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:600;margin-bottom:4px">Total Used</div>
+				<div style="font-size:22px;font-weight:800;color:${totalUsed > totalBudget ? 'var(--red)' : 'var(--text)'}">${fmtCurrency(totalUsed, cur)}</div>
 				<div style="font-size:11px;color:var(--text3)">of ${fmtCurrency(totalBudget, cur)} total</div>
 			</div>
 		</div>
@@ -1524,6 +1597,14 @@ function saveCategory() {
 
 	closeAllModals();
 	persist();
+
+	const cur = getCurrency();
+	const totalAllocated = getTotalAllocated();
+	const totalBudget = getTotalBudget();
+	if (totalAllocated > totalBudget) {
+		tool.notify(`⚠ Total allocations (${fmtCurrency(totalAllocated, cur)}) exceed the project budget (${fmtCurrency(totalBudget, cur)}).`, 'warning');
+	}
+
 	renderBudget();
 	tool.notify(id ? 'Category updated' : 'Category added', 'success');
 }
@@ -1653,14 +1734,14 @@ function saveExpense() {
 		DB.expenses.push(data);
 	}
 
-	// Check if over budget for category
+	// Check if over budget for category (activities + expenses)
 	if (data.category) {
 		const cat = getCategoryById(data.category);
 		if (cat) {
-			const spent = getSpentForCategory(data.category);
+			const used = getUsedForCategory(data.category);
 			const alloc = Number(cat.allocated) || 0;
-			if (spent > alloc && alloc > 0) {
-				tool.notify(`⚠ Warning: "${cat.name}" category is now over budget by ${fmtCurrency(spent - alloc, getCurrency())}`, 'warning');
+			if (used > alloc && alloc > 0) {
+				tool.notify(`⚠ Warning: "${cat.name}" category is now over budget by ${fmtCurrency(used - alloc, getCurrency())}`, 'warning');
 			}
 		}
 	}

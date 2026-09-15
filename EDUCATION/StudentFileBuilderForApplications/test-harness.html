@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudentFile Builder — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="StudentFileBuilderForApplications.css">
+<style>
+body { padding-top: 28px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 28px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — StudentFile Builder</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'student_file_builder_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = { id: 'usr_test1', name: 'Grace Hopper', email: 'grace@example.com', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false }, locale: 'en' };
+  var _fields = {}, _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function(missing, msg) { if (missing && missing.length) console.warn('[Missing params]', msg, missing); },
+    declareOutput: function() {},
+    declareParams: function() {},
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    requestUpload: function(accept, cb) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      if (accept) input.accept = accept;
+      input.onchange = function() {
+        var f = input.files && input.files[0];
+        if (!f) { cb('No file selected', null); return; }
+        var reader = new FileReader();
+        reader.onload = function() {
+          cb(null, { name: f.name, url: reader.result, size: f.size, type: f.type || '' });
+        };
+        reader.onerror = function() { cb('Could not read file', null); };
+        reader.readAsDataURL(f);
+      };
+      input.click();
+    },
+    requestExportPdf: function(options, cb) {
+      var html = options.html || document.body.innerHTML;
+      try {
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        cb(null, { name: (options.filename || 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+      } catch(e) { cb('Export failed: ' + e.message, null); }
+    },
+    requestAI: function(prompt, context, cb) {
+      setTimeout(function() {
+        var q = (prompt || '').toLowerCase();
+        var answer;
+        if (q.indexOf('evaluate') > -1 || q.indexOf('verdict') > -1) {
+          answer = "VERDICT: POSSIBLE\nEstimated readiness score: 62/100\n\nKey gaps:\n1. Standardized test scores are still pending.\n2. Not all recommendation letters are received yet.\n3. Supplemental essays have not been started.\n\nNext actions:\n• Book the SAT/ACT test date now.\n• Follow up with referees this week.\n• Draft outlines for the supplemental essays.";
+        } else if (q.indexOf('missing') > -1 || q.indexOf('left') > -1 || q.indexOf('next') > -1) {
+          answer = "Based on the current file, the biggest gaps are:\n\n1. Essays & Statements — most applications still need the personal statement drafted.\n2. References — at least one letter is still 'Requested' and not yet received.\n3. Test Scores — confirm whether SAT/ACT and English proficiency scores are required for each school.\n\nRecommended next step: draft the personal statement outline first, then follow up with referees before the deadlines.";
+        } else if (q.indexOf('essay') > -1 || q.indexOf('statement') > -1) {
+          answer = "For the personal statement, build the narrative around a single compelling story. Tie the student's robotics leadership and community tutoring into a clear 'why this major' arc, and keep it under the word limit. Start with a vivid scene, show growth, and end with forward-looking intent.";
+        } else {
+          answer = "Here's my advice as your admissions mentor:\n\n• Focus on the requirements still marked 'In Progress' or 'Not Started'.\n• Prioritize items with due dates in the next 30 days.\n• Make sure each application has at least one strong achievement, a solid grade summary, and two confirmed references.\n\nYou can also add mentor notes in the Mentor tab to track next steps.";
+        }
+        cb(null, answer);
+      }, 600);
+    },
+    onReady: function(cb) { load(); cb(_value, _fields); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('StudentFile DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = `<div id="app">
+	<div class="ro-banner" id="ro-banner" style="display:none">
+		<span>🔒 Read-only mode — you are viewing this student's application file.</span>
+	</div>
+	<div class="ro-banner view-banner" id="view-banner" style="display:none">
+		<span>🧭 Mentor view — student content is read-only. You can request more data and leave feedback.</span>
+	</div>
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<div class="brand-icon">🎓</div>
+			<div class="brand-name">StudentFile</div>
+			<div class="brand-sub">Application Prep</div>
+		</div>
+		<nav class="nav">
+			<div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+			<div class="nav-item" data-page="profile"><span class="nav-icon">👤</span>Student Profile</div>
+			<div class="nav-item" data-page="applications"><span class="nav-icon">🎯</span>Applications<span class="nav-badge" id="nav-apps-count">0</span></div>
+			<div class="nav-item" data-page="portfolio"><span class="nav-icon">🎨</span>Portfolio<span class="nav-badge" id="nav-portfolio-count">0</span></div>
+			<div class="nav-item" data-page="achievements"><span class="nav-icon">🏆</span>Achievements<span class="nav-badge" id="nav-ach-count">0</span></div>
+			<div class="nav-item" data-page="grades"><span class="nav-icon">📚</span>Grades &amp; Scores<span class="nav-badge" id="nav-grades-count">0</span></div>
+			<div class="nav-item" data-page="references"><span class="nav-icon">💌</span>References<span class="nav-badge" id="nav-refs-count">0</span></div>
+			<div class="nav-item" data-page="documents"><span class="nav-icon">📄</span>Documents<span class="nav-badge" id="nav-docs-count">0</span></div>
+			<div class="nav-item" data-page="requests"><span class="nav-icon">📥</span>Requests<span class="nav-badge" id="nav-requests-count">0</span></div>
+			<div class="nav-item" data-page="mentor"><span class="nav-icon">🧭</span>Mentor</div>
+		</nav>
+		<div class="sidebar-foot">
+			<div class="foot-card">
+				<div class="foot-label">Overall Readiness</div>
+				<div class="foot-value" id="sidebar-readiness">0%</div>
+				<div class="progress"><div class="progress-fill" id="sidebar-readiness-bar" style="width:0%"></div></div>
+			</div>
+		</div>
+	</aside>
+	<main class="main">
+		<header class="topbar">
+			<div class="topbar-titles">
+				<div class="page-title" id="page-title">Dashboard</div>
+				<div class="page-sub" id="page-sub">One student, every application, fully prepared.</div>
+			</div>
+			<div class="topbar-actions">
+				<div class="view-toggle" id="view-toggle">
+					<button class="view-btn" data-view="student">👤 Student</button>
+					<button class="view-btn" data-view="mentor">🧭 Mentor</button>
+				</div>
+				<button class="btn btn-outline" id="btn-export">📤 Export Summary</button>
+				<button class="theme-toggle" id="theme-toggle"><span id="theme-icon">🌙</span></button>
+			</div>
+		</header>
+		<section id="sec-dashboard" class="section active">
+			<div class="stats-grid" id="dash-stats"></div>
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Applications</h3><button class="btn btn-sm btn-primary" id="dash-add-app" data-action="add-app">+ Add</button></div>
+					<div id="dash-apps"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>Upcoming Deadlines</h3></div>
+					<div id="dash-deadlines"></div>
+				</div>
+			</div>
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Open Data Requests</h3><button class="btn btn-sm btn-ghost" id="dash-goto-requests">View all</button></div>
+					<div id="dash-requests"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>Recent Mentor Notes</h3><button class="btn btn-sm btn-ghost" id="dash-goto-notes">View all</button></div>
+					<div id="dash-notes"></div>
+				</div>
+			</div>
+		</section>
+		<section id="sec-profile" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Student Information</h3><span class="panel-hint">Saved automatically as you type.</span></div>
+				<div class="form-grid">
+					<div class="field"><label>First Name</label><input type="text" id="pf-first" placeholder="e.g. Ada"></div>
+					<div class="field"><label>Last Name</label><input type="text" id="pf-last" placeholder="e.g. Lovelace"></div>
+					<div class="field"><label>School</label><input type="text" id="pf-school" placeholder="Current school"></div>
+					<div class="field"><label>Grade / Year Level</label><input type="text" id="pf-grade" list="grade-levels" placeholder="e.g. Grade 12 / IB2"><datalist id="grade-levels"><option value="Grade 5"><option value="Grade 6"><option value="Grade 7"><option value="Grade 8"><option value="Grade 9"><option value="Grade 10"><option value="Grade 11"><option value="Grade 12"><option value="IB1"><option value="IB2"><option value="A-Levels Year 1"><option value="A-Levels Year 2"><option value="Trade School Year 1"><option value="Apprenticeship Year 1"></datalist></div>
+					<div class="field"><label>Date of Birth</label><input type="date" id="pf-dob"></div>
+					<div class="field"><label>Email</label><input type="email" id="pf-email" placeholder="student@example.com"></div>
+					<div class="field"><label>Phone</label><input type="text" id="pf-phone" placeholder="+1 555-0101"></div>
+					<div class="field field-full"><label>Address</label><input type="text" id="pf-address" placeholder="Street, City, Country"></div>
+				</div>
+			</div>
+			<div class="panel">
+				<div class="panel-head"><h3>Mentor / Counselor</h3></div>
+				<div class="form-grid">
+					<div class="field"><label>Mentor Name</label><input type="text" id="pf-mentor-name" placeholder="e.g. Dr. Grace Hopper"></div>
+					<div class="field"><label>Mentor Email</label><input type="email" id="pf-mentor-email" placeholder="mentor@example.com"></div>
+					<div class="field field-full"><label>Target Programs / Fields of Interest</label><textarea id="pf-programs" rows="2" placeholder="e.g. Computer Science, Business, Medicine, Architecture..."></textarea></div>
+					<div class="field field-full"><label>Interests &amp; Strengths</label><textarea id="pf-interests" rows="2" placeholder="e.g. Robotics, debate, community service, painting..."></textarea></div>
+					<div class="field field-full"><label>Notes</label><textarea id="pf-notes" rows="2" placeholder="Any extra context the mentor should know."></textarea></div>
+				</div>
+			</div>
+		</section>
+		<section id="sec-applications" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Application Files</h3><button class="btn btn-primary" id="btn-add-app" data-action="add-app">+ Add Application</button></div>
+				<p class="panel-hint">General application files per pathway — university, college, IB and other. Add target schools and link the achievements, portfolio and references that support each one.</p>
+				<div id="apps-grid" class="apps-grid"></div>
+			</div>
+		</section>
+		<section id="sec-portfolio" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Portfolio</h3><button class="btn btn-primary" id="btn-add-portfolio" data-action="add-portfolio">+ Add Portfolio Item</button></div>
+				<p class="panel-hint">Projects, essays, research and creative work — with their content and supporting evidence files.</p>
+				<div class="chip-row" id="portfolio-filter"></div>
+				<div id="portfolio-grid" class="cards-grid"></div>
+			</div>
+		</section>
+		<section id="sec-achievements" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Achievements &amp; Activities</h3><button class="btn btn-primary" id="btn-add-ach" data-action="add-ach">+ Add Achievement</button></div>
+				<p class="panel-hint">Awards, competitions, leadership, community service, sports, arts — anything that supports the application.</p>
+				<div class="chip-row" id="ach-filter"></div>
+				<div id="ach-grid" class="cards-grid"></div>
+			</div>
+		</section>
+		<section id="sec-grades" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Grades &amp; Scores</h3><button class="btn btn-primary" id="btn-add-grade" data-action="add-grade">+ Add Grade</button></div>
+				<p class="panel-hint">Subject grades, predicted scores and standardized test results.</p>
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead><tr><th>Subject / Test</th><th>Type</th><th>Score</th><th>Term / Year</th><th>Notes</th><th class="th-actions"></th></tr></thead>
+						<tbody id="grades-body"></tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+		<section id="sec-references" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>References &amp; Recommendation Letters</h3><button class="btn btn-primary" id="btn-add-ref" data-action="add-ref">+ Add Referee</button></div>
+				<p class="panel-hint">Track who will write each letter, request status and delivery.</p>
+				<div id="refs-grid" class="cards-grid"></div>
+			</div>
+		</section>
+		<section id="sec-documents" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Supporting Documents</h3><button class="btn btn-primary" id="btn-upload-doc" data-action="upload-doc">📎 Upload File</button></div>
+				<p class="panel-hint">Transcripts, certificates, portfolios, essays and any supporting files.</p>
+				<div id="docs-grid" class="cards-grid"></div>
+			</div>
+		</section>
+		<section id="sec-requests" class="section">
+			<div class="panel">
+				<div class="panel-head"><h3>Data Requests</h3><button class="btn btn-primary" id="btn-add-request" data-action="add-request">+ New Request</button></div>
+				<p class="panel-hint">The mentor requests missing data and evidence; the student fulfills the request. Both can reply in the conversation.</p>
+				<div id="requests-list" class="cards-grid"></div>
+			</div>
+		</section>
+		<section id="sec-mentor" class="section">
+			<div class="dash-cols">
+				<div class="panel">
+					<div class="panel-head"><h3>Mentor Notes</h3><button class="btn btn-sm btn-primary" id="btn-add-note" data-action="add-note">+ Add Note</button></div>
+					<div id="notes-list"></div>
+				</div>
+				<div class="panel">
+					<div class="panel-head"><h3>AI Mentor Assistant</h3></div>
+					<div class="ai-box" id="ai-box">
+						<div class="ai-messages" id="ai-messages"><div class="ai-msg ai-msg-bot">Ask me for guidance — e.g. "What is still missing for Emma's university applications?"</div></div>
+						<div class="ai-inputrow"><textarea id="ai-input" rows="2" placeholder="Ask the AI mentor..."></textarea><button class="btn btn-primary" id="ai-send">Ask</button></div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+</div>
+<div class="modal-overlay" id="modal-overlay">
+	<div class="modal" id="modal">
+		<div class="modal-header"><h3 id="modal-title">Title</h3><button class="btn btn-icon modal-close" id="modal-close">✕</button></div>
+		<div class="modal-body" id="modal-body"></div>
+		<div class="modal-footer" id="modal-footer"></div>
+	</div>
+</div>
+<div class="drawer-overlay" id="drawer-overlay">
+	<div class="drawer" id="drawer">
+		<div class="drawer-header">
+			<div class="drawer-title-wrap"><h3 id="drawer-title">Application</h3><div class="drawer-sub" id="drawer-sub"></div></div>
+			<button class="btn btn-icon" id="drawer-close">✕</button>
+		</div>
+		<div class="drawer-body" id="drawer-body"></div>
+	</div>
+</div>`;
+
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'StudentFileBuilderForApplications.js';
+    script.onload = function() { status.textContent = 'Ready — click "Load Sample Data" to test'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 1500);
+
+  fetch('StudentFileBuilderForApplications.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() { /* fallback already triggered */ });
+})();
+</script>
+
+<script>
+/* ── Sample Data Generator ── */
+(function() {
+  function dateISO(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function addDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return dateISO(d); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function r(cat, title, desc, status, due, targetYear) { return { id: uid(), cat: cat, title: title, desc: desc || "", status: status || "not-started", due: due || "", targetYear: targetYear || "", notes: "" }; }
+  function tgt(inst, program, deadline, status, notes) { return { id: uid(), institution: inst, program: program, deadline: deadline, status: status || "planning", notes: notes || "" }; }
+  function cmt(author, role, text, daysAgo) { return { id: uid(), author: author, role: role, text: text, time: new Date(Date.now() - (daysAgo || 0) * 86400000).toISOString() }; }
+
+  function universityReqs() {
+    return [
+      r("academic", "Academic Transcript / Grade Report", "Official transcript or latest grade report", "done"),
+      r("academic", "Predicted Grades", "Predicted final grades from school", "done"),
+      r("tests", "Standardized Test Scores", "SAT / ACT score reports", "in-progress", addDays(30)),
+      r("tests", "English Proficiency", "TOEFL / IELTS (if required)", "not-started", addDays(60), "Grade 12"),
+      r("essays", "Personal Statement / Main Essay", "The primary application essay", "in-progress", addDays(45)),
+      r("essays", "Supplemental Essays", "School-specific short essays", "not-started", addDays(75), "Grade 11"),
+      r("references", "Letters of Recommendation", "2-3 letters from teachers / counselor", "in-progress", addDays(50)),
+      r("documents", "CV / Resume", "Summary of activities and achievements", "done"),
+      r("portfolio", "Portfolio", "For arts / design / performance programs", "not-needed"),
+      r("financial", "Financial Aid / Scholarship Forms", "FAFSA / CSS or school financial forms", "not-started", addDays(80)),
+      r("documents", "Application Fee / Fee Waiver", "Pay the fee or request a waiver", "done"),
+      r("interview", "Interview Preparation", "Admissions or alumni interview", "not-started", addDays(90))
+    ];
+  }
+  function ibReqs() {
+    return [
+      r("academic", "IB Predicted Grades", "Predicted 1-7 scores from subject teachers", "done"),
+      r("academic", "Subject Choices Confirmation", "HL / SL subject selection confirmed", "done"),
+      r("essays", "Extended Essay (EE)", "4,000-word independent research essay", "in-progress", addDays(40)),
+      r("essays", "Theory of Knowledge (TOK) Essay", "TOK prescribed-title essay", "done"),
+      r("portfolio", "CAS Portfolio", "Creativity, Activity, Service evidence", "in-progress", addDays(25)),
+      r("documents", "Internal Assessment Records", "IA work across subjects", "in-progress"),
+      r("references", "School Reference", "Coordinator / teacher reference", "done"),
+      r("tests", "Language Proficiency", "If applying in a second language", "not-needed")
+    ];
+  }
+  function collegeReqs() {
+    return [
+      r("academic", "High School Transcript", "Official or latest transcript", "done"),
+      r("academic", "Diploma / Graduation Certificate", "Proof of secondary completion", "not-started", addDays(100)),
+      r("documents", "Application Form", "Completed institutional application", "not-started", addDays(120)),
+      r("tests", "Placement Test", "Math / English placement", "not-started", addDays(130)),
+      r("references", "Letters of Recommendation", "1-2 letters", "in-progress", ""),
+      r("essays", "Personal Statement", "Optional but recommended", "not-started", addDays(110)),
+      r("portfolio", "Portfolio", "For arts / applied programs", "not-needed"),
+      r("financial", "Financial Aid Forms", "Scholarships, grants, payment plans", "not-started", addDays(90))
+    ];
+  }
+  function tradesReqs() {
+    return [
+      r("academic", "Transcript / Grade Report", "Latest academic record", "done"),
+      r("academic", "High School Diploma / GED", "Proof of secondary completion (if applicable)", "in-progress", addDays(40)),
+      r("documents", "Application / Enrolment Form", "Trade school or apprenticeship application", "not-started", addDays(60)),
+      r("tests", "Entrance Assessment / Aptitude Test", "If required by the program", "not-started", addDays(80)),
+      r("references", "References / Employer Reference", "Teacher, employer or supervisor letters", "in-progress"),
+      r("documents", "Resume / CV", "Work experience and skills summary", "done"),
+      r("portfolio", "Portfolio of Trade Work", "Photos or descriptions of projects, repairs and builds", "in-progress"),
+      r("documents", "Safety Certifications", "e.g. first aid, WHMIS / OSHA, equipment tickets", "done"),
+      r("interview", "Interview / Site Visit", "Employer or program interview", "not-started", addDays(45)),
+      r("financial", "Financial Aid / Sponsorship", "Apprenticeship grants, scholarships, payment plans", "not-started"),
+      r("documents", "ID / Driver's License", "If required for site access or tools", "not-started", addDays(30))
+    ];
+  }
+
+  function generateSampleData() {
+    var uniId = "app1", ibId = "app2", colId = "app3";
+    return {
+      _theme: "light",
+      _view: "student",
+      student: {
+        firstName: "Emma", lastName: "Chen", school: "Westfield International School", gradeLevel: "IB2",
+        dob: "2009-03-14", email: "emma.chen@example.com", phone: "+1 555-0142", address: "",
+        mentorName: "Dr. Grace Hopper", mentorEmail: "grace@example.com",
+        targetPrograms: "Computer Science, Biomedical Engineering",
+        interests: "Robotics club, debate, community tutoring, oil painting",
+        notes: "Strong in STEM; needs to strengthen the essay narrative around leadership."
+      },
+      applications: [
+        {
+          id: uniId, type: "university", name: "University Application File", status: "preparing",
+          notes: "Primary pathway — STEM focus.",
+          faculty: "Computer Science", intake: "Fall 2027", targetYear: "Grade 12 · 2027",
+          requirements: universityReqs(),
+          targets: [
+            tgt("Stanford University", "Computer Science", addDays(90), "preparing", "Early action."),
+            tgt("MIT", "Electrical Engineering & CS", addDays(120), "planning", ""),
+            tgt("UC Berkeley", "Computer Science", addDays(130), "planning", "")
+          ],
+          links: { achievements: ["ach1"], portfolio: ["pf1", "pf2"], references: ["ref1", "ref2", "ref3"], documents: ["doc1", "doc2"] },
+          comments: [ cmt("Dr. Grace Hopper", "mentor", "Strong profile for CS — focus on the robotics narrative in the essays.", 2) ]
+        },
+        {
+          id: ibId, type: "ib", name: "IB Diploma Application File", status: "preparing",
+          notes: "",
+          faculty: "", intake: "May 2027", targetYear: "IB2 · 2027",
+          requirements: ibReqs(),
+          targets: [ tgt("IB Diploma Programme", "", addDays(200), "preparing", "") ],
+          links: { achievements: [], portfolio: ["pf1"], references: ["ref1"], documents: ["doc1"] },
+          comments: []
+        },
+        {
+          id: colId, type: "college", name: "College Application File", status: "planning",
+          notes: "Backup option.",
+          faculty: "Nursing", intake: "Fall 2027", targetYear: "",
+          requirements: collegeReqs(),
+          targets: [ tgt("Seattle Community College", "Nursing", addDays(120), "planning", "") ],
+          links: { achievements: [], portfolio: [], references: [], documents: [] },
+          comments: []
+        },
+        {
+          id: "app4", type: "trades", name: "Trades / Apprenticeship Application File", status: "planning",
+          notes: "Electrical apprenticeship pathway.",
+          faculty: "Electrician", intake: "Fall 2027", targetYear: "Grade 12 · 2027",
+          requirements: tradesReqs(),
+          targets: [ tgt("IBEW Local Apprenticeship", "Electrician", addDays(150), "planning", "") ],
+          links: { achievements: [], portfolio: ["pf4"], references: [], documents: [] },
+          comments: []
+        }
+      ],
+      portfolio: [
+        {
+          id: "pf1", title: "Robotics Research Paper", category: "research", status: "complete",
+          description: "A 2,000-word paper on autonomous navigation algorithms used by the competition robot. Includes design diagrams and performance data.",
+          tags: ["robotics", "research"], appIds: [uniId, ibId],
+          files: [ { name: "robotics-paper.pdf", url: "https://example.com/robotics-paper.pdf", size: 184320, type: "application/pdf" } ],
+          comments: [ cmt("Dr. Grace Hopper", "mentor", "Excellent work — include the judges' feedback page too.", 0) ]
+        },
+        {
+          id: "pf2", title: "Community Tutoring Program Summary", category: "community", status: "in-progress",
+          description: "Overview of the weekly math and coding tutoring program the student runs, with attendance and outcomes.",
+          tags: ["community", "leadership"], appIds: [uniId], files: [], comments: []
+        },
+        {
+          id: "pf3", title: "Oil Painting Portfolio", category: "creative", status: "draft",
+          description: "Selected works from the city youth arts festival.", tags: ["art"], appIds: [], files: [], comments: []
+        },
+        {
+          id: "pf4", title: "Residential Wiring Project", category: "technical", status: "in-progress",
+          description: "Photos and notes from a residential wiring project completed during work experience.",
+          tags: ["electrical", "trades"], appIds: ["app4"], files: [], comments: []
+        }
+      ],
+      achievements: [
+        { id: "ach1", title: "National Robotics Championship — Regional Winner", category: "competition", date: "2025", organization: "FIRST Robotics", description: "Led the programming team; robot placed 1st in the regional qualifier.", evidenceUrl: "" },
+        { id: uid(), title: "Student Council President", category: "leadership", date: "2025–2026", organization: "Westfield International School", description: "Elected president; organized a school-wide STEM fair with 500+ attendees.", evidenceUrl: "" },
+        { id: uid(), title: "Community Tutoring — 120+ hours", category: "community", date: "2024–2026", organization: "Local Library", description: "Weekly math and coding tutoring for middle-school students.", evidenceUrl: "" },
+        { id: uid(), title: "Oil Painting Exhibition", category: "arts", date: "2025", organization: "City Youth Arts Festival", description: "Two pieces selected for the annual youth exhibition.", evidenceUrl: "" },
+        { id: uid(), title: "First Aid & WHMIS Certified", category: "technical", date: "2026", organization: "St. John Ambulance", description: "Standard first aid and workplace safety certification.", evidenceUrl: "" }
+      ],
+      grades: [
+        { id: uid(), subject: "Mathematics HL", type: "predicted", score: "7", term: "IB2", year: "2026", notes: "" },
+        { id: uid(), subject: "Physics HL", type: "predicted", score: "6", term: "IB2", year: "2026", notes: "" },
+        { id: uid(), subject: "Computer Science HL", type: "predicted", score: "7", term: "IB2", year: "2026", notes: "" },
+        { id: uid(), subject: "English A: Literature SL", type: "predicted", score: "6", term: "IB2", year: "2026", notes: "" },
+        { id: uid(), subject: "SAT", type: "test", score: "1510", term: "", year: "2026", notes: "Math 790 / RW 720" }
+      ],
+      references: [
+        { id: "ref1", refereeName: "Ms. Marie Curie", role: "Physics Teacher", organization: "Westfield International School", status: "received", email: "m.curie@westfield.edu", phone: "", requestDate: addDays(-40), receivedDate: addDays(-5), letterUrl: "", notes: "" },
+        { id: "ref2", refereeName: "Mr. Alan Turing", role: "Computer Science Teacher", organization: "Westfield International School", status: "in-progress", email: "a.turing@westfield.edu", phone: "", requestDate: addDays(-25), receivedDate: "", letterUrl: "", notes: "Follow up in two weeks." },
+        { id: "ref3", refereeName: "Dr. Grace Hopper", role: "Guidance Counselor", organization: "Westfield International School", status: "requested", email: "g.hopper@westfield.edu", phone: "", requestDate: addDays(-10), receivedDate: "", letterUrl: "", notes: "" }
+      ],
+      documents: [
+        { id: "doc1", name: "Transcript — Grade 11.pdf", url: "https://example.com/transcript.pdf", size: 184320, type: "application/pdf", uploadedAt: new Date().toISOString() },
+        { id: "doc2", name: "Resume.pdf", url: "https://example.com/resume.pdf", size: 94208, type: "application/pdf", uploadedAt: new Date().toISOString() }
+      ],
+      requests: [
+        {
+          id: uid(), title: "Upload Grade 11 transcript PDF", section: "documents", due: addDays(7), status: "open",
+          description: "The university file still needs the official Grade 11 transcript.",
+          createdAt: new Date(Date.now() - 3 * 86400000).toISOString(),
+          replies: [ cmt("Dr. Grace Hopper", "mentor", "Please upload it under Documents when ready.", 3) ]
+        },
+        {
+          id: uid(), title: "Add evidence for the Extended Essay", section: "portfolio", due: addDays(14), status: "in-progress",
+          description: "Please add the EE abstract and supervisor feedback as portfolio evidence.",
+          createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
+          replies: [ cmt("Emma Chen", "student", "I will upload the abstract this week.", 4) ]
+        }
+      ],
+      mentorNotes: [
+        { id: uid(), title: "Milestone check", text: "Transcripts and resume are complete. SAT score is strong for all targets.", tags: ["milestone"], date: addDays(-12) },
+        { id: uid(), title: "Reference follow-ups", text: "Two letters still pending — send gentle reminders this week. Mr. Turing's letter is in progress.", tags: ["references", "deadline"], date: addDays(-6) },
+        { id: uid(), title: "Essay first-draft review", text: "Reviewed the personal statement outline. Recommend opening with the robotics story and tying in community tutoring.", tags: ["essay", "priority"], date: addDays(-3) }
+      ]
+    };
+  }
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(generateSampleData());
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+})();
+</script>
+</body>
+</html>
