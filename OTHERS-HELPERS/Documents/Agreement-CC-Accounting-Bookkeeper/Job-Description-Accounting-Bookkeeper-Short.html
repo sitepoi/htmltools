@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Tanımı - Özet - Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 48px 56px 56px;
+  }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-eng {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .doc-meta {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 20px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 { font-size: 13.5px; color: var(--ink); margin: 12px 0 6px; }
+
+  p { font-size: 13.5px; margin-bottom: 8px; }
+  ul, ol { margin: 0 0 8px 20px; }
+  li { font-size: 13px; margin-bottom: 4px; }
+  li strong { color: var(--ink); }
+
+  .highlight-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+
+  table.meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px;
+    font-size: 13px;
+  }
+  table.meta-table td {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.meta-table td:first-child {
+    width: 170px;
+    background: #f5f8fb;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .placeholder { color: var(--muted); font-style: italic; }
+
+  /* ---------- Signature block ---------- */
+  .signature-block {
+    margin-top: 32px;
+    display: flex;
+    gap: 40px;
+    justify-content: space-between;
+  }
+  .sig-col { flex: 1; }
+  .sig-line {
+    border-top: 1px solid var(--ink);
+    margin-top: 52px;
+    padding-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .sig-role {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 12.5px;
+    display: block;
+  }
+  .approval-note {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+  }
+
+  input.doc-field {
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+    padding: 0 2px 2px;
+    outline: none;
+  }
+  input.doc-field:hover { border-bottom-color: var(--muted); }
+  input.doc-field:focus {
+    border-bottom-color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 2px 2px 0 0;
+  }
+  input.doc-field::placeholder { color: var(--muted); font-style: italic; }
+  .sig-line input.doc-field { margin: 0 3px; }
+  .sig-line .doc-field-name { width: 150px; }
+  .sig-line .doc-field-date { width: 100px; }
+  .approval-note .doc-field-place { width: 170px; }
+  .approval-note .doc-field-date { width: 110px; }
+
+  /* ---------- Print ---------- */
+  @page { margin: 16mm 15mm; }
+  @media print {
+    body { background: #fff; }
+    input.doc-field {
+      background: transparent;
+      border-bottom: 1px solid #999;
+    }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .doc-header { border-bottom-color: #000; break-after: avoid; page-break-after: avoid; }
+    .highlight-box, .signature-block, .approval-note { break-inside: avoid; page-break-inside: avoid; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">CentreCanada Newcomer Services Society</div>
+    <div class="doc-title">Görev Tanımı - Özet</div>
+    <div class="doc-subtitle">Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</div>
+    <div class="doc-eng">(Accounting Bookkeeper - Condensed Version)</div>
+    <div class="doc-meta">
+      Belge No: <span class="placeholder">JD-2026-03-K</span> |
+      Yürürlük Tarihi: <span class="placeholder">___________</span> |
+      Versiyon: <span class="placeholder">1.0</span>
+    </div>
+  </header>
+
+  <div class="highlight-box">
+    Bu belge, tam görev tanımının <strong>kısa özetidir</strong>. Resmi ve bağlayıcı belge,
+    <strong>"Görev Tanımı - Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)"</strong> adlı tam sürümdür;
+    ayrıntılı görev listesi ve CPA iş bölümü o belgede yer alır.
+  </div>
+
+  <section>
+    <h2>1. Pozisyon Özeti</h2>
+    <p>
+      <strong>Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</strong>, kurumun tüm mali işlemlerinin
+      - kayıtların tutulması, devlete yapılan bildirimlerin verilerinin hazırlanması, verilerin
+      toplanması - <strong>eksiksiz, hatasız ve zamanında tamamlanmasından sorumlu nihai kişidir</strong>.
+      Bir işin başkası (ör. CPA) tarafından yapılması gerektiğinde, o işin takibi, hataların tespiti
+      ve düzelttirilmesi de bu rolün sorumluluğundadır.
+    </p>
+    <p>Rol, <strong>Executive Director'a</strong> ve <strong>Mali Heyet'ten onaylardan sorumlu belirlenecek bir temsilciye</strong> raporlar.</p>
+  </section>
+
+  <section>
+    <h2>2. Sorumluluk Alanları</h2>
+    <ul>
+      <li><strong>Günlük kayıt:</strong> gelir ve giderlerin, gelen faturaların ve küçük kasanın kaydı; nakit tahsilatlar alındığı gün <strong>"Nakit Alınanlar" WhatsApp Grubu'na</strong> yazılır (makbuz düzenlenmez).</li>
+      <li><strong>Mutabakatlar:</strong> her ay banka ve kredi kartı ekstrelerindeki her işlemin QuickBooks kayıtlarıyla tek tek eşleştirilmesi ve bakiyelerin doğrulanması.</li>
+      <li><strong>Borç / alacak:</strong> satıcı faturaları, vade takibi, ödemeler ve tahsilatlar.</li>
+      <li><strong>Nakit ve pledge:</strong> bağış taahhütlerinin (pledge) QuickBooks invoice / pledge sistemiyle takibi; haftalık pledge raporu.</li>
+      <li><strong>Bordro ve devlet yükümlülükleri:</strong> bordro verilerinin CPA'ya iletilmesi, işlenen bordronun doğrulanması; kesintilerin ve beyannamelerin CPA tarafından zamanında yapılmasının takibi.</li>
+      <li><strong>Program ve etkinlik gelirleri:</strong> hafta sonu okulu ve Future Bridge Academy veli ödemeleri, kermes gelirleri; gelir getirici faaliyetlerin GST hesaplarının ayrı tutulması.</li>
+      <li><strong>Bina ve kira:</strong> kiracı faturaları ve tahsilat, mortgage kaydı (anapara / faiz), bina bakım ve işletme giderleri.</li>
+      <li><strong>Bağış makbuzları:</strong> resmi makbuzların (tax receipts) düzenlenmesi ve kaydı; online bağış platformlarının mutabakatı.</li>
+      <li><strong>Bütçe ve hibe takibi:</strong> departman bütçeleri ile hibelerin harcanan / kalan durumlarının izlenmesi ve aylık raporlanması.</li>
+      <li><strong>Raporlama:</strong> aylık mali tabloların Executive Director'a ve Mali Heyet temsilcisine sunulması.</li>
+      <li><strong>Belge koordinasyonu:</strong> banka, hibe veren, devlet kurumları ve yönetim tarafından istenen mali belgelerin hazırlanması, gönderilmesi ve kayıtlarının tutulması.</li>
+      <li><strong>Görev yönetimi:</strong> tüm işlerin BookkeeperTaskManager üzerinden takibi; görev durumlarının güncellenmesi ve çalışma saatlerinin doldurulması.</li>
+      <li><strong>İç destek (zaman içinde geliştirilir):</strong> bütçe hazırlığında veri desteği, kurul mali özetleri, süreç eğitimleri, sabit kıymet listesi.</li>
+      <li><strong>Diğer:</strong> reimbursement'lar; görevlilere verilen fonların harcama dökümlerinin toplanması; öğrenci bursu ödemeleri ve resmi belgeleri (gerektiğinde T4A); WorkSafeBC bildirim / primlerinin CPA tarafından zamanında yapılmasının takibi; kısıtlı fonlar ve ayni bağışların kaydı.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. CPA İş Bölümü</h2>
+    <p><strong>CPA hazırlar ve verir:</strong> bordro ve kaynak kesintileri, T4/T4A, GST/HST, PST, WorkSafeBC, T3010, yıl sonu mali tabloları.</p>
+    <p><strong>Bookkeeper hazırlar ve teslim eder:</strong> CPA'nın ihtiyaç duyduğu tüm veri paketlerini (bordro, GST/PST çalışma verileri, T3010 veri paketi, yıl sonu çizelgeleri) eksiksiz ve zamanında hazırlar; CPA'nın son tarihlerini takip eder, sorunları raporlar. Her yıl başında CPA'dan <strong>veri istek listesi</strong> talep edilir ve Mali Heyet onayına sunulur; QuickBooks yapısının kurulumu, CPA / danışman tarafından hazırlanan şablonun bookkeeper tarafından uygulanmasıyla yapılır. Gerekirse yönetim CPA'yı değiştirebilir; verilerin düzenli kalması bu rolün sorumluluğundadır.</p>
+  </section>
+
+  <section>
+    <h2>4. Görev Ritmi</h2>
+    <ul>
+      <li><strong>Günlük:</strong> kayıtlar, nakit bildirimi, görev güncellemeleri.</li>
+      <li><strong>Haftalık:</strong> pledge raporu, onaylı ödemeler, haftalık rapor, çalışma saatleri.</li>
+      <li><strong>İki haftalık:</strong> bordro verilerinin CPA'ya iletilmesi ve kesinti takibi.</li>
+      <li><strong>Aylık:</strong> mutabakatlar, mali tablolar, bütçe / hibe / program raporları, düzenli ödemeler, makbuz düzenleme.</li>
+      <li><strong>Üç aylık:</strong> GST/HST ve PST çalışma verileri, kurul mali özetleri, bütçe gözden geçirme.</li>
+      <li><strong>Yıllık:</strong> CPA veri istek listesi, T4/T4A ve T3010 veri paketleri, denetim desteği, bağışçı özet mektupları.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Çalışma Düzeni</h2>
+    <table class="meta-table">
+      <tr><td>Unvan</td><td>Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</td></tr>
+      <tr><td>Bağlı Olduğu Kişi</td><td>Executive Director ve Mali Heyet'ten onaylardan sorumlu belirlenecek bir temsilci</td></tr>
+      <tr><td>Çalışma Şekli</td><td>Tam zamanlı, Çalışan (Employee)</td></tr>
+      <tr><td>Çalışma Saatleri</td><td>Haftada 40 saat; ay sonu ve beyanname dönemlerinde esneklik gerekebilir</td></tr>
+      <tr><td>Çalışma Yeri</td><td>Kurum binası (on-site), <span class="placeholder">Burnaby / New Westminster, BC</span>. Mesai saatlerinde kurumda bulunmak esastır; mevcut uzaktan çalışma düzeninden, Mali Heyet ile birlikte hazırlanacak planlı bir takvime bağlı olarak kademeli şekilde sürekli on-site çalışmaya geçilir.</td></tr>
+      <tr><td>Onay Düzeni</td><td>Ödemeleri hazırlar ve onaya sunar; nihai onayı Executive Director veya Mali Heyet temsilcisi verir (bookkeeper tek başına ödeme yetkilisi değildir)</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. İletişim ve Esneklik</h2>
+    <ul>
+      <li>Görevle ilgili sorular <strong>"Mali Heyet Sorular ve Cevaplar" WhatsApp Grubu'nda</strong> sorulur.</li>
+      <li>Görev takibi ve raporlamalar, kurumun sağladığı yazılımlar (BookkeeperTaskManager vb.) üzerinden yürütülür.</li>
+      <li>Görevler ve kapsamları, <strong>Mali Heyet'in kararları doğrultusunda</strong> zaman içinde değişebilir; pozisyonun içeriğiyle uyumlu yeni düzenli veya düzensiz işler Mali Heyet, Mali Heyet temsilcisi veya Executive Director tarafından verilebilir.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. Kabul ve Onay</h2>
+    <p>
+      Aşağıyı imzalayarak çalışan, bu özeti okuduğunu; ayrıntıların
+      <strong>"Görev Tanımı - Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)"</strong> adlı tam görev
+      tanımı belgesinde yer aldığını ve o belgenin taraflar arasındaki anlaşmanın ayrılmaz bir
+      parçası olduğunu kabul eder.
+    </p>
+
+    <div class="signature-block">
+      <div class="sig-col">
+        <div class="sig-line"><span class="sig-role">Çalışan</span><input type="text" class="doc-field doc-field-name" placeholder="Ad Soyad" aria-label="Çalışan ad soyad"> / İmza · <input type="text" class="doc-field doc-field-date" placeholder="Tarih" aria-label="Tarih"></div>
+      </div>
+      <div class="sig-col">
+        <div class="sig-line"><span class="sig-role">Kurum Adına</span><input type="text" class="doc-field doc-field-name" placeholder="Ad Soyad, Unvan" aria-label="Kurum adına ad soyad, unvan"> / İmza · <input type="text" class="doc-field doc-field-date" placeholder="Tarih" aria-label="Tarih"></div>
+      </div>
+    </div>
+
+    <div class="approval-note">
+      Yer: <input type="text" class="doc-field doc-field-place" placeholder="______________________" aria-label="Yer"> &nbsp;&nbsp; Tarih: <input type="text" class="doc-field doc-field-date" placeholder="______________________" aria-label="Tarih">
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

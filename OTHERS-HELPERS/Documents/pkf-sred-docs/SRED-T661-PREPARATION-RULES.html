@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SR&amp;ED T661 Document Preparation Rules</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 30px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 {
+    font-size: 14px;
+    color: var(--ink);
+    margin: 18px 0 8px;
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+
+  ul, ol {
+    margin: 0 0 12px 22px;
+    font-size: 13.5px;
+  }
+  li { margin-bottom: 5px; }
+
+  .rule-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .rule-box strong { color: var(--accent); }
+
+  table.rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 8px 0 16px;
+  }
+  table.rules-table th {
+    background: #f5f8fb;
+    color: var(--accent);
+    text-align: left;
+    font-size: 10.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+  }
+  table.rules-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f4f8;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    h2, h3, p, li, .rule-box { break-inside: avoid; }
+    h2, h3 { break-after: avoid; }
+    table.rules-table tr { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">PKF SR&amp;ED Claim Preparation</div>
+    <div class="doc-title">T661 Document Preparation Rulebook</div>
+    <div class="doc-subtitle">Narrative, scoring, citation, humanization, and prep-document rules for any project</div>
+    <div class="doc-meta">
+      Version: 1.0
+      <span>|</span>
+      Date: 16 September 2026
+      <span>|</span>
+      Reference project: OpusChart (fiscal year 1 July 2024 to 30 June 2025)
+    </div>
+  </header>
+
+  <section>
+    <h2>1 - Purpose and Scope</h2>
+    <p>
+      This rulebook captures the full method used to turn a human-written SR&amp;ED narrative into
+      a send-ready T661 preparation document. It applies to every future project. It covers:
+    </p>
+    <ul>
+      <li>the inputs you must collect before starting;</li>
+      <li>the hard constraints of the current T661 form;</li>
+      <li>the five-file document model and what each file is for;</li>
+      <li>claim accuracy rules, citation rules, and humanization rules;</li>
+      <li>the scoring model used to compare versions;</li>
+      <li>the required structure of the T661 prep document;</li>
+      <li>print layout rules;</li>
+      <li>the step-by-step pipeline and verification workflow;</li>
+      <li>the audit readiness checklist;</li>
+      <li>worked pitfalls from the OpusChart project.</li>
+    </ul>
+    <div class="rule-box">
+      <strong>Absolute rule:</strong> the original human-written narrative is never modified.
+      Every derived document is a new file. The original stays byte-for-byte as the source of truth.
+    </div>
+  </section>
+
+  <section>
+    <h2>2 - Inputs to Collect Before Starting</h2>
+    <table class="rules-table">
+      <tr><th>Input</th><th>What it is</th><th>Used for</th></tr>
+      <tr>
+        <td>Original narrative</td>
+        <td>The human-written SR&amp;ED text, usually a docx with lines 242, 244, 246</td>
+        <td>Source of truth; transcribed to HTML paragraph-identically</td>
+      </tr>
+      <tr>
+        <td>Task management export</td>
+        <td>Full task board export (ClickUp, Jira, etc.) as JSON with task id, name, status, description, assignees, dates, priority, tags, time spent, sprint, subtasks</td>
+        <td>Evidence for every claim; generates the full task list annex</td>
+      </tr>
+      <tr>
+        <td>Fiscal year confirmation</td>
+        <td>Claim start and end dates, and confirmation that all work falls inside them</td>
+        <td>Dates and scoping in the narrative</td>
+      </tr>
+      <tr>
+        <td>Personnel list</td>
+        <td>Names, roles, tracked hours, assumed SR&amp;ED hours per person</td>
+        <td>Personnel summary in the audit package</td>
+      </tr>
+      <tr>
+        <td>Form facts</td>
+        <td>Current T661 word limits and evidence checklist lines, verified from the actual form PDF</td>
+        <td>Word counters and evidence mapping</td>
+      </tr>
+    </table>
+    <p>
+      Verify the form facts yourself against the real T661 for the tax year being claimed. The
+      form changes between years; do not carry numbers forward without checking.
+    </p>
+  </section>
+
+  <section>
+    <h2>3 - T661 Form Constraints (Current Form)</h2>
+    <table class="rules-table">
+      <tr><th>Form line</th><th>Content</th><th>Word limit</th></tr>
+      <tr><td>242</td><td>What scientific or technological uncertainty did you attempt to overcome</td><td>350 words</td></tr>
+      <tr><td>244</td><td>What work did you perform to overcome the uncertainty</td><td>700 words</td></tr>
+      <tr><td>246</td><td>What advancement did you achieve or attempt to achieve</td><td>350 words</td></tr>
+    </table>
+    <ul>
+      <li>Line 240 (scientific or technological objectives) no longer exists on the current form. Do not include it.</li>
+      <li>Words are whitespace-separated tokens. The prep document counts them automatically with a live counter per line body.</li>
+      <li>The form has no attach-extra-sheets note. Supporting material lives outside the form as an annex.</li>
+    </ul>
+    <h3>Evidence checklist (form lines 270-282)</h3>
+    <table class="rules-table">
+      <tr><th>T661 line</th><th>Evidence type</th></tr>
+      <tr><td>271</td><td>Time sheets</td></tr>
+      <tr><td>272</td><td>Design of experiments</td></tr>
+      <tr><td>273</td><td>Project records</td></tr>
+      <tr><td>274</td><td>Source code</td></tr>
+      <tr><td>276</td><td>Progress reports and minutes</td></tr>
+      <tr><td>277</td><td>Test protocols and test data</td></tr>
+    </table>
+    <p>
+      The audit package section of the prep document maps each line to what the claimant actually
+      holds, so the gap is visible before filing.
+    </p>
+  </section>
+
+  <section>
+    <h2>4 - The Five-File Document Model</h2>
+    <table class="rules-table">
+      <tr><th>File</th><th>Role</th><th>Rules</th></tr>
+      <tr>
+        <td>Original narrative (docx)</td>
+        <td>Untouchable source</td>
+        <td>Never opened for editing. Kept only for comparison.</td>
+      </tr>
+      <tr>
+        <td>Human version HTML</td>
+        <td>Editable transcript of the original</td>
+        <td>Verified paragraph-identical to the docx at creation time. After that it is a working copy, clearly named as such.</td>
+      </tr>
+      <tr>
+        <td>Working and cited master HTML</td>
+        <td>Corrected narrative with task-ID citations</td>
+        <td>Same claims as the narrative but corrected, dated, and cited. Contains the supporting records and personnel sections.</td>
+      </tr>
+      <tr>
+        <td>Relatedness report HTML</td>
+        <td>Scoring and analysis</td>
+        <td>Purpose, method, data profile, scores, theme-by-theme evidence, unsupported claims, risks, recommendations, roadmap, contradiction check, related documents.</td>
+      </tr>
+      <tr>
+        <td>T661 prep HTML</td>
+        <td>Send-ready deliverable</td>
+        <td>Part 1 pasteable text, Part 2 cited annex, version comparison, audit package, Annex A full task list.</td>
+      </tr>
+      <tr>
+        <td>Task data file</td>
+        <td>Evidence source for the annex</td>
+        <td>The exported task board JSON plus a generated JS file that renders the full task list into the prep document.</td>
+      </tr>
+    </table>
+    <p>
+      Naming convention: per-project subfolder under <code>pkf-sred-docs</code>, for example
+      <code>opus-24-25/</code>. Every file name carries the fiscal year.
+    </p>
+  </section>
+
+  <section>
+    <h2>5 - Claim Accuracy Rules</h2>
+    <p>Every statement in the narrative must survive a CRA technical review. These rules were
+    learned the hard way during the OpusChart work.</p>
+    <table class="rules-table">
+      <tr><th>Rule</th><th>Explanation</th><th>OpusChart example</th></tr>
+      <tr>
+        <td>Never claim what is not in the records</td>
+        <td>A claim with no matching task or record is removed or reworded, never kept.</td>
+        <td>Spreadsheets were claimed as a tool used; the original narrative only said manual reconciliation effort remained. Reworded to say that.</td>
+      </tr>
+      <tr>
+        <td>Verify every count against the data</td>
+        <td>Counts of screens, tasks, sprints, hours come from the export, not from memory.</td>
+        <td>Nine screens became eight after counting subtasks 359 to 366.</td>
+      </tr>
+      <tr>
+        <td>Dates must match the records</td>
+        <td>Month and year claims are checked against task dates.</td>
+        <td>Vacation work was in January and February 2025, not February alone.</td>
+      </tr>
+      <tr>
+        <td>Remove trigger vocabulary</td>
+        <td>Words that signal routine work to a reviewer: debugging, routine, bug fixing. Frame the same work as investigation of inconsistencies.</td>
+        <td>The original narrative used debugging for what became investigation-driven fixes.</td>
+      </tr>
+      <tr>
+        <td>No profitability claims</td>
+        <td>Business or financial outcomes do not belong in a technological narrative.</td>
+        <td>Profitability statements removed from the corrected text.</td>
+      </tr>
+      <tr>
+        <td>Unfinished work is investigation only</td>
+        <td>If a capability was not completed in the year, say exactly that. Never imply the result exists.</td>
+        <td>AI recommendation capability: no recommendation capability was completed; the work was research and a prototype.</td>
+      </tr>
+      <tr>
+        <td>Payment providers are context only</td>
+        <td>External services like Stripe are inputs to the system, not the advancement.</td>
+        <td>Stripe events are framed as external payment events the internal state machine reconciles.</td>
+      </tr>
+      <tr>
+        <td>Cite the correct record</td>
+        <td>A citation must point to the task that actually contains the work.</td>
+        <td>A UI question task was replaced by the task that actually recorded the work.</td>
+      </tr>
+      <tr>
+        <td>Claim only what was done</td>
+        <td>Testing or documentation claims must match the records actually present.</td>
+        <td>Manual and automated testing became manual testing and production-update records, because the automation tasks live on a different board.</td>
+      </tr>
+      <tr>
+        <td>State the base condition</td>
+        <td>The narrative must establish that the project started from an existing state with unresolved manual effort.</td>
+        <td>OpusChart was an existing application whose continued development addressed the remaining manual effort.</td>
+      </tr>
+      <tr>
+        <td>Respect the fiscal year</td>
+        <td>Only work inside the claim period is described as performed in-year.</td>
+        <td>All 217 tasks fall inside 1 July 2024 to 30 June 2025.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6 - Citation Rules</h2>
+    <ul>
+      <li>Task IDs appear in parentheses immediately after the claim they support: <code>(task 370)</code>.</li>
+      <li>Ranges use the to form: <code>(tasks 66 to 69)</code>, <code>(task 358, subtasks 359 to 366)</code>.</li>
+      <li>Time annotations are included for significant tasks: <code>(task 367, 45 hours 54 minutes)</code>.</li>
+      <li>Date annotations are included for key validations: <code>(tasks 1242, 1243, January 2025)</code>.</li>
+      <li>Every citation is verified against the export before the document is considered done. Zero missing or wrong IDs is the acceptance bar.</li>
+      <li>Citations live only in the cited annex version (Part 2). The pasteable form text has none.</li>
+      <li>Meta-references to the task system, such as the work is recorded in N tasks across M sprints, belong to the annex only, never to the form text.</li>
+      <li>The full task list annex lists every task: ID, name, sprint, status, completed date, time tracked.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7 - Humanization Rules</h2>
+    <p>
+      The pasteable text must not read like generated prose. A CRA reviewer has seen thousands of
+      claims; generated structure is a credibility risk. Rewrite until the tells are gone while
+      keeping every fact, date, and citation intact.
+    </p>
+    <h3>Do not use</h3>
+    <table class="rules-table">
+      <tr><th>Pattern</th><th>Example to avoid</th><th>Replacement</th></tr>
+      <tr>
+        <td>Enumeration scaffolding</td>
+        <td>A second uncertainty... A third uncertainty... Finally...</td>
+        <td>Permissions were another open question. Billing automation raised its own questions.</td>
+      </tr>
+      <tr>
+        <td>Parallel triads</td>
+        <td>Each observation was analyzed, the model was revised, and the outputs were re-validated.</td>
+        <td>Each failure was traced to the calculation rule that caused it, that rule was revised, and the outputs were checked again.</td>
+      </tr>
+      <tr>
+        <td>Hypothesis framing</td>
+        <td>We treated each calculation model as a hypothesis tested against real scenarios.</td>
+        <td>The recalculation work happened as a series of fixes driven by real failures.</td>
+      </tr>
+      <tr>
+        <td>Metaphors</td>
+        <td>Served as validation checkpoints for the broader architecture.</td>
+        <td>Each produced inconsistencies during the period, and fixing each one guided the next refinement.</td>
+      </tr>
+      <tr>
+        <td>Symmetric closing triads</td>
+        <td>Scalability, consistency, and reliability continue to present technological challenges.</td>
+        <td>Open questions remain. How forecasting scales, whether calculations hold up, and whether AI recommendations are reliable are all still under investigation.</td>
+      </tr>
+      <tr>
+        <td>Meta-references in form text</td>
+        <td>The work is recorded in 217 tasks across 23 sprints.</td>
+        <td>Keep this sentence in the annex only.</td>
+      </tr>
+      <tr>
+        <td>Generated-sounding jargon</td>
+        <td>A change in any input now propagates consistently through resource forecasts.</td>
+        <td>When an input changes, resource forecasts, project costs, and remaining budget balances update consistently.</td>
+      </tr>
+    </table>
+    <h3>Do use</h3>
+    <ul>
+      <li>Failure-driven narrative: start paragraphs from the concrete problem that occurred.</li>
+      <li>Real bug details with dates: a January 1 holiday was saved as the previous year; employees with multiple assignment lines had doubled hours.</li>
+      <li>Varied sentence length and plain transitions between topics.</li>
+      <li>First person plural with actual work verbs: we built, we tested, we fixed.</li>
+      <li>The same humanized wording in both the pasteable version and the cited version, so the two stay aligned sentence for sentence.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>8 - Scoring Model</h2>
+    <h3>Filing readiness rubric (out of 100)</h3>
+    <table class="rules-table">
+      <tr><th>Criterion</th><th>Max points</th><th>What a full score means</th></tr>
+      <tr><td>Within T661 word limits</td><td>20</td><td>All three lines inside 350, 700, 350</td></tr>
+      <tr><td>All three sections complete</td><td>5</td><td>242, 244, 246 all present and substantive</td></tr>
+      <tr><td>Uncertainty framed technologically</td><td>10</td><td>Uncertainty is about models and calculations, not business outcomes</td></tr>
+      <tr><td>Base state and standard-practice contrast</td><td>10</td><td>Existing state described, and why standard tools could not do it</td></tr>
+      <tr><td>Systematic investigation structure</td><td>15</td><td>Work is shown as investigation, testing, and revision cycles</td></tr>
+      <tr><td>Advancements technological, not business</td><td>10</td><td>Advancements are technical capabilities</td></tr>
+      <tr><td>No unsupported claims</td><td>15</td><td>Nothing stated that the records do not support</td></tr>
+      <tr><td>Tax-year dates and scoping</td><td>5</td><td>Dates present and inside the fiscal year</td></tr>
+      <tr><td>Vocabulary clean</td><td>5</td><td>No trigger words, no generated-sounding phrasing</td></tr>
+      <tr><td>External services framed as context only</td><td>5</td><td>Stripe and similar providers are inputs, not the advance</td></tr>
+    </table>
+    <p>Worked example: OpusChart original version scored 62 of 100; the corrected pasteable
+    version scored 91 of 100.</p>
+    <h3>Task relatedness rubric</h3>
+    <table class="rules-table">
+      <tr><th>Component</th><th>Max</th><th>Measures</th></tr>
+      <tr><td>Claims supported by the task log</td><td>100</td><td>Share of narrative claims that have a matching task record</td></tr>
+      <tr><td>Traceability</td><td>100</td><td>Share of claims that cite their record directly</td></tr>
+      <tr><td>Consistency with records</td><td>100</td><td>Dates, counts, and statuses match the export</td></tr>
+    </table>
+    <p>
+      The components are aggregated with weighting; claim support and traceability weigh heavier
+      than consistency. Worked example: OpusChart original 43, corrected 82.
+    </p>
+    <h3>Theme evidence weights and overall score</h3>
+    <p>
+      Evidence is scored per theme and combined. Overall score = 70 percent theme evidence plus
+      30 percent investigation quality.
+    </p>
+    <table class="rules-table">
+      <tr><th>Theme</th><th>Weight</th></tr>
+      <tr><td>Calculations and budget model</td><td>25%</td></tr>
+      <tr><td>Budget and rates</td><td>20%</td></tr>
+      <tr><td>Holidays and dates</td><td>10%</td></tr>
+      <tr><td>Permissions</td><td>15%</td></tr>
+      <tr><td>Billing</td><td>15%</td></tr>
+      <tr><td>AI assistance</td><td>15%</td></tr>
+    </table>
+    <p>
+      Adapt the theme list per project: it reflects what the work was actually about, as found in
+      the task export.
+    </p>
+    <p>
+      Any theme scoring below full marks gets a roadmap section: ordered tasks that raise the
+      score, each with its expected gain and a target of 90 plus. The roadmap items are things
+      the claimant must do in the source data, not things the writer can patch in the document.
+    </p>
+  </section>
+
+  <section>
+    <h2>9 - Required Structure of the T661 Prep Document</h2>
+    <ol>
+      <li>
+        <strong>Header meta block:</strong> claim year, date, source files, claimant placeholders.
+      </li>
+      <li>
+        <strong>Part 1 - Directly pasteable version:</strong> one body per form line (242, 244,
+        246) with no citations, a live word counter under each heading (green inside the limit,
+        red over), and a copy-text button per line.
+      </li>
+      <li>
+        <strong>Part 2 - Evidence citation version:</strong> the same text with task-ID citations.
+        This is the technical annex for CRA reviews; it is not pasted into the form.
+      </li>
+      <li>
+        <strong>Version comparison:</strong> the filing readiness table and the task relatedness
+        table, original version against the pasteable version.
+      </li>
+      <li>
+        <strong>Audit package:</strong> claimant identification table (name, business number,
+        fiscal year end, claim year, project title, technical contact), the evidence checklist
+        mapped to T661 lines 270-282, and the personnel summary (role, tracked hours, assumed
+        SR&amp;ED hours).
+      </li>
+      <li>
+        <strong>Annex A - Full task list:</strong> the complete task export rendered as a table
+        with ID, task, sprint, status, completed date, time tracked, plus a task count line.
+      </li>
+    </ol>
+    <p>
+      The annex task list is rendered from a companion data file
+      (<code>opus-tasks-annex.js</code> in the reference project) generated from the task export.
+      If the HTML is sent as HTML, the companion file must travel with it. Printing to PDF makes
+      the document self-contained.
+    </p>
+  </section>
+
+  <section>
+    <h2>10 - Print Layout Rules</h2>
+    <ul>
+      <li>Never put <code>break-inside: avoid</code> on whole sections. A section taller than the
+      remaining page is pushed to the next page, which is how a page ends up holding only the
+      document header.</li>
+      <li>Allow the first section to flow directly after the header on page 1.</li>
+      <li>Start each major part on a fresh page with <code>break-before: page</code>; the first
+      part starts naturally.</li>
+      <li>Keep <code>break-inside: avoid</code> on small units: paragraphs, headings, banners,
+      line headers, and table rows.</li>
+      <li>Keep headings with their next content using <code>break-after: avoid</code>.</li>
+      <li>Wrap long table header rows in <code>thead</code> so the header repeats on every
+      printed page of the task list.</li>
+      <li>Hide screen-only elements in print: buttons, dividers, progress trackers, working
+      sheets.</li>
+      <li>Verify by printing to PDF and checking the text of every page; page 1 must contain
+      content, not just the header.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>11 - Step-by-Step Pipeline for a New Project</h2>
+    <table class="rules-table">
+      <tr><th>Step</th><th>Action</th><th>Acceptance check</th></tr>
+      <tr><td>1</td><td>Collect the original narrative, the task export, personnel, fiscal year confirmation</td><td>All inputs present</td></tr>
+      <tr><td>2</td><td>Transcribe the narrative to an HTML working copy, paragraph-identical, and verify against the docx</td><td>Zero text differences</td></tr>
+      <tr><td>3</td><td>Extract the task data profile: total tasks, sprints, statuses, dates, hours</td><td>Data profile section written</td></tr>
+      <tr><td>4</td><td>Confirm every task falls inside the fiscal year</td><td>In-year row added to the report</td></tr>
+      <tr><td>5</td><td>Score the original version with both rubrics</td><td>Baseline numbers recorded</td></tr>
+      <tr><td>6</td><td>Write the corrected narrative with task-ID citations, applying the claim accuracy rules</td><td>Every claim either cited or removed</td></tr>
+      <tr><td>7</td><td>Verify all citations against the export</td><td>Zero missing or wrong IDs</td></tr>
+      <tr><td>8</td><td>Humanize the corrected text, then apply the same wording to the uncited pasteable version</td><td>Tells removed, facts intact, word limits respected</td></tr>
+      <tr><td>9</td><td>Re-score and write the comparison tables</td><td>Both rubrics, original vs corrected</td></tr>
+      <tr><td>10</td><td>Build the T661 prep document: pasteable part, cited annex, comparison, audit package, task list annex</td><td>Structure complete</td></tr>
+      <tr><td>11</td><td>Run the contradiction check: each correction listed with what it was checked against</td><td>Every item marked fixed or pending decision</td></tr>
+      <tr><td>12</td><td>Print QA: render to PDF and inspect page layout and annex rendering</td><td>Page 1 has content, annex header repeats, no empty pages</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>12 - Verification Workflow</h2>
+    <p>Technical checks used on every step, in order:</p>
+    <ol>
+      <li>
+        <strong>Annex data generation:</strong> a short script reads the task export JSON and
+        writes a JS file of the form <code>var OPUS_TASKS = [[id, name, sprint, status,
+        date_done, time_spent], ...];</code> using UTF-8. The prep document loads this file and
+        renders the table; if the file is missing, the table shows a fallback message instead of
+        failing.
+      </li>
+      <li>
+        <strong>Script syntax:</strong> extract inline script blocks and run them through
+        <code>node --check</code>.
+      </li>
+      <li>
+        <strong>Headless render:</strong> open the document in a headless browser and confirm the
+        rendered task row count equals the export count, and the word counters show the right
+        numbers.
+      </li>
+      <li>
+        <strong>Print QA:</strong> print to PDF and inspect the text of every page, verifying page
+        1 contains content and the annex table header repeats.
+      </li>
+      <li>
+        <strong>Text hygiene scan:</strong> no em dashes, no emojis, hyphen used instead of em
+        dash everywhere, per the house document style.
+      </li>
+      <li>
+        <strong>Citation cross-check:</strong> extract every task ID from the cited version and
+        diff against the export IDs, including range endpoints.
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>13 - Audit Readiness Checklist</h2>
+    <p>Before filing, confirm each of these exists or is consciously deferred:</p>
+    <table class="rules-table">
+      <tr><th>Item</th><th>Status rule</th></tr>
+      <tr>
+        <td>Claimant identification</td>
+        <td>Legal name, business number, technical contact filled in by the claimant. Placeholders like [To be completed] must be gone before sending.</td>
+      </tr>
+      <tr>
+        <td>Time sheets (line 271)</td>
+        <td>Task tracking with hours, already in the export.</td>
+      </tr>
+      <tr>
+        <td>Design of experiments (line 272)</td>
+        <td>Usually the biggest gap. Create a hypothesis-and-result log from the task comments before filing.</td>
+      </tr>
+      <tr>
+        <td>Source code (line 274)</td>
+        <td>Repository access; a commit history summary for the claim period can be added later.</td>
+      </tr>
+      <tr>
+        <td>Progress reports and minutes (line 276)</td>
+        <td>Task comments and meeting records from the task system.</td>
+      </tr>
+      <tr>
+        <td>Test protocols and test data (line 277)</td>
+        <td>Task log with dated results and attachments on the calculation and billing tasks.</td>
+      </tr>
+      <tr>
+        <td>Personnel assumptions</td>
+        <td>Assumed SR&amp;ED hours and eligible shares confirmed by the team.</td>
+      </tr>
+      <tr>
+        <td>Companion data file</td>
+        <td>If the prep document is sent as HTML, the task data JS file travels with it; otherwise print to PDF.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>14 - Pitfalls Learned (OpusChart)</h2>
+    <ul>
+      <li>
+        <strong>Unsupported tool claim:</strong> the narrative implied spreadsheets were part of
+        the work. The records showed manual reconciliation effort only. The claim was reworded to
+        what the original actually said.
+      </li>
+      <li>
+        <strong>Wrong count:</strong> the corrected text said nine screens; the subtask list
+        contains eight.
+      </li>
+      <li>
+        <strong>Wrong period:</strong> vacation workflow work was in January and February 2025,
+        not February alone.
+      </li>
+      <li>
+        <strong>Wrong citation:</strong> one claim cited a task that merely asked a UI question;
+        the correct task was the one recording the work.
+      </li>
+      <li>
+        <strong>Overclaimed testing:</strong> automated testing tasks live on a different board,
+        so the text was corrected to manual testing and production-update records.
+      </li>
+      <li>
+        <strong>AI overclaim:</strong> the original said the AI work demonstrated potential;
+        reality was research plus an unfinished prototype. The corrected text says no
+        recommendation capability was completed.
+      </li>
+      <li>
+        <strong>Deleted form line:</strong> line 240 was included until the actual form was
+        checked; it no longer exists.
+      </li>
+      <li>
+        <strong>Empty first print page:</strong> <code>break-inside: avoid</code> on whole
+        sections pushed the first section to page 2, leaving page 1 with only the header.
+      </li>
+      <li>
+        <strong>Generated prose tells:</strong> the first corrected draft was accurate but read
+        as generated; the humanization pass fixed it without changing any fact.
+      </li>
+    </ul>
+  </section>
+
+</div>
+</body>
+</html>

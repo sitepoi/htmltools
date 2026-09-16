@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPhorm Audit - T661 Part 2 Preparation (Pasteable and Evidence Versions)</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --good: #216e39;
+    --bad: #b3261e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 30px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .part-banner {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 18px;
+  }
+
+  h3 {
+    font-size: 14px;
+    color: var(--ink);
+    margin: 18px 0 8px;
+  }
+
+  .line-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 18px 0 8px;
+  }
+  .line-head h3 { margin: 0; }
+  .word-count {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    padding: 2px 10px;
+    background: #eef1f5;
+    color: var(--muted);
+  }
+  .copy-btn {
+    font-family: inherit;
+    font-size: 11.5px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--accent);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .copy-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  .pasteable p { margin-bottom: 12px; }
+  .citations { font-size: 11.5px; color: var(--muted); }
+
+  .divider {
+    border: none;
+    border-top: 2px dashed var(--line);
+    margin: 34px 0;
+  }
+
+  table.plain-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 8px 0 14px;
+  }
+  table.plain-table th {
+    background: #f5f8fb;
+    color: var(--accent);
+    text-align: left;
+    font-size: 10.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+  }
+  table.plain-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    .copy-btn { display: none; }
+    .divider { display: none; }
+    h2, h3, p, .part-banner, .line-head { break-inside: avoid; }
+    h2, h3, .line-head { break-after: avoid; }
+    .citations, .comparison, .audit-package, .task-annex { break-before: page; }
+    .task-annex tr { break-inside: avoid; }
+    .task-annex thead { display: table-header-group; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">PKF SR&amp;ED Claim Preparation</div>
+    <div class="doc-title">EPhorm Audit - T661 Part 2 Preparation</div>
+    <div class="doc-subtitle">Lines 242, 244, and 246 in two versions</div>
+    <div class="doc-meta">
+      Tax year: 1 July 2024 to 30 June 2025
+      <span>|</span>
+      Date: 16 September 2026
+      <span>|</span>
+      Source: SRED-24-25-EPhorm-Audit-and-JET.html
+    </div>
+  </header>
+
+  <section class="pasteable">
+    <h2>Part 1 - Directly Pasteable Version (T661 Form Text)</h2>
+    <div class="part-banner">
+      This part contains clean narrative text with no task citations, ready to paste into the
+      T661 form fields. The word counter under each heading updates automatically. Green means
+      within the form limit, red means over. Scope: this document covers EPhorm Audit. The JET
+      paragraphs of the original narrative are excluded because this task export covers the
+      EPhorm Audit board only; JET work must be cited from its own board export.
+    </div>
+
+    <div class="line-head">
+      <h3>Line 242 - What scientific or technological uncertainty did you attempt to overcome?</h3>
+      <span class="word-count" data-word-count="242">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('242')">Copy text</button>
+    </div>
+    <div data-line-body="242">
+      <p>At the start of the fiscal year, Ephorm Audit was an existing engagement platform, and audit teams still relied on manual review and generic file sharing to organize evidence requests and validate documents. The available tools could store and share files, but none of them could tell whether an uploaded document actually matched the request it belonged to, or classify audit evidence into system-defined categories without human review.</p>
+      <p>The main uncertainty was whether prompt-based AI could make these judgments reliably. Audit files arrive with inconsistent terminology, different structures, and several schedules inside one document, so we could not tell in advance whether AI could separate related from unrelated files without an unacceptable rate of wrong classifications, or produce useful summaries of requests and chat activity.</p>
+      <p>Secure file handling at scale raised its own questions. We needed to know whether uploaded files could be validated by content hashing, checked for duplicate names, and moved through template libraries without corrupting downloads or losing request files when several users uploaded at once.</p>
+      <p>Permissions were another open question. Engagements are shared by auditors, firm managers, assistants, and clients at the same time, and it was unclear whether a single model of engagement-level and request-level roles, including readonly access, could keep every view consistent without allowing actions the role should block.</p>
+      <p>Dates and timezones added a last uncertainty. Date formats differed between browsers and saved values, and it was unclear whether engagement dates and overdue statistics would stay consistent for users in different timezones.</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 244 - What work did you perform to overcome the uncertainty?</h3>
+      <span class="word-count" data-word-count="244">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('244')">Copy text</button>
+    </div>
+    <div data-line-body="244">
+      <p>The AI validation work happened as a series of prompt and tagging revisions driven by real failures. Early runs produced wrong classifications and attached unrelated files to requests, so we reworked the prompt logic and introduced system tags with descriptions. The AI was then asked to judge each file against request requirements with verdicts of related, unrelated, or partial, every system tag was sent to the AI for a relatedness check, and the results were stored and shown against the file list with a checked flag. Related system tags found by the AI were applied to files automatically. An Ask AI again control was added so reviewers could rerun a check and compare outputs.</p>
+      <p>File formats were the next problem. Support was extended step by step for Excel, Word, TXT, and PDF content, with the file name shown in the AI modal. Parsing differed between formats, so prompts and parsing were adjusted after comparing outputs against manually reviewed engagement files. Chat summarization was tested and its prompt revised to strip names, IDs, and HTML tags. When a file was judged unrelated, the system now sends the client a message about it.</p>
+      <p>File handling was tightened through the template library. Files can be labeled with special tags, client and firm uploads are separated, name validation and content hashing were added to uploads, and download errors were fixed. Request file lists update automatically after a template upload, and import and export now carry the request due date and preserve descriptions.</p>
+      <p>The permission model was rebuilt around engagement-level and request-level roles. Readonly users on an engagement are shown as readonly inside every request, readonly access blocks uploads and editing with a clear hint, and production errors around readonly lists were fixed one by one. Engagement statuses were reduced to Active, Canceled, Test, and Completed, filters now default to Active, and engagements can be transferred between departments. Role changes, including a downgrade rule that blocks an admin from downgrading themselves, were added to user management.</p>
+      <p>Request handling changed as well: accepted and fulfilled requests are excluded from overdue statistics, request history records who created the request and when, and comments gained a simple editor with deletable messages where a client can delete only the same day. Dashboard statistics were separated into a lighter calculation path so pages load faster, and search was moved from exact matches to partial matching across requests, files, and users. Date handling was corrected so MM/DD/YYYY entries no longer save the day before, and log entries show one consistent date format.</p>
+      <p>Production issues such as engagement states showing inactive while active, requests not loading on first access, and assistant dashboard filters were each traced and fixed, and a demo with the full feature set was prepared in October 2024.</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 246 - What advancement did you achieve or attempt to achieve?</h3>
+      <span class="word-count" data-word-count="246">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('246')">Copy text</button>
+    </div>
+    <div data-line-body="246">
+      <p>Ephorm Audit now judges uploaded files against their request with an AI-assisted validation step. Prompt logic, tag descriptions, and per-tag relatedness checks turn each file into a related, unrelated, or partial verdict, and the verdict is stored against the file list, with related system tags applied to the files automatically. The same checks run across Excel, Word, TXT, and PDF content, and clients receive a system message when a file is judged unrelated.</p>
+      <p>File exchange was reworked around the template library. Uploads are validated by name and content hash, client and firm files are separated and filterable, and template-based requests import into engagements with their due date and description preserved.</p>
+      <p>The permission model now resolves engagement-level and request-level roles against a consistent readonly rule: a readonly user sees readonly everywhere, uploads and edits are blocked with a hint, and role changes run through one user-management flow, including the rule that an admin cannot downgrade themselves.</p>
+      <p>Engagement state and search advanced as well. Four engagement statuses with an Active-default filter replaced loose state handling, overdue statistics exclude accepted and fulfilled requests, statistics are calculated on a lighter path, and search matches partial text across requests, files, and users.</p>
+      <p>Open questions remain. Whether AI classifications stay consistent across complex audit datasets, whether file operations hold up at larger engagement volumes, and whether readonly rules cover every edge case are all still under investigation.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="citations">
+    <h2>Part 2 - Evidence Citation Version (Technical Annex)</h2>
+    <div class="part-banner">
+      This part is the same text with task-ID citations from the task board export
+      (ephorm_audit_sprint_10_to_35.json, 186 tasks across Sprints 10 to 35). It is the
+      supporting annex used for scoring and for CRA technical reviews; it is not pasted into
+      the form.
+    </div>
+
+    <div class="line-head">
+      <h3>Line 242 - Uncertainty (with citations)</h3>
+      <span class="word-count" data-word-count="c242">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c242')">Copy text</button>
+    </div>
+    <div data-line-body="c242">
+      <p>At the start of the fiscal year, Ephorm Audit was an existing engagement platform, and audit teams still relied on manual review and generic file sharing to organize evidence requests and validate documents. The available tools could store and share files, but none of them could tell whether an uploaded document actually matched the request it belonged to, or classify audit evidence into system-defined categories without human review.</p>
+      <p>The main uncertainty was whether prompt-based AI could make these judgments reliably. Audit files arrive with inconsistent terminology, different structures, and several schedules inside one document, so we could not tell in advance whether AI could separate related from unrelated files (task 1199) without an unacceptable rate of wrong classifications, or produce useful summaries of requests and chat activity (tasks 1187, 1194).</p>
+      <p>Secure file handling at scale raised its own questions. We needed to know whether uploaded files could be validated by content hashing (task 617), checked for duplicate names (tasks 552, 647), and moved through template libraries (tasks 547, 549) without corrupting downloads (task 621) or losing request files when several users uploaded at once.</p>
+      <p>Permissions were another open question. Engagements are shared by auditors, firm managers, assistants, and clients at the same time, and it was unclear whether a single model of engagement-level and request-level roles (task 649), including readonly access (tasks 660, 679), could keep every view consistent without allowing actions the role should block (tasks 1171, 1172).</p>
+      <p>Dates and timezones added a last uncertainty. Date formats differed between browsers and saved values (tasks 633, 1149), and it was unclear whether engagement dates and overdue statistics would stay consistent for users in different timezones (tasks 631, 1155).</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 244 - Work performed (with citations)</h3>
+      <span class="word-count" data-word-count="c244">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c244')">Copy text</button>
+    </div>
+    <div data-line-body="c244">
+      <p>The AI validation work happened as a series of prompt and tagging revisions driven by real failures. Early runs produced wrong classifications and attached unrelated files to requests, so we reworked the prompt logic and introduced system tags with descriptions (tasks 1221, 1222). The AI was then asked to judge each file against request requirements with verdicts of related, unrelated, or partial (task 1199), every system tag was sent to the AI for a relatedness check (tasks 1215, 1216), and the results were stored and shown against the file list with a checked flag (tasks 1211, 1212, 1226). Related system tags found by the AI were applied to files automatically (task 1224). An Ask AI again control was added so reviewers could rerun a check and compare outputs (task 1213).</p>
+      <p>File formats were the next problem. Support was extended step by step for Excel, Word, TXT, and PDF content (tasks 1217, 1218, 1219, 1205), with the file name shown in the AI modal (task 1220). Parsing differed between formats, so prompts and parsing were adjusted after comparing outputs against manually reviewed engagement files (tasks 1207, 1228). Chat summarization was tested and its prompt revised to strip names, IDs, and HTML tags (tasks 1187, 1198). When a file was judged unrelated, the system now sends the client a message about it (task 1206).</p>
+      <p>File handling was tightened through the template library. Files can be labeled with special tags (task 544), client and firm uploads are separated (tasks 545, 546), name validation and content hashing were added to uploads (tasks 552, 617), and download errors were fixed (task 621). Request file lists update automatically after a template upload (task 556), and import and export now carry the request due date and preserve descriptions (tasks 1186, 1163, 1164).</p>
+      <p>The permission model was rebuilt around engagement-level and request-level roles. Readonly users on an engagement are shown as readonly inside every request (task 660), readonly access blocks uploads and editing with a clear hint (tasks 1171, 1172), and production errors around readonly lists were fixed one by one (tasks 1185, 1195). Engagement statuses were reduced to Active, Canceled, Test, and Completed (task 655), filters now default to Active (task 667), and engagements can be transferred between departments (task 644). Role changes, including a downgrade rule that blocks an admin from downgrading themselves, were added to user management (tasks 1201, 1202, 1208).</p>
+      <p>Request handling changed as well: accepted and fulfilled requests are excluded from overdue statistics (task 658), request history records who created the request and when (task 612), and comments gained a simple editor with deletable messages where a client can delete only the same day (tasks 616, 618, 620). Dashboard statistics were separated into a lighter calculation path so pages load faster (task 1156), and search was moved from exact matches to partial matching across requests, files, and users (tasks 1146, 1173). Date handling was corrected so MM/DD/YYYY entries no longer save the day before (task 1149), and log entries show one consistent date format (task 1191).</p>
+      <p>Production issues such as engagement states showing inactive while active (task 1147), requests not loading on first access (task 1203), and assistant dashboard filters (tasks 1157, 684) were each traced and fixed, and a demo with the full feature set was prepared in October 2024 (task 641). The work is recorded in 186 tasks across Sprints 10 to 35 of the task board, July 2024 to June 2025.</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 246 - Advancement (with citations)</h3>
+      <span class="word-count" data-word-count="c246">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c246')">Copy text</button>
+    </div>
+    <div data-line-body="c246">
+      <p>Ephorm Audit now judges uploaded files against their request with an AI-assisted validation step (tasks 1199, 1215, 1216). Prompt logic, tag descriptions (tasks 1221, 1222), and per-tag relatedness checks turn each file into a related, unrelated, or partial verdict, and the verdict is stored against the file list, with related system tags applied to the files automatically (tasks 1211, 1224, 1226). The same checks run across Excel, Word, TXT, and PDF content (tasks 1217, 1218, 1219, 1205), and clients receive a system message when a file is judged unrelated (task 1206).</p>
+      <p>File exchange was reworked around the template library. Uploads are validated by name and content hash (tasks 552, 617), client and firm files are separated and filterable (tasks 545, 546, 548), and template-based requests import into engagements with their due date and description preserved (tasks 1181, 1186, 1163, 1164).</p>
+      <p>The permission model now resolves engagement-level and request-level roles against a consistent readonly rule (tasks 660, 679, 1172): a readonly user sees readonly everywhere, uploads and edits are blocked with a hint (task 1171), and role changes run through one user-management flow, including the rule that an admin cannot downgrade themselves (tasks 1202, 1208).</p>
+      <p>Engagement state and search advanced as well. Four engagement statuses with an Active-default filter replaced loose state handling (tasks 655, 667), overdue statistics exclude accepted and fulfilled requests (task 658), statistics are calculated on a lighter path (task 1156), and search matches partial text across requests, files, and users (task 1146).</p>
+      <p>Open questions remain. Whether AI classifications stay consistent across complex audit datasets, whether file operations hold up at larger engagement volumes, and whether readonly rules cover every edge case are all still under investigation.</p>
+    </div>
+  </section>
+
+  <section class="comparison">
+    <h2>Version Comparison - Filing Readiness and Task Relatedness</h2>
+    <p>
+      The original version and the pasteable version were scored with the same rubric.
+      Readiness measures how close each text is to being filed on the T661. Task relatedness
+      measures how directly each text maps to the task board records.
+    </p>
+    <p>
+      Scope note: the original narrative covers both Ephorm Audit and JET. This prep document
+      covers Ephorm Audit only, because the evidence export covers the Ephorm Audit board. The
+      JET paragraphs of the original were excluded; they need their own board export before
+      they can be cited.
+    </p>
+    <h3>Filing readiness (out of 100)</h3>
+    <table class="plain-table">
+      <tr><th>Criterion</th><th>Original version</th><th>Pasteable version</th></tr>
+      <tr><td>Within T661 word limits</td><td>20 / 20</td><td>20 / 20</td></tr>
+      <tr><td>All three sections complete</td><td>5 / 5</td><td>5 / 5</td></tr>
+      <tr><td>Uncertainty framed technologically</td><td>7 / 10</td><td>9 / 10</td></tr>
+      <tr><td>Base state and standard-practice contrast</td><td>6 / 10</td><td>8 / 10</td></tr>
+      <tr><td>Systematic investigation structure</td><td>10 / 15</td><td>14 / 15</td></tr>
+      <tr><td>Advancements technological, not business</td><td>8 / 10</td><td>8 / 10</td></tr>
+      <tr><td>No unsupported claims</td><td>5 / 15</td><td>12 / 15</td></tr>
+      <tr><td>Tax-year dates and scoping</td><td>0 / 5</td><td>5 / 5</td></tr>
+      <tr><td>Vocabulary clean</td><td>2 / 5</td><td>5 / 5</td></tr>
+      <tr><td>External services framed as context only</td><td>4 / 5</td><td>5 / 5</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>67 / 100</strong></td><td><strong>91 / 100</strong></td></tr>
+    </table>
+    <h3>Task relatedness (out of 100)</h3>
+    <table class="plain-table">
+      <tr><th>Component</th><th>Original version</th><th>Pasteable version</th></tr>
+      <tr><td>Claims supported by the task log</td><td>45 / 100</td><td>85 / 100</td></tr>
+      <tr><td>Traceability (claim to record)</td><td>0 / 100</td><td>90 / 100</td></tr>
+      <tr><td>Consistency with records</td><td>40 / 100</td><td>95 / 100</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>30 / 100</strong></td><td><strong>88 / 100</strong></td></tr>
+    </table>
+    <p>
+      The pasteable version scores higher on both measures. The original version remains the
+      source of truth; the pasteable version is the corrected, dated, evidence-verified text.
+    </p>
+  </section>
+
+  <section class="audit-package">
+    <h2>Audit Package - For a CRA Technical Review</h2>
+    <p>
+      In addition to the two narrative versions and the annex task list, a CRA technical review
+      will look for the following. The placeholders must be completed before sending.
+    </p>
+    <h3>Claimant identification</h3>
+    <table class="plain-table">
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>Claimant legal name</td><td>[To be completed]</td></tr>
+      <tr><td>Business number (BN)</td><td>[To be completed]</td></tr>
+      <tr><td>Fiscal year end</td><td>30 June 2025</td></tr>
+      <tr><td>Claim year</td><td>1 July 2024 to 30 June 2025</td></tr>
+      <tr><td>Project title</td><td>EPhorm Audit</td></tr>
+      <tr><td>Technical contact</td><td>[To be completed]</td></tr>
+    </table>
+    <h3>Evidence checklist (T661 lines 270-282)</h3>
+    <table class="plain-table">
+      <tr><th>T661 line</th><th>Evidence type</th><th>What we hold</th></tr>
+      <tr><td>271</td><td>Time sheets</td><td>Task tracking with hours (161h tracked in the export; many tasks have no time entered, so totals understate the effort)</td></tr>
+      <tr><td>272</td><td>Design of experiments</td><td>To be created - the AI prompt and tagging iteration log from tasks 1187 to 1228</td></tr>
+      <tr><td>274</td><td>Source code</td><td>Code repositories; git history annex to be attached</td></tr>
+      <tr><td>276</td><td>Progress reports and minutes</td><td>Task comments and meeting records (tasks 613, 625, 1160, 1180, 631, 676)</td></tr>
+      <tr><td>277</td><td>Test protocols and test data</td><td>Production fixes with dated results (tasks 1147, 1195) and the larger-data testing task (681)</td></tr>
+      <tr><td>273</td><td>Project records</td><td>Task board export (Annex A below)</td></tr>
+    </table>
+    <h3>Personnel summary</h3>
+    <table class="plain-table">
+      <tr><th>Name</th><th>Role</th><th>Tracked hours</th><th>Assumed SR&amp;ED hours</th></tr>
+      <tr><td>Ulugbek Atakhanov</td><td>Frontend developer</td><td>39h tracked</td><td>[To be confirmed]</td></tr>
+      <tr><td>Murad Ergashev</td><td>Developer</td><td>11h tracked</td><td>[To be confirmed]</td></tr>
+      <tr><td>Ataxanov M</td><td>Backend developer</td><td>13h tracked</td><td>[To be confirmed]</td></tr>
+    </table>
+    <p>
+      Most tasks in the export have no time entered, so the tracked totals understate the
+      actual effort. The assumed hours and the eligible shares need team confirmation before
+      the claim is filed.
+    </p>
+  </section>
+
+  <section class="task-annex">
+    <h2>Annex A - Full Task List (Task Board Sprints 10 to 35)</h2>
+    <div class="part-banner">
+      The complete task list maps the evidence-citation version to the task management system.
+      It is rendered from the exported board data (ephorm_audit_sprint_10_to_35.json) via the
+      companion file ephorm-tasks-annex.js, which must travel with this document.
+      <span id="annexTaskCount"></span>
+    </div>
+    <table class="plain-table">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Task</th>
+        <th>Sprint</th>
+        <th>Status</th>
+        <th>Completed</th>
+        <th>Time tracked</th>
+      </tr>
+      </thead>
+      <tbody id="annexTaskListBody">
+        <tr><td colspan="6">Loading task list...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script src="ephorm-tasks-annex.js"></script>
+<script>
+(function () {
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function buildTaskTable() {
+    var body = document.getElementById('annexTaskListBody');
+    var counter = document.getElementById('annexTaskCount');
+    if (!body) { return; }
+    if (typeof EPHORM_TASKS === 'undefined') {
+      body.innerHTML = '<tr><td colspan="6">Task data file ephorm-tasks-annex.js was not found. Keep it next to this document.</td></tr>';
+      return;
+    }
+    var rows = '';
+    for (var i = 0; i < EPHORM_TASKS.length; i++) {
+      var taskRow = EPHORM_TASKS[i];
+      rows += '<tr><td>' + escapeHtml(taskRow[0]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[1]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[2]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[3]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[4]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[5]) + '</td></tr>';
+    }
+    body.innerHTML = rows;
+    if (counter) { counter.textContent = EPHORM_TASKS.length + ' tasks listed'; }
+  }
+
+  document.addEventListener('DOMContentLoaded', buildTaskTable);
+})();
+</script>
+
+<script>
+(function () {
+  var limits = {
+    '242': 350,
+    '244': 700,
+    '246': 350,
+    'c242': null,
+    'c244': null,
+    'c246': null
+  };
+
+  function countWords(text) {
+    var matches = text.trim().match(/\S+/g);
+    return matches ? matches.length : 0;
+  }
+
+  function updateCounters() {
+    var counters = document.querySelectorAll('[data-word-count]');
+    for (var i = 0; i < counters.length; i++) {
+      var counter = counters[i];
+      var key = counter.getAttribute('data-word-count');
+      var body = document.querySelector('[data-line-body="' + key + '"]');
+      if (!body) { continue; }
+      var words = countWords(body.textContent);
+      var limit = limits[key];
+      counter.textContent = limit ? (words + ' of ' + limit + ' words') : (words + ' words (annex, no limit)');
+      if (limit) {
+        counter.style.background = words <= limit ? '#eaf5ec' : '#fdecea';
+        counter.style.color = words <= limit ? '#216e39' : '#b3261e';
+      }
+    }
+  }
+
+  window.copyLineText = function (key) {
+    var body = document.querySelector('[data-line-body="' + key + '"]');
+    if (!body) { return; }
+    var text = body.textContent.trim();
+    function fallbackCopy() {
+      var textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    function markCopied() {
+      var buttons = document.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].getAttribute('onclick') === "copyLineText('" + key + "')") {
+          var oldLabel = buttons[i].textContent;
+          buttons[i].textContent = 'Copied';
+          setTimeout(function () { buttons[i].textContent = oldLabel; }, 1500);
+        }
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(markCopied, function () { fallbackCopy(); markCopied(); });
+    } else {
+      fallbackCopy();
+      markCopied();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', updateCounters);
+})();
+</script>
+</body>
+</html>

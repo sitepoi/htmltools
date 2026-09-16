@@ -196,6 +196,7 @@
   .approval-note .doc-field-date { width: 110px; }
 
   /* ---------- Print ---------- */
+  @page { margin: 18mm 16mm; }
   @media print {
     body { background: #fff; }
     input.doc-field {
@@ -210,8 +211,14 @@
       max-width: none;
       padding: 0;
     }
-    section, h2, h3, p, li { break-inside: avoid; }
-    .doc-header { border-bottom-color: #000; }
+    /* Long sections flow across pages; only small, atomic pieces stay intact.
+       This avoids an empty page being left after the title / header. */
+    section { break-inside: auto; page-break-inside: auto; }
+    h2, h3, p, li, tr { break-inside: avoid; page-break-inside: avoid; }
+    h2, h3 { break-after: avoid; page-break-after: avoid; }
+    table { break-inside: auto; page-break-inside: auto; }
+    .doc-header { border-bottom-color: #000; break-after: avoid; page-break-after: avoid; }
+    .highlight-box, .signature-block, .approval-note { break-inside: avoid; page-break-inside: avoid; }
     h2 { color: #000; }
   }
 </style>
@@ -249,15 +256,18 @@
     <p>Aşağıdaki liste, pozisyonun sorumluluk alanlarını özetlemektedir:</p>
     <ul>
       <li><strong>Günlük Kayıt ve Defter Tutma</strong> - tüm gelir ve giderlerin muhasebe sistemine zamanında ve doğru kaydedilmesi; bağış, hibe, aidat ve program gelirlerinin takibi.</li>
-      <li><strong>Banka ve Kredi Kartı Mutabakatları</strong> - her ay tüm banka hesaplarının ve kredi kartlarının ekstrelerle karşılaştırılarak mutabakatının yapılması.</li>
+      <li><strong>Banka ve Kredi Kartı Mutabakatları</strong> - her ay tüm banka hesaplarının ve kredi kartlarının ekstrelerinin QuickBooks kayıtlarıyla karşılaştırılması; ekstredeki her bir ödemenin (kredi kartı ve banka kartı ödemeleri dahil) ilgili gider kaydıyla tek tek eşleştirilmesi ve dönem sonu bakiyelerinin mutabakatının yapılması.</li>
       <li><strong>Borç ve Alacak Yönetimi</strong> - satıcı faturalarının kaydı, ödemelerin zamanında yapılması, alacakların ve tahsilatların takibi.</li>
       <li><strong>Satın Alma ve Ödemeler</strong> - mali heyet veya Executive Director'dan onay / talep alındıktan sonra satın alma ve ödemelerin yapılması; aylık düzenli ödemelerin (burslar, kiralar vb.) ve düzensiz ödemelerin onay mekanizmalarıyla yürütülmesi.</li>
-      <li><strong>Nakit Yönetimi ve Pledge (Bağış Taahhüdü) Takibi</strong> - gelen nakit paraların toplanıp kaydedilmesi, elden yapılan nakit harcamaların kaydı, pledge yapan kişilerin ödemelerinin QuickBooks invoice / pledge sistemiyle takibi ve kurum içi yazılım üzerinden haftalık raporların gruplarla paylaşılması.</li>
-      <li><strong>Bordro (Payroll) ve Devlet Yükümlülükleri</strong> - bordroların doğrudan bu roldeki kişi tarafından yapılması; kaynak kesintileri (CPP, EI, vergi), GST/HST, PST ve WorkSafeBC bildirim ve ödemelerinin hazırlanması ve zamanında yapılması.</li>
+      <li><strong>Nakit Yönetimi ve Pledge (Bağış Taahhüdü) Takibi</strong> - gelen nakit paraların toplanıp "Nakit Alınanlar" WhatsApp Grubu'na yazılarak muhasebe sistemine kaydedilmesi, elden yapılan nakit harcamaların kaydı, pledge yapan kişilerin ödemelerinin QuickBooks invoice / pledge sistemiyle takibi ve kurum içi yazılım üzerinden haftalık raporların gruplarla paylaşılması.</li>
+      <li><strong>Bordro (Payroll) ve Devlet Yükümlülükleri</strong> - bordro işlemlerinin ve resmi bildirimlerin (kaynak kesintileri, GST/HST, PST, WorkSafeBC, T3010) CPA tarafından yapılması; bu rolün veri paketlerini hazırlama, CPA ile koordinasyon ve son tarihleri takip sorumluluğu.</li>
       <li><strong>Ödeme Operasyonları</strong> - bankadan yapılması gereken ödemelerin gönderilmesi (çekle yapılamayanlar), nakit ödemelerin yapılması ve reimbursement'ların takibi ile ödenmesi.</li>
       <li><strong>Finansal Raporlama</strong> - Executive Director için aylık mali tabloların (gelir-gider, bütçe karşılaştırması, nakit durumu) hazırlanması.</li>
       <li><strong>Departman Bütçe Takibi</strong> - departman bazında bütçelerin QuickBooks'ta takibi, ödemelerin departman bütçeleriyle eşleştirilmesi, bütçe gerçekleşme ve kalan tutarlarının izlenmesi ve aylık raporlanması.</li>
       <li><strong>Hibe (Grant) Takibi</strong> - hibelerin finansal açıdan takibi; hibe miktarlarının, harcanan ve kalan kısımların izlenmesi; haftalık ve aylık raporların üretilmesi.</li>
+      <li><strong>Program ve Etkinlik Gelirleri ile GST Yönetimi</strong> - hafta sonu okulu (Weekend School) ve Future Bridge Academy gibi programların veli ödemelerinin ve giderlerinin takibi ile tahsilatların tamamlanması; kermes gibi gelir toplamalı etkinliklerin gelirlerinin kaydedilmesi; her türlü gelir getirici faaliyetin GST hesaplarının ayrı tutulması ve yönetilmesi.</li>
+      <li><strong>Bina, Kira ve Gayrimenkul Yönetimi</strong> - kiracı kiralarının faturalanması ve tahsilat takibi, mortgage ödemelerinin kaydı, bina bakım ve işletme giderlerinin takibi ile yıllık bina gelir-gider özetinin hazırlanması.</li>
+      <li><strong>Mali Belge ve Bilgi Koordinatörlüğü</strong> - banka, hibe veren, devlet kurumları ve yönetim tarafından istenen mali belge ve raporların hazırlanması, gönderilmesi ve gönderim kayıtlarının tutulması.</li>
       <li><strong>Hayır Kurumu Yükümlülükleri ve T3010</strong> - CRA hayır kurumu gereklilikleri için verilerin toplanması ve raporların hazırlanması; T3010 beyannamesinin baştan sona öğrenilmesi ve QuickBooks kayıtlarının bu verilerin kolayca çıkarılabileceği şekilde düzenlenmesi.</li>
       <li><strong>Yıl Sonu ve Denetim Desteği</strong> - yıl sonu kapanış işlemleri ve mali denetim / inceleme hazırlığı; dış muhasebeciyle koordinasyon.</li>
       <li><strong>Görev Yönetimi (BookkeeperTaskManager)</strong> - tüm işlerin kurumun BookkeeperTaskManager uygulaması üzerinden takip edilmesi; görevlerin durumlarının güncellenmesi ve tamamlanması.</li>
@@ -282,6 +292,7 @@
       <li>Herhangi bir sürecin bir noktada aksaması durumunda <strong>süreci sonuçlanana kadar takip etmek</strong>; işin eksik, hatalı veya unutulmuş kalmamasını sağlamak.</li>
       <li>Tespit edilen hata ve eksiklikleri ilgili kişi veya kurumlara bildirmek, düzeltme sürecini yürütmek ve <strong>sonucunu doğrulamak</strong>.</li>
       <li>Takip edilen süreçlerdeki gecikme ve riskleri zamanında Executive Director'a raporlamak.</li>
+      <li>Görevle ilgili soruları <strong>"Mali Heyet Sorular ve Cevaplar" WhatsApp Grubu'nda</strong> sormak ve yanıtları takip etmek.</li>
     </ul>
     <h3>B. Günlük Kayıt ve Defter Tutma</h3>
     <ul>
@@ -293,9 +304,11 @@
 
     <h3>C. Banka ve Kredi Kartı Mutabakatları</h3>
     <ul>
-      <li>Her ay tüm <strong>banka hesaplarının ve kredi kartlarının mutabakatını</strong> ekstrelerle karşılaştırarak yapmak.</li>
-      <li><strong>Farkları araştırmak ve düzeltmek</strong>; mutabakat belgelerini aylık dosyalarda saklamak.</li>
-      <li>Online bankacılık üzerinden ödemeleri hazırlamak; yetki sınırları çerçevesinde <strong>çift onay / imza süreçlerine</strong> uymak.</li>
+      <li>Her ay tüm <strong>banka hesaplarının ve kredi kartlarının mutabakatını</strong> yapmak: banka ve kart ekstrelerini QuickBooks kayıtlarıyla karşılaştırarak dönem sonu bakiyelerinin eşitliğini doğrulamak.</li>
+      <li>Ekstredeki <strong>her bir işlemi tek tek değerlendirmek</strong>: kredi kartı ve banka kartı ile yapılan her ödemenin QuickBooks'taki ilgili gider kalemiyle ayrı ayrı eşleştirilmesi; tarih ve tutarların doğrulanması.</li>
+      <li>Ekstrede olup kayıtlarda görünmeyen veya kayıtlarda olup ekstrede görünmeyen <strong>farkları araştırmak ve düzeltmek</strong>; mutabakat belgelerini aylık dosyalarda saklamak.</li>
+      <li>Online bankacılıkta <strong>ödemeleri hazırlamak ve gönderilmek üzere onaya sunmak</strong>; bu rol banka hesaplarına görüntüleme ve ödeme hazırlama yetkisiyle erişir, ödemelerin nihai onayı / serbest bırakılması Executive Director veya Mali Heyet'ten onaylardan sorumlu belirlenen kişi tarafından yapılır (bu rol tek başına ödeme yetkilisi değildir).</li>
+      <li>Yetki sınırları çerçevesinde <strong>çift onay / imza süreçlerine</strong> uymak.</li>
     </ul>
 
     <h3>D. Borç ve Alacak Yönetimi</h3>
@@ -307,11 +320,11 @@
 
     <h3>E. Bordro (Payroll) ve Devlet Yükümlülükleri</h3>
     <ul>
-      <li><strong>Bordroları (payroll) doğrudan bu rol kapsamında yapmak</strong>: çalışma saatleri, ücretler, kesintiler ve net ödemelerin hesaplanması ve işlenmesi.</li>
-      <li><strong>Payroll kaynaklı devlet ödemelerini bankadan yapmak</strong>: kaynak kesintileri (CPP, EI, vergi) ve işveren paylarının zamanında gönderilmesi.</li>
-      <li><strong>GST/HST ve PST beyannamelerini</strong> hazırlamak ve son ödeme tarihlerine uyarak ödemek.</li>
-      <li><strong>WorkSafeBC bildirimlerini yapmak ve prim ödemelerini</strong> zamanında gerçekleştirmek.</li>
-      <li>İşveren payları ve yıllık özetler (T4/T4A) için <strong>kayıtları eksiksiz tutmak</strong>.</li>
+      <li><strong>Bordro (payroll) sürecini CPA ile koordine etmek</strong>: her bordro döneminde çalışma saatleri, ücretler, izinler ve değişiklik verilerini CPA'ya iletmek; işlenen bordroyu QuickBooks'a kaydetmek ve bordro hesaplarını mutabakat etmek.</li>
+      <li><strong>Payroll kaynaklı devlet kesintilerinin (CPP, EI, vergi) CPA tarafından zamanında ödendiğini takip etmek</strong> ve kayıtları doğrulamak.</li>
+      <li><strong>GST/HST ve PST için çalışma verilerini (working papers) hazırlayıp CPA'ya iletmek</strong>; CPA'nın beyannameleri son tarihlerinde verdiğini takip etmek.</li>
+      <li><strong>WorkSafeBC üç aylık bildirimlerinin ve prim ödemelerinin CPA tarafından zamanında yapılmasını takip etmek</strong>; yıllık mutabakatı doğrulamak.</li>
+      <li>İşveren payları ve yıllık özetler (T4/T4A) için <strong>kayıtları eksiksiz tutmak ve CPA'ya gerekli verileri iletmek</strong>.</li>
       <li>Mevzuat değişikliklerini (oranlar, son tarihler, CRA gereklilikleri) takip etmek ve Executive Director'ı bilgilendirmek.</li>
     </ul>
 
@@ -327,20 +340,24 @@
       <li>Yıl sonu kapanış işlemlerine <strong>destek olmak</strong>; dış muhasebeci / denetçi ile koordinasyon kurmak.</li>
       <li>Mali denetim / inceleme için <strong>istenen belgeleri ve örnekleri</strong> hazırlamak.</li>
       <li>Kurumun iç kontrol prosedürlerine ve <strong>belge saklama sürelerine</strong> uymak.</li>
+      <li>Tüm muhasebesel faaliyetlere dair konularda <strong>uzmanlaşmak</strong>: işlemlerin resmiyetinin nasıl olması gerektiğini bilmek; mevzuat ve CRA kılavuzlarındaki değişiklikleri takip edip uygulamaları güncel tutmak.</li>
     </ul>
 
     <h3>H. Hayır Kurumu Yükümlülükleri ve T3010</h3>
     <ul>
-      <li><strong>T3010 (Kayıtlı Hayır Kurumu Bilgi Beyannamesi) formunu tamamen öğrenmek</strong>: tüm bölümlerini, istenen verileri ve son başvuru tarihini bilmek; formda ve CRA kılavuzlarında yapılan değişiklikleri takip etmek.</li>
+      <li><strong>T3010 formunu ve veri gereksinimlerini öğrenmek</strong>: hangi bölümün hangi verileri istediğini bilmek, CPA'nın ihtiyaç duyduğu T3010 veri paketini hazırlayabilmek ve son başvuru tarihini takip etmek.</li>
       <li>QuickBooks kayıtlarını (hesap planı, sınıflar / etiketler, müşteri ve tedarikçi listeleri) <strong>T3010'daki verilerin kolayca çıkarılabileceği şekilde düzenlemek</strong> - örneğin gelirleri (resmi makbuzlu bağışlar, makbuzsuz bağışlar, devlet hibeleri, program gelirleri) ve giderleri (program faaliyetleri, yönetim, bağış toplama) CRA kategorilerine göre ayrıştırmak.</li>
-      <li>Resmi <strong>bağış makbuzlarının (tax receipts) kayıtlarını eksiksiz tutmak</strong>: bağışçı bilgileri, makbuz tarihi, tutar ve verilen avantaj değeri; CRA makbuz kurallarına uymak.</li>
+      <li>Resmi <strong>bağış makbuzlarını (tax receipts) düzenlemek ve bağışçılara göndermek</strong>; bağışçı bilgileri, makbuz tarihi, tutar ve verilen avantaj değeri kayıtlarını eksiksiz tutmak ve CRA makbuz kurallarına uymak.</li>
+      <li>Yıl sonunda <strong>bağışçı özet mektuplarını</strong> hazırlamak ve göndermek.</li>
+      <li>Online bağış platformları ve e-transfer bağışlarının <strong>raporlarını QuickBooks ve banka kayıtlarıyla mutabakat etmek</strong>.</li>
+      <li>Bağışçı listelerini <strong>muhasebe kayıtlarıyla eşleştirmek</strong>; isim ve tutar farklarını çözmek.</li>
       <li><strong>Kısıtlı fonları</strong> (belirli amaçlı bağışlar, 10 yıllık hibeler, vakıf fonları) ayrı izlemek; ayni (gayri nakdi) bağışların kaydını tutmak.</li>
-      <li>T3010 için <strong>taslak veri setini ve destekleyici raporları</strong> yıl sonunda hazır olacak şekilde derlemek; dış muhasebeciyle birlikte beyannamenin hazırlanmasına destek olmak.</li>
+      <li>T3010 için <strong>taslak veri paketini ve destekleyici raporları</strong> CPA'nın istek listesine göre derlemek ve son başvuru tarihinden en az bir ay önce CPA'ya teslim etmek; CPA'nın beyannameyi zamanında verdiğini takip etmek.</li>
     </ul>
 
     <h3>I. Nakit Yönetimi ve Pledge Takibi</h3>
     <ul>
-      <li><strong>Gelen nakit paraları toplamak ve kaydetmek</strong>: bağış, etkinlik ve okul ücreti gibi nakit tahsilatları gününde makbuz karşılığında kayda almak.</li>
+      <li><strong>Gelen nakit paraları toplamak ve kaydetmek</strong>: bağış, etkinlik ve okul ücreti gibi nakit tahsilatları, alındığı gün <strong>"Nakit Alınanlar" WhatsApp Grubu'na yazmak</strong> ve muhasebe sistemine kaydetmek (nakit tahsilat için makbuz düzenlenmez).</li>
       <li><strong>Elden verilen nakit harcamaları kaydetmek</strong>: harcamalar için elden verilen paraları makbuz / belge karşılığında kayda geçirmek ve küçük kasayla mutabakatını yapmak.</li>
       <li><strong>Pledge (bağış taahhüdü) yapan kişileri QuickBooks'ta invoice / pledge olarak açmak</strong> ve ödemelerini takip etmek; kimin ne kadar ödediğini ve ne kadarının kaldığını güncel tutmak.</li>
       <li>Kurum içi yazılım üzerinden <strong>haftalık pledge raporu</strong> hazırlamak (kimin ne kadar verdiği, ne kadar kaldığı) ve ilgili gruplarla paylaşmak.</li>
@@ -364,8 +381,9 @@
 
     <h3>L. Satın Alma ve Ödemeler</h3>
     <ul>
-      <li>Mali heyet veya Executive Director'dan <strong>onay / talep alındıktan sonra</strong> satın almaları yapmak ve ödemeleri gerçekleştirmek: vendor ödemeleri, bilet vb. satın almalar, internet üzerinden ve çek ile ödemeler.</li>
+      <li><strong>Mali Heyet'ten onaylardan sorumlu belirlenen kişiden</strong> veya Executive Director'dan <strong>onay / talep alındıktan sonra</strong> satın almaları yapmak ve ödemeleri gerçekleştirmek: vendor ödemeleri, bilet vb. satın almalar, internet üzerinden ve çek ile ödemeler.</li>
       <li><strong>Aylık düzenli ödemeleri zamanında yapmak</strong>: hayır kurumu kapsamında öğrenci bursları, bazı öğrenci takviyeleri, çalışanların kullanımına ayrılan fonlar, kiralar vb.</li>
+      <li>Öğrenci bursu ödemelerini yapmak ve <strong>gerekli resmi belgeleri hazırlamak</strong> (gerektiğinde T4A vb.); bu ödemelerin kayıtlarını eksiksiz tutmak.</li>
       <li><strong>Düzensiz gelişen ödemeleri</strong>, gerekli onay mekanizmaları tamamlandıktan sonra yapmak.</li>
     </ul>
 
@@ -374,6 +392,7 @@
       <li><strong>Bankadan yapılması gereken ödemeleri göndermek</strong>: çekle yapılamayan ödemeler için banka üzerinden ödeme işlemlerini (online transfer, EFT, havale vb.) gerçekleştirmek.</li>
       <li><strong>Nakit ödemeleri yapmak</strong>: onaylanan harcamalar için elden nakit ödeme yapmak ve makbuz karşılığında kayda almak.</li>
       <li><strong>Reimbursement'ları takip etmek ve ödemek</strong>: çalışan ve gönüllülerin harcama geri ödemelerini makbuz karşılığında işlemek; ödemelerini zamanında yapmak.</li>
+      <li><strong>Görevlilere verilen fonların harcama dökümlerini toplamak ve sisteme yüklemek</strong>; bu konulardaki resmiyet gerekliliklerini öğrenmek ve ödemelerin resmiyete uygun şekilde yapılmasını sağlamak.</li>
     </ul>
 
     <h3>N. Görev Takibi ve Çalışma Saatleri (BookkeeperTaskManager)</h3>
@@ -386,29 +405,73 @@
       <li><strong>Dashboard ve Year Plan görünümlerini</strong> kullanarak tamamlanma oranını, aylık kırılımları, kategori bazlı durumu ve yıllık görev planını izlemek.</li>
       <li><strong>Çalışma saatlerini doldurmak</strong>: çalışılan saatleri düzenli olarak uygulamaya girmek.</li>
     </ul>
+
+    <h3>O. Program, Etkinlik Gelirleri ve GST Yönetimi</h3>
+    <ul>
+      <li>Hafta sonu okulu (Weekend School), Future Bridge Academy ve benzeri programların <strong>gelirlerini (veli ödemeleri) ve giderlerini takip etmek</strong>; ödemelerin tamamlanmasını sağlamak, gecikmeleri izlemek ve tahsilatları sonuçlandırmak.</li>
+      <li>Kermes gibi gelir toplamalı etkinliklerde <strong>gelen gelirleri gününde kaydetmek</strong>; etkinlik bazında gelir-gider dengesini çıkarmak.</li>
+      <li>Her türlü gelir getirici faaliyetin <strong>GST hesaplarını ayrı tutmak ve yönetmek</strong>: gelirlerin GST'ye tabi olup olmadığını belirlemek, tahsil edilen ve ödenen GST'yi ayrı kayıt altında izlemek ve beyannameye doğru aktarmak.</li>
+    </ul>
+
+    <h3>P. Bina, Kira ve Gayrimenkul Yönetimi</h3>
+    <ul>
+      <li><strong>Kiracı kiralarını faturalamak ve tahsilatını takip etmek</strong>: aylık kira faturalarının düzenlenmesi, ödemelerin kaydı ve gecikmelerin izlenmesi.</li>
+      <li>Kira gelirinin <strong>GST/HST durumunu</strong> kira sözleşmesine göre (ticari / konut) doğru kaydetmek ve CPA'nın beyanname çalışmasına aktarmak.</li>
+      <li><strong>Mortgage ödemelerini kaydetmek</strong>: CPA'dan alınan ödeme planına göre anapara / faiz ayrımıyla takip etmek.</li>
+      <li>Bina <strong>bakım, onarım, sigorta, emlak vergisi ve işletme giderlerini</strong> kaydetmek ve bina bazında ayrı izlemek.</li>
+      <li>Yıllık <strong>bina gelir-gider özetini</strong> hazırlamak ve CPA'ya sunmak.</li>
+      <li><strong>Kira artış dönemlerini ve kiracı bildirim tarihlerini</strong> takip etmek.</li>
+      <li>Kamu hizmeti (hidro, gaz, su) faturalarını <strong>bina bazında kaydetmek</strong>.</li>
+      <li><strong>Kiracı güvence depozitolarını</strong> ayrı izlemek.</li>
+    </ul>
+
+    <h3>Q. Mali Belge ve Bilgi Koordinatörlüğü</h3>
+    <ul>
+      <li><strong>Standart mali belge kütüphanesi tutmak</strong>: mali tablolar, bütçe gerçekleşme raporları, banka ekstreleri, CRA hayır kurumu yazısı, sigorta belgeleri ve sık istenen diğer belgeleri güncel ve hazır halde bulundurmak.</li>
+      <li>Banka, hibe veren, devlet kurumları, yönetim veya diğer birimler tarafından istenen <strong>mali belge ve raporları hazırlamak ve göndermek</strong>: gereken verileri QuickBooks'tan çıkarmak, gerekirse CPA'dan temin etmek ve talep eden birime zamanında iletmek.</li>
+      <li>Hibe başvuruları ve raporlamaları için istenen <strong>mali dokümanları</strong> hazırlamak.</li>
+      <li><strong>Gönderim kayıtlarını tutmak</strong> (kime, ne, ne zaman gönderildi) ve talep son tarihlerini takip etmek.</li>
+    </ul>
+
+    <h3>R. İç Destek Raporları ve Mali Politika Desteği (Zaman İçinde Geliştirilir)</h3>
+    <p>
+      Bu alandaki görevler hemen değil, <strong>zaman içinde geliştirilecektir</strong>: önce gerekli
+      rapor altyapısı oluşturulur, ardından bu raporlar düzenli olarak üretilir. Bu rolün, bu
+      görevleri zaman içinde üstlenebilecek yetkinliği geliştirmesi beklenir.
+    </p>
+    <ul>
+      <li>Yıllık bütçe hazırlığında departmanlara <strong>veri desteği</strong> sağlamak ve taslak rakamları toplamak.</li>
+      <li>Yönetim kurulu ve komite toplantıları için <strong>destekleyici mali özetler</strong> hazırlamak.</li>
+      <li>Yeni çalışan ve gönüllülere <strong>harcama ve reimbursement süreçlerini</strong> anlatmak.</li>
+      <li>Mali politikalara (harcama, satın alma, nakit taşıma kuralları) <strong>yazılı destek</strong> vermek.</li>
+      <li><strong>Sabit kıymet listesini</strong> (bina, mobilya, ekipman) tutmak ve güncellemek.</li>
+    </ul>
   </section>
 
   <section>
     <h2>3. Spesifik Görevler</h2>
     <ol>
       <li>Tüm gelir ve giderleri <strong>muhasebe sistemine</strong> zamanında ve doğru kaydetmek.</li>
-      <li>Her ay tüm <strong>banka hesaplarının ve kredi kartlarının mutabakatını</strong> yapmak.</li>
+      <li>Her ay tüm <strong>banka hesaplarının ve kredi kartlarının mutabakatını</strong> yapmak; ekstredeki her bir ödemeyi QuickBooks'taki gider kaydıyla tek tek eşleştirmek.</li>
       <li>Satıcı faturalarını kaydetmek, <strong>vade takibi</strong> yapmak ve ödemeleri zamanında hazırlamak.</li>
-      <li>Mali heyet veya Executive Director onayı sonrasında <strong>satın almaları ve ödemeleri</strong> gerçekleştirmek (vendor ödemeleri, bilet satın alma, internet ve çek ile ödeme).</li>
+      <li><strong>Mali Heyet'ten onaylardan sorumlu belirlenen kişi</strong> veya Executive Director onayı sonrasında <strong>satın almaları ve ödemeleri</strong> gerçekleştirmek (vendor ödemeleri, bilet satın alma, internet ve çek ile ödeme).</li>
       <li><strong>Aylık düzenli ödemeleri</strong> (öğrenci bursları, öğrenci takviyeleri, çalışan fonları, kiralar vb.) zamanında yapmak.</li>
+      <li>Öğrenci bursu ödemelerini yapmak ve <strong>gerekli resmi belgeleri hazırlamak</strong> (gerektiğinde T4A vb.).</li>
       <li>Düzensiz gelişen ödemeleri <strong>onay mekanizmaları sonrasında</strong> yapmak.</li>
       <li><strong>Alacakları ve tahsilatları</strong> takip etmek; gecikmeleri raporlamak.</li>
-      <li>Gelen <strong>nakit tahsilatları toplamak</strong> ve gününde makbuz karşılığında kaydetmek.</li>
+      <li>Gelen <strong>nakit tahsilatları toplamak</strong>; alındığı gün "Nakit Alınanlar" WhatsApp Grubu'na yazmak ve muhasebe sistemine kaydetmek (makbuz düzenlenmez).</li>
       <li>Elden yapılan <strong>nakit harcamaları</strong> belge karşılığında kaydetmek ve mutabakatını tutmak.</li>
       <li>Pledge yapan kişileri QuickBooks'ta <strong>invoice / pledge olarak</strong> açmak ve ödemelerini takip etmek.</li>
       <li>Kurum içi yazılım üzerinden <strong>haftalık pledge raporlarını</strong> (kimin ne kadar verdiği, ne kadar kaldığı) hazırlayıp ilgili gruplarla paylaşmak.</li>
       <li>Küçük kasa (petty cash) <strong>kayıt ve mutabakatını</strong> tutmak.</li>
-      <li><strong>Bordroları (payroll) doğrudan bu rol kapsamında yapmak</strong>: saatler, ücretler, kesintiler ve net ödemeler.</li>
-      <li><strong>Kaynak kesintileri, GST/HST ve PST</strong> beyannamelerini hazırlamak ve son tarihlerde ödemek; payroll kaynaklı devlet ödemelerini bankadan yapmak.</li>
-      <li><strong>WorkSafeBC bildirimlerini ve prim ödemelerini</strong> zamanında yapmak.</li>
+      <li><strong>Bordroları (payroll) CPA'ya veri desteğiyle koordine etmek</strong>: saatler, ücretler, izinler ve değişiklikleri CPA'ya iletmek; işlenen bordroyu kaydetmek ve mutabakat etmek.</li>
+      <li><strong>Kaynak kesintileri, GST/HST ve PST</strong> için çalışma verilerini CPA'ya iletmek; CPA'nın beyannameleri ve ödemeleri son tarihlerde yaptığını takip etmek.</li>
+      <li><strong>WorkSafeBC üç aylık bildirimlerinin ve prim ödemelerinin</strong> CPA tarafından zamanında yapılmasını takip etmek; yıllık mutabakatı doğrulamak.</li>
       <li>Bankadan yapılması gereken <strong>ödemeleri göndermek</strong> (çekle yapılamayan ödemeler).</li>
       <li><strong>Nakit ödemeleri</strong> onay sonrasında yapmak ve kaydetmek.</li>
       <li><strong>Reimbursement'ları takip etmek</strong> ve ödemelerini yapmak.</li>
+      <li><strong>Görevlilere verilen fonların harcama dökümlerini</strong> toplamak, sisteme yüklemek ve ödemeleri resmiyete uygun şekilde yürütmek.</li>
+      <li>Görevle ilgili soruları <strong>"Mali Heyet Sorular ve Cevaplar" WhatsApp Grubu'nda</strong> sormak.</li>
       <li><strong>BookkeeperTaskManager uygulamasını aktif kullanmak</strong>; tüm görevleri Task Board üzerinden takip edip tamamlamak.</li>
       <li>Görevleri <strong>bekliyor / devam ediyor / tamamlandı</strong> durumlarıyla güncellemek; tamamlamaları kayıt altına almak.</li>
       <li>Geciken (overdue) görevleri gününde tamamlamak; <strong>onay ve bilgi taleplerini</strong> uygulama üzerinden gönderip sonuçlanana kadar takip etmek.</li>
@@ -420,17 +483,28 @@
       <li>Ödemeleri <strong>departman bütçeleriyle eşleştirmek</strong>; gerçekleşme ve kalan tutarları takip etmek.</li>
       <li>Departman bazında <strong>aylık bütçe raporlarını</strong> (planlanan / gerçekleşen / kalan) hazırlamak ve ilgili kişilere sunmak.</li>
       <li>Program bazlı <strong>gelir-gider raporlarını</strong> hazırlamak.</li>
+      <li>Hafta sonu okulu ve Future Bridge Academy gibi programların <strong>veli ödemelerini ve giderlerini</strong> takip etmek; tahsilatların tamamlanmasını sağlamak.</li>
+      <li>Kermes gibi gelir toplamalı etkinliklerde <strong>gelen gelirleri</strong> gününde kaydetmek.</li>
+      <li>Gelir getirici faaliyetlerin <strong>GST hesaplarını ayrı tutmak ve yönetmek</strong>.</li>
+      <li>Kiracı <strong>kira faturalarını düzenlemek ve tahsilatları takip etmek</strong>.</li>
+      <li><strong>Mortgage ödemelerini</strong> anapara / faiz ayrımıyla kaydetmek.</li>
+      <li>Bina <strong>bakım, onarım ve işletme giderlerini</strong> bina bazında kaydetmek.</li>
+      <li>Talep edilen <strong>mali belge ve raporları</strong> (banka, hibe veren, devlet kurumları vb.) hazırlamak ve göndermek; gönderim kayıtlarını tutmak.</li>
+      <li>Resmi <strong>bağış makbuzlarını düzenlemek</strong> ve kayıtlarını tutmak.</li>
+      <li>Online bağış platformlarını <strong>QuickBooks ve banka ile mutabakat etmek</strong>.</li>
+      <li>Kamu hizmeti faturalarını <strong>bina bazında kaydetmek</strong>; kira artış / bildirim tarihlerini ve kiracı depozitolarını takip etmek.</li>
+      <li>Muhasebesel konularda <strong>uzmanlaşmak</strong>; resmiyet ve uyum gerekliliklerini bilmek ve takip etmek.</li>
       <li>Hibe ve bağış kayıtlarını <strong>kısıtlarına uygun</strong> şekilde takip etmek.</li>
       <li>Her hibeyi QuickBooks'ta <strong>ayrı kayıt / sınıf altında</strong> izlemek; toplam tutar, harcanan ve kalan kısımları güncel tutmak.</li>
       <li>Hibelerin <strong>haftalık ve aylık raporlarını</strong> (miktar, harcanan, kalan) üretmek ve ilgili kişilerle paylaşmak.</li>
       <li>Hibe verenlere sunulacak <strong>mali raporların verilerini</strong> hazırlamak.</li>
       <li>Yönetim kurulu ve komiteler için <strong>mali özetler</strong> derlemek.</li>
       <li>Yıl sonu kapanışına ve <strong>mali denetim / incelemeye</strong> destek olmak.</li>
-      <li><strong>T3010 formunu tamamen öğrenmek</strong>: bölümlerini, istenen verileri ve son başvuru tarihini bilmek.</li>
+      <li><strong>T3010 formunu ve veri gereksinimlerini öğrenmek</strong>; CPA'nın ihtiyaç duyduğu veri paketini hazırlayabilmek.</li>
       <li>QuickBooks <strong>hesap planını ve kayıt düzenini</strong> T3010 verilerinin kolayca çıkarılabileceği şekilde kurmak ve korumak.</li>
       <li>Gelirleri ve giderleri <strong>CRA / T3010 kategorilerine göre</strong> ayrıştırarak kaydetmek (makbuzlu bağış, hibe, program geliri; program / yönetim / bağış toplama giderleri).</li>
       <li>Resmi <strong>bağış makbuzlarının kayıtlarını</strong> eksiksiz ve CRA kurallarına uygun tutmak.</li>
-      <li>T3010 için yıl sonunda <strong>taslak veri setini ve destekleyici raporları</strong> hazırlamak; dış muhasebeciyle birlikte beyannameye destek olmak.</li>
+      <li>T3010 için <strong>taslak veri paketini</strong> yıl sonunda CPA'ya teslim etmek; CPA'nın beyannameyi zamanında verdiğini takip etmek.</li>
       <li>Nakit akışını izlemek ve olası <strong>nakit sıkıntılarını</strong> önceden Executive Director'a bildirmek.</li>
       <li>Mevzuat ve CRA gerekliliklerindeki <strong>değişiklikleri takip etmek</strong> ve ilgili kişileri bilgilendirmek.</li>
     </ol>
@@ -450,10 +524,10 @@
     <ul>
       <li><strong>Günlük:</strong> nakit tahsilat ve ödemelerin kaydı, gelen fatura ve e-postaların işlenmesi, BookkeeperTaskManager'daki görevlerin güncellenmesi.</li>
       <li><strong>Haftalık:</strong> pledge raporu, çalışma saatlerinin doldurulması, haftalık rapor, bekleyen fatura ve ödeme listesinin gözden geçirilmesi.</li>
-      <li><strong>İki haftalık (Biweekly):</strong> bordro (payroll) işlemleri ve payroll kaynaklı devlet ödemeleri.</li>
+      <li><strong>İki haftalık (Biweekly):</strong> bordro verilerinin CPA'ya iletilmesi ve payroll kaynaklı devlet ödemelerinin CPA tarafından yapıldığının takibi.</li>
       <li><strong>Aylık:</strong> banka ve kredi kartı mutabakatları, aylık mali tablolar, departman bütçe raporları, hibe raporları ve aylık düzenli ödemeler (kiralar, burslar, çalışan fonları vb.).</li>
-      <li><strong>Üç aylık (Quarterly):</strong> GST/HST ve PST beyannameleri (kurumun beyan dönemine göre), yönetim kurulu mali özetleri, bütçe gözden geçirmeleri.</li>
-      <li><strong>Yıllık:</strong> yıl sonu kapanışı, T4/T4A özetleri, T3010 taslak verileri, denetim / inceleme desteği, WorkSafeBC yıllık bildirimi.</li>
+      <li><strong>Üç aylık (Quarterly):</strong> GST/HST ve PST çalışma verilerinin CPA'ya teslimi (kurumun beyan dönemine göre), yönetim kurulu mali özetleri, bütçe gözden geçirmeleri.</li>
+      <li><strong>Yıllık:</strong> yıl sonu kapanışı, T4/T4A ve T3010 veri paketlerinin CPA'ya teslimi, denetim / inceleme desteği, WorkSafeBC yıllık mutabakatının doğrulanması.</li>
     </ul>
 
     <h3>B. Ad-hoc (Düzensiz) Görevler</h3>
@@ -461,6 +535,7 @@
       <li>Mali heyet veya Executive Director'ın talebiyle gelişen satın almalar, ödemeler ve raporlamalar.</li>
       <li>Denetim / inceleme sırasında istenen belge ve örneklerin hazırlanması.</li>
       <li>Yeni hibe başvuruları veya hibe verenlere sunulacak mali raporlar için veri hazırlama.</li>
+      <li>Banka, hibe veren, devlet kurumları veya yönetim tarafından istenen <strong>mali belge ve raporların hazırlanması ve gönderilmesi</strong>.</li>
       <li>Mevzuat ve CRA gerekliliklerindeki değişikliklerden doğan işlemler.</li>
     </ul>
 
@@ -473,14 +548,77 @@
   </section>
 
   <section>
-    <h2>5. Pozisyon Detayları</h2>
+    <h2>5. CPA İş Bölümü ve Veri Paketleri</h2>
+    <p>
+      Kurumun resmi mali bildirimleri dış muhasebe firması (CPA) tarafından hazırlanır ve verilir.
+      Bu bölüm, CPA ile bu rol arasındaki iş bölümünü ve rolün CPA'ya sunacağı veri paketlerini
+      tanımlar. Genel kural şudur: <strong>CPA "rakamlara göre bildirimleri hazırlar ve verir",
+      bookkeeper "rakamların kaynağını eksiksiz ve doğru şekilde CPA'ya sunar"</strong>.
+    </p>
+
+    <h3>A. CPA'nın Sorumlulukları</h3>
+    <ul>
+      <li>Bordro (payroll) işlemleri ve kaynak kesintilerinin (CPP, EI, vergi) devlete ödenmesi.</li>
+      <li>T4/T4A özetlerinin hazırlanması ve verilmesi.</li>
+      <li>GST/HST ve PST beyannamelerinin hazırlanması ve verilmesi.</li>
+      <li>T3010 (Kayıtlı Hayır Kurumu Bilgi Beyannamesi) hazırlanması ve verilmesi.</li>
+      <li>Yıl sonu mali tabloları, denetim / inceleme ve diğer resmi bildirimler.</li>
+      <li>WorkSafeBC üç aylık bildirimleri ve yıllık mutabakat (bordro hizmeti kapsamında ise).</li>
+      <li>Gayrimenkul konularında: alımda arazi / bina değer ayrımı, CCA (amortisman) planı, mortgage anapara / faiz planı, ticari kira gelirinin GST/HST ve ITC açısından değerlendirilmesi; yıl sonu mali tablolarında bina kalemlerinin ve T3010 açısından kira gelirinin incelenmesi.</li>
+    </ul>
+
+    <h3>B. Bookkeeper'ın Sorumlulukları: Veri Paketleri</h3>
+    <p>
+      CPA'ya teslim edilecek tüm verilerin eksiksiz, doğru ve zamanında hazırlanması bu rolün
+      sorumluluğundadır. Hazırlanacak paketler:
+    </p>
+    <ul>
+      <li><strong>Bordro veri paketi:</strong> her bordro döneminde çalışma saatleri, ücretler, izinler ve değişiklikler CPA'ya iletilir; işlenen bordro QuickBooks'a doğru kaydedilir ve bordro hesapları mutabakat edilir.</li>
+      <li><strong>GST/HST ve PST çalışma paketi:</strong> dönem sonunda tahsil edilen ve ödenen vergi tutarları, istisnalar ve destekleyici kayıtlar CPA'ya iletilir.</li>
+      <li><strong>T3010 veri paketi:</strong> gelirler (resmi makbuzlu bağışlar, makbuzsuz bağışlar, hibeler, program gelirleri), giderler (program / yönetim / bağış toplama), bağış makbuzu kayıtları, kısıtlı fonlar ve CPA'nın istek listesindeki diğer bilgiler derlenir.</li>
+      <li><strong>Yıl sonu paketi:</strong> mutabakatlar, yaşlandırmalar (borçlar / alacaklar), sabit kıymet bilgileri, numune belgeler ve CPA'nın istediği tüm çizelgeler.</li>
+      <li><strong>T4/T4A veri paketi:</strong> çalışan bilgileri, ücretler, kesintiler ve öğrenci bursu ödemeleri (gerekliyse).</li>
+      <li><strong>Gayrimenkul veri paketi:</strong> bina gelir-gider özeti, kira gelirlerinin GST durumu ve mortgage anapara / faiz bilgileri.</li>
+    </ul>
+
+    <h3>C. CPA Veri İstek Listesi (Checklist)</h3>
+    <ul>
+      <li>Her yıl başında <strong>CPA'dan yıllık veri istek listesi talep edilir</strong>; bu talep BookkeeperTaskManager'da bir görev olarak tanımlanır ve takip edilir.</li>
+      <li>Alınan liste <strong>Mali Heyet tarafından incelenir ve onaylanır</strong>; onaylanan listedeki her kalemin hangi QuickBooks raporu veya veri paketiyle karşılanacağı yazılı hale getirilir.</li>
+      <li>Listedeki teslim tarihleri görev takvimine (BookkeeperTaskManager) işlenir ve bu tarihlere uyulur.</li>
+    </ul>
+
+    <h3>D. QuickBooks Yapısının Düzenlenmesi (Tek Seferlik Kurulum Projesi)</h3>
+    <p>
+      QuickBooks hesap planının, program / departman sınıflarının ve T3010 kategorilerinin doğru
+      kurgulanması tek seferlik bir kurulum projesidir ve şu şekilde yürütülür:
+    </p>
+    <ul>
+      <li>CPA'dan veya bir QuickBooks ProAdvisor danışmanından <strong>tek seferlik, ücretli bir kurulum çalışması</strong> alınır: standart hesap planı şablonu, sınıf / etiket yapısı ve CPA'nın istediği raporların eşlemesi hazırlanır.</li>
+      <li>Bu şablon <strong>bookkeeper tarafından QuickBooks'a uygulanır</strong>; kurulum sonrasında yapının korunması ve yeni gelir / gider kalemlerinin doğru sınıflanması bookkeeper'ın sorumluluğudur.</li>
+      <li>Kurulumun ardından <strong>kısa bir el kitabı</strong> (hangi işlemin hangi hesaba / sınıfa girileceği) yazılı olarak tutulur ve gerektikçe güncellenir.</li>
+      <li>Yıl sonunda CPA, yapının doğruluğunu gözden geçirir ve gerekli düzeltmeleri bildirir.</li>
+    </ul>
+
+    <h3>E. Teslim Takvimi, Toplantılar ve CPA Performansının Takibi</h3>
+    <ul>
+      <li><strong>Aylık:</strong> mutabakatlar ve kayıtlar ay sonunda tamamlanır; defter CPA'nın ihtiyaç duyduğu temizlikte tutulur.</li>
+      <li><strong>Üç aylık:</strong> GST/HST ve PST çalışma paketleri, beyanname son tarihinden en az bir hafta önce CPA'ya teslim edilir.</li>
+      <li><strong>Yıllık:</strong> yıl başında CPA ile yıllık takvim ve veri istek listesi üzerinden başlangıç toplantısı yapılır; T3010 döneminden önce veri paketi toplantısı yapılır ve paket, beyanname son tarihinden en az bir ay önce teslim edilir.</li>
+      <li><strong>CPA performansının takibi:</strong> CPA'nın son tarihlere uyup uymadığı, verilen verileri doğru kullanıp kullanmadığı ve iletişimin sağlıklı işleyip işlemediği bu rol tarafından izlenir; sorunlar Executive Director'a ve Mali Heyet'e raporlanır.</li>
+      <li><strong>CPA değişikliği:</strong> CPA ile çalışmada tekrarlayan sorunlar yaşanırsa veya süreçler yönetilemez hale gelirse, yönetim CPA'yı değiştirme kararı alabilir; bu geçişte tüm kayıtların eksiksiz ve düzenli kalması ve yeni CPA'ya veri aktarımının sağlanması bu rolün sorumluluğundadır.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Pozisyon Detayları</h2>
     <table class="meta-table">
       <tr><td>Unvan</td><td>Muhasebe ve Defter Tutma Sorumlusu (Bookkeeper)</td></tr>
-      <tr><td>Bağlı Olduğu Kişi</td><td>Executive Director ve Mali Heyet'ten belirlenecek bir temsilci</td></tr>
+      <tr><td>Bağlı Olduğu Kişi</td><td>Executive Director ve Mali Heyet'ten onaylardan sorumlu belirlenecek bir temsilci</td></tr>
       <tr><td>Departman</td><td>Muhasebe / Finans</td></tr>
-      <tr><td>Çalışma Şekli</td><td><span class="placeholder">Yarı zamanlı / Tam zamanlı, Kontratlı</span></td></tr>
-      <tr><td>Çalışma Saatleri</td><td><span class="placeholder">Haftada ____ saat</span>; ay sonu ve beyanname dönemlerinde esneklik gerekebilir</td></tr>
-      <tr><td>Lokasyon / Seyahat</td><td><span class="placeholder">Burnaby / New Westminster, BC</span>; <span class="placeholder">gerektiğinde hibrit (uzaktan / ofis)</span></td></tr>
+      <tr><td>Çalışma Şekli</td><td>Tam zamanlı, Çalışan (Employee)</td></tr>
+      <tr><td>Çalışma Saatleri</td><td>Haftada 40 saat; ay sonu ve beyanname dönemlerinde esneklik gerekebilir</td></tr>
+      <tr><td>Çalışma Yeri / Seyahat</td><td>Kurum binası (on-site), <span class="placeholder">Burnaby / New Westminster, BC</span>; gerektiğinde okul, merkez ve tesis ziyaretleri. Mesai saatlerinde kurumda bulunmak esastır. Mevcut büyük ölçüde uzaktan çalışma düzeninden, Mali Heyet ile birlikte hazırlanacak planlı bir takvime bağlı olarak on-site süre kademeli şekilde artırılır ve zaman içinde sürekli on-site çalışmaya geçilir.</td></tr>
       <tr><td>Ücret</td><td><span class="placeholder">Aylık ____ CAD</span></td></tr>
       <tr><td>Başlangıç Tarihi</td><td><span class="placeholder">___________</span></td></tr>
       <tr><td>Süre</td><td><span class="placeholder">___________</span></td></tr>
@@ -488,14 +626,15 @@
   </section>
 
   <section>
-    <h2>6. Nitelikler ve Beceriler</h2>
+    <h2>7. Nitelikler ve Beceriler</h2>
     <ul>
       <li><strong>Eğitim:</strong> <span class="placeholder">Muhasebe, işletme, finans veya ilgili bir alanda diploma / sertifika veya eşdeğer deneyim</span>.</li>
       <li><strong>Deneyim:</strong> <strong>Defter tutma, borç-alacak takibi, mutabakat ve finansal raporlama</strong> alanlarında deneyim tercih edilir; kâr amacı gütmeyen kuruluş deneyimi avantajdır.</li>
       <li><strong>Yazılım:</strong> <strong>QuickBooks</strong> hâkimiyeti; ileri düzey <strong>Excel</strong> (tablo, formül, pivot) becerisi. Kurum içi geliştirilen programları (<strong>BookkeeperTaskManager</strong> vb.) kullanma ve hızlı öğrenme becerisi.</li>
-      <li><strong>Bordro (Payroll):</strong> Kanada bordro esasları (kaynak kesintileri, T4, ROE) konusunda bilgi sahibi olmak veya hızlı öğrenebilmek.</li>
+      <li><strong>Bordro (Payroll):</strong> Kanada bordro esasları (kaynak kesintileri, T4, ROE) hakkında CPA'ya veri hazırlayacak ve işlenen bordroyu doğrulayacak düzeyde bilgi sahibi olmak veya hızlı öğrenebilmek.</li>
       <li><strong>Mevzuat Bilgisi:</strong> Kanada defter tutma esasları ve CRA gereklilikleri (kaynak kesintileri, GST/HST, PST) hakkında bilgi sahibi olmak veya hızlı öğrenebilmek.</li>
       <li><strong>Hayır Kurumu Mevzuatı:</strong> <strong>T3010 beyannamesini ve CRA bağış makbuzu (receipting) kurallarını</strong> öğrenmeye istekli olmak; QuickBooks hesap planını bu gerekliliklere göre kurgulayabilmek. Kâr amacı gütmeyen / hayır kurumu muhasebesi deneyimi güçlü bir avantajdır.</li>
+      <li><strong>Muhasebe Uzmanlığı ve Uyum:</strong> Muhasebesel konularda sürekli uzmanlaşma isteği; işlemlerin resmiyet ve uyum gerekliliklerini (CRA, GST/HST, hayır kurumu mevzuatı) bilmek ve değişiklikleri takip etmek.</li>
       <li><strong>Detaycılık:</strong> Kayıtlarda yüksek doğruluk ve detaylara dikkat; tutarsızlıkları fark edip araştırma becerisi.</li>
       <li><strong>Organizasyon:</strong> Son tarihleri, belgeleri ve birden fazla hesabı aynı anda yönetme becerisi.</li>
       <li><strong>Gizlilik:</strong> Mali bilgilerin gizliliğini koruma konusunda güvenilirlik ve titizlik.</li>
@@ -504,13 +643,16 @@
   </section>
 
   <section>
-    <h2>7. Takip ve Raporlama</h2>
+    <h2>8. Takip ve Raporlama</h2>
     <p>
-      Bu rol, yürüttüğü tüm işleri <strong>Executive Director'a</strong> ve
-      <strong>Mali Heyet üyeleri arasından belirlenecek bir kişiye</strong> raporlar. Rolün
-      işlerinin kritik önemi nedeniyle Executive Director'a düzenli ve zamanında raporlama
-      yapılması esastır; raporlar aynı zamanda Mali Heyet'ten belirlenen irtibat kişisiyle de
-      paylaşılır.
+      Bu rol, yürüttüğü tüm işleri <strong>iki kişiye raporlar</strong>: <strong>Executive Director</strong> ve
+      <strong>Mali Heyet'ten onaylardan sorumlu olarak belirlenecek bir kişi</strong>. Mali Heyet üyeleri
+      kendi görev alanlarıyla ilgili işlerde bookkeeper ile birlikte çalışabilir; ödeme, makbuz veya
+      diğer konularda onay gerektiğinde, onayları vermekle görevli Mali Heyet temsilcisine sorulur ve
+      işlemler bu onayla tamamlanır. Rolün işlerinin kritik önemi nedeniyle Executive Director'a düzenli
+      ve zamanında raporlama yapılması esastır; raporlar aynı zamanda Mali Heyet temsilcisiyle de
+      paylaşılır. Görevle ilgili sorular <strong>"Mali Heyet Sorular ve Cevaplar" WhatsApp Grubu'nda</strong>
+      sorulur.
     </p>
     <ul>
       <li><strong>Haftalık:</strong> O hafta tamamlanan kayıtlar, bekleyen fatura ve ödemeler, mutabakat durumu, <strong>hibelerin harcanan / kalan durumu</strong>, <strong>BookkeeperTaskManager'daki görev durumu</strong> ve dikkat gerektiren konuların kısa bir özeti.</li>
@@ -524,19 +666,23 @@
   </section>
 
   <section>
-    <h2>8. Performans Beklentileri</h2>
+    <h2>9. Performans Beklentileri</h2>
     <ul>
       <li>Muhasebe kayıtlarını <strong>zamanında, eksiksiz ve doğru</strong> tutmak.</li>
       <li>Banka ve kredi kartı mutabakatlarını <strong>her ay zamanında</strong> tamamlamak.</li>
       <li>Fatura ödemelerini ve alacak tahsilatlarını <strong>vadesinde</strong> yönetmek.</li>
       <li>Tüm ödemeleri <strong>onaylar tamamlandıktan sonra ve zamanında</strong> yapmak.</li>
       <li>Devredilen veya üçüncü taraflarca yürütülen işleri <strong>sonuçlanana kadar takip etmek</strong>; eksik, hatalı veya unutulmuş iş bırakmamak.</li>
-      <li>Bordroları (payroll) <strong>zamanında ve doğru</strong> yapmak; payroll kaynaklı devlet ödemelerini son tarihlerinde göndermek.</li>
-      <li>WorkSafeBC <strong>bildirim ve prim ödemelerini</strong> son tarihlerine uyarak yapmak.</li>
+      <li>Bordro verilerini CPA'ya <strong>zamanında ve doğru</strong> iletmek; işlenen bordroyu doğrulamak ve devlet ödemelerinin yapıldığını takip etmek.</li>
+      <li>WorkSafeBC <strong>bildirim ve prim ödemelerinin CPA tarafından zamanında yapılmasını</strong> takip etmek.</li>
+      <li>CPA'ya teslim edilecek veri paketlerini <strong>eksiksiz, doğru ve zamanında</strong> hazırlamak; CPA'nın son tarihlerini takip etmek.</li>
+      <li>Kira tahsilatlarını ve mortgage ödemelerini <strong>eksiksiz ve zamanında</strong> kaydetmek.</li>
       <li>Reimbursement'ları <strong>makbuz karşılığında ve zamanında</strong> ödemek.</li>
       <li>BookkeeperTaskManager uygulamasını <strong>aktif ve güncel</strong> kullanmak; görevleri durumlarıyla işaretlemek ve çalışma saatlerini düzenli doldurmak.</li>
       <li>Nakit tahsilat ve harcamaları <strong>eksiksiz ve gününde</strong> kaydetmek.</li>
       <li>Pledge takibini güncel tutmak; <strong>haftalık raporları zamanında</strong> hazırlayıp gruplarla paylaşmak.</li>
+      <li>Program ve etkinlik gelirlerini (veli ödemeleri, kermes vb.) <strong>eksiksiz kaydetmek ve tahsilatları tamamlamak</strong>.</li>
+      <li>Gelir getirici faaliyetlerin <strong>GST kayıtlarını ayrı ve doğru</strong> tutmak.</li>
       <li>Departman bütçelerini <strong>gerçekleşme ve kalan tutarlarıyla</strong> güncel tutmak; aylık bütçe raporlarını zamanında sunmak.</li>
       <li>Hibeleri <strong>harcanan ve kalan tutarlarıyla</strong> güncel tutmak; haftalık ve aylık hibe raporlarını zamanında üretmek.</li>
       <li>Beyanname ve devlet kesintilerini <strong>son tarihlere uyarak</strong> göndermek.</li>
@@ -547,11 +693,11 @@
       <li>Tüm faaliyetlerde <strong>yasal, etik ve mevzuat</strong> gerekliliklerine uymak.</li>
       <li>Kurumun misyonunu ve değerlerini tüm etkileşimlerde <strong>sadakatle</strong> temsil etmek.</li>
     </ul>
-    <p>Bu görev tanımında sayılanların dışında, CentreCanada'nın ihtiyaçlarına ve <strong>Mali Heyet'in kararlarına</strong> göre görevler ve kapsamları zaman zaman değişebilir, güncellenebilir veya yeni görevler eklenebilir.</p>
+    <p>Bu görev tanımında sayılanların dışında, CentreCanada'nın ihtiyaçlarına ve <strong>Mali Heyet'in kararlarına</strong> göre görevler ve kapsamları zaman zaman değişebilir, güncellenebilir veya yeni görevler eklenebilir. Duruma göre ortaya çıkan düzenli veya düzensiz işler, <strong>pozisyonun içeriğiyle uyumlu olmak kaydıyla</strong>, Mali Heyet, Mali Heyet temsilcisi veya Executive Director tarafından bu role görev olarak verilebilir.</p>
   </section>
 
   <section>
-    <h2>9. Kabul ve Onay</h2>
+    <h2>10. Kabul ve Onay</h2>
     <p>
       Aşağıyı imzalayarak çalışan, bu Görev Tanımı'nda açıklanan sorumlulukları ve koşulları
       okuduğunu, anladığını ve kabul ettiğini; bu belgenin taraflar arasındaki anlaşmanın ayrılmaz
@@ -574,7 +720,7 @@
   </section>
 
   <section>
-    <h2>10. Periyodik Görev Listesi (Özet)</h2>
+    <h2>11. Periyodik Görev Listesi (Özet)</h2>
     <p>
       Aşağıdaki liste, bu görev tanımında yer alan sorumlulukların periyodik özetidir. Bu liste
       <strong>burada yazılanlarla sınırlı değildir</strong>; görevlerin güncel ve tam listesi
@@ -584,11 +730,11 @@
 
     <h3>Günlük Görevler</h3>
     <ul>
-      <li>Nakit tahsilat ve ödemelerin gününde makbuz karşılığında kaydedilmesi.</li>
+      <li>Nakit tahsilatların, alındığı gün "Nakit Alınanlar" WhatsApp Grubu'na yazılması ve muhasebe sistemine kaydedilmesi (makbuz düzenlenmez); nakit ödemelerin kaydedilmesi.</li>
       <li>Gelen faturaların, e-postaların ve mali taleplerin işlenmesi.</li>
       <li>Küçük kasa (petty cash) işlemlerinin kaydı.</li>
+      <li>Etkinlik günlerinde (kermes vb.) toplanan gelirlerin kaydedilmesi.</li>
       <li>BookkeeperTaskManager'daki görevlerin güncellenmesi; tamamlanan görevlerin işaretlenmesi.</li>
-      <li>Çalışma saatlerinin doldurulması.</li>
     </ul>
 
     <h3>Haftalık Görevler</h3>
@@ -597,21 +743,31 @@
       <li>Bekleyen fatura ve ödeme listesinin gözden geçirilmesi.</li>
       <li>Onaylı satıcı ödemelerinin çalıştırılması.</li>
       <li>Haftalık raporun Executive Director'a ve Mali Heyet temsilcisine sunulması.</li>
+      <li>Çalışma saatlerinin doldurulması (haftalık).</li>
+      <li>Talep edilen mali belge ve raporların hazırlanması ve gönderilmesi.</li>
     </ul>
 
     <h3>İki Haftalık (Biweekly) Görevler</h3>
     <ul>
-      <li>Bordro (payroll) işlemlerinin yapılması: saatler, ücretler, kesintiler ve net ödemeler.</li>
-      <li>Payroll kaynaklı devlet ödemelerinin bankadan gönderilmesi (kaynak kesintileri: CPP, EI, vergi).</li>
+      <li>Bordro verilerinin (saatler, ücretler, izinler, değişiklikler) CPA'ya iletilmesi; işlenen bordronun doğrulanması ve mutabakatı.</li>
+      <li>Payroll kaynaklı devlet kesintilerinin (CPP, EI, vergi) CPA tarafından zamanında ödendiğinin takibi.</li>
     </ul>
 
     <h3>Aylık Görevler</h3>
     <ul>
-      <li>Tüm banka hesaplarının ve kredi kartlarının ekstrelerle mutabakatı.</li>
+      <li>Tüm banka hesaplarının ve kredi kartlarının mutabakatı: ekstredeki her işlemin QuickBooks'taki gider kayıtlarıyla tek tek eşleştirilmesi ve dönem sonu bakiyelerinin doğrulanması.</li>
       <li>Aylık mali tabloların hazırlanması: gelir-gider, bütçe karşılaştırması, nakit durumu.</li>
       <li>Departman bazında bütçe gerçekleşme / kalan raporlarının hazırlanması.</li>
       <li>Hibelerin harcanan / kalan raporlarının hazırlanması.</li>
+      <li>Program bazlı (hafta sonu okulu, Future Bridge Academy) gelir-gider takibi: veli ödemelerinin izlenmesi, tahsilatların tamamlanması ve raporun hazırlanması.</li>
+      <li>Gelir getirici faaliyetlerin GST hesaplarının ayrı ve güncel tutulması.</li>
       <li>Aylık düzenli ödemelerin yapılması: kiralar, öğrenci bursları ve takviyeleri, çalışan fonları.</li>
+      <li>Öğrenci bursu ödemeleri için gerekli resmi belgelerin hazırlanması (gerektiğinde T4A vb.).</li>
+      <li>Görevlilere verilen fonların harcama dökümlerinin toplanması ve sisteme yüklenmesi.</li>
+      <li>Kiracı kira faturalarının düzenlenmesi, tahsilatların takibi ve mortgage ödemelerinin kaydı.</li>
+      <li>Bina bakım, onarım ve işletme giderlerinin kaydı.</li>
+      <li>Online bağış platformlarının mutabakatı; resmi bağış makbuzlarının düzenlenmesi.</li>
+      <li>Kamu hizmeti faturalarının bina bazında kaydı; kira artış ve bildirim tarihlerinin takibi.</li>
       <li>Reimbursement'ların işlenmesi ve ödenmesi.</li>
       <li>GST/HST ve PST beyannameleri (kurumun beyan dönemine göre).</li>
       <li>Aylık değerlendirme raporunun Executive Director'a ve Mali Heyet temsilcisine sunulması.</li>
@@ -619,19 +775,23 @@
 
     <h3>Üç Aylık (Quarterly) Görevler</h3>
     <ul>
-      <li>Üç aylık döneme tabi ise GST/HST ve PST beyannamelerinin hazırlanması ve ödenmesi.</li>
+      <li>GST/HST ve PST çalışma verilerinin CPA'ya iletilmesi; CPA'nın beyannameleri ve ödemeleri zamanında yaptığının takibi.</li>
       <li>Yönetim kurulu ve komiteler için mali özetlerin derlenmesi.</li>
       <li>Bütçelerin gözden geçirilmesi ve sapmaların raporlanması.</li>
-      <li>Dönemsel WorkSafeBC bildirimleri (döneme göre).</li>
+      <li>WorkSafeBC üç aylık bildiriminin ve prim ödemesinin CPA tarafından zamanında yapıldığının takibi.</li>
     </ul>
 
     <h3>Yıllık Görevler</h3>
     <ul>
       <li>Yıl sonu kapanış işlemleri ve dış muhasebeci / denetçi ile koordinasyon.</li>
-      <li>T4/T4A özetlerinin hazırlanması ve gönderimi.</li>
-      <li>T3010 taslak veri setinin ve destekleyici raporların hazırlanması.</li>
+      <li>T4/T4A veri paketinin (öğrenci bursları dahil, gerekliyse) CPA'ya iletilmesi.</li>
+      <li>T3010 veri paketinin CPA'ya teslim edilmesi ve beyannamenin zamanında verildiğinin takibi.</li>
+      <li>CPA'dan yıllık veri istek listesinin talep edilmesi ve Mali Heyet onayına sunulması.</li>
+      <li>Bina gelir-gider özetinin hazırlanması ve CPA'ya sunulması.</li>
+      <li>Yıl sonu bağışçı özet mektuplarının hazırlanması.</li>
+      <li>Sabit kıymet listesinin güncellenmesi (bina, mobilya, ekipman).</li>
       <li>Mali denetim / inceleme için belgelerin hazırlanması.</li>
-      <li>WorkSafeBC yıllık bildirimi ve prim mutabakatı.</li>
+      <li>WorkSafeBC yıllık mutabakatı (annual reconciliation): yıllık bordro tutarının bildirilmesi ve prim farkının kapatılması.</li>
       <li>Yıllık bütçe döngüsü için mali verilerin hazırlanması.</li>
       <li>Belge saklama sürelerinin kontrolü ve arşivlerin düzenlenmesi.</li>
     </ul>
