@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpusChart - SR&ED Task Relatedness Report</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --warn-soft: #fdf3e7;
+    --warn: #b45309;
+    --bad-soft: #fdecea;
+    --bad: #b3261e;
+    --good-soft: #eaf5ec;
+    --good: #216e39;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 28px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 { font-size: 13.5px; color: var(--ink); margin: 16px 0 6px; }
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  ul, ol { margin: 0 0 10px 22px; }
+  li { font-size: 13.5px; margin-bottom: 6px; }
+
+  .highlight-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .warn-box {
+    background: var(--warn-soft);
+    border-left: 4px solid var(--warn);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .bad-box {
+    background: var(--bad-soft);
+    border-left: 4px solid var(--bad);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .good-box {
+    background: var(--good-soft);
+    border-left: 4px solid var(--good);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+
+  /* ---------- Score cards ---------- */
+  .score-row { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .score-card {
+    flex: 1;
+    min-width: 150px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 16px;
+    text-align: center;
+    background: #fbfdff;
+  }
+  .score-card.overall { border-color: var(--accent); background: var(--accent-soft); }
+  .score-num {
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .score-card.overall .score-num { color: var(--ink); }
+  .score-den { font-size: 16px; color: var(--muted); font-weight: 600; }
+  .score-label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .score-formula {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  /* ---------- Tables ---------- */
+  table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 18px;
+    font-size: 13px;
+  }
+  table.report-table th {
+    background: #f5f8fb;
+    color: var(--accent);
+    text-align: left;
+    font-size: 11.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+  }
+  table.report-table td {
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.report-table td.score-cell {
+    white-space: nowrap;
+    font-weight: 700;
+    text-align: center;
+    width: 64px;
+  }
+  table.report-table td.task-cell { width: 280px; }
+  .task-ids { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+
+  .verdict-band {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+  .band-moderate { background: var(--warn-soft); color: var(--warn); }
+
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    section, h2, h3, p, li, tr { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">PKF SR&amp;ED Claim Preparation</div>
+    <div class="doc-title">OpusChart - SR&amp;ED Task Relatedness Report</div>
+    <div class="doc-subtitle">How well the OpusChart narrative is supported by the task management system</div>
+    <div class="doc-meta">
+      Date: 15 September 2026
+      <span>|</span>
+      Narrative reviewed: SRED-24-25-OpusChart.html
+      <span>|</span>
+      Task source: opus_chart_rm_sprint_10_to_32.json
+      <span>|</span>
+      Version 2.4
+    </div>
+  </header>
+
+  <section>
+    <h2>1. Purpose and Method</h2>
+    <p>
+      This report compares the OpusChart SR&amp;ED technical narrative (T661 lines 240, 242, 244,
+      and 246) against the Resource Management task list in ClickUp and scores how closely the
+      narrative reflects the actual development work recorded in the task management system.
+    </p>
+    <p>
+      Method: every one of the 217 exported tasks was reviewed. Each claim made by the narrative
+      (uncertainty, work performed, advancement) was matched against supporting tasks by keyword
+      and by manual reading of task titles. Supporting task IDs are cited in Section 4. The score
+      combines theme-level evidence with the quality of the task records as proof of a systematic
+      investigation.
+    </p>
+    <p>
+      This is version 2.2 of the report. The task source was replaced: the earlier chart-board
+      export was the wrong list, and this report now uses the Resource Management board
+      (opus_chart_rm_sprint_10_to_32.json, Sprints 10 to 32). All scores were recalculated, the
+      fiscal year (1 July 2024 to 30 June 2025) was confirmed, and completion of all "ready for
+      deployment" tasks was confirmed, which brings every task in the export inside the claim
+      year and resolves the status ambiguity. Task IDs belong to the Resource Management board;
+      the same numbers on other boards refer to different tasks.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Sprint Data Profile</h2>
+    <table class="report-table">
+      <tr>
+        <th>Item</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Total tasks exported</td>
+        <td>217 (Sprint 10 to Sprint 32, 23 sprint slots)</td>
+      </tr>
+      <tr>
+        <td>Date range of tasks</td>
+        <td>Created 2024-03-28 to 2025-04-30; work performed July 2024 to April 2025</td>
+      </tr>
+      <tr>
+        <td>Completion state</td>
+        <td>180 completed (7 Closed + 173 ready for deployment, all confirmed); 37 still open
+          (13 continuous, 11 Open, 8 in development, 5 in review)</td>
+      </tr>
+      <tr>
+        <td>Dominant status</td>
+        <td>"ready for deployment" on 173 tasks (80 percent), all confirmed completed inside
+          the claim year</td>
+      </tr>
+      <tr>
+        <td>Technical staff named</td>
+        <td>Azizbek Habibov, Ulugbek Atakhanov, Kazim Kargi, Ubaydulloh Pulat, plus reviewers Nathan, Monish, Muza, and Erkin</td>
+      </tr>
+      <tr>
+        <td>Time tracking</td>
+        <td>Present on many tasks (example: 45h 54m on task 367, 73h 5m on task 159, 10h 52m on task 169)</td>
+      </tr>
+      <tr>
+        <td>Fiscal year</td>
+        <td>1 July 2024 to 30 June 2025 (confirmed); all 217 tasks fall inside the claim year</td>
+      </tr>
+      <tr>
+        <td>Data gaps</td>
+        <td>Sprints 16, 20, 21, 22, 25, 31, and 32 are empty; Sprint 30 has one task</td>
+      </tr>
+    </table>
+    <div class="good-box">
+      Status ambiguity resolved: all 173 "ready for deployment" tasks are confirmed completed
+      inside the claim year, which brings the completed total to 180. The remaining 37 tasks
+      are continuous, open, in review, or in development; the narrative references them only
+      where it describes work that is still ongoing.
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Overall Relatedness Score</h2>
+    <div class="score-row">
+      <div class="score-card overall">
+        <div class="score-num">71<span class="score-den">/100</span></div>
+        <div class="score-label">Overall relatedness</div>
+      </div>
+      <div class="score-card">
+        <div class="score-num">78<span class="score-den">/100</span></div>
+        <div class="score-label">Theme evidence</div>
+      </div>
+      <div class="score-card">
+        <div class="score-num">55<span class="score-den">/100</span></div>
+        <div class="score-label">Investigation quality</div>
+      </div>
+    </div>
+    <p class="score-formula">
+      Overall = 70 percent x theme evidence (78) + 30 percent x investigation quality (55) = 71.
+      Fiscal year confirmed: 1 July 2024 to 30 June 2025, and completion of all "ready for
+      deployment" tasks confirmed, which lifts the investigation quality score.
+    </p>
+    <p>
+      Verdict: <span class="verdict-band band-moderate">Moderate relatedness</span>
+    </p>
+    <div class="highlight-box">
+      The permissions, budgets and rates, billing, and calculation themes are well represented
+      in the Resource Management task log and can be cited task by task. Two areas drag the
+      score down: the AI work, while inside the claim year, is still unfinished, and the task
+      records remain written as feature and bug work, which weakly supports the
+      "systematic investigation" framing the CRA requires.
+    </div>
+
+    <h3>Comparison: human-written version vs working draft</h3>
+    <table class="report-table">
+      <tr>
+        <th>Score</th>
+        <th>Human-written version (SRED-24-25-OpusChart.html)</th>
+        <th>Working draft (SRED-24-25-OpusChart-V2-Working.html, v2.3)</th>
+        <th>Gained</th>
+      </tr>
+      <tr>
+        <td>Overall relatedness</td>
+        <td>71/100</td>
+        <td>73/100</td>
+        <td>+2</td>
+      </tr>
+      <tr>
+        <td>Theme evidence</td>
+        <td>78/100</td>
+        <td>80/100</td>
+        <td>+2</td>
+      </tr>
+      <tr>
+        <td>Investigation quality</td>
+        <td>55/100</td>
+        <td>55/100</td>
+        <td>0</td>
+      </tr>
+    </table>
+    <p>
+      What created the gain: the draft removed the unsupported profitability claim, limited the
+      AI section to the actual vector database and RAG research, named the central permission
+      function (task 367), added dates and Resource Management task IDs to every paragraph, and
+      now fits the current T661 word limits. Investigation quality is unchanged because it
+      measures the ClickUp records, which only the Section 10 roadmap can improve.
+    </p>
+    <p>
+      Both versions were scored against the same Resource Management task export, with the
+      fiscal year (1 July 2024 to 30 June 2025) and task completion confirmed. Scores from the
+      earlier, incorrect chart-board export are not comparable and are not shown.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. Theme-by-Theme Evidence</h2>
+    <table class="report-table">
+      <tr>
+        <th>Score</th>
+        <th>Weight</th>
+        <th>Narrative theme</th>
+        <th>Evidence in the task log</th>
+      </tr>
+      <tr>
+        <td class="score-cell">8/10</td>
+        <td>25%</td>
+        <td>Resource allocation and utilization calculation engine</td>
+        <td>
+          Strong. Multiple recorded iterations on budget hours, totals, timezone boundaries,
+          and holiday-adjusted listings across 2024 and 2025.
+          <div class="task-ids">Tasks 160, 162, 169, 369, 370, 394, 34, 35, 41, 42, 49, 50,
+          73, 190</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="score-cell">8/10</td>
+        <td>20%</td>
+        <td>Project budgets and hourly-rate structures</td>
+        <td>
+          Strong. Budget tab with rates and total cost, date-conflict checks, currency rules,
+          group-based rates (task 495), and company-type rate groups (tasks 66-69, 2025).
+          Profitability appears once, as a data field (task 37, January 2025).
+          <div class="task-ids">Tasks 158, 160, 162, 163, 164, 165, 166, 167, 168, 175, 176,
+          177, 495, 65, 66, 67, 68, 69, 37, 54, 58</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="score-cell">7/10</td>
+        <td>10%</td>
+        <td>Vacations, holidays, and locations</td>
+        <td>
+          Medium. Holiday ordering and date-boundary handling in 2024, vacation rules aligned
+          with local holidays in 2025, and availability views.
+          <div class="task-ids">Tasks 365, 369, 370, 374, 389, 44, 48, 63, 72, 102, 103,
+          104</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="score-cell">9/10</td>
+        <td>15%</td>
+        <td>Permission and role-based workflow controls</td>
+        <td>
+          Strongest theme. Readonly account controls with per-screen removal of editing
+          (357, 358 and subtasks 359-366), a central permission control function (367,
+          45h 54m), role validation (159, 73h 5m), and license checks (197, 202, 203).
+          <div class="task-ids">Tasks 357, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367,
+          148, 157, 159, 180, 197, 202, 203, 372, 375, 376, 377, 378, 379, 380, 381, 382, 383,
+          384, 391, 393, 47, 88, 97, 99, 104</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="score-cell">8/10</td>
+        <td>15%</td>
+        <td>Billing, subscriptions, and refunds (Stripe)</td>
+        <td>
+          Strong. Refund button with internal status transitions, Stripe event sync, Financial
+          Manager approval list, RM-count-based monthly invoicing, and invoice correctness
+          fixes.
+          <div class="task-ids">Tasks 352, 354, 147, 149, 173, 174, 178, 179, 181, 195, 196,
+          198, 199, 200, 201, 205, 207, 498, 499, 1252</div>
+        </td>
+      </tr>
+      <tr>
+        <td class="score-cell">5/10</td>
+        <td>15%</td>
+        <td>AI-assisted project analysis and resource recommendations</td>
+        <td>
+          All AI work is inside the claim year (July 2024 to June 2025) but unfinished: vector
+          database and RAG research (1242, 1243), data collections and API endpoint (1239,
+          1240), web scraping (1241, 87), OpenAI integration in development (1246-1249).
+          The work is real but has no completed result to claim.
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>5. What the Task Log Does Not Support</h2>
+    <ul>
+      <li>
+        <strong>AI-assisted analysis (242, 244, 246).</strong> The AI tasks are inside the
+        claim year but are research and in-progress development (1242, 1243, 1239, 1240, 1241,
+        87, 1246-1249), not completed results. The narrative can claim the investigation, not an
+        advancement.
+      </li>
+      <li>
+        <strong>Profitability calculations.</strong> Only one task mentions profitability:
+        task 37 "Add field Approved Profitability" (January 2025, in-year). That is a data
+        field, not a calculation claim, so the narrative's profitability wording still cannot
+        be defended.
+      </li>
+      <li>
+        <strong>Subscription and licensing synchronization.</strong> License checks are well
+        evidenced (197, 202, 203), but no task describes subscription-status synchronization.
+        Keep the claim to license enforcement.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. Work in the Task Log That the Narrative Does Not Claim</h2>
+    <p>
+      These areas are in the task system but not in the narrative. That is acceptable for a
+      claim, but it shows the narrative is selective, and it matters if the CRA asks for a full
+      task list.
+    </p>
+    <ul>
+      <li>Messaging and comments: tasks 137-146, 153, 154, 155 (about 10 tasks)</li>
+      <li>Web scraping data sources: tasks 1241, 87</li>
+      <li>Talent pool views: tasks 95, 98</li>
+      <li>File uploads moved to DigitalOcean Spaces: task 171</li>
+      <li>Data export and import: tasks 184, 185</li>
+      <li>Source code scan report: task 1244</li>
+      <li>Routine operations: meetings, production updates, refactoring (151), credential sharing (152)</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. Risks If the CRA Reviews These Records</h2>
+    <ol>
+      <li>
+        <strong>AI section is unfinished.</strong> The AI tasks are in-year but are research and
+        in-progress development with no completed result to claim as an advancement.
+      </li>
+      <li>
+        <strong>Bug-flavoured titles.</strong> "Bug on calculating hours in budget tab" (169),
+        "Budget bug" (34), and "Hourly rate tab gives error" (54) read as routine bug fixing,
+        which is excluded work.
+      </li>
+      <li>
+        <strong>Task ID overlap between boards.</strong> The same ID numbers appear on the other
+        ClickUp boards. Any cited task must name the Resource Management board to avoid
+        confusion in a review.
+      </li>
+      <li>
+        <strong>No dates in the narrative.</strong> The task log spans July 2024 to April 2025.
+        The narrative gives no period, which weakens the tax-year scoping.
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>8. Recommendations to Raise the Score</h2>
+    <ol>
+      <li>
+        <strong>Keep the AI section as an investigation, not an advancement.</strong> The fiscal
+        year (ending 30 June 2025) includes the AI tasks, so describe the vector database and
+        RAG research (tasks 1242, 1243) honestly and state that no recommendation capability
+        was completed.
+      </li>
+      <li>
+        <strong>Add dates and Resource-Management task IDs to line 244.</strong> Cite the IDs
+        from Section 4 and name the board, since IDs overlap with other ClickUp lists.
+      </li>
+      <li>
+        <strong>Reframe calculation bugs as experimental observations.</strong> Tasks 169, 34,
+        42, 49, 50, and 73 describe model iterations. Present them as observed inconsistencies
+        from tested calculation models, not as bug fixes.
+      </li>
+      <li>
+        <strong>Keep "profitability" out of the claim.</strong> The only evidence is task 37, a
+        data field. Use "project cost, budget consumption, and remaining balances" wording.
+      </li>
+      <li>
+        <strong>Use the named staff and tracked hours for T661 Part 6.</strong> Four developers
+        plus product support are named, with substantial tracked time (for example, 45h 54m on
+        task 367 and 73h 5m on task 159).
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>9. Related Documents</h2>
+    <p>
+      The human-written OpusChart narrative is <strong>SRED-24-25-OpusChart.html</strong>
+      (identical to the Word document), and the active working draft is
+      <strong>SRED-24-25-OpusChart-V2-Working.html</strong> in this folder.
+    </p>
+    <p>
+      File roles: the human-written file is the original text. The working draft is the
+      evidence-backed master with task-ID citations, used as the technical annex and for
+      scoring. The T661 form fields (lines 242, 244, 246) are prepared in
+      <strong>SRED-24-25-OpusChart-T661-Prep.html</strong>, which contains both the clean
+      pasteable text and the cited annex version.
+    </p>
+    <div class="warn-box">
+      <strong>Note:</strong> this analysis is based only on the exported task names, statuses,
+      and dates. It does not verify the underlying code, tests, or documentation, which should
+      be reviewed before the claim is finalized.
+    </div>
+  </section>
+
+  <section>
+    <h2>10. Roadmap to 90+ - Task List</h2>
+    <p>
+      The three scores move together: overall = 70 percent theme evidence + 30 percent
+      investigation quality, so both components must pass 90 for the overall score to pass 90.
+      Theme evidence is capped by the task records themselves, so the biggest gains come from
+      enriching the ClickUp data, not from rewording the narrative.
+    </p>
+    <div class="warn-box">
+      Honesty note: the CRA values contemporaneous records. Add new comments, results, and
+      statuses with their real dates, and keep the original task titles unchanged. Do not
+      rewrite history.
+    </div>
+
+    <h3>Investigation quality: 55 to 90+ (30 percent of the overall score)</h3>
+    <table class="report-table">
+      <tr>
+        <th>No.</th>
+        <th>Task</th>
+        <th>Owner</th>
+        <th>Effect</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>For each of the roughly 25 cited tasks, add a "Result" comment in ClickUp
+          describing the observed inconsistency, the calculation rule or logic that caused it,
+          and the revision made. Keep the original title untouched.</td>
+        <td>You (ClickUp)</td>
+        <td>+12</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Create an "SR&amp;ED experiment log" list with one entry per hypothesis: hypothesis,
+          test performed, result, conclusion, date. About 15 entries covering the five themes.
+          I can draft the entry text.</td>
+        <td>You (ClickUp), me (draft text)</td>
+        <td>+8</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Update the 37 open tasks to their real final status (Closed, or abandoned with a
+          reason) so the log shows completion.</td>
+        <td>You (ClickUp)</td>
+        <td>+5</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Move meetings, production updates, refactoring, and credential tasks to a separate
+          operations list so the Resource Management board reads as technical work only.</td>
+        <td>You (ClickUp)</td>
+        <td>+5</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Attach evidence to the billing and calculation tasks: spreadsheet extracts, PDFs,
+          and screenshots (tasks 147, 169, 354, 42, 49).</td>
+        <td>You (ClickUp)</td>
+        <td>+5</td>
+      </tr>
+    </table>
+    <p>Investigation quality target after tasks 1-5: 55 + 35 = 90.</p>
+
+    <h3>Theme evidence: 78 to 90+ (70 percent of the overall score)</h3>
+    <table class="report-table">
+      <tr>
+        <th>No.</th>
+        <th>Theme (current)</th>
+        <th>Task</th>
+        <th>Owner</th>
+        <th>Effect</th>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>AI (5/10)</td>
+        <td>Finish and record results for the vector database prototype (1240), complete the
+          OpenAI integration tasks (1246-1249) with outcomes, and add one evaluation task
+          (for example, "rate recommendation relevance on 20 projects"). Target 9/10.</td>
+        <td>You (ClickUp), me (narrative update)</td>
+        <td>+6.0</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Calculations (8/10)</td>
+        <td>Record for tasks 34, 42, 49, 50, 73, and 169 which calculation rule failed and how
+          the model was revised. Add one model-comparison task per discrepancy.
+          Target 9.5/10.</td>
+        <td>You (ClickUp)</td>
+        <td>+3.8</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Holidays and vacations (7/10)</td>
+        <td>Record the company-versus-local holiday statistics tests and the vacation status
+          propagation tests with results (they exist on the other board). Target 9/10.</td>
+        <td>You (ClickUp)</td>
+        <td>+2.0</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>Budgets and rates (8/10)</td>
+        <td>Add tests for rate resolution when a resource has multiple assignments with
+          overlapping date-versioned rates, and record outputs. Target 9/10.</td>
+        <td>You (ClickUp)</td>
+        <td>+2.0</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>Billing (8/10)</td>
+        <td>Finish task 1252 (payment/invoice testing) with recorded results, and add one
+          subscription-state reconciliation test with outcomes. Target 9/10.</td>
+        <td>You (ClickUp)</td>
+        <td>+1.5</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>Permissions (9/10)</td>
+        <td>Add a role-by-function test matrix (expected access versus observed) for the
+          permission model, listing the conflicts found. I can draft the matrix.
+          Target 9.5/10.</td>
+        <td>You (ClickUp), me (draft matrix)</td>
+        <td>+0.8</td>
+      </tr>
+    </table>
+    <p>Theme evidence target after tasks 6-11: 78 + 16 = 94.</p>
+
+    <h3>Overall: 71 to 90+</h3>
+    <ol>
+      <li>Complete tasks 1 to 11 above. With theme evidence at 94 and investigation quality at
+        90, the overall score reaches about 93 (70 percent x 94 + 30 percent x 90).</li>
+      <li>Re-export the ClickUp JSON and send it to me; I re-run the analysis and refresh this
+        report and the tracker in the working document.</li>
+      <li>Keep the narrative within the T661 word limits (350 / 700 / 350) when citing the new
+        evidence.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>11. Contradiction Check - Working Draft vs Sources</h2>
+    <p>
+      This section compares the working draft (SRED-24-25-OpusChart-V2-Working.html, v2.4)
+      against the human-written version and the Resource Management task export, and lists every
+      contradiction found so they can be resolved one by one. Task IDs exist only in the working
+      draft; the human-written version contains no citations. Items checked against the task
+      export verify the draft's task IDs and dates. Items checked against the human version
+      verify deviations from the original text.
+    </p>
+    <table class="report-table">
+      <tr>
+        <th>No.</th>
+        <th>Location in draft</th>
+        <th>What the draft says</th>
+        <th>Checked against</th>
+        <th>What the sources show</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>244 paragraph 2</td>
+        <td>Vacation workflows aligned with local holiday rules "in February 2025
+          (tasks 63, 44, 48, 72)".</td>
+        <td>Task export</td>
+        <td>Tasks 44 and 48 were completed in January 2025, not February.</td>
+        <td>Fixed - now says January and February 2025.</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>244 paragraph 1</td>
+        <td>The draft's calculation cycle cited task 190.</td>
+        <td>Task export</td>
+        <td>Task 190 is "where is PCTL in projects page", a UI question, not a
+          calculation-model task. The human version has no citations at all.</td>
+        <td>Fixed - citation replaced with task 49.</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>244 paragraph 6</td>
+        <td>"supported by manual and automated testing".</td>
+        <td>Task export</td>
+        <td>The automated test tasks (Playwright) exist only on the old chart board; the
+          Resource Management board has manual testing and production-update tasks.</td>
+        <td>Fixed - now says manual testing and production-update records.</td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>242 paragraph 4 and 246 paragraph 4</td>
+        <td>"subscription status ... synchronized" claimed for the billing state machine.</td>
+        <td>Task export</td>
+        <td>No task describes subscription-status synchronization; Section 5 of this report
+          flags the gap.</td>
+        <td>To decide - keep as-is or soften to license enforcement only.</td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>242, 244, and 246</td>
+        <td>Profitability claims removed.</td>
+        <td>Human version</td>
+        <td>The human-written version claims "profitability calculations and management" in all
+          three sections.</td>
+        <td>To confirm - intentional removal, since task 37 supports only a data field.</td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>246 paragraph 5</td>
+        <td>"No recommendation capability was advanced during the period."</td>
+        <td>Human version</td>
+        <td>The human-written version says the AI exploration "demonstrated the potential".</td>
+        <td>To confirm - deliberate correction of an overclaim.</td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>244 paragraph 2</td>
+        <td>"Duplicated project records" dropped from the propagation examples.</td>
+        <td>Human version</td>
+        <td>The human-written version lists it, and task 59 ("Deactivating project creates copy
+          in active state") supports it.</td>
+        <td>Optional - can be restored within the 47-word headroom.</td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>242 paragraph 1</td>
+        <td>The CPA-firm context and "We could not identify any available solution" sentence
+          were replaced by a shorter base-state sentence.</td>
+        <td>Human version</td>
+        <td>The human-written version opens with the CPA-firm context and the no-available-
+          solution statement.</td>
+        <td>To confirm - trimmed for the T661 word limit.</td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>244 opening date</td>
+        <td>"Between July 2024 and April 2025".</td>
+        <td>Task export</td>
+        <td>Three tasks were created before July 2024 (171 on 2024-03-28, 158 on 2024-05-10,
+          172 on 2024-06-05).</td>
+        <td>Minor - the sprint window starts in July; note in supporting records if needed.</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>Personnel sheet</td>
+        <td>Kazim Kargi 280h assumed; 60 percent eligible shares for the developers.</td>
+        <td>Assumption</td>
+        <td>These are assumptions, not values from the task data.</td>
+        <td>To confirm with the team.</td>
+      </tr>
+    </table>
+    <p>
+      Items 1 to 3 are already fixed in the draft. Items 4 to 10 need a decision or a
+      confirmation; each can be resolved one at a time without touching the human-written
+      version.
+    </p>
+  </section>
+
+</div>
+</body>
+</html>

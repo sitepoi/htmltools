@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpusChart - T661 Part 2 Preparation (Pasteable and Evidence Versions)</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --good: #216e39;
+    --bad: #b3261e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 15px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  section { margin-bottom: 30px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .part-banner {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 18px;
+  }
+
+  h3 {
+    font-size: 14px;
+    color: var(--ink);
+    margin: 18px 0 8px;
+  }
+
+  .line-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 18px 0 8px;
+  }
+  .line-head h3 { margin: 0; }
+  .word-count {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    padding: 2px 10px;
+    background: #eef1f5;
+    color: var(--muted);
+  }
+  .copy-btn {
+    font-family: inherit;
+    font-size: 11.5px;
+    padding: 4px 12px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--accent);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .copy-btn:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  .pasteable p { margin-bottom: 12px; }
+  .citations { font-size: 11.5px; color: var(--muted); }
+
+  .divider {
+    border: none;
+    border-top: 2px dashed var(--line);
+    margin: 34px 0;
+  }
+
+  table.plain-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 8px 0 14px;
+  }
+  table.plain-table th {
+    background: #f5f8fb;
+    color: var(--accent);
+    text-align: left;
+    font-size: 10.5px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+  }
+  table.plain-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    .copy-btn { display: none; }
+    section:not(.task-annex), h2, h3, p { break-inside: avoid; }
+    .task-annex tr { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">PKF SR&amp;ED Claim Preparation</div>
+    <div class="doc-title">OpusChart - T661 Part 2 Preparation</div>
+    <div class="doc-subtitle">Lines 242, 244, and 246 in two versions</div>
+    <div class="doc-meta">
+      Tax year: 1 July 2024 to 30 June 2025
+      <span>|</span>
+      Date: 15 September 2026
+      <span>|</span>
+      Source: SRED-24-25-OpusChart-V2-Working.html
+    </div>
+  </header>
+
+  <section class="pasteable">
+    <h2>Part 1 - Directly Pasteable Version (T661 Form Text)</h2>
+    <div class="part-banner">
+      This part contains clean narrative text with no task citations, ready to paste into the
+      T661 form fields. The word counter under each heading updates automatically. Green means
+      within the form limit, red means over.
+    </div>
+
+    <div class="line-head">
+      <h3>Line 242 - What scientific or technological uncertainty did you attempt to overcome?</h3>
+      <span class="word-count" data-word-count="242">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('242')">Copy text</button>
+    </div>
+    <div data-line-body="242">
+      <p>At the start of the fiscal year, OpusChart was an existing application whose continued development addressed the remaining manual effort needed to reconcile project capacity, resource availability, and financial performance. Standard project-management and scheduling libraries can store assignments, rates, and calendars, but they cannot automatically recalculate interdependent results when several inputs change at once. No available tool combined resource allocation, financial forecasting, and role-based workflow management in one platform.</p>
+      <p>The principal uncertainty was whether a recalculation model could keep resource availability, project budgets, hourly rates, utilization percentages, and remaining balances synchronized as projects evolved. Changes to assignments, dates, vacations, company types, and billing rates affected several calculations at once, and it was unclear whether budgets, remaining balances, project costs, and utilization could be recalculated without inconsistencies or inaccurate forecasts. A related uncertainty was whether date-versioned hourly rates, including group-based rates, could be resolved correctly when a resource had multiple assignments and rates that changed over time.</p>
+      <p>A second uncertainty involved permission and workflow structures. The platform needed to support administrators, resource managers, project managers, financial managers, and readonly users. It was unclear whether a single permission-resolution model could enforce their rules consistently across budgeting, resource allocation, billing, reporting, and project management without conflicts or unintended access, and whether license expiry and activation states could be included in the same model.</p>
+      <p>A third uncertainty arose from automating billing workflows. We needed to determine whether an internal billing state machine could keep subscription status, invoice records, refund requests, license enforcement, and resource-usage statistics synchronized when external payment events arrived from Stripe, without manual intervention or contradictory states between the external payments and the internal records.</p>
+      <p>Finally, we began a preliminary investigation into AI-assisted project analysis. It was uncertain whether stored project information could be retrieved in a form usable for generating meaningful recommendations where requirements, availability constraints, and utilization targets change frequently. This investigation was limited to researching vector databases and retrieval-augmented generation and evaluating whether project, company, and resource data could be stored and retrieved for downstream analysis.</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 244 - What work did you perform to overcome the uncertainty?</h3>
+      <span class="word-count" data-word-count="244">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('244')">Copy text</button>
+    </div>
+    <div data-line-body="244">
+      <p>To address the recalculation uncertainty, we treated each calculation model as a hypothesis tested against real project scenarios. Between July 2024 and April 2025, early implementations produced inconsistent results when assignments, vacations, hourly rates, or timelines changed. Observed inconsistencies included a January 1 holiday saved as the previous year, one-day assignment conflicts from timezone handling, budget hour discrepancies, doubled hours for employees with multiple assignment lines, and a total-cost discrepancy in the dashboard. Each observation was analyzed to identify the calculation rule that caused it, the model was revised, and the outputs were re-validated. Holiday-ordered listings, date-conflict checks on hourly rates, the budget tab, and budget storage were developed and revised in the same cycle.</p>
+      <p>We also investigated how changes propagate across interconnected components. Vacations, local holidays, resource availability, project assignments, and utilization dashboards all relied on shared calculations; changes in one area produced unexpected results elsewhere, such as incorrect utilization percentages, missing resources, and inaccurate dashboard totals. We evaluated synchronization strategies, filtering methods, and update sequences to determine how changes could propagate without conflicting information. Local holiday handling was validated in July 2024, vacation workflows were aligned with local holiday rules in January and February 2025, and availability views were corrected in April 2025.</p>
+      <p>Permission management was investigated as a resolution model rather than separate rules. In July 2024 we introduced readonly account controls, removed editing capabilities from readonly users across eight screens, and centralized the permission logic into a single control function. Role rules for project managers, resource managers, financial managers, administrators, and readonly users were tested across budgeting, resource allocation, billing, reporting, and project functions, including the rule that a Resource role cannot be readonly. License-based restrictions were added in September 2024 and extended in 2025 to Accelo-ID write access, readonly resource requests, and blocked-member visibility.</p>
+      <p>Billing automation was investigated between July 2024 and April 2025, on the hypothesis that an internal state machine could remain consistent with Stripe payment events. Early testing revealed inconsistencies between invoice records, refund requests, and license enforcement. We tested synchronization methods between Stripe events and internal records, refined the refund request and approval workflow with internal status transitions such as Refunded, Refund Rejected, and Pending Refund, and validated billing calculations against resource-usage data, including daily resource-manager counts used for monthly invoicing. Invoice correctness and visibility were repeatedly tested, with end-to-end payment testing into 2025.</p>
+      <p>As a preliminary exploration of AI-assisted analysis, we researched vector databases and retrieval-augmented generation, defined data collections for projects, companies, and resources, prepared an API endpoint for saving data into the vector database, and tested web scraping as a data source. OpenAI integration and a resource-suggestion interface began in April 2025 and remain in development; no recommendation capability was completed, and whether AI-generated insights can reliably support resource planning remains open.</p>
+      <p>Throughout the period, observed inconsistencies involving budget calculations, utilization reporting, dashboard accuracy, licensing controls, project synchronization, resource visibility, and billing workflows served as validation checkpoints for the broader architecture. Each failed calculation or synchronization issue guided further refinement. The work is recorded in 217 tasks across 23 sprints in the Resource Management task list, July 2024 to April 2025, supported by manual testing, production-update records, and Swagger API documentation.</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 246 - What advancement did you achieve or attempt to achieve?</h3>
+      <span class="word-count" data-word-count="246">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('246')">Copy text</button>
+    </div>
+    <div data-line-body="246">
+      <p>One advancement was an integrated recalculation framework combining project assignments, vacations, local holidays, utilization targets, hourly rates, and budget calculations in a single planning model. A change in any input now propagates consistently through resource forecasts, project costs, and remaining budget balances.</p>
+      <p>A second advancement was the rate and cost resolution method. The platform resolves date-versioned hourly rates, including group-based rates and rate groups by company type, against company currency settings, and automatically recalculates project spending and budget consumption as assignments evolve, removing the manual reconciliation previously required between resource schedules and project budgets.</p>
+      <p>We also advanced permission management. The centralized permission-resolution model, built around a single control function, now evaluates role combinations, readonly access, activation states, and license-based restrictions consistently across the platform, including license checks on project and resource saves.</p>
+      <p>A further advancement was the internal billing state machine. Subscription status, invoice records, refund approvals, license checks, and resource-usage statistics are now reconciled with Stripe payment events through one internal workflow. Refund statuses such as Refunded, Refund Rejected, and Pending Refund are managed internally, and monthly invoices are generated from tracked resource-manager counts.</p>
+      <p>Vector-database research and the retrieval prototype for project, company, and resource data established a technical foundation for possible AI-assisted analysis. OpenAI integration and a resource-suggestion interface remain in development; no recommendation capability was advanced during the period.</p>
+      <p>Uncertainties remain. Scalability of resource forecasting under larger workloads, consistency of complex financial calculations under changing project conditions, and the reliability of AI-generated recommendations continue to present technological challenges still under investigation.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="citations">
+    <h2>Part 2 - Evidence Citation Version (Technical Annex)</h2>
+    <div class="part-banner">
+      This part is the same text with task-ID citations from the Resource Management task list.
+      It is the supporting annex used for scoring and for CRA technical reviews; it is not pasted
+      into the form.
+    </div>
+
+    <div class="line-head">
+      <h3>Line 242 - Uncertainty (with citations)</h3>
+      <span class="word-count" data-word-count="c242">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c242')">Copy text</button>
+    </div>
+    <div data-line-body="c242">
+      <p>At the start of the fiscal year, OpusChart was an existing application whose continued development addressed the remaining manual effort needed to reconcile project capacity, resource availability, and financial performance. Standard project-management and scheduling libraries can store assignments, rates, and calendars, but they cannot automatically recalculate interdependent results when several inputs change at once. No available tool combined resource allocation, financial forecasting, and role-based workflow management in one platform.</p>
+      <p>The principal uncertainty was whether a recalculation model could keep resource availability, project budgets, hourly rates, utilization percentages, and remaining balances synchronized as projects evolved. Changes to assignments, dates, vacations, company types, and billing rates affected several calculations at once, and it was unclear whether budgets, remaining balances, project costs, and utilization could be recalculated without inconsistencies or inaccurate forecasts. A related uncertainty was whether date-versioned hourly rates, including group-based rates, could be resolved correctly when a resource had multiple assignments and rates that changed over time.</p>
+      <p>A second uncertainty involved permission and workflow structures. The platform needed to support administrators, resource managers, project managers, financial managers, and readonly users. It was unclear whether a single permission-resolution model could enforce their rules consistently across budgeting, resource allocation, billing, reporting, and project management without conflicts or unintended access, and whether license expiry and activation states could be included in the same model.</p>
+      <p>A third uncertainty arose from automating billing workflows. We needed to determine whether an internal billing state machine could keep subscription status, invoice records, refund requests, license enforcement, and resource-usage statistics synchronized when external payment events arrived from Stripe, without manual intervention or contradictory states between the external payments and the internal records.</p>
+      <p>Finally, we began a preliminary investigation into AI-assisted project analysis. It was uncertain whether stored project information could be retrieved in a form usable for generating meaningful recommendations where requirements, availability constraints, and utilization targets change frequently. This investigation was limited to researching vector databases and retrieval-augmented generation (tasks 1242, 1243) and evaluating whether project, company, and resource data could be stored and retrieved for downstream analysis (tasks 1239, 1240).</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 244 - Work performed (with citations)</h3>
+      <span class="word-count" data-word-count="c244">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c244')">Copy text</button>
+    </div>
+    <div data-line-body="c244">
+      <p>To address the recalculation uncertainty, we treated each calculation model as a hypothesis tested against real project scenarios. Between July 2024 and April 2025, early implementations produced inconsistent results when assignments, vacations, hourly rates, or timelines changed. Observed inconsistencies included a January 1 holiday saved as the previous year (task 370), one-day assignment conflicts from timezone handling (tasks 394, 41), budget hour discrepancies (tasks 169, 34), doubled hours for employees with multiple assignment lines (task 50), and a total-cost discrepancy in the dashboard (task 42). Each observation was analyzed to identify the calculation rule that caused it, the model was revised, and the outputs were re-validated. Holiday-ordered listings (task 369), date-conflict checks on hourly rates (task 162), the budget tab (task 160), and budget storage (tasks 35, 158) were developed and revised in the same cycle (task 49).</p>
+      <p>We also investigated how changes propagate across interconnected components. Vacations, local holidays, resource availability, project assignments, and utilization dashboards all relied on shared calculations; changes in one area produced unexpected results elsewhere, such as incorrect utilization percentages, missing resources, and inaccurate dashboard totals. We evaluated synchronization strategies, filtering methods, and update sequences to determine how changes could propagate without conflicting information. Local holiday handling was validated in July 2024 (tasks 369, 370, 374, 389), vacation workflows were aligned with local holiday rules in January and February 2025 (tasks 44, 48, 63, 72), and availability views were corrected in April 2025 (tasks 102, 103, 104).</p>
+      <p>Permission management was investigated as a resolution model rather than separate rules. In July 2024 we introduced readonly account controls (task 357), removed editing capabilities from readonly users across eight screens (task 358, subtasks 359 to 366), and centralized the permission logic into a single control function (task 367, 45 hours 54 minutes). Role rules for project managers, resource managers, financial managers, administrators, and readonly users were tested across budgeting, resource allocation, billing, reporting, and project functions (tasks 148, 157, 159, 180, 372, 375 to 384, 391, 393), including the rule that a Resource role cannot be readonly (task 159, 73 hours 5 minutes). License-based restrictions were added in September 2024 (tasks 197, 202, 203) and extended in 2025 to Accelo-ID write access (task 47), readonly resource requests (task 97), and blocked-member visibility (tasks 99, 104).</p>
+      <p>Billing automation was investigated between July 2024 and April 2025, on the hypothesis that an internal state machine could remain consistent with Stripe payment events. Early testing revealed inconsistencies between invoice records, refund requests, and license enforcement. We tested synchronization methods between Stripe events and internal records (tasks 173, 174), refined the refund request and approval workflow with internal status transitions such as Refunded, Refund Rejected, and Pending Refund (tasks 352, 178, 179, 181, 195, 196, 198, 207), and validated billing calculations against resource-usage data, including daily resource-manager counts used for monthly invoicing (tasks 200, 201, 498). Invoice correctness and visibility were repeatedly tested (tasks 147, 149, 354, 499), with end-to-end payment testing into 2025 (task 1252).</p>
+      <p>As a preliminary exploration of AI-assisted analysis, we researched vector databases and retrieval-augmented generation (tasks 1242, 1243, January 2025), defined data collections for projects, companies, and resources (task 1239), prepared an API endpoint for saving data into the vector database (task 1240), and tested web scraping as a data source (tasks 1241, 87, March 2025). OpenAI integration and a resource-suggestion interface began in April 2025 (tasks 1246 to 1249) and remain in development; no recommendation capability was completed, and whether AI-generated insights can reliably support resource planning remains open.</p>
+      <p>Throughout the period, observed inconsistencies involving budget calculations, utilization reporting, dashboard accuracy, licensing controls, project synchronization, resource visibility, and billing workflows served as validation checkpoints for the broader architecture. Each failed calculation or synchronization issue guided further refinement. The work is recorded in 217 tasks across 23 sprints in the Resource Management task list, July 2024 to April 2025, supported by manual testing, production-update records, and Swagger API documentation (tasks 206, 491).</p>
+    </div>
+
+    <div class="line-head">
+      <h3>Line 246 - Advancement (with citations)</h3>
+      <span class="word-count" data-word-count="c246">counting...</span>
+      <button type="button" class="copy-btn" onclick="copyLineText('c246')">Copy text</button>
+    </div>
+    <div data-line-body="c246">
+      <p>One advancement was an integrated recalculation framework combining project assignments, vacations, local holidays, utilization targets, hourly rates, and budget calculations in a single planning model. A change in any input now propagates consistently through resource forecasts, project costs, and remaining budget balances.</p>
+      <p>A second advancement was the rate and cost resolution method. The platform resolves date-versioned hourly rates, including group-based rates (task 495) and rate groups by company type (tasks 66 to 69), against company currency settings (tasks 165, 176), and automatically recalculates project spending and budget consumption as assignments evolve, removing the manual reconciliation previously required between resource schedules and project budgets.</p>
+      <p>We also advanced permission management. The centralized permission-resolution model, built around a single control function (task 367), now evaluates role combinations, readonly access, activation states, and license-based restrictions consistently across the platform, including license checks on project and resource saves (tasks 202, 203).</p>
+      <p>A further advancement was the internal billing state machine. Subscription status, invoice records, refund approvals, license checks, and resource-usage statistics are now reconciled with Stripe payment events through one internal workflow. Refund statuses such as Refunded, Refund Rejected, and Pending Refund are managed internally (task 195), and monthly invoices are generated from tracked resource-manager counts (tasks 200, 201, 498).</p>
+      <p>Vector-database research and the retrieval prototype for project, company, and resource data (tasks 1242, 1243, 1239, 1240) established a technical foundation for possible AI-assisted analysis. OpenAI integration and a resource-suggestion interface remain in development (tasks 1247 to 1249); no recommendation capability was advanced during the period.</p>
+      <p>Uncertainties remain. Scalability of resource forecasting under larger workloads, consistency of complex financial calculations under changing project conditions, and the reliability of AI-generated recommendations continue to present technological challenges still under investigation.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Version Comparison - Filing Readiness and Task Relatedness</h2>
+    <p>
+      The original version and the pasteable version were scored with the same rubric.
+      Readiness measures how close each text is to being filed on the T661. Task relatedness
+      measures how directly each text maps to the Resource Management task records.
+    </p>
+    <h3>Filing readiness (out of 100)</h3>
+    <table class="plain-table">
+      <tr><th>Criterion</th><th>Original version</th><th>Pasteable version</th></tr>
+      <tr><td>Within T661 word limits</td><td>20 / 20</td><td>20 / 20</td></tr>
+      <tr><td>All three sections complete</td><td>5 / 5</td><td>5 / 5</td></tr>
+      <tr><td>Uncertainty framed technologically</td><td>8 / 10</td><td>9 / 10</td></tr>
+      <tr><td>Base state and standard-practice contrast</td><td>5 / 10</td><td>9 / 10</td></tr>
+      <tr><td>Systematic investigation structure</td><td>8 / 15</td><td>14 / 15</td></tr>
+      <tr><td>Advancements technological, not business</td><td>6 / 10</td><td>8 / 10</td></tr>
+      <tr><td>No unsupported claims</td><td>5 / 15</td><td>12 / 15</td></tr>
+      <tr><td>Tax-year dates and scoping</td><td>0 / 5</td><td>5 / 5</td></tr>
+      <tr><td>Vocabulary clean</td><td>3 / 5</td><td>5 / 5</td></tr>
+      <tr><td>Stripe framed as context only</td><td>2 / 5</td><td>4 / 5</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>62 / 100</strong></td><td><strong>91 / 100</strong></td></tr>
+    </table>
+    <h3>Task relatedness (out of 100)</h3>
+    <table class="plain-table">
+      <tr><th>Component</th><th>Original version</th><th>Pasteable version</th></tr>
+      <tr><td>Claims supported by the task log</td><td>60 / 100</td><td>85 / 100</td></tr>
+      <tr><td>Traceability (claim to record)</td><td>15 / 100</td><td>90 / 100</td></tr>
+      <tr><td>Consistency with records</td><td>40 / 100</td><td>95 / 100</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>43 / 100</strong></td><td><strong>82 / 100</strong></td></tr>
+    </table>
+    <p>
+      The pasteable version scores higher on both measures. The original version remains the
+      source of truth; the pasteable version is the corrected, dated, evidence-verified text.
+    </p>
+  </section>
+
+  <section>
+    <h2>Audit Package - For a CRA Technical Review</h2>
+    <p>
+      In addition to the two narrative versions and the annex task list, a CRA technical review
+      will look for the following. The placeholders must be completed before sending.
+    </p>
+    <h3>Claimant identification</h3>
+    <table class="plain-table">
+      <tr><th>Field</th><th>Value</th></tr>
+      <tr><td>Claimant legal name</td><td>[To be completed]</td></tr>
+      <tr><td>Business number (BN)</td><td>[To be completed]</td></tr>
+      <tr><td>Fiscal year end</td><td>30 June 2025</td></tr>
+      <tr><td>Claim year</td><td>1 July 2024 to 30 June 2025</td></tr>
+      <tr><td>Project title</td><td>OpusChart</td></tr>
+      <tr><td>Technical contact</td><td>[To be completed]</td></tr>
+    </table>
+    <h3>Evidence checklist (T661 lines 270-282)</h3>
+    <table class="plain-table">
+      <tr><th>T661 line</th><th>Evidence type</th><th>What we hold</th></tr>
+      <tr><td>271</td><td>Time sheets</td><td>ClickUp time tracking on tasks (1,802h 21m tracked)</td></tr>
+      <tr><td>272</td><td>Design of experiments</td><td>To be created - the hypothesis and result log (report Section 10)</td></tr>
+      <tr><td>274</td><td>Source code</td><td>Code repositories; git history annex to be attached</td></tr>
+      <tr><td>276</td><td>Progress reports and minutes</td><td>ClickUp task comments and meeting records</td></tr>
+      <tr><td>277</td><td>Test protocols and test data</td><td>Task log with dated results; attachments on billing and calculation tasks</td></tr>
+      <tr><td>273</td><td>Project records</td><td>ClickUp export (Annex A below)</td></tr>
+    </table>
+    <h3>Personnel summary</h3>
+    <table class="plain-table">
+      <tr><th>Name</th><th>Role</th><th>Tracked hours</th><th>Assumed SR&amp;ED hours</th></tr>
+      <tr><td>Ulugbek Atakhanov</td><td>Frontend developer and tester</td><td>1,700h 09m</td><td>1,020h</td></tr>
+      <tr><td>Azizbek Habibov</td><td>Backend developer</td><td>663h 04m</td><td>400h</td></tr>
+      <tr><td>Kazim Kargi</td><td>Manager, infrastructure</td><td>none tracked</td><td>280h</td></tr>
+      <tr><td>Ubaydulloh Pulat</td><td>Backend developer</td><td>none tracked</td><td>20h</td></tr>
+    </table>
+    <p>
+      The assumed hours and the eligible shares still need team confirmation before the claim is
+      filed.
+    </p>
+  </section>
+
+  <section class="task-annex">
+    <h2>Annex A - Full Task List (Resource Management Board)</h2>
+    <div class="part-banner">
+      The complete task list maps the evidence-citation version to the task management system.
+      It is rendered from the exported ClickUp data (opus_chart_rm_sprint_10_to_32.json) via the
+      companion file opus-tasks-annex.js, which must travel with this document.
+      <span id="annexTaskCount"></span>
+    </div>
+    <table class="plain-table">
+      <tr>
+        <th>ID</th>
+        <th>Task</th>
+        <th>Sprint</th>
+        <th>Status</th>
+        <th>Completed</th>
+        <th>Time tracked</th>
+      </tr>
+      <tbody id="annexTaskListBody">
+        <tr><td colspan="6">Loading task list...</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+
+<script src="opus-tasks-annex.js"></script>
+<script>
+(function () {
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function buildTaskTable() {
+    var body = document.getElementById('annexTaskListBody');
+    var counter = document.getElementById('annexTaskCount');
+    if (!body) { return; }
+    if (typeof OPUS_TASKS === 'undefined') {
+      body.innerHTML = '<tr><td colspan="6">Task data file opus-tasks-annex.js was not found. Keep it next to this document.</td></tr>';
+      return;
+    }
+    var rows = '';
+    for (var i = 0; i < OPUS_TASKS.length; i++) {
+      var taskRow = OPUS_TASKS[i];
+      rows += '<tr><td>' + escapeHtml(taskRow[0]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[1]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[2]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[3]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[4]) + '</td>' +
+              '<td>' + escapeHtml(taskRow[5]) + '</td></tr>';
+    }
+    body.innerHTML = rows;
+    if (counter) { counter.textContent = OPUS_TASKS.length + ' tasks listed'; }
+  }
+
+  document.addEventListener('DOMContentLoaded', buildTaskTable);
+})();
+</script>
+
+<script>
+(function () {
+  var limits = {
+    '242': 350,
+    '244': 700,
+    '246': 350,
+    'c242': null,
+    'c244': null,
+    'c246': null
+  };
+
+  function countWords(text) {
+    var matches = text.trim().match(/\S+/g);
+    return matches ? matches.length : 0;
+  }
+
+  function updateCounters() {
+    var counters = document.querySelectorAll('[data-word-count]');
+    for (var i = 0; i < counters.length; i++) {
+      var counter = counters[i];
+      var key = counter.getAttribute('data-word-count');
+      var body = document.querySelector('[data-line-body="' + key + '"]');
+      if (!body) { continue; }
+      var words = countWords(body.textContent);
+      var limit = limits[key];
+      counter.textContent = limit ? (words + ' of ' + limit + ' words') : (words + ' words (annex, no limit)');
+      if (limit) {
+        counter.style.background = words <= limit ? '#eaf5ec' : '#fdecea';
+        counter.style.color = words <= limit ? '#216e39' : '#b3261e';
+      }
+    }
+  }
+
+  window.copyLineText = function (key) {
+    var body = document.querySelector('[data-line-body="' + key + '"]');
+    if (!body) { return; }
+    var text = body.textContent.trim();
+    function fallbackCopy() {
+      var textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    function markCopied() {
+      var buttons = document.querySelectorAll('button');
+      for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].getAttribute('onclick') === "copyLineText('" + key + "')") {
+          var oldLabel = buttons[i].textContent;
+          buttons[i].textContent = 'Copied';
+          setTimeout(function () { buttons[i].textContent = oldLabel; }, 1500);
+        }
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(markCopied, function () { fallbackCopy(); markCopied(); });
+    } else {
+      fallbackCopy();
+      markCopied();
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', updateCounters);
+})();
+</script>
+</body>
+</html>
