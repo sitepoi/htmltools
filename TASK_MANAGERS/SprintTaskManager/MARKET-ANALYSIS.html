@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Analysis - SprintTaskManager</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-soft: #eef0fd;
+    --line: #e5e7eb;
+    --good: #1e7e4f;
+    --warn: #b45309;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 16px 64px;
+    background: #f3f4f6;
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 44px 52px 56px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+  .doc-header { border-bottom: 3px solid var(--accent); padding-bottom: 18px; margin-bottom: 26px; }
+  .doc-header .kicker {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .doc-header h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.2; }
+  .doc-header .sub { color: var(--muted); font-size: 15px; margin: 0; }
+  .doc-header .meta {
+    margin-top: 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+  }
+  h2 {
+    font-size: 21px;
+    margin: 34px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h2 .num {
+    flex: none;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: var(--accent); }
+  p { margin: 8px 0; }
+  ul, ol { margin: 8px 0; padding-left: 24px; }
+  li { margin: 4px 0; }
+  strong { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); color: var(--accent); font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 14px 0;
+  }
+  .callout.warn { border-left-color: var(--warn); background: #fef6ec; }
+  .callout.good { border-left-color: var(--good); background: #edf7f1; }
+  .two-col { display: flex; gap: 18px; flex-wrap: wrap; }
+  .two-col > div { flex: 1; min-width: 260px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .chip {
+    display: inline-block;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 3px 12px;
+    font-size: 12.5px;
+    color: #374151;
+  }
+  .toc { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .score { display: inline-block; min-width: 26px; padding: 0 6px; height: 26px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; text-align: center; line-height: 26px; }
+  .score.high { background: #1e7e4f; }
+  .score.med { background: #b45309; }
+  .score.low { background: #6b7280; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border: none; max-width: 100%; padding: 20px 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <div class="kicker">Product Research - Market Analysis</div>
+    <h1>SprintTaskManager: Markets, Users and Customers</h1>
+    <p class="sub">Who benefits from a sprint-based team task board with goals, assignments, drag-and-drop kanban and built-in reporting - and what already exists on the market.</p>
+    <div class="meta">
+      <span>Prepared: 16 September 2026</span>
+      <span>Subject tool: SprintTaskManager engine (UniconHub html-tool)</span>
+      <span>Proposed product name: SprintTaskManager</span>
+      <span>Status: research document - no code changes</span>
+    </div>
+  </div>
+
+  <div class="toc">
+    <strong>Contents</strong>
+    <ol style="margin: 6px 0 0;">
+      <li><a href="#s1">What the tool actually is</a></li>
+      <li><a href="#s2">Why rename it - the naming question</a></li>
+      <li><a href="#s3">Today's user: the small structured team</a></li>
+      <li><a href="#s4">Who else would benefit - market segments</a></li>
+      <li><a href="#s5">Why it wins over generic task managers</a></li>
+      <li><a href="#s6">Customer types and how it could be sold</a></li>
+      <li><a href="#s7">Similar tools on the market</a></li>
+      <li><a href="#s8">Positioning: the gap this tool fills</a></li>
+      <li><a href="#s9">Why people will not use it - objections and fixes</a></li>
+      <li><a href="#s10">Recommendation</a></li>
+    </ol>
+  </div>
+
+  <h2 id="s1"><span class="num">1</span>What the tool actually is</h2>
+  <p>Under the hood, this is a <strong>sprint-first team task manager</strong>: work is organized into time-boxed periods (sprints), each with a written goal, and a shared team moves task cards across a kanban board until the period closes. The engine is entirely general-purpose; only the current seed data (a small nonprofit-style team) is specific.</p>
+  <div class="two-col">
+    <div>
+      <h3>Core engine capabilities</h3>
+      <ul>
+        <li>Sprints with name, start/end dates, goal and status (planned / active), with smart defaults that chain the next sprint after the previous one</li>
+        <li>Kanban board with four statuses - To Do, In Progress, Done, Blocked - and drag-and-drop card movement</li>
+        <li>Task fields: title, description, priority (critical/high/medium/low), assignee, due date, notes</li>
+        <li>Labels with color coding, file attachments and external links per task</li>
+        <li>List view with sortable columns (priority, title, status, assignee, due date, sprint)</li>
+        <li>Report view: completion donut chart, workload bars by priority, overdue list, recent activity, completed-in-sprint list</li>
+        <li>Team view from the CMS permitted-users list, with manager/staff role badges</li>
+        <li>Manager/staff permission model: managers own sprints, staff only move their own tasks</li>
+        <li>Search plus assignee/priority/status filters</li>
+        <li>PDF and CSV export of the current sprint</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What it is not</h3>
+      <ul>
+        <li>Not a project manager: no Gantt charts, dependencies, subtasks or resource planning</li>
+        <li>Not a recurring-obligation tracker: that is the RecurringTaskManager sibling (daily/weekly/monthly cadences, per-occurrence evidence)</li>
+        <li>Not a scrum tool: no story points, velocity charts, burndown or ceremonies</li>
+        <li>Not a document store: attachments and links live on tasks, but the task is the first-class object</li>
+      </ul>
+      <div class="callout">
+        The defining feature: a team works in <strong>time-boxed cycles with a written goal</strong>, and every task belongs to one cycle. Completion math, overdue pressure and assignee accountability are computed per sprint - which is what turns a board into a management tool.
+      </div>
+    </div>
+  </div>
+
+  <h2 id="s2"><span class="num">2</span>Why rename it - the naming question</h2>
+  <p>The working name <strong>PersonalTaskManager</strong> is misleading on two counts: the tool is built for <strong>teams</strong> (assignees, permitted users, manager/staff roles, team view), and it is organized around <strong>sprints</strong>, not a personal to-do list. "Personal" undersells it and signals the wrong market.</p>
+  <h3>Candidate names, assessed</h3>
+  <table>
+    <tr>
+      <th style="width: 220px;">Candidate</th>
+      <th style="width: 110px;">Verdict</th>
+      <th>Reasoning</th>
+    </tr>
+    <tr>
+      <td><strong>SprintTaskManager</strong></td>
+      <td><span class="score high">Pick</span></td>
+      <td>States the differentiator (sprints) and the category (task manager). Consistent with the sibling names RecurringTaskManager and HierarchyItemChecklistManager in the TASK_MANAGERS folder. Clear, searchable, honest.</td>
+    </tr>
+    <tr>
+      <td>TeamSprintManager</td>
+      <td><span class="score med">Alt</span></td>
+      <td>Adds the team aspect but hides the word "task"; slightly longer and reads more like an app than a category.</td>
+    </tr>
+    <tr>
+      <td>SprintBoard / SprintFlow</td>
+      <td><span class="score low">No</span></td>
+      <td>Brandable but vague; does not follow the folder's naming convention and says nothing about what it manages.</td>
+    </tr>
+    <tr>
+      <td>PersonalTaskManager (keep)</td>
+      <td><span class="score low">No</span></td>
+      <td>Mislabels a multi-user team tool as a personal one; blocks the B2B story from the first impression.</td>
+    </tr>
+  </table>
+  <div class="callout good">
+    <strong>Recommendation:</strong> rename to <strong>SprintTaskManager</strong>. File names, tool title, folder name and documentation should follow (e.g. <code>SprintTaskManager.html/.css/.js</code>). The CMS type names (<code>taskSprints-uniconbaseapps</code>, <code>taskItems-uniconbaseapps</code>) are technical identifiers and can stay unchanged.
+  </div>
+
+  <h2 id="s3"><span class="num">3</span>Today's user: the small structured team</h2>
+  <p>The current instance serves a small team in a nonprofit-style organization (the workspace shows Canadian-centre IDs and the developer subdomain <code>centrecanada</code>). Its usage pattern: a manager creates a two-week sprint with a goal, assigns tasks to team members, and the team moves cards on the board while the manager watches the report view.</p>
+  <p>That profile is the first beachhead, but it is one instance of a much larger pattern: <strong>any team of roughly 2-15 people that delivers work in short cycles toward a stated goal, and needs a shared answer to "what are we doing this period, who owns it, and are we on track?"</strong></p>
+
+  <h2 id="s4"><span class="num">4</span>Who else would benefit - market segments</h2>
+  <p>Scored by fit: how well the sprint-goal-kanban pattern, per-sprint reports and the manager/staff permission model match the segment's real work.</p>
+
+  <table>
+    <tr>
+      <th style="width: 70px;">Fit</th>
+      <th style="width: 200px;">Segment</th>
+      <th>Sprint-shaped work they actually do</th>
+      <th>Why this tool fits</th>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Nonprofits, churches and charities</td>
+      <td>Fundraising campaigns, event runs, grant application windows, volunteer projects - each is a time-boxed push with a goal</td>
+      <td>The current instance already lives here; permitted-users teams map to staff-plus-volunteers; the goal banner keeps everyone on message.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">9</span></td>
+      <td>Marketing and creative agencies</td>
+      <td>Client campaigns in two-week bursts, launch checklists, content calendars per client</td>
+      <td>Campaign = sprint with a goal; labels and links hold creative assets; overdue and workload reports replace status meetings.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Small development and IT teams</td>
+      <td>Two-week build cycles, release prep, bug-fix pushes, blocked items</td>
+      <td>The kanban shape plus a Blocked column is the working pattern; light enough to skip Jira ceremony.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>Restaurant, retail and store operations</td>
+      <td>Menu launches, store openings, seasonal promotions, remodel periods - short pushes per location</td>
+      <td>Managers assign per store, staff can only move their own cards; PDF export prints a period plan for a noticeboard.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">8</span></td>
+      <td>HR and people operations</td>
+      <td>Recruitment sprints, onboarding cohorts, performance-review cycles</td>
+      <td>A hiring sprint with candidates as cards; assignees are the hiring panel; the report shows the pipeline.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Education administration</td>
+      <td>Term projects, accreditation prep windows, event weeks</td>
+      <td>Goal-first periods match academic cycles; per-sprint exports become evidence folders.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Construction and property crews</td>
+      <td>Site phases, move-in pushes, renovation periods</td>
+      <td>Phase = sprint; attachments hold photos and drawings; Blocked column surfaces site problems.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">7</span></td>
+      <td>Consultancies and agencies-of-one</td>
+      <td>Client engagements as periods, deliverable checklists per client</td>
+      <td>One tool instance per client (the CMS instance scope isolates tasks) while the consultant keeps the overview.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">6</span></td>
+      <td>Finance and accounting teams</td>
+      <td>Month-end close as a period, audit prep pushes</td>
+      <td>Close-the-month is a perfect sprint; but recurring daily/weekly obligations are better served by the RecurringTaskManager sibling.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">5</span></td>
+      <td>Personal and household use</td>
+      <td>Personal projects with deadlines</td>
+      <td>Works solo, but the team features are wasted and consumer apps already cover it.</td>
+    </tr>
+  </table>
+
+  <div class="callout good">
+    <strong>Common thread across the top segments:</strong> a small team that must <strong>finish a batch of work by a date</strong>, with a <strong>stated goal</strong>, <strong>visible ownership</strong> and a <strong>weekly answer to "are we on track?"</strong>. Sprint cadence plus the report view answers exactly that.
+  </div>
+
+  <h2 id="s5"><span class="num">5</span>Why it wins over generic task managers</h2>
+  <table>
+    <tr>
+      <th>Need</th>
+      <th>Generic task manager (Trello, To Do, Asana)</th>
+      <th>This tool</th>
+    </tr>
+    <tr>
+      <td>Work in two-week periods with a written goal</td>
+      <td>Boards and lists exist, but periods and goals are manual conventions the team must maintain</td>
+      <td>Sprint is the native object: dates, goal, status, and the next sprint chains automatically</td>
+    </tr>
+    <tr>
+      <td>See completion and overdue at a glance</td>
+      <td>Dashboards exist in higher tiers, or you build them</td>
+      <td>Report view built in: completion donut, workload by priority, overdue and completed lists</td>
+    </tr>
+    <tr>
+      <td>Restrict staff to their own cards</td>
+      <td>Guest/permission models vary and are usually paid</td>
+      <td>Manager vs staff roles enforced in the tool: staff only move and edit their own tasks</td>
+    </tr>
+    <tr>
+      <td>Who is on the team and what is their role</td>
+      <td>Member management is platform overhead</td>
+      <td>Team view derives automatically from the CMS permitted-users list</td>
+    </tr>
+    <tr>
+      <td>Attachments and links on a task</td>
+      <td>Paid tiers and integrations</td>
+      <td>Uploads and links are part of the task record, stored in CMS storage</td>
+    </tr>
+    <tr>
+      <td>Hand a period plan to someone without an account</td>
+      <td>Export is often PDF-only or absent</td>
+      <td>PDF and CSV export of the current sprint built in</td>
+    </tr>
+    <tr>
+      <td>Setup burden</td>
+      <td>Workspaces, boards, power-ups, automations</td>
+      <td>Create a sprint, add tasks, drag. Zero configuration</td>
+    </tr>
+  </table>
+
+  <h2 id="s6"><span class="num">6</span>Customer types and how it could be sold</h2>
+  <ul>
+    <li><strong>Small-team subscriptions (B2B):</strong> agencies, clinics, stores and crews pay per workspace or per seat. They buy outcomes: sprints that close, overloads that surface, meetings that shorten.</li>
+    <li><strong>Vertical editions:</strong> the same engine, re-skinned and re-seeded - Campaign edition (agencies), Fundraiser edition (nonprofits), Store-Ops edition (retail). The four kanban columns and fields stay; only seed labels and demo content change.</li>
+    <li><strong>Platform-embedded (B2B2C):</strong> in the UniconHub context it sells as one CMS tool among many: "the team-cycle layer" next to RecurringTaskManager (the obligation layer) and HierarchyItemChecklistManager (the procedure layer). The three task tools together cover cadence, procedure and team execution.</li>
+    <li><strong>Nonprofits and grant-funded organizations:</strong> funders ask "what did the team accomplish in this period?" - the sprint goal and the report view answer it. Grant-period sprints with exported PDFs become reporting artifacts.</li>
+    <li><strong>Consultants and freelancers (B2B2B):</strong> run each client as an instance; the CMS instance scope already isolates client tasks, while shared sprints keep the consultant's own calendar.</li>
+  </ul>
+  <div class="callout warn">
+    <strong>Progress on the prerequisites:</strong> the engine is feature-complete and tested. What remains before a public launch: the rename to SprintTaskManager, a notification channel (due-date and sprint-close reminders via the CMS email SDK), and starter content packs per segment - the same pattern the RecurringTaskManager already uses with its DEFINITION-PACKS folder.
+  </div>
+
+  <h2 id="s7"><span class="num">7</span>Similar tools on the market</h2>
+  <p>Yes - but nothing combines all four of its strengths (sprint goal as a first-class object, drag-and-drop kanban, built-in per-sprint reports, manager/staff permissions) in one lightweight package. Competitors cluster into four groups:</p>
+
+  <h3>Group A - Kanban boards</h3>
+  <p><strong>Trello, MeisterTask, Kanbanize.</strong> Trello is the closest cousin: boards, cards, labels, attachments. Weaknesses for this use case: no native sprint/period object with a goal, no completion/overdue math, permissions are a paid feature, and a board drifts without a cycle boundary. MeisterTask adds automation but the same gaps apply.</p>
+
+  <h3>Group B - Project management suites</h3>
+  <p><strong>Asana, Monday, ClickUp, Wrike, Notion (templates).</strong> All can do sprints, goals, views and reports - with configuration, training and usually a paid tier. Weaknesses: they are project-shaped (portfolios, dependencies, automations), so a two-week team cycle carries real setup and upkeep overhead, and reporting lives behind dashboard configuration.</p>
+
+  <h3>Group C - Dev-focused agile tools</h3>
+  <p><strong>Jira, Linear, Shortcut (Clubhouse), Azure Boards.</strong> Purpose-built sprints, boards and reports. Weaknesses: they are software-shaped - story points, epics, releases - which makes them heavy and intimidating for non-technical teams; Linear and Jira also price per seat.</p>
+
+  <h3>Group D - Vertical, workflow-locked tools</h3>
+  <table>
+    <tr>
+      <th style="width: 220px;">Tool / category</th>
+      <th>What it does</th>
+      <th>Overlap and gap vs this tool</th>
+    </tr>
+    <tr>
+      <td>Store and restaurant ops: Jolt, Zenput</td>
+      <td>Per-location checklists and audits</td>
+      <td>Same short-cycle execution idea, but locked to store workflows; no general team projects</td>
+    </tr>
+    <tr>
+      <td>Agency tools: Basecamp, Teamwork</td>
+      <td>Client projects with messages and files</td>
+      <td>Project-shaped and message-heavy; no sprint goal object, and higher per-seat pricing</td>
+    </tr>
+    <tr>
+      <td>Church and volunteer tools: Planning Center</td>
+      <td>Service planning and volunteer scheduling</td>
+      <td>People-scheduling focus; team task execution and sprint reports are secondary</td>
+    </tr>
+    <tr>
+      <td>Nonprofit CRM suites: Bloomerang, DonorPerfect modules</td>
+      <td>Donor and campaign tracking</td>
+      <td>Data-of-record focus; they do not run the team's weekly work</td>
+    </tr>
+    <tr>
+      <td>Spreadsheets on shared drives</td>
+      <td>The universal default: columns, colors, status cells</td>
+      <td>Familiar and free, but no drag-drop, no per-task attachments and links, no completion math, no permission boundaries</td>
+    </tr>
+  </table>
+
+  <h2 id="s8"><span class="num">8</span>Positioning: the gap this tool fills</h2>
+  <div class="two-col">
+    <div>
+      <h3>The gap</h3>
+      <ul>
+        <li>Kanban boards are shapeless - no period boundary, no goal, no completion math</li>
+        <li>Project suites are heavy - setup, training and price exceed what a 2-15 person team needs</li>
+        <li>Agile tools are developer-shaped and scare non-technical teams away</li>
+        <li>Spreadsheets carry the plan but no ownership, attachments or drag-and-drop</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The position</h3>
+      <div class="callout good">
+        <strong>"The sprint board for teams that do not do agile ceremony":</strong> time-boxed periods with a written goal, a drag-and-drop board, built-in completion and overdue reports, and role-based permissions - light enough for a volunteer team, disciplined enough for a manager who answers to a funder.
+      </div>
+      <p>One-line pitches per audience: "every campaign closes with a report" (agencies), "show funders what the team did this period" (nonprofits), "a two-week plan on one board, printed if you want" (stores and crews).</p>
+    </div>
+  </div>
+
+  <h2 id="s9"><span class="num">9</span>Why people will not use it - objections and fixes</h2>
+  <p>Honest negative assessment. Every objection below is a real adoption blocker, ranked by how likely it is to stop someone from using the tool, with the fix that addresses it.</p>
+  <table>
+    <tr>
+      <th style="width: 70px;">Severity</th>
+      <th style="width: 230px;">Objection</th>
+      <th>Why it blocks adoption</th>
+      <th>What to do about it</th>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"No notifications or reminders"</td>
+      <td>A due date that never taps a shoulder is a due date that misses. Teams default back to chat and email for nudges, and the tool becomes a passive wall.</td>
+      <td>Ship due-date and sprint-close reminders through the CMS email SDK (already available). Later: a daily digest of overdue and due-today cards.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"We already use Trello / Asana / Monday"</td>
+      <td>Teams will not run two overlapping boards. A direct fight with entrenched suites is lost before it starts.</td>
+      <td>Position as the light alternative, not the replacement: "your project suite plans the year, this tool runs the fortnight". Sell to teams currently on spreadsheets - they are the real target.</td>
+    </tr>
+    <tr>
+      <td><span class="score high">High</span></td>
+      <td>"Everything must live in a sprint"</td>
+      <td>Ad-hoc requests that arrive mid-period have no home; forcing a sprint for every task feels rigid and teams will work around the tool.</td>
+      <td>Keep the sprint as the organizing frame but document the mid-sprint add flow prominently; the default two-week window is short enough that "add it to this sprint" is a natural answer.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No subtasks, dependencies or Gantt"</td>
+      <td>Teams managing genuinely complex work (hardware, multi-party projects) will outgrow flat cards quickly.</td>
+      <td>This is a positioning boundary, not a bug: point complex-project teams at a suite. Do not chase Gantt features; it would blur the tool's simplicity.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No recurring tasks"</td>
+      <td>Teams with weekly obligations (reports, checks) will want them repeating inside the sprint.</td>
+      <td>Deliberate split: RecurringTaskManager is the sibling for cadence. Link the two in messaging - "obligations recur, execution sprints".</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No mobile app"</td>
+      <td>Staff on the floor or in the field check tasks on phones; a desktop web page limits them.</td>
+      <td>The layout is already responsive; a PWA wrapper with browser notifications closes most of the gap without a store submission.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"Where did our last sprint go?"</td>
+      <td>Teams want to compare periods or look up a past sprint's plan.</td>
+      <td>Export the sprint to PDF/CSV at close (already possible) and store it with the funder/client file; later, a read-only sprint archive view.</td>
+    </tr>
+    <tr>
+      <td><span class="score med">Medium</span></td>
+      <td>"No velocity or burndown"</td>
+      <td>Teams trained on scrum will look for the classic charts and may dismiss the report view as light.</td>
+      <td>The completion donut and workload bars answer "are we on track" for most teams; if needed, a burndown is one more SVG in the report view - low cost, do it only if a segment asks.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"Vendor lock-in - our plans are trapped"</td>
+      <td>Data-portability fears stop careful buyers (finance, compliance, nonprofits).</td>
+      <td>Already solved: PDF and CSV export per sprint. Document it as the official exit path.</td>
+    </tr>
+    <tr>
+      <td><span class="score low">Low</span></td>
+      <td>"The name says Personal but it is a team tool"</td>
+      <td>Confusion at first glance; buyers skip tools that look like solo toys.</td>
+      <td>Solved by the rename to SprintTaskManager (section 2) plus a team-oriented landing description.</td>
+    </tr>
+  </table>
+
+  <h2 id="s10"><span class="num">10</span>Recommendation</h2>
+  <ol>
+    <li><strong>Rename to SprintTaskManager.</strong> Update the folder, file names (SprintTaskManager.html/.css/.js), the tool title and documentation. Keep the CMS type names (taskSprints-uniconbaseapps, taskItems-uniconbaseapps) unchanged - they are technical identifiers, not product names.</li>
+    <li><strong>Pick one beachhead segment.</strong> The strongest matches are nonprofits/charities (the current instance) and marketing/creative agencies - both already buy tools to run short pushes. The demo for either is the same: create a sprint, set the goal, drag three cards, open the report.</li>
+    <li><strong>Sell the cycle, not the board.</strong> The differentiator is the sprint object plus per-sprint reports - marketing should lead with "goal, deadline, ownership, proof", not "kanban".</li>
+    <li><strong>Ship the notification channel next.</strong> Due-date and sprint-close emails are the single highest-impact feature for retention and are already possible through the CMS email SDK.</li>
+    <li><strong>Treat the current instance as reference customer number one</strong> and produce a screenshot-and-numbers case study from it: sprints closed, tasks completed, overdue trend.</li>
+    <li><strong>Keep the trio story.</strong> SprintTaskManager (team execution in cycles), RecurringTaskManager (repeating obligations with evidence) and HierarchyItemChecklistManager (procedures and standards) are three distinct answers to three distinct questions - bundle them in messaging, not in code.</li>
+  </ol>
+  <p style="color: var(--muted); font-size: 13px; margin-top: 28px;">Prepared as a research document. Product names mentioned are for market context only and belong to their respective owners. No code changes were made.</p>
+
+</div>
+</body>
+</html>

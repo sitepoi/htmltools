@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; frame-src http://127.0.0.1:* http://localhost:*; worker-src 'self' blob:;" />
+  <title>Unicon Studio</title>
+  <link rel="stylesheet" href="css/app.css" />
+  <script src="/monaco/vs/loader.js"></script>
+</head>
+<body class="explorer-collapsed terminal-collapsed">
+
+  <header id="app-header">
+    <div class="header-left">
+      <span id="app-title">Unicon Studio</span>
+      <span id="bridge-status" class="bridge-status">starting</span>
+    </div>
+    <div class="header-center">
+      <button id="open-folder-button" type="button">Open Folder</button>
+      <div id="folder-tabs" class="folder-tabs"></div>
+    </div>
+    <div class="header-right">
+      <button id="show-preview-button" class="header-toggle-button" type="button" title="Return to the live preview">Preview</button>
+      <button id="ssot-button" class="header-toggle-button" type="button" title="Open the feature management document (SSOT) with the task list">SSOT</button>
+      <button id="toggle-explorer-button" class="header-toggle-button" type="button" title="Show or hide the file explorer">Explorer</button>
+      <button id="toggle-terminal-button" class="header-toggle-button" type="button" title="Show or hide the terminal">Terminal</button>
+    </div>
+  </header>
+
+  <div id="work-area">
+    <aside id="explorer-panel" class="panel panel-explorer">
+      <div class="panel-head panel-head-with-toggle">
+        <span>Explorer</span>
+        <button id="explorer-refresh-button" class="panel-head-toggle" type="button" title="Refresh the file tree">refresh</button>
+      </div>
+      <div id="explorer-shared-context" class="explorer-shared-context" hidden="hidden"></div>
+      <div id="explorer-tree" class="explorer-tree"></div>
+      <div id="explorer-search" class="explorer-search">
+        <input id="explorer-search-input" type="text" placeholder="Search in project..." />
+        <div id="explorer-search-results" class="explorer-search-results"></div>
+      </div>
+    </aside>
+
+    <main id="center-column">
+      <section id="preview-panel" class="panel panel-preview">
+        <div class="panel-head">Preview</div>
+        <div id="preview-toolbar" class="preview-toolbar">
+          <button id="preview-start-button" class="preview-button" type="button">Start preview</button>
+          <button id="preview-stop-button" class="preview-button" type="button" hidden="hidden">Stop</button>
+          <button id="preview-reload-button" class="preview-button" type="button" hidden="hidden">Reload</button>
+          <button id="preview-console-button" class="preview-button" type="button">Console <span id="preview-console-count">0</span></button>
+          <button id="preview-devtools-button" class="preview-button" type="button">DevTools</button>
+          <select id="preview-entry-select" class="preview-select" hidden="hidden" title="Choose which HTML page to preview"></select>
+          <select id="preview-role-select" class="preview-select" hidden="hidden" title="Preview role for the tool SDK">
+            <option value="admin">Admin</option>
+            <option value="editor">Editor</option>
+            <option value="viewer">Viewer</option>
+          </select>
+          <span id="preview-url-label" class="preview-url-label"></span>
+        </div>
+        <div id="preview-log" class="preview-log" hidden="hidden"></div>
+        <div id="preview-console" class="preview-console" hidden="hidden"></div>
+        <div id="preview-body" class="preview-body">
+          <div id="preview-message" class="panel-placeholder">
+            <p>Your web UI renders here - T-14 (static) and T-15 (Next.js).</p>
+          </div>
+        </div>
+      </section>
+      <section id="editor-panel" class="panel panel-editor panel-hidden">
+        <div class="editor-head">
+          <div id="editor-tabs" class="editor-tabs"></div>
+          <button id="editor-close-button" class="panel-head-toggle" type="button" title="Close the editor and return to the preview">close</button>
+        </div>
+        <div id="editor-status" class="editor-status"></div>
+        <div id="monaco-container" class="monaco-container"></div>
+      </section>
+    </main>
+
+    <aside id="chat-panel" class="panel panel-chat">
+      <div class="chat-head">
+        <button id="chat-new-button" class="chat-head-button" type="button" title="Start a new chat">New</button>
+        <select id="chat-session-select" title="Switch chat session"></select>
+        <button id="chat-agent-button" class="chat-head-button" type="button" title="Toggle agent mode - the AI plans and edits files through approved tools">Agent</button>
+        <button id="chat-settings-button" class="chat-head-button" type="button" title="AI settings">Settings</button>
+      </div>
+      <div id="chat-settings" class="chat-settings" hidden="hidden">
+        <label>Provider
+          <select id="ai-provider-select">
+            <option value="copilot">GitHub Copilot API</option>
+            <option value="openai">OpenAI-compatible API</option>
+          </select>
+        </label>
+        <label>Token (saved with OS encryption)
+          <input id="ai-token-input" type="password" placeholder="paste your token here" />
+        </label>
+        <div class="chat-settings-actions">
+          <button id="ai-token-save-button" type="button">Save token</button>
+          <button id="ai-token-clear-button" type="button">Clear token</button>
+        </div>
+        <label>Base URL (a custom gateway works too)
+          <input id="ai-base-url-input" type="text" placeholder="https://your-ai-gateway.example.com/v1" />
+        </label>
+        <label>Model (empty = provider default)
+          <input id="ai-model-input" type="text" placeholder="gpt-4o-copilot" />
+        </label>
+        <label>MCP servers for the agent (one per line: name URL)
+          <input id="mcp-enabled-checkbox" type="checkbox" />
+          <textarea id="mcp-servers-input" rows="2" placeholder="github https://api.githubcopilot.com/mcp/"></textarea>
+          <span class="mcp-settings-note">Servers at api.githubcopilot.com get your saved Copilot token automatically. Other servers connect without authentication in v1.</span>
+        </label>
+        <div class="chat-settings-actions">
+          <button id="ai-test-button" type="button">Test connection / list models</button>
+          <button id="ai-config-save-button" type="button">Save settings</button>
+        </div>
+        <span id="ai-settings-status" class="ai-settings-status"></span>
+      </div>
+      <div id="chat-messages" class="chat-messages"></div>
+      <div id="chat-attachments" class="chat-attachments" hidden="hidden"></div>
+      <div class="chat-input-row">
+        <textarea id="chat-input" rows="1" placeholder="Ask about your project - type / for commands (/explain, /fix, /refactor, /preview-check), click + on a file to attach it, or type #path"></textarea>
+        <button id="chat-send-button" type="button">Send</button>
+        <button id="chat-stop-button" type="button" hidden="hidden">Stop</button>
+      </div>
+    </aside>
+  </div>
+
+  <footer id="terminal-panel" class="panel panel-terminal">
+    <div class="panel-head panel-head-with-toggle">
+      <span>Terminal</span>
+      <div class="terminal-head-actions">
+        <button id="terminal-clear-button" class="panel-head-toggle" type="button" title="Clear the terminal output">clear</button>
+        <button id="terminal-kill-button" class="panel-head-toggle" type="button" title="Stop the terminal session">kill</button>
+        <button id="terminal-head-toggle-button" class="panel-head-toggle" type="button" title="Expand or collapse the terminal">expand</button>
+      </div>
+    </div>
+    <div id="terminal-body" class="terminal-body">
+      <div id="terminal-output" class="terminal-output"></div>
+      <div class="terminal-input-row">
+        <span class="terminal-prompt">&gt;</span>
+        <input id="terminal-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command - Enter to run" />
+      </div>
+    </div>
+  </footer>
+
+  <div id="ssot-overlay" class="ssot-overlay" hidden="hidden">
+    <div class="ssot-overlay-head">
+      <span>Feature management - single source of truth (live document with task list)</span>
+      <button id="ssot-close-button" type="button">Close</button>
+    </div>
+    <iframe id="ssot-frame" class="ssot-frame" title="SSOT document" src="about:blank"></iframe>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/explorer.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/chat-panel.js"></script>
+  <script src="js/preview-view.js"></script>
+  <script src="js/terminal-view.js"></script>
+</body>
+</html>

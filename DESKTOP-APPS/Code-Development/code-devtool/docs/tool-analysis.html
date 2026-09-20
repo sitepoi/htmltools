@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desktop Code Development Tool - Feasibility Analysis</title>
+  <style>
+    :root {
+      --accent: #4f46e5;
+      --accent-soft: #eef2ff;
+      --text: #1f2937;
+      --strong: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --soft: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+      background: #ffffff;
+    }
+    .page { max-width: 980px; margin: 0 auto; padding: 28px 32px 80px; }
+    h1 { font-size: 26px; color: var(--strong); border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
+    h2 { font-size: 19px; color: var(--accent); margin-top: 38px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { font-size: 15px; color: #1e1b4b; margin-top: 22px; }
+    .sub { color: var(--muted); margin-top: -6px; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+    th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--accent-soft); color: #312e81; font-weight: 700; }
+    tr:nth-child(even) td { background: #fafbfc; }
+    code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; color: #6d28d9; }
+    .verdict { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0; }
+    .caveat { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+    .yes { color: #15803d; font-weight: 700; }
+    .verify { color: #b45309; font-weight: 700; }
+    .no { color: #b91c1c; font-weight: 700; }
+    .flows { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+    .flow-box { flex: 1 1 170px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--soft); }
+    .flow-box strong { display: block; color: var(--accent); font-size: 13px; }
+    .flow-box span { font-size: 12.5px; color: var(--muted); }
+    ul { margin: 8px 0; }
+    li { margin: 4px 0; }
+    .footer { margin-top: 50px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 12px; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Desktop Code Development Tool</h1>
+  <p class="sub">Feasibility analysis - can Electron plus plain JavaScript cover the requested feature set? Companion analysis for <a href="code-devtool-ssot.html">code-devtool-ssot.html</a> (the governing document).</p>
+
+  <div class="verdict">
+    <strong>Verdict: YES.</strong> Every requested capability - AI chat, an AI
+    agent that edits a selected folder like VS Code with Copilot, feature
+    management, and a live web preview - is achievable with Electron and
+    JavaScript only. No TypeScript, no UI framework, and no native module
+    builds are required for version 1. Three honest caveats are listed at the
+    end.
+  </div>
+
+  <h2>1. The request</h2>
+  <ol>
+    <li>Desktop code development tool.</li>
+    <li>AI chat feature.</li>
+    <li>Develops code in a user-selected folder, the VS Code workflow.</li>
+    <li>AI agent capability with GitHub Copilot-like capabilities.</li>
+    <li>Feature management through an SSOT document (the template).</li>
+    <li>Live preview of the web UI inside the tool; web development only:
+    HTML/CSS/JS projects (like this repository) or Next.js projects, nothing
+    else.</li>
+    <li>Electron and JavaScript only.</li>
+  </ol>
+
+  <h2>2. Capability map</h2>
+  <table>
+    <tr><th>Capability</th><th>Electron mechanism</th><th>Plain JS?</th><th>Risk</th></tr>
+    <tr><td>Desktop app and window</td><td>Electron main process + Chromium renderer</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>Select a project folder</td><td><code>dialog.showOpenDialog</code> in the main process</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>File explorer, open and save files</td><td>Node <code>fs</code> via a locked-down IPC bridge</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>Code editor</td><td>Monaco Editor (npm package, bundled locally, plain JS integration)</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>AI chat with streaming</td><td>HTTPS streaming to the AI provider from the main process</td><td class="yes">Yes</td><td>Medium</td></tr>
+    <tr><td>AI agent (multi-file edits, search, run commands)</td><td>Agent loop in the main process with a fixed tool registry</td><td class="yes">Yes</td><td>Medium</td></tr>
+    <tr><td>Terminal</td><td><code>child_process</code> command sessions (no native modules)</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>Web preview for static sites</td><td>Built-in plain Node HTTP server + iframe + hot reload</td><td class="yes">Yes</td><td>Low</td></tr>
+    <tr><td>Web preview for Next.js</td><td>Spawn <code>npm run dev</code> as a child process, capture the port, iframe to it</td><td class="yes">Yes</td><td>Medium</td></tr>
+    <tr><td>GitHub Copilot-like AI</td><td>GitHub Copilot API as primary provider behind a provider abstraction</td><td class="yes">Yes</td><td class="verify">Verify</td></tr>
+    <tr><td>Feature management</td><td>This repository's SSOT documents (sections 10, 14, 17)</td><td class="yes">Yes</td><td>Low</td></tr>
+  </table>
+
+  <h2>3. Architecture in one view</h2>
+  <div class="flows">
+    <div class="flow-box"><strong>Main process (Node.js)</strong><span>folder access, project file service, preview server, Next.js runner, terminal service, agent runtime, AI provider clients</span></div>
+    <div class="flow-box"><strong>Preload bridge</strong><span>contextBridge allowlist - the ONLY path between UI and Node.js power</span></div>
+    <div class="flow-box"><strong>Renderer (Chromium)</strong><span>plain HTML/CSS/JS UI: explorer, editor tabs, chat, terminal, preview; zero Node.js access</span></div>
+  </div>
+  <ul>
+    <li>Security baseline from day one: contextIsolation on, nodeIntegration
+    off, sandbox on, allowlisted IPC channels, content security policy,
+    secrets in safeStorage.</li>
+    <li>Core invariant (ROOT-ONLY): no file outside the opened project folder
+    can ever be read or written by the tool, the agent, or an agent command.
+    One service resolves every path.</li>
+    <li>Everything is plain JavaScript files - <code>.js</code>,
+    <code>.html</code>, <code>.css</code> - no build step for our own code.</li>
+  </ul>
+
+  <h2>4. GitHub Copilot parity - covered and not covered</h2>
+  <table>
+    <tr><th>Copilot capability</th><th>In our tool</th><th>Status</th></tr>
+    <tr><td>Chat with workspace context</td><td>Chat panel with <code>#file</code> attachments and search results</td><td class="yes">Yes</td></tr>
+    <tr><td>Agentic multi-file edits</td><td>Agent plan-execute loop with read/write/edit/search tools and per-file diffs with undo</td><td class="yes">Yes</td></tr>
+    <tr><td>AI runs terminal commands</td><td>Approval-gated command tool, working directory pinned to the project root</td><td class="yes">Yes</td></tr>
+    <tr><td>Workspace search</td><td>Recursive text search with result navigation</td><td class="yes">Yes</td></tr>
+    <tr><td>Slash commands</td><td>/explain, /fix, /refactor, /preview-check</td><td class="yes">Yes</td></tr>
+    <tr><td>Inline completion while typing</td><td>Monaco completion provider using the Copilot API</td><td class="verify">Verify first</td></tr>
+    <tr><td>Model Context Protocol tools</td><td>Optional MCP client in the agent runtime</td><td class="yes">Later (optional)</td></tr>
+    <tr><td>Copilot-specific model quality</td><td>Depends on what the Copilot API exposes for our subscription</td><td class="verify">Verify first</td></tr>
+    <tr><td>VS Code extension marketplace</td><td>Not applicable to a single-purpose tool</td><td class="no">Out of scope</td></tr>
+    <tr><td>Language servers and debuggers</td><td>Not needed for HTML/CSS/JS and Next.js scope; browser DevTools cover preview debugging</td><td class="no">Out of scope</td></tr>
+  </table>
+
+  <h2>5. AI provider facts</h2>
+  <ul>
+    <li><strong>GitHub Copilot API</strong> (api.githubcopilot.com) is the
+    primary provider: OpenAI-compatible chat completions with streaming,
+    authenticated with an OAuth device flow or a personal access token, and
+    it requires a GitHub account with a Copilot subscription.</li>
+    <li><strong>To verify at implementation time</strong> (tasks T-07 and
+    T-18 in the SSOT): exact endpoints, available models, rate limits, and
+    whether an inline completion endpoint exists. The provider abstraction
+    means any OpenAI-compatible endpoint can replace it without touching the
+    UI.</li>
+    <li><strong>Fallbacks</strong> are already designed in: any
+    OpenAI-compatible API, and later a local model (idea I-03).</li>
+  </ul>
+
+  <h2>6. Development phases</h2>
+  <p>The SSOT document groups the work into release groups; a group ships
+  together and only when its tasks are done and its risks are closed.</p>
+  <table>
+    <tr><th>Group</th><th>Tasks</th><th>Goal</th></tr>
+    <tr><td>SKEL</td><td>T-01, T-02</td><td>App bootstrap + locked-down window and IPC bridge</td></tr>
+    <tr><td>FILES</td><td>T-03..T-06</td><td>Open folder, explorer, Monaco editor, search</td></tr>
+    <tr><td>AI</td><td>T-07..T-09</td><td>Copilot provider, streaming chat, #file context</td></tr>
+    <tr><td>AGENT</td><td>T-10..T-13</td><td>Tool registry, plan loop, command approval, change review and undo</td></tr>
+    <tr><td>PREVIEW</td><td>T-14..T-16</td><td>Static preview, Next.js preview, console and error overlay</td></tr>
+    <tr><td>TERM</td><td>T-17</td><td>Terminal view</td></tr>
+    <tr><td>PARITY</td><td>T-18..T-20</td><td>Inline completion (verify), slash commands, optional MCP</td></tr>
+    <tr><td>PACK</td><td>T-21</td><td>Windows installer + smoke test</td></tr>
+  </table>
+
+  <h2>7. Constraints and non-goals</h2>
+  <ul>
+    <li>JavaScript only: no TypeScript, no UI framework, no native module
+    builds in version 1 (the terminal is a command session, not a PTY).</li>
+    <li>Web projects only: static HTML/CSS/JS and Next.js. Anything else is
+    refused with a clear message, never attempted.</li>
+    <li>No cloud backend: state lives in local JSON files; the only traffic
+    out is the AI API call.</li>
+    <li>Not a VS Code clone: no extension marketplace, no language servers -
+    the tool does one job well.</li>
+  </ul>
+
+  <h2>8. Answer to the question</h2>
+  <p><strong>Yes, we can do this with Electron and JavaScript only.</strong>
+  The plan is fully specified in <a href="code-devtool-ssot.html">code-devtool-ssot.html</a>
+  - decisions CODE-01 to CODE-09, 21 tasks in 8 release groups, 7 logged
+  risks, and a publish gate. Three honest caveats:</p>
+  <div class="caveat">
+    <strong>Caveat 1.</strong> Inline completion ships only after verifying
+    that the Copilot API exposes a completion endpoint; otherwise it is
+    deferred (SSOT task T-18, limitation L-02). Chat and agent capabilities
+    do not depend on it.
+  </div>
+  <div class="caveat">
+    <strong>Caveat 2.</strong> The v1 terminal is a command session, not a
+    full interactive PTY (no vim-style programs) because native modules are
+    excluded; node-pty can be added later as a new decision.
+  </div>
+  <div class="caveat">
+    <strong>Caveat 3.</strong> "All Copilot capabilities" means the practical
+    set in section 4, not the VS Code extension ecosystem - that part is
+    intentionally out of scope for a single-purpose tool.
+  </div>
+
+  <div class="footer">
+    Desktop Code Development Tool feasibility analysis - version 0.1,
+    2026-09-19. This file answers the question; code-devtool-ssot.html owns
+    every decision after it.
+  </div>
+
+</div>
+</body>
+</html>

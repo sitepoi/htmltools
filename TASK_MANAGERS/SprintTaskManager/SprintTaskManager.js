@@ -1,5 +1,5 @@
 /* ============================================================
-   Personal Task Manager - JS
+   Sprint Task Manager - JS
    Uniconhub CMS html-tool. Kanban task board with sprint management.
    Uses CMS objects for sprint & task persistence via tool.requestObjects.
    Entry point: tool.onReady

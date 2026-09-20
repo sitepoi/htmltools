@@ -1,0 +1,51 @@
+{
+  "name": "unicon-studio",
+  "productName": "Unicon Studio",
+  "version": "0.1.0",
+  "description": "Unicon Studio - a visual-first desktop studio for web development (HTML/CSS/JS and Next.js) with AI chat, an AI agent, a terminal, and live preview.",
+  "main": "main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "node scripts/sync-ssot-docs.js && node scripts/build-dist.js"
+  },
+  "author": "UniconHub",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "monaco-editor": "^0.52.0"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.uniconhub.uniconstudio",
+    "productName": "Unicon Studio",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "afterPack": "scripts/after-pack.js",
+    "files": [
+      "main/**/*",
+      "renderer/**/*",
+      "docs/**/*",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SprintTaskManager - Development Plan</title>
+<style>
+  :root {
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #4f46e5;
+    --accent-d: #4338ca;
+    --high: #16a34a;
+    --mid: #d97706;
+    --low: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: #f4f6f8;
+  }
+  header {
+    background: #0f172a;
+    color: #e6edf5;
+    padding: 18px 28px;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
+  header .sub { margin-top: 5px; font-size: 12.5px; color: #9aa8ba; }
+  header .sub strong { color: #818cf8; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 24px 48px; }
+  .intro {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .intro ul { margin: 8px 0 0; padding-left: 20px; }
+  .intro li { margin: 3px 0; }
+  .stats-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat {
+    flex: 1;
+    min-width: 130px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .stat .num { font-size: 20px; font-weight: 800; color: var(--accent-d); }
+  .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .filters input[type=search] {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 12px;
+    font: inherit;
+    font-size: 13px;
+  }
+  .filters select {
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font: inherit;
+    font-size: 13px;
+    background: #fff;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 100px;
+    padding: 6px 13px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .idea {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .score {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+  }
+  .score.s-high { background: var(--high); }
+  .score.s-mid { background: var(--mid); }
+  .score.s-low { background: var(--low); }
+  .idea-body { flex: 1; min-width: 0; }
+  .idea-title { font-size: 14.5px; font-weight: 700; }
+  .idea-id { color: var(--muted); font-size: 12px; font-weight: 600; margin-right: 6px; }
+  .badges { margin: 6px 0; display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+  .b-cat { background: #ecfdf5; color: #047857; }
+  .b-eff-s { background: #f0fdf4; color: #166534; }
+  .b-eff-m { background: #fffbeb; color: #b45309; }
+  .b-eff-l { background: #fef2f2; color: #b91c1c; }
+  .b-req { background: #eef2ff; color: #4338ca; }
+  .b-obj { background: #fdf2f8; color: #be185d; }
+  .b-status { background: #f1f5f9; color: #475569; }
+  .idea-desc { font-size: 13px; color: #334155; line-height: 1.55; }
+  .idea-value { font-size: 12.5px; color: #4338ca; margin-top: 6px; }
+  .idea-value strong { color: #4338ca; }
+  .cat-head {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    margin: 18px 0 8px;
+  }
+  .note-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #78350f;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .note-box.blue {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+  }
+  .note-box table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+  .note-box th, .note-box td { border: 1px solid #c7d2fe; padding: 5px 8px; text-align: left; }
+  .note-box th { background: #e0e7ff; }
+  .applied { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; background: #fff; border: 1px dashed var(--line); border-radius: 10px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SprintTaskManager - Development Plan</h1>
+  <div class="sub">Every objection from the market analysis, mapped to a concrete task, plus the extra ideas we can imagine - so we can decide <strong>what to apply</strong> and <strong>in which order</strong>.</div>
+</header>
+<div class="wrap">
+
+  <div class="intro">
+    How to read this plan:
+    <ul>
+      <li><strong>Value</strong> = the colored score box on each card (1-10). 8-10 green = high impact, 6-7 amber = worthwhile, 1-5 gray = nice to have.</li>
+      <li><strong>Effort</strong> = Small (hours), Medium (a day or two), Large (multi-day or needs a decision).</li>
+      <li><strong>Requirement</strong> = "pure code" means we can build it inside this tool. "CMS" means the parent CMS must cooperate (permissions, email channel, storage).</li>
+      <li><strong>Objection</strong> = the pink badge names which objection from MARKET-ANALYSIS.html section 9 this task answers (O1-O10). Cards without it are additional ideas.</li>
+      <li>Use the filters to sort by value, see one category, or only the objection fixes.</li>
+    </ul>
+  </div>
+
+  <div class="note-box blue">
+    <strong>Capacity reality check (Firestore 1MB):</strong> the 1MB limit applies <strong>per document</strong>, not per tool instance. Each sprint is its own document and each task is its own document, so there is no aggregate 1MB wall for the whole tool. Details:
+    <table>
+      <tr><th>Object</th><th>What one document carries</th><th>Practical limit</th></tr>
+      <tr><td>Sprint</td><td>name, dates, goal, managerId, status (~0.5-2 KB)</td><td>Unlimited count; a year holds 26 two-week sprints or one year-long sprint - both fine</td></tr>
+      <tr><td>Task</td><td>text fields + label/attachment/link <strong>metadata</strong> (~200 bytes per attachment entry; files live in CMS storage URLs, not in the document)</td><td>Thousands of attachment entries per task; 1 MB ≈ 4,000-5,000 attachments</td></tr>
+      <tr><td>Tasks per sprint</td><td>tasks are separate documents - no 1MB constraint on the relationship</td><td>Unlimited by storage; the board UI stays smooth to roughly 200-300 visible tasks (see G4)</td></tr>
+      <tr><td>Users</td><td>permitted users come from the CMS access list, not from these documents</td><td>No 1MB impact at all</td></tr>
+    </table>
+    The real ceilings are the Firestore quotas (free tier: 50K reads and 20K writes per day - a 500-task board costs 500 reads per query) and the 500-operation batch cap (already enforced in the sprint delete). Year-long operation: a single sprint can span any dates including a full year, and any number of sprints can chain across a year - there is no hard limit either way.
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="filters">
+    <input type="search" id="fSearch" placeholder="Search ideas...">
+    <select id="fSort">
+      <option value="value">Sort: Value</option>
+      <option value="id">Sort: ID</option>
+      <option value="effort">Sort: Effort</option>
+    </select>
+    <select id="fStatus">
+      <option value="all">All statuses</option>
+      <option value="proposed">Proposed</option>
+      <option value="applied">Applied</option>
+    </select>
+    <select id="fObj">
+      <option value="all">All ideas</option>
+      <option value="obj">Only objection fixes (O1-O10)</option>
+    </select>
+  </div>
+  <div class="filters" id="catChips"></div>
+
+  <div id="list"></div>
+
+  <footer>
+    Generated as a planning document - no tool code changes. Decide the order together, then we implement one idea at a time with the same verification routine (static checks, smoke tests, test-harness proof).
+  </footer>
+</div>
+
+<script>
+(function () {
+  var CATEGORIES = [
+    { id: "data", label: "Data & Reports" },
+    { id: "workflow", label: "Workflow & Collaboration" },
+    { id: "notify", label: "Notifications & Channels" },
+    { id: "governance", label: "Governance & Reliability" },
+    { id: "ux", label: "UX & Simplification" },
+    { id: "adoption", label: "Growth & Adoption" }
+  ];
+
+  var IDEAS = [
+    /* ---- A. Data & Reports ---- */
+    { id: "A1", cat: "data", title: "Sprint archive and history view",
+      value: 7, effort: "m", req: "pure code", status: "proposed", obj: "O7",
+      desc: "A read-only 'Past sprints' tab listing closed sprints with their goal, completion percent, overdue count and an export button. The sprint selector keeps only active/planned sprints by default.",
+      benefit: "Answers 'where did our last sprint go?' - teams and funders can look up any closed period instead of relying on exports made by hand." },
+    { id: "A2", cat: "data", title: "Burndown and velocity chart in the report view",
+      value: 7, effort: "m", req: "pure code", status: "proposed", obj: "O8",
+      desc: "Two extra SVG charts: a burndown line (tasks remaining vs days elapsed in the sprint) and a velocity bar (tasks completed per sprint over the last 6 sprints).",
+      benefit: "Scrum-trained teams get the classic charts; managers get a trend line showing whether the team is front-loading or finishing late." },
+    { id: "A3", cat: "data", title: "Full JSON backup and restore",
+      value: 7, effort: "m", req: "cms", status: "proposed", obj: "O9",
+      desc: "An admin action that exports ALL sprints and tasks of this instance as one JSON file (via the CMS download channel) and a matching import that recreates them.",
+      benefit: "Closes the lock-in objection completely: one click to leave, one click to recover after a disaster." },
+    { id: "A4", cat: "data", title: "Per-person workload report",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "A report section that groups open tasks by assignee and shows count, sum of priorities, overdue count and done rate per person.",
+      benefit: "Today workload bars are per priority, not per person. Managers ask 'who is overloaded this sprint?' - this answers it directly." },
+    { id: "A5", cat: "data", title: "Cross-sprint search",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Extend the search box with a scope toggle: 'this sprint' or 'all sprints'. Results from other sprints show a small sprint chip and open read-only.",
+      benefit: "Teams forget which sprint held a task; this finds it in one search instead of switching sprints." },
+    { id: "A6", cat: "data", title: "Year timeline view of sprints",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "A horizontal timeline (pure CSS/SVG) showing all sprints of the year with their status colors and completion percent.",
+      benefit: "The one-year picture for planning: gaps between sprints, overlaps, and how much of the year is covered." },
+    { id: "A7", cat: "data", title: "Auto-generated sprint close summary",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "When a sprint closes, compose a text summary from data: goal, total tasks, done count, overdue count, top labels - pre-filled into the export.",
+      benefit: "The manager pastes one paragraph into the funder report instead of writing it." },
+    { id: "A8", cat: "data", title: "Unassigned and orphan task report",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "A report section listing tasks with no assignee, and tasks whose assignee is no longer in the permitted users list.",
+      benefit: "Unassigned work silently dies; this makes it visible before sprint close." },
+
+    /* ---- B. Workflow & Collaboration ---- */
+    { id: "B1", cat: "workflow", title: "Unscheduled task pool (backlog outside sprints)",
+      value: 9, effort: "l", req: "pure code", status: "proposed", obj: "O3",
+      desc: "A 'Backlog' area holding tasks with no sprintId. New task creation offers 'add to this sprint' or 'save to backlog'. A drag target lets backlog cards be pulled into the current sprint.",
+      benefit: "Removes the rigidity objection: ad-hoc requests have a home without forcing a sprint, and the board stays clean." },
+    { id: "B2", cat: "workflow", title: "Task comments and activity log",
+      value: 8, effort: "l", req: "pure code", status: "proposed",
+      desc: "A comment thread per task plus an automatic activity log (created, assigned, moved to In Progress, moved to Done with user name and time).",
+      benefit: "Cards today hold no conversation; teams fall back to chat apps and the card goes stale. This makes the card the single source of truth." },
+    { id: "B3", cat: "workflow", title: "Move a task to another sprint",
+      value: 8, effort: "s", req: "pure code", status: "proposed",
+      desc: "A 'Move to sprint' selector in the task modal that updates the task's sprintId; the task disappears from the current board and appears in the target.",
+      benefit: "Work that didn't finish in one sprint currently has no clean way to roll over - the most common real workflow gap." },
+    { id: "B4", cat: "workflow", title: "Sprint close wizard",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "A guided close action on a sprint: shows unfinished tasks, offers to move each to the next sprint or the backlog, then marks the sprint completed and archives it.",
+      benefit: "Turns the end of a sprint from a cleanup chore into one screen; nothing is silently left behind." },
+    { id: "B5", cat: "workflow", title: "Sprint templates with recurring task seeds",
+      value: 7, effort: "l", req: "pure code", status: "proposed", obj: "O5",
+      desc: "A 'create sprint from template' action: a saved JSON template (name pattern, duration, goal placeholder, seed tasks with assignees and labels) is cloned into the new sprint.",
+      benefit: "The recurring-tasks gap gets a partial answer: teams that run the same sprint shape every two weeks (month-end, payroll, reporting) recreate it in one click. Deep daily/weekly cadence remains the RecurringTaskManager sibling's job." },
+    { id: "B6", cat: "workflow", title: "Blocked-by dependency links",
+      value: 6, effort: "m", req: "pure code", status: "proposed", obj: "O4",
+      desc: "A 'blocked by' field linking a task to another task; the blocked card shows the blocker's title and status, and auto-moves to Blocked when the blocker moves to Blocked.",
+      benefit: "Adds the single most-used dependency (X cannot start until Y) without building a full Gantt engine." },
+    { id: "B7", cat: "workflow", title: "Subtasks / checklist steps per task",
+      value: 6, effort: "m", req: "pure code", status: "proposed", obj: "O4",
+      desc: "An optional checklist array inside a task (like the existing labels array): steps with done flags, shown as a progress indicator on the card.",
+      benefit: "Handles 'this task is really five steps' without task sprawl; complexity teams get structure without dependencies." },
+    { id: "B8", cat: "workflow", title: "Undo last action",
+      value: 7, effort: "s", req: "pure code", status: "proposed",
+      desc: "After a move, delete or status change, show an 'Undo' toast for a few seconds that restores the previous state.",
+      benefit: "Drag-and-drop mis-clicks and accidental deletes are the most common support complaints in board tools; this fixes them instantly." },
+    { id: "B9", cat: "workflow", title: "Reorder cards within a column",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Track a sortOrder per task and make drag reorder inside a column work in addition to moving between columns.",
+      benefit: "Teams treat card order as priority ('top of the column is next'); today the order is fixed." },
+    { id: "B10", cat: "workflow", title: "Duplicate task",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "A Duplicate action in the task modal that clones the task (title copy, same labels/links, new id) into the same sprint.",
+      benefit: "Repeated work items (one per location, one per client) become one click." },
+    { id: "B11", cat: "workflow", title: "Batch assign",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "In the list view, multi-select rows and set the assignee, priority or labels for all selected tasks at once.",
+      benefit: "Sprint planning with 20+ tasks is painful one modal at a time; this makes planning minutes instead of an hour." },
+    { id: "B12", cat: "workflow", title: "Time estimate field on tasks",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "An optional hours estimate field; the report view sums estimates per person.",
+      benefit: "Teams that need 'can we finish this sprint?' math get it without time tracking." },
+    { id: "B13", cat: "workflow", title: "@mentions in task comments",
+      value: 5, effort: "m", req: "pure code", status: "proposed",
+      desc: "Typing @name in a comment highlights that person (depends on B2 comments).",
+      benefit: "Draws the right person's attention without a separate channel." },
+    { id: "B14", cat: "workflow", title: "Sprint duration presets",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "Quick buttons in the sprint form: 1 week, 2 weeks (default), 4 weeks, 12 weeks (quarter), custom.",
+      benefit: "Teams that work monthly or quarterly cycles get correct date math in one click." },
+
+    /* ---- C. Notifications & Channels ---- */
+    { id: "C1", cat: "notify", title: "Due-soon and overdue email reminders",
+      value: 9, effort: "m", req: "cms", status: "proposed", obj: "O1",
+      desc: "The CMS sends an email (via the requestSendEmail channel already in the SDK) to the assignee when a task is due within 24h or becomes overdue, using the permitted-users email list.",
+      benefit: "The single biggest retention win from the objections: due dates that never tap a shoulder are due dates that miss." },
+    { id: "C2", cat: "notify", title: "Sprint-close digest email",
+      value: 8, effort: "m", req: "cms", status: "proposed", obj: "O1",
+      desc: "On the sprint end date, the CMS emails the manager a digest: goal, completed count, overdue list, top label breakdown (data from A7's summary).",
+      benefit: "The manager gets the funder-report paragraph in their inbox without opening the tool." },
+    { id: "C3", cat: "notify", title: "Daily digest of due-today cards",
+      value: 7, effort: "m", req: "cms", status: "proposed", obj: "O1",
+      desc: "Each morning, one email per user listing their cards due today and overdue, with direct links.",
+      benefit: "Turns the tool from a passive wall into a morning routine; catches work before standups." },
+    { id: "C4", cat: "notify", title: "iCal export of task due dates",
+      value: 5, effort: "m", req: "cms", status: "proposed",
+      desc: "Export the current sprint's due dates as an .ics calendar file the user imports into Outlook/Google.",
+      benefit: "Due dates finally show up where people actually look - the calendar." },
+    { id: "C5", cat: "notify", title: "Import from Trello / Asana / CSV",
+      value: 8, effort: "l", req: "pure code", status: "proposed", obj: "O2",
+      desc: "A paste/upload importer that turns a Trello board export (JSON), an Asana CSV or a generic CSV into tasks in the current sprint (columns -> statuses, labels -> labels, members -> assignees where emails match).",
+      benefit: "Answers the 'we already use Trello/Asana' objection with a migration bridge instead of an argument; the switch costs minutes." },
+
+    /* ---- D. Governance & Reliability ---- */
+    { id: "D1", cat: "governance", title: "CMS-side instance-scope hardening",
+      value: 10, effort: "l", req: "cms", status: "proposed",
+      desc: "The bridge-level fix documented in the data-leak report: when a query for an instance-scoped type cannot resolve the current record ID, return { objects: [] } instead of all objects; verify _parentObjectId on get/update/delete. This is a parent-CMS change, not tool code.",
+      benefit: "Closes the cross-instance data leak at the only place it can truly be closed - the bridge. Highest value item on this whole list." },
+    { id: "D2", cat: "governance", title: "Multi-user conflict handling and live refresh",
+      value: 8, effort: "m", req: "cms", status: "proposed",
+      desc: "Subscribe to object changes (or poll lightly) so another user's move/delete refreshes the board; on update conflicts, reload and notify instead of silently overwriting.",
+      benefit: "The tool is multi-user by design; today two users editing at once can overwrite each other without either knowing." },
+    { id: "D3", cat: "governance", title: "Clear write-failure UX and offline fallback",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "When a write times out or fails, keep the optimistic UI change but mark it 'not saved' with a Retry button; a banner explains the CMS CRUD channel is down.",
+      benefit: "The delete-timeout debugging session showed users get zero feedback on write failures. Silent failure is the worst failure for a task tool." },
+    { id: "D4", cat: "governance", title: "Per-task audit trail (status history)",
+      value: 7, effort: "m", req: "pure code", status: "proposed",
+      desc: "A history array on each task: timestamp, user, field changed, old value, new value - capped at the last 50 entries.",
+      benefit: "Answers 'who moved this to Done and when?' - the question funders and auditors actually ask." },
+    { id: "D5", cat: "governance", title: "Board performance for 300+ tasks",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "Render cards in chunks (or virtualize the list view) and debounce filter re-renders, so boards with several hundred tasks stay smooth.",
+      benefit: "Removes the soft ceiling described in the capacity box; needed before promising large teams." },
+    { id: "D6", cat: "governance", title: "Fine-grained roles: sprint owner vs member",
+      value: 6, effort: "m", req: "cms", status: "proposed",
+      desc: "A third role between manager and staff: sprint owners may edit their own sprint's goal and tasks but not delete the sprint or manage other sprints.",
+      benefit: "Lets multi-team organizations share one tool without giving everyone manager rights." },
+    { id: "D7", cat: "governance", title: "Attachment size and count guidance",
+      value: 4, effort: "s", req: "pure code", status: "proposed",
+      desc: "Show per-task attachment count and warn near the practical metadata ceiling; document that files live in CMS storage (URLs), not in the Firestore document.",
+      benefit: "Prevents surprise 'task too large to save' errors years from now." },
+
+    /* ---- E. UX & Simplification ---- */
+    { id: "E1", cat: "ux", title: "Mobile polish and PWA wrapper",
+      value: 8, effort: "l", req: "pure code", status: "proposed", obj: "O6",
+      desc: "Touch-friendly drag (long-press or tap-to-move menu), sticky board toolbar on small screens, and a PWA manifest with home-screen install and browser notifications.",
+      benefit: "Staff on the floor or in the field check tasks on phones; this closes most of the no-mobile-app gap without an app store." },
+    { id: "E2", cat: "ux", title: "First-run guided tour",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "When a new instance has no sprints, show 3-4 overlay steps: create a sprint, add a task, drag a card, open the report.",
+      benefit: "Sprint concepts are foreign to non-agile teams; 60 seconds of guidance prevents abandonment in the first week." },
+    { id: "E3", cat: "ux", title: "Sprint selector grouped by year and quarter",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "Replace the flat dropdown with optgroups (2026 Q1, Q2...) or a compact list, since a year of sprints makes the current dropdown long.",
+      benefit: "Directly supports the year-of-sprints scenario from the capacity question." },
+    { id: "E4", cat: "ux", title: "Keyboard shortcuts",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "N = new task, 1-4 = focus board columns, / = focus search, Esc already closes overlays, arrows = move between cards in list view.",
+      benefit: "Power users plan a whole sprint without the mouse." },
+    { id: "E5", cat: "ux", title: "Dark mode",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "A theme toggle persisted in UI state (the _theme field already exists) plus CSS variables for dark surfaces.",
+      benefit: "Cheap goodwill win; boards are often used in low-light rooms." },
+    { id: "E6", cat: "ux", title: "Localization (EN + TR at minimum)",
+      value: 6, effort: "l", req: "pure code", status: "proposed",
+      desc: "Extract all visible strings into a small dictionary and add a language toggle (English + Turkish first, matching the primary users).",
+      benefit: "Non-English teams adopt faster; the current users are bilingual and Turkish labels lower friction for staff." },
+    { id: "E7", cat: "ux", title: "Relative due dates",
+      value: 4, effort: "s", req: "pure code", status: "proposed",
+      desc: "In the task modal, a quick-set row: 'today', 'tomorrow', '+3 days', 'end of sprint' next to the date field.",
+      benefit: "One click instead of opening the date picker." },
+    { id: "E8", cat: "ux", title: "Accessibility pass",
+      value: 6, effort: "m", req: "pure code", status: "proposed",
+      desc: "ARIA roles for the board (cards as buttons, columns as groups), full keyboard drag alternative, and contrast checks.",
+      benefit: "Screen-reader and keyboard users can run the board; some funders require accessibility compliance." },
+
+    /* ---- F. Growth & Adoption ---- */
+    { id: "F1", cat: "adoption", title: "Definition packs per segment",
+      value: 8, effort: "m", req: "pure code", status: "proposed",
+      desc: "Starter JSON packs like the RecurringTaskManager sibling: nonprofit-campaign.json, agency-campaign.json, store-opening.json - each pre-loads a sprint template (name pattern, goal placeholder, seed tasks with labels and priorities).",
+      benefit: "One import re-skins the tool for a segment; the demo for any segment becomes a one-click import." },
+    { id: "F2", cat: "adoption", title: "Reference case study from the live instance",
+      value: 6, effort: "s", req: "pure code", status: "proposed",
+      desc: "Document the current instance: sprints run, tasks completed, overdue trend, how the manager uses the report view - as a one-page case study.",
+      benefit: "Reference customer number one becomes the sales story; every nonprofit pitch starts with a working example." },
+    { id: "F3", cat: "adoption", title: "Demo script and landing copy",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "A 3-minute demo script (create sprint, set goal, drag three cards, show report) and landing-page copy from the MARKET-ANALYSIS positioning.",
+      benefit: "Consistent first impression; the 'cycle not board' story stays intact." },
+    { id: "F4", cat: "adoption", title: "Sprint review / retrospective note",
+      value: 5, effort: "s", req: "pure code", status: "proposed",
+      desc: "An optional free-text 'what went well / what to improve' field on the sprint, surfaced when closing (B4) and shown in the archive (A1).",
+      benefit: "Turns every sprint close into a learning loop instead of just a checkbox." }
+  ];
+
+  var APPLIED_NOTES = [
+    "Renamed PersonalTaskManager to SprintTaskManager (folder, files, UI title, test harness) - objection O10 (the misleading 'Personal' name).",
+    "Confirm-before-delete modals on tasks and sprints, with the pending action captured correctly before the dialog closes.",
+    "Two-step safe sprint delete: batch-delete tasks first, then the sprint, with the 500-operation batch cap enforced.",
+    "safeRequest wrapper around every write: 30-second timeout detection, console diagnostics and error toasts when the CMS bridge does not respond.",
+    "Manager vs staff roles: staff can only move and edit their own cards; managers own sprints.",
+    "Per-instance task data (taskItems, scope: instance) and shared sprints (taskSprints, scope: shared) in the CMS configuration, with load-time diagnostics for cross-instance leaks.",
+    "PDF and CSV export of the current sprint.",
+    "Search plus assignee/priority/status filters; sortable list view.",
+    "Labels, attachments and links on tasks, with files stored in CMS storage (metadata in the document).",
+    "Sprint goal banner, smart next-sprint date defaults, and report view with completion donut, workload bars, overdue and completed lists."
+  ];
+
+  var sortMode = "value";
+  var activeCat = "all";
+  var statusFilter = "all";
+  var objFilter = "all";
+  var searchText = "";
+
+  function byId(id) { return document.getElementById(id); }
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function scoreClass(value) { return value >= 8 ? "s-high" : (value >= 6 ? "s-mid" : "s-low"); }
+  function effortClass(effort) { return effort === "s" ? "b-eff-s" : (effort === "m" ? "b-eff-m" : "b-eff-l"); }
+  function effortLabel(effort) { return effort === "s" ? "Small" : (effort === "m" ? "Medium" : "Large"); }
+  function categoryLabel(id) {
+    for (var i = 0; i < CATEGORIES.length; i++) if (CATEGORIES[i].id === id) return CATEGORIES[i].label;
+    return id;
+  }
+
+  function renderStats() {
+    var total = IDEAS.length;
+    var applied = IDEAS.filter(function (idea) { return idea.status === "applied"; }).length;
+    var objCount = IDEAS.filter(function (idea) { return idea.obj; }).length;
+    var sum = 0;
+    IDEAS.forEach(function (idea) { sum += idea.value; });
+    var avg = total ? (sum / total).toFixed(1) : "0";
+    byId("statsRow").innerHTML =
+      '<div class="stat"><div class="num">' + total + '</div><div class="lbl">Ideas</div></div>' +
+      '<div class="stat"><div class="num">' + avg + '</div><div class="lbl">Avg value</div></div>' +
+      '<div class="stat"><div class="num">' + objCount + '</div><div class="lbl">Objection fixes</div></div>' +
+      '<div class="stat"><div class="num">' + applied + '</div><div class="lbl">Already applied</div></div>';
+  }
+
+  function renderCatChips() {
+    var html = '<button type="button" class="chip' + (activeCat === "all" ? " active" : "") + '" data-cat="all">All</button>';
+    CATEGORIES.forEach(function (category) {
+      html += '<button type="button" class="chip' + (activeCat === category.id ? " active" : "") + '" data-cat="' + category.id + '">' +
+        escapeHtml(category.label) + "</button>";
+    });
+    byId("catChips").innerHTML = html;
+    Array.prototype.forEach.call(byId("catChips").querySelectorAll(".chip"), function (chip) {
+      chip.addEventListener("click", function () {
+        activeCat = chip.getAttribute("data-cat");
+        render();
+      });
+    });
+  }
+
+  function render() {
+    renderCatChips();
+    renderStats();
+    var list = IDEAS.slice();
+    if (statusFilter !== "all") list = list.filter(function (idea) { return idea.status === statusFilter; });
+    if (activeCat !== "all") list = list.filter(function (idea) { return idea.cat === activeCat; });
+    if (objFilter !== "all") list = list.filter(function (idea) { return idea.obj; });
+    if (searchText) {
+      list = list.filter(function (idea) {
+        return (idea.title + " " + idea.desc + " " + idea.benefit).toLowerCase().indexOf(searchText) > -1;
+      });
+    }
+    if (sortMode === "value") list.sort(function (a, b) { return b.value - a.value; });
+    else if (sortMode === "effort") list.sort(function (a, b) { return a.effort.localeCompare(b.effort); });
+    else list.sort(function (a, b) { return a.id.localeCompare(b.id); });
+
+    var html = "";
+    var shownCategories = [];
+    CATEGORIES.forEach(function (category) {
+      var categoryIdeas = list.filter(function (idea) { return idea.cat === category.id; });
+      if (!categoryIdeas.length) return;
+      html += '<div class="cat-head">' + escapeHtml(category.label) + "</div>";
+      categoryIdeas.forEach(function (idea) {
+        html += '<div class="idea">' +
+          '<div class="score ' + scoreClass(idea.value) + '">' + idea.value + "</div>" +
+          '<div class="idea-body">' +
+          '<div class="idea-title"><span class="idea-id">' + escapeHtml(idea.id) + "</span>" + escapeHtml(idea.title) + "</div>" +
+          '<div class="badges">' +
+          '<span class="badge b-cat">' + escapeHtml(categoryLabel(idea.cat)) + "</span>" +
+          '<span class="badge ' + effortClass(idea.effort) + '">' + effortLabel(idea.effort) + " effort</span>" +
+          '<span class="badge b-req">' + (idea.req === "pure code" ? "pure code" : "needs CMS") + "</span>" +
+          (idea.obj ? '<span class="badge b-obj">fixes objection ' + idea.obj + "</span>" : "") +
+          "</div>" +
+          '<div class="idea-desc">' + escapeHtml(idea.desc) + "</div>" +
+          '<div class="idea-value"><strong>Why:</strong> ' + escapeHtml(idea.benefit) + "</div>" +
+          "</div></div>";
+      });
+    });
+    if (!list.length) html = '<div class="empty">No ideas match the current filters.</div>';
+
+    var appliedHtml = "";
+    if (statusFilter === "all" && activeCat === "all" && objFilter === "all" && !searchText) {
+      appliedHtml = '<div class="cat-head">Already applied (recent)</div>' +
+        '<div class="intro"><ul>' + APPLIED_NOTES.map(function (note) { return "<li>" + escapeHtml(note) + "</li>"; }).join("") + "</ul></div>";
+    }
+    byId("list").innerHTML = html + appliedHtml;
+  }
+
+  byId("fSearch").addEventListener("input", function () {
+    searchText = this.value.trim().toLowerCase();
+    render();
+  });
+  byId("fSort").addEventListener("change", function () {
+    sortMode = this.value;
+    render();
+  });
+  byId("fStatus").addEventListener("change", function () {
+    statusFilter = this.value;
+    render();
+  });
+  byId("fObj").addEventListener("change", function () {
+    objFilter = this.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
