@@ -1,0 +1,448 @@
+[HTML]
+<div class="vlt-import-tool">
+  <div class="vlt-import-controls">
+    <label class="vlt-file-label" for="vlt-csv-file">
+      <span class="vlt-file-label-text">Choose CSV file</span>
+      <input type="file" id="vlt-csv-file" accept=".csv,text/csv" />
+    </label>
+    <button type="button" id="vlt-clear-btn">Clear File</button>
+    <button type="button" id="vlt-import-btn" disabled>Import Volunteers</button>
+    <button type="button" id="vlt-cancel-btn" hidden>Cancel Import</button>
+  </div>
+
+  <div id="vlt-status" class="vlt-status" role="status" aria-live="polite"></div>
+  <div id="vlt-error" class="vlt-error" role="alert" hidden></div>
+
+  <section class="vlt-preview" aria-labelledby="vlt-preview-title">
+    <h2 id="vlt-preview-title">Preview</h2>
+    <div class="vlt-table-wrap">
+      <table id="vlt-preview-table" class="vlt-preview-table">
+        <thead id="vlt-preview-head"></thead>
+        <tbody id="vlt-preview-body"></tbody>
+      </table>
+    </div>
+    <p id="vlt-preview-count" class="vlt-preview-count" aria-live="polite"></p>
+  </section>
+</div>
+
+[CSS]
+.vlt-import-tool {
+  --vlt-primary: var(--gw-color-primary, #0d7377);
+  --vlt-primary-weak: var(--gw-color-primary-light, #14a3a8);
+  --vlt-surface: var(--gw-color-surface, #ffffff);
+  --vlt-surface-alt: var(--gw-color-surface-alt, #f9fafb);
+  --vlt-border: var(--gw-color-border, #d1d5db);
+  --vlt-text: var(--gw-color-text, #1f2937);
+  --vlt-text-muted: var(--gw-color-text-muted, #6b7280);
+  --vlt-success: var(--gw-color-success, #10b981);
+  --vlt-success-soft: var(--gw-color-success-soft, #d1fae5);
+  --vlt-danger: var(--gw-color-danger, #ef4444);
+  --vlt-danger-soft: var(--gw-color-danger-soft, #fee2e2);
+  --vlt-warning: var(--gw-color-warning, #f59e0b);
+  --vlt-warning-soft: var(--gw-color-warning-soft, #fef3c7);
+  font-family: var(--gw-font-family, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  color: var(--vlt-text);
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.vlt-import-tool .vlt-import-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vlt-import-tool .vlt-file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vlt-import-tool .vlt-file-label input[type="file"] {
+  font-size: 14px;
+  color: var(--vlt-text);
+}
+
+.vlt-import-tool .vlt-file-label-text {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.vlt-import-tool #vlt-import-btn,
+.vlt-import-tool #vlt-clear-btn,
+.vlt-import-tool #vlt-cancel-btn {
+  background: var(--vlt-primary);
+  color: #ffffff;
+  border: 1px solid var(--vlt-primary);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.vlt-import-tool #vlt-import-btn:hover:not(:disabled),
+.vlt-import-tool #vlt-clear-btn:hover:not(:disabled),
+.vlt-import-tool #vlt-cancel-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--vlt-primary) 88%, black);
+  border-color: color-mix(in srgb, var(--vlt-primary) 88%, black);
+}
+
+.vlt-import-tool #vlt-import-btn:disabled,
+.vlt-import-tool #vlt-clear-btn:disabled,
+.vlt-import-tool #vlt-cancel-btn:disabled {
+  background: var(--vlt-border);
+  border-color: var(--vlt-border);
+  color: var(--vlt-text-muted);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.vlt-import-tool .vlt-status {
+  font-size: 14px;
+  color: var(--vlt-success);
+  min-height: 18px;
+}
+
+.vlt-import-tool .vlt-status.is-loading {
+  color: var(--vlt-text-muted);
+}
+
+.vlt-import-tool .vlt-error {
+  border: 1px solid var(--vlt-danger);
+  background: var(--vlt-danger-soft);
+  color: color-mix(in srgb, var(--vlt-danger) 72%, black);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.vlt-import-tool .vlt-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vlt-import-tool #vlt-preview-title {
+  font-size: 16px;
+  margin: 0;
+}
+
+.vlt-import-tool .vlt-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--vlt-border);
+  border-radius: 8px;
+  background: var(--vlt-surface);
+}
+
+.vlt-import-tool .vlt-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 560px;
+}
+
+.vlt-import-tool .vlt-preview-table th,
+.vlt-import-tool .vlt-preview-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--vlt-border);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.vlt-import-tool .vlt-preview-table th {
+  background: var(--vlt-surface-alt);
+  font-weight: 600;
+  color: var(--vlt-text);
+}
+
+.vlt-import-tool .vlt-preview-table tr.vlt-row-error td,
+.vlt-import-tool .vlt-preview-table tr.is-invalid td {
+  background: var(--vlt-danger-soft);
+  color: color-mix(in srgb, var(--vlt-danger) 80%, black);
+}
+
+.vlt-import-tool .vlt-preview-table tr.vlt-row-warning td {
+  background: var(--vlt-warning-soft);
+}
+
+.vlt-import-tool .vlt-preview-count {
+  color: var(--vlt-text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.vlt-import-tool .vlt-file-label input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  border: 1px solid var(--vlt-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--vlt-surface-alt);
+  color: var(--vlt-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .vlt-import-tool .vlt-import-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vlt-import-tool .vlt-import-controls button,
+  .vlt-import-tool .vlt-import-controls label {
+    width: 100%;
+  }
+}
+
+[JS]
+(function () {
+  if (!window.tool || typeof tool.onReady !== 'function') return;
+
+  tool.onReady(function () {
+    var root = document.querySelector('.vlt-import-tool');
+    if (!root) return;
+
+    if (root.__vltBound) {
+      root.__vltRefresh && root.__vltRefresh();
+      return;
+    }
+    root.__vltBound = true;
+
+    var fileInput = root.querySelector('#vlt-csv-file');
+    var importBtn = root.querySelector('#vlt-import-btn');
+    var clearBtn = root.querySelector('#vlt-clear-btn');
+    var cancelBtn = root.querySelector('#vlt-cancel-btn');
+    var statusEl = root.querySelector('#vlt-status');
+    var errorEl = root.querySelector('#vlt-error');
+    var previewHead = root.querySelector('#vlt-preview-head');
+    var previewBody = root.querySelector('#vlt-preview-body');
+    var previewCount = root.querySelector('#vlt-preview-count');
+
+    var state = {
+      rows: [],
+      headers: [],
+      busy: false,
+      invalidMessage: ''
+    };
+
+    function canWrite() {
+      var user = tool.getUser();
+      var roles = user && Array.isArray(user.roles) ? user.roles : [];
+      return !tool.isReadOnly() && (roles.includes('editor') || roles.includes('admin') || roles.includes('owner') || roles.includes('developer') || roles.includes('user-manager'));
+    }
+
+    function updateButtons() {
+      var hasFile = !!(fileInput.files && fileInput.files.length);
+      importBtn.disabled = !hasFile || !canWrite() || state.busy;
+      clearBtn.disabled = !hasFile || state.busy;
+      cancelBtn.hidden = !state.busy;
+      cancelBtn.disabled = !state.busy;
+      fileInput.disabled = state.busy;
+      if (!canWrite()) {
+        importBtn.title = 'Viewers cannot import volunteers';
+      } else {
+        importBtn.title = '';
+      }
+    }
+
+    function setStatus(msg, kind) {
+      statusEl.textContent = msg || '';
+      statusEl.className = 'vlt-status' + (kind ? ' ' + kind : '');
+    }
+
+    function setError(msg) {
+      if (!msg) {
+        errorEl.hidden = true;
+        errorEl.textContent = '';
+        return;
+      }
+      errorEl.hidden = false;
+      errorEl.textContent = msg;
+    }
+
+    function reportValidity(isValid, msg) {
+      tool.reportValid(isValid, msg || '');
+      state.invalidMessage = isValid ? '' : (msg || 'Invalid CSV rows found.');
+    }
+
+    function clearPreview(keepFile) {
+      state.rows = [];
+      state.headers = [];
+      previewHead.innerHTML = '';
+      previewBody.innerHTML = '';
+      previewCount.textContent = '';
+      setError('');
+      setStatus('', '');
+      reportValidity(true, '');
+      if (!keepFile && fileInput) fileInput.value = '';
+      updateButtons();
+      tool.resize();
+    }
+
+    function renderPreview() {
+      previewHead.innerHTML = '';
+      previewBody.innerHTML = '';
+
+      if (!state.rows.length) {
+        previewCount.textContent = 'No file loaded.';
+        tool.resize();
+        return;
+      }
+
+      var theadRow = document.createElement('tr');
+      state.headers.forEach(function (h) {
+        var th = document.createElement('th');
+        th.textContent = h;
+        theadRow.appendChild(th);
+      });
+      var thStatus = document.createElement('th');
+      thStatus.textContent = 'Status';
+      theadRow.appendChild(thStatus);
+      previewHead.appendChild(theadRow);
+
+      var invalidCount = 0;
+      state.rows.forEach(function (row) {
+        var tr = document.createElement('tr');
+        if (!row.valid) {
+          tr.className = 'vlt-row-error is-invalid';
+          invalidCount++;
+        }
+        state.headers.forEach(function (h) {
+          var td = document.createElement('td');
+          td.textContent = row.values[h] || '';
+          tr.appendChild(td);
+        });
+        var tdStatus = document.createElement('td');
+        tdStatus.textContent = row.valid ? 'Ready' : row.error;
+        tr.appendChild(tdStatus);
+        previewBody.appendChild(tr);
+      });
+
+      if (invalidCount > 0) {
+        var message = invalidCount + ' invalid row' + (invalidCount === 1 ? '' : 's') + ' found. Please fix the CSV and try again.';
+        setError(message);
+        reportValidity(false, message);
+      } else {
+        setError('');
+        reportValidity(true, '');
+      }
+
+      previewCount.textContent = state.rows.length + ' row' + (state.rows.length === 1 ? '' : 's') + ' loaded' + (invalidCount ? ', ' + invalidCount + ' invalid' : '') + '.';
+      tool.resize();
+    }
+
+    function parseCsv(text) {
+      var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(function (line) {
+        return line.trim() !== '';
+      });
+      if (!lines.length) return { headers: [], rows: [], error: 'CSV file is empty.' };
+      var headers = lines[0].split(',').map(function (cell) { return cell.trim(); }).filter(Boolean);
+      if (!headers.length) return { headers: [], rows: [], error: 'CSV headers are missing.' };
+      var rows = [];
+      for (var i = 1; i < lines.length; i++) {
+        var parts = lines[i].split(',');
+        var values = {};
+        headers.forEach(function (h, idx) {
+          values[h] = (parts[idx] || '').trim();
+        });
+        var isValid = Object.keys(values).some(function (key) { return values[key] !== ''; });
+        rows.push({ values: values, valid: isValid, error: isValid ? '' : 'Empty row' });
+      }
+      return { headers: headers, rows: rows, error: '' };
+    }
+
+    function loadFile(file) {
+      if (!file) {
+        clearPreview(false);
+        return;
+      }
+      var reader = new FileReader();
+      state.busy = true;
+      setStatus('Reading CSV...', 'is-loading');
+      setError('');
+      updateButtons();
+      cancelBtn.hidden = false;
+      reader.onload = function () {
+        if (state.busy === false) return;
+        var parsed = parseCsv(String(reader.result || ''));
+        state.busy = false;
+        if (parsed.error) {
+          setStatus(parsed.error, '');
+          setError(parsed.error);
+          reportValidity(false, parsed.error);
+          state.headers = [];
+          state.rows = [];
+          renderPreview();
+          updateButtons();
+          return;
+        }
+        state.headers = parsed.headers;
+        state.rows = parsed.rows;
+        setStatus('CSV loaded. Review the preview before importing.', 'success');
+        renderPreview();
+        updateButtons();
+      };
+      reader.onerror = function () {
+        state.busy = false;
+        setStatus('Unable to read the selected file.', '');
+        setError('Unable to read the selected file.');
+        reportValidity(false, 'Unable to read the selected file.');
+        updateButtons();
+      };
+      reader.readAsText(file);
+    }
+
+    fileInput.addEventListener('change', function () {
+      loadFile(fileInput.files && fileInput.files[0]);
+    });
+
+    clearBtn.addEventListener('click', function () {
+      if (state.busy) return;
+      clearPreview(false);
+    });
+
+    cancelBtn.addEventListener('click', function () {
+      state.busy = false;
+      setStatus('Import canceled.', 'warning');
+      setError('');
+      updateButtons();
+    });
+
+    importBtn.addEventListener('click', function () {
+      if (!canWrite()) {
+        setError('You do not have permission to import volunteers.');
+        return;
+      }
+      if (state.rows.some(function (row) { return !row.valid; })) {
+        var invalidMessage = state.invalidMessage || 'Invalid rows detected. Please fix them before importing.';
+        reportValidity(false, invalidMessage);
+        setError(invalidMessage);
+        return;
+      }
+      setStatus('Importing is not wired yet.', 'warning');
+    });
+
+    root.__vltRefresh = function () {
+      updateButtons();
+      if (!canWrite()) {
+        setStatus('Read-only access: import is disabled for viewers.', 'warning');
+      }
+    };
+
+    root.__vltRefresh();
+    if (!canWrite()) {
+      importBtn.disabled = true;
+    }
+    if (!(fileInput.files && fileInput.files.length)) {
+      clearPreview(true);
+    }
+  });
+})();

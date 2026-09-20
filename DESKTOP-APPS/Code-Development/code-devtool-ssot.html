@@ -18,7 +18,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.22</span>
+      <span>v0.29</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -57,7 +57,7 @@
     capabilities; this document owns all subsequent decisions.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Document version</th><td>0.29</td></tr>
     <tr><th>Last updated</th><td>2026-09-19</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>the desktop code development tool: folder opening, file explorer, code editor, AI chat, AI agent, terminal, web preview, packaging</td></tr>
@@ -283,12 +283,17 @@
     the app (CODE-10).</li>
     <li>Agent mode plans and executes multi-file edits through approved
     tools; every terminal command the agent wants to run is shown to the user
-    and runs only after approval.</li>
+    and runs only after approval, with an "Approve all in session" shortcut
+    (CODE-31). The plan, thinking progress, and tool steps show live status
+    symbols - spinner while working, check when done, cross when failed
+    (CODE-32).</li>
     <li>Preview pane supports exactly two project kinds: static
     (HTML/CSS/JS) and Next.js. Saved files trigger a reload. Preview errors
     are visible, not silent. The preview is the primary center surface of
     the app (CODE-10).</li>
-    <li>Terminal view runs commands inside the project folder.</li>
+    <li>Terminal view runs multiple instances per folder - VS Code-style
+    instance tabs one level below the folder tabs (CODE-34); each instance
+    has its own session, output, scroll, and command history.</li>
     <li>GitHub Copilot-like capabilities: chat, agentic multi-file edits,
     <code>#file</code> context attachments, workspace search, inline
     completion (subject to API verification, T-18), slash commands.</li>
@@ -511,18 +516,21 @@ const toolRegistry = {
     only when needed and shares the center with the preview (T-05).</li>
     <li>The shell defaults to explorer-collapsed and terminal-collapsed on
     every start; no layout state is persisted in v1.</li>
-    <li>The header SSOT button opens this live document in a full overlay,
-    served by the app server (CODE-18); task checkboxes and progress work
-    there as in the browser.</li>
+    <li>The header Docs button opens the OPENED folder's documents in a
+    full overlay - the folder's SSOT first, then plans, reports, marketing,
+    help, and social media pages (CODE-36); Unicon Studio's own SSOT stays
+    available as a built-in option when the folder has no documents. Task
+    checkboxes and progress work there as in the browser.</li>
   </ul>
 
   <h2 id="sec-matrix">8. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
     <tr><td>The AI requests a path outside the project root</td><td>The path is refused by project-file-service, the refusal is logged, and the agent receives the refusal as the tool result - the run continues.</td></tr>
-    <tr><td>The agent wants to run a terminal command</td><td>An approval dialog shows the exact command and working directory. Cancel = the command does not run and the agent is told; Approve = it runs with the project-root working directory.</td></tr>
-    <tr><td>The user denies an agent command</td><td>The command does not run; the tool returns "Command not approved by the user" to the agent, which continues with the next action.</td></tr>
-    <tr><td>The terminal session dies or is killed</td><td>The view shows [ session ended ]; the next command starts a fresh session in the project root.</td></tr>
+    <tr><td>The agent wants to run a terminal command</td><td>The activity panel shows the exact command with Approve / Approve all in session / Deny buttons. Approve = it runs with the project-root working directory and the row switches to a green "Approved" state; Approve all = this command and every further command in the same run are approved and each appears as approved; Deny = the command does not run and the agent is told.</td></tr>
+    <tr><td>The user denies an agent command</td><td>The command does not run; the row switches to a red "Denied" state; the tool returns "Command not approved by the user" to the agent, which continues with the next action.</td></tr>
+    <tr><td>A terminal instance dies or is killed</td><td>That instance shows [ session ended ] and its tab dims; the next command in it starts a fresh session in the project root. Other instances are unaffected.</td></tr>
+    <tr><td>The user opens a new terminal instance</td><td>A new instance tab starts in the same folder (the + button); each instance has its own output, scroll, and command history. Instances keep running while their folder tab is in the background; closing a folder stops all of its instances.</td></tr>
     <tr><td>The agent edits a file the editor has unsaved changes for</td><td>The dirty tab keeps the user's content and never reloads; the agent's write lands on disk. The user resolves by saving the tab (overwrites) or re-editing (L-11).</td></tr>
     <tr><td>The AI API returns a network error or rate limit</td><td>Chat shows a retry button with the error text; an agent run pauses and offers Resume; nothing is written partially.</td></tr>
     <tr><td>The preview fails to start for an unexpected reason</td><td>The exact error message is shown in the preview pane and logged in the main process; the Start preview button stays available for a retry.</td></tr>
@@ -730,6 +738,60 @@ const toolRegistry = {
       <td>Bug report 2026-09-19: switching back reloaded the preview and lost the entry-page selection.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>CODE-29</td><td>2026-09-20</td>
+      <td>Unicon Gateway provider: the app talks to the Unicon AI gateway protocol (the one sitepoicms uses) as a first-class provider - custom routes POST /v1/chat/stream (SSE with named delta/token/chunk/message events and result/done/error) and POST /v1/chat/complete, provider and model passed IN THE BODY, API-key auth with dual headers (Authorization Bearer + X-Api-Key) plus X-Unicon-Host (tenant) and X-Unicon-Source: unicon-studio, and GET /v1/models. The agent uses PROMPT-BASED tool calling with this provider (toolCalls JSON in the reply text, tool results injected as user messages) because the gateway has no native tools/tool_choice - native mode stays for Copilot/OpenAI. Settings gain Base URL, gateway provider, and tenant hostname fields; the token stays in safeStorage.</td>
+      <td>User request 2026-09-20: connect the same gateway sitepoicms uses and run deepseek-v4-pro through it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-30</td><td>2026-09-20</td>
+      <td>JWT auth mode for the Unicon gateway: deployments without an API key (browser direct-connect style) store the shared JWT secret in the Token field instead; the app signs a fresh 5-minute HS256 JWT per request with payload {sub: tenantHostname, iat, exp, scope: "chat-stream"} exactly like the CMS token endpoint, sends it as Authorization Bearer, and omits X-Api-Key. A settings checkbox switches between key and JWT mode; the tenant hostname becomes required in JWT mode.</td>
+      <td>User report 2026-09-20: the CMS env has only UNICON_AI_GATEWAY_JWT_SECRET - no API key.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-31</td><td>2026-09-20</td>
+      <td>Session auto-approve for agent commands: each approval row gains an "Approve all in session" button that approves the current command and every further command in the same agent run without asking again; auto-approved commands still appear in the activity panel as approved. Every approval row also changes to a visible approved (green check) or denied (red cross) state the moment the user decides, instead of keeping its waiting look.</td>
+      <td>User request 2026-09-20: approve everything in one session like Copilot does, and show the approved state.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-32</td><td>2026-09-20</td>
+      <td>Visible agent progress: a spinner line shows what the agent is doing while waiting (Planning..., Step N - thinking...), plan steps carry status symbols (pending circle, active spinner, green check when done, red cross when failed), and tool lines transition in place from a running spinner to a check or cross instead of stacking text rows.</td>
+      <td>User request 2026-09-20: the agent looked like it was doing nothing while waiting; show the thinking process with checkmarks and statuses.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-33</td><td>2026-09-20</td>
+      <td>XML tool-call parsing for prompt-based agent mode: some gateway models reply with Anthropic-style &lt;tool_calls&gt;&lt;invoke name="..."&gt;&lt;parameter name="..."&gt;...&lt;/parameter&gt;&lt;/invoke&gt;&lt;/tool_calls&gt; blocks instead of the JSON the prompt asks for; the parser normalizes both shapes to the same call shape, decodes XML entities, merges an arguments JSON parameter when present, and strips any surviving tool-call markup from the visible chat summary so raw XML never shows in the chat.</td>
+      <td>User report 2026-09-20: the chat showed a raw &lt;tool_calls&gt; block (read_file on VolunteerManagement.html) as the last message.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-34</td><td>2026-09-20</td>
+      <td>Multiple terminal instances per folder: the terminal strip gains VS Code-style instance tabs one level below the folder tabs. Each instance owns a persistent cmd.exe session (keyed by sessionId under its folder root), its own output element with scroll position, and its own command history; the + button adds an instance, × closes one (stopping its session), and clear/kill act on the active instance. Output and exit broadcasts carry the sessionId so background instances keep streaming while hidden. Closing a folder stops all of its instances; closing the last instance auto-creates a fresh idle one so the strip is never empty. Extends CODE-23 (per-folder scope) downward with per-instance scope.</td>
+      <td>User request 2026-09-20: multiple terminal instances under any folder, like VS Code, as a second level under the multi-folder tabs.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-35</td><td>2026-09-20</td>
+      <td>Gateway model routing: the live gateway rejects UNSUPPORTED_MODEL (422) when the model is not routable for the provider. Test connection now calls GET /v1/models?provider=&lt;gatewayProvider&gt; exactly as the gateway hint says, hides models marked routable:false, and shows the provider-scoped bare ids in the model field; grouped responses keep provider prefixes. Gateway errors now surface the details, hint, and supportedModels fields in the message so the exact routable id is visible without guessing.</td>
+      <td>User report 2026-09-20: agent run failed with "Model deepseek-v4-pro is not available for provider deepseek" while the same model works in their apps.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-36</td><td>2026-09-20</td>
+      <td>Project documents panel: the Docs overlay shows the OPENED folder's documents instead of the app's own SSOT. A document service scans the active root (recursively, depth-capped, node_modules/.git/.next skipped) for files matching an extensible type table - SSOT, plan, report, marketing, help, social media, readme - over .html/.htm/.md, excluding test-harness and old- prefixed files. Documents are served by the app server under /project-docs/ with the same ROOT-ONLY invariant as every file access; the overlay selector lists them SSOT-first and falls back to the built-in Unicon Studio SSOT when the folder has none. The type table is the single extension point for the user's upcoming document ruleset.</td>
+      <td>User request 2026-09-20: the SSOT button should show the opened folder's SSOT; folders can hold multiple SSOT files plus other document types (marketing, help, social media) that will get a full ruleset later.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-37</td><td>2026-09-20</td>
+      <td>Auto-approved command labeling: after the user clicks "Approve all in session", the approving row shows "Approved (all in session)" with a note that auto-approve is ON, and every later command appears as "Auto-approved: &lt;command&gt;" - approved commands are never silently skipped or mislabeled.</td>
+      <td>User request 2026-09-20: later approvals should be labeled as auto-approved.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">11. Maintenance rules</h2>
@@ -759,12 +821,13 @@ const toolRegistry = {
     <tr><td>4</td><td>AI foundation (T-07..T-09)</td><td><code>main/ai/ai-settings.js</code>, <code>main/ai/openai-compatible-client.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/chat-store.js</code>, <code>renderer/js/chat-panel.js</code> - DONE (unit-tested; live API check needs the user token, scenario S3) - AI GROUP COMPLETE</td></tr>
     <tr><td>5</td><td>Agent mode (T-10..T-13)</td><td><code>main/ai/agent-runtime.js</code>, <code>main/ai/tools.js</code>, <code>main/terminal-service.js</code>, <code>renderer/js/chat-panel.js</code> - DONE (tool registry, plan loop, approval gate, change review + undo; headless end-to-end green) - AGENT GROUP COMPLETE</td></tr>
     <tr><td>6</td><td>Web preview (T-14..T-16)</td><td><code>main/preview-server.js</code>, <code>main/nextjs-runner.js</code>, <code>renderer/js/preview-view.js</code> - T-14 DONE (static + hot reload), T-15 DONE (Next.js dev server + port capture + log stream), T-16 DONE (console relay + DevTools) - extended with entry detection and the html-tool wrapper (CODE-16)</td></tr>
-    <tr><td>7</td><td>Terminal (T-17)</td><td><code>main/terminal-service.js</code>, <code>renderer/js/terminal-view.js</code> - DONE (persistent session, history, clear/kill) - TERM GROUP COMPLETE</td></tr>
+    <tr><td>7</td><td>Terminal (T-17)</td><td><code>main/terminal-service.js</code>, <code>renderer/js/terminal-view.js</code> - DONE (persistent session, history, clear/kill) - TERM GROUP COMPLETE - extended 2026-09-20 with multiple instances per folder (CODE-34)</td></tr>
     <tr><td>8</td><td>Copilot parity extras (T-18..T-20)</td><td><code>main/ai/mcp-client.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/main.js</code>, <code>renderer/js/chat-panel.js</code>, <code>renderer/js/editor.js</code> - DONE</td></tr>
     <tr><td>9</td><td>Packaging (T-21)</td><td><code>package.json</code> build section, <code>scripts/build-dist.js</code>, <code>scripts/sync-ssot-docs.js</code>, <code>scripts/generate-icon.js</code>, <code>scripts/ensure-rcedit.js</code>, <code>scripts/after-pack.js</code> - DONE</td></tr>
     <tr><td>10</td><td>Run the test plan in section 16</td><td>test pass record in section 16.2 - PENDING</td></tr>
     <tr><td>11</td><td>SSOT document inside the app (T-23)</td><td><code>main/app-server.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code> - DONE</td></tr>
     <tr><td>12</td><td>Folder tabs and workspace context (T-24/T-25)</td><td><code>main/app-state.js</code>, <code>main/main.js</code>, <code>main/terminal-service.js</code>, <code>main/workspace-context.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/app.js</code>, <code>renderer/js/explorer.js</code>, <code>renderer/js/editor.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code> - DONE</td></tr>
+    <tr><td>13</td><td>Unicon Gateway provider (T-26)</td><td><code>main/ai/unicon-gateway-client.js</code>, <code>main/ai/provider-unicon.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/main.js</code>, <code>renderer/index.html</code>, <code>renderer/js/chat-panel.js</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">13. Open questions</h2>
@@ -1240,7 +1303,7 @@ const toolRegistry = {
           <p><strong>How we will solve it:</strong> child_process spawn of cmd.exe with cwd pinned to the project root (CODE-06); output lines stream to the terminal panel; input line with command history; clear and kill actions; one session in v1.</p>
           <p><strong>Benefit:</strong> Terminal workflows stay inside the tool.</p>
           <p><strong>Files:</strong> <code>main/terminal-service.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code></p>
-          <p><strong>Status:</strong> Completed 2026-09-19 - persistent cmd.exe session in the project root (echo off, the view echoes input), streaming output, in-memory history with Up/Down, clear and kill actions, and the session restarts on the next command after it dies. Session test green.</p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - persistent cmd.exe session in the project root (echo off, the view echoes input), streaming output, in-memory history with Up/Down, clear and kill actions, and the session restarts on the next command after it dies. Session test green. Extended 2026-09-20 (CODE-34): multiple instances per folder with VS Code-style instance tabs; per-instance output, scroll, and history; live two-session isolation test and fake-DOM renderer harness green.</p>
         </div>
       </details>
     </div>
@@ -1390,6 +1453,37 @@ const toolRegistry = {
           <p><strong>Benefit:</strong> Every tool folder inherits the project's base rules automatically - no copying, no manual attachment.</p>
           <p><strong>Files:</strong> <code>main/workspace-context.js</code>, <code>main/main.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/explorer.js</code>, <code>renderer/css/app.css</code></p>
           <p><strong>Status:</strong> Completed 2026-09-19 - workspace-root detection, auto-attached rule context for chat and agent, explorer strip; unit tests green (root walk, old- exclusion, chat and agent injection).</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="GATEWAY">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Unicon AI gateway</span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="GATEWAY">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="GATEWAY"></div></div>
+    <p class="task-group-note">Why these belong together: the gateway has its own routes, auth headers,
+    and prompt-based tool calling - client, provider, agent mode, and settings
+    must land together or nothing works.</p>
+
+    <div class="task-item" data-task-id="T-26" data-group="GATEWAY" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Unicon Gateway provider (deepseek-v4-pro)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The user runs their own AI gateway (the one sitepoicms uses) and wants deepseek-v4-pro through it instead of a direct AI connection.</p>
+          <p><strong>How we will solve it:</strong> A first-class Unicon Gateway provider: /v1/chat/stream SSE + /v1/chat/complete + /v1/models, provider/model in the body, dual auth headers with tenant attribution, prompt-based tool calling in agent mode, and dedicated settings fields.</p>
+          <p><strong>Benefit:</strong> The product's own AI path - no direct connection to any AI vendor.</p>
+          <p><strong>Files:</strong> <code>main/ai/unicon-gateway-client.js</code>, <code>main/ai/provider-unicon.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/main.js</code>, <code>renderer/index.html</code>, <code>renderer/js/chat-panel.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-20 - gateway client with all SSE event shapes, complete and models endpoints, dual headers + tenant attribution, prompt-based agent tool calling, settings fields; 6-group unit tests green (live gateway check needs the user's base URL and key entered in Settings).</p>
         </div>
       </details>
     </div>
@@ -1689,7 +1783,47 @@ const toolRegistry = {
   2026-09-19 - per-folder live iframes (CODE-28): each folder's preview
   keeps its own iframe; switching tabs no longer reloads, and the chosen
   entry page (e.g. test-harness) and role survive switching away and back;
-  iframe sequence test green.</p>
+  iframe sequence test green. 2026-09-20 - Unicon Gateway provider (CODE-29,
+  T-26): the app's own AI path - custom gateway routes, dual auth headers,
+  tenant attribution, and prompt-based agent tool calling; gateway unit
+  tests green; live check pending the user's base URL and key.
+  2026-09-20 - JWT auth mode (CODE-30): the shared JWT secret (saved in the
+  Token field) signs a 5-minute HS256 token per request with the gateway's
+  exact payload; JWT tests green. 2026-09-20 - models parser broadened: the
+  gateway's /v1/models response shape was unknown, so the parser now accepts
+  flat lists, item objects, and provider-grouped containers, and reports the
+  raw response when nothing matches (diagnostic for the user to relay).
+  2026-09-20 - gateway complete-endpoint fix: the /v1/chat/complete body no
+  longer sends a stream field (a strict validator rejected it as
+  "Request validation failed"), and gateway errors now carry the raw
+  response body in the message so failures can be matched exactly.
+  2026-09-20 - agent UX upgrade (CODE-31/32/33): "Approve all in session"
+  with approved/denied states on every approval row; visible thinking and
+  step/tool status symbols (spinner while working, check when done, cross
+  when failed); XML &lt;tool_calls&gt; blocks from the gateway model are parsed
+  and executed instead of leaking into the chat. XML parser, auto-approve,
+  and full agent-loop tests green.
+  2026-09-20 - multiple terminal instances per folder (CODE-34): instance
+  tabs inside the terminal strip under the folder tabs; per-instance
+  sessions, output, scroll, and history; sessionId-scoped broadcasts keep
+  background instances streaming; closing a folder stops all its instances.
+  Live two-session isolation test and fake-DOM renderer harness green.
+  2026-09-20 - gateway model routing fix (CODE-35): the live gateway
+  rejected deepseek-v4-pro as UNSUPPORTED_MODEL (422 - not routable for
+  provider deepseek on that deployment); Test connection now queries
+  GET /v1/models?provider=&lt;gatewayProvider&gt; and lists only routable=true
+  models, and gateway errors surface details/hint/supportedModels so the
+  exact routable id is visible. Provider-scoped models + diagnostics tests
+  green.
+  2026-09-20 - project documents panel (CODE-36): the Docs overlay shows
+  the opened folder's documents - SSOT first, then plans, reports,
+  marketing, help, social media, readme - served from the project root
+  under /project-docs/ with the ROOT-ONLY guard; Unicon Studio's SSOT
+  remains the built-in fallback; the type table in document-service.js is
+  the extension point for the upcoming document ruleset. Document scan,
+  route, and overlay harness tests green. Auto-approved command labels
+  (CODE-37): "Approved (all in session)" and "Auto-approved: command" rows
+  make the approve-all state visible.</p>
 
   <h2 id="sec-risks">17. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -1846,7 +1980,7 @@ const toolRegistry = {
 
   <div class="footer">
     Unicon Studio - single source of truth for all decisions
-    about this feature. Version 0.22, 2026-09-19.
+    about this feature. Version 0.29, 2026-09-20.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

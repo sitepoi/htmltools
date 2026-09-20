@@ -299,6 +299,73 @@
   </div>
 </div>
 
+<!-- Import Volunteers Modal -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📥 Import Volunteers</h3>
+      <button class="modal-close" onclick="closeModal('modalImport')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="vm-import">
+        <div class="import-dropzone" id="importDropzone">
+          <div class="import-dropzone-icon">📄</div>
+          <div class="import-dropzone-text" id="importDropzoneText">
+            Drag & drop a CSV file here, or click to browse
+          </div>
+          <div class="import-dropzone-hint">Accepts .csv files. First row is the header row.</div>
+          <input type="file" id="importFileInput" accept=".csv,text/csv" class="import-file-input" />
+        </div>
+
+        <div class="import-mapping" id="importMappingContainer">
+          <div class="import-mapping-title">Column-to-Field Mapping</div>
+          <div class="import-mapping-grid">
+            <div class="import-mapping-row">
+              <label class="form-label" for="importMapName">Full Name</label>
+              <select class="form-select" id="importMapName">
+                <option value="">-- Select column --</option>
+              </select>
+            </div>
+            <div class="import-mapping-row">
+              <label class="form-label" for="importMapEmail">Email</label>
+              <select class="form-select" id="importMapEmail">
+                <option value="">-- Select column --</option>
+              </select>
+            </div>
+            <div class="import-mapping-row">
+              <label class="form-label" for="importMapPhone">Phone</label>
+              <select class="form-select" id="importMapPhone">
+                <option value="">-- Select column --</option>
+              </select>
+            </div>
+            <div class="import-mapping-row">
+              <label class="form-label" for="importMapSkills">Skills</label>
+              <select class="form-select" id="importMapSkills">
+                <option value="">-- Select column --</option>
+              </select>
+            </div>
+            <div class="import-mapping-row">
+              <label class="form-label" for="importMapAvailability">Availability</label>
+              <select class="form-select" id="importMapAvailability">
+                <option value="">-- Select column --</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="import-status" id="importStatusArea" role="status" aria-live="polite"></div>
+
+        <div class="import-preview" id="importPreviewContainer"></div>
+
+        <div class="import-footer">
+          <button class="btn btn-outline" onclick="closeModal('modalImport')">Close</button>
+          <button class="btn btn-primary" id="importVolunteersBtn" disabled>⬆️ Import Volunteers</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm Modal -->
 <div class="modal-overlay" id="modalConfirm">
   <div class="modal">
