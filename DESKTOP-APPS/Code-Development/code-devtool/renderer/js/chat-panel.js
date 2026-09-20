@@ -16,6 +16,9 @@
   let agentModeOn = false
   let agentPlanElement = null
   let agentActivityElement = null
+  let agentThinkingElement = null
+  let pendingToolLineElement = null
+  let pendingToolLineSymbol = null
 
   // ── Slash commands (T-19) ──
   const slashCommands = [
@@ -272,6 +275,9 @@
     setStreaming(true)
     agentPlanElement = null
     agentActivityElement = null
+    agentThinkingElement = null
+    pendingToolLineElement = null
+    pendingToolLineSymbol = null
     try {
       if (agentModeOn) {
         currentRunIsAgent = true
@@ -282,6 +288,7 @@
           return
         }
         currentRequestId = startResult.requestId
+        showAgentThinking('Thinking...')
       } else {
         currentRunIsAgent = false
         const startResult = await bridge.startChat({ text: text, attachmentPaths: attachmentPaths })
@@ -351,69 +358,203 @@
     if (container) container.scrollTop = container.scrollHeight
   }
 
+  // CODE-32: a visible "what is the agent doing right now" line with an
+  // animated spinner while the model is thinking or a tool is waiting.
+  function showAgentThinking(text) {
+    ensureAgentActivity()
+    if (!agentThinkingElement) {
+      agentThinkingElement = document.createElement('div')
+      agentThinkingElement.className = 'agent-thinking'
+      const symbol = document.createElement('span')
+      symbol.className = 'agent-thinking-symbol'
+      const label = document.createElement('span')
+      label.className = 'agent-thinking-label'
+      agentThinkingElement.appendChild(symbol)
+      agentThinkingElement.appendChild(label)
+    }
+    if (!agentThinkingElement.parentElement) agentActivityElement.appendChild(agentThinkingElement)
+    agentThinkingElement.querySelector('.agent-thinking-label').textContent = text || 'Thinking...'
+    const container = chatMessagesContainer()
+    if (container) container.scrollTop = container.scrollHeight
+  }
+
+  function hideAgentThinking() {
+    if (agentThinkingElement && agentThinkingElement.parentElement) {
+      agentThinkingElement.remove()
+    }
+  }
+
+  function updatePlanStepStatuses(activeIndex) {
+    if (!agentPlanElement) return
+    const items = agentPlanElement.querySelectorAll('li')
+    items.forEach((item, itemIndex) => {
+      item.classList.remove('agent-step-active')
+      if (itemIndex < activeIndex) {
+        item.classList.remove('agent-step-pending')
+        item.classList.add('agent-step-done')
+      } else if (itemIndex === activeIndex) {
+        item.classList.add('agent-step-active')
+      }
+    })
+  }
+
+  function markPlanStepsFinished(failed) {
+    if (!agentPlanElement) return
+    const items = agentPlanElement.querySelectorAll('li')
+    items.forEach((item) => {
+      if (item.classList.contains('agent-step-active')) {
+        item.classList.remove('agent-step-active')
+        item.classList.add(failed ? 'agent-step-failed' : 'agent-step-done')
+      }
+    })
+  }
+
   function handleAgentEvent(event) {
     if (!event) return
     if (!currentRequestId) currentRequestId = event.requestId
     if (event.requestId !== currentRequestId) return
 
-    if (event.type === 'plan') {
-      const bubble = document.createElement('div')
-      bubble.className = 'chat-bubble chat-bubble-assistant'
-      const planBox = document.createElement('div')
-      planBox.className = 'agent-plan'
-      const planHead = document.createElement('div')
-      planHead.className = 'agent-plan-head'
-      planHead.textContent = 'Agent plan'
-      planBox.appendChild(planHead)
-      const stepList = document.createElement('ol')
-      stepList.className = 'agent-step-list'
+    if (event.type === 'thinking') {
+      showAgentThinking(event.text)
+    } else if (event.type === 'plan') {
+      hideAgentThinking()
+      let stepList = agentPlanElement
+      if (!stepList) {
+        const bubble = document.createElement('div')
+        bubble.className = 'chat-bubble chat-bubble-assistant'
+        const planBox = document.createElement('div')
+        planBox.className = 'agent-plan'
+        const planHead = document.createElement('div')
+        planHead.className = 'agent-plan-head'
+        planHead.textContent = 'Agent plan'
+        planBox.appendChild(planHead)
+        stepList = document.createElement('ol')
+        stepList.className = 'agent-step-list'
+        planBox.appendChild(stepList)
+        bubble.appendChild(planBox)
+        const container = chatMessagesContainer()
+        if (container) {
+          container.appendChild(bubble)
+          container.scrollTop = container.scrollHeight
+        }
+        agentPlanElement = stepList
+      }
+      stepList.textContent = ''
       ;(event.steps || []).forEach((step) => {
         const item = document.createElement('li')
+        item.className = 'agent-step-pending'
         item.textContent = step.title + (step.file ? ' (' + step.file + ')' : '')
         stepList.appendChild(item)
       })
-      planBox.appendChild(stepList)
-      bubble.appendChild(planBox)
-      const container = chatMessagesContainer()
-      if (container) {
-        container.appendChild(bubble)
-        container.scrollTop = container.scrollHeight
-      }
-      agentPlanElement = stepList
     } else if (event.type === 'step') {
-      if (agentPlanElement) {
-        const items = agentPlanElement.querySelectorAll('li')
-        if (items[event.index]) items[event.index].classList.add('agent-step-active')
-      }
+      hideAgentThinking()
+      updatePlanStepStatuses(event.index)
     } else if (event.type === 'tool') {
-      const line = document.createElement('div')
-      line.className = 'agent-tool-line' + (event.status === 'error' ? ' agent-tool-error' : '')
-      line.textContent = (event.status === 'done' ? 'ok  ' : (event.status === 'error' ? 'fail ' : '...  ')) + event.name + (event.summary ? ' - ' + truncateText(event.summary, 120) : '')
-      appendAgentActivityLine(line)
+      hideAgentThinking()
+      if (event.status === 'running') {
+        const line = document.createElement('div')
+        line.className = 'agent-tool-line'
+        const symbol = document.createElement('span')
+        symbol.className = 'agent-tool-symbol agent-tool-symbol-running'
+        const label = document.createElement('span')
+        label.className = 'agent-tool-label'
+        label.textContent = event.name + (event.summary ? ' - ' + truncateText(event.summary, 120) : '')
+        line.appendChild(symbol)
+        line.appendChild(label)
+        appendAgentActivityLine(line)
+        pendingToolLineElement = line
+        pendingToolLineSymbol = symbol
+      } else {
+        const toolFinishedOk = event.status === 'done'
+        let line = pendingToolLineElement
+        let symbol = pendingToolLineSymbol
+        if (!line) {
+          line = document.createElement('div')
+          line.className = 'agent-tool-line'
+          symbol = document.createElement('span')
+          symbol.className = 'agent-tool-symbol'
+          const label = document.createElement('span')
+          label.className = 'agent-tool-label'
+          line.appendChild(symbol)
+          line.appendChild(label)
+          appendAgentActivityLine(line)
+        }
+        symbol.className = 'agent-tool-symbol ' + (toolFinishedOk ? 'agent-tool-symbol-done' : 'agent-tool-symbol-error')
+        line.classList.toggle('agent-tool-error', !toolFinishedOk)
+        line.querySelector('.agent-tool-label').textContent = event.name + (event.summary ? ' - ' + truncateText(event.summary, 120) : '')
+        pendingToolLineElement = null
+        pendingToolLineSymbol = null
+      }
     } else if (event.type === 'tool-output') {
       const line = document.createElement('div')
       line.className = 'agent-tool-output'
       line.textContent = truncateText(event.text, 300)
       appendAgentActivityLine(line)
     } else if (event.type === 'approval-request') {
+      hideAgentThinking()
+      if (event.autoApproved) {
+        // CODE-31: after "Approve all in session", later commands never
+        // wait - they are shown as auto-approved so nothing runs invisibly.
+        const line = document.createElement('div')
+        line.className = 'agent-approval-line agent-approval-approved'
+        const symbol = document.createElement('span')
+        symbol.className = 'agent-tool-symbol agent-tool-symbol-done'
+        const label = document.createElement('span')
+        label.className = 'agent-approval-command'
+        label.textContent = 'Auto-approved: ' + event.command
+        line.appendChild(symbol)
+        line.appendChild(label)
+        appendAgentActivityLine(line)
+        return
+      }
       const row = document.createElement('div')
       row.className = 'agent-approval-row'
       const label = document.createElement('span')
+      label.className = 'agent-approval-command'
       label.textContent = 'Run command: ' + event.command
       const approveButton = document.createElement('button')
       approveButton.className = 'approve'
       approveButton.textContent = 'Approve'
+      const approveAllButton = document.createElement('button')
+      approveAllButton.className = 'approve approve-all'
+      approveAllButton.textContent = 'Approve all in session'
       const denyButton = document.createElement('button')
       denyButton.textContent = 'Deny'
-      const decide = (decision) => {
-        approveButton.disabled = true
-        denyButton.disabled = true
+      const markDecision = (approved, allSession) => {
+        row.className = 'agent-approval-row ' + (approved ? 'agent-approval-approved' : 'agent-approval-denied')
+        row.textContent = ''
+        const symbol = document.createElement('span')
+        symbol.className = 'agent-approval-symbol'
+        symbol.textContent = approved ? '✓' : '✗'
+        const stateLabel = document.createElement('span')
+        stateLabel.className = 'agent-approval-command'
+        const statePrefix = approved ? (allSession ? 'Approved (all in session)' : 'Approved') : 'Denied'
+        stateLabel.textContent = statePrefix + ': ' + event.command
+        row.appendChild(symbol)
+        row.appendChild(stateLabel)
+        if (allSession) {
+          const noteLine = document.createElement('div')
+          noteLine.className = 'agent-approval-line agent-approval-approved'
+          const noteSymbol = document.createElement('span')
+          noteSymbol.className = 'agent-tool-symbol agent-tool-symbol-done'
+          const noteLabel = document.createElement('span')
+          noteLabel.className = 'agent-approval-command'
+          noteLabel.textContent = 'Auto-approve is ON for this run - later commands will show as auto-approved.'
+          noteLine.appendChild(noteSymbol)
+          noteLine.appendChild(noteLabel)
+          appendAgentActivityLine(noteLine)
+        }
+      }
+      const decide = (decision, approved, allSession) => {
+        markDecision(approved, allSession)
         bridge.approveAgentCommand(currentRequestId, decision)
       }
-      approveButton.addEventListener('click', () => decide('approve'))
-      denyButton.addEventListener('click', () => decide('deny'))
+      approveButton.addEventListener('click', () => decide('approve', true, false))
+      approveAllButton.addEventListener('click', () => decide('approve-all', true, true))
+      denyButton.addEventListener('click', () => decide('deny', false, false))
       row.appendChild(label)
       row.appendChild(approveButton)
+      row.appendChild(approveAllButton)
       row.appendChild(denyButton)
       appendAgentActivityLine(row)
     } else if (event.type === 'change') {
@@ -423,6 +564,8 @@
       appendAgentActivityLine(line)
     } else if (event.type === 'done') {
       const doneRequestId = event.requestId
+      hideAgentThinking()
+      markPlanStepsFinished(false)
       setStreaming(false)
       currentRequestId = ''
       currentRunIsAgent = false
@@ -450,13 +593,23 @@
       }
       agentPlanElement = null
       agentActivityElement = null
+      agentThinkingElement = null
+      pendingToolLineElement = null
+      pendingToolLineSymbol = null
     } else if (event.type === 'undo-done') {
       appendMessageBubble('assistant', 'Changes undone.')
     } else if (event.type === 'error') {
+      hideAgentThinking()
+      markPlanStepsFinished(true)
       appendMessageBubble('assistant', '[Agent error: ' + event.message + ']')
       setStreaming(false)
       currentRequestId = ''
       currentRunIsAgent = false
+      agentPlanElement = null
+      agentActivityElement = null
+      agentThinkingElement = null
+      pendingToolLineElement = null
+      pendingToolLineSymbol = null
     }
   }
 
@@ -480,13 +633,39 @@
     if (!settings.hidden) loadSettingsIntoForm()
   }
 
+  function updateProviderDependentFields() {
+    const providerSelect = document.getElementById('ai-provider-select')
+    const providerName = providerSelect ? providerSelect.value : 'copilot'
+    const uniconBlocks = document.querySelectorAll('.unicon-settings-block')
+    uniconBlocks.forEach((block) => { block.hidden = providerName !== 'unicon' })
+    const modelInput = document.getElementById('ai-model-input')
+    if (modelInput) {
+      modelInput.placeholder = providerName === 'unicon' ? 'deepseek-v4-pro' : (providerName === 'openai' ? 'gpt-4o-mini' : 'gpt-4o-copilot')
+    }
+    const baseUrlInput = document.getElementById('ai-base-url-input')
+    if (baseUrlInput) {
+      baseUrlInput.placeholder = providerName === 'unicon' ? 'https://your-gateway.example.com' : 'https://your-ai-gateway.example.com/v1'
+    }
+  }
+
   async function loadSettingsIntoForm() {
     const config = await bridge.getAiConfig()
     if (!config) return
     const providerSelect = document.getElementById('ai-provider-select')
     if (providerSelect) providerSelect.value = config.provider
     const baseUrlInput = document.getElementById('ai-base-url-input')
-    if (baseUrlInput) baseUrlInput.value = config.provider === 'copilot' ? config.copilotBaseUrl : config.openAiBaseUrl
+    if (baseUrlInput) {
+      if (config.provider === 'unicon') baseUrlInput.value = config.uniconBaseUrl || ''
+      else if (config.provider === 'copilot') baseUrlInput.value = config.copilotBaseUrl
+      else baseUrlInput.value = config.openAiBaseUrl
+    }
+    const uniconProviderInput = document.getElementById('unicon-provider-input')
+    if (uniconProviderInput) uniconProviderInput.value = config.uniconProvider || 'deepseek'
+    const uniconHostInput = document.getElementById('unicon-host-input')
+    if (uniconHostInput) uniconHostInput.value = config.uniconHost || ''
+    const uniconJwtCheckbox = document.getElementById('unicon-jwt-checkbox')
+    if (uniconJwtCheckbox) uniconJwtCheckbox.checked = config.uniconAuthMode === 'jwt'
+    updateProviderDependentFields()
     const modelInput = document.getElementById('ai-model-input')
     if (modelInput) modelInput.value = config.model || ''
     const mcpEnabledCheckbox = document.getElementById('mcp-enabled-checkbox')
@@ -498,7 +677,7 @@
     }
     const status = document.getElementById('ai-settings-status')
     if (status) {
-      const tokenSaved = config.provider === 'copilot' ? config.copilotHasToken : config.openAiHasToken
+      const tokenSaved = config.provider === 'copilot' ? config.copilotHasToken : (config.provider === 'unicon' ? config.uniconHasToken : config.openAiHasToken)
       status.textContent = 'Token: ' + (tokenSaved ? 'saved' : 'not set') + (config.safeStorageAvailable ? '' : ' - OS encryption unavailable')
     }
   }
@@ -509,6 +688,15 @@
     const modelInput = document.getElementById('ai-model-input')
     const patch = { provider: providerSelect.value, model: modelInput.value.trim() }
     if (providerSelect.value === 'copilot') patch.copilotBaseUrl = baseUrlInput.value.trim()
+    else if (providerSelect.value === 'unicon') {
+      patch.uniconBaseUrl = baseUrlInput.value.trim()
+      const uniconProviderInput = document.getElementById('unicon-provider-input')
+      if (uniconProviderInput) patch.uniconProvider = uniconProviderInput.value.trim()
+      const uniconHostInput = document.getElementById('unicon-host-input')
+      if (uniconHostInput) patch.uniconHost = uniconHostInput.value.trim()
+      const uniconJwtCheckbox = document.getElementById('unicon-jwt-checkbox')
+      if (uniconJwtCheckbox) patch.uniconAuthMode = uniconJwtCheckbox.checked ? 'jwt' : 'key'
+    }
     else patch.openAiBaseUrl = baseUrlInput.value.trim()
     const mcpEnabledCheckbox = document.getElementById('mcp-enabled-checkbox')
     const mcpServersInput = document.getElementById('mcp-servers-input')
@@ -633,7 +821,7 @@
     const configSaveButton = document.getElementById('ai-config-save-button')
     if (configSaveButton) configSaveButton.addEventListener('click', saveSettingsFromForm)
     const providerSelect = document.getElementById('ai-provider-select')
-    if (providerSelect) providerSelect.addEventListener('change', loadSettingsIntoForm)
+    if (providerSelect) providerSelect.addEventListener('change', updateProviderDependentFields)
     if (typeof bridge.onChatEvent === 'function') bridge.onChatEvent(handleChatEvent)
     if (typeof bridge.onAgentEvent === 'function') bridge.onAgentEvent(handleAgentEvent)
     window.addEventListener('codedevtool:attach-file', (event) => {

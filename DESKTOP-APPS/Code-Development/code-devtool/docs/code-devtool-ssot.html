@@ -18,7 +18,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.22</span>
+      <span>v0.25</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -57,7 +57,7 @@
     capabilities; this document owns all subsequent decisions.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Document version</th><td>0.25</td></tr>
     <tr><th>Last updated</th><td>2026-09-19</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>the desktop code development tool: folder opening, file explorer, code editor, AI chat, AI agent, terminal, web preview, packaging</td></tr>
@@ -730,6 +730,18 @@ const toolRegistry = {
       <td>Bug report 2026-09-19: switching back reloaded the preview and lost the entry-page selection.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>CODE-29</td><td>2026-09-20</td>
+      <td>Unicon Gateway provider: the app talks to the Unicon AI gateway protocol (the one sitepoicms uses) as a first-class provider - custom routes POST /v1/chat/stream (SSE with named delta/token/chunk/message events and result/done/error) and POST /v1/chat/complete, provider and model passed IN THE BODY, API-key auth with dual headers (Authorization Bearer + X-Api-Key) plus X-Unicon-Host (tenant) and X-Unicon-Source: unicon-studio, and GET /v1/models. The agent uses PROMPT-BASED tool calling with this provider (toolCalls JSON in the reply text, tool results injected as user messages) because the gateway has no native tools/tool_choice - native mode stays for Copilot/OpenAI. Settings gain Base URL, gateway provider, and tenant hostname fields; the token stays in safeStorage.</td>
+      <td>User request 2026-09-20: connect the same gateway sitepoicms uses and run deepseek-v4-pro through it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-30</td><td>2026-09-20</td>
+      <td>JWT auth mode for the Unicon gateway: deployments without an API key (browser direct-connect style) store the shared JWT secret in the Token field instead; the app signs a fresh 5-minute HS256 JWT per request with payload {sub: tenantHostname, iat, exp, scope: "chat-stream"} exactly like the CMS token endpoint, sends it as Authorization Bearer, and omits X-Api-Key. A settings checkbox switches between key and JWT mode; the tenant hostname becomes required in JWT mode.</td>
+      <td>User report 2026-09-20: the CMS env has only UNICON_AI_GATEWAY_JWT_SECRET - no API key.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">11. Maintenance rules</h2>
@@ -765,6 +777,7 @@ const toolRegistry = {
     <tr><td>10</td><td>Run the test plan in section 16</td><td>test pass record in section 16.2 - PENDING</td></tr>
     <tr><td>11</td><td>SSOT document inside the app (T-23)</td><td><code>main/app-server.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code> - DONE</td></tr>
     <tr><td>12</td><td>Folder tabs and workspace context (T-24/T-25)</td><td><code>main/app-state.js</code>, <code>main/main.js</code>, <code>main/terminal-service.js</code>, <code>main/workspace-context.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/app.js</code>, <code>renderer/js/explorer.js</code>, <code>renderer/js/editor.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code> - DONE</td></tr>
+    <tr><td>13</td><td>Unicon Gateway provider (T-26)</td><td><code>main/ai/unicon-gateway-client.js</code>, <code>main/ai/provider-unicon.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/main.js</code>, <code>renderer/index.html</code>, <code>renderer/js/chat-panel.js</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">13. Open questions</h2>
@@ -1395,6 +1408,37 @@ const toolRegistry = {
     </div>
   </section>
 
+  <section class="task-group" data-release-group="GATEWAY">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Unicon AI gateway</span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="GATEWAY">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="GATEWAY"></div></div>
+    <p class="task-group-note">Why these belong together: the gateway has its own routes, auth headers,
+    and prompt-based tool calling - client, provider, agent mode, and settings
+    must land together or nothing works.</p>
+
+    <div class="task-item" data-task-id="T-26" data-group="GATEWAY" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Unicon Gateway provider (deepseek-v4-pro)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The user runs their own AI gateway (the one sitepoicms uses) and wants deepseek-v4-pro through it instead of a direct AI connection.</p>
+          <p><strong>How we will solve it:</strong> A first-class Unicon Gateway provider: /v1/chat/stream SSE + /v1/chat/complete + /v1/models, provider/model in the body, dual auth headers with tenant attribution, prompt-based tool calling in agent mode, and dedicated settings fields.</p>
+          <p><strong>Benefit:</strong> The product's own AI path - no direct connection to any AI vendor.</p>
+          <p><strong>Files:</strong> <code>main/ai/unicon-gateway-client.js</code>, <code>main/ai/provider-unicon.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/main.js</code>, <code>renderer/index.html</code>, <code>renderer/js/chat-panel.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-20 - gateway client with all SSE event shapes, complete and models endpoints, dual headers + tenant attribution, prompt-based agent tool calling, settings fields; 6-group unit tests green (live gateway check needs the user's base URL and key entered in Settings).</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <section class="task-group" data-release-group="PACK">
     <header class="task-group-header">
       <span class="task-group-name">Group: Packaging</span>
@@ -1689,7 +1733,16 @@ const toolRegistry = {
   2026-09-19 - per-folder live iframes (CODE-28): each folder's preview
   keeps its own iframe; switching tabs no longer reloads, and the chosen
   entry page (e.g. test-harness) and role survive switching away and back;
-  iframe sequence test green.</p>
+  iframe sequence test green. 2026-09-20 - Unicon Gateway provider (CODE-29,
+  T-26): the app's own AI path - custom gateway routes, dual auth headers,
+  tenant attribution, and prompt-based agent tool calling; gateway unit
+  tests green; live check pending the user's base URL and key.
+  2026-09-20 - JWT auth mode (CODE-30): the shared JWT secret (saved in the
+  Token field) signs a 5-minute HS256 token per request with the gateway's
+  exact payload; JWT tests green. 2026-09-20 - models parser broadened: the
+  gateway's /v1/models response shape was unknown, so the parser now accepts
+  flat lists, item objects, and provider-grouped containers, and reports the
+  raw response when nothing matches (diagnostic for the user to relay).</p>
 
   <h2 id="sec-risks">17. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -1846,7 +1899,7 @@ const toolRegistry = {
 
   <div class="footer">
     Unicon Studio - single source of truth for all decisions
-    about this feature. Version 0.22, 2026-09-19.
+    about this feature. Version 0.25, 2026-09-20.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

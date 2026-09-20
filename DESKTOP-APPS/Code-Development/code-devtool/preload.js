@@ -44,9 +44,10 @@ contextBridge.exposeInMainWorld('codedevtool', {
   startPreview: () => ipcRenderer.invoke('preview:start'),
   stopPreview: () => ipcRenderer.invoke('preview:stop'),
   openPreviewDevTools: () => ipcRenderer.invoke('preview:open-devtools'),
-  startTerminal: () => ipcRenderer.invoke('term:start'),
-  sendTerminalInput: (text) => ipcRenderer.invoke('term:input', { text: text }),
-  stopTerminal: () => ipcRenderer.invoke('term:stop'),
+  listProjectDocuments: () => ipcRenderer.invoke('docs:list'),
+  startTerminal: (sessionId) => ipcRenderer.invoke('term:start', { sessionId: sessionId }),
+  sendTerminalInput: (sessionId, text) => ipcRenderer.invoke('term:input', { sessionId: sessionId, text: text }),
+  stopTerminal: (sessionId) => ipcRenderer.invoke('term:stop', { sessionId: sessionId }),
   onTerminalOutput: (listener) => {
     const wrappedListener = (_event, payload) => listener(payload)
     ipcRenderer.on('term:output', wrappedListener)

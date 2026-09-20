@@ -19,6 +19,7 @@ const chatStore = require('./ai/chat-store')
 const agentRuntime = require('./ai/agent-runtime')
 const terminalService = require('./terminal-service')
 const workspaceContext = require('./workspace-context')
+const documentService = require('./document-service')
 
 let mainWindow = null
 let projectWatcher = null
@@ -99,15 +100,15 @@ function broadcastNextjsEvent(projectRoot, event) {
   }
 }
 
-function broadcastTerminalOutput(projectRoot, text) {
+function broadcastTerminalOutput(projectRoot, sessionId, text) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('term:output', { root: projectRoot, text: text })
+    mainWindow.webContents.send('term:output', { root: projectRoot, sessionId: sessionId, text: text })
   }
 }
 
-function broadcastTerminalExited(projectRoot, exitCode) {
+function broadcastTerminalExited(projectRoot, sessionId, exitCode) {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('term:exited', { root: projectRoot, exitCode: exitCode })
+    mainWindow.webContents.send('term:exited', { root: projectRoot, sessionId: sessionId, exitCode: exitCode })
   }
 }
 
@@ -226,9 +227,13 @@ function registerIpcHandlers() {
 
   ipcMain.handle('ai:save-config', (_event, patch) => {
     const configPatch = {}
-    if (typeof patch.provider === 'string' && (patch.provider === 'copilot' || patch.provider === 'openai')) configPatch.provider = patch.provider
+    if (typeof patch.provider === 'string' && (patch.provider === 'copilot' || patch.provider === 'openai' || patch.provider === 'unicon')) configPatch.provider = patch.provider
     if (typeof patch.copilotBaseUrl === 'string' && patch.copilotBaseUrl.trim().startsWith('https://')) configPatch.copilotBaseUrl = patch.copilotBaseUrl.trim()
     if (typeof patch.openAiBaseUrl === 'string' && patch.openAiBaseUrl.trim().startsWith('https://')) configPatch.openAiBaseUrl = patch.openAiBaseUrl.trim()
+    if (typeof patch.uniconBaseUrl === 'string' && patch.uniconBaseUrl.trim().startsWith('https://')) configPatch.uniconBaseUrl = patch.uniconBaseUrl.trim()
+    if (typeof patch.uniconProvider === 'string') configPatch.uniconProvider = patch.uniconProvider.trim().slice(0, 40)
+    if (typeof patch.uniconHost === 'string') configPatch.uniconHost = patch.uniconHost.trim().slice(0, 120)
+    if (typeof patch.uniconAuthMode === 'string') configPatch.uniconAuthMode = patch.uniconAuthMode === 'jwt' ? 'jwt' : 'key'
     if (typeof patch.model === 'string') configPatch.model = patch.model.trim().slice(0, 100)
     if (patch.mcp) {
       const sanitizedMcp = aiSettings.sanitizeMcpPatch(patch.mcp)
@@ -239,7 +244,8 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('ai:set-token', (_event, payload) => {
-    const providerName = payload && payload.provider === 'openai' ? 'openai' : 'copilot'
+    const requestedProvider = payload && typeof payload.provider === 'string' ? payload.provider : 'copilot'
+    const providerName = (requestedProvider === 'openai' || requestedProvider === 'unicon') ? requestedProvider : 'copilot'
     const token = payload && typeof payload.token === 'string' ? payload.token.trim() : ''
     if (!token) return aiSettings.getPublicConfig()
     aiSettings.setToken(providerName, token)
@@ -247,7 +253,8 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('ai:clear-token', (_event, payload) => {
-    const providerName = payload && payload.provider === 'openai' ? 'openai' : 'copilot'
+    const requestedProvider = payload && typeof payload.provider === 'string' ? payload.provider : 'copilot'
+    const providerName = (requestedProvider === 'openai' || requestedProvider === 'unicon') ? requestedProvider : 'copilot'
     aiSettings.clearToken(providerName)
     return aiSettings.getPublicConfig()
   })
@@ -375,6 +382,7 @@ function registerIpcHandlers() {
       abortController: new AbortController(),
       pendingApprovalResolver: null,
       approvalTimeout: null,
+      autoApproveAll: false,
       changes: [],
       emit: (type, payload) => sendAgentEvent(requestId, type, payload)
     }
@@ -384,6 +392,7 @@ function registerIpcHandlers() {
     const fullConfig = aiSettings.loadConfig()
     const mcpConfig = fullConfig.mcp && typeof fullConfig.mcp === 'object' ? fullConfig.mcp : { enabled: false, servers: [] }
     const sharedContextFiles = workspaceContext.getSharedContext(projectRoot).files
+    const toolCallMode = config.provider === 'unicon' ? 'prompt' : 'native'
     agentRuntime.runAgent({
       runRecord,
       baseUrl,
@@ -393,7 +402,9 @@ function registerIpcHandlers() {
       attachmentPaths,
       mcpConfig,
       copilotToken: aiSettings.getToken('copilot'),
-      sharedContextFiles
+      sharedContextFiles,
+      toolCallMode,
+      chatClient: chatService.providerFor(config.provider)
     }).then((finalResult) => {
       activeAgentRuns.delete(requestId)
       if (finalResult.summary) chatStore.addMessage(projectRoot, sessionId, 'assistant', finalResult.summary)
@@ -424,7 +435,12 @@ function registerIpcHandlers() {
 
   ipcMain.handle('agent:approval-command', (_event, payload) => {
     const runRecord = activeAgentRuns.get(payload && payload.requestId)
-    if (runRecord) agentRuntime.resolveApproval(runRecord, payload.decision === 'approve')
+    if (runRecord) {
+      // CODE-31: 'approve-all' approves the current command AND every
+      // further command in this run without asking again.
+      if (payload.decision === 'approve-all') runRecord.autoApproveAll = true
+      agentRuntime.resolveApproval(runRecord, payload.decision === 'approve' || payload.decision === 'approve-all')
+    }
     return { ok: Boolean(runRecord) }
   })
 
@@ -499,6 +515,15 @@ function registerIpcHandlers() {
     return appState.loadState()
   })
 
+  ipcMain.handle('docs:list', () => {
+    const projectRoot = appState.getActiveProjectRoot()
+    if (!projectRoot) return { rootName: '', docs: [] }
+    return {
+      rootName: path.basename(projectRoot),
+      docs: documentService.listProjectDocuments(projectRoot)
+    }
+  })
+
   ipcMain.handle('preview:start', async () => {
     try {
       const projectRoot = appState.getActiveProjectRoot()
@@ -554,32 +579,37 @@ function registerIpcHandlers() {
     return { ok: false }
   })
 
-  ipcMain.handle('term:start', () => {
+  ipcMain.handle('term:start', (_event, payload) => {
     const projectRoot = appState.getActiveProjectRoot()
     if (!projectRoot) return { error: 'No folder open - open a project folder first.' }
-    const alreadyRunning = terminalService.isSessionRunning(projectRoot)
+    const sessionId = payload && typeof payload.sessionId === 'string' ? payload.sessionId : ''
+    if (!sessionId) return { error: 'Missing terminal instance id.' }
+    const alreadyRunning = terminalService.isSessionRunning(projectRoot, sessionId)
     terminalService.startSession({
       cwd: projectRoot,
-      onOutput: (text) => broadcastTerminalOutput(projectRoot, text),
-      onExit: (exitCode) => broadcastTerminalExited(projectRoot, exitCode)
+      sessionId: sessionId,
+      onOutput: (text) => broadcastTerminalOutput(projectRoot, sessionId, text),
+      onExit: (exitCode) => broadcastTerminalExited(projectRoot, sessionId, exitCode)
     })
-    return { ok: true, alreadyRunning: alreadyRunning }
+    return { ok: true, sessionId: sessionId, alreadyRunning: alreadyRunning }
   })
 
   ipcMain.handle('term:input', (_event, payload) => {
     const projectRoot = appState.getActiveProjectRoot()
-    const activeSession = projectRoot ? terminalService.getActiveSession(projectRoot) : null
+    const sessionId = payload && typeof payload.sessionId === 'string' ? payload.sessionId : ''
+    const session = projectRoot && sessionId ? terminalService.getSession(projectRoot, sessionId) : null
     const inputText = payload && typeof payload.text === 'string' ? payload.text : ''
     if (!inputText) return { ok: false }
-    if (!activeSession) return { error: 'No terminal session - start one first.' }
-    activeSession.send(inputText)
+    if (!session) return { error: 'No terminal session - start one first.' }
+    session.send(inputText)
     return { ok: true }
   })
 
-  ipcMain.handle('term:stop', () => {
+  ipcMain.handle('term:stop', (_event, payload) => {
     const projectRoot = appState.getActiveProjectRoot()
-    if (projectRoot) terminalService.stopSession(projectRoot)
-    broadcastTerminalExited(projectRoot || '', null)
+    const sessionId = payload && typeof payload.sessionId === 'string' ? payload.sessionId : ''
+    if (projectRoot && sessionId) terminalService.stopSession(projectRoot, sessionId)
+    if (projectRoot) broadcastTerminalExited(projectRoot, sessionId, null)
     return { ok: true }
   })
 }
@@ -587,9 +617,12 @@ function registerIpcHandlers() {
 async function startApplication() {
   // Packaged builds serve the bundled SSOT documents (docs/ inside the
   // package); development serves the live files next to the app folder.
-  const serverStartResult = await appServer.start(
-    app.isPackaged ? { docsFolder: path.join(app.getAppPath(), 'docs') } : undefined
-  )
+  // The /project-docs route serves the ACTIVE folder's own documents
+  // (CODE-36) - the provider reads the active root at request time.
+  const serverStartResult = await appServer.start(Object.assign(
+    app.isPackaged ? { docsFolder: path.join(app.getAppPath(), 'docs') } : {},
+    { projectRootProvider: () => appState.getActiveProjectRoot() }
+  ))
   uiUrl = serverStartResult.url
   Menu.setApplicationMenu(null)
   registerIpcHandlers()

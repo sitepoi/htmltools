@@ -13,8 +13,12 @@ function streamChat(options) {
   return openAiCompatibleClient.streamChat(Object.assign({}, options, { baseUrl: baseUrl() }))
 }
 
+function chatOnce(options) {
+  return openAiCompatibleClient.chatOnce(Object.assign({}, options, { baseUrl: baseUrl() }))
+}
+
 function listModels(apiKey) {
   return openAiCompatibleClient.listModels(baseUrl(), apiKey)
 }
 
-module.exports = { streamChat, listModels, baseUrl }
+module.exports = { streamChat, chatOnce, listModels, baseUrl }

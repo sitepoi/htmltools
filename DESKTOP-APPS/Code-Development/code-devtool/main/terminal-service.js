@@ -16,14 +16,22 @@ function killProcessTree(childProcess) {
   }
 }
 
-// One persistent session per open folder (CODE-23): switching folder tabs
-// keeps each folder's terminal alive, like separate terminal instances.
+// Multiple terminal instances per folder (CODE-34): each folder tab owns
+// any number of terminal sessions, keyed by sessionId - VS Code-style
+// instance tabs one level below the folder tabs (CODE-23). Sessions stay
+// alive across folder switches and stop when their folder closes.
 
-const sessionsByRoot = new Map()
+const sessionsByRoot = new Map() // Map<projectRoot, Map<sessionId, session>>
 
 function startSession(options) {
   const workingDirectory = options.cwd
-  const existingSession = sessionsByRoot.get(workingDirectory)
+  const sessionId = typeof options.sessionId === 'string' && options.sessionId ? options.sessionId : 'default'
+  let rootSessions = sessionsByRoot.get(workingDirectory)
+  if (!rootSessions) {
+    rootSessions = new Map()
+    sessionsByRoot.set(workingDirectory, rootSessions)
+  }
+  const existingSession = rootSessions.get(sessionId)
   if (existingSession) return existingSession
   const onOutput = options.onOutput
   const onExit = options.onExit
@@ -35,6 +43,13 @@ function startSession(options) {
   } else {
     childProcess = spawn('/bin/sh', ['-i'], { cwd: workingDirectory })
   }
+  const forgetSession = () => {
+    const sessions = sessionsByRoot.get(workingDirectory)
+    if (sessions) {
+      sessions.delete(sessionId)
+      if (sessions.size === 0) sessionsByRoot.delete(workingDirectory)
+    }
+  }
   childProcess.stdout.on('data', (chunk) => {
     if (typeof onOutput === 'function') onOutput(chunk.toString())
   })
@@ -42,15 +57,16 @@ function startSession(options) {
     if (typeof onOutput === 'function') onOutput(chunk.toString())
   })
   childProcess.on('exit', (exitCode) => {
-    sessionsByRoot.delete(workingDirectory)
+    forgetSession()
     if (typeof onExit === 'function') onExit(exitCode)
   })
   childProcess.on('error', (processError) => {
-    sessionsByRoot.delete(workingDirectory)
+    forgetSession()
     if (typeof onExit === 'function') onExit(-1, processError.message)
   })
   const session = {
     root: workingDirectory,
+    sessionId: sessionId,
     send: function (inputText) {
       try {
         childProcess.stdin.write(String(inputText) + '\r\n')
@@ -60,28 +76,46 @@ function startSession(options) {
     },
     stop: function () {
       killProcessTree(childProcess)
-      sessionsByRoot.delete(workingDirectory)
+      forgetSession()
     }
   }
-  sessionsByRoot.set(workingDirectory, session)
+  rootSessions.set(sessionId, session)
   return session
 }
 
-function stopSession(projectRoot) {
-  const session = sessionsByRoot.get(projectRoot)
+function getSession(projectRoot, sessionId) {
+  const rootSessions = sessionsByRoot.get(projectRoot)
+  if (!rootSessions) return null
+  return rootSessions.get(sessionId) || null
+}
+
+function getSessionIds(projectRoot) {
+  const rootSessions = sessionsByRoot.get(projectRoot)
+  return rootSessions ? Array.from(rootSessions.keys()) : []
+}
+
+function stopSession(projectRoot, sessionId) {
+  // Without a sessionId this stops every instance in the folder (used when
+  // a folder tab closes); with one it stops that single instance.
+  const rootSessions = sessionsByRoot.get(projectRoot)
+  if (!rootSessions) return
+  if (sessionId === undefined || sessionId === null) {
+    for (const session of Array.from(rootSessions.values())) session.stop()
+    return
+  }
+  const session = rootSessions.get(sessionId)
   if (session) session.stop()
 }
 
 function stopAllSessions() {
-  for (const session of Array.from(sessionsByRoot.values())) session.stop()
+  for (const projectRoot of Array.from(sessionsByRoot.keys())) stopSession(projectRoot)
 }
 
-function getActiveSession(projectRoot) {
-  return sessionsByRoot.get(projectRoot) || null
-}
-
-function isSessionRunning(projectRoot) {
-  return sessionsByRoot.has(projectRoot)
+function isSessionRunning(projectRoot, sessionId) {
+  const rootSessions = sessionsByRoot.get(projectRoot)
+  if (!rootSessions) return false
+  if (sessionId === undefined || sessionId === null) return rootSessions.size > 0
+  return rootSessions.has(sessionId)
 }
 
 function runCommand(command, options) {
@@ -141,4 +175,4 @@ function runCommand(command, options) {
   })
 }
 
-module.exports = { runCommand, killProcessTree, startSession, stopSession, stopAllSessions, getActiveSession, isSessionRunning }
+module.exports = { runCommand, killProcessTree, startSession, getSession, getSessionIds, stopSession, stopAllSessions, isSessionRunning }

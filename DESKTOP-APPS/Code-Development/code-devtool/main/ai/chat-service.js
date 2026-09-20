@@ -4,6 +4,7 @@
 
 const providerCopilot = require('./provider-copilot')
 const providerOpenAiCompatible = require('./provider-openai-compatible')
+const providerUnicon = require('./provider-unicon')
 
 const systemPrompt =
   'You are the AI assistant of Unicon Studio, a visual-first desktop tool for web development. ' +
@@ -12,11 +13,15 @@ const systemPrompt =
   'Treat attached files as the current code. Multi-file agent edits arrive in a later release - for now answer with code and explanations.'
 
 function providerFor(providerName) {
-  return providerName === 'openai' ? providerOpenAiCompatible : providerCopilot
+  if (providerName === 'openai') return providerOpenAiCompatible
+  if (providerName === 'unicon') return providerUnicon
+  return providerCopilot
 }
 
 function defaultModelFor(providerName) {
-  return providerName === 'openai' ? 'gpt-4o-mini' : 'gpt-4o-copilot'
+  if (providerName === 'openai') return 'gpt-4o-mini'
+  if (providerName === 'unicon') return 'deepseek-v4-pro'
+  return 'gpt-4o-copilot'
 }
 
 function buildRequestMessages(attachments, historyMessages, userText, sharedContextFiles) {

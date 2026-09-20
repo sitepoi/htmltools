@@ -21,7 +21,7 @@
     </div>
     <div class="header-right">
       <button id="show-preview-button" class="header-toggle-button" type="button" title="Return to the live preview">Preview</button>
-      <button id="ssot-button" class="header-toggle-button" type="button" title="Open the feature management document (SSOT) with the task list">SSOT</button>
+      <button id="ssot-button" class="header-toggle-button" type="button" title="Open the folder's documents (SSOT, marketing, help, social media)">Docs</button>
       <button id="toggle-explorer-button" class="header-toggle-button" type="button" title="Show or hide the file explorer">Explorer</button>
       <button id="toggle-terminal-button" class="header-toggle-button" type="button" title="Show or hide the terminal">Terminal</button>
     </div>
@@ -88,6 +88,7 @@
           <select id="ai-provider-select">
             <option value="copilot">GitHub Copilot API</option>
             <option value="openai">OpenAI-compatible API</option>
+            <option value="unicon">Unicon Gateway</option>
           </select>
         </label>
         <label>Token (saved with OS encryption)
@@ -99,6 +100,16 @@
         </div>
         <label>Base URL (a custom gateway works too)
           <input id="ai-base-url-input" type="text" placeholder="https://your-ai-gateway.example.com/v1" />
+        </label>
+        <label class="unicon-settings-block" hidden="hidden">Gateway provider
+          <input id="unicon-provider-input" type="text" placeholder="deepseek" />
+        </label>
+        <label class="unicon-settings-block" hidden="hidden">Tenant hostname (X-Unicon-Host)
+          <input id="unicon-host-input" type="text" placeholder="your-cms.example.com" />
+        </label>
+        <label class="unicon-settings-block" hidden="hidden">JWT secret mode (gateway signs requests)
+          <input id="unicon-jwt-checkbox" type="checkbox" />
+          <span class="mcp-settings-note">When checked, the Token field holds the shared JWT secret; the app signs a fresh 5-minute token per request.</span>
         </label>
         <label>Model (empty = provider default)
           <input id="ai-model-input" type="text" placeholder="gpt-4o-copilot" />
@@ -134,7 +145,8 @@
       </div>
     </div>
     <div id="terminal-body" class="terminal-body">
-      <div id="terminal-output" class="terminal-output"></div>
+      <div id="terminal-tabs" class="terminal-tabs"></div>
+      <div id="terminal-outputs" class="terminal-outputs"></div>
       <div class="terminal-input-row">
         <span class="terminal-prompt">&gt;</span>
         <input id="terminal-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command - Enter to run" />
@@ -144,10 +156,11 @@
 
   <div id="ssot-overlay" class="ssot-overlay" hidden="hidden">
     <div class="ssot-overlay-head">
-      <span>Feature management - single source of truth (live document with task list)</span>
+      <span id="ssot-overlay-title">Project documents</span>
+      <select id="ssot-doc-select" class="ssot-doc-select" title="Choose a document"></select>
       <button id="ssot-close-button" type="button">Close</button>
     </div>
-    <iframe id="ssot-frame" class="ssot-frame" title="SSOT document" src="about:blank"></iframe>
+    <iframe id="ssot-frame" class="ssot-frame" title="Document" src="about:blank"></iframe>
   </div>
 
   <script src="js/app.js"></script>

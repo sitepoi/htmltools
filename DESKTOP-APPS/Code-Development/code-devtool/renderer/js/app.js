@@ -126,17 +126,77 @@
 
   function openSsotOverlay() {
     const overlay = document.getElementById('ssot-overlay')
-    const frame = document.getElementById('ssot-frame')
     if (!overlay) return
     overlay.hidden = false
-    if (frame && (!frame.getAttribute('src') || frame.getAttribute('src') === 'about:blank')) {
-      frame.src = '/docs/code-devtool-ssot.html'
-    }
+    refreshProjectDocuments()
   }
 
   function closeSsotOverlay() {
     const overlay = document.getElementById('ssot-overlay')
     if (overlay) overlay.hidden = true
+  }
+
+  // ── Project documents overlay (CODE-36) ──
+  // The overlay shows the OPENED folder's documents (SSOT first, then
+  // plans, reports, marketing, help, social media) served from the active
+  // project root. Unicon Studio's own SSOT stays available as a built-in.
+  let projectDocuments = []
+  const builtinDocumentOption = { name: 'code-devtool-ssot.html', relativePath: '', type: 'builtin', label: 'Unicon Studio SSOT (built-in)' }
+
+  function documentUrl(documentRecord) {
+    if (!documentRecord || documentRecord.type === 'builtin') return '/docs/code-devtool-ssot.html'
+    return '/project-docs/' + documentRecord.relativePath
+  }
+
+  function refreshProjectDocuments() {
+    if (!bridge || typeof bridge.listProjectDocuments !== 'function') return
+    bridge.listProjectDocuments().then((result) => {
+      projectDocuments = result && Array.isArray(result.docs) ? result.docs : []
+      renderDocumentSelector()
+    }).catch(() => {
+      projectDocuments = []
+      renderDocumentSelector()
+    })
+  }
+
+  function renderDocumentSelector() {
+    const select = document.getElementById('ssot-doc-select')
+    if (!select) return
+    const previousValue = select.value
+    select.textContent = ''
+    const allOptions = projectDocuments.concat([builtinDocumentOption])
+    allOptions.forEach((documentRecord) => {
+      const option = document.createElement('option')
+      option.value = documentRecord.type === 'builtin' ? 'builtin' : documentRecord.relativePath
+      const nestedHint = documentRecord.relativePath.includes('/') ? ' - ' + documentRecord.relativePath : ''
+      option.textContent = documentRecord.type === 'builtin'
+        ? documentRecord.label
+        : documentRecord.label + ': ' + documentRecord.name + nestedHint
+      select.appendChild(option)
+    })
+    const preferredValue = projectDocuments.length > 0 ? projectDocuments[0].relativePath : 'builtin'
+    const previousStillExists = allOptions.some((documentRecord) =>
+      documentRecord.type === 'builtin' ? previousValue === 'builtin' : documentRecord.relativePath === previousValue
+    )
+    select.value = previousStillExists ? previousValue : preferredValue
+    const title = document.getElementById('ssot-overlay-title')
+    if (title) {
+      title.textContent = projectDocuments.length > 0
+        ? 'Documents - ' + projectDocuments.length + ' file(s) in this folder'
+        : 'No project documents found - showing Unicon Studio SSOT'
+    }
+    updateDocumentFrame()
+  }
+
+  function updateDocumentFrame() {
+    const overlay = document.getElementById('ssot-overlay')
+    const frame = document.getElementById('ssot-frame')
+    const select = document.getElementById('ssot-doc-select')
+    if (!overlay || !frame || !select || overlay.hidden) return
+    const selectedValue = select.value
+    const selectedDocument = projectDocuments.find((documentRecord) => documentRecord.relativePath === selectedValue)
+    const url = selectedDocument ? documentUrl(selectedDocument) : documentUrl(builtinDocumentOption)
+    if (frame.getAttribute('src') !== url) frame.src = url
   }
 
   function wireInterface() {
@@ -154,14 +214,20 @@
     if (ssotButton) ssotButton.addEventListener('click', openSsotOverlay)
     const ssotCloseButton = document.getElementById('ssot-close-button')
     if (ssotCloseButton) ssotCloseButton.addEventListener('click', closeSsotOverlay)
+    const documentSelect = document.getElementById('ssot-doc-select')
+    if (documentSelect) documentSelect.addEventListener('change', updateDocumentFrame)
     if (bridge && typeof bridge.onFolderTabsChanged === 'function') {
       bridge.onFolderTabsChanged((tabsState) => {
         folderTabsState = tabsState || folderTabsState
         renderFolderTabs()
+        refreshProjectDocuments()
       })
     }
     if (bridge && typeof bridge.onProjectChanged === 'function') {
-      bridge.onProjectChanged(() => restoreProjectState())
+      bridge.onProjectChanged(() => {
+        restoreProjectState()
+        refreshProjectDocuments()
+      })
     }
   }
 

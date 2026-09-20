@@ -61,16 +61,107 @@ function buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks) {
   return messages
 }
 
-function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText, externalCatalogText, sharedContextBlocks }) {
+function decodeXmlEntities(value) {
+  return String(value)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+}
+
+function parseXmlParameterValue(rawValue) {
+  const trimmed = String(rawValue).trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    const parsed = parseJsonLenient(trimmed)
+    if (parsed !== null) return parsed
+  }
+  return trimmed
+}
+
+// CODE-33: some gateway models reply with Anthropic-style XML tool calls
+// instead of the JSON the prompt asks for:
+// <tool_calls><invoke name="read_file"><parameter name="path">a.html</parameter></invoke></tool_calls>
+function parseXmlToolCalls(content) {
+  const text = String(content || '')
+  const calls = []
+  const invokePattern = /<invoke\b([^>]*)>([\s\S]*?)<\/invoke\s*>/g
+  let invokeMatch
+  while ((invokeMatch = invokePattern.exec(text)) !== null) {
+    const nameMatch = /name\s*=\s*["']([^"']+)["']/.exec(invokeMatch[1])
+    if (!nameMatch) continue
+    const callArguments = {}
+    const parameterPattern = /<parameter\b([^>]*)>([\s\S]*?)<\/parameter\s*>/g
+    let parameterMatch
+    while ((parameterMatch = parameterPattern.exec(invokeMatch[2])) !== null) {
+      const parameterNameMatch = /name\s*=\s*["']([^"']+)["']/.exec(parameterMatch[1])
+      if (!parameterNameMatch) continue
+      const parameterName = parameterNameMatch[1]
+      const parsedValue = parseXmlParameterValue(decodeXmlEntities(parameterMatch[2]))
+      if (parameterName === 'arguments' && parsedValue && typeof parsedValue === 'object' && !Array.isArray(parsedValue)) {
+        Object.assign(callArguments, parsedValue)
+      } else {
+        callArguments[parameterName] = parsedValue
+      }
+    }
+    calls.push({ name: nameMatch[1], arguments: callArguments })
+  }
+  return calls
+}
+
+function stripToolCallMarkup(text) {
+  // Defensive: raw tool-call markup that survives parsing must never leak
+  // into the visible chat summary.
+  return String(text || '')
+    .replace(/<tool_calls\b[^>]*>[\s\S]*?<\/tool_calls\s*>/g, '')
+    .replace(/<tool_call\b[^>]*>[\s\S]*?<\/tool_call\s*>/g, '')
+    .trim()
+}
+
+function parsePromptToolCalls(content) {
+  // Prompt-based tool calling (CODE-29, Unicon gateway): the model replies
+  // with JSON like {"toolCalls":[{"name":"...","arguments":{...}}]} (or a
+  // bare array), or with <tool_calls><invoke> XML blocks (CODE-33) - both
+  // are normalized to the same call shape.
+  const cleaned = String(content || '').replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  let parsed = null
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch (_parseError) {
+    parsed = null
+  }
+  if (parsed === null) parsed = parseJsonLenient(cleaned)
+  let rawCalls = []
+  if (parsed) {
+    rawCalls = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.toolCalls) ? parsed.toolCalls : [])
+  }
+  if (rawCalls.length === 0) rawCalls = parseXmlToolCalls(cleaned)
+  return rawCalls
+    .filter((call) => call && typeof call.name === 'string')
+    .slice(0, 6)
+    .map((call, callIndex) => ({
+      id: 'prompt_tool_' + callIndex,
+      name: call.name,
+      arguments: call.arguments && typeof call.arguments === 'object' ? call.arguments : {}
+    }))
+}
+
+function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText, externalCatalogText, sharedContextBlocks, toolCallMode }) {
   const messages = []
+  const toolCallingInstruction = toolCallMode === 'prompt'
+    ? '\nTool calling: when you need a tool, reply with ONLY a tool call and nothing else, in one of these two forms (JSON or XML):\n' +
+      'JSON: {"toolCalls":[{"name":"tool_name","arguments":{...}}]}\n' +
+      'XML: <tool_calls><invoke name="tool_name"><parameter name="arg">value</parameter></invoke></tool_calls>\n' +
+      'Tool results come back as user messages. When the step is finished, reply with a short status message as plain text (no tool calls).'
+    : ''
   messages.push({
     role: 'system',
     content: 'You are the Unicon Studio coding agent. Original request: ' + userText + '\n' +
       'Current step ' + (stepIndex + 1) + ' of ' + totalSteps + ': ' + step.title + (step.file ? ' (file: ' + step.file + ')' : '') + '.\n' +
       'Available tools:\n' + toolCatalogText() + externalCatalogText + '\n' +
       'Use tools to inspect and edit the project. Prefer edit_file over write_file for small changes. ' +
-      'Do not ask permission for file edits - the user reviews them after the run. ' +
-      'When the step is finished, reply with a short status message without tool calls.'
+      'Do not ask permission for file edits - the user reviews them after the run. ' + toolCallingInstruction
   })
   sharedContextBlocks.forEach((block) => messages.push(block))
   attachments.forEach((attachment) => {
@@ -81,6 +172,13 @@ function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText,
 }
 
 function waitForApproval(runRecord, command) {
+  // CODE-31: "Approve all in this session" - after the user approves all,
+  // every further command in this run is auto-approved and shown to the
+  // user as approved without waiting.
+  if (runRecord.autoApproveAll) {
+    runRecord.emit('approval-request', { command: command, autoApproved: true })
+    return Promise.resolve(true)
+  }
   return new Promise((resolve) => {
     runRecord.pendingApprovalResolver = resolve
     runRecord.approvalTimeout = setTimeout(() => resolveApproval(runRecord, false), approvalTimeoutMilliseconds)
@@ -155,7 +253,9 @@ async function executeTool(call, runRecord, changes, externalTools) {
 }
 
 async function runAgent(options) {
-  const { runRecord, baseUrl, apiKey, model, userText, attachmentPaths, mcpConfig, copilotToken, sharedContextFiles } = options
+  const { runRecord, baseUrl, apiKey, model, userText, attachmentPaths, mcpConfig, copilotToken, sharedContextFiles, toolCallMode, chatClient } = options
+  const chatBackend = chatClient || client
+  const usesPromptToolCalling = toolCallMode === 'prompt'
   const projectRoot = runRecord.projectRoot
   const emit = runRecord.emit
   const signal = runRecord.abortController.signal
@@ -174,10 +274,10 @@ async function runAgent(options) {
     }))
     : []
 
-  emit('plan', { steps: [] })
+  emit('thinking', { text: 'Planning...' })
   let planSteps
   try {
-    const planResponse = await client.chatOnce({
+    const planResponse = await chatBackend.chatOnce({
       baseUrl, apiKey, model,
       messages: buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks),
       signal
@@ -209,16 +309,50 @@ async function runAgent(options) {
       attachments: attachmentBlocks,
       userText,
       externalCatalogText: externalTools.catalogText,
-      sharedContextBlocks
+      sharedContextBlocks,
+      toolCallMode
     })
     for (let iteration = 0; iteration < maximumToolIterations; iteration++) {
-      const response = await client.chatOnce({
+      if (usesPromptToolCalling) {
+        // Prompt-based tool calling (CODE-29): the gateway has no native
+        // tool_calls - the model answers with a toolCalls JSON array or
+        // <tool_calls> XML blocks (CODE-33).
+        emit('thinking', { text: 'Step ' + (stepIndex + 1) + ' - thinking...' })
+        const response = await chatBackend.chatOnce({
+          baseUrl, apiKey, model,
+          messages: stepMessages,
+          signal
+        })
+        const promptToolCalls = parsePromptToolCalls(response.content || '')
+        if (promptToolCalls.length === 0) {
+          if (response.content) lastAssistantText = stripToolCallMarkup(response.content)
+          break
+        }
+        stepMessages.push({ role: 'assistant', content: response.content || '' })
+        for (const call of promptToolCalls) {
+          emit('tool', { name: call.name, status: 'running', summary: summarizeArguments(call.arguments) })
+          let toolResult
+          try {
+            toolResult = await executeTool(call, runRecord, changes, externalTools)
+          } catch (toolError) {
+            toolResult = { ok: false, error: toolError && toolError.message ? toolError.message : String(toolError) }
+          }
+          emit('tool', { name: call.name, status: toolResult.ok ? 'done' : 'error', summary: summarizeToolResult(toolResult) })
+          stepMessages.push({
+            role: 'user',
+            content: 'Tool result for "' + call.name + '":\n' + JSON.stringify(toolResult)
+          })
+        }
+        continue
+      }
+      emit('thinking', { text: 'Step ' + (stepIndex + 1) + ' - thinking...' })
+      const response = await chatBackend.chatOnce({
         baseUrl, apiKey, model,
         messages: stepMessages,
         tools: allToolSchemas,
         signal
       })
-      if (response.content) lastAssistantText = response.content
+      if (response.content) lastAssistantText = stripToolCallMarkup(response.content)
       if (response.toolCalls.length === 0) break
       stepMessages.push({
         role: 'assistant',
@@ -244,4 +378,4 @@ async function runAgent(options) {
   return { summary: summary, changes: changes }
 }
 
-module.exports = { runAgent, resolveApproval, parsePlan, parseJsonLenient }
+module.exports = { runAgent, resolveApproval, parsePlan, parseJsonLenient, parsePromptToolCalls, parseXmlToolCalls, stripToolCallMarkup }

@@ -9,12 +9,17 @@ const path = require('path')
 const configFileVersion = 1
 const copilotTokenFileName = 'codedevtool-copilot-token.bin'
 const openAiTokenFileName = 'codedevtool-openai-key.bin'
+const uniconTokenFileName = 'codedevtool-unicon-key.bin'
 
 const defaultConfig = {
   version: configFileVersion,
   provider: 'copilot',
   copilotBaseUrl: 'https://api.githubcopilot.com',
   openAiBaseUrl: 'https://api.openai.com/v1',
+  uniconBaseUrl: '',
+  uniconProvider: 'deepseek',
+  uniconHost: '',
+  uniconAuthMode: 'key',
   model: '',
   mcp: { enabled: false, servers: [] }
 }
@@ -26,7 +31,9 @@ function getConfigFilePath() {
 }
 
 function tokenFileNameFor(providerName) {
-  return providerName === 'openai' ? openAiTokenFileName : copilotTokenFileName
+  if (providerName === 'openai') return openAiTokenFileName
+  if (providerName === 'unicon') return uniconTokenFileName
+  return copilotTokenFileName
 }
 
 function loadConfig() {
@@ -117,6 +124,10 @@ function getPublicConfig() {
     provider: config.provider,
     copilotBaseUrl: config.copilotBaseUrl,
     openAiBaseUrl: config.openAiBaseUrl,
+    uniconBaseUrl: config.uniconBaseUrl || '',
+    uniconProvider: config.uniconProvider || 'deepseek',
+    uniconHost: config.uniconHost || '',
+    uniconAuthMode: config.uniconAuthMode === 'jwt' ? 'jwt' : 'key',
     model: config.model,
     mcp: {
       enabled: Boolean(mcpConfig.enabled),
@@ -127,6 +138,7 @@ function getPublicConfig() {
     },
     copilotHasToken: getToken('copilot') !== '',
     openAiHasToken: getToken('openai') !== '',
+    uniconHasToken: getToken('unicon') !== '',
     safeStorageAvailable: safeStorage.isEncryptionAvailable()
   }
 }
