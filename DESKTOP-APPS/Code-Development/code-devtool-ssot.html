@@ -1,0 +1,1856 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Unicon Studio - Technical Source of Truth</title>
+  <link rel="stylesheet" type="text/css" href="ssot.css" />
+  <script src="ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">Unicon Studio</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.22</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+  <h1>Unicon Studio</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for every decision about Unicon Studio: a
+    VISUAL-FIRST Windows desktop application for web development. The AI
+    chat and the live preview are the primary surfaces (CODE-10); the file
+    explorer, code editor, and terminal are secondary. The app opens a local
+    project folder, previews web projects (static HTML/CSS/JS and Next.js),
+    and carries an AI chat and an AI agent with GitHub Copilot-like
+    capabilities. Every decision made for this feature is logged in
+    section 10 and this document is updated in the same change as the code.
+    When this document or the code disagree, this document is the tiebreaker
+    - it is updated to capture the final decision, never silently left
+    divergent. Companion document:
+    <code>tool-analysis.html</code> - the feasibility analysis that answers
+    whether Electron plus plain JavaScript can cover the requested
+    capabilities; this document owns all subsequent decisions.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Last updated</th><td>2026-09-19</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>the desktop code development tool: folder opening, file explorer, code editor, AI chat, AI agent, terminal, web preview, packaging</td></tr>
+    <tr><th>Primary code areas</th><td><code>DESKTOP-APPS/Code-Development/tool-analysis.html, DESKTOP-APPS/Code-Development/code-devtool-ssot.html, DESKTOP-APPS/Code-Development/code-devtool/</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>the CMS html-tool system (this is a standalone desktop app), VS Code extension development, non-web projects (any language or framework beyond HTML/CSS/JS and Next.js), final visual styling, branding and icon design</td></tr>
+    <tr><th>Companion documents</th><td><code>tool-analysis.html</code></td></tr>
+  </table>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one feature and one set of invariants around
+  Unicon Studio - a single-purpose, VISUAL-FIRST Electron application for web
+  development (static HTML/CSS/JS sites and Next.js projects). The AI chat
+  and the live preview lead the experience; the file explorer, code editor,
+  and terminal are secondary tools that appear only when needed (decision
+  CODE-10). This document is the <strong>single source of truth for every
+  decision we make</strong> about this feature, now and in the future. No
+  decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this feature, the decision is added to section 10 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> No file outside the one
+  project folder the user opened can EVER be read or written by the tool, by
+  the AI agent, or by a command the agent runs. Everything below serves this
+  one sentence.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this feature: what it is for, and exactly which
+  parts of it belong to this feature (write "whole file" when everything
+  applies). Keep this block in sync with the
+  <code>Primary code areas</code> row above. Files marked "planned" do not
+  exist yet and are created by the tasks in section 14.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this feature</th></tr>
+    <tr>
+      <td><a href="tool-analysis.html"><code>tool-analysis.html</code></a></td>
+      <td>Feasibility analysis: proves that Electron plus plain JavaScript covers the requested capabilities</td>
+      <td>Whole file - the answer and the phase plan</td>
+    </tr>
+    <tr>
+      <td><a href="code-devtool-ssot.html"><code>code-devtool-ssot.html</code></a></td>
+      <td>This document - the single source of truth for every decision</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>ssot.css</code>, <code>ssot.js</code></td>
+      <td>Shared design and behavior for SSOT documents</td>
+      <td>Whole files - copied from the SSOT template; never edited per-document</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/package.json</code> (created 2026-09-19)</td>
+      <td>Electron app manifest and npm scripts (start, dist)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/main.js</code> (created 2026-09-19)</td>
+      <td>Electron main process: window, IPC (Inter-Process Communication) hub, service wiring</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/app-state.js</code> (created 2026-09-19)</td>
+      <td>Project root and recent projects persisted as JSON under userData (CODE-08)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/app-server.js</code> (created 2026-09-19)</td>
+      <td>Serves the renderer UI and the Monaco bundle on 127.0.0.1 (CODE-14)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/project-file-service.js</code> (created 2026-09-19)</td>
+      <td>The ONLY path to the disk; enforces the section 7.1 invariant</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/preview-server.js</code> (created 2026-09-19), <code>code-devtool/main/nextjs-runner.js</code> (created 2026-09-19)</td>
+      <td>Static HTTP preview server with project-kind detection; Next.js dev server child process with port capture and log stream</td>
+      <td>Whole files</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/terminal-service.js</code> (created 2026-09-19)</td>
+      <td>One-shot command runner and persistent command sessions (cmd.exe, project-root cwd, timeout, process-tree kill); used by the agent gate and the terminal view (T-17)</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/main/ai/ai-settings.js</code>, <code>code-devtool/main/ai/openai-compatible-client.js</code>, <code>code-devtool/main/ai/provider-copilot.js</code>, <code>code-devtool/main/ai/provider-openai-compatible.js</code>, <code>code-devtool/main/ai/chat-service.js</code>, <code>code-devtool/main/ai/chat-store.js</code>, <code>code-devtool/main/ai/tools.js</code>, <code>code-devtool/main/ai/agent-runtime.js</code> (created 2026-09-19)</td>
+      <td>AI provider clients, chat, and the agent plan-execute loop with the tool registry</td>
+      <td>Whole files</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/preload.js</code> (created 2026-09-19)</td>
+      <td>contextBridge allowlist between renderer and main</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/renderer/index.html</code>, <code>css/app.css</code>, <code>js/app.js</code>, <code>js/preview-view.js</code>, <code>js/explorer.js</code>, <code>js/chat-panel.js</code>, <code>js/editor.js</code>, <code>js/terminal-view.js</code> (created 2026-09-19)</td>
+      <td>The UI: explorer, editor tabs, chat, terminal, preview</td>
+      <td>Whole files</td>
+    </tr>
+    <tr>
+      <td><code>code-devtool/node_modules/monaco-editor/min/</code> (served as <code>/monaco</code>)</td>
+      <td>Monaco Editor bundled locally via npm - no CDN; served to the UI by the app server (CODE-14)</td>
+      <td>Whole folder</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-glossary">3. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here. Add a row
+  whenever a discussion introduces a term - one meaning per term, so every
+  reader and every AI sees the same definition.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>AI (Artificial Intelligence)</td><td>An external language model accessed over HTTPS. In this tool the primary provider is the GitHub Copilot API.</td></tr>
+    <tr><td>Agent / agent mode</td><td>One AI run that plans multiple steps and executes them by calling tools (read file, write file, run command) until the user request is complete.</td></tr>
+    <tr><td>Main process</td><td>The Electron Node.js process that owns the window, file system access, servers, terminal sessions, and the agent runtime.</td></tr>
+    <tr><td>Renderer process</td><td>The Chromium process that shows the UI (chat, explorer, editor, terminal, preview) as a local web page with no Node.js access.</td></tr>
+    <tr><td>Preload</td><td>The small bridge script that exposes a fixed allowlist of safe functions from the main process to the renderer.</td></tr>
+    <tr><td>IPC (Inter-Process Communication)</td><td>The message channel between the renderer, the preload bridge, and the main process.</td></tr>
+    <tr><td>MCP (Model Context Protocol)</td><td>The standard protocol for giving a model external tools. Used later for Copilot parity (T-20).</td></tr>
+    <tr><td>Project root</td><td>The one folder the user opened. The hard boundary for every file operation in this tool.</td></tr>
+    <tr><td>Static project</td><td>A folder with HTML, CSS, and JavaScript files served directly, no build step.</td></tr>
+    <tr><td>Next.js project</td><td>A folder whose package.json lists <code>next</code> as a dependency; previewed by running its dev server.</td></tr>
+    <tr><td>safeStorage</td><td>Electron API that encrypts secrets with the operating system keychain.</td></tr>
+    <tr><td>Copilot API</td><td>GitHub's hosted model API (api.githubcopilot.com). The primary AI backend (decision CODE-03).</td></tr>
+    <tr><td>Hot reload</td><td>The preview reloads automatically after a saved file inside the project changes.</td></tr>
+    <tr><td>SSOT (Single Source Of Truth)</td><td>This document and its governance rules.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">4. Verified problem and root cause</h2>
+  <h3>4.1 Verified evidence</h3>
+  <ul>
+    <li>2026-09-19, user request: "I want to develop a desktop code
+    development tool, which would have an AI Chat feature and develop code in
+    a folder selected, as we do in Visual Studio code right now, with AI
+    agent capability, with all GitHub Copilot capabilities, manage everything
+    in a feature management (like this template attached) and show the web UI
+    ... inside the tool as preview."</li>
+    <li>2026-09-19, the request fixes the constraints: "Can we do this with
+    only required capabilities with Electron and only js based", and the
+    scope: "for now it will be only for web development - only html-css-js
+    based like we do in this project, or a next js project - nothing else".</li>
+    <li>2026-09-19, this repository contains the project style that the tool
+    must be able to develop: plain HTML/CSS/JS tools, one folder per tool.</li>
+    <li>Result today: the requested tool does not exist; development happens
+    in VS Code with GitHub Copilot, and the user wants the same workflow in
+    their own single-purpose desktop application.</li>
+  </ul>
+  <h3>4.2 Current implementation (verified)</h3>
+  <pre>
+// DESKTOP-APPS/Code-Development/ - current state
+// tool-analysis.html exists but is empty; no Electron application exists.
+// The feature is greenfield. There is no code to fix - this document
+// instead captures the full design before the first line is written.
+  </pre>
+  <h3>4.3 Structural flaws of the alternatives</h3>
+  <ol>
+    <li><strong>VS Code cannot be our product.</strong> It is not realistic
+    to rebrand or embed VS Code; its extension surface and its Copilot
+    integration are tied to Microsoft's product decisions.</li>
+    <li><strong>Browser-only tools cannot touch the disk.</strong> A web page
+    cannot read an arbitrary local folder, watch files, or spawn a terminal
+    without a companion local server - which is half of an Electron app
+    anyway.</li>
+    <li><strong>Tauri breaks the language constraint.</strong> Tauri would
+    be lighter, but its backend is Rust - the user asked for JavaScript
+    only.</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> the tool must own a desktop
+  runtime with real file-system and process access, while remaining plain
+  JavaScript end to end - and that is exactly what Electron provides.</p>
+
+  <h2 id="sec-requirements">5. Requirements</h2>
+  <ol>
+    <li>Electron desktop application for Windows, built in plain JavaScript
+    only: no TypeScript build step, no UI framework, no native modules in
+    version 1. Every feature traces to a <code>.js</code>, <code>.html</code>,
+    or <code>.css</code> file.</li>
+    <li>The user can open any local folder; that folder becomes the project
+    root for the session.</li>
+    <li>File explorer shows the project tree, tracks external changes, and
+    ignores <code>node_modules</code>, <code>.git</code>, and
+    <code>.next</code> by default (toggleable).</li>
+    <li>Code editor opens and saves files with tabs, unsaved-change markers,
+    and a conflict guard when the same file is edited from two places.</li>
+    <li>AI chat with streaming responses; chat history is saved per project
+    and restored on reopen. The chat is one of the two primary surfaces of
+    the app (CODE-10).</li>
+    <li>Agent mode plans and executes multi-file edits through approved
+    tools; every terminal command the agent wants to run is shown to the user
+    and runs only after approval.</li>
+    <li>Preview pane supports exactly two project kinds: static
+    (HTML/CSS/JS) and Next.js. Saved files trigger a reload. Preview errors
+    are visible, not silent. The preview is the primary center surface of
+    the app (CODE-10).</li>
+    <li>Terminal view runs commands inside the project folder.</li>
+    <li>GitHub Copilot-like capabilities: chat, agentic multi-file edits,
+    <code>#file</code> context attachments, workspace search, inline
+    completion (subject to API verification, T-18), slash commands.</li>
+    <li>Secrets are stored with safeStorage only; nothing leaves the machine
+    except AI API calls, and the UI states the active provider.</li>
+    <li>No native module builds (no node-pty) in version 1; the dependency
+    list stays short.</li>
+    <li>Every feature and decision is tracked in this document in the same
+    change as the code.</li>
+  </ol>
+
+  <h2 id="sec-options">6. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr>
+      <td><strong>A. Electron + plain JavaScript</strong></td>
+      <td>Electron main process owns fs, servers, terminal, and the agent runtime; the renderer is a local HTML/CSS/JS page talking over an allowlisted bridge.</td>
+      <td>Yes - desktop runtime, folders, terminal, preview, AI streaming all covered</td>
+      <td>Low - one framework, one language</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>B. Tauri</strong></td>
+      <td>Rust backend with a web view frontend; smaller binary and memory use.</td>
+      <td>Partially - same capabilities</td>
+      <td>High - requires Rust, breaks "only js"</td>
+      <td class="status-rejected">REJECTED (violates the JavaScript-only constraint)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Fork or embed VS Code / Eclipse Theia</strong></td>
+      <td>Reuse a full IDE shell and wire our own AI into it.</td>
+      <td>Yes - but inherits a huge codebase</td>
+      <td>Very high - maintenance and rebranding fight the single-purpose goal</td>
+      <td class="status-rejected">REJECTED (too heavy for one feature; not a clean own product)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Browser-only web application</strong></td>
+      <td>A hosted page with a web preview; no local process.</td>
+      <td>No - browsers cannot read arbitrary folders, watch files, or spawn terminals</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (cannot satisfy requirement 2 and 6)</td>
+    </tr>
+    <tr>
+      <td><strong>E. Electron + React/Vite renderer</strong></td>
+      <td>Electron with a framework-based renderer and a build step.</td>
+      <td>Yes</td>
+      <td>Medium - adds a toolchain the user excluded</td>
+      <td class="status-rejected">REJECTED for v1 (JavaScript-only constraint); the plain UI is simple enough without a framework</td>
+    </tr>
+  </table>
+  <p><strong>Decision: Option A - Electron with a plain JavaScript
+  renderer.</strong> Options B, C, D, and E are dropped for v1. Option E may
+  be revisited only if the UI outgrows plain HTML/CSS/JS, and then as a new
+  dated decision.</p>
+  <h3>6.1 Answers to open questions</h3>
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>Which AI backend do we use?</td><td>GitHub Copilot API as the primary provider, behind a provider abstraction that accepts any OpenAI-compatible endpoint (CODE-03).</td></tr>
+    <tr><td>Where does the agent run?</td><td>In the Electron main process, Node.js, so the folder invariant is enforced in one place (CODE-04).</td></tr>
+    <tr><td>How is the preview served?</td><td>Built-in static server for static projects; the project's own dev server for Next.js (CODE-05).</td></tr>
+    <tr><td>How do we build a terminal without native modules?</td><td>child_process based command sessions (cmd.exe on Windows) in v1 (CODE-06).</td></tr>
+    <tr><td>Which editor component?</td><td>Monaco Editor bundled locally from npm, no CDN (CODE-02).</td></tr>
+  </table>
+
+  <h2 id="sec-design">7. Solution design</h2>
+  <h3>7.1 Core invariant</h3>
+  <p class="note"><strong>Invariant ROOT-ONLY.</strong> Every file path used
+  by the app - from the explorer, the editor, the AI tools, and the terminal
+  - is resolved by <code>project-file-service.js</code>, which rejects
+  absolute paths, <code>..</code> escapes, and symlink escapes before the
+  disk is touched. There is no other call site that touches
+  <code>fs</code> for project files. The terminal service pins its working
+  directory to the project root and refuses <code>cd</code> outside it when
+  driven by the agent. A code reviewer must be able to check any call site
+  against this invariant in one look.</p>
+  <h3>7.2 Process model and folder layout</h3>
+  <pre>
+DESKTOP-APPS/Code-Development/code-devtool/
+  package.json                      app manifest; deps: electron, electron-builder, monaco-editor
+  main/
+    main.js                         window creation, security settings, IPC hub
+    project-file-service.js         ONLY path to the disk (ROOT-ONLY lives here)
+    preview-server.js               static HTTP server on 127.0.0.1, random port
+    nextjs-runner.js                spawns `npm run dev`, captures port, kills cleanly
+    terminal-service.js             command sessions with output streaming
+    ai/
+      provider-interface.js         chatStream() contract shared by providers
+      provider-copilot.js           GitHub Copilot API client
+      provider-openai-compatible.js any OpenAI-compatible endpoint (fallback)
+      agent-runtime.js              plan + tool loop, approval flow
+      tools.js                      tool registry (read_file, write_file, ...)
+  preload.js                        contextBridge allowlist (no raw ipcRenderer exposure)
+  renderer/
+    index.html                      5-panel shell: explorer | editor | chat | preview | terminal
+    css/app.css                     layout + theme
+    js/app.js, js/explorer.js, js/editor.js, js/chat-panel.js, js/terminal-view.js, js/preview-view.js
+  vendor/monaco/                    Monaco Editor local bundle
+  build/                            electron-builder output (gitignored)
+  </pre>
+  <ul>
+    <li>The renderer holds ZERO Node.js power: <code>contextIsolation: true</code>,
+    <code>nodeIntegration: false</code>, <code>sandbox: true</code> (CODE-07).</li>
+    <li>The layout is visual first (CODE-10): the preview is the center
+    stage, the AI chat is the always-visible right panel, and the explorer,
+    editor, and terminal are secondary and collapsed by default - see
+    section 7.7.</li>
+    <li>The UI itself is served by <code>app-server.js</code> over
+    127.0.0.1 (CODE-14) so Monaco web workers and blob resources load from
+    a real origin; only the renderer folder and the Monaco bundle are
+    served, behind the same path guard.</li>
+    <li>All renderer-to-main traffic goes through the allowlist in
+    <code>preload.js</code>; unknown channels are dropped.</li>
+    <li>Persistent state (recent projects, chat sessions, settings) lives as
+    JSON files under Electron userData - no database (CODE-08).</li>
+  </ul>
+  <h3>7.3 AI and agent design</h3>
+  <pre>
+// main/ai/agent-runtime.js - agent loop, authoritative shape
+async function runAgentLoop(userRequest) {
+  const plan = await provider.plan(userRequest)          // structured steps
+  for (const step of plan.steps) {
+    emitAgentEvent('step', step)
+    let response = await provider.callWithTools(step)    // may emit tool_calls
+    while (response.toolCalls.length &gt; 0) {
+      for (const call of response.toolCalls) {
+        if (call.name === 'run_command') {
+          await waitForUserApproval(call)                // never auto-run
+        }
+        const result = await executeToolCall(call)       // fs + terminal only
+        emitAgentEvent('tool', call, result)
+      }
+      response = await provider.callWithTools(step, response.messages)
+    }
+  }
+  emitAgentEvent('done', collectedFileChanges)           // diff list for review
+}
+// main/ai/tools.js - every path goes through project-file-service
+const toolRegistry = {
+  read_file:     (args) =&gt; projectFileService.read(args.path),
+  write_file:    (args) =&gt; projectFileService.write(args.path, args.content),
+  edit_file:     (args) =&gt; projectFileService.applyStringReplace(args.path, args.find, args.replace),
+  list_dir:      (args) =&gt; projectFileService.list(args.path),
+  search_files:  (args) =&gt; projectFileService.search(args.query),
+  run_command:   (args) =&gt; terminalService.runApproved(args.command) // approval gate
+}
+  </pre>
+  <ul>
+    <li>Every agent write records the before-content and is shown as a
+    per-file diff; the user can accept all or undo all (T-13).</li>
+    <li>The agent writes are refused when the editor holds unsaved changes
+    for that file - the user resolves the conflict first.</li>
+    <li>Streaming uses the provider's stream endpoint; the watchdog cancels
+    stalled calls and the UI always shows a Stop button.</li>
+  </ul>
+  <h3>7.4 IPC contract (allowlist)</h3>
+  <table>
+    <tr><th>Channel</th><th>Direction</th><th>Purpose</th></tr>
+    <tr><td><code>app:open-folder</code></td><td>renderer → main</td><td>Show the folder dialog and set the project root</td></tr>
+    <tr><td><code>fs:read-file</code>, <code>fs:write-file</code>, <code>fs:list-dir</code>, <code>fs:search</code></td><td>renderer → main</td><td>All file operations, always through project-file-service</td></tr>
+    <tr><td><code>fs:changed</code></td><td>main → renderer</td><td>Watcher event with the changed path</td></tr>
+    <tr><td><code>ai:*</code> channels (config, token, models, sessions, chat stream)</td><td>both</td><td>AI settings and streaming chat; tokens never leave the main process</td></tr>
+    <tr><td><code>ai:chat-stream</code></td><td>renderer → main</td><td>Streaming AI chat</td></tr>
+    <tr><td><code>agent:run</code>, <code>agent:approve-command</code>, <code>agent:stop</code></td><td>renderer → main</td><td>Agent lifecycle and the command approval gate</td></tr>
+    <tr><td><code>agent:event</code></td><td>main → renderer</td><td>Plan steps, tool calls, diffs, approval requests</td></tr>
+    <tr><td><code>preview:start</code>, <code>preview:stop</code>, <code>preview:status</code>, <code>preview:open-devtools</code></td><td>both</td><td>Preview lifecycle, error reporting, and DevTools</td></tr>
+    <tr><td><code>term:start</code>, <code>term:input</code>, <code>term:output</code></td><td>both</td><td>Terminal session input and output</td></tr>
+  </table>
+  <h3>7.5 Preview design</h3>
+  <ul>
+    <li>Static project: <code>preview-server.js</code> serves the project
+    root on <code>127.0.0.1</code> with a random free port; the renderer
+    loads that URL in an iframe; <code>fs:changed</code> reloads it
+    (debounced).</li>
+    <li>Entry pages: a static project may have several root .html files. The
+    toolbar selector picks the entry; full documents are served directly
+    and body-only html-tool files run through the generated wrapper with
+    the mock SDK (CODE-16).</li>
+    <li>Opening a different folder stops the running preview (Stopped
+    state); the preview never serves a stale root.</li>
+    <li>Next.js project: <code>nextjs-runner.js</code> spawns
+    <code>npm.cmd run dev</code>, captures the port from the child output,
+    and streams the dev server log into the preview pane until ready; stop
+    kills the process tree, never leaves orphans.</li>
+    <li>Next.js projects use the dev server's own hot module replacement;
+    the tool's iframe reload on <code>fs:changed</code> applies to static
+    projects only.</li>
+    <li>Console relay: static HTML pages get an injected relay script that
+    forwards console output to the preview console panel; Next.js projects
+    rely on the dev server's built-in error overlay plus the streamed dev
+    server log (T-16).</li>
+    <li>Project kind is auto-detected from <code>package.json</code> and the
+    presence of an entry HTML file, with a manual override. Anything that is
+    neither static nor Next.js gets a clear "project kind not supported"
+    message - it is never attempted (CODE-05).</li>
+  </ul>
+  <h3>7.6 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required change</th></tr>
+    <tr><td><code>renderer/js/chat-panel.js</code> (chat and #file attachments)</td>
+    <td>Sends attachment paths as relative project paths only; renders <code>ai:event</code> tokens; never resolves paths itself</td></tr>
+    <tr><td><code>renderer/js/explorer.js</code></td>
+    <td>Reads only what <code>fs:list-dir</code> returns; all create/rename/delete via fs channels</td></tr>
+    <tr><td><code>renderer/js/editor.js</code></td>
+    <td>Saves through <code>fs:write-file</code> with a content hash; subscribes to <code>fs:changed</code>; never writes files itself</td></tr>
+    <tr><td><code>renderer/js/preview-view.js</code></td>
+    <td>Only loads <code>http://127.0.0.1</code> URLs produced by the preview service; relays iframe console messages</td></tr>
+    <tr><td><code>renderer/js/terminal-view.js</code></td>
+    <td>Sends input to <code>term:input</code>; displays <code>term:output</code>; never spawns anything itself</td></tr>
+  </table>
+
+  <h3>7.7 Primary layout - visual first</h3>
+  <ul>
+    <li>The app is visual first: the AI chat and the live preview are the
+    PRIMARY surfaces (decision CODE-10). The AI chat is the always-visible
+    LEFT panel and the preview is the dominant RIGHT center stage
+    (CODE-17).</li>
+    <li>Secondary surfaces: the file explorer starts collapsed (header
+    toggle, leftmost when open), the terminal starts collapsed as a slim
+    strip (header toggle or its own head toggle), and the code editor opens
+    only when needed and shares the center with the preview (T-05).</li>
+    <li>The shell defaults to explorer-collapsed and terminal-collapsed on
+    every start; no layout state is persisted in v1.</li>
+    <li>The header SSOT button opens this live document in a full overlay,
+    served by the app server (CODE-18); task checkboxes and progress work
+    there as in the browser.</li>
+  </ul>
+
+  <h2 id="sec-matrix">8. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>The AI requests a path outside the project root</td><td>The path is refused by project-file-service, the refusal is logged, and the agent receives the refusal as the tool result - the run continues.</td></tr>
+    <tr><td>The agent wants to run a terminal command</td><td>An approval dialog shows the exact command and working directory. Cancel = the command does not run and the agent is told; Approve = it runs with the project-root working directory.</td></tr>
+    <tr><td>The user denies an agent command</td><td>The command does not run; the tool returns "Command not approved by the user" to the agent, which continues with the next action.</td></tr>
+    <tr><td>The terminal session dies or is killed</td><td>The view shows [ session ended ]; the next command starts a fresh session in the project root.</td></tr>
+    <tr><td>The agent edits a file the editor has unsaved changes for</td><td>The dirty tab keeps the user's content and never reloads; the agent's write lands on disk. The user resolves by saving the tab (overwrites) or re-editing (L-11).</td></tr>
+    <tr><td>The AI API returns a network error or rate limit</td><td>Chat shows a retry button with the error text; an agent run pauses and offers Resume; nothing is written partially.</td></tr>
+    <tr><td>The preview fails to start for an unexpected reason</td><td>The exact error message is shown in the preview pane and logged in the main process; the Start preview button stays available for a retry.</td></tr>
+    <tr><td>The preview is running and the user opens a different folder</td><td>The old preview stops with the Stopped state; the user starts the preview again for the new root.</td></tr>
+    <tr><td>The project has several root .html files</td><td>The toolbar shows an entry-page selector; the default excludes test-harness.html and prefers the app file; changing the entry reloads the iframe.</td></tr>
+    <tr><td>The preview port is already in use</td><td>For static projects the service picks the next free port; for Next.js the dev server itself moves to another port and the tool follows the port it prints.</td></tr>
+    <tr><td>The Next.js dev server fails to start</td><td>The dev server log is surfaced in the preview pane; the preview shows the error and the Start preview button re-appears as Restart; the app remains usable.</td></tr>
+    <tr><td>The project folder is deleted while it is open</td><td>The explorer shows a missing-folder state; every file operation refuses with a clear message.</td></tr>
+    <tr><td>A saved file changes outside the tool</td><td>The watcher event reloads the editor content (if clean) and refreshes the preview; a dirty editor keeps its unsaved content and warns instead.</td></tr>
+    <tr><td>The opened folder is neither a static site nor a Next.js project</td><td>Project-kind detection reports "project kind not supported" in the preview pane; the editor, chat, and terminal still work.</td></tr>
+    <tr><td>The Copilot API cannot authenticate</td><td>The exact provider error appears in the chat bubble and in the Settings test result; nothing is sent twice and nothing partial is stored.</td></tr>
+    <tr><td>Monaco or its workers fail to load</td><td>The editor status line shows the failure; chat and preview keep working; the app server log shows the failing path.</td></tr>
+    <tr><td>The SSOT document fails to load in the app</td><td>The overlay iframe shows the server error; the app keeps working and the document remains available next to the app folder.</td></tr>
+    <tr><td>An MCP server is unreachable or times out</td><td>The agent reports the server failure in the tool activity and continues with the built-in tools; the settings screen shows the configured server list for correction.</td></tr>
+    <tr><td>The build cannot download the rcedit tool (GitHub unreachable)</td><td>The build fails with a clear download error; after one successful build the tool is cached in build/rcedit and later builds work offline.</td></tr>
+    <tr><td>A folder tab is closed while its preview or terminal runs</td><td>The tab closes; that folder's preview and terminal session stop; every other tab keeps its own session untouched.</td></tr>
+    <tr><td>Switching folders with unsaved editor tabs</td><td>The shell confirms first; after approval the editor tabs close because they belong to the previous folder.</td></tr>
+    <tr><td>A broadcast listener throws (shared emit loop)</td><td>The preload wrapper isolates each listener with try/catch (CODE-27); the failing listener logs an error and every other listener still runs.</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">9. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>No Node.js debugging or breakpoints in v1</td><td>Preview-side debugging uses the browser DevTools only</td><td>Accepted; idea I-08</td></tr>
+    <tr><td>L-02</td><td>Inline completion depends on the Copilot API exposing a completion endpoint</td><td>Accepted 2026-09-19 - no public completion endpoint (IDE-only suggestions service); completion skipped in v1 (CODE-19)</td><td>Closed at T-18</td></tr>
+    <tr><td>L-03</td><td>No extension or plugin ecosystem</td><td>Capabilities are only what we build</td><td>Accepted; idea I-05</td></tr>
+    <tr><td>L-04</td><td>Windows-only packaging first</td><td>No macOS/Linux installers until requested</td><td>Accepted</td></tr>
+    <tr><td>L-05</td><td>No file indexer; large folders use plain recursion</td><td>Very large trees may feel slow</td><td>Accepted; revisit if measured</td></tr>
+    <tr><td>L-06</td><td>The terminal is a command session, not a full PTY (no interactive programs)</td><td>No <code>vim</code>/interactive prompts in the terminal in v1</td><td>Accepted; node-pty later if needed (CODE-06)</td></tr>
+    <tr><td>L-07</td><td>No manual project-kind override; auto-detection only</td><td>A folder that auto-detects wrong needs a manual fix in the project files</td><td>Deferred part of T-15; add the override with the settings surface later</td></tr>
+    <tr><td>L-08</td><td>Copilot auth is PAT-based; OAuth device flow not built</td><td>The user must create and paste a PAT from GitHub</td><td>Accepted per CODE-13; revisit if PAT entry becomes a support burden</td></tr>
+    <tr><td>L-09</td><td>Closing the app with unsaved editor tabs does not warn (tab-level close confirms)</td><td>Solved 2026-09-19 - a beforeunload guard shows the native confirm when any tab is dirty (shipped with PACK)</td><td>Closed</td></tr>
+    <tr><td>L-10</td><td>Agent transcripts are not stored as sessions; only the user text and the final summary persist (CODE-15)</td><td>Old tool chatter cannot be re-read after a restart</td><td>Accepted; revisit when agents get long multi-turn workflows</td></tr>
+    <tr><td>L-11</td><td>Agent writes are not blocked by unsaved editor tabs</td><td>A dirty tab can overwrite an agent change on save</td><td>Deferred; the dirty tab never reloads, so the conflict is visible to the user</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">10. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr>
+      <td>CODE-01</td><td>2026-09-19</td>
+      <td>Build the tool as an Electron desktop application in plain JavaScript only: no TypeScript, no UI framework, no native modules in version 1.</td>
+      <td>Matches the user's explicit constraint; the smallest toolchain; risk traded: a heavier runtime than Tauri, accepted.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-02</td><td>2026-09-19</td>
+      <td>The renderer UI is plain HTML/CSS/JS; code editing uses Monaco Editor bundled locally from npm (no CDN).</td>
+      <td>Monaco gives editor quality and completion hooks with a plain-JS integration; local bundle keeps the app offline.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-03</td><td>2026-09-19</td>
+      <td>The AI backend is the GitHub Copilot API (api.githubcopilot.com) as the primary provider, behind a provider abstraction that also accepts any OpenAI-compatible endpoint.</td>
+      <td>The user has Copilot and wants Copilot-like capabilities; the abstraction protects us from API gaps and lets a fallback provider plug in.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-04</td><td>2026-09-19</td>
+      <td>The agent runtime lives in the Electron main process. Its only tools are the project file service and the approval-gated terminal tool.</td>
+      <td>One place enforces the ROOT-ONLY invariant; the renderer never touches the file system.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-05</td><td>2026-09-19</td>
+      <td>Preview supports exactly two project kinds: static (HTML/CSS/JS) and Next.js (dev server). Anything else is refused with a clear message, never attempted.</td>
+      <td>The user fixed the scope ("nothing else"); refusing keeps every outcome deterministic.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-06</td><td>2026-09-19</td>
+      <td>The terminal in v1 is a child_process based command session (cmd.exe on Windows), not a PTY, to avoid native module builds.</td>
+      <td>Trades interactive programs for zero native rebuilds; node-pty can be added later as a new decision.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-07</td><td>2026-09-19</td>
+      <td>Security baseline: contextIsolation on, nodeIntegration off, sandbox on, allowlisted IPC, a content security policy in the renderer, and secrets only in safeStorage.</td>
+      <td>An AI agent that runs commands makes a locked-down bridge non-negotiable; the allowlist is the only bridge.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-08</td><td>2026-09-19</td>
+      <td>Project state (recent projects, chat sessions, settings) persists as JSON files under Electron userData; no database.</td>
+      <td>Single-user desktop tool; JSON files are the simplest durable storage and need no server.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-09</td><td>2026-09-19</td>
+      <td>Every feature decision and code change for this tool is tracked in this document in the same change as the code.</td>
+      <td>Governance rule from the SSOT template; keeps the document and the code from diverging.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-10</td><td>2026-09-19</td>
+      <td>The app is visual first: AI chat and the live preview are the primary surfaces; the explorer, editor, and terminal are secondary and collapsed or hidden by default.</td>
+      <td>User request 2026-09-19: "I want the AI Chat and Preview is the main part of the app ... more visual, not just like VS Code."</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-11</td><td>2026-09-19</td>
+      <td>The PREVIEW group is built before the AI group: the static preview is credential-free, immediately visible, and completes the visual-first shell; the AI chat follows right after.</td>
+      <td>Sequencing decision from the same user discussion as CODE-10; keeps every push visually demonstrable.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-12</td><td>2026-09-19</td>
+      <td>The FILES core (T-03 project root and T-04 file explorer) ships right after PREVIEW and before the AI group; the Monaco editor and workspace search (T-05, T-06) stay after AI.</td>
+      <td>User feedback 2026-09-19: the explorer placeholder made the tool feel broken. A working file tree is the entry point to every project; chat can follow it.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-13</td><td>2026-09-19</td>
+      <td>Copilot authentication is PAT-first: the user pastes a personal access token in Settings, it is stored with safeStorage (OS encryption), and it is never shown again or written to config files. OAuth device flow is deferred.</td>
+      <td>Simplest reliable path for a local desktop app without a registered OAuth client; safeStorage keeps the token at OS-encryption level (CODE-07).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-14</td><td>2026-09-19</td>
+      <td>The application UI is served by a local app server on 127.0.0.1 (app-server.js) instead of file://, serving ONLY the renderer folder and the Monaco bundle. The CSP adds style-src 'unsafe-inline' (Monaco inline styles) and worker-src blob: (Monaco web workers).</td>
+      <td>Monaco web workers cannot load from file:// origins; a real loopback origin makes workers, blob resources, and later editor features reliable. The server is path-guarded and loopback-only.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-15</td><td>2026-09-19</td>
+      <td>Agent runs render live in the chat panel and are not stored as chat sessions in v1; only the user text and the final summary persist in the session. The change history for Undo keeps the last 10 runs.</td>
+      <td>Agent transcripts are mostly tool chatter; storing summaries keeps the session history useful while the full review experience lives in the live UI.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-16</td><td>2026-09-19</td>
+      <td>A folder counts as a static project when it contains index.html OR any root .html file. Body-only html-tool files (no <html> tag, CMS tool structure: HTML + sibling CSS/JS) are previewed through a generated wrapper page at /__codedevtool-app/?entry=... that links the sibling CSS/JS and injects a localStorage-backed mock tool SDK; full HTML documents are served directly. The preview toolbar gets an entry-page selector and a role selector (admin/editor/viewer).</td>
+      <td>User report 2026-09-19: a VolunteerManagement folder (no index.html, body-only HTML) was refused as unsupported. The wrapper reproduces what test-harness.html does - combine the three files plus a mock SDK - so every html-tool folder previews.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-17</td><td>2026-09-19</td>
+      <td>The AI chat is the always-visible LEFT panel and the preview is the dominant RIGHT center stage; the explorer (when opened) stays leftmost.</td>
+      <td>User request 2026-09-19: "chat should be on the left, preview should be on the right".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-18</td><td>2026-09-19</td>
+      <td>This SSOT document is reachable inside the app: a header SSOT button opens a full overlay with the live document (served by the app-server /docs routes) including the interactive task list.</td>
+      <td>User request 2026-09-19: "I need to have the SSOT document and its task list on the UI as well".</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-19</td><td>2026-09-19</td>
+      <td>No inline completion in v1: verification against current GitHub documentation shows the public Copilot API exposes chat, embeddings, and model endpoints only; inline suggestions are served by the private IDE service copilot-proxy.githubusercontent.com. L-02 accepted.</td>
+      <td>T-18 verification step: "if no, record the finding, mark L-02 accepted, and close the task". Revisit if GitHub publishes a public completions endpoint.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-20</td><td>2026-09-19</td>
+      <td>MCP in v1 = a minimal streamable-HTTP MCP client behind settings: the Copilot API does not inject MCP tools (MCP is a client-side feature in the Copilot SDK), so the app implements the client itself - tools/list becomes function schemas (mcp_&lt;server&gt;_&lt;tool&gt;), tools/call runs through the agent loop, the saved Copilot token is attached automatically for api.githubcopilot.com servers, and no custom headers are stored.</td>
+      <td>T-20 verification step; GitHub hosts an MCP server at api.githubcopilot.com/mcp/ which works out of the box.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-21</td><td>2026-09-19</td>
+      <td>winCodeSign-free packaging: electron-builder's own executable editing needs the winCodeSign package, whose extraction fails on Windows without symlink privileges, so the build wrapper disables certificate auto-discovery, builds with signAndEditExecutable=false, and an afterPack hook embeds the icon and version metadata using a locally extracted rcedit-x64.exe (cached in build/rcedit). The dist script also syncs the SSOT documents into docs/ - packaged builds serve that snapshot through the /docs routes.</td>
+      <td>Build failure 2026-09-19 (7-Zip symlink privilege error) + the fact that the live SSOT documents live outside the packaged app.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-22</td><td>2026-09-19</td>
+      <td>The product ships as "Unicon Studio" - brand-first, and "Studio" matches the visual-first positioning (chat and live preview as the primary surfaces). Applied to the window title, header, AI prompts, package identity (unicon-studio, appId com.uniconhub.uniconstudio), and this document. Internal identifiers stay unchanged for stability: the code-devtool folder, the codedevtool* IPC/bridge names, the /__codedevtool-app preview route, and the CODEDEVTOOL_SMOKE_TEST environment variable.</td>
+      <td>User request 2026-09-19: make it a Unicon product and find the best name.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-23</td><td>2026-09-19</td>
+      <td>Folder tabs: the app opens multiple project folders in ONE instance as header tabs. Each tab owns its explorer, live preview, persistent terminal session, and chat history; only the active tab runs a preview server and file watcher. Switching tabs keeps every folder's terminal session alive - exactly like having several terminal instances. Editor tabs clear on switch, guarded by a confirm when unsaved. The agent's root-only invariant (CODE-04) applies per tab, and undo always runs in the folder where the change happened.</td>
+      <td>User request 2026-09-19: VS Code's one-folder-per-instance model forces many instances; the user wanted the multi-terminal model applied to folders.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-24</td><td>2026-09-19</td>
+      <td>Workspace context (project base structure): walking up from the open folder, the app finds the workspace root - the nearest ancestor containing rule files named *-rules.txt (retired files starting with old- are excluded) - and automatically attaches those rule files as system context to the AI chat and the agent. The explorer shows a "Workspace rules" strip listing them. Shared files stay read-only context; every edit remains scoped to the active folder tab.</td>
+      <td>User request 2026-09-19: small html tools do not carry html-tool-rules.txt; the AI needs a project base structure to reach the shared rules.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-25</td><td>2026-09-19</td>
+      <td>Clean app frame: a Preview button in the header returns from the editor to the live preview from anywhere; the electron/node version badge is removed (developer info has no user value); the default Electron menu bar is hidden (autoHideMenuBar, setMenuBarVisibility(false), and an empty application menu) - the header carries every action.</td>
+      <td>User reports 2026-09-19: no obvious way back to the preview after opening files; version text clutters the header; the default Electron menu looks wrong for the product.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-26</td><td>2026-09-19</td>
+      <td>Persistent per-folder previews: every folder tab keeps its own preview running - the static preview server and the Next.js dev runner became per-folder services, stopped only with their tab (or their Stop button). Switching tabs swaps the visible iframe to that folder's live URL without restarting anything; the renderer remembers each folder's last preview state and restores it. File changes in the active folder hot-reload the visible static preview; a background folder's preview is fresh when its tab becomes active. Cost is deliberate: static previews cost a few MB each; each running Next.js dev server is a full Node process and the Stop button releases it.</td>
+      <td>User request 2026-09-19: keep every opened folder previewing simultaneously, reloading after agent edits, so work flows serially across tabs.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-27</td><td>2026-09-19</td>
+      <td>Shared broadcast dispatch is isolated per listener: the preload wrapper for app:project-changed calls each listener inside try/catch, so one failing listener can no longer abort the shared EventEmitter emit loop and silence every listener registered after it. Root cause of the preview-not-switching bug: the editor's folder-switch handler assigned to a const (openFiles) and threw; explorer ran first and looked fine while chat, preview, and terminal never received the event.</td>
+      <td>Bug report 2026-09-19: switching folders kept the old preview visible even though the explorer updated. Reproduced with an automated UI driver and traced to the const assignment.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-28</td><td>2026-09-19</td>
+      <td>Per-folder live iframes: each folder tab with a running preview owns its iframe, and switching tabs swaps visibility without reloading - the page keeps its scroll and UI state. The record stores the user's entry-page and role choices and rebuilds the URL from them on restore (so choosing test-harness survives switching away and back). The console relay feeds only from the visible iframe, and the record plus iframe are removed when that folder's preview stops.</td>
+      <td>Bug report 2026-09-19: switching back reloaded the preview and lost the entry-page selection.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-maintenance">11. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this feature.</strong> Every decision is recorded in section 10 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li>Review every new file-access call site against the ROOT-ONLY
+    invariant in section 7.1: every path resolves through
+    <code>project-file-service.js</code>, no exceptions.</li>
+    <li>Never introduce a path that bypasses the agent tool registry - the
+    AI can touch files and commands only through it.</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">12. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Create this SSOT document and the feasibility analysis</td><td><code>code-devtool-ssot.html</code>, <code>tool-analysis.html</code> - DONE</td></tr>
+    <tr><td>2</td><td>Application skeleton with locked-down window and bridge, plus the visual-first shell (T-01, T-02, T-22)</td><td><code>code-devtool/package.json</code>, <code>main/main.js</code>, <code>main/app-state.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code> - DONE (smoke launch exit 0; visual-first layout applied)</td></tr>
+    <tr><td>3</td><td>Folder and file editing core (T-03..T-06)</td><td><code>main/project-file-service.js</code>, <code>main/app-server.js</code>, <code>renderer/js/explorer.js</code>, <code>renderer/js/editor.js</code> - T-03..T-06 DONE (project root, file tree, Monaco editor, search) - FILES GROUP COMPLETE</td></tr>
+    <tr><td>4</td><td>AI foundation (T-07..T-09)</td><td><code>main/ai/ai-settings.js</code>, <code>main/ai/openai-compatible-client.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/chat-store.js</code>, <code>renderer/js/chat-panel.js</code> - DONE (unit-tested; live API check needs the user token, scenario S3) - AI GROUP COMPLETE</td></tr>
+    <tr><td>5</td><td>Agent mode (T-10..T-13)</td><td><code>main/ai/agent-runtime.js</code>, <code>main/ai/tools.js</code>, <code>main/terminal-service.js</code>, <code>renderer/js/chat-panel.js</code> - DONE (tool registry, plan loop, approval gate, change review + undo; headless end-to-end green) - AGENT GROUP COMPLETE</td></tr>
+    <tr><td>6</td><td>Web preview (T-14..T-16)</td><td><code>main/preview-server.js</code>, <code>main/nextjs-runner.js</code>, <code>renderer/js/preview-view.js</code> - T-14 DONE (static + hot reload), T-15 DONE (Next.js dev server + port capture + log stream), T-16 DONE (console relay + DevTools) - extended with entry detection and the html-tool wrapper (CODE-16)</td></tr>
+    <tr><td>7</td><td>Terminal (T-17)</td><td><code>main/terminal-service.js</code>, <code>renderer/js/terminal-view.js</code> - DONE (persistent session, history, clear/kill) - TERM GROUP COMPLETE</td></tr>
+    <tr><td>8</td><td>Copilot parity extras (T-18..T-20)</td><td><code>main/ai/mcp-client.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/main.js</code>, <code>renderer/js/chat-panel.js</code>, <code>renderer/js/editor.js</code> - DONE</td></tr>
+    <tr><td>9</td><td>Packaging (T-21)</td><td><code>package.json</code> build section, <code>scripts/build-dist.js</code>, <code>scripts/sync-ssot-docs.js</code>, <code>scripts/generate-icon.js</code>, <code>scripts/ensure-rcedit.js</code>, <code>scripts/after-pack.js</code> - DONE</td></tr>
+    <tr><td>10</td><td>Run the test plan in section 16</td><td>test pass record in section 16.2 - PENDING</td></tr>
+    <tr><td>11</td><td>SSOT document inside the app (T-23)</td><td><code>main/app-server.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code> - DONE</td></tr>
+    <tr><td>12</td><td>Folder tabs and workspace context (T-24/T-25)</td><td><code>main/app-state.js</code>, <code>main/main.js</code>, <code>main/terminal-service.js</code>, <code>main/workspace-context.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/app.js</code>, <code>renderer/js/explorer.js</code>, <code>renderer/js/editor.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code> - DONE</td></tr>
+  </table>
+
+  <h2 id="sec-questions">13. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 10.</p>
+  <ol>
+    <li><strong>Final product name.</strong> ANSWERED 2026-09-19: the
+    product ships as "Unicon Studio" (CODE-22); the code folder and the
+    internal protocol names stay code-devtool/codedevtool for stability.</li>
+    <li><strong>Does the Copilot API expose inline completions?</strong>
+    ANSWERED 2026-09-19: no public completion endpoint exists; L-02 accepted,
+    completion skipped in v1 (CODE-19). Revisit if GitHub publishes one.</li>
+    <li><strong>Default AI model.</strong> The default model depends on what
+    the Copilot subscription exposes at implementation time; the settings
+    screen lists the available models.</li>
+    <li><strong>Distribution.</strong> ANSWERED 2026-09-19: both the NSIS
+    installer and a portable exe ship (T-21); Windows x64 only for v1,
+    macOS later if asked.</li>
+    <li><strong>Command approval strictness.</strong> Default is approve
+    every agent command; should the user get a per-session "trust this
+    project" switch later?</li>
+    <li><strong>App icon and theme.</strong> ANSWERED 2026-09-19: the
+    generated placeholder icon (indigo code-window) ships with the
+    installer; a designer-made identity can replace it later now that the
+    name is fixed (Unicon Studio, CODE-22).</li>
+  </ol>
+
+  <h2 id="sec-tasklist">14. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar. <strong>Execution order: ALL GROUPS COMPLETE (SKEL, LAYOUT,
+  PREVIEW, FILES, AI, AGENT, TERM, DOCS, PARITY, PACK, MULTI) - the
+  remaining gate is the user acceptance run in section 16.2</strong>.</p>
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 13.</li>
+  </ul>
+
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) · 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="SKEL">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Application skeleton</span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="SKEL">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="SKEL"></div></div>
+    <p class="task-group-note">Why these belong together: T-01 creates the app shell and T-02 locks its
+    security model. Shipping a window without the bridge lockdown would mean
+    the renderer could reach Node.js - the ROOT-ONLY invariant would not
+    exist yet. They ship as one unit.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="SKEL" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Application bootstrap</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> There is no Electron app yet; nothing runs.</p>
+          <p><strong>How we will solve it:</strong> Create <code>code-devtool/</code> with package.json (electron, electron-builder, monaco-editor deps; start and dist scripts), the main entry, and the folder layout from section 7.2. Plain JavaScript only.</p>
+          <p><strong>Benefit:</strong> The app starts with <code>npm start</code> and the whole plan has a place to live.</p>
+          <p><strong>Files:</strong> <code>code-devtool/package.json</code>, <code>main/main.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - built under code-devtool/, dependencies installed, smoke launch exit 0. Tick the checkbox above to mark it done in this browser.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="SKEL" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Locked-down window and IPC bridge</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> An app whose renderer can run AI-driven changes needs a hard security boundary from day one.</p>
+          <p><strong>How we will solve it:</strong> Window with contextIsolation on, nodeIntegration off, sandbox on; preload contextBridge expose of the 7.4 channel allowlist; renderer index.html with the 5-panel shell and a content security policy; IPC health-check round trip.</p>
+          <p><strong>Benefit:</strong> CODE-07 is enforced structurally before any feature code exists.</p>
+          <p><strong>Files:</strong> <code>main/main.js</code>, <code>main/app-state.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - locked window, allowlist bridge, and visual-first shell verified by smoke launch (exit 0). Tick the checkbox above to mark it done in this browser.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="LAYOUT">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Visual-first shell</span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="LAYOUT">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="LAYOUT"></div></div>
+    <p class="task-group-note">Why these belong together: the layout change touches the shell markup, its
+    CSS, and the toggle wiring in one pass; shipping half of it would leave
+    broken panel states.</p>
+
+    <div class="task-item" data-task-id="T-22" data-group="LAYOUT" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-22</span>
+          <span class="task-title">Visual-first shell: chat and preview lead</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-22 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The shell looked like a code IDE; the user wants chat and preview to be the main stage (decision CODE-10).</p>
+          <p><strong>How we will solve it:</strong> Preview becomes the dominant center panel, AI chat the always-visible right panel; explorer and terminal start collapsed with header toggles; the editor placeholder stays hidden until T-05 makes it real, then it shares the center with the preview.</p>
+          <p><strong>Benefit:</strong> The app reads as a visual builder, not a VS Code clone.</p>
+          <p><strong>Files:</strong> <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - layout applied (section 7.7) and shell relaunched.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="FILES">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Folder and file editing core</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="FILES">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="FILES"></div></div>
+    <p class="task-group-note">Why these belong together: T-03 establishes the project root; T-04..T-06
+    are the only UI surfaces over project-file-service. The ROOT-ONLY
+    invariant ships inside this group and every later group depends on it.</p>
+
+    <div class="task-item" data-task-id="T-03" data-group="FILES" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Open folder and project root</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The tool needs the one folder everything else is scoped to.</p>
+          <p><strong>How we will solve it:</strong> dialog.showOpenDialog with directory selection; store the project root plus a recent-projects list in userData JSON; show the root in the window title.</p>
+          <p><strong>Benefit:</strong> The project root - the input to the ROOT-ONLY invariant - exists.</p>
+          <p><strong>Files:</strong> <code>main/main.js</code>, <code>main/app-state.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - shipped with the skeleton (folder dialog, project root, recent projects, watcher) and marked complete now that the tree consumes it.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="FILES" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">File explorer with watcher</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The user must see and navigate the project tree.</p>
+          <p><strong>How we will solve it:</strong> Lazy-loaded tree via fs:list-dir; ignore node_modules, .git, .next by default with a toggle; fs.watch for external changes; create, rename, and delete for files and folders through project-file-service.</p>
+          <p><strong>Benefit:</strong> The core IDE feel, and every later feature reuses the tree.</p>
+          <p><strong>Files:</strong> <code>main/project-file-service.js</code>, <code>renderer/js/explorer.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - tree with lazy folder loading, hidden node_modules/.git/.next, refresh button, auto-refresh on file changes; file click selects the file until the editor arrives (T-05). The visibility toggle for ignored folders is deferred to T-05.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="FILES" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Monaco editor with tabs and save</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Code must be opened and edited comfortably.</p>
+          <p><strong>How we will solve it:</strong> Monaco Editor loaded from the local vendor bundle (no CDN); editor tabs per file; save through fs:write-file; unsaved-change markers and a dirty-state close dialog; watcher-driven external updates.</p>
+          <p><strong>Benefit:</strong> The editor surface the agent and the completion feature (T-18) plug into.</p>
+          <p><strong>Files:</strong> <code>renderer/js/editor.js</code>, <code>main/app-server.js</code>, <code>main/project-file-service.js</code>, <code>renderer/css/app.css</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - Monaco served from the local bundle with working web workers (CODE-14); tabs with dirty markers, Ctrl+S save, tab-level dirty confirm, external-change reload, language detection by extension, close returns to the preview. App-close warning for unsaved tabs added with PACK (L-09).</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="FILES" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Workspace search</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The agent and the user both need to find code fast (a Copilot staple).</p>
+          <p><strong>How we will solve it:</strong> Recursive text search in project-file-service with a results list; clicking a result opens the file at the matching line.</p>
+          <p><strong>Benefit:</strong> Feeds chat context and agent tooling; users find symbols without an indexer.</p>
+          <p><strong>Files:</strong> <code>main/project-file-service.js</code>, <code>renderer/js/explorer.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - search box in the explorer, 400ms debounce, case-insensitive, 200-result cap, click opens the file at the matching line.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="AI">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: AI foundation</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="AI">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="AI"></div></div>
+    <p class="task-group-note">Why these belong together: T-07 opens the provider channel, T-08 renders
+    it, T-09 feeds it context. A chat UI without the verified provider, or a
+    provider without a chat surface, is untestable.</p>
+
+    <div class="task-item" data-task-id="T-07" data-group="AI" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Provider layer and Copilot authentication</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The tool needs a verified, authenticated AI channel (CODE-03).</p>
+          <p><strong>How we will solve it:</strong> PAT-first auth (CODE-13): token pasted in Settings, stored via safeStorage, masked everywhere; a shared SSE streaming client; Copilot and OpenAI-compatible providers; Test connection lists the available models; base URL and model are editable.</p>
+          <p><strong>Benefit:</strong> Every AI feature builds on one stable, swappable channel.</p>
+          <p><strong>Files:</strong> <code>main/ai/ai-settings.js</code>, <code>main/ai/openai-compatible-client.js</code>, <code>main/ai/provider-copilot.js</code>, <code>main/ai/provider-openai-compatible.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - unit-tested (safeStorage round trip, token never in config files, SSE client). Live API verification happens at first use (scenario S3) because it needs the user's token. Device-flow OAuth deferred (L-08).</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="AI" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Streaming chat with saved sessions</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The core AI chat feature from the request.</p>
+          <p><strong>How we will solve it:</strong> Chat panel renders the stream token by token; Stop button and abort; per-project session history as JSON under userData; session titles auto-generated; context window managed with a size cap.</p>
+          <p><strong>Benefit:</strong> The primary human-AI surface, persisted per project.</p>
+          <p><strong>Files:</strong> <code>renderer/js/chat-panel.js</code>, <code>main/ai/chat-store.js</code>, <code>renderer/css/app.css</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - streaming bubbles, sessions with auto titles and switcher, New chat, Stop, inline error bubbles, settings panel. Caps: 200 messages per session, 8000 characters per message, last 30 history messages sent.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="AI" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">#file context attachments</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Copilot-style chats need explicit file context.</p>
+          <p><strong>How we will solve it:</strong> #file and @file mentions resolve against the project root; attachments render as snippet chips with a size cap; explorer right-click "add to chat".</p>
+          <p><strong>Benefit:</strong> Precise context without pasting code by hand.</p>
+          <p><strong>Files:</strong> <code>renderer/js/chat-panel.js</code>, <code>renderer/js/explorer.js</code>, <code>main/project-file-service.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - Explorer hover + button attaches files (max 5 chips) and #path mentions in the message resolve to files; reads capped at 50KB per file, 20KB sent per attachment block.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="AGENT">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Agent mode</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="AGENT">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="AGENT"></div></div>
+    <p class="task-group-note">Why these belong together: T-10 defines the only tools, T-11 drives them,
+    T-12 gates the dangerous one, and T-13 makes every effect reviewable. An
+    agent that could write without review or run commands without approval
+    would violate the core guarantee - the group ships complete or not at
+    all.</p>
+
+    <div class="task-item" data-task-id="T-10" data-group="AGENT" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Tool registry</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The agent needs a fixed, safe set of capabilities (CODE-04).</p>
+          <p><strong>How we will solve it:</strong> Register read_file, write_file, edit_file (string replace), list_dir, search_files, run_command; each validates its arguments; every path resolves through project-file-service.</p>
+          <p><strong>Benefit:</strong> One place defines everything the AI can do - nothing else exists.</p>
+          <p><strong>Files:</strong> <code>main/ai/tools.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - six tools with argument validation, size caps, and the ROOT-ONLY path guarantee; all unit-tested against a temp project.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-11" data-group="AGENT" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Plan and execute loop</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Multi-file tasks need the planner-to-steps loop from section 7.3.</p>
+          <p><strong>How we will solve it:</strong> Planner produces ordered steps; each step runs model calls with tool_call parsing until done; the UI shows live step and tool progress; Stop cancels; API errors pause with Resume.</p>
+          <p><strong>Benefit:</strong> The agentic capability the user asked for.</p>
+          <p><strong>Files:</strong> <code>main/ai/agent-runtime.js</code>, <code>renderer/js/chat-panel.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - planner JSON with tolerant parsing and a direct-task fallback, stepwise execution with a tool-call loop (max 12 iterations), live plan and tool events; verified end-to-end with a fake provider.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-12" data-group="AGENT" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Command approval gate</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> An AI running shell commands is the highest-risk capability in the app.</p>
+          <p><strong>How we will solve it:</strong> Every run_command shows the exact command and working directory; Approve / Deny / deny-all-this-session; output streams to the agent and the terminal view; timeout and kill; the terminal service pins the working directory to the project root.</p>
+          <p><strong>Benefit:</strong> Terminal automation with a human gate on every command.</p>
+          <p><strong>Files:</strong> <code>main/terminal-service.js</code>, <code>main/ai/agent-runtime.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - every command shows Approve/Deny in the chat, 5-minute auto-deny timeout, Stop denies and aborts, runs through cmd.exe with project-root cwd and a 2-minute timeout; deny-all-session is deferred to the settings surface.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-13" data-group="AGENT" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">AI change review and undo</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Agent edits must never be a black box.</p>
+          <p><strong>How we will solve it:</strong> Every agent write stores the before-content; per-file diff list at run end; accept all / undo all; writes blocked while the editor holds unsaved changes for that file.</p>
+          <p><strong>Benefit:</strong> The user stays in control of every AI change.</p>
+          <p><strong>Files:</strong> <code>main/ai/agent-runtime.js</code>, <code>renderer/js/chat-panel.js</code>, <code>main/project-file-service.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - before/after snapshots per write, per-file change list in the activity panel, Undo all restores content (deletes created files); history keeps the last 10 runs. Blocking writes on unsaved editor tabs is deferred (L-11).</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="PREVIEW">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Web preview</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="PREVIEW">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PREVIEW"></div></div>
+    <p class="task-group-note">Why these belong together: T-14 and T-15 are the two allowed project kinds
+    from CODE-05; T-16 makes both of them debuggable. Shipping one kind
+    without the error surface would leave silent failures.</p>
+
+    <div class="task-item" data-task-id="T-14" data-group="PREVIEW" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Static preview with hot reload</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> HTML/CSS/JS projects need an instant preview like the tools in this repository.</p>
+          <p><strong>How we will solve it:</strong> Built-in plain-Node HTTP server on 127.0.0.1 with a free random port; iframe preview; debounced reload on fs:changed; manual reload button and URL display.</p>
+          <p><strong>Benefit:</strong> See the web UI inside the tool, as requested.</p>
+          <p><strong>Files:</strong> <code>main/preview-server.js</code>, <code>renderer/js/preview-view.js</code>, <code>main/main.js</code>, <code>preload.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - static preview + hot reload + project-kind gate verified; the console relay stays with T-16. Extended 2026-09-19 (CODE-16): folders without index.html but with root .html files are now static; body-only tool files preview through a generated wrapper with a mock tool SDK, entry-page and role selectors in the toolbar.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-15" data-group="PREVIEW" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Next.js preview via dev server</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Next.js is the second allowed project kind (CODE-05).</p>
+          <p><strong>How we will solve it:</strong> Detect next in package.json; spawn npm.cmd run dev in the project root; capture the port from the child output; stream the dev server log until ready; iframe to 127.0.0.1:port; Stop kills the whole process tree with taskkill; Start preview doubles as Restart after a stop or crash.</p>
+          <p><strong>Benefit:</strong> Next.js projects preview like static ones, without leaving the tool.</p>
+          <p><strong>Files:</strong> <code>main/nextjs-runner.js</code>, <code>main/main.js</code>, <code>preload.js</code>, <code>renderer/js/preview-view.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - dev server spawn, port capture, log stream, and process-tree kill verified by code review and parser test; end-to-end check on a real Next.js project is scenario S7. Manual project-kind override deferred (L-07). Fix 2026-09-19: spawn EINVAL on npm.cmd (Node security change) - npm now runs through cmd.exe /d /s /c; the preview start error is shown exactly instead of a generic message. Port capture hardened 2026-09-19: rolling output buffer (lines split across chunks) plus a broad localhost-URL match, because dev server output formats vary across Next.js versions.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-16" data-group="PREVIEW" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-16</span>
+          <span class="task-title">Preview console and error overlay</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Preview errors must be visible, never silent (requirement 7).</p>
+          <p><strong>How we will solve it:</strong> Relay iframe console messages to a preview console panel; surface dev-server process output when it fails; a button opens the browser DevTools scoped to the preview.</p>
+          <p><strong>Benefit:</strong> Debugging stays inside the tool.</p>
+          <p><strong>Files:</strong> <code>renderer/js/preview-view.js</code>, <code>main/main.js</code>, <code>main/preview-server.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - console relay script injected into static HTML responses, preview console panel with level colors and a message counter, DevTools button opens detached DevTools on the app window. Next.js console relay relies on its built-in overlay plus the streamed dev server log.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="TERM">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Terminal</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="TERM">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="TERM"></div></div>
+    <p class="task-group-note">Why these belong together: single-task group; the terminal is the
+    execution surface the agent approval gate (T-12) depends on, so it cannot
+    drift across releases.</p>
+
+    <div class="task-item" data-task-id="T-17" data-group="TERM" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-17</span>
+          <span class="task-title">Terminal view</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-17 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The user must run commands (npm install, git, tests) inside the project.</p>
+          <p><strong>How we will solve it:</strong> child_process spawn of cmd.exe with cwd pinned to the project root (CODE-06); output lines stream to the terminal panel; input line with command history; clear and kill actions; one session in v1.</p>
+          <p><strong>Benefit:</strong> Terminal workflows stay inside the tool.</p>
+          <p><strong>Files:</strong> <code>main/terminal-service.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - persistent cmd.exe session in the project root (echo off, the view echoes input), streaming output, in-memory history with Up/Down, clear and kill actions, and the session restarts on the next command after it dies. Session test green.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="DOCS">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: SSOT document in the app</span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="DOCS">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="DOCS"></div></div>
+    <p class="task-group-note">Why these belong together: the button, the overlay, and the /docs routes
+    form one unit - the button without the route would show an empty frame.</p>
+
+    <div class="task-item" data-task-id="T-23" data-group="DOCS" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-23</span>
+          <span class="task-title">Feature management (SSOT) inside the app</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-23 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The feature document and its task list must be reachable while using the tool (user request 2026-09-19).</p>
+          <p><strong>How we will solve it:</strong> A header SSOT button opens a full overlay with the live document in an iframe, served by the app server (/docs routes); task checkboxes and progress work as in the browser.</p>
+          <p><strong>Benefit:</strong> Decisions and the task list are one click away inside the tool.</p>
+          <p><strong>Files:</strong> <code>main/app-server.js</code>, <code>renderer/index.html</code>, <code>renderer/css/app.css</code>, <code>renderer/js/app.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - overlay with the live SSOT document; /docs serves the doc, its CSS/JS, and the feasibility analysis; route tests green.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="PARITY">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Copilot parity extras</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="PARITY">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PARITY"></div></div>
+    <p class="task-group-note">Why these belong together: T-18 verifies the API first, and T-19/T-20 build
+    the remaining Copilot-style surfaces on the same provider layer. The
+    verification result decides what ships, so the group stays together.</p>
+
+    <div class="task-item" data-task-id="T-18" data-group="PARITY" data-task-status="ignored">
+      <details>
+        <summary>
+          <span class="task-id">T-18</span>
+          <span class="task-title">Inline completion (verify, then build)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-18 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Copilot-style inline suggestions while typing.</p>
+          <p><strong>How we will solve it:</strong> First verify against current GitHub documentation whether the Copilot API exposes a completion endpoint; if yes, wire Monaco inline completion provider with debounce and ghost-text accept (Tab); if no, record the finding, mark L-02 accepted, and close the task.</p>
+          <p><strong>Benefit:</strong> The last big Copilot surface, honestly scoped by what the API allows.</p>
+          <p><strong>Files:</strong> <code>renderer/js/editor.js</code>, <code>main/ai/provider-copilot.js</code></p>
+          <p><strong>Status:</strong> Closed 2026-09-19 - verified against current GitHub documentation: the public Copilot API exposes chat, embeddings, and model endpoints only; inline suggestions are served by the private IDE service copilot-proxy.githubusercontent.com ("API service for Copilot suggestions"). No public completion endpoint exists, so L-02 is accepted and inline completion is skipped in v1 (CODE-19). Revisit if GitHub publishes a completions endpoint.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-19" data-group="PARITY" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-19</span>
+          <span class="task-title">Slash commands</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Fast, repeatable prompts in the chat.</p>
+          <p><strong>How we will solve it:</strong> /explain, /fix, /refactor, /preview-check expand to prompt templates with the active file as context.</p>
+          <p><strong>Benefit:</strong> Copilot-style quick actions with near-zero typing.</p>
+          <p><strong>Files:</strong> <code>renderer/js/chat-panel.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - typing / opens a command menu above the chat input (live filter, Up/Down, Enter/Tab or click); /explain, /fix, and /refactor fill in the active editor file as a #path mention when a file is open; /preview-check asks about the preview console; a fully typed command expands and sends on Enter. Syntax checked, smoke green.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-20" data-group="PARITY" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-20</span>
+          <span class="task-title">MCP client (optional)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-20 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Model Context Protocol tools extend the agent beyond our built-in registry.</p>
+          <p><strong>How we will solve it:</strong> Add an MCP client to the agent runtime with a settings section for MCP server configs; verify GitHub's current Copilot API MCP support first; keep behind settings.</p>
+          <p><strong>Benefit:</strong> Future extensibility without expanding our own surface.</p>
+          <p><strong>Files:</strong> <code>main/ai/mcp-client.js</code>, <code>main/ai/agent-runtime.js</code>, <code>main/ai/ai-settings.js</code>, <code>main/main.js</code>, <code>renderer/index.html</code>, <code>renderer/js/chat-panel.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - verified: the Copilot API does not inject MCP tools (MCP is client-side in the Copilot SDK); shipped a minimal streamable-HTTP MCP client instead (CODE-20): a settings section (enable + one name-URL server per line), tools/list converted to function schemas (mcp_&lt;server&gt;_&lt;tool&gt;) merged with the built-in registry, tools/call executed by the agent, the saved Copilot token attached automatically for api.githubcopilot.com servers, no custom headers stored, failures degrade to tool errors. Unit tests (round trip, auth, graceful failure, agent loop) and smoke green.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="MULTI">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Multiple folders in one instance</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="MULTI">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="MULTI"></div></div>
+    <p class="task-group-note">Why these belong together: folder tabs without the shared rules
+    would still leave every tool folder context-blind, and the shared rules
+    without tabs would only help one folder at a time. One unit.</p>
+
+    <div class="task-item" data-task-id="T-24" data-group="MULTI" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">Folder tabs - many projects in one instance</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The one-folder-per-instance model forces many separate instances when working across small html tools.</p>
+          <p><strong>How we will solve it:</strong> Open folders become header tabs; each tab has its own explorer, live preview, persistent terminal session, and chat history; only the active tab runs a preview server and file watcher; closing a tab stops only that folder's sessions.</p>
+          <p><strong>Benefit:</strong> One instance operates many folders independently - the multi-terminal model applied to folders.</p>
+          <p><strong>Files:</strong> <code>main/app-state.js</code>, <code>main/main.js</code>, <code>main/terminal-service.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/app.js</code>, <code>renderer/js/editor.js</code>, <code>renderer/js/terminal-view.js</code>, <code>renderer/css/app.css</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - header folder tabs with switch and close; per-folder terminal sessions survive tab switches; preview and watcher follow the active tab; editor tabs clear on switch after a dirty confirm; agent undo runs in the folder where the change happened; unit tests green.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-25" data-group="MULTI" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Project base structure - shared workspace rules</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Small html tools do not carry html-tool-rules.txt; the AI must reach the shared rules of the whole project tree.</p>
+          <p><strong>How we will solve it:</strong> Walk up from the open folder to the nearest ancestor with *-rules.txt files (retired old- files excluded); attach those rule files as system context to chat and agent; show a "Workspace rules" strip in the explorer.</p>
+          <p><strong>Benefit:</strong> Every tool folder inherits the project's base rules automatically - no copying, no manual attachment.</p>
+          <p><strong>Files:</strong> <code>main/workspace-context.js</code>, <code>main/main.js</code>, <code>main/ai/chat-service.js</code>, <code>main/ai/agent-runtime.js</code>, <code>preload.js</code>, <code>renderer/index.html</code>, <code>renderer/js/explorer.js</code>, <code>renderer/css/app.css</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - workspace-root detection, auto-attached rule context for chat and agent, explorer strip; unit tests green (root walk, old- exclusion, chat and agent injection).</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="PACK">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Packaging</span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="PACK">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="PACK"></div></div>
+    <p class="task-group-note">Why these belong together: the installer is the last step; it must package
+    everything above, so it releases only after the feature groups.</p>
+
+    <div class="task-item" data-task-id="T-21" data-group="PACK" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-21</span>
+          <span class="task-title">Windows installer and smoke test</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-21 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The app must be installable outside a dev checkout.</p>
+          <p><strong>How we will solve it:</strong> electron-builder NSIS installer (plus portable zip per section 13 question 4); app icon; smoke test of the installed app against the section 16 scenarios.</p>
+          <p><strong>Benefit:</strong> A real product artifact, not just a dev process.</p>
+          <p><strong>Files:</strong> <code>code-devtool/package.json</code> (build section), <code>build/</code>, <code>scripts/build-dist.js</code>, <code>scripts/sync-ssot-docs.js</code>, <code>scripts/generate-icon.js</code>, <code>scripts/ensure-rcedit.js</code>, <code>scripts/after-pack.js</code></p>
+          <p><strong>Status:</strong> Completed 2026-09-19 - dist/Unicon Studio Setup 0.1.0.exe (NSIS installer) and dist/Unicon Studio 0.1.0.exe (portable) built; the generated icon and version metadata are embedded with a self-managed rcedit because electron-builder's own editing tool fails on this machine (CODE-21); the SSOT documents ship inside the package (docs/ snapshot); app-close dirty-tab warning added (L-09); packaged smoke launch exit 0.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <h2 id="sec-ideas">15. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 14) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) · 0 waiting (0%) · 0 ignored</span>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Git panel</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Status, diff, stage, and commit panel built on the git executable if present.</p>
+        <p><strong>Why:</strong> Completes the coding loop without leaving the tool.</p>
+        <p><strong>Discussion / outcome:</strong> New - not required by the current request.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Line-level diff viewer for AI changes</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A side-by-side diff view in the change review (beyond the before/after list in T-13).</p>
+        <p><strong>Why:</strong> Easier review of large agent edits.</p>
+        <p><strong>Discussion / outcome:</strong> New - T-13 ships the simple version first.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Local models via Ollama</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Add a provider for a local Ollama endpoint as an offline AI option.</p>
+        <p><strong>Why:</strong> Privacy and offline use.</p>
+        <p><strong>Discussion / outcome:</strong> New - the provider abstraction (T-07) makes this a small addition.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Multiple open project folders</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> More than one project root per window (workspaces).</p>
+        <p><strong>Why:</strong> Some workflows span folders.</p>
+        <p><strong>Discussion / outcome:</strong> New - complicates ROOT-ONLY; one root per window stays the v1 rule.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Plugin system</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> User-loaded JavaScript plugins with a sandbox.</p>
+        <p><strong>Why:</strong> Community extension without forking.</p>
+        <p><strong>Discussion / outcome:</strong> New - a big security surface; would need its own SSOT section.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Light and dark themes</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Two app themes via CSS variables.</p>
+        <p><strong>Why:</strong> Comfort; cheap to add with plain CSS.</p>
+        <p><strong>Discussion / outcome:</strong> New - likely a "very small thing" task soon.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Automatic updates</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> electron-updater with a release feed.</p>
+        <p><strong>Why:</strong> Installed users stay current.</p>
+        <p><strong>Discussion / outcome:</strong> New - needs a hosting decision (section 13).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Preview debugging with DevTools</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Full DevTools attached to the preview iframe, not just the console relay.</p>
+        <p><strong>Why:</strong> Debugging parity with a browser.</p>
+        <p><strong>Discussion / outcome:</strong> Partially covered by T-16 (console relay + DevTools button); full integration deferred.</p>
+      </div>
+    </details>
+  </div>
+
+  <h2 id="sec-testplan">16. Test plan - step by step</h2>
+  <p>Preparation: a dev checkout with the dependencies installed; one small
+  static sample project (an HTML/CSS/JS page with an intentional console
+  message) and one small Next.js sample project in temporary folders. Keep
+  the main-process console visible for service logs.</p>
+  <h3>16.1 Scenarios</h3>
+  <ol>
+    <li><strong>S1 - Open a folder.</strong> Steps: start the app, click
+    Open Folder, choose the static sample. PASS if: the tree shows, the title
+    shows the folder name, and the folder appears under Recent.</li>
+    <li><strong>S2 - Edit and save.</strong> Steps: open a file, change it,
+    save, close the tab, reopen. PASS if: the change persisted, the dirty
+    marker cleared on save, and an external edit to the same file reloads a
+    clean tab.</li>
+    <li><strong>S3 - Chat streaming.</strong> Steps: send a message in the
+    chat. PASS if: the answer streams, Stop cancels mid-stream, and the
+    session text survives an app restart.</li>
+    <li><strong>S4 - Agent edit with approval.</strong> Steps: ask the agent
+    to add a small feature across two files, approve the command it requests,
+    review the diff list. PASS if: both files changed, the diff list matched,
+    and Undo restored both files.</li>
+    <li><strong>S5 - Path escape refused.</strong> Steps: ask the agent to
+    read a path outside the project (use a crafted prompt). PASS if: the tool
+    call is refused, the refusal is visible in the chat, and the run
+    continues.</li>
+    <li><strong>S6 - Static preview and hot reload.</strong> Steps: start the
+    preview for the static sample, edit and save a file. PASS if: the iframe
+    shows the page and reloads automatically; the preview console panel shows
+    the intentional console message.</li>
+    <li><strong>S7 - Next.js preview.</strong> Steps: open the Next.js
+    sample, start the preview, wait for ready, stop it. PASS if: the page
+    renders, the dev server log streamed, and Stop left no running node
+    process.</li>
+    <li><strong>S8 - Terminal.</strong> Steps: run a directory listing and an
+    intentionally failing command in the terminal. PASS if: output and the
+    error both appear, the working directory is the project root.</li>
+    <li><strong>S9 - Unsaved conflict guard.</strong> Steps: edit a file
+    without saving, ask the agent to rewrite the same file. PASS if: the
+    write is blocked with the conflict dialog and nothing was overwritten.</li>
+    <li><strong>S10 - Inline completion.</strong> Steps (only if T-18
+    verified the endpoint): type in an open file. PASS if: a ghost suggestion
+    appears and Tab accepts it. If the endpoint does not exist, record L-02
+    accepted and skip.</li>
+  </ol>
+  <h3>16.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>S1-S3 (folder, editor, chat)</td><td></td><td></td></tr>
+    <tr><td>S4-S5, S9 (agent, path guard, conflict guard)</td><td></td><td></td></tr>
+    <tr><td>S6-S7 (static and Next.js preview)</td><td></td><td></td></tr>
+    <tr><td>S8 (terminal)</td><td></td><td></td></tr>
+    <tr><td>S10 (completion, conditional)</td><td></td><td></td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish the first release only when S1-S9
+  all PASS, the SKEL, FILES, AI, AGENT, PREVIEW, and TERM groups are done
+  with no open risks, and the packaging group is done with its smoke test.
+  S10 passes or L-02 is marked accepted before the release that includes the
+  PARITY group.</p>
+  <p><strong>Progress log:</strong> 2026-09-19 - application skeleton
+  (T-01, T-02) built under code-devtool/, dependencies installed, smoke
+  launch exited cleanly (exit code 0). 2026-09-19 - visual-first shell
+  (T-22) applied: preview is the center stage, chat is the right panel,
+  explorer and terminal collapsed by default (CODE-10). 2026-09-19 - static
+  preview (T-14) shipped: built-in 127.0.0.1 server, iframe center stage,
+  debounced hot reload, project-kind gate; PREVIEW moved ahead of AI
+  (CODE-11). 2026-09-19 - Next.js preview (T-15) shipped: dev server spawn,
+  port capture, log stream, process-tree kill on stop. 2026-09-19 - preview
+  start failure diagnosed and fixed: spawn EINVAL on npm.cmd (Node security
+  change); npm now runs through cmd.exe /d /s /c, and preview:start returns
+  the exact error instead of rejecting. 2026-09-19 - console relay (T-16)
+  shipped: injected relay script for static pages, preview console panel,
+  DevTools button; PREVIEW group complete. 2026-09-19 - file explorer (T-04)
+  shipped: lazy tree, hidden node_modules/.git/.next, auto-refresh; T-03
+  marked complete (CODE-12). 2026-09-19 - Next.js port capture hardened:
+  rolling output buffer plus a broad localhost-URL match. S1-S10 scenarios
+  pending. 2026-09-19 - AI group (T-07/08/09) shipped: PAT-first auth with
+  safeStorage (CODE-13), SSE streaming chat with per-project sessions, file
+  attachments and #path mentions; unit tests green. Live API verification
+  is scenario S3 with the user's token. 2026-09-19 - editor and search
+  (T-05/T-06) shipped: Monaco on tabs with dirty markers and Ctrl+S,
+  workspace search with jump-to-line; the UI moved to a local 127.0.0.1
+  server (CODE-14) so Monaco workers load; FILES group complete.
+  2026-09-19 - AGENT group (T-10/11/12/13) shipped: tool registry, plan-
+  execute loop, command approval gate, change review with undo; headless
+  end-to-end run with a fake provider green. 2026-09-19 - TERM group (T-17)
+  shipped: persistent terminal session in the project folder with history,
+  clear, and kill; session test green. 2026-09-19 - html-tool folders now
+  preview (CODE-16): any root .html file makes a folder static; body-only
+  tool files run through a generated wrapper with a mock tool SDK, with
+  entry-page and role selectors in the toolbar; wrapper tests green.
+  2026-09-19 - layout correction (CODE-17): chat moved to the left, preview
+  right; the [hidden] CSS override bug that made the preview take half the
+  height is fixed. 2026-09-19 - SSOT document inside the app (CODE-18, T-23):
+  header SSOT button opens the live document overlay; route tests green.
+  2026-09-19 - PARITY group: T-18 closed with the verification finding (no
+  public Copilot completions endpoint; L-02 accepted, CODE-19); T-19 slash
+  commands shipped (/explain, /fix, /refactor, /preview-check with
+  active-file context); T-20 minimal MCP client shipped (HTTP transport,
+  settings-gated, Copilot token auto-attached for api.githubcopilot.com,
+  CODE-20); unit tests and smoke green. 2026-09-19 - PACK group (T-21)
+  shipped: NSIS installer + portable exe, generated app icon embedded via a
+  self-managed rcedit (CODE-21), packaged builds bundle a docs/ snapshot of
+  the SSOT documents, app-close dirty-tab warning added (L-09), packaged
+  smoke exit 0. All ten release groups complete - v1 feature-complete.
+  2026-09-19 - NAMING (CODE-22): the product ships as Unicon Studio; window
+  title, header, AI prompts, package identity, and this document updated;
+  internal protocol names stay unchanged for stability. 2026-09-19 - MULTI
+  group (T-24/T-25) shipped: folder tabs with per-folder preview, terminal,
+  chat, and explorer; workspace-root rule files (e.g. html-tool-rules.txt)
+  auto-attach to the AI; unit tests green. 2026-09-19 - clean app frame
+  (CODE-25): header Preview button returns from the editor to the live
+  preview; the electron/node version badge is removed; the default Electron
+  menu bar is hidden. 2026-09-19 - persistent per-folder previews (CODE-26):
+  the static preview server and the Next.js runner serve one folder each and
+  keep running across tab switches; the visible iframe swaps to the active
+  folder's live preview instantly; multi-root server tests green.
+  2026-09-19 - preview-switch bug fixed (CODE-27): the editor's folder-switch
+  handler assigned to a const and threw inside the shared project-changed
+  dispatch, silently killing the listeners registered after it (chat,
+  preview, terminal); fixed the const and isolated each listener with
+  try/catch; reproduced and re-verified with an automated UI driver.
+  2026-09-19 - per-folder live iframes (CODE-28): each folder's preview
+  keeps its own iframe; switching tabs no longer reloads, and the chosen
+  entry page (e.g. test-harness) and role survive switching away and back;
+  iframe sequence test green.</p>
+
+  <h2 id="sec-risks">17. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 14). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open · 0 solved · 0 accepted (0% solved)</span>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-01" data-group="AI" data-risk-severity="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">Copilot API capability uncertainty</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> tasks T-07, T-18 / whole group AI</p>
+        <p><strong>What can go wrong:</strong> The Copilot API may lack an inline completion endpoint, change models, or rate-limit our usage; we build against assumptions instead of the verified API.</p>
+        <p><strong>Likelihood / impact:</strong> Medium / High (blocks a requested capability)</p>
+        <p><strong>Mitigation:</strong> Verify current GitHub documentation before writing each provider (T-07, T-18); provider abstraction allows an OpenAI-compatible fallback; completion ships only after verification.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the AI group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="AGENT" data-risk-severity="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">AI-run commands can damage the machine</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> tasks T-12, T-17 / whole group AGENT</p>
+        <p><strong>What can go wrong:</strong> A harmful or mistaken command runs on the user's machine and affects files outside the project.</p>
+        <p><strong>Likelihood / impact:</strong> Medium / High</p>
+        <p><strong>Mitigation:</strong> Human approval for every agent command; working directory pinned to the project root; timeout and kill; no shell access through the fs tools.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the AGENT group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="PREVIEW" data-risk-severity="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Next.js dev server lifecycle and port handling</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-15 / whole group PREVIEW</p>
+        <p><strong>What can go wrong:</strong> Port detection fails or a stopped preview leaves an orphan node process that keeps the port occupied.</p>
+        <p><strong>Likelihood / impact:</strong> Medium / Low-Medium</p>
+        <p><strong>Mitigation:</strong> Port parsing with fallback to the next free port; process-tree kill on stop; Restart button; dev server log surfaced.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the PREVIEW group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="AI" data-risk-severity="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">Secret leakage from provider tokens</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-07 / whole group AI</p>
+        <p><strong>What can go wrong:</strong> The Copilot token ends up in plain JSON settings or in chat logs, and leaks with a backup or a shared machine.</p>
+        <p><strong>Likelihood / impact:</strong> Low / High</p>
+        <p><strong>Mitigation:</strong> safeStorage only (CODE-07); settings files never contain the token; logs redact it.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the AI group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="SKEL" data-risk-severity="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Monaco bundle size and offline reliability</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-05 / whole group SKEL</p>
+        <p><strong>What can go wrong:</strong> A CDN dependency breaks offline or bloats the installer.</p>
+        <p><strong>Likelihood / impact:</strong> Low / Low</p>
+        <p><strong>Mitigation:</strong> Monaco is bundled locally from npm with its worker files; no runtime CDN.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the SKEL group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-06" data-group="AGENT" data-risk-severity="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">Agent edits clobber user edits</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-13 / whole group AGENT</p>
+        <p><strong>What can go wrong:</strong> The agent overwrites a file the user is editing, losing unsaved work.</p>
+        <p><strong>Likelihood / impact:</strong> Medium / Medium</p>
+        <p><strong>Mitigation:</strong> Conflict guard on unsaved editor changes; before-content snapshots and undo for every agent write.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-verify before the AGENT group ships</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-07" data-risk-severity="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-07</span>
+        <span class="risk-title">Scope creep beyond web projects</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-07 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> whole document (cross-cutting)</p>
+        <p><strong>What can go wrong:</strong> Requests for other frameworks or languages dilute the tool and its preview; "nothing else" (the user's words) gets ignored.</p>
+        <p><strong>Likelihood / impact:</strong> High / Medium</p>
+        <p><strong>Mitigation:</strong> CODE-05 fixes the project kinds; new kinds require a new dated decision in section 10, never a silent add.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-19 - open; re-check at every release planning</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to start building
+  locally now - every risk above has a mitigation in its group. Publishing
+  happens only under the section 16.2 gate: all scenarios PASS, groups done,
+  and no open risks for the groups being pushed.</p>
+
+  <div class="footer">
+    Unicon Studio - single source of truth for all decisions
+    about this feature. Version 0.22, 2026-09-19.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>
