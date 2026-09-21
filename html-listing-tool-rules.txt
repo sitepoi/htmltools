@@ -1,0 +1,107 @@
+You are building an HTML LISTING TOOL for the UniconHub CMS html-tool system
+(TYPE 3 of 4 - APPLICATION-LEVEL listing tool).
+
+Placement: APPLICATION level. It lists the folders and objects of an
+application and customizes the presentation for that application's needs.
+It is NOT an object-level interface (that is TYPE 1).
+
+A listing tool renders CMS folders and objects (any CMS object type) into
+custom visual formats decided by the tool design: tables, cards, galleries,
+boards, calendars, timelines, grouped lists, etc. Its job is to PRESENT
+collections - it writes to source records only where the tool design
+explicitly adds a write action (status change, toggle, rating).
+
+The tool runs inside the same sandboxed iframe and uses the same `window.tool`
+SDK as the ACTIVE html-tool. The full common contract lives in
+html-tool-rules.txt (TYPE 1) - everything there applies here unless this file
+overrides it.
+
+--- OUTPUT FORMAT ---
+[HTML]
+...body markup only, no <html>/<head>/<style>/<script> tags...
+
+[CSS]
+...stylesheet rules only, no <style> tag...
+
+[JS]
+...JavaScript only, no <script> tag...
+--- END FORMAT ---
+
+Do not merge them. Do not add extra explanation between the blocks.
+JS entry point MUST be tool.onReady(cb). No DOMContentLoaded/window.onload.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT MAKES A TOOL A LISTING TOOL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PLACEMENT: attached at application level; its job is to present the
+  application's folders and objects in the formats the application needs.
+• Primary duty: read and present collections of CMS objects and/or folders.
+• Data sources:
+  - tool.requestObjects('query') with filters, sorting and paging for the
+    listed object types (requires allowObjectCRUD: 'yes' + allowedObjectTypes)
+  - tool.requestObjects('get') for a selected item's detail
+  - Folder trees come from a folder object type the admin points to via
+    tool.param (folderTypeId), or from allowedObjectTypes when the CMS type
+    itself holds folders
+  - tool.getFields() / onReady fields for the parent record context
+• Drill-down:
+  - tool.openObjectDetail(mainObjectType, objectId) opens the CMS detail
+  - Internal drill-down (filtering within the tool) is preferred for
+    lightweight views - avoid re-fetching when the data is already loaded
+• Own value stays LIGHT - store only UI state:
+  { version, ui: { viewMode, search, filters, sort, favorites[] } }
+  Never cache full object lists in tool.setValue(); refetch on load.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LISTING PATTERNS (pick ONE primary pattern per tool)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• TABLE LIST: sortable columns, row actions, optional bulk select, column
+  totals where numeric, sticky header.
+• CARD GRID: item template with icon/image, title, meta chips, hover actions.
+• GALLERY / BOARD / KANBAN / CALENDAR / TIMELINE / MAP-STYLE: the tool design
+  decides the visual metaphor; the data contract below stays the same.
+• GROUPED LIST: grouped by folder or category with per-group counts
+  ("N of M" chips).
+
+COMMON REQUIREMENTS for every pattern:
+• Search input + filter controls + sort selector, all refetched via
+  requestObjects('query') - client-side filtering is allowed only for data
+  already on screen.
+• Pagination: "Load more" (append) is preferred over jumping pages. Cap page
+  size at ~50. Show "N of M loaded".
+• Loading state while a query is in flight; empty state with a hint
+  ("No records yet" + what creates one); error state with a retry button.
+• Count chips and badges come from query results, never guessed.
+• Write actions (if any): gate with roles (editor+), use requestObjects
+  ('update') with the full object payload, confirm destructive changes with
+  a two-step button, then refresh the list.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PARAMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• allowObjectCRUD: 'yes'      (mandatory - requestObjects needs it)
+• allowedObjectTypes          (goodToHave - the object type ids this tool can
+  list; scope: 'shared' so the tool works across apps). Probe access at
+  startup with a small query and warn once with the exact JSON to add if the
+  query fails silently.
+• folderTypeId                (optional - type that holds the folder tree)
+• defaultView / pageSize      (optional)
+• reportMissingParams() inside onReady for mandatory params with a reason.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERMISSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Listing and drill-down work for viewers.
+• Write actions, bulk actions and destructive buttons are editor+ only.
+• Read-only mode hides every write control but keeps search/filter/sort.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Same test-harness.html pattern as TYPE 1 (mock window.tool, localStorage
+  value store). Mock requestObjects with a localStorage-backed collection and
+  a ~30ms async delay so loading states are testable; implement query, get,
+  and (if used) update in the mock.
+• Smoke tests in Node: query-parameter building, paging math, grouping logic.
+• Headless QA: load the harness, assert the list renders with N items and
+  that "Load more" appends the next page.

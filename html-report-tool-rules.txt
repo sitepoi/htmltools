@@ -1,0 +1,101 @@
+You are building an HTML REPORT TOOL for the UniconHub CMS html-tool system
+(TYPE 2 of 4 - APPLICATION-LEVEL or FOLDER-LEVEL reporting tool).
+
+Placement: APPLICATION level or FOLDER level. It reports across the objects
+under that scope (objects live under folders, folders live under an
+application) - not a single object.
+
+A report tool produces formatted, printable and exportable reports from CMS
+data for any application. It READS source data and NEVER edits it. Its own
+value holds only report configuration, never copies of the data.
+
+The tool runs inside the same sandboxed iframe and uses the same `window.tool`
+SDK as the ACTIVE html-tool. The full common contract lives in
+html-tool-rules.txt (TYPE 1) - everything there applies here unless this file
+overrides it.
+
+--- OUTPUT FORMAT ---
+[HTML]
+...body markup only, no <html>/<head>/<style>/<script> tags...
+
+[CSS]
+...stylesheet rules only, no <style> tag...
+
+[JS]
+...JavaScript only, no <script> tag...
+--- END FORMAT ---
+
+Do not merge them. Do not add extra explanation between the blocks.
+JS entry point MUST be tool.onReady(cb). No DOMContentLoaded/window.onload.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT MAKES A TOOL A REPORT TOOL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PLACEMENT: attached at application or folder level; it reads all objects
+  under that scope. It is NOT an object-level interface (that is TYPE 1).
+• READ-ONLY posture: a report tool may be used by viewers. Viewing and
+  exporting always work; nothing in the report edits source records.
+• Data sources:
+  - tool.requestObjects('query' | 'get') for the report's source object types
+    (requires allowObjectCRUD: 'yes' + allowedObjectTypes including those types)
+  - tool.getFields() / onReady fields for the parent record context
+  - tool.param(name, default) for admin configuration (branding, period, types)
+  - tool.requestAI for summaries and analysis when allowAi is on
+• Own value stays LIGHT - recommended schema:
+  { version, config: { periodStart, periodEnd, filters, viewMode }, lastGeneratedAt }
+  Never store the fetched records or generated report body in tool.setValue().
+• Params to declare:
+  - allowObjectCRUD: 'yes'        (mandatory - needed for requestObjects)
+  - allowExportPdf: 'yes'         (goodToHave - PDF export)
+  - allowSendEmail: 'yes'         (optional - email the report)
+  - sourceObjectTypes             (mandatory when the design needs a data type)
+  - companyName / logoUrl / accentColor (optional - branding)
+  - defaultPeriod                  (optional - e.g. this-month)
+• reportMissingParams() inside onReady for every mandatory param, with a clear
+  reason sentence for each.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REPORT DESIGN CONVENTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PRINT-FIRST layout: design for A4 (or Letter) paper.
+  - @page { size: A4; margin: 18mm 16mm; }
+  - Running header (company name + report title) and footer (page X of Y)
+    via CSS counters and position: running / @page margin boxes where
+    supported; otherwise a simple printed header element.
+  - Repeatable section headers (break-inside: avoid on cards and tables rows).
+• Content blocks:
+  - KPI tiles row (label + big number + delta vs previous period)
+  - Tables with numeric right-aligned columns, column totals, zebra rows
+  - Pure-SVG charts (bars, lines, donuts) - NO chart CDNs, no canvas images
+  - Progress bars, status pills, "no data for the selected period" empty state
+• Branding comes from params (logo, colors, company name) - never hardcoded.
+• Page numbers: CSS counters or the exported HTML's own pagination; do not
+  rely on JS measurement when the print path can be used directly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXPORT CHANNELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• PDF: build a standalone HTML string (inline styles, no external CSS) and
+  call tool.requestExportPdf({ html: standaloneHtml, filename }) then
+  tool.openUrl(resultUrl). Fallback: open a print window with the same HTML.
+• CSV: build the string in JS and trigger a Blob download. No fetch.
+• Download .html: standalone self-contained document via Blob download.
+• Email (optional): tool.requestSendEmail with the inline-styled HTML body.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PERMISSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Use tool.getUser() roles + effectiveAccess exactly as html-tool-rules.txt
+  describes. Viewers can generate and export; only config editing is gated
+  to editor+ roles. In read-only mode hide config controls, keep
+  Generate / Download / Print usable.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TESTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Same test-harness.html pattern as TYPE 1 (mock window.tool, localStorage
+  value store). Mock requestObjects with a localStorage-backed store and a
+  small async delay; mock requestExportPdf returning a fake url; requestAI
+  returning canned JSON per prompt marker.
+• Verify: syntax (node --check), el() id cross-check against HTML, smoke test
+  of the report math (totals, deltas) in Node with a fake DOM.

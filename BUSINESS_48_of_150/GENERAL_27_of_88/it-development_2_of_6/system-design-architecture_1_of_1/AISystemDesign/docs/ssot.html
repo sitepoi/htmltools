@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI System Design - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="done"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body>
+
+  <!-- ── Table of contents - a CLOSED drawer opened with the ☰ button ── -->
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">AI System Design</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <!-- ── Task list - ALWAYS visible on the right on wide screens; on narrow
+       screens it becomes a drawer opened with the Tasks button. The list is
+       generated by ssot.js from section 15 - edit tasks ONLY in section 15. ── -->
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks - click to open the risk register"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>AI System Design</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for every decision about [short description of what
+    this tool owns - e.g. report rendering, AI chat memory, file upload
+    storage]. Every decision made for this tool is logged in section 11 and
+    this document is updated in the same change as the code. When this
+    document or the code disagree, this document is the tiebreaker - it is
+    updated to capture the final decision, never silently left divergent.
+    [Optional: Companion document: <code>other-document.html</code> - explain
+    the relationship and which sections are superseded here.]
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <!-- TEMPLATE: pick one class - status-active (work in progress),
+         status-implemented (shipped), status-proposal (plan not approved). -->
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (AISystemDesign).</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/AISystemDesign.css</code>, <code>app/AISystemDesign.html</code>, <code>app/AISystemDesign.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+  </table>
+
+  <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-decisions">0</div>
+      <div class="summary-label">Decisions logged</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-tasks">0/0</div>
+      <div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-ideas">0/0</div>
+      <div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-big" id="kpi-status">-</div>
+      <div class="summary-label">Document status</div>
+    </div>
+  </div>
+
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines one tool and one set of invariants around
+  [what the tool does] - and it is the <strong>single source of truth for
+  every decision we make</strong> about this tool, now and in the future.
+  No decision is considered made until it is written here. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here.</strong> Before or together
+    with any change to this tool, the decision is added to section 11 with
+    a date, and the affected section is updated in the same change.</li>
+    <li><strong>The register is append-only.</strong> Decision rows are never
+    deleted. A reversed decision is marked "Reversed (date)" with a reason -
+    the original row stays for history.</li>
+    <li><strong>This document wins ties.</strong> If this document or the
+    code disagree, the discrepancy is resolved in this document first (with a
+    dated decision), then applied to the code - never the other way around,
+    and never silently left divergent.</li>
+    <li><strong>Check before changing.</strong> Before changing any behavior
+    covered here, read the relevant section and the register; after the
+    change, update this document in the same change as the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> Every variable,
+    function, and code snippet in any update uses understandable names. No
+    cryptic abbreviations. Short names are allowed only for loop indexes and
+    universally known abbreviations (id, url, api).</li>
+    <li><strong>Acronyms are always expanded</strong> next to every use - in
+    prose, tables, and headings. Literal identifiers stay as they are.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> [One sentence: the property
+  this document exists to protect - e.g. "A stale browser session can NEVER
+  silently revert a record to an older state." Everything below serves this
+  one sentence.]</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <p>Every file involved in this tool: what it is for, and exactly which
+  parts of it belong to this tool (write "whole file" when everything
+  applies). Links open the file in VS Code. Keep this block in sync with the
+  <code>Primary code areas</code> row above.</p>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <!-- TEMPLATE: one row per file. Link format:
+         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
+         #L123 to jump to a specific line). -->
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
+      <td>[What this file does overall - one line]</td>
+      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
+    </tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <p>The starting picture of this tool: what is <strong>already
+  developed, shipped and in effect right now</strong>, before any new work.
+  This section is the factual baseline - when a planned change (sections
+  5-8) ships, its result moves here, and the release log (section 19) keeps
+  the full history. Planned work never appears in this table - planned work
+  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
+         effect today. "Where it lives" = the code path or file that
+         implements it. "In effect since" = the version or date it shipped.
+         "Known from" = the evidence - decision ID (section 11), release-log
+         row (section 19), or code verified on a date. When a capability
+         ships, move its finished task here from section 15. -->
+    <tr>
+      <td>C-01</td>
+      <td>[What already works - a user-visible or system behavior]</td>
+      <td><code>[file-or-function that implements it]</code></td>
+      <td>[vX.Y.Z or YYYY-MM-DD]</td>
+      <td>D-AISD-NN / release-log row / verified in code on YYYY-MM-DD]</td>
+    </tr>
+  </table>
+  <p class="note">When adopting this template for an existing tool, fill
+  this section first: the current behavior is the baseline that the next
+  sections verify and improve. Capabilities listed here are in effect and
+  must keep working unless a decision in section 11 reverses them.</p>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <p>Terms used in this document, with the exact meaning used here. Add a row
+  whenever a discussion introduces a term - one meaning per term, so every
+  reader and every AI sees the same definition.</p>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <!-- TEMPLATE: one row per term. -->
+    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <h3>5.1 Verified evidence</h3>
+  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
+  <ul>
+    <li>[Observed behavior 1 - with where/when it was seen]</li>
+    <li>[Observed behavior 2]</li>
+    <li>[Result of the behavior - what the user experiences]</li>
+  </ul>
+  <h3>5.2 Current implementation (verified in code)</h3>
+  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
+  <pre>
+// [file path] - [function name], current logic
+[the actual code]
+  </pre>
+  <h3>5.3 Structural flaws</h3>
+  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
+       fails, not just that it fails. -->
+  <ol>
+    <li><strong>[Flaw name].</strong> [Why this flaw allows the bad outcome.]</li>
+  </ol>
+  <p class="risk"><strong>Root cause:</strong> [one paragraph that reduces all
+  the flaws to the single underlying cause].</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>[Requirement 1 - measurable, testable]</li>
+    <li>[Requirement 2]</li>
+    <li>[Requirement 3 - e.g. multi-tenant, no custom security rules, cost]</li>
+    <li>[Requirement 4 - UX behavior on failure]</li>
+    <li>[Requirement 5 - no loops, no unbounded growth, no polling]</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <!-- TEMPLATE: one row per considered option; keep the VERDICT cells with
+         one of: ADOPTED / REJECTED (reason) / DEFERRED (decision ID). -->
+    <tr>
+      <td><strong>A. [Option name]</strong></td>
+      <td>[How it works]</td>
+      <td>[Yes / Partially / No - why]</td>
+      <td>[Low / Medium / High - what it touches]</td>
+      <td class="status-adopted">ADOPTED</td>
+    </tr>
+    <tr>
+      <td><strong>B. [Option name]</strong></td>
+      <td>[How it works]</td>
+      <td>[Yes / Partially / No - why]</td>
+      <td>[Low / Medium / High - what it touches]</td>
+      <td class="status-rejected">REJECTED ([reason or decision ID])</td>
+    </tr>
+  </table>
+  <p><strong>Decision: [chosen option(s) and why].</strong> [What happens to
+  the rejected ideas - dropped, deferred, or reused in a smaller role.]</p>
+  <h3>7.1 Answers to open questions</h3>
+  <!-- TEMPLATE: every open question raised during evaluation becomes a dated
+       answer here, and later a row in section 11. -->
+  <table>
+    <tr><th>Question</th><th>Answer</th></tr>
+    <tr><td>[Question]</td><td>[Answer with decision ID when logged]</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <!-- TEMPLATE: the core of the document. Split into sub-sections as the
+       tool needs - invariants, server logic, client contract, callers
+       table, edge cases. Use <h3> per topic. -->
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant [short-code].</strong> [The most important
+  rule of the tool - stated so precisely that a code reviewer can check any
+  call site against it in one look.]</p>
+  <h3>8.2 [Main implementation piece]</h3>
+  <pre>
+// [file path] - [function name], new logic
+[the authoritative code snippet]
+  </pre>
+  <ul>
+    <li>[Key behavior bullet]</li>
+    <li>[Key behavior bullet]</li>
+  </ul>
+  <h3>8.3 Caller contract table</h3>
+  <table>
+    <tr><th>Caller</th><th>Required change</th></tr>
+    <tr><td><code>[file path]</code> ([call site])</td>
+    <td>[exact obligation of this caller]</td></tr>
+  </table>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <!-- TEMPLATE: every scenario has exactly ONE outcome. "Sometimes" is not
+         an acceptable cell value. -->
+    <tr><td>[Scenario]</td><td>[Deterministic outcome]</td></tr>
+    <tr><td>[Failure scenario]</td><td>[How it resolves - which dialog, which retry, which log]</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>[What is NOT covered]</td><td>[What can go wrong because of it]</td><td>[Accepted / deferred to task T-xx / decision ID]</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <!-- TEMPLATE: replace D-AISD below with the tool's unique prefix once,
+       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <!--
+    <tr>
+      <td>D-AISD-01</td><td>YYYY-MM-DD</td>
+      <td>[The decision - what is decided and how it will be implemented]</td>
+      <td>[Why this choice; what risk it trades away]</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    -->
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li><strong>This document is the single source of truth for every decision
+    about this tool.</strong> Every decision is recorded in section 11 with
+    a date, and the affected section is updated in the same change as the
+    code. A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    delete rows.</li>
+    <li>[Tool-specific rule: the invariant from section 8.1 - review every
+    new call site against it.]</li>
+    <li>Never introduce a path that bypasses [the tool's core mechanism].</li>
+    <li>Global naming rule: any update - code or documentation - MUST use
+    understandable, self-explanatory names. No cryptic abbreviations. Existing
+    misleading names are renamed when their code is touched.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+    <tr><td>2</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <p>Decision points we resolve together before or during implementation.
+  Every answer becomes a dated row in section 11.</p>
+  <ol>
+    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+  </ol>
+
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into
+  <strong>release groups</strong>: a group either ships in ONE push (the badge
+  says so) or is a related set that must not be broken across releases.
+  Click a task to expand its full details. Tick the checkbox when a task is
+  done - progress is remembered by the browser per document and shown in the
+  sidebar.</p>
+
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box">
+      <strong>Definition of READY</strong> - a task starts only when:
+      <ul>
+        <li>Its requirement is written in section 6.</li>
+        <li>Options are evaluated and the decision is logged (section 11).</li>
+        <li>It belongs to exactly one release group.</li>
+      </ul>
+    </div>
+    <div class="dor-dod-box">
+      <strong>Definition of DONE</strong> - a group is done only when:
+      <ul>
+        <li>All its tasks are checked.</li>
+        <li>Its open risks are solved or accepted (section 18).</li>
+        <li>Tests you chose to track pass (if any).</li>
+        <li>The document version is bumped and PUSH READY shows.</li>
+      </ul>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong class="status-mandatory">Mandatory</strong> - required for the
+    core guarantee; do first.</li>
+    <li><strong class="status-valuable">Very valuable</strong> - strong
+    benefit; schedule soon.</li>
+    <li><strong class="status-small">Very small thing</strong> - cheap
+    cleanup; do when touching the area.</li>
+    <li><strong class="status-optional">Optional - needs decision</strong> -
+    unclear benefit or a product decision is required; see section 14.</li>
+  </ul>
+
+  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
+       the "ships together" reason, and the tasks inside form one unit.
+       Badge variants: "ONE PUSH - do not split" for groups that must ship in
+       a single push, or "RELATED - do not split" for groups that must not be
+       broken across releases.
+       data-group-status: planned | in-progress | testing | pushed.
+       PUSH READY is computed automatically by ssot.js. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
+       uncomment it, and edit).
+  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: [Group name]</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
+    <p class="task-group-note">Why these belong together: [the shared dependency -
+    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
+    Publishing T-01 alone breaks all writers."]</p>
+
+    TEMPLATE (inside the commented sample): one .task-item block per task.
+    data-task-id must be unique across the whole document; data-group matches
+    the group key above. data-task-status: not-started | in-progress | ignored.
+    Done is the checkbox. The status chip is rendered by ssot.js.
+    PERMANENT DONE: write data-task-status="done" on the task div (or
+    checked="checked" on the checkbox) to mark it done for every browser;
+    npm run rel does this for pushed groups.
+    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> [why this task exists]</p>
+          <p><strong>How we will solve it:</strong> [approach, files]</p>
+          <p><strong>Benefit:</strong> [what the user or system gains]</p>
+          <p><strong>Files:</strong> <code>[file paths]</code></p>
+          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+        </div>
+      </details>
+    </div>
+
+    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+  </section>
+  END OF TEMPLATE SAMPLE -->
+
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <p>Future ideas live here until they are decided. We discuss each idea and
+  write the outcome inside its details. An agreed idea moves to the task list
+  (section 15) with a priority; a rejected idea is marked Ignored with the
+  reason. Tick the checkbox when an idea is done - progress is remembered by
+  the browser per document.</p>
+
+  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+
+  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
+       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> [what the idea is]</p>
+        <p><strong>Why:</strong> [what it would improve]</p>
+        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>[Preparation: what accounts, tenants, browsers, and test data the pass
+  needs. Keep the browser console open and filter by [trace keyword] - every
+  [operation] writes a trace line.]</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
+    PASS if: [observable result].</li>
+    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
+    PASS if: [observable result].</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>[Group of scenarios]</td><td></td><td></td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> [the exact condition under which this
+  tool is allowed to be published - e.g. "publish only when every MUST
+  scenario PASSES and T-01..T-03 ship in the same release"].</p>
+  <p><strong>Progress log:</strong> [append one line per completed scenario
+  with the date and the observed evidence - keep this a running history.]</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <p>Every risk or side effect of a change that is NOT pushed yet lives here,
+  linked to its release group (section 15). <strong>Before every push</strong>
+  re-evaluate every OPEN risk of the groups being pushed: solve them one by
+  one (tick the checkbox), or mark the risk Accepted
+  (<code>data-risk-status="accepted"</code>) with a reason and the date, and
+  update the <code>Last re-evaluation</code> line inside the risk. A group is
+  push-ready when its tasks are done AND it has no OPEN risks - the task
+  panel shows a PUSH READY badge per group and the open-risk count.</p>
+
+  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
+  </div>
+
+  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
+       data-group = the release group it belongs to (must match a
+       data-release-group in section 15; leave empty for cross-cutting risks).
+       data-risk-level: critical (mandatory - blocks every push until solved)
+       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
+       reported only).
+       data-risk-status: open | accepted. Solved = the checkbox. -->
+  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
+  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
+        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
+        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
+        <p><strong>Mitigation:</strong> [what we do about it]</p>
+        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+      </div>
+    </details>
+  </div>
+  END OF TEMPLATE SAMPLE -->
+
+  <p class="ok"><strong>Overall verdict.</strong> [One paragraph: is it safe to
+  test locally, is it safe to publish, and under which condition.]</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. The <code>npm run rel</code> script appends
+  a row here automatically after every successful push - do not edit or remove
+  the marker comment below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    AI System Design - single source of truth for all decisions about this
+    tool. Version 0.1, 2026-09-21.
+    Keep in sync with code; when in doubt, update this document in the same
+    change as the code.
+  </div>
+  </div><!-- /#view-document -->
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync. Tasks stamped by <code>npm run rel</code> show the push version
+    they shipped in.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks. Critical risks block every push until solved; high
+    risks block unless accepted; medium risks warn; low risks are reported
+    only.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved
+    state. Tick the checkbox here or in section 18 - both stay in sync.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div><!-- /#content -->
+</body>
+</html>

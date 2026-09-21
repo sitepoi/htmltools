@@ -1,0 +1,337 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PUBLISH AND PUSH RULES - chat-driven publishing protocol (GitHub Copilot)
+
+WHEN THIS FILE APPLIES
+The user says "publish" / "push" / "publish and push" (or asks to ship the
+tools store). Copilot then follows this file START TO FINISH, step by step,
+running every command listed here. This file is auto-attached to the chat
+context like the other *-rules.txt files - the checklist is always visible.
+
+GOLDEN RULE (never broken)
+- "Prepare everything" is NOT a push order. Commit, version and push happen
+  ONLY because the user asked to publish/push in the current conversation.
+- If any phase fails, STOP, fix it, and report - never skip a phase to reach
+  the push.
+
+WHAT THE PUBLISH DOES (end to end)
+1. Finds every tool changed since the last push.
+2. Re-syncs the dynamic folder names when tools or idea counts changed.
+3. Updates each changed tool's SSOT in the same change as the code.
+4. Regenerates the 5 AI satellite documents per changed tool (Copilot writes
+   them in chat - NO AI gateway is needed).
+5. Appends release rows (updates.html + ssot.html) per changed tool.
+6. Runs the verification gate - every check MUST pass.
+7. Commits, bumps the version, and pushes.
+8. Reports the result.
+
+No AI gateway configuration is required in this mode. The scripts still
+exist for automation (npm run rel) but the chat workflow does everything
+without calling any AI backend.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 0 - PREFLIGHT (always first, read-only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+0.1 Git state
+    Run and read BOTH:
+      git status --short
+      git rev-parse '@{push}'
+    Purpose: know what changed, what is untracked, and the commit the last
+    push ended at (the baseline for "changed since last push").
+    Expected: branch main. If git reports an unfinished merge/rebase, STOP.
+
+0.2 Changed tools list
+    Run:
+      npm run tools:changed
+    Purpose: the authoritative list of tools whose app / listing / reporting
+    files changed since the last push (tracked diffs + untracked new files).
+    NOTE: a docs-only change does NOT count as a changed tool - only the
+    tool's own part folders (app, listing, reporting) do.
+
+0.3 Docs folders complete
+    Run:
+      npm run docs:init
+    Purpose: idempotent - creates any missing file of the 6 documents in
+    every tool's docs/ folder. Never overwrites existing documents.
+
+0.4 Plan with the user
+    Show the changed tools and confirm the order of work. If the user only
+    said "prepare", STOP after the phases they asked for - do not push.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 1 - FOLDER NAME SYNC (dynamic names <name>_<apps>_of_<ideas>)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Run this phase when tools were added/moved/renamed or the tool-ideas catalog
+changed since the last sync (counts must match reality):
+
+1.1 Re-sync the tree
+    Run:
+      node "C:/Users/Admin/AppData/Local/Temp/repo-sync-hierarchy2.cjs"
+    What it does (self-healing, safe to re-run): stages all tool folders out,
+    wipes the BUSINESS*/PERSONAL* roots, rebuilds the full taxonomy tree from
+    UNICON-TOOLS/folder-hierarchy-import.json, moves every tool into
+    <root>/<TYPE>/<category>/<subcategory>/<Tool>/ with its part folders
+    (app / listing / reporting) and docs/ preserved, renames every folder to
+    <base>_<apps>_of_<ideas>, adds .gitkeep to empty subcategories, and
+    updates the folder paths in UNICON-TOOLS/all-tools.html.
+    GOTCHA: NEVER pipe this command (no | tail, no > file redirect) - the
+    terminal's tty quirk stops piped node scripts. Run it bare.
+
+1.2 Verify the result
+    Run:
+      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name app | wc -l
+        → must equal the number of built tools (50 today)
+      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name docs | wc -l
+        → must equal the same number
+      find BUSINESS_48_of_150 PERSONAL_2_of_40 -name .gitkeep | wc -l
+        → equals the number of empty subcategories (140 today)
+    Run:
+      node "C:/Users/Admin/AppData/Local/Temp/alltools-verify2.cjs"
+        → must print "all 50 folder paths exist on disk"
+    Expected root names: BUSINESS_48_of_150, PERSONAL_2_of_40, with types
+    GENERAL_27_of_88 / VERTICAL_21_of_62 / GENERAL_1_of_20 / VERTICAL_1_of_20.
+    If any number is wrong, STOP and fix the sync script before continuing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 2 - SSOT UPDATE (per changed tool, in the SAME change as the code)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+For EVERY changed tool, read the tool's code diff and its docs/ssot.html,
+then update the SSOT. A decision that is not in section 11 did not happen.
+
+2.1 Section 3 - Existing capabilities
+    Move every newly shipped behavior into the capabilities table (C-01,
+    C-02, ...) with where it lives, since when, and the evidence (decision
+    ID or release-log row). Planned work NEVER appears here.
+
+2.2 Section 11 - Decision register (APPEND-ONLY)
+    Add one row per decision made in this change: ID <prefix>-NN in order
+    (the tool's prefix, e.g. D-AICPB), date, the decision, rationale/risk,
+    status Adopted. NEVER delete or renumber rows. A reversal is a new row
+    "Reversed (date)" with the reason.
+
+2.3 Section 15 - Development task list
+    Add/complete tasks in release groups. Group rules: a ONE PUSH group ships
+    in a single push; a RELATED group must not be broken across releases.
+    Tick checkboxes (data-task-status="done") for the tasks shipped by this
+    push; stamp pushed groups with data-group-status="pushed".
+
+2.4 Section 18 - Risk register
+    For every risk of THIS push: write it with data-risk-id R-NN,
+    data-group matching its release group, a level (critical/high/medium/
+    low) and data-risk-status. Before pushing, every open critical/high risk
+    must be solved (checked) or accepted with a date + reason in
+    "Last re-evaluation".
+
+2.5 Sections 4-10, 12-14, 16-17
+    Update the glossary, problem/requirements/options/design/failure matrix/
+    limitations, maintenance rules, checklist, open questions, ideas and test
+    plan ONLY where this change affects them. Keep them factual and dated.
+
+2.6 Document version + status
+    Bump "Document version" (0.1 → 0.2 → ...) and "Last updated" to today.
+    Keep the status chip correct: status-active (work in progress),
+    status-implemented (shipped), status-proposal (plan not approved).
+
+2.7 Style rules for every SSOT edit
+    - Names self-explanatory, no cryptic abbreviations; acronyms expanded.
+    - Hyphen "-", never the em dash. No emoji icons in headers/CSS.
+    - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+      Status) - the automated scanners read these rows.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 3 - SATELLITE REGENERATION (per changed tool, all 5 documents)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Copilot writes these directly in the chat - its own AI generates the content
+from: the tool's code (app/listing/reporting files), its SSOT, its update
+history, the tool-ideas catalog entry (purpose, users, TAM/SAM/SOM,
+licensing), the taxonomy path, and this project's AI chat transcripts.
+The SSOT is NEVER overwritten by generation. Each document follows its
+template in _docs/templates/ (same structure, same class names, content only
+between the GENERATED markers).
+
+3.1 docs/webpage.html - marketing webpage fragment
+    Content block only (no html/head/body tags) - pasted into the CMS webpage
+    content tool. Structure: full-width hero (eyebrow, headline, subheadline,
+    two CTA buttons, trust points) → stats band → 6 benefit cards with SVG
+    icons → two alternating highlight rows with checklists → 3-step
+    how-it-works → comparison table → 3 testimonials → FAQ (3 details
+    blocks) → final CTA band. ALL styles scoped under .<tool-kebab>-page.
+    Focus on BENEFITS that sell. Real facts only - no invented names.
+
+3.2 docs/help.html - user help
+    Only the five sections between the markers: Overview / Before you start /
+    Step by step (exact clicks) / Common questions / Troubleshooting. Plain
+    user words - no implementation details, no decisions, no code.
+
+3.3 docs/presentation.html - marketing deck
+    Only the nine <section class="pres-slide"> blocks: 01 title (class
+    pres-slide pres-title-slide), 02 problem, 03 solution (pres-grid-2), 04
+    benefits (pres-grid-3), 05 highlights (pres-list), 06 how it works
+    (pres-grid-3), 07 numbers (pres-table), 08 quote (pres-quote), 09
+    closing (pres-closing). Keep data-slide-number attributes. Benefits
+    focus. The shared presentation.js adds nav/counter/PDF export.
+
+3.4 docs/social.html - share kit
+    Only the content between the markers: 3 WhatsApp share-cards (short /
+    medium / long), 4 post share-cards (X under 280 chars / LinkedIn /
+    Instagram / Facebook), 1 hashtags share-card with .hashtags chips, 3
+    visual ideas, 1 one-pager pitch share-card, the links list. Every
+    share-card keeps a div.share-body[data-share-text] - the Copy buttons
+    depend on it. Emojis allowed inside share TEXTS only, never in headings.
+
+3.5 docs/updates.html - Highlights only
+    Rewrite the paragraph(s) between the GENERATED-HIGHLIGHTS markers: one
+    short paragraph per milestone release (newest 1-3), written for end
+    users. The changelog ROWS are appended in Phase 4 - never rewrite them.
+
+3.6 Writing rules for every satellite
+    - Replace all [PLACEHOLDER]s; leave none behind unintentionally.
+    - No code fences/markdown in the output regions.
+    - When the SSOT and the code disagree, the SSOT wins.
+    - Keep the template's class names and the marker comments intact.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 4 - RELEASE ROWS (per changed tool)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4.1 docs/updates.html
+    Append a row BEFORE the <!-- UPDATES-ROWS marker:
+      <tr><td>YYYY-MM-DD</td><td>vX.Y.Z</td><td>What changed in user
+      words</td><td>all users</td></tr>
+4.2 docs/ssot.html
+    Append a row BEFORE the <!-- RELEASE-LOG-ROWS marker:
+      <tr><td>YYYY-MM-DD</td><td>vX.Y.Z</td><td><commit hash></td>
+      <td>What shipped</td></tr>
+4.3 Version and commit values
+    Version = the package.json version AFTER the bump (Phase 6). Commit hash:
+    run   git rev-parse --short HEAD   (after the commit exists).
+    If the row was added before the commit exists, put the version and fill
+    the commit hash right after Phase 6 commits.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
+          skip them to reach the push)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5.1 Docs completeness
+      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name docs | wc -l
+        → equals the number of tools (50 today)
+    Every docs folder contains all 6 files: ssot.html, webpage.html,
+    help.html, presentation.html, updates.html, social.html.
+
+5.2 Risk gate (changed tools only)
+    Read the SSOT of every changed tool: no OPEN risk with data-risk-level
+    "critical" or "high" (unless data-risk-status="accepted" with a date +
+    reason inside its details). Medium risks warn, low risks are reported.
+
+5.3 Placeholder and style scan on touched documents
+    No remaining [PLACEHOLDER] / [FEATURE NAME] / [ASSETS_RELATIVE] /
+    [CSS_CLASS] / [CODE] in the documents touched by this publish (except
+    intended template samples). No em dash, no emoji icons in headers/CSS.
+
+5.4 Script syntax (only when a scripts/*.js file changed)
+      node --check scripts/releaseContext.js
+      node --check scripts/init-docs.js
+      node --check scripts/generate-docs.js
+      node --check scripts/release.js
+      node --check scripts/build-ssot-index.js
+
+5.5 Control tower index
+    Run:
+      npm run ssot:index
+    → must print "50 tool documents" (or the current tool count) and write
+    _docs/index.html with correct counts (open risks 0 unless accepted).
+
+5.6 Tool index (only when all-tools.html or folder names changed)
+    Run:
+      node "C:/Users/Admin/AppData/Local/Temp/alltools-verify2.cjs"
+    → must print "all 50 folder paths exist on disk".
+
+5.7 Optional visual smoke (when a template/asset changed)
+    Open one changed SSOT and one presentation in headless Edge and confirm
+    the engines boot:
+      "/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+      --headless=new --disable-gpu --virtual-time-budget=5000 --dump-dom
+      "file:///d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/<path>/docs/ssot.html"
+    The dump must show task-panel-progress and kpi-decisions values.
+
+5.8 Final review
+    Read the complete list of files that will be committed (git status) and
+    confirm nothing unexpected is included. Show the user the summary and the
+    proposed commit message BEFORE pushing (one line, conventional-commit
+    prefix: feat/fix/docs/chore/refactor/perf/test, max 72 characters).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 6 - COMMIT AND PUSH (only because the user asked to publish/push)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6.1 Stage everything
+      git add -A
+6.2 Commit the changes (code + docs in one commit)
+      git commit -m "<the agreed one-line message>"
+6.3 Bump the version
+      npm version patch
+    This bumps package.json (0.1.0 → 0.1.1 → ...) and creates its own commit
+    and tag.
+6.4 Push with tags
+      git push --follow-tags
+6.5 Fill the commit hashes
+    Run:
+      git rev-parse --short HEAD
+    If any Phase 4 release-log row still has a placeholder hash, write the
+    real one now, commit it with:
+      git commit -m "docs: fill release commit hashes" --no-verify
+    then:
+      git push
+6.6 If the push fails
+    STOP immediately and report the error. Never retry blindly, never change
+    history, never force-push.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 7 - REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After every publish, report:
+- the new version number and the commit(s) pushed
+- the changed tools and what shipped for each
+- which documents were created/updated (SSOT sections, satellites, release
+  rows, control tower index)
+- folder names re-synced (when Phase 1 ran) with the new counts
+- anything left for the user (open risks accepted, deferred work, next steps)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HARD RULES (apply to every phase, no exceptions)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Never commit or push without the user's explicit publish/push instruction.
+- Never run npm run rel in chat mode - the chat workflow above replaces it
+  and must be followed step by step instead. (npm run rel remains available
+  for fully automated pushes when an AI gateway is configured.)
+- Never pipe node output in this terminal (no | tail / | head / > file) -
+  piped node scripts print "stdout is not a tty" and may not run. Run bare.
+- Never delete decision-register rows; append-only, reversals are new rows.
+- Never overwrite an SSOT with AI output; AI writes satellites only.
+- Never invent facts, customer names, or metrics that are not in the sources.
+- Names self-explanatory; no cryptic abbreviations; acronyms expanded.
+- Hyphen "-", never em dash; no emoji icons in document headers/CSS.
+- If a phase fails or a check does not pass, STOP and report - the push waits.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMMAND CHEAT SHEET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+git status --short                        state before publishing
+npm run tools:changed                     changed tools since last push
+npm run docs:init                         ensure 6 docs files per tool (idempotent)
+node ".../Temp/repo-sync-hierarchy2.cjs"  re-sync taxonomy tree + dynamic names
+node ".../Temp/alltools-verify2.cjs"      verify all-tools.html paths
+npm run ssot:index                        rebuild _docs/index.html control tower
+node --check scripts/<file>.js            syntax-check a script
+git add -A                                stage everything
+git commit -m "..."                       one-line conventional commit
+npm version patch                         bump package.json version
+git push --follow-tags                    push code + tags
+git rev-parse --short HEAD                current short commit hash
+npm run ai:test                           AI backend self-test (Mode A only)
+npm run rel -- --dry-run                  preview the automated release (Mode A)
+
+DOC LAYOUT (per tool folder)
+  <Tool>/app/        the tool itself
+  <Tool>/listing/    only when a listing tool is built
+  <Tool>/reporting/  only when a reporting tool is built
+  <Tool>/docs/       ssot.html + webpage.html + help.html + presentation.html
+                     + updates.html + social.html
