@@ -1,0 +1,202 @@
+<div class="htl-root" id="htl-root">
+  <header class="htl-header">
+    <div class="htl-header-inner">
+      <div class="htl-brand">
+        <div class="htl-logo-mark">T</div>
+        <div>
+          <h1>HTML Tool Item Editor</h1>
+          <p>Details and code of one CMS html-tool, saved back to this record's fields</p>
+        </div>
+      </div>
+      <div class="htl-header-actions">
+        <span class="htl-save-state" id="htl-save-state">Draft staged</span>
+        <span class="htl-role-badge" id="htl-role-badge"></span>
+        <span class="htl-lock-note" id="htl-lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+    <nav class="htl-tabs" id="htl-tabs">
+      <button class="htl-tab active" data-tab="details">Details</button>
+      <button class="htl-tab" data-tab="html">HTML</button>
+      <button class="htl-tab" data-tab="css">CSS</button>
+      <button class="htl-tab" data-tab="js">JS</button>
+      <button class="htl-tab" data-tab="preview">Preview</button>
+    </nav>
+  </header>
+
+  <div class="htl-banner" id="htl-fields-banner" style="display:none">
+    <span id="htl-fields-banner-text"></span>
+    <div class="htl-banner-actions">
+      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-pull">⇩ Import from fields</button>
+      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-dismiss">Dismiss</button>
+    </div>
+  </div>
+
+  <main class="htl-main">
+    <section class="htl-pane" id="pane-details">
+      <div class="htl-card">
+        <h2>Tool details</h2>
+        <p class="htl-hint">Field IDs match your Tool Definition app exactly - existing values load here automatically and edits write back to the same fields.</p>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label for="htl-f-toolName">Tool name <span class="htl-required">*</span></label>
+            <input class="htl-input" id="htl-f-toolName" placeholder="e.g. Star Rating" maxlength="120">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolIcon">Icon <span class="htl-label-hint">(single emoji)</span></label>
+            <input class="htl-input" id="htl-f-toolIcon" placeholder="e.g. ⭐" maxlength="8">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolStatus">Status</label>
+            <select class="htl-input" id="htl-f-toolStatus">
+              <option value="active">Active — visible in App Store</option>
+              <option value="draft">Draft — hidden from App Store</option>
+            </select>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolDescription">Description</label>
+            <textarea class="htl-textarea" id="htl-f-toolDescription" spellcheck="false" placeholder="What the tool does and what value it stores."></textarea>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label>Linked CMS field IDs</label>
+            <p class="htl-hint">Saved to these sibling fields: <span class="htl-field-id-list" id="htl-field-id-list"></span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Categories &amp; tags</h2>
+        <p class="htl-hint">Pick any number of categories from the taxonomy and add search keywords. These live in the tool itself, no longer limited by the old single-category field.</p>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label>Categories <span class="htl-label-hint" id="htl-category-count">0 selected</span></label>
+            <input class="htl-input" id="htl-category-search" placeholder="Filter categories...">
+            <div class="htl-cat-box" id="htl-category-list"></div>
+            <div class="htl-chips" id="htl-category-selected"></div>
+          </div>
+          <div class="htl-field">
+            <label>Tags <span class="htl-label-hint">(type and press Enter or comma)</span></label>
+            <div class="htl-tags-list" id="htl-tags-list"></div>
+            <input class="htl-input" id="htl-tags-input" placeholder="e.g. rating, stars" maxlength="200">
+            <div class="htl-tag-suggest" id="htl-tag-suggest"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Display settings</h2>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label for="htl-f-toolDisplayMode">Display mode</label>
+            <select class="htl-input" id="htl-f-toolDisplayMode">
+              <option value="inline">Inline — always visible in the form</option>
+              <option value="trigger-popup">Trigger → Popup</option>
+              <option value="trigger-drawer">Trigger → Drawer</option>
+              <option value="toolbar-strip">Toolbar Strip</option>
+            </select>
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolHeight">Height</label>
+            <input class="htl-input" id="htl-f-toolHeight" placeholder="e.g. 200px" maxlength="20">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolAutoHeight">Auto height</label>
+            <select class="htl-input" id="htl-f-toolAutoHeight">
+              <option value="yes">Yes — shrink-wrap to content</option>
+              <option value="no">No — use fixed height above</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Schema &amp; validation</h2>
+        <div class="htl-form-grid">
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolParams">Parameters schema <span class="htl-label-hint">(JSON - values for tool.param(key, default))</span></label>
+            <textarea class="htl-json-field" id="htl-f-toolParams" spellcheck="false" placeholder='{ "max": 5, "labels": "Poor,Fair,Good" }'></textarea>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolOutputSchema">Output schema <span class="htl-label-hint">(JSON - shape of the tool.setValue() value)</span></label>
+            <textarea class="htl-json-field" id="htl-f-toolOutputSchema" spellcheck="false" placeholder='{ "rating": "number", "label": "string" }'></textarea>
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolValidationEnabled">Validation enabled</label>
+            <select class="htl-input" id="htl-f-toolValidationEnabled">
+              <option value="no">No — accept any value</option>
+              <option value="yes">Yes — enforce output schema</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="htl-pane" id="pane-html" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">HTML code</span>
+          <span class="htl-editor-hint">Body markup only - no &lt;html&gt; / &lt;head&gt; / &lt;style&gt; / &lt;script&gt; tags. CDN script tags are allowed.</span>
+          <span class="htl-editor-meta" id="htl-meta-html">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-html" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolHtmlCode" spellcheck="false" wrap="off" placeholder="Paste the [HTML] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-css" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">CSS code</span>
+          <span class="htl-editor-hint">Stylesheet rules only - no &lt;style&gt; tag.</span>
+          <span class="htl-editor-meta" id="htl-meta-css">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-css" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolCssCode" spellcheck="false" wrap="off" placeholder="Paste the [CSS] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-js" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">JS code</span>
+          <span class="htl-editor-hint">JavaScript only - no &lt;script&gt; tag. Entry point must be tool.onReady(callback).</span>
+          <span class="htl-editor-meta" id="htl-meta-js">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-js" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolJsCode" spellcheck="false" wrap="off" placeholder="Paste the [JS] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-preview" style="display:none">
+      <div class="htl-preview-bar">
+        <button class="htl-btn htl-btn-primary htl-btn-sm" id="htl-btn-rebuild">▶ Rebuild preview</button>
+        <span class="htl-hint">Runs the three code blocks together with a mock tool SDK inside a sandboxed frame. A log panel appears inside the preview.</span>
+        <span class="htl-preview-status" id="htl-preview-status">Not built yet</span>
+      </div>
+      <div class="htl-preview-frame-wrap">
+        <iframe class="htl-preview-frame" id="htl-preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Tool preview"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <footer class="htl-actionbar">
+    <div class="htl-actionbar-left">
+      <span class="htl-hint" id="htl-sync-note">Auto-saves to CMS fields as you edit.</span>
+    </div>
+    <div class="htl-actionbar-right">
+      <button class="htl-btn htl-btn-ghost" id="htl-btn-pull">⇩ Import from form fields</button>
+      <button class="htl-btn htl-btn-ghost" id="htl-btn-check-js">✓ Check JS</button>
+    </div>
+  </footer>
+
+  <details class="htl-debug" open>
+    <summary>Diagnostics log - open to see the field-import steps</summary>
+    <pre class="htl-debug-log" id="htl-debug-log">(no entries yet)</pre>
+  </details>
+</div>

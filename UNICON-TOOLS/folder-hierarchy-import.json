@@ -1,0 +1,2113 @@
+{
+  "meta": {
+    "schema": "uniconhub-folder-taxonomy",
+    "version": "1.0.0",
+    "updatedAt": "2026-09-21",
+    "importNote": "The CMS import consumes the folders array. The top-level meta and scalingRules keys are tooling metadata. Each folder carries extra code and slug fields - stable identifiers used by the idea catalog and page generators. Never rename or reuse a code."
+  },
+  "scalingRules": [
+    "CMS folders are created ONLY by importing this file. Never create, rename or delete folders manually in the CMS UI - change this file first, then re-import.",
+    "Split rule - when a subcategory passes 60 tools, split it into new subcategories under the same category. New subcategory codes are appended (next letter). Existing codes are never renamed or reused.",
+    "Utilities enforcement - the Utilities / Misc Helpers leaves (B-G-14, P-G-06) are parking spots only. Whenever a real category exists for a tool, it moves there. Utilities must stay near-empty.",
+    "New category or subcategory is a deliberate decision made in this file first (new code), followed by re-importing the file.",
+    "Boundary rules - PERSONAL only when the user manages their own life (default is BUSINESS). VERTICAL only when industry-specific content or workflow is baked in, otherwise GENERAL. HR is GENERAL because every company has HR.",
+    "One tool = one folder = one subcategory in this file. A tool that serves several audiences can be multi-listed in the store app, but has one home here.",
+    "Tags and search facets are managed inside the HtmlToolLibraryItem application, not in this hierarchy. This hierarchy is only the filing system for tools entering the CMS."
+  ],
+  "folders": [
+    {
+      "name": "Business",
+      "code": "B",
+      "slug": "business",
+      "order": 10,
+      "categories": [
+        "html-tool-library-item-uniconbaseapps"
+      ],
+      "children": [
+        {
+          "name": "General",
+          "code": "BG",
+          "slug": "general",
+          "order": 10,
+          "categories": [
+            "html-tool-library-item-uniconbaseapps"
+          ],
+          "children": [
+            {
+              "name": "AI & Automation",
+              "code": "B-G-01",
+              "slug": "ai-automation",
+              "order": 10,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "AI Chat Assistants",
+                  "code": "B-G-01-a",
+                  "slug": "ai-chat-assistants",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "AI Content Builders",
+                  "code": "B-G-01-b",
+                  "slug": "ai-content-builders",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "AI Agents & Workflows",
+                  "code": "B-G-01-c",
+                  "slug": "ai-agents-workflows",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Prompt & Model Utilities",
+                  "code": "B-G-01-d",
+                  "slug": "prompt-model-utilities",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Finance & Accounting",
+              "code": "B-G-02",
+              "slug": "finance-accounting",
+              "order": 20,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Invoicing & Billing",
+                  "code": "B-G-02-a",
+                  "slug": "invoicing-billing",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Expense Management",
+                  "code": "B-G-02-b",
+                  "slug": "expense-management",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Payments & Collections",
+                  "code": "B-G-02-c",
+                  "slug": "payments-collections",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Budgeting & Planning",
+                  "code": "B-G-02-d",
+                  "slug": "budgeting-planning",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Payroll",
+                  "code": "B-G-02-e",
+                  "slug": "payroll",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Tax & Compliance",
+                  "code": "B-G-02-f",
+                  "slug": "tax-compliance",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Financial Reporting",
+                  "code": "B-G-02-g",
+                  "slug": "financial-reporting",
+                  "order": 70,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Sales & CRM",
+              "code": "B-G-03",
+              "slug": "sales-crm",
+              "order": 30,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "CRM & Contacts",
+                  "code": "B-G-03-a",
+                  "slug": "crm-contacts",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Leads & Pipelines",
+                  "code": "B-G-03-b",
+                  "slug": "leads-pipelines",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Quotes & Proposals",
+                  "code": "B-G-03-c",
+                  "slug": "quotes-proposals",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Order Management",
+                  "code": "B-G-03-d",
+                  "slug": "order-management",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Commissions",
+                  "code": "B-G-03-e",
+                  "slug": "commissions",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Marketing & Brand",
+              "code": "B-G-04",
+              "slug": "marketing-brand",
+              "order": 40,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Email Campaigns",
+                  "code": "B-G-04-a",
+                  "slug": "email-campaigns",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Social Media Publishing",
+                  "code": "B-G-04-b",
+                  "slug": "social-publishing",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "SEO & Content Marketing",
+                  "code": "B-G-04-c",
+                  "slug": "seo-content-marketing",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Ads & Promotions",
+                  "code": "B-G-04-d",
+                  "slug": "ads-promotions",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Reviews & Reputation",
+                  "code": "B-G-04-e",
+                  "slug": "reviews-reputation",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Brand & Design Assets",
+                  "code": "B-G-04-f",
+                  "slug": "brand-design-assets",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Content & Media",
+              "code": "B-G-05",
+              "slug": "content-media",
+              "order": 50,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Document Creation & Editing",
+                  "code": "B-G-05-a",
+                  "slug": "document-creation-editing",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Presentation Tools",
+                  "code": "B-G-05-b",
+                  "slug": "presentation-tools",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Publishing & Distribution",
+                  "code": "B-G-05-c",
+                  "slug": "publishing-distribution",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Media Libraries",
+                  "code": "B-G-05-d",
+                  "slug": "media-libraries",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Communications",
+              "code": "B-G-06",
+              "slug": "communications",
+              "order": 60,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Announcements & Broadcasts",
+                  "code": "B-G-06-a",
+                  "slug": "announcements-broadcasts",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Team Chat & Messaging",
+                  "code": "B-G-06-b",
+                  "slug": "team-chat",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Feedback & Surveys",
+                  "code": "B-G-06-c",
+                  "slug": "feedback-surveys",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Approvals & Sign-off",
+                  "code": "B-G-06-d",
+                  "slug": "approvals-sign-off",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "People & HR",
+              "code": "B-G-07",
+              "slug": "people-hr",
+              "order": 70,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Recruiting & Interviews",
+                  "code": "B-G-07-a",
+                  "slug": "recruiting-interviews",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Onboarding & Handbooks",
+                  "code": "B-G-07-b",
+                  "slug": "onboarding-handbooks",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Employee Records",
+                  "code": "B-G-07-c",
+                  "slug": "employee-records",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Time & Attendance",
+                  "code": "B-G-07-d",
+                  "slug": "time-attendance",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Daily Logs & Supervision",
+                  "code": "B-G-07-e",
+                  "slug": "daily-logs-supervision",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Permits & Leave",
+                  "code": "B-G-07-f",
+                  "slug": "permits-leave",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Training & Verification",
+                  "code": "B-G-07-g",
+                  "slug": "training-verification",
+                  "order": 70,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Performance & Mentoring",
+                  "code": "B-G-07-h",
+                  "slug": "performance-mentoring",
+                  "order": 80,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Safety & Incidents",
+                  "code": "B-G-07-i",
+                  "slug": "safety-incidents",
+                  "order": 90,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Offboarding",
+                  "code": "B-G-07-j",
+                  "slug": "offboarding",
+                  "order": 100,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Operations & Management",
+              "code": "B-G-08",
+              "slug": "operations-management",
+              "order": 80,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Task & To-do Management",
+                  "code": "B-G-08-a",
+                  "slug": "task-todo",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Project & Sprint Management",
+                  "code": "B-G-08-b",
+                  "slug": "project-sprint",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Recurring & Scheduled Tasks",
+                  "code": "B-G-08-c",
+                  "slug": "recurring-scheduled",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Checklists & Hierarchies",
+                  "code": "B-G-08-d",
+                  "slug": "checklists-hierarchies",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Matching & Rostering",
+                  "code": "B-G-08-e",
+                  "slug": "matching-rostering",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Scheduling & Bookings",
+                  "code": "B-G-08-f",
+                  "slug": "scheduling-bookings",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Work Orders & Maintenance",
+                  "code": "B-G-08-g",
+                  "slug": "work-orders-maintenance",
+                  "order": 70,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Quality & Inspections",
+                  "code": "B-G-08-h",
+                  "slug": "quality-inspections",
+                  "order": 80,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Forms & Data Collection",
+              "code": "B-G-09",
+              "slug": "forms-data-collection",
+              "order": 90,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Forms & Surveys",
+                  "code": "B-G-09-a",
+                  "slug": "forms-surveys",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Registrations & Applications",
+                  "code": "B-G-09-b",
+                  "slug": "registrations-applications",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Business Profiles & Directories",
+                  "code": "B-G-09-c",
+                  "slug": "business-profiles-directories",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Audits & Inspections",
+                  "code": "B-G-09-d",
+                  "slug": "audits-inspections",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Reporting & Analytics",
+              "code": "B-G-10",
+              "slug": "reporting-analytics",
+              "order": 100,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Dashboards & KPIs",
+                  "code": "B-G-10-a",
+                  "slug": "dashboards-kpis",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Report Builders",
+                  "code": "B-G-10-b",
+                  "slug": "report-builders",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Data Visualization",
+                  "code": "B-G-10-c",
+                  "slug": "data-visualization",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "IT & Development",
+              "code": "B-G-11",
+              "slug": "it-development",
+              "order": 110,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Website & Page Builders",
+                  "code": "B-G-11-a",
+                  "slug": "website-page-builders",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Code Editors & IDEs",
+                  "code": "B-G-11-b",
+                  "slug": "code-editors-ides",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "API & Integration Tools",
+                  "code": "B-G-11-c",
+                  "slug": "api-integration",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Testing & QA",
+                  "code": "B-G-11-d",
+                  "slug": "testing-qa",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "System Design & Architecture",
+                  "code": "B-G-11-e",
+                  "slug": "system-design-architecture",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Web Content Editing",
+                  "code": "B-G-11-f",
+                  "slug": "web-content-editing",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "File & Media",
+              "code": "B-G-12",
+              "slug": "file-media",
+              "order": 120,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Image Editing",
+                  "code": "B-G-12-a",
+                  "slug": "image-editing",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Video & Audio Editing",
+                  "code": "B-G-12-b",
+                  "slug": "video-audio-editing",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "File Conversion",
+                  "code": "B-G-12-c",
+                  "slug": "file-conversion",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "PDF Tools",
+                  "code": "B-G-12-d",
+                  "slug": "pdf-tools",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "OCR & Scanning",
+                  "code": "B-G-12-e",
+                  "slug": "ocr-scanning",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Compression & Optimization",
+                  "code": "B-G-12-f",
+                  "slug": "compression-optimization",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Translation & Localization",
+              "code": "B-G-13",
+              "slug": "translation-localization",
+              "order": 130,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Text Translation",
+                  "code": "B-G-13-a",
+                  "slug": "text-translation",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Document & HTML Translation",
+                  "code": "B-G-13-b",
+                  "slug": "document-html-translation",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Localization Management",
+                  "code": "B-G-13-c",
+                  "slug": "localization-management",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Glossary & Terminology",
+                  "code": "B-G-13-d",
+                  "slug": "glossary-terminology",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Utilities",
+              "code": "B-G-14",
+              "slug": "utilities",
+              "order": 140,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Misc Helpers",
+                  "code": "B-G-14-a",
+                  "slug": "misc-helpers",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vertical",
+          "code": "BV",
+          "slug": "vertical",
+          "order": 20,
+          "categories": [
+            "html-tool-library-item-uniconbaseapps"
+          ],
+          "children": [
+            {
+              "name": "Education & Training",
+              "code": "B-V-01",
+              "slug": "education-training",
+              "order": 10,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "K-12 Schools",
+                  "code": "B-V-01-a",
+                  "slug": "k12-schools",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Higher Education",
+                  "code": "B-V-01-b",
+                  "slug": "higher-education",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Tutoring & Test Prep",
+                  "code": "B-V-01-c",
+                  "slug": "tutoring-test-prep",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Corporate Training & LMS",
+                  "code": "B-V-01-d",
+                  "slug": "corporate-training-lms",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Vocational Training",
+                  "code": "B-V-01-e",
+                  "slug": "vocational-training",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Food & Beverage",
+              "code": "B-V-02",
+              "slug": "food-beverage",
+              "order": 20,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Restaurants & Cafes",
+                  "code": "B-V-02-a",
+                  "slug": "restaurants-cafes",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Catering",
+                  "code": "B-V-02-b",
+                  "slug": "catering",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Bars & Nightlife",
+                  "code": "B-V-02-c",
+                  "slug": "bars-nightlife",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Food Delivery & Ghost Kitchens",
+                  "code": "B-V-02-d",
+                  "slug": "food-delivery-ghost-kitchens",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Grocery & Meal Kits",
+                  "code": "B-V-02-e",
+                  "slug": "grocery-meal-kits",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Health & Wellness",
+              "code": "B-V-03",
+              "slug": "health-wellness",
+              "order": 30,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Clinics & Practices",
+                  "code": "B-V-03-a",
+                  "slug": "clinics-practices",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Dental",
+                  "code": "B-V-03-b",
+                  "slug": "dental",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Mental Health",
+                  "code": "B-V-03-c",
+                  "slug": "mental-health",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Fitness & Gyms",
+                  "code": "B-V-03-d",
+                  "slug": "fitness-gyms",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Pharmacy",
+                  "code": "B-V-03-e",
+                  "slug": "pharmacy",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Senior Care",
+                  "code": "B-V-03-f",
+                  "slug": "senior-care",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Nonprofit & Community",
+              "code": "B-V-04",
+              "slug": "nonprofit-community",
+              "order": 40,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Fundraising Campaigns",
+                  "code": "B-V-04-a",
+                  "slug": "fundraising-campaigns",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Grants",
+                  "code": "B-V-04-b",
+                  "slug": "grants",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Donations & Pledges",
+                  "code": "B-V-04-c",
+                  "slug": "donations-pledges",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Volunteers",
+                  "code": "B-V-04-d",
+                  "slug": "volunteers",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Membership & Clubs",
+                  "code": "B-V-04-e",
+                  "slug": "membership-clubs",
+                  "order": 50,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Religious & Community Orgs",
+                  "code": "B-V-04-f",
+                  "slug": "religious-community-orgs",
+                  "order": 60,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Real Estate & Property",
+              "code": "B-V-05",
+              "slug": "real-estate-property",
+              "order": 50,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Sales & Rentals",
+                  "code": "B-V-05-a",
+                  "slug": "sales-rentals",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Property Management",
+                  "code": "B-V-05-b",
+                  "slug": "property-management",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Valuation & Listings",
+                  "code": "B-V-05-c",
+                  "slug": "valuation-listings",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Retail & E-Commerce",
+              "code": "B-V-06",
+              "slug": "retail-ecommerce",
+              "order": 60,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Store Operations",
+                  "code": "B-V-06-a",
+                  "slug": "store-operations",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Product & Catalog",
+                  "code": "B-V-06-b",
+                  "slug": "product-catalog",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Orders & Fulfillment",
+                  "code": "B-V-06-c",
+                  "slug": "orders-fulfillment",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Marketplaces",
+                  "code": "B-V-06-d",
+                  "slug": "marketplaces",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Logistics & Transport",
+              "code": "B-V-07",
+              "slug": "logistics-transport",
+              "order": 70,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Fleet & Dispatch",
+                  "code": "B-V-07-a",
+                  "slug": "fleet-dispatch",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Warehousing",
+                  "code": "B-V-07-b",
+                  "slug": "warehousing",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Shipping & Delivery",
+                  "code": "B-V-07-c",
+                  "slug": "shipping-delivery",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Public Transit",
+                  "code": "B-V-07-d",
+                  "slug": "public-transit",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Construction & Trades",
+              "code": "B-V-08",
+              "slug": "construction-trades",
+              "order": 80,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Contractors",
+                  "code": "B-V-08-a",
+                  "slug": "contractors",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Job Sites & Inspections",
+                  "code": "B-V-08-b",
+                  "slug": "job-sites-inspections",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Equipment Rental",
+                  "code": "B-V-08-c",
+                  "slug": "equipment-rental",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Building Materials",
+                  "code": "B-V-08-d",
+                  "slug": "building-materials",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Professional Services",
+              "code": "B-V-09",
+              "slug": "professional-services",
+              "order": 90,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Legal Firms",
+                  "code": "B-V-09-a",
+                  "slug": "legal-firms",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Accounting Firms",
+                  "code": "B-V-09-b",
+                  "slug": "accounting-firms",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Consulting",
+                  "code": "B-V-09-c",
+                  "slug": "consulting",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Marketing Agencies",
+                  "code": "B-V-09-d",
+                  "slug": "marketing-agencies",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Hospitality & Travel",
+              "code": "B-V-10",
+              "slug": "hospitality-travel",
+              "order": 100,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Hotels & Lodging",
+                  "code": "B-V-10-a",
+                  "slug": "hotels-lodging",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Travel Agencies",
+                  "code": "B-V-10-b",
+                  "slug": "travel-agencies",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Tours & Attractions",
+                  "code": "B-V-10-c",
+                  "slug": "tours-attractions",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Event Venues",
+                  "code": "B-V-10-d",
+                  "slug": "event-venues",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Home Services",
+              "code": "B-V-11",
+              "slug": "home-services",
+              "order": 110,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Cleaning",
+                  "code": "B-V-11-a",
+                  "slug": "cleaning",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Landscaping",
+                  "code": "B-V-11-b",
+                  "slug": "landscaping",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Repair & Maintenance",
+                  "code": "B-V-11-c",
+                  "slug": "repair-maintenance",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Home Improvement & Decor",
+                  "code": "B-V-11-d",
+                  "slug": "home-improvement-decor",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Events & Entertainment",
+              "code": "B-V-12",
+              "slug": "events-entertainment",
+              "order": 120,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Event Planning",
+                  "code": "B-V-12-a",
+                  "slug": "event-planning",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Ticketing",
+                  "code": "B-V-12-b",
+                  "slug": "ticketing",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Sports Clubs",
+                  "code": "B-V-12-c",
+                  "slug": "sports-clubs",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Media & Publishing",
+                  "code": "B-V-12-d",
+                  "slug": "media-publishing",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Manufacturing",
+              "code": "B-V-13",
+              "slug": "manufacturing",
+              "order": 130,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Production & BOM",
+                  "code": "B-V-13-a",
+                  "slug": "production-bom",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Quality Control",
+                  "code": "B-V-13-b",
+                  "slug": "quality-control",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Maintenance",
+                  "code": "B-V-13-c",
+                  "slug": "maintenance",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Agriculture",
+              "code": "B-V-14",
+              "slug": "agriculture",
+              "order": 140,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Farm Management",
+                  "code": "B-V-14-a",
+                  "slug": "farm-management",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Livestock",
+                  "code": "B-V-14-b",
+                  "slug": "livestock",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Produce & Distribution",
+                  "code": "B-V-14-c",
+                  "slug": "produce-distribution",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Automotive",
+              "code": "B-V-15",
+              "slug": "automotive",
+              "order": 150,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Dealerships",
+                  "code": "B-V-15-a",
+                  "slug": "dealerships",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Service Shops",
+                  "code": "B-V-15-b",
+                  "slug": "service-shops",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Rental & Fleet",
+                  "code": "B-V-15-c",
+                  "slug": "rental-fleet",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Personal",
+      "code": "P",
+      "slug": "personal",
+      "order": 20,
+      "categories": [
+        "html-tool-library-item-uniconbaseapps"
+      ],
+      "children": [
+        {
+          "name": "General",
+          "code": "PG",
+          "slug": "general",
+          "order": 10,
+          "categories": [
+            "html-tool-library-item-uniconbaseapps"
+          ],
+          "children": [
+            {
+              "name": "Personal Finance",
+              "code": "P-G-01",
+              "slug": "personal-finance",
+              "order": 10,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Budgeting & Spending",
+                  "code": "P-G-01-a",
+                  "slug": "budgeting-spending",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Tax Preparation",
+                  "code": "P-G-01-b",
+                  "slug": "tax-preparation",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Banking & Loans",
+                  "code": "P-G-01-c",
+                  "slug": "banking-loans",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Investments",
+                  "code": "P-G-01-d",
+                  "slug": "investments",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Productivity",
+              "code": "P-G-02",
+              "slug": "productivity",
+              "order": 20,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "To-do & Habits",
+                  "code": "P-G-02-a",
+                  "slug": "todo-habits",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Notes & Journaling",
+                  "code": "P-G-02-b",
+                  "slug": "notes-journaling",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Calendar & Reminders",
+                  "code": "P-G-02-c",
+                  "slug": "calendar-reminders",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Goal Setting",
+                  "code": "P-G-02-d",
+                  "slug": "goal-setting",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Health & Fitness",
+              "code": "P-G-03",
+              "slug": "health-fitness",
+              "order": 30,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Exercise & Diet",
+                  "code": "P-G-03-a",
+                  "slug": "exercise-diet",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Habit Tracking",
+                  "code": "P-G-03-b",
+                  "slug": "habit-tracking",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Personal Medical Records",
+                  "code": "P-G-03-c",
+                  "slug": "personal-medical-records",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Learning & Study",
+              "code": "P-G-04",
+              "slug": "learning-study",
+              "order": 40,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Language Learning",
+                  "code": "P-G-04-a",
+                  "slug": "language-learning",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Exam Prep",
+                  "code": "P-G-04-b",
+                  "slug": "exam-prep",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Skill Courses",
+                  "code": "P-G-04-c",
+                  "slug": "skill-courses",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Creative & Hobbies",
+              "code": "P-G-05",
+              "slug": "creative-hobbies",
+              "order": 50,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Writing",
+                  "code": "P-G-05-a",
+                  "slug": "writing",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Drawing & Music",
+                  "code": "P-G-05-b",
+                  "slug": "drawing-music",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "DIY Projects",
+                  "code": "P-G-05-c",
+                  "slug": "diy-projects",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "File & Utilities",
+              "code": "P-G-06",
+              "slug": "file-utilities",
+              "order": 60,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Document Converters",
+                  "code": "P-G-06-a",
+                  "slug": "document-converters",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Photo Organizers",
+                  "code": "P-G-06-b",
+                  "slug": "photo-organizers",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Misc Helpers",
+                  "code": "P-G-06-c",
+                  "slug": "misc-helpers",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Vertical",
+          "code": "PV",
+          "slug": "vertical",
+          "order": 20,
+          "categories": [
+            "html-tool-library-item-uniconbaseapps"
+          ],
+          "children": [
+            {
+              "name": "Travel & Outdoors",
+              "code": "P-V-01",
+              "slug": "travel-outdoors",
+              "order": 10,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Trip Planning",
+                  "code": "P-V-01-a",
+                  "slug": "trip-planning",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Itineraries",
+                  "code": "P-V-01-b",
+                  "slug": "itineraries",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Packing",
+                  "code": "P-V-01-c",
+                  "slug": "packing",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Outdoor Activities",
+                  "code": "P-V-01-d",
+                  "slug": "outdoor-activities",
+                  "order": 40,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Family & Parenting",
+              "code": "P-V-02",
+              "slug": "family-parenting",
+              "order": 20,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Chores & Allowance",
+                  "code": "P-V-02-a",
+                  "slug": "chores-allowance",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Baby Tracking",
+                  "code": "P-V-02-b",
+                  "slug": "baby-tracking",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Family Calendars",
+                  "code": "P-V-02-c",
+                  "slug": "family-calendars",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Home & Living",
+              "code": "P-V-03",
+              "slug": "home-living",
+              "order": 30,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Shopping Lists",
+                  "code": "P-V-03-a",
+                  "slug": "shopping-lists",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Home Inventory",
+                  "code": "P-V-03-b",
+                  "slug": "home-inventory",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Smart Home",
+                  "code": "P-V-03-c",
+                  "slug": "smart-home",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Relationships & Events",
+              "code": "P-V-04",
+              "slug": "relationships-events",
+              "order": 40,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Weddings",
+                  "code": "P-V-04-a",
+                  "slug": "weddings",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Parties",
+                  "code": "P-V-04-b",
+                  "slug": "parties",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Gift Planning",
+                  "code": "P-V-04-c",
+                  "slug": "gift-planning",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Faith & Spirituality",
+              "code": "P-V-05",
+              "slug": "faith-spirituality",
+              "order": 50,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Scripture Study",
+                  "code": "P-V-05-a",
+                  "slug": "scripture-study",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Prayer",
+                  "code": "P-V-05-b",
+                  "slug": "prayer",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Congregation",
+                  "code": "P-V-05-c",
+                  "slug": "congregation",
+                  "order": 30,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Vehicles",
+              "code": "P-V-06",
+              "slug": "vehicles",
+              "order": 60,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Car Maintenance Logs",
+                  "code": "P-V-06-a",
+                  "slug": "car-maintenance-logs",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Trip Logs",
+                  "code": "P-V-06-b",
+                  "slug": "trip-logs",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Pets",
+              "code": "P-V-07",
+              "slug": "pets",
+              "order": 70,
+              "categories": [
+                "html-tool-library-item-uniconbaseapps"
+              ],
+              "children": [
+                {
+                  "name": "Care Schedules",
+                  "code": "P-V-07-a",
+                  "slug": "care-schedules",
+                  "order": 10,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                },
+                {
+                  "name": "Health Records",
+                  "code": "P-V-07-b",
+                  "slug": "health-records",
+                  "order": 20,
+                  "categories": [
+                    "html-tool-library-item-uniconbaseapps"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTML Tool Item Editor - test harness</title>
+<link rel="stylesheet" href="HtmlToolLibraryItem.css">
+<style>
+  body { margin: 0; background: #e8ebf3; font-family: 'Segoe UI', Arial, sans-serif; }
+  .th-bar { position: sticky; top: 0; z-index: 50; background: #0f172a; color: #fff; padding: 10px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .th-bar b { font-size: 14px; margin-right: 6px; }
+  .th-btn { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+  .th-btn:hover { background: #334155; }
+  #app { max-width: 1200px; margin: 0 auto; }
+  .th-log { position: fixed; right: 10px; bottom: 10px; width: 330px; max-height: 170px; overflow: auto; background: #0f172a; color: #cbd5e1; border-radius: 10px; padding: 8px 10px; font: 11px/1.5 Consolas, monospace; z-index: 60; }
+  .th-log b { display: block; color: #fff; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="th-bar">
+  <b>HtmlToolLibraryItem harness</b>
+  <button class="th-btn" id="th-role-btn">Role: admin</button>
+  <button class="th-btn" id="th-ro-btn">Read-only: no</button>
+  <button class="th-btn" id="th-reset-btn">Reset storage</button>
+  <span id="th-role-info" style="font-size:12px;color:#cbd5e1;margin-left:auto"></span>
+</div>
+<div id="app">
+<!-- TOOL HTML START -->
+<div class="htl-root" id="htl-root">
+  <header class="htl-header">
+    <div class="htl-header-inner">
+      <div class="htl-brand">
+        <div class="htl-logo-mark">T</div>
+        <div>
+          <h1>HTML Tool Item Editor</h1>
+          <p>Details and code of one CMS html-tool, saved back to this record's fields</p>
+        </div>
+      </div>
+      <div class="htl-header-actions">
+        <span class="htl-save-state" id="htl-save-state">Draft staged</span>
+        <span class="htl-role-badge" id="htl-role-badge"></span>
+        <span class="htl-lock-note" id="htl-lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+    <nav class="htl-tabs" id="htl-tabs">
+      <button class="htl-tab active" data-tab="details">Details</button>
+      <button class="htl-tab" data-tab="html">HTML</button>
+      <button class="htl-tab" data-tab="css">CSS</button>
+      <button class="htl-tab" data-tab="js">JS</button>
+      <button class="htl-tab" data-tab="preview">Preview</button>
+    </nav>
+  </header>
+
+  <div class="htl-banner" id="htl-fields-banner" style="display:none">
+    <span id="htl-fields-banner-text"></span>
+    <div class="htl-banner-actions">
+      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-pull">⇩ Import from fields</button>
+      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-dismiss">Dismiss</button>
+    </div>
+  </div>
+
+  <main class="htl-main">
+    <section class="htl-pane" id="pane-details">
+      <div class="htl-card">
+        <h2>Tool details</h2>
+        <p class="htl-hint">Field IDs match your Tool Definition app exactly - existing values load here automatically and edits write back to the same fields.</p>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label for="htl-f-toolName">Tool name <span class="htl-required">*</span></label>
+            <input class="htl-input" id="htl-f-toolName" placeholder="e.g. Star Rating" maxlength="120">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolIcon">Icon <span class="htl-label-hint">(single emoji)</span></label>
+            <input class="htl-input" id="htl-f-toolIcon" placeholder="e.g. ⭐" maxlength="8">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolStatus">Status</label>
+            <select class="htl-input" id="htl-f-toolStatus">
+              <option value="active">Active — visible in App Store</option>
+              <option value="draft">Draft — hidden from App Store</option>
+            </select>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolDescription">Description</label>
+            <textarea class="htl-textarea" id="htl-f-toolDescription" spellcheck="false" placeholder="What the tool does and what value it stores."></textarea>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label>Linked CMS field IDs</label>
+            <p class="htl-hint">Saved to these sibling fields: <span class="htl-field-id-list" id="htl-field-id-list"></span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Categories &amp; tags</h2>
+        <p class="htl-hint">Pick any number of categories from the taxonomy and add search keywords. These live in the tool itself, no longer limited by the old single-category field.</p>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label>Categories <span class="htl-label-hint" id="htl-category-count">0 selected</span></label>
+            <input class="htl-input" id="htl-category-search" placeholder="Filter categories...">
+            <div class="htl-cat-box" id="htl-category-list"></div>
+            <div class="htl-chips" id="htl-category-selected"></div>
+          </div>
+          <div class="htl-field">
+            <label>Tags <span class="htl-label-hint">(type and press Enter or comma)</span></label>
+            <div class="htl-tags-list" id="htl-tags-list"></div>
+            <input class="htl-input" id="htl-tags-input" placeholder="e.g. rating, stars" maxlength="200">
+            <div class="htl-tag-suggest" id="htl-tag-suggest"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Display settings</h2>
+        <div class="htl-form-grid">
+          <div class="htl-field">
+            <label for="htl-f-toolDisplayMode">Display mode</label>
+            <select class="htl-input" id="htl-f-toolDisplayMode">
+              <option value="inline">Inline — always visible in the form</option>
+              <option value="trigger-popup">Trigger → Popup</option>
+              <option value="trigger-drawer">Trigger → Drawer</option>
+              <option value="toolbar-strip">Toolbar Strip</option>
+            </select>
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolHeight">Height</label>
+            <input class="htl-input" id="htl-f-toolHeight" placeholder="e.g. 200px" maxlength="20">
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolAutoHeight">Auto height</label>
+            <select class="htl-input" id="htl-f-toolAutoHeight">
+              <option value="yes">Yes — shrink-wrap to content</option>
+              <option value="no">No — use fixed height above</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="htl-card">
+        <h2>Schema &amp; validation</h2>
+        <div class="htl-form-grid">
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolParams">Parameters schema <span class="htl-label-hint">(JSON - values for tool.param(key, default))</span></label>
+            <textarea class="htl-json-field" id="htl-f-toolParams" spellcheck="false" placeholder='{ "max": 5, "labels": "Poor,Fair,Good" }'></textarea>
+          </div>
+          <div class="htl-field htl-field-wide">
+            <label for="htl-f-toolOutputSchema">Output schema <span class="htl-label-hint">(JSON - shape of the tool.setValue() value)</span></label>
+            <textarea class="htl-json-field" id="htl-f-toolOutputSchema" spellcheck="false" placeholder='{ "rating": "number", "label": "string" }'></textarea>
+          </div>
+          <div class="htl-field">
+            <label for="htl-f-toolValidationEnabled">Validation enabled</label>
+            <select class="htl-input" id="htl-f-toolValidationEnabled">
+              <option value="no">No — accept any value</option>
+              <option value="yes">Yes — enforce output schema</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="htl-pane" id="pane-html" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">HTML code</span>
+          <span class="htl-editor-hint">Body markup only - no &lt;html&gt; / &lt;head&gt; / &lt;style&gt; / &lt;script&gt; tags. CDN script tags are allowed.</span>
+          <span class="htl-editor-meta" id="htl-meta-html">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-html" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolHtmlCode" spellcheck="false" wrap="off" placeholder="Paste the [HTML] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-css" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">CSS code</span>
+          <span class="htl-editor-hint">Stylesheet rules only - no &lt;style&gt; tag.</span>
+          <span class="htl-editor-meta" id="htl-meta-css">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-css" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolCssCode" spellcheck="false" wrap="off" placeholder="Paste the [CSS] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-js" style="display:none">
+      <div class="htl-editor">
+        <div class="htl-editor-head">
+          <span class="htl-editor-title">JS code</span>
+          <span class="htl-editor-hint">JavaScript only - no &lt;script&gt; tag. Entry point must be tool.onReady(callback).</span>
+          <span class="htl-editor-meta" id="htl-meta-js">0 lines · 0 chars</span>
+        </div>
+        <div class="htl-editor-body">
+          <pre class="htl-gutter" id="htl-gutter-js" aria-hidden="true">1</pre>
+          <textarea class="htl-code" id="htl-code-toolJsCode" spellcheck="false" wrap="off" placeholder="Paste the [JS] block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-preview" style="display:none">
+      <div class="htl-preview-bar">
+        <button class="htl-btn htl-btn-primary htl-btn-sm" id="htl-btn-rebuild">▶ Rebuild preview</button>
+        <span class="htl-hint">Runs the three code blocks together with a mock tool SDK inside a sandboxed frame. A log panel appears inside the preview.</span>
+        <span class="htl-preview-status" id="htl-preview-status">Not built yet</span>
+      </div>
+      <div class="htl-preview-frame-wrap">
+        <iframe class="htl-preview-frame" id="htl-preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Tool preview"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <footer class="htl-actionbar">
+    <div class="htl-actionbar-left">
+      <span class="htl-hint" id="htl-sync-note">Auto-saves to CMS fields as you edit.</span>
+    </div>
+    <div class="htl-actionbar-right">
+      <button class="htl-btn htl-btn-ghost" id="htl-btn-pull">⇩ Import from form fields</button>
+      <button class="htl-btn htl-btn-ghost" id="htl-btn-check-js">✓ Check JS</button>
+    </div>
+  </footer>
+
+  <details class="htl-debug" open>
+    <summary>Diagnostics log - open to see the field-import steps</summary>
+    <pre class="htl-debug-log" id="htl-debug-log">(no entries yet)</pre>
+  </details>
+</div>
+<!-- TOOL HTML END -->
+</div>
+<div class="th-log" id="th-log"><b>tool log</b></div>
+
+<script>
+(function () {
+  'use strict';
+  var STORAGE_KEY = 'htl_library_item_test_v1';
+  var query = new URLSearchParams(window.location.search);
+  var role = query.get('role') || 'admin';
+  var readOnly = query.get('ro') === '1';
+  var listeners = {};
+  function register(eventName, callback) { (listeners[eventName] = listeners[eventName] || []).push(callback); }
+  function fire(eventName, payload) {
+    (listeners[eventName] || []).slice().forEach(function (callback) {
+      try { callback(payload); } catch (error) { logLine('listener error: ' + error.message); }
+    });
+  }
+  function logLine(text) {
+    var box = document.getElementById('th-log');
+    if (!box) return;
+    var line = document.createElement('div');
+    line.textContent = new Date().toLocaleTimeString() + '  ' + text;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+  function savedValue() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (error) { return null; }
+  }
+  function persistValue(value) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) {}
+  }
+  var sampleFields = {
+    toolName: 'Brand Set Generator',
+    toolIcon: '🎨',
+    toolCategory: 'Media',
+    toolTags: 'brand, logo, design',
+    toolStatus: 'active',
+    toolDescription: 'Generates a full brand identity kit from a company profile.',
+    toolHtmlCode: '<div class="bsg-root"><header class="bsg-header"><h1>Sample Tool</h1></header></div>',
+    toolCssCode: '.bsg-root { font-family: Arial, sans-serif; padding: 20px; background: #f4f5fa; }\n.bsg-header h1 { color: #4f46e5; }',
+    toolJsCode: 'tool.onReady(function (value) {\n  var root = document.getElementById("bsg-root");\n  if (root) root.innerHTML += "<p>Sample tool runs in the preview.</p>";\n  tool.notify("Sample ready", "success");\n});',
+    toolDisplayMode: 'inline',
+    toolHeight: '1500px',
+    toolAutoHeight: 'no',
+    toolParams: '{"aiEnabled":"yes"}',
+    toolOutputSchema: '{"type":"object"}',
+    toolValidationEnabled: 'no'
+  };
+  function buildMockObjectDocument() {
+    return {
+      id: 'sample-tool-id', _id: 'sample-tool-id',
+      cmsObjectType: 'tools-applicationstore', typeId: 'ai-sample-applicationstore',
+      name: sampleFields.toolName, contentId: 'sample-content', slug: 'sample-slug',
+      blocks: [], aiChat: {}, meta: {}, seo: {}, permissions: {}, categories: [],
+      objectData: { data_categoriesBased: sampleFields }
+    };
+  }
+  function currentUser() {
+    if (role === 'none') return null;
+    if (role === 'viewer') return { id: 'u_viewer', name: 'Viewer', email: 'viewer@test.local', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } };
+    if (role === 'editor') return { id: 'u_editor', name: 'Editor', email: 'editor@test.local', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } };
+    return { id: 'u_admin', name: 'Admin', email: 'admin@test.local', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } };
+  }
+  var value = savedValue();
+  var mockParams = {
+    fieldIdOverrides: query.get('fieldIdOverrides') || '',
+    previewMockValue: query.get('previewMockValue') || '{}',
+    previewMockParams: query.get('previewMockParams') || '{}'
+  };
+  window.tool = {
+    onReady: function (callback) {
+      if (typeof callback === 'function') {
+        try { callback(value, buildMockObjectDocument()); } catch (error) { logLine('onReady threw: ' + error.message); }
+      }
+    },
+    getValue: function () { return value; },
+    setValue: function (newValue) { value = newValue; persistValue(newValue); fire('valueChange', newValue); },
+    onValueChange: function (callback) { register('valueChange', callback); },
+    getFields: function () { logLine('getFields called - object doc with ' + Object.keys(sampleFields).length + ' nested field values'); return buildMockObjectDocument(); },
+    watchField: function (fieldId, callback) { register('field:' + fieldId, callback); },
+    setField: function (fieldId, fieldValue) { sampleFields[fieldId] = fieldValue; fire('fieldsChange', sampleFields); },
+    setFields: function (fieldMap) {
+      Object.keys(fieldMap || {}).forEach(function (fieldId) { sampleFields[fieldId] = fieldMap[fieldId]; });
+      fire('fieldsChange', sampleFields);
+      logLine('setFields: ' + Object.keys(fieldMap || {}).length + ' field(s) written');
+    },
+    onFieldsChange: function (callback) { register('fieldsChange', callback); },
+    param: function (paramName, defaultValue) {
+      return (typeof mockParams[paramName] !== 'undefined' && mockParams[paramName] !== '') ? mockParams[paramName] : defaultValue;
+    },
+    isReadOnly: function () { return readOnly; },
+    onReadonlyChange: function (callback) { register('readonlyChange', callback); },
+    reportValid: function (isValid, message) { logLine('reportValid(' + isValid + ')' + (message ? ' - ' + message : '')); },
+    requestSave: function (callback) { logLine('requestSave - parent Save simulated'); if (typeof callback === 'function') callback(null, true); },
+    notify: function (message, severity) { logLine('[' + (severity || 'info') + '] ' + message); },
+    resize: function () {},
+    declareOutput: function (schema) { logLine('declareOutput called'); },
+    declareParams: function (params) { logLine('declareParams: ' + (params || []).length + ' param(s)'); },
+    reportMissingParams: function (missing, message) { logLine('reportMissingParams: ' + (message || '')); },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (callback) { register('userChange', callback); },
+    getPermittedUsers: function () { var user = currentUser(); return user ? [user] : []; },
+    onPermittedUsersChange: function (callback) { register('permittedUsersChange', callback); },
+    openUrl: function (url) { logLine('openUrl: ' + url); },
+    openObjectDetail: function (objectType, objectId) { logLine('openObjectDetail: ' + objectType + '/' + objectId); },
+    requestAI: function (prompt, context, callback) { callback('AI unavailable in harness mock', null); },
+    requestAIStream: function (prompt, context, callbacks) { if (callbacks && callbacks.onError) callbacks.onError('AI unavailable in harness mock'); },
+    requestUpload: function (accept, callback) { callback('Upload unavailable in harness mock', null); },
+    requestFileContent: function (url, callback) { callback('FileContent unavailable in harness mock', null); },
+    requestExportPdf: function (options, callback) { callback('ExportPdf unavailable in harness mock', null); },
+    requestSendEmail: function (options, callback) { callback('SendEmail unavailable in harness mock', null); },
+    requestObjects: function (action, params, callback) { callback('Objects unavailable in harness mock', null); }
+  };
+  document.getElementById('th-role-btn').addEventListener('click', function () {
+    var roles = ['admin', 'editor', 'viewer', 'none'];
+    role = roles[(roles.indexOf(role) + 1) % roles.length];
+    this.textContent = 'Role: ' + role;
+    fire('userChange', currentUser());
+    logLine('role switched to ' + role);
+  });
+  document.getElementById('th-ro-btn').addEventListener('click', function () {
+    readOnly = !readOnly;
+    this.textContent = 'Read-only: ' + (readOnly ? 'yes' : 'no');
+    fire('readonlyChange', readOnly);
+    logLine('read-only: ' + readOnly);
+  });
+  document.getElementById('th-reset-btn').addEventListener('click', function () {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.reload();
+  });
+  document.getElementById('th-role-info').textContent = 'QA: ?role=admin|editor|viewer|none&ro=1';
+  logLine('harness ready. role=' + role + ' ro=' + readOnly + ' stored value=' + (value ? 'present' : 'none'));
+})();
+</script>
+<script src="HtmlToolLibraryItem.js"></script>
+</body>
+</html>

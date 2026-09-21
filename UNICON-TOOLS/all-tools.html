@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All HTML Tools - UniconHub HTMLBasedTools</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --panel: #ffffff;
+    --ink: #1c2430;
+    --muted: #5c6b7d;
+    --line: #dde3ea;
+    --accent: #0f5c8a;
+    --accent-soft: #e7f0f7;
+    --yes-bg: #e4f4e8;
+    --yes-ink: #1d7a36;
+    --yes-line: #9fd8ad;
+    --no-bg: #fbeaea;
+    --no-ink: #b02a2a;
+    --no-line: #eab4b4;
+    --unknown-bg: #fdf3df;
+    --unknown-ink: #96680a;
+    --unknown-line: #eed8a6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .page-wrap { max-width: 1060px; margin: 0 auto; padding: 28px 20px 60px; }
+  header.page-head {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  h1 { margin: 0 0 6px; font-size: 24px; color: var(--accent); }
+  .head-sub { color: var(--muted); font-size: 13.5px; }
+  .head-sub code { background: #eef2f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  .stats-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .stat-chip {
+    background: var(--accent-soft);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 13px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .stat-chip strong { color: var(--accent); font-size: 15px; margin-right: 4px; }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    position: sticky; top: 8px; z-index: 5;
+    box-shadow: 0 2px 8px rgba(28, 36, 48, 0.06);
+  }
+  .toolbar label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+  .toolbar input[type=search], .toolbar select {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--ink);
+    background: #fff;
+  }
+  .toolbar input[type=search] { width: 240px; }
+  .toolbar .spacer { flex: 1; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+  .legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  section.group {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .group-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .group-head:hover { background: #f8fafc; }
+  .group-title { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; }
+  .group-path { font-family: Consolas, monospace; font-size: 12px; color: var(--muted); }
+  .group-counts { margin-left: auto; display: flex; gap: 8px; font-size: 12px; color: var(--muted); }
+  .group-counts b { color: var(--ink); }
+  .group-arrow { color: var(--muted); transition: transform 0.15s; }
+  section.group.collapsed .group-arrow { transform: rotate(-90deg); }
+  section.group.collapsed .tool-list { display: none; }
+  .tool-list { border-top: 1px solid var(--line); }
+  .tool-row {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+    padding: 10px 18px;
+    border-bottom: 1px solid #edf1f5;
+  }
+  .tool-row:last-child { border-bottom: none; }
+  .tool-row:hover { background: #fafcfd; }
+  .tool-main { flex: 1 1 340px; min-width: 260px; }
+  .tool-name { font-weight: 600; font-size: 14px; }
+  .tool-folder { font-family: Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .tool-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tool-lines { font-family: Consolas, monospace; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .tool-lines .lines-total { color: var(--ink); font-weight: 600; }
+  .tool-lines .lines-split { margin-left: 8px; opacity: 0.85; }
+  .tool-statuses { display: flex; gap: 8px; flex-wrap: wrap; }
+  .status-badge {
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .status-badge .status-key { font-weight: 400; opacity: 0.75; margin-right: 3px; }
+  .status-yes { background: var(--yes-bg); color: var(--yes-ink); border-color: var(--yes-line); }
+  .status-no { background: var(--no-bg); color: var(--no-ink); border-color: var(--no-line); }
+  .status-unknown { background: var(--unknown-bg); color: var(--unknown-ink); border-color: var(--unknown-line); }
+  .empty-note {
+    padding: 26px 18px; text-align: center; color: var(--muted); font-size: 13.5px;
+  }
+  footer.page-foot {
+    margin-top: 22px; font-size: 12px; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px;
+  }
+  footer.page-foot h2 { font-size: 13px; margin: 0 0 6px; color: var(--ink); }
+  footer.page-foot ul { margin: 4px 0 0; padding-left: 18px; }
+  footer.page-foot li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <header class="page-head">
+    <h1>All HTML Tools</h1>
+    <div class="head-sub">
+      Index of every html-tool format project in this codebase. Each tool has two publish statuses:
+      published <strong>as a tool</strong> and used <strong>inside at least one application</strong>.
+      Statuses are maintained in the <code>TOOL_GROUPS</code> array at the top of this file's script.
+    </div>
+    <div class="stats-row" id="statsRow"></div>
+  </header>
+
+  <div class="toolbar">
+    <label for="searchInput">Search</label>
+    <input type="search" id="searchInput" placeholder="Tool name or folder...">
+    <label for="asToolFilter">As a tool</label>
+    <select id="asToolFilter">
+      <option value="all">All</option>
+      <option value="yes">Published</option>
+      <option value="no">Not published</option>
+      <option value="unknown">No info</option>
+    </select>
+    <label for="inAppFilter">In an app</label>
+    <select id="inAppFilter">
+      <option value="all">All</option>
+      <option value="yes">In use</option>
+      <option value="no">Not used</option>
+      <option value="unknown">No info</option>
+    </select>
+    <div class="spacer"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--yes-bg);border:1px solid var(--yes-line)"></span>Yes</span>
+      <span><span class="dot" style="background:var(--no-bg);border:1px solid var(--no-line)"></span>No</span>
+      <span><span class="dot" style="background:var(--unknown-bg);border:1px solid var(--unknown-line)"></span>No info</span>
+    </div>
+  </div>
+
+  <div id="groupsContainer"></div>
+
+  <footer class="page-foot">
+    <h2>Not html-tools (excluded from the index above)</h2>
+    <ul>
+      <li><code>DESKTOP-APPS/Code-Development/</code> - Unicon Studio, an Electron desktop app (plus its planning docs), not a CMS html-tool.</li>
+      <li><code>OTHERS-HELPERS/Documents/</code> - standalone printable documents, not html-tools.</li>
+      <li><code>OTHERS-HELPERS/functions/</code> - cloud functions source, not an html-tool.</li>
+      <li><code>OTHERS-HELPERS/pdf-proxy/</code> - PDF proxy service, not an html-tool.</li>
+      <li><code>OTHERS-HELPERS/IhlasRisalesiKartlar/</code> - standalone Turkish card viewer page, not an html-tool.</li>
+    </ul>
+  </footer>
+
+</div>
+
+<script>
+// ============================================================================
+// TOOL_GROUPS - the master list. To update publish statuses, change the
+// `asTool` and `inApp` fields below. Allowed values: 'yes', 'no', 'unknown'.
+//   asTool = published in the CMS as a standalone tool
+//   inApp  = used inside at least one CMS application
+// ============================================================================
+var TOOL_GROUPS = [
+  {
+    key: 'common',
+    label: 'COMMON',
+    path: 'COMMON/',
+    tools: [
+      { id: 'company-profile', name: 'Company Profile', folder: 'COMMON/CompanyProfile', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 560, cssLines: 275, jsLines: 1393 }
+    ]
+  },
+  {
+    key: 'editors',
+    label: 'EDITORS',
+    path: 'EDITORS/',
+    tools: [
+      { id: 'html-content-editor-viewer', name: 'HTML Content Editor and Viewer', folder: 'EDITORS/HTMLContentEditorAndViewer', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 118, cssLines: 822, jsLines: 652 },
+      { id: 'image-editing-tools', name: 'Image Editing Tools', folder: 'EDITORS/ImageEditingTools', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 773, cssLines: 592, jsLines: 4374 }
+    ]
+  },
+  {
+    key: 'education',
+    label: 'EDUCATION',
+    path: 'EDUCATION/',
+    tools: [
+      { id: 'attendance-checker', name: 'Attendance Checker', folder: 'EDUCATION/AttendanceChecker', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 136, cssLines: 534, jsLines: 1278 },
+      { id: 'bloom-learn-manager', name: 'Bloom Learn Manager', folder: 'EDUCATION/BloomLearnManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 249, cssLines: 758, jsLines: 2376 },
+      { id: 'curriculum-builder', name: 'Curriculum Builder', folder: 'EDUCATION/CurriculumBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 337, cssLines: 1083, jsLines: 4912 },
+      { id: 'education-program-presentation', name: 'Education Program Presentation', folder: 'EDUCATION/EducationProgramPresentation', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 271, cssLines: 323, jsLines: 650 },
+      { id: 'education-program-presentation-2', name: 'Education Program Presentation 2', folder: 'EDUCATION/EducationProgramPresentation2', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 692, cssLines: 787, jsLines: 271 },
+      { id: 'essay-subject-builder', name: 'Essay Subject Builder', folder: 'EDUCATION/EssaySubjectBuilder', asTool: 'unknown', inApp: 'unknown', note: 'Builds subject definitions consumed by Essay Writing Educator.', htmlLines: 88, cssLines: 171, jsLines: 741 },
+      { id: 'essay-writing-educator', name: 'Essay Writing Educator', folder: 'EDUCATION/EssayWritingEducator', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 82, cssLines: 413, jsLines: 1471 },
+      { id: 'self-paced-education', name: 'Self Paced Education by Section', folder: 'EDUCATION/SelfPacedEducationBySection', asTool: 'unknown', inApp: 'unknown', note: 'Student-facing tool for Curriculum Builder courses.', htmlLines: 142, cssLines: 1244, jsLines: 3955 },
+      { id: 'student-file-builder', name: 'Student File Builder for Applications', folder: 'EDUCATION/StudentFileBuilderForApplications', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 297, cssLines: 423, jsLines: 1896 }
+    ]
+  },
+  {
+    key: 'finance',
+    label: 'FINANCE',
+    path: 'FINANCE/',
+    tools: [
+      { id: 'fundraising-campaign-manager', name: 'Fundraising Campaign Manager', folder: 'FINANCE/FundraisingCampaingManager', asTool: 'unknown', inApp: 'unknown', note: 'Folder name in repo: FundraisingCampaingManager.', htmlLines: 312, cssLines: 568, jsLines: 939 },
+      { id: 'invoice-expense-collector', name: 'Invoice and Expense Collector', folder: 'FINANCE/InvoiceAndExpenseCollector', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 158, cssLines: 604, jsLines: 1790 },
+      { id: 'payments-management', name: 'Payments Management', folder: 'FINANCE/PaymentsManagement', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 192, cssLines: 557, jsLines: 2788 },
+      { id: 'personal-tax-preparation', name: 'Personal Tax Preparation', folder: 'FINANCE/PersonalTaxPreparation', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 374, cssLines: 398, jsLines: 1937 },
+      { id: 'pledge-donation-tracker', name: 'Pledge and Donation Tracker', folder: 'FINANCE/PledgeAndDonationTracker', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 415, cssLines: 1901, jsLines: 2157 }
+    ]
+  },
+  {
+    key: 'generating-content',
+    label: 'GENERATING CONTENT',
+    path: 'GENERATING_CONTENT/',
+    tools: [
+      { id: 'ai-chat-presentation-builder', name: 'AI Chat Presentation Builder', folder: 'GENERATING_CONTENT/AIChatPresentationBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 377, cssLines: 600, jsLines: 6471 },
+      { id: 'ai-legal-document-builder', name: 'AI Legal Formatted Document Builder', folder: 'GENERATING_CONTENT/AILegalFormattedDocumentBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 365, cssLines: 412, jsLines: 5138 },
+      { id: 'news-generator', name: 'News Generator', folder: 'GENERATING_CONTENT/NewsGenerator', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 420, cssLines: 581, jsLines: 5905 },
+      { id: 'vibe-coding-app-builder', name: 'Vibe Coding HTML App Builder', folder: 'GENERATING_CONTENT/VibeCodingHTMLAppBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 1069, cssLines: 614, jsLines: 3578 },
+      { id: 'webpage-builder', name: 'Webpage Builder', folder: 'GENERATING_CONTENT/WebpageBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 1087, cssLines: 713, jsLines: 5078 }
+    ]
+  },
+  {
+    key: 'hr',
+    label: 'HR',
+    path: 'HR/',
+    tools: [
+      { id: 'daily-supervision-logs', name: 'Daily Supervision Logs', folder: 'HR/DailySupervisionLogs', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 110, cssLines: 1434, jsLines: 385 },
+      { id: 'employee-daily-logs', name: 'Employee Daily Logs', folder: 'HR/EmployeeDailyLogs', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 111, cssLines: 797, jsLines: 379 },
+      { id: 'employee-data-collection', name: 'Employee Data Collection', folder: 'HR/EmployeeDataCollection', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 214, cssLines: 733, jsLines: 1073 },
+      { id: 'employment-agreement-builder', name: 'Employment Agreement Builder', folder: 'HR/EmploymentAgreementBuilder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 92, cssLines: 1326, jsLines: 658 },
+      { id: 'incident-accident-report', name: 'Incident Accident Report Form', folder: 'HR/IncidentAccidentReportForm', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 154, cssLines: 417, jsLines: 405 },
+      { id: 'interview-manager', name: 'Interview Manager', folder: 'HR/InterviewManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 1003, cssLines: 2216, jsLines: 2224 },
+      { id: 'staff-permit-management', name: 'Staff Permit Management', folder: 'HR/StaffPermitManagement', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 419, cssLines: 630, jsLines: 2076 },
+      { id: 'staff-training-verification', name: 'Staff Training Verification', folder: 'HR/StaffTrainingVerification', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 720, cssLines: 700, jsLines: 654 },
+      { id: 'summer-jobs-handbook', name: 'Summer Jobs Staff Handbook', folder: 'HR/SummerJobs_StaffHandbook', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 66, cssLines: 655, jsLines: 1683 },
+      { id: 'weekly-mentorship-logs', name: 'Weekly Mentorship Logs', folder: 'HR/WeeklyMentorshipLogs', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 110, cssLines: 1434, jsLines: 399 }
+    ]
+  },
+  {
+    key: 'nonprofit',
+    label: 'NONPROFIT',
+    path: 'NONPROFIT/',
+    tools: [
+      { id: 'grant-planner-v1', name: 'Grant Planner (v1)', folder: 'NONPROFIT/GrantPlanner-v1-delete', asTool: 'unknown', inApp: 'unknown', note: 'Folder is marked v1-delete - superseded by Grant Workflow Manager.', htmlLines: 477, cssLines: 1180, jsLines: 1286 },
+      { id: 'grant-workflow-manager', name: 'Grant Workflow Manager', folder: 'NONPROFIT/GrantWorkflowManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 671, cssLines: 1804, jsLines: 2366 },
+      { id: 'volunteer-management', name: 'Volunteer Management', folder: 'NONPROFIT/VolunteerManagement', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 383, cssLines: 588, jsLines: 1500 }
+    ]
+  },
+  {
+    key: 'others-helpers',
+    label: 'OTHERS HELPERS',
+    path: 'OTHERS-HELPERS/',
+    tools: [
+      { id: 'ai-system-design', name: 'AI System Design', folder: 'OTHERS-HELPERS/AISystemDesign', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 1566, cssLines: 435, jsLines: 2270 },
+      { id: 'matchmaking', name: 'Matchmaking', folder: 'OTHERS-HELPERS/Matchmaking', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 614, cssLines: 342, jsLines: 1521 }
+    ]
+  },
+  {
+    key: 'personal-apps',
+    label: 'PERSONAL APPS',
+    path: 'PERSONAL-APPS/',
+    tools: [
+      { id: 'travel-planner', name: 'Travel Planner', folder: 'PERSONAL-APPS/TravelPlanner', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 149, cssLines: 397, jsLines: 2729 }
+    ]
+  },
+  {
+    key: 'startup',
+    label: 'STARTUP',
+    path: 'STARTUP/',
+    tools: [
+      { id: 'brand-set-generator', name: 'Brand Set Generator', folder: 'STARTUP/BrandSetGenerator', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 305, cssLines: 934, jsLines: 3740 }
+    ]
+  },
+  {
+    key: 'task-managers',
+    label: 'TASK MANAGERS',
+    path: 'TASK_MANAGERS/',
+    tools: [
+      { id: 'hierarchy-item-checklist', name: 'Hierarchy Item Checklist Manager', folder: 'TASK_MANAGERS/HierarchyItemChecklistManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 66, cssLines: 497, jsLines: 1838 },
+      { id: 'recurring-task-manager', name: 'Recurring Task Manager', folder: 'TASK_MANAGERS/RecurringTaskManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 384, cssLines: 1296, jsLines: 3336 },
+      { id: 'sprint-task-manager', name: 'Sprint Task Manager', folder: 'TASK_MANAGERS/SprintTaskManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 373, cssLines: 612, jsLines: 1860 }
+    ]
+  },
+  {
+    key: 'translators',
+    label: 'TRANSLATORS',
+    path: 'TRANSLATORS/',
+    tools: [
+      { id: 'html-bulk-translator', name: 'HTML Bulk Translator', folder: 'TRANSLATORS/HtmlBulkTranslator', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 98, cssLines: 258, jsLines: 1423 }
+    ]
+  },
+  {
+    key: 'verticals',
+    label: 'VERTICALS',
+    path: 'VERTICALS/',
+    tools: [
+      { id: 'ai-blinds-consultation', name: 'AI Blinds Consultation', folder: 'VERTICALS/AIBlindsConsultation', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 441, cssLines: 1977, jsLines: 1638 },
+      { id: 'bus-company-work-order', name: 'Bus Company Work Order', folder: 'VERTICALS/BusCompanyWorkOrder', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 144, cssLines: 341, jsLines: 703 },
+      { id: 'restaurant-menu-manager', name: 'Restaurant and Menu Manager', folder: 'VERTICALS/RESTAURANT/RestaurantAndMenuManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 1002, cssLines: 1898, jsLines: 5046 },
+      { id: 'restaurant-settings-delivery-zones', name: 'Restaurant Settings - Delivery Zones', folder: 'VERTICALS/RESTAURANT/ResturantSettings (deliveryzones)', asTool: 'unknown', inApp: 'unknown', note: 'No test-harness in this folder.', htmlLines: 57, cssLines: 307, jsLines: 562 },
+      { id: 'restaurant-settings-menu-management', name: 'Restaurant Settings - Menu Management', folder: 'VERTICALS/RESTAURANT/ResturantSettings (menu-management)', asTool: 'unknown', inApp: 'unknown', note: 'No test-harness in this folder.', htmlLines: 221, cssLines: 611, jsLines: 1040 },
+      { id: 'restaurant-settings', name: 'Restaurant Settings', folder: 'VERTICALS/RESTAURANT/ResturantSettings (settings)', asTool: 'unknown', inApp: 'unknown', note: 'No test-harness in this folder.', htmlLines: 374, cssLines: 652, jsLines: 670 },
+      { id: 'warehouse-manager', name: 'Warehouse Manager', folder: 'VERTICALS/WarehouseManager', asTool: 'unknown', inApp: 'unknown', note: '', htmlLines: 46, cssLines: 794, jsLines: 1038 }
+    ]
+  }
+];
+
+var STATUS_LABELS = {
+  yes: { text: 'Yes', cls: 'status-yes' },
+  no: { text: 'No', cls: 'status-no' },
+  unknown: { text: 'No info', cls: 'status-unknown' }
+};
+
+function allTools() {
+  var list = [];
+  TOOL_GROUPS.forEach(function (group) {
+    group.tools.forEach(function (tool) { list.push(tool); });
+  });
+  return list;
+}
+
+function countBy(list, key, value) {
+  var n = 0;
+  list.forEach(function (tool) { if (tool[key] === value) n++; });
+  return n;
+}
+
+function buildStats() {
+  var tools = allTools();
+  var totalLines = 0;
+  tools.forEach(function (tool) {
+    totalLines += (tool.htmlLines || 0) + (tool.cssLines || 0) + (tool.jsLines || 0);
+  });
+  var statsRow = document.getElementById('statsRow');
+  statsRow.innerHTML =
+    chip('Total tools', tools.length) +
+    chip('Groups', TOOL_GROUPS.length) +
+    chip('Total code lines', fmtThousands(totalLines)) +
+    chip('Published as a tool', countBy(tools, 'asTool', 'yes')) +
+    chip('Used in an app', countBy(tools, 'inApp', 'yes')) +
+    chip('Awaiting publish info', countBy(tools, 'asTool', 'unknown'));
+}
+
+function fmtThousands(numberValue) {
+  return String(numberValue).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function chip(label, value) {
+  return '<div class="stat-chip"><strong>' + value + '</strong>' + escapeHtml(label) + '</div>';
+}
+
+function statusBadgeHtml(status) {
+  var s = STATUS_LABELS[status] || STATUS_LABELS.unknown;
+  return '<span class="status-badge ' + s.cls + '">' + s.text + '</span>';
+}
+
+function toolLinesHtml(tool) {
+  var htmlLines = tool.htmlLines || 0;
+  var cssLines = tool.cssLines || 0;
+  var jsLines = tool.jsLines || 0;
+  var total = htmlLines + cssLines + jsLines;
+  return (
+    '<div class="tool-lines" title="HTML ' + fmtThousands(htmlLines) + ' lines / CSS ' + fmtThousands(cssLines) + ' lines / JS ' + fmtThousands(jsLines) + ' lines">' +
+      '<span class="lines-total">' + fmtThousands(total) + '</span> lines' +
+      '<span class="lines-split">HTML ' + fmtThousands(htmlLines) + ' / CSS ' + fmtThousands(cssLines) + ' / JS ' + fmtThousands(jsLines) + '</span>' +
+    '</div>'
+  );
+}
+
+function toolRowHtml(tool) {
+  var noteHtml = tool.note ? '<div class="tool-note">' + escapeHtml(tool.note) + '</div>' : '';
+  return (
+    '<div class="tool-row">' +
+      '<div class="tool-main">' +
+        '<div class="tool-name">' + escapeHtml(tool.name) + '</div>' +
+        '<div class="tool-folder">' + escapeHtml(tool.folder) + '</div>' +
+        toolLinesHtml(tool) +
+        noteHtml +
+      '</div>' +
+      '<div class="tool-statuses">' +
+        '<span class="status-badge ' + (STATUS_LABELS[tool.asTool] || STATUS_LABELS.unknown).cls + '">' +
+          '<span class="status-key">as a tool</span>' + (STATUS_LABELS[tool.asTool] || STATUS_LABELS.unknown).text +
+        '</span>' +
+        '<span class="status-badge ' + (STATUS_LABELS[tool.inApp] || STATUS_LABELS.unknown).cls + '">' +
+          '<span class="status-key">in an app</span>' + (STATUS_LABELS[tool.inApp] || STATUS_LABELS.unknown).text +
+        '</span>' +
+      '</div>' +
+    '</div>'
+  );
+}
+
+function groupHtml(group, tools) {
+  var publishedCount = countBy(tools, 'asTool', 'yes');
+  var appCount = countBy(tools, 'inApp', 'yes');
+  var rows = tools.map(toolRowHtml).join('');
+  return (
+    '<section class="group" data-group="' + group.key + '">' +
+      '<div class="group-head" data-group-toggle="' + group.key + '">' +
+        '<span class="group-arrow">&#9660;</span>' +
+        '<span class="group-title">' + escapeHtml(group.label) + '</span>' +
+        '<span class="group-path">' + escapeHtml(group.path) + '</span>' +
+        '<span class="group-counts">' +
+          '<span>' + tools.length + ' tools</span>' +
+          '<span><b>' + publishedCount + '</b> published</span>' +
+          '<span><b>' + appCount + '</b> in apps</span>' +
+        '</span>' +
+      '</div>' +
+      '<div class="tool-list">' + rows + '</div>' +
+    '</section>'
+  );
+}
+
+function applyFilters() {
+  var query = document.getElementById('searchInput').value.trim().toLowerCase();
+  var asToolFilter = document.getElementById('asToolFilter').value;
+  var inAppFilter = document.getElementById('inAppFilter').value;
+  var container = document.getElementById('groupsContainer');
+
+  TOOL_GROUPS.forEach(function (group) {
+    var visibleTools = group.tools.filter(function (tool) {
+      var matchesSearch = !query ||
+        tool.name.toLowerCase().indexOf(query) !== -1 ||
+        tool.folder.toLowerCase().indexOf(query) !== -1;
+      var matchesAsTool = asToolFilter === 'all' || tool.asTool === asToolFilter;
+      var matchesInApp = inAppFilter === 'all' || tool.inApp === inAppFilter;
+      return matchesSearch && matchesAsTool && matchesInApp;
+    });
+    var section = container.querySelector('[data-group="' + group.key + '"]');
+    if (!section) return;
+    if (visibleTools.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+    section.querySelector('.tool-list').innerHTML = visibleTools.map(toolRowHtml).join('');
+    section.querySelector('.group-counts').innerHTML =
+      '<span>' + visibleTools.length + ' of ' + group.tools.length + ' tools</span>' +
+      '<span><b>' + countBy(visibleTools, 'asTool', 'yes') + '</b> published</span>' +
+      '<span><b>' + countBy(visibleTools, 'inApp', 'yes') + '</b> in apps</span>';
+  });
+
+  var anyVisible = TOOL_GROUPS.some(function (group) {
+    var section = container.querySelector('[data-group="' + group.key + '"]');
+    return section && section.style.display !== 'none';
+  });
+  if (!anyVisible) {
+    var empty = container.querySelector('.empty-note');
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty-note';
+      container.appendChild(empty);
+    }
+    empty.textContent = 'No tools match the current search and filters.';
+  } else {
+    var existing = container.querySelector('.empty-note');
+    if (existing) existing.remove();
+  }
+}
+
+function bindEvents() {
+  var container = document.getElementById('groupsContainer');
+  document.getElementById('searchInput').addEventListener('input', applyFilters);
+  document.getElementById('asToolFilter').addEventListener('change', applyFilters);
+  document.getElementById('inAppFilter').addEventListener('change', applyFilters);
+  container.addEventListener('click', function (event) {
+    var toggle = event.target.closest ? event.target.closest('[data-group-toggle]') : null;
+    if (!toggle) return;
+    var key = toggle.getAttribute('data-group-toggle');
+    var section = container.querySelector('[data-group="' + key + '"]');
+    if (section) section.classList.toggle('collapsed');
+  });
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderAll() {
+  var container = document.getElementById('groupsContainer');
+  container.innerHTML = TOOL_GROUPS.map(function (group) {
+    return groupHtml(group, group.tools);
+  }).join('');
+  buildStats();
+  bindEvents();
+}
+
+renderAll();
+</script>
+</body>
+</html>
