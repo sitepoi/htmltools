@@ -141,10 +141,14 @@
   // plans, reports, marketing, help, social media) served from the active
   // project root. Unicon Studio's own SSOT stays available as a built-in.
   let projectDocuments = []
-  const builtinDocumentOption = { name: 'code-devtool-ssot.html', relativePath: '', type: 'builtin', label: 'Unicon Studio SSOT (built-in)' }
+  const builtinDocumentOptions = [
+    { name: 'code-devtool-ssot.html', relativePath: 'builtin-ssot', type: 'builtin', label: 'Unicon Studio SSOT (built-in)', url: '/docs/code-devtool-ssot.html' },
+    { name: 'document-system-rules.html', relativePath: 'builtin-rules', type: 'builtin', label: 'Document system rules (built-in)', url: '/docs/document-system-rules.html' }
+  ]
 
   function documentUrl(documentRecord) {
-    if (!documentRecord || documentRecord.type === 'builtin') return '/docs/code-devtool-ssot.html'
+    if (!documentRecord) return builtinDocumentOptions[0].url
+    if (documentRecord.type === 'builtin') return documentRecord.url
     return '/project-docs/' + documentRecord.relativePath
   }
 
@@ -164,20 +168,18 @@
     if (!select) return
     const previousValue = select.value
     select.textContent = ''
-    const allOptions = projectDocuments.concat([builtinDocumentOption])
+    const allOptions = projectDocuments.concat(builtinDocumentOptions)
     allOptions.forEach((documentRecord) => {
       const option = document.createElement('option')
-      option.value = documentRecord.type === 'builtin' ? 'builtin' : documentRecord.relativePath
+      option.value = documentRecord.relativePath
       const nestedHint = documentRecord.relativePath.includes('/') ? ' - ' + documentRecord.relativePath : ''
       option.textContent = documentRecord.type === 'builtin'
         ? documentRecord.label
         : documentRecord.label + ': ' + documentRecord.name + nestedHint
       select.appendChild(option)
     })
-    const preferredValue = projectDocuments.length > 0 ? projectDocuments[0].relativePath : 'builtin'
-    const previousStillExists = allOptions.some((documentRecord) =>
-      documentRecord.type === 'builtin' ? previousValue === 'builtin' : documentRecord.relativePath === previousValue
-    )
+    const preferredValue = projectDocuments.length > 0 ? projectDocuments[0].relativePath : builtinDocumentOptions[0].relativePath
+    const previousStillExists = allOptions.some((documentRecord) => documentRecord.relativePath === previousValue)
     select.value = previousStillExists ? previousValue : preferredValue
     const title = document.getElementById('ssot-overlay-title')
     if (title) {
@@ -194,8 +196,9 @@
     const select = document.getElementById('ssot-doc-select')
     if (!overlay || !frame || !select || overlay.hidden) return
     const selectedValue = select.value
-    const selectedDocument = projectDocuments.find((documentRecord) => documentRecord.relativePath === selectedValue)
-    const url = selectedDocument ? documentUrl(selectedDocument) : documentUrl(builtinDocumentOption)
+    const selectedDocument = projectDocuments.find((documentRecord) => documentRecord.relativePath === selectedValue) ||
+      builtinDocumentOptions.find((documentRecord) => documentRecord.relativePath === selectedValue)
+    const url = selectedDocument ? documentUrl(selectedDocument) : documentUrl(builtinDocumentOptions[0])
     if (frame.getAttribute('src') !== url) frame.src = url
   }
 

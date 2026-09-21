@@ -1,0 +1,65 @@
+/* ── One-pager shared styles (all features) ─────────────────────────────────
+   Used by every <feature>/_onepager.html. The design is compact enough to
+   fit one printed A4/Letter page: open the page, press "Print / PDF" to
+   export. Do NOT inline styles in one-pager files - edit this file instead. */
+.onepager-root {
+  --op-ink: #0f172a; --op-text: #1f2937; --op-muted: #64748b;
+  --op-accent: #4f46e5; --op-accent-2: #7c3aed; --op-line: #e2e8f0;
+  --op-soft: #f8fafc;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  color: var(--op-text); background: #ffffff; line-height: 1.6;
+}
+.onepager-page { max-width: 860px; margin: 0 auto; padding: 40px 32px 48px; }
+.onepager-topbar { display: flex; justify-content: space-between; align-items: center; padding-bottom: 18px; border-bottom: 2px solid var(--op-ink); }
+.onepager-brand { font-weight: 800; font-size: 1.02rem; color: var(--op-ink); letter-spacing: -0.01em; }
+.onepager-tag { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--op-accent); }
+.onepager-hero { padding: 34px 0 26px; }
+.onepager-hero h1 { font-size: clamp(1.9rem, 4vw, 2.7rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--op-ink); }
+.onepager-hero .onepager-tagline { font-size: 1.08rem; color: var(--op-muted); margin-top: 12px; max-width: 640px; }
+.onepager-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.onepager-chip { font-size: 0.78rem; font-weight: 600; color: #3730a3; background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 999px; padding: 4px 12px; }
+.onepager-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--op-line); border: 1px solid var(--op-line); border-radius: 16px; overflow: hidden; margin: 22px 0 6px; }
+.onepager-stat { background: #fff; padding: 20px 14px; text-align: center; }
+.onepager-stat b { display: block; font-size: 1.7rem; font-weight: 800; color: var(--op-accent); }
+.onepager-stat span { font-size: 0.8rem; color: var(--op-muted); font-weight: 600; }
+.onepager-section { margin-top: 30px; }
+.onepager-section h2 { font-size: 1.25rem; font-weight: 800; color: var(--op-ink); letter-spacing: -0.02em; padding-bottom: 8px; border-bottom: 2px solid var(--op-soft); margin-bottom: 14px; }
+.onepager-num { color: var(--op-accent); margin-right: 8px; }
+.onepager-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.onepager-item { border: 1px solid var(--op-line); border-radius: 14px; padding: 16px; background: var(--op-soft); }
+.onepager-item h3 { font-size: 0.95rem; font-weight: 700; color: var(--op-ink); }
+.onepager-item p { font-size: 0.85rem; color: var(--op-muted); margin-top: 6px; }
+.onepager-list { list-style: none; }
+.onepager-list li { padding: 6px 0 6px 26px; position: relative; font-size: 0.92rem; }
+.onepager-list li::before { content: '✓'; position: absolute; left: 0; top: 6px; width: 18px; height: 18px; background: #dcfce7; color: #15803d; border-radius: 50%; font-size: 0.68rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.onepager-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.onepager-step { border: 1px solid var(--op-line); border-radius: 14px; padding: 16px; background: #fff; }
+.onepager-step b { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; align-items: center; justify-content: center; font-size: 0.8rem; margin-bottom: 8px; }
+.onepager-step h3 { font-size: 0.92rem; font-weight: 700; color: var(--op-ink); }
+.onepager-step p { font-size: 0.83rem; color: var(--op-muted); margin-top: 4px; }
+.onepager-cta { margin-top: 34px; background: linear-gradient(135deg, #1e1b4b, #4f46e5); border-radius: 18px; padding: 30px 28px; color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.onepager-cta h2 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.01em; }
+.onepager-cta p { font-size: 0.88rem; opacity: 0.85; margin-top: 4px; }
+.onepager-btn { display: inline-block; background: #fff; color: #4f46e5; font-weight: 700; font-size: 0.9rem; padding: 11px 22px; border-radius: 999px; text-decoration: none; }
+.onepager-btn:hover { background: #eef2ff; }
+.onepager-footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--op-line); font-size: 0.8rem; color: var(--op-muted); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.onepager-print { background: none; border: 1px solid var(--op-line); color: var(--op-muted); font-weight: 600; font-size: 0.8rem; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.onepager-print:hover { border-color: var(--op-accent); color: var(--op-accent); }
+.onepager-actions { display: flex; gap: 8px; align-items: center; }
+.onepager-export { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; color: #fff; font-weight: 700; font-size: 0.8rem; padding: 7px 16px; border-radius: 999px; cursor: pointer; box-shadow: 0 6px 16px rgba(79,70,229,0.3); }
+.onepager-export:hover { box-shadow: 0 10px 22px rgba(79,70,229,0.4); }
+body.onepager-exporting .onepager-print, body.onepager-exporting .onepager-export { display: none; }
+body.onepager-exporting .onepager-reveal { opacity: 1 !important; transform: none !important; }
+.onepager-reveal { opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.onepager-reveal.onepager-reveal-visible { opacity: 1; transform: none; }
+@media (max-width: 720px) { .onepager-stats, .onepager-grid, .onepager-steps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .onepager-stats, .onepager-grid, .onepager-steps { grid-template-columns: 1fr; } .onepager-page { padding: 28px 18px 36px; } }
+@media print {
+  @page { size: A4; margin: 0; }
+  .onepager-root { background: #fff; }
+  .onepager-page { max-width: none; padding: 12mm 14mm; }
+  .onepager-print, .onepager-export { display: none; }
+  .onepager-reveal { opacity: 1 !important; transform: none !important; }
+  .onepager-hero h1 { font-size: 2rem; }
+  .onepager-section, .onepager-item, .onepager-step, .onepager-cta, .onepager-stats { break-inside: avoid; page-break-inside: avoid; }
+}

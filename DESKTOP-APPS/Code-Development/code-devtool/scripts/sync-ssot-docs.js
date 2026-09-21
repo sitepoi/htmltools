@@ -14,7 +14,8 @@ const documentNames = [
   'code-devtool-ssot.html',
   'ssot.css',
   'ssot.js',
-  'tool-analysis.html'
+  'tool-analysis.html',
+  'document-system-rules.html'
 ]
 
 fs.mkdirSync(targetFolder, { recursive: true })

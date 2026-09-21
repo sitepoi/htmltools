@@ -1,0 +1,269 @@
+/* ── Presentation shared styles (all features) ──────────────────────────────
+   Used by every <feature>/_presentation.html. Each <section class="pres-slide">
+   is one slide; press "Print" and choose "Save as PDF" to export the deck -
+   the print rules below give every slide its own page. Do NOT inline styles
+   in presentation files - edit this file instead.
+
+   PDF EXPORT COMPATIBILITY: slides are rendered to canvas with html2canvas,
+   which does NOT support background-clip:text (text turns invisible),
+   border-image, or backdrop-filter. Use only solid colors, real borders,
+   gradients and box-shadows here, and always pair background-image with a
+   solid background-color fallback. */
+
+.pres-root {
+  --pr-ink: #0b1220; --pr-text: #334155; --pr-muted: #64748b;
+  --pr-accent: #4f46e5; --pr-accent-2: #7c3aed; --pr-line: #e2e8f0;
+  --pr-soft: #f8fafc; --pr-success: #16a34a; --pr-success-soft: #dcfce7;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--pr-text);
+  background: radial-gradient(1200px 600px at 85% -10%, #e0e7ff 0%, transparent 55%),
+    radial-gradient(900px 500px at -10% 110%, #ede9fe 0%, transparent 55%), #eef2f7;
+  line-height: 1.6;
+}
+
+/* Reset + box model */
+.pres-root, .pres-root *, .pres-root *::before, .pres-root *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Chrome: progress bar, counter, navigation ──────────────────────────── */
+.pres-progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%; z-index: 50;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  box-shadow: 0 0 12px rgba(124, 58, 237, 0.55);
+  transition: width 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.pres-counter {
+  position: fixed; right: 24px; top: 18px; z-index: 60;
+  background: rgba(11, 18, 32, 0.82); color: #fff;
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.pres-nav {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px; z-index: 60;
+  display: flex; gap: 6px; padding: 6px;
+  background: rgba(11, 18, 32, 0.88); border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 18px 40px -12px rgba(11, 18, 32, 0.45);
+}
+.pres-nav button {
+  border: none; background: transparent; color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem; font-weight: 600; padding: 9px 18px;
+  border-radius: 999px; cursor: pointer; transition: background 0.2s ease, color 0.2s ease;
+}
+.pres-nav button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.pres-nav button:disabled { opacity: 0.35; cursor: default; }
+.pres-nav-export {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; color: #fff !important;
+  box-shadow: 0 6px 18px -6px rgba(79, 70, 229, 0.7);
+}
+
+/* ── Stage + slides ─────────────────────────────────────────────────────── */
+.pres-stage { max-width: 1024px; margin: 0 auto; padding: 48px 24px 96px; }
+
+.pres-slide {
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+  border: 1px solid var(--pr-line); border-radius: 24px;
+  box-shadow: 0 24px 50px -24px rgba(15, 23, 42, 0.22), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  padding: 60px 64px; min-height: 540px; aspect-ratio: 16 / 9;
+  display: flex; flex-direction: column; justify-content: center;
+  animation: presSlideIn 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+@keyframes presSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.995); }
+  to { opacity: 1; transform: none; }
+}
+.pres-slide::after {
+  content: attr(data-slide-number);
+  position: absolute; right: 22px; bottom: 16px;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; color: #cbd5e1;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+.pres-kicker {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: var(--pr-accent); font-weight: 700; font-size: 0.78rem;
+  text-transform: uppercase; letter-spacing: 0.16em;
+}
+.pres-kicker::before {
+  content: ''; width: 22px; height: 3px; border-radius: 2px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+}
+.pres-slide h1 {
+  font-size: clamp(2.2rem, 5.2vw, 3.4rem); font-weight: 800;
+  letter-spacing: -0.035em; color: var(--pr-ink); line-height: 1.06; margin-top: 18px;
+}
+.pres-slide h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.3rem); font-weight: 800;
+  letter-spacing: -0.025em; color: var(--pr-ink); line-height: 1.14; margin-top: 16px;
+}
+.pres-slide p { color: var(--pr-muted); font-size: 1.05rem; margin-top: 12px; max-width: 780px; }
+
+/* ── Title slide ────────────────────────────────────────────────────────── */
+.pres-title-slide {
+  justify-content: center;
+  border-color: rgba(255, 255, 255, 0.14);
+  background-color: #2e2a75;
+  background-image:
+    radial-gradient(1050px 520px at 88% -12%, rgba(124, 58, 237, 0.6) 0%, transparent 58%),
+    radial-gradient(720px 460px at -8% 112%, rgba(79, 70, 229, 0.55) 0%, transparent 58%),
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(135deg, #131136 0%, #2e2a75 52%, #4338ca 100%);
+  background-size: auto, auto, 42px 42px, 42px 42px, auto;
+  color: #fff;
+}
+.pres-title-slide .pres-kicker { color: rgba(255, 255, 255, 0.78); }
+.pres-title-slide .pres-kicker::before { background: linear-gradient(90deg, #a5b4fc, #c4b5fd); }
+.pres-title-slide h1 {
+  /* Solid white (no background-clip text) so html2canvas exports it exactly. */
+  color: #ffffff;
+  text-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.pres-title-slide p { color: rgba(255, 255, 255, 0.82); font-size: 1.15rem; }
+.pres-title-slide::after { color: rgba(255, 255, 255, 0.4); }
+.pres-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+.pres-chip {
+  background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #fff; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.02em;
+  border-radius: 999px; padding: 7px 16px;
+  /* backdrop-filter is a screen-only enhancement; html2canvas ignores it,
+     so the translucent background above is what the PDF renders. */
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Cards + grids ──────────────────────────────────────────────────────── */
+.pres-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 28px; }
+.pres-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 28px; }
+.pres-card {
+  border: 1px solid var(--pr-line); border-radius: 18px; padding: 26px;
+  background: #fff;
+  box-shadow: 0 14px 30px -22px rgba(15, 23, 42, 0.35);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.pres-card:hover {
+  transform: translateY(-4px);
+  border-color: #c7d2fe;
+  box-shadow: 0 22px 40px -22px rgba(79, 70, 229, 0.4);
+}
+.pres-card h3 {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.06rem; font-weight: 700; color: var(--pr-ink);
+}
+.pres-card h3::before {
+  content: ''; flex: none; width: 12px; height: 12px; border-radius: 4px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 4px 10px -3px rgba(79, 70, 229, 0.65);
+}
+.pres-card p { font-size: 0.92rem; margin-top: 8px; color: var(--pr-muted); }
+
+/* ── Lists ──────────────────────────────────────────────────────────────── */
+.pres-list { list-style: none; margin-top: 24px; display: grid; gap: 4px; }
+.pres-list li {
+  padding: 13px 16px 13px 52px; position: relative; font-size: 1.04rem;
+  border-radius: 12px; transition: background 0.2s ease;
+}
+.pres-list li:hover { background: var(--pr-soft); }
+.pres-list li::before {
+  content: '✓'; position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; background: var(--pr-success-soft); color: var(--pr-success);
+  border-radius: 50%; font-size: 0.8rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.pres-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  margin-top: 26px; font-size: 0.98rem; overflow: hidden;
+  border: 1px solid var(--pr-line); border-radius: 16px;
+}
+.pres-table th, .pres-table td { text-align: left; padding: 15px 20px; }
+.pres-table thead th {
+  background: linear-gradient(180deg, #f1f5f9, #eef2f7);
+  color: #475569; font-size: 0.72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--pr-line);
+}
+.pres-table tbody tr:nth-child(even) { background: var(--pr-soft); }
+.pres-table tbody td { border-top: 1px solid var(--pr-line); }
+.pres-table tbody tr:first-child td { border-top: none; }
+.pres-table tbody td:last-child { font-weight: 700; color: var(--pr-ink); }
+
+/* ── Big numbers + quotes ───────────────────────────────────────────────── */
+.pres-big {
+  font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 800; letter-spacing: -0.04em;
+  /* Solid color (no background-clip text) so html2canvas exports it exactly. */
+  color: #4f46e5;
+}
+.pres-quote {
+  position: relative;
+  font-size: clamp(1.25rem, 2.8vw, 1.8rem); font-weight: 600; color: var(--pr-ink);
+  line-height: 1.45; max-width: 860px;
+  /* Solid border (no border-image) so html2canvas exports it exactly. */
+  border-left: 4px solid #6366f1;
+  border-radius: 4px;
+  padding: 8px 0 8px 28px; margin-top: 24px;
+}
+.pres-quote cite {
+  display: block; margin-top: 20px; font-style: normal;
+  font-size: 0.92rem; font-weight: 600; color: var(--pr-muted); letter-spacing: 0.02em;
+}
+
+/* ── Closing slide ──────────────────────────────────────────────────────── */
+.pres-closing {
+  justify-content: center; align-items: center; text-align: center;
+  color: #fff; border-color: rgba(255, 255, 255, 0.14);
+  background-color: #2e2a75;
+  background-image:
+    radial-gradient(900px 460px at 50% -20%, rgba(124, 58, 237, 0.55) 0%, transparent 60%),
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(135deg, #131136 0%, #2e2a75 55%, #4338ca 100%);
+  background-size: auto, 42px 42px, 42px 42px, auto;
+}
+.pres-closing h2 { color: #fff; }
+.pres-closing p { color: rgba(255, 255, 255, 0.82); margin-left: auto; margin-right: auto; }
+.pres-closing::after { color: rgba(255, 255, 255, 0.4); }
+.pres-btn {
+  display: inline-block; margin-top: 30px;
+  background: #fff; color: #4f46e5; font-weight: 700; font-size: 1rem;
+  padding: 15px 32px; border-radius: 999px; text-decoration: none;
+  box-shadow: 0 18px 34px -12px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.pres-btn:hover { transform: translateY(-2px); box-shadow: 0 24px 40px -12px rgba(0, 0, 0, 0.55); }
+
+/* ── PDF export state ───────────────────────────────────────────────────── */
+body.pres-exporting { margin: 0; }
+body.pres-exporting .pres-stage { padding: 0; gap: 0; max-width: none; width: 297mm; margin: 0 auto; }
+body.pres-exporting .pres-slide {
+  display: flex !important; width: 297mm; height: 167mm;
+  min-height: 0; aspect-ratio: auto; border-radius: 0; box-shadow: none;
+  animation: none !important;
+}
+body.pres-exporting .pres-nav, body.pres-exporting .pres-counter, body.pres-exporting .pres-progress { display: none; }
+
+/* ── Small screens ──────────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .pres-slide { padding: 44px 30px; min-height: 440px; }
+  .pres-grid-2, .pres-grid-3 { grid-template-columns: 1fr; }
+  .pres-stage { padding: 32px 12px 96px; }
+  .pres-table th, .pres-table td { padding: 12px 14px; }
+}
+
+/* ── Print (browser Print → Save as PDF) ────────────────────────────────── */
+@media print {
+  @page { size: 297mm 167mm; margin: 0; }
+  .pres-root { background: #fff; }
+  .pres-nav, .pres-counter, .pres-progress { display: none; }
+  .pres-stage { padding: 0; max-width: none; }
+  .pres-slide {
+    display: flex !important; box-shadow: none; border: none; border-radius: 0;
+    width: 100%; height: 167mm; min-height: 167mm; overflow: hidden;
+    animation: none !important;
+    page-break-after: always; break-after: page;
+  }
+  .pres-slide:last-child { page-break-after: auto; }
+}

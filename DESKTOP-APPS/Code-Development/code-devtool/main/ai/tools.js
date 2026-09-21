@@ -3,6 +3,8 @@
 // project-file-service (ROOT-ONLY invariant, section 7.1) and every
 // command goes through the approval gate (T-12).
 
+const documentSystem = require('../document-system')
+
 const maximumToolOutputCharacters = 20000
 const maximumWrittenCharacters = 300000
 
@@ -118,6 +120,21 @@ const toolDefinitions = [
         ok: runResult.exitCode === 0,
         result: 'Exit code ' + runResult.exitCode + (runResult.timedOut ? ' (timed out)' : '') + '\n' + outputText
       }
+    }
+  },
+  {
+    name: 'create_document',
+    description: 'Create a project document inside _docs/ from the bundled templates (the document system ruleset): the SSOT working document, the satellites (help, marketing, updates, social, onepager, presentation) or the monthly digest. Shared design files are copied automatically. Existing files are never overwritten.',
+    parameters: {
+      type: 'One of: ssot, help, marketing, updates, social, onepager, presentation, monthly',
+      name: 'Feature name slug (lowercase letters, digits, hyphens), e.g. report-builder - not used for monthly'
+    },
+    run: (argumentsObject, context) => {
+      const type = typeof argumentsObject.type === 'string' ? argumentsObject.type.trim().toLowerCase() : ''
+      const name = typeof argumentsObject.name === 'string' ? argumentsObject.name.trim().toLowerCase() : ''
+      const result = documentSystem.createDocument(context.projectRoot, { type: type, name: name })
+      if (!result.ok) return { ok: false, error: result.error }
+      return { ok: true, path: result.path, result: result.message }
     }
   }
 ]

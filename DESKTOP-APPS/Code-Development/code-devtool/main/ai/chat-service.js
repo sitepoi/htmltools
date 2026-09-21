@@ -5,6 +5,7 @@
 const providerCopilot = require('./provider-copilot')
 const providerOpenAiCompatible = require('./provider-openai-compatible')
 const providerUnicon = require('./provider-unicon')
+const documentSystem = require('../document-system')
 
 const systemPrompt =
   'You are the AI assistant of Unicon Studio, a visual-first desktop tool for web development. ' +
@@ -27,6 +28,10 @@ function defaultModelFor(providerName) {
 function buildRequestMessages(attachments, historyMessages, userText, sharedContextFiles) {
   const messages = []
   messages.push({ role: 'system', content: systemPrompt })
+  // Document requests get the COMPACT document-system ruleset (CODE-38) -
+  // the full explainer stays in the Docs overlay, out of the prompt.
+  const documentRulesBlock = documentSystem.buildDocumentRulesBlock(userText)
+  if (documentRulesBlock) messages.push(documentRulesBlock)
   ;(sharedContextFiles || []).forEach((file) => {
     messages.push({
       role: 'system',

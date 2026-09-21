@@ -22,7 +22,8 @@ const docsMapping = {
   '/docs/code-devtool-ssot.html': 'code-devtool-ssot.html',
   '/docs/ssot.css': 'ssot.css',
   '/docs/ssot.js': 'ssot.js',
-  '/docs/tool-analysis.html': 'tool-analysis.html'
+  '/docs/tool-analysis.html': 'tool-analysis.html',
+  '/docs/document-system-rules.html': 'document-system-rules.html'
 }
 
 const contentTypesByExtension = {

@@ -8,6 +8,7 @@ const { toolDefinitions, toolCatalogText, toolSchemaForApi } = require('./tools'
 const { buildExternalTools, callExternalTool } = require('./mcp-client')
 const projectFileService = require('../project-file-service')
 const terminalService = require('../terminal-service')
+const documentSystem = require('../document-system')
 
 const maximumSteps = 6
 const maximumToolIterations = 12
@@ -45,7 +46,7 @@ function parsePlan(text) {
   return [{ title: 'Direct task', file: '', action: 'Complete the request directly with tools' }]
 }
 
-function buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks) {
+function buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks, documentRulesBlock) {
   const messages = []
   messages.push({
     role: 'system',
@@ -53,6 +54,7 @@ function buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks) {
       'Return ONLY JSON: {"steps":[{"title":"short step title","file":"relative path or empty","action":"concrete instructions for that step"}]}. ' +
       'At most 6 steps, concrete and ordered. No prose outside the JSON.'
   })
+  if (documentRulesBlock) messages.push(documentRulesBlock)
   sharedContextBlocks.forEach((block) => messages.push(block))
   attachmentBlocks.forEach((attachment) => {
     messages.push({ role: 'system', content: 'Attached file "' + attachment.path + '":\n```\n' + attachment.content + '\n```' })
@@ -147,7 +149,7 @@ function parsePromptToolCalls(content) {
     }))
 }
 
-function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText, externalCatalogText, sharedContextBlocks, toolCallMode }) {
+function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText, externalCatalogText, sharedContextBlocks, toolCallMode, documentRulesBlock }) {
   const messages = []
   const toolCallingInstruction = toolCallMode === 'prompt'
     ? '\nTool calling: when you need a tool, reply with ONLY a tool call and nothing else, in one of these two forms (JSON or XML):\n' +
@@ -163,6 +165,7 @@ function buildStepMessages({ step, stepIndex, totalSteps, attachments, userText,
       'Use tools to inspect and edit the project. Prefer edit_file over write_file for small changes. ' +
       'Do not ask permission for file edits - the user reviews them after the run. ' + toolCallingInstruction
   })
+  if (documentRulesBlock) messages.push(documentRulesBlock)
   sharedContextBlocks.forEach((block) => messages.push(block))
   attachments.forEach((attachment) => {
     messages.push({ role: 'system', content: 'Attached file "' + attachment.path + '":\n```\n' + attachment.content + '\n```' })
@@ -241,6 +244,13 @@ async function executeTool(call, runRecord, changes, externalTools) {
 
   const toolResult = await tool.run(call.arguments || {}, toolContext)
 
+  // Documents created by create_document are undoable like any other write:
+  // undo removes a file that did not exist before the run.
+  if (call.name === 'create_document' && toolResult.ok && toolResult.path) {
+    changes.push({ path: toolResult.path, before: '', existedBefore: false })
+    runRecord.emit('change', { path: toolResult.path })
+  }
+
   if (beforeSnapshot && toolResult.ok) {
     const afterRead = projectFileService.readFile(projectRoot, beforeSnapshot.path)
     const afterContent = afterRead.content !== undefined && !afterRead.error ? afterRead.content : ''
@@ -273,13 +283,16 @@ async function runAgent(options) {
       content: 'Shared workspace rule file "' + file.name + '" (from the workspace root):\n```\n' + file.content + '\n```'
     }))
     : []
+  // Document requests carry the COMPACT ruleset (CODE-38) - the full
+  // explainer stays out of the prompt and lives in the Docs overlay.
+  const documentRulesBlock = documentSystem.buildDocumentRulesBlock(userText)
 
   emit('thinking', { text: 'Planning...' })
   let planSteps
   try {
     const planResponse = await chatBackend.chatOnce({
       baseUrl, apiKey, model,
-      messages: buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks),
+      messages: buildPlanMessages(attachmentBlocks, userText, sharedContextBlocks, documentRulesBlock),
       signal
     })
     planSteps = parsePlan(planResponse.content)
@@ -310,7 +323,8 @@ async function runAgent(options) {
       userText,
       externalCatalogText: externalTools.catalogText,
       sharedContextBlocks,
-      toolCallMode
+      toolCallMode,
+      documentRulesBlock
     })
     for (let iteration = 0; iteration < maximumToolIterations; iteration++) {
       if (usesPromptToolCalling) {

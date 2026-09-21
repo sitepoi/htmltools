@@ -17,14 +17,19 @@ const acceptedExtensions = new Set(['.html', '.htm', '.md'])
 const skippedBaseNames = new Set(['test-harness', 'index', 'tool-analysis'])
 
 // Extensible document type definitions: the first matching type wins.
-// Order matters for sorting - SSOT documents always come first.
+// Order matters for sorting - SSOT documents always come first, then the
+// satellites in the ruleset's order, then the auxiliary types.
 const documentTypeDefinitions = [
   { type: 'ssot', label: 'SSOT', patterns: [/ssot/i] },
+  { type: 'help', label: 'Help', patterns: [/help/i] },
+  { type: 'marketing', label: 'Marketing', patterns: [/marketing/i] },
+  { type: 'updates', label: 'Updates', patterns: [/updates/i] },
+  { type: 'social', label: 'Social media', patterns: [/social/i] },
+  { type: 'onepager', label: 'One-pager', patterns: [/onepager/i] },
+  { type: 'presentation', label: 'Presentation', patterns: [/presentation/i] },
+  { type: 'monthly', label: 'Monthly digest', patterns: [/^\d{4}-\d{2}$/] },
   { type: 'plan', label: 'Plan', patterns: [/plan/i] },
   { type: 'report', label: 'Report', patterns: [/report/i] },
-  { type: 'marketing', label: 'Marketing', patterns: [/marketing/i] },
-  { type: 'help', label: 'Help', patterns: [/help/i] },
-  { type: 'social', label: 'Social media', patterns: [/social/i] },
   { type: 'readme', label: 'Readme', patterns: [/^readme$/i] }
 ]
 
@@ -33,7 +38,9 @@ function classifyDocument(fileName) {
   const extension = path.extname(lowerName)
   if (!acceptedExtensions.has(extension)) return null
   const baseName = path.basename(lowerName, extension)
-  if (baseName.startsWith('old') || skippedBaseNames.has(baseName)) return null
+  // Old files, harnesses, the app's own docs, and the TEMPLATES themselves
+  // are never project documents.
+  if (baseName.startsWith('old') || baseName.endsWith('-template') || skippedBaseNames.has(baseName)) return null
   for (const definition of documentTypeDefinitions) {
     if (definition.patterns.some((pattern) => pattern.test(baseName))) {
       return { type: definition.type, label: definition.label }

@@ -18,7 +18,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.29</span>
+      <span>v0.30</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -57,7 +57,7 @@
     capabilities; this document owns all subsequent decisions.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.29</td></tr>
+    <tr><th>Document version</th><td>0.30</td></tr>
     <tr><th>Last updated</th><td>2026-09-19</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>the desktop code development tool: folder opening, file explorer, code editor, AI chat, AI agent, terminal, web preview, packaging</td></tr>
@@ -517,10 +517,11 @@ const toolRegistry = {
     <li>The shell defaults to explorer-collapsed and terminal-collapsed on
     every start; no layout state is persisted in v1.</li>
     <li>The header Docs button opens the OPENED folder's documents in a
-    full overlay - the folder's SSOT first, then plans, reports, marketing,
-    help, and social media pages (CODE-36); Unicon Studio's own SSOT stays
-    available as a built-in option when the folder has no documents. Task
-    checkboxes and progress work there as in the browser.</li>
+    full overlay - the folder's SSOT first, then help, marketing, updates,
+    social, onepager, presentation, monthly digest (CODE-36); the agent
+    creates these documents from the bundled ruleset templates (CODE-38),
+    and Unicon Studio's own SSOT plus the full document-system rules stay
+    available as built-in options when the folder has no documents.</li>
   </ul>
 
   <h2 id="sec-matrix">8. Failure matrix - deterministic outcomes</h2>
@@ -790,6 +791,12 @@ const toolRegistry = {
       <td>CODE-37</td><td>2026-09-20</td>
       <td>Auto-approved command labeling: after the user clicks "Approve all in session", the approving row shows "Approved (all in session)" with a note that auto-approve is ON, and every later command appears as "Auto-approved: &lt;command&gt;" - approved commands are never silently skipped or mislabeled.</td>
       <td>User request 2026-09-20: later approvals should be labeled as auto-approved.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>CODE-38</td><td>2026-09-20</td>
+      <td>Document generation system (the full sitepoicms feature-document ruleset): the app bundles the 8 templates (SSOT 19-section working document + help, marketing, updates, social, onepager, presentation, monthly digest) and the 6 shared design/behavior files (ssot.css, ssot.js, onepager.css, onepager.js, presentation.css, presentation.js) extracted verbatim from the canonical ruleset by scripts/extract-document-templates.js. A new create_document agent tool scaffolds documents inside the opened folder under _docs/ - placeholders replaced with split/join only, shared assets copied once, link depths fixed, existing files never overwritten, and created files are undoable like any other agent write. The AI prompt receives only the COMPACT operational ruleset (~2.3KB) when the request mentions documents - the 275KB explainer never enters a prompt; it is served as a built-in document in the Docs overlay (/docs/document-system-rules.html, synced into packages).</td>
+      <td>User request 2026-09-20: apply the complete document ruleset so the SSOT and all satellite documents can be built for html-css-js tools or major features in Next.js projects, keeping the prompt content short.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -1823,7 +1830,15 @@ const toolRegistry = {
   the extension point for the upcoming document ruleset. Document scan,
   route, and overlay harness tests green. Auto-approved command labels
   (CODE-37): "Approved (all in session)" and "Auto-approved: command" rows
-  make the approve-all state visible.</p>
+  make the approve-all state visible.
+  2026-09-20 - document generation system (CODE-38): the complete
+  feature-document ruleset is integrated - 8 templates + 6 shared assets
+  extracted verbatim into main/document-system/, a create_document agent
+  tool scaffolds _docs/<slug>-ssot.html and the six satellites plus the
+  monthly digest (split/join placeholders, no overwrites, undoable),
+  document requests get the 2.3KB compact ruleset instead of the 275KB
+  explainer, and the full ruleset is a built-in entry in the Docs overlay.
+  Creation, agent-loop, scanner, overlay, and route tests green.</p>
 
   <h2 id="sec-risks">17. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -1980,7 +1995,7 @@ const toolRegistry = {
 
   <div class="footer">
     Unicon Studio - single source of truth for all decisions
-    about this feature. Version 0.29, 2026-09-20.
+    about this feature. Version 0.30, 2026-09-20.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>
