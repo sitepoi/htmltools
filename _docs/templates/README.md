@@ -31,6 +31,30 @@ improvement made here applies to every tool after the next run.
   - `webpage.html` and `social.html` are fully self-contained (own styles +
     copy script) because they are pasted into the CMS or shared directly.
 
+## Shared design layer - edit once, applies to ALL documents
+
+The CSS and JS live ONCE in `_docs/assets/` and every generated document
+links to that single copy (relative path computed per tool). This means:
+
+- Editing `_docs/assets/ssot.css` restyles ALL 50 SSOTs + all help and
+  updates documents instantly - no regeneration, no per-file edits.
+- Editing `_docs/assets/ssot.js` upgrades the behavior (tabs, task panel,
+  push gate, checkbox persistence) of every SSOT at once.
+- Editing `_docs/assets/presentation.css` / `presentation.js` upgrades
+  every marketing deck at once.
+
+Verify the links anytime with:
+
+- `npm run ssot:check` - reports any document that does not link the shared
+  assets (must print "Shared assets check OK").
+
+Structural HTML changes (a new SSOT section, a new slide order) are a
+different layer: the templates in this folder are the source for NEW
+documents (`npm run docs:init`), while existing documents keep their own
+content sections and are edited in place. Rule of thumb: change the shared
+assets for LOOK and BEHAVIOR, change the templates for the STRUCTURE of new
+documents.
+
 ## Placeholders
 
 The generators (`scripts/init-docs.js`, `scripts/generate-docs.js`) replace

@@ -33,8 +33,16 @@ body {
   color: var(--text);
   line-height: 1.6;
 }
-#content { max-width: 920px; margin: 0 auto; padding: 26px 26px 90px; }
-@media (min-width: 1280px) { #content { margin-right: 354px; } }
+#content { max-width: 1000px; margin: 0 auto; padding: 28px 28px 96px; }
+/* On wide screens the fixed task panel takes the right side and the content
+   centers itself inside the REMAINING space - never overlapped, no giant
+   one-sided gap. */
+@media (min-width: 1440px) {
+  #content {
+    margin-right: 408px;
+    margin-left: max(0px, calc((100% - 1000px - 408px) / 2));
+  }
+}
 
 h1, h2, h3, h4 { color: var(--ink); line-height: 1.25; }
 h1 { font-size: 1.9rem; margin: 0 0 6px; }
@@ -139,10 +147,10 @@ td.status-adopted, td.status-rejected, td.status-implemented, td.status-proposal
 
 /* ---------- task panel (right side) ---------- */
 #task-panel {
-  position: fixed; top: 64px; right: 14px; width: 320px;
-  max-height: calc(100vh - 88px);
-  background: #fff; border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.10);
+  position: fixed; top: 70px; right: 18px; width: 370px;
+  max-height: calc(100vh - 98px);
+  background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: -6px 10px 34px rgba(15, 23, 42, 0.10);
   z-index: 45; display: flex; flex-direction: column; overflow: hidden;
 }
 .task-panel-header {
@@ -163,16 +171,16 @@ td.status-adopted, td.status-rejected, td.status-implemented, td.status-proposal
 .task-panel-progress { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
 .task-panel-progress-bar { height: 4px; background: var(--soft); }
 #task-panel-progress-fill { height: 100%; background: var(--accent); width: 0; }
-#task-panel-groups { padding: 10px 12px; overflow: auto; flex: 1; }
-.task-panel-group { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; background: #fff; overflow: hidden; }
+#task-panel-groups { padding: 12px 14px; overflow: auto; flex: 1; }
+.task-panel-group { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; background: #fff; overflow: hidden; }
 .task-panel-group-head {
-  padding: 8px 10px; font-size: 0.82rem; font-weight: 700;
+  padding: 9px 12px; font-size: 0.84rem; font-weight: 700;
   border-bottom: 1px dashed var(--line);
   display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
 }
 .task-panel-task {
   display: flex; gap: 8px; align-items: center;
-  padding: 6px 10px; font-size: 0.83rem;
+  padding: 7px 12px; font-size: 0.85rem;
   border-top: 1px solid #f1f5f9; cursor: pointer;
 }
 .task-panel-task:hover { background: var(--accent-soft); }
@@ -185,8 +193,8 @@ td.status-adopted, td.status-rejected, td.status-implemented, td.status-proposal
   border: 1px solid var(--line); background: #fff; border-radius: 10px;
   padding: 8px 14px; cursor: pointer; font-weight: 700;
 }
-@media (max-width: 1279px) {
-  #task-panel { transform: translateX(110%); transition: transform 0.2s; }
+@media (max-width: 1439px) {
+  #task-panel { transform: translateX(112%); transition: transform 0.2s; }
   #task-panel.open { transform: none; }
   .task-panel-toggle { display: block; }
 }
