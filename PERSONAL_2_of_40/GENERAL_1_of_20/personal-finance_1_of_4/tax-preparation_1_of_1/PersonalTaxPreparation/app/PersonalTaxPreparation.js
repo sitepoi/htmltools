@@ -42,6 +42,24 @@ var EXPENSE_CATEGORIES = [
 	{ id: 'otherExpense', label: 'Other Expense' }
 ];
 
+/* Document kinds - each kind gets its own upload area and guidance */
+var DOC_KINDS = {
+	bankStatement: { id: 'bank-statement', label: 'Bank statement', icon: '🏦', badgeClass: 'badge-bank', countId: 'bank', guidance: 'Every monthly bank and credit-card statement. The AI turns them into income and expense transactions.' },
+	invoicePaid: { id: 'invoice-paid', label: 'Invoice paid', icon: '🧾', badgeClass: 'badge-paid', countId: 'paid', guidance: 'Vendor bills and invoices you paid - your expense side. They become deductible expenses.' },
+	invoiceSent: { id: 'invoice-sent', label: 'Invoice sent', icon: '📄', badgeClass: 'badge-sent', countId: 'sent', guidance: 'The sales invoices you issued - your income side. They become revenue entries.' },
+	other: { id: 'other', label: 'Other document', icon: '📎', badgeClass: 'badge-other', countId: 'other', guidance: 'Receipts, T4 slips, notices of assessment and anything else that supports your file.' }
+};
+function docKindInfo(kindId) {
+	var match = null;
+	Object.keys(DOC_KINDS).forEach(function (key) { if (DOC_KINDS[key].id === kindId) match = DOC_KINDS[key]; });
+	return match || DOC_KINDS.other;
+}
+function normalizeDocKind(kindId) {
+	if (kindId === 'bank-statement' || kindId === 'invoice-paid' || kindId === 'invoice-sent' || kindId === 'other') return kindId;
+	if (kindId === 'csv') return 'bank-statement';   // legacy: bank CSVs were kind csv
+	return 'other';                                    // legacy 'document' and unknown kinds
+}
+
 /* Approximate 2025 BC combined (federal + provincial) marginal rates — planning only */
 var BC_BRACKETS_2025 = [
 	{ upTo: 47937, rate: 0.2006 },
@@ -207,6 +225,7 @@ function normalizeDB(val) {
 	db.profile.taxYear = parseInt(db.profile.taxYear, 10) || fresh.profile.taxYear;
 	db.gstAdj = Object.assign({}, fresh.gstAdj, d.gstAdj || {});
 	db.docs = Array.isArray(d.docs) ? d.docs : [];
+	db.docs.forEach(function (doc) { doc.kind = normalizeDocKind(doc.kind); });
 	db.transactions = Array.isArray(d.transactions) ? d.transactions : [];
 	db.checklist = Array.isArray(d.checklist) ? d.checklist : [];
 	db.suggestions = Array.isArray(d.suggestions) ? d.suggestions : [];
@@ -710,27 +729,29 @@ function parseCsvDoc(docId) {
 }
 
 /* ══ Documents ══ */
-function kindOf(name) { return /\.csv$/i.test(name || '') ? 'csv' : 'document'; }
-function uploadDocs() {
+function kindOf(name) { return /\.csv$/i.test(name || '') ? 'bank-statement' : 'other'; }
+function isCsvFile(doc) { return /\.csv$/i.test(doc.name || ''); }
+function uploadDocsWithKind(kindId) {
 	if (isReadOnly) return;
 	setStatus('doc-status', 'Opening file picker…');
 	tool.requestUpload('.pdf,.docx,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.heic', function (err, file) {
 		if (err) { setStatus('doc-status', ''); notify('Upload failed: ' + err, 'error'); return; }
 		var doc = {
 			id: genId(), name: file.name, url: file.url, size: file.size, type: file.type,
-			kind: kindOf(file.name), status: 'uploaded', extracted: '', analyzedAt: null, txCount: 0, notes: ''
+			kind: normalizeDocKind(kindId || kindOf(file.name)), status: 'uploaded', extracted: '', analyzedAt: null, txCount: 0, notes: ''
 		};
 		DB.docs.push(doc);
 		persist(); refreshAll();
-		pushActivity('doc', '📄 Uploaded ' + file.name);
-		notify('Uploaded: ' + file.name, 'success');
-		if (doc.kind === 'csv') {
+		pushActivity('doc', '📄 Uploaded ' + file.name + ' (' + docKindInfo(doc.kind).label + ')');
+		notify('Uploaded: ' + file.name + ' - ' + docKindInfo(doc.kind).label, 'success');
+		if (isCsvFile(doc)) {
 			extractDoc(doc.id, function () { parseCsvDoc(doc.id); });
 		} else {
 			extractDoc(doc.id, function () { analyzeDoc(doc.id); });
 		}
 	});
 }
+function uploadDocs() { uploadDocsWithKind(''); }
 function extractDoc(docId, cb) {
 	var doc = DB.docs.find(function (d) { return d.id === docId; });
 	if (!doc) { if (cb) cb('missing'); return; }
@@ -770,7 +791,7 @@ function analyzeDoc(docId) {
 			return;
 		}
 		var part = chunks[i]; i++;
-		tool.requestAI(buildExtractPrompt(part, doc.name + ' (part ' + i + '/' + chunks.length + ')'), '', function (err, resp) {
+		tool.requestAI(buildExtractPrompt(part, doc.name + ' (part ' + i + '/' + chunks.length + ')', docKindInfo(doc.kind).label), '', function (err, resp) {
 			if (err && !resp) {
 				doc.status = 'error';
 				doc.notes = 'AI analysis error: ' + err;
@@ -797,16 +818,18 @@ function analyzeAll() {
 	function step() {
 		if (i >= queue.length) { notify('Finished analyzing ' + queue.length + ' document(s).', 'success'); return; }
 		var d = queue[i++];
-		if (d.kind === 'csv') extractDoc(d.id, function () { parseCsvDoc(d.id); step(); });
+		if (isCsvFile(d)) extractDoc(d.id, function () { parseCsvDoc(d.id); step(); });
 		else extractDoc(d.id, function () { analyzeDoc(d.id); step(); });
 	}
 	notify('Analyzing ' + queue.length + ' document(s) with AI…', 'info');
 	step();
 }
-function buildExtractPrompt(chunk, docName) {
+function buildExtractPrompt(chunk, docName, docKindLabel) {
 	return [
 		'You are a Canadian bookkeeping AI for a British Columbia taxpayer (tax year ' + DB.profile.taxYear + ').',
 		'Extract income and expense transactions from this document chunk.',
+		'Document kind: ' + (docKindLabel || 'other') + '.',
+		'Kind expectations: bank statements hold BOTH income and expense transactions; invoices paid are EXPENSES (money the taxpayer paid); invoices sent are INCOME (money the taxpayer received). Match each direction to the document kind.',
 		'Categories — income: sales, services, employmentIncome, interestIncome, otherIncome. expense: advertising, meals, officeSupplies, phoneInternet, rent, utilities, vehicle, travel, insurance, bankFees, professionalFees, subcontractors, software, equipment, homeOffice, interest, training, memberships, salaries, otherExpense.',
 		'For each transaction return exactly these fields:',
 		'  date: "YYYY-MM-DD"',
@@ -1370,17 +1393,17 @@ function renderDocuments() {
 	if (!tbody) return;
 	var filter = el('doc-filter') ? el('doc-filter').value : 'all';
 	var rows = DB.docs.filter(function (d) {
-		if (filter === 'csv') return d.kind === 'csv';
-		if (filter === 'document') return d.kind !== 'csv';
 		if (filter === 'pending') return d.status !== 'analyzed';
-		return true;
+		if (filter === 'all') return true;
+		return d.kind === filter;
 	});
 	tbody.innerHTML = rows.length ? rows.map(function (d) {
+		var kindInfo = docKindInfo(d.kind);
 		var statusBadge = docStatusBadge(d);
 		return '<tr>' +
 			'<td><div style="font-weight:700">' + esc(d.name) + '</div>' +
 			(d.notes ? '<div class="muted" style="font-size:11px">' + esc(d.notes) + '</div>' : '') + '</td>' +
-			'<td><span class="badge ' + (d.kind === 'csv' ? 'src-csv' : '') + '">' + (d.kind === 'csv' ? 'CSV' : (d.type || 'file')) + '</span></td>' +
+			'<td><span class="badge ' + kindInfo.badgeClass + '">' + kindInfo.icon + ' ' + kindInfo.label + '</span></td>' +
 			'<td>' + fmtBytes(d.size) + '</td>' +
 			'<td>' + statusBadge + '</td>' +
 			'<td class="num">' + d.txCount + '</td>' +
@@ -1389,7 +1412,24 @@ function renderDocuments() {
 			(d.status !== 'analyzed' ? '<button class="icon-btn" title="Analyze with AI" onclick="analyzeDoc(\'' + d.id + '\')">🤖</button>' : '') +
 			'<button class="icon-btn danger" title="Remove" onclick="removeDoc(\'' + d.id + '\')">✕</button>' +
 			'</td></tr>';
-	}).join('') : '<tr class="empty-row"><td colspan="6">No documents yet — upload invoices, receipts and bank statements.</td></tr>';
+	}).join('') : '<tr class="empty-row"><td colspan="6">No documents yet - use one of the four areas above to add bank statements, invoices paid, invoices sent or other documents.</td></tr>';
+	updateDocKindCounts();
+	highlightDocKindCards();
+}
+function updateDocKindCounts() {
+	var counts = {};
+	DB.docs.forEach(function (d) { counts[d.kind] = (counts[d.kind] || 0) + 1; });
+	Object.keys(DOC_KINDS).forEach(function (key) {
+		var info = DOC_KINDS[key];
+		var countElement = el('dk-count-' + info.countId);
+		if (countElement) countElement.textContent = counts[info.id] || 0;
+	});
+}
+function highlightDocKindCards() {
+	var filter = el('doc-filter') ? el('doc-filter').value : 'all';
+	qsa('.doc-kind-card').forEach(function (card) {
+		card.classList.toggle('active', card.getAttribute('data-kind') === filter);
+	});
 }
 function docStatusBadge(d) {
 	if (d.status === 'analyzed') return '<span class="badge ok">✓ Analyzed</span>';
@@ -1797,9 +1837,26 @@ function bindEvents() {
 		n.onclick = function () { navigate(this.getAttribute('data-page')); };
 	});
 	el('theme-toggle').onclick = toggleTheme;
-	el('btn-upload-docs').onclick = uploadDocs;
-	el('btn-upload-docs2').onclick = function (e) { if (e) e.stopPropagation(); uploadDocs(); };
-	el('doc-dropzone').onclick = uploadDocs;
+	var genericUploadButton = el('btn-upload-docs2');
+	if (genericUploadButton) genericUploadButton.onclick = function (e) { if (e) e.stopPropagation(); uploadDocs(); };
+	var dropzoneElement = el('doc-dropzone');
+	if (dropzoneElement) dropzoneElement.onclick = uploadDocs;
+	var bindDocKindUpload = function (buttonId, kindId) {
+		var button = el(buttonId);
+		if (button) button.onclick = function () { uploadDocsWithKind(kindId); };
+	};
+	bindDocKindUpload('btn-upload-bank', 'bank-statement');
+	bindDocKindUpload('btn-upload-invoice-paid', 'invoice-paid');
+	bindDocKindUpload('btn-upload-invoice-sent', 'invoice-sent');
+	bindDocKindUpload('btn-upload-other', 'other');
+	qsa('.doc-kind-card').forEach(function (card) {
+		card.onclick = function (event) {
+			if (event.target.closest && event.target.closest('button')) return;
+			var filterSelect = el('doc-filter');
+			if (filterSelect) filterSelect.value = card.getAttribute('data-kind');
+			renderDocuments();
+		};
+	});
 	el('btn-analyze-all').onclick = analyzeAll;
 	el('doc-filter').onchange = function () { renderDocuments(); };
 	el('btn-add-tx').onclick = function () { openTxModal(null); };

@@ -73,23 +73,50 @@
 		<section id="sec-documents" class="section">
 			<div class="page-header">
 				<div class="page-title">📂 Documents &amp; Bank Statements</div>
-				<div class="page-sub">Upload invoices, receipts and statements — the AI extracts income &amp; expense transactions from them.</div>
+				<div class="page-sub">Separate areas for the files that matter most - bank statements, invoices you paid, and invoices you sent. The AI extracts income &amp; expense transactions from each area.</div>
 				<div class="toolbar">
-					<button class="btn btn-primary" id="btn-upload-docs">📤 Upload Documents</button>
 					<button class="btn btn-outline" id="btn-analyze-all">🤖 Analyze All with AI</button>
 					<select class="form-input form-inline" id="doc-filter">
 						<option value="all">All documents</option>
-						<option value="document">PDF / Word / Other</option>
-						<option value="csv">Bank CSVs</option>
+						<option value="bank-statement">Bank statements</option>
+						<option value="invoice-paid">Invoices paid</option>
+						<option value="invoice-sent">Invoices sent</option>
+						<option value="other">Other documents</option>
 						<option value="pending">Needs analysis</option>
 					</select>
 					<span class="toolbar-status" id="doc-status"></span>
 				</div>
 			</div>
+			<div class="doc-kinds-grid">
+				<div class="doc-kind-card" data-kind="bank-statement">
+					<div class="dk-icon">🏦</div>
+					<div class="dk-head"><strong>Bank statements</strong><span class="dk-count" id="dk-count-bank">0</span></div>
+					<div class="dk-guide">Every monthly bank and credit-card statement. The AI turns them into income and expense transactions.</div>
+					<button class="btn btn-primary btn-sm" id="btn-upload-bank">+ Add bank statements</button>
+				</div>
+				<div class="doc-kind-card" data-kind="invoice-paid">
+					<div class="dk-icon">🧾</div>
+					<div class="dk-head"><strong>Invoices paid</strong><span class="dk-count" id="dk-count-paid">0</span></div>
+					<div class="dk-guide">Vendor bills and invoices you paid - your expense side. They become deductible expenses.</div>
+					<button class="btn btn-primary btn-sm" id="btn-upload-invoice-paid">+ Add invoices paid</button>
+				</div>
+				<div class="doc-kind-card" data-kind="invoice-sent">
+					<div class="dk-icon">📄</div>
+					<div class="dk-head"><strong>Invoices sent</strong><span class="dk-count" id="dk-count-sent">0</span></div>
+					<div class="dk-guide">The sales invoices you issued - your income side. They become revenue entries.</div>
+					<button class="btn btn-primary btn-sm" id="btn-upload-invoice-sent">+ Add invoices sent</button>
+				</div>
+				<div class="doc-kind-card" data-kind="other">
+					<div class="dk-icon">📎</div>
+					<div class="dk-head"><strong>Other documents</strong><span class="dk-count" id="dk-count-other">0</span></div>
+					<div class="dk-guide">Receipts, T4 slips, notices of assessment and anything else that supports your file.</div>
+					<button class="btn btn-primary btn-sm" id="btn-upload-other">+ Add other document</button>
+				</div>
+			</div>
 			<div class="dropzone" id="doc-dropzone">
 				<div class="dz-icon">📤</div>
-				<div class="dz-title">Drop / click to upload documents</div>
-				<div class="dz-sub">Invoices · receipts · bank statements (PDF, DOCX, XLSX, CSV, TXT, images)</div>
+				<div class="dz-title">Or drop any file here</div>
+				<div class="dz-sub">Dropped files are filed under their detected kind (CSV goes to bank statements)</div>
 				<button class="btn btn-primary" id="btn-upload-docs2">Choose files</button>
 			</div>
 			<div class="card">
@@ -98,7 +125,7 @@
 						<thead>
 							<tr>
 								<th>Document</th>
-								<th>Type</th>
+								<th>Kind</th>
 								<th>Size</th>
 								<th>Status</th>
 								<th>Tx found</th>

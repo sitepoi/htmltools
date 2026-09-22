@@ -395,3 +395,19 @@ textarea.form-input { resize: vertical; min-height: 70px; }
 .link-btn { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 12px; font-weight: 700; padding: 0; font-family: inherit; }
 .link-btn:hover { text-decoration: underline; }
 .doc-viewer { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; max-height: 50vh; overflow: auto; word-break: break-word; }
+
+/* ── Document kind areas ── */
+.doc-kinds-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.doc-kind-card { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer; position: relative; transition: border-color .15s ease, transform .15s ease; }
+.doc-kind-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+.doc-kind-card.active { border-color: var(--primary); background: var(--primary-soft); }
+.dk-icon { font-size: 1.35rem; line-height: 1; }
+.dk-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 7px 0 4px; }
+.dk-count { background: var(--primary-soft); color: var(--primary); border-radius: 999px; padding: 1px 9px; font-size: 11px; font-weight: 700; }
+.doc-kind-card.active .dk-count { background: #fff; }
+.dk-guide { font-size: 12px; color: var(--muted); margin-bottom: 10px; min-height: 32px; }
+.badge-bank { background: #e0f2fe; color: #0369a1; border-color: transparent; }
+.badge-paid { background: #fef3c7; color: #b45309; border-color: transparent; }
+.badge-sent { background: #dcfce7; color: #15803d; border-color: transparent; }
+.badge-other { background: var(--bg); color: var(--muted); }
+.is-ro .doc-kind-card { cursor: default; }
