@@ -28,6 +28,7 @@ const { join } = require('path')
 const context = require('./releaseContext')
 const { buildToolDocuments } = require('./init-docs')
 const { generateToolDocumentation } = require('./generate-docs')
+const { refreshToolIndexCode, refreshToolIndexScreenshots } = require('./refresh-docs-index')
 
 const MAX_SHORT_MESSAGE_DIFF_CHARS = 12000
 const RISK_LEVEL_RANK = { low: 1, medium: 2, high: 3, critical: 4 }
@@ -247,6 +248,22 @@ async function main() {
         console.log(`→ [dry-run] ${tool.toolName}: would append the release + updates rows and stamp tasks (RELEASE_SSOT_GROUPS=${process.env.RELEASE_SSOT_GROUPS || 'unset'}).`)
       }
       await generateToolDocumentation(tool, { types: context.SATELLITE_TYPES, dryRun })
+      // keep the embedded code panes of docs/index.html in sync with the new code
+      if (dryRun) {
+        console.log(`→ [dry-run] ${tool.toolName}: would refresh the code payload in docs/index.html.`)
+      } else {
+        refreshToolIndexCode(tool)
+      }
+      // refresh the marketing screenshots used by docs/webpage.html + the
+      // index viewer + help (headless Edge, sample data) - skipped in dry-run
+      if (dryRun) {
+        console.log(`→ [dry-run] ${tool.toolName}: would refresh docs/screenshots/ via npm run screenshots.`)
+      } else {
+        const { screenshotTool } = require('./capture-screenshots')
+        screenshotTool(tool)
+        // keep the index viewer payload in sync with the fresh captures
+        refreshToolIndexScreenshots(tool)
+      }
     }
   }
 

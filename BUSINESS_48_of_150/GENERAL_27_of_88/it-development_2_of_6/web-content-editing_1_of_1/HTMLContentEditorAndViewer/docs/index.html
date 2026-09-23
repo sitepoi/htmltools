@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HTML Content Editor And Viewer - Docs Index</title>
+<!--
+  DOCS INDEX TEMPLATE - _docs/templates/_index-template.html
+  One-page shell for a tool's docs folder: a thin left menu loads every
+  document (SSOT, webpage, help, presentation, updates, social), the tool's
+  HTML / CSS / JS code (embedded, with a Copy button), and the test harness
+  into a full-page pane - open ONLY this file to review everything about the
+  tool. Self-contained (no shared assets) so it works anywhere. Created by
+  scripts/init-docs.js as docs/index.html for every tool; the test-harness
+  menu item appears only when the tool has app/test-harness.html. The code
+  panes are embedded between the CODE-PAYLOAD markers and refreshed with
+  `node scripts/refresh-docs-index.js <Tool>` after code changes.
+  URL shortcut: index.html?doc=help (or ?doc=code-js) opens directly.
+-->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #1f2937; }
+  .docs-shell { display: flex; height: 100vh; height: 100dvh; }
+  .docs-menu {
+    width: 236px; flex: 0 0 236px;
+    background: #0f172a; color: #cbd5e1;
+    display: flex; flex-direction: column;
+    border-right: 1px solid #1e293b;
+  }
+  .docs-brand { padding: 18px 16px 14px; border-bottom: 1px solid #1e293b; }
+  .docs-brand-name { font-weight: 800; color: #f8fafc; font-size: 0.95rem; line-height: 1.3; }
+  .docs-brand-sub { font-size: 0.72rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+  .docs-nav { flex: 1; overflow-y: auto; padding: 10px 10px; }
+  .docs-nav-item {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: 1px solid transparent;
+    color: #cbd5e1; padding: 9px 12px; margin-bottom: 2px;
+    border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 0.86rem; font-weight: 600;
+  }
+  .docs-nav-item:hover { background: #1e293b; color: #f1f5f9; }
+  .docs-nav-item.active { background: #4f46e5; color: #ffffff; }
+  .docs-nav-item .docs-nav-sub { display: block; font-size: 0.7rem; font-weight: 500; color: #64748b; margin-top: 1px; }
+  .docs-nav-item.active .docs-nav-sub { color: #c7d2fe; }
+  .docs-nav-item.docs-nav-code { color: #fbbf24; }
+  .docs-nav-item.docs-nav-code:hover { background: #1e293b; color: #fcd34d; }
+  .docs-nav-item.docs-nav-code.active { background: #b45309; color: #fffbeb; }
+  .docs-nav-item.docs-nav-code.active .docs-nav-sub { color: #fde68a; }
+  .docs-nav-item.docs-nav-harness { color: #86efac; }
+  .docs-nav-item.docs-nav-harness:hover { background: #1e293b; color: #bbf7d0; }
+  .docs-nav-sep { border: 0; border-top: 1px solid #1e293b; margin: 10px 4px; }
+  .docs-nav-group-label { font-size: 0.66rem; color: #475569; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; padding: 8px 12px 2px; }
+  .docs-menu-footer {
+    padding: 12px 16px; border-top: 1px solid #1e293b;
+    font-size: 0.72rem; color: #64748b;
+  }
+  .docs-stage { flex: 1; min-width: 0; background: #e2e8f0; position: relative; }
+  .docs-frame {
+    width: 100%; height: 100%; border: 0;
+    display: block; background: #ffffff;
+  }
+  .docs-open {
+    position: absolute; top: 10px; right: 10px; z-index: 5;
+    background: #0f172a; color: #e2e8f0; border: 0; border-radius: 8px;
+    padding: 7px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; opacity: 0.9;
+  }
+  .docs-open:hover { opacity: 1; }
+  /* code viewer pane */
+  .docs-code-view {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; background: #0b1220;
+  }
+  .docs-code-view.visible { display: flex; }
+  .docs-code-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: #111c30; border-bottom: 1px solid #1e293b;
+    flex-wrap: wrap;
+  }
+  .docs-code-title { color: #fbbf24; font-weight: 800; font-size: 0.9rem; font-family: ui-monospace, Consolas, monospace; }
+  .docs-code-meta { color: #64748b; font-size: 0.75rem; margin-right: auto; }
+  .docs-code-btn {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px;
+    padding: 6px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .docs-code-btn:hover { background: #334155; }
+  .docs-code-btn.copied { background: #14532d; border-color: #16a34a; color: #bbf7d0; }
+  .docs-code-pre { flex: 1; overflow: auto; margin: 0; padding: 16px 18px; }
+  .docs-code-code {
+    font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    font-size: 12.5px; line-height: 1.55; color: #dbeafe;
+    white-space: pre; tab-size: 4;
+  }
+  .docs-code-empty { color: #64748b; padding: 40px; text-align: center; font-size: 0.9rem; }
+  /* screenshots viewer pane */
+  .docs-nav-item.docs-nav-shots { color: #93c5fd; }
+  .docs-nav-item.docs-nav-shots:hover { background: #1e293b; color: #bfdbfe; }
+  .docs-nav-item.docs-nav-shots.active { background: #1d4ed8; color: #eff6ff; }
+  .docs-nav-item.docs-nav-shots.active .docs-nav-sub { color: #bfdbfe; }
+  .docs-shots-view {
+    position: absolute; inset: 0; display: none;
+    flex-direction: column; background: #0b1220;
+  }
+  .docs-shots-view.visible { display: flex; }
+  .docs-shots-viewer {
+    flex: 1; min-height: 0; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px 72px;
+  }
+  .docs-shots-img {
+    max-width: 100%; max-height: 100%;
+    border-radius: 10px; border: 1px solid #1e293b;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5); background: #1e293b;
+  }
+  .docs-shots-empty { color: #64748b; text-align: center; font-size: 0.9rem; line-height: 1.7; }
+  .docs-shots-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+    background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+    width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+    font-size: 1.05rem; font-family: inherit;
+  }
+  .docs-shots-arrow:hover { background: #334155; }
+  .docs-shots-arrow.prev { left: 14px; }
+  .docs-shots-arrow.next { right: 14px; }
+  .docs-shots-info {
+    border-top: 1px solid #1e293b; background: #111c30;
+    padding: 12px 18px;
+  }
+  .docs-shots-counter { color: #93c5fd; font-weight: 800; font-size: 0.8rem; margin: 0 0 8px; }
+  .docs-shots-info dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px 22px; margin: 0; }
+  .docs-shots-info dt { color: #64748b; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .docs-shots-info dd { color: #e2e8f0; font-size: 0.8rem; margin: 2px 0 0; overflow-wrap: anywhere; }
+  .docs-shots-thumbs {
+    border-top: 1px solid #1e293b; padding: 10px 14px;
+    display: flex; gap: 10px; overflow-x: auto;
+  }
+  .docs-shots-thumb {
+    flex: 0 0 auto; width: 150px; padding: 0;
+    border: 2px solid #1e293b; border-radius: 8px; overflow: hidden;
+    cursor: pointer; background: #0f172a; font-family: inherit;
+  }
+  .docs-shots-thumb.active { border-color: #60a5fa; }
+  .docs-shots-thumb img { width: 100%; height: 84px; object-fit: cover; object-position: top; display: block; }
+  .docs-shots-thumb span { display: block; padding: 5px 7px; font-size: 0.66rem; color: #94a3b8; text-align: left; }
+  .docs-shots-thumb.active span { color: #bfdbfe; }
+  @media (max-width: 860px) {
+    .docs-shots-viewer { padding: 14px 46px; }
+    .docs-shots-arrow.prev { left: 4px; }
+    .docs-shots-arrow.next { right: 4px; }
+  }
+  @media (max-width: 860px) {
+    .docs-shell { flex-direction: column; }
+    .docs-menu { width: 100%; flex: 0 0 auto; border-right: 0; border-bottom: 1px solid #1e293b; }
+    .docs-nav { display: flex; overflow-x: auto; padding: 6px; }
+    .docs-nav-item { white-space: nowrap; margin: 0 2px; }
+    .docs-brand { display: none; }
+    .docs-menu-footer { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="docs-shell">
+
+  <aside class="docs-menu">
+    <div class="docs-brand">
+      <div class="docs-brand-name">HTML Content Editor And Viewer</div>
+      <div class="docs-brand-sub">docs index</div>
+    </div>
+    <nav class="docs-nav">
+      <div class="docs-nav-group-label">Documents</div>
+      <button class="docs-nav-item active" data-doc="ssot" data-src="ssot.html">SSOT<span class="docs-nav-sub">single source of truth</span></button>
+      <button class="docs-nav-item" data-doc="webpage" data-src="webpage.html">Marketing webpage<span class="docs-nav-sub">website content block</span></button>
+      <button class="docs-nav-item" data-doc="help" data-src="help.html">User help<span class="docs-nav-sub">how to use the tool</span></button>
+      <button class="docs-nav-item" data-doc="presentation" data-src="presentation.html">Presentation<span class="docs-nav-sub">marketing deck</span></button>
+      <button class="docs-nav-item" data-doc="updates" data-src="updates.html">Updates<span class="docs-nav-sub">release history</span></button>
+      <button class="docs-nav-item" data-doc="social" data-src="social.html">Social share kit<span class="docs-nav-sub">posts and WhatsApp</span></button>
+      <hr class="docs-nav-sep" />
+      <div class="docs-nav-group-label">Code</div>
+      <button class="docs-nav-item docs-nav-code" data-doc="code-html">HTML code<span class="docs-nav-sub">markup of the tool</span></button>
+      <button class="docs-nav-item docs-nav-code" data-doc="code-css">CSS code<span class="docs-nav-sub">stylesheet of the tool</span></button>
+      <button class="docs-nav-item docs-nav-code" data-doc="code-js">JS code<span class="docs-nav-sub">logic of the tool</span></button>
+      <hr class="docs-nav-sep" />
+      <div class="docs-nav-group-label">Media</div>
+      <button class="docs-nav-item docs-nav-shots" data-doc="screenshots">Screenshots<span class="docs-nav-sub">captured views of the tool</span></button>
+      <hr class="docs-nav-sep" />
+      <button class="docs-nav-item docs-nav-harness" data-doc="harness" data-src="../app/test-harness.html">Test harness<span class="docs-nav-sub">live tool with mock SDK</span></button>
+    </nav>
+    <div class="docs-menu-footer">One page for everything in this docs folder. 2026-09-23</div>
+  </aside>
+
+  <main class="docs-stage">
+    <iframe class="docs-frame" id="docs-frame" src="ssot.html" title="Document viewer"></iframe>
+    <button class="docs-open" id="docs-open" type="button" title="Open the current document in a new browser tab">Open in new tab ↗</button>
+    <div class="docs-code-view" id="docs-code-view">
+      <div class="docs-code-head">
+        <span class="docs-code-title" id="docs-code-title"></span>
+        <span class="docs-code-meta" id="docs-code-meta"></span>
+        <button class="docs-code-btn" id="docs-code-copy" type="button">Copy code</button>
+        <button class="docs-code-btn" id="docs-code-open" type="button" title="Open the code file in a new browser tab">Open ↗</button>
+      </div>
+      <pre class="docs-code-pre"><code class="docs-code-code" id="docs-code-code"></code></pre>
+    </div>
+    <div class="docs-shots-view" id="docs-shots-view">
+      <div class="docs-shots-viewer" id="docs-shots-viewer">
+        <button class="docs-shots-arrow prev" id="docs-shots-prev" type="button" title="Previous screenshot">&#9664;</button>
+        <img class="docs-shots-img" id="docs-shots-img" alt="Screenshot of the tool" />
+        <button class="docs-shots-arrow next" id="docs-shots-next" type="button" title="Next screenshot">&#9654;</button>
+        <div class="docs-shots-empty" id="docs-shots-empty">No screenshots yet.<br />Run <b>npm run screenshots -- &lt;ToolName&gt;</b> to capture them.</div>
+      </div>
+      <div class="docs-shots-info" id="docs-shots-info"></div>
+      <div class="docs-shots-thumbs" id="docs-shots-thumbs"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- CODE-PAYLOAD-START - refresh-docs-index.js replaces the payload between these markers -->
+<script type="application/json" id="code-payload">{"html":{"name":"HTMLContentEditorAndViewer.html","src":"../app/HTMLContentEditorAndViewer.html","content":"<div id=\"app\">\r\n\t<div id=\"tab-bar\">\r\n\t\t<button class=\"tab-btn active\" data-tab=\"viewer\" id=\"btn-viewer\">\r\n\t\t\t<i class=\"ti ti-eye\" aria-hidden=\"true\"><\/i> Viewer\r\n\t\t<\/button>\r\n\t\t<button class=\"tab-btn\" data-tab=\"code\" id=\"btn-code\">\r\n\t\t\t<i class=\"ti ti-code\" aria-hidden=\"true\"><\/i> Code\r\n\t\t<\/button>\r\n\t<\/div>\r\n\r\n\t<div id=\"pane-viewer\" class=\"pane active\">\r\n\t\t<div id=\"viewer-toolbar\">\r\n\t\t\t<div id=\"viewer-toolbar-left\">\r\n\t\t\t\t<span id=\"viewer-label\"><i class=\"ti ti-eye\" aria-hidden=\"true\"><\/i> <span\r\n\t\t\t\t\t\tid=\"viewer-mode-label\">Viewing<\/span><\/span>\r\n\t\t\t\t<span id=\"autosave-indicator\" style=\"display:none;\">\r\n\t\t\t\t\t<i class=\"ti ti-circle-check\" aria-hidden=\"true\"><\/i> Saved\r\n\t\t\t\t<\/span>\r\n\t\t\t<\/div>\r\n\t\t\t<div id=\"viewer-toolbar-right\">\r\n\t\t\t\t<div id=\"rich-edit-toolbar\" style=\"display:none;\">\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"bold\" title=\"Bold\"><i class=\"ti ti-bold\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"italic\" title=\"Italic\"><i class=\"ti ti-italic\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"underline\" title=\"Underline\"><i class=\"ti ti-underline\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<div class=\"rte-sep\"><\/div>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"h1\" title=\"Heading 1\">H1<\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"h2\" title=\"Heading 2\">H2<\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"h3\" title=\"Heading 3\">H3<\/button>\r\n\t\t\t\t\t<div class=\"rte-sep\"><\/div>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"insertUnorderedList\" title=\"Bullet list\"><i class=\"ti ti-list\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"insertOrderedList\" title=\"Numbered list\"><i\r\n\t\t\t\t\t\t\tclass=\"ti ti-list-numbers\" aria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<div class=\"rte-sep\"><\/div>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"createLink\" title=\"Insert link\"><i class=\"ti ti-link\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"unlink\" title=\"Remove link\"><i class=\"ti ti-unlink\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<div class=\"rte-sep\"><\/div>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"undo\" title=\"Undo\"><i class=\"ti ti-arrow-back-up\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t\t<button class=\"rte-btn\" data-cmd=\"redo\" title=\"Redo\"><i class=\"ti ti-arrow-forward-up\"\r\n\t\t\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t\t\t<\/div>\r\n\t\t\t\t<div id=\"viewer-actions\">\r\n\t\t\t\t\t<button id=\"btn-toggle-edit\" style=\"display:none;\"><i class=\"ti ti-edit\" aria-hidden=\"true\"><\/i>\r\n\t\t\t\t\t\tEdit<\/button>\r\n\t\t\t\t\t<button id=\"btn-save-edit\" style=\"display:none;\"><i class=\"ti ti-check\" aria-hidden=\"true\"><\/i>\r\n\t\t\t\t\t\tSave<\/button>\r\n\t\t\t\t\t<button id=\"btn-cancel-edit\" style=\"display:none;\"><i class=\"ti ti-x\" aria-hidden=\"true\"><\/i>\r\n\t\t\t\t\t\tCancel<\/button>\r\n\t\t\t\t<\/div>\r\n\t\t\t<\/div>\r\n\t\t<\/div>\r\n\t\t<div id=\"edit-mode-banner\">\r\n\t\t\t<i class=\"ti ti-pencil\" aria-hidden=\"true\"><\/i>\r\n\t\t\tClick any element to edit. Paste content from anywhere — formatting, tables and images are preserved.\r\n\t\t\tChanges autosave silently.\r\n\t\t<\/div>\r\n\t\t<div id=\"preview-wrap\">\r\n\t\t\t<div id=\"preview-content\"><\/div>\r\n\t\t<\/div>\r\n\t<\/div>\r\n\r\n\t<div id=\"pane-code\" class=\"pane\">\r\n\t\t<div id=\"code-subtab-bar\">\r\n\t\t\t<button class=\"code-subtab active\" data-sub=\"html\">\r\n\t\t\t\t<i class=\"ti ti-brand-html5\" aria-hidden=\"true\"><\/i> HTML\r\n\t\t\t<\/button>\r\n\t\t\t<button class=\"code-subtab\" data-sub=\"css\">\r\n\t\t\t\t<i class=\"ti ti-brand-css3\" aria-hidden=\"true\"><\/i> CSS\r\n\t\t\t\t<span class=\"subtab-badge\" id=\"css-badge\" style=\"display:none;\"><\/span>\r\n\t\t\t<\/button>\r\n\t\t\t<button class=\"code-subtab\" data-sub=\"js\">\r\n\t\t\t\t<i class=\"ti ti-brand-javascript\" aria-hidden=\"true\"><\/i> JS\r\n\t\t\t\t<span class=\"subtab-badge\" id=\"js-badge\" style=\"display:none;\"><\/span>\r\n\t\t\t<\/button>\r\n\t\t\t<div id=\"code-toolbar-right\">\r\n\t\t\t\t<span id=\"char-count\">0 chars<\/span>\r\n\t\t\t\t<button id=\"btn-clear\"><i class=\"ti ti-trash\" aria-hidden=\"true\"><\/i> Clear<\/button>\r\n\t\t\t<\/div>\r\n\t\t<\/div>\r\n\r\n\t\t<div id=\"monaco-container\">\r\n\t\t\t<div id=\"monaco-html\" class=\"monaco-pane active\"><\/div>\r\n\t\t\t<div id=\"monaco-css\" class=\"monaco-pane\"><\/div>\r\n\t\t\t<div id=\"monaco-js\" class=\"monaco-pane\"><\/div>\r\n\t\t\t<div id=\"monaco-loading\">\r\n\t\t\t\t<i class=\"ti ti-loader-2\" aria-hidden=\"true\"><\/i> Loading editor…\r\n\t\t\t<\/div>\r\n\t\t<\/div>\r\n\t<\/div>\r\n\r\n\t<div id=\"notes-panel\">\r\n\t\t<div id=\"notes-header\">\r\n\t\t\t<span id=\"notes-title\"><i class=\"ti ti-notes\" aria-hidden=\"true\"><\/i> Notes<\/span>\r\n\t\t\t<button id=\"notes-toggle\" title=\"Collapse notes\"><i class=\"ti ti-chevron-down\"\r\n\t\t\t\t\taria-hidden=\"true\"><\/i><\/button>\r\n\t\t<\/div>\r\n\t\t<div id=\"notes-body\">\r\n\t\t\t<div id=\"notes-list\"><\/div>\r\n\t\t\t<div id=\"notes-compose\">\r\n\t\t\t\t<textarea id=\"note-input\" placeholder=\"Add a note about this document… (Ctrl+Enter to post)\"\r\n\t\t\t\t\trows=\"2\"><\/textarea>\r\n\t\t\t\t<div id=\"notes-compose-actions\">\r\n\t\t\t\t\t<span id=\"notes-hint\"><i class=\"ti ti-lock\" aria-hidden=\"true\"><\/i> Only you can see your notes\r\n\t\t\t\t\t\tunless you are an admin<\/span>\r\n\t\t\t\t\t<button id=\"btn-post-note\"><i class=\"ti ti-send\" aria-hidden=\"true\"><\/i> Post<\/button>\r\n\t\t\t\t<\/div>\r\n\t\t\t<\/div>\r\n\t\t<\/div>\r\n\t<\/div>\r\n<\/div>\r\n\r\n<script src=\"https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js\"><\/script>"},"css":{"name":"HTMLContentEditorAndViewer.css","src":"../app/HTMLContentEditorAndViewer.css","content":"*,\r\n*::before,\r\n*::after {\r\n\tbox-sizing: border-box;\r\n\tmargin: 0;\r\n\tpadding: 0;\r\n}\r\n\r\nhtml,\r\nbody {\r\n\theight: 100%;\r\n\tbackground: transparent;\r\n\tfont-family: var(--font-sans, system-ui, sans-serif);\r\n}\r\n\r\n#app {\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\theight: 100vh;\r\n\tborder: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tborder-radius: var(--border-radius-lg, 12px);\r\n\toverflow: hidden;\r\n\tbackground: var(--color-background-primary, #fff);\r\n}\r\n\r\n#tab-bar {\r\n\tdisplay: flex;\r\n\tborder-bottom: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tpadding: 6px 10px 0;\r\n\tflex-shrink: 0;\r\n}\r\n\r\n.tab-btn {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 6px;\r\n\tpadding: 7px 16px 8px;\r\n\tfont-size: 13px;\r\n\tfont-weight: 500;\r\n\tcolor: var(--color-text-secondary, #666);\r\n\tbackground: transparent;\r\n\tborder: 0.5px solid transparent;\r\n\tborder-bottom: none;\r\n\tborder-radius: var(--border-radius-md, 8px) var(--border-radius-md, 8px) 0 0;\r\n\tcursor: pointer;\r\n\ttransition: color 0.15s, background 0.15s;\r\n}\r\n\r\n.tab-btn:hover {\r\n\tcolor: var(--color-text-primary, #111);\r\n\tbackground: var(--color-background-primary, #fff);\r\n}\r\n\r\n.tab-btn.active {\r\n\tcolor: var(--color-text-primary, #111);\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tborder-color: var(--color-border-tertiary, #e2e2e2);\r\n\tmargin-bottom: -0.5px;\r\n}\r\n\r\n.tab-btn .ti {\r\n\tfont-size: 15px;\r\n}\r\n\r\n.pane {\r\n\tdisplay: none;\r\n\tflex-direction: column;\r\n\tflex: 1;\r\n\tmin-height: 0;\r\n}\r\n\r\n.pane.active {\r\n\tdisplay: flex;\r\n}\r\n\r\n/* ── Viewer toolbar ── */\r\n#viewer-toolbar {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tjustify-content: space-between;\r\n\tpadding: 6px 12px;\r\n\tborder-bottom: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tflex-shrink: 0;\r\n\tgap: 8px;\r\n\tflex-wrap: wrap;\r\n\tmin-height: 41px;\r\n}\r\n\r\n#viewer-toolbar-left {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 10px;\r\n}\r\n\r\n#viewer-toolbar-right {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 8px;\r\n\tflex-wrap: wrap;\r\n}\r\n\r\n#viewer-label {\r\n\tfont-size: 12px;\r\n\tcolor: var(--color-text-secondary, #888);\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 5px;\r\n}\r\n\r\n#autosave-indicator {\r\n\tfont-size: 11px;\r\n\tcolor: #3B6D11;\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 4px;\r\n\topacity: 0;\r\n\ttransition: opacity 0.4s ease;\r\n}\r\n\r\n#autosave-indicator.visible {\r\n\topacity: 1;\r\n}\r\n\r\n#autosave-indicator .ti {\r\n\tfont-size: 13px;\r\n}\r\n\r\n#viewer-actions {\r\n\tdisplay: flex;\r\n\tgap: 6px;\r\n}\r\n\r\n#btn-toggle-edit,\r\n#btn-save-edit,\r\n#btn-cancel-edit {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 5px;\r\n\tpadding: 5px 11px;\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tcursor: pointer;\r\n\ttransition: background 0.12s, color 0.12s;\r\n}\r\n\r\n#btn-toggle-edit {\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tbackground: transparent;\r\n\tcolor: var(--color-text-secondary, #555);\r\n}\r\n\r\n#btn-toggle-edit:hover {\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n}\r\n\r\n#btn-save-edit {\r\n\tborder: 0.5px solid #378ADD;\r\n\tbackground: transparent;\r\n\tcolor: #185FA5;\r\n}\r\n\r\n#btn-save-edit:hover {\r\n\tbackground: #E6F1FB;\r\n}\r\n\r\n#btn-cancel-edit {\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tbackground: transparent;\r\n\tcolor: var(--color-text-secondary, #555);\r\n}\r\n\r\n#btn-cancel-edit:hover {\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n}\r\n\r\n/* ── RTE toolbar ── */\r\n#rich-edit-toolbar {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 2px;\r\n\tflex-wrap: wrap;\r\n}\r\n\r\n.rte-btn {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tjustify-content: center;\r\n\tmin-width: 28px;\r\n\theight: 28px;\r\n\tpadding: 0 5px;\r\n\tfont-size: 12px;\r\n\tfont-weight: 600;\r\n\tborder: 0.5px solid transparent;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tbackground: transparent;\r\n\tcolor: var(--color-text-secondary, #555);\r\n\tcursor: pointer;\r\n\ttransition: background 0.1s, color 0.1s, border-color 0.1s;\r\n}\r\n\r\n.rte-btn:hover {\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n\tborder-color: var(--color-border-tertiary, #ddd);\r\n}\r\n\r\n.rte-btn.active {\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: #185FA5;\r\n\tborder-color: #378ADD;\r\n}\r\n\r\n.rte-btn .ti {\r\n\tfont-size: 14px;\r\n}\r\n\r\n.rte-sep {\r\n\twidth: 0.5px;\r\n\theight: 20px;\r\n\tbackground: var(--color-border-tertiary, #ddd);\r\n\tmargin: 0 3px;\r\n}\r\n\r\n#edit-mode-banner {\r\n\tdisplay: none;\r\n\talign-items: center;\r\n\tgap: 8px;\r\n\tpadding: 7px 16px;\r\n\tbackground: #E6F1FB;\r\n\tborder-bottom: 0.5px solid #B5D4F4;\r\n\tfont-size: 12px;\r\n\tcolor: #185FA5;\r\n\tflex-shrink: 0;\r\n\tline-height: 1.5;\r\n}\r\n\r\n#edit-mode-banner.visible {\r\n\tdisplay: flex;\r\n}\r\n\r\n#edit-mode-banner .ti {\r\n\tfont-size: 14px;\r\n\tflex-shrink: 0;\r\n}\r\n\r\n#preview-wrap {\r\n\tflex: 1;\r\n\toverflow-y: auto;\r\n\tmin-height: 0;\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n}\r\n\r\n#preview-content {\r\n\tflex: 1;\r\n\tpadding: 24px 32px;\r\n\tfont-size: 15px;\r\n\tline-height: 1.7;\r\n\tcolor: var(--color-text-primary, #111);\r\n\toutline: none;\r\n}\r\n\r\n#viewer-iframe {\r\n\tflex: 1;\r\n\twidth: 100%;\r\n\tborder: none;\r\n\tmin-height: 0;\r\n}\r\n\r\n#preview-content h1 {\r\n\tfont-size: 2em;\r\n\tfont-weight: 600;\r\n\tmargin: 0.75em 0 0.4em;\r\n\tline-height: 1.25;\r\n}\r\n\r\n#preview-content h2 {\r\n\tfont-size: 1.5em;\r\n\tfont-weight: 600;\r\n\tmargin: 0.75em 0 0.4em;\r\n\tline-height: 1.3;\r\n}\r\n\r\n#preview-content h3 {\r\n\tfont-size: 1.2em;\r\n\tfont-weight: 600;\r\n\tmargin: 0.75em 0 0.4em;\r\n\tline-height: 1.4;\r\n}\r\n\r\n#preview-content p {\r\n\tmargin: 0 0 0.75em;\r\n}\r\n\r\n#preview-content ul,\r\n#preview-content ol {\r\n\tmargin: 0 0 0.75em 1.5em;\r\n\tpadding: 0;\r\n}\r\n\r\n#preview-content li {\r\n\tmargin: 0.2em 0;\r\n}\r\n\r\n#preview-content a {\r\n\tcolor: #185FA5;\r\n\ttext-decoration: underline;\r\n}\r\n\r\n#preview-content table {\r\n\tborder-collapse: collapse;\r\n\twidth: 100%;\r\n\tmargin: 0 0 0.75em;\r\n\tfont-size: 14px;\r\n}\r\n\r\n#preview-content th,\r\n#preview-content td {\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tpadding: 8px 12px;\r\n\ttext-align: left;\r\n}\r\n\r\n#preview-content th {\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tfont-weight: 500;\r\n}\r\n\r\n#preview-content img {\r\n\tmax-width: 100%;\r\n\theight: auto;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n}\r\n\r\n#preview-content blockquote {\r\n\tborder-left: 3px solid var(--color-border-secondary, #ccc);\r\n\tmargin: 0 0 0.75em;\r\n\tpadding: 4px 0 4px 16px;\r\n\tcolor: var(--color-text-secondary, #666);\r\n}\r\n\r\n#preview-content pre,\r\n#preview-content code {\r\n\tfont-family: var(--font-mono, monospace);\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tborder-radius: 4px;\r\n\tfont-size: 13px;\r\n}\r\n\r\n#preview-content pre {\r\n\tpadding: 12px 16px;\r\n\toverflow-x: auto;\r\n\tmargin: 0 0 0.75em;\r\n}\r\n\r\n#preview-content code {\r\n\tpadding: 1px 5px;\r\n}\r\n\r\n#preview-content.edit-mode {\r\n\tbackground: #fafaf8;\r\n\tcursor: text;\r\n}\r\n\r\n#preview-content.edit-mode *:hover {\r\n\toutline: 1.5px dashed #85B7EB;\r\n\toutline-offset: 3px;\r\n\tborder-radius: 3px;\r\n\tcursor: text;\r\n}\r\n\r\n#preview-content.edit-mode *:focus {\r\n\toutline: 2px solid #378ADD;\r\n\toutline-offset: 3px;\r\n\tborder-radius: 3px;\r\n}\r\n\r\n/* ── Code pane ── */\r\n#code-subtab-bar {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tborder-bottom: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tpadding: 0 10px;\r\n\tflex-shrink: 0;\r\n\tmin-height: 41px;\r\n}\r\n\r\n.code-subtab {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 5px;\r\n\tpadding: 0 14px;\r\n\theight: 41px;\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tcolor: var(--color-text-secondary, #666);\r\n\tbackground: transparent;\r\n\tborder: none;\r\n\tborder-bottom: 2px solid transparent;\r\n\tcursor: pointer;\r\n\ttransition: color 0.15s, border-color 0.15s;\r\n\tposition: relative;\r\n\twhite-space: nowrap;\r\n}\r\n\r\n.code-subtab:hover {\r\n\tcolor: var(--color-text-primary, #111);\r\n}\r\n\r\n.code-subtab.active {\r\n\tcolor: var(--color-text-primary, #111);\r\n\tborder-bottom-color: #378ADD;\r\n}\r\n\r\n.code-subtab .ti {\r\n\tfont-size: 14px;\r\n}\r\n\r\n.code-subtab[data-sub=\"html\"] .ti {\r\n\tcolor: #D85A30;\r\n}\r\n\r\n.code-subtab[data-sub=\"css\"] .ti {\r\n\tcolor: #185FA5;\r\n}\r\n\r\n.code-subtab[data-sub=\"js\"] .ti {\r\n\tcolor: #BA7517;\r\n}\r\n\r\n.subtab-badge {\r\n\twidth: 6px;\r\n\theight: 6px;\r\n\tborder-radius: 50%;\r\n\tbackground: #378ADD;\r\n\tposition: absolute;\r\n\ttop: 8px;\r\n\tright: 4px;\r\n}\r\n\r\n#code-toolbar-right {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 8px;\r\n\tmargin-left: auto;\r\n\tflex-shrink: 0;\r\n}\r\n\r\n#char-count {\r\n\tfont-size: 12px;\r\n\tcolor: var(--color-text-secondary, #888);\r\n\twhite-space: nowrap;\r\n}\r\n\r\n#btn-clear {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 5px;\r\n\tpadding: 5px 11px;\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tborder: 0.5px solid #D85A30;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tbackground: transparent;\r\n\tcolor: #993C1D;\r\n\tcursor: pointer;\r\n\ttransition: background 0.12s;\r\n\twhite-space: nowrap;\r\n}\r\n\r\n#btn-clear:hover {\r\n\tbackground: #FAECE7;\r\n}\r\n\r\n/* ── Monaco container ── */\r\n#monaco-container {\r\n\tflex: 1;\r\n\tmin-height: 0;\r\n\tposition: relative;\r\n\tbackground: var(--color-background-primary, #fff);\r\n}\r\n\r\n.monaco-pane {\r\n\tdisplay: none;\r\n\tposition: absolute;\r\n\tinset: 0;\r\n}\r\n\r\n.monaco-pane.active {\r\n\tdisplay: block;\r\n}\r\n\r\n#monaco-loading {\r\n\tposition: absolute;\r\n\tinset: 0;\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tjustify-content: center;\r\n\tgap: 8px;\r\n\tfont-size: 13px;\r\n\tcolor: var(--color-text-secondary, #888);\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tz-index: 10;\r\n}\r\n\r\n#monaco-loading .ti {\r\n\tfont-size: 18px;\r\n\tanimation: spin 1s linear infinite;\r\n}\r\n\r\n@keyframes spin {\r\n\tto {\r\n\t\ttransform: rotate(360deg);\r\n\t}\r\n}\r\n\r\n#monaco-loading.hidden {\r\n\tdisplay: none;\r\n}\r\n\r\n/* ── Notes ── */\r\n#notes-panel {\r\n\tflex-shrink: 0;\r\n\tborder-top: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\tmax-height: 340px;\r\n\ttransition: max-height 0.25s ease;\r\n}\r\n\r\n#notes-panel.collapsed {\r\n\tmax-height: 41px;\r\n\toverflow: hidden;\r\n}\r\n\r\n#notes-header {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tjustify-content: space-between;\r\n\tpadding: 8px 12px;\r\n\tbackground: var(--color-background-secondary, #f5f5f3);\r\n\tborder-bottom: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tflex-shrink: 0;\r\n\tcursor: pointer;\r\n\tuser-select: none;\r\n}\r\n\r\n#notes-title {\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tcolor: var(--color-text-secondary, #666);\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 6px;\r\n}\r\n\r\n#notes-title .ti {\r\n\tfont-size: 14px;\r\n}\r\n\r\n#notes-toggle {\r\n\tbackground: transparent;\r\n\tborder: none;\r\n\tcursor: pointer;\r\n\tcolor: var(--color-text-secondary, #888);\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tpadding: 2px;\r\n\ttransition: transform 0.2s;\r\n}\r\n\r\n#notes-panel.collapsed #notes-toggle {\r\n\ttransform: rotate(-90deg);\r\n}\r\n\r\n#notes-body {\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\toverflow: hidden;\r\n\tflex: 1;\r\n\tmin-height: 0;\r\n}\r\n\r\n#notes-list {\r\n\tflex: 1;\r\n\toverflow-y: auto;\r\n\tpadding: 8px 12px;\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\tgap: 8px;\r\n}\r\n\r\n.note-item {\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\tgap: 4px;\r\n\tpadding: 10px 12px;\r\n\tborder: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tbackground: var(--color-background-secondary, #f9f9f7);\r\n}\r\n\r\n.note-item.own-note {\r\n\tborder-color: #B5D4F4;\r\n\tbackground: #E6F1FB;\r\n}\r\n\r\n.note-meta {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 8px;\r\n\tflex-wrap: wrap;\r\n}\r\n\r\n.note-author {\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tcolor: var(--color-text-primary, #111);\r\n}\r\n\r\n.note-time {\r\n\tfont-size: 11px;\r\n\tcolor: var(--color-text-tertiary, #aaa);\r\n}\r\n\r\n.note-badge {\r\n\tfont-size: 10px;\r\n\tpadding: 2px 7px;\r\n\tborder-radius: 99px;\r\n\tfont-weight: 500;\r\n\tbackground: #B5D4F4;\r\n\tcolor: #0C447C;\r\n}\r\n\r\n.note-text {\r\n\tfont-size: 13px;\r\n\tcolor: var(--color-text-primary, #111);\r\n\tline-height: 1.6;\r\n\twhite-space: pre-wrap;\r\n\tword-break: break-word;\r\n}\r\n\r\n.note-text.editing {\r\n\tdisplay: none;\r\n}\r\n\r\n.note-edit-area {\r\n\tdisplay: none;\r\n\twidth: 100%;\r\n\tfont-size: 13px;\r\n\tfont-family: var(--font-sans, system-ui, sans-serif);\r\n\tline-height: 1.6;\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tpadding: 6px 10px;\r\n\tresize: none;\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n\toutline: none;\r\n}\r\n\r\n.note-edit-area.visible {\r\n\tdisplay: block;\r\n}\r\n\r\n.note-actions {\r\n\tdisplay: flex;\r\n\tgap: 6px;\r\n\tmargin-top: 4px;\r\n}\r\n\r\n.note-btn {\r\n\tfont-size: 11px;\r\n\tpadding: 3px 9px;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tbackground: transparent;\r\n\tcursor: pointer;\r\n\tcolor: var(--color-text-secondary, #666);\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 4px;\r\n\ttransition: background 0.12s;\r\n}\r\n\r\n.note-btn:hover {\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n}\r\n\r\n.note-btn.danger {\r\n\tcolor: #993C1D;\r\n\tborder-color: #D85A30;\r\n}\r\n\r\n.note-btn.danger:hover {\r\n\tbackground: #FAECE7;\r\n}\r\n\r\n.note-btn.save {\r\n\tcolor: #185FA5;\r\n\tborder-color: #378ADD;\r\n}\r\n\r\n.note-btn.save:hover {\r\n\tbackground: #E6F1FB;\r\n}\r\n\r\n.notes-empty {\r\n\tfont-size: 13px;\r\n\tcolor: var(--color-text-tertiary, #bbb);\r\n\ttext-align: center;\r\n\tpadding: 20px 0;\r\n\tfont-style: italic;\r\n}\r\n\r\n#notes-compose {\r\n\tborder-top: 0.5px solid var(--color-border-tertiary, #e2e2e2);\r\n\tpadding: 10px 12px;\r\n\tdisplay: flex;\r\n\tflex-direction: column;\r\n\tgap: 8px;\r\n\tflex-shrink: 0;\r\n}\r\n\r\n#note-input {\r\n\twidth: 100%;\r\n\tfont-size: 13px;\r\n\tfont-family: var(--font-sans, system-ui, sans-serif);\r\n\tline-height: 1.6;\r\n\tborder: 0.5px solid var(--color-border-secondary, #ccc);\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tpadding: 8px 12px;\r\n\tresize: none;\r\n\tbackground: var(--color-background-primary, #fff);\r\n\tcolor: var(--color-text-primary, #111);\r\n\toutline: none;\r\n\ttransition: border-color 0.15s;\r\n}\r\n\r\n#note-input:focus {\r\n\tborder-color: #378ADD;\r\n}\r\n\r\n#note-input::placeholder {\r\n\tcolor: var(--color-text-tertiary, #aaa);\r\n}\r\n\r\n#notes-compose-actions {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tjustify-content: space-between;\r\n\tgap: 8px;\r\n}\r\n\r\n#notes-hint {\r\n\tfont-size: 11px;\r\n\tcolor: var(--color-text-tertiary, #aaa);\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 4px;\r\n}\r\n\r\n#notes-hint .ti {\r\n\tfont-size: 12px;\r\n}\r\n\r\n#btn-post-note {\r\n\tdisplay: flex;\r\n\talign-items: center;\r\n\tgap: 5px;\r\n\tpadding: 5px 14px;\r\n\tfont-size: 12px;\r\n\tfont-weight: 500;\r\n\tborder: 0.5px solid #378ADD;\r\n\tborder-radius: var(--border-radius-md, 8px);\r\n\tbackground: transparent;\r\n\tcolor: #185FA5;\r\n\tcursor: pointer;\r\n\ttransition: background 0.12s;\r\n}\r\n\r\n#btn-post-note:hover {\r\n\tbackground: #E6F1FB;\r\n}\r\n\r\n/* ── Read-only ── */\r\n#app.readonly-mode #tab-bar {\r\n\tdisplay: none;\r\n}\r\n\r\n#app.readonly-mode #pane-code {\r\n\tdisplay: none !important;\r\n}\r\n\r\n#app.readonly-mode #pane-viewer {\r\n\tdisplay: flex !important;\r\n}\r\n\r\n#app.readonly-mode #btn-toggle-edit,\r\n#app.readonly-mode #btn-save-edit,\r\n#app.readonly-mode #btn-cancel-edit {\r\n\tdisplay: none !important;\r\n}\r\n\r\n#app.readonly-mode {\r\n\tborder: none;\r\n\tborder-radius: 0;\r\n}\r\n\r\n#app.readonly-mode .note-btn.danger,\r\n#app.readonly-mode .note-btn.edit-trigger {\r\n\tdisplay: none;\r\n}"},"js":{"name":"HTMLContentEditorAndViewer.js","src":"../app/HTMLContentEditorAndViewer.js","content":"let currentUser = null;\r\nlet isAdmin = false;\r\nlet isRO = false;\r\nlet savedData = { html: '', css: '', js: '', notes: [] };\r\nlet notesCollapsed = false;\r\nlet richEditActive = false;\r\nlet preEditSnapshot = '';\r\nlet currentTab = 'viewer';\r\nlet currentSubTab = 'html';\r\nlet autoSaveTimer = null;\r\nlet saveIndicatorTimer = null;\r\nlet codeDebounceTimer = null;\r\n\r\n// Monaco editor instances\r\nlet monacoEditors = {};   // { html, css, js }\r\nlet monacoReady = false;\r\nlet monacoReadyQueue = [];   // callbacks waiting for monaco\r\n\r\n/* ── Bootstrap ── */\r\ntool.onReady((val, fields) => {\r\n\tcurrentUser = tool.getUser();\r\n\tisAdmin = hasEditRole(currentUser);\r\n\tsavedData = parseValue(val);\r\n\r\n\tinitMonaco(() => {\r\n\t\trenderAll();\r\n\t\tisRO = tool.isReadOnly();\r\n\t\tapplyReadOnly(isRO);\r\n\t});\r\n\r\n\ttool.onValueChange(v => {\r\n\t\tif (richEditActive) return;\r\n\t\tsavedData = parseValue(v);\r\n\t\trenderViewer();\r\n\t\tsetMonacoValues();\r\n\t\trenderNotes();\r\n\t});\r\n\ttool.onReadonlyChange(ro => { isRO = ro; applyReadOnly(ro); });\r\n\ttool.onUserChange(u => {\r\n\t\tcurrentUser = u;\r\n\t\tisAdmin = hasEditRole(u);\r\n\t\tapplyReadOnly(isRO);\r\n\t\trenderNotes();\r\n\t});\r\n});\r\n\r\n/* ── Monaco init ── */\r\nfunction initMonaco(cb) {\r\n\trequire.config({\r\n\t\tpaths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }\r\n\t});\r\n\r\n\trequire(['vs/editor/editor.main'], () => {\r\n\t\tconst commonOpts = {\r\n\t\t\ttheme: 'vs',\r\n\t\t\tfontSize: 13,\r\n\t\t\tlineHeight: 22,\r\n\t\t\tfontFamily: \"'Fira Code', 'Cascadia Code', 'Courier New', monospace\",\r\n\t\t\tfontLigatures: true,\r\n\t\t\tminimap: { enabled: false },\r\n\t\t\tscrollBeyondLastLine: false,\r\n\t\t\twordWrap: 'on',\r\n\t\t\tautomaticLayout: false,   // we call layout() manually\r\n\t\t\ttabSize: 2,\r\n\t\t\trenderLineHighlight: 'line',\r\n\t\t\tscrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },\r\n\t\t\tpadding: { top: 12, bottom: 12 },\r\n\t\t\tsuggest: { showWords: true },\r\n\t\t\tquickSuggestions: { other: true, comments: false, strings: false }\r\n\t\t};\r\n\r\n\t\tmonacoEditors.html = monaco.editor.create(\r\n\t\t\tdocument.getElementById('monaco-html'),\r\n\t\t\t{ ...commonOpts, language: 'html', value: savedData.html }\r\n\t\t);\r\n\t\tmonacoEditors.css = monaco.editor.create(\r\n\t\t\tdocument.getElementById('monaco-css'),\r\n\t\t\t{ ...commonOpts, language: 'css', value: savedData.css }\r\n\t\t);\r\n\t\tmonacoEditors.js = monaco.editor.create(\r\n\t\t\tdocument.getElementById('monaco-js'),\r\n\t\t\t{ ...commonOpts, language: 'javascript', value: savedData.js }\r\n\t\t);\r\n\r\n\t\t// wire change listeners\r\n\t\tmonacoEditors.html.onDidChangeModelContent(() => onMonacoChange('html'));\r\n\t\tmonacoEditors.css.onDidChangeModelContent(() => onMonacoChange('css'));\r\n\t\tmonacoEditors.js.onDidChangeModelContent(() => onMonacoChange('js'));\r\n\r\n\t\tmonacoReady = true;\r\n\t\tdocument.getElementById('monaco-loading').classList.add('hidden');\r\n\r\n\t\tlayoutActiveEditor();\r\n\t\tcb && cb();\r\n\t});\r\n}\r\n\r\nfunction layoutActiveEditor() {\r\n\tconst ed = monacoEditors[currentSubTab];\r\n\tif (ed) ed.layout();\r\n}\r\n\r\nfunction setMonacoValues() {\r\n\tif (!monacoReady) return;\r\n\t['html', 'css', 'js'].forEach(k => {\r\n\t\tconst ed = monacoEditors[k];\r\n\t\tconst val = savedData[k] || '';\r\n\t\tif (ed && ed.getValue() !== val) {\r\n\t\t\ted.setValue(val);\r\n\t\t}\r\n\t});\r\n\tupdateSubtabBadges();\r\n\tupdateCharCount();\r\n}\r\n\r\nfunction onMonacoChange(field) {\r\n\tif (!monacoReady) return;\r\n\tsavedData[field] = monacoEditors[field].getValue();\r\n\tupdateCharCount();\r\n\tupdateSubtabBadges();\r\n\tclearTimeout(codeDebounceTimer);\r\n\tcodeDebounceTimer = setTimeout(() => {\r\n\t\tsave(true);\r\n\t\tif (currentTab === 'viewer') renderViewer();\r\n\t}, 800);\r\n}\r\n\r\n/* ── Helpers ── */\r\nfunction hasEditRole(u) {\r\n\treturn u && Array.isArray(u.roles) &&\r\n\t\t(u.roles.includes('admin') || u.roles.includes('editor'));\r\n}\r\n\r\nfunction parseValue(val) {\r\n\tif (!val) return { html: '', css: '', js: '', notes: [] };\r\n\tif (typeof val === 'string') return { html: val, css: '', js: '', notes: [] };\r\n\treturn {\r\n\t\thtml: val.html || '',\r\n\t\tcss: val.css || '',\r\n\t\tjs: val.js || '',\r\n\t\tnotes: Array.isArray(val.notes) ? val.notes : []\r\n\t};\r\n}\r\n\r\nfunction save(silent) {\r\n\ttool.setValue(savedData);\r\n\ttool.reportValid(true);\r\n\tif (silent) showSaveIndicator();\r\n}\r\n\r\nfunction showSaveIndicator() {\r\n\tconst el = document.getElementById('autosave-indicator');\r\n\tel.style.display = 'flex';\r\n\tel.classList.add('visible');\r\n\tclearTimeout(saveIndicatorTimer);\r\n\tsaveIndicatorTimer = setTimeout(() => {\r\n\t\tel.classList.remove('visible');\r\n\t\tsetTimeout(() => { el.style.display = 'none'; }, 400);\r\n\t}, 2000);\r\n}\r\n\r\nfunction uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }\r\n\r\nfunction formatTime(iso) {\r\n\tconst d = new Date(iso);\r\n\treturn d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +\r\n\t\t' · ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });\r\n}\r\n\r\nfunction escHtml(str) {\r\n\treturn String(str)\r\n\t\t.replace(/&/g, '&amp;').replace(/<\/g, '&lt;')\r\n\t\t.replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\r\n}\r\n\r\nfunction visibleNotes() {\r\n\tif (isAdmin) return savedData.notes;\r\n\tconst myId = currentUser ? currentUser.id : null;\r\n\treturn savedData.notes.filter(n => n.authorId === myId);\r\n}\r\n\r\nfunction updateCharCount() {\r\n\tconst val = monacoReady\r\n\t\t? (monacoEditors[currentSubTab]?.getValue() || '')\r\n\t\t: (savedData[currentSubTab] || '');\r\n\tconst len = val.length;\r\n\tdocument.getElementById('char-count').textContent =\r\n\t\tlen.toLocaleString() + ' char' + (len !== 1 ? 's' : '');\r\n}\r\n\r\nfunction updateSubtabBadges() {\r\n\tdocument.getElementById('css-badge').style.display = savedData.css.trim() ? 'inline-flex' : 'none';\r\n\tdocument.getElementById('js-badge').style.display = savedData.js.trim() ? 'inline-flex' : 'none';\r\n}\r\n\r\n/* ── Viewer ── */\r\nfunction buildViewerHTML() {\r\n\tconst html = savedData.html || '';\r\n\tconst css = savedData.css || '';\r\n\tconst js = savedData.js || '';\r\n\treturn `<!DOCTYPE html><html><head>\r\n    <meta charset=\"utf-8\">\r\n    <style>\r\n      *, *::before, *::after { box-sizing: border-box; }\r\n      body { margin: 0; padding: 0; font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.7; color: #111; }\r\n      h1 { font-size: 2em; font-weight: 600; margin: 0.75em 0 0.4em; }\r\n      h2 { font-size: 1.5em; font-weight: 600; margin: 0.75em 0 0.4em; }\r\n      h3 { font-size: 1.2em; font-weight: 600; margin: 0.75em 0 0.4em; }\r\n      p { margin: 0 0 0.75em; } ul, ol { margin: 0 0 0.75em 1.5em; } li { margin: 0.2em 0; }\r\n      a { color: #185FA5; } table { border-collapse: collapse; width: 100%; margin: 0 0 0.75em; }\r\n      th, td { border: 0.5px solid #ccc; padding: 8px 12px; text-align: left; }\r\n      th { background: #f5f5f3; font-weight: 500; }\r\n      img { max-width: 100%; height: auto; }\r\n      blockquote { border-left: 3px solid #ccc; margin: 0 0 0.75em; padding: 4px 0 4px 16px; color: #666; }\r\n      pre, code { font-family: monospace; background: #f5f5f3; border-radius: 4px; font-size: 13px; }\r\n      pre { padding: 12px 16px; overflow-x: auto; margin: 0 0 0.75em; }\r\n      code { padding: 1px 5px; }\r\n      ${css}\r\n    <\/style>\r\n  <\/head><body>\r\n    <div style=\"padding: 24px 32px;\">${html || '<p style=\"color:#bbb;font-style:italic;\">No content yet.<\/p>'}<\/div>\r\n    ${js ? `<script>\\n${js}\\n<\\/script>` : ''}\r\n  <\/body><\/html>`;\r\n}\r\n\r\nfunction renderViewer() {\r\n\tif (richEditActive) return;\r\n\tconst wrap = document.getElementById('preview-wrap');\r\n\tconst hasCSS = savedData.css.trim().length > 0;\r\n\tconst hasJS = savedData.js.trim().length > 0;\r\n\r\n\tif (hasCSS || hasJS) {\r\n\t\tlet iframe = document.getElementById('viewer-iframe');\r\n\t\tdocument.getElementById('preview-content').style.display = 'none';\r\n\t\tif (!iframe) {\r\n\t\t\tiframe = document.createElement('iframe');\r\n\t\t\tiframe.id = 'viewer-iframe';\r\n\t\t\tiframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');\r\n\t\t\tiframe.style.cssText = 'flex:1;width:100%;height:100%;border:none;min-height:0;';\r\n\t\t\twrap.appendChild(iframe);\r\n\t\t}\r\n\t\tiframe.srcdoc = buildViewerHTML();\r\n\t} else {\r\n\t\tconst iframe = document.getElementById('viewer-iframe');\r\n\t\tif (iframe) iframe.remove();\r\n\t\tconst content = document.getElementById('preview-content');\r\n\t\tcontent.style.display = '';\r\n\t\tcontent.innerHTML = savedData.html ||\r\n\t\t\t'<p style=\"color:#bbb;font-style:italic;\">No content yet.<\/p>';\r\n\t}\r\n}\r\n\r\nfunction renderAll() {\r\n\trenderViewer();\r\n\tsetMonacoValues();\r\n\trenderNotes();\r\n}\r\n\r\n/* ── Tab switching ── */\r\nfunction switchTab(tab) {\r\n\tcurrentTab = tab;\r\n\tconst paneViewer = document.getElementById('pane-viewer');\r\n\tconst paneCode = document.getElementById('pane-code');\r\n\tconst btnViewer = document.getElementById('btn-viewer');\r\n\tconst btnCode = document.getElementById('btn-code');\r\n\r\n\tif (tab === 'viewer') {\r\n\t\tpaneViewer.classList.add('active');\r\n\t\tpaneCode.classList.remove('active');\r\n\t\tbtnViewer.classList.add('active');\r\n\t\tbtnCode.classList.remove('active');\r\n\t\trenderViewer();\r\n\t} else {\r\n\t\tif (richEditActive) exitRichEdit(false);\r\n\t\tpaneCode.classList.add('active');\r\n\t\tpaneViewer.classList.remove('active');\r\n\t\tbtnCode.classList.add('active');\r\n\t\tbtnViewer.classList.remove('active');\r\n\t\t// give DOM a frame to paint before layout\r\n\t\trequestAnimationFrame(() => layoutActiveEditor());\r\n\t}\r\n\ttool.resize();\r\n}\r\n\r\nfunction switchSubTab(sub) {\r\n\tcurrentSubTab = sub;\r\n\tdocument.querySelectorAll('.code-subtab').forEach(b =>\r\n\t\tb.classList.toggle('active', b.dataset.sub === sub));\r\n\tdocument.querySelectorAll('.monaco-pane').forEach(p =>\r\n\t\tp.classList.toggle('active', p.id === 'monaco-' + sub));\r\n\tupdateCharCount();\r\n\t// layout after display:block kicks in\r\n\trequestAnimationFrame(() => layoutActiveEditor());\r\n}\r\n\r\n/* ── Rich edit (viewer, HTML only) ── */\r\nfunction enterRichEdit() {\r\n\tif (savedData.css.trim() || savedData.js.trim()) {\r\n\t\ttool.notify('Visual edit is unavailable when CSS or JS is present — edit HTML in the Code tab instead.', 'warning');\r\n\t\treturn;\r\n\t}\r\n\trichEditActive = true;\r\n\tpreEditSnapshot = savedData.html;\r\n\r\n\tconst content = document.getElementById('preview-content');\r\n\tcontent.contentEditable = 'true';\r\n\tcontent.classList.add('edit-mode');\r\n\tcontent.focus();\r\n\r\n\tdocument.getElementById('rich-edit-toolbar').style.display = 'flex';\r\n\tdocument.getElementById('btn-toggle-edit').style.display = 'none';\r\n\tdocument.getElementById('btn-save-edit').style.display = 'flex';\r\n\tdocument.getElementById('btn-cancel-edit').style.display = 'flex';\r\n\tdocument.getElementById('viewer-mode-label').textContent = 'Editing';\r\n\tdocument.getElementById('edit-mode-banner').classList.add('visible');\r\n\r\n\tcontent.addEventListener('input', onRichInput);\r\n\tcontent.addEventListener('paste', onRichPaste);\r\n\tcontent.addEventListener('keyup', updateToolbarState);\r\n\tcontent.addEventListener('mouseup', updateToolbarState);\r\n\ttool.resize();\r\n}\r\n\r\nfunction exitRichEdit(doSave) {\r\n\trichEditActive = false;\r\n\tconst content = document.getElementById('preview-content');\r\n\r\n\tcontent.removeEventListener('input', onRichInput);\r\n\tcontent.removeEventListener('paste', onRichPaste);\r\n\tcontent.removeEventListener('keyup', updateToolbarState);\r\n\tcontent.removeEventListener('mouseup', updateToolbarState);\r\n\tclearTimeout(autoSaveTimer);\r\n\r\n\tif (doSave) {\r\n\t\tsavedData.html = content.innerHTML;\r\n\t\tsave(false);\r\n\t\tif (monacoReady && monacoEditors.html.getValue() !== savedData.html) {\r\n\t\t\tmonacoEditors.html.setValue(savedData.html);\r\n\t\t}\r\n\t\ttool.notify('Document saved', 'success');\r\n\t} else {\r\n\t\tcontent.innerHTML = preEditSnapshot ||\r\n\t\t\t'<p style=\"color:#bbb;font-style:italic;\">No content yet.<\/p>';\r\n\t\tsavedData.html = preEditSnapshot;\r\n\t}\r\n\r\n\tcontent.contentEditable = 'false';\r\n\tcontent.classList.remove('edit-mode');\r\n\r\n\tdocument.getElementById('rich-edit-toolbar').style.display = 'none';\r\n\tdocument.getElementById('btn-toggle-edit').style.display = 'flex';\r\n\tdocument.getElementById('btn-save-edit').style.display = 'none';\r\n\tdocument.getElementById('btn-cancel-edit').style.display = 'none';\r\n\tdocument.getElementById('viewer-mode-label').textContent = 'Viewing';\r\n\tdocument.getElementById('edit-mode-banner').classList.remove('visible');\r\n\ttool.resize();\r\n}\r\n\r\nfunction onRichInput() {\r\n\tsavedData.html = document.getElementById('preview-content').innerHTML;\r\n\tif (monacoReady && monacoEditors.html.getValue() !== savedData.html) {\r\n\t\tmonacoEditors.html.setValue(savedData.html);\r\n\t}\r\n\tclearTimeout(autoSaveTimer);\r\n\tautoSaveTimer = setTimeout(() => {\r\n\t\ttool.setValue(savedData);\r\n\t\ttool.reportValid(true);\r\n\t\tshowSaveIndicator();\r\n\t}, 800);\r\n}\r\n\r\nfunction onRichPaste(e) {\r\n\te.preventDefault();\r\n\tconst clip = e.clipboardData || window.clipboardData;\r\n\tconst htmlData = clip.getData('text/html');\r\n\tconst textData = clip.getData('text/plain');\r\n\tlet toInsert = '';\r\n\r\n\tif (htmlData && htmlData.trim()) {\r\n\t\ttoInsert = sanitizePastedHTML(htmlData);\r\n\t} else if (textData) {\r\n\t\ttoInsert = textData.split('\\n')\r\n\t\t\t.map(l => l.trim()\r\n\t\t\t\t? `<p>${l.replace(/&/g, '&amp;').replace(/<\/g, '&lt;').replace(/>/g, '&gt;')}<\/p>`\r\n\t\t\t\t: '<br>')\r\n\t\t\t.join('');\r\n\t}\r\n\tif (!toInsert) return;\r\n\r\n\tconst sel = window.getSelection();\r\n\tif (!sel.rangeCount) return;\r\n\tsel.deleteFromDocument();\r\n\tconst range = sel.getRangeAt(0);\r\n\tconst frag = document.createRange().createContextualFragment(toInsert);\r\n\tconst lastNode = frag.lastChild;\r\n\trange.insertNode(frag);\r\n\tif (lastNode) {\r\n\t\tconst r = document.createRange();\r\n\t\tr.setStartAfter(lastNode);\r\n\t\tr.collapse(true);\r\n\t\tsel.removeAllRanges();\r\n\t\tsel.addRange(r);\r\n\t}\r\n\tonRichInput();\r\n}\r\n\r\nfunction sanitizePastedHTML(html) {\r\n\tconst doc = new DOMParser().parseFromString(html, 'text/html');\r\n\tconst ALLOWED = new Set([\r\n\t\t'p', 'br', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',\r\n\t\t'strong', 'b', 'em', 'i', 'u', 's', 'mark', 'ul', 'ol', 'li', 'a',\r\n\t\t'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',\r\n\t\t'img', 'blockquote', 'pre', 'code', 'hr', 'figure', 'figcaption'\r\n\t]);\r\n\tconst ATTRS = {\r\n\t\t'a': ['href', 'title', 'target'],\r\n\t\t'img': ['src', 'alt', 'width', 'height'],\r\n\t\t'td': ['colspan', 'rowspan'],\r\n\t\t'th': ['colspan', 'rowspan', 'scope'],\r\n\t\t'col': ['span']\r\n\t};\r\n\tfunction clean(node) {\r\n\t\tif (node.nodeType === Node.TEXT_NODE) return node.cloneNode();\r\n\t\tif (node.nodeType !== Node.ELEMENT_NODE) return null;\r\n\t\tconst tag = node.tagName.toLowerCase();\r\n\t\tif (!ALLOWED.has(tag)) {\r\n\t\t\tconst frag = document.createDocumentFragment();\r\n\t\t\tnode.childNodes.forEach(c => { const n = clean(c); if (n) frag.appendChild(n); });\r\n\t\t\treturn frag;\r\n\t\t}\r\n\t\tconst el = document.createElement(tag);\r\n\t\t(ATTRS[tag] || []).forEach(attr => {\r\n\t\t\tif (!node.hasAttribute(attr)) return;\r\n\t\t\tconst val = node.getAttribute(attr);\r\n\t\t\tif ((attr === 'href' || attr === 'src') && /^javascript:/i.test(val.trim())) return;\r\n\t\t\tel.setAttribute(attr, val);\r\n\t\t});\r\n\t\tif (tag === 'a') { el.setAttribute('target', '_blank'); el.setAttribute('rel', 'noopener noreferrer'); }\r\n\t\tnode.childNodes.forEach(c => { const n = clean(c); if (n) el.appendChild(n); });\r\n\t\treturn el;\r\n\t}\r\n\tconst wrap = document.createElement('div');\r\n\tconst frag = document.createDocumentFragment();\r\n\tdoc.body.childNodes.forEach(c => { const n = clean(c); if (n) frag.appendChild(n); });\r\n\twrap.appendChild(frag);\r\n\treturn wrap.innerHTML;\r\n}\r\n\r\n/* ── RTE toolbar ── */\r\ndocument.getElementById('rich-edit-toolbar').addEventListener('mousedown', e => {\r\n\tconst btn = e.target.closest('.rte-btn');\r\n\tif (!btn) return;\r\n\te.preventDefault();\r\n\tconst cmd = btn.dataset.cmd;\r\n\tconst content = document.getElementById('preview-content');\r\n\tif (cmd === 'h1' || cmd === 'h2' || cmd === 'h3') {\r\n\t\tdocument.execCommand('formatBlock', false, cmd);\r\n\t} else if (cmd === 'createLink') {\r\n\t\tconst sel = window.getSelection();\r\n\t\tif (sel && sel.toString().trim()) {\r\n\t\t\tconst link = prompt('Enter URL:');\r\n\t\t\tif (link && link.trim()) {\r\n\t\t\t\tdocument.execCommand('createLink', false, link.trim());\r\n\t\t\t\tcontent.querySelectorAll('a:not([rel])').forEach(a => {\r\n\t\t\t\t\ta.setAttribute('target', '_blank');\r\n\t\t\t\t\ta.setAttribute('rel', 'noopener noreferrer');\r\n\t\t\t\t});\r\n\t\t\t}\r\n\t\t} else {\r\n\t\t\ttool.notify('Select text first to add a link', 'warning');\r\n\t\t}\r\n\t} else {\r\n\t\tdocument.execCommand(cmd, false, null);\r\n\t}\r\n\tcontent.focus();\r\n\tonRichInput();\r\n\tupdateToolbarState();\r\n});\r\n\r\nfunction updateToolbarState() {\r\n\t['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList'].forEach(cmd => {\r\n\t\tconst btn = document.querySelector(`.rte-btn[data-cmd=\"${cmd}\"]`);\r\n\t\tif (btn) btn.classList.toggle('active', document.queryCommandState(cmd));\r\n\t});\r\n}\r\n\r\n/* ── Read-only ── */\r\nfunction applyReadOnly(ro) {\r\n\tconst app = document.getElementById('app');\r\n\tconst btnToggleEdit = document.getElementById('btn-toggle-edit');\r\n\tconst tabBar = document.getElementById('tab-bar');\r\n\r\n\tif (monacoReady) {\r\n\t\t['html', 'css', 'js'].forEach(k => {\r\n\t\t\tmonacoEditors[k]?.updateOptions({ readOnly: ro });\r\n\t\t});\r\n\t}\r\n\r\n\tif (ro) {\r\n\t\tapp.classList.add('readonly-mode');\r\n\t\tif (richEditActive) exitRichEdit(false);\r\n\t\tbtnToggleEdit.style.display = 'none';\r\n\t\ttabBar.style.display = 'none';\r\n\t} else {\r\n\t\tapp.classList.remove('readonly-mode');\r\n\t\ttabBar.style.display = 'flex';\r\n\t\tbtnToggleEdit.style.display = isAdmin ? 'flex' : 'none';\r\n\t}\r\n\tswitchTab('viewer');\r\n\ttool.resize();\r\n}\r\n\r\n/* ── Clear ── */\r\ndocument.getElementById('btn-clear').addEventListener('click', () => {\r\n\tif (!savedData[currentSubTab]?.trim()) return;\r\n\tsavedData[currentSubTab] = '';\r\n\tif (monacoReady) monacoEditors[currentSubTab]?.setValue('');\r\n\tupdateCharCount();\r\n\tupdateSubtabBadges();\r\n\tsave(true);\r\n\trenderViewer();\r\n\ttool.notify(`${currentSubTab.toUpperCase()} cleared`, 'info');\r\n});\r\n\r\n/* ── Tab / subtab buttons ── */\r\ndocument.getElementById('btn-viewer').addEventListener('click', () => switchTab('viewer'));\r\ndocument.getElementById('btn-code').addEventListener('click', () => switchTab('code'));\r\ndocument.getElementById('btn-toggle-edit').addEventListener('click', () => enterRichEdit());\r\ndocument.getElementById('btn-save-edit').addEventListener('click', () => exitRichEdit(true));\r\ndocument.getElementById('btn-cancel-edit').addEventListener('click', () => exitRichEdit(false));\r\ndocument.querySelectorAll('.code-subtab').forEach(btn =>\r\n\tbtn.addEventListener('click', () => switchSubTab(btn.dataset.sub)));\r\n\r\n/* ── Notes ── */\r\nfunction renderNotes() {\r\n\tconst list = document.getElementById('notes-list');\r\n\tconst notes = visibleNotes();\r\n\tconst myId = currentUser ? currentUser.id : null;\r\n\r\n\tif (notes.length === 0) {\r\n\t\tlist.innerHTML = '<p class=\"notes-empty\">No notes yet. Be the first to add one.<\/p>';\r\n\t\tupdateNotesTitle(0); return;\r\n\t}\r\n\r\n\tconst sorted = [...notes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));\r\n\tlist.innerHTML = '';\r\n\tsorted.forEach(note => {\r\n\t\tconst isOwn = note.authorId === myId;\r\n\t\tconst item = document.createElement('div');\r\n\t\titem.className = 'note-item' + (isOwn ? ' own-note' : '');\r\n\t\titem.dataset.id = note.id;\r\n\t\titem.innerHTML = `\r\n      <div class=\"note-meta\">\r\n        <span class=\"note-author\">${escHtml(note.authorName || 'Unknown')}<\/span>\r\n        ${isOwn ? '<span class=\"note-badge\">You<\/span>' : ''}\r\n        <span class=\"note-time\">${formatTime(note.createdAt)}<\/span>\r\n        ${note.updatedAt ? '<span class=\"note-time\"> · edited<\/span>' : ''}\r\n      <\/div>\r\n      <div class=\"note-text\">${escHtml(note.text)}<\/div>\r\n      <textarea class=\"note-edit-area\" rows=\"3\">${escHtml(note.text)}<\/textarea>\r\n      ${isOwn ? `\r\n        <div class=\"note-actions\">\r\n          <button class=\"note-btn edit-trigger\"><i class=\"ti ti-edit\"><\/i> Edit<\/button>\r\n          <button class=\"note-btn save\" style=\"display:none\"><i class=\"ti ti-check\"><\/i> Save<\/button>\r\n          <button class=\"note-btn cancel-edit\" style=\"display:none\"><i class=\"ti ti-x\"><\/i> Cancel<\/button>\r\n          <button class=\"note-btn danger delete-btn\"><i class=\"ti ti-trash\"><\/i> Delete<\/button>\r\n        <\/div>` : ''}\r\n    `;\r\n\t\tif (isOwn) {\r\n\t\t\titem.querySelector('.edit-trigger').addEventListener('click', () => startNoteEdit(item, note.id));\r\n\t\t\titem.querySelector('.save').addEventListener('click', () => commitNoteEdit(item, note.id));\r\n\t\t\titem.querySelector('.cancel-edit').addEventListener('click', () => cancelNoteEdit(item, note.id));\r\n\t\t\titem.querySelector('.delete-btn').addEventListener('click', () => deleteNote(note.id));\r\n\t\t}\r\n\t\tlist.appendChild(item);\r\n\t});\r\n\tupdateNotesTitle(notes.length);\r\n}\r\n\r\nfunction updateNotesTitle(count) {\r\n\tdocument.getElementById('notes-title').innerHTML =\r\n\t\t`<i class=\"ti ti-notes\"><\/i> Notes${count > 0\r\n\t\t\t? ` <span style=\"font-size:11px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:99px;padding:1px 7px;\">${count}<\/span>`\r\n\t\t\t: ''}`;\r\n}\r\n\r\nfunction startNoteEdit(item, id) {\r\n\titem.querySelector('.note-text').classList.add('editing');\r\n\titem.querySelector('.note-edit-area').classList.add('visible');\r\n\titem.querySelector('.edit-trigger').style.display = 'none';\r\n\titem.querySelector('.save').style.display = 'flex';\r\n\titem.querySelector('.cancel-edit').style.display = 'flex';\r\n\titem.querySelector('.delete-btn').style.display = 'none';\r\n\titem.querySelector('.note-edit-area').focus();\r\n}\r\n\r\nfunction cancelNoteEdit(item, id) {\r\n\tconst note = savedData.notes.find(n => n.id === id);\r\n\titem.querySelector('.note-edit-area').value = note ? note.text : '';\r\n\titem.querySelector('.note-text').classList.remove('editing');\r\n\titem.querySelector('.note-edit-area').classList.remove('visible');\r\n\titem.querySelector('.edit-trigger').style.display = 'flex';\r\n\titem.querySelector('.save').style.display = 'none';\r\n\titem.querySelector('.cancel-edit').style.display = 'none';\r\n\titem.querySelector('.delete-btn').style.display = 'flex';\r\n}\r\n\r\nfunction commitNoteEdit(item, id) {\r\n\tconst newText = item.querySelector('.note-edit-area').value.trim();\r\n\tif (!newText) { tool.notify('Note cannot be empty', 'warning'); return; }\r\n\tconst idx = savedData.notes.findIndex(n => n.id === id);\r\n\tif (idx === -1) return;\r\n\tsavedData.notes[idx].text = newText;\r\n\tsavedData.notes[idx].updatedAt = new Date().toISOString();\r\n\tsave(false); renderNotes();\r\n\ttool.notify('Note updated', 'success');\r\n}\r\n\r\nfunction deleteNote(id) {\r\n\tsavedData.notes = savedData.notes.filter(n => n.id !== id);\r\n\tsave(false); renderNotes();\r\n\ttool.notify('Note deleted', 'info');\r\n}\r\n\r\nfunction postNote() {\r\n\tconst input = document.getElementById('note-input');\r\n\tconst text = input.value.trim();\r\n\tif (!text) return;\r\n\tsavedData.notes.push({\r\n\t\tid: uid(), authorId: currentUser?.id || 'anonymous',\r\n\t\tauthorName: currentUser?.name || 'Anonymous',\r\n\t\ttext, createdAt: new Date().toISOString(), updatedAt: null\r\n\t});\r\n\tsave(false); renderNotes();\r\n\tinput.value = ''; input.style.height = '';\r\n\ttool.notify('Note posted', 'success');\r\n\tdocument.getElementById('notes-list').scrollTop = 0;\r\n}\r\n\r\ndocument.getElementById('btn-post-note').addEventListener('click', postNote);\r\ndocument.getElementById('note-input').addEventListener('keydown', e => {\r\n\tif (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); postNote(); }\r\n});\r\ndocument.getElementById('note-input').addEventListener('input', function () {\r\n\tthis.style.height = 'auto';\r\n\tthis.style.height = Math.min(this.scrollHeight, 120) + 'px';\r\n});\r\ndocument.getElementById('notes-header').addEventListener('click', () => {\r\n\tnotesCollapsed = !notesCollapsed;\r\n\tdocument.getElementById('notes-panel').classList.toggle('collapsed', notesCollapsed);\r\n\ttool.resize();\r\n});"}}</script>
+<!-- CODE-PAYLOAD-END -->
+
+<!-- SCREENSHOTS-PAYLOAD-START - refresh-docs-index.js replaces the payload between these markers -->
+<script type="application/json" id="shots-payload">[]</script>
+<!-- SCREENSHOTS-PAYLOAD-END -->
+
+<script>
+(function () {
+  'use strict';
+  var frame = document.getElementById('docs-frame');
+  var openButton = document.getElementById('docs-open');
+  var codeView = document.getElementById('docs-code-view');
+  var codeTitle = document.getElementById('docs-code-title');
+  var codeMeta = document.getElementById('docs-code-meta');
+  var codeElement = document.getElementById('docs-code-code');
+  var codeCopyButton = document.getElementById('docs-code-copy');
+  var codeOpenButton = document.getElementById('docs-code-open');
+  var navItems = Array.prototype.slice.call(document.querySelectorAll('.docs-nav-item'));
+  var currentSource = 'ssot.html';
+  var currentCodeKind = '';
+
+  var codePayload = { html: null, css: null, js: null };
+  try {
+    codePayload = JSON.parse(document.getElementById('code-payload').textContent) || codePayload;
+  } catch (error) { /* payload unavailable */ }
+
+  /* ---- screenshots viewer ---- */
+  var shotsView = document.getElementById('docs-shots-view');
+  var shotsViewer = document.getElementById('docs-shots-viewer');
+  var shotsImg = document.getElementById('docs-shots-img');
+  var shotsEmpty = document.getElementById('docs-shots-empty');
+  var shotsInfo = document.getElementById('docs-shots-info');
+  var shotsThumbs = document.getElementById('docs-shots-thumbs');
+  var shotsPrev = document.getElementById('docs-shots-prev');
+  var shotsNext = document.getElementById('docs-shots-next');
+  var shotsPayload = [];
+  try {
+    shotsPayload = JSON.parse(document.getElementById('shots-payload').textContent) || [];
+  } catch (error) { /* payload unavailable */ }
+  var currentShotIndex = 0;
+
+  function renderShotsInfo(shot) {
+    if (!shotsInfo) return;
+    if (!shot) { shotsInfo.innerHTML = ''; return; }
+    var fields = [
+      ['File', shot.name || ''],
+      ['Shot', shot.label || ''],
+      ['Page', shot.page || ''],
+      ['Viewport', shot.viewport || ''],
+      ['Dimensions', shot.width && shot.height ? shot.width + ' \u00d7 ' + shot.height + ' px' : ''],
+      ['Captured', shot.capturedAt ? shot.capturedAt.replace('T', ' ').slice(0, 19) + ' UTC' : ''],
+      ['Used in', Array.isArray(shot.usedIn) && shot.usedIn.length ? shot.usedIn.join(', ') : 'docs index viewer'],
+    ];
+    shotsInfo.innerHTML = '<p class="docs-shots-counter">Screenshot ' + (currentShotIndex + 1) + ' of ' + shotsPayload.length + '</p>' +
+      '<dl>' + fields.filter(function (field) { return field[1]; })
+        .map(function (field) { return '<div><dt>' + field[0] + '</dt><dd>' + field[1] + '</dd></div>'; })
+        .join('') + '</dl>';
+  }
+
+  function showShot(index) {
+    if (!shotsPayload.length) {
+      if (shotsImg) shotsImg.style.display = 'none';
+      if (shotsEmpty) shotsEmpty.style.display = '';
+      if (shotsPrev) shotsPrev.style.display = 'none';
+      if (shotsNext) shotsNext.style.display = 'none';
+      if (shotsThumbs) shotsThumbs.style.display = 'none';
+      renderShotsInfo(null);
+      return;
+    }
+    currentShotIndex = ((index % shotsPayload.length) + shotsPayload.length) % shotsPayload.length;
+    var shot = shotsPayload[currentShotIndex];
+    if (shotsImg) {
+      shotsImg.style.display = '';
+      shotsImg.src = shot.src;
+    }
+    if (shotsEmpty) shotsEmpty.style.display = 'none';
+    if (shotsPrev) shotsPrev.style.display = shotsPayload.length > 1 ? '' : 'none';
+    if (shotsNext) shotsNext.style.display = shotsPayload.length > 1 ? '' : 'none';
+    if (shotsThumbs) {
+      shotsThumbs.innerHTML = shotsPayload.map(function (entry, i) {
+        return '<button class="docs-shots-thumb' + (i === currentShotIndex ? ' active' : '') + '" type="button" data-shot-index="' + i + '">' +
+          '<img src="' + entry.src + '" alt="' + (entry.label || entry.name) + '" loading="lazy" />' +
+          '<span>' + (entry.label || entry.name) + '</span></button>';
+      }).join('');
+    }
+    renderShotsInfo(shot);
+  }
+
+  function openShotsPane() {
+    currentCodeKind = '';
+    codeView.classList.remove('visible');
+    shotsView.classList.add('visible');
+    frame.style.display = 'none';
+    if (openButton) openButton.style.display = 'none';
+    showShot(currentShotIndex);
+  }
+
+  if (shotsThumbs) {
+    shotsThumbs.addEventListener('click', function (event) {
+      var thumb = event.target.closest ? event.target.closest('.docs-shots-thumb') : null;
+      if (!thumb) return;
+      showShot(Number(thumb.getAttribute('data-shot-index')) || 0);
+    });
+  }
+  if (shotsPrev) shotsPrev.addEventListener('click', function () { showShot(currentShotIndex - 1); });
+  if (shotsNext) shotsNext.addEventListener('click', function () { showShot(currentShotIndex + 1); });
+  document.addEventListener('keydown', function (event) {
+    if (!shotsView.classList.contains('visible')) return;
+    if (event.key === 'ArrowLeft') showShot(currentShotIndex - 1);
+    if (event.key === 'ArrowRight') showShot(currentShotIndex + 1);
+    if (event.key === 'Escape') { shotsView.classList.remove('visible'); frame.style.display = ''; if (openButton) openButton.style.display = ''; }
+  });
+
+  function activateItem(activeItem) {
+    navItems.forEach(function (item) { item.classList.toggle('active', item === activeItem); });
+  }
+
+  function showCodePane(kind) {
+    var entry = codePayload[kind];
+    currentCodeKind = kind;
+    codeView.classList.add('visible');
+    shotsView.classList.remove('visible');
+    frame.style.display = 'none';
+    if (openButton) openButton.style.display = 'none';
+    if (!entry) {
+      codeTitle.textContent = kind.toUpperCase() + ' code';
+      codeMeta.textContent = 'no ' + kind + ' file in the app folder';
+      codeElement.textContent = '';
+      return;
+    }
+    codeTitle.textContent = entry.name;
+    var lineCount = entry.content ? entry.content.split('\n').length : 0;
+    codeMeta.textContent = lineCount + ' lines - ' + (entry.content ? entry.content.length : 0) + ' characters';
+    codeElement.textContent = entry.content || '';
+    codeView.scrollTop = 0;
+  }
+
+  function showDocumentPane(item) {
+    currentCodeKind = '';
+    codeView.classList.remove('visible');
+    shotsView.classList.remove('visible');
+    frame.style.display = '';
+    if (openButton) openButton.style.display = '';
+    currentSource = item.getAttribute('data-src');
+    frame.src = currentSource;
+  }
+
+  function openItem(item) {
+    if (!item) return;
+    activateItem(item);
+    if (item.getAttribute('data-doc') === 'screenshots') {
+      openShotsPane();
+    } else if (item.getAttribute('data-doc').indexOf('code-') === 0) {
+      showCodePane(item.getAttribute('data-doc').slice(5));
+    } else {
+      showDocumentPane(item);
+    }
+    try { window.location.hash = 'doc=' + item.getAttribute('data-doc'); } catch (error) { /* ignore */ }
+  }
+
+  navItems.forEach(function (item) {
+    item.addEventListener('click', function () { openItem(item); });
+  });
+
+  if (openButton) {
+    openButton.addEventListener('click', function () {
+      var fullUrl = new URL(currentSource, window.location.href).href;
+      try { window.open(fullUrl, '_blank'); } catch (error) { /* blocked */ }
+    });
+  }
+
+  if (codeCopyButton) {
+    codeCopyButton.addEventListener('click', function () {
+      var entry = codePayload[currentCodeKind];
+      var text = entry && entry.content ? entry.content : '';
+      if (!text) return;
+      function markCopied() {
+        codeCopyButton.textContent = 'Copied ✓';
+        codeCopyButton.classList.add('copied');
+        setTimeout(function () {
+          codeCopyButton.textContent = 'Copy code';
+          codeCopyButton.classList.remove('copied');
+        }, 1600);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(markCopied).catch(function () { fallbackCopy(text, markCopied); });
+      } else {
+        fallbackCopy(text, markCopied);
+      }
+    });
+  }
+
+  if (codeOpenButton) {
+    codeOpenButton.addEventListener('click', function () {
+      var entry = codePayload[currentCodeKind];
+      if (!entry || !entry.src) return;
+      var fullUrl = new URL(entry.src, window.location.href).href;
+      try { window.open(fullUrl, '_blank'); } catch (error) { /* blocked */ }
+    });
+  }
+
+  function fallbackCopy(text, markCopied) {
+    var textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try { document.execCommand('copy'); } catch (error) { /* copying unavailable */ }
+    document.body.removeChild(textArea);
+    markCopied();
+  }
+
+  // ?doc= or #doc= shortcut opens that document on load
+  try {
+    var requestedDoc = new URLSearchParams(window.location.search).get('doc')
+      || window.location.hash.replace(/^#doc=/, '');
+    if (requestedDoc) {
+      var requestedItem = navItems.find(function (item) { return item.getAttribute('data-doc') === requestedDoc; });
+      if (requestedItem) openItem(requestedItem);
+    }
+  } catch (error) { /* ignore */ }
+})();
+</script>
+</body>
+</html>

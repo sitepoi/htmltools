@@ -138,8 +138,8 @@
     the relationship and which sections are superseded here.]
   </p>
   <table>
-    <tr><th>Document version</th><td>0.2</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <tr><th>Document version</th><td>0.3</td></tr>
+    <tr><th>Last updated</th><td>2026-09-23</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
@@ -386,6 +386,18 @@
       <td>Bank statements, invoices paid and invoices sent drive opposite sides of the ledger and users keep them apart; separating them prevents direction mistakes and guides the AI correctly. Risk traded away: one more field per document - mitigated by automatic migration and auto-detection (CSV defaults to bank-statement).</td>
       <td class="status-adopted">Adopted</td>
     </tr>
+    <tr>
+      <td>D-PTP-02</td><td>2026-09-23</td>
+      <td>The public marketing "demo" is a screenshot gallery (5-10 captured views with a lightbox viewer), never a live or embedded tool. The webpage, help and social documents reuse the same captures.</td>
+      <td>The tool's HTML/CSS/JS must never reach a public page where a visitor, scraper or AI could copy it. Flat screenshots show the product without exposing the source; mock data only, never real customer data.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-PTP-03</td><td>2026-09-23</td>
+      <td>The test harness accepts a ?page=<view> query parameter to open a named view after load (dashboard, documents, transactions, finder, gst, assistant, reports, settings).</td>
+      <td>Powers the automated per-page screenshot capture (npm run screenshots) so every page of the tool gets its own marketing shot without manual clicks. Harness-only; no effect on the production tool.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -546,6 +558,36 @@
     </div>
   </section>
 
+  <section class="task-group" data-release-group="public-screenshots" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Public screenshots and gallery</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="public-screenshots">0/1</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="public-screenshots"></div></div>
+    <p class="task-group-note">Why these belong together: the per-page harness navigation, the nine captured views and the gallery-based public demo are one feature - shipping only part of it would leave the public page with a broken or missing demo.</p>
+
+    <div class="task-item" data-task-id="T-02" data-group="public-screenshots" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Screenshot gallery demo: harness ?page navigation, nine captured views, gallery replaces the live demo</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a live demo on a public page exposes the tool's code to visitors and scrapers; customers still need to see the product before buying.</p>
+          <p><strong>How we will solve it:</strong> the harness opens any named view via ?page=, npm run screenshots captures nine views (dashboard, documents, transactions, finder, GST, assistant, reports, settings + mobile), and the marketing page shows them as a gallery with a lightbox - images only.</p>
+          <p><strong>Benefit:</strong> the public page demonstrates the tool without shipping a single line of its code; the same captures feed the help figures, the social media strip and the docs index viewer.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code>, <code>docs/screenshots/*</code>, <code>docs/webpage.html</code>, <code>docs/help.html</code>, <code>docs/social.html</code>, <code>docs/index.html</code></p>
+          <p><strong>Status:</strong> DONE - nine unique shots captured and verified; gallery, help figures, social strip and index viewer render with the real captures.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
@@ -655,6 +697,7 @@
   <table>
     <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
     <tbody id="release-log-rows">
+    <tr><td>2026-09-23</td><td>v0.1.3</td><td>[COMMIT-HASH]</td><td>Public picture tour: nine captured screenshots with a gallery viewer on the marketing page; help figures and the social media strip reuse the same shots; harness ?page= navigation powers the automated captures.</td></tr>
     <tr><td>2026-09-21</td><td>v0.1.1</td><td>1e90dc1/td><td>Document kind areas: separate uploads for bank statements, invoices paid, invoices sent and other documents; kind-aware AI classification; automatic legacy migration.</td></tr>
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
     </tbody>
@@ -662,7 +705,7 @@
 
   <div class="footer">
     Personal Tax Preparation - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-09-21.
+    tool. Version 0.3, 2026-09-23.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

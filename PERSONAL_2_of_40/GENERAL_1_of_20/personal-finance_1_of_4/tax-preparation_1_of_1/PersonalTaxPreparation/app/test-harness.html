@@ -738,6 +738,17 @@ try {
 		}
 	}
 } catch (e) {}
+/* Navigate to a named page via ?page= (QA convenience for screenshot capture):
+   waits a moment for the tool to be ready, then clicks the matching nav item. */
+try {
+	var requestedPage = new URLSearchParams(window.location.search).get('page');
+	if (requestedPage) {
+		setTimeout(function () {
+			var navItem = document.querySelector('.nav-item[data-page="' + requestedPage + '"]');
+			if (navItem) navItem.click();
+		}, 200);
+	}
+} catch (e) {}
 </script>
 </body>
 </html>

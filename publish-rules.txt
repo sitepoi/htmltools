@@ -1,30 +1,50 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PUBLISH AND PUSH RULES - chat-driven publishing protocol (GitHub Copilot)
+SHIP RULES - the end-to-end shipment protocol (GitHub Copilot)
 
-TRIGGER COMMAND (one stable phrase - use it every time)
-The user says:   PUBLISH AND PUSH   (short alias: SHIP)
-Copilot then executes THE WHOLE procedure below - phases 0 through 7 - in
+TRIGGER COMMAND (ONE WORD - the user's word for the whole process)
+The user says:   SHIP
+Copilot then executes THE WHOLE procedure below - phases 0 through 8 - in
 one go, with no further confirmation needed beyond this command:
   1. finds every changed tool,
   2. updates each changed tool's SSOT in the same change as the code,
   3. regenerates all 5 satellite documents per changed tool,
-  4. appends the release rows,
-  5. runs the verification gate,
-  6. commits, bumps the version, and pushes,
-  7. reports the result.
-Any other wording (e.g. "prepare the docs", "update the ssot") does NOT
-include the commit and push - only the trigger command does.
+  4. captures the screenshots and refreshes the galleries/viewers,
+  5. appends the release rows + a new social share set per ship,
+  6. runs the verification gate,
+  7. commits, bumps the version, and pushes,
+  8. prepares the CMS handoff bundle (npm run ship:cms) and reports.
+Any other wording (e.g. "prepare the docs", "update the ssot", the old
+"PUBLISH AND PUSH" phrase) does NOT include the commit and push - only
+"SHIP" does. "SHIP" is THE word; there is no other trigger.
 
 WHEN THIS FILE APPLIES
-"PUBLISH AND PUSH" (or "SHIP") always triggers the full procedure below.
+"SHIP" always triggers the full procedure below.
 This file is auto-attached to the chat context like the other *-rules.txt
 files - the checklist is always visible.
 
 GOLDEN RULE (never broken)
 - "Prepare everything" is NOT a push order. Commit, version and push happen
-  ONLY because the user asked to publish/push in the current conversation.
+  ONLY because the user said SHIP in the current conversation.
 - If any phase fails, STOP, fix it, and report - never skip a phase to reach
   the push.
+
+CODE PROTECTION RULES (public pages - never broken)
+The tool's code is the store's product. Public pages must make it
+IMPOSSIBLE - not just hard - for a visitor, scraper or AI to reach it:
+- The public webpage (docs/webpage.html and its webpage-export.html) shows
+  SCREENSHOTS ONLY. The gallery band IS the demo. Never embed the tool's
+  HTML/CSS/JS, the test harness, iframes of the app, or code blocks there.
+- Only the PUBLIC design system (webpage.css/js, ssot.css/js,
+  presentation.css/js) may ship with public pages - they carry no tool
+  logic and no secrets.
+- docs/ is the INTERNAL documentation folder. Its index.html, code panes
+  and the harness link are for the team - they are never pasted to the
+  website, the CMS public web, or any customer-facing surface.
+- Screenshots are flat PNGs - code cannot be extracted from them. Capture
+  with sample/mock data only, never with real customer data.
+- If a future live demo is ever desired, it must run behind the CMS's own
+  sandbox (server-side or a hosted instance), NEVER by shipping the source
+  to the page.
 
 WHAT THE PUBLISH DOES (end to end)
 1. Finds every tool changed since the last push.
@@ -44,12 +64,12 @@ without calling any AI backend.
 TOOLS WITHOUT DOCUMENTS YET (first documentation)
 When a changed tool has no docs/ folder yet (or its satellites are still
 template placeholders), the publish CREATES the full set in the same run:
-  - Phase 0.3 creates the 6 files from the templates,
+  - Phase 0.3 creates the 7 files from the templates,
   - Phase 2 fills the SSOT completely from the code,
   - Phase 3 generates all 5 satellites in full,
   - Phase 4 appends the first release row to updates.html + ssot.html.
-Expected volume: N changed tools × 6 documents. Three new tools = 18
-documents (3 SSOTs + 15 satellites), all completed in one publish run.
+Expected volume: N changed tools × 7 files (the docs index + SSOT + 5
+satellites). Three new tools = 21 files, all completed in one publish run.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -74,8 +94,9 @@ PHASE 0 - PREFLIGHT (always first, read-only)
 0.3 Docs folders complete
     Run:
       npm run docs:init
-    Purpose: idempotent - creates any missing file of the 6 documents in
-    every tool's docs/ folder. Never overwrites existing documents.
+    Purpose: idempotent - creates any missing file of the 7 documents in
+    every tool's docs/ folder (index.html + SSOT + 5 satellites). Never
+    overwrites existing documents.
 
 0.4 Plan with the user
     Show the changed tools and confirm the order of work. If the user only
@@ -186,19 +207,53 @@ The SSOT is NEVER overwritten by generation. Each document follows its
 template in _docs/templates/ (same structure, same class names, content only
 between the GENERATED markers).
 
-3.1 docs/webpage.html - marketing webpage fragment
+3.1 docs/webpage.html - marketing webpage on the SHARED design system
     Content block only (no html/head/body tags) - pasted into the CMS webpage
-    content tool. Structure: full-width hero (eyebrow, headline, subheadline,
-    two CTA buttons, trust points) → stats band → 6 benefit cards with SVG
-    icons → two alternating highlight rows with checklists → 3-step
-    how-it-works → comparison table → 3 testimonials → FAQ (3 details
-    blocks) → final CTA band. ALL styles scoped under .<tool-kebab>-page.
+    content tool. The page has a STABLE shell: accent <style> block, links to
+    the shared _docs/assets/webpage.css + webpage.js, hero, GENERATED
+    markers, the SCREENSHOT GALLERY band (the protected "demo" - see the
+    CODE PROTECTION rules below), final CTA. Copilot rewrites ONLY the
+    content between the GENERATED-START and GENERATED-END markers:
+    stats band (4 wp-stat) → 6 wp-card benefits with SVG icons → two
+    alternating highlight rows (wp-split / wp-reverse; the wp-visual keeps
+    the screenshots/01-dashboard-desktop.png and
+    screenshots/03-documents-desktop.png <img> tags exactly) → a third
+    "Works where you are" row with the portrait screenshots/02-dashboard-
+    mobile.png in a wp-visual wp-visual-mobile (present ONLY while the
+    mobile shot exists) → 3-step how-it-works → comparison table → 3
+    testimonials → FAQ (3 details).
+    RULES OF THE DESIGN SYSTEM (never break these):
+    - The design is IDENTICAL for every tool - it lives ONCE in
+      _docs/assets/webpage.css + webpage.js (wp- classes). Change the design
+      THERE, never per page.
+    - A tool's identity is its COLOR ONLY: the accent pair
+      --wp-accent / --wp-accent-2 in the page's tiny inline <style>, taken
+      from the tool's own CSS --primary (npm run docs:init fills it).
+    - No per-tool <style> blocks, no new class prefixes, no inline styles
+      in the generated region. Content only.
+    - The gallery band is the ONLY "demo": it shows the tool's
+      screenshots (5-10 images, filled automatically from
+      docs/screenshots/ by docs:init) with a lightbox viewer from
+      webpage.js. The tool's code is NEVER on this page.
+    - Screenshots: docs/screenshots/01-09*.png, captured with
+      npm run screenshots -- <ToolName> (headless Edge, sample data).
+      Broken images fall back to a "Screenshot coming soon" plate
+      (webpage.js) - never delete the <img> tags.
+    - For the website: run npm run webpage:export -- <ToolName> to produce
+      docs/webpage-export.html - the same page with webpage.css + webpage.js
+      INLINED, ready to paste anywhere. The inlined css/js is the PUBLIC
+      design system only (no tool logic). Replace the two [CTA link]s.
     Focus on BENEFITS that sell. Real facts only - no invented names.
 
 3.2 docs/help.html - user help
     Only the five sections between the markers: Overview / Before you start /
     Step by step (exact clicks) / Common questions / Troubleshooting. Plain
     user words - no implementation details, no decisions, no code.
+    The sixth section "6. What it looks like" lives OUTSIDE the markers -
+    it is the shell's fixed screenshot figures (docs/screenshots/<shot>
+    with captions), filled automatically by npm run docs:init. Never
+    rewrite or delete it; when the tool has no screenshots the section is
+    simply absent.
 
 3.3 docs/presentation.html - marketing deck
     Only the nine <section class="pres-slide"> blocks: 01 title (class
@@ -208,13 +263,22 @@ between the GENERATED markers).
     closing (pres-closing). Keep data-slide-number attributes. Benefits
     focus. The shared presentation.js adds nav/counter/PDF export.
 
-3.4 docs/social.html - share kit
-    Only the content between the markers: 3 WhatsApp share-cards (short /
-    medium / long), 4 post share-cards (X under 280 chars / LinkedIn /
-    Instagram / Facebook), 1 hashtags share-card with .hashtags chips, 3
-    visual ideas, 1 one-pager pitch share-card, the links list. Every
-    share-card keeps a div.share-body[data-share-text] - the Copy buttons
-    depend on it. Emojis allowed inside share TEXTS only, never in headings.
+3.4 docs/social.html - share kit (ONE NEW SET PER SHIP)
+    Only the content between the markers for the NEWEST ship: 3 WhatsApp
+    share-cards (short / medium / long), 4 post share-cards (X under 280
+    chars / LinkedIn / Instagram / Facebook), 1 hashtags share-card with
+    .hashtags chips, 3 visual ideas (prefer REAL screenshots + diagrams),
+    1 one-pager pitch share-card, the links list. Every share-card keeps a
+    div.share-body[data-share-text] - the Copy buttons depend on it.
+    Emojis allowed inside share TEXTS only, never in headings.
+    Every SHIP = its own social share set: before writing the new kit,
+    move the previous kit into the archive between the SHARE-SETS-START
+    and SHARE-SETS-END markers as a <details class="share-set"> block
+    (summary = version · date · one-line) and write the new kit between
+    the GENERATED markers. Never delete a set - an app updates many
+    times, and every update keeps its shares. The fixed sections 7
+    (Media to attach - real screenshot thumbnails) and 8 (share sets
+    archive) live OUTSIDE the markers and are filled by docs:init.
 
 3.5 docs/updates.html - Highlights only
     Rewrite the paragraph(s) between the GENERATED-HIGHLIGHTS markers: one
@@ -228,11 +292,47 @@ between the GENERATED markers).
     - Keep the template's class names and the marker comments intact.
 
 3.7 First-time generation (tool had no documents before this run)
-    When the changed tool's docs/ was just created by Phase 0.3, its 6 files
+    When the changed tool's docs/ was just created by Phase 0.3, its 7 files
     are template placeholders - generate ALL of them in full now: the whole
     SSOT content in Phase 2 and every satellite section in Phase 3. The
     "update" wording in 3.1-3.5 means "build from scratch" for such tools.
-    When done, none of the 6 files may still contain template placeholders.
+    When done, none of the 7 files may still contain template placeholders.
+    (The screenshots figures/rows/payloads are filled by docs:init from
+    the actual files on disk - never hand-write shot paths into content.)
+
+3.8 Code panes freshness (docs/index.html)
+    The index embeds the tool's HTML/CSS/JS for viewing and copying - after
+    every code change, refresh those panes for each changed tool:
+      npm run docs:index-code -- <ToolName>
+    (Mode A: npm run rel does this automatically for changed tools.)
+
+3.9 Screenshots freshness (docs/screenshots/)
+    After code changes that touch what a customer sees (dashboard, lists,
+    reports, documents areas), refresh the tool's marketing screenshots:
+      npm run screenshots -- <ToolName>
+    Nine shots per tool: 01-dashboard-desktop (1440x900), 02-dashboard-
+    mobile (390x844), 03-documents, 04-transactions, 05-expense-finder,
+    06-gst, 07-assistant, 08-reports, 09-settings (all 1440x900 desktop,
+    via ?sample=1&page=<page> - requires the harness ?page= param). When a
+    harness does not support a page, the duplicate of the dashboard is
+    detected byte-for-byte and deleted, so every tool keeps only its
+    UNIQUE shots (aim: at least 5). The script ALSO writes
+    docs/screenshots/screenshots.json - the manifest (file, label, page,
+    viewport, REAL pixel dimensions read from the PNG, capture time).
+    Consumers of the shots: the webpage highlight rows (01/02/03), the
+    webpage gallery band (all), the help "What it looks like" figures
+    (all), the social media strip (all) and the index viewer (all).
+
+3.10 Screenshots viewer freshness (docs/index.html)
+    The index has a MEDIA → Screenshots viewer: large preview with
+    prev/next, an info panel below (file, shot label, page, viewport,
+    dimensions, capture time, which docs use the shot) and a thumbnail
+    strip - all from the embedded SCREENSHOTS-PAYLOAD. After capturing or
+    after any doc starts using a shot, refresh the payload:
+      npm run docs:index-shots -- <ToolName>
+    (Mode A: npm run rel does this automatically right after the capture.)
+    The "Used in" row must list every document that references the shot -
+    keep webpage.html and help.html in sync with the shots they embed.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PHASE 4 - RELEASE ROWS (per changed tool)
@@ -258,8 +358,8 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
 5.1 Docs completeness
       find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name docs | wc -l
         → equals the number of tools (50 today)
-    Every docs folder contains all 6 files: ssot.html, webpage.html,
-    help.html, presentation.html, updates.html, social.html.
+    Every docs folder contains all 7 files: index.html, ssot.html,
+    webpage.html, help.html, presentation.html, updates.html, social.html.
 
 5.2 Risk gate (changed tools only)
     Read the SSOT of every changed tool: no OPEN risk with data-risk-level
@@ -311,7 +411,7 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
     For every tool whose docs/ was created in THIS run: the SSOT has
     capabilities (section 3) plus at least one decision or a baseline note,
     release rows exist in both updates.html and ssot.html, and none of the
-    6 files contains template placeholders. Count check: new tools × 6 =
+    7 files contains template placeholders. Count check: new tools × 7 =
     the number of created/updated documents reported in Phase 7.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -345,12 +445,56 @@ PHASE 7 - REPORT
 After every publish, report:
 - the new version number and the commit(s) pushed
 - the changed tools and what shipped for each
-- the document count: N changed tools × 6 documents created/updated (e.g.
-  3 first-time tools = 18 documents), listed per tool
+- the document count: N changed tools × 7 files created/updated (the docs
+  index + SSOT + 5 satellites; e.g. 3 first-time tools = 21 files), listed
+  per tool
 - which documents were created/updated (SSOT sections, satellites, release
   rows, control tower index)
 - folder names re-synced (when Phase 1 ran) with the new counts
 - anything left for the user (open risks accepted, deferred work, next steps)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 8 - CMS HANDOFF BUNDLE (prepare only - no CMS calls yet)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After the push, build the payload bundle the application store CMS will
+consume when its import API is ready:
+      npm run ship:cms -- <ToolName>     (or --all)
+The script writes ship-out/<ToolName>/ with:
+  - webpage-export.html  → the website application's related object
+  - help.html            → the app's help object
+  - presentation.html    → the app's presentation object
+  - updates.html         → the app's updates object
+  - social.html          → the app's social object
+  - code/                → the html tool library folder (html/css/js)
+  - manifest.json        → the exact CMS targets per file (object type,
+                           object id, field, create vs update)
+The script NEVER talks to the CMS. The target mapping + the open questions
+for the CMS team live in SHIP-CMS-PLAN.md - read it before asking for the
+CMS import API. When the CMS is ready, this phase upgrades from bundle
+building to the real upload (still only inside the SHIP run).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DESIGN DECISIONS LOG (agreed in the design discussions - keep them here)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+D-01 The SHIP word: "SHIP" is THE trigger for the full end-to-end
+    shipment process (commit, version, push + all doc phases). The older
+    "PUBLISH AND PUSH" wording is retired and no longer triggers anything.
+D-02 Shared design system: webpage/ssot/presentation design lives ONCE in
+    _docs/assets/; a tool differs only by its accent colors and content.
+D-03 The public "demo" is a screenshot gallery (5-10 images) - never a
+    working tool. Code protection beats interactivity (see the CODE
+    PROTECTION RULES).
+D-04 One capture, many documents: docs/screenshots/ + screenshots.json
+    feed the webpage rows + gallery, the help figures, the social media
+    strip, and the index viewer (with its info panel).
+D-05 Social sharing is per SHIP: every update appends its own share set to
+    docs/social.html (archive via SHARE-SETS markers); shares reference
+    the real screenshots/diagrams of that ship.
+D-06 CMS integration is planned but NOT active: SHIP Phase 8 prepares the
+    bundle (npm run ship:cms) and SHIP-CMS-PLAN.md lists what we need from
+    the CMS team (see Phase 8).
+D-07 docs/ is internal documentation; public surfaces are only webpage-
+    export.html (website) and the social texts + screenshots.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HARD RULES (apply to every phase, no exceptions)
@@ -390,5 +534,7 @@ DOC LAYOUT (per tool folder)
   <Tool>/app/        the tool itself
   <Tool>/listing/    only when a listing tool is built
   <Tool>/reporting/  only when a reporting tool is built
-  <Tool>/docs/       ssot.html + webpage.html + help.html + presentation.html
+  <Tool>/docs/       index.html (one-page shell - open ONLY this to reach
+                     every document and the test harness in iframes) +
+                     ssot.html + webpage.html + help.html + presentation.html
                      + updates.html + social.html

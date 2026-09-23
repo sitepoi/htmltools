@@ -33,6 +33,18 @@
   .hashtags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .hashtag { background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; border-radius: 999px; padding: 4px 12px; font-size: 0.82rem; font-weight: 600; }
   .footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem; }
+  /* media to attach + per-ship share sets (shared shell) */
+  .share-media { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px; }
+  .share-media-shot { margin: 0; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f8fafc; }
+  .share-media-shot img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; display: block; }
+  .share-media-shot figcaption { padding: 6px 9px; font-size: 0.7rem; color: #64748b; word-break: break-all; }
+  .share-set { margin: 12px 0; border: 1px solid #e2e8f0; border-radius: 14px; background: #ffffff; overflow: hidden; }
+  .share-set > summary { cursor: pointer; padding: 14px 18px; font-weight: 700; color: #0f172a; background: #f8fafc; list-style: none; }
+  .share-set > summary::before { content: '\25B8 '; color: #4f46e5; }
+  .share-set[open] > summary::before { content: '\25BE '; }
+  .share-set > summary .share-set-date { float: right; color: #64748b; font-weight: 500; font-size: 0.8rem; }
+  .share-set-body { padding: 4px 18px 16px; }
+  .share-set-body .share-card { border: 1px solid #eef2ff; }
 </style>
 </head>
 <body>
@@ -121,6 +133,23 @@
 </ul>
 
 <!-- GENERATED-END -->
+
+<h2 id="media">7. Media to attach</h2>
+<div class="share-card">
+  <div class="share-card-head"><span class="share-tag">Screenshots for the latest ship</span></div>
+  <p class="share-note">Attach the real screenshots below to every post of this release. Diagrams or
+  promo images can be added the same way - the goal is one strong visual per post.</p>
+  <div class="share-media"><p class="share-note">No screenshots yet - run npm run screenshots -- SummerJobs_StaffHandbook and re-run docs:init.</p></div>
+</div>
+
+<!-- SHARE-SETS-START - one archived share set per ship, newest first.
+     After every SHIP, Copilot moves the previous kit here as a
+     <details class="share-set"> block and writes the new kit between the
+     GENERATED markers above. -->
+<h2 id="share-sets">8. Share sets by release</h2>
+<p class="meta">Every SHIP adds its own share set - use the newest on top. Multiple updates
+mean multiple sets; nothing is ever deleted, only archived.</p>
+<!-- SHARE-SETS-END -->
 
 <div class="footer">
   Summer Jobs Staff Handbook - social media share kit. Satellite of the SSOT system -

@@ -32,23 +32,32 @@ const MAX_TEMPLATE_CHARS = 24000
 const GENERATION_SPECS = {
   webpage: {
     templateName: 'webpage',
-    promptTitle: 'MARKETING WEBPAGE FRAGMENT',
+    promptTitle: 'MARKETING WEBPAGE CONTENT',
     outputContract: [
-      'Output ONLY the content block, exactly two parts in this order:',
-      '1. one <style> block whose rules are ALL scoped under the .[css]-page class',
-      '   (never style bare html/body/a/button tags)',
-      '2. one <div class="[css]-page"> ... </div> block.',
-      'Follow the template structure: full-width hero with eyebrow, headline, subheadline,',
-      'two CTA buttons and trust points; a stats band overlapping the hero; a benefits',
-      'grid of six cards with SVG icons; two alternating highlight rows with checklists;',
-      'a three-step how-it-works; a comparison table (the usual way vs this tool); three',
-      'testimonials with five stars; an FAQ with three details blocks; a final full-width',
-      'CTA band. Keep every class name of the template (the [css] prefix stands for',
-      'the class prefix given below). Replace every placeholder with real content.',
-      'Focus on BENEFITS and outcomes that sell the product - the reader is a buyer.',
-      'Do NOT output html/head/body tags, code fences, or markdown. Do NOT invent',
-      'customer names - use "Customer, Role at Company" style placeholders only when',
-      'a real name is unavailable.',
+      'Output ONLY the HTML between the GENERATED-START and GENERATED-END',
+      'markers of the template below (the hero, the screenshot gallery band',
+      'and the final CTA live OUTSIDE the markers - never output them). The',
+      'region',
+      'contains, in order: a stats band overlapping the hero (four wp-stat',
+      'blocks), a benefits section with six wp-card blocks with SVG icons,',
+      'two alternating highlight rows (wp-split, wp-reverse) whose wp-visual',
+      'holds the screenshot <img> tag with the src placeholder kept as-is,',
+      'plus a third wp-split row when the page has the mobile screenshot',
+      '(02-dashboard-mobile.png) - keep whichever rows the template shows,',
+      'a three-step how-it-works (wp-step blocks), a comparison table (the',
+      'usual way vs this tool), three testimonials (wp-testimonial with',
+      'five stars), and an FAQ with three details blocks.',
+      'Keep every wp- class name exactly as in the template. Replace every',
+      '[PLACEHOLDER] in the region with real content - but keep the',
+      'screenshot <img src="screenshots/..."> attributes exactly as the',
+      'template has them. The page uses the SHARED design system',
+      '(_docs/assets/webpage.css + webpage.js) with per-tool accent colors',
+      'already set in the page shell - do NOT add your own <style> block or',
+      'change colors; write content only.',
+      'Focus on BENEFITS and outcomes that sell the product. No invented',
+      'customer names - use role-style citations ("Owner, BC consulting',
+      'practice") when no real name is available. Do NOT output code fences',
+      'or markdown.',
     ].join('\n'),
   },
   help: {
@@ -99,12 +108,16 @@ const GENERATION_SPECS = {
       '2. Social media posts - four share-cards (X post under 280 characters,',
       '   LinkedIn post, Instagram caption, Facebook post)',
       '3. Hashtags - one share-card with data-share-text plus the .hashtags chips',
-      '4. Suggested visuals - three concrete ideas (screenshot, before/after, recording)',
+      '4. Suggested visuals - three concrete ideas referencing the real',
+      '   screenshots in docs/screenshots/ (or a diagram), not generic ideas',
       '5. One-pager pitch - one share-card with data-share-text elevator pitch',
       '6. Links to use - keep the list of the other documents',
       'Keep the share-card / share-tag / share-copy structure exactly - the Copy',
       'buttons depend on data-share-text. Emojis are welcome INSIDE the share texts',
       'but never in headings. Use [link] as a placeholder for the public URL.',
+      'The sections 7 (Media to attach - real screenshot thumbnails) and 8',
+      '(Share sets by release archive) live OUTSIDE the markers and are shell-owned -',
+      'never output them. This kit is the NEWEST ship; older ships live in the archive.',
       'Do NOT output the h1, meta paragraph, footer or script. No code fences.',
     ].join('\n'),
   },
@@ -149,9 +162,7 @@ function buildGenerationPrompt({ tool, documentType, spec, conversationContext }
   const template = templateContent(spec.templateName)
   const templateRegion = documentType === 'updates'
     ? templateRegionBetween(template, HIGHLIGHTS_START, HIGHLIGHTS_END)
-    : documentType === 'webpage'
-      ? template.slice(template.indexOf('<style>'))
-      : templateRegionBetween(template, GENERATED_START, GENERATED_END)
+    : templateRegionBetween(template, GENERATED_START, GENERATED_END)
 
   return [
     'You are writing the ' + spec.promptTitle + ' for "' + displayName + '",',
@@ -209,12 +220,6 @@ function spliceRegion(documentContent, startMarker, endMarker, newContent) {
   return before + '\n' + newContent + '\n' + after
 }
 
-function spliceWebpage(previousContent, newContent) {
-  const headerCommentEnd = previousContent.indexOf('-->') + 3
-  if (headerCommentEnd <= 3) return newContent
-  return previousContent.slice(0, headerCommentEnd) + '\n' + newContent + '\n'
-}
-
 async function generateToolDocumentation(tool, { types = context.SATELLITE_TYPES, dryRun = false, sinceTime = '' } = {}) {
   const log = (message) => console.log(message)
   log(`\n=== ${tool.toolName} (${tool.parts.join(', ')}) ===`)
@@ -261,9 +266,7 @@ async function generateToolDocumentation(tool, { types = context.SATELLITE_TYPES
     }
 
     let newContent
-    if (documentType === 'webpage') {
-      newContent = spliceWebpage(currentContent || templateContent('webpage'), aiOutput)
-    } else if (documentType === 'updates') {
+    if (documentType === 'updates') {
       newContent = spliceRegion(currentContent, HIGHLIGHTS_START, HIGHLIGHTS_END, aiOutput)
     } else {
       newContent = spliceRegion(currentContent, GENERATED_START, GENERATED_END, aiOutput)

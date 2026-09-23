@@ -90,7 +90,9 @@ body {
   background: radial-gradient(900px 480px at 85% -10%, #7c3aed 0%, transparent 55%),
     linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
   color: #ffffff;
-  display: flex; flex-direction: column; justify-content: center;
+  /* display comes ONLY from .pres-slide / .pres-slide.active - a display
+     here would override display:none and keep slide 1 visible forever */
+  flex-direction: column; justify-content: center;
 }
 .pres-title-slide.active { display: flex; }
 .pres-title-slide h1 { color: #ffffff; font-size: clamp(2.2rem, 5vw, 3.6rem); }
@@ -111,7 +113,9 @@ body {
 .pres-closing {
   background: radial-gradient(800px 400px at 20% -10%, #7c3aed 0%, transparent 55%),
     linear-gradient(135deg, #1e1b4b, #4f46e5 70%, #7c3aed);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  /* display comes ONLY from .pres-slide / .pres-slide.active - a display
+     here would override display:none and keep the last slide visible forever */
+  flex-direction: column; align-items: center; justify-content: center;
   text-align: center;
 }
 .pres-closing.active { display: flex; }
