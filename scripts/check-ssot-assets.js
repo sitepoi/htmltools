@@ -1,11 +1,11 @@
 // ── SHARED ASSETS CHECK (npm run ssot:check) ───────────────────────────────
 // Verifies that every tool's SSOT and satellite documents link the SHARED
 // design layer in _docs/assets/ (ssot.css, ssot.js, presentation.css,
-// presentation.js, webpage.css, webpage.js). The design lives ONCE in
-// _docs/assets - editing those files restyles every document instantly, so no
-// document may drift into its own copy. social.html and index.html (the
-// one-page docs shell) are intentionally self-contained - index.html is
-// checked for EXISTENCE only.
+// presentation.js, webpage.css, webpage.js, index.css, index.js). The design
+// lives ONCE in _docs/assets - editing those files restyles every document
+// instantly, so no document may drift into its own copy. social.html is
+// intentionally self-contained (it is pasted into the CMS or shared
+// directly). index.html links index.css/index.js and carries only its data.
 // webpage.html links are reported as WARNINGS: a page still on the old
 // self-contained format works, and it moves to the shared webpage design
 // system when it is next rebuilt (npm run docs:init / docs:generate).
@@ -19,6 +19,7 @@ const REQUIRED_LINKS = {
   'help.html': ['assets/ssot.css'],
   'updates.html': ['assets/ssot.css'],
   'presentation.html': ['assets/presentation.css', 'assets/presentation.js'],
+  'index.html': ['assets/index.css', 'assets/index.js'],
 }
 const WEBPAGE_LINKS = ['assets/webpage.css', 'assets/webpage.js']
 

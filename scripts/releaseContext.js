@@ -2,7 +2,7 @@
 // Collects dynamic project context from:
 //   a) git (diff, commit logs, changed files since any commit ref)
 //   b) every tool's SSOT (docs/ssot.html under every tool folder)
-//   c) the tool ideas catalog (UNICON-TOOLS/tool-ideas-catalog.json) and the
+//   c) the tool ideas catalog (UNICON-TOOLS/tools-catalog/tool-ideas-catalog.json) and the
 //      tool index (UNICON-TOOLS/all-tools.html)
 //   d) this project's VS Code Copilot transcript (other projects' chats are
 //      filtered out by project-path mentions; RELEASE_CONTEXT_FILE overrides)
@@ -34,8 +34,8 @@ const MAX_RELEVANT_DECISION_ROWS = 15
 const ROOT = join(__dirname, '..')
 const ASSETS_DIR = join(ROOT, '_docs', 'assets')
 const TEMPLATES_DIR = join(ROOT, '_docs', 'templates')
-const CATALOG_PATH = join(ROOT, 'UNICON-TOOLS', 'tool-ideas-catalog.json')
-const TAXONOMY_PATH = join(ROOT, 'UNICON-TOOLS', 'folder-hierarchy-import.json')
+const CATALOG_PATH = join(ROOT, 'UNICON-TOOLS', 'tools-catalog', 'tool-ideas-catalog.json')
+const TAXONOMY_PATH = join(ROOT, 'UNICON-TOOLS', 'tools-catalog', 'folder-hierarchy-import.json')
 const ALL_TOOLS_PATH = join(ROOT, 'UNICON-TOOLS', 'all-tools.html')
 const TOOL_PARTS = ['app', 'listing', 'reporting']
 const SATELLITE_TYPES = ['webpage', 'help', 'presentation', 'social', 'updates']

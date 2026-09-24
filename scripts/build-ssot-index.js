@@ -11,7 +11,7 @@ const { join, relative } = require('path')
 const releaseContext = require('./releaseContext')
 
 const INDEX_PATH = join(releaseContext.ROOT, '_docs', 'index.html')
-const TAXONOMY_PATH = join(releaseContext.ROOT, 'UNICON-TOOLS', 'folder-hierarchy-import.json')
+const TAXONOMY_PATH = join(releaseContext.ROOT, 'UNICON-TOOLS', 'tools-catalog', 'folder-hierarchy-import.json')
 
 function escapeHtml(text) {
   return String(text || '')

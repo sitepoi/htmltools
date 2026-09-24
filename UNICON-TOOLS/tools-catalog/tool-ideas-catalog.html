@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Ideas Catalog - UniconHub</title>
+<style>
+  :root {
+    --bg: #f1f5f9; --panel: #ffffff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --accent: #1e4e79; --accent-soft: #e8f0f8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI Variable Text", "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; font-size: 15.5px; }
+  .sidebar, header.page-head, .toolbar, .sel-bar, section.branch, .detail-pane, footer.page-foot { box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+  .layout { display: flex; gap: 14px; max-width: none; margin: 0; padding: 18px 16px 70px; align-items: flex-start; }
+  .sidebar { width: 292px; flex-shrink: 0; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; transition: width .15s ease; }
+  .sidebar.collapsed { width: 44px; }
+  .sidebar.collapsed .side-head { justify-content: center; padding-left: 0; padding-right: 0; }
+  .sidebar.collapsed .side-head-title, .sidebar.collapsed .side-total, .sidebar.collapsed #sideNav { display: none; }
+  .side-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 12px 14px 8px; font-size: 14px; font-weight: 700; color: var(--accent); }
+  .side-toggle { border: 1px solid var(--line); background: #fff; border-radius: 6px; width: 26px; height: 24px; padding: 0; cursor: pointer; font-size: 12px; color: var(--muted); line-height: 1; flex-shrink: 0; }
+  .side-toggle:hover { background: var(--accent-soft); }
+  .side-total { padding: 0 14px 10px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+  .side-total b { color: var(--ink); }
+  .side-group { border-bottom: 1px solid var(--line); }
+  .side-group:last-child { border-bottom: none; }
+  .side-group-head { padding: 8px 12px; cursor: pointer; user-select: none; }
+  .side-group-head:hover { background: var(--accent-soft); }
+  .side-group-title { font-size: 12.5px; font-weight: 700; display: flex; justify-content: space-between; gap: 6px; }
+  .side-group-title .count { color: var(--accent); }
+  .side-group-totals { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+  .side-group-totals span { margin-right: 7px; white-space: nowrap; }
+  .side-group-totals b { color: var(--ink); }
+  .side-cats { display: none; border-top: 1px solid #edf1f5; padding: 3px 0; }
+  .side-group.open .side-cats { display: block; }
+  .side-item { display: flex; justify-content: space-between; gap: 6px; padding: 4px 12px 4px 18px; font-size: 11.5px; cursor: pointer; color: var(--ink); }
+  .side-item:hover { background: #f2f6fa; }
+  .side-item.active { background: var(--accent-soft); font-weight: 600; }
+  .side-item .meta { color: var(--muted); white-space: nowrap; }
+  .side-subitem { display: flex; justify-content: space-between; gap: 6px; padding: 3px 10px 3px 32px; font-size: 11px; cursor: pointer; color: var(--ink); }
+  .side-subitem:hover { background: #f2f6fa; }
+  .side-subitem.active { background: var(--accent-soft); font-weight: 600; }
+  .side-subitem .meta { color: var(--muted); white-space: nowrap; }
+  .main { flex: 1; min-width: 0; }
+  header.page-head { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
+  h1 { margin: 0 0 5px; font-size: 21px; color: var(--accent); }
+  .page-head-row { display: flex; align-items: center; gap: 10px; }
+  .page-head-row h1 { margin: 0; }
+  .font-controls { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .font-btn { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 4px 11px; cursor: pointer; font-size: 13px; color: var(--ink); line-height: 1.4; }
+  .font-btn:hover { background: var(--accent-soft); }
+  .font-level { font-size: 11.5px; color: var(--muted); min-width: 40px; text-align: center; }
+  .head-sub { color: var(--muted); font-size: 12.5px; }
+  .stats-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .stat-chip { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font-size: 12px; }
+  .stat-chip strong { color: var(--accent); font-size: 14px; margin-right: 4px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; position: sticky; top: 8px; z-index: 5; box-shadow: 0 2px 8px rgba(28,36,48,.06); }
+  .toolbar label { font-size: 12px; color: var(--muted); margin-right: 3px; }
+  .toolbar input[type=search], .toolbar select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 13px; background: #fff; color: var(--ink); }
+  .toolbar input[type=search] { width: 180px; }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .tb-btn { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; color: var(--ink); }
+  .toolbar .tb-btn:hover { background: var(--accent-soft); }
+  .tb-menu-wrap { position: relative; }
+  .tb-menu { display: none; position: absolute; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(15,23,42,.12); min-width: 220px; z-index: 30; padding: 5px; }
+  .tb-menu.open { display: block; }
+  .tb-menu-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 7px 10px; font-size: 12.5px; border-radius: 6px; cursor: pointer; color: var(--ink); }
+  .tb-menu-item:hover { background: var(--accent-soft); }
+  .tb-menu-sep { height: 1px; background: var(--line); margin: 5px 4px; }
+  .sel-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .sel-title { font-size: 15px; font-weight: 700; }
+  .sel-path { font-size: 11.5px; color: var(--muted); }
+  .sel-totals { margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+  .sel-totals b { color: var(--ink); }
+  section.branch { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .branch-head { display: flex; align-items: center; gap: 10px; padding: 11px 15px; cursor: pointer; user-select: none; background: #f8fafc; }
+  .branch-head:hover { background: #edf2f7; }
+  .branch-title { font-size: 14.5px; font-weight: 700; }
+  .branch-counts { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .branch-counts b { color: var(--ink); }
+  .branch-arrow { color: var(--muted); transition: transform .15s; }
+  section.branch.collapsed .branch-arrow { transform: rotate(-90deg); }
+  section.branch.collapsed .branch-body { display: none; }
+  .cat { border-top: 1px solid var(--line); }
+  .cat-head { display: flex; align-items: center; gap: 10px; padding: 8px 15px 8px 24px; cursor: pointer; user-select: none; background: #fcfdfe; }
+  .cat-head:hover { background: #f2f6fa; }
+  .cat-title { font-size: 13px; font-weight: 600; }
+  .cat-meta { font-size: 11.5px; color: var(--muted); margin-left: auto; }
+  .cat-arrow { color: var(--muted); font-size: 11px; transition: transform .15s; }
+  .cat.collapsed .cat-arrow { transform: rotate(-90deg); }
+  .cat.collapsed .idea-list { display: none; }
+  .idea-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; padding: 10px 12px 12px; }
+  .idea-card { border: 1px solid var(--line); border-radius: 9px; padding: 11px 13px; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+  .idea-card:hover { border-color: #b9cadb; box-shadow: 0 2px 10px rgba(28,36,48,.07); }
+  .idea-head { display: flex; gap: 8px; align-items: flex-start; }
+  .idea-head .titles { flex: 1; min-width: 0; }
+  .idea-name { font-weight: 700; font-size: 13.5px; }
+  .idea-sub { font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 400; }
+  .idea-purpose { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .idea-metrics { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 6px; }
+  .metric { background: #f8fafc; border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; min-width: 0; }
+  .metric .ml { display: block; font-size: 10px; letter-spacing: .4px; color: var(--muted); text-transform: uppercase; }
+  .metric .mv { display: block; font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .idea-foot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .idea-foot select { border: 1px solid var(--line); border-radius: 6px; font-size: 12px; padding: 3px 6px; background: #fff; color: var(--ink); }
+  .notes-btn { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 10px; font-size: 11.5px; cursor: pointer; color: var(--muted); }
+  .notes-btn.has-notes { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .lic-badge { border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 600; background: var(--accent-soft); color: var(--accent); border: 1px solid var(--line); white-space: nowrap; }
+  .st-badge { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 600; border: 1px solid var(--line); white-space: nowrap; }
+  .st-planned { background: #e8f0f8; color: #1e4e79; border-color: #b6cde4; }
+  .st-progress { background: #fdf3df; color: #96680a; border-color: #eed8a6; }
+  .st-built { background: #e4f4e8; color: #1d7a36; border-color: #9fd8ad; }
+  .st-skipped { background: #fbeaea; color: #b02a2a; border-color: #eab4b4; }
+  .idea-notes-area { display: none; }
+  .idea-notes-area.open { display: block; }
+  .idea-notes-area textarea { width: 100%; min-height: 50px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; font-family: inherit; resize: vertical; }
+  .empty-note { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  /* ---- one-item-per-line table ---- */
+  .idea-table-wrap { overflow-x: auto; }
+  table.idea-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; }
+  table.idea-table th { text-align: left; padding: 7px 9px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border-bottom: 2px solid var(--line); background: #f8fafc; white-space: nowrap; }
+  table.idea-table th.sortable { cursor: pointer; }
+  table.idea-table th.sortable:hover { color: var(--accent); }
+  table.idea-table th.sorted { color: var(--accent); }
+  table.idea-table td { padding: 7px 9px; border-bottom: 1px solid #edf1f5; vertical-align: top; }
+  table.idea-table tr:hover td { background: #f5f8fb; }
+  td.idea-name-cell { min-width: 220px; }
+  .idea-name-cell .idea-name { font-weight: 700; font-size: 13px; display: block; }
+  .idea-name-cell .idea-purpose { font-size: 11.5px; color: var(--muted); margin-top: 1px; max-width: 460px; }
+  td.idea-metrics-cell { white-space: nowrap; color: var(--muted); }
+  td.idea-metrics-cell b { color: var(--ink); }
+  .tool-folder-cell { font-family: Consolas, monospace; font-size: 11.5px; color: var(--accent); white-space: nowrap; }
+  .tool-folder-cell.dash { color: var(--muted); }
+  .st-badge.auto { border-style: dashed; }
+  /* ---- publish score ---- */
+  td.pub-cell-td { white-space: nowrap; }
+  .pub-cell { display: flex; align-items: center; gap: 6px; min-width: 96px; }
+  .pub-bar { width: 52px; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; flex-shrink: 0; }
+  .pub-fill { height: 100%; background: #cbd5e1; }
+  .pub-fill.pub-partial { background: #d99a2b; }
+  .pub-fill.pub-full { background: #1d7a36; }
+  .pub-score { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .pub-ver { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  .pub-overview .pub-bar { width: 100%; height: 8px; margin: 8px 0 5px; }
+  .pub-meta { font-size: 12px; color: var(--muted); }
+  .pub-meta b { color: var(--ink); }
+  .pub-fields { display: flex; gap: 10px; margin-top: 8px; }
+  .pub-fields label { font-size: 11.5px; color: var(--muted); display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .pub-fields input { border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font-size: 12.5px; color: var(--ink); }
+  .pub-subjects { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 8px; margin-top: 8px; }
+  .pub-subject { display: flex; align-items: center; gap: 6px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px; background: #fff; }
+  .pub-subject.on { background: var(--accent-soft); border-color: #b6cde4; }
+  .pub-subject input { cursor: pointer; margin: 0; }
+  .pub-subject input:disabled { cursor: not-allowed; }
+  .pub-missing { font-size: 10px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  /* ---- right detail pane ---- */
+  .detail-pane { width: 460px; flex-shrink: 0; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .detail-placeholder { padding: 22px 16px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  .dp-head { display: flex; align-items: flex-start; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+  .dp-title { font-size: 15px; font-weight: 700; flex: 1; line-height: 1.35; }
+  .dp-sub { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 3px; }
+  .dp-close { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+  .dp-close:hover { background: var(--accent-soft); }
+  .dp-body { padding: 12px 14px 18px; }
+  .dp-body h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 14px 0 6px; }
+  .dp-body h3:first-child { margin-top: 0; }
+  .dp-docs-btn { display: inline-block; background: var(--accent); color: #fff; border-radius: 6px; padding: 7px 14px; font-size: 12.5px; font-weight: 600; text-decoration: none; margin-top: 10px; }
+  .dp-docs-btn:hover { background: #163f66; }
+  table.idea-table tr[data-id] { cursor: pointer; }
+  table.idea-table tr[data-id].selected td { background: var(--accent-soft); }
+  table.idea-table tr[data-id].selected:hover td { background: #d3e4f2; }
+  .details-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 4px; }
+  .details-tool { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; }
+  .details-tool .dt-path { font-family: Consolas, monospace; font-size: 11px; color: var(--accent); word-break: break-all; margin-top: 3px; }
+  .details-tool .dt-line { margin-top: 3px; }
+  .details-tool .dt-line b { color: var(--ink); }
+  .details-files { max-height: 180px; overflow-y: auto; border: 1px solid #edf1f5; border-radius: 8px; margin-top: 6px; }
+  .details-files table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  .details-files td { padding: 4px 10px; border-bottom: 1px solid #f0f3f6; }
+  .details-files td:last-child { text-align: right; color: var(--muted); white-space: nowrap; }
+  .details-docs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .details-docs .doc-chip { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 2px 9px; font-size: 11px; }
+  .details-docs .doc-chip.missing { color: var(--muted); border-style: dashed; background: #fafbfc; }
+  .details-notes textarea { width: 100%; min-height: 70px; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font-size: 12.5px; font-family: inherit; resize: vertical; }
+  .details-work { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .details-work select { border: 1px solid var(--line); border-radius: 6px; font-size: 12px; padding: 4px 7px; background: #fff; }
+  .details-auto-note { font-size: 11.5px; color: #1d7a36; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #fff; border-radius: 10px; padding: 16px 18px; width: min(620px, 92vw); max-height: 86vh; display: flex; flex-direction: column; }
+  .modal-box h2 { margin: 0 0 8px; font-size: 15px; }
+  .modal-box textarea { width: 100%; flex: 1; min-height: 260px; border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: Consolas, monospace; font-size: 12px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+  .modal-actions button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 12.5px; }
+  .modal-actions button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  footer.page-foot { margin-top: 14px; font-size: 11.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  @media (max-width: 1200px) {
+    .detail-pane { position: static; width: 100%; max-height: none; }
+  }
+  @media (max-width: 980px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; position: static; max-height: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="side-head">
+      <span class="side-head-title">Groups</span>
+      <button class="side-toggle" id="sidebarToggle" title="Collapse / expand the groups menu">«</button>
+    </div>
+    <div class="side-total" id="sideTotals"></div>
+    <nav id="sideNav"></nav>
+  </aside>
+
+  <div class="main">
+
+    <header class="page-head">
+      <div class="page-head-row">
+        <h1>Tool Ideas Catalog</h1>
+        <div class="font-controls">
+          <button class="font-btn" id="fontMinus" title="Smaller text">A−</button>
+          <span class="font-level" id="fontLevel">100%</span>
+          <button class="font-btn" id="fontPlus" title="Larger text">A+</button>
+        </div>
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+    </header>
+
+    <div class="toolbar">
+      <label for="searchInput">Search</label>
+      <input type="search" id="searchInput" placeholder="Name, purpose...">
+      <label for="statusFilter">Status</label>
+      <select id="statusFilter"><option value="all">All</option><option value="backlog">Backlog</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="built">Built</option><option value="skipped">Skipped</option></select>
+      <label for="licensingFilter">Licensing</label>
+      <select id="licensingFilter"><option value="all">All</option></select>
+      <label for="sortSelect">Sort</label>
+      <select id="sortSelect"><option value="order">Catalog order</option><option value="som">SOM (high first)</option><option value="tam">TAM (high first)</option><option value="name">Name</option><option value="status">Status</option><option value="licensing">Licensing</option><option value="folder">Built as</option><option value="publish">Publish score</option></select>
+      <div class="spacer"></div>
+      <div class="tb-menu-wrap">
+        <button class="tb-btn" id="btnActionsMenu" title="All actions">⚙ Actions ▾</button>
+        <div class="tb-menu" id="actionsMenu">
+          <button class="tb-menu-item" id="menuExportHierarchy" data-action="export-hierarchy">📦 Export folder hierarchy</button>
+          <button class="tb-menu-item" data-action="export-ideas">📄 Export ideas catalog</button>
+          <button class="tb-menu-item" data-action="export-work">Export work</button>
+          <button class="tb-menu-item" data-action="import-work">Import work</button>
+          <div class="tb-menu-sep"></div>
+          <button class="tb-menu-item" data-action="export-publish">📤 Export publish</button>
+          <button class="tb-menu-item" data-action="import-publish">📥 Import publish</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="selectionBar"></div>
+    <div id="groupsContainer"></div>
+
+    <footer class="page-foot">
+      <details>
+        <summary>About this page (reference notes)</summary>
+        <p>Pick a group, category or subcategory on the left to browse its ideas; click an item in the list to see its details on the right. The <b>Built</b> status is derived AUTOMATICALLY from the repo - every tool folder under BUSINESS*/PERSONAL* is detected with its code files, docs and screenshots. Manual status (Backlog / Planned / In Progress / Skipped) applies to ideas without a built folder and is saved in this browser.</p>
+        <p>This page is the <b>SSOT for the folder hierarchy</b> - <b>Export folder hierarchy</b> downloads the structure in the folder-hierarchy-import.json schema with a <b>new version number on every export</b>.</p>
+        <p>Master data lives in <b>catalog-data.js</b> (the SSOT - the MANUAL region is edited via AI conversation; the GENERATED region is the repo scan). The JSON files in this folder (<b>tool-ideas-catalog.json</b>, <b>folder-hierarchy-import.json</b>, <b>tool-publish-state.json</b>) are exported copies refreshed by <b>npm run catalog:build</b>, and can also be exported on demand from the Actions menu. Manual work state (status for ideas without a folder, priority, notes) is saved in this browser (localStorage key uniconhub_tool_ideas_work_v1).</p>
+      </details>
+    </footer>
+
+  </div>
+
+  <aside class="detail-pane" id="detailsPane">
+    <div class="detail-placeholder">Select an item from the list to see its details.</div>
+  </aside>
+
+</div>
+
+<div class="modal-overlay" id="workModal">
+  <div class="modal-box">
+    <h2 id="workModalTitle">Work state JSON</h2>
+    <textarea id="workModalText"></textarea>
+    <div class="modal-actions">
+      <button id="workModalClose">Close</button>
+      <button class="primary" id="workModalApply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<script src="catalog-data.js"></script>
+<script>
+
+var WORK_STORAGE_KEY = "uniconhub_tool_ideas_work_v1";
+var STATUSES = [
+  { id: "backlog", label: "Backlog" },
+  { id: "planned", label: "Planned", cls: "st-planned" },
+  { id: "in-progress", label: "In Progress", cls: "st-progress" },
+  { id: "built", label: "Built", cls: "st-built" },
+  { id: "skipped", label: "Skipped", cls: "st-skipped" }
+];
+var PRIORITIES = [
+  { id: "none", label: "Priority: -" },
+  { id: "low", label: "Priority: Low" },
+  { id: "medium", label: "Priority: Medium" },
+  { id: "high", label: "Priority: High" }
+];
+var LICENSING_LABELS = {
+  "freemium": "Freemium",
+  "subscription-monthly": "Monthly subscription",
+  "subscription-annual": "Annual subscription",
+  "one-time": "One-time purchase",
+  "per-seat-monthly": "Per-seat monthly",
+  "usage-based": "Usage based",
+  "white-label": "White label",
+  "app-bundle": "App bundle"
+};
+
+var Q = String.fromCharCode(34);
+
+var _work = loadWork();
+var _filters = { search: "", status: "all", licensing: "all", sort: "order" };
+var _selection = { kind: "cat", key: "B-G-01" };
+var _collapsedGroups = {};
+var SIDEBAR_KEY = "catalog_sidebar_collapsed";
+
+function setSidebarCollapsed(collapsed) {
+  document.getElementById("sidebar").classList.toggle("collapsed", collapsed);
+  document.getElementById("sidebarToggle").textContent = collapsed ? "»" : "«";
+  document.getElementById("sidebarToggle").title = collapsed ? "Expand the groups menu" : "Collapse the groups menu";
+  try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0"); } catch (err) { /* storage unavailable */ }
+}
+
+var FONT_ZOOM_KEY = "catalog_font_zoom";
+var FONT_ZOOM_STEPS = [0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25];
+var _fontZoomIndex = 3;
+
+function applyFontZoom(index) {
+  _fontZoomIndex = Math.max(0, Math.min(FONT_ZOOM_STEPS.length - 1, index));
+  var level = FONT_ZOOM_STEPS[_fontZoomIndex];
+  document.body.style.zoom = String(level);
+  var levelLabel = document.getElementById("fontLevel");
+  if (levelLabel) levelLabel.textContent = Math.round(level * 100) + "%";
+  try { localStorage.setItem(FONT_ZOOM_KEY, String(_fontZoomIndex)); } catch (err) { /* ignore */ }
+}
+
+function initFontZoom() {
+  var stored = 3;
+  try {
+    var raw = localStorage.getItem(FONT_ZOOM_KEY);
+    if (raw !== null) stored = parseInt(raw, 10);
+    if (isNaN(stored) || stored < 0 || stored >= FONT_ZOOM_STEPS.length) stored = 3;
+  } catch (err) { /* ignore */ }
+  applyFontZoom(stored);
+}
+
+function allIdeas() {
+  var list = [];
+  IDEA_GROUPS.forEach(function (g) { g.categories.forEach(function (c) { c.ideas.forEach(function (i) { list.push(i); }); }); });
+  return list;
+}
+
+function findGroup(key) {
+  for (var i = 0; i < IDEA_GROUPS.length; i++) if (IDEA_GROUPS[i].key === key) return IDEA_GROUPS[i];
+  return null;
+}
+
+function findCat(key) {
+  for (var i = 0; i < IDEA_GROUPS.length; i++) {
+    var group = IDEA_GROUPS[i];
+    for (var j = 0; j < group.categories.length; j++) {
+      if (group.categories[j].key === key) return { group: group, cat: group.categories[j] };
+    }
+  }
+  return null;
+}
+
+function findSub(key) {
+  for (var i = 0; i < IDEA_GROUPS.length; i++) {
+    var group = IDEA_GROUPS[i];
+    for (var j = 0; j < group.categories.length; j++) {
+      var cat = group.categories[j];
+      for (var k = 0; k < cat.ideas.length; k++) {
+        if (cat.ideas[k].code === key) return { group: group, cat: cat, sub: key, label: cat.ideas[k].sub };
+      }
+    }
+  }
+  return null;
+}
+
+function loadWork() {
+  try {
+    var raw = localStorage.getItem(WORK_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) { return {}; }
+}
+
+function saveWork() {
+  try { localStorage.setItem(WORK_STORAGE_KEY, JSON.stringify(_work)); } catch (err) {}
+}
+
+function workOf(id) {
+  if (!_work[id]) _work[id] = { status: "backlog", priority: "none", notes: "" };
+  return _work[id];
+}
+
+function moneyOf(str) {
+  if (!str) return 0;
+  var cleaned = String(str).replace(/[$,]/g, "");
+  if (/B$/.test(cleaned)) return parseFloat(cleaned) * 1e9;
+  if (/M$/.test(cleaned)) return parseFloat(cleaned) * 1e6;
+  if (/K$/.test(cleaned)) return parseFloat(cleaned) * 1e3;
+  return parseFloat(cleaned) || 0;
+}
+
+function fmtMoney(value) {
+  if (value >= 1e9) return "$" + (value / 1e9).toFixed(1).replace(/.0$/, "") + "B";
+  if (value >= 1e6) return "$" + (value / 1e6).toFixed(1).replace(/.0$/, "") + "M";
+  if (value >= 1e3) return "$" + (value / 1e3).toFixed(0) + "K";
+  return "$" + value;
+}
+
+function esc(text) {
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function totalsOf(ideas) {
+  var totals = { tam: 0, sam: 0, som: 0, count: ideas.length };
+  ideas.forEach(function (idea) {
+    totals.tam += moneyOf(idea.tam);
+    totals.sam += moneyOf(idea.sam);
+    totals.som += moneyOf(idea.som);
+  });
+  return totals;
+}
+
+function subRowsOf(cat) {
+  var map = {};
+  cat.ideas.forEach(function (idea) {
+    if (!map[idea.code]) map[idea.code] = { code: idea.code, label: idea.sub, ideas: [] };
+    map[idea.code].ideas.push(idea);
+  });
+  var rows = [];
+  Object.keys(map).forEach(function (key) { rows.push(map[key]); });
+  rows.sort(function (a, b) { return a.code < b.code ? -1 : 1; });
+  return rows;
+}
+
+function renderSidebar() {
+  var all = allIdeas();
+  var total = totalsOf(all);
+  document.getElementById("sideTotals").innerHTML =
+    "<b>" + total.count + "</b> ideas<br>" +
+    "TAM <b>" + fmtMoney(total.tam) + "</b> - SAM <b>" + fmtMoney(total.sam) + "</b> - SOM <b>" + fmtMoney(total.som) + "</b>";
+
+  var nav = "";
+  IDEA_GROUPS.forEach(function (group) {
+    var groupTotals = totalsOf(group.categories.reduce(function (acc, c) { return acc.concat(c.ideas); }, []));
+    var groupActive = _selection.kind === "group" && _selection.key === group.key;
+    var groupContainsSelection = (_selection.kind === "cat" || _selection.kind === "sub") && group.categories.some(function (c) {
+      return c.key === _selection.key || c.ideas.some(function (idea) { return idea.code === _selection.key; });
+    });
+    nav += (
+      "<div class=" + Q + "side-group" + ((groupActive || groupContainsSelection) && !_collapsedGroups[group.key] ? " open" : "") + Q + " data-gkey=" + group.key + ">" +
+        "<div class=side-group-head data-act=select-group data-key=" + group.key + ">" +
+          "<div class=side-group-title><span>" + esc(group.label) + "</span><span class=count>" + groupTotals.count + "</span></div>" +
+          "<div class=side-group-totals>" +
+            "<span>TAM <b>" + fmtMoney(groupTotals.tam) + "</b></span>" +
+            "<span>SAM <b>" + fmtMoney(groupTotals.sam) + "</b></span>" +
+            "<span>SOM <b>" + fmtMoney(groupTotals.som) + "</b></span>" +
+          "</div>" +
+        "</div>" +
+        "<div class=side-cats>"
+    );
+    group.categories.forEach(function (cat) {
+      var catTotals = totalsOf(cat.ideas);
+      var catActive = _selection.kind === "cat" && _selection.key === cat.key;
+      nav += (
+        "<div class=" + Q + "side-item" + (catActive ? " active" : "") + Q + " data-act=select-cat data-key=" + cat.key + " title=" + Q + "TAM " + fmtMoney(catTotals.tam) + " - SAM " + fmtMoney(catTotals.sam) + " - SOM " + fmtMoney(catTotals.som) + Q + ">" +
+          "<span>" + esc(cat.label) + "</span><span class=meta>" + catTotals.count + " - " + fmtMoney(catTotals.som) + "</span>" +
+        "</div>"
+      );
+      subRowsOf(cat).forEach(function (row) {
+        var subTotals = totalsOf(row.ideas);
+        var subActive = _selection.kind === "sub" && _selection.key === row.code;
+        nav += (
+          "<div class=" + Q + "side-subitem" + (subActive ? " active" : "") + Q + " data-act=select-sub data-key=" + row.code + " title=" + Q + "TAM " + fmtMoney(subTotals.tam) + " - SAM " + fmtMoney(subTotals.sam) + " - SOM " + fmtMoney(subTotals.som) + Q + ">" +
+            "<span>" + esc(row.label) + "</span><span class=meta>" + subTotals.count + " - " + fmtMoney(subTotals.som) + "</span>" +
+          "</div>"
+        );
+      });
+    });
+    nav += "</div></div>";
+  });
+  document.getElementById("sideNav").innerHTML = nav;
+}
+
+function buildStats() {
+  var ideas = allIdeas();
+  var counts = { backlog: 0, planned: 0, "in-progress": 0, built: 0, skipped: 0 };
+  var portfolioSom = 0;
+  var totalSom = 0;
+  var builtTools = 0;
+  ideas.forEach(function (idea) {
+    var status = effectiveStatusOf(idea);
+    counts[status]++;
+    totalSom += moneyOf(idea.som);
+    if (status === "in-progress" || status === "built" || status === "planned") portfolioSom += moneyOf(idea.som);
+    if (IDEA_TOOLS[idea.id]) builtTools++;
+  });
+  var publishSum = 0, publishFull = 0;
+  ideas.forEach(function (idea) {
+    if (!IDEA_TOOLS[idea.id]) return;
+    var pct = publishPercentOf(IDEA_TOOLS[idea.id].folder);
+    publishSum += pct;
+    if (pct >= 100) publishFull++;
+  });
+  var html = "";
+  html += chip("Ideas", ideas.length);
+  html += chip("Built tools (auto)", builtTools);
+  html += chip("Publish score", builtTools ? Math.round(publishSum / builtTools) + "%" : "-");
+  html += chip("Fully published", publishFull + "/" + builtTools);
+  html += chip("Catalog SOM (3yr)", fmtMoney(totalSom));
+  html += chip("Planned", counts.planned);
+  html += chip("In Progress", counts["in-progress"]);
+  html += chip("Built", counts.built);
+  html += chip("Skipped", counts.skipped);
+  html += chip("Working portfolio SOM", fmtMoney(portfolioSom));
+  document.getElementById("statsRow").innerHTML = html;
+}
+
+function chip(label, value) {
+  return "<div class=stat-chip><strong>" + value + "</strong>" + esc(label) + "</div>";
+}
+
+function effectiveStatusOf(idea) {
+  return IDEA_TOOLS[idea.id] ? "built" : (workOf(idea.id).status || "backlog");
+}
+
+function statusMetaOf(statusId) {
+  var meta = null;
+  STATUSES.forEach(function (s) { if (s.id === statusId) meta = s; });
+  return meta;
+}
+
+function ideaMatches(idea) {
+  var query = _filters.search;
+  if (query && (idea.name + " " + idea.purpose + " " + idea.sub + " " + (IDEA_TOOLS[idea.id] ? IDEA_TOOLS[idea.id].folder : "")).toLowerCase().indexOf(query) === -1) return false;
+  if (_filters.status !== "all" && effectiveStatusOf(idea) !== _filters.status) return false;
+  if (_filters.licensing !== "all" && idea.licensing !== _filters.licensing) return false;
+  return true;
+}
+
+var STATUS_SORT_RANK = { "in-progress": 0, "planned": 1, "backlog": 2, "built": 3, "skipped": 4 };
+var _sortDir = -1;
+
+function defaultSortDir(mode) {
+  return (mode === "som" || mode === "tam" || mode === "publish") ? -1 : 1;
+}
+
+function compareBy(mode, a, b) {
+  var cmp;
+  if (mode === "som" || mode === "tam") {
+    cmp = moneyOf(a[mode]) - moneyOf(b[mode]);
+  } else if (mode === "name") {
+    cmp = a.name.localeCompare(b.name);
+  } else if (mode === "status") {
+    cmp = (STATUS_SORT_RANK[effectiveStatusOf(a)] || 9) - (STATUS_SORT_RANK[effectiveStatusOf(b)] || 9);
+  } else if (mode === "licensing") {
+    cmp = String(a.licensing).localeCompare(String(b.licensing));
+  } else if (mode === "publish") {
+    var publishFolderA = IDEA_TOOLS[a.id] ? IDEA_TOOLS[a.id].folder : "";
+    var publishFolderB = IDEA_TOOLS[b.id] ? IDEA_TOOLS[b.id].folder : "";
+    cmp = publishPercentOf(publishFolderA) - publishPercentOf(publishFolderB);
+  } else if (mode === "folder") {
+    var folderA = IDEA_TOOLS[a.id] ? IDEA_TOOLS[a.id].folder : "";
+    var folderB = IDEA_TOOLS[b.id] ? IDEA_TOOLS[b.id].folder : "";
+    if (!folderA && !folderB) cmp = 0;
+    else if (!folderA) cmp = 1;
+    else if (!folderB) cmp = -1;
+    else cmp = folderA.localeCompare(folderB);
+  } else {
+    return 0;
+  }
+  if (cmp === 0) cmp = a.name.localeCompare(b.name);
+  return cmp * _sortDir;
+}
+
+function sortIdeas(list) {
+  var mode = _filters.sort;
+  if (mode === "order") return list.slice();
+  return list.slice().sort(function (a, b) { return compareBy(mode, a, b); });
+}
+
+function sortByColumn(mode) {
+  if (_filters.sort === mode && mode !== "order") {
+    _sortDir = -_sortDir;
+  } else {
+    _filters.sort = mode;
+    _sortDir = defaultSortDir(mode);
+  }
+  document.getElementById("sortSelect").value = mode;
+  renderSelection();
+}
+
+function ideaRowHtml(idea) {
+  var status = effectiveStatusOf(idea);
+  var statusMeta = statusMetaOf(status);
+  var tool = IDEA_TOOLS[idea.id] || null;
+  var badge = statusMeta && statusMeta.cls
+    ? "<span class=" + Q + "st-badge " + statusMeta.cls + (tool ? " auto" : "") + Q + ">" + statusMeta.label + (tool ? " (auto)" : "") + "</span>"
+    : "";
+  var folderCell = tool
+    ? "<span class=tool-folder-cell title=" + Q + esc(tool.path) + Q + ">" + esc(tool.folder) + "</span>"
+    : "<span class=\"tool-folder-cell dash\">-</span>";
+  var publishCell = tool ? publishCellHtml(tool) : "<span class=\"tool-folder-cell dash\">-</span>";
+  return (
+    "<tr data-id=" + idea.id + " title=" + Q + "Click to open details" + Q + ">" +
+      "<td>" + badge + "</td>" +
+      "<td class=idea-name-cell><span class=idea-name>" + esc(idea.name) + "</span>" +
+        "<span class=idea-sub style=\"font-size:11px;color:var(--muted)\"> " + esc(idea.sub) + "</span>" +
+        "<div class=idea-purpose>" + esc(idea.purpose) + "</div></td>" +
+      "<td class=idea-metrics-cell>" + esc(idea.users) + "<br><b>" + esc(idea.tam) + "</b> TAM<br><b>" + esc(idea.som) + "</b> SOM</td>" +
+      "<td><span class=lic-badge>" + (LICENSING_LABELS[idea.licensing] || idea.licensing) + "</span></td>" +
+      "<td>" + folderCell + "</td>" +
+      "<td class=pub-cell-td>" + publishCell + "</td>" +
+    "</tr>"
+  );
+}
+
+function thHtml(mode, label, tip) {
+  var mark = _filters.sort === mode ? (_sortDir > 0 ? " ▲" : " ▼") : "";
+  return "<th class=sortable" + (_filters.sort === mode ? " sorted" : "") + " data-sort=" + mode +
+    " title=" + Q + "Sort by " + (tip || label) + Q + ">" + label + mark + "</th>";
+}
+
+function tableHeadHtml() {
+  return "<thead><tr>" +
+    thHtml("status", "Status") +
+    thHtml("name", "Idea") +
+    thHtml("som", "Market", "SOM") +
+    thHtml("licensing", "Licensing") +
+    thHtml("folder", "Built as") +
+    thHtml("publish", "Publish") +
+    "</tr></thead>";
+}
+
+function catSectionHtml(cat, visibleIdeas) {
+  var catTotals = totalsOf(cat.ideas);
+  return (
+    "<section class=branch>" +
+      "<div class=branch-head>" +
+        "<span class=branch-title>" + esc(cat.label) + "</span>" +
+        "<span class=branch-counts>" + cat.ideas.length + " ideas - TAM <b>" + fmtMoney(catTotals.tam) + "</b> - SAM <b>" + fmtMoney(catTotals.sam) + "</b> - SOM <b>" + fmtMoney(catTotals.som) + "</b></span>" +
+      "</div>" +
+      "<div class=branch-body><div class=idea-table-wrap><table class=idea-table>" +
+        tableHeadHtml() +
+        "<tbody>" + visibleIdeas.map(ideaRowHtml).join("") + "</tbody>" +
+      "</table></div></div>" +
+    "</section>"
+  );
+}
+
+function renderSelection() {
+  var out = "";
+  var visible = [];
+  var pathText = "";
+  var titleText = "";
+  var totals = { tam: 0, sam: 0, som: 0, count: 0 };
+
+  if (_selection.kind === "group") {
+    var group = findGroup(_selection.key);
+    if (!group) { renderSelectionEmpty(); return; }
+    pathText = group.label;
+    titleText = group.label;
+    var groupIdeas = group.categories.reduce(function (acc, c) { return acc.concat(c.ideas); }, []);
+    totals = totalsOf(groupIdeas);
+    group.categories.forEach(function (cat) {
+      var vis = sortIdeas(cat.ideas.filter(ideaMatches));
+      if (vis.length) out += catSectionHtml(cat, vis);
+    });
+  } else if (_selection.kind === "cat") {
+    var found = findCat(_selection.key);
+    if (!found) { renderSelectionEmpty(); return; }
+    pathText = found.group.label + " / " + found.cat.label;
+    titleText = found.cat.label;
+    totals = totalsOf(found.cat.ideas);
+    var visCat = sortIdeas(found.cat.ideas.filter(ideaMatches));
+    if (visCat.length) out += catSectionHtml(found.cat, visCat);
+  } else if (_selection.kind === "sub") {
+    var sub = findSub(_selection.key);
+    if (!sub) { renderSelectionEmpty(); return; }
+    pathText = sub.group.label + " / " + sub.cat.label + " / " + sub.label;
+    titleText = sub.label;
+    var subIdeas = sub.cat.ideas.filter(function (idea) { return idea.code === sub.sub; });
+    totals = totalsOf(subIdeas);
+    var visSub = sortIdeas(subIdeas.filter(ideaMatches));
+    if (visSub.length) {
+      out += (
+        "<section class=branch>" +
+          "<div class=branch-head>" +
+            "<span class=branch-title>" + esc(sub.label) + "</span>" +
+            "<span class=branch-counts>" + subIdeas.length + " ideas - TAM <b>" + fmtMoney(totals.tam) + "</b> - SAM <b>" + fmtMoney(totals.sam) + "</b> - SOM <b>" + fmtMoney(totals.som) + "</b></span>" +
+          "</div>" +
+          "<div class=branch-body><div class=idea-table-wrap><table class=idea-table>" +
+            tableHeadHtml() +
+            "<tbody>" + visSub.map(ideaRowHtml).join("") + "</tbody>" +
+          "</table></div></div>" +
+        "</section>"
+      );
+    }
+  }
+
+  var barHtml = (
+    "<div class=sel-bar>" +
+      "<div><div class=sel-title>" + esc(titleText) + "</div><div class=sel-path>" + esc(pathText) + "</div></div>" +
+      "<div class=sel-totals>" +
+        "<span><b>" + totals.count + "</b> ideas</span>" +
+        "<span>TAM <b>" + fmtMoney(totals.tam) + "</b></span>" +
+        "<span>SAM <b>" + fmtMoney(totals.sam) + "</b></span>" +
+        "<span>SOM <b>" + fmtMoney(totals.som) + "</b></span>" +
+      "</div>" +
+    "</div>"
+  );
+  document.getElementById("selectionBar").innerHTML = barHtml;
+  document.getElementById("groupsContainer").innerHTML = out.trim() || "<div class=empty-note>No ideas match the current filters.</div>";
+  updateSelectedRow(_detailsIdeaId);
+}
+
+function renderSelectionEmpty() {
+  document.getElementById("selectionBar").innerHTML = "";
+  document.getElementById("groupsContainer").innerHTML = "<div class=empty-note>Selection not found.</div>";
+}
+
+function applyFilters() {
+  _filters.search = document.getElementById("searchInput").value.trim().toLowerCase();
+  _filters.status = document.getElementById("statusFilter").value;
+  _filters.licensing = document.getElementById("licensingFilter").value;
+  _filters.sort = document.getElementById("sortSelect").value;
+  _sortDir = defaultSortDir(_filters.sort);
+  renderSelection();
+}
+
+function selectGroup(key) {
+  if (_selection.kind === "group" && _selection.key === key) {
+    _collapsedGroups[key] = !_collapsedGroups[key];
+  } else {
+    _selection = { kind: "group", key: key };
+    delete _collapsedGroups[key];
+  }
+  renderSidebar(); renderSelection();
+}
+function selectCat(key) { _selection = { kind: "cat", key: key }; renderSidebar(); renderSelection(); }
+function selectSub(key) { _selection = { kind: "sub", key: key }; renderSidebar(); renderSelection(); }
+
+function findIdea(id) {
+  for (var i = 0; i < IDEA_GROUPS.length; i++) {
+    var group = IDEA_GROUPS[i];
+    for (var j = 0; j < group.categories.length; j++) {
+      var cat = group.categories[j];
+      for (var k = 0; k < cat.ideas.length; k++) {
+        if (cat.ideas[k].id === id) return cat.ideas[k];
+      }
+    }
+  }
+  return null;
+}
+
+function selectCatOfIdea(id) {
+  for (var i = 0; i < IDEA_GROUPS.length; i++) {
+    var cats = IDEA_GROUPS[i].categories;
+    for (var j = 0; j < cats.length; j++) {
+      for (var k = 0; k < cats[j].ideas.length; k++) {
+        if (cats[j].ideas[k].id === id) { selectCat(cats[j].key); return; }
+      }
+    }
+  }
+}
+
+var _detailsIdeaId = null;
+
+function docsUrlOf(id) {
+  var tool = IDEA_TOOLS[id];
+  if (!tool) return null;
+  return "../../" + tool.path + "/docs/index.html";
+}
+
+function renderDetails(id) {
+  var idea = findIdea(id);
+  var pane = document.getElementById("detailsPane");
+  if (!idea) { pane.innerHTML = "<div class=detail-placeholder>Item not found.</div>"; return; }
+  _detailsIdeaId = id;
+  var work = workOf(id);
+  var tool = IDEA_TOOLS[id] || null;
+  var status = effectiveStatusOf(idea);
+  var statusMeta = statusMetaOf(status);
+
+  var html = "";
+  html += "<div class=dp-head><div class=dp-title>" + esc(idea.name) + "<span class=dp-sub>" + esc(idea.sub) + "</span></div>" +
+    "<button class=dp-close data-act=clear-details title=" + Q + "Close" + Q + ">&#10005;</button></div>";
+  html += "<div class=dp-body>";
+  html += "<div class=details-grid>" +
+    "<div class=metric><span class=ml>Users</span><span class=mv>" + esc(idea.users) + "</span></div>" +
+    "<div class=metric><span class=ml>TAM</span><span class=mv>" + esc(idea.tam) + "</span></div>" +
+    "<div class=metric><span class=ml>SAM</span><span class=mv>" + esc(idea.sam) + "</span></div>" +
+    "<div class=metric><span class=ml>SOM (3yr)</span><span class=mv>" + esc(idea.som) + "</span></div>" +
+    "</div>" +
+    "<p style=\"font-size:12.5px;color:var(--muted);margin:8px 0 0\">" + esc(idea.purpose) + "</p>";
+
+  if (tool) {
+    var filesRows = tool.files.map(function (file) {
+      return "<tr><td>" + esc(file.name) + "</td><td>" + (file.bytes / 1024).toFixed(1) + " KB</td></tr>";
+    }).join("");
+    var docsChips = tool.docsList.map(function (docName) {
+      return "<span class=doc-chip>" + esc(docName) + "</span>";
+    }).join("");
+    html += "<h3>Built tool (auto-detected)</h3>" +
+      "<div class=details-tool>" +
+        "<div class=dt-line><b>Folder:</b> " + esc(tool.folder) + "</div>" +
+        "<div class=dt-path>" + esc(tool.path) + "</div>" +
+        "<div class=dt-line><b>Parts:</b> " + esc(tool.parts.join(", ")) + " - <b>Code files:</b> " + tool.files.length + " - <b>Docs:</b> " + tool.docsCount + "/" + tool.docsTotal + " - <b>Screenshots:</b> " + tool.screenshots + " - <b>Harness:</b> " + (tool.harness ? "yes" : "no") + " - <b>Modified:</b> " + esc(String(tool.modifiedAt).replace("T", " ").slice(0, 19)) + " UTC</div>" +
+      "</div>" +
+      "<div class=details-files><table>" + filesRows + "</table></div>" +
+      "<div class=details-docs>" + docsChips + "</div>";
+    if (tool.docsCount > 0) {
+      html += "<div><a class=dp-docs-btn href=" + Q + esc(docsUrlOf(id)) + Q + " target=_blank rel=noopener>📖 Open docs index</a></div>";
+    }
+    html += publishSectionHtml(tool);
+  } else {
+    html += "<h3>Not built yet</h3><p style=\"font-size:12.5px;color:var(--muted);margin:0\">No tool folder found in the repo for this idea.</p>";
+  }
+
+  html += "<h3>Work state</h3>";
+  if (tool) {
+    html += "<div class=details-work><span class=" + Q + "st-badge " + statusMeta.cls + Q + ">" + statusMeta.label + "</span>" +
+      "<span class=details-auto-note>Status is derived from the folder automatically.</span></div>";
+  } else {
+    var statusOptions = STATUSES.filter(function (s) { return s.id !== "built"; }).map(function (s) {
+      return "<option value=" + s.id + (work.status === s.id ? " selected" : "") + ">" + s.label + "</option>";
+    }).join("");
+    var priorityOptions = PRIORITIES.map(function (p) {
+      return "<option value=" + p.id + (work.priority === p.id ? " selected" : "") + ">" + p.label + "</option>";
+    }).join("");
+    html += "<div class=details-work>" +
+      "<select id=detailsStatus class=status-select data-id=" + id + ">" + statusOptions + "</select>" +
+      "<select id=detailsPriority class=priority-select data-id=" + id + ">" + priorityOptions + "</select>" +
+      "</div>";
+  }
+  html += "<div class=details-notes><textarea id=detailsNotes data-act=notes-text data-id=" + id + " placeholder=" + Q + "Working notes for this idea..." + Q + ">" + esc(work.notes || "") + "</textarea></div>";
+  html += "</div>";
+
+  pane.innerHTML = html;
+  updateSelectedRow(id);
+}
+
+function clearDetails() {
+  _detailsIdeaId = null;
+  document.getElementById("detailsPane").innerHTML = "<div class=detail-placeholder>Select an item from the list to see its details.</div>";
+  updateSelectedRow("");
+}
+
+function updateSelectedRow(id) {
+  document.querySelectorAll("#groupsContainer tr[data-id]").forEach(function (row) {
+    row.classList.toggle("selected", row.getAttribute("data-id") === id);
+  });
+}
+
+var PUBLISH_SUBJECTS = [
+  { id: "code", label: "Code" },
+  { id: "harness", label: "Test harness" },
+  { id: "screenshots", label: "Screenshots" },
+  { id: "webpage", label: "Webpage" },
+  { id: "help", label: "Help" },
+  { id: "presentation", label: "Presentation" },
+  { id: "updates", label: "Updates" },
+  { id: "social", label: "Social" }
+];
+var PUBLISH_STORAGE_KEY = "uniconhub_tool_publish_state_v1";
+var _publishOverrides = loadPublishOverrides();
+
+function loadPublishOverrides() {
+  try {
+    var raw = localStorage.getItem(PUBLISH_STORAGE_KEY);
+    if (!raw) return {};
+    var parsed = JSON.parse(raw);
+    return (parsed && parsed.tools) || {};
+  } catch (err) { return {}; }
+}
+
+function savePublishOverrides() {
+  try { localStorage.setItem(PUBLISH_STORAGE_KEY, JSON.stringify({ tools: _publishOverrides })); } catch (err) { /* ignore */ }
+}
+
+function publishStateOf(folder) {
+  var state = { version: "", publishedAt: "", subjects: {} };
+  var sources = [];
+  if (typeof REPO_PUBLISH_STATE !== "undefined" && REPO_PUBLISH_STATE && REPO_PUBLISH_STATE.tools && REPO_PUBLISH_STATE.tools[folder]) sources.push(REPO_PUBLISH_STATE.tools[folder]);
+  if (_publishOverrides[folder]) sources.push(_publishOverrides[folder]);
+  sources.forEach(function (src) {
+    if (src.version) state.version = src.version;
+    if (src.publishedAt) state.publishedAt = src.publishedAt;
+    Object.keys(src.subjects || {}).forEach(function (key) { state.subjects[key] = !!src.subjects[key]; });
+  });
+  return state;
+}
+
+function publishPercentOf(folder) {
+  var state = publishStateOf(folder);
+  var total = PUBLISH_SUBJECTS.length;
+  var count = 0;
+  PUBLISH_SUBJECTS.forEach(function (s) { if (state.subjects[s.id]) count++; });
+  return total ? Math.round(count / total * 100) : 0;
+}
+
+function readySubjectsOf(tool) {
+  var docs = tool.docsList || [];
+  return {
+    code: true,
+    harness: !!tool.harness,
+    screenshots: (tool.screenshots || 0) > 0,
+    webpage: docs.indexOf("webpage.html") !== -1,
+    help: docs.indexOf("help.html") !== -1,
+    presentation: docs.indexOf("presentation.html") !== -1,
+    updates: docs.indexOf("updates.html") !== -1,
+    social: docs.indexOf("social.html") !== -1
+  };
+}
+
+function publishCellHtml(tool) {
+  var pct = publishPercentOf(tool.folder);
+  var state = publishStateOf(tool.folder);
+  var fillCls = pct >= 100 ? "pub-full" : (pct > 0 ? "pub-partial" : "");
+  var versionLabel = state.version ? "<span class=pub-ver>v" + esc(state.version) + "</span>" : "";
+  return "<div class=pub-cell title=" + Q + "Published: " + pct + "% of subjects" + Q + ">" +
+    "<span class=pub-bar><span class=\"pub-fill " + fillCls + "\" style=\"width:" + pct + "%\"></span></span>" +
+    "<span class=pub-score>" + pct + "%</span>" + versionLabel +
+    "</div>";
+}
+
+function publishSectionHtml(tool) {
+  var state = publishStateOf(tool.folder);
+  var total = PUBLISH_SUBJECTS.length;
+  var publishedCount = 0;
+  PUBLISH_SUBJECTS.forEach(function (s) { if (state.subjects[s.id]) publishedCount++; });
+  var pct = total ? Math.round(publishedCount / total * 100) : 0;
+  var fillCls = pct >= 100 ? "pub-full" : (pct > 0 ? "pub-partial" : "");
+  var ready = readySubjectsOf(tool);
+  var rows = PUBLISH_SUBJECTS.map(function (s) {
+    var isReady = !!ready[s.id];
+    var isOn = !!state.subjects[s.id];
+    return "<label class=pub-subject" + (isOn ? " on" : "") + ">" +
+      "<input type=checkbox data-act=publish-toggle data-subject=" + s.id + " data-folder=" + Q + esc(tool.folder) + Q + (isReady ? "" : " disabled") + (isOn ? " checked" : "") + ">" +
+      "<span>" + esc(s.label) + "</span>" +
+      (isReady ? "" : "<span class=pub-missing>not ready</span>") +
+      "</label>";
+  }).join("");
+  return "<h3>Publish to the store</h3>" +
+    "<div class=pub-overview>" +
+      "<span class=pub-bar><span class=\"pub-fill " + fillCls + "\" style=\"width:" + pct + "%\"></span></span>" +
+      "<div class=pub-meta><b>" + publishedCount + " of " + total + "</b> subjects published (" + pct + "%)</div>" +
+    "</div>" +
+    "<div class=pub-fields>" +
+      "<label>Published version<input type=text data-act=publish-version data-folder=" + Q + esc(tool.folder) + Q + " value=" + Q + esc(state.version || "") + Q + " placeholder=" + Q + "e.g. 0.1.3" + Q + "></label>" +
+      "<label>Published at<input type=text value=" + Q + esc(state.publishedAt || "") + Q + " readonly placeholder=" + Q + "auto on version change" + Q + "></label>" +
+    "</div>" +
+    "<div class=pub-subjects>" + rows + "</div>";
+}
+
+function exportPublishState() {
+  var tools = {};
+  Object.keys(IDEA_TOOLS).forEach(function (ideaId) {
+    tools[IDEA_TOOLS[ideaId].folder] = publishStateOf(IDEA_TOOLS[ideaId].folder);
+  });
+  var data = {
+    meta: {
+      schema: "uniconhub-tool-publish-state",
+      updatedAt: new Date().toISOString().slice(0, 10),
+      note: "What is published to the applicationStore html tool library, per tool and per subject."
+    },
+    tools: tools
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.href = url;
+  link.download = "tool-publish-state.json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+}
+
+function importPublishState(text) {
+  var parsed = JSON.parse(text);
+  var tools = parsed.tools || {};
+  Object.keys(tools).forEach(function (folder) {
+    var entry = tools[folder] || {};
+    var cur = _publishOverrides[folder] = _publishOverrides[folder] || { version: "", publishedAt: "", subjects: {} };
+    if (entry.version) cur.version = entry.version;
+    if (entry.publishedAt) cur.publishedAt = entry.publishedAt;
+    Object.keys(entry.subjects || {}).forEach(function (key) { cur.subjects[key] = !!entry.subjects[key]; });
+  });
+  savePublishOverrides();
+}
+
+// ---- ideas catalog export (tool-ideas-catalog.json format) ----
+function catalogFolderPathOf(code) {
+  var found = "";
+  function walk(node, parts) {
+    if (node.code === code) { found = parts.concat([node.name]).join(" > "); return; }
+    (node.children || []).forEach(function (child) { if (!found) walk(child, parts.concat([node.name])); });
+  }
+  var roots = (FOLDER_HIERARCHY && FOLDER_HIERARCHY.folders) || [];
+  roots.forEach(function (root) { if (!found) walk(root, []); });
+  return found || code;
+}
+
+function exportIdeasCatalog() {
+  var ideas = [];
+  IDEA_GROUPS.forEach(function (g) {
+    g.categories.forEach(function (c) {
+      c.ideas.forEach(function (idea) {
+        var entry = {
+          code: idea.code,
+          folder: catalogFolderPathOf(idea.code),
+          name: idea.name,
+          purpose: idea.purpose,
+          users: idea.users,
+          tam: idea.tam,
+          sam: idea.sam,
+          som: idea.som,
+          licensing: idea.licensing
+        };
+        if (idea.id !== idea.code) entry.id = idea.id;
+        ideas.push(entry);
+      });
+    });
+  });
+  var data = {
+    schema: "uniconhub-tool-idea-catalog",
+    version: "1.0.0",
+    generatedAt: new Date().toISOString().slice(0, 10),
+    disclaimer: "Directional planning estimates (order of magnitude), not market research. Validate user counts, TAM/SAM/SOM and licensing per idea before development.",
+    licensingTypes: ["freemium", "subscription-monthly", "subscription-annual", "one-time", "per-seat-monthly", "usage-based", "white-label", "app-bundle"],
+    metricNotes: {
+      users: "Rough worldwide count of potential users or organizations for this niche.",
+      tam: "Estimated global annual software spend (USD) for this niche - order of magnitude.",
+      sam: "TAM narrowed to the SMB / reachable segment UniconHub can realistically serve (about 10-25 percent).",
+      som: "What the UniconHub store could realistically capture within about 3 years (about 0.1-0.5 percent of SAM)."
+    },
+    exportedNote: "Exported from tool-ideas-catalog.html - catalog-data.js is the SSOT.",
+    ideas: ideas
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.href = url;
+  link.download = "tool-ideas-catalog.json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+}
+
+function versionToNumber(version) {
+  var parts = String(version).split(".");
+  var major = parseInt(parts[0], 10) || 0;
+  var minor = parseInt(parts[1], 10) || 0;
+  var patch = parseInt(parts[2], 10) || 0;
+  return major * 1000000 + minor * 1000 + patch;
+}
+
+function bumpPatch(version) {
+  var parts = String(version).split(".");
+  return (parts[0] || "1") + "." + (parts[1] || "0") + "." + ((parseInt(parts[2], 10) || 0) + 1);
+}
+
+// The folder hierarchy export: downloads the folder structure in the exact
+// folder-hierarchy-import.json schema with the NEXT version number. The
+// version is monotonic - every export carries the latest version, even when
+// several exports happen in a row.
+var HIERARCHY_EXPORT_KEY = "uniconhub_hierarchy_export_version";
+
+function exportFolderHierarchy() {
+  if (!window.FOLDER_HIERARCHY || !window.FOLDER_HIERARCHY.folders) {
+    alert("Folder hierarchy data is not embedded - run npm run catalog:build first.");
+    return;
+  }
+  var data = JSON.parse(JSON.stringify(window.FOLDER_HIERARCHY));
+  var meta = data.meta = data.meta || {};
+  var fileVersion = meta.version || "1.0.0";
+  var nextVersion = bumpPatch(fileVersion);
+  try {
+    var lastExported = localStorage.getItem(HIERARCHY_EXPORT_KEY);
+    if (lastExported && versionToNumber(lastExported) >= versionToNumber(nextVersion)) {
+      nextVersion = bumpPatch(lastExported);
+    }
+  } catch (err) { /* storage unavailable */ }
+
+  var exportedAt = new Date().toISOString();
+  meta.version = nextVersion;
+  meta.updatedAt = exportedAt.slice(0, 10);
+  meta.versionHistory = meta.versionHistory || [];
+  meta.versionHistory.push({
+    version: nextVersion,
+    exportedAt: exportedAt,
+    note: "Exported from tool-ideas-catalog.html (the SSOT surface for the folder hierarchy)"
+  });
+  meta.exportNote = "This file is an export of the folder hierarchy. The ideas catalog page is the SSOT for the folder hierarchy - export a fresh copy after every change.";
+
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var url = URL.createObjectURL(blob);
+  var link = document.createElement("a");
+  link.href = url;
+  link.download = "folder-hierarchy-import-v" + nextVersion + ".json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+
+  try { localStorage.setItem(HIERARCHY_EXPORT_KEY, nextVersion); } catch (err) { /* ignore */ }
+  var hierarchyMenuItem = document.getElementById("menuExportHierarchy");
+  if (hierarchyMenuItem) {
+    hierarchyMenuItem.textContent = "📦 Export folder hierarchy (last v" + nextVersion + ")";
+    hierarchyMenuItem.title = "Downloaded " + link.download + " - next export will be v" + bumpPatch(nextVersion);
+  }
+}
+
+var _modalMode = "work";
+
+function openWorkModal(mode) {
+  _modalMode = "work";
+  document.getElementById("workModalTitle").textContent = mode === "export" ? "Work state JSON - copy to save" : "Paste work state JSON and Apply";
+  document.getElementById("workModalText").value = mode === "export" ? JSON.stringify(_work, null, 2) : "";
+  document.getElementById("workModal").classList.add("open");
+}
+
+function openPublishModal() {
+  _modalMode = "publish";
+  document.getElementById("workModalTitle").textContent = "Paste tool-publish-state.json and Apply";
+  document.getElementById("workModalText").value = "";
+  document.getElementById("workModal").classList.add("open");
+}
+
+function bindEvents() {
+  var container = document.getElementById("groupsContainer");
+  ["searchInput", "statusFilter", "licensingFilter", "sortSelect"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", applyFilters);
+  });
+  container.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!target.getAttribute || !target.getAttribute("data-id")) return;
+    var id = target.getAttribute("data-id");
+    if (target.classList.contains("status-select")) {
+      workOf(id).status = target.value;
+    } else if (target.classList.contains("priority-select")) {
+      workOf(id).priority = target.value;
+    }
+    saveWork(); buildStats();
+    if (_filters.status !== "all") renderSelection();
+  });
+  container.addEventListener("input", function (event) {
+    var target = event.target;
+    if (target.getAttribute && target.getAttribute("data-act") === "notes-text") {
+      workOf(target.getAttribute("data-id")).notes = target.value;
+      saveWork();
+      var btn = container.querySelector(".notes-btn[data-id=" + target.getAttribute("data-id") + "]");
+      if (btn) { btn.textContent = target.value ? "Notes (" + target.value.length + ")" : "Notes"; btn.classList.toggle("has-notes", !!target.value); }
+    }
+  });
+  container.addEventListener("click", function (event) {
+    var th = event.target.closest ? event.target.closest("th[data-sort]") : null;
+    if (th) { sortByColumn(th.getAttribute("data-sort")); return; }
+    var row = event.target.closest ? event.target.closest("tr[data-id]") : null;
+    if (row) renderDetails(row.getAttribute("data-id"));
+  });
+  var detailsPane = document.getElementById("detailsPane");
+  detailsPane.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!target.getAttribute) return;
+    var act = target.getAttribute("data-act");
+    if (act === "publish-toggle") {
+      var folder = target.getAttribute("data-folder");
+      var subject = target.getAttribute("data-subject");
+      var entry = _publishOverrides[folder] = _publishOverrides[folder] || { version: "", publishedAt: "", subjects: {} };
+      entry.subjects[subject] = !!target.checked;
+      savePublishOverrides();
+      buildStats(); renderSelection();
+      if (_detailsIdeaId) renderDetails(_detailsIdeaId);
+      return;
+    }
+    if (act === "publish-version") {
+      var versionFolder = target.getAttribute("data-folder");
+      var versionEntry = _publishOverrides[versionFolder] = _publishOverrides[versionFolder] || { version: "", publishedAt: "", subjects: {} };
+      var newVersion = target.value.trim();
+      versionEntry.version = newVersion;
+      versionEntry.publishedAt = newVersion ? (versionEntry.publishedAt || new Date().toISOString().slice(0, 10)) : "";
+      savePublishOverrides();
+      buildStats(); renderSelection();
+      if (_detailsIdeaId) renderDetails(_detailsIdeaId);
+      return;
+    }
+    var id = target.getAttribute("data-id");
+    if (!id) return;
+    if (target.classList.contains("status-select")) {
+      workOf(id).status = target.value;
+      saveWork(); buildStats();
+      if (_filters.status !== "all") renderSelection();
+    } else if (target.classList.contains("priority-select")) {
+      workOf(id).priority = target.value;
+      saveWork();
+    }
+  });
+  detailsPane.addEventListener("input", function (event) {
+    var target = event.target;
+    if (target.getAttribute && target.getAttribute("data-act") === "notes-text") {
+      workOf(target.getAttribute("data-id")).notes = target.value;
+      saveWork();
+    }
+  });
+  detailsPane.addEventListener("click", function (event) {
+    var node = event.target.closest ? event.target.closest("[data-act=clear-details]") : null;
+    if (node) clearDetails();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && _detailsIdeaId) clearDetails();
+  });
+  document.getElementById("sideNav").addEventListener("click", function (event) {
+    var node = event.target.closest ? event.target.closest("[data-act]") : null;
+    if (!node) return;
+    var act = node.getAttribute("data-act");
+    var key = node.getAttribute("data-key");
+    if (act === "select-group") selectGroup(key);
+    if (act === "select-cat") selectCat(key);
+    if (act === "select-sub") selectSub(key);
+  });
+  document.getElementById("sidebarToggle").addEventListener("click", function () {
+    setSidebarCollapsed(!document.getElementById("sidebar").classList.contains("collapsed"));
+  });
+  document.getElementById("fontMinus").addEventListener("click", function () { applyFontZoom(_fontZoomIndex - 1); });
+  document.getElementById("fontPlus").addEventListener("click", function () { applyFontZoom(_fontZoomIndex + 1); });
+  var actionsMenu = document.getElementById("actionsMenu");
+  document.getElementById("btnActionsMenu").addEventListener("click", function (event) {
+    event.stopPropagation();
+    actionsMenu.classList.toggle("open");
+  });
+  actionsMenu.addEventListener("click", function (event) {
+    var item = event.target.closest ? event.target.closest("[data-action]") : null;
+    if (!item) return;
+    actionsMenu.classList.remove("open");
+    var action = item.getAttribute("data-action");
+    if (action === "export-hierarchy") exportFolderHierarchy();
+    if (action === "export-ideas") exportIdeasCatalog();
+    if (action === "export-work") openWorkModal("export");
+    if (action === "import-work") openWorkModal("import");
+    if (action === "export-publish") exportPublishState();
+    if (action === "import-publish") openPublishModal();
+  });
+  document.addEventListener("click", function (event) {
+    if (!actionsMenu.classList.contains("open")) return;
+    if (!actionsMenu.parentNode.contains(event.target)) actionsMenu.classList.remove("open");
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") actionsMenu.classList.remove("open");
+  });
+  document.getElementById("workModalClose").addEventListener("click", function () { document.getElementById("workModal").classList.remove("open"); });
+  document.getElementById("workModalApply").addEventListener("click", function () {
+    try {
+      var text = document.getElementById("workModalText").value;
+      if (_modalMode === "publish") {
+        importPublishState(text);
+        document.getElementById("workModal").classList.remove("open");
+        buildStats(); renderSelection();
+      } else {
+        _work = JSON.parse(text);
+        saveWork();
+        document.getElementById("workModal").classList.remove("open");
+        buildStats(); renderSelection(); renderSidebar();
+      }
+    } catch (err) {
+      alert("Invalid JSON: " + err.message);
+    }
+  });
+}
+
+function populateLicensingFilter() {
+  var select = document.getElementById("licensingFilter");
+  var seen = {};
+  allIdeas().forEach(function (idea) { seen[idea.licensing] = true; });
+  Object.keys(LICENSING_LABELS).forEach(function (key) {
+    if (seen[key]) {
+      var option = document.createElement("option");
+      option.value = key; option.textContent = LICENSING_LABELS[key];
+      select.appendChild(option);
+    }
+  });
+}
+
+populateLicensingFilter();
+try {
+  var requestedStatus = new URLSearchParams(window.location.search).get("status");
+  if (requestedStatus && STATUSES.some(function (s) { return s.id === requestedStatus; })) {
+    document.getElementById("statusFilter").value = requestedStatus;
+    _filters.status = requestedStatus;
+  }
+} catch (err) { /* ignore */ }
+try {
+  var requestedSort = new URLSearchParams(window.location.search).get("sort");
+  var sortOptions = ["order", "som", "tam", "name", "status", "licensing", "folder", "publish"];
+  if (requestedSort && sortOptions.indexOf(requestedSort) !== -1) {
+    document.getElementById("sortSelect").value = requestedSort;
+    _filters.sort = requestedSort;
+    _sortDir = defaultSortDir(requestedSort);
+  }
+} catch (err) { /* ignore */ }
+buildStats();
+renderSidebar();
+renderSelection();
+bindEvents();
+initFontZoom();
+try {
+  var collapsedByQuery = new URLSearchParams(window.location.search).get("collapsed");
+  if (localStorage.getItem(SIDEBAR_KEY) === "1" || collapsedByQuery === "1") setSidebarCollapsed(true);
+} catch (err) { /* ignore */ }
+try {
+  var requestedDetails = new URLSearchParams(window.location.search).get("details");
+  if (requestedDetails && findIdea(requestedDetails)) {
+    selectCatOfIdea(requestedDetails);
+    renderDetails(requestedDetails);
+  }
+} catch (err) { /* ignore */ }
+</script>
+</body>
+</html>

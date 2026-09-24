@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option b vs c - document folder placement</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --accent:#2563eb; --purple:#7c3aed; --line:#e5e7eb; --bg:#f4f6fa; --ok:#15803d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, system-ui, sans-serif; background:var(--bg); color:var(--ink); line-height:1.55; }
+  .page { max-width:1060px; margin:0 auto; padding:26px 18px 60px; }
+  .doc-header { border-bottom:3px solid var(--accent); padding-bottom:10px; margin-bottom:6px; }
+  .doc-header h1 { margin:0 0 4px; font-size:24px; }
+  .doc-header .sub { color:var(--muted); font-size:13.5px; }
+  h2 { font-size:17px; margin:30px 0 10px; }
+  p.lead { max-width:820px; }
+  .columns { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:860px) { .columns { grid-template-columns:1fr; } }
+  .option { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 18px 14px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  .option h3 { margin:0 0 4px; font-size:15px; }
+  .option h3 .tag { display:inline-block; font-size:11px; font-weight:800; border-radius:999px; padding:2px 10px; margin-left:8px; vertical-align:2px; }
+  .tag-copy { background:#fef3c7; color:#92400e; }
+  .tag-shared { background:#dcfce7; color:#166534; }
+  .option .note { font-size:12.5px; color:var(--muted); margin:6px 0 12px; }
+  /* folder tree */
+  .tree { font-size:13px; }
+  .tree ul { list-style:none; margin:0; padding-left:22px; position:relative; }
+  .tree ul::before { content:''; position:absolute; left:8px; top:0; bottom:12px; border-left:2px solid #d1d5db; }
+  .tree li { position:relative; padding:3px 0 3px 10px; }
+  .tree li::before { content:''; position:absolute; left:-14px; top:15px; width:12px; border-top:2px solid #d1d5db; }
+  .tree .node { border:1px solid var(--line); background:#fff; border-radius:8px; padding:5px 10px; display:inline-block; min-width:150px; }
+  .tree .node.folder { background:#f8fafc; font-weight:600; }
+  .tree .node.leaf { background:#eff6ff; border-color:#bfdbfe; }
+  .tree .node.doc { background:#f0fdf4; border-color:#bbf7d0; font-size:12px; }
+  .tree .node.tool { background:#f5f3ff; border-color:#ddd6fe; font-size:12px; }
+  .tree .node small { display:block; color:var(--muted); font-weight:400; font-size:11px; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; font-size:12px; color:var(--muted); }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .dot { width:10px; height:10px; border-radius:3px; border:1px solid; display:inline-block; }
+  .dot-tool { background:#f5f3ff; border-color:#a78bfa; }
+  .dot-doc { background:#f0fdf4; border-color:#4ade80; }
+  .dot-leaf { background:#eff6ff; border-color:#60a5fa; }
+  /* comparison table */
+  table { width:100%; border-collapse:collapse; background:#fff; font-size:13px; margin-top:10px; }
+  th, td { border:1px solid var(--line); padding:8px 12px; text-align:left; vertical-align:top; }
+  th { background:#f8fafc; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); }
+  td b { color:var(--ink); }
+  .win { color:var(--ok); font-weight:700; }
+  .verdict { background:#fff; border:1px solid var(--line); border-left:4px solid var(--ok); border-radius:10px; padding:12px 16px; margin-top:16px; font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+  <h1>Where do the documents go - option b vs option c</h1>
+  <div class="sub">website-builder-uniconbaseapps folders - prepared for the HtmlToolLibraryItem decision - date: 2026-09-23</div>
+</div>
+
+<p class="lead">The taxonomy from <code>folder-hierarchy-import.json</code> is imported into the CMS ONCE (about 220 folders: Business &gt; General &gt; category &gt; leaf subcategory). Tool records already sit in their leaf folders. The question is only: <b>where do each tool's 5 documents (webpage, help, updates, presentation, social) live inside the website-builder app?</b></p>
+
+<div class="columns">
+
+  <div class="option">
+    <h3>Option b - a second copy of the tree<span class="tag tag-copy">COPY</span></h3>
+    <div class="note">The website-builder app gets its OWN copy of the full hierarchy under a root folder like "html-tool related pages". Each copied leaf holds the 5 documents of every tool in that leaf.</div>
+    <div class="tree">
+      <ul>
+        <li><span class="node folder">Tool Library tree (imported)</span>
+          <ul>
+            <li><span class="node folder">Personal &gt; Personal Finance</span>
+              <ul>
+                <li><span class="node leaf">Tax Preparation (leaf)</span>
+                  <ul>
+                    <li><span class="node tool">PersonalTaxPreparation record<small>html-tool-library object</small></span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+      <div style="border-top:1px dashed #cbd5e1;margin:12px 0"></div>
+      <ul>
+        <li><span class="node folder">Website-builder app - "tool pages" root (copy)</span>
+          <ul>
+            <li><span class="node folder">Personal &gt; Personal Finance (copy)</span>
+              <ul>
+                <li><span class="node leaf">Tax Preparation (leaf copy)</span>
+                  <ul>
+                    <li><span class="node doc">webpage object</span></li>
+                    <li><span class="node doc">help object</span></li>
+                    <li><span class="node doc">updates object</span></li>
+                    <li><span class="node doc">presentation object</span></li>
+                    <li><span class="node doc">social object</span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div class="note"><b>Cost:</b> the hierarchy exists twice - about 220 extra folders to import and keep in sync forever. <b>Gain:</b> all documents sit in a separate tree, apart from the tool records.</div>
+  </div>
+
+  <div class="option">
+    <h3>Option c - the SAME tree, shared<span class="tag tag-shared">SHARED</span></h3>
+    <div class="note">No copy at all. Every folder node in the import file already carries a <code>categories</code> list - we add <code>website-builder-uniconbaseapps</code> to it once, re-import, and the same folders serve both apps. Documents are created in the leaf where the tool record already lives.</div>
+    <div class="tree">
+      <ul>
+        <li><span class="node folder">The ONE taxonomy tree (imported, shared)</span>
+          <ul>
+            <li><span class="node folder">Personal &gt; Personal Finance</span>
+              <ul>
+                <li><span class="node leaf">Tax Preparation (leaf)</span>
+                  <ul>
+                    <li><span class="node tool">PersonalTaxPreparation record<small>html-tool-library object</small></span></li>
+                    <li><span class="node doc">webpage object</span></li>
+                    <li><span class="node doc">help object</span></li>
+                    <li><span class="node doc">updates object</span></li>
+                    <li><span class="node doc">presentation object</span></li>
+                    <li><span class="node doc">social object</span></li>
+                    <li><span class="node doc">version objects (v1..v20)<small>website-builder objects</small></span></li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div class="note"><b>Cost:</b> one edit to the import file (add the app to each folder's <code>categories</code>), re-import. <b>Gain:</b> one filing system, zero duplication - everything about a category lives in its leaf.</div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span><span class="dot dot-leaf"></span>leaf folder</span>
+  <span><span class="dot dot-tool"></span>tool record</span>
+  <span><span class="dot dot-doc"></span>website-builder document / version</span>
+</div>
+
+<h2>Side-by-side comparison</h2>
+<table>
+  <tr><th></th><th>Option b (copy of the tree)</th><th>Option c (shared tree)</th></tr>
+  <tr><td><b>Folder count in website-builder app</b></td><td>about 220 new folders</td><td class="win">0 new folders</td></tr>
+  <tr><td><b>Import file change</b></td><td>duplicate the whole hierarchy inside the file</td><td class="win">add one app name to each folder's categories list (programmatic, small)</td></tr>
+  <tr><td><b>Keeping in sync</b></td><td>every new category must be added in 2 places</td><td class="win">one place only</td></tr>
+  <tr><td><b>What a leaf folder contains</b></td><td>tool record in tree 1, documents in tree 2 - same leaf exists twice</td><td class="win">tool record + its 5 documents + its versions together</td></tr>
+  <tr><td><b>Listing all webpages</b></td><td class="win">browse the webpage branch of the copied tree</td><td>query website-builder type + filter by slug suffix (-webpage)</td></tr>
+  <tr><td><b>Listing one category completely</b></td><td>two places to look</td><td class="win">one leaf = everything</td></tr>
+  <tr><td><b>Matches the import rule</b></td><td>yes, but the file doubles</td><td class="win">yes - and the file already has the categories array designed for this</td></tr>
+</table>
+
+<div class="verdict">
+<b>Recommendation: option c.</b> The import file was built with a <code>categories</code> array on every folder exactly so several applications can share one hierarchy. Option b gives slightly easier per-type browsing on the website, but that can be reproduced with a slug filter - and it costs a permanent double hierarchy. HtmlToolLibraryItem already implements c: it creates every document and version snapshot in the leaf folder of its own record.
+</div>
+
+</div>
+</body>
+</html>

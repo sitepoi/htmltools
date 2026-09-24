@@ -115,7 +115,7 @@ changed since the last sync (counts must match reality):
       - open C:/Users/Admin/AppData/Local/Temp/repo-sync-hierarchy2.cjs
       - add one TOOL_HOMES entry per new tool:
           '<ToolName>': '<subcategory code>'
-        (codes come from UNICON-TOOLS/folder-hierarchy-import.json, e.g.
+        (codes come from UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json, e.g.
         B-G-01-b for ai-content-builders)
       - confirm the mapped tool count equals the built tool count
         (npm run tools:changed lists the new tools as well).
@@ -127,7 +127,7 @@ changed since the last sync (counts must match reality):
       node "C:/Users/Admin/AppData/Local/Temp/repo-sync-hierarchy2.cjs"
     What it does (self-healing, safe to re-run): stages all tool folders out,
     wipes the BUSINESS*/PERSONAL* roots, rebuilds the full taxonomy tree from
-    UNICON-TOOLS/folder-hierarchy-import.json, moves every tool into
+    UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json, moves every tool into
     <root>/<TYPE>/<category>/<subcategory>/<Tool>/ with its part folders
     (app / listing / reporting) and docs/ preserved, renames every folder to
     <base>_<apps>_of_<ideas>, adds .gitkeep to empty subcategories, and
@@ -146,9 +146,21 @@ changed since the last sync (counts must match reality):
     Run:
       node "C:/Users/Admin/AppData/Local/Temp/alltools-verify2.cjs"
         → must print "all 50 folder paths exist on disk"
-    Expected root names: BUSINESS_48_of_150, PERSONAL_2_of_40, with types
-    GENERAL_27_of_88 / VERTICAL_21_of_62 / GENERAL_1_of_20 / VERTICAL_1_of_20.
-    If any number is wrong, STOP and fix the sync script before continuing.
+    Expected root names: BUSINESS_<apps>_of_<ideas> and PERSONAL_<apps>_of_<ideas>
+    where apps = tools built on disk and ideas = catalog entries (apps may
+    never exceed ideas - see D-08). The sync script prints the exact names
+    it wrote; trust those and verify counts with alltools-verify2.
+    If any number is wrong, STOP and fix the catalog/sync before continuing.
+
+1.3 Rebuild the catalog monitor (after EVERY catalog or folder change)
+    The tool-ideas-catalog page shows the AUTO-DETECTED status of every
+    tool (built folders, code files, docs 7/7, screenshots, harness) - it
+    is regenerated from the repo, never hand-edited:
+      npm run catalog:build
+    Rule D-08 applies here too: before the sync, every built tool MUST have
+    a matching idea in tool-ideas-catalog.json (one tool = one idea, exact
+    name match via scripts/build-catalog-page.js TOOL_IDEA_MAP) - add the
+    missing idea entries first, then sync, then build the page.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PHASE 2 - SSOT UPDATE (per changed tool, in the SAME change as the code)
@@ -305,6 +317,10 @@ between the GENERATED markers).
     every code change, refresh those panes for each changed tool:
       npm run docs:index-code -- <ToolName>
     (Mode A: npm run rel does this automatically for changed tools.)
+    CENTRALIZED SHELL: docs/index.html carries ONLY the tool's data (the
+    two JSON payloads + the menu). The design and behavior live ONCE in
+    _docs/assets/index.css + index.js - never add inline styles/scripts to
+    a per-tool index; change the shared assets instead.
 
 3.9 Screenshots freshness (docs/screenshots/)
     After code changes that touch what a customer sees (dashboard, lists,
@@ -313,12 +329,15 @@ between the GENERATED markers).
     Nine shots per tool: 01-dashboard-desktop (1440x900), 02-dashboard-
     mobile (390x844), 03-documents, 04-transactions, 05-expense-finder,
     06-gst, 07-assistant, 08-reports, 09-settings (all 1440x900 desktop,
-    via ?sample=1&page=<page> - requires the harness ?page= param). When a
-    harness does not support a page, the duplicate of the dashboard is
-    detected byte-for-byte and deleted, so every tool keeps only its
-    UNIQUE shots (aim: at least 5). The script ALSO writes
-    docs/screenshots/screenshots.json - the manifest (file, label, page,
-    viewport, REAL pixel dimensions read from the PNG, capture time).
+    via ?sample=1&bare=1&page=<page> - requires the harness ?page= and
+    ?bare= params). BARE MODE: ?bare=1 hides the harness toolbar so the
+    shots show the REAL app only - every harness must support it (body
+    class th-bare + display:none on the harness bar). When a harness does
+    not support a page, the duplicate of the dashboard is detected
+    byte-for-byte and deleted, so every tool keeps only its UNIQUE shots
+    (aim: at least 5). The script ALSO writes docs/screenshots/
+    screenshots.json - the manifest (file, label, page, viewport, REAL
+    pixel dimensions read from the PNG, capture time).
     Consumers of the shots: the webpage highlight rows (01/02/03), the
     webpage gallery band (all), the help "What it looks like" figures
     (all), the social media strip (all) and the index viewer (all).
@@ -495,6 +514,96 @@ D-06 CMS integration is planned but NOT active: SHIP Phase 8 prepares the
     the CMS team (see Phase 8).
 D-07 docs/ is internal documentation; public surfaces are only webpage-
     export.html (website) and the social texts + screenshots.
+D-08 Folder names are FACTUAL: <apps>_of_<ideas> must always be correct at
+    every level, and apps may never exceed ideas. A built tool without a
+    catalog idea gets its idea added to tool-ideas-catalog.json BEFORE the
+    re-sync (one tool = one idea). Re-sync with
+    node C:/Users/Admin/AppData/Local/Temp/repo-sync-hierarchy2.cjs.
+D-09 Screenshots show the REAL app: every harness supports ?bare=1 which
+    hides the harness toolbar, and the capture script always passes it.
+D-10 The docs index is centralized: per-tool index.html = data only;
+    design/behavior live in _docs/assets/index.css + index.js.
+D-11 The catalog is a LIVE monitor: "Built" status is auto-derived from
+    the repo by scripts/build-catalog-page.js (npm run catalog:build) -
+    never hand-maintained. Every built tool must have an exact-name idea
+    in the catalog (TOOL_IDEA_MAP). Manual statuses (backlog/planned/
+    in-progress/skipped) apply only to ideas without a folder. The page
+    shows one item per line with a Details modal per item.
+D-12 The catalog page is the SSOT SURFACE for the folder hierarchy.
+    UNICON-TOOLS/tools-catalog/folder-hierarchy-import.json (meta.version
+    "1.0.0" + versionHistory) is merged into catalog-data.js as
+    FOLDER_HIERARCHY by npm run catalog:build. The toolbar button
+    "Export folder hierarchy" downloads it in the same schema with the
+    NEXT version number on EVERY export: meta.version = bumpPatch(max
+    of file version and localStorage uniconhub_hierarchy_export_version),
+    updatedAt refreshed, one versionHistory entry appended per export.
+    Filename: folder-hierarchy-import-v<next>.json. Versions are
+    monotonic across repeated exports from one browser. The SSOT role
+    is explained in the page's bottom "About this page" note (D-13).
+D-13 The catalog page is a 3-COLUMN workspace: LEFT = groups tree
+    (sidebar), MIDDLE = one-item-per-line list for the selected group/
+    category/subcategory, RIGHT = inline details pane (no popup) that
+    opens when an item row is clicked (also ?details=<ideaId>). The
+    pane shows the built-tool repo info and a "Open docs index" button
+    that links to <tool folder>/docs/index.html - the single gateway
+    to all documents of every built tool. The page explanation text
+    lives only in the collapsible "About this page" note at the bottom.
+    The layout is full-width (no centered max-width) and the sidebar is
+    COLLAPSIBLE via the side-head « / » toggle (collapses to a 44px
+    strip that PUSHES content, never overlays it; state persisted in
+    localStorage catalog_sidebar_collapsed, QA param ?collapsed=1).
+    Detail pane width 460px. Table headers are CLICK-TO-SORT: each th
+    (status/name/som/licensing/folder) toggles the sort - first click
+    sets the mode, second click reverses direction (▲/▼ marker on the
+    active header); the toolbar sort select mirrors it (status /
+    licensing / built-as added) and ?sort=<mode> deep-links a sort.
+    Status sort rank: in-progress, planned, backlog, built, skipped.
+    Palette: slate background #f1f5f9, ink #0f172a, muted #64748b,
+    line #e2e8f0, accent #1e4e79 - panels get a soft 1px shadow.
+D-14 PUBLISH MANAGEMENT: every built tool is tracked against the
+    applicationStore html tool library. 8 publish subjects: code,
+    harness, screenshots, webpage, help, presentation, updates, social.
+    Completeness = published subjects / 8, shown as a progress bar +
+    % in the PUBLISH column (green full / amber partial / gray none)
+    with the published version chip; the column sorts (Publish score).
+    SSOT = UNICON-TOOLS/tools-catalog/tool-publish-state.json (per tool:
+    version, publishedAt, subjects{}), merged into catalog-data.js by
+    catalog:build as REPO_PUBLISH_STATE and merged with localStorage overrides
+    (uniconhub_tool_publish_state_v1) - page edits win for quick
+    management, Export publish downloads the merged JSON to update the
+    SSOT file (commit on SHIP), Import publish restores flags.
+    Readiness is auto-derived (subject exists in repo): code=always,
+    harness=harness file, screenshots=screenshots>0, docs=docsList.
+    Not-ready subjects are disabled with a "not ready" tag. Version
+    input auto-stamps publishedAt (today). Stats chips: Publish score
+    (avg %) + Fully published (N/50).
+D-15 TOOLS-CATALOG FOLDER + DATA-FILE SPLIT: all catalog files live in
+    UNICON-TOOLS/tools-catalog/: tool-ideas-catalog.html (UI only, NO
+    data inside), tool-ideas-catalog.json (ideas SSOT),
+    folder-hierarchy-import.json (taxonomy SSOT), tool-publish-state.json
+    (publish SSOT), catalog-data.js (GENERATED - npm run catalog:build
+    writes it; never edit by hand). The page loads data via
+    <script src="catalog-data.js"> (works on file:// and http - fetch
+    would break file://). Generator writes only catalog-data.js and no
+    longer edits the page. Docs links use ../../<tool path>/docs/index.html.
+    EXTERNAL CONSUMERS to keep in sync when paths change: the CMS folder
+    import + C:/Users/Admin/AppData/Local/Temp/repo-sync-hierarchy2.cjs
+    (reads folder-hierarchy-import.json and tool-ideas-catalog.json).
+D-16 SINGLE SSOT = catalog-data.js: the catalog page reads ONLY
+    UNICON-TOOLS/tools-catalog/catalog-data.js. Inside it, the
+    MANUAL-DATA-START/END region (var IDEA_GROUPS, var FOLDER_HIERARCHY,
+    var REPO_PUBLISH_STATE) is the single source of truth, edited via
+    AI conversation - npm run catalog:build PRESERVES it verbatim. The
+    GENERATED-DATA-START/END region (var IDEA_TOOLS repo scan + var
+    CATALOG_BUILT_AT) is rewritten on every build. catalog:build ALSO
+    re-exports the 3 JSON files (tool-ideas-catalog.json,
+    folder-hierarchy-import.json, tool-publish-state.json) from the
+    manual region - they are generated copies, never edited by hand.
+    The page can export the same JSONs on demand (Actions menu:
+    Export folder hierarchy / Export ideas catalog / Export publish).
+    Editing workflow: idea/publish/hierarchy changes = AI edits the
+    manual region directly (no build needed); tool/docs/repo changes =
+    npm run catalog:build to refresh the scan + JSON exports.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HARD RULES (apply to every phase, no exceptions)

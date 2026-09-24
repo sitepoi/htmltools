@@ -28,15 +28,15 @@ const context = require('./releaseContext')
 const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 
 const SHOT_SPECS = [
-  { name: '01-dashboard-desktop.png', label: 'Dashboard (desktop)', page: 'dashboard', size: '1440,900', query: '?sample=1' },
-  { name: '02-dashboard-mobile.png', label: 'Dashboard (mobile)', page: 'dashboard', size: '390,844', query: '?sample=1' },
-  { name: '03-documents-desktop.png', label: 'Documents (desktop)', page: 'documents', size: '1440,900', query: '?sample=1&page=documents' },
-  { name: '04-transactions-desktop.png', label: 'Transactions (desktop)', page: 'transactions', size: '1440,900', query: '?sample=1&page=transactions' },
-  { name: '05-expense-finder-desktop.png', label: 'Expense Finder (desktop)', page: 'finder', size: '1440,900', query: '?sample=1&page=finder' },
-  { name: '06-gst-desktop.png', label: 'GST / PST (desktop)', page: 'gst', size: '1440,900', query: '?sample=1&page=gst' },
-  { name: '07-assistant-desktop.png', label: 'AI Assistant (desktop)', page: 'assistant', size: '1440,900', query: '?sample=1&page=assistant' },
-  { name: '08-reports-desktop.png', label: 'Reports (desktop)', page: 'reports', size: '1440,900', query: '?sample=1&page=reports' },
-  { name: '09-settings-desktop.png', label: 'Settings (desktop)', page: 'settings', size: '1440,900', query: '?sample=1&page=settings' },
+  { name: '01-dashboard-desktop.png', label: 'Dashboard (desktop)', page: 'dashboard', size: '1440,900', query: '?sample=1&bare=1' },
+  { name: '02-dashboard-mobile.png', label: 'Dashboard (mobile)', page: 'dashboard', size: '390,844', query: '?sample=1&bare=1' },
+  { name: '03-documents-desktop.png', label: 'Documents (desktop)', page: 'documents', size: '1440,900', query: '?sample=1&bare=1&page=documents' },
+  { name: '04-transactions-desktop.png', label: 'Transactions (desktop)', page: 'transactions', size: '1440,900', query: '?sample=1&bare=1&page=transactions' },
+  { name: '05-expense-finder-desktop.png', label: 'Expense Finder (desktop)', page: 'finder', size: '1440,900', query: '?sample=1&bare=1&page=finder' },
+  { name: '06-gst-desktop.png', label: 'GST / PST (desktop)', page: 'gst', size: '1440,900', query: '?sample=1&bare=1&page=gst' },
+  { name: '07-assistant-desktop.png', label: 'AI Assistant (desktop)', page: 'assistant', size: '1440,900', query: '?sample=1&bare=1&page=assistant' },
+  { name: '08-reports-desktop.png', label: 'Reports (desktop)', page: 'reports', size: '1440,900', query: '?sample=1&bare=1&page=reports' },
+  { name: '09-settings-desktop.png', label: 'Settings (desktop)', page: 'settings', size: '1440,900', query: '?sample=1&bare=1&page=settings' },
 ]
 
 // Reads width/height straight from the PNG IHDR (bytes 16-23).

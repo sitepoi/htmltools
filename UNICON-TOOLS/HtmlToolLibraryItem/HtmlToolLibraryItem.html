@@ -9,19 +9,27 @@
         </div>
       </div>
       <div class="htl-header-actions">
+        <span class="htl-size-meter" id="htl-size-meter" title="Stored value size"></span>
         <span class="htl-save-state" id="htl-save-state">Draft staged</span>
         <span class="htl-role-badge" id="htl-role-badge"></span>
         <span class="htl-lock-note" id="htl-lock-note" style="display:none">🔒 Read-only</span>
       </div>
     </div>
+  </header>
+
+  <div class="htl-tabbar">
     <nav class="htl-tabs" id="htl-tabs">
       <button class="htl-tab active" data-tab="details">Details</button>
       <button class="htl-tab" data-tab="html">HTML</button>
       <button class="htl-tab" data-tab="css">CSS</button>
       <button class="htl-tab" data-tab="js">JS</button>
       <button class="htl-tab" data-tab="preview">Preview</button>
+      <button class="htl-tab" data-tab="docs">Docs</button>
+      <button class="htl-tab" data-tab="screenshots">Screenshots</button>
+      <button class="htl-tab" data-tab="versions">Versions</button>
+      <button class="htl-tab" data-tab="synclogs">Sync &amp; Logs</button>
     </nav>
-  </header>
+  </div>
 
   <div class="htl-banner" id="htl-fields-banner" style="display:none">
     <span id="htl-fields-banner-text"></span>
@@ -112,12 +120,66 @@
         <h2>Schema &amp; validation</h2>
         <div class="htl-form-grid">
           <div class="htl-field htl-field-wide">
-            <label for="htl-f-toolParams">Parameters schema <span class="htl-label-hint">(JSON - values for tool.param(key, default))</span></label>
-            <textarea class="htl-json-field" id="htl-f-toolParams" spellcheck="false" placeholder='{ "max": 5, "labels": "Poor,Fair,Good" }'></textarea>
+            <label>Parameters schema <span class="htl-label-hint">(values for tool.param(key, default))</span></label>
+            <div class="htl-schema-editor" id="htl-schema-params">
+              <div class="htl-schema-tabs">
+                <button class="htl-schema-tab active" data-schema-tab="toolParams" data-schema-part="json">JSON code</button>
+                <button class="htl-schema-tab" data-schema-tab="toolParams" data-schema-part="sample">Sample</button>
+                <button class="htl-schema-tab" data-schema-tab="toolParams" data-schema-part="editor">Editor</button>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolParams-json">
+                <textarea class="htl-json-field" id="htl-f-toolParams" spellcheck="false" placeholder='{ "max": 5, "labels": "Poor,Fair,Good" }'></textarea>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolParams-sample" style="display:none">
+                <div class="htl-schema-sample">
+                  <p>A parameters schema is a JSON object that maps each parameter name to its default value. The CMS field settings use this list; the tool itself calls <code>tool.param(key, default)</code> at runtime.</p>
+                  <pre>{
+  "currency": "USD",
+  "maximumStars": 5,
+  "showAverage": true,
+  "labels": ["Poor", "Fair", "Good"],
+  "style": { "theme": "dark" }
+}</pre>
+                  <p>Allowed value types: string (in quotes), number, boolean, array or object (JSON).</p>
+                </div>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolParams-editor" style="display:none">
+                <p class="htl-hint">Values are JSON: strings need quotes ("USD"), numbers and booleans as-is, arrays and objects as JSON text.</p>
+                <div class="htl-schema-rows" id="htl-schema-rows-toolParams"></div>
+                <button class="htl-btn htl-btn-ghost htl-btn-sm htl-schema-add" id="htl-schema-add-toolParams">+ Add parameter</button>
+              </div>
+            </div>
           </div>
           <div class="htl-field htl-field-wide">
-            <label for="htl-f-toolOutputSchema">Output schema <span class="htl-label-hint">(JSON - shape of the tool.setValue() value)</span></label>
-            <textarea class="htl-json-field" id="htl-f-toolOutputSchema" spellcheck="false" placeholder='{ "rating": "number", "label": "string" }'></textarea>
+            <label>Output schema <span class="htl-label-hint">(shape of the tool.setValue() value)</span></label>
+            <div class="htl-schema-editor" id="htl-schema-output">
+              <div class="htl-schema-tabs">
+                <button class="htl-schema-tab active" data-schema-tab="toolOutputSchema" data-schema-part="json">JSON code</button>
+                <button class="htl-schema-tab" data-schema-tab="toolOutputSchema" data-schema-part="sample">Sample</button>
+                <button class="htl-schema-tab" data-schema-tab="toolOutputSchema" data-schema-part="editor">Editor</button>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolOutputSchema-json">
+                <textarea class="htl-json-field" id="htl-f-toolOutputSchema" spellcheck="false" placeholder='{ "rating": "number", "label": "string" }'></textarea>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolOutputSchema-sample" style="display:none">
+                <div class="htl-schema-sample">
+                  <p>An output schema is a JSON object that describes the shape of the value the tool saves with <code>tool.setValue()</code>. Each key maps to its expected type name.</p>
+                  <pre>{
+  "rating": "number",
+  "label": "string",
+  "liked": "boolean",
+  "tags": "array",
+  "config": "object"
+}</pre>
+                  <p>Type names: string / number / boolean / array / object. Nested shapes can be written as objects in the Editor tab.</p>
+                </div>
+              </div>
+              <div class="htl-schema-part" id="htl-schema-pane-toolOutputSchema-editor" style="display:none">
+                <p class="htl-hint">Values are JSON: type names in quotes ("number"), nested shapes as JSON objects.</p>
+                <div class="htl-schema-rows" id="htl-schema-rows-toolOutputSchema"></div>
+                <button class="htl-btn htl-btn-ghost htl-btn-sm htl-schema-add" id="htl-schema-add-toolOutputSchema">+ Add field</button>
+              </div>
+            </div>
           </div>
           <div class="htl-field">
             <label for="htl-f-toolValidationEnabled">Validation enabled</label>
@@ -183,20 +245,64 @@
         <iframe class="htl-preview-frame" id="htl-preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Tool preview"></iframe>
       </div>
     </section>
+
+    <section class="htl-pane" id="pane-docs" style="display:none">
+      <div class="htl-doc-tabs" id="htl-doc-tabs"></div>
+      <div class="htl-doc-content" id="htl-doc-content"></div>
+      <details class="htl-seo-details">
+        <summary>Target configuration</summary>
+        <div class="htl-target-config">
+          <p class="htl-hint">Each document is pushed to its own CMS object type. The real types come from the field parameters - the defaults below are placeholders for testing.</p>
+          <div class="htl-target-grid">
+            <div class="htl-target-item"><span class="htl-target-label">Tool leaf folder</span><code class="htl-target-value" id="htl-target-leaf-folder"></code></div>
+            <div class="htl-target-item"><span class="htl-target-label">Page type</span><code class="htl-target-value" id="htl-target-page-type"></code></div>
+            <div class="htl-target-item"><span class="htl-target-label">Social type</span><code class="htl-target-value" id="htl-target-social-type"></code></div>
+            <div class="htl-target-item"><span class="htl-target-label">Versions type</span><code class="htl-target-value" id="htl-target-versions-type"></code></div>
+          </div>
+          <p class="htl-hint" id="htl-doc-object-note"></p>
+        </div>
+      </details>
+    </section>
+
+    <section class="htl-pane" id="pane-screenshots" style="display:none">
+      <div class="htl-card">
+        <h2>Screenshots</h2>
+        <p class="htl-hint">Upload to CMS storage - only the URL is kept, never file bytes. Insert a shot into the active document editor with the Insert button.</p>
+        <div class="htl-shots-bar">
+          <button class="htl-btn htl-btn-primary htl-btn-sm" id="htl-shots-upload">⬆ Upload screenshot</button>
+          <span class="htl-hint" id="htl-shots-count">0 shots</span>
+        </div>
+        <div class="htl-shots-list" id="htl-shots-list"></div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-versions" style="display:none">
+      <div class="htl-card">
+        <h2>Code versions</h2>
+        <p class="htl-hint">Snapshots of the html/css/js code stored in a separate object type. The newest 20 per tool are kept; older snapshots are deleted automatically. Load returns the code to the editors.</p>
+        <div class="htl-shots-bar">
+          <button class="htl-btn htl-btn-primary htl-btn-sm" id="htl-versions-snapshot">◈ Snapshot current code</button>
+          <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-versions-refresh">↻ Refresh list</button>
+          <span class="htl-hint" id="htl-versions-note"></span>
+        </div>
+        <div class="htl-versions-list" id="htl-versions-list"></div>
+      </div>
+    </section>
+
+    <section class="htl-pane" id="pane-synclogs" style="display:none">
+      <div class="htl-card">
+        <h2>Field sync</h2>
+        <p class="htl-hint">Edits auto-save to this record's CMS fields as you type - the form Save button still commits them. Use Import to overwrite the editor with the form field values.</p>
+        <p class="htl-hint" id="htl-sync-note">Auto-saves to CMS fields as you edit.</p>
+        <div class="htl-sync-actions">
+          <button class="htl-btn htl-btn-ghost" id="htl-btn-pull">⇩ Import from form fields</button>
+          <button class="htl-btn htl-btn-ghost" id="htl-btn-check-js">✓ Check JS</button>
+        </div>
+      </div>
+      <details class="htl-debug" open>
+        <summary>Diagnostics log - open to see the field-import steps</summary>
+        <pre class="htl-debug-log" id="htl-debug-log">(no entries yet)</pre>
+      </details>
+    </section>
   </main>
-
-  <footer class="htl-actionbar">
-    <div class="htl-actionbar-left">
-      <span class="htl-hint" id="htl-sync-note">Auto-saves to CMS fields as you edit.</span>
-    </div>
-    <div class="htl-actionbar-right">
-      <button class="htl-btn htl-btn-ghost" id="htl-btn-pull">⇩ Import from form fields</button>
-      <button class="htl-btn htl-btn-ghost" id="htl-btn-check-js">✓ Check JS</button>
-    </div>
-  </footer>
-
-  <details class="htl-debug" open>
-    <summary>Diagnostics log - open to see the field-import steps</summary>
-    <pre class="htl-debug-log" id="htl-debug-log">(no entries yet)</pre>
-  </details>
 </div>

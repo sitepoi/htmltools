@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Size Report - Tool Code + Documents vs the 1 MB Limit</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --accent:#0f766e; --line:#e5e7eb; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; --bg:#f8fafc; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Segoe UI, system-ui, sans-serif; color:var(--ink); background:var(--bg); line-height:1.55; }
+  .page { max-width:1080px; margin:0 auto; padding:28px 20px 60px; }
+  .doc-header { border-bottom:3px solid var(--accent); padding-bottom:12px; margin-bottom:8px; }
+  .doc-header h1 { margin:0 0 4px; font-size:26px; }
+  .doc-header .sub { color:var(--muted); font-size:14px; }
+  h2 { font-size:19px; margin:34px 0 10px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:16px; margin:20px 0 8px; }
+  table { width:100%; border-collapse:collapse; background:#fff; font-size:13.5px; margin:10px 0; }
+  th, td { border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top; }
+  th { background:#f1f5f9; font-weight:600; }
+  .num { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .total td { font-weight:700; background:#f0fdfa; }
+  .ok { color:var(--ok); font-weight:700; }
+  .warn { color:var(--warn); font-weight:700; }
+  .bad { color:var(--bad); font-weight:700; }
+  .note { background:#fff; border:1px solid var(--line); border-left:4px solid var(--accent); padding:10px 14px; font-size:13.5px; margin:12px 0; }
+  .warnbox { border-left-color:var(--warn); background:#fffbeb; }
+  .badbox { border-left-color:var(--bad); background:#fef2f2; }
+  code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12.5px; }
+  .meter { height:10px; background:#e5e7eb; border-radius:5px; overflow:hidden; margin-top:4px; }
+  .meter div { height:100%; border-radius:5px; }
+  ul { margin:8px 0; padding-left:22px; }
+  li { margin:4px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="doc-header">
+  <h1>Size Report - One Tool Package vs the 1 MB Object Limit</h1>
+  <div class="sub">Reference tool: PersonalTaxPreparation - second data point: BrandSetGenerator - target: applicationstore.uniconhub.com - prepared for HtmlToolLibraryItem file-management design - date: 2026-09-25</div>
+</div>
+
+<p>Firestore allows <b>1,048,576 bytes (1 MB)</b> per object document, including field names and
+a small per-field indexing overhead (roughly 32 bytes per field). This report measures real
+workspace files to answer one question: <b>can one CMS object hold the code, the test harness,
+the 7 documents, and the screenshots of one tool - and where does the 1 MB run out?</b></p>
+
+<h2>1. Measured - PersonalTaxPreparation (reference tool)</h2>
+
+<h3>1a. Code files (a + b)</h3>
+<table>
+  <tr><th>File</th><th class="num">Bytes</th><th class="num">KB</th></tr>
+  <tr><td>PersonalTaxPreparation.html</td><td class="num">20,003</td><td class="num">19.5</td></tr>
+  <tr><td>PersonalTaxPreparation.css</td><td class="num">21,564</td><td class="num">21.1</td></tr>
+  <tr><td>PersonalTaxPreparation.js</td><td class="num">100,090</td><td class="num">97.7</td></tr>
+  <tr><td>test-harness.html</td><td class="num">44,875</td><td class="num">43.8</td></tr>
+  <tr class="total"><td>Code + harness total</td><td class="num">186,532</td><td class="num">182.2</td></tr>
+</table>
+
+<h3>1b. Documents (c)</h3>
+<table>
+  <tr><th>Document</th><th class="num">Bytes</th><th class="num">KB</th></tr>
+  <tr><td>index.html (one-page shell + code panes + gallery + shot payloads)</td><td class="num">179,057</td><td class="num">174.9</td></tr>
+  <tr><td>ssot.html (source of truth)</td><td class="num">43,941</td><td class="num">42.9</td></tr>
+  <tr><td>webpage-export.html (self-contained public page)</td><td class="num">34,787</td><td class="num">34.0</td></tr>
+  <tr><td>social.html</td><td class="num">19,853</td><td class="num">19.4</td></tr>
+  <tr><td>webpage.html</td><td class="num">14,853</td><td class="num">14.5</td></tr>
+  <tr><td>help.html</td><td class="num">5,804</td><td class="num">5.7</td></tr>
+  <tr><td>presentation.html</td><td class="num">5,794</td><td class="num">5.7</td></tr>
+  <tr><td>updates.html</td><td class="num">2,908</td><td class="num">2.8</td></tr>
+  <tr class="total"><td>All 7 documents total</td><td class="num">306,997</td><td class="num">299.8</td></tr>
+</table>
+
+<h3>1c. Screenshots (d)</h3>
+<table>
+  <tr><th>File</th><th class="num">Bytes</th><th class="num">KB</th></tr>
+  <tr><td>04-transactions-desktop.png</td><td class="num">169,168</td><td class="num">165.2</td></tr>
+  <tr><td>01-dashboard-desktop.png</td><td class="num">109,182</td><td class="num">106.6</td></tr>
+  <tr><td>06-gst-desktop.png</td><td class="num">95,161</td><td class="num">92.9</td></tr>
+  <tr><td>03-documents-desktop.png</td><td class="num">94,575</td><td class="num">92.4</td></tr>
+  <tr><td>05-expense-finder-desktop.png</td><td class="num">80,552</td><td class="num">78.7</td></tr>
+  <tr><td>09-settings-desktop.png</td><td class="num">79,021</td><td class="num">77.2</td></tr>
+  <tr><td>08-reports-desktop.png</td><td class="num">72,520</td><td class="num">70.8</td></tr>
+  <tr><td>07-assistant-desktop.png</td><td class="num">64,823</td><td class="num">63.3</td></tr>
+  <tr><td>02-dashboard-mobile.png</td><td class="num">47,240</td><td class="num">46.1</td></tr>
+  <tr><td>screenshots.json (manifest)</td><td class="num">2,209</td><td class="num">2.2</td></tr>
+  <tr class="total"><td>Screenshots total (9 shots)</td><td class="num">814,451</td><td class="num">795.4</td></tr>
+</table>
+<p class="note">Shot range: <b>46 - 165 KB each, average about 90 KB</b>. These are 1440x900 and
+390x844 viewport PNG captures. The 9 shots alone are nearly <b>80% of the whole 1 MB budget</b>.</p>
+
+<h2>2. Measured - BrandSetGenerator (second data point)</h2>
+<table>
+  <tr><th>File</th><th class="num">Bytes</th><th class="num">KB</th></tr>
+  <tr><td>BrandSetGenerator.js</td><td class="num">219,357</td><td class="num">214.2</td></tr>
+  <tr><td>BrandSetGenerator.css</td><td class="num">35,870</td><td class="num">35.0</td></tr>
+  <tr><td>BrandSetGenerator.html</td><td class="num">16,993</td><td class="num">16.6</td></tr>
+  <tr><td>test-harness.html</td><td class="num">26,825</td><td class="num">26.2</td></tr>
+  <tr class="total"><td>Code + harness total</td><td class="num">299,045</td><td class="num">292.0</td></tr>
+  <tr><td>index.html</td><td class="num">309,432</td><td class="num">302.2</td></tr>
+  <tr><td>ssot.html</td><td class="num">34,736</td><td class="num">33.9</td></tr>
+  <tr><td>webpage.html</td><td class="num">21,301</td><td class="num">20.8</td></tr>
+  <tr><td>social.html</td><td class="num">10,201</td><td class="num">10.0</td></tr>
+  <tr><td>presentation.html</td><td class="num">4,693</td><td class="num">4.6</td></tr>
+  <tr><td>updates.html</td><td class="num">1,846</td><td class="num">1.8</td></tr>
+  <tr><td>help.html</td><td class="num">1,742</td><td class="num">1.7</td></tr>
+  <tr class="total"><td>All 7 documents total</td><td class="num">383,951</td><td class="num">375.0</td></tr>
+  <tr class="total"><td>Code + documents combined</td><td class="num">682,996</td><td class="num">667.0</td></tr>
+</table>
+<p class="note">BrandSetGenerator has no captured screenshots yet - its 667 KB total is code plus
+documents only. Its JS (214 KB) is the largest code file measured so far.</p>
+
+<h2>3. Per-category size ranges (expected values to plan with)</h2>
+<table>
+  <tr><th>Category</th><th class="num">Small end</th><th class="num">Large end</th><th>Notes</th></tr>
+  <tr><td>a - tool HTML</td><td class="num">17 KB</td><td class="num">27 KB</td><td>body markup only, no head</td></tr>
+  <tr><td>a - tool CSS</td><td class="num">21 KB</td><td class="num">36 KB</td><td>rules only</td></tr>
+  <tr><td>a - tool JS</td><td class="num">98 KB</td><td class="num">220 KB</td><td>the biggest code file - grows with features</td></tr>
+  <tr><td>b - test-harness</td><td class="num">27 KB</td><td class="num">45 KB</td><td>full page with embedded copy of the HTML</td></tr>
+  <tr><td>c - index doc</td><td class="num">175 KB</td><td class="num">310 KB</td><td>DOMINANT doc - shell + code panes + gallery payloads</td></tr>
+  <tr><td>c - ssot doc</td><td class="num">34 KB</td><td class="num">44 KB</td><td>grows a little with each ship</td></tr>
+  <tr><td>c - webpage + webpage-export</td><td class="num">15 KB</td><td class="num">35 KB</td><td>per file</td></tr>
+  <tr><td>c - social doc</td><td class="num">10 KB</td><td class="num">20 KB</td><td>grows with the share-set archive</td></tr>
+  <tr><td>c - help doc</td><td class="num">2 KB</td><td class="num">6 KB</td><td></td></tr>
+  <tr><td>c - presentation doc</td><td class="num">5 KB</td><td class="num">6 KB</td><td></td></tr>
+  <tr><td>c - updates doc</td><td class="num">2 KB</td><td class="num">3 KB</td><td></td></tr>
+  <tr><td>d - one screenshot (PNG)</td><td class="num">46 KB</td><td class="num">165 KB</td><td>average about 90 KB at 1440x900</td></tr>
+</table>
+
+<h2>4. The 1 MB check (1,048,576 bytes)</h2>
+<table>
+  <tr><th>Package</th><th class="num">PersonalTaxPreparation</th><th class="num">BrandSetGenerator</th><th>Verdict</th></tr>
+  <tr><td>Code + harness only</td><td class="num">182.2 KB - 17%</td><td class="num">292.0 KB - 28%</td><td class="ok">fits easily</td></tr>
+  <tr><td>Code + harness + all 7 docs</td><td class="num">482.0 KB - 46%</td><td class="num">667.0 KB - 64%</td><td class="ok">fits</td></tr>
+  <tr><td>Everything + 9 screenshots</td><td class="num">1,277.4 KB - 125%</td><td class="num">about 1.43 MB with 9 shots</td><td class="bad">EXCEEDS 1 MB</td></tr>
+  <tr><td>Screenshots alone (9 shots)</td><td class="num">795.4 KB - 76%</td><td class="num">-</td><td class="warn">nearly the whole budget</td></tr>
+</table>
+
+<div class="note warnbox"><b>Finding:</b> code + harness + all 7 documents is about 480 - 670 KB for a
+typical tool and fits under 1 MB with headroom. The screenshots are what breaks the budget -
+9 PNG shots average almost 800 KB on their own. Any object that stores screenshots alongside
+everything else goes over 1 MB.</div>
+
+<div class="meter"><div style="width:46%;background:#15803d"></div></div>
+<div>PersonalTaxPreparation: code + docs = 46% of 1 MB</div>
+<div class="meter"><div style="width:64%;background:#15803d"></div></div>
+<div>BrandSetGenerator: code + docs = 64% of 1 MB</div>
+<div class="meter"><div style="width:100%;background:#b91c1c"></div></div>
+<div>PersonalTaxPreparation: everything incl. screenshots = 125% of 1 MB - over the limit</div>
+
+<h2>5. Headroom analysis</h2>
+<ul>
+  <li>With code + docs only, the larger measured tool leaves about <b>380 KB</b> of headroom.
+  Docs can roughly double in size before the limit is reached.</li>
+  <li>The JS file is the main growth driver on the code side (98 - 220 KB today). A very large
+  tool (JS 400 KB + HTML 30 KB + CSS 40 KB + harness 50 KB) would still only be about 520 KB -
+  over half the budget, but still fit with all docs.</li>
+  <li>Practical safety cap for the object: <b>900 KB</b>, leaving room for field-name and
+  indexing overhead plus future growth.</li>
+  <li>Screenshots in the object are impossible at the planned 9-shot gallery: even 3 shots
+  (about 270 KB) would consume the remaining headroom of the bigger tool.</li>
+</ul>
+
+<h2>6. Recommendation for HtmlToolLibraryItem storage design</h2>
+<div class="note"><b>One CMS object per tool can hold: tool definition + code (html/css/js) +
+test harness + all 7 documents.</b> Screenshots must stay OUT of the object.</div>
+<ul>
+  <li><b>In the object (text fields):</b> tool details, html/css/js code, test-harness, and the
+  7 documents (index/help/presentation/social/ssot/updates/webpage). Expected total about
+  480 - 670 KB, always under 1 MB.</li>
+  <li><b>Out of the object (media):</b> screenshots upload to the CMS media library / storage
+  via <code>requestUpload</code>, and the documents reference them by URL. This matches the
+  existing SHIP-CMS-PLAN section 2.7 convention.</li>
+  <li><b>Fallback if no media library yet:</b> a separate screenshots object per tool - but
+  one object per tool can only hold about 8 - 10 shots before it too reaches 1 MB, so the
+  media-library route is the durable answer.</li>
+  <li><b>Compression options if shots must shrink:</b> PNG to optimized PNG or WebP commonly
+  cuts 40 - 70% of these sizes, and reducing 1440x900 to 1200x750 helps further.</li>
+  <li><b>Guard in the tool:</b> HtmlToolLibraryItem should show a live size meter of the
+  object payload and warn at 800 KB / block at 950 KB, like the existing translator tool's
+  warning pattern.</li>
+</ul>
+
+<div class="note">Source files measured (read-only, nothing changed):<br>
+<code>PERSONAL_2_of_40/GENERAL_1_of_20/personal-finance_1_of_4/tax-preparation_1_of_1/PersonalTaxPreparation/app</code> and <code>.../docs</code><br>
+<code>BUSINESS_48_of_150/GENERAL_27_of_88/marketing-brand_1_of_6/brand-design-assets_1_of_1/BrandSetGenerator/app</code> and <code>.../docs</code></div>
+
+</div>
+</body>
+</html>
