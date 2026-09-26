@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI for Seniors - Session 2: Voice, Big Projects, and Safety</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --warn-bg: #fdf0e0;
+    --warn-line: #d99a2b;
+    --tip-bg: #eaf3fa;
+    --tip-line: #2f78a8;
+    --safe-bg: #edf7ef;
+    --safe-line: #1d7a36;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #e8edf2;
+    overflow: hidden;
+  }
+  .deck-stage { position: relative; height: 100%; width: 100%; }
+  .deck-slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    padding: 52px 64px 90px;
+    overflow-y: auto;
+    background: #ffffff;
+  }
+  .deck-slide.deck-active { display: flex; flex-direction: column; }
+  .deck-slide-inner { width: 100%; max-width: 1120px; margin: auto; }
+  .deck-kicker {
+    display: inline-block;
+    font-size: 17px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .deck-illustration { text-align: center; margin-bottom: 10px; }
+  .deck-illustration svg { height: 66px; width: auto; }
+  .deck-slide h1, .deck-slide h2 { margin: 0 0 18px; line-height: 1.18; color: var(--ink); }
+  .deck-slide h1 { font-size: clamp(38px, 5.2vw, 58px); }
+  .deck-slide h2 { font-size: clamp(30px, 4.2vw, 46px); }
+  .deck-slide h3 { font-size: 22px; margin: 0 0 8px; color: var(--accent); }
+  .deck-slide p { font-size: 21px; line-height: 1.5; margin: 10px 0; }
+  .deck-slide ul, .deck-slide ol { font-size: 21px; line-height: 1.5; padding-left: 28px; margin: 10px 0; }
+  .deck-slide li { margin: 10px 0; }
+  .deck-slide strong { color: var(--accent-dark); }
+  .deck-note {
+    font-size: 16.5px;
+    color: var(--muted);
+    border-left: 4px solid var(--line);
+    padding: 6px 14px;
+    margin-top: 18px;
+  }
+  .deck-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0; }
+  .deck-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin: 18px 0; }
+  .deck-card {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .deck-card.warm { background: var(--soft-warm); border-color: #ecdcc8; }
+  .deck-card h3 { margin-top: 0; }
+  .deck-card p { font-size: 18.5px; margin: 6px 0; }
+  .deck-big-number { font-size: 44px; font-weight: 800; color: var(--accent); display: block; margin-bottom: 4px; }
+  .deck-prompt-box {
+    background: var(--soft-warm);
+    border: 1px solid #ecdcc8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .deck-prompt-box .deck-prompt-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent-2);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .deck-prompt-box.strong { background: var(--safe-bg); border-color: var(--safe-line); }
+  .deck-prompt-box.strong .deck-prompt-label { color: var(--good); }
+  .deck-rules { list-style: none; padding: 0; margin: 16px 0; counter-reset: rule-counter; }
+  .deck-rules li {
+    counter-increment: rule-counter;
+    background: var(--soft);
+    border-radius: 12px;
+    padding: 15px 18px 15px 64px;
+    margin: 12px 0;
+    position: relative;
+    font-size: 21px;
+  }
+  .deck-rules li::before {
+    content: counter(rule-counter);
+    position: absolute;
+    left: 14px;
+    top: 14px;
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+  }
+  .deck-rules li.safe::before { background: var(--good); }
+  .deck-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 18.5px; }
+  .deck-table th {
+    background: var(--soft);
+    color: var(--accent);
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 3px solid var(--accent);
+  }
+  .deck-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .deck-table tr:nth-child(even) td { background: #fafcfd; }
+  .deck-title-slide {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 55%, #174f7d 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-title-slide h1 { color: #ffffff; font-size: clamp(40px, 6vw, 66px); }
+  .deck-title-slide .deck-sub { color: #dce8f2; font-size: 24px; max-width: 780px; margin: 0 auto; }
+  .deck-title-slide .deck-chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 28px; }
+  .deck-title-slide .deck-chip {
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-size: 18px;
+  }
+  .deck-closing-slide {
+    background: linear-gradient(135deg, #a85e31 0%, var(--accent-2) 60%, #d68a55 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-closing-slide h2 { color: #ffffff; font-size: clamp(34px, 4.6vw, 52px); }
+  .deck-closing-slide .deck-sub { color: #fcefe2; font-size: 23px; max-width: 760px; margin: 0 auto; }
+  .deck-closing-slide .deck-chip {
+    display: inline-block;
+    margin-top: 26px;
+    background: #ffffff;
+    color: var(--accent-2);
+    border-radius: 999px;
+    padding: 14px 34px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .deck-closing-slide .deck-note { color: #f8e3d2; border-left-color: rgba(255,255,255,.5); }
+  .deck-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #f2f5f8;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+    z-index: 10;
+  }
+  .deck-btn {
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+  .deck-btn:hover { background: var(--tip-bg); }
+  .deck-btn:disabled { opacity: .4; cursor: default; }
+  .deck-counter { font-size: 16px; color: var(--muted); font-weight: 700; min-width: 70px; }
+  .deck-dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .deck-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    cursor: pointer;
+    padding: 0;
+  }
+  .deck-dot.deck-dot-active { background: var(--accent); }
+  .deck-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 6px;
+    background: var(--accent);
+    width: 0;
+    z-index: 11;
+    transition: width .25s ease;
+  }
+  .deck-help { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+  /* ---------- Hands-on interactions ---------- */
+  .deck-reveal {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 14px 0;
+  }
+  .deck-reveal summary {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 13px 18px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .deck-reveal summary::-webkit-details-marker { display: none; }
+  .deck-reveal summary::before {
+    content: "+";
+    font-size: 24px;
+    font-weight: 800;
+    width: 24px;
+    text-align: center;
+    color: var(--accent-2);
+    flex: 0 0 24px;
+  }
+  .deck-reveal[open] summary::before { content: "-"; }
+  .deck-reveal-body { padding: 2px 18px 16px; }
+  .deck-reveal-body p { font-size: 18.5px; }
+  .deck-reveal .deck-prompt-box { font-size: 17.5px; }
+  /* ---------- Small interactive questions ---------- */
+  .deck-question {
+    background: #eef6fd;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 12px 16px 14px;
+    margin: 16px 0 4px;
+  }
+  .deck-question-prompt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .deck-question-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    flex: 0 0 26px;
+  }
+  .deck-question-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  .deck-choice {
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 16.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .deck-choice:hover { background: var(--tip-bg); }
+  .deck-choice.deck-choice-picked { background: var(--accent); color: #ffffff; }
+  /* ---------- Photo demo ---------- */
+  .deck-photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 4px; }
+  .deck-photo-frame {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+  }
+  .deck-photo-frame svg { width: 100%; height: auto; max-height: 190px; border-radius: 6px; }
+  .deck-photo-badge {
+    display: inline-block;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 2px 12px;
+    margin-bottom: 6px;
+  }
+  .deck-photo-badge.before { background: #fdf0e0; color: #a0661c; }
+  .deck-photo-badge.after { background: var(--safe-bg); color: var(--good); }
+  .deck-photo-cap { font-size: 14.5px; font-weight: 700; color: var(--muted); margin-top: 6px; }
+  .deck-music-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .deck-music-links a {
+    display: inline-block;
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 15.5px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .deck-music-links a:hover { background: var(--tip-bg); }
+  @media (max-width: 860px) { .deck-photo-grid { grid-template-columns: 1fr; } }
+  @media print {
+    body { overflow: visible; background: #ffffff; }
+    .deck-stage { position: static; height: auto; }
+    .deck-slide {
+      display: flex !important;
+      position: relative;
+      inset: auto;
+      height: auto;
+      min-height: 0;
+      page-break-after: always;
+      overflow: visible;
+      padding: 30px 40px;
+    }
+    .deck-slide:last-child { page-break-after: auto; }
+    .deck-controls, .deck-progress { display: none; }
+  }
+  @media (max-width: 860px) {
+    .deck-slide { padding: 32px 24px 80px; }
+    .deck-grid-2, .deck-grid-3 { grid-template-columns: 1fr; }
+    .deck-slide p, .deck-slide li { font-size: 18px; }
+    .deck-help { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck-progress" id="deck-progress"></div>
+
+<div class="deck-stage" id="deck-stage">
+
+  <!-- 1 · Title -->
+  <section class="deck-slide deck-title-slide" data-slide-number="1">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#f0c9a8;">Session 2 of 2 - about 50 minutes, ends with a fun quiz</div>
+      <h1>Voice, Big Projects, and Staying Safe</h1>
+      <p class="deck-sub">Now that you can ask, let's make it effortless - talk instead of type, build something big, and stay in charge.</p>
+      <div class="deck-chips">
+        <span class="deck-chip">Talk, don't type</span>
+        <span class="deck-chip">Your big projects</span>
+        <span class="deck-chip">Safety rules</span>
+        <span class="deck-chip">Ends with Kahoot</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Welcome back -->
+  <section class="deck-slide" data-slide-number="2">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Four question parts"><rect x="8" y="8" width="36" height="36" rx="8" fill="#0f5c8a"/><rect x="52" y="8" width="36" height="36" rx="8" fill="#c2703d"/><rect x="8" y="52" width="36" height="36" rx="8" fill="#c2703d"/><rect x="52" y="52" width="36" height="36" rx="8" fill="#0f5c8a"/><text x="26" y="31" font-size="16" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Who</text><text x="70" y="31" font-size="16" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">What</text><text x="26" y="75" font-size="14" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Details</text><text x="70" y="75" font-size="14" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Format</text></svg></div>
+      <span class="deck-kicker">Welcome back</span>
+      <h2>What did we learn last time?</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card">
+          <h3>The four-part recipe</h3>
+          <p><strong>Who</strong> - who you are and who it is for.<br><strong>What</strong> - what you want.<br><strong>Details</strong> - what matters.<br><strong>Format</strong> - how the answer should look.</p>
+        </div>
+        <div class="deck-card warm">
+          <h3>The five fix-up words</h3>
+          <p><strong>Shorter.</strong> <strong>Simpler.</strong> <strong>Step by step.</strong> <strong>With an example.</strong> <strong>Another version.</strong></p>
+          <p>These words fix almost any answer.</p>
+        </div>
+      </div>
+      <p class="deck-note">Quick check with your neighbor: tell them one thing you asked AI this week, and one fix-up word you used.</p>
+    </div>
+  </section>
+
+  <!-- 3 · Voice -->
+  <section class="deck-slide" data-slide-number="3">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Microphone"><rect x="36" y="10" width="24" height="40" rx="12" fill="#0f5c8a"/><path d="M24 46 C24 62 36 70 48 70 C60 70 72 62 72 46" fill="none" stroke="#c2703d" stroke-width="5" stroke-linecap="round"/><line x1="48" y1="70" x2="48" y2="86" stroke="#0f5c8a" stroke-width="5" stroke-linecap="round"/><line x1="34" y1="86" x2="62" y2="86" stroke="#0f5c8a" stroke-width="5" stroke-linecap="round"/></svg></div>
+      <span class="deck-kicker">You do not have to type</span>
+      <h2>Talk. The computer listens.</h2>
+      <p>Every phone already has a voice assistant, and every AI app has a microphone. Say the prompt out loud - the app writes it and reads the answer back.</p>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>On your phone</h3><p>"Hey Siri, remind me to take my pills at 8 in the evening."<br>"Hey Google, set a timer for 20 minutes."<br>"Alexa, play Frank Sinatra."</p></div>
+        <div class="deck-card warm"><h3>Inside the AI apps</h3><p>Tap the microphone, then say: "Tell me three good questions to ask my grandchildren on our next video call." The answer is spoken to you.</p></div>
+      </div>
+      <p class="deck-note">For many seniors, voice is the front door - not a crutch. Find your preferred way in, and use it proudly.</p>
+    </div>
+  </section>
+
+  <!-- 4 · Photos -->
+  <section class="deck-slide" data-slide-number="4">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Camera"><rect x="10" y="28" width="76" height="50" rx="10" fill="#f4f7fa" stroke="#0f5c8a" stroke-width="4"/><path d="M34 28 L40 16 L56 16 L62 28 Z" fill="#0f5c8a"/><circle cx="48" cy="52" r="15" fill="none" stroke="#c2703d" stroke-width="5"/><circle cx="48" cy="52" r="6" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">See it happen - open the demos</span>
+      <h2>Photo magic for family albums</h2>
+      <p>No installation needed: open each demo and watch the before and after.</p>
+      <details class="deck-reveal">
+        <summary>Demo 1 - scratches disappear in one tap</summary>
+        <div class="deck-reveal-body">
+          <p>Google Photos "Magic Editor" and iPhone "Clean Up": you tap the scratch - the app fills it using what is around it.</p>
+          <div class="deck-photo-grid">
+            <div class="deck-photo-frame">
+              <span class="deck-photo-badge before">Before</span>
+              <svg viewBox="0 0 220 160" role="img" aria-label="Old scratched photo in sepia"><defs><filter id="nf1"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/><feColorMatrix type="matrix" values="0 0 0 0 0.97 0 0 0 0 0.95 0 0 0 0 0.9 0 0 0 0.22 0"/></filter></defs><rect x="0" y="0" width="220" height="160" fill="#cfb78a"/><circle cx="170" cy="30" r="16" fill="#e0c995"/><path d="M0 105 Q55 80 110 105 T220 100 L220 160 L0 160 Z" fill="#a5875c"/><rect x="70" y="80" width="50" height="40" fill="#8c724f"/><polygon points="62,82 95,60 128,82" fill="#6f5839"/><rect x="90" y="100" width="14" height="20" fill="#5d4a2f"/><rect x="30" y="90" width="8" height="30" fill="#5d4a2f"/><circle cx="34" cy="80" r="22" fill="#7d6a45"/><rect x="140" y="98" width="6" height="22" fill="#6f5839"/><rect x="158" y="98" width="6" height="22" fill="#6f5839"/><rect x="176" y="98" width="6" height="22" fill="#6f5839"/><rect x="194" y="98" width="6" height="22" fill="#6f5839"/><line x1="18" y1="26" x2="72" y2="52" stroke="#f7f2e6" stroke-width="2" opacity="0.95"/><line x1="96" y1="8" x2="132" y2="86" stroke="#f7f2e6" stroke-width="2" opacity="0.9"/><line x1="148" y1="118" x2="204" y2="138" stroke="#f7f2e6" stroke-width="2" opacity="0.95"/><line x1="38" y1="108" x2="92" y2="128" stroke="#f7f2e6" stroke-width="2" opacity="0.9"/><line x1="108" y1="120" x2="136" y2="112" stroke="#f7f2e6" stroke-width="1.5" opacity="0.9"/><line x1="12" y1="76" x2="210" y2="88" stroke="#8a7352" stroke-width="1.5" opacity="0.5"/><rect x="0" y="0" width="220" height="160" filter="url(#nf1)"/></svg>
+              <div class="deck-photo-cap">An old scratched photo</div>
+            </div>
+            <div class="deck-photo-frame">
+              <span class="deck-photo-badge after">After</span>
+              <svg viewBox="0 0 220 160" role="img" aria-label="The same photo with scratches removed"><rect x="0" y="0" width="220" height="160" fill="#d6bf90"/><circle cx="170" cy="30" r="16" fill="#e6cf9c"/><path d="M0 105 Q55 80 110 105 T220 100 L220 160 L0 160 Z" fill="#ab8c60"/><rect x="70" y="80" width="50" height="40" fill="#93774f"/><polygon points="62,82 95,60 128,82" fill="#755d3d"/><rect x="90" y="100" width="14" height="20" fill="#624f33"/><rect x="30" y="90" width="8" height="30" fill="#624f33"/><circle cx="34" cy="80" r="22" fill="#827048"/><rect x="140" y="98" width="6" height="22" fill="#755d3d"/><rect x="158" y="98" width="6" height="22" fill="#755d3d"/><rect x="176" y="98" width="6" height="22" fill="#755d3d"/><rect x="194" y="98" width="6" height="22" fill="#755d3d"/></svg>
+              <div class="deck-photo-cap">After one tap</div>
+            </div>
+          </div>
+        </div>
+      </details>
+      <details class="deck-reveal">
+        <summary>Demo 2 - black-and-white becomes color</summary>
+        <div class="deck-reveal-body">
+          <p>MyHeritage adds realistic color to old portraits and scenes - upload the photo and watch.</p>
+          <div class="deck-photo-grid">
+            <div class="deck-photo-frame">
+              <span class="deck-photo-badge before">Before</span>
+              <svg viewBox="0 0 220 160" role="img" aria-label="Black-and-white version of the photo"><rect x="0" y="0" width="220" height="160" fill="#c9c9c9"/><circle cx="170" cy="30" r="16" fill="#e3e3e3"/><path d="M0 105 Q55 80 110 105 T220 100 L220 160 L0 160 Z" fill="#9c9c9c"/><rect x="70" y="80" width="50" height="40" fill="#8a8a8a"/><polygon points="62,82 95,60 128,82" fill="#636363"/><rect x="90" y="100" width="14" height="20" fill="#4d4d4d"/><rect x="30" y="90" width="8" height="30" fill="#4d4d4d"/><circle cx="34" cy="80" r="22" fill="#707070"/><rect x="140" y="98" width="6" height="22" fill="#636363"/><rect x="158" y="98" width="6" height="22" fill="#636363"/><rect x="176" y="98" width="6" height="22" fill="#636363"/><rect x="194" y="98" width="6" height="22" fill="#636363"/></svg>
+              <div class="deck-photo-cap">The old black-and-white</div>
+            </div>
+            <div class="deck-photo-frame">
+              <span class="deck-photo-badge after">After</span>
+              <svg viewBox="0 0 220 160" role="img" aria-label="The same photo colorized"><rect x="0" y="0" width="220" height="160" fill="#8fc7e8"/><circle cx="170" cy="30" r="16" fill="#f2c94c"/><path d="M0 105 Q55 80 110 105 T220 100 L220 160 L0 160 Z" fill="#74ab66"/><rect x="70" y="80" width="50" height="40" fill="#d9a066"/><polygon points="62,82 95,60 128,82" fill="#a3442f"/><rect x="90" y="100" width="14" height="20" fill="#7a4a26"/><rect x="30" y="90" width="8" height="30" fill="#6b4a2e"/><circle cx="34" cy="80" r="22" fill="#4f8f4f"/><rect x="140" y="98" width="6" height="22" fill="#9a7a4d"/><rect x="158" y="98" width="6" height="22" fill="#9a7a4d"/><rect x="176" y="98" width="6" height="22" fill="#9a7a4d"/><rect x="194" y="98" width="6" height="22" fill="#9a7a4d"/></svg>
+              <div class="deck-photo-cap">After colorize</div>
+            </div>
+          </div>
+        </div>
+      </details>
+      <details class="deck-reveal">
+        <summary>Demo 3 - how to prepare your own demo</summary>
+        <div class="deck-reveal-body">
+          <ol>
+            <li>Photograph an old printed family photo with your phone.</li>
+            <li>Google Photos: open it, tap Edit, then Magic Editor - tap a scratch and watch it vanish.</li>
+            <li>iPhone: Photos, tap Edit, then Clean Up.</li>
+            <li>For color: upload the same photo to MyHeritage and tap colorize.</li>
+          </ol>
+          <p>Prepare ONE family photo before the seminar - showing your own family's picture live is worth ten slides.</p>
+        </div>
+      </details>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> Hands up: which fix do you want for your own photos?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">Remove scratches</button>
+          <button type="button" class="deck-choice">Add color</button>
+          <button type="button" class="deck-choice">Try it on my phone</button>
+          <button type="button" class="deck-choice">Better captions</button>
+        </div>
+      </div>
+      <p class="deck-note">Identify and captions stay too: point the camera at a bird or plant to name it, and ask AI for warm album captions.</p>
+    </div>
+  </section>
+
+  <!-- 5 · Memory and hobbies -->
+  <section class="deck-slide" data-slide-number="5">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Paint palette"><path d="M48 78 C22 78 10 64 10 46 C10 34 22 30 34 40 C40 45 52 42 60 34 C68 26 82 28 84 42 C86 58 72 78 48 78 Z" fill="#0f5c8a"/><circle cx="30" cy="52" r="5" fill="#c2703d"/><circle cx="46" cy="50" r="5" fill="#ffffff"/><circle cx="62" cy="54" r="5" fill="#1d7a36"/><circle cx="72" cy="44" r="4" fill="#c8102e"/></svg></div>
+      <span class="deck-kicker">The pleasures that keep life rich</span>
+      <h2>Memories and hobbies, on demand</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Gardening</h3><p>"I live in Ontario and want to grow tomatoes on my balcony. Give me a simple month-by-month plan."</p></div>
+        <div class="deck-card"><h3>Heritage recipes</h3><p>Grandmother's cookie recipe, updated for a grandchild's allergy - with the right substitute.</p></div>
+        <div class="deck-card"><h3>Mind games</h3><p>"Play a memory game with me. Ask five questions about a place I love, then quiz me."</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">The long-term project - your family story booklet</span>
+        Interview me for my family story booklet. Ask one question at a time, starting with my childhood home, and write my answers into a story at the end.
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Travel -->
+  <section class="deck-slide" data-slide-number="6">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Suitcase"><rect x="16" y="32" width="64" height="46" rx="10" fill="#0f5c8a"/><rect x="34" y="22" width="28" height="14" rx="6" fill="none" stroke="#0f5c8a" stroke-width="5"/><rect x="40" y="52" width="16" height="8" rx="3" fill="#ffffff"/><line x1="30" y1="38" x2="30" y2="72" stroke="#c2703d" stroke-width="4" stroke-linecap="round"/></svg></div>
+      <span class="deck-kicker">A little dreaming is good for you</span>
+      <h2>Travel and planning in one minute</h2>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">The dream-trip prompt</span>
+        Plan a relaxed 5-day trip to Chicago for a couple in their 70s. We like museums, short walks, early dinners, and places without many stairs. One simple plan per day, with rest time.
+      </div>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>Then refine it</h3><p>"Remove anything that needs a car." "Add one afternoon for shopping." "Make each day start after 10 am."</p></div>
+        <div class="deck-card"><h3>And pack for it</h3><p>"Make me a packing list for 4 days in November, including medications and comfortable shoes."</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Your second chapter -->
+  <section class="deck-slide" data-slide-number="7">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Sunrise"><circle cx="48" cy="52" r="16" fill="#c2703d"/><line x1="48" y1="20" x2="48" y2="30" stroke="#c2703d" stroke-width="5" stroke-linecap="round"/><line x1="22" y1="28" x2="29" y2="36" stroke="#c2703d" stroke-width="5" stroke-linecap="round"/><line x1="74" y1="28" x2="67" y2="36" stroke="#c2703d" stroke-width="5" stroke-linecap="round"/><path d="M14 76 C30 64 66 64 82 76 Z" fill="#0f5c8a"/></svg></div>
+      <span class="deck-kicker">You are 55 - not finished</span>
+      <h2>Your second chapter is the best one</h2>
+      <p>AI has read everything ever written. It has never lived. <strong>You supply the stories, the judgment, and the humor - AI supplies the spelling, the design, and the speed.</strong></p>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Write the book</h3><p>A memoir, a cookbook, a children's book, a local history only you remember.</p></div>
+        <div class="deck-card"><h3>Share your expertise</h3><p>Teach, tutor, consult, mentor - thirty years of knowledge has an audience.</p></div>
+        <div class="deck-card warm"><h3>Build something</h3><p>A website, a small shop, a channel, a newsletter - AI handles the technical part.</p></div>
+        <div class="deck-card warm"><h3>Preserve the archive</h3><p>Restore the photos, transcribe the letters, complete the family tree.</p></div>
+        <div class="deck-card"><h3>Create art and music</h3><p>Paint with words, compose a song, design the cards.</p></div>
+        <div class="deck-card"><h3>Lead your community</h3><p>Newsletters, events, fundraising letters, welcoming newcomers.</p></div>
+      </div>
+      <p class="deck-note">Six projects, one rule: AI assists, you author. Your name goes on the work; your judgment goes into it.</p>
+    </div>
+  </section>
+
+  <!-- 8 · Write your book -->
+  <section class="deck-slide" data-slide-number="8">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Book and pen"><path d="M20 76 L20 26 C20 18 27 14 34 16 L62 22 C68 23 72 29 72 36 L72 74 C72 82 66 86 60 84 L34 78 C27 76 22 80 20 76 Z" fill="#0f5c8a"/><rect x="58" y="8" width="20" height="7" rx="3.5" fill="#c2703d" transform="rotate(35 58 8)"/></svg></div>
+      <span class="deck-kicker">The project of a lifetime</span>
+      <h2>You can write a book</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>1 - Let AI interview you</h3><p>One question at a time. Your answers become the chapter outline.</p></div>
+        <div class="deck-card"><h3>2 - Speak the chapters</h3><p>Dictate into Google Docs, then ask AI: "Rewrite this as a warm, clear chapter, keeping my words where they shine."</p></div>
+        <div class="deck-card warm"><h3>3 - Polish</h3><p>Grammarly catches typos. AI finds repeated words and weak sentences.</p></div>
+        <div class="deck-card warm"><h3>4 - Publish</h3><p>Describe the cover to Canva or Designer. Amazon KDP prints it for free - and AI writes the back cover.</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Start it this week</span>
+        I want to write a memoir about my 30 years as a nurse. Interview me one question at a time, starting with my very first day on the job. At the end, propose a chapter outline with a title for each chapter.
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · Which tool - everyday -->
+  <section class="deck-slide" data-slide-number="9">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">The matching guide - part 1</span>
+      <h2>Which AI for which task</h2>
+      <table class="deck-table">
+        <thead><tr><th>You want to</th><th>Use</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Ask anything, write, brainstorm</td><td><strong>ChatGPT</strong></td><td>The most popular all-rounder, with voice</td></tr>
+          <tr><td>Work through long letters and documents</td><td><strong>Claude</strong></td><td>Best with long texts, careful warm writing</td></tr>
+          <tr><td>Search the web, maps, YouTube</td><td><strong>Gemini</strong></td><td>Connected to all of Google</td></tr>
+          <tr><td>Help on a Windows computer, Word, Outlook</td><td><strong>Microsoft Copilot</strong></td><td>Built into what you already use</td></tr>
+          <tr><td>Answers with sources you can check</td><td><strong>Perplexity</strong></td><td>Shows a citation for every claim</td></tr>
+          <tr><td>Ask inside WhatsApp or Facebook</td><td><strong>Meta AI</strong></td><td>No new app to learn</td></tr>
+          <tr><td>Name that bird or plant</td><td><strong>Merlin Bird ID / iNaturalist</strong></td><td>Identifies by photo or birdsong</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 10 · Which tool - creating -->
+  <section class="deck-slide" data-slide-number="10">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Paint, sing, film - watch what people made</span>
+      <h2>AI creates: pictures, music, videos</h2>
+      <p>Describe it in one sentence - the AI makes it. Here are the tools, and samples of what they produce.</p>
+      <div class="deck-grid-3">
+        <div class="deck-card">
+          <h3>Pictures</h3>
+          <p><strong>DALL-E</strong> (inside ChatGPT), <strong>Microsoft Designer</strong>, <strong>Adobe Firefly</strong>. Free tiers on all three - Firefly is the safe one if you ever sell.</p>
+          <div class="deck-photo-frame">
+            <svg viewBox="0 0 220 160" role="img" aria-label="Sample AI painting: a cat astronaut floating near a red planet"><defs><linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c2e5e"/><stop offset="1" stop-color="#4d3f7d"/></linearGradient></defs><rect width="220" height="160" fill="url(#bg1)"/><circle cx="172" cy="42" r="30" fill="#c96f4a"/><circle cx="172" cy="42" r="30" fill="none" stroke="#e8a06b" stroke-width="3" opacity="0.75"/><circle cx="160" cy="36" r="7" fill="#b85e3c" opacity="0.5"/><circle cx="178" cy="52" r="4" fill="#b85e3c" opacity="0.45"/><circle cx="20" cy="22" r="3" fill="#ffffff"/><circle cx="58" cy="64" r="2" fill="#ffffff"/><circle cx="92" cy="16" r="2" fill="#ffffff"/><circle cx="38" cy="96" r="2.5" fill="#ffffff"/><circle cx="132" cy="124" r="2" fill="#ffffff"/><circle cx="66" cy="132" r="2.5" fill="#ffffff"/><circle cx="104" cy="82" r="30" fill="#dce6f5" opacity="0.9" stroke="#9aa3c7" stroke-width="2"/><circle cx="104" cy="84" r="18" fill="#f0d9bd"/><path d="M90 76 L86 60 L100 68 Z" fill="#f0d9bd"/><path d="M118 76 L122 60 L108 68 Z" fill="#f0d9bd"/><circle cx="98" cy="82" r="2.5" fill="#3a2a22"/><circle cx="110" cy="82" r="2.5" fill="#3a2a22"/><circle cx="104" cy="88" r="1.8" fill="#e58f8f"/><path d="M101 91 q3 2.5 6 0" stroke="#3a2a22" stroke-width="1.2" fill="none"/><line x1="95" y1="88" x2="84" y2="86" stroke="#c9a27f" stroke-width="1"/><line x1="113" y1="88" x2="124" y2="86" stroke="#c9a27f" stroke-width="1"/><ellipse cx="104" cy="124" rx="26" ry="18" fill="#e8e8ee"/><ellipse cx="86" cy="126" rx="8" ry="6" fill="#e8e8ee"/><ellipse cx="122" cy="126" rx="8" ry="6" fill="#e8e8ee"/></svg>
+            <div class="deck-photo-cap">"A cat astronaut floating near a red planet, oil painting"</div>
+          </div>
+        </div>
+        <div class="deck-card">
+          <h3>Music</h3>
+          <p><strong>Suno</strong> and <strong>Udio</strong>: paste your own words, pick a style - folk, jazz, lullaby - and it sings a full song.</p>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Made by Suno from two lines of words</span>
+            "Sunrise on the Bosphorus, tea steam in the air, the ferry hums a melody my grandfather used to share."
+          </div>
+          <p>Two real songs made this way - tap to listen:</p>
+          <div class="deck-music-links">
+            <a href="https://suno.com/s/U3rcRDoJhvxihn2o" target="_blank" rel="noopener">Listen - sample 1</a>
+            <a href="https://suno.com/s/8CS6APbLfyeCiXee" target="_blank" rel="noopener">Listen - sample 2</a>
+          </div>
+          <p>In the session everyone creates a free Suno account and makes a song together - then we listen to a few.</p>
+        </div>
+        <div class="deck-card warm">
+          <h3>Videos</h3>
+          <p><strong>Sora</strong> (OpenAI), <strong>Runway</strong>, <strong>Pika</strong> turn one sentence into a short video. <strong>CapCut</strong> edits your family clips with captions.</p>
+          <div class="deck-photo-frame">
+            <svg viewBox="0 0 220 100" role="img" aria-label="Sample AI video: a sailing boat at sunset, three moments"><defs><linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7b267"/><stop offset="1" stop-color="#e86a4a"/></linearGradient></defs><rect width="220" height="100" fill="#23232f"/><g><rect x="10" y="8" width="62" height="84" rx="4" fill="url(#sky2)"/><circle cx="28" cy="26" r="7" fill="#ffe08a"/><rect x="10" y="58" width="62" height="34" fill="#2b4a6f"/><path d="M18 66 L64 66 L56 74 L26 74 Z" fill="#5a3926"/><rect x="35" y="36" width="3" height="30" fill="#3a2a1e"/><polygon points="38,40 38,64 56,64" fill="#f6efe4"/></g><g><rect x="79" y="8" width="62" height="84" rx="4" fill="url(#sky2)"/><circle cx="97" cy="26" r="7" fill="#ffe08a"/><rect x="79" y="58" width="62" height="34" fill="#2b4a6f"/><path d="M87 66 L133 66 L125 74 L95 74 Z" fill="#5a3926"/><rect x="104" y="36" width="3" height="30" fill="#3a2a1e"/><polygon points="107,40 107,64 125,64" fill="#f6efe4"/></g><g><rect x="148" y="8" width="62" height="84" rx="4" fill="url(#sky2)"/><circle cx="166" cy="26" r="7" fill="#ffe08a"/><rect x="148" y="58" width="62" height="34" fill="#2b4a6f"/><path d="M156 66 L202 66 L194 74 L164 74 Z" fill="#5a3926"/><rect x="173" y="36" width="3" height="30" fill="#3a2a1e"/><polygon points="176,40 176,64 194,64" fill="#f6efe4"/></g></svg>
+            <div class="deck-photo-cap">"A sailing boat crossing the bay at sunset" - three moments</div>
+          </div>
+        </div>
+      </div>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> Hands up: which one would you like to try?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">A picture</button>
+          <button type="button" class="deck-choice">A song</button>
+          <button type="button" class="deck-choice">A video</button>
+          <button type="button" class="deck-choice">My own idea</button>
+        </div>
+      </div>
+      <p class="deck-note">Books, covers, posters, and websites work the same way: describe it to the right tool, then refine by talking - see the prompt palette.</p>
+    </div>
+  </section>  <!-- 11 · Doctor visits -->
+  <section class="deck-slide" data-slide-number="11">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Medical cross"><circle cx="48" cy="48" r="36" fill="#f4f7fa" stroke="#c8102e" stroke-width="5"/><path d="M48 30 L48 66 M30 48 L66 48" stroke="#c8102e" stroke-width="8" stroke-linecap="round"/></svg></div>
+      <span class="deck-kicker">Your next appointment</span>
+      <h2>Talk to your doctor with confidence</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Before the visit</h3><p>AI interviews you, then gives a short list: what to tell the doctor and five questions to ask.</p></div>
+        <div class="deck-card"><h3>During the visit</h3><p>Bring your printed medication list. Language trouble? Open the Translate app and hand the phone over.</p></div>
+        <div class="deck-card warm"><h3>After the visit</h3><p>Tell AI what you remember, in your own words - it rewrites it clearly with what to do next.</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Try this before your next visit</span>
+        I am visiting my heart doctor about [reason]. Help me prepare: ask me questions one at a time, then give me five clear questions to ask during the visit.
+      </div>
+      <p class="deck-note">AI prepares and explains - the doctor decides. Always.</p>
+    </div>
+  </section>
+  <!-- 12 · Pharmacy and health facts -->
+  <section class="deck-slide" data-slide-number="12">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Medicine bottle"><rect x="30" y="22" width="36" height="56" rx="8" fill="#0f5c8a"/><rect x="26" y="12" width="44" height="14" rx="5" fill="#c2703d"/><ellipse cx="48" cy="48" rx="9" ry="7" fill="#ffffff" transform="rotate(20 48 48)"/></svg></div>
+      <span class="deck-kicker">Medicine and trust</span>
+      <h2>Understand your medicines. Verify what you hear.</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Understand your medicine</h3><p>What it is for, how it is usually taken, common side effects - in plain words from your label.</p></div>
+        <div class="deck-card"><h3>Questions for the pharmacist</h3><p>AI prepares a clear, polite question list before your visit. The pharmacist decides everything.</p></div>
+        <div class="deck-card warm"><h3>Check a health claim</h3><p>Heard it on TV or WhatsApp? AI says how likely it is to be true or false - official sources settle it.</p></div>
+      </div>
+      <p><strong>The true-or-false check for health news:</strong></p>
+      <ul>
+        <li>Who says it - a named doctor or hospital, or "a friend of a friend"?</li>
+        <li>Where is the proof - studies and official sources, or screenshots?</li>
+        <li>Check MedlinePlus or WHO, then ask your doctor.</li>
+        <li>Red flags: "miracle cure", "secret formula", "doctors hate this", "act now".</li>
+      </ul>
+      <p class="deck-note">AI translates and explains. Only your doctor and pharmacist decide anything about your health.</p>
+    </div>
+  </section>
+  <!-- 13 · Golden rules -->
+  <section class="deck-slide" data-slide-number="13">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Shield with check"><path d="M48 10 L82 22 V48 C82 66 68 78 48 88 C28 78 14 66 14 48 V22 Z" fill="#0f5c8a"/><path d="M34 48 L44 58 L64 36" stroke="#ffffff" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="deck-kicker">Safety first - read slowly</span>
+      <h2>The five golden rules</h2>
+      <ol class="deck-rules">
+        <li><strong>No secrets in the chat.</strong> Never passwords, bank or card numbers, ID numbers, or full addresses.</li>
+        <li><strong>Never send money because of a call or message.</strong> No real bank, police officer, or grandchild ever demands gift cards or urgent transfers.</li>
+        <li><strong>AI does not call you first.</strong> A call about your account, your computer, or "AI support" is a scam. Hang up.</li>
+        <li><strong>Verify before you trust.</strong> Important facts get checked against official sources - the doctor, the bank's own website, the government.</li>
+        <li><strong>When in doubt, stop.</strong> Urgency is the scammer's tool. If you feel rushed or scared, end it and talk to family first.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 14 · Scams -->
+  <section class="deck-slide" data-slide-number="14">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Phone warning"><rect x="30" y="8" width="36" height="76" rx="8" fill="#0f5c8a"/><rect x="36" y="16" width="24" height="44" rx="3" fill="#ffffff"/><path d="M48 34 L48 44 M48 52 L48 53" stroke="#c8102e" stroke-width="5" stroke-linecap="round"/><circle cx="48" cy="72" r="4" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">Know the tricks</span>
+      <h2>Scams that use AI</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card warm"><h3>The voice-clone call</h3><p>A scammer copies a family member's voice from a public video and calls: "Grandma, I am in trouble, I need money now, do not tell mom."</p></div>
+        <div class="deck-card"><h3>Your answer: the family code word</h3><p>Agree on a secret word only your family knows. Any caller claiming to be family must say it. A perfect voice still cannot know it.</p></div>
+        <div class="deck-card"><h3>Fake messages and emails</h3><p>Your bank, the post office, a "missed delivery" - with a link and urgency. Never tap links in unexpected messages.</p></div>
+        <div class="deck-card warm"><h3>Fake photos and videos</h3><p>Deepfakes can show people doing things that never happened. Check with the person directly before believing or forwarding.</p></div>
+      </div>
+      <p class="deck-note">The goal is confidence, not fear. People who know these five rules and one code word are safer than most internet users of any age.</p>
+    </div>
+  </section>
+
+  <!-- 15 · The helper app -->
+  <section class="deck-slide" data-slide-number="15">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="App grid"><rect x="8" y="8" width="36" height="36" rx="9" fill="#0f5c8a"/><rect x="52" y="8" width="36" height="36" rx="9" fill="#c2703d"/><rect x="8" y="52" width="36" height="36" rx="9" fill="#c2703d"/><rect x="52" y="52" width="36" height="36" rx="9" fill="#0f5c8a"/><circle cx="26" cy="26" r="7" fill="#ffffff"/><circle cx="70" cy="26" r="7" fill="#ffffff"/><circle cx="26" cy="70" r="7" fill="#ffffff"/><circle cx="70" cy="70" r="7" fill="#ffffff"/></svg></div>
+      <span class="deck-kicker">Your companion after this course</span>
+      <h2>Meet your Senior Helper</h2>
+      <p>After today, you get your own <strong>Senior Helper AI Coordinator</strong> - one friendly app with a button for everything you learned:</p>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Write a letter</h3><p>Fill four boxes, the helper writes the letter.</p></div>
+        <div class="deck-card"><h3>Explain a paper</h3><p>Paste a difficult letter, get plain words back.</p></div>
+        <div class="deck-card"><h3>Plan my week</h3><p>Menus and one shopping list, ready.</p></div>
+        <div class="deck-card warm"><h3>Health helper</h3><p>Meals, movement, schedules - ideas only, doctor decides.</p></div>
+        <div class="deck-card warm"><h3>Write my stories</h3><p>The memoir interview starts here.</p></div>
+        <div class="deck-card"><h3>Check a message</h3><p>Paste anything suspicious - the helper checks for scams.</p></div>
+      </div>
+      <p class="deck-note">Big text, a listen button, and your five golden rules always on screen. It was built for you - just like the ten-minute habit keeps it alive.</p>
+    </div>
+  </section>
+  <!-- 16 · Volunteer -->
+  <section class="deck-slide" data-slide-number="16">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Two people"><circle cx="32" cy="30" r="12" fill="#0f5c8a"/><circle cx="66" cy="30" r="12" fill="#c2703d"/><path d="M18 78 C18 56 26 48 32 48 C38 48 46 56 46 78 Z" fill="#0f5c8a"/><path d="M50 78 C50 56 58 48 64 48 C70 48 78 56 78 78 Z" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">Give back - your experience matters</span>
+      <h2>Volunteer: build a lesson for youth</h2>
+      <p>Your decades of experience can teach the next generation. We have the tools - you bring the knowledge.</p>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>1 - Chat with AI</h3><p>Tell it about your trade, your homeland, your hobby. It drafts a complete lesson as a document.</p></div>
+        <div class="deck-card"><h3>2 - Export as PDF</h3><p>One click turns the draft into a shareable file, ready to hand over.</p></div>
+        <div class="deck-card warm"><h3>3 - We upload it</h3><p>Into our curriculum builder - with quizzes and web documents for young learners. Your name goes on as the contributor.</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">The volunteer prompt</span>
+        I would like to volunteer a lesson for young students about [your subject]. Interview me one question at a time about what a beginner should know, then write a complete draft education document with three examples and five quiz questions.
+      </div>
+      <details class="deck-reveal">
+        <summary>Tap to open - flyers, posters, and talks for your cause</summary>
+        <div class="deck-reveal-body">
+          <p>AI writes the words, Canva makes the design - free, and ready in minutes.</p>
+          <ol>
+            <li>One prompt gives you the flyer text and a design brief.</li>
+            <li>Canva - Magic Design: paste the brief, and it builds flyers, posters, and slide decks for you to edit.</li>
+            <li>Refine by talking: "bigger title", "simpler", "translate to Turkish".</li>
+          </ol>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">The flyer prompt</span>
+            We are organizing a community dinner for [cause]. Write the short flyer text: a warm headline, three lines about the event, and one line asking people to bring a dish. Then give me a design brief for Canva: A4, warm colors, large text, space for our logo and one photo.
+          </div>
+        </div>
+      </details>
+      <p class="deck-note">One hour a week, no technical skill needed - the AI does the formatting. Talk to us after the Kahoot if you would like to join.</p>
+    </div>
+  </section>
+  <!-- 17 · Closing -->
+  <section class="deck-slide deck-closing-slide" data-slide-number="17">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#fde8d3;">You made it</div>
+      <h2>You are the one giving the orders now</h2>
+      <p class="deck-sub">AI is a tool you now hold. It only has the power you give it - and you know exactly how much to give.</p>
+      <span class="deck-chip">One last thing - Kahoot time!</span>
+      <p class="deck-note">Grab your phone, join the game, and show what you learned across both sessions. Every question comes straight from these slides.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="deck-controls">
+  <button class="deck-btn" id="deck-prev-button" type="button">Previous</button>
+  <button class="deck-btn" id="deck-next-button" type="button">Next</button>
+  <span class="deck-counter" id="deck-counter">1 / 17</span>
+  <div class="deck-dots" id="deck-dots"></div>
+  <span class="deck-help">Arrow keys or Space to move - P to print</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var allSlides = Array.prototype.slice.call(document.querySelectorAll(".deck-slide"));
+  var currentSlideIndex = 0;
+  var progressBarElement = document.getElementById("deck-progress");
+  var slideCounterElement = document.getElementById("deck-counter");
+  var previousButton = document.getElementById("deck-prev-button");
+  var nextButton = document.getElementById("deck-next-button");
+  var dotsContainer = document.getElementById("deck-dots");
+
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > allSlides.length - 1) { return allSlides.length - 1; }
+    return requestedIndex;
+  }
+
+  function buildDotNavigation() {
+    allSlides.forEach(function (slide, slideIndex) {
+      var dotButton = document.createElement("button");
+      dotButton.type = "button";
+      dotButton.className = "deck-dot";
+      dotButton.setAttribute("aria-label", "Go to slide " + (slideIndex + 1));
+      dotButton.addEventListener("click", function () { showSlideAtIndex(slideIndex); });
+      dotsContainer.appendChild(dotButton);
+    });
+  }
+
+  function updateControls() {
+    slideCounterElement.textContent = (currentSlideIndex + 1) + " / " + allSlides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === allSlides.length - 1;
+    var progressPercent = ((currentSlideIndex + 1) / allSlides.length) * 100;
+    progressBarElement.style.width = progressPercent + "%";
+    var allDotButtons = dotsContainer.querySelectorAll(".deck-dot");
+    allDotButtons.forEach(function (dotButton, dotIndex) {
+      dotButton.classList.toggle("deck-dot-active", dotIndex === currentSlideIndex);
+    });
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    allSlides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("deck-active", slideIndex === currentSlideIndex);
+    });
+    updateControls();
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function handleKeyboardNavigation(event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(allSlides.length - 1);
+    } else if (event.key === "p" || event.key === "P") {
+      window.print();
+    }
+  }
+
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+  window.addEventListener("beforeprint", function () {
+    document.querySelectorAll(".deck-reveal").forEach(function (revealElement) {
+      revealElement.setAttribute("open", "");
+    });
+  });
+  document.addEventListener("click", function (event) {
+    var choiceButton = event.target.closest(".deck-choice");
+    if (choiceButton) {
+      choiceButton.classList.toggle("deck-choice-picked");
+    }
+  });
+  buildDotNavigation();
+  showSlideAtIndex(0);
+})();
+</script>
+</body>
+</html>

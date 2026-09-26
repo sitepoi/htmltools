@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI for Seniors - What Is Hard for You - Needs Form</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --line: #dfe6ec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef2f6;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .nf-shell { max-width: 820px; margin: 0 auto; background: #ffffff; padding: 26px 38px 44px; min-height: 100vh; }
+  .nf-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .nf-top img { height: 44px; width: auto; }
+  .nf-top-title { font-size: 20px; font-weight: 800; color: var(--accent-dark); }
+  .nf-top-sub { font-size: 13.5px; color: var(--muted); }
+  .nf-print-btn {
+    margin-left: auto;
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  h1 { color: var(--accent); font-size: 27px; margin: 0 0 4px; }
+  .nf-lead { color: var(--muted); margin: 0 0 14px; }
+  .nf-namedate { display: flex; flex-wrap: wrap; gap: 12px 34px; margin: 10px 0 18px; }
+  .nf-namedate span { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .nf-line { border-bottom: 1.5px solid var(--accent); width: 220px; height: 22px; }
+  h2 {
+    color: var(--ink);
+    font-size: 19px;
+    margin: 22px 0 10px;
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 4px;
+  }
+  .nf-areas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+  .nf-area { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px 8px; }
+  .nf-area h3 { margin: 0 0 6px; font-size: 15.5px; color: var(--accent); }
+  .nf-tick { display: flex; align-items: flex-start; gap: 9px; margin: 6px 0; font-size: 14.5px; }
+  .nf-box {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--accent);
+    border-radius: 4px;
+    flex: 0 0 16px;
+    margin-top: 2px;
+    background: #ffffff;
+  }
+  .nf-write-line { display: flex; align-items: flex-end; gap: 12px; margin: 16px 0; }
+  .nf-write-no {
+    width: 30px;
+    height: 30px;
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex: 0 0 30px;
+  }
+  .nf-write-line .nf-line { flex: 1; width: auto; border-bottom: 2px solid var(--accent); }
+  .nf-question-box { border: 2px solid var(--accent); border-radius: 10px; min-height: 68px; padding: 10px; }
+  .nf-note {
+    background: #eaf3fa;
+    border: 1px solid #2f78a8;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 20px;
+    font-size: 15px;
+  }
+  .nf-footer { margin-top: 26px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); padding-top: 10px; }
+  .nf-print-header, .nf-print-footer { display: none; }
+  @media (max-width: 700px) {
+    .nf-shell { padding: 18px 16px 36px; }
+    .nf-areas { grid-template-columns: 1fr; }
+    .nf-line { width: 130px; }
+  }
+  @media print {
+    @page { size: A4; margin: 20mm 16mm 16mm; }
+    body { background: #ffffff; font-size: 13.5px; }
+    .nf-shell { max-width: none; padding: 0; min-height: 0; }
+    .nf-top { display: none; }
+    .nf-print-btn { display: none; }
+    .nf-print-header {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 12mm;
+      align-items: center;
+      gap: 3mm;
+      padding: 0 16mm;
+      border-bottom: 0.5mm solid #c8102e;
+      background: #ffffff;
+      overflow: hidden;
+    }
+    .nf-print-header img { height: 8mm; width: auto; }
+    .nf-print-header-text { flex: 1; overflow: hidden; }
+    .nf-print-header-title { font-size: 10pt; font-weight: 700; line-height: 1.15; }
+    .nf-print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
+    .nf-print-footer {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 10mm;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16mm;
+      border-top: 0.4mm solid var(--line);
+      font-size: 8pt;
+      color: var(--muted);
+      background: #ffffff;
+    }
+    h1 { font-size: 20pt; }
+    .nf-areas { grid-template-columns: 1fr 1fr; gap: 4mm 8mm; }
+    .nf-area { break-inside: avoid; padding: 3mm 4mm 2mm; }
+    .nf-area h3 { margin-bottom: 1.5mm; }
+    .nf-tick { margin: 1.6mm 0; }
+    .nf-page2 { page-break-before: always; }
+    .nf-write-line { margin: 6mm 0; }
+    .nf-write-line .nf-line { border-bottom: 0.5mm solid var(--accent); height: 13mm; }
+    .nf-note, .nf-question-box, h2 { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Print-only running header and footer -->
+<div class="nf-print-header">
+  <img src="centrecanada-logo.png" alt="" />
+  <div class="nf-print-header-text">
+    <div class="nf-print-header-title">AI for Seniors - What is hard for you?</div>
+    <div class="nf-print-header-sub">CentreCanada Newcomer Services Society</div>
+  </div>
+</div>
+<div class="nf-print-footer">
+  <span>CentreCanada - AI for Seniors - Needs Form</span>
+  <span>Take this form home with you</span>
+</div>
+
+<div class="nf-shell">
+
+  <div class="nf-top">
+    <img src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div>
+      <div class="nf-top-title">AI for Seniors - Needs Form</div>
+      <div class="nf-top-sub">CentreCanada Newcomer Services Society</div>
+    </div>
+    <button class="nf-print-btn" type="button" onclick="window.print()">Print</button>
+  </div>
+
+  <h1>What is hard for you?</h1>
+  <p class="nf-lead">Tick everything that feels hard. No tick is too small, and you may tick as many as you like.</p>
+
+  <div class="nf-namedate">
+    <span>Your name <span class="nf-line"></span></span>
+    <span>Today's date <span class="nf-line"></span></span>
+  </div>
+
+  <h2>Tick what feels hard</h2>
+  <div class="nf-areas">
+    <div class="nf-area">
+      <h3>Paperwork</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Reading letters from the bank, insurance, or government</div>
+      <div class="nf-tick"><span class="nf-box"></span>Writing letters and emails</div>
+      <div class="nf-tick"><span class="nf-box"></span>Filling in forms</div>
+      <div class="nf-tick"><span class="nf-box"></span>Understanding bills</div>
+    </div>
+    <div class="nf-area">
+      <h3>Health</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Understanding medicines and leaflets</div>
+      <div class="nf-tick"><span class="nf-box"></span>Preparing for a doctor visit</div>
+      <div class="nf-tick"><span class="nf-box"></span>Checking whether health advice is true</div>
+      <div class="nf-tick"><span class="nf-box"></span>Remembering appointments and pills</div>
+    </div>
+    <div class="nf-area">
+      <h3>Food</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Reading ingredient lists</div>
+      <div class="nf-tick"><span class="nf-box"></span>Checking for allergies</div>
+      <div class="nf-tick"><span class="nf-box"></span>Checking halal status</div>
+      <div class="nf-tick"><span class="nf-box"></span>Planning meals and shopping</div>
+    </div>
+    <div class="nf-area">
+      <h3>Family</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Keeping in touch with family abroad</div>
+      <div class="nf-tick"><span class="nf-box"></span>Language barriers</div>
+      <div class="nf-tick"><span class="nf-box"></span>Birthday and special-day messages</div>
+      <div class="nf-tick"><span class="nf-box"></span>Helping grandchildren with schoolwork</div>
+    </div>
+    <div class="nf-area">
+      <h3>Home and money</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Budgeting and shopping</div>
+      <div class="nf-tick"><span class="nf-box"></span>Understanding contracts</div>
+      <div class="nf-tick"><span class="nf-box"></span>Recognizing scams and fake calls</div>
+    </div>
+    <div class="nf-area">
+      <h3>Hobbies and dreams</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Finding new ideas for hobbies</div>
+      <div class="nf-tick"><span class="nf-box"></span>Starting a project - a book, a shop, a course</div>
+      <div class="nf-tick"><span class="nf-box"></span>Travel planning</div>
+    </div>
+    <div class="nf-area">
+      <h3>Technology comfort</h3>
+      <div class="nf-tick"><span class="nf-box"></span>Installing and opening apps</div>
+      <div class="nf-tick"><span class="nf-box"></span>Typing on a small keyboard</div>
+      <div class="nf-tick"><span class="nf-box"></span>Reading small text</div>
+      <div class="nf-tick"><span class="nf-box"></span>Trusting technology at all</div>
+    </div>
+    <div class="nf-area">
+      <h3>Something else</h3>
+      <div class="nf-tick"><span class="nf-box"></span></div>
+      <div class="nf-tick"><span class="nf-box"></span></div>
+    </div>
+  </div>
+
+  <div class="nf-page2">
+    <h2>My three biggest difficulties</h2>
+    <p class="nf-lead">Write the three things you would most like help with - in any language.</p>
+    <div class="nf-write-line"><span class="nf-write-no">1</span><span class="nf-line"></span></div>
+    <div class="nf-write-line"><span class="nf-write-no">2</span><span class="nf-line"></span></div>
+    <div class="nf-write-line"><span class="nf-write-no">3</span><span class="nf-line"></span></div>
+
+    <h2>One question I would like answered today</h2>
+    <div class="nf-question-box"></div>
+
+    <h2>AI tools I already use (if any)</h2>
+    <div class="nf-question-box" style="min-height: 46px;"></div>
+
+    <div class="nf-note">
+      <strong>What happens next:</strong> during today's seminar we will pick several of your ticks and answer them together with AI, live. The form goes home with you - the ideas you see today work for every tick on this page.
+    </div>
+  </div>
+
+  <div class="nf-footer">AI Education for Seniors - CentreCanada Newcomer Services Society - print one copy per learner - Version 1.0 - 26 September 2026</div>
+</div>
+
+</body>
+</html>

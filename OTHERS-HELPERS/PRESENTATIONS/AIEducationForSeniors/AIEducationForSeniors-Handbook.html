@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI for Seniors - Your Everyday Handbook</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --warn-bg: #fdf0e0;
+    --warn-line: #d99a2b;
+    --tip-bg: #eaf3fa;
+    --tip-line: #2f78a8;
+    --safe-bg: #edf7ef;
+    --safe-line: #1d7a36;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    font-size: 17.5px;
+    line-height: 1.62;
+  }
+  .hb-page { max-width: 900px; margin: 0 auto; padding: 30px 34px 70px; }
+  .hb-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+  }
+  .hb-top img { height: 46px; width: auto; }
+  .hb-top-title { font-size: 21px; font-weight: 800; color: var(--accent-dark); }
+  .hb-top-sub { font-size: 14px; color: var(--muted); }
+  .hb-section { margin-bottom: 44px; }
+  h2.hb-h2 {
+    font-size: 26px;
+    color: var(--accent);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2.hb-h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3.hb-h3 { font-size: 20px; margin: 24px 0 8px; color: var(--ink); }
+  h4.hb-h4 { font-size: 17.5px; margin: 18px 0 6px; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  strong { color: var(--accent-dark); }
+  .hb-lead { color: var(--muted); font-size: 17px; }
+
+  .hb-box {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin: 14px 0;
+    border: 1px solid var(--line);
+    background: var(--soft);
+  }
+  .hb-box .hb-box-label {
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .hb-box.tip { background: var(--tip-bg); border-color: var(--tip-line); }
+  .hb-box.tip .hb-box-label { color: var(--tip-line); }
+  .hb-box.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .hb-box.warn .hb-box-label { color: #a0661c; }
+  .hb-box.safe { background: var(--safe-bg); border-color: var(--safe-line); }
+  .hb-box.safe .hb-box-label { color: var(--good); }
+
+  .hb-prompt {
+    background: var(--soft-warm);
+    border: 1px solid #ecdcc8;
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin: 12px 0;
+  }
+  .hb-prompt .hb-prompt-label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--accent-2);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .hb-recipe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+  .hb-recipe-step { background: var(--soft); border-radius: 10px; padding: 12px 14px; border-top: 4px solid var(--accent); }
+  .hb-recipe-step .hb-recipe-no { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent-2); font-weight: 700; }
+  .hb-recipe-step h4 { margin: 6px 0 4px; font-size: 16px; color: var(--ink); }
+  .hb-recipe-step p { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+  .hb-fixwords { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .hb-fixword { background: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 15px; }
+
+  table.hb-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 15.5px; }
+  table.hb-table th { background: var(--soft); text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--accent); color: var(--accent); }
+  table.hb-table td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.hb-table tr:nth-child(even) td { background: #fafcfd; }
+
+  .hb-steps { list-style: none; padding: 0; counter-reset: hb-step; margin: 14px 0; }
+  .hb-steps li {
+    counter-increment: hb-step;
+    position: relative;
+    padding: 10px 10px 10px 50px;
+    margin: 9px 0;
+    background: var(--soft);
+    border-radius: 10px;
+  }
+  .hb-steps li::before {
+    content: counter(hb-step);
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 29px;
+    height: 29px;
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .hb-steps li.safe::before { background: var(--good); }
+
+  .hb-footer {
+    margin-top: 50px;
+    border-top: 3px solid var(--accent);
+    padding-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* ---------- Print-only cover, header, footer ---------- */
+  .hb-cover, .hb-print-header, .hb-print-footer { display: none; }
+  .hb-print-table, .hb-print-table tbody, .hb-print-table tr, .hb-print-table td { display: block; }
+  .hb-print-table thead, .hb-print-table tfoot { display: none; }
+
+  @media print {
+    @page { size: A4; margin: 20mm 16mm 16mm; }
+    body { background: #ffffff; }
+    .hb-top { display: none; }
+    .hb-page { max-width: none; margin: 0; padding: 0; }
+
+    .hb-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 230mm;
+      box-sizing: border-box;
+      page-break-after: always;
+    }
+    .hb-cover-inner { max-width: 150mm; }
+    .hb-cover-logo { width: 44mm; height: auto; display: block; margin: 0 auto 16mm; }
+    .hb-cover-title { font-size: 30pt; font-weight: 800; color: var(--accent); line-height: 1.15; }
+    .hb-cover-rule { width: 40mm; height: 1mm; background: #c8102e; margin: 7mm auto; }
+    .hb-cover-subtitle { font-size: 12.5pt; color: var(--muted); line-height: 1.55; margin-bottom: 16mm; }
+    .hb-cover-contents { text-align: left; border: 0.4mm solid var(--line); border-radius: 3mm; padding: 8mm 10mm; margin-bottom: 16mm; }
+    .hb-cover-contents-title { font-size: 11pt; font-weight: 800; color: #c8102e; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 4mm; }
+    .hb-cover-contents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2mm 8mm; font-size: 10.5pt; color: var(--ink); }
+    .hb-cover-meta { display: flex; flex-direction: column; gap: 2mm; font-size: 10pt; color: var(--muted); }
+
+    .hb-print-table { display: table; width: 100%; border-collapse: collapse; }
+    .hb-print-table thead { display: table-header-group; }
+    .hb-print-table tfoot { display: table-footer-group; }
+    .hb-print-table tbody { display: table-row-group; }
+    .hb-print-table tr { display: table-row; }
+    .hb-print-table td { display: table-cell; padding: 0; }
+    .hb-print-content-cell { padding: 0; }
+    .hb-print-header {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      padding: 3mm 16mm;
+      border-bottom: 0.5mm solid #c8102e;
+      background: #ffffff;
+    }
+    .hb-print-header-logo { height: 8mm; width: auto; }
+    .hb-print-header-text { flex: 1; overflow: hidden; }
+    .hb-print-header-title { font-size: 10pt; font-weight: 700; color: var(--ink); line-height: 1.15; }
+    .hb-print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
+    .hb-print-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3mm 16mm;
+      border-top: 0.4mm solid var(--line);
+      font-size: 8pt;
+      color: var(--muted);
+      background: #ffffff;
+    }
+
+    .hb-section { page-break-before: always; }
+    .hb-section.hb-section-first { page-break-before: auto; }
+    h2.hb-h2, h3.hb-h3, h4.hb-h4 { page-break-after: avoid; }
+    .hb-box, .hb-prompt, .hb-recipe-step, table.hb-table tr, .hb-steps li { page-break-inside: avoid; }
+    table.hb-table thead { display: table-header-group; }
+    a { color: inherit; text-decoration: none; }
+  }
+
+  @media (max-width: 700px) {
+    .hb-page { padding: 18px 16px 50px; }
+    .hb-recipe { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Repeating print header and footer: in-flow table header rows, so they never overlap content -->
+<table class="hb-print-table">
+  <thead>
+    <tr>
+      <td>
+        <div class="hb-print-header">
+          <img class="hb-print-header-logo" src="centrecanada-logo.png" alt="" />
+          <div class="hb-print-header-text">
+            <div class="hb-print-header-title">AI for Seniors - Your Everyday Handbook</div>
+            <div class="hb-print-header-sub">CentreCanada Newcomer Services Society</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="hb-print-content-cell">
+
+<!-- Print-only cover page -->
+<div class="hb-cover">
+  <div class="hb-cover-inner">
+    <img class="hb-cover-logo" src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div class="hb-cover-title">AI for Seniors</div>
+    <div class="hb-cover-rule"></div>
+    <div class="hb-cover-subtitle">Your everyday handbook. How to ask, what AI can do for you, and how to stay safe.</div>
+    <div class="hb-cover-contents">
+      <div class="hb-cover-contents-title">Contents</div>
+      <div class="hb-cover-contents-grid">
+        <span>AI in plain words</span>
+        <span>How to ask well</span>
+        <span>Letters, papers, and planning</span>
+        <span>Food: ingredients, allergies, halal</span>
+        <span>Health and medicines</span>
+        <span>Family and translation</span>
+        <span>Hobbies, memories, projects</span>
+        <span>Stay safe: the golden rules</span>
+        <span>Ten minutes a day</span>
+        <span>Your helper app</span>
+        <span>Volunteer: teach the next generation</span>
+        <span>Ready prompts and plain words</span>
+      </div>
+    </div>
+    <div class="hb-cover-meta">
+      <span>Prepared by CentreCanada Newcomer Services Society</span>
+      <span>Version 1.5 - 26 September 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="hb-page">
+
+  <div class="hb-top">
+    <img src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div>
+      <div class="hb-top-title">AI for Seniors - Your Everyday Handbook</div>
+      <div class="hb-top-sub">CentreCanada Newcomer Services Society</div>
+    </div>
+  </div>
+
+  <!-- 1 · Welcome -->
+  <section class="hb-section hb-section-first" id="hb-welcome">
+    <h2 class="hb-h2">This handbook is yours</h2>
+    <p class="hb-lead">Keep it next to your phone. Everything you learned in the seminar is here - how to ask, what AI can do for you, and how to stay safe.</p>
+    <p>You do not need to become technical. You only need to learn to <strong>ask</strong> - and the computer does the heavy lifting. Ten minutes of practice a day keeps the skill alive, and the prompts in this book are ready to copy.</p>
+    <div class="hb-box tip">
+      <span class="hb-box-label">The promise</span>
+      You will be able to: open a chat with AI, ask a useful question, get a helpful answer in plain language, know when an answer may be wrong, and stay safe from AI-powered scams.
+    </div>
+  </section>
+
+  <!-- 2 · AI in plain words -->
+  <section class="hb-section">
+    <h2 class="hb-h2">AI in plain words</h2>
+    <p>Imagine a friend who has read every book, article, and recipe in the world - in every language. This friend cannot feel, does not know you personally, and sometimes remembers things wrong. But this friend is extremely fast at summarizing, explaining, writing, translating, and giving ideas. <strong>That friend is AI.</strong></p>
+    <ul>
+      <li><strong>AI is not a person.</strong> It has no feelings, opinions, or plans of its own - it answers what you ask, nothing more.</li>
+      <li><strong>AI does not know you.</strong> It only knows what you type. You decide what it ever learns about you.</li>
+      <li><strong>AI is not always right.</strong> It can make mistakes with complete confidence - like some voices on the internet. Anything that matters gets checked.</li>
+    </ul>
+    <p>And AI is already working for you: the junk-mail filter, the map app, the bank alert that spots an unusual purchase, and the voice assistant in your phone.</p>
+    <h3 class="hb-h3">What comes next</h3>
+    <p>AI keeps getting better at talking, reading forms, and translating - and in the coming years it will live in every phone, car, and home. Your part stays the same: ask clearly, check what matters, and never type secrets. The five golden rules will still protect you in 2035.</p>
+    <div class="hb-box">
+      <span class="hb-box-label">Good news</span>
+      AI has no power over you. It only has the power you choose to give it.
+    </div>
+  </section>
+
+  <!-- 3 · How to ask -->
+  <section class="hb-section">
+    <h2 class="hb-h2">How to ask well</h2>
+    <p>A vague question gets a vague answer. A rich question gets a useful answer. The recipe has <strong>four parts</strong>:</p>
+    <div class="hb-recipe">
+      <div class="hb-recipe-step"><span class="hb-recipe-no">Part 1</span><h4>Who</h4><p>Who you are, and who this is for.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">Part 2</span><h4>What</h4><p>What you want, exactly.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">Part 3</span><h4>Details</h4><p>What matters to you.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">Part 4</span><h4>Format</h4><p>How the answer should look.</p></div>
+    </div>
+    <p><strong>Before:</strong> "write letter landlord" - a vague, useless letter.<br>
+    <strong>After:</strong> "I am a 74-year-old tenant. My tap has dripped for two weeks and I called the manager twice. Write a short, polite letter to my landlord asking for a repair, under 150 words." - a ready-to-send letter.</p>
+    <p>If the answer is not right, use one of the <strong>five fix-up words</strong>:</p>
+    <div class="hb-fixwords">
+      <span class="hb-fixword">Shorter</span>
+      <span class="hb-fixword">Simpler</span>
+      <span class="hb-fixword">Step by step</span>
+      <span class="hb-fixword">With an example</span>
+      <span class="hb-fixword">Another version</span>
+    </div>
+    <p>You can also say <strong>"answer me in my own language"</strong> - the chat apps answer in your language too.</p>
+    <h3 class="hb-h3">Your own folders: Projects</h3>
+    <p>ChatGPT and Claude both have <strong>Projects</strong> - folders for one subject. Keep a Health folder, a Family folder, a Garden folder. The AI reads everything in the folder and answers with that background - no repeating yourself.</p>
+    <p><strong>Make it personal:</strong> in the folder settings add one line, for example "I am 72, explain simply, answer me in Turkish." Every chat in that folder follows it.</p>
+    <h3 class="hb-h3">What AI remembers</h3>
+    <ul>
+      <li><strong>ChatGPT memory:</strong> it can save things you tell it - your name, your city, that you like short answers - and use them next time. Check what it saved by asking: "What do you remember about me?" Delete anything under Settings, Personalization, Memory - or just say "Forget everything."</li>
+      <li><strong>Claude:</strong> remembers only inside the current chat. To make it remember across chats, put the facts in a Project.</li>
+      <li><strong>The rule:</strong> let it remember preferences, never secrets. A memory of "likes short answers" is helpful; a memory of a bank card number must never exist.</li>
+    </ul>
+    <h3 class="hb-h3">Make it better by talking</h3>
+    <p>The first answer is a first draft, not the final one. You and AI improve it together - and you can do it all by talking:</p>
+    <ol class="hb-steps">
+      <li><strong>Ask for a draft.</strong> One clear question.</li>
+      <li><strong>Say: "Read it back to me."</strong> You hear what you have.</li>
+      <li><strong>Say one change.</strong> "Warmer", "shorter", "remove the second paragraph".</li>
+      <li class="safe"><strong>Hear the new version.</strong> Then say the next change. Repeat until it sounds like you.</li>
+    </ol>
+    <p>Useful words: <strong>shorter, simpler, warmer, more polite, more formal, two versions, read it back, translate it back.</strong></p>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Try it by voice</span>
+      Tap the microphone and say: "Read my letter back to me, then suggest three small improvements - and only make the ones I choose."
+    </div>
+  </section>
+
+  <!-- 4 · Everyday helpers -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Letters, papers, and planning</h2>
+    <h3 class="hb-h3">Write it</h3>
+    <p>Complaints, thank-you notes, invitations, appointment requests - drafted in one minute, then you edit and send.</p>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      Write a polite complaint letter to my internet company. My internet has been very slow for a week, I called three times, and nothing changed. I would like a refund for this month. Keep the letter short and clear.
+    </div>
+    <h3 class="hb-h3">Understand it</h3>
+    <p>Paste a difficult letter from the bank, insurance, or government and ask for plain words:</p>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      Please explain this letter in plain words, like you are talking to a friend who is not a lawyer. Then tell me, step by step, what I need to DO and any deadlines I must not miss: [paste the letter]
+    </div>
+    <h3 class="hb-h3">Plan it</h3>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      I have a busy week coming up: a doctor appointment on Tuesday, a pharmacy visit on Wednesday, and a family birthday dinner on Saturday. Help me plan my week day by day, with one reminder for each day, in a simple table.
+    </div>
+    <p>Do not like typing? Tap the <strong>microphone</strong> in the app and speak instead. Or say "Hey Siri" / "Hey Google" on your phone for reminders and timers.</p>
+  </section>
+
+  <!-- 5 · Food -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Food: ingredients, allergies, halal</h2>
+    <p>AI can read an ingredient list with you - but it cannot taste, cannot test, and cannot certify anything. The label and the certification mark stay the final word.</p>
+    <ul>
+      <li><strong>Explain the label:</strong> paste any ingredient list and get each item in plain words.</li>
+      <li><strong>Allergy check:</strong> name your allergens, paste the list - AI flags possible problems, then the food maker confirms.</li>
+      <li><strong>Halal check:</strong> AI explains which ingredients may come from animal sources or alcohol and what to ask - the official halal certification label remains the reliable confirmation.</li>
+      <li><strong>Vegetarian, vegan, and other diets:</strong> name your diet and paste the list - AI tells you what fits and what does not, in plain words.</li>
+    </ul>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      I am checking food for allergies. My allergens are peanuts and eggs. Please check this ingredient list and explain anything I should worry about: [paste the list]
+    </div>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      I follow this diet: [gluten-free / vegan / low sugar]. Please check this ingredient list and tell me which items fit and which do not: [paste the list]
+    </div>
+    <div class="hb-box warn">
+      <span class="hb-box-label">Remember</span>
+      For allergies, ask the maker directly. For halal, look for the certification mark. For personal health effects, ask your doctor.
+    </div>
+  </section>
+
+  <!-- 6 · Health -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Health and medicines</h2>
+    <div class="hb-box safe">
+      <span class="hb-box-label">The one rule that matters</span>
+      AI gives ideas and explanations. It never decides anything medical. No diagnosis, no dose changes, no emergencies. Doctors, nurses, and pharmacists remain the only health authority.
+    </div>
+    <h3 class="hb-h3">Meals, movement, schedules</h3>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      I am 70 years old and my doctor asked me to eat less salt. Give me five simple low-salt dinner ideas, each with fewer than eight ingredients. Do not give medical advice.
+    </div>
+    <h3 class="hb-h3">Understand your medicine</h3>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      Please help me understand my medicine in plain words. From my label: [medicine name and dose]. Explain what it is usually for, how it is commonly taken, and common side effects. Then list five good questions to ask my pharmacist.
+    </div>
+    <h3 class="hb-h3">Doctor visits</h3>
+    <ul>
+      <li><strong>Before:</strong> ask AI to prepare what to tell the doctor and five questions to ask.</li>
+      <li><strong>During:</strong> bring your printed medication list. Language trouble? Open ChatGPT Voice (best) or Microsoft Copilot voice and hand the phone over.</li>
+      <li><strong>After:</strong> tell AI what you remember, in your own words - it rewrites it clearly with what to do next.</li>
+    </ul>
+    <h3 class="hb-h3">Health news: true or false?</h3>
+    <ol class="hb-steps">
+      <li><strong>Who says it?</strong> A named doctor or hospital, or "a friend of a friend"?</li>
+      <li><strong>Where is the proof?</strong> Studies and official sources, or screenshots?</li>
+      <li><strong>Check an official source.</strong> MedlinePlus, WHO, or your country's health authority.</li>
+      <li><strong>Watch for red flags.</strong> "Miracle cure", "secret formula", "doctors hate this", "act now" - stop and verify.</li>
+      <li class="safe"><strong>Ask a professional.</strong> Your doctor or pharmacist settles it.</li>
+    </ol>
+    <h3 class="hb-h3">Healthy aging: tools and benefits</h3>
+    <ul>
+      <li><strong>Meals and movement - ChatGPT (best) or Claude:</strong> menus and seated routines within your doctor's limits. <strong>Benefit:</strong> independence without guesswork.</li>
+      <li><strong>Medicine reminders - Medisafe, MyTherapy, or your phone's reminders:</strong> the right pill at the right time. <strong>Benefit:</strong> no forgotten doses.</li>
+      <li><strong>Steps and activity - Apple Health or Google Fit:</strong> your phone counts them for you. <strong>Benefit:</strong> you see progress and keep moving.</li>
+      <li><strong>Mind and company - ChatGPT or Claude:</strong> daily memory games and calm chat. <strong>Benefit:</strong> a sharper mind and company on quiet days.</li>
+      <li><strong>Brain games - Lumosity, Peak, or Elevate:</strong> a few free games a day. <strong>Benefit:</strong> a daily mental workout.</li>
+      <li><strong>Hearing and vision - live captions and Be My Eyes:</strong> live captions turn spoken words into text on the screen; Be My Eyes reads labels aloud. <strong>Benefit:</strong> you take part in everything.</li>
+      <li><strong>Living-alone check-in - Snug:</strong> one tap a day; family is alerted if you miss it. <strong>Benefit:</strong> peace of mind for everyone.</li>
+    </ul>
+    <p>These tools build the habit. Every plan still gets your doctor's approval.</p>
+  </section>
+
+  <!-- 7 · Family and translation -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Family and translation</h2>
+    <p>AI keeps you close to the people you love - birthday wishes, homework help with grandchildren, bedtime stories, and letters across languages.</p>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      Write a warm birthday message for my 10-year-old grandson who loves dinosaurs and football. Short and cheerful, about 60 words.
+    </div>
+    <h3 class="hb-h3">Live translation</h3>
+    <ul>
+      <li><strong>Live conversation - two good choices:</strong>
+        <ul>
+          <li><strong>ChatGPT Voice (best):</strong> tap the voice button and say "Be my translator between English and [language]". Talk naturally - it listens and speaks both ways like a real person.</li>
+          <li><strong>Microsoft Copilot voice:</strong> works too, and is already on many Windows computers.</li>
+        </ul>
+        Google Translate Conversation mode remains a backup, but many people find it stiff and slow next to AI voice.
+      </li>
+      <li><strong>Camera translation:</strong> Google Lens and the Translate camera read menus, signs, medicine boxes, and letters.</li>
+      <li><strong>Letters:</strong> paste any letter into DeepL or a chat app for a natural translation in both directions.</li>
+    </ul>
+    <div class="hb-box tip">
+      <span class="hb-box-label">For doctor visits</span>
+      Open an AI voice translator before the appointment - ChatGPT Voice is best, Copilot works too - and hand the phone to the doctor when needed. Short, clear sentences translate best.
+    </div>
+  </section>
+
+  <!-- 8 · Hobbies and projects -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Hobbies, memories, and your projects</h2>
+    <ul>
+      <li><strong>Gardening:</strong> "I live in Ontario and want to grow tomatoes on my balcony. Give me a simple month-by-month plan."</li>
+      <li><strong>Heritage recipes:</strong> ask AI to write down a family recipe as a keepsake, with the story behind it.</li>
+      <li><strong>Photos:</strong> Google Photos "Magic Editor" and iPhone "Clean Up" repair old pictures; ask AI for beautiful captions.</li>
+      <li><strong>Your life story:</strong> "Interview me one question at a time, starting with my childhood home, then write my answers into a story."</li>
+      <li><strong>Big dreams:</strong> a book, a small shop, a course you could teach - AI handles the spelling, design, and speed. You bring the wisdom.</li>
+    </ul>
+  </section>
+
+  <!-- 9 · Safety -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Stay safe: the golden rules</h2>
+    <ol class="hb-steps">
+      <li><strong>No secrets in the chat.</strong> Never passwords, bank or card numbers, ID numbers, or full addresses.</li>
+      <li><strong>Never send money because of a call or message.</strong> No real bank, police officer, or grandchild ever demands gift cards or urgent transfers.</li>
+      <li><strong>AI does not call you first.</strong> A call about your account, your computer, or "AI support" is a scam. Hang up.</li>
+      <li><strong>Verify before you trust.</strong> Check important facts with official sources - the doctor, the bank's own website, the government.</li>
+      <li class="safe"><strong>When in doubt, stop.</strong> If you feel rushed or scared, end it and talk to family first.</li>
+    </ol>
+    <h3 class="hb-h3">Never type these</h3>
+    <ul>
+      <li>Passwords and PINs.</li>
+      <li>Bank and card numbers, expiry dates, the code on the back.</li>
+      <li>Passport, social insurance, and health card numbers.</li>
+      <li>Your full address and exact birth date - age and city are enough.</li>
+      <li>Other people's full names, addresses, phone numbers, and photos of children.</li>
+      <li>Medical files that carry your name and ID together.</li>
+    </ul>
+    <p>One test for anything: <strong>would I read this out loud in a public library?</strong> If not, keep it out of the chat.</p>
+    <h3 class="hb-h3">The family code word</h3>
+    <p>Scammers can copy a family member's voice with AI and call: "Grandma, I am in trouble, I need money now." <strong>Agree on a secret word only your family knows.</strong> Any caller claiming to be family must say it - a perfect fake voice still cannot know it.</p>
+    <div class="hb-box warn">
+      <span class="hb-box-label">Remember</span>
+      People who know these five rules and one code word are safer than most internet users of any age. The goal is confidence, not fear.
+    </div>
+  </section>
+
+  <!-- 10 · Ten minutes a day -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Ten minutes a day</h2>
+    <div class="hb-recipe">
+      <div class="hb-recipe-step"><span class="hb-recipe-no">5 minutes</span><h4>One real task</h4><p>A shopping list, an email, a recipe - something actually needed.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">2 minutes</span><h4>One fix-up</h4><p>Use one fix-up word on the answer.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">3 minutes</span><h4>One curious question</h4><p>A bird, a song, a place, a word.</p></div>
+      <div class="hb-recipe-step"><span class="hb-recipe-no">Bonus</span><h4>Teach a friend</h4><p>Teaching is the proof you learned.</p></div>
+    </div>
+    <p>Small regular use beats long sessions. In ten weeks, that is seventy real tasks.</p>
+  </section>
+
+  <!-- 11 · Helper app -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Your helper app</h2>
+    <p>After the seminar, you get the <strong>Senior Helper AI Coordinator</strong> - one friendly app with a button for everything you learned. No typing needed: tap a button, fill the simple boxes, and the helper asks the AI for you.</p>
+    <ul>
+      <li><strong>Write a letter</strong> - fill four boxes, the letter appears.</li>
+      <li><strong>Explain a paper</strong> - paste a difficult letter, get plain words.</li>
+      <li><strong>Food and ingredients</strong> - allergy check, halal check, ingredient explainer.</li>
+      <li><strong>Pharmacy and medicines</strong> - understand medicines, check health claims.</li>
+      <li><strong>Doctor visit helper</strong> - questions before, plain summary after.</li>
+      <li><strong>Translate</strong> - letters, phrases, and words for a doctor visit.</li>
+      <li><strong>Check a suspicious message</strong> - paste it, the helper checks for scams.</li>
+      <li><strong>My saved answers</strong> - keep the answers you want to use again.</li>
+    </ul>
+    <p>The five golden rules stay on screen at all times, and there is a Listen button that reads answers out loud.</p>
+  </section>
+
+  <!-- 12 · Volunteer -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Volunteer: teach the next generation</h2>
+    <p>Your decades of experience can teach young people - and you do not need to be a teacher. CentreCanada has the tools; you bring the knowledge.</p>
+    <ol class="hb-steps">
+      <li><strong>Chat with AI about your subject.</strong> A trade, a homeland, a hobby, a recipe tradition - anything worth teaching.</li>
+      <li><strong>Let AI draft the lesson.</strong> It writes the topic, a friendly explanation, examples, and quiz questions.</li>
+      <li><strong>Print it as a PDF.</strong> One click turns the draft into a shareable file.</li>
+      <li class="safe"><strong>Hand it to the team.</strong> We upload it into the curriculum builder, which turns it into training flows, quizzes, and web documents for students. Your name goes on it as the contributor.</li>
+    </ol>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">The volunteer prompt</span>
+      I would like to volunteer a lesson for young students about [your subject]. Interview me one question at a time about the most important things a beginner should know. Then write a complete draft education document: the topic, a friendly explanation, three examples, and five quiz questions with answers.
+    </div>
+    <div class="hb-box tip">
+      <span class="hb-box-label">One hour a week</span>
+      No technical skill needed - the AI does the formatting. Talk to the course team if you would like to join.
+    </div>
+    <h3 class="hb-h3">Flyers and posters for your cause</h3>
+    <p>AI writes the words, Canva makes the design - free and in minutes.</p>
+    <div class="hb-prompt">
+      <span class="hb-prompt-label">Type this</span>
+      We are organizing a community dinner for [cause]. Write the short flyer text: a warm headline, three lines about the event, and one line asking people to bring a dish. Then give me a design brief for Canva: A4, warm colors, large text, space for our logo.
+    </div>
+    <p>Paste the design brief into <strong>Canva - Magic Design</strong> - it builds the flyer, poster, or presentation, and you edit it. The same trick works for birthday invitations and community talks.</p>
+  </section>
+
+  <!-- 13 · Ready prompts -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Ready prompts</h2>
+    <p class="hb-lead">Copy one, replace the brackets, and send it. Twenty of the most useful ones.</p>
+    <table class="hb-table">
+      <thead><tr><th>Situation</th><th>Type this</th></tr></thead>
+      <tbody>
+        <tr><td>A thank-you note</td><td>Write a warm thank-you note to [person] for [kind act]. About 80 words, sincere but not too formal.</td></tr>
+        <tr><td>An appointment request</td><td>Draft a short friendly email asking [office] for an appointment in [month], in the afternoon if possible.</td></tr>
+        <tr><td>Understand a letter</td><td>Explain this in plain words and tell me what I need to do: [paste]</td></tr>
+        <tr><td>Refund request</td><td>I bought [product] and it does not work because [reason]. Write a short, polite refund request to the store.</td></tr>
+        <tr><td>Weekly menu</td><td>Plan five simple dinners for one person that are low in salt. Then give me one shopping list.</td></tr>
+        <tr><td>Use what is in the fridge</td><td>I have these ingredients: [list]. Suggest three simple dinners without buying more than three extra items.</td></tr>
+        <tr><td>Gentle movement</td><td>Create a gentle 15-minute seated exercise routine using only a chair. Add a note that I should check with my doctor first.</td></tr>
+        <tr><td>Medication schedule</td><td>Make a large, easy-to-read daily medication schedule table with columns for morning, noon, evening, and night.</td></tr>
+        <tr><td>Doctor visit</td><td>I am visiting my [doctor] about [reason]. Help me prepare: ask me questions one at a time, then give me five questions to ask.</td></tr>
+        <tr><td>Health claim check</td><td>I heard this health claim: [claim]. Say how likely it is to be true or false and how I can verify it.</td></tr>
+        <tr><td>Birthday message</td><td>Write a warm birthday message for my [age]-year-old grandson who loves [interests]. About 60 words.</td></tr>
+        <tr><td>Bedtime story</td><td>Write a 200-word bedtime story about [character] who [adventure]. Gentle, happy ending.</td></tr>
+        <tr><td>Translation</td><td>Translate this into [language], keeping the tone natural: [text]</td></tr>
+        <tr><td>Video call questions</td><td>Give me five good questions to ask my grandchildren on our next video call.</td></tr>
+        <tr><td>Gardening plan</td><td>I live in [region] and want to grow [plant] on my balcony. Give me a simple month-by-month plan.</td></tr>
+        <tr><td>Family story</td><td>Interview me for my family story booklet. Ask one question at a time, starting with my childhood home.</td></tr>
+        <tr><td>Photo caption</td><td>Write three short, warm caption ideas for an old family photo. It shows [describe the scene].</td></tr>
+        <tr><td>Trip plan</td><td>Plan a relaxed 5-day trip to [city] for me. I like museums, short walks, and early dinners. One plan per day, with rest time.</td></tr>
+        <tr><td>Packing list</td><td>I am flying to [place] for [number] days in [month]. Make me a packing list, including medications.</td></tr>
+        <tr><td>Scam check</td><td>Check this message for scams and tell me exactly what to do: [paste]</td></tr>
+      </tbody>
+    </table>
+    <h3 class="hb-h3">Tricks for ChatGPT</h3>
+    <ul>
+      <li><strong>Letters:</strong> after the first draft, say "Shorter, and warmer."</li>
+      <li><strong>Plain words:</strong> "Explain like I am 12, with an example from daily life."</li>
+      <li><strong>Voice translator:</strong> tap the voice button and say "Be my translator between English and [language]."</li>
+      <li><strong>Company:</strong> "Let's have a ten-minute chat about my day. Ask me one question at a time."</li>
+      <li><strong>Scams:</strong> paste the message and ask "Is this a scam? What warning signs does it show?"</li>
+    </ul>
+    <h3 class="hb-h3">Tricks for Claude</h3>
+    <ul>
+      <li><strong>Long letters:</strong> paste anything and ask "Summarize in five bullets and tell me what I must DO."</li>
+      <li><strong>Warm writing:</strong> "Write this card like a warm grandmother - sincere and short."</li>
+      <li><strong>Life story:</strong> "Interview me one question at a time, starting with my childhood home."</li>
+      <li><strong>Your own draft:</strong> "Rewrite this keeping my voice, and keep it under 200 words."</li>
+      <li><strong>Comparing choices:</strong> "Compare these two options in a simple table."</li>
+    </ul>
+  </section>
+
+  <!-- 14 · Glossary -->
+  <section class="hb-section">
+    <h2 class="hb-h2">Plain words</h2>
+    <table class="hb-table">
+      <thead><tr><th>Word</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>AI</strong></td><td>A computer program that imitates parts of human language and problem solving.</td></tr>
+        <tr><td><strong>Prompt</strong></td><td>The question or instruction you send to the AI. Everything starts with a prompt.</td></tr>
+        <tr><td><strong>Chatbot</strong></td><td>The chat window where you talk with AI by typing or speaking.</td></tr>
+        <tr><td><strong>Follow-up</strong></td><td>Your next message after the first answer - the conversation continues naturally.</td></tr>
+        <tr><td><strong>Hallucination</strong></td><td>The AI's word for making something up with full confidence. Check important facts.</td></tr>
+        <tr><td><strong>Voice assistant</strong></td><td>Siri, Google Assistant, or Alexa - the helper that listens to your spoken commands.</td></tr>
+        <tr><td><strong>Deepfake</strong></td><td>A fake photo, video, or voice created with AI, made to look real.</td></tr>
+        <tr><td><strong>Phishing</strong></td><td>Fake messages that try to steal passwords or money by pretending to be someone you trust.</td></tr>
+        <tr><td><strong>Free plan</strong></td><td>The no-cost version of an app, which is enough for everything in this handbook.</td></tr>
+        <tr><td><strong>AI voice translator</strong></td><td>A chat app voice mode that hears one language and speaks the other. ChatGPT Voice is the best choice; Microsoft Copilot voice works too.</td></tr>
+        <tr><td><strong>Halal certification</strong></td><td>An official label confirming that a food follows halal rules.</td></tr>
+        <tr><td><strong>Family code word</strong></td><td>A secret word only your family knows, used to prove a caller is really family.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="hb-footer">
+    <p><strong>AI for Seniors - Your Everyday Handbook.</strong> Version 1.5, 26 September 2026. Prepared by CentreCanada Newcomer Services Society.</p>
+    <p>Free to use, adapt, and translate for community education. The five golden safety rules must be kept in any adaptation.</p>
+  </footer>
+
+</div>
+      </td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>
+        <div class="hb-print-footer">
+          <span>CentreCanada - AI for Seniors</span>
+          <span>Version 1.5 - 26 September 2026</span>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+</body>
+</html>

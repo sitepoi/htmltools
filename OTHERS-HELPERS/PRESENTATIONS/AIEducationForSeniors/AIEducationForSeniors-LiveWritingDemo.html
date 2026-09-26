@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI for Seniors - Live Writing Demo - Prompt Palette</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --tip-bg: #eaf3fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef2f6;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .ld-shell { max-width: 840px; margin: 0 auto; background: #ffffff; padding: 26px 38px 44px; min-height: 100vh; }
+  .ld-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .ld-top img { height: 44px; width: auto; }
+  .ld-top-title { font-size: 20px; font-weight: 800; color: var(--accent-dark); }
+  .ld-top-sub { font-size: 13.5px; color: var(--muted); }
+  .ld-print-btn {
+    margin-left: auto;
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  h1 { color: var(--accent); font-size: 27px; margin: 0 0 4px; }
+  .ld-lead { color: var(--muted); margin: 0 0 14px; }
+  h2 {
+    color: var(--ink);
+    font-size: 19px;
+    margin: 22px 0 8px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 4px;
+  }
+  .ld-prompt {
+    background: var(--soft-warm);
+    border: 1px solid #ecdcc8;
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin: 10px 0;
+  }
+  .ld-prompt .ld-prompt-label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--accent-2);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 5px;
+  }
+  .ld-prompt.strong { background: #edf7ef; border-color: var(--good); }
+  .ld-prompt.strong .ld-prompt-label { color: var(--good); }
+  table.ld-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  table.ld-table th {
+    background: var(--soft);
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  table.ld-table td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 15px; }
+  table.ld-table tr:nth-child(even) td { background: #fafcfd; }
+  ol.ld-steps { margin: 10px 0; padding-left: 24px; }
+  ol.ld-steps li { margin: 8px 0; }
+  .ld-note {
+    background: var(--tip-bg);
+    border: 1px solid #2f78a8;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 14px 0;
+  }
+  .ld-footer { margin-top: 26px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); padding-top: 10px; }
+  .ld-print-header, .ld-print-footer { display: none; }
+  .ld-print-table, .ld-print-table tbody, .ld-print-table tr, .ld-print-table td { display: block; }
+  .ld-print-table thead, .ld-print-table tfoot { display: none; }
+  @media (max-width: 700px) {
+    .ld-shell { padding: 18px 14px 36px; }
+    table.ld-table th, table.ld-table td { font-size: 13px; padding: 6px 6px; }
+  }
+  @media print {
+    @page { size: A4; margin: 18mm 14mm 14mm; }
+    body { background: #ffffff; font-size: 12px; }
+    .ld-shell { max-width: none; padding: 0; min-height: 0; }
+    .ld-top { display: none; }
+    .ld-print-btn { display: none; }
+    .ld-print-table { display: table; width: 100%; border-collapse: collapse; }
+    .ld-print-table thead { display: table-header-group; }
+    .ld-print-table tfoot { display: table-footer-group; }
+    .ld-print-table tbody { display: table-row-group; }
+    .ld-print-table tr { display: table-row; }
+    .ld-print-table td { display: table-cell; padding: 0; }
+    .ld-print-content-cell { padding: 0 0 4mm; }
+    .ld-print-header {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      padding: 3mm 16mm;
+      border-bottom: 0.5mm solid #c8102e;
+      background: #ffffff;
+    }
+    .ld-print-header img { height: 8mm; width: auto; }
+    .ld-print-header-text { flex: 1; overflow: hidden; }
+    .ld-print-header-title { font-size: 10pt; font-weight: 700; line-height: 1.15; }
+    .ld-print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
+    .ld-print-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3mm 16mm;
+      border-top: 0.4mm solid var(--line);
+      font-size: 8pt;
+      color: var(--muted);
+      background: #ffffff;
+    }
+    h1 { font-size: 17pt; }
+    h2 { font-size: 12.5pt; break-after: avoid; margin-top: 5mm; }
+    .ld-prompt, .ld-note { break-inside: avoid; }
+    table.ld-table th, table.ld-table td { font-size: 9.5pt; padding: 2mm 2.5mm; }
+    table.ld-table tr { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Repeating print header and footer: in-flow table header rows, so they never overlap content -->
+<table class="ld-print-table">
+  <thead>
+    <tr>
+      <td>
+        <div class="ld-print-header">
+          <img src="centrecanada-logo.png" alt="" />
+          <div class="ld-print-header-text">
+            <div class="ld-print-header-title">Live writing demo - prompt palette</div>
+            <div class="ld-print-header-sub">CentreCanada Newcomer Services Society</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="ld-print-content-cell">
+        <div class="ld-shell">
+
+  <div class="ld-top">
+    <img src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div>
+      <div class="ld-top-title">Live Writing Demo - Prompt Palette</div>
+      <div class="ld-top-sub">CentreCanada Newcomer Services Society</div>
+    </div>
+    <button class="ld-print-btn" type="button" onclick="window.print()">Print</button>
+  </div>
+
+  <h1>Live writing demo - prompt palette</h1>
+  <p class="ld-lead">Show the room how a document becomes perfect by talking with AI - with zero typing and zero guessing. Everything here is ready to read out loud.</p>
+
+  <h2>The opening prompt - copy and paste</h2>
+  <div class="ld-prompt strong">
+    <span class="ld-prompt-label">Opening prompt</span>
+    I am a 70-year-old customer. My washing machine broke one week after delivery and the store has not answered my three calls. Please write a polite complaint letter asking for a repair or a refund. About 150 words, firm but polite, with a place for my name and address.
+  </div>
+  <div class="ld-prompt">
+    <span class="ld-prompt-label">Türkçe - use this if the room prefers Turkish</span>
+    Ben 70 yaşında bir müşteriyim. Çamaşır makinem teslimattan bir hafta sonra bozuldu ve mağaza üç aramama dönmedi. Lütfen tamir ya da iade isteyen nazik bir şikayet mektubu yaz. Yaklaşık 150 kelime, kararlı ama kibar, adım ve adresim için yer bırak.
+  </div>
+
+  <h2>The palette - universal follow-ups</h2>
+  <p>Each line works no matter what the AI wrote. Pick by looking at the draft - never by guessing.</p>
+  <table class="ld-table">
+    <thead><tr><th style="width:30%">What to fix</th><th>The words to say</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Length</strong></td><td>"Shorter." - "Under 150 words." - "Longer - keep going."</td></tr>
+      <tr><td><strong>Tone</strong></td><td>"Warmer." - "More polite." - "More formal." - "Simpler words."</td></tr>
+      <tr><td><strong>Pointing at parts</strong></td><td>"Remove the second paragraph." - "Move the price to the end." - "Add one sentence about the refund."</td></tr>
+      <tr><td><strong>Options</strong></td><td>"Give me two versions - one formal, one warm." - "Write three different openings."</td></tr>
+      <tr><td><strong>The editor</strong></td><td>"What would make this better? Three ideas - but do only the ones I choose." - "Check for mistakes and fix them."</td></tr>
+      <tr><td><strong>Voice</strong></td><td>"Read it back to me." - "Read only the first paragraph."</td></tr>
+      <tr><td><strong>The check</strong></td><td>"Translate it back into Turkish." - "Translate this letter into English, natural tone."</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How to run it live - four minutes</h2>
+  <ol class="ld-steps">
+    <li><strong>Paste the opening prompt</strong> and show the first draft on the big screen.</li>
+    <li><strong>Say: "Read it back to me"</strong> - the room hears the draft.</li>
+    <li><strong>Look at the draft and pick ONE palette line</strong> that fits what you see. Letter too cold? Say "Warmer." Too long? "Shorter."</li>
+    <li><strong>Say it</strong> and show the improved version.</li>
+    <li><strong>Repeat three rounds</strong>, then finish with "read it back to me" and a translate-back check.</li>
+  </ol>
+
+  <h2>A worked example path</h2>
+  <ol class="ld-steps">
+    <li><strong>Round 1:</strong> the opening prompt above.</li>
+    <li><strong>If the letter sounds cold:</strong> "Warmer and more polite."</li>
+    <li><strong>If it is too long:</strong> "Shorter - under 150 words."</li>
+    <li><strong>If a detail is missing:</strong> "Add that I called three times and got no answer."</li>
+    <li><strong>Round 4:</strong> "Read it back to me."</li>
+    <li><strong>The check:</strong> "Translate it back into Turkish" - and read the Turkish back to the room.</li>
+    <li><strong>Finish:</strong> "Now read the final version aloud, slowly."</li>
+  </ol>
+
+  <div class="ld-note">
+    <strong>Presenter tips:</strong> speak every prompt - never type - it looks like magic. Announce what you will fix before saying it: "The letter is cold. Watch: warmer." Keep every round visible on the big screen. If the room is mostly Turkish, run the whole demo in Turkish and translate at the end.
+  </div>
+
+  <div class="ld-footer">AI Education for Seniors - CentreCanada Newcomer Services Society - print one copy for the presenter before the seminar - Version 1.0 - 26 September 2026</div>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>
+        <div class="ld-print-footer">
+          <span>CentreCanada - AI for Seniors - Live Writing Demo</span>
+          <span>Version 1.0 - 26 September 2026</span>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+</body>
+</html>

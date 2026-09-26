@@ -1,0 +1,81 @@
+<div id="shc-app">
+  <header class="shc-header">
+    <div class="shc-heading">
+      <div class="shc-greeting" id="shc-greeting">Good day! What would you like help with?</div>
+      <div class="shc-subline">Choose a task below, or type your question in your own words. You can also say it - many phones let you talk instead of type.</div>
+    </div>
+    <div class="shc-header-tools">
+      <button type="button" class="shc-toolbtn" id="shc-new-chat" title="Start a fresh conversation">New chat</button>
+      <button type="button" class="shc-toolbtn" id="shc-text-bigger" title="Make all text bigger">Bigger text</button>
+      <button type="button" class="shc-toolbtn" id="shc-text-smaller" title="Make all text smaller">Smaller text</button>
+      <button type="button" class="shc-toolbtn" id="shc-listen-toggle" title="Read the answers out loud">Listen: off</button>
+    </div>
+  </header>
+
+  <div class="shc-category-grid" id="shc-category-grid">
+    <button type="button" class="shc-catbtn" data-category-key="free-question"><span class="shc-catname">My own question</span><span class="shc-cathint">Ask anything in your own words</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="write-letter"><span class="shc-catname">Write a letter or email</span><span class="shc-cathint">Complaints, thank-you notes, requests</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="explain-text"><span class="shc-catname">Explain a letter or paper</span><span class="shc-cathint">Bank, insurance, government letters</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="plan-week"><span class="shc-catname">Plan my week and meals</span><span class="shc-cathint">Menus and a shopping list</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="health-helper"><span class="shc-catname">Health helper</span><span class="shc-cathint">Meals, movement, schedules - ideas only</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="food-ingredients"><span class="shc-catname">Food and ingredients</span><span class="shc-cathint">Allergy, halal, veggie, vegan, and diet checks</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="pharmacy-help"><span class="shc-catname">Pharmacy and medicines</span><span class="shc-cathint">Understand medicines, check health claims</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="doctor-visit"><span class="shc-catname">Doctor visit helper</span><span class="shc-cathint">Prepare questions, summarize after</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="translate-help"><span class="shc-catname">Translate</span><span class="shc-cathint">Letters, phrases, doctor visits</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="family-message"><span class="shc-catname">Message for family</span><span class="shc-cathint">Birthdays, stories, homework help</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="hobby-project"><span class="shc-catname">Hobbies and projects</span><span class="shc-cathint">Gardening, crafts, music, games</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="trip-plan"><span class="shc-catname">Plan a trip</span><span class="shc-cathint">Day-by-day plans and packing</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="learn-new"><span class="shc-catname">Learn something new</span><span class="shc-cathint">A gentle plan from zero</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="my-stories"><span class="shc-catname">Write my stories</span><span class="shc-cathint">Memoir, family stories, recipes</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="safety-check"><span class="shc-catname">Check a suspicious message</span><span class="shc-cathint">Is this a scam? Paste it here</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="my-notes"><span class="shc-catname">My saved answers</span><span class="shc-cathint">Answers I kept for later</span></button>
+  </div>
+
+  <main class="shc-main">
+    <section class="shc-panel shc-form-panel" id="shc-form-panel"></section>
+
+    <section class="shc-panel shc-chat-panel" id="shc-chat-panel">
+      <div class="shc-quick-starts" id="shc-quick-starts"></div>
+      <div class="shc-chat-messages" id="shc-chat-messages">
+        <div class="shc-welcome-note" id="shc-welcome-note">
+          <div class="shc-welcome-title">This is your helper</div>
+          <p>Tap one of the ready questions below, or type your own. The helper answers in plain words, in short paragraphs, and never gets impatient.</p>
+          <p>For health, money, and legal matters, the helper gives ideas - your doctor, bank, and family make the decisions. Your five golden safety rules are at the bottom of this page.</p>
+        </div>
+      </div>
+      <div class="shc-again-chips" id="shc-again-chips"></div>
+      <div class="shc-chat-input-row">
+        <button type="button" class="shc-talk-btn" id="shc-talk-button" title="Talk instead of typing">Talk</button>
+        <textarea class="shc-chat-input" id="shc-chat-input" rows="2" placeholder="Type your question here..."></textarea>
+        <button type="button" class="shc-send-btn" id="shc-send-button">Ask</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shc-safety-card" id="shc-safety-card">
+    <div class="shc-safety-title">
+      <span>Your five golden safety rules</span>
+      <button type="button" class="shc-safety-toggle" id="shc-safety-toggle">Hide</button>
+    </div>
+    <div class="shc-safety-content" id="shc-safety-content">
+      <ol class="shc-safety-list">
+        <li>No secrets in the chat - never passwords, card numbers, or ID numbers.</li>
+        <li>Never send money because of a phone call or message.</li>
+        <li>AI does not call you first - hang up.</li>
+        <li>Check important facts with official sources.</li>
+        <li>When in doubt, stop and ask family.</li>
+      </ol>
+    </div>
+  </footer>
+
+  <div class="shc-modal-overlay" id="shc-copy-modal-overlay">
+    <div class="shc-modal-box">
+      <div class="shc-modal-title">Copy your question</div>
+      <div class="shc-modal-hint">Select the text below, then copy it. You can paste it into any AI app, like ChatGPT or Gemini.</div>
+      <textarea class="shc-modal-textarea" id="shc-copy-modal-text" rows="6"></textarea>
+      <div class="shc-modal-actions">
+        <button type="button" class="shc-modal-btn" id="shc-copy-modal-done">Done</button>
+      </div>
+    </div>
+  </div>
+</div>

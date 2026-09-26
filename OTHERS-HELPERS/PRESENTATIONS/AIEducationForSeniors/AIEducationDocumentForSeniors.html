@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Education for Seniors - Complete Course Document</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #5b6b7f;
+    --accent: #0f5c8a;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --warn-bg: #fdf0e0;
+    --warn-line: #d99a2b;
+    --tip-bg: #eaf3fa;
+    --tip-line: #2f78a8;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #ffffff;
+    font-size: 17.5px;
+    line-height: 1.62;
+  }
+  .doc-shell {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  /* ---------- Sidebar ---------- */
+  .doc-side {
+    border-right: 1px solid var(--line);
+    background: var(--soft);
+    padding: 26px 18px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .doc-side h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent);
+    margin: 22px 0 8px;
+  }
+  .doc-side h2:first-child { margin-top: 0; }
+  .doc-side a {
+    display: block;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    font-size: 14.5px;
+    line-height: 1.35;
+    margin-bottom: 2px;
+  }
+  .doc-side a:hover { background: #e7eef5; color: var(--accent); }
+  .doc-side .side-note {
+    margin-top: 26px;
+    padding: 12px;
+    background: #ffffff;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  /* ---------- Main ---------- */
+  .doc-main { padding: 34px 44px 70px; min-width: 0; max-width: 920px; }
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .doc-header .doc-eyebrow {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--accent-2);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .doc-header h1 {
+    font-size: 38px;
+    line-height: 1.2;
+    margin: 0 0 10px;
+    color: var(--ink);
+  }
+  .doc-header p.doc-subtitle { font-size: 19px; color: var(--muted); margin: 0; max-width: 720px; }
+  .doc-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .doc-meta span {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 13px;
+    padding: 4px 12px;
+    border-radius: 999px;
+  }
+  h2.doc-h2 {
+    font-size: 27px;
+    color: var(--accent);
+    margin: 54px 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2.doc-h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  .doc-section > p.doc-lead { color: var(--muted); margin-top: 6px; font-size: 17px; }
+  h3.doc-h3 { font-size: 20px; margin: 30px 0 8px; color: var(--ink); }
+  h4.doc-h4 { font-size: 17.5px; margin: 20px 0 6px; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  strong { color: var(--ink); }
+  .doc-section {
+    padding-top: 6px;
+  }
+  /* ---------- Module heads ---------- */
+  .module-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 56px;
+    padding: 18px 20px;
+    background: var(--soft);
+    border-left: 6px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+  }
+  .module-head .module-number {
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 19px;
+    flex: 0 0 auto;
+  }
+  .module-head h2 { margin: 0; font-size: 24px; color: var(--accent); }
+  .module-head p { margin: 2px 0 0; font-size: 14.5px; color: var(--muted); }
+  /* ---------- Callouts ---------- */
+  .doc-callout {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin: 16px 0;
+    border: 1px solid var(--line);
+    background: var(--soft);
+  }
+  .doc-callout .callout-label {
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .doc-callout.tip { background: var(--tip-bg); border-color: var(--tip-line); }
+  .doc-callout.tip .callout-label { color: var(--tip-line); }
+  .doc-callout.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  .doc-callout.warn .callout-label { color: #a0661c; }
+  .doc-callout.safe { background: #edf7ef; border-color: var(--good); }
+  .doc-callout.safe .callout-label { color: var(--good); }
+  /* ---------- Prompt cards ---------- */
+  .prompt-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 16px 0;
+    overflow: hidden;
+    background: #ffffff;
+  }
+  .prompt-card .prompt-title {
+    background: var(--soft-warm);
+    padding: 10px 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--line);
+  }
+  .prompt-card .prompt-body { padding: 14px 16px; }
+  .prompt-card .prompt-type {
+    background: var(--soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 14px;
+    margin: 10px 0;
+    font-size: 16.5px;
+    border-radius: 0 8px 8px 0;
+  }
+  .prompt-card .prompt-expect { color: var(--muted); font-size: 15.5px; }
+  .prompt-card .prompt-expect strong { color: var(--good); }
+  /* ---------- Tables ---------- */
+  table.doc-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 15.5px;
+  }
+  table.doc-table th {
+    background: var(--soft);
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+  }
+  table.doc-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.doc-table tr:nth-child(even) td { background: #fafcfd; }
+  /* ---------- Grids ---------- */
+  .grid-2, .grid-3 {
+    display: grid;
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .mini-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #ffffff;
+  }
+  .mini-card h4 { margin: 0 0 6px; color: var(--accent); font-size: 16.5px; }
+  .mini-card p { margin: 4px 0; font-size: 15px; color: var(--muted); }
+  /* ---------- Steps ---------- */
+  .step-list { list-style: none; padding: 0; counter-reset: step-counter; margin: 16px 0; }
+  .step-list li {
+    counter-increment: step-counter;
+    position: relative;
+    padding: 10px 10px 10px 52px;
+    margin: 10px 0;
+    background: var(--soft);
+    border-radius: 10px;
+  }
+  .step-list li::before {
+    content: counter(step-counter);
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    width: 30px;
+    height: 30px;
+    background: var(--accent);
+    color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  /* ---------- Quiz ---------- */
+  .quiz-q {
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 12px 0;
+  }
+  .quiz-q p { margin: 0 0 6px; font-weight: 700; }
+  .quiz-q .quiz-a { color: var(--good); font-size: 15.5px; margin: 0; }
+  /* ---------- Footer ---------- */
+  .doc-footer {
+    margin-top: 70px;
+    border-top: 3px solid var(--accent);
+    padding-top: 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .back-top {
+    display: inline-block;
+    margin-top: 30px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    border: 1px solid var(--accent);
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+  .back-top:hover { background: var(--tip-bg); }
+  /* ---------- Print-only cover, header, footer (hidden on screen) ---------- */
+  .doc-cover, .print-header, .print-footer { display: none; }
+
+  /* ---------- Print ---------- */
+  @media print {
+    @page { size: A4; margin: 20mm 16mm 16mm; }
+    body { background: #ffffff; }
+
+    .doc-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 250mm;
+      box-sizing: border-box;
+      page-break-after: always;
+    }
+    .doc-cover-inner { max-width: 150mm; }
+    .doc-cover-logo { width: 44mm; height: auto; display: block; margin: 0 auto 16mm; }
+    .doc-cover-title { font-size: 30pt; font-weight: 800; color: var(--accent); line-height: 1.15; }
+    .doc-cover-rule { width: 40mm; height: 1mm; background: #c8102e; margin: 7mm auto; }
+    .doc-cover-subtitle { font-size: 12.5pt; color: var(--muted); line-height: 1.55; margin-bottom: 16mm; }
+    .doc-cover-contents { text-align: left; border: 0.4mm solid var(--line); border-radius: 3mm; padding: 8mm 10mm; margin-bottom: 16mm; }
+    .doc-cover-contents-title { font-size: 11pt; font-weight: 800; color: #c8102e; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 4mm; }
+    .doc-cover-contents-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.2mm 8mm; font-size: 10.5pt; color: var(--ink); }
+    .doc-cover-meta { display: flex; flex-direction: column; gap: 2mm; font-size: 10pt; color: var(--muted); }
+
+    .print-header {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 12mm;
+      align-items: center;
+      gap: 3mm;
+      padding: 0 16mm;
+      border-bottom: 0.5mm solid #c8102e;
+      background: #ffffff;
+      overflow: hidden;
+    }
+    .print-header-logo { height: 8mm; width: auto; }
+    .print-header-text { flex: 1; overflow: hidden; }
+    .print-header-title { font-size: 10pt; font-weight: 700; color: var(--ink); line-height: 1.15; }
+    .print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
+    .print-footer {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 10mm;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16mm;
+      border-top: 0.4mm solid var(--line);
+      font-size: 8pt;
+      color: var(--muted);
+      background: #ffffff;
+    }
+
+    .doc-shell { grid-template-columns: 1fr; max-width: none; }
+    .doc-side { display: none; }
+    .doc-main { padding: 0; max-width: none; }
+    .module-head { page-break-before: always; page-break-inside: avoid; }
+    h2.doc-h2, h3.doc-h3, h4.doc-h4 { page-break-after: avoid; }
+    .prompt-card, .doc-callout, .mini-card, table.doc-table tr, .step-list li, .quiz-q { page-break-inside: avoid; }
+    table.doc-table thead { display: table-header-group; }
+    .back-top { display: none; }
+    a { color: inherit; text-decoration: none; }
+  }
+  @media (max-width: 900px) {
+    .doc-shell { grid-template-columns: 1fr; }
+    .doc-side { display: none; }
+    .doc-main { padding: 24px 18px 50px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .doc-header h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Print-only cover page -->
+<div class="doc-cover" id="doc-cover">
+  <div class="doc-cover-inner">
+    <img class="doc-cover-logo" src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div class="doc-cover-title">AI Education for Seniors</div>
+    <div class="doc-cover-rule"></div>
+    <div class="doc-cover-subtitle">A friendly, practical course that turns artificial intelligence into an everyday helper. No technical background needed - just curiosity, a phone or computer, and about ten minutes of practice a day.</div>
+    <div class="doc-cover-contents">
+      <div class="doc-cover-contents-title">Contents</div>
+      <div class="doc-cover-contents-grid">
+        <span>The course at a glance</span>
+        <span>Finding learner needs</span>
+        <span>Modules 1-11: the full curriculum</span>
+        <span>Hands-on practices 1-33</span>
+        <span>Tool guide and task matching</span>
+        <span>Hands-on installation guide</span>
+        <span>Prompt library (40 prompts)</span>
+        <span>AI projects gallery</span>
+        <span>Safety rules and glossary</span>
+        <span>Instructor notes and session plans</span>
+      </div>
+    </div>
+    <div class="doc-cover-meta">
+      <span>Prepared by CentreCanada Newcomer Services Society</span>
+      <span>Version 1.6 - 26 September 2026</span>
+      <span>Free to use, adapt, and translate for community education</span>
+    </div>
+  </div>
+</div>
+
+<!-- Print-only running header and footer -->
+<div class="print-header">
+  <img class="print-header-logo" src="centrecanada-logo.png" alt="" />
+  <div class="print-header-text">
+    <div class="print-header-title">AI Education for Seniors</div>
+    <div class="print-header-sub">CentreCanada Newcomer Services Society</div>
+  </div>
+</div>
+<div class="print-footer">
+  <span>CentreCanada - AI Education for Seniors</span>
+  <span>Version 1.6 - 26 September 2026</span>
+</div>
+
+<div class="doc-shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="doc-side">
+    <h2>Start here</h2>
+    <a href="#about">About this document</a>
+    <a href="#at-a-glance">The course at a glance</a>
+    <a href="#who-it-is-for">Who this is for</a>
+    <a href="#learner-needs">Finding learner needs</a>
+
+    <h2>Course modules</h2>
+    <a href="#module-1">1 - AI in plain words</a>
+    <a href="#module-2">2 - Your first chat</a>
+    <a href="#module-3">3 - Asking well</a>
+    <a href="#module-4">4 - Everyday helpers</a>
+    <a href="#module-5">5 - Health and wellbeing</a>
+    <a href="#module-6">6 - Family and connection</a>
+    <a href="#module-7">7 - Memory and hobbies</a>
+    <a href="#module-8">8 - Voice and accessibility</a>
+    <a href="#module-9">9 - Safety first</a>
+    <a href="#module-10">10 - Independent practice</a>
+    <a href="#big-projects">11 - Big projects: your second chapter</a>
+
+    <h2>Reference</h2>
+    <a href="#tool-guide">Tool guide</a>
+    <a href="#task-tool-matching">Task and tool matching</a>
+    <a href="#installation-guide">Hands-on installation guide</a>
+    <a href="#ai-projects">AI projects gallery</a>
+    <a href="#prompt-library">Prompt library</a>
+    <a href="#practice-sheets">Practice sheets</a>
+    <a href="#glossary">Glossary</a>
+    <a href="#instructor-notes">Instructor notes</a>
+    <a href="#presentation-plan">Presentation plan</a>
+    <a href="#success-measures">Success measures</a>
+
+    <div class="side-note">
+      Print this document (Ctrl+P) to share it as a handout. It prints like a booklet - a cover page with the CentreCanada logo, and the logo on every page. All practice prompts are ready to copy.
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="doc-main">
+
+    <header class="doc-header">
+      <div class="doc-eyebrow">Community education program</div>
+      <h1>AI Education for Seniors</h1>
+      <p class="doc-subtitle">A friendly, practical course that turns artificial intelligence into an everyday helper. No technical background needed - just curiosity, a phone or computer, and about ten minutes of practice a day.</p>
+      <div class="doc-meta">
+        <span>Audience: adults 60+</span>
+        <span>Level: beginner, hands-on</span>
+        <span>Format: 6 sessions of 90 minutes</span>
+        <span>Workshop: 2 sessions of about 50 minutes + Kahoot</span>
+        <span>Tools: ChatGPT, Claude, Gemini, Copilot, Perplexity + creator tools</span>
+        <span>Language: English</span>
+        <span>Version 1.6 - 26 Sep 2026</span>
+      </div>
+    </header>
+
+    <!-- ============ ABOUT ============ -->
+    <section class="doc-section" id="about">
+      <h2 class="doc-h2">About this document</h2>
+      <p class="doc-lead">Everything needed to teach and learn AI as a useful life tool - one complete reference for organizers, instructors, helpers, and learners.</p>
+      <p>This document is the full course behind the slide decks. The complete 30-slide master deck is <strong>AIEducationPresentationForSeniors.html</strong>, and the two workshop decks - <strong>AIEducationPresentation-Session1.html</strong> (17 slides) and <strong>AIEducationPresentation-Session2.html</strong> (16 slides) - split it into two sessions of about 50 minutes each. The course ends with one shared Kahoot quiz (<strong>Kahoot-Questions.txt</strong>, 12 questions covering both sessions). After the course, learners continue with the <strong>Senior Helper AI Coordinator</strong> app. This document contains the complete curriculum, every hands-on exercise with exact prompts to try, a tool guide, a task-to-tool matching guide, a ready-to-copy prompt library, safety rules, a glossary, instructor session plans, and success measures.</p>
+      <p>This file is the internal <strong>source of truth</strong> for the program. The handout learners receive is <strong>AIEducationForSeniors-Handbook.html</strong> - a shorter, learner-only version with no instructor or technical details.</p>
+      <ul>
+        <li><strong>Learners</strong> can work through modules 1 to 10 at their own pace, alone or with a helper.</li>
+        <li><strong>Instructors</strong> can follow the six-week session plans in the <a href="#instructor-notes">Instructor notes</a> section and project the companion presentation.</li>
+        <li><strong>Families</strong> can use the <a href="#practice-sheets">Practice sheets</a> to support a parent or grandparent one exercise at a time.</li>
+      </ul>
+      <div class="doc-callout tip">
+        <span class="callout-label">The promise of this course</span>
+        After six sessions, every learner should be able to: open a chat with AI, ask a useful question, get a helpful answer in plain language, recognize when an answer may be wrong, and stay safe from AI-powered scams.
+      </div>
+    </section>
+
+    <!-- ============ AT A GLANCE ============ -->
+    <section class="doc-section" id="at-a-glance">
+      <h2 class="doc-h2">The course at a glance</h2>
+      <table class="doc-table">
+        <thead>
+          <tr><th>Session</th><th>Theme</th><th>Hands-on result</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Week 1</strong></td><td>AI in plain words + first chat</td><td>Learner sends their first message and reads an answer</td></tr>
+          <tr><td><strong>Week 2</strong></td><td>Asking well + letters and emails</td><td>Learner writes a real letter with AI help</td></tr>
+          <tr><td><strong>Week 3</strong></td><td>Health companion + privacy basics</td><td>Learner builds a personal meal plan or medication schedule</td></tr>
+          <tr><td><strong>Week 4</strong></td><td>Family, translation, photos</td><td>Learner writes a message to family and translates one text</td></tr>
+          <tr><td><strong>Week 5</strong></td><td>Voice, hobbies, memory keeping</td><td>Learner completes one voice-only task and one hobby task</td></tr>
+          <tr><td><strong>Week 6</strong></td><td>Scam safety + independence</td><td>Learner passes the safety quiz and sets a daily practice habit</td></tr>
+        </tbody>
+      </table>
+      <div class="grid-3">
+        <div class="mini-card"><h4>Time needed</h4><p>6 x 90 minutes in class, plus 10 minutes of practice a day between sessions.</p></div>
+        <div class="mini-card"><h4>What learners need</h4><p>A smartphone or computer with internet, and one free AI app (any one of the four in the tool guide).</p></div>
+        <div class="mini-card"><h4>Teaching style</h4><p>Show, then do. Every session is at least half hands-on. Repeat key ideas three times.</p></div>
+      </div>
+    </section>
+
+    <!-- ============ WHO IT IS FOR ============ -->
+    <section class="doc-section" id="who-it-is-for">
+      <h2 class="doc-h2">Who this is for</h2>
+      <p class="doc-lead">Built for older adults - and for the people who teach them.</p>
+      <ul>
+        <li>Retirees who want to keep their minds active and stay independent.</li>
+        <li>Grandparents who want to stay close to grandchildren and family abroad.</li>
+        <li>People who feel left behind by technology and want a gentle, patient introduction.</li>
+        <li>Community centers, libraries, senior clubs, and church groups that want a ready-made course.</li>
+        <li>Caregivers and adult children who want to help an older parent use AI safely.</li>
+      </ul>
+      <h3 class="doc-h3">Design rules used throughout the course</h3>
+      <ul>
+        <li><strong>Plain words.</strong> No jargon. Every new term is explained the first time and collected in the <a href="#glossary">Glossary</a>.</li>
+        <li><strong>One idea at a time.</strong> Each module teaches one skill and practices it before moving on.</li>
+        <li><strong>Readable everything.</strong> Large text, high contrast, short paragraphs, printed handouts available.</li>
+        <li><strong>Hands-on first.</strong> Every concept is followed by a "Try it now" card with an exact prompt to type or say.</li>
+        <li><strong>Safety built in.</strong> Trust rules appear in every module, and Module 9 is a full safety lesson.</li>
+      </ul>
+      <div class="doc-callout">
+        <span class="callout-label">A note on fears</span>
+        Many seniors worry that AI is "too complicated for me" or "something that will trick me." Both feelings are normal and both are addressed directly: the course shows how simple daily use is, and it teaches exactly how the tricks work so they can be spotted. Confidence grows fastest when a learner wins their first small success - so the very first exercise is designed to succeed.
+      </div>
+    </section>
+
+    <!-- ============ LEARNER NEEDS ============ -->
+    <section class="doc-section" id="learner-needs">
+      <h2 class="doc-h2">Finding out what each learner needs</h2>
+      <p class="doc-lead">The seminar becomes personal when it starts from real difficulties. Print the form before the day, hand it out at the start, and answer several of the ticks live - the form then goes home with each learner.</p>
+      <h3 class="doc-h3">Step 1 - The needs form (print one per learner)</h3>
+      <p>Print <strong>AIEducationForSeniors-NeedsForm.html</strong> (open it in a browser and press Ctrl+P) - one copy per learner. Read each line aloud and ask learners to tick the ones that feel hard, then write their three biggest difficulties. Anyone may tick as many as they like.</p>
+      <table class="doc-table">
+        <thead><tr><th>Life area</th><th>Things people often find hard (tick yours)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Paperwork</strong></td><td>Reading letters from the bank, insurance, or government - writing letters and emails - filling in forms - understanding bills</td></tr>
+          <tr><td><strong>Health</strong></td><td>Understanding medicines and leaflets - preparing for a doctor visit - checking whether health advice is true - remembering appointments and pills</td></tr>
+          <tr><td><strong>Food</strong></td><td>Reading ingredient lists - checking for allergies - checking halal status - planning meals and shopping</td></tr>
+          <tr><td><strong>Family</strong></td><td>Keeping in touch with family abroad - language barriers - birthday and special-day messages - helping grandchildren with schoolwork</td></tr>
+          <tr><td><strong>Home and money</strong></td><td>Budgeting and shopping - understanding contracts - recognizing scams and fake calls</td></tr>
+          <tr><td><strong>Hobbies and dreams</strong></td><td>Finding new ideas for hobbies - starting a project (a book, a shop, a course) - travel planning</td></tr>
+          <tr><td><strong>Technology comfort</strong></td><td>Installing and opening apps - typing on a small keyboard - reading small text - trusting technology at all</td></tr>
+        </tbody>
+      </table>
+      <p>Three open questions to ask aloud (write the answers on the back of the form):</p>
+      <ol>
+        <li>What one thing took you the longest this week?</li>
+        <li>What do you wish someone else would do for you?</li>
+        <li>What would you love to do, if it were not so difficult?</li>
+      </ol>
+      <h3 class="doc-h3">Step 2 - The difficulty-to-AI map</h3>
+      <p>When a learner names a difficulty, point at the matching row, show the tool, and try the first prompt together. Every difficulty maps to an existing part of the course:</p>
+      <table class="doc-table">
+        <thead><tr><th>They say it is hard to...</th><th>Module</th><th>AI solution</th><th>First prompt to try</th></tr></thead>
+        <tbody>
+          <tr><td>Understand a letter</td><td>4</td><td>Paste it into ChatGPT or Claude</td><td>"Explain this in plain words and tell me what I need to do: [paste]"</td></tr>
+          <tr><td>Write a letter or email</td><td>4</td><td>Four-part recipe in any chat app</td><td>See Practice 6 - A polite complaint</td></tr>
+          <tr><td>Prepare for a doctor visit</td><td>5</td><td>Questions list + after-visit summary</td><td>See Practice 18 - The doctor visit helper</td></tr>
+          <tr><td>Know if health advice is true</td><td>5</td><td>Health claim check + MedlinePlus/WHO</td><td>See Practice 17 - The health claim check</td></tr>
+          <tr><td>Check food and allergies</td><td>5</td><td>Ingredient explainer + maker confirms</td><td>See Practice 14 - The allergy check</td></tr>
+          <tr><td>Talk with family in another language</td><td>6</td><td>ChatGPT Voice (best) or Microsoft Copilot voice / DeepL for letters</td><td>See Practice 24 - Live translation practice</td></tr>
+          <tr><td>Use the phone without typing</td><td>8</td><td>Voice assistants and voice chat</td><td>"Hey Siri, remind me at 8 pm"</td></tr>
+          <tr><td>Spot a scam</td><td>9</td><td>Scam checker + family code word</td><td>Paste the message in the Senior Helper app</td></tr>
+        </tbody>
+      </table>
+      <div class="doc-callout tip">
+        <span class="callout-label">Keep the form</span>
+        Return to each learner's form at the start of every session: "Last week we solved your letters. What is next on your list?" That single question turns the course into their course.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 1 ============ -->
+    <div class="module-head">
+      <div class="module-number">1</div>
+      <div><h2>AI in plain words</h2><p>What it is, what it is not, and where it already lives in daily life - 20 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-1">
+      <h3 class="doc-h3">The library-friend picture</h3>
+      <p>The simplest picture that works: imagine a friend who has read every book, article, and recipe in the world - millions of pages - in every language. This friend cannot feel, does not know you personally, and sometimes remembers things wrong. But this friend is extremely fast at summarizing, explaining, writing, translating, and giving ideas. That friend is AI.</p>
+      <ul>
+        <li><strong>AI does not think like a person.</strong> It guesses the next word, again and again, based on everything it has read. The guesses are so good that the result looks like thinking.</li>
+        <li><strong>AI does not know you.</strong> It only knows what you choose to type. It has no memory of your life unless you tell it (and some apps let you tell it, which can be useful).</li>
+        <li><strong>AI is not always right.</strong> It can make mistakes with complete confidence. Important facts always need checking - this rule appears in every module.</li>
+      </ul>
+      <div class="grid-3">
+        <div class="mini-card"><h4>AI is</h4><p>A fast, patient, tireless assistant that never gets annoyed by questions.</p></div>
+        <div class="mini-card"><h4>AI is not</h4><p>A person, a doctor, a lawyer, a bank, or an authority you should trust blindly.</p></div>
+        <div class="mini-card"><h4>AI needs</h4><p>A clear question from you. The question is called a <strong>prompt</strong>.</p></div>
+      </div>
+
+      <h3 class="doc-h3">AI is already in your daily life</h3>
+      <ul>
+        <li>The junk-mail filter that keeps spam out of your inbox.</li>
+        <li>The map app that predicts how long a drive will take.</li>
+        <li>The camera that sharpens your photos and finds a face in a crowd of old pictures.</li>
+        <li>The bank alert that spots an unusual purchase on your card.</li>
+        <li>The TV service that suggests what to watch next.</li>
+        <li>The voice assistant in your phone that sets a reminder when you say "remind me."</li>
+      </ul>
+      <p>In short: AI has been helping inside your phone for years. Today you simply learn how to ask it for help - in your own words.</p>
+
+      <h3 class="doc-h3">What comes next: the future of AI</h3>
+      <p>Learners often ask where all this is going. The honest, useful answer: nobody can predict exactly, but two things are sure - AI will be in more places, and the five safety rules will stay exactly the same.</p>
+      <table class="doc-table">
+        <thead><tr><th>When</th><th>What to expect</th><th>What it means for you</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Near future - 1 to 3 years</strong></td><td>AI built into every phone and computer. Better, more natural voice chats. Forms, letters, and translations finished in seconds with AI help. Doctors and banks use AI assistants - but a human always signs off.</td><td>Fewer apps to learn: you will mostly talk to your phone. The asking skill you learn today stays the same.</td></tr>
+          <tr><td><strong>Longer term - 5 to 15 years</strong></td><td>Personal AI assistants that remember your appointments, medicines, and preferences. Health sensors at home watched over by your doctor. Smarter homes, self-driving transport, teaching that adapts to each person.</td><td>AI removes busywork - it does not replace people. Decisions about money, health, and family stay human. The five golden rules still protect you in 2035.</td></tr>
+        </tbody>
+      </table>
+      <p>One promise to make in class: <strong>the skill you learn today - asking well - never goes out of date.</strong> Whatever AI becomes, it will still answer the person who asks clearly.</p>
+
+      <h3 class="doc-h3">Key words for this module</h3>
+      <ul>
+        <li><strong>Artificial intelligence (AI):</strong> a computer program that imitates parts of human language and problem solving.</li>
+        <li><strong>Chatbot:</strong> the chat window where you talk with AI by typing or speaking.</li>
+        <li><strong>Prompt:</strong> the message or question you send. Everything starts with a prompt.</li>
+        <li><strong>Reply:</strong> the answer the AI gives back.</li>
+      </ul>
+
+      <div class="doc-callout tip">
+        <span class="callout-label">Group warm-up</span>
+        Ask the class: "Where did a computer already help you this week without you asking?" Answers usually include maps, TV suggestions, spam filters, and bank alerts. That is AI already working for them.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 2 ============ -->
+    <div class="module-head">
+      <div class="module-number">2</div>
+      <div><h2>Your first chat</h2><p>Opening the app, signing in safely, and sending the first message - 45 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-2">
+      <h3 class="doc-h3">Choose one tool to start</h3>
+      <p>Pick exactly one. They all work the same way at the beginner level: a chat box at the bottom, answers above. The <a href="#tool-guide">Tool guide</a> compares them. For most seniors the easiest path is:</p>
+      <ul>
+        <li><strong>On a phone:</strong> install the ChatGPT app (free) from the app store, or simply use the voice assistant already built into the phone (Siri on iPhone, Google Assistant on Android).</li>
+        <li><strong>On a computer:</strong> open any web browser and go to chatgpt.com, claude.ai, gemini.google.com, copilot.microsoft.com, or chat.deepseek.com. All have free plans - DeepSeek gives the most free daily use.</li>
+      </ul>
+
+      <h3 class="doc-h3">Signing in safely</h3>
+      <ol>
+        <li>Create an account with your own email and a strong password you have not used elsewhere.</li>
+        <li>Write the password in a paper notebook kept at home - do not save it in a shared computer.</li>
+        <li>Never type your password, bank details, or ID numbers into the chat itself. The chat is for questions, not secrets.</li>
+        <li>If the app asks for payment, look for the "free plan" option - all five tools have one. You never need to pay for this course.</li>
+      </ol>
+
+      <h3 class="doc-h3">Hands-on 1: the first three messages</h3>
+      <p>Open the chat and type these, one at a time. Read each answer before sending the next.</p>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 1 - Say hello</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Hello! My name is Mary and I am 72 years old. Please introduce yourself in three simple sentences and tell me three things you can help me with.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a short, friendly answer that lists easy tasks like writing, explaining, and translating. This proves the chat works - the first small win.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 2 - Ask the big question</div>
+        <div class="prompt-body">
+          <div class="prompt-type">What is artificial intelligence? Explain it like you would to a curious grandparent, in plain words, with one everyday example.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a paragraph without jargon, using an example such as a helpful librarian or a recipe assistant.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 3 - Get the menu</div>
+        <div class="prompt-body">
+          <div class="prompt-type">List 10 things I can ask you that would help me in my daily life. Keep the list simple and put the most useful ones first.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a numbered list - letters, shopping lists, recipes, reminders, explanations, stories, translations. Learners circle the three they care about most; that list becomes their personal goals.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Chat manners that make everything easier</h3>
+      <ul>
+        <li>Write full sentences - the AI follows instructions, not keywords.</li>
+        <li>You can be polite, but you do not have to be - a clear order works too.</li>
+        <li>If the answer is too long: type <strong>"Make it shorter"</strong>.</li>
+        <li>If the answer is confusing: type <strong>"Explain that again, simpler"</strong>.</li>
+        <li>If the answer is wrong: type <strong>"That is not right, please check"</strong> - it will try again.</li>
+        <li>You never finish a chat "wrong." There is nothing to break. Typing more words is the only skill.</li>
+      </ul>
+
+      <h3 class="doc-h3">Projects: your own folders in the AI</h3>
+      <p>Both ChatGPT and Claude offer <strong>Projects</strong> - folders where you keep several chats about one subject. One folder for health, one for family, one for the garden. The AI uses everything in the folder when it answers, so it already knows the background.</p>
+      <ul>
+        <li><strong>ChatGPT:</strong> in the side menu choose Projects, then New project. Give it a name and a short instruction, such as "I am 72. Explain simply. Answer in Turkish." Every chat inside the project follows that instruction.</li>
+        <li><strong>Claude:</strong> in the side menu choose Projects, then create a project. Claude projects also take <strong>project knowledge</strong> - paste your favorite recipes, a medication list, or family first names once, and every chat in the project reads them.</li>
+        <li><strong>Why use them:</strong> tidier chats, more consistent answers, and you never repeat yourself inside a project.</li>
+        <li><strong>The same safety line applies:</strong> a project is still a chat - no passwords, no card numbers, no ID numbers inside it.</li>
+      </ul>
+
+      <h3 class="doc-h3">Memory: what the AI remembers about you</h3>
+      <ul>
+        <li><strong>ChatGPT has a Memory.</strong> When you say "remember that I like short answers" - or it notices you always ask in Turkish - it saves that and uses it in later chats. See and manage it under Settings - Personalization - Memory, or simply ask: "What do you remember about me?"</li>
+        <li><strong>Claude keeps less long-term memory.</strong> It remembers only inside the current chat. To make Claude remember things across chats, put them in a Project as project knowledge.</li>
+        <li><strong>Get more customized answers:</strong> state your preferences once - "Always explain simply, answer me in Turkish, my name is Mary." Store it in ChatGPT memory or in the project instruction line. The AI then sounds like your own assistant.</li>
+        <li><strong>Delete what it gathered:</strong> in ChatGPT say "Forget everything you remember about me", or delete items under Settings - Personalization - Memory. In Claude, delete the chat or the project files. Deleting a chat removes what is inside it in both apps.</li>
+        <li><strong>The safe habit:</strong> let the AI remember only what you would say in a public library. Convenience must never beat the no-secrets rule.</li>
+      </ul>
+    </section>
+
+    <!-- ============ MODULE 3 ============ -->
+    <div class="module-head">
+      <div class="module-number">3</div>
+      <div><h2>Asking well</h2><p>The one real skill of the whole course: the four-part question recipe - 45 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-3">
+      <p>AI answers exactly what it is asked. A vague question gets a vague answer. A rich question gets a useful answer. Asking well is the whole skill, and it has four parts.</p>
+
+      <h3 class="doc-h3">The four-part recipe</h3>
+      <table class="doc-table">
+        <thead><tr><th>Part</th><th>Question to answer</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Who</strong></td><td>Who are you, and who is this for?</td><td>"I am a 75-year-old grandmother..."</td></tr>
+          <tr><td><strong>2. What</strong></td><td>What do you want, exactly?</td><td>"...and I need a short birthday letter for my 10-year-old grandson..."</td></tr>
+          <tr><td><strong>3. Details</strong></td><td>Which details matter?</td><td>"...he loves dinosaurs and football, and I want it warm but not long..."</td></tr>
+          <tr><td><strong>4. Format</strong></td><td>How should the answer look?</td><td>"...write about 100 words, in simple sentences."</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">Before and after</h3>
+      <div class="prompt-card">
+        <div class="prompt-title">Weak prompt</div>
+        <div class="prompt-body">
+          <div class="prompt-type">write letter landlord</div>
+          <p class="prompt-expect"><strong>Result:</strong> a generic, impersonal letter that does not fit the real situation.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Strong prompt (same task, four parts)</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am a 74-year-old tenant. My bathroom tap has been dripping for two weeks and I have called the building manager twice with no result. Please write a short, polite letter to my landlord asking for a repair. Keep it under 150 words, friendly but firm, and leave placeholders for the date and my apartment number.</div>
+          <p class="prompt-expect"><strong>Result:</strong> a ready-to-use letter with the right tone, length, and details.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">The five follow-up words that fix anything</h3>
+      <ul>
+        <li><strong>"Shorter"</strong> - makes any answer more compact.</li>
+        <li><strong>"Simpler"</strong> - removes jargon and long sentences.</li>
+        <li><strong>"Bigger text"</strong> - in some apps you can ask for larger, clearer formatting in the answer itself.</li>
+        <li><strong>"With an example"</strong> - turns an explanation into something concrete.</li>
+        <li><strong>"Step by step"</strong> - turns a wall of text into numbered instructions.</li>
+      </ul>
+
+      <h3 class="doc-h3">The talk-and-improve loop: iterate with AI out loud</h3>
+      <p>The best answers are not the first answers. AI drafts, you react, AI improves - and the whole loop can happen by talking, with no typing. Tap the microphone and speak your changes like you would to a patient assistant.</p>
+      <ol class="step-list">
+        <li><strong>Ask for the first draft.</strong> One clear four-part question.</li>
+        <li><strong>Read or listen.</strong> Ask: "Read it back to me" - the AI reads the draft aloud.</li>
+        <li><strong>Say one change.</strong> One small correction at a time: "make the opening warmer", "remove the second paragraph", "add my apartment number", "shorter".</li>
+        <li><strong>Hear the new version.</strong> The AI reads the improved draft back.</li>
+        <li><strong>Repeat</strong> until it sounds like you. Two or three rounds are normal; ten is fine too.</li>
+      </ol>
+      <div class="prompt-card">
+        <div class="prompt-title">A worked example - the birthday letter, three rounds</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Round 1: "Write a birthday letter for my grandson, about 80 words."<br><br>Round 2 (spoken): "Make the opening warmer, and mention that he is turning ten."<br><br>Round 3 (spoken): "Read it back to me. Then shorten it to 60 words and keep the joke about dinosaurs."</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> each round is visibly better - and the whole loop happened by talking, with zero typing.</p>
+        </div>
+      </div>
+      <h4 class="doc-h4">Iteration words worth teaching aloud</h4>
+      <ul>
+        <li><strong>Small changes:</strong> "shorter", "simpler", "warmer", "more polite", "more formal", "bigger text".</li>
+        <li><strong>Pointing at parts:</strong> "remove the second paragraph", "move the address to the end", "add one sentence about the refund".</li>
+        <li><strong>Asking for options:</strong> "give me two versions - one formal, one warm", "what would make this better? three ideas".</li>
+        <li><strong>Checking:</strong> "read it back to me", "check the dates", "translate it back into my language so I can check".</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Try it - improve any document by talking</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Take any letter you wrote this week. Open voice mode and say: "I will paste a letter. Read it back to me, then suggest three small improvements - and do only the ones I choose." Then say which ones to apply.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> the AI acts as a polite editor - you stay the author, and every change is yours to accept or refuse.</p>
+        </div>
+      </div>
+      <h4 class="doc-h4">The same loop for ideas and big projects</h4>
+      <ul>
+        <li><strong>Ideas:</strong> "give me five ideas for [topic]" - pick one - "develop idea 3 further" - "what could go wrong with it?"</li>
+        <li><strong>Documents:</strong> draft - add - reorder - shorten - check facts - translate - read aloud - done. Each step is one spoken instruction.</li>
+        <li><strong>Stories and books:</strong> one chapter at a time, one spoken correction at a time (see the family story project).</li>
+      </ul>
+
+      <h3 class="doc-h3">The live writing demo - a scripted path with a prompt palette</h3>
+      <p>To show the class how a document becomes perfect by talking, print <strong>AIEducationForSeniors-LiveWritingDemo.html</strong> before the seminar. It holds the opening prompt ready to paste, plus a palette of universal follow-up prompts - so the next step is never a guess, even though nobody can know what the AI will write.</p>
+      <ol class="step-list">
+        <li><strong>Paste the opening prompt</strong> and show the first draft on the big screen.</li>
+        <li><strong>Ask: "Read it back to me."</strong> The room hears the draft.</li>
+        <li><strong>Look at the draft and pick ONE palette line</strong> that fits what you see - too cold? "Warmer." Too long? "Shorter."</li>
+        <li><strong>Say it</strong> and show the improved version.</li>
+        <li><strong>Repeat three rounds</strong>, then finish with "read it back to me" and a translate-back check.</li>
+      </ol>
+      <p>Why this works: the palette lines are universal - they fix whatever appeared, so the next step is chosen by looking at the screen, never by guessing. And speaking every prompt instead of typing makes the loop look like magic.</p>
+
+      <h3 class="doc-h3">Hands-on 2: fixing weak questions</h3>
+      <p>Learners rewrite each weak prompt using the four parts, then compare answers with the strong version.</p>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 4 - Improve the question</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Weak: "recipe chicken"<br><br>Strong version to try: I am cooking dinner for two on Saturday. Suggest a simple chicken recipe that takes under 45 minutes, uses common ingredients I likely have at home, and include step-by-step instructions.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a full recipe with steps, instead of a vague suggestion.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 5 - Your turn</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Weak: "explain my blood test"</div>
+          <p class="prompt-expect"><strong>Learner task:</strong> rewrite this using all four parts (who, what, details, format). A strong version looks like: "I am 68. My doctor gave me blood test results and I do not understand the cholesterol numbers. Explain what LDL and HDL mean in plain words, what healthy ranges are, and list three questions I should ask my doctor. Do not diagnose anything."</p>
+        </div>
+      </div>
+      <div class="doc-callout warn">
+        <span class="callout-label">Important habit</span>
+        AI can explain test results in plain words, but it must never decide what they mean for your health. Only a doctor or pharmacist can do that. Always ask AI for "questions to ask my doctor" - never for a diagnosis.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 4 ============ -->
+    <div class="module-head">
+      <div class="module-number">4</div>
+      <div><h2>Everyday helpers</h2><p>Letters, emails, forms, and planning - the work that fills an ordinary week - 50 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-4">
+      <p>This is where the course becomes visibly useful. Every learner has papers and messages they have been avoiding. AI does the drafting; the learner stays in charge and edits the result.</p>
+
+      <h3 class="doc-h3">Letters and emails</h3>
+      <ul>
+        <li>Complaints: slow internet, wrong bill, faulty appliance.</li>
+        <li>Thanks: to a doctor, a neighbor, a volunteer, a teacher.</li>
+        <li>Invitations and replies: family gatherings, community events.</li>
+        <li>Requests: appointments, refunds, information, repairs.</li>
+      </ul>
+
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 6 - A polite complaint</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Write a polite complaint letter to my internet company. My internet has been very slow for a week, I called three times, and nothing changed. I would like a refund for this month. My account number is [number]. Keep the letter short, respectful, and clear about what I want.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a letter with a subject line, a calm explanation, and a clear request. Learner adds their own name and address and sends it.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 7 - An appointment email</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Draft a short, friendly email to my eye doctor asking for an appointment in the first week of October, in the afternoon if possible. I have been there before for an annual check.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> three to five polite sentences, ready to paste into the email app.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Understanding difficult letters</h3>
+      <p>Banks, insurance companies, and government offices write long, complicated letters. AI can translate them into plain words in seconds.</p>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 8 - The plain-words explainer</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Please explain this letter in plain words, like you are talking to a friend who is not a lawyer. Then tell me what I need to DO, step by step, and what deadlines I must not miss:<br><br>[paste the letter text here]</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a summary, an action list, and the deadlines pulled out - no jargon left.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Weekly planning</h3>
+      <ul>
+        <li>Menus and shopping lists for one person or two.</li>
+        <li>Packing lists for trips and hospital stays.</li>
+        <li>To-do lists sorted by what matters most.</li>
+        <li>Reminder schedules for bills, renewals, and appointments.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 9 - The weekly helper</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I have a busy week coming up: a doctor appointment on Tuesday, a pharmacy visit on Wednesday, and a family birthday dinner on Saturday. Help me plan my week day by day, with one reminder for each day, in a simple table.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a day-by-day week plan with reminders - something to print and keep on the fridge.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">The dictation shortcut</h3>
+      <p>Typing is slow for many learners. Both phones and computers have a microphone: tap it and speak the prompt instead of typing it. The recipe stays the same - say "who, what, details, format" out loud. In the AI apps, tap the microphone next to the chat box and talk normally; the app writes it down and answers.</p>
+    </section>
+
+    <!-- ============ MODULE 5 ============ -->
+    <div class="module-head">
+      <div class="module-number">5</div>
+      <div><h2>Health and wellbeing</h2><p>A gentle companion for meals, food checks, medicines, and mind - with a clear safety line - 60 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-5">
+      <h3 class="doc-h3">What AI can help with</h3>
+      <ul>
+        <li><strong>Meal ideas</strong> inside dietary limits: low salt, low sugar, diabetic-friendly, soft food, smaller portions.</li>
+        <li><strong>Gentle movement plans</strong>: seated exercise routines, short walks, stretching - always approved by the learner's doctor before starting.</li>
+        <li><strong>Medication schedules</strong>: a clear table of what to take and when, built from the labels the learner photographs or types in.</li>
+        <li><strong>Plain-word explanations</strong> of diagnoses, test terms, and medication leaflets - for understanding, never for decisions.</li>
+        <li><strong>Mind and mood</strong>: conversation on a lonely afternoon, memory games, gratitude prompts, calming breathing routines.</li>
+      </ul>
+
+      <div class="doc-callout safe">
+        <span class="callout-label">The health safety line (repeat every session)</span>
+        AI gives ideas and explanations - it NEVER decides anything medical. No diagnosis, no dose changes, no stopping a medication, no emergency advice. Doctors, nurses, and pharmacists remain the only health authority. For symptoms, pain, or emergencies: call your doctor or local emergency number, not a chatbot.
+      </div>
+
+      <h3 class="doc-h3">Hands-on 3: three health prompts</h3>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 10 - Meals within limits</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am 70 years old and my doctor asked me to eat less salt. Give me five simple low-salt dinner ideas, each with fewer than eight ingredients, that I can make without special kitchen tools. Do not give medical advice.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> five realistic dinners and why they fit a low-salt diet. Learner checks with their doctor or dietitian if unsure.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 11 - A chair routine</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Create a gentle 15-minute seated exercise routine for a beginner, using only a chair. List each exercise with simple instructions and how many seconds to do it. Add a note that I should ask my doctor before starting.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> five to seven seated movements with timings, plus the doctor note automatically.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 12 - The medication table</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I take four medicines at different times of day. Help me make a clear daily schedule table with columns for morning, noon, evening, and night. I will type in the medicines and doses from my labels. Keep the table big and easy to read.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> an empty or partially filled table the learner completes with their own medication labels - the AI builds the structure, the labels remain the source of truth.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Food: ingredients, allergies, and halal</h3>
+      <p>Food questions come up every week. AI can read an ingredient list with you - but it cannot taste, cannot test, and cannot certify anything. The maker's label and certification marks stay the final word.</p>
+      <ul>
+        <li><strong>Ingredient explainer:</strong> paste any ingredient list and get each item explained in plain words, with its common effects.</li>
+        <li><strong>Allergy check:</strong> name your allergens, paste the list, and AI flags possible problems - then the food maker confirms.</li>
+        <li><strong>Halal check:</strong> AI explains which ingredients may come from animal sources or alcohol and what questions to ask - the official halal certification label remains the reliable confirmation.</li>
+        <li><strong>Vegetarian, vegan, and other diets:</strong> name your diet - gluten-free, diabetic-friendly, low salt - and AI checks an ingredient list against it, in plain words. The maker and your doctor confirm.</li>
+        <li><strong>Food effects:</strong> what is known about a food's effects versus what is myth - personal health effects are always checked with a doctor.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 13 - The ingredient explainer</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Please explain this food ingredient list in plain words. For each item, say what it is and any common effects it may have:<br><br>[paste the ingredient list from the package]</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a plain-word list, item by item - E-numbers, preservatives, and all.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 14 - The allergy check</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am checking food for allergies. My allergens are [peanuts, milk, eggs...]. Please check this ingredient list and point out anything I should worry about, with a plain explanation for each:<br><br>[paste the ingredient list]<br><br>Remind me to confirm with the food maker and my doctor.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> flagged ingredients plus a reminder that the maker and doctor confirm - AI checks words, not the food itself.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 15 - The halal check</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Please help me check whether this food is halal. The food and ingredients: [describe the food or paste the ingredient list]. Explain which ingredients may come from animal sources or alcohol, what to ask the maker, and remind me that an official halal certification label is the most reliable check.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a careful explanation of doubtful ingredients - with the certification label named as the authority.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Try it - the diet check</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I follow this diet: [gluten-free / vegan / low sugar / ...]. Please check this ingredient list and tell me which items fit and which do not, with a plain explanation for each:<br><br>[paste the ingredient list]</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a clear fit-or-not list - with the maker's label and your doctor as the final confirmation.</p>
+        </div>
+      </div>
+      <div class="doc-callout warn">
+        <span class="callout-label">The label is the authority</span>
+        AI reads lists - it cannot verify what is inside a package. For allergies, ask the maker directly. For halal, look for the certification mark. For personal health effects, ask your doctor.
+      </div>
+
+      <h3 class="doc-h3">Pharmacy: understanding medicines and checking health claims</h3>
+      <p>Medicines come with long leaflets in small print. AI can translate them into plain words and prepare your questions - but only a pharmacist or doctor decides anything about doses.</p>
+      <ul>
+        <li><strong>Understand your medicine:</strong> what it is for, how it is usually taken, and common side effects - all in plain words from your label.</li>
+        <li><strong>Questions for the pharmacist:</strong> AI prepares a clear, polite question list before you visit or call.</li>
+        <li><strong>Health claim check:</strong> heard something on TV or WhatsApp? AI judges how likely it is to be true or false and points to official sources - the true-or-false workflow below.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 16 - Understand your medicine</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Please help me understand my medicine in plain words. From my label: [medicine name, dose, what the leaflet says]. Explain what it is usually for, how it is commonly taken, and common side effects. Then list five good questions to ask my pharmacist. Never change a dose - my pharmacist decides.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a plain-word explanation plus a ready question list for the pharmacy visit.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 17 - The health claim check</div>
+        <div class="prompt-body">
+          <div class="prompt-type">HEALTH CLAIM CHECK TASK. I heard this health claim: [the claim, e.g. "this drink cures arthritis in a week"]. Please say how likely it is to be true or false, what reliable official sources say about it, and how I can verify it. Point out warning signs like miracle cures and secret formulas. Never diagnose or prescribe.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a true-or-false verdict with reasons, plus the official places to double-check.</p>
+        </div>
+      </div>
+      <h4 class="doc-h4">The true-or-false workflow for health news</h4>
+      <ol class="step-list">
+        <li><strong>Who says it?</strong> A named doctor or hospital, or "a friend of a friend"? Anonymous claims are the weakest.</li>
+        <li><strong>Where is the proof?</strong> Real health advice points to studies and official sources, not screenshots.</li>
+        <li><strong>Check an official source.</strong> MedlinePlus, WHO, or your country's health authority - search the claim there.</li>
+        <li><strong>Watch for red flags.</strong> "Miracle cure", "doctors hate this", "secret formula", "act now" - these words mean stop and verify.</li>
+        <li><strong>Ask a professional.</strong> Your doctor or pharmacist settles it in one visit.</li>
+      </ol>
+      <div class="doc-callout safe">
+        <span class="callout-label">Medicines: the only rule that matters</span>
+        AI explains labels - it never changes a dose, never stops a medicine, and never mixes medicines. Those decisions belong to your pharmacist and doctor alone.
+      </div>
+
+      <h3 class="doc-h3">Doctor visits made easier</h3>
+      <p>A visit goes better with preparation. AI can help on all three sides of it: before, during, and after.</p>
+      <ul>
+        <li><strong>Before:</strong> make a plain-word list of what to tell the doctor, plus the questions to ask.</li>
+        <li><strong>During:</strong> bring a printed medication list; for language help, open ChatGPT Voice (best) or Microsoft Copilot voice and hand the phone over.</li>
+        <li><strong>After:</strong> tell AI what the doctor said in your own words - it rewrites it clearly and lists what to do next.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 18 - The doctor visit helper</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am visiting my [doctor type, e.g. heart doctor] about [the reason]. Help me prepare: first, ask me one question at a time about how I feel and what worries me. Then give me a short list of what to tell the doctor and five clear questions to ask during the visit.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a one-page visit plan - what to say, what to ask, and what to bring.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">After the visit - summarize what you heard</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I just came from the doctor. In my own words, this is what I remember: [describe it however you can, in any language]. Please rewrite it as a clear summary in plain words, list what I need to DO next, and note any parts I should double-check with the clinic.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a clean summary to keep in your health folder - and a list of follow-up questions.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Companionship, used with care</h3>
+      <p>Chatting with AI can ease loneliness, and many seniors enjoy memory games, story prompts, and daily conversation. Two gentle rules keep it healthy:</p>
+      <ul>
+        <li>AI is a tool, not a replacement for people. Use it between visits - and use the confidence it builds to reach out to real friends.</li>
+        <li>If a chat starts to feel like a doctor, a therapist, or a best friend, take a break. For emotional struggles, a real person - family, clergy, a doctor, a helpline - is the right support.</li>
+      </ul>
+
+      <h3 class="doc-h3">AI for healthy aging: tools and benefits</h3>
+      <p>Healthy aging is the whole picture - body, mind, safety, and connection. These tools work together as one daily routine, and none of them replaces your doctor.</p>
+      <ul>
+        <li><strong>Meals and movement plans - ChatGPT (best) or Claude:</strong> low-salt menus, seated exercise routines, and a gentle weekly plan, all within your doctor's limits. <strong>Benefit:</strong> independence in daily choices without guesswork.</li>
+        <li><strong>Medication reminders - Medisafe, MyTherapy, or the phone's own reminder app:</strong> a clear daily pill schedule with alerts. <strong>Benefit:</strong> the right medicine at the right time - no forgotten doses.</li>
+        <li><strong>Steps and activity - Apple Health (iPhone) or Google Fit (Android):</strong> the phone counts steps and walks by itself. <strong>Benefit:</strong> you see your own progress, and small wins keep you moving.</li>
+        <li><strong>Mind and company - ChatGPT or Claude:</strong> daily memory games, one new fact each morning, and calm conversation. <strong>Benefit:</strong> a sharper, more active mind and company on quiet afternoons.</li>
+        <li><strong>Brain games - Lumosity, Peak, or Elevate:</strong> a few minutes of games each day for memory, attention, and focus. <strong>Benefit:</strong> a daily mental workout that feels like play.</li>
+        <li><strong>Hearing and vision - phone live captions and Be My Eyes:</strong> live captions turn spoken words into text on the screen as people talk, and the camera reads labels aloud. <strong>Benefit:</strong> full participation in conversations and daily life.</li>
+        <li><strong>Living-alone check-in - Snug:</strong> one tap a day tells your family you are fine; a missed check-in alerts them. <strong>Benefit:</strong> peace of mind for you and your family.</li>
+        <li><strong>Doctor visits - the doctor visit helper plus an AI voice translator:</strong> questions before, a plain-word summary after, translation during. <strong>Benefit:</strong> calmer visits where nothing important is forgotten.</li>
+      </ul>
+      <div class="doc-callout safe">
+        <span class="callout-label">The healthy-aging rule</span>
+        Use these tools daily for habits, and as preparation for professional care. Every plan, routine, and food idea still gets your doctor's approval before it becomes part of your life.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 6 ============ -->
+    <div class="module-head">
+      <div class="module-number">6</div>
+      <div><h2>Family and connection</h2><p>Messages, homework help, stories, and translation for families near and far - 50 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-6">
+      <h3 class="doc-h3">The four family superpowers</h3>
+      <div class="grid-2">
+        <div class="mini-card"><h4>1. Words for special days</h4><p>Birthday wishes, congratulations, sympathy cards, thank-you notes - warm and personal, in minutes.</p></div>
+        <div class="mini-card"><h4>2. Homework helper</h4><p>Grandparents can help with schoolwork again: ask AI to explain long division, fractions, or history in plain steps, then learn together.</p></div>
+        <div class="mini-card"><h4>3. Storyteller</h4><p>Custom bedtime stories starring the grandchildren's own interests - dinosaurs, football, princesses, trains.</p></div>
+        <div class="mini-card"><h4>4. Bridge across languages</h4><p>Translate letters, emails, and chats with family abroad; learn a few warm phrases in their language.</p></div>
+      </div>
+
+      <h3 class="doc-h3">Hands-on 4: four family prompts</h3>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 19 - A birthday message</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Write a warm birthday message for my 10-year-old grandson who loves dinosaurs and football. Short and cheerful, about 60 words, from his grandma.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a short message. Learner asks for "another version, with a joke about dinosaurs" to see how easy changing tone is.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 20 - Homework, together</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Explain long division to me the way I could explain it to my 9-year-old granddaughter. Step by step, with one worked example, in the simplest words possible.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> numbered steps plus one example with numbers - enough for a grandparent to sit beside the child and work through it.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 21 - A bedtime story</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Make up a short bedtime story, about 200 words, about a squirrel named Nutty who finds a lost key in the park and returns it to its owner. Gentle, happy ending.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a complete story. Follow-up prompt: "Now write part two, where Nutty gets a thank-you gift."</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 22 - A bridge across languages</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Translate this letter into English, keeping the tone warm and respectful:<br><br>[paste the letter in the family's language]</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a faithful translation. Follow-up: "Now translate my reply back into [language], and make it sound natural, not robotic."</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Translation: your language bridge</h3>
+      <p>Language should never stand between you and the people you love - or between you and your doctor. AI speaks your language too.</p>
+      <ul>
+        <li><strong>Letters and messages:</strong> paste any text into DeepL or a chat app and get a natural translation.</li>
+        <li><strong>Live conversation - two AI voice choices:</strong>
+          <ul>
+            <li><strong>ChatGPT Voice (our recommendation):</strong> the most natural of the two. Tap the voice button and say "Be my translator between English and [language]". Speak in either language - it answers in the other like a real person, and you can ask it to slow down or explain a phrase.</li>
+            <li><strong>Microsoft Copilot voice:</strong> also translates spoken conversation well, and is already on many Windows computers.</li>
+          </ul>
+          Google Translate's Conversation mode remains a backup, but many people find it stiff and slow compared with AI voice. Two people, two languages, one phone - now with a natural voice.</li>
+        <li><strong>Labels and papers through the camera:</strong> Google Lens and the Translate camera read signs, menus, medicine boxes, and letters.</li>
+        <li><strong>The chat apps speak your language:</strong> simply ask in your own language - ChatGPT, Claude, Gemini, and Copilot all answer in it. You can even say: "From now on, answer me in [your language]."</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 23 - Translate a letter</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Translate this letter into [language], keeping the tone warm and respectful. Then translate my short reply back into [the other language], and make it sound natural, not robotic:<br><br>[paste the letter]</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> both directions translated - then ask "now read my reply aloud" for the spoken version.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 24 - Live translation practice</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Open the ChatGPT app and tap the voice button. Say: "Be my translator between English and [language]. Speak only the translation, nothing else." Then speak these three sentences: "How are you feeling today?" - "I would like to make an appointment." - "Please speak slowly, I am still learning."<br><br>Second option: do the same with Microsoft Copilot voice. Our recommendation: ChatGPT Voice - the most natural spoken translation.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> the phone shows and speaks each sentence in the other language - a live two-way conversation with no typing.</p>
+        </div>
+      </div>
+      <div class="doc-callout tip">
+        <span class="callout-label">For doctor visits</span>
+        Open an AI voice translator before the appointment - ChatGPT Voice is the most natural, Microsoft Copilot works too - and hand the phone to the doctor when needed. Add your medication list as text first - translation works best with short, clear sentences.
+      </div>
+
+      <div class="doc-callout warn">
+        <span class="callout-label">Family privacy rule</span>
+        Never type a child's full name, school, address, or photo into a chat. Use first names only, or say "my grandson." Photos of minors never belong in public AI tools. The same rule applies to anyone's health details.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 7 ============ -->
+    <div class="module-head">
+      <div class="module-number">7</div>
+      <div><h2>Memory and hobbies</h2><p>Photos, family stories, recipes, and the pleasures that keep life rich - 50 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-7">
+      <h3 class="doc-h3">Photo magic</h3>
+      <ul>
+        <li><strong>Identify things in photos:</strong> point the phone camera at a bird, flower, or mushroom and ask the AI app (or Google Lens, which is built into many Android phones and the Google app) what it is.</li>
+        <li><strong>Fix old photos:</strong> Google Photos "Magic Editor" and iPhone "Clean Up" can remove scratches, wrinkles, and stray objects from old family pictures.</li>
+        <li><strong>Write captions and album notes:</strong> ask AI to turn a few spoken memories into a beautiful caption for the family album.</li>
+        <li><strong>Organize:</strong> ask AI to help sort photo albums by decade, event, or person, and to suggest an album plan.</li>
+      </ul>
+      <div class="doc-callout tip">
+        <span class="callout-label">Classroom demo - no installation needed</span>
+        The photo slide in the deck contains built-in before/after examples (scratches removed, black-and-white colorized) - open them instead of installing anything. For a live wow moment, photograph an old family photo before class and run Magic Editor on it: Google Photos - Edit - Magic Editor, then tap the scratch.
+      </div>
+
+      <h3 class="doc-h3">The family story project</h3>
+      <p>A favorite long-term project: the learner records memories, and AI turns them into a keepsake booklet for the family. The AI interviews, the learner answers, the AI writes - the learner stays the author.</p>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 25 - The storyteller interview</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I want to write down my life stories for my family. Interview me with questions, one at a time. Start with my childhood home. After I answer each question, ask me the next one. At the end, turn my answers into a story titled "My Childhood Home."</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> one gentle question at a time, then a draft story the learner can correct - a real keepsake in one sitting.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Hobbies, on demand</h3>
+      <div class="grid-3">
+        <div class="mini-card"><h4>Gardening</h4><p>"I live in Ontario and want to grow tomatoes on my balcony. Give me a simple month-by-month plan, in plain words."</p></div>
+        <div class="mini-card"><h4>Cooking heritage</h4><p>"My grandmother's cookie recipe uses 2 eggs but my grandson is allergic. Suggest a good substitute for eggs and how much to use."</p></div>
+        <div class="mini-card"><h4>Crafts</h4><p>"Suggest five easy crochet projects for a beginner, from simplest to hardest, with the materials for each."</p></div>
+      </div>
+      <div class="grid-3">
+        <div class="mini-card"><h4>Mind games</h4><p>"Play a memory game with me. Ask me five questions about a trip I took long ago, wait for my answers, then quiz me on them."</p></div>
+        <div class="mini-card"><h4>Music</h4><p>"I like 1960s folk music. Recommend ten songs I might not know, and tell me one interesting thing about each."</p></div>
+        <div class="mini-card"><h4>Games</h4><p>"Teach me to play chess against you. Use plain notation like A1 to H8, and be patient - explain each move the first few turns."</p></div>
+      </div>
+
+      <h3 class="doc-h3">Hands-on 5: one hobby, fully explored</h3>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 26 - Choose your own</div>
+        <div class="prompt-body">
+          <div class="prompt-type">[Learner picks their hobby] Ask me three questions about my hobby to understand what I already know. Then suggest three specific projects I could try this month, from easy to challenging.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a mini-interview then three tailored projects. This is the "asking well" recipe used in reverse - the AI asks the questions this time.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MODULE 8 ============ -->
+    <div class="module-head">
+      <div class="module-number">8</div>
+      <div><h2>Voice and accessibility</h2><p>Talk instead of type, and make every screen easier to read - 40 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-8">
+      <h3 class="doc-h3">The phone assistant is already there</h3>
+      <ul>
+        <li><strong>iPhone - Siri:</strong> "Hey Siri, remind me to take my pills at 8 in the evening." "Hey Siri, call my daughter." "Hey Siri, what is the weather on Saturday?"</li>
+        <li><strong>Android - Google Assistant:</strong> "Hey Google, set a timer for 20 minutes." "Hey Google, play Frank Sinatra." "Hey Google, what time is sunset?"</li>
+        <li><strong>Amazon Alexa:</strong> the same ideas on a home speaker - timers, reminders, music, news, calling family.</li>
+      </ul>
+      <p>These assistants understand plain spoken sentences. Learners practice five spoken commands until they feel natural. For many seniors this - not typing - becomes the main way they use AI every day.</p>
+
+      <h3 class="doc-h3">Voice chat inside the AI apps</h3>
+      <p>ChatGPT, Claude, Gemini, and Copilot all have a microphone button. Tap it and speak the prompt out loud. The app types the words and reads the answer aloud. This turns the entire course into a voice experience:</p>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 27 - A fully spoken task</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Say this out loud to the AI app: "Tell me three good questions to ask my grandchildren on our next video call, and keep your answer short."</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> the answer read aloud. No typing, no reading small text - the whole exchange spoken.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Making screens comfortable</h3>
+      <ul>
+        <li><strong>Bigger text on the phone:</strong> Settings - Display - Font size. Raise it. This helps everywhere, not just in AI apps.</li>
+        <li><strong>Bigger text in the answer:</strong> after an answer, type "Please rewrite that using short sentences and simple words, and put each point on its own line."</li>
+        <li><strong>Read-aloud:</strong> most phones can read any screen aloud - look for "Spoken Content" on iPhone or "Select to Speak" on Android in the accessibility settings.</li>
+        <li><strong>Slow and patient:</strong> AI never gets impatient. Asking "again, slower" is always fine.</li>
+      </ul>
+
+      <div class="doc-callout tip">
+        <span class="callout-label">Accessibility is dignity</span>
+        The goal is not that learners master typing - it is that they stay independent. Voice input and larger text are not crutches; they are the front door for many seniors. Celebrate every learner who finds their preferred way in.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 9 ============ -->
+    <div class="module-head">
+      <div class="module-number">9</div>
+      <div><h2>Safety first</h2><p>The golden rules, the scams that use AI, and how to check anything - 60 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-9">
+      <h3 class="doc-h3">The five golden rules</h3>
+      <ol class="step-list">
+        <li><strong>Never share secrets in a chat.</strong> No passwords, no bank or card numbers, no ID numbers, no full addresses. The chat is for questions, not for secrets.</li>
+        <li><strong>Never send money because of a phone call or message.</strong> No real bank, police officer, or grandchild ever demands gift cards or urgent transfers. Hang up and call the real number yourself.</li>
+        <li><strong>AI does not call you first.</strong> No chatbot phones you about your account. If someone claims to be from Microsoft, Apple, your bank, or "AI support" - it is a scam call. Hang up.</li>
+        <li><strong>Verify before you trust.</strong> Important facts (health, money, travel documents) get checked against an official source - the doctor, the bank's own website, the government site.</li>
+        <li><strong>When in doubt, stop.</strong> Urgency is the scammer's tool. Real organizations give you time. If you feel rushed or scared, end the conversation and talk to family first.</li>
+      </ol>
+
+      <h3 class="doc-h3">The scams AI made stronger</h3>
+      <table class="doc-table">
+        <thead><tr><th>Scam</th><th>How it works now</th><th>What to do</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Voice-clone "grandchild" call</strong></td>
+            <td>A few seconds of a family member's voice (from a public video) can be copied. The scammer calls, sounds exactly like the grandchild, and says: "I am in trouble, I need money right now, do not tell mom."</td>
+            <td>Hang up. Call the grandchild's real number. Family rule: a secret code word - if the caller cannot say it, it is not them.</td>
+          </tr>
+          <tr>
+            <td><strong>Fake messages and emails</strong></td>
+            <td>Messages that look like your bank, the post office, or a family member, with a link and a sense of urgency.</td>
+            <td>Never tap links in unexpected messages. Open the bank or post office website yourself and check there. Look closely at the sender's full address.</td>
+          </tr>
+          <tr>
+            <td><strong>Fake photos and videos (deepfakes)</strong></td>
+            <td>AI can make realistic pictures or videos of people doing things that never happened.</td>
+            <td>Assume any shocking video could be fake. Check with the person directly, and do not forward it until it is confirmed.</td>
+          </tr>
+          <tr>
+            <td><strong>Fake "AI investment" offers</strong></td>
+            <td>Ads promising guaranteed returns from "AI trading" - often with fake celebrity endorsements.</td>
+            <td>There is no guaranteed investment. Ask your bank or a licensed advisor. "Guaranteed + AI + high return" = scam.</td>
+          </tr>
+          <tr>
+            <td><strong>Fake tech support</strong></td>
+            <td>Pop-ups and calls saying "your computer is infected - call this number."</td>
+            <td>Close the browser. Real companies never call you about infections. Ask a family member or a trusted local shop instead.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">Privacy in practice</h3>
+      <ul>
+        <li>What you type may be used to improve the AI. Treat the chat like a public library, not a diary.</li>
+        <li>Use first names only for other people. Strip out addresses, phone numbers, and account numbers before pasting letters.</li>
+        <li>If a chat holds something personal, delete the conversation when done (every major app has a delete option).</li>
+        <li>For very private matters, talk to a person - not a chatbot.</li>
+      </ul>
+
+      <h3 class="doc-h3">Never give this to AI - the complete list</h3>
+      <table class="doc-table">
+        <thead><tr><th>Never type or upload</th><th>Why</th><th>Instead</th></tr></thead>
+        <tbody>
+          <tr><td>Passwords, PINs, security codes</td><td>They open your accounts, and chats can be read and used.</td><td>Keep them in a paper notebook at home.</td></tr>
+          <tr><td>Bank and card numbers, expiry dates, the three numbers on the back</td><td>Together they are enough to take money.</td><td>Call the bank or visit the branch for money questions.</td></tr>
+          <tr><td>Government ID numbers - passport, social insurance, health card</td><td>Identity theft starts with these.</td><td>Show them only to offices that must see them.</td></tr>
+          <tr><td>Your full home address and exact birth date</td><td>Combined with a name, they build a profile of you.</td><td>Say your age and city - that is enough for help.</td></tr>
+          <tr><td>Other people's full names, addresses, phone numbers, or photos of children</td><td>You cannot give away someone else's privacy.</td><td>First names only - "my grandson" works fine.</td></tr>
+          <tr><td>Medical files with your name and ID together</td><td>Health records are the most sensitive data there is.</td><td>Paste symptoms or a medicine name without identity details.</td></tr>
+          <tr><td>Work documents or other people's private papers</td><td>They are not yours to share.</td><td>Ask about the topic in your own words.</td></tr>
+        </tbody>
+      </table>
+      <p>The one-question test: <strong>would I read this out loud in a public library?</strong> If the answer is no, it does not belong in a chat.</p>
+
+      <h3 class="doc-h3">The family code word</h3>
+      <p>The single most effective protection: the family agrees on a secret word - the name of a childhood pet, a street, a favorite dish. Anyone who phones claiming to be family, or claiming the family is in trouble, must say the word. Scammers cannot know it, no matter how perfect the voice sounds. Agree on the word this week.</p>
+
+      <div class="doc-callout safe">
+        <span class="callout-label">Reassurance, not fear</span>
+        The goal of this module is confidence, not anxiety. Learners who know these five rules and one code word are safer than most internet users of any age. The course ends with the message: AI is a tool you now hold - it only has the power you give it.
+      </div>
+    </section>
+
+    <!-- ============ MODULE 10 ============ -->
+    <div class="module-head">
+      <div class="module-number">10</div>
+      <div><h2>Independent practice</h2><p>Ten minutes a day, a practice club, and a routine that sticks - 30 minutes</p></div>
+    </div>
+    <section class="doc-section" id="module-10">
+      <h3 class="doc-h3">The ten-minute daily habit</h3>
+      <p>Skills grow from small, regular use - not long sessions. The daily routine has three parts:</p>
+      <ol>
+        <li><strong>One real task (5 minutes).</strong> Something actually needed: a shopping list, an email, a recipe, a question about the news.</li>
+        <li><strong>One follow-up (2 minutes).</strong> Use one of the five fix-up words: "shorter," "simpler," "with an example," "step by step," or "another version."</li>
+        <li><strong>One new thing (3 minutes).</strong> Ask a question about something new - a bird, a song, a place, a word. Curiosity keeps the mind sharp.</li>
+      </ol>
+
+      <h3 class="doc-h3">The weekly challenge list</h3>
+      <p>Print and check off one per week:</p>
+      <ul>
+        <li>Week 1: Use the dictation microphone instead of typing.</li>
+        <li>Week 2: Write one real letter or email with AI help and send it.</li>
+        <li>Week 3: Translate one message from or to another language.</li>
+        <li>Week 4: Interview AI about one of your hobbies.</li>
+        <li>Week 5: Make a packing list for a real or imaginary trip.</li>
+        <li>Week 6: Explain something to a grandchild using an AI explanation you prepared.</li>
+        <li>Week 7: Plan a full week of dinners plus one shopping list.</li>
+        <li>Week 8: Start your family story booklet - one interview.</li>
+        <li>Week 9: Use voice commands for all reminders for one full day.</li>
+        <li>Week 10: Teach one friend one thing you learned. Teaching is the proof.</li>
+      </ul>
+
+      <h3 class="doc-h3">Starting a practice club</h3>
+      <ul>
+        <li>Meet weekly for one hour at the library, community center, or a coffee shop with wifi.</li>
+        <li>Round one: each person shares the one thing they did with AI this week.</li>
+        <li>Round two: everyone tries the same new prompt together - "group practice."</li>
+        <li>Round three: one safety story from the news, discussed as a group.</li>
+        <li>More confident members become "table helpers" - teaching others is the fastest way to keep the skill.</li>
+      </ul>
+    </section>
+
+    <!-- ============ BIG PROJECTS ============ -->
+    <div class="module-head">
+      <div class="module-number">11</div>
+      <div><h2>Big projects: your second chapter</h2><p>Books, businesses, teaching, and legacies - for 55+ adults with decades to share - workshop-style</p></div>
+    </div>
+    <section class="doc-section" id="big-projects">
+      <h3 class="doc-h3">Why life experience is the secret ingredient</h3>
+      <p>AI has read everything ever written - but it has never lived. It has no stories of its own, no judgment, no humor earned over decades. That is exactly what you bring. AI supplies the spelling, the design, and the speed. You supply the wisdom. Every project below works the same way: you are the author and the owner; AI is the tireless assistant.</p>
+      <div class="doc-callout tip">
+        <span class="callout-label">Nothing here requires technical skill</span>
+        Today's AI tools handle the technical parts - layouts, editing, translation, and publishing steps. These projects need your experience, your patience, and a few minutes a day. That is all.
+      </div>
+
+      <h3 class="doc-h3">The project menu</h3>
+      <div class="grid-3">
+        <div class="mini-card"><h4>Write your book</h4><p>Memoir, novel, cookbook, children's book, local history.</p></div>
+        <div class="mini-card"><h4>Share your expertise</h4><p>Teach, tutor, consult, mentor - decades of knowledge has an audience.</p></div>
+        <div class="mini-card"><h4>Build something new</h4><p>A website, a small shop, a YouTube channel, a newsletter.</p></div>
+        <div class="mini-card"><h4>Preserve the archive</h4><p>Photos restored, letters transcribed, the family tree completed.</p></div>
+        <div class="mini-card"><h4>Create art and music</h4><p>Paint with words, compose a song, design cards and posters.</p></div>
+        <div class="mini-card"><h4>Lead your community</h4><p>Newsletters, events, fundraising letters, translating for newcomers.</p></div>
+      </div>
+
+      <h3 class="doc-h3">Project 1 - Write your book</h3>
+      <p>The dream project. Choose the kind of book: a <strong>memoir</strong> of your working life, a <strong>novel</strong> built from a story you always wanted to tell, a <strong>cookbook</strong> of family recipes, a <strong>children's book</strong> for the grandchildren, or a <strong>local history</strong> only you remember.</p>
+      <ol class="step-list">
+        <li><strong>Outline.</strong> Let AI interview you chapter by chapter, then turn your answers into a table of contents.</li>
+        <li><strong>Draft by speaking.</strong> Dictate each chapter with voice typing in Google Docs or Word. Paste the rough text into Claude or ChatGPT and ask: "Rewrite this as a warm, clear chapter, keeping my words where they shine."</li>
+        <li><strong>Edit.</strong> Run the text through Grammarly (free) for typos, then ask the AI: "Find repeated words and weak sentences in this chapter and suggest fixes."</li>
+        <li><strong>Cover and layout.</strong> Describe the cover you imagine to Canva Magic Studio or Microsoft Designer - they design several options from your words.</li>
+        <li><strong>Publish.</strong> Amazon KDP or Blurb prints and sells the book for free; AI writes the back-cover description. Or simply print it for the family.</li>
+      </ol>
+      <table class="doc-table">
+        <thead><tr><th>Book task</th><th>Best tool</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Chapter outline from your stories</td><td>Claude or ChatGPT</td><td>Long-form writing, patient interviews</td></tr>
+          <tr><td>Dictation while you speak</td><td>Google Docs or Word voice typing</td><td>Free, already on your device</td></tr>
+          <tr><td>Warm rewrite of your draft</td><td>Claude</td><td>Keeps your voice, smooths the prose</td></tr>
+          <tr><td>Typo and grammar pass</td><td>Grammarly (free)</td><td>Catches what AI misses</td></tr>
+          <tr><td>Cover design</td><td>Canva Magic Studio / Microsoft Designer</td><td>Designs from a written description</td></tr>
+          <tr><td>Print and sell</td><td>Amazon KDP / Blurb</td><td>Free self-publishing; AI writes the blurb</td></tr>
+        </tbody>
+      </table>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 28 - The memoir interview</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I want to write a memoir about my [30 years as a nurse / career / life]. Interview me one question at a time, starting with my very first day on the job. After I answer, ask the next question. At the end, propose a chapter outline for the book with a title for each chapter.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a gentle interview that becomes a book plan - the outline is the first real artifact of the book.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 29 - The family cookbook</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Help me make a family cookbook. I will tell you the recipes one by one in any order. For each one, ask me for the ingredients, the steps, and the story behind the dish, then write it as a beautiful recipe page with a "Story behind this dish" note. Start by asking me for the first recipe.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> consistent, keepsake-quality pages - one recipe per session works well.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Project 2 - Share your expertise</h3>
+      <ul>
+        <li><strong>Teach a course</strong> at the community center, library, or online: AI builds the lesson plan, handouts, slide outline, and quiz.</li>
+        <li><strong>Consult or tutor:</strong> AI prepares sessions, explains your own field in simple words for beginners, and drafts invoices and agreements (a human checks the numbers).</li>
+        <li><strong>Mentor:</strong> AI helps write opening questions and feedback notes for mentoring younger people.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 30 - From expert to teacher</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I was a [career] for 35 years. Design a beginner course called "What I wish I knew at 30 about [field]" - four sessions of one hour, for adults with no background. Give me the session plan, one handout outline per session, and three discussion questions each.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a complete teaching plan - learners often realize their expertise is the course itself.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Project 3 - Build something new</h3>
+      <ul>
+        <li><strong>A website or blog:</strong> describe it in plain sentences to Wix AI or Squarespace and it builds the first version - then AI writes the pages.</li>
+        <li><strong>A small shop</strong> (Etsy, local market): AI writes product descriptions, pricing guidance, and thank-you notes.</li>
+        <li><strong>A YouTube channel:</strong> AI writes scripts and titles; CapCut adds captions and edits automatically; Canva makes the thumbnails.</li>
+        <li><strong>A newsletter:</strong> for family, a club, or a building - AI writes, Canva lays out.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 31 - The idea test</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am thinking of a small project: [describe it in two sentences]. Ask me five questions to test the idea, then give me an honest list of the three biggest challenges and three first steps. Be kind but honest.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a friendly reality check plus a starting plan. Always verify money numbers with a real person.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Project 4 - Preserve the family archive</h3>
+      <ul>
+        <li><strong>Restore photos:</strong> Google Photos Magic Editor, iPhone Clean Up, and MyHeritage repair scratches and bring faded pictures back; MyHeritage colorizes black-and-white portraits.</li>
+        <li><strong>Transcribe letters and diaries:</strong> photograph them and let text recognition read them into editable text - or dictate them out loud.</li>
+        <li><strong>Complete the family tree:</strong> Ancestry and MyHeritage scan records and suggest matches for ancestors.</li>
+        <li><strong>Interview the oldest relatives</strong> with AI-prepared questions, then bind the transcripts into the story booklet from Module 7.</li>
+      </ul>
+
+      <h3 class="doc-h3">Project 5 - Create art and music</h3>
+      <ul>
+        <li><strong>Paint with words:</strong> describe a scene - "a rainy harbor at dusk, in the style of an old postcard" - and image tools like DALL-E (inside ChatGPT), Microsoft Designer, or Adobe Firefly paint it. Firefly is the safest choice for art you might sell.</li>
+        <li><strong>Compose a song:</strong> Suno turns a few written lines into a complete song - an anniversary gift or a family theme song.</li>
+        <li><strong>Design cards and posters:</strong> Canva Magic turns a sentence into invitations, posters, and birthday cards.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 32 - A song for the family</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Write warm song lyrics for my 50th wedding anniversary, mentioning [two real details from your life]. About 12 lines, gentle waltz style, no jargon.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> lyrics ready to paste into Suno - which then sings them for you.</p>
+        </div>
+      </div>
+      <div class="doc-callout tip">
+        <span class="callout-label">Two ready samples to play in class</span>
+        Open these two songs made in Suno and play them for the room - then invite everyone to create their own free Suno account and make a song in the session:<br><br>
+        <a href="https://suno.com/s/U3rcRDoJhvxihn2o">Sample 1 - suno.com/s/U3rcRDoJhvxihn2o</a><br>
+        <a href="https://suno.com/s/8CS6APbLfyeCiXee">Sample 2 - suno.com/s/8CS6APbLfyeCiXee</a>
+      </div>
+
+      <h3 class="doc-h3">Project 6 - Lead your community</h3>
+      <ul>
+        <li><strong>Newsletters and bulletins</strong> for a club, faith community, or building.</li>
+        <li><strong>Event planning:</strong> checklists, invitations, thank-you notes.</li>
+        <li><strong>Fundraising letters and grant drafts:</strong> AI drafts, you review and sign - never send a draft about money without a careful human read.</li>
+        <li><strong>Translating for newcomers:</strong> welcome letters and forms in several languages.</li>
+      </ul>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 33 - The community letter</div>
+        <div class="prompt-body">
+          <div class="prompt-type">Draft a warm invitation letter for our [club / community] spring potluck. Mention the date placeholder, that families are welcome, and that everyone brings one dish. About 120 words, cheerful and clear.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a ready letter - then ask for the same letter "in simpler English" or translated into a second language.</p>
+        </div>
+      </div>
+
+      <h4 class="doc-h4">Flyers, posters, and presentations for good causes</h4>
+      <p>A four-step pipeline that ends in something you can print or show - no design skills needed:</p>
+      <ol class="step-list">
+        <li><strong>AI writes the words.</strong> The invitation, the announcement, the talk outline - see the prompts below.</li>
+        <li><strong>AI writes the design brief.</strong> One sentence that describes the look: "A warm A4 flyer, big text, red and blue, one photo of our garden."</li>
+        <li><strong>Canva Magic turns the brief into a design.</strong> Free Canva account - Magic Design - paste the brief - it creates flyers, posters, and slide decks for you to edit.</li>
+        <li><strong>Refine by talking.</strong> "Bigger title", "simpler", "translate to Turkish" - the talk-and-improve loop.</li>
+      </ol>
+      <div class="prompt-card">
+        <div class="prompt-title">Try it - the flyer for your cause</div>
+        <div class="prompt-body">
+          <div class="prompt-type">We are organizing a community dinner for [cause]. Write the short flyer text: a warm headline, three lines about the event, and one line asking people to bring a dish. Then give me a design brief for Canva: A4, warm colors, large text, space for our logo and one photo.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> ready flyer words plus a design brief - paste the brief into Canva Magic Design and edit the result.</p>
+        </div>
+      </div>
+      <div class="prompt-card">
+        <div class="prompt-title">Try it - a talk for the community</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I am giving a 10-minute talk at the community center about [our neighborhood garden / my trade / a good cause]. Prepare 8 slides: a title, six points, and a thank-you slide - with one short sentence and one photo idea on each slide.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a slide-by-slide outline - build it in Canva or PowerPoint in minutes, then practice it out loud with the AI.</p>
+        </div>
+      </div>
+
+      <h3 class="doc-h3">Project 7 - Volunteer: build a curriculum for youth</h3>
+      <p>After the seminar, learners can give back with their greatest asset - experience. CentreCanada runs a curriculum pipeline: seniors describe a subject, AI drafts the education material, and it lands in the curriculum builder for young learners.</p>
+      <ol class="step-list">
+        <li><strong>Chat with AI about the subject.</strong> A trade, a homeland, a hobby, a recipe tradition - anything worth teaching.</li>
+        <li><strong>Let AI draft the material.</strong> It prepares a complete lesson document: the topic, the explanation, examples, and quiz questions.</li>
+        <li><strong>Export as PDF.</strong> One click turns the draft into a shareable file.</li>
+        <li><strong>Hand it to the team.</strong> The team uploads the PDF into the curriculum builder, which already turns materials into training flows, quizzes, and web documents.</li>
+      </ol>
+      <div class="prompt-card">
+        <div class="prompt-title">Practice 34 - The volunteer lesson</div>
+        <div class="prompt-body">
+          <div class="prompt-type">I would like to volunteer a lesson for young students about [your subject]. Interview me one question at a time about the most important things a beginner should know. Then write a complete draft education document: the topic, a friendly explanation, three examples, and five quiz questions with answers.</div>
+          <p class="prompt-expect"><strong>What to expect:</strong> a full draft lesson - print it as PDF and hand it to the course team. Your name goes on it as the contributor.</p>
+        </div>
+      </div>
+
+      <div class="doc-callout safe">
+        <span class="callout-label">The golden rule for big projects</span>
+        AI assists - you author. Read every page before it is published. Check facts before they are shared. For anything about money or contracts, a human professional has the final word. Your name goes on the work; your judgment goes into it.
+      </div>
+    </section>
+
+    <!-- ============ TOOL GUIDE ============ -->
+    <section class="doc-section" id="tool-guide">
+      <h2 class="doc-h2">Tool guide</h2>
+      <p class="doc-lead">The four main chat tools and the everyday helpers around them.</p>
+      <table class="doc-table">
+        <thead>
+          <tr><th>Tool</th><th>What it is best at</th><th>Cost</th><th>How to start</th><th>Voice?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ChatGPT</strong> (OpenAI)</td>
+            <td>The most popular all-rounder. Excellent at letters, explanations, and creative writing. Huge amount of beginner guidance available.</td>
+            <td>Free plan is enough for this course</td>
+            <td>chatgpt.com or the ChatGPT app</td>
+            <td>Yes - mic button and spoken answers</td>
+          </tr>
+          <tr>
+            <td><strong>Claude</strong> (Anthropic)</td>
+            <td>Warm, careful writing tone. Very good at long documents - pasting a letter and getting a plain-word summary.</td>
+            <td>Free plan is enough</td>
+            <td>claude.ai or the Claude app</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td><strong>Gemini</strong> (Google)</td>
+            <td>Deeply connected to Google: maps, YouTube, Gmail. Good for travel plans and questions about places.</td>
+            <td>Free plan is enough</td>
+            <td>gemini.google.com or the Gemini app</td>
+            <td>Yes - often the easiest voice chat to start</td>
+          </tr>
+          <tr>
+            <td><strong>Microsoft Copilot</strong></td>
+            <td>Built into Windows and the Edge browser. Good for computer tasks and email summaries in Outlook.</td>
+            <td>Free plan is enough</td>
+            <td>copilot.microsoft.com or the Copilot app</td>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <td><strong>DeepSeek</strong></td>
+            <td>Full-featured chat and voice with the most generous free limits - the suggestion for heavy daily use.</td>
+            <td>Free plan is the most generous of the five</td>
+            <td>chat.deepseek.com or the DeepSeek app</td>
+            <td>Yes</td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="doc-table">
+        <thead>
+          <tr><th>Everyday helper</th><th>What it does</th><th>Where it lives</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Siri / Google Assistant / Alexa</strong></td><td>Reminders, timers, calls, messages, weather, music - by voice.</td><td>Already on the phone or a home speaker</td></tr>
+          <tr><td><strong>Google Lens</strong></td><td>Point the camera at a plant, bird, text, or object and it identifies or translates it.</td><td>Google app or Android camera</td></tr>
+          <tr><td><strong>Google Translate / Apple Translate</strong></td><td>Instant translation of written text and spoken words.</td><td>Free apps on every phone</td></tr>
+          <tr><td><strong>Google Photos Magic Editor / iPhone Clean Up</strong></td><td>Remove scratches, wires, and strangers from old photos; improve lighting.</td><td>Built into the phone's photo app</td></tr>
+          <tr><td><strong>MedlinePlus and WHO sites</strong></td><td>The trusted health sources to verify what AI says about health.</td><td>medlineplus.gov, who.int</td></tr>
+        </tbody>
+      </table>
+      <div class="doc-callout tip">
+        <span class="callout-label">One tool at a time</span>
+        Beginners should master ONE chat tool first. After week 3, curious learners can try a second - the skills transfer completely. Do not let tool-hopping replace practice.
+      </div>
+      <div class="doc-callout tip">
+        <span class="callout-label">The companion app - Senior Helper AI Coordinator</span>
+        After the course, learners can keep using AI through the <strong>Senior Helper AI Coordinator</strong>, a big-button app built for this program. It has one button per life area (write a letter, explain a paper, plan meals, health helper, food and ingredient checks, pharmacy and medicines, family messages, hobbies, trips, learn something new, write my stories, check a suspicious message), builds the four-part question from simple boxes, asks the AI in plain words, reads answers aloud, and keeps the five golden rules on screen at all times.
+      </div>
+
+      <h3 class="doc-h3">ChatGPT - ten use cases with their tricks</h3>
+      <table class="doc-table">
+        <thead><tr><th>Use case</th><th>The trick to say</th></tr></thead>
+        <tbody>
+          <tr><td>Letters and replies</td><td>After the first draft say: "Shorter, and warmer." Or: "Reply as I would - calm but firm."</td></tr>
+          <tr><td>Explain anything in plain words</td><td>"Explain this like I am 12, then give one example from daily life: [paste or type]"</td></tr>
+          <tr><td>Live spoken translation</td><td>Tap the voice button and say: "Be my translator between English and [language]."</td></tr>
+          <tr><td>A friend on quiet afternoons</td><td>"Let's have a ten-minute chat about my day. Ask me one question at a time."</td></tr>
+          <tr><td>Meals within your limits</td><td>"Five low-salt dinners, cooking for one, under eight ingredients - and one shopping list."</td></tr>
+          <tr><td>Memory and brain games</td><td>"Give me five memory exercises I can do in five minutes, with the answers."</td></tr>
+          <tr><td>Trip planning</td><td>"Plan a three-day trip for two seniors with a print-friendly daily schedule."</td></tr>
+          <tr><td>What is this thing?</td><td>Upload a photo of a bird, flower, or object and ask: "What is this, and one interesting fact?"</td></tr>
+          <tr><td>Scam check</td><td>Paste a suspicious message and ask: "Is this a scam? What warning signs does it show?"</td></tr>
+          <tr><td>Learn something new</td><td>"Teach me [topic] in ten minutes a day for two weeks. Start with lesson one."</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">Claude - ten use cases with their tricks</h3>
+      <table class="doc-table">
+        <thead><tr><th>Use case</th><th>The trick to say</th></tr></thead>
+        <tbody>
+          <tr><td>Long letters and documents</td><td>Paste anything and ask: "Summarize this in five bullets and tell me exactly what I must DO."</td></tr>
+          <tr><td>Warm personal writing</td><td>"Write this birthday card like a warm grandmother - sincere, short, and smiling."</td></tr>
+          <tr><td>Your life story</td><td>"Interview me one question at a time, starting with my childhood home."</td></tr>
+          <tr><td>Polishing your own draft</td><td>"Rewrite this keeping my voice, fix the grammar, and keep it under 200 words."</td></tr>
+          <tr><td>Stories and poems for grandchildren</td><td>"A 200-word bedtime story starring a kitten named Pamuk - gentle, happy ending."</td></tr>
+          <tr><td>Instructions explained step by step</td><td>"Explain this device manual like I have never used one, step by step: [paste]"</td></tr>
+          <tr><td>Comparing choices</td><td>"Compare these two hearing aid options in a simple table: price, batteries, support."</td></tr>
+          <tr><td>Natural translation of letters</td><td>"Translate this letter, keeping the tone warm and natural, not robotic."</td></tr>
+          <tr><td>After-visit summaries</td><td>"The doctor said this, in my own words: [speak it]. Rewrite it clearly with what to do next."</td></tr>
+          <tr><td>Careful, patient explanations</td><td>"Explain what a cataract is, slowly and kindly, then list my questions for the eye doctor."</td></tr>
+        </tbody>
+      </table>
+      <p>Quick rule: <strong>ChatGPT for everything everyday, Claude for anything long, warm, or careful.</strong> Both are free, both speak, and both answer in your language.</p>
+    </section>
+
+    <!-- ============ TASK AND TOOL MATCHING ============ -->
+    <section class="doc-section" id="task-tool-matching">
+      <h2 class="doc-h2">Task and tool matching</h2>
+      <p class="doc-lead">The complete map: what you want to do, and which AI solution does it best. Use the quick rule first, then the full tables.</p>
+      <div class="doc-callout tip">
+        <span class="callout-label">Presenter quick reference - print before the seminar</span>
+        Print <strong>AIEducationForSeniors-ToolBenefitsReference.html</strong> and keep it beside you during the seminar. It lists every tool from these tables with its benefit on a few compact pages, grouped by life area - so during questions you answer from the sheet instead of searching or asking an AI live in front of the room. It also covers the case where a learner already uses a tool, and what to do when someone names a tool not on the list.
+      </div>
+      <div class="doc-callout tip">
+        <span class="callout-label">Choose in ten seconds</span>
+        <ul>
+          <li>Writing, explaining, brainstorming - <strong>ChatGPT</strong> or <strong>Claude</strong>.</li>
+          <li>The most free daily usage - <strong>DeepSeek</strong>.</li>
+          <li>Questions that need Google search, maps, or YouTube - <strong>Gemini</strong>.</li>
+          <li>On a Windows computer, in Word or Outlook - <strong>Microsoft Copilot</strong>.</li>
+          <li>Answers that must show sources you can check - <strong>Perplexity</strong>.</li>
+          <li>Pictures, videos, music, websites - the <strong>specialized creator tools</strong> in the tables below.</li>
+          <li>Birds and plants - <strong>Merlin Bird ID</strong> and <strong>iNaturalist</strong>.</li>
+          <li>Health - AI for ideas, <strong>professionals for decisions</strong>.</li>
+        </ul>
+      </div>
+
+      <h3 class="doc-h3">A - Talking, writing, understanding</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Ask anything, write letters, brainstorm</td><td>ChatGPT</td><td>The most popular all-rounder, with voice and a huge community</td></tr>
+          <tr><td>Work through long letters and documents</td><td>Claude</td><td>Best with long texts and careful, warm writing</td></tr>
+          <tr><td>Search the web, maps, videos, your Gmail world</td><td>Gemini</td><td>Connected to all of Google</td></tr>
+          <tr><td>Help inside Windows, Word, Outlook</td><td>Microsoft Copilot</td><td>Built into the computer and Office you already use</td></tr>
+          <tr><td>Answers with sources you can check</td><td>Perplexity</td><td>Shows a citation for every claim - ideal for verifying</td></tr>
+          <tr><td>Ask inside WhatsApp or Facebook Messenger</td><td>Meta AI</td><td>No new app to learn - it lives in chats you already use</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">B - Writing and publishing a book</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Outline and draft chapters</td><td>Claude or ChatGPT</td><td>Long-form writing, patient interviews (see Project 1)</td></tr>
+          <tr><td>Grammar and clarity pass</td><td>Grammarly (free)</td><td>Catches typos and wordiness AI itself misses</td></tr>
+          <tr><td>Cover design and layout</td><td>Canva Magic Studio / Microsoft Designer</td><td>Designs a cover from a written description</td></tr>
+          <tr><td>Print and sell the book</td><td>Amazon KDP / Blurb</td><td>Free self-publishing; AI writes the back-cover blurb</td></tr>
+          <tr><td>Fiction ideas and plot help</td><td>ChatGPT (or Sudowrite, paid)</td><td>Brainstorms scenes, characters, and endings</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">C - Research and fact-checking</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Understand today's news</td><td>Perplexity or Gemini</td><td>Grounded in live search results</td></tr>
+          <tr><td>Verify a health claim</td><td>MedlinePlus / WHO - then your doctor</td><td>Official sources are the only health authority</td></tr>
+          <tr><td>Deep dive on one topic</td><td>Perplexity</td><td>Lists sources under every answer</td></tr>
+          <tr><td>Local businesses, hours, reviews</td><td>Gemini / Google Maps</td><td>Reads live, current Google data</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">D - Photos, images, art</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Restore and repair old photos</td><td>Google Photos Magic Editor, iPhone Clean Up, MyHeritage</td><td>One-tap fixes for scratches, fading, stray objects</td></tr>
+          <tr><td>Colorize black-and-white portraits</td><td>MyHeritage photo tools</td><td>Adds realistic color to old pictures</td></tr>
+          <tr><td>Create an image from a description</td><td>DALL-E (inside ChatGPT) / Microsoft Designer</td><td>Type a scene, get a picture</td></tr>
+          <tr><td>Make art you might sell</td><td>Adobe Firefly</td><td>Legally safe for commercial use</td></tr>
+          <tr><td>Cards, posters, invitations</td><td>Canva Magic</td><td>Turns one sentence into a full design</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">E - Video and audio</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Edit a family or hobby video</td><td>CapCut</td><td>Automatic captions, templates, easy trimming</td></tr>
+          <tr><td>Generate a short video from a sentence</td><td>Sora / Runway / Pika</td><td>Type a scene - a short video comes out</td></tr>
+          <tr><td>Edit a podcast by editing text</td><td>Descript</td><td>Delete a sentence in the transcript and the audio follows</td></tr>
+          <tr><td>Turn a voice recording into text</td><td>Otter.ai or the chat apps</td><td>Fast, free transcription of interviews and memories</td></tr>
+          <tr><td>Script and plan a video</td><td>ChatGPT</td><td>Writes the script; CapCut assembles the clips</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">F - Music and sound</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Write and sing a song</td><td>Suno / Udio</td><td>Paste lyrics, pick a style, it sings</td></tr>
+          <tr><td>Discover music you will like</td><td>Spotify AI DJ or the chat apps</td><td>Learns your taste from listening history</td></tr>
+          <tr><td>Learn an instrument</td><td>ChatGPT + YouTube</td><td>A practice plan from the AI, demonstrations on YouTube</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">G - Languages and translation</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Translate a letter naturally</td><td>DeepL</td><td>The most natural letter tone of all translators</td></tr>
+          <tr><td>Live two-way spoken translation</td><td>1. ChatGPT Voice (best) - 2. Microsoft Copilot voice</td><td>ChatGPT sounds the most like a real person in both languages; Copilot works too. Google Translate Conversation remains a backup</td></tr>
+          <tr><td>Read labels, signs, and letters through the camera</td><td>Google Lens / Translate camera</td><td>Point the camera - it reads and translates on screen</td></tr>
+          <tr><td>Use AI entirely in your own language</td><td>Any chat app</td><td>Ask in your language; say "answer me in [language]"</td></tr>
+          <tr><td>Practice speaking a language</td><td>ChatGPT voice mode / Duolingo</td><td>Talk without fear of judgment</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">H - Learning and teaching</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Explain a school topic step by step</td><td>ChatGPT / Claude</td><td>Plain words, worked examples, endless patience</td></tr>
+          <tr><td>A tutor for the grandchildren</td><td>Khanmigo (Khan Academy)</td><td>Built for students, guided by teachers' methods</td></tr>
+          <tr><td>Build your own course</td><td>ChatGPT lesson plans + Canva slides</td><td>See Practice 30 - from expert to teacher</td></tr>
+          <tr><td>Learn a brand-new skill from zero</td><td>ChatGPT</td><td>A gentle 4-week plan at 20 minutes a day</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">I - Nature and hobbies</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Name a bird by its song or photo</td><td>Merlin Bird ID</td><td>Free, identifies by sound - feels like magic</td></tr>
+          <tr><td>Name a plant, mushroom, or insect</td><td>iNaturalist / Google Lens</td><td>Photo identification with expert communities</td></tr>
+          <tr><td>Recipes, crafts, game rules</td><td>ChatGPT / Claude</td><td>The hobby prompts from Module 7</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">J - Health (ideas only - never decisions)</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Meal and movement ideas</td><td>ChatGPT / Claude</td><td>With your doctor's approval before starting</td></tr>
+          <tr><td>Healthy aging routines - meals, movement, mind</td><td>ChatGPT (best) or Claude</td><td>Daily plans within your doctor's limits - see "AI for healthy aging" in Module 5</td></tr>
+          <tr><td>A medication schedule table</td><td>Any chat tool - then a pharmacist checks</td><td>AI builds the table; the labels stay the source of truth</td></tr>
+          <tr><td>Brain training and memory games</td><td>Lumosity / Peak / Elevate</td><td>A few free games a day keep the mind sharp</td></tr>
+          <tr><td>A daily check-in when living alone</td><td>Snug</td><td>One tap a day - family is alerted if a check-in is missed</td></tr>
+          <tr><td>Understand a diagnosis in plain words</td><td>Any chat tool</td><td>For understanding - never for decisions</td></tr>
+          <tr><td>Prepare and follow up a doctor visit</td><td>ChatGPT / Claude + Translate for language help</td><td>Questions before, plain-word summary after</td></tr>
+          <tr><td>Food ingredients, allergies, halal questions</td><td>ChatGPT / Claude</td><td>AI explains and flags - the label and the certification mark confirm</td></tr>
+          <tr><td>Check whether a health claim is true</td><td>AI first pass + MedlinePlus / WHO + your doctor</td><td>AI gives a verdict on reliability; official sources settle it</td></tr>
+          <tr><td>Verify anything health-related</td><td>MedlinePlus, WHO, your doctor</td><td>The only authorities that count</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">K - Accessibility</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Read labels, menus, and letters aloud</td><td>Be My Eyes (AI + volunteers)</td><td>Free app for low vision - a helper in your pocket</td></tr>
+          <tr><td>See conversations as text</td><td>Phone live captions / live transcribe</td><td>Built into iPhone and Android</td></tr>
+          <tr><td>Hear any screen read aloud</td><td>Seeing AI / phone accessibility settings</td><td>Free, no new hardware</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">L - Home, voice, routines</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Reminders, timers, calls, music</td><td>Siri / Google Assistant / Alexa</td><td>Already on the phone or a home speaker</td></tr>
+          <tr><td>Control lights and devices by voice</td><td>Alexa / Google Home</td><td>Smart home with plain spoken commands</td></tr>
+          <tr><td>Menus and shopping lists</td><td>ChatGPT / Gemini</td><td>The weekly helper prompts</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">M - Business and side projects</h3>
+      <table class="doc-table">
+        <thead><tr><th>You want to</th><th>Best tool</th><th>Why it fits</th></tr></thead>
+        <tbody>
+          <tr><td>Test a business or project idea</td><td>ChatGPT / Claude</td><td>Practice 31 - the idea test</td></tr>
+          <tr><td>Product descriptions for a shop</td><td>ChatGPT</td><td>Warm, clear listings in minutes</td></tr>
+          <tr><td>A website from a description</td><td>Wix AI / Squarespace</td><td>It builds the first version; you edit</td></tr>
+          <tr><td>Newsletters and community mailings</td><td>ChatGPT + Canva</td><td>Words from the AI, layout from Canva</td></tr>
+          <tr><td>Money, taxes, contracts</td><td>A human professional, always</td><td>AI drafts - humans decide and sign</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ INSTALLATION GUIDE ============ -->
+    <section class="doc-section" id="installation-guide">
+      <h2 class="doc-h2">Hands-on installation guide</h2>
+      <p class="doc-lead">Installing the apps together is the first hands-on win. Do it in class, slowly, with helpers walking the rows.</p>
+      <ol class="step-list">
+        <li><strong>Open the app store.</strong> iPhone: the App Store. Android: Google Play.</li>
+        <li><strong>Search the app name.</strong> ChatGPT, Claude, Gemini, Microsoft Copilot, or DeepSeek - install ONE, the one shown on the screen. For the most free daily use, DeepSeek is the suggestion.</li>
+        <li><strong>Create or sign in.</strong> Use an existing Google or Apple account when offered - one less password to remember.</li>
+        <li><strong>Choose the free plan.</strong> If a payment screen appears, find and tap the free option. This course never costs money.</li>
+        <li><strong>Open the chat.</strong> Find the message box and type the first practice prompt - it works immediately.</li>
+      </ol>
+      <table class="doc-table">
+        <thead><tr><th>App</th><th>iPhone</th><th>Android</th><th>Also works in a browser</th></tr></thead>
+        <tbody>
+          <tr><td>ChatGPT</td><td>App Store</td><td>Google Play</td><td>chatgpt.com</td></tr>
+          <tr><td>Claude</td><td>App Store</td><td>Google Play</td><td>claude.ai</td></tr>
+          <tr><td>Gemini</td><td>App Store</td><td>Google Play</td><td>gemini.google.com</td></tr>
+          <tr><td>Microsoft Copilot</td><td>App Store</td><td>Google Play</td><td>copilot.microsoft.com</td></tr>
+          <tr><td>DeepSeek</td><td>App Store</td><td>Google Play</td><td>chat.deepseek.com</td></tr>
+          <tr><td>Google Translate</td><td>App Store</td><td>Pre-installed on many</td><td>translate.google.com</td></tr>
+          <tr><td>Google Lens</td><td>Inside the Google app</td><td>Built into the camera</td><td>-</td></tr>
+        </tbody>
+      </table>
+      <h3 class="doc-h3">The "test it now" checklist (finish each line before moving on)</h3>
+      <ul>
+        <li>The app opens and shows a chat box.</li>
+        <li>I sent one message and got an answer.</li>
+        <li>I tapped the microphone and spoke one sentence.</li>
+        <li>I used the word "shorter" and the answer got shorter.</li>
+        <li>I found the delete or new-chat option.</li>
+        <li>I asked for the answer "in [my language]" and it worked.</li>
+      </ul>
+      <div class="doc-callout tip">
+        <span class="callout-label">Classroom installation tips</span>
+        Bring power strips and chargers, have two helpers per ten learners, work one step at a time with the big screen, and never rush. Every installed app is a permanent win the learner takes home.
+      </div>
+    </section>
+
+    <!-- ============ AI PROJECTS ============ -->
+    <section class="doc-section" id="ai-projects">
+      <h2 class="doc-h2">AI projects that solve their problems</h2>
+      <p class="doc-lead">A gallery of ready-made routines. Each one starts from a real difficulty, names the AI to use, and ends with a first prompt.</p>
+      <div class="grid-2">
+        <div class="mini-card"><h4>Project: The letter friend</h4><p><strong>Problem:</strong> letters and forms pile up unread.<br><strong>Use:</strong> ChatGPT or Claude + the four-part recipe.<br><strong>Routine:</strong> every Saturday, one letter explained and one reply written.<br><strong>First prompt:</strong> "Explain this letter in plain words: [paste]".</p></div>
+        <div class="mini-card"><h4>Project: The medicine folder</h4><p><strong>Problem:</strong> too many medicines, unclear labels.<br><strong>Use:</strong> any chat tool + a pharmacist check.<br><strong>Routine:</strong> one plain-word page per medicine, kept in a folder.<br><strong>First prompt:</strong> "Explain my medicine in plain words: [label]".</p></div>
+        <div class="mini-card"><h4>Project: The safe shopper</h4><p><strong>Problem:</strong> allergies or halal doubts at the store.<br><strong>Use:</strong> camera translation (Lens) + the Senior Helper food check.<br><strong>Routine:</strong> photograph the label, ask, then check the certification mark.<br><strong>First prompt:</strong> "Check this ingredient list for peanuts: [paste]".</p></div>
+        <div class="mini-card"><h4>Project: The family bridge</h4><p><strong>Problem:</strong> family abroad, different language.<br><strong>Use:</strong> ChatGPT Voice for live calls (Microsoft Copilot voice is the backup) + DeepL for letters.<br><strong>Routine:</strong> one translated letter and one live call per week.<br><strong>First prompt:</strong> "Translate this into [language]: [text]".</p></div>
+        <div class="mini-card"><h4>Project: The calm doctor visit</h4><p><strong>Problem:</strong> forgetting what to ask the doctor.<br><strong>Use:</strong> the Senior Helper doctor-visit helper.<br><strong>Routine:</strong> before every visit: questions; after: summary.<br><strong>First prompt:</strong> "I am seeing my heart doctor about... help me prepare".</p></div>
+        <div class="mini-card"><h4>Project: The scam shield</h4><p><strong>Problem:</strong> strange calls and messages.<br><strong>Use:</strong> the Senior Helper scam checker + family code word.<br><strong>Routine:</strong> paste every strange message; never answer alone.<br><strong>First prompt:</strong> "Check this message for scams: [paste]".</p></div>
+        <div class="mini-card"><h4>Project: My life story</h4><p><strong>Problem:</strong> memories worth keeping, no idea where to start.<br><strong>Use:</strong> Claude or ChatGPT interviews.<br><strong>Routine:</strong> one interview question a day, written down.<br><strong>First prompt:</strong> "Interview me about my childhood home".</p></div>
+        <div class="mini-card"><h4>Project: The helper app</h4><p><strong>Problem:</strong> too many apps to remember.<br><strong>Use:</strong> the Senior Helper AI Coordinator - one app, one button per task.<br><strong>Routine:</strong> ten minutes a day, one button.<br><strong>First prompt:</strong> tap "Write a letter" and fill four boxes.</p></div>
+      </div>
+      <p>Rule for every project: <strong>for this task, use this AI</strong>. One routine, one tool, repeated weekly - that is how a difficulty turns into a solved problem.</p>
+    </section>
+
+    <!-- ============ PROMPT LIBRARY ============ -->
+    <section class="doc-section" id="prompt-library">
+      <h2 class="doc-h2">Prompt library</h2>
+      <p class="doc-lead">Thirty ready-to-use prompts, organized by life area. Copy one, replace the brackets, and send it.</p>
+
+      <h3 class="doc-h3">Letters and paperwork</h3>
+      <div class="prompt-card"><div class="prompt-title">1 - Complaint letter</div><div class="prompt-body"><div class="prompt-type">Write a polite complaint letter to [company] about [problem]. I have contacted them [number] times. I would like [what you want]. Keep it under 150 words, calm and clear.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">2 - Thank-you note</div><div class="prompt-body"><div class="prompt-type">Write a warm thank-you note to [person] for [kind act]. About 80 words, sincere but not too formal.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">3 - Appointment request</div><div class="prompt-body"><div class="prompt-type">Draft a short friendly email asking [office] for an appointment in [month], in the [morning/afternoon] if possible. I am an existing patient/customer.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">4 - Plain-words explainer</div><div class="prompt-body"><div class="prompt-type">Explain this document in plain words, like you are talking to a friend who is not a lawyer. Then list what I need to DO and any deadlines: [paste document]</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">5 - Refund request</div><div class="prompt-body"><div class="prompt-type">I bought [product] on [date] and it does not work because [reason]. Write a short refund request to the store, polite and firm, mentioning my receipt number [number].</div></div></div>
+
+      <h3 class="doc-h3">Food and home</h3>
+      <div class="prompt-card"><div class="prompt-title">6 - Weekly menu</div><div class="prompt-body"><div class="prompt-type">Plan five simple dinners for [one/two] people this week. Preferences: [low salt / low sugar / soft food / no fish]. Then give one combined shopping list.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">7 - Use what is in the fridge</div><div class="prompt-body"><div class="prompt-type">I have these ingredients: [list]. Suggest three simple dinner ideas I can make without buying more than three extra items.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">8 - Recipe substitution</div><div class="prompt-body"><div class="prompt-type">A recipe needs [ingredient] but I cannot use it because of [allergy/diet]. Suggest the best substitute and the amount to use.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">9 - Heritage recipe</div><div class="prompt-body"><div class="prompt-type">Help me write down my grandmother's recipe as a keepsake card. Ask me questions one at a time about the dish, then write it beautifully with a short memory line.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">10 - Home help</div><div class="prompt-body"><div class="prompt-type">Explain how to [remove a stain / descale the kettle / fix a dripping tap] step by step, in plain words, using common household items.</div></div></div>
+
+      <h3 class="doc-h3">Health (ideas only - never decisions)</h3>
+      <div class="prompt-card"><div class="prompt-title">11 - Meal limits</div><div class="prompt-body"><div class="prompt-type">Give me five [low-salt / low-sugar] meal ideas that are simple to cook, with fewer than eight ingredients each. Do not give medical advice.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">12 - Gentle movement</div><div class="prompt-body"><div class="prompt-type">Create a gentle 15-minute seated exercise routine for a beginner using only a chair. List each exercise with instructions and timing. Add a note that I should check with my doctor first.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">13 - Medication schedule</div><div class="prompt-body"><div class="prompt-type">Make a large, easy-to-read daily medication schedule table with columns for morning, noon, evening, and night. I will fill in my medicines and doses.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">14 - Plain-word health</div><div class="prompt-body"><div class="prompt-type">Explain what [term, e.g. a cataract] is in plain words, and list five good questions I should ask my eye doctor. Do not diagnose anything.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">15 - Mind and mood</div><div class="prompt-body"><div class="prompt-type">Suggest three short calming breathing exercises and a five-minute gratitude writing prompt for this evening. Keep everything gentle and simple.</div></div></div>
+
+      <h3 class="doc-h3">Family</h3>
+      <div class="prompt-card"><div class="prompt-title">16 - Birthday wish</div><div class="prompt-body"><div class="prompt-type">Write a warm birthday message for my [age]-year-old [grandson/granddaughter] who loves [interests]. About 60 words, cheerful, from Grandma/Grandpa.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">17 - Bedtime story</div><div class="prompt-body"><div class="prompt-type">Write a 200-word bedtime story about [character] who [small adventure]. Gentle, happy ending. Then suggest a title.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">18 - Homework together</div><div class="prompt-body"><div class="prompt-type">Explain [school topic] the way I could teach it to my [age]-year-old grandchild. Step by step, one worked example, simplest words possible.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">19 - Translation</div><div class="prompt-body"><div class="prompt-type">Translate this into [language], keeping the tone warm and natural: [paste text]</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">20 - Video call questions</div><div class="prompt-body"><div class="prompt-type">Give me five good questions to ask my grandchildren on our next video call, so the conversation flows and they enjoy talking to me.</div></div></div>
+
+      <h3 class="doc-h3">Hobbies, travel, and learning</h3>
+      <div class="prompt-card"><div class="prompt-title">21 - Gardening plan</div><div class="prompt-body"><div class="prompt-type">I live in [region] and want to grow [plant] on my balcony/garden. Give me a simple month-by-month plan in plain words.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">22 - Family story interview</div><div class="prompt-body"><div class="prompt-type">Interview me for my family story booklet. Ask one question at a time, starting with my childhood home, and write my answers into a story at the end.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">23 - Photo caption</div><div class="prompt-body"><div class="prompt-type">Write three short, warm caption ideas for an old family photo. It shows [describe the scene] and the people are [who they are].</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">24 - Trip planner</div><div class="prompt-body"><div class="prompt-type">Plan a relaxed 5-day trip to [city] for a couple in their 70s. We like museums, short walks, early dinners, and places without many stairs. One simple plan per day, with rest time.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">25 - Packing list</div><div class="prompt-body"><div class="prompt-type">I am flying to [place] for [number] days in [month] to visit family. Make me a packing checklist, including medications, comfortable shoes, and a small first-aid kit.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">26 - Music discovery</div><div class="prompt-body"><div class="prompt-type">I like [artists or style]. Recommend ten songs I might not know, and tell me one interesting thing about each.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">27 - Memory game</div><div class="prompt-body"><div class="prompt-type">Play a memory game with me. Ask me five questions about a place I love, wait for my answers, then quiz me on what I said.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">28 - News explainer</div><div class="prompt-body"><div class="prompt-type">Explain today's news about [topic] in plain words, like you are telling a neighbor. No jargon, under 150 words. Then list two questions I could ask to learn more.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">29 - Learn something new</div><div class="prompt-body"><div class="prompt-type">I want to learn the basics of [bird watching / bridge / chess / calligraphy]. Design me a gentle 4-week plan, 20 minutes a day, starting from zero.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">30 - Teach a friend</div><div class="prompt-body"><div class="prompt-type">I want to teach a friend how to use AI for the first time. Write me a simple 20-minute lesson script, friendly and encouraging, with one practice exercise at the end.</div></div></div>
+
+      <h3 class="doc-h3">Big projects</h3>
+      <div class="prompt-card"><div class="prompt-title">31 - The memoir interview</div><div class="prompt-body"><div class="prompt-type">I want to write a memoir about my [career or life]. Interview me one question at a time, starting with [the beginning]. After each answer, ask the next question. At the end, propose a chapter outline with a title for each chapter.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">32 - The family cookbook</div><div class="prompt-body"><div class="prompt-type">Help me make a family cookbook. I will give you recipes one by one. For each, ask for the ingredients, the steps, and the story behind the dish, then write a beautiful recipe page with a "Story behind this dish" note. Ask me for the first recipe now.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">33 - The children's book</div><div class="prompt-body"><div class="prompt-type">Write a children's picture book about [theme] for a 6-year-old. Six pages, about 40 words per page, ending warm and happy. Then suggest what each page's illustration should show.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">34 - Expert to teacher</div><div class="prompt-body"><div class="prompt-type">I was a [career] for [number] years. Design a beginner course called "What I wish I knew at 30 about [field]" - four one-hour sessions for adults with no background. Give the session plan, handout outlines, and three discussion questions each.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">35 - Test an idea</div><div class="prompt-body"><div class="prompt-type">I am thinking of [describe the project in two sentences]. Ask me five questions to test the idea, then list the three biggest challenges and three first steps. Be kind but honest.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">36 - Shop listing</div><div class="prompt-body"><div class="prompt-type">Write a friendly Etsy listing for [handmade item], including the title, a warm description, the materials, and the size details. Keep it honest and simple.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">37 - Channel script</div><div class="prompt-body"><div class="prompt-type">Write a 3-minute video script for a YouTube channel about [topic] for beginners my age. Plain words, a friendly opening, one clear idea, and a warm sign-off.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">38 - Community letter</div><div class="prompt-body"><div class="prompt-type">Draft a warm invitation letter for our [club] [event]. Mention the date placeholder, that families are welcome, and [one detail]. About 120 words, cheerful and clear.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">39 - Anniversary song</div><div class="prompt-body"><div class="prompt-type">Write warm song lyrics for my [number]th wedding anniversary, mentioning [two real details from your life]. About 12 lines, gentle waltz style, no jargon.</div></div></div>
+      <div class="prompt-card"><div class="prompt-title">40 - Family archive plan</div><div class="prompt-body"><div class="prompt-type">Help me organize my family archive. I have [describe what you have: old photos, letters, documents]. Suggest a simple step-by-step plan to scan, restore, and label everything, and which free tools to use for each step.</div></div></div>
+    </section>
+
+    <!-- ============ PRACTICE SHEETS ============ -->
+    <section class="doc-section" id="practice-sheets">
+      <h2 class="doc-h2">Practice sheets</h2>
+      <p class="doc-lead">Printable one-page cards. Cut them out and keep them next to the phone or computer.</p>
+
+      <h3 class="doc-h3">Card A - The four-part question recipe</h3>
+      <table class="doc-table">
+        <thead><tr><th>Say</th><th>Then</th></tr></thead>
+        <tbody>
+          <tr><td>1. Who I am</td><td>"I am 72, and this is for my grandson..."</td></tr>
+          <tr><td>2. What I want</td><td>"...please write a short birthday message..."</td></tr>
+          <tr><td>3. The details</td><td>"...he loves dinosaurs and football..."</td></tr>
+          <tr><td>4. The format</td><td>"...about 60 words, warm and simple."</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">Card B - The five fix-up words</h3>
+      <ul>
+        <li><strong>Shorter</strong> - make the answer compact.</li>
+        <li><strong>Simpler</strong> - plain words, short sentences.</li>
+        <li><strong>Step by step</strong> - numbered instructions.</li>
+        <li><strong>With an example</strong> - a concrete sample.</li>
+        <li><strong>Another version</strong> - a different take.</li>
+      </ul>
+
+      <h3 class="doc-h3">Card C - The five golden safety rules</h3>
+      <ol>
+        <li>No secrets in the chat (passwords, cards, ID numbers).</li>
+        <li>Never send money because of a call or message.</li>
+        <li>AI does not call you first - hang up.</li>
+        <li>Verify important facts with official sources.</li>
+        <li>When in doubt, stop and ask family.</li>
+      </ol>
+
+      <h3 class="doc-h3">Card D - The daily ten minutes</h3>
+      <ol>
+        <li>One real task - 5 minutes.</li>
+        <li>One fix-up word - 2 minutes.</li>
+        <li>One curious question - 3 minutes.</li>
+      </ol>
+    </section>
+
+    <!-- ============ GLOSSARY ============ -->
+    <section class="doc-section" id="glossary">
+      <h2 class="doc-h2">Glossary</h2>
+      <p class="doc-lead">Every term in plain words.</p>
+      <table class="doc-table">
+        <thead><tr><th>Term</th><th>Plain meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AI (artificial intelligence)</strong></td><td>A computer program that imitates parts of human language and problem solving.</td></tr>
+          <tr><td><strong>App</strong></td><td>A program on the phone - the small icon you tap to open something.</td></tr>
+          <tr><td><strong>Account</strong></td><td>Your personal sign-in to a service, made with your email and a password.</td></tr>
+          <tr><td><strong>Chatbot</strong></td><td>The chat window where you talk to AI by typing or speaking.</td></tr>
+          <tr><td><strong>Prompt</strong></td><td>The message or question you send to the AI. Everything starts with a prompt.</td></tr>
+          <tr><td><strong>Reply / answer</strong></td><td>What the AI sends back.</td></tr>
+          <tr><td><strong>Follow-up</strong></td><td>Your next message after the first answer - the conversation continues naturally.</td></tr>
+          <tr><td><strong>Hallucination</strong></td><td>The AI's fancy word for making something up with full confidence. Real, but checkable.</td></tr>
+          <tr><td><strong>Voice assistant</strong></td><td>Siri, Google Assistant, or Alexa - the helper that listens to your spoken commands.</td></tr>
+          <tr><td><strong>Dictation</strong></td><td>Speaking and having the device write the words for you.</td></tr>
+          <tr><td><strong>Deepfake</strong></td><td>A fake photo, video, or voice created with AI, made to look real.</td></tr>
+          <tr><td><strong>Phishing</strong></td><td>Fake messages that try to steal passwords or money by pretending to be someone you trust.</td></tr>
+          <tr><td><strong>Project</strong></td><td>A folder in ChatGPT or Claude where chats about one subject live together, with their own instructions.</td></tr>
+          <tr><td><strong>Memory</strong></td><td>Things ChatGPT saves about you across chats so answers fit you better. You can see and delete it any time.</td></tr>
+          <tr><td><strong>Privacy</strong></td><td>Your right to control who sees your personal information.</td></tr>
+          <tr><td><strong>Free plan</strong></td><td>The no-cost version of an app, which is enough for everything in this course.</td></tr>
+          <tr><td><strong>Translate</strong></td><td>Turn words from one language into another.</td></tr>
+          <tr><td><strong>Plain words</strong></td><td>Simple, everyday language without jargon.</td></tr>
+          <tr><td><strong>Verify</strong></td><td>Check that something is true using a trusted official source.</td></tr>
+          <tr><td><strong>Family code word</strong></td><td>A secret word only your family knows, used to prove a caller is really family.</td></tr>
+          <tr><td><strong>AI image generator</strong></td><td>A tool that creates pictures from a written description, such as DALL-E or Adobe Firefly.</td></tr>
+          <tr><td><strong>Self-publishing</strong></td><td>Publishing a book yourself through services like Amazon KDP instead of a traditional publisher.</td></tr>
+          <tr><td><strong>Voice cloning</strong></td><td>Copying a person's voice with AI - the trick behind the fake "grandchild" phone call.</td></tr>
+          <tr><td><strong>Citation</strong></td><td>A note showing where a fact came from, so you can check it yourself.</td></tr>
+          <tr><td><strong>Allergen</strong></td><td>Something in food that can cause an allergic reaction in some people, like peanuts or milk.</td></tr>
+          <tr><td><strong>Halal certification</strong></td><td>An official label confirming that a food follows halal rules.</td></tr>
+          <tr><td><strong>Leaflet</strong></td><td>The paper inside the medicine box that explains the medicine.</td></tr>
+          <tr><td><strong>Health claim</strong></td><td>A statement that something prevents or cures illness - always to be checked before believing it.</td></tr>
+          <tr><td><strong>AI voice translator</strong></td><td>A chat app voice mode that hears one language and speaks the other. ChatGPT Voice is the best choice; Microsoft Copilot voice works too.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ INSTRUCTOR NOTES ============ -->
+    <section class="doc-section" id="instructor-notes">
+      <h2 class="doc-h2">Instructor notes</h2>
+      <p class="doc-lead">Everything needed to run the six-week course.</p>
+
+      <h3 class="doc-h3">Room setup and materials</h3>
+      <ul>
+        <li>Chairs with table space for phones, a large screen or projector for the slides, and strong wifi.</li>
+        <li>Printed handouts: the needs form (one per learner), the presenter quick reference, the live writing demo palette (one for the presenter), the four practice cards, the prompt library, and the safety rules.</li>
+        <li>Power strips and chargers - learners will arrive with low batteries.</li>
+        <li>One or two "table helpers" (volunteers or confident learners) per ten learners.</li>
+        <li>Name tags with large print.</li>
+      </ul>
+
+      <h3 class="doc-h3">Teaching tips that work with seniors</h3>
+      <ul>
+        <li><strong>Show, then do.</strong> Demonstrate once on the big screen, then let everyone try with a helper nearby.</li>
+        <li><strong>Repeat the point three times.</strong> Say it, show it, then ask the class to say it back in their own words.</li>
+        <li><strong>One success per session.</strong> End every session with each learner having completed at least one real task.</li>
+        <li><strong>Never say "it is easy."</strong> For someone who fears technology, "easy" sounds like a judgment. Say "it takes a few tries" instead.</li>
+        <li><strong>Patience over pace.</strong> If a session runs long on one exercise, that exercise was the valuable part - the curriculum can flex.</li>
+        <li><strong>Normalize mistakes.</strong> Share one of your own mistakes with AI every session. Learners relax when the teacher errs too.</li>
+        <li><strong>Phone-first.</strong> Most seniors will use AI on their phone. Where possible, teach on the phone with the computer as backup.</li>
+      </ul>
+
+      <h3 class="doc-h3">Six-week session plan</h3>
+      <table class="doc-table">
+        <thead><tr><th>Week</th><th>Goal</th><th>Main hands-on</th><th>Homework</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>1</strong></td>
+            <td>Everyone sends a first message and gets an answer.</td>
+            <td>Collect the needs form; Practices 1-3 (say hello, big question, the menu); install one app together.</td>
+            <td>One curious question per day; read the safety card aloud once.</td>
+          </tr>
+          <tr>
+            <td><strong>2</strong></td>
+            <td>Everyone writes one real letter with the four-part recipe.</td>
+            <td>Practices 4-8 (before/after, complaint, appointment, explainer).</td>
+            <td>Send the letter or email for real this week.</td>
+          </tr>
+          <tr>
+            <td><strong>3</strong></td>
+            <td>Health helpers plus the privacy line.</td>
+            <td>Practices 10-18 (meals, chair routine, medication table, food checks, pharmacy, doctor visits).</td>
+            <td>Make the medication table and put it on the fridge.</td>
+          </tr>
+          <tr>
+            <td><strong>4</strong></td>
+            <td>Family connection: messages, stories, translation.</td>
+            <td>Practices 19-24 plus one photo caption.</td>
+            <td>Send one family message and translate one text.</td>
+          </tr>
+          <tr>
+            <td><strong>5</strong></td>
+            <td>Voice-first use plus one hobby project.</td>
+            <td>Practice 27 (spoken task) and Practice 26 (hobby interview).</td>
+            <td>Use voice commands for all reminders for one day.</td>
+          </tr>
+          <tr>
+            <td><strong>6</strong></td>
+            <td>Scam safety, the code word, and independence.</td>
+            <td>Safety quiz, set the family code word, plan the practice club.</td>
+            <td>Teach one friend one thing; keep the ten-minute habit.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 class="doc-h3">Accessibility checklist</h3>
+      <ul>
+        <li>Slides: text 28 points or larger, dark on light, one idea per slide.</li>
+        <li>Handouts: 14-16 point text, generous spacing.</li>
+        <li>Hearing: use the room microphone; repeat questions aloud before answering.</li>
+        <li>Vision: offer the same content on paper and screen; keep the room bright.</li>
+        <li>Mobility: keyboard shortcuts and voice input reduce typing.</li>
+        <li>Pace: built-in breaks every 30 minutes.</li>
+      </ul>
+    </section>
+
+    <!-- ============ PRESENTATION PLAN ============ -->
+    <section class="doc-section" id="presentation-plan">
+      <h2 class="doc-h2">Presentation plan</h2>
+      <p class="doc-lead">The companion slide decks - a full 24-slide master deck, or two session decks for a compact workshop. The decks are designed to be projected while learners follow along with their own devices.</p>
+
+      <h3 class="doc-h3">The two-session workshop format</h3>
+      <p>For a compact two-part workshop, use the two session decks. Each session runs about 45-60 minutes including practice. One Kahoot quiz covers both sessions and is played at the end of session 2.</p>
+      <table class="doc-table">
+        <thead><tr><th>Session</th><th>Deck file</th><th>What it covers</th><th>Ends with</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1 - Your Friendly Everyday Helper</strong></td><td>AIEducationPresentation-Session1.html</td><td>17 slides: needs map, what AI is, the four-part recipe, install and test, the tricks slide, letters, health line, food checks, family, translation, daily habit</td><td>A look ahead to session 2 - the Kahoot comes later</td></tr>
+          <tr><td><strong>2 - Voice, Big Projects, and Safety</strong></td><td>AIEducationPresentation-Session2.html</td><td>17 slides: recap, voice, photos, hobbies, travel, doctor visits, pharmacy and health claims, your second chapter, writing a book, tool matching, golden rules, scams, the helper app, volunteer program</td><td>Kahoot-Questions.txt (12 questions)</td></tr>
+        </tbody>
+      </table>
+      <p>Kahoot setup: create one kahoot and enter the 12 questions from <strong>Kahoot-Questions.txt</strong> - each has four answer options, the correct answer, a suggested 20-second time limit, and a short "why" line to say after the reveal.</p>
+
+      <h3 class="doc-h3">The full 24-slide master deck</h3>
+      <table class="doc-table">
+        <thead><tr><th>Slide</th><th>Content</th><th>Presenter note</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Title: "AI - Your Friendly Everyday Helper"</td><td>Open warmly: "You already use AI every day without knowing it."</td></tr>
+          <tr><td>2</td><td>The promise: three benefits</td><td>Independence, connection, confidence - the three words of the course.</td></tr>
+          <tr><td>3</td><td>What is hard for you? - the needs map</td><td>Learners fill the printed needs form: tick difficulties, write their three biggest. The presenter picks several and answers them live with AI; the form goes home with the learner.</td></tr>
+          <tr><td>4</td><td>AI in plain words - the library friend</td><td>Tell the library-friend story slowly. Ask for their own analogy.</td></tr>
+          <tr><td>5</td><td>What AI is not</td><td>Talk to them as fellow adults who already use AI daily: it is not a person, it only sees what you type, and it can be wrong - so check what matters.</td></tr>
+          <tr><td>6</td><td>AI is already in your life</td><td>Invite the group to name examples - maps, spam filters, bank alerts.</td></tr>
+          <tr><td>7</td><td>The one skill: asking well (four parts)</td><td>Say the recipe out loud twice, then open the hidden sample prompts one by one. This is the most important slide.</td></tr>
+          <tr><td>8</td><td>Weak prompt vs strong prompt</td><td>Read both aloud, then run the three hands-on blocks: write your own question, write in your own language first, and the translate-back check.</td></tr>
+          <tr><td>9</td><td>Tricks that save you time</td><td>Demo two tricks live: voice translation and read-it-back. Use the hands-up poll to find which tricks are new to the room.</td></tr>
+          <tr><td>10</td><td>Install and test together</td><td>Walk the app-store steps slowly; suggest DeepSeek for the largest free limits; finish the "test it now" checklist before moving on.</td></tr>
+          <tr><td>11</td><td>Everyday letters and emails</td><td>Show the complaint letter result. This is the week-2 task.</td></tr>
+          <tr><td>12</td><td>Health companion</td><td>State the safety line twice. Never a diagnosis - ideas and explanations only.</td></tr>
+          <tr><td>13</td><td>Food: ingredients, allergies, halal</td><td>Live-demo the allergy prompt. The label and the certification mark are the authority.</td></tr>
+          <tr><td>14</td><td>Doctor visits made easier</td><td>Before: questions; during: translator; after: plain-word summary.</td></tr>
+          <tr><td>15</td><td>Pharmacy and health facts</td><td>Walk the true-or-false workflow for health news. The pharmacist decides, always.</td></tr>
+          <tr><td>16</td><td>Family and connection</td><td>Mention homework help and bedtime stories - strong emotional hooks.</td></tr>
+          <tr><td>17</td><td>Translation: your language bridge</td><td>Live-demo ChatGPT Voice translation with a volunteer (Copilot voice as backup).</td></tr>
+          <tr><td>18</td><td>Memory and hobbies</td><td>The family story booklet is the long-term project of the course.</td></tr>
+          <tr><td>19</td><td>Your second chapter - big projects</td><td>Light the ambition: books, expertise, building, the archive. Life experience is the raw material.</td></tr>
+          <tr><td>20</td><td>Voice: talk, do not type</td><td>Live-demo one spoken command if possible. This slide relieves a lot of worry.</td></tr>
+          <tr><td>21</td><td>Photo magic</td><td>Open the built-in before/after demos on the slide - no installation needed. Even better: photograph one old family photo beforehand and run the Magic Editor fix live.</td></tr>
+          <tr><td>22</td><td>Write your book - the workflow</td><td>Walk the four steps slowly. Many learners secretly want this one.</td></tr>
+          <tr><td>23</td><td>Travel and planning</td><td>Fun, light slide - a dream trip plan takes one minute to generate.</td></tr>
+          <tr><td>24</td><td>Which AI for which task - everyday</td><td>The matching table learners will photograph with their phones.</td></tr>
+          <tr><td>25</td><td>AI creates: pictures, music, videos</td><td>Open the three samples - the cat astronaut painting, the Suno song, the sailing-boat video - then poll which one to try.</td></tr>
+          <tr><td>26</td><td>The five golden safety rules</td><td>Read all five slowly. Learners repeat them back.</td></tr>
+          <tr><td>27</td><td>Scams that use AI</td><td>Tell the voice-clone story calmly. Introduce the family code word.</td></tr>
+          <tr><td>28</td><td>Ten minutes a day</td><td>The daily routine. Repetition beats intensity.</td></tr>
+          <tr><td>29</td><td>Prompt cards to take home</td><td>Point to the printed cards in their hands. These are the take-away.</td></tr>
+          <tr><td>30</td><td>Volunteer: build a curriculum for youth</td><td>Present the flow: chat with AI, export as PDF, the team uploads it. Collect names after the Kahoot.</td></tr>
+          <tr><td>31</td><td>Closing: today's first step</td><td>End with the first practice prompt, said together out loud.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ============ SUCCESS MEASURES ============ -->
+    <section class="doc-section" id="success-measures">
+      <h2 class="doc-h2">Success measures</h2>
+      <p class="doc-lead">How learners - and organizers - know the course worked.</p>
+
+      <h3 class="doc-h3">Confidence self-check (before and after)</h3>
+      <p>Rate each line 1 (not at all) to 5 (completely):</p>
+      <ul>
+        <li>I can open an AI chat on my own device.</li>
+        <li>I can ask a question that gets a useful answer.</li>
+        <li>I know what to do when an answer is confusing or wrong.</li>
+        <li>I can use AI for a real daily task (a letter, a list, a plan).</li>
+        <li>I know the safety rules and can spot a suspicious message.</li>
+        <li>I am confident I can keep learning without help.</li>
+      </ul>
+
+      <h3 class="doc-h3">The friendly quiz (10 questions)</h3>
+      <div class="quiz-q"><p>1. Is AI a person who secretly reads your messages?</p><p class="quiz-a">No. AI is a computer program. It only sees what you type, and you should treat chats as public anyway.</p></div>
+      <div class="quiz-q"><p>2. What is a "prompt"?</p><p class="quiz-a">The question or instruction you send to the AI. Everything starts with a prompt.</p></div>
+      <div class="quiz-q"><p>3. The answer is too long. What do you type?</p><p class="quiz-a">"Make it shorter" - or any of the five fix-up words: shorter, simpler, step by step, with an example, another version.</p></div>
+      <div class="quiz-q"><p>4. Should you type your bank PIN into a chat?</p><p class="quiz-a">Never. No passwords, card numbers, or ID numbers in any chat.</p></div>
+      <div class="quiz-q"><p>5. A caller sounds exactly like your grandson and asks for urgent money. What do you do?</p><p class="quiz-a">Hang up and call his real number. Voices can be copied. Use the family code word.</p></div>
+      <div class="quiz-q"><p>6. Can AI make mistakes?</p><p class="quiz-a">Yes - often, and with full confidence. Always verify important facts with official sources.</p></div>
+      <div class="quiz-q"><p>7. What is a deepfake?</p><p class="quiz-a">A fake photo, video, or voice made with AI, designed to look real.</p></div>
+      <div class="quiz-q"><p>8. Name one daily task AI can help with.</p><p class="quiz-a">Letters and emails, shopping lists, menus, reminders, translation, explanations, stories - any one is correct.</p></div>
+      <div class="quiz-q"><p>9. Who should decide medical questions?</p><p class="quiz-a">Doctors, nurses, and pharmacists. AI gives ideas and explanations, never decisions.</p></div>
+      <div class="quiz-q"><p>10. How much daily practice keeps the skill alive?</p><p class="quiz-a">Ten minutes a day - one real task, one fix-up, one curious question.</p></div>
+
+      <h3 class="doc-h3">Organizer success signs</h3>
+      <ul>
+        <li>At least 8 of 10 learners send their first message in session one.</li>
+        <li>At least 7 of 10 send a real letter or email by week two.</li>
+        <li>Learners choose to continue: a practice club forms after the course.</li>
+        <li>Learners report using AI at home between sessions - the surest sign the habit took root.</li>
+      </ul>
+    </section>
+
+    <footer class="doc-footer">
+      <p><strong>AI Education for Seniors</strong> - complete course document. Companion deck: AIEducationPresentationForSeniors.html. Version 1.6, 26 September 2026.</p>
+      <p>Free to use, adapt, and translate for community education. The health and safety rules in Modules 5 and 9 must be kept in any adaptation.</p>
+      <a class="back-top" href="#about">Back to top</a>
+    </footer>
+
+  </main>
+</div>
+</body>
+</html>

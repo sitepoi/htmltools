@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Tools and Their Benefits - Presenter Quick Reference</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --line: #dfe6ec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef2f6;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .tr-shell { max-width: 840px; margin: 0 auto; background: #ffffff; padding: 26px 38px 44px; min-height: 100vh; }
+  .tr-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+  }
+  .tr-top img { height: 44px; width: auto; }
+  .tr-top-title { font-size: 20px; font-weight: 800; color: var(--accent-dark); }
+  .tr-top-sub { font-size: 13.5px; color: var(--muted); }
+  .tr-print-btn {
+    margin-left: auto;
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  h1 { color: var(--accent); font-size: 27px; margin: 0 0 4px; }
+  .tr-lead { color: var(--muted); margin: 0 0 14px; }
+  .tr-rules { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 12px 0 4px; }
+  .tr-rules-label {
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--accent);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .tr-rules ul { margin: 0; padding-left: 20px; }
+  .tr-rules li { margin: 4px 0; }
+  h2 {
+    color: var(--ink);
+    font-size: 18px;
+    margin: 20px 0 8px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 4px;
+  }
+  table.tr-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  table.tr-table th {
+    background: var(--soft);
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  table.tr-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 14px; }
+  table.tr-table tr:nth-child(even) td { background: #fafcfd; }
+  .tr-footer { margin-top: 24px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); padding-top: 10px; }
+  .tr-print-header, .tr-print-footer { display: none; }
+  .tr-print-table, .tr-print-table tbody, .tr-print-table tr, .tr-print-table td { display: block; }
+  .tr-print-table thead, .tr-print-table tfoot { display: none; }
+  .tr-table a { color: var(--accent); }
+  @media (max-width: 700px) {
+    .tr-shell { padding: 18px 14px 36px; }
+    table.tr-table th, table.tr-table td { font-size: 12.5px; padding: 6px 6px; }
+  }
+  @media print {
+    @page { size: A4; margin: 18mm 14mm 14mm; }
+    body { background: #ffffff; font-size: 11px; }
+    .tr-shell { max-width: none; padding: 0; min-height: 0; }
+    .tr-top { display: none; }
+    .tr-print-btn { display: none; }
+    .tr-print-table { display: table; width: 100%; border-collapse: collapse; }
+    .tr-print-table thead { display: table-header-group; }
+    .tr-print-table tfoot { display: table-footer-group; }
+    .tr-print-table tbody { display: table-row-group; }
+    .tr-print-table tr { display: table-row; }
+    .tr-print-table td { display: table-cell; padding: 0; }
+    .tr-print-content-cell { padding: 0 0 4mm; }
+    .tr-print-header {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      padding: 3mm 16mm;
+      border-bottom: 0.5mm solid #c8102e;
+      background: #ffffff;
+    }
+    .tr-print-header img { height: 8mm; width: auto; }
+    .tr-print-header-text { flex: 1; overflow: hidden; }
+    .tr-print-header-title { font-size: 10pt; font-weight: 700; line-height: 1.15; }
+    .tr-print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
+    .tr-print-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3mm 16mm;
+      border-top: 0.4mm solid var(--line);
+      font-size: 8pt;
+      color: var(--muted);
+      background: #ffffff;
+    }
+    a { color: inherit; text-decoration: none; }
+    h1 { font-size: 15pt; }
+    .tr-rules { break-inside: avoid; padding: 2.5mm 4mm; margin: 2mm 0 1mm; }
+    .tr-rules li { margin: 1mm 0; }
+    h2 { break-after: avoid; font-size: 11pt; margin: 4mm 0 1.5mm; }
+    table.tr-table { margin: 1mm 0 2mm; }
+    table.tr-table th, table.tr-table td { font-size: 8.6pt; padding: 1.4mm 2mm; }
+    table.tr-table tr { break-inside: avoid; }
+    table.tr-table thead { display: table-header-group; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Repeating print header and footer: in-flow table header rows, so they never overlap content -->
+<table class="tr-print-table">
+  <thead>
+    <tr>
+      <td>
+        <div class="tr-print-header">
+          <img src="centrecanada-logo.png" alt="" />
+          <div class="tr-print-header-text">
+            <div class="tr-print-header-title">AI tools and their benefits - presenter quick reference</div>
+            <div class="tr-print-header-sub">CentreCanada Newcomer Services Society</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="tr-print-content-cell">
+
+<div class="tr-shell">
+
+  <div class="tr-top">
+    <img src="centrecanada-logo.png" alt="CentreCanada logo" />
+    <div>
+      <div class="tr-top-title">AI Tools and Their Benefits</div>
+      <div class="tr-top-sub">CentreCanada Newcomer Services Society</div>
+    </div>
+    <button class="tr-print-btn" type="button" onclick="window.print()">Print</button>
+  </div>
+
+  <h1>AI tools and their benefits</h1>
+  <p class="tr-lead">Presenter quick reference. Print this before the seminar and keep it beside you. Every tool covered today is here, with what it does and the benefit it gives - so you can answer questions from this sheet instead of searching or asking an AI live in front of the room.</p>
+
+  <div class="tr-rules">
+    <span class="tr-rules-label">How to answer questions with this sheet</span>
+    <ul>
+      <li>Someone asks for a tool for a specific need - point to the matching group and read the benefit line.</li>
+      <li>Someone already uses a tool - welcome it, ask what they use it for, and show one more thing the same tool can do.</li>
+      <li>Someone names a tool that is not on this list - write it down and answer at the break. Never stop the seminar to search.</li>
+    </ul>
+  </div>
+
+  <h2>1. Chat and voice tools</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://chatgpt.com"><strong>ChatGPT</strong></a> (free plan)</td><td>All-rounder: letters, explanations, meal plans, photos, and the best live spoken translation by voice.</td><td>One app covers most daily needs - the recommended first tool.</td></tr>
+      <tr><td><a href="https://chat.deepseek.com"><strong>DeepSeek</strong></a> (free plan)</td><td>Full chat and voice with the most generous free limits.</td><td>The best free choice for daily heavy use - our suggestion for the seminar.</td></tr>
+      <tr><td><a href="https://claude.ai"><strong>Claude</strong></a> (free plan)</td><td>Long documents, warm careful writing, patient interviews.</td><td>Best for long letters, life stories, and polite personal writing.</td></tr>
+      <tr><td><a href="https://gemini.google.com"><strong>Gemini</strong></a> (free plan)</td><td>Connected to Google: search, maps, YouTube, Gmail.</td><td>Great for travel plans and questions about places.</td></tr>
+      <tr><td><a href="https://copilot.microsoft.com"><strong>Microsoft Copilot</strong></a> (free plan)</td><td>Built into Windows, Word, and Outlook. Spoken translation backup.</td><td>Easiest for Windows users; the second voice translator.</td></tr>
+      <tr><td><a href="https://www.perplexity.ai"><strong>Perplexity</strong></a> (free plan)</td><td>Answers with a source shown for every claim.</td><td>Verifying news and health claims without blind trust.</td></tr>
+      <tr><td><a href="https://www.meta.ai"><strong>Meta AI</strong></a> (free)</td><td>Lives inside WhatsApp and Facebook Messenger.</td><td>No new app to learn - ask where you already chat.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>2. Translation and language</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.deepl.com"><strong>DeepL</strong></a> (free)</td><td>The most natural written translation of letters.</td><td>Letters keep a warm, human tone in both directions.</td></tr>
+      <tr><td><a href="https://translate.google.com"><strong>Google Translate</strong></a> / <a href="https://www.apple.com/iphone/"><strong>Apple Translate</strong></a> (free)</td><td>Written and camera translation; Conversation mode as backup.</td><td>Point the camera at signs, menus, and medicine boxes.</td></tr>
+      <tr><td><a href="https://lens.google.com"><strong>Google Lens</strong></a> (free)</td><td>Reads and translates anything printed through the camera.</td><td>Instant reading of labels, menus, and letters.</td></tr>
+      <tr><td><a href="https://chatgpt.com"><strong>ChatGPT Voice</strong></a> (free)</td><td>Live two-way spoken translation - the best choice.</td><td>Natural conversation in two languages on one phone.</td></tr>
+      <tr><td><a href="https://www.duolingo.com"><strong>Duolingo</strong></a> (free)</td><td>Daily language practice games.</td><td>Learning a family language in small steps.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. Health and healthy aging</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://chatgpt.com"><strong>ChatGPT</strong></a> or <a href="https://claude.ai"><strong>Claude</strong></a> (free)</td><td>Meal and movement plans within your doctor's limits.</td><td>Independence in daily choices, no guesswork.</td></tr>
+      <tr><td><a href="https://www.medisafe.com"><strong>Medisafe</strong></a> (free)</td><td>Pill reminders and daily medication schedules.</td><td>Right medicine at the right time, no forgotten doses.</td></tr>
+      <tr><td><a href="https://www.mytherapyapp.com/"><strong>MyTherapy</strong></a> (free)</td><td>Pill reminders, dose records, and health reports to share with your doctor.</td><td>Right medicine at the right time, plus a report for the doctor.</td></tr>
+      <tr><td><a href="https://www.apple.com/ios/health/"><strong>Apple Health</strong></a> / <a href="https://www.google.com/fit/"><strong>Google Fit</strong></a> (built in)</td><td>Automatic step and activity counting.</td><td>Seeing your progress keeps you moving.</td></tr>
+      <tr><td><a href="https://www.bemyeyes.com"><strong>Be My Eyes</strong></a> (free)</td><td>Reads labels and surroundings aloud for low vision.</td><td>A helper in your pocket for daily reading.</td></tr>
+      <tr><td><a href="https://www.seeingai.com"><strong>Seeing AI</strong></a> (free)</td><td>Reads any text aloud through the camera.</td><td>Letters and papers become spoken words.</td></tr>
+      <tr><td><a href="https://support.google.com/accessibility"><strong>Phone live captions</strong></a> (built in)</td><td>Turns conversations into text on the screen.</td><td>Full participation despite hearing difficulty.</td></tr>
+      <tr><td><a href="https://medlineplus.gov"><strong>MedlinePlus</strong></a> / <a href="https://www.who.int"><strong>WHO</strong></a> (free)</td><td>Official health information and fact checks.</td><td>The only authorities that settle health claims.</td></tr>
+      <tr><td><strong>Doctor visit helper + <a href="https://chatgpt.com">AI voice translator</a></strong> (free)</td><td>Questions before, translation during, summary after a visit.</td><td>Calmer visits where nothing important is forgotten.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4. Photos and creativity</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://photos.google.com"><strong>Google Photos Magic Editor</strong></a> / <a href="https://www.apple.com/iphone/"><strong>iPhone Clean Up</strong></a> (built in)</td><td>One-tap repair of old photos.</td><td>Family memories look their best.</td></tr>
+      <tr><td><a href="https://www.myheritage.com"><strong>MyHeritage photo tools</strong></a> (free tier)</td><td>Adds realistic color to old portraits.</td><td>Black-and-white family photos come alive.</td></tr>
+      <tr><td><a href="https://chatgpt.com"><strong>DALL-E inside ChatGPT</strong></a> (free tier)</td><td>Creates an image from a written description.</td><td>Pictures for cards, slides, and fun.</td></tr>
+      <tr><td><a href="https://designer.microsoft.com"><strong>Microsoft Designer</strong></a> (free)</td><td>Designs from one sentence.</td><td>Invitations and posters in minutes.</td></tr>
+      <tr><td><a href="https://firefly.adobe.com"><strong>Adobe Firefly</strong></a> (free tier)</td><td>Image creation that is safe for selling.</td><td>Art you may sell without legal worry.</td></tr>
+      <tr><td><a href="https://www.canva.com"><strong>Canva Magic</strong></a> (free tier)</td><td>Flyers, posters, invitations, and presentations from a sentence.</td><td>Full designs for causes and events without design skills.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Video, audio, and music</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.capcut.com"><strong>CapCut</strong></a> (free)</td><td>Easy video editing with automatic captions.</td><td>Family and hobby videos look professional.</td></tr>
+      <tr><td><a href="https://www.descript.com"><strong>Descript</strong></a> (free tier)</td><td>Edits audio by editing text.</td><td>Fix a recording by deleting sentences.</td></tr>
+      <tr><td><a href="https://otter.ai"><strong>Otter.ai</strong></a> (free tier)</td><td>Turns voice recordings into text.</td><td>Memories and interviews become written keepsakes.</td></tr>
+      <tr><td><a href="https://suno.com"><strong>Suno</strong></a> (free tier)</td><td>Sings songs from your own lyrics. Class samples: <a href="https://suno.com/s/U3rcRDoJhvxihn2o">sample 1</a>, <a href="https://suno.com/s/8CS6APbLfyeCiXee">sample 2</a>.</td><td>A personal song for birthdays and weddings.</td></tr>
+      <tr><td><a href="https://www.spotify.com"><strong>Spotify AI DJ</strong></a> (with free account)</td><td>Finds music you will like.</td><td>New music without searching.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Learning and hobbies</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.khanacademy.org/khanmigo"><strong>Khanmigo</strong></a> (Khan Academy)</td><td>A tutor built for students.</td><td>Grandchildren get guided homework help.</td></tr>
+      <tr><td><a href="https://merlin.allaboutbirds.org"><strong>Merlin Bird ID</strong></a> (free)</td><td>Names birds by song or photo.</td><td>The garden and the park get names.</td></tr>
+      <tr><td><a href="https://www.inaturalist.org"><strong>iNaturalist</strong></a> (free)</td><td>Names plants, mushrooms, and insects.</td><td>Walking in nature becomes a hobby.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7. Home, money, and projects</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.apple.com/siri/"><strong>Siri</strong></a> / <a href="https://assistant.google.com"><strong>Google Assistant</strong></a> / <a href="https://alexa.amazon.com"><strong>Alexa</strong></a> (built in)</td><td>Reminders, timers, calls, music by voice.</td><td>Hands-free help at home.</td></tr>
+      <tr><td><a href="https://www.snugsafe.com/"><strong>Snug</strong></a> (free version)</td><td>One tap a day to check in; family is alerted if a check-in is missed.</td><td>Peace of mind when living alone.</td></tr>
+      <tr><td><a href="https://www.grammarly.com"><strong>Grammarly</strong></a> (free tier)</td><td>Grammar and clarity pass on anything you wrote.</td><td>Letters leave with clean spelling.</td></tr>
+      <tr><td><a href="https://www.wix.com"><strong>Wix AI</strong></a> / <a href="https://www.squarespace.com"><strong>Squarespace</strong></a> (free trials)</td><td>Builds a website from a description.</td><td>A shop or club page without code.</td></tr>
+      <tr><td><a href="https://kdp.amazon.com"><strong>Amazon KDP</strong></a> / <a href="https://www.blurb.com"><strong>Blurb</strong></a> (free to publish)</td><td>Self-publishing a book.</td><td>Your life story becomes a real book.</td></tr>
+      <tr><td><strong>Senior Helper AI Coordinator</strong> (free)</td><td>Big-button app: one tap per task, reads answers aloud.</td><td>The easiest entry point after the seminar.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Brain and mind</h2>
+  <table class="tr-table">
+    <thead><tr><th style="width:24%">Tool</th><th style="width:38%">What it does best</th><th>Benefit for you</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.mindmate-app.com/"><strong>MindMate</strong></a> (free)</td><td>Brain games, memory exercises, and mental health support built for seniors.</td><td>One app designed for older adults - a daily mental workout.</td></tr>
+      <tr><td><a href="https://www.lumosity.com/en/"><strong>Lumosity</strong></a> (free tier)</td><td>Games for memory, attention, and problem solving.</td><td>A few free games a day keep the mind sharp.</td></tr>
+      <tr><td><a href="https://www.peak.net/"><strong>Peak</strong></a> (free version)</td><td>Short daily workouts for memory and mental agility.</td><td>A personal training plan in a few minutes a day.</td></tr>
+      <tr><td><a href="https://www.cognifit.com/"><strong>CogniFit</strong></a> (free tier)</td><td>Science-based games and cognitive assessments.</td><td>Tracks memory and focus over time.</td></tr>
+      <tr><td><a href="https://play.google.com/store/apps/details?id=com.apptoyslab.membrain"><strong>Fit Brains Trainer</strong></a> (free tier)</td><td>Games for memory, speed, and logic by Rosetta Stone.</td><td>Short sessions, a different skill each day.</td></tr>
+      <tr><td><a href="https://www.happy-neuron.com/"><strong>Happy Neuron</strong></a> (free tier)</td><td>Games for memory, attention, language, and reasoning.</td><td>Puzzles that feel like play.</td></tr>
+      <tr><td><a href="https://www.neuronation.com/"><strong>NeuroNation</strong></a> (free tier)</td><td>Personalized training for memory and concentration.</td><td>Exercises tailored to you.</td></tr>
+      <tr><td><a href="https://www.brainwell.com/"><strong>Brainwell</strong></a> (free)</td><td>Games for memory, problem solving, and critical thinking.</td><td>Daily challenges with levels.</td></tr>
+      <tr><td><a href="https://elevateapp.com/"><strong>Elevate</strong></a> (free version)</td><td>Games for comprehension, focus, and processing speed.</td><td>Personalized daily workouts.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Questions about the future of AI</h2>
+  <div class="tr-rules">
+    <span class="tr-rules-label">If someone asks: where is all this going?</span>
+    <ul>
+      <li><strong>Near future - 1 to 3 years:</strong> AI built into every phone and computer, better voice chats, forms and translations finished in seconds, doctors and banks using AI assistants - with a human always signing off. Meaning: fewer apps to learn, you will mostly talk to your phone.</li>
+      <li><strong>Longer term - 5 to 15 years:</strong> personal assistants that remember appointments and medicines, health sensors watched over by the doctor, smarter homes and transport. Meaning: AI removes busywork - people stay in charge of money, health, and family decisions.</li>
+      <li><strong>The one promise:</strong> the skill taught today - asking well - never goes out of date. And the five golden rules still work in 2035.</li>
+    </ul>
+  </div>
+
+  <h2>10. If someone asks: how do I make AI answers better?</h2>
+  <div class="tr-rules">
+    <span class="tr-rules-label">The talk-and-improve loop</span>
+    <ul>
+      <li>Draft - listen - say one change - listen again. Do it all by voice: "read it back to me", then "warmer", "shorter", "remove the second paragraph".</li>
+      <li>One change per round beats five at once.</li>
+      <li>Ask for options: "give me two versions - formal and warm".</li>
+      <li>Let AI suggest: "what would make this better? three ideas" - the learner decides which to keep.</li>
+      <li>For documents: draft, add, reorder, shorten, check facts, translate, read aloud - each step is one spoken instruction.</li>
+      <li>For the live demo, print the prompt palette - AIEducationForSeniors-LiveWritingDemo.html - universal follow-ups chosen by looking at the draft, never by guessing.</li>
+    </ul>
+  </div>
+
+  <div class="tr-footer">AI Education for Seniors - CentreCanada Newcomer Services Society - print one copy for the presenter before the seminar - Version 1.5 - 26 September 2026</div>
+</div>
+      </td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>
+        <div class="tr-print-footer">
+          <span>CentreCanada - AI for Seniors - Presenter Quick Reference</span>
+          <span>Version 1.5 - 26 September 2026</span>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+</body>
+</html>

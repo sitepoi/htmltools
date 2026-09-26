@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeniorHelperAICoordinator - Test Harness</title>
+<link rel="stylesheet" href="SeniorHelperAICoordinator.css">
+<style>
+  body { margin: 0; padding: 0; }
+  #th-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 8px 12px; background: #0f172a; color: #e2e8f0; font: 12px system-ui, sans-serif;
+  }
+  #th-bar button {
+    padding: 5px 10px; border: 1px solid #4c4a63; background: #2a2740; color: #e2e8f0;
+    border-radius: 6px; cursor: pointer; font: 11px system-ui, sans-serif;
+  }
+  #th-bar button:hover { background: #3a3657; }
+  #th-status { margin-left: auto; color: #a5a0b8; font-size: 11px; }
+  #th-dump-wrap { display: none; background: #0f172a; color: #7dd3fc; padding: 10px; max-height: 200px; overflow: auto; }
+  #th-dump { font: 11px Consolas, monospace; white-space: pre-wrap; margin: 0; }
+  .tool-host { max-width: 1100px; margin: 0 auto; padding: 12px; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>Senior Helper AI Coordinator</strong>
+  <button id="th-role-btn">Role: developer</button>
+  <button id="th-toggle-ro">Toggle read-only</button>
+  <button id="th-dump-btn">Dump saved value</button>
+  <button id="th-clear-sessions">Clear chat store</button>
+  <button id="th-reload">Reload</button>
+  <span id="th-status">Ready</span>
+</div>
+<div id="th-dump-wrap"><pre id="th-dump"></pre></div>
+<div class="tool-host">
+
+<!-- TOOL HTML INLINED -->
+<div id="shc-app">
+  <header class="shc-header">
+    <div class="shc-heading">
+      <div class="shc-greeting" id="shc-greeting">Good day! What would you like help with?</div>
+      <div class="shc-subline">Choose a task below, or type your question in your own words. You can also say it - many phones let you talk instead of type.</div>
+    </div>
+    <div class="shc-header-tools">
+      <button type="button" class="shc-toolbtn" id="shc-new-chat" title="Start a fresh conversation">New chat</button>
+      <button type="button" class="shc-toolbtn" id="shc-text-bigger" title="Make all text bigger">Bigger text</button>
+      <button type="button" class="shc-toolbtn" id="shc-text-smaller" title="Make all text smaller">Smaller text</button>
+      <button type="button" class="shc-toolbtn" id="shc-listen-toggle" title="Read the answers out loud">Listen: off</button>
+    </div>
+  </header>
+
+  <div class="shc-category-grid" id="shc-category-grid">
+    <button type="button" class="shc-catbtn" data-category-key="free-question"><span class="shc-catname">My own question</span><span class="shc-cathint">Ask anything in your own words</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="write-letter"><span class="shc-catname">Write a letter or email</span><span class="shc-cathint">Complaints, thank-you notes, requests</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="explain-text"><span class="shc-catname">Explain a letter or paper</span><span class="shc-cathint">Bank, insurance, government letters</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="plan-week"><span class="shc-catname">Plan my week and meals</span><span class="shc-cathint">Menus and a shopping list</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="health-helper"><span class="shc-catname">Health helper</span><span class="shc-cathint">Meals, movement, schedules - ideas only</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="food-ingredients"><span class="shc-catname">Food and ingredients</span><span class="shc-cathint">Allergy, halal, veggie, vegan, and diet checks</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="pharmacy-help"><span class="shc-catname">Pharmacy and medicines</span><span class="shc-cathint">Understand medicines, check health claims</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="doctor-visit"><span class="shc-catname">Doctor visit helper</span><span class="shc-cathint">Prepare questions, summarize after</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="translate-help"><span class="shc-catname">Translate</span><span class="shc-cathint">Letters, phrases, doctor visits</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="family-message"><span class="shc-catname">Message for family</span><span class="shc-cathint">Birthdays, stories, homework help</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="hobby-project"><span class="shc-catname">Hobbies and projects</span><span class="shc-cathint">Gardening, crafts, music, games</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="trip-plan"><span class="shc-catname">Plan a trip</span><span class="shc-cathint">Day-by-day plans and packing</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="learn-new"><span class="shc-catname">Learn something new</span><span class="shc-cathint">A gentle plan from zero</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="my-stories"><span class="shc-catname">Write my stories</span><span class="shc-cathint">Memoir, family stories, recipes</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="safety-check"><span class="shc-catname">Check a suspicious message</span><span class="shc-cathint">Is this a scam? Paste it here</span></button>
+    <button type="button" class="shc-catbtn" data-category-key="my-notes"><span class="shc-catname">My saved answers</span><span class="shc-cathint">Answers I kept for later</span></button>
+  </div>
+
+  <main class="shc-main">
+    <section class="shc-panel shc-form-panel" id="shc-form-panel"></section>
+
+    <section class="shc-panel shc-chat-panel" id="shc-chat-panel">
+      <div class="shc-quick-starts" id="shc-quick-starts"></div>
+      <div class="shc-chat-messages" id="shc-chat-messages">
+        <div class="shc-welcome-note" id="shc-welcome-note">
+          <div class="shc-welcome-title">This is your helper</div>
+          <p>Tap one of the ready questions below, or type your own. The helper answers in plain words, in short paragraphs, and never gets impatient.</p>
+          <p>For health, money, and legal matters, the helper gives ideas - your doctor, bank, and family make the decisions. Your five golden safety rules are at the bottom of this page.</p>
+        </div>
+      </div>
+      <div class="shc-again-chips" id="shc-again-chips"></div>
+      <div class="shc-chat-input-row">
+        <button type="button" class="shc-talk-btn" id="shc-talk-button" title="Talk instead of typing">Talk</button>
+        <textarea class="shc-chat-input" id="shc-chat-input" rows="2" placeholder="Type your question here..."></textarea>
+        <button type="button" class="shc-send-btn" id="shc-send-button">Ask</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shc-safety-card" id="shc-safety-card">
+    <div class="shc-safety-title">
+      <span>Your five golden safety rules</span>
+      <button type="button" class="shc-safety-toggle" id="shc-safety-toggle">Hide</button>
+    </div>
+    <div class="shc-safety-content" id="shc-safety-content">
+      <ol class="shc-safety-list">
+        <li>No secrets in the chat - never passwords, card numbers, or ID numbers.</li>
+        <li>Never send money because of a phone call or message.</li>
+        <li>AI does not call you first - hang up.</li>
+        <li>Check important facts with official sources.</li>
+        <li>When in doubt, stop and ask family.</li>
+      </ol>
+    </div>
+  </footer>
+
+  <div class="shc-modal-overlay" id="shc-copy-modal-overlay">
+    <div class="shc-modal-box">
+      <div class="shc-modal-title">Copy your question</div>
+      <div class="shc-modal-hint">Select the text below, then copy it. You can paste it into any AI app, like ChatGPT or Gemini.</div>
+      <textarea class="shc-modal-textarea" id="shc-copy-modal-text" rows="6"></textarea>
+      <div class="shc-modal-actions">
+        <button type="button" class="shc-modal-btn" id="shc-copy-modal-done">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /TOOL HTML INLINED -->
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function () {
+  var STORAGE_KEY = "seniorhelper_test_db";
+  var SESSION_KEY = "seniorhelper_test_sessions";
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var readOnlyFlag = false;
+  var roleIndex = 0;
+  var ROLE_LIST = [
+    { id: "u-dev", name: "Test Developer", email: "dev@example.com", roles: ["developer"] },
+    { id: "u-view", name: "Guest Viewer", email: "viewer@example.com", roles: ["viewer"] },
+    { id: "u-ed", name: "Mina Editor", email: "mina@example.com", roles: ["editor"] }
+  ];
+  var currentUser = ROLE_LIST[0];
+  var fields = {};
+  var storedValue = null;
+
+  function loadValue() { try { var raw = localStorage.getItem(STORAGE_KEY); storedValue = raw ? JSON.parse(raw) : null; } catch (e) { storedValue = null; } }
+  function saveValue() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(storedValue)); } catch (e) {} }
+  function fire(eventName, arg) { (listeners[eventName] || []).forEach(function (cb) { try { cb(arg); } catch (e) {} }); }
+
+  window.tool = {
+    onReady: function (cb) { loadValue(); setTimeout(function () { cb(storedValue, fields); }, 10); },
+    getValue: function () { return storedValue; },
+    setValue: function (data) { storedValue = data; saveValue(); fire("valueChange", storedValue); },
+    onValueChange: function (cb) { listeners.valueChange.push(cb); },
+    getFields: function () { return fields; },
+    setField: function (id, val) { fields[id] = val; },
+    setFields: function (obj) { Object.assign(fields, obj); },
+    watchField: function () {},
+    onFieldsChange: function () {},
+    param: function (name, defaultVal) {
+      if (name === "allowAi") { return "yes"; }
+      if (name === "allowObjectCRUD") { return "yes"; }
+      if (name === "userFirstName") { return "Mary"; }
+      if (name === "defaultTextScale") { return "normal"; }
+      return defaultVal;
+    },
+    isReadOnly: function () { return readOnlyFlag; },
+    onReadonlyChange: function (cb) { listeners.readonlyChange.push(cb); },
+    getUser: function () { return currentUser; },
+    onUserChange: function (cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function () { return [{ id: "u1", name: "Alice" }, { id: "u2", name: "Bob" }]; },
+    onPermittedUsersChange: function () {},
+    reportValid: function () {},
+    notify: function (msg, severity) { console.log("NOTIFY [" + (severity || "info") + "]:", msg); },
+    resize: function () {},
+    openUrl: function (url) { console.log("OPEN URL:", url); },
+    openObjectDetail: function () {},
+    declareOutput: function (schema) { console.log("declareOutput:", JSON.stringify(schema).substring(0, 140)); },
+    declareParams: function (params) { console.log("declareParams:", params.length, "params"); },
+    reportMissingParams: function (missing, message) { console.log("reportMissingParams:", missing, message); },
+    getParentPageUrl: function () { return "https://tenant.uniconhub.com/admin/objects/ai-chat-sessions-uniconbaseapps/record-123"; },
+    requestAI: function (prompt, context, callback) {
+      console.log("AI REQUEST - prompt length:", prompt.length);
+      setTimeout(function () { callback(null, generateMockResponse(prompt)); }, 700);
+    },
+    requestAIStream: function (prompt, context, callbacks) {
+      var full = generateMockResponse(prompt);
+      var position = 0;
+      var step = Math.max(6, Math.floor(full.length / 40));
+      var timer = setInterval(function () {
+        var chunk = full.substring(position, position + step);
+        position += step;
+        if (chunk) { callbacks.onToken(chunk); }
+        if (position >= full.length) { clearInterval(timer); callbacks.onComplete(full); }
+      }, 15);
+    },
+    requestUpload: function (accept, cb) { setTimeout(function () { cb(null, { name: "sample.pdf", url: "https://example.com/sample.pdf", size: 2048, type: "application/pdf" }); }, 300); },
+    requestFileContent: function (url, cb) { setTimeout(function () { cb(null, "Mock extracted text content."); }, 200); },
+    requestObjects: function (action, params, cb) {
+      function loadSessions() { try { var raw = localStorage.getItem(SESSION_KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
+      function saveSessions(list) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(list)); } catch (e) {} }
+      setTimeout(function () {
+        if (action === "query") {
+          cb(null, { objects: loadSessions() });
+        } else if (action === "create") {
+          var newObject = { id: "sess-" + Date.now().toString(36), name: params.name || "New Chat", _parentObjectId: "record-123", productData: params.productData };
+          var list = loadSessions();
+          list.unshift(newObject);
+          saveSessions(list);
+          cb(null, { object: newObject });
+        } else if (action === "update") {
+          var updateList = loadSessions();
+          for (var i = 0; i < updateList.length; i++) {
+            if (updateList[i].id === params.objectId) {
+              var oldFields = (updateList[i].productData && updateList[i].productData.data_categoriesBased) || {};
+              var newFields = (params.productData && params.productData.data_categoriesBased) || {};
+              updateList[i].productData = updateList[i].productData || {};
+              updateList[i].productData.data_categoriesBased = Object.assign({}, oldFields, newFields);
+              break;
+            }
+          }
+          saveSessions(updateList);
+          cb(null, { ok: true });
+        } else if (action === "delete") {
+          saveSessions(loadSessions().filter(function (s) { return s.id !== params.objectId; }));
+          cb(null, { ok: true });
+        } else {
+          cb(null, { ok: true });
+        }
+      }, 150);
+    },
+    requestExportPdf: function (opts, cb) { setTimeout(function () { cb(null, { name: (opts.filename || "export") + ".html", url: "https://example.com/export.html", size: 8192, type: "text/html" }); }, 400); },
+    requestSendEmail: function (opts, cb) { console.log("SEND EMAIL to:", opts.to); setTimeout(function () { cb(null, { ok: true }); }, 400); },
+    requestSave: function (cb) { console.log("requestSave called"); if (cb) { cb(null, true); } }
+  };
+
+  function generateMockResponse(prompt) {
+    if (prompt.indexOf("SCAM ANALYSIS TASK") !== -1) {
+      return "This looks like a scam. It creates urgency and asks for money or personal details.\n\nWhat to do:\n\n1. Do not reply and do not tap any link.\n\n2. Do not send money or gift cards to anyone.\n\n3. Delete the message.\n\n4. If it mentioned a real company, call that company's official number yourself.\n\nWhen in doubt, show it to a family member first.";
+    }
+    if (prompt.indexOf("medication") !== -1) {
+      return "Here is a simple medication schedule table you can fill in.\n\nMorning column: write the medicines you take after breakfast.\n\nNoon column: write the medicines you take around lunch.\n\nEvening column: write the medicines you take around dinner.\n\nNight column: write the medicines you take before bed.\n\nPlease copy the names and doses exactly from your medicine labels, and ask your pharmacist to check the finished table.";
+    }
+    return "Of course, I would be glad to help.\n\nHere is a simple answer in plain words.\n\nFirst, the main idea, in one short sentence.\n\nSecond, the steps you can follow, one at a time.\n\nThird, one gentle reminder: for anything about health, money, or legal matters, please check the final decision with your doctor, your bank, or your family.\n\nIf you tell me more details, I can make this answer even more personal. (Mock answer from the test harness.)";
+  }
+
+  function updateBar() {
+    document.getElementById("th-role-btn").textContent = "Role: " + currentUser.roles[0];
+    document.getElementById("th-status").textContent = readOnlyFlag ? "Read-only ON" : "Read-only OFF";
+  }
+
+  document.getElementById("th-role-btn").addEventListener("click", function () {
+    roleIndex = (roleIndex + 1) % ROLE_LIST.length;
+    currentUser = ROLE_LIST[roleIndex];
+    fire("userChange", currentUser);
+    updateBar();
+  });
+  document.getElementById("th-toggle-ro").addEventListener("click", function () {
+    readOnlyFlag = !readOnlyFlag;
+    fire("readonlyChange", readOnlyFlag);
+    updateBar();
+  });
+  document.getElementById("th-dump-btn").addEventListener("click", function () {
+    var wrap = document.getElementById("th-dump-wrap");
+    wrap.style.display = "block";
+    document.getElementById("th-dump").textContent = JSON.stringify(storedValue, null, 2);
+  });
+  document.getElementById("th-clear-sessions").addEventListener("click", function () {
+    try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    document.getElementById("th-status").textContent = "Chat store cleared - reloading...";
+    setTimeout(function () { location.reload(); }, 400);
+  });
+  document.getElementById("th-reload").addEventListener("click", function () { location.reload(); });
+  updateBar();
+})();
+</script>
+<script src="SeniorHelperAICoordinator.js"></script>
+</body>
+</html>

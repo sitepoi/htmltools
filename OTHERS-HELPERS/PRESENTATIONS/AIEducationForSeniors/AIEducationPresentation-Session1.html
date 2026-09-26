@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI for Seniors - Session 1: Your Friendly Everyday Helper</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --warn-bg: #fdf0e0;
+    --warn-line: #d99a2b;
+    --tip-bg: #eaf3fa;
+    --tip-line: #2f78a8;
+    --safe-bg: #edf7ef;
+    --safe-line: #1d7a36;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #e8edf2;
+    overflow: hidden;
+  }
+  .deck-stage { position: relative; height: 100%; width: 100%; }
+  .deck-slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    padding: 52px 64px 90px;
+    overflow-y: auto;
+    background: #ffffff;
+  }
+  .deck-slide.deck-active { display: flex; flex-direction: column; }
+  .deck-slide-inner { width: 100%; max-width: 1120px; margin: auto; }
+  .deck-kicker {
+    display: inline-block;
+    font-size: 17px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .deck-illustration { text-align: center; margin-bottom: 10px; }
+  .deck-illustration svg { height: 66px; width: auto; }
+  .deck-slide h1, .deck-slide h2 { margin: 0 0 18px; line-height: 1.18; color: var(--ink); }
+  .deck-slide h1 { font-size: clamp(38px, 5.2vw, 58px); }
+  .deck-slide h2 { font-size: clamp(30px, 4.2vw, 46px); }
+  .deck-slide h3 { font-size: 22px; margin: 0 0 8px; color: var(--accent); }
+  .deck-slide p { font-size: 21px; line-height: 1.5; margin: 10px 0; }
+  .deck-slide ul, .deck-slide ol { font-size: 21px; line-height: 1.5; padding-left: 28px; margin: 10px 0; }
+  .deck-slide li { margin: 10px 0; }
+  .deck-slide strong { color: var(--accent-dark); }
+  .deck-note {
+    font-size: 16.5px;
+    color: var(--muted);
+    border-left: 4px solid var(--line);
+    padding: 6px 14px;
+    margin-top: 18px;
+  }
+  .deck-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0; }
+  .deck-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin: 18px 0; }
+  .deck-card {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .deck-card.warm { background: var(--soft-warm); border-color: #ecdcc8; }
+  .deck-card h3 { margin-top: 0; }
+  .deck-card p { font-size: 18.5px; margin: 6px 0; }
+  .deck-big-number { font-size: 44px; font-weight: 800; color: var(--accent); display: block; margin-bottom: 4px; }
+  .deck-recipe {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 22px 0;
+  }
+  .deck-recipe-step {
+    background: var(--soft);
+    border-radius: 14px;
+    padding: 18px;
+    border-top: 5px solid var(--accent);
+  }
+  .deck-recipe-step.warm { border-top-color: var(--accent-2); }
+  .deck-recipe-step .step-no {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--accent-2);
+    font-weight: 700;
+  }
+  .deck-recipe-step h3 { font-size: 21px; margin: 8px 0 6px; color: var(--ink); }
+  .deck-recipe-step p { font-size: 17px; margin: 0; color: var(--muted); }
+  .deck-prompt-box {
+    background: var(--soft-warm);
+    border: 1px solid #ecdcc8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .deck-prompt-box .deck-prompt-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent-2);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .deck-prompt-box.strong { background: var(--safe-bg); border-color: var(--safe-line); }
+  .deck-prompt-box.strong .deck-prompt-label { color: var(--good); }
+  .deck-title-slide {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 55%, #174f7d 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-title-slide h1 { color: #ffffff; font-size: clamp(40px, 6vw, 66px); }
+  .deck-title-slide .deck-sub { color: #dce8f2; font-size: 24px; max-width: 780px; margin: 0 auto; }
+  .deck-title-slide .deck-chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 28px; }
+  .deck-title-slide .deck-chip {
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-size: 18px;
+  }
+  .deck-closing-slide {
+    background: linear-gradient(135deg, #a85e31 0%, var(--accent-2) 60%, #d68a55 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-closing-slide h2 { color: #ffffff; font-size: clamp(34px, 4.6vw, 52px); }
+  .deck-closing-slide .deck-sub { color: #fcefe2; font-size: 23px; max-width: 760px; margin: 0 auto; }
+  .deck-closing-slide .deck-chip {
+    display: inline-block;
+    margin-top: 26px;
+    background: #ffffff;
+    color: var(--accent-2);
+    border-radius: 999px;
+    padding: 14px 34px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .deck-closing-slide .deck-note { color: #f8e3d2; border-left-color: rgba(255,255,255,.5); }
+  .deck-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #f2f5f8;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+    z-index: 10;
+  }
+  .deck-btn {
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+  .deck-btn:hover { background: var(--tip-bg); }
+  .deck-btn:disabled { opacity: .4; cursor: default; }
+  .deck-counter { font-size: 16px; color: var(--muted); font-weight: 700; min-width: 70px; }
+  .deck-dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .deck-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    cursor: pointer;
+    padding: 0;
+  }
+  .deck-dot.deck-dot-active { background: var(--accent); }
+  .deck-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 6px;
+    background: var(--accent);
+    width: 0;
+    z-index: 11;
+    transition: width .25s ease;
+  }
+  .deck-help { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+  /* ---------- Hands-on interactions ---------- */
+  .deck-reveal {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 14px 0;
+  }
+  .deck-reveal summary {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 13px 18px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .deck-reveal summary::-webkit-details-marker { display: none; }
+  .deck-reveal summary::before {
+    content: "+";
+    font-size: 24px;
+    font-weight: 800;
+    width: 24px;
+    text-align: center;
+    color: var(--accent-2);
+    flex: 0 0 24px;
+  }
+  .deck-reveal[open] summary::before { content: "-"; }
+  .deck-reveal-body { padding: 2px 18px 16px; }
+  .deck-reveal-body p { font-size: 18.5px; }
+  .deck-reveal-nested { background: #ffffff; }
+  .deck-try-textarea {
+    width: 100%;
+    min-height: 96px;
+    border: 2px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 18px;
+    font-family: inherit;
+    resize: vertical;
+    display: block;
+    margin: 8px 0;
+  }
+  .deck-recipe-explain { font-size: 17px; color: var(--muted); margin: 0 0 8px !important; }
+  .deck-recipe-example {
+    font-size: 17px;
+    color: var(--accent-dark);
+    background: #ffffff;
+    border: 1px dashed var(--accent);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 0 !important;
+    line-height: 1.5;
+  }
+  .deck-reveal .deck-prompt-box { font-size: 17.5px; }
+
+  /* ---------- Small interactive questions ---------- */
+  .deck-question {
+    background: #eef6fd;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 12px 16px 14px;
+    margin: 16px 0 4px;
+  }
+  .deck-question-prompt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .deck-question-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    flex: 0 0 26px;
+  }
+  .deck-question-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  .deck-choice {
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 16.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .deck-choice:hover { background: var(--tip-bg); }
+  .deck-choice.deck-choice-picked { background: var(--accent); color: #ffffff; }
+  .deck-question-answer { margin-top: 8px; min-height: 64px; }
+  @media print {
+    body { overflow: visible; background: #ffffff; }
+    .deck-stage { position: static; height: auto; }
+    .deck-slide {
+      display: flex !important;
+      position: relative;
+      inset: auto;
+      height: auto;
+      min-height: 0;
+      page-break-after: always;
+      overflow: visible;
+      padding: 30px 40px;
+    }
+    .deck-slide:last-child { page-break-after: auto; }
+    .deck-controls, .deck-progress { display: none; }
+  }
+  @media (max-width: 860px) {
+    .deck-slide { padding: 32px 24px 80px; }
+    .deck-grid-2, .deck-grid-3, .deck-recipe { grid-template-columns: 1fr; }
+    .deck-slide p, .deck-slide li { font-size: 18px; }
+    .deck-help { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck-progress" id="deck-progress"></div>
+
+<div class="deck-stage" id="deck-stage">
+
+  <!-- 1 · Title -->
+  <section class="deck-slide deck-title-slide" data-slide-number="1">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#f0c9a8;">Session 1 of 2 - about 50 minutes</div>
+      <h1>AI - Your Friendly Everyday Helper</h1>
+      <p class="deck-sub">You do not need to become technical. You only need to learn to ask - and the computer does the heavy lifting.</p>
+      <div class="deck-chips">
+        <span class="deck-chip">No jargon</span>
+        <span class="deck-chip">Hands-on practice</span>
+        <span class="deck-chip">Safety built in</span>
+        <span class="deck-chip">Two sessions total</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · The promise -->
+  <section class="deck-slide" data-slide-number="2">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">The promise</span>
+      <h2>What these two sessions give you</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><span class="deck-big-number">1</span><h3>Independence</h3><p>Write your own letters, understand difficult paperwork, plan your week - without waiting for help.</p></div>
+        <div class="deck-card"><span class="deck-big-number">2</span><h3>Connection</h3><p>Warm messages to family, homework help with grandchildren, translation across languages.</p></div>
+        <div class="deck-card"><span class="deck-big-number">3</span><h3>Confidence</h3><p>You will know what AI can do, what it cannot do, and how to spot the tricks that use it.</p></div>
+      </div>
+      <p class="deck-note">You already use AI every day without knowing it. These sessions make you the one giving the orders.</p>
+    </div>
+  </section>
+  <!-- 3 · What is hard for you -->
+  <section class="deck-slide" data-slide-number="3">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Needs list"><rect x="22" y="14" width="52" height="70" rx="8" fill="#f4f7fa" stroke="#0f5c8a" stroke-width="4"/><rect x="36" y="8" width="24" height="12" rx="4" fill="#c2703d"/><line x1="32" y1="34" x2="64" y2="34" stroke="#0f5c8a" stroke-width="4" stroke-linecap="round"/><line x1="32" y1="46" x2="64" y2="46" stroke="#c2703d" stroke-width="4" stroke-linecap="round"/><line x1="32" y1="58" x2="56" y2="58" stroke="#0f5c8a" stroke-width="4" stroke-linecap="round"/></svg></div>
+      <span class="deck-kicker">Start with you</span>
+      <h2>What is hard for you? We fix that.</h2>
+      <p>Tick the things that feel difficult - every tick has an AI solution, and we will answer some of your ticks live today.</p>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Letters and forms</h3><p>Bank, insurance, government papers.</p></div>
+        <div class="deck-card"><h3>Health</h3><p>Medicines, doctor visits, health news.</p></div>
+        <div class="deck-card"><h3>Food</h3><p>Ingredients, allergies, halal checks.</p></div>
+        <div class="deck-card warm"><h3>Family abroad</h3><p>Language barriers, staying close.</p></div>
+        <div class="deck-card warm"><h3>Money and safety</h3><p>Bills, contracts, strange calls.</p></div>
+        <div class="deck-card"><h3>Dreams</h3><p>A book, a shop, a trip - why not?</p></div>
+      </div>
+      <p class="deck-note">Fill the form in front of you: tick what feels hard and write your three biggest difficulties. We will pick several and answer them with AI, live. Take the form home - the ideas in this seminar work for every tick on it.</p>
+    </div>
+  </section>
+  <!-- 4 · AI in plain words -->
+  <section class="deck-slide" data-slide-number="4">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Open book"><path d="M48 26 C36 18 20 18 12 22 L12 70 C20 66 36 66 48 74 Z" fill="#0f5c8a"/><path d="M48 26 C60 18 76 18 84 22 L84 70 C76 66 60 66 48 74 Z" fill="#c2703d"/><path d="M48 74 L48 26" stroke="#ffffff" stroke-width="3"/></svg></div>
+      <span class="deck-kicker">The one idea to remember</span>
+      <h2>AI is the library friend</h2>
+      <p>Imagine a friend who has read <strong>every book, article, and recipe in the world</strong> - in every language.</p>
+      <ul>
+        <li>Extremely fast at <strong>summarizing, explaining, writing, and translating</strong>.</li>
+        <li>Never tired, never impatient, <strong>happy to repeat anything</strong>.</li>
+        <li>Does not think like a person - it <strong>guesses the next word</strong>, again and again, so well that it looks like thinking.</li>
+      </ul>
+      <p class="deck-note">That friend is AI. You do not need to know how it works - just like you drive a car without knowing the engine.</p>
+    </div>
+  </section>
+
+  <!-- 5 · What AI is not -->
+  <section class="deck-slide" data-slide-number="5">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Straight talk</span>
+      <h2>What AI is not</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>It is not a person</h3><p>No feelings, no opinions, no plans of its own. It answers what you ask - that is the whole job.</p></div>
+        <div class="deck-card"><h3>It does not know you</h3><p>It only sees what you type in the chat. You decide what it ever learns about you.</p></div>
+        <div class="deck-card warm"><h3>It is not always right</h3><p>It can state a mistake with full confidence - like some voices on the internet. Anything that matters gets checked.</p></div>
+      </div>
+      <p>So treat it like any source you meet online: take the helpful ideas, keep your own judgment. <strong>AI has no power over you</strong> - only the power you choose to give it.</p>
+    </div>
+  </section>
+
+  <!-- 6 · Already in your life -->
+  <section class="deck-slide" data-slide-number="6">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">You are not a beginner</span>
+      <h2>AI is already working for you</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>The junk-mail filter</h3><p>Keeps spam out of your inbox - it learned what spam looks like.</p></div>
+        <div class="deck-card"><h3>The map app</h3><p>Predicts your driving time and finds the fastest route.</p></div>
+        <div class="deck-card"><h3>The bank alert</h3><p>Spots an unusual purchase on your card and calls you.</p></div>
+        <div class="deck-card"><h3>The voice assistant</h3><p>"Remind me at 8" - Siri, Google, and Alexa already listen for you.</p></div>
+      </div>
+      <p class="deck-note">In short: you already use AI every day. Today you simply learn how to ask it for help - in your own words.</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> Tick the ones you already use</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">The junk-mail filter</button>
+          <button type="button" class="deck-choice">The map app</button>
+          <button type="button" class="deck-choice">The bank alert</button>
+          <button type="button" class="deck-choice">The voice assistant</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · The one skill -->
+  <section class="deck-slide" data-slide-number="7">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Four question parts"><rect x="8" y="8" width="36" height="36" rx="8" fill="#0f5c8a"/><rect x="52" y="8" width="36" height="36" rx="8" fill="#c2703d"/><rect x="8" y="52" width="36" height="36" rx="8" fill="#c2703d"/><rect x="52" y="52" width="36" height="36" rx="8" fill="#0f5c8a"/><text x="26" y="31" font-size="16" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Who</text><text x="70" y="31" font-size="16" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">What</text><text x="26" y="75" font-size="14" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Details</text><text x="70" y="75" font-size="14" fill="#fff" text-anchor="middle" font-family="Segoe UI, sans-serif" font-weight="700">Format</text></svg></div>
+      <span class="deck-kicker">The whole skill, on one slide</span>
+      <h2>Ask well, and AI does the rest</h2>
+      <p>A vague question gets a vague answer. A rich question gets a useful answer. The recipe has <strong>four parts</strong>:</p>
+      <div class="deck-recipe">
+        <div class="deck-recipe-step">
+          <span class="step-no">Part 1</span>
+          <h3>Who</h3>
+          <p class="deck-recipe-explain">Who are you, and who is this for?</p>
+          <p class="deck-recipe-example">"I am a 75-year-old grandmother..."</p>
+        </div>
+        <div class="deck-recipe-step">
+          <span class="step-no">Part 2</span>
+          <h3>What</h3>
+          <p class="deck-recipe-explain">What do you want, exactly?</p>
+          <p class="deck-recipe-example">"...I need a short birthday letter for my grandson..."</p>
+        </div>
+        <div class="deck-recipe-step warm">
+          <span class="step-no">Part 3</span>
+          <h3>Details</h3>
+          <p class="deck-recipe-explain">What matters to you?</p>
+          <p class="deck-recipe-example">"...he loves dinosaurs and football..."</p>
+        </div>
+        <div class="deck-recipe-step warm">
+          <span class="step-no">Part 4</span>
+          <h3>Format</h3>
+          <p class="deck-recipe-explain">How should the answer look?</p>
+          <p class="deck-recipe-example">"...about 60 words, warm and simple."</p>
+        </div>
+      </div>
+      <p class="deck-note">Remember it as: Who - What - Details - Format.</p>
+      <details class="deck-reveal">
+        <summary>Tap to open - complete sample prompts</summary>
+        <div class="deck-reveal-body">
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Sample 1 - a birthday letter</span>
+            <strong>Who:</strong> I am a 75-year-old grandmother. <strong>What:</strong> I need a short birthday letter for my grandson. <strong>Details:</strong> he loves dinosaurs and football. <strong>Format:</strong> about 60 words, warm and simple.
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Sample 2 - a doctor visit</span>
+            <strong>Who:</strong> I am a 68-year-old patient. <strong>What:</strong> help me prepare for my appointment. <strong>Details:</strong> I take three medicines and my knees hurt. <strong>Format:</strong> a list of what to tell the doctor and five questions to ask.
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Sample 3 - a week of dinners</span>
+            <strong>Who:</strong> I am cooking for one. <strong>What:</strong> plan five low-salt dinners. <strong>Details:</strong> easy, under eight ingredients each. <strong>Format:</strong> a table plus one shopping list.
+          </div>
+        </div>
+      </details>
+      <details class="deck-reveal">
+        <summary>Tap to open - make it better by talking</summary>
+        <div class="deck-reveal-body">
+          <p>The first answer is a first draft. Improve it by talking - one spoken change at a time:</p>
+          <ul>
+            <li>"Read it back to me" - you hear the draft.</li>
+            <li>"Warmer", "shorter", "remove the second paragraph" - one change per round.</li>
+            <li>"Give me two versions - one formal, one warm" - then pick.</li>
+            <li>"What would make this better? Three ideas" - the AI becomes your editor.</li>
+          </ul>
+          <div class="deck-prompt-box strong">
+            <span class="deck-prompt-label">The loop in one line</span>
+            Draft - listen - say one change - listen again. Repeat until it sounds like you.
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 8 · Weak vs strong -->
+  <section class="deck-slide" data-slide-number="8">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Weak to strong"><path d="M20 72 L20 50 L34 50" stroke="#b0b9c4" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polygon points="20,38 10,52 30,52" fill="#b0b9c4"/><path d="M62 64 L78 34 L82 74 Z" fill="#1d7a36"/></svg></div>
+      <span class="deck-kicker">Two examples, then your turn</span>
+      <h2>Which letter would you rather send?</h2>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Weak question</span>
+        write letter landlord
+      </div>
+      <div class="deck-prompt-box strong">
+        <span class="deck-prompt-label">Strong question - four parts</span>
+        I am a 74-year-old tenant. My bathroom tap has been dripping for two weeks and I have called the building manager twice with no result. Please write a short, polite letter to my landlord asking for a repair. Keep it under 150 words, friendly but firm, and leave placeholders for the date and my apartment number.
+      </div>
+      <p class="deck-note">Same task. The second question produces a ready-to-send letter. The details are the difference.</p>
+
+      <details class="deck-reveal">
+        <summary>Hands-on 1 - Your turn: write your own question</summary>
+        <div class="deck-reveal-body">
+          <p><strong>Your subject:</strong> your washing machine is broken and the store does not answer your calls. Write a question to AI that asks for a complaint letter - in your own words, any language.</p>
+          <p><strong>Konunuz (Türkçe):</strong> Çamaşır makineniz bozuldu ve mağaza aramalarınıza dönmüyor. Yapay zekadan bir şikayet mektubu yazmasını isteyen bir soru yazın - kendi cümlelerinizle, istediğiniz dilde.</p>
+          <textarea class="deck-try-textarea" placeholder="Type or write your question here..."></textarea>
+          <details class="deck-reveal deck-reveal-nested">
+            <summary>Tap to compare with a strong example</summary>
+            <div class="deck-reveal-body">
+              <div class="deck-prompt-box strong">
+                <span class="deck-prompt-label">Strong question - four parts</span>
+                I am a 70-year-old customer. My washing machine broke one week after delivery and the store has not answered my three calls. Please write a polite complaint letter asking for a repair or a refund. About 150 words, firm but polite, with a place for my name and address.
+              </div>
+              <div class="deck-prompt-box strong">
+                <span class="deck-prompt-label">Güçlü soru - dört parça (Türkçe)</span>
+                Ben 70 yaşında bir müşteriyim. Çamaşır makinem teslimattan bir hafta sonra bozuldu ve mağaza üç aramama dönmedi. Lütfen tamir ya da iade isteyen nazik bir şikayet mektubu yaz. Yaklaşık 150 kelime, kararlı ama kibar, adım ve adresim için yer bırak.
+              </div>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <details class="deck-reveal">
+        <summary>Hands-on 2 - Write it in your own language first</summary>
+        <div class="deck-reveal-body">
+          <p>Prepare the document in <strong>your own language</strong>. Make it mature there. Only then translate it to English.</p>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Step 1 - write it in your language</span>
+            [Your language:] My washing machine is broken and the store does not answer. Write a complaint letter to the store for me.
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Adım 1 (Türkçe)</span>
+            Çamaşır makinem bozuldu ve mağaza dönmüyor. Benim için mağazaya bir şikayet mektubu yaz.
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Step 2 - make it mature in your language</span>
+            [Your language:] Improve this letter. Make it polite but firm, under 200 words, with a place for my name and address.
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Adım 2 (Türkçe)</span>
+            Bu mektubu iyileştir. Kibar ama kararlı olsun, 200 kelimenin altında, adım ve adresim için yer bırak.
+          </div>
+          <div class="deck-prompt-box strong">
+            <span class="deck-prompt-label">Step 3 - translate to English</span>
+            Now translate this letter into English. Keep the tone natural and polite, like a real person wrote it.
+          </div>
+          <div class="deck-prompt-box strong">
+            <span class="deck-prompt-label">Adım 3 (Türkçe)</span>
+            Şimdi bu mektubu İngilizceye çevir. Ton doğal ve nazik olsun, gerçek bir insan yazmış gibi.
+          </div>
+        </div>
+      </details>
+
+      <details class="deck-reveal">
+        <summary>Hands-on 3 - Is my English good enough? The translate-back check</summary>
+        <div class="deck-reveal-body">
+          <p>Your English letter is ready - but is it correct? Let a <strong>second AI</strong> check the first one:</p>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">The check prompt</span>
+            Translate this back into [your language]: [paste the English letter]
+          </div>
+          <div class="deck-prompt-box">
+            <span class="deck-prompt-label">Kontrol sorusu (Türkçe)</span>
+            Bunu [dilinize] geri çevirin: [İngilizce mektubu yapıştırın]
+          </div>
+          <p>Now compare: does the translation back say the same as your original? <strong>If the meaning matches, your English is ready to send.</strong> If something changed, fix that part and check again. Use a different app for the check - if ChatGPT wrote the letter, use Claude or Copilot.</p>
+          <p><strong>Türkçe:</strong> Karşılaştırın: geri çeviri orijinalinizle aynı anlama geliyor mu? Anlam uyuyorsa İngilizceniz göndermeye hazır demektir. Bir şey değiştiyse o kısmı düzeltin ve tekrar kontrol edin. Mektubu ChatGPT yazdıysa, kontrolü Claude ya da Copilot ile yapın.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 9 · Live demo -->
+  <section class="deck-slide" data-slide-number="9">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Chat bubble"><rect x="14" y="16" width="68" height="52" rx="14" fill="#0f5c8a"/><path d="M26 68 L26 82 L42 68 Z" fill="#0f5c8a"/><circle cx="32" cy="42" r="4" fill="#fff"/><circle cx="48" cy="42" r="4" fill="#fff"/><circle cx="64" cy="42" r="4" fill="#fff"/></svg></div>
+      <span class="deck-kicker">Beyond the basics - small tricks, big time savings</span>
+      <h2>Tricks that save you time</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Be my translator</h3><p>Tap the voice button: "Be my translator between English and Turkish." Two people, one phone.</p></div>
+        <div class="deck-card"><h3>Read it back to me</h3><p>Any answer becomes spoken words - letters, menus, medicine labels, news.</p></div>
+        <div class="deck-card"><h3>Interview me</h3><p>"Interview me one question at a time" - the AI writes your letter or story by asking you.</p></div>
+        <div class="deck-card warm"><h3>Two versions</h3><p>"Give me two versions - one formal, one warm" - then keep the one you like.</p></div>
+        <div class="deck-card warm"><h3>What am I forgetting?</h3><p>"I am travelling to Istanbul for five days - what am I forgetting?" - instant checklist.</p></div>
+        <div class="deck-card warm"><h3>Practice the call</h3><p>"Let's practice a difficult phone call - you play the insurance agent, I will call you."</p></div>
+      </div>
+      <details class="deck-reveal">
+        <summary>Tap to open - six more tricks</summary>
+        <div class="deck-reveal-body">
+          <div class="deck-grid-2">
+            <div class="deck-card"><h3>Remember me</h3><p>"Remember that I like short answers and always answer me in Turkish."</p></div>
+            <div class="deck-card"><h3>Check itself</h3><p>"Check this letter for mistakes, then translate it back to Turkish so I can verify."</p></div>
+            <div class="deck-card"><h3>The polite editor</h3><p>"What would make this better? Three ideas - but do only the ones I choose."</p></div>
+            <div class="deck-card"><h3>Turn it into a table</h3><p>"Put that into a simple table." - prices, schedules, medicines become easy to read.</p></div>
+            <div class="deck-card warm"><h3>Explain like I am ten</h3><p>"Explain this like I am ten years old." - jargon disappears.</p></div>
+            <div class="deck-card warm"><h3>Make a quiz</h3><p>"Make a five-question quiz about birds for my grandson."</p></div>
+          </div>
+        </div>
+      </details>
+      <p class="deck-note">Every trick works by voice - tap the microphone and talk. And you can take a photo of anything and ask: "What is this?"</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> Hands up: which of these is new to you?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">Be my translator</button>
+          <button type="button" class="deck-choice">Interview me</button>
+          <button type="button" class="deck-choice">What am I forgetting?</button>
+          <button type="button" class="deck-choice">Practice the call</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 10 · Install and test together -->
+  <section class="deck-slide" data-slide-number="10">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Download and install"><rect x="18" y="56" width="60" height="26" rx="8" fill="#0f5c8a"/><path d="M48 16 L48 52" stroke="#c2703d" stroke-width="6" stroke-linecap="round"/><polygon points="34,42 48,58 62,42" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">Hands-on time</span>
+      <h2>Install and test together</h2>
+      <ul>
+        <li><strong>Open the app store</strong> - App Store on iPhone, Google Play on Android.</li>
+        <li><strong>Search and install ONE app</strong> - ChatGPT, Claude, Gemini, Copilot, or DeepSeek.</li>
+        <li><strong>Our suggestion: DeepSeek.</strong> Its free plan gives you the most messages every day.</li>
+        <li><strong>Sign in</strong> with your Google or Apple account - one less password to remember.</li>
+        <li><strong>Choose the free plan.</strong> This course never costs money.</li>
+        <li><strong>Test it now:</strong> type the first practice message - and it answers.</li>
+      </ul>
+      <p class="deck-note">Slow is fine. Helpers walk the rows. When everyone has one answer on screen, we move on.</p>
+    </div>
+  </section>
+  <!-- 11 · Letters and emails -->
+  <section class="deck-slide" data-slide-number="11">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Envelope"><rect x="10" y="26" width="76" height="50" rx="8" fill="#f4f7fa" stroke="#0f5c8a" stroke-width="4"/><path d="M14 32 L48 58 L82 32" fill="none" stroke="#c2703d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="deck-kicker">Everyday helpers</span>
+      <h2>Letters, emails, and paperwork</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Write it</h3><p>Complaints, thank-you notes, invitations, appointment requests - drafted in one minute, then you edit and send.</p></div>
+        <div class="deck-card"><h3>Understand it</h3><p>Paste a difficult letter from the bank or insurance company. Ask: "Explain this in plain words and tell me what I need to do."</p></div>
+        <div class="deck-card warm"><h3>Plan it</h3><p>Weekly menus, shopping lists, packing lists, reminder schedules - organized for you.</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Try this tonight</span>
+        I have a busy week coming up: a doctor appointment on Tuesday, a pharmacy visit on Wednesday, and a family birthday dinner on Saturday. Help me plan my week day by day, with one reminder for each day, in a simple table.
+      </div>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> What will you ask AI to write first?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">A complaint letter</button>
+          <button type="button" class="deck-choice">A thank-you note</button>
+          <button type="button" class="deck-choice">An appointment request</button>
+          <button type="button" class="deck-choice">A dinner plan</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · Health -->
+  <section class="deck-slide" data-slide-number="12">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Heart with a plus"><path d="M48 78 C18 58 14 36 28 26 C38 19 47 23 48 31 C49 23 58 19 68 26 C82 36 78 58 48 78 Z" fill="#c8102e"/><path d="M72 4 v22 M61 15 h22" stroke="#0f5c8a" stroke-width="6" stroke-linecap="round"/></svg></div>
+      <span class="deck-kicker">Health companion - with a clear line</span>
+      <h2>Helpful ideas. Never a diagnosis.</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Meal ideas</h3><p>Low salt, low sugar, soft food - five simple dinners within your limits.</p></div>
+        <div class="deck-card"><h3>Gentle movement</h3><p>A 15-minute seated routine, explained simply. Your doctor approves before you start.</p></div>
+        <div class="deck-card"><h3>Clear explanations</h3><p>What a cataract is, in plain words, and the questions to ask your eye doctor.</p></div>
+      </div>
+      <div class="deck-prompt-box strong">
+        <span class="deck-prompt-label">The safety line - say it with me</span>
+        AI gives ideas and explanations. It never decides anything medical. No diagnosis, no dose changes, no emergencies. Doctors, nurses, and pharmacists remain the only health authority.
+      </div>
+      <p class="deck-note">Healthy aging toolkit: ChatGPT (best) or Claude for meals and movement, Medisafe or MyTherapy for medicine reminders, Apple Health or Google Fit for steps, phone live captions and Be My Eyes for hearing and vision, Lumosity or Peak for brain games, Snug for a daily family check-in. Benefits: independence, a sharper mind, and safer medicine habits.</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> Which health helper do you want most?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">Meal ideas</button>
+          <button type="button" class="deck-choice">A chair routine</button>
+          <button type="button" class="deck-choice">A medicine schedule</button>
+          <button type="button" class="deck-choice">Plain-word explanations</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 13 · Food and ingredients -->
+  <section class="deck-slide" data-slide-number="13">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Apple with a leaf"><circle cx="48" cy="54" r="30" fill="#c8102e"/><path d="M48 24 C48 12 40 10 40 10" stroke="#1d7a36" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="48" cy="22" rx="9" ry="4" fill="#1d7a36"/></svg></div>
+      <span class="deck-kicker">You eat it - know what is in it</span>
+      <h2>Food: check before you eat</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>Explain the label</h3><p>Paste any ingredient list - AI explains each item in plain words and its common effects.</p></div>
+        <div class="deck-card"><h3>Allergy check</h3><p>Name your allergens, paste the list - AI flags possible problems. The food maker confirms.</p></div>
+        <div class="deck-card warm"><h3>Halal and diet checks</h3><p>Halal, vegetarian, vegan, gluten-free - name your diet and AI checks the list. The certification label and the maker stay the authority.</p></div>
+        <div class="deck-card warm"><h3>Food effects</h3><p>Known effects versus myth, in plain words. Personal health questions always go to your doctor.</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Try this</span>
+        I am checking food for allergies. My allergens are peanuts and eggs. Please check this ingredient list and explain anything I should worry about: [paste the list]
+      </div>
+      <p class="deck-note">AI reads lists - it cannot test what is inside the package. The label, the maker, and the certification mark stay the final word.</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> What would you like AI to check first?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">An ingredient list</button>
+          <button type="button" class="deck-choice">Allergies</button>
+          <button type="button" class="deck-choice">Halal</button>
+          <button type="button" class="deck-choice">My diet</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 14 · Family -->
+  <section class="deck-slide" data-slide-number="14">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Two hearts"><path d="M28 66 C10 52 10 34 22 28 C30 24 38 28 40 33 C42 28 50 24 58 28 C70 34 70 52 52 66 L40 74 Z" fill="#0f5c8a"/><path d="M58 62 C76 48 76 30 64 24 C56 20 50 24 48 28 C53 33 53 44 50 54 Z" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">The heart of the course</span>
+      <h2>Closer to the people you love</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>Words for special days</h3><p>Birthday wishes, congratulations, sympathy cards - warm and personal, in minutes.</p></div>
+        <div class="deck-card"><h3>Homework, together</h3><p>Ask AI to explain long division step by step - then sit with your grandchild and learn together.</p></div>
+        <div class="deck-card"><h3>Bedtime stories</h3><p>A 200-word story about a squirrel who finds a lost key - starring the children's own interests.</p></div>
+        <div class="deck-card warm"><h3>Across languages</h3><p>Translate letters to family abroad, and learn a few warm phrases in their language.</p></div>
+      </div>
+      <p class="deck-note">Privacy rule: first names only in chats. Never type a child's full name, school, address, or photo.</p>
+    </div>
+  </section>
+  <!-- 15 · Translation -->
+  <section class="deck-slide" data-slide-number="15">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Globe with speech bubble"><circle cx="46" cy="50" r="32" fill="#0f5c8a"/><ellipse cx="46" cy="50" rx="14" ry="32" fill="none" stroke="#fff" stroke-width="3"/><line x1="16" y1="40" x2="76" y2="40" stroke="#fff" stroke-width="3"/><line x1="16" y1="60" x2="76" y2="60" stroke="#fff" stroke-width="3"/><rect x="62" y="6" width="28" height="18" rx="9" fill="#c2703d"/><path d="M70 24 L70 18 L84 18 L84 24 Z" fill="#c2703d"/></svg></div>
+      <span class="deck-kicker">Talk in your language</span>
+      <h2>Translation: your language bridge</h2>
+      <div class="deck-grid-2">
+        <div class="deck-card"><h3>Live conversation - two AI voices</h3><p>ChatGPT Voice (best) and Microsoft Copilot voice hear one language and speak the other naturally.</p></div>
+        <div class="deck-card"><h3>Camera translation</h3><p>Google Lens and the Translate camera read menus, signs, medicine boxes, and letters.</p></div>
+        <div class="deck-card warm"><h3>Letters</h3><p>DeepL and the chat apps translate letters naturally, in both directions.</p></div>
+        <div class="deck-card warm"><h3>AI speaks your language</h3><p>Just ask in your own language. The chat apps answer in it - say "answer me in Turkish".</p></div>
+      </div>
+      <div class="deck-prompt-box">
+        <span class="deck-prompt-label">Try this now</span>
+        Open ChatGPT. Tap the voice button. Say: "Be my translator between English and [language]." Then say: "How are you feeling today?"
+      </div>
+      <p class="deck-note">Best choice: ChatGPT Voice - Copilot voice works too. For doctor visits: open it before the appointment and hand the phone to the doctor.</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> What will you translate first?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">A letter</button>
+          <button type="button" class="deck-choice">A menu</button>
+          <button type="button" class="deck-choice">A medicine box</button>
+          <button type="button" class="deck-choice">A live conversation</button>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- 16 · Ten minutes a day -->
+  <section class="deck-slide" data-slide-number="16">
+    <div class="deck-slide-inner">
+      <div class="deck-illustration"><svg viewBox="0 0 96 96" role="img" aria-label="Clock"><circle cx="48" cy="48" r="36" fill="#f4f7fa" stroke="#0f5c8a" stroke-width="5"/><path d="M48 30 L48 50 L62 58" stroke="#c2703d" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="deck-kicker">The habit that keeps the skill</span>
+      <h2>Ten minutes a day</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><span class="deck-big-number">5 min</span><h3>One real task</h3><p>A shopping list, an email, a recipe, a question about the news - something actually needed.</p></div>
+        <div class="deck-card"><span class="deck-big-number">2 min</span><h3>One fix-up</h3><p>Use one of the five words: shorter, simpler, step by step, with an example, another version.</p></div>
+        <div class="deck-card warm"><span class="deck-big-number">3 min</span><h3>One curious question</h3><p>A bird, a song, a place, a word. Curiosity keeps the mind sharp.</p></div>
+      </div>
+      <p class="deck-note">Small regular use beats long sessions. In ten weeks, you will have completed seventy real tasks.</p>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> What will your first real task be tomorrow?</div>
+        <textarea class="deck-try-textarea deck-question-answer" rows="2" placeholder="Type or speak your answer..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17 · Closing session 1 -->
+  <section class="deck-slide deck-closing-slide" data-slide-number="17">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#fde8d3;">You made it through half the course</div>
+      <h2>Today you learned to ask</h2>
+      <p class="deck-sub">Next session: talk instead of type, big projects like writing your book, and the safety rules that keep you in charge.</p>
+      <span class="deck-chip">See you in session 2!</span>
+      <p class="deck-note">Next time: talk instead of type, your big projects, and the safety rules. The big Kahoot game comes at the end of session 2 - every question comes straight from both sessions.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="deck-controls">
+  <button class="deck-btn" id="deck-prev-button" type="button">Previous</button>
+  <button class="deck-btn" id="deck-next-button" type="button">Next</button>
+  <span class="deck-counter" id="deck-counter">1 / 17</span>
+  <div class="deck-dots" id="deck-dots"></div>
+  <span class="deck-help">Arrow keys or Space to move - P to print</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var allSlides = Array.prototype.slice.call(document.querySelectorAll(".deck-slide"));
+  var currentSlideIndex = 0;
+  var progressBarElement = document.getElementById("deck-progress");
+  var slideCounterElement = document.getElementById("deck-counter");
+  var previousButton = document.getElementById("deck-prev-button");
+  var nextButton = document.getElementById("deck-next-button");
+  var dotsContainer = document.getElementById("deck-dots");
+
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > allSlides.length - 1) { return allSlides.length - 1; }
+    return requestedIndex;
+  }
+
+  function buildDotNavigation() {
+    allSlides.forEach(function (slide, slideIndex) {
+      var dotButton = document.createElement("button");
+      dotButton.type = "button";
+      dotButton.className = "deck-dot";
+      dotButton.setAttribute("aria-label", "Go to slide " + (slideIndex + 1));
+      dotButton.addEventListener("click", function () { showSlideAtIndex(slideIndex); });
+      dotsContainer.appendChild(dotButton);
+    });
+  }
+
+  function updateControls() {
+    slideCounterElement.textContent = (currentSlideIndex + 1) + " / " + allSlides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === allSlides.length - 1;
+    var progressPercent = ((currentSlideIndex + 1) / allSlides.length) * 100;
+    progressBarElement.style.width = progressPercent + "%";
+    var allDotButtons = dotsContainer.querySelectorAll(".deck-dot");
+    allDotButtons.forEach(function (dotButton, dotIndex) {
+      dotButton.classList.toggle("deck-dot-active", dotIndex === currentSlideIndex);
+    });
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    allSlides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("deck-active", slideIndex === currentSlideIndex);
+    });
+    updateControls();
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function handleKeyboardNavigation(event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(allSlides.length - 1);
+    } else if (event.key === "p" || event.key === "P") {
+      window.print();
+    }
+  }
+
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+  window.addEventListener("beforeprint", function () {
+    document.querySelectorAll(".deck-reveal").forEach(function (revealElement) {
+      revealElement.setAttribute("open", "");
+    });
+  });
+  document.addEventListener("click", function (event) {
+    var choiceButton = event.target.closest(".deck-choice");
+    if (choiceButton) {
+      choiceButton.classList.toggle("deck-choice-picked");
+    }
+  });
+  buildDotNavigation();
+  showSlideAtIndex(0);
+})();
+</script>
+</body>
+</html>
