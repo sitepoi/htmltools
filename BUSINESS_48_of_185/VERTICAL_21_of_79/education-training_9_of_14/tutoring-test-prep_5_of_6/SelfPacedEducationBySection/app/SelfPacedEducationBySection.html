@@ -4,7 +4,7 @@
   <header class="app-header app-header-util" id="app-header">
     <div class="header-left">
       <button class="btn-icon" id="btn-back" title="Back" style="display:none">←</button>
-      <h1 class="app-title" id="app-title" style="display:none">📚 Self-Paced Learning</h1>
+      <h1 class="app-title" id="app-title" style="display:none">📚 Self-Paced Education</h1>
     </div>
     <div class="header-right">
       <button class="btn btn-sm btn-outline" id="btn-dark-mode" data-dark-toggle title="Toggle dark mode">🌙</button>
@@ -49,6 +49,12 @@
           <option value="self_paced">🚀 Self-Paced — lessons unlock automatically</option>
           <option value="supervised">🛡️ Supervised — supervisor approves each lesson</option>
         </select>
+        <label class="setup-label" style="margin-top:16px">🗓️ Course Start Date <span style="font-weight:400;color:var(--text-muted)">(optional — unlocks time-aware status messages)</span></label>
+        <input class="setup-input" type="date" id="setup-course-start-date">
+        <label class="setup-label" style="margin-top:16px">🎯 Target End Date <span style="font-weight:400;color:var(--text-muted)">(recommended goal — not a strict deadline)</span></label>
+        <input class="setup-input" type="date" id="setup-target-end-date">
+        <label class="setup-label" style="margin-top:16px">🔗 Course Page Link <span style="font-weight:400;color:var(--text-muted)">(optional — the direct link to this course)</span></label>
+        <input class="setup-input" type="url" id="setup-course-page-url" placeholder="https://...">
         <button class="btn btn-primary setup-save-btn" id="btn-setup-save">💾 Save &amp; Load Curriculum</button>
         <button class="btn btn-outline setup-cancel-btn" id="btn-setup-cancel">Cancel</button>
       </div>
@@ -58,6 +64,7 @@
 
   <!-- SECTION GROUPS VIEW -->
   <div id="view-sections" class="view">
+    <div id="course-schedule-panel" style="display:none"></div>
     <div class="toolbar" id="sections-toolbar">
       <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
       <select class="filter-select" id="filter-status">

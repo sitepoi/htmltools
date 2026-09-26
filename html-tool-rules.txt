@@ -129,6 +129,40 @@ tool.getUser()               → { id, name, email, roles, effectiveAccess, loca
 tool.onUserChange(cb)        → cb(user) — fires when the session user changes.
                                user is null when logged out.
 
+── Current page URL ──────────────────────────────────
+tool.getParentPageUrl()      → string — the ORIGIN + PATHNAME of the CMS page
+                               the tool iframe is embedded on, e.g.
+                               https://acme.uniconhub.com/admin/objects/
+                               courses-uniconbaseapps/course-123
+                               Returns '' when unavailable.
+                               PURPOSE — lets a tool build shareable links that
+                               point at the EXACT CMS page the user is on
+                               (WhatsApp study links, email CTA links, shared
+                               report links, ...) with ZERO per-record manual
+                               setup.  Example: the supervisor is on the
+                               course detail page → the shared link is that
+                               course's page, automatically, for every course.
+
+                               SECURITY CONTRACT (host / CMS side):
+                               • The host MUST send only location.origin +
+                                 location.pathname.  The query string and the
+                                 hash MUST be stripped BEFORE sending — they
+                                 can carry auth tokens, magic links, session
+                                 ids and other secrets.
+                               • The pathname reveals only the record the
+                                 user is already viewing, so no new
+                                 capability is granted.
+
+                               SECURITY CONTRACT (tool side):
+                               • Treat the value as display/share DATA only —
+                                 never as an authorization signal, and never
+                                 as a substitute for tool.getUser() role
+                                 checks.
+                               • Defense in depth — strip '?' and '#' (and
+                                 everything after them) from the value before
+                                 embedding it in shared links, emails or
+                                 exported files.
+
 ── Roles & Permissions (★ how to gate features) ──────
 tool.getUser().roles is an array of strings.  These strings are your ONLY
 mechanism for deciding what a user can see or do inside your tool.
@@ -1084,6 +1118,9 @@ HARD RULES
 ✗  No fetch to external URLs (sandboxed: allow-scripts, allow-forms, allow-downloads, allow-popups)
 ✗  No alert(), confirm(), or prompt()
 ✗  No raw postMessage calls — always use the tool.* SDK
+✓  tool.getParentPageUrl() returns ORIGIN + PATHNAME only — the host strips
+   the query string and hash before sending (they can carry auth tokens).
+   Treat the value as display/share data, never as an authorization signal.
 ✓  Always call tool.declareParams() for EVERY param your tool reads
 ✓  Always call tool.reportMissingParams() inside tool.onReady() if required
    params are missing — this triggers a warning banner in the CMS UI so

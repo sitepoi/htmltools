@@ -172,9 +172,11 @@ Renderer kinds:
 
 CMS-side requirements:
 - P1 Objects saved in the table om_objects are the ONLY publishable
-  objects. The CMS exposes a public read API that serves om_objects for
-  registered content sources (read-only, public scope, queryable from
-  the live site - not only inside a tool iframe).
+  objects. Each tenant exposes a public read API that serves om_objects
+  for registered content sources (read-only, public scope, queryable
+  from the live site - not only inside a tool iframe). publicwebsite
+  registers sources PER TENANT with service tokens (see section 10 and
+  publicwebsite-feature-request.md).
 - P2 The public website never WRITES to source apps; writes stay
   allowlisted per tool with editor role as today (HtmlToolLibraryItem
   pushing webpage docs is the configured exception).
@@ -299,3 +301,43 @@ Reserved slugs per tool: <toolSlug>-webpage, <toolSlug>-help,
   registry as any other app (section 8).
 - Social and versions already follow the per-type pattern; they are not
   pages and never enter the taxonomy or the public API.
+
+## 10. Tenant decision (2026-09-24)
+
+- applicationstore.uniconhub.com = the REAL tenant: all html-tools and
+  real applications are published here; installations and usage run
+  over this tenant.
+- cms.uniconhub.com = a second tenant used for the marketing website
+  (www.uniconhub.com) today.
+- The old website runs on the old version (generalwebsite); the move to
+  the new public website platform (publicwebsite application) is a
+  waiting task.
+
+DECISION: build the new public website ON the applicationstore tenant.
+
+- The tools that create and edit website pages (HtmlToolLibraryItem,
+  WebpageBuilder) run on applicationstore - tool writes are
+  tenant-scoped, so pages must live where the tools are.
+- The publicwebsite application (renderer + content-source registry,
+  section 8) is installed on applicationstore and reads om_objects
+  same-tenant through the public API - no cross-tenant feature needed.
+- www.uniconhub.com is only a domain/frontend that renders from the
+  applicationstore public API.
+- cms.uniconhub.com keeps whatever still runs there until migration is
+  complete, then retires. The waiting task "move everything to the new
+  public website" targets the applicationstore tenant.
+
+Multi-tenant READ extension (2026-09-24, confirmed by the user): the
+publicwebsite application stays on the applicationstore tenant, but its
+content-source registry gains per-source TENANT configuration - it
+collects pages and data from many tenants, many applications and many
+folders through configured API calls with read-only service tokens.
+
+- Tools, applications and their web contents: applicationstore tenant
+  (everything stays together here).
+- General webpages: pulled from cms.uniconhub.com as a configured
+  source - no data copied or moved.
+- Tool WRITES stay tenant-scoped (tools never write cross-tenant);
+  cross-tenant access is READ-ONLY and only through the public API.
+- Full specification: publicwebsite-feature-request.md - the feature
+  request prompt to run against the CMS AI.

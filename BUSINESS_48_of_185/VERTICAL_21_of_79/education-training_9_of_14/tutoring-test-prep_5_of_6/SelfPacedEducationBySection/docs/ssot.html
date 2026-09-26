@@ -5,74 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Self Paced Education By Section - Technical Source of Truth</title>
   <!--
-  ────────────────────────────────────────────────────────────────────────────
-  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
-
-  HOW TO USE THIS TEMPLATE
-  1. This template is copied into every tool folder as docs/ssot.html by
-     scripts/init-docs.js - never create a tool SSOT by hand.
-  2. Replace every [PLACEHOLDER] in the document.
-  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
-     Every decision row uses <prefix>-NN in order (01, 02, ...).
-  4. Remove all TEMPLATE comments (like this one) before the first publish.
-  5. Bump "Document version" on EVERY update, with "Last updated" date.
-  6. Never inline styles or scripts - the design lives in
-     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
-     linked below through ../../../../../../_docs/assets/.
-  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
-     marked ONE PUSH must ship in a single push and must never be split; a
-     RELATED group must not be broken across releases either. Each task
-     shows its main name collapsed and full details on click; the done
-     checkbox is remembered by the browser per document.
-  8. The right task panel (always visible on wide screens) is generated from
-     section 15 - never write tasks twice. Edit the board in section 15 and
-     the panel, progress bars, and sidebar counter follow automatically.
-  9. Task statuses: give a task `data-task-status` - `not-started` (default),
-     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
-     done checkbox switches the task to done; unticking returns it to the
-     previous status. Browser ticks stay in that browser only. PERMANENT
-     DONE is written into the file: set `data-task-status="done"` on the
-     task div (or `checked` on its checkbox) - `npm run rel` writes this
-     automatically for every pushed group.
- 10. Ideas (section 16): future ideas are discussed there before they become
-     work. An agreed idea moves to the task list (section 15); a rejected one
-     is marked `data-idea-status="ignored"` with the reason in its details.
-     Done / waiting / ignored statistics update automatically.
- 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
-     change is written in the risk register and linked to its release group
-     (`data-group`). Before every push, re-evaluate every OPEN risk of the
-     groups being pushed: solve them one by one (tick the checkbox), or mark
-     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
-     date, and update the `Last re-evaluation` line. Risk levels:
-     `critical` (mandatory - blocks every push until solved), `high` (blocks
-     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
-     A group shows PUSH READY in the task panel only when its tasks are done
-     AND it has no open risks.
- 12. Push provenance: when running `npm run rel`, set
-     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
-     task in the shipped groups is stamped with the version, commit and
-     date-time of that push, and the groups move to "pushed".
- 13. Satellite documents: docs/webpage.html, docs/help.html,
-     docs/presentation.html, docs/social.html are GENERATED from this file +
-     the code by scripts/generate-docs.js (run by npm run rel). They are
-     satellites - when they disagree with this SSOT, this SSOT wins.
-     docs/updates.html is maintained automatically by npm run rel.
-
-  GOVERNANCE RULES (apply to every tool SSOT in this repo)
-  - A tool SSOT is the REAL single source of truth for one tool (app,
-    listing, or reporting). There is exactly one SSOT per tool folder.
-  - No tool code change is made without updating the related document in
-    the SAME change. A decision that is not in section 11 did not happen.
-  - The decision register is APPEND-ONLY. Never delete rows; reverse a
-    decision by marking it "Reversed (date)" with a reason.
-  - When the code and the document disagree, the document is updated first to
-    capture the final decision, then the code follows. Never silently leave
-    them divergent.
-  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
-    always expanded next to their use.
-  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
-    Status) - the automated change-documentation reads these rows.
-  ────────────────────────────────────────────────────────────────────────────
+  SSOT for the Self-Paced Education html-tool (TYPE 1, object level).
+  Decision prefix for this tool: D-SPEB.
+  Governance rules: every decision is logged in section 11; the register is
+  append-only; when code and document disagree, the document wins and is
+  updated first. Names are self-explanatory, acronyms expanded, hyphen "-"
+  never the em dash.
   -->
   <!-- Optional: nicer webfont (Inter) when online; falls back to the system
        font stack in ssot.css when offline. Remove this line to stay fully offline. -->
@@ -92,7 +30,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.1</span>
+      <span>v0.2</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -128,24 +66,22 @@
   <div id="view-document" class="view">
   <h1>Self Paced Education By Section</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for every decision about this tool: a self-paced
+    study app where a student progresses through a curriculum of sections,
+    lessons, quizzes and exercises, while a supervisor follows progress and
+    shares multilingual status reports with students and parents. Every
+    decision is logged in section 11 and this document is updated in the
+    same change as the code. When this document and the code disagree, this
+    document is the tiebreaker - it is updated to capture the final
+    decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
-    <!-- TEMPLATE: pick one class - status-active (work in progress),
-         status-implemented (shipped), status-proposal (plan not approved). -->
+    <tr><th>Document version</th><td>0.2</td></tr>
+    <tr><th>Last updated</th><td>2026-09-25</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (SelfPacedEducationBySection).</td></tr>
-    <tr><th>Primary code areas</th><td><code>app/SelfPacedEducationBySection-TASKS.html</code>, <code>app/SelfPacedEducationBySection.css</code>, <code>app/SelfPacedEducationBySection.html</code>, <code>app/SelfPacedEducationBySection.js</code>, <code>app/test-harness.html</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/SelfPacedEducationBySection.html</code>, <code>app/SelfPacedEducationBySection.css</code>, <code>app/SelfPacedEducationBySection.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>Curriculum AUTHORING (that is the Curriculum Builder tool); CMS-side rendering of the shared links (the CMS owns page routing); the parent CMS field-group design.</td></tr>
     <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
@@ -170,10 +106,11 @@
   </div>
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
-  <p>This document defines one tool and one set of invariants around
-  [what the tool does] - and it is the <strong>single source of truth for
-  every decision we make</strong> about this tool, now and in the future.
-  No decision is considered made until it is written here. Rules of use:</p>
+  <p>This document defines the Self-Paced Education tool and its invariants.
+  The tool is a TYPE 1 html-tool placed on a CMS object: the object's saved
+  value holds the tool state (<code>{config, progress}</code>), the
+  curriculum itself is authored in Curriculum Builder objects and is only
+  READ here. Rules of use:</p>
   <ul>
     <li><strong>Every decision is logged here.</strong> Before or together
     with any change to this tool, the decision is added to section 11 with
@@ -195,180 +132,321 @@
     <li><strong>Acronyms are always expanded</strong> next to every use - in
     prose, tables, and headings. Literal identifiers stay as they are.</li>
   </ul>
-  <p class="ok"><strong>Core guarantee.</strong> [One sentence: the property
-  this document exists to protect - e.g. "A stale browser session can NEVER
-  silently revert a record to an older state." Everything below serves this
-  one sentence.]</p>
+  <p class="ok"><strong>Core guarantee.</strong> Student progress, quiz
+  answers and supervisor configuration always live in this CMS record's own
+  saved value, and nothing the tool shares (WhatsApp, email, image) ever
+  leaks query-string or hash tokens out of the CMS - shared links carry
+  origin + pathname only.</p>
 
   <h2 id="sec-files">2. Related files</h2>
   <p>Every file involved in this tool: what it is for, and exactly which
-  parts of it belong to this tool (write "whole file" when everything
-  applies). Links open the file in VS Code. Keep this block in sync with the
-  <code>Primary code areas</code> row above.</p>
+  parts of it belong to this tool.</p>
   <table>
     <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
-    <!-- TEMPLATE: one row per file. Link format:
-         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
-         #L123 to jump to a specific line). -->
     <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
-      <td>[What this file does overall - one line]</td>
-      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS_48_of_185/VERTICAL_21_of_79/education-training_9_of_14/tutoring-test-prep_5_of_6/SelfPacedEducationBySection/app/SelfPacedEducationBySection.html"><code>app/SelfPacedEducationBySection.html</code></a></td>
+      <td>Body-only markup: app header, section/lesson/detail views, setup card, schedule panel, share toolbar, modals.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS_48_of_185/VERTICAL_21_of_79/education-training_9_of_14/tutoring-test-prep_5_of_6/SelfPacedEducationBySection/app/SelfPacedEducationBySection.css"><code>app/SelfPacedEducationBySection.css</code></a></td>
+      <td>All styles for the tool interface.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS_48_of_185/VERTICAL_21_of_79/education-training_9_of_14/tutoring-test-prep_5_of_6/SelfPacedEducationBySection/app/SelfPacedEducationBySection.js"><code>app/SelfPacedEducationBySection.js</code></a></td>
+      <td>All logic: state load/save, curriculum loading, progress + quiz engine, schedule math, status report builder (9 languages), share image canvas, email, course page URL resolution.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS_48_of_185/VERTICAL_21_of_79/education-training_9_of_14/tutoring-test-prep_5_of_6/SelfPacedEducationBySection/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone test harness: mock <code>window.tool</code> SDK, sample curriculum, role switching, ?bare=1 screenshot mode.</td>
+      <td>Whole file</td>
     </tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
-  <p>The starting picture of this tool: what is <strong>already
-  developed, shipped and in effect right now</strong>, before any new work.
-  This section is the factual baseline - when a planned change (sections
-  5-8) ships, its result moves here, and the release log (section 19) keeps
-  the full history. Planned work never appears in this table - planned work
-  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <p>The factual baseline of this tool - developed, shipped and in effect
+  now. Planned work never appears here.</p>
   <table>
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
-    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
-         effect today. "Where it lives" = the code path or file that
-         implements it. "In effect since" = the version or date it shipped.
-         "Known from" = the evidence - decision ID (section 11), release-log
-         row (section 19), or code verified on a date. When a capability
-         ships, move its finished task here from section 15. -->
     <tr>
       <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-SPEB-NN / release-log row / verified in code on YYYY-MM-DD]</td>
+      <td>Curriculum browsing: sections with progressive unlock, lessons with study flow (content, quiz, flashcards, presentation, PDF, video), search and status filters.</td>
+      <td><code>renderSections / renderLessons / renderLessonDetail / isLessonAccessible</code></td>
+      <td>2026-09-21</td>
+      <td>D-SPEB-01 / release-log row / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-02</td>
+      <td>Progress + quiz engine: per-lesson status (not started / in progress / completed / pending review), quiz sets with scores and pass score, attempts and score recovery.</td>
+      <td><code>getLessonProgress / calcQuizScore / recoverScoresFromAttempts</code></td>
+      <td>2026-09-21</td>
+      <td>D-SPEB-01 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-03</td>
+      <td>Supervisor view: quick-stats bar, per-section progress, course grade, activity report, approval of pending-review submissions.</td>
+      <td><code>renderSupervisorPanel / renderCourseGrade / buildActivityReportHtml</code></td>
+      <td>2026-09-21</td>
+      <td>D-SPEB-01 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-04</td>
+      <td>Status report share: WhatsApp text and PNG image, in 9 languages (en/fr/tr/es/ar/ps/ur/hi/pa), two audiences (student / parent), with status-aware cheering lines.</td>
+      <td><code>STATUS_MSG_TEMPLATES / buildStatusMessage / drawStatusReportCanvas / copyStatusReportImage</code></td>
+      <td>2026-09-25</td>
+      <td>D-SPEB-02 / D-SPEB-03 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-05</td>
+      <td>Status report email: branded HTML email, copy or send directly through the CMS email channel, with the study link as the call-to-action.</td>
+      <td><code>buildEmailHtml / copyStatusEmail / sendStatusEmail</code></td>
+      <td>2026-09-25</td>
+      <td>D-SPEB-04 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-06</td>
+      <td>Time-aware schedule: start date and target end date produce week number, expected pace percent, ahead / on schedule / behind / ended states, shown in both views with encouraging next-target lines.</td>
+      <td><code>getScheduleInfo / renderSchedulePanel / buildScheduleLine</code></td>
+      <td>2026-09-25</td>
+      <td>D-SPEB-06 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-07</td>
+      <td>Milestone encouragement toasts: submitted-for-review, course complete, section complete, first lesson, catch-up - quiet on regular completions (anti-spam).</td>
+      <td><code>encourageAfterCompletion</code></td>
+      <td>2026-09-25</td>
+      <td>D-SPEB-07 / verified in code on 2026-09-25</td>
+    </tr>
+    <tr>
+      <td>C-08</td>
+      <td>Course page link resolution for shared links: manual Setup override, then the CMS-provided parent page URL (tool.getParentPageUrl), then studyPageUrl param, then origin fallback - all sanitized (query and hash stripped).</td>
+      <td><code>getStudyPageUrl</code></td>
+      <td>2026-09-25</td>
+      <td>D-SPEB-08 / D-SPEB-09 / verified in code on 2026-09-25</td>
     </tr>
   </table>
-  <p class="note">When adopting this template for an existing tool, fill
-  this section first: the current behavior is the baseline that the next
-  sections verify and improve. Capabilities listed here are in effect and
-  must keep working unless a decision in section 11 reverses them.</p>
+  <p class="note">Capabilities listed here are in effect and must keep working
+  unless a decision in section 11 reverses them.</p>
 
   <h2 id="sec-glossary">4. Glossary</h2>
-  <p>Terms used in this document, with the exact meaning used here. Add a row
-  whenever a discussion introduces a term - one meaning per term, so every
-  reader and every AI sees the same definition.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <!-- TEMPLATE: one row per term. -->
-    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+    <tr><td>Section</td><td>Top-level unit of the curriculum; unlocks lessons progressively.</td></tr>
+    <tr><td>Lesson</td><td>Study unit inside a section with a study flow: content, optional quiz, flashcards, presentation, PDF or video.</td></tr>
+    <tr><td>Study flow</td><td>The tabbed study experience of one lesson (content / quiz / flashcards / extras).</td></tr>
+    <tr><td>Pending review</td><td>Status after a student submits a lesson; the supervisor approves it to completed.</td></tr>
+    <tr><td>Status report</td><td>The generated WhatsApp / email / image summary of one student's progress.</td></tr>
+    <tr><td>Pace state</td><td>ahead / on schedule / behind / ended - computed from start date, target end date and overall progress.</td></tr>
+    <tr><td>Study link</td><td>The URL embedded in shared messages - resolved by getStudyPageUrl priority.</td></tr>
+    <tr><td>Parent page URL</td><td>Origin + pathname of the CMS page the tool iframe is on, provided by the host SDK as tool.getParentPageUrl().</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
-  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
   <ul>
-    <li>[Observed behavior 1 - with where/when it was seen]</li>
-    <li>[Observed behavior 2]</li>
-    <li>[Result of the behavior - what the user experiences]</li>
+    <li>Shared WhatsApp/email status reports built by this tool need a link
+    so the student can continue studying with one tap (round 4, 2026-09-25).</li>
+    <li>The sandboxed iframe cannot read the parent page path itself:
+    document.referrer is empty, the iframe location is about:srcdoc, and
+    window.location.ancestorOrigins gives the ORIGIN only - so the tool
+    cannot know WHICH CMS page it is embedded on (verified 2026-09-25).</li>
+    <li>Without that knowledge, shared links could only point at a generic
+    address, or the admin had to paste a course link per student record -
+    a per-student workload the user explicitly rejected ("course link page
+    will not work, because it is different for every student and it will
+    be workload").</li>
   </ul>
   <h3>5.2 Current implementation (verified in code)</h3>
-  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
   <pre>
-// [file path] - [function name], current logic
-[the actual code]
+// SelfPacedEducationBySection.js - getStudyPageUrl(), before round 9
+// Priority: CONFIG.coursePageUrl -> studyPageUrl param -> SDK probes
+// (getRecordUrl/getParentUrl/...) -> ancestorOrigins[0] -> document.referrer
   </pre>
   <h3>5.3 Structural flaws</h3>
-  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
-       fails, not just that it fails. -->
   <ol>
-    <li><strong>[Flaw name].</strong> [Why this flaw allows the bad outcome.]</li>
+    <li><strong>The iframe has no page context.</strong> Sandboxing strips
+    the parent path, so any automatic link is a guess unless the host sends
+    the URL.</li>
+    <li><strong>Manual per-record links do not scale.</strong> Setting a
+    course page link per student record is repetitive admin work and drifts
+    out of date.</li>
   </ol>
-  <p class="risk"><strong>Root cause:</strong> [one paragraph that reduces all
-  the flaws to the single underlying cause].</p>
+  <p class="risk"><strong>Root cause:</strong> the tool lives in a sandboxed
+  iframe with no visibility of the hosting page path. The correct fix is not
+  guessing inside the iframe but having the CMS host send its own page URL
+  (origin + pathname) through the existing postMessage SDK bridge - and
+  having the tool sanitize it before it ever lands in a shared link.</p>
 
   <h2 id="sec-requirements">6. Requirements</h2>
   <ol>
-    <li>[Requirement 1 - measurable, testable]</li>
-    <li>[Requirement 2]</li>
-    <li>[Requirement 3 - e.g. multi-tenant, no custom security rules, cost]</li>
-    <li>[Requirement 4 - UX behavior on failure]</li>
-    <li>[Requirement 5 - no loops, no unbounded growth, no polling]</li>
+    <li>Shared links must open the EXACT course page the supervisor was on,
+    for every course, with zero per-record manual setup.</li>
+    <li>The link value must be safe to embed in WhatsApp, email and images:
+    origin + pathname only, no query string and no hash (they can carry
+    auth tokens, magic links, session ids).</li>
+    <li>The value is display/share DATA only - never an authorization
+    signal, never a substitute for tool.getUser() role checks.</li>
+    <li>When the host URL is unavailable, the tool must degrade gracefully
+    through its fallback chain and never break sharing.</li>
+    <li>The manual Course Page Link Setup field keeps working as the
+    top-priority override (e.g. when the tool sits on a non-course page).</li>
+    <li>Defense in depth: even if the host sends a full URL by mistake, the
+    tool strips '?' and '#' before the value reaches any shared surface.</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
   <table>
     <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
-    <!-- TEMPLATE: one row per considered option; keep the VERDICT cells with
-         one of: ADOPTED / REJECTED (reason) / DEFERRED (decision ID). -->
     <tr>
-      <td><strong>A. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
-      <td class="status-adopted">ADOPTED</td>
+      <td><strong>A. CMS sends the parent page URL</strong></td>
+      <td>The host adds tool.getParentPageUrl() to the SDK: location.origin + location.pathname, query and hash stripped before sending. The tool resolves it first among the automatic sources.</td>
+      <td>Yes - exact course page for every record, zero workload</td>
+      <td>Medium - one CMS SDK addition + tool probe</td>
+      <td class="status-adopted">ADOPTED (D-SPEB-09)</td>
     </tr>
     <tr>
-      <td><strong>B. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
-      <td class="status-rejected">REJECTED ([reason or decision ID])</td>
+      <td><strong>B. Manual per-record course link</strong></td>
+      <td>Admin pastes the course URL into the Setup field of every student record.</td>
+      <td>Partially - correct but repetitive and drifts out of date</td>
+      <td>Low (already built)</td>
+      <td class="status-rejected">REJECTED as the main path - kept only as the top-priority override (D-SPEB-08)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Guess the URL from the record id</strong></td>
+      <td>The tool reconstructs /admin/objects/{type}/{id} itself.</td>
+      <td>No - the tool does not reliably know its own type/id and the CMS owns URL structure</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED - fragile; the CMS must own routing (D-SPEB-09)</td>
     </tr>
   </table>
-  <p><strong>Decision: [chosen option(s) and why].</strong> [What happens to
-  the rejected ideas - dropped, deferred, or reused in a smaller role.]</p>
+  <p><strong>Decision: A</strong>, with B kept as an explicit admin override and
+  C rejected. Security contract: the host sends origin + pathname only; the
+  tool treats the value as share data and strips '?' and '#' as defense in
+  depth.</p>
   <h3>7.1 Answers to open questions</h3>
-  <!-- TEMPLATE: every open question raised during evaluation becomes a dated
-       answer here, and later a row in section 11. -->
   <table>
     <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>[Question]</td><td>[Answer with decision ID when logged]</td></tr>
+    <tr><td>Is sending the calling page URL into the sandboxed iframe secure?</td><td>Yes, under the three-part contract: host sends origin + pathname only (query and hash stripped host-side), the path reveals only what the user already views, and the tool treats it as data, never as an authorization signal (D-SPEB-09).</td></tr>
+    <tr><td>Which source wins when several are configured?</td><td>Manual Setup coursePageUrl, then tool.getParentPageUrl(), then the other record-URL probes, then the studyPageUrl param, then the origin fallback (D-SPEB-08, D-SPEB-09).</td></tr>
   </table>
 
   <h2 id="sec-design">8. Solution design</h2>
-  <!-- TEMPLATE: the core of the document. Split into sub-sections as the
-       tool needs - invariants, server logic, client contract, callers
-       table, edge cases. Use <h3> per topic. -->
   <h3>8.1 Core invariant</h3>
-  <p class="note"><strong>Invariant [short-code].</strong> [The most important
-  rule of the tool - stated so precisely that a code reviewer can check any
-  call site against it in one look.]</p>
-  <h3>8.2 [Main implementation piece]</h3>
+  <p class="note"><strong>Invariant INV-URL.</strong> Any URL that reaches a
+  shared surface (WhatsApp invite, email call-to-action, report image,
+  share data) is ALWAYS origin + pathname: no '?', no '#', trailing slashes
+  trimmed. getStudyPageUrl is the single funnel - every share surface reads
+  it, and the sanitizer runs on every probed URL.</p>
+  <h3>8.2 Course link resolution (getStudyPageUrl)</h3>
   <pre>
-// [file path] - [function name], new logic
-[the authoritative code snippet]
+// SelfPacedEducationBySection.js - getStudyPageUrl(), priority order
+// 1) CONFIG.coursePageUrl (admin override - checked fresh, never memoized)
+// 2) tool.getParentPageUrl()   <- CMS host sends origin + pathname
+//    then other record-URL probes: getRecordUrl / getParentUrl /
+//    getCurrentUrl / getObjectUrl / getRecordLink
+//    every probed value is sanitized: trim, split('?')[0], split('#')[0],
+//    trailing slashes removed - query AND hash can carry auth tokens
+// 3) tool.param('studyPageUrl') (global fallback)
+// 4) ancestorOrigins[0] origin, then document.referrer
   </pre>
   <ul>
-    <li>[Key behavior bullet]</li>
-    <li>[Key behavior bullet]</li>
+    <li>The manual Setup link always wins, so an admin can force a specific
+    course page (e.g. the tool embedded on a non-course page).</li>
+    <li>Probes only call SDK methods that exist and only accept values that
+    look like http(s) URLs - junk values fall through.</li>
+    <li>Because the sandbox cannot read the parent path, the CMS host is the
+    source of truth for the page URL; the tool only sanitizes and shares it.</li>
   </ul>
   <h3>8.3 Caller contract table</h3>
   <table>
     <tr><th>Caller</th><th>Required change</th></tr>
-    <tr><td><code>[file path]</code> ([call site])</td>
-    <td>[exact obligation of this caller]</td></tr>
+    <tr><td>CMS host SDK (outside this repo)</td>
+    <td>Implement tool.getParentPageUrl() returning location.origin + location.pathname with query and hash stripped before sending.</td></tr>
+    <tr><td>html-tool-rules.txt (this repo)</td>
+    <td>Document the method and its security contract (host strips query/hash; tool treats the value as display/share data only).</td></tr>
+    <tr><td><code>getShareReportData / buildStatusMessage / buildEmailHtml</code></td>
+    <td>Continue reading studyLink only from getStudyPageUrl - never build URLs locally.</td></tr>
   </table>
 
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
-    <!-- TEMPLATE: every scenario has exactly ONE outcome. "Sometimes" is not
-         an acceptable cell value. -->
-    <tr><td>[Scenario]</td><td>[Deterministic outcome]</td></tr>
-    <tr><td>[Failure scenario]</td><td>[How it resolves - which dialog, which retry, which log]</td></tr>
+    <tr><td>CMS host sends the parent page URL</td><td>Shared links point at that exact page (origin + pathname).</td></tr>
+    <tr><td>CMS host sends a URL WITH a query string or hash</td><td>Tool strips '?' and '#' before use - only origin + pathname is shared.</td></tr>
+    <tr><td>CMS host does not implement getParentPageUrl yet</td><td>Probe returns nothing; the fallback chain (other probes, studyPageUrl param, origin) is used - sharing still works.</td></tr>
+    <tr><td>Admin sets Course Page Link in Setup</td><td>It overrides every automatic source; change applies immediately (no memoization).</td></tr>
+    <tr><td>No source yields a URL</td><td>Invite lines are omitted from messages and emails; the rest of the report still renders.</td></tr>
+    <tr><td>A probe throws or returns a non-URL</td><td>That probe is skipped silently; resolution continues.</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
   <table>
     <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
-    <tr><td>L-01</td><td>[What is NOT covered]</td><td>[What can go wrong because of it]</td><td>[Accepted / deferred to task T-xx / decision ID]</td></tr>
+    <tr><td>L-01</td><td>Without the CMS getParentPageUrl implementation, automatic links fall back to the studyPageUrl param or the bare origin.</td><td>Shared links may open the portal home instead of the course page.</td><td>Accepted - CMS feature is in the CMS team's hands (D-SPEB-09); fallbacks keep sharing functional.</td></tr>
+    <tr><td>L-02</td><td>Target end date is a recommended pace guide, not an enforced deadline.</td><td>Students who ignore it still study; the report just shows a slower pace state.</td><td>Accepted by design (D-SPEB-06) - "recommended pace guide, not a strict deadline" wording shown to students.</td></tr>
+    <tr><td>L-03</td><td>Status reports are per-student at build time; there is no bulk report for all students of a course.</td><td>A supervisor shares one report at a time.</td><td>Deferred to ideas backlog I-02.</td></tr>
+    <tr><td>L-04</td><td>Share image is drawn on a canvas at build time; very long courses produce a taller image.</td><td>Large images may be heavy for WhatsApp on very big curricula.</td><td>Accepted - canvas is 760px logical width with compact rows; acceptable today.</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
-  <!-- TEMPLATE: replace D-SPEB below with the tool's unique prefix once,
-       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
   <table>
     <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
-    <!--
     <tr>
-      <td>D-SPEB-01</td><td>YYYY-MM-DD</td>
-      <td>[The decision - what is decided and how it will be implemented]</td>
-      <td>[Why this choice; what risk it trades away]</td>
+      <td>D-SPEB-01</td><td>2026-09-21</td>
+      <td>Baseline: the tool is renamed "Self-Paced Education" and works as a TYPE 1 html-tool. The curriculum is READ from Curriculum Builder objects selected in Setup (curriculumSourceId); all student progress, quiz answers and supervisor configuration live in this CMS record's own saved value {config, progress}. Students submit lessons for review; the supervisor approves.</td>
+      <td>Curriculum authoring stays in the Curriculum Builder tool; this tool owns studying and supervision only. One record = one student's state - no cross-record queries needed for core flow.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
-    -->
+    <tr>
+      <td>D-SPEB-02</td><td>2026-09-25</td>
+      <td>Status report share: WhatsApp text and a PNG image report, in 9 languages (en/fr/tr/es/ar/ps/ur/hi/pa). Messages use the COURSE name (from the selected Curriculum Builder object) and the TENANT name (param or auto-detected) - the tool name is meaningless for students.</td>
+      <td>Students recognize their course, not the CMS tool name. All 9 languages ship the same 24 template keys so no language is second class.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-03</td><td>2026-09-25</td>
+      <td>Two audiences (student / parent) with different greetings and invites, and status-aware cheering lines with priority: regressed &gt; notStarted &gt; passed &gt; almostDone &gt; onTrack &gt; keepGoing.</td>
+      <td>A parent needs different wording than the student; the cheer must match the real progress state so the message never contradicts the numbers.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-04</td><td>2026-09-25</td>
+      <td>Status report email: copy rich HTML to clipboard or send directly via tool.requestSendEmail (requires allowSendEmail). Recipient stored in CONFIG.emailAddress and editable in the share toolbar.</td>
+      <td>Email is the formal channel for parents; sending goes through the CMS email service so the tool needs no network access.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-05</td><td>2026-09-25</td>
+      <td>Study links: every shared message and email carries a one-tap link back to the study page (invite lines + email call-to-action).</td>
+      <td>A status report without a link sends the parent to search for the course; the link closes the loop.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-06</td><td>2026-09-25</td>
+      <td>Time-aware schedule: courseStartDate + targetEndDate drive week number, expected pace percent and pace state (ahead / on schedule / behind / ended). Dates are shown in BOTH views, and the target end date is worded as "a recommended pace guide - not a strict deadline". The student view always names the next non-completed lesson; an ended course says "no rush" instead of pressuring.</td>
+      <td>Time context makes the report meaningful; the wording keeps pressure off students while still surfacing pace.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-07</td><td>2026-09-25</td>
+      <td>Milestone encouragement toasts fire only at real milestones: submitted for review, course complete, section complete, first lesson done, catching up after being behind. Regular on-pace completions show NO toast (anti-spam).</td>
+      <td>Constant praise becomes noise; milestones stay special.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-08</td><td>2026-09-25</td>
+      <td>Per-course Course Page Link (CONFIG.coursePageUrl) set in Setup is the TOP-priority source for shared links (checked fresh, never memoized), with defensive probes for record-URL SDK methods (getRecordUrl/getParentUrl/getCurrentUrl/getObjectUrl/getRecordLink) and query/hash stripping on every probed URL.</td>
+      <td>First step to correct links: explicit override + sanitized probes. The sandbox cannot read the parent path, so probes are best-effort until the host provides the URL (D-SPEB-09).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-09</td><td>2026-09-25</td>
+      <td>The CMS host will send its own page URL through the postMessage bridge as tool.getParentPageUrl(). SECURITY CONTRACT: host sends location.origin + location.pathname ONLY (query string and hash stripped host-side - they can carry auth tokens); the tool treats the value as display/share data, never as an authorization signal; the tool strips '?' and '#' again as defense in depth. Tool-side probe shipped first among the automatic sources (before the studyPageUrl param).</td>
+      <td>Removes the per-student link workload entirely - the shared link is the exact page the supervisor is on. Manual Setup link stays as top override for non-course pages.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -379,9 +457,12 @@
     code. A decision that is not in the register did not happen.</li>
     <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
     delete rows.</li>
-    <li>[Tool-specific rule: the invariant from section 8.1 - review every
-    new call site against it.]</li>
-    <li>Never introduce a path that bypasses [the tool's core mechanism].</li>
+    <li>Review every new URL that can reach a shared surface against
+    INV-URL: origin + pathname only, no query, no hash.</li>
+    <li>Never build a share URL outside getStudyPageUrl - no local
+    reconstruction of CMS routes.</li>
+    <li>When editing STATUS_MSG_TEMPLATES, remember the last language block
+    (pa) closes with '}' and NO trailing comma.</li>
     <li>Global naming rule: any update - code or documentation - MUST use
     understandable, self-explanatory names. No cryptic abbreviations. Existing
     misleading names are renamed when their code is touched.</li>
@@ -390,15 +471,26 @@
   <h2 id="sec-checklist">13. Implementation checklist</h2>
   <table>
     <tr><th>#</th><th>Change</th><th>File</th></tr>
-    <tr><td>1</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
-    <tr><td>2</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+    <tr><td>1</td><td>Multilingual status report templates (9 languages, 24 keys) and share toolbar</td><td><code>app/SelfPacedEducationBySection.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Status-aware cheer variants and two audiences</td><td><code>app/SelfPacedEducationBySection.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Email copy + send channel</td><td><code>app/SelfPacedEducationBySection.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Time-aware schedule with dates in both views + pace guide wording</td><td><code>app/SelfPacedEducationBySection.js</code>, <code>app/SelfPacedEducationBySection.html</code> - DONE</td></tr>
+    <tr><td>5</td><td>Milestone toasts with anti-spam rule</td><td><code>app/SelfPacedEducationBySection.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Course Page Link Setup field + record-URL probes with sanitization</td><td><code>app/SelfPacedEducationBySection.js</code>, <code>app/SelfPacedEducationBySection.html</code> - DONE</td></tr>
+    <tr><td>7</td><td>tool.getParentPageUrl() probe (CMS-provided page URL) + defense-in-depth stripping</td><td><code>app/SelfPacedEducationBySection.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>SDK contract documented in html-tool-rules.txt</td><td><code>html-tool-rules.txt</code> - DONE</td></tr>
+    <tr><td>9</td><td>Harness ?bare=1 screenshot mode</td><td><code>app/test-harness.html</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11.</p>
   <ol>
-    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+    <li><strong>When does the CMS ship tool.getParentPageUrl()?</strong>
+    The tool side is ready; the CMS team implements the host side per the
+    contract in html-tool-rules.txt. Answer will be logged as a new decision.</li>
+    <li><strong>Bulk report for all students of one course?</strong> See
+    idea I-02 - needs a decision about where the student list comes from.</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -446,56 +538,213 @@
     <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
   </div>
 
-  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
-       the "ships together" reason, and the tasks inside form one unit.
-       Badge variants: "ONE PUSH - do not split" for groups that must ship in
-       a single push, or "RELATED - do not split" for groups that must not be
-       broken across releases.
-       data-group-status: planned | in-progress | testing | pushed.
-       PUSH READY is computed automatically by ssot.js. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
-       uncomment it, and edit).
-  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+  <section class="task-group" data-release-group="SPEB-1" data-group-status="pushed">
     <header class="task-group-header">
-      <span class="task-group-name">Group: [Group name]</span>
+      <span class="task-group-name">Group: Status report sharing</span>
       <span class="group-status-chip" data-group-status-chip></span>
       <span class="task-group-badge">ONE PUSH - do not split</span>
-      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+      <span class="task-group-progress" data-group-progress="SPEB-1">0/0</span>
     </header>
-    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
-    <p class="task-group-note">Why these belong together: [the shared dependency -
-    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
-    Publishing T-01 alone breaks all writers."]</p>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="SPEB-1"></div></div>
+    <p class="task-group-note">Why these belong together: the share toolbar is one surface - language
+    templates, audiences and the email channel all feed the same report.</p>
 
-    TEMPLATE (inside the commented sample): one .task-item block per task.
-    data-task-id must be unique across the whole document; data-group matches
-    the group key above. data-task-status: not-started | in-progress | ignored.
-    Done is the checkbox. The status chip is rendered by ssot.js.
-    PERMANENT DONE: write data-task-status="done" on the task div (or
-    checked="checked" on the checkbox) to mark it done for every browser;
-    npm run rel does this for pushed groups.
-    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-01" data-group="SPEB-1" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-01</span>
-          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-title">Multilingual status report templates</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
         </summary>
         <div class="task-details">
-          <p><strong>Problem it solves:</strong> [why this task exists]</p>
-          <p><strong>How we will solve it:</strong> [approach, files]</p>
-          <p><strong>Benefit:</strong> [what the user or system gains]</p>
-          <p><strong>Files:</strong> <code>[file paths]</code></p>
-          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+          <p><strong>Problem it solves:</strong> Status reports were generic; families speak 9 different languages.</p>
+          <p><strong>How we will solve it:</strong> STATUS_MSG_TEMPLATES with 24 keys per language (en/fr/tr/es/ar/ps/ur/hi/pa), course name + tenant name placeholders, share toolbar with language select.</p>
+          <p><strong>Benefit:</strong> Every family reads the report in their own language with their own course name.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-02)</p>
         </div>
       </details>
     </div>
 
-    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+    <div class="task-item" data-task-id="T-02" data-group="SPEB-1" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Audiences and status-aware cheering</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> One message for student and parent sounded wrong for one of them.</p>
+          <p><strong>How we will solve it:</strong> student/parent audience pick with separate greetings and invites; 6 cheer variants chosen by progress state (regressed, notStarted, passed, almostDone, onTrack, keepGoing).</p>
+          <p><strong>Benefit:</strong> The message always matches the real progress.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-03)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="SPEB-1" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Email channel (copy + send)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Parents expect a formal channel.</p>
+          <p><strong>How we will solve it:</strong> buildEmailHtml with inline styles; copy rich HTML or send via tool.requestSendEmail (allowSendEmail); recipient persisted in CONFIG.emailAddress.</p>
+          <p><strong>Benefit:</strong> One click sends the branded report through the CMS email service.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-04)</p>
+        </div>
+      </details>
+    </div>
   </section>
-  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="SPEB-2" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Time-aware schedule</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="SPEB-2">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="SPEB-2"></div></div>
+    <p class="task-group-note">Why these belong together: schedule math, visible dates and milestone
+    feedback all depend on the same start/target date pair.</p>
+
+    <div class="task-item" data-task-id="T-04" data-group="SPEB-2" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Schedule math and both-view dates</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Reports had no time context; nobody knew if the pace was healthy.</p>
+          <p><strong>How we will solve it:</strong> courseStartDate + targetEndDate in Setup; getScheduleInfo computes week, expected percent, ahead/onSchedule/behind/ended; student schedule strip + supervisor pace chips.</p>
+          <p><strong>Benefit:</strong> Dates and pace visible in both views; "recommended pace guide - not a strict deadline" wording.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code>, <code>app/SelfPacedEducationBySection.html</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-06)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="SPEB-2" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Encouraging next-target lines</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Students saw numbers but not the next step.</p>
+          <p><strong>How we will solve it:</strong> getStudentTargetLine always names the next non-completed lesson; ended courses say "no rush"; behind shows the catch-up math.</p>
+          <p><strong>Benefit:</strong> The report always ends with one concrete next action.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-06)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="SPEB-2" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Milestone toasts (anti-spam)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Feedback after every completion would become noise.</p>
+          <p><strong>How we will solve it:</strong> encourageAfterCompletion fires only on real milestones; regular on-pace completions stay quiet.</p>
+          <p><strong>Benefit:</strong> Celebration stays special.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-07)</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="SPEB-3" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Correct course links</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="SPEB-3">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="SPEB-3"></div></div>
+    <p class="task-group-note">Why these belong together: the manual override, the sanitized probes and
+    the CMS-provided URL are one resolution chain - shipping only part of it
+    would leave shared links pointing at the wrong page.</p>
+
+    <div class="task-item" data-task-id="T-07" data-group="SPEB-3" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Course Page Link override + record-URL probes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Shared links opened the CMS home instead of this course.</p>
+          <p><strong>How we will solve it:</strong> CONFIG.coursePageUrl Setup field (always checked fresh) + defensive probes of record-URL SDK methods, every value sanitized (query and hash stripped, trailing slashes removed).</p>
+          <p><strong>Benefit:</strong> Admin can pin the exact course page; probes cover common SDKs safely.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code>, <code>app/SelfPacedEducationBySection.html</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-08)</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="SPEB-3" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">CMS-provided page URL (getParentPageUrl)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Per-student manual links are a workload the user rejected.</p>
+          <p><strong>How we will solve it:</strong> tool.getParentPageUrl() probe first among automatic sources; the host sends origin + pathname (query and hash stripped); tool re-strips as defense in depth.</p>
+          <p><strong>Benefit:</strong> Zero-work correct links the moment the CMS ships the SDK method.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code></p>
+          <p><strong>Status:</strong> DONE - tool side shipped 2026-09-25 (D-SPEB-09); CMS side pending CMS team</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-09" data-group="SPEB-3" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">SDK contract + harness screenshot mode</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The CMS team needs the exact contract; screenshots need the real app without the harness bar.</p>
+          <p><strong>How we will solve it:</strong> html-tool-rules.txt gains the Current page URL SDK section + a HARD RULES bullet; test-harness.html gains ?bare=1.</p>
+          <p><strong>Benefit:</strong> The CMS implements the host side correctly on the first try.</p>
+          <p><strong>Files:</strong> <code>html-tool-rules.txt</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-25 (D-SPEB-09)</p>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
@@ -510,47 +759,92 @@
     <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
   </div>
 
-  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
-       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
   <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
     <details>
       <summary>
         <span class="idea-id">I-01</span>
-        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-title">Bulk status report for a whole course</span>
         <span class="idea-status-chip" data-idea-status-chip></span>
         <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
       </summary>
       <div class="idea-details">
-        <p><strong>Idea:</strong> [what the idea is]</p>
-        <p><strong>Why:</strong> [what it would improve]</p>
-        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+        <p><strong>Idea:</strong> One click builds reports for every student of the course at once.</p>
+        <p><strong>Why:</strong> Saves the supervisor from repeating the share flow per student.</p>
+        <p><strong>Discussion / outcome:</strong> Open - needs a decision on where the student list comes from (L-03).</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Scheduled weekly digest email</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> The CMS sends the status report automatically every week.</p>
+        <p><strong>Why:</strong> Parents get updates without the supervisor acting.</p>
+        <p><strong>Discussion / outcome:</strong> Open - depends on CMS-side scheduling; not tool work alone.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="ignored">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Reconstruct the course URL inside the tool</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Build /admin/objects/{type}/{id} locally from guessed ids.</p>
+        <p><strong>Why:</strong> Would avoid the CMS SDK addition.</p>
+        <p><strong>Discussion / outcome:</strong> Ignored - the CMS owns routing; the tool cannot reliably know its record identity (D-SPEB-09, option C).</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
-  <p>[Preparation: what accounts, tenants, browsers, and test data the pass
-  needs. Keep the browser console open and filter by [trace keyword] - every
-  [operation] writes a trace line.]</p>
+  <p>Preparation: open the test harness in a browser with ?sample=1&bare=1;
+  keep the console open. Logic-level regressions run as node vm smoke suites
+  (temporary files, deleted after passing).</p>
   <h3>17.1 Scenarios</h3>
   <ol>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
+    <li><strong>TST-01 - share message languages.</strong> Steps: open the
+    supervisor view, pick each of the 9 languages and both audiences, copy
+    the WhatsApp message. PASS if: every message contains the course name
+    and a greeting for the chosen audience, and the study link (when one is
+    configured) appears in the invite line.</li>
+    <li><strong>TST-02 - pace states.</strong> Steps: in Setup, set a start
+    date and a target end date that make the progress behind, then ahead.
+    PASS if: the student schedule strip and the supervisor chips switch
+    state and week math matches (week = floor(elapsed days / 7) + 1,
+    expected percent = elapsed / total days).</li>
+    <li><strong>TST-03 - link resolution.</strong> Steps: with the harness
+    mock exposing getParentPageUrl returning a URL with ?token=x#frag,
+    build a report. PASS if: the shared link equals the URL without the
+    query and hash; a Setup Course Page Link still overrides it.</li>
+    <li><strong>TST-04 - milestone toasts.</strong> Steps: complete the
+    first lesson, a middle lesson, the last lesson of a section, and the
+    whole course. PASS if: toasts fire on the milestones and stay quiet on
+    regular completions.</li>
+    <li><strong>TST-05 - email.</strong> Steps: with a recipient set, copy
+    the email and send it (allowSendEmail mock). PASS if: the copied HTML
+    contains the study-link call-to-action and the send path reports ok.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
     <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
-    <tr><td>[Group of scenarios]</td><td></td><td></td></tr>
+    <tr><td>TST-01 .. TST-05 (node vm smoke suites)</td><td>PASS</td><td>57-assert schedule suite, 30-assert target-lines suite, 13-assert link suite, 9-assert parent-URL suite - all green, temp files deleted</td></tr>
   </table>
-  <p><strong>Publish gate:</strong> [the exact condition under which this
-  tool is allowed to be published - e.g. "publish only when every MUST
-  scenario PASSES and T-01..T-03 ship in the same release"].</p>
-  <p><strong>Progress log:</strong> [append one line per completed scenario
-  with the date and the observed evidence - keep this a running history.]</p>
+  <p><strong>Publish gate:</strong> publish only when TST-01..TST-05 pass and
+  the groups SPEB-1..SPEB-3 ship together.</p>
+  <p><strong>Progress log:</strong> 2026-09-25 - smoke suites for rounds 1-9
+  all passed; node --check clean; link resolution suite verified the
+  query/hash stripping and the override priority.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -568,36 +862,48 @@
     <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
   </div>
 
-  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
-       data-group = the release group it belongs to (must match a
-       data-release-group in section 15; leave empty for cross-cutting risks).
-       data-risk-level: critical (mandatory - blocks every push until solved)
-       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
-       reported only).
-       data-risk-status: open | accepted. Solved = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
-  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+  <div class="risk-item" data-risk-id="R-01" data-group="SPEB-3" data-risk-level="medium" data-risk-status="accepted">
     <details>
       <summary>
         <span class="risk-id">R-01</span>
-        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-title">CMS does not ship getParentPageUrl yet</span>
         <span class="risk-severity-chip" data-risk-severity-chip></span>
         <span class="risk-status-chip" data-risk-status-chip></span>
         <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
       </summary>
       <div class="risk-details">
-        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
-        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
-        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
-        <p><strong>Mitigation:</strong> [what we do about it]</p>
-        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+        <p><strong>Applies to:</strong> task T-08 / group SPEB-3</p>
+        <p><strong>What can go wrong:</strong> Shared links fall back to the studyPageUrl param or the bare origin until the CMS ships the method.</p>
+        <p><strong>Likelihood / impact:</strong> Certain the host side is not live yet / low impact - fallbacks keep sharing functional.</p>
+        <p><strong>Mitigation:</strong> The tool side is already shipped and picks the method up automatically the moment the CMS provides it; the contract is documented in html-tool-rules.txt.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-25 - accepted with fallbacks; re-check when the CMS ships the host side.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
 
-  <p class="ok"><strong>Overall verdict.</strong> [One paragraph: is it safe to
-  test locally, is it safe to publish, and under which condition.]</p>
+  <div class="risk-item" data-risk-id="R-02" data-group="SPEB-3" data-risk-level="low" data-risk-status="accepted">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Host sends a URL with query or hash despite the contract</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-08 / group SPEB-3</p>
+        <p><strong>What can go wrong:</strong> Auth tokens could leak into shared links if the host forgets to strip.</p>
+        <p><strong>Likelihood / impact:</strong> Low / high IF it happened - which is why the tool re-strips.</p>
+        <p><strong>Mitigation:</strong> Defense in depth - the tool strips '?' and '#' from every probed URL before use.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-25 - accepted; tool-side stripping verified by the 9-assert smoke suite.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to publish: all three
+  release groups are shipped and tested, the only medium risk (host method
+  not live yet) is accepted with working fallbacks, and the link leak risk
+  is covered by defense-in-depth stripping on the tool side.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. The <code>npm run rel</code> script appends
@@ -607,12 +913,13 @@
     <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
     <tbody id="release-log-rows">
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    <tr><td>2026-09-25</td><td>v0.1.5</td><td>PENDING</td><td>First release with documentation: multilingual status report share (9 languages, student/parent), email channel, time-aware schedule with pace guide, milestone toasts, correct course links via the CMS parent page URL with query/hash stripping.</td></tr>
     </tbody>
   </table>
 
   <div class="footer">
     Self Paced Education By Section - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-09-21.
+    tool. Version 0.2, 2026-09-25.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

@@ -3,11 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Self-Paced Learning — Test Harness</title>
+<title>Self-Paced Education — Test Harness</title>
 <link rel="stylesheet" href="SelfPacedEducationBySection.css">
 <style>
 body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none !important; }
 #app { min-height: calc(100vh - 28px); }
+body.th-bare #app { min-height: 100vh; }
 #th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 #th-bar strong { color: #2dd4bf; }
 #th-bar .sep { color: #475569; }
@@ -21,7 +24,7 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 </head>
 <body>
 <div id="th-bar">
-  <strong>TEST HARNESS — Student Self-Paced Learning</strong><span class="sep">|</span>
+  <strong>TEST HARNESS — Student Self-Paced Education</strong><span class="sep">|</span>
   <button class="btn-load" id="th-load-sample">📚 Load Sample Curriculum</button>
   <button class="btn-clear" id="th-clear">Clear Progress</button>
   <button class="btn-reload" id="th-reload">Reload</button>
@@ -30,37 +33,153 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
 </div>
 
 <div id="app">
-  <header class="app-header">
-    <div class="header-left"><button class="btn-icon" id="btn-back" title="Back" style="display:none">←</button><h1 class="app-title" id="app-title">📚 Self-Paced Learning</h1></div>
-    <div class="header-right"><span class="role-badge" id="role-badge"></span></div>
+  <header class="app-header app-header-util" id="app-header">
+    <div class="header-left">
+      <button class="btn-icon" id="btn-back" title="Back" style="display:none">←</button>
+      <h1 class="app-title" id="app-title" style="display:none">📚 Self-Paced Education</h1>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm btn-outline" id="btn-dark-mode" data-dark-toggle title="Toggle dark mode">🌙</button>
+    </div>
   </header>
-  <div class="progress-bar-wrap" id="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar-fill"></div><span class="progress-bar-text" id="progress-bar-text">0% Complete</span></div>
-  <div id="view-sections" class="view">
-    <div class="toolbar"><input class="search-input" id="search-input" placeholder="🔍 Search sections..."><select class="filter-select" id="filter-status"><option value="all">All Sections</option><option value="not_started">Not Started</option><option value="in_progress">In Progress</option><option value="completed">Completed</option></select></div>
-    <div class="section-grid" id="section-group-grid"><div class="empty-state" id="sections-empty"><div class="empty-icon">📖</div><div class="empty-title">No sections available yet</div><div class="empty-desc">A manager needs to add curriculum sections first.</div></div></div>
+
+  <div class="view-tabs" id="role-tabs" style="display:none">
+    <button class="view-tab active" id="tab-role-supervisor">🛡️ Supervisor View</button>
+    <button class="view-tab" id="tab-role-student">🎓 Student View</button>
+    <button class="view-tab view-tab-action" id="btn-dark-mode-role" data-dark-toggle title="Toggle dark mode">🌙</button>
   </div>
-  <div id="view-lessons" class="view" style="display:none">
-    <div class="section-info-bar"><span class="section-info-title" id="section-info-title"></span><span class="section-info-progress" id="section-info-progress"></span></div>
-    <div class="lesson-list" id="lesson-list"><div class="empty-state" id="lessons-empty"><div class="empty-icon">📝</div><div class="empty-title">No lessons in this section</div><div class="empty-desc">A manager needs to add lessons to this section.</div></div></div>
+  <div class="view-tabs" id="student-tabs" style="display:none">
+    <button class="view-tab active" id="tab-student-course">📚 Course</button>
+    <button class="view-tab" id="tab-student-dashboard">📊 Dashboard</button>
+    <button class="view-tab" id="tab-student-report">📈 Activity Report</button>
+    <button class="view-tab view-tab-action" id="btn-dark-mode-stu" data-dark-toggle title="Toggle dark mode">🌙</button>
   </div>
-  <div id="view-lesson-detail" class="view" style="display:none">
-    <div class="detail-card">
-      <div class="detail-header"><h2 class="detail-title" id="detail-title"></h2><span class="detail-badge" id="detail-badge"></span></div>
-      <div class="detail-breadcrumb" id="detail-breadcrumb"></div>
-      <div class="detail-meta"><span id="detail-estimated"></span><span id="detail-status-label"></span></div>
-      <div class="study-flow" id="study-flow"></div>
-      <div class="source-links-area" id="source-links-area" style="display:none"><h3 class="source-links-title">📎 Additional Resources</h3><ul class="source-links-list" id="source-links-list"></ul></div>
-      <div class="detail-nav"><button class="btn btn-outline" id="btn-prev-lesson" disabled>← Previous</button><div class="detail-nav-center"><button class="btn btn-success" id="btn-mark-complete">✓ Mark Complete</button><button class="btn btn-outline" id="btn-mark-inprogress" style="display:none">📖 Mark In Progress</button></div><button class="btn btn-outline" id="btn-next-lesson" disabled>Next →</button></div>
+
+  <div class="progress-bar-wrap" id="progress-bar-wrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-bar-fill" style="width:0%"></div>
+    </div>
+    <span class="progress-bar-text" id="progress-bar-text">0% Complete</span>
+  </div>
+
+  <div id="view-setup" class="view" style="display:none">
+    <div class="setup-card">
+      <div class="setup-icon">⚙️</div>
+      <h2 class="setup-title">Configure This Course</h2>
+      <p class="setup-desc">Select which curriculum this learning module should use. Only admins can set this.</p>
+      <div class="setup-form">
+        <label class="setup-label">Available Curriculums</label>
+        <select class="setup-select" id="setup-curriculum-select">
+          <option value="">-- Loading curriculums... --</option>
+        </select>
+        <label class="setup-label" style="margin-top:16px">📋 Course Management Type</label>
+        <select class="setup-select" id="setup-management-type">
+          <option value="self_paced">🚀 Self-Paced — lessons unlock automatically</option>
+          <option value="supervised">🛡️ Supervised — supervisor approves each lesson</option>
+        </select>
+        <label class="setup-label" style="margin-top:16px">🗓️ Course Start Date <span style="font-weight:400;color:var(--text-muted)">(optional — unlocks time-aware status messages)</span></label>
+        <input class="setup-input" type="date" id="setup-course-start-date">
+        <label class="setup-label" style="margin-top:16px">🎯 Target End Date <span style="font-weight:400;color:var(--text-muted)">(recommended goal — not a strict deadline)</span></label>
+        <input class="setup-input" type="date" id="setup-target-end-date">
+        <label class="setup-label" style="margin-top:16px">🔗 Course Page Link <span style="font-weight:400;color:var(--text-muted)">(optional — the direct link to this course)</span></label>
+        <input class="setup-input" type="url" id="setup-course-page-url" placeholder="https://...">
+        <button class="btn btn-primary setup-save-btn" id="btn-setup-save">💾 Save &amp; Load Curriculum</button>
+        <button class="btn btn-outline setup-cancel-btn" id="btn-setup-cancel">Cancel</button>
+      </div>
+      <div class="setup-hint" id="setup-hint"></div>
     </div>
   </div>
-  <div class="loading-overlay" id="loading-overlay" style="display:none"><div class="spinner"></div><span>Loading...</span></div>
+
+  <div id="view-sections" class="view">
+    <div id="course-schedule-panel" style="display:none"></div>
+    <div class="toolbar" id="sections-toolbar">
+      <input class="search-input" id="search-input" placeholder="🔍 Search sections...">
+      <select class="filter-select" id="filter-status">
+        <option value="all">All Sections</option>
+        <option value="not_started">Not Started</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+    <div id="course-grade-panel"></div>
+    <div id="progress-report-panel"></div>
+    <div class="section-grid" id="section-group-grid">
+      <div class="empty-state" id="sections-empty">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">No sections available yet</div>
+        <div class="empty-desc">A manager needs to add curriculum sections first.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-lessons" class="view" style="display:none">
+    <div class="section-info-bar" id="section-info-bar">
+      <span class="section-info-title" id="section-info-title"></span>
+      <span class="section-info-progress" id="section-info-progress"></span>
+    </div>
+    <div class="lesson-list" id="lesson-list">
+      <div class="empty-state" id="lessons-empty">
+        <div class="empty-icon">📝</div>
+        <div class="empty-title">No lessons in this section</div>
+        <div class="empty-desc">A manager needs to add lessons to this section.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-lesson-detail" class="view" style="display:none">
+    <div class="detail-breadcrumb" id="detail-breadcrumb"></div>
+    <div class="detail-hero">
+      <div class="detail-header">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <span class="detail-badge" id="detail-badge"></span>
+      </div>
+      <div class="detail-meta">
+        <span id="detail-estimated"></span>
+        <span id="detail-status-label"></span>
+      </div>
+    </div>
+    <div class="study-flow" id="study-flow"></div>
+    <div class="source-links-area" id="source-links-area" style="display:none">
+      <h3 class="source-links-title">Additional Resources</h3>
+      <ul class="source-links-list" id="source-links-list"></ul>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loading-overlay" style="display:none">
+    <div class="spinner"></div>
+    <span>Loading...</span>
+  </div>
+
+  <div class="drawer-overlay" id="drawer-overlay" style="display:none">
+    <div class="drawer-backdrop" id="drawer-backdrop"></div>
+    <div class="drawer-panel" role="dialog" aria-modal="true">
+      <div class="drawer-head">
+        <span class="drawer-title" id="drawer-title"></span>
+        <button class="drawer-close" id="drawer-close" title="Close">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-desc" id="drawer-desc"></div>
+        <input class="drawer-input" id="drawer-input" type="text" autocomplete="off">
+        <div class="drawer-error" id="drawer-error" style="display:none"></div>
+      </div>
+      <div class="drawer-actions">
+        <button class="btn btn-outline" id="drawer-cancel">Cancel</button>
+        <button class="btn btn-primary" id="drawer-save">💾 Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 (function() {
   var STORAGE_DATA = 'student_test_data_v2';
-  // User with admin role to test setup screen; change to ['worker'] for student view
-  var _user = { id: 'u-admin', name: 'Can Öztürk (Admin)', email: 'can@example.com', roles: ['admin'] };
+  // ?bare=1 hides the harness toolbar (marketing screenshots show the real app only)
+  if (new URLSearchParams(window.location.search).get('bare') === '1') {
+    document.body.className = 'th-bare';
+  }
+  // Admin user (object-level manager) to test the supervisor view and the
+  // setup screen; remove effectiveAccess.isManager to simulate a student.
+  var _user = { id: 'u-admin', name: 'Can Öztürk (Admin)', email: 'can@example.com', roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } };
 
   // Default sample curriculum (simulates what setValue stores in productData)
   var SAMPLE_CURRICULUM = {
@@ -145,13 +264,14 @@ body { padding-top: 28px !important; margin: 0; background: #f8fafc; }
     declareParams: function() {},
     reportMissingParams: function() {},
     requestObjects: function(action, params, callback) {
+      // Synchronous mock: the sample curriculum must be visible in the very
+      // first paint so headless screenshot captures show real content.
       if (action === 'query') {
-        // Return all curriculum objects so contentId filtering works
-        setTimeout(function() { callback(null, { objects: [SAMPLE_CURRICULUM] }); }, 100);
+        callback(null, { objects: [SAMPLE_CURRICULUM] });
       } else if (action === 'get' && params.objectId === 'cur-sample-1') {
-        setTimeout(function() { callback(null, { object: SAMPLE_CURRICULUM }); }, 100);
+        callback(null, { object: SAMPLE_CURRICULUM });
       } else {
-        setTimeout(function() { callback('Not found', null); }, 100);
+        callback('Not found', null);
       }
     },
     onReady: function(cb) { cb(loadData(), {}); },
@@ -170,5 +290,29 @@ document.getElementById('th-clear').addEventListener('click', function() { if (c
 document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
 </script>
 <script src="SelfPacedEducationBySection.js"></script>
+<script>
+// QA/screenshot views: the capture script sends ?page=<name>; the tool boots
+// synchronously (sample curriculum + sync mock), so we can switch views right
+// after the tool script. Unknown pages keep the default supervisor view.
+(function() {
+  var page = new URLSearchParams(window.location.search).get('page') || '';
+  if (page === 'documents') {
+    window.openSection('sec-fractions');
+    window.openLesson('sec-fractions', 'les-intro');
+  } else if (page === 'finder') {
+    window.currentRoleView = 'student';
+    window.currentStudentTab = 'course';
+    window.applyViewVisibility();
+  } else if (page === 'assistant') {
+    window.currentRoleView = 'student';
+    window.currentStudentTab = 'dashboard';
+    window.applyViewVisibility();
+  } else if (page === 'reports') {
+    window.currentRoleView = 'student';
+    window.currentStudentTab = 'report';
+    window.applyViewVisibility();
+  }
+})();
+</script>
 </body>
 </html>

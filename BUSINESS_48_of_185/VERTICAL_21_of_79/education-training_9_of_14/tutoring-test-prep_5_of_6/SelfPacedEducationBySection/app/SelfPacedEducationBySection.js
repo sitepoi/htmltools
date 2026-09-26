@@ -10,7 +10,7 @@ function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&
 function el(id) { return document.getElementById(id); }
 
 /* ── State ── */
-var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false, studentName: '' }; // Object-level config (set by admin per object)
+var CONFIG = { curriculumSourceId: '', managementType: 'self_paced', dashboardVisible: false, studentName: '', emailAddress: '', courseStartDate: '', targetEndDate: '', coursePageUrl: '' }; // Object-level config (set by admin per object)
 var SECTIONS = [];            // Section array from curriculum
 var PROGRESS = {};            // { sectionId: { lessonId: { status, score, completedAt, quizAnswers, ... } } }
 var currentView = 'sections'; // 'sections' | 'lessons' | 'lesson-detail' | 'setup'
@@ -23,6 +23,11 @@ var _suppressNextValueChange = false;   // skip onValueChange reload after our o
 var _lastSavedJson = null;              // JSON of our last internal save (to tell internal vs external changes apart)
 var _lastSavedAt = 0;                   // timestamp of our last internal save (stale-echo protection)
 var availableCurriculums = []; // Cached list of Builder objects for the setup picker
+var CURRICULUM_NAME = '';      // Course name from the selected Curriculum Builder object
+var _tenantNameResolved = false; // tenant-name detection ran once
+var _tenantNameValue = '';       // detected tenant name ('' = none)
+var _studyPageUrlResolved = false; // study-page link detection ran once
+var _studyPageUrlValue = '';       // detected study page link ('' = none)
 var currentRoleView = 'supervisor'; // supervisors only: 'supervisor' | 'student'
 var currentStudentTab = 'course';   // student view sub-tab: 'course' | 'dashboard' | 'report'
 
@@ -1092,6 +1097,71 @@ function renderProgressReport() {
   panel.innerHTML = buildActivityReportHtml();
 }
 
+/** Friendly display for a YYYY-MM-DD config date (e.g. 'Sep 10, 2026'). */
+function formatConfigDate(iso) {
+  var p = parseIsoDateOnly(iso);
+  if (!p) return String(iso || '');
+  return new Date(Date.UTC(p.y, p.m - 1, p.d)).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+/** Encouraging "next target" line for the student view, based on the dates.
+ *  The target end date is framed as a recommended pace, never a deadline. */
+function getStudentTargetLine(r) {
+  if (!r || !r.schedule) return '';
+  var s = r.schedule;
+  if (r.totalLessons > 0 && r.completed >= r.totalLessons) {
+    return '🎓 All lessons complete — amazing work!';
+  }
+  var nextTitle = '';
+  var all = getAllLessonsInOrder();
+  for (var i = 0; i < all.length; i++) {
+    var st = getLessonProgress(all[i].sectionId, all[i].lessonId).status;
+    if (st !== 'completed') {
+      nextTitle = (all[i].lesson && all[i].lesson.title) ? all[i].lesson.title : ('Lesson ' + (i + 1));
+      break;
+    }
+  }
+  if (s.state === 'ended') {
+    return '🎯 The target date has passed — no rush, every finished lesson still counts. "' + nextTitle + '" is next, one lesson at a time!';
+  }
+  if (r.completed === 0) {
+    return '🌱 Your journey starts now — the first lesson is waiting. Take the first step today!';
+  }
+  if (s.state === 'behind') {
+    var gapPct = Math.max(0, s.expectedPct - r.overallPct);
+    var lessonsToCatch = Math.max(1, Math.ceil((gapPct / 100) * r.totalLessons));
+    return '🎯 Next target: finish "' + nextTitle + '" — you are ' + s.behindBy + '% behind the recommended pace. ' + lessonsToCatch + ' more lesson' + (lessonsToCatch !== 1 ? 's' : '') + ' and you are back on target!';
+  }
+  if (s.state === 'ahead') {
+    return '🌟 You are ' + s.aheadBy + '% ahead of the recommended pace — outstanding! "' + nextTitle + '" is next, keep the momentum!';
+  }
+  return '🎯 You are right on target — "' + nextTitle + '" is next, keep the rhythm!';
+}
+
+/** Course schedule strip on the student view: start + target end date with
+ *  the recommended-pace explanation and the encouraging next-target line. */
+function renderSchedulePanel() {
+  var panel = el('course-schedule-panel');
+  if (!panel) return;
+  var hasDates = !!(CONFIG.courseStartDate || CONFIG.targetEndDate);
+  panel._hasSchedule = hasDates;
+  if (!hasDates) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  var r = getShareReportData();
+  var startTxt = CONFIG.courseStartDate ? formatConfigDate(CONFIG.courseStartDate) : '—';
+  var endTxt = CONFIG.targetEndDate ? formatConfigDate(CONFIG.targetEndDate) : '—';
+  var targetLine = getStudentTargetLine(r);
+  var html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-sm);margin-bottom:14px">';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;color:var(--text)">';
+  html += '<span style="font-weight:600">🗓️ Started ' + esc(startTxt) + '</span>';
+  html += '<span style="font-weight:700;color:var(--primary)">🎯 Target end date: ' + esc(endTxt) + '</span>';
+  html += '</div>';
+  html += '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">The target end date is a recommended pace guide — not a strict deadline. Study at your own rhythm.</div>';
+  if (targetLine) html += '<div style="font-size:13px;font-weight:600;color:var(--primary-dark);margin-top:6px">' + esc(targetLine) + '</div>';
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
 /** The slim header only exists for the back button on inner pages (lesson
  *  list / lesson detail). On the sections view there is no top line at all —
  *  the dark-mode toggle lives on the tab line instead. */
@@ -1149,14 +1219,17 @@ function applyViewVisibility() {
   var grid = el('section-group-grid');
   var gradePanel = el('course-grade-panel');
   var reportPanel = el('progress-report-panel');
+  var schedulePanel = el('course-schedule-panel');
   if (toolbar) toolbar.style.display = (tab === 'course') ? '' : 'none';
   if (grid) grid.style.display = (tab === 'course') ? '' : 'none';
   if (gradePanel) gradePanel.style.display = (tab === 'dashboard') ? '' : 'none';
   if (reportPanel) reportPanel.style.display = (tab === 'report') ? '' : 'none';
+  if (schedulePanel) schedulePanel.style.display = (tab === 'course' && schedulePanel._hasSchedule) ? '' : 'none';
   tool.resize();
 }
 
 function renderSections() {
+  renderSchedulePanel();
   renderCourseGrade();
   renderProgressReport();
   applyViewVisibility();
@@ -2723,7 +2796,7 @@ function showSections() {
   el('view-lessons').style.display = 'none';
   el('view-lesson-detail').style.display = 'none';
   applyHeaderVisibility();
-  el('app-title').textContent = '📚 Self-Paced Learning';
+  el('app-title').textContent = '📚 Self-Paced Education';
   el('search-input').value = ''; el('filter-status').value = 'all';
   renderSections();
   tool.resize();
@@ -2865,12 +2938,42 @@ function markComplete() {
   updateProgressBar();
   saveProgress(true, function(res) {
     reportSaveResult(res, newStatus === 'pending_review' ? 'Lesson submitted for supervisor review' : 'Lesson marked as complete');
+    encourageAfterCompletion(newStatus);
   });
 
   if (newStatus === 'completed') {
     var next = getNextLesson(currentSectionId, currentLessonId);
     if (next && isLessonAccessible(next.sectionId, next.lessonId)) setTimeout(function() { openLesson(next.sectionId, next.lessonId); }, 800);
     else setTimeout(function() { openSection(currentSectionId); }, 800);
+  }
+}
+
+/** One encouraging toast at real milestones — first lesson, section complete,
+ *  course complete, submitted for review, or catching up from behind.
+ *  Regular on-pace lesson completions stay quiet (anti-spam): the Finish
+ *  summary and the save confirmation are already enough feedback there. */
+function encourageAfterCompletion(newStatus) {
+  if (newStatus === 'pending_review') {
+    tool.notify('⏳ Submitted for review — your effort shows! Keep reviewing the materials while you wait.', 'info');
+    return;
+  }
+  var r = getShareReportData();
+  if (r.totalLessons > 0 && r.completed >= r.totalLessons) {
+    tool.notify('🎓 Course complete! Congratulations — all ' + r.totalLessons + ' lessons done, amazing work!', 'success');
+    return;
+  }
+  var sec = findSection(currentSectionId);
+  var sum = sec ? getSectionProgressSummary(sec.id) : null;
+  if (sec && sum && sum.total > 0 && sum.completed === sum.total) {
+    tool.notify('🏁 Section "' + (sec.title || 'Section') + '" complete! You are on fire — the next section is unlocked.', 'success');
+    return;
+  }
+  if (r.completed === 1) {
+    tool.notify('🎉 First lesson done! A great start — the next lesson is waiting for you.', 'success');
+    return;
+  }
+  if (r.schedule && r.schedule.state === 'behind') {
+    tool.notify('💪 One more lesson done! You are catching up — keep the rhythm and you are back on target.', 'info');
   }
 }
 
@@ -3022,6 +3125,7 @@ function loadCurriculum(callback) {
   var fieldName = tool.param('builderFieldName', '');
 
   if (!sourceId) {
+    CURRICULUM_NAME = '';
     SECTIONS = [];
     if (callback) callback();
     renderCurrentView();
@@ -3039,6 +3143,7 @@ function loadCurriculum(callback) {
 
     if (err) {
       tool.notify('Error loading curriculum: ' + JSON.stringify(err), 'error');
+      CURRICULUM_NAME = '';
       SECTIONS = [];
     } else {
       var objects = [];
@@ -3057,6 +3162,7 @@ function loadCurriculum(callback) {
 
       if (objects.length === 0) {
         tool.notify('Query returned 0 objects of type "' + SECTIONS_TYPE + '". Check the Curriculum Builder App ID matches.', 'error');
+        CURRICULUM_NAME = '';
         SECTIONS = [];
       } else {
         var found = null;
@@ -3065,8 +3171,12 @@ function loadCurriculum(callback) {
         }
         if (!found) {
           tool.notify('Found ' + objects.length + ' object(s) but none with contentId="' + sourceId + '". ContentIds found: ' + contentIdsFound.join(', '), 'error');
+          CURRICULUM_NAME = '';
           SECTIONS = [];
         } else {
+          // The CMS object's own name IS the course name (shown to students
+          // on the shared status report image and WhatsApp message).
+          CURRICULUM_NAME = found.name || found.title || found.contentTitle || found.contentName || '';
           SECTIONS = findSectionsInObject(found, fieldName);
           if (SECTIONS.length === 0) {
             if (fieldName) {
@@ -3147,6 +3257,10 @@ function loadData(val) {
     CONFIG.managementType = val.config.managementType || 'self_paced';
     CONFIG.dashboardVisible = val.config.dashboardVisible !== undefined ? val.config.dashboardVisible : false;
     CONFIG.studentName = val.config.studentName || '';
+    CONFIG.emailAddress = val.config.emailAddress || '';
+    CONFIG.courseStartDate = val.config.courseStartDate || '';
+    CONFIG.targetEndDate = val.config.targetEndDate || '';
+    CONFIG.coursePageUrl = val.config.coursePageUrl || '';
   }
   // Legacy: also check tool param for backward compat
   if (!CONFIG.curriculumSourceId) {
@@ -3242,7 +3356,7 @@ function showSetup() {
       if (gp0) gp0.style.display = 'none';
       var rp0 = el('progress-report-panel');
       if (rp0) rp0.style.display = 'none';
-      el('app-title').textContent = '📚 Self-Paced Learning';
+      el('app-title').textContent = '📚 Self-Paced Education';
       applyHeaderVisibility();
       el('section-group-grid').innerHTML = '<div class="empty-state"><div class="empty-icon">🔒</div><div class="empty-title">No course configured yet</div><div class="empty-desc">Please contact your administrator to set up the course curriculum.</div></div>';
       tool.resize();
@@ -3307,6 +3421,37 @@ function renderSetup() {
     selectContainer.appendChild(tempDiv.firstElementChild);
   }
 
+  // Schedule date fields — update values if present, create if not (keeps
+  // older harness embeds working even before their HTML is refreshed)
+  var startInput = el('setup-course-start-date');
+  var targetInput = el('setup-target-end-date');
+  if (!startInput || !targetInput) {
+    var dateHtml = '<label class="setup-label" style="margin-top:16px">🗓️ Course Start Date <span style="font-weight:400;color:var(--text-muted)">(optional — unlocks time-aware status messages)</span></label>';
+    dateHtml += '<input class="setup-input" type="date" id="setup-course-start-date">';
+    dateHtml += '<label class="setup-label" style="margin-top:16px">🎯 Target End Date <span style="font-weight:400;color:var(--text-muted)">(recommended goal — not a strict deadline)</span></label>';
+    dateHtml += '<input class="setup-input" type="date" id="setup-target-end-date">';
+    var tempDiv2 = document.createElement('div');
+    tempDiv2.innerHTML = dateHtml;
+    while (tempDiv2.firstElementChild) selectContainer.appendChild(tempDiv2.firstElementChild);
+    startInput = el('setup-course-start-date');
+    targetInput = el('setup-target-end-date');
+  }
+  if (startInput) startInput.value = CONFIG.courseStartDate || '';
+  if (targetInput) targetInput.value = CONFIG.targetEndDate || '';
+
+  // Course page link — update value if present, create if not (same pattern
+  // as the date fields above, for older harness embeds)
+  var courseUrlInput = el('setup-course-page-url');
+  if (!courseUrlInput) {
+    var urlHtml = '<label class="setup-label" style="margin-top:16px">🔗 Course Page Link <span style="font-weight:400;color:var(--text-muted)">(optional — the direct link to this course)</span></label>';
+    urlHtml += '<input class="setup-input" type="url" id="setup-course-page-url" placeholder="https://...">';
+    var tempDiv3 = document.createElement('div');
+    tempDiv3.innerHTML = urlHtml;
+    while (tempDiv3.firstElementChild) selectContainer.appendChild(tempDiv3.firstElementChild);
+    courseUrlInput = el('setup-course-page-url');
+  }
+  if (courseUrlInput) courseUrlInput.value = CONFIG.coursePageUrl || '';
+
   hint.innerHTML = isAdmin()
     ? 'Select a curriculum and click Save. Only admins can change this later.'
     : '🔒 Only admins can configure the curriculum. Please contact your administrator.';
@@ -3320,7 +3465,7 @@ function cancelSetup() {
     el('view-sections').style.display = '';
     el('progress-bar-wrap').style.display = '';
     currentView = 'sections';
-    el('app-title').textContent = '📚 Self-Paced Learning';
+    el('app-title').textContent = '📚 Self-Paced Education';
     applyHeaderVisibility();
     updateAdminUI();
     renderSections();
@@ -3337,6 +3482,21 @@ function saveSetupConfig() {
   var selectedId = el('setup-curriculum-select').value;
   var mgmtSelect = el('setup-management-type');
   var mgmtType = mgmtSelect ? mgmtSelect.value : 'self_paced';
+  var startInput = el('setup-course-start-date');
+  var targetInput = el('setup-target-end-date');
+  var startDate = startInput ? String(startInput.value || '').trim() : '';
+  var targetDate = targetInput ? String(targetInput.value || '').trim() : '';
+  var dateError = validateScheduleDates(startDate, targetDate);
+  if (dateError) {
+    tool.notify('🗓️ ' + dateError, 'warning');
+    return;
+  }
+  var courseUrlInput = el('setup-course-page-url');
+  var courseUrl = courseUrlInput ? String(courseUrlInput.value || '').trim() : '';
+  if (courseUrl && !/^https?:\/\//i.test(courseUrl)) {
+    tool.notify('🔗 Course page link must start with http:// or https://', 'warning');
+    return;
+  }
 
   if (!selectedId) {
     tool.notify('Please select a curriculum.', 'warning');
@@ -3350,6 +3510,15 @@ function saveSetupConfig() {
 
   CONFIG.curriculumSourceId = selectedId;
   CONFIG.managementType = mgmtType;
+  CONFIG.courseStartDate = startDate;
+  CONFIG.targetEndDate = targetDate;
+  // The study link changed — clear the memoized fallback so the shared
+  // messages and emails pick up the new course link immediately.
+  if (CONFIG.coursePageUrl !== courseUrl) {
+    CONFIG.coursePageUrl = courseUrl;
+    _studyPageUrlResolved = false;
+    _studyPageUrlValue = '';
+  }
 
   // Switch view BEFORE saving — so onValueChange won't re-render setup
   el('view-setup').style.display = 'none';
@@ -3445,6 +3614,19 @@ function renderSupervisorPanel() {
   html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e">📖 ' + inProgress + ' In Progress</span>';
   html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#f1f5f9;color:#64748b">📌 ' + notStarted + ' Not Started</span>';
   if (pendingReview > 0) html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#fee2e2;color:#991b1b">⏳ ' + pendingReview + ' Awaiting Review</span>';
+  // Schedule chips — course dates + pace state at a glance
+  if (CONFIG.courseStartDate || CONFIG.targetEndDate) {
+    var supStart = CONFIG.courseStartDate ? formatConfigDate(CONFIG.courseStartDate) : '—';
+    var supEnd = CONFIG.targetEndDate ? formatConfigDate(CONFIG.targetEndDate) : '—';
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:#eef2ff;color:#3730a3">🗓️ ' + esc(supStart) + ' → 🎯 ' + esc(supEnd) + '</span>';
+    var supSched = getScheduleInfo();
+    if (supSched) {
+      var paceLabelMap = { ahead: '⏩ Ahead of pace', onSchedule: '✅ On target', behind: '🐢 Behind pace', ended: '🏁 Target date passed' };
+      var paceBgMap = { ahead: '#d1fae5', onSchedule: '#d1fae5', behind: '#fef3c7', ended: '#fee2e2' };
+      var paceClrMap = { ahead: '#065f46', onSchedule: '#065f46', behind: '#92400e', ended: '#991b1b' };
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;background:' + (paceBgMap[supSched.state] || '#d1fae5') + ';color:' + (paceClrMap[supSched.state] || '#065f46') + '">' + (paceLabelMap[supSched.state] || '✅ On target') + '</span>';
+    }
+  }
   html += '<span style="flex:1"></span>';
   html += '<button data-sup-reset-all style="font-size:10px;padding:3px 10px;border-radius:12px;border:1px solid #d1d5db;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap" title="Reset all student progress back to Not Started">🗑 Reset All Progress</button>';
   html += '</div>';
@@ -3488,6 +3670,33 @@ function renderSupervisorPanel() {
     }
     html += '</div></div>';
   }
+  html += '</div>';
+
+  // ── Share / status report toolbar (under the section status block) ──
+  html += '<div style="padding:12px 20px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:#f8fafc">';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">';
+  html += '<span style="font-size:12px;font-weight:700;color:#334155;white-space:nowrap">📤 Share Status:</span>';
+  html += '<button data-sup-copy-image title="Copy a report image of the completion status (sections, lessons, overall) and paste it into WhatsApp" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#4f46e5;color:#fff;border:none;font-family:inherit">🖼️ Copy Report Image</button>';
+  html += '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px">';
+  html += '<span style="font-size:12px;color:#64748b;white-space:nowrap">👥 To:</span>';
+  html += '<select data-sup-audience title="Who receives the message — the student or the parent" style="padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#334155;cursor:pointer;font-family:inherit">';
+  html += '<option value="student">🎓 Student</option>';
+  html += '<option value="parent">👨‍👩‍👧 Parent</option>';
+  html += '</select>';
+  html += '<span style="font-size:12px;color:#64748b;white-space:nowrap">🌐 Language:</span>';
+  html += '<select data-sup-msg-lang title="Language of the WhatsApp message and email" style="padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#334155;cursor:pointer;font-family:inherit">';
+  for (var langIdx = 0; langIdx < STATUS_MSG_LANGS.length; langIdx++) {
+    html += '<option value="' + esc(STATUS_MSG_LANGS[langIdx].code) + '">' + STATUS_MSG_LANGS[langIdx].label + '</option>';
+  }
+  html += '</select>';
+  html += '<input data-sup-email type="email" placeholder="✉️ Email for direct send (editable)" value="' + esc(CONFIG.emailAddress || '') + '" title="Recipient email — saved with the record" style="padding:6px 10px;border-radius:8px;font-size:12px;border:1px solid #e2e8f0;background:#fff;color:#334155;min-width:200px;max-width:280px;flex:1;font-family:inherit">';
+  html += '</div>';
+  html += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px">';
+  html += '<button data-sup-copy-msg title="Copy the WhatsApp text message for the selected audience and language" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#059669;color:#fff;border:none;font-family:inherit">💬 Copy WhatsApp Message</button>';
+  html += '<button data-sup-copy-email title="Copy the designed status report email (formatted HTML) to paste into your email client" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#0ea5e9;color:#fff;border:none;font-family:inherit">📧 Copy Email</button>';
+  html += '<button data-sup-send-email title="Send the designed status report email directly to the address above" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:#dc2626;color:#fff;border:none;font-family:inherit">✉️ Send Email</button>';
+  html += '</div>';
   html += '</div>';
 
   // ── Pending review actions (supervised mode only) ──
@@ -3551,6 +3760,27 @@ function renderSupervisorPanel() {
     }
     var changeCourseBtn = panel.querySelector('[data-sup-change-course]');
     if (changeCourseBtn) changeCourseBtn.addEventListener('click', function() { showSetup(); });
+    // Share status: copy report image / copy WhatsApp + email (student or parent)
+    var copyImgBtn = panel.querySelector('[data-sup-copy-image]');
+    if (copyImgBtn) copyImgBtn.addEventListener('click', copyStatusReportImage);
+    var audienceSel = panel.querySelector('[data-sup-audience]');
+    var msgLangSel = panel.querySelector('[data-sup-msg-lang]');
+    function shareLang() { return msgLangSel ? msgLangSel.value : 'en'; }
+    function shareAudience() { return (audienceSel && audienceSel.value === 'parent') ? 'parent' : 'student'; }
+    var emailInput = panel.querySelector('[data-sup-email]');
+    if (emailInput) {
+      emailInput.addEventListener('change', function() {
+        CONFIG.emailAddress = this.value;
+        if (window._emailSaveTimer) clearTimeout(window._emailSaveTimer);
+        window._emailSaveTimer = setTimeout(function() { window._emailSaveTimer = null; saveProgress(); }, 800);
+      });
+    }
+    var copyMsgBtn = panel.querySelector('[data-sup-copy-msg]');
+    if (copyMsgBtn) copyMsgBtn.addEventListener('click', function() { copyStatusMessage(shareLang(), shareAudience()); });
+    var copyEmailBtn = panel.querySelector('[data-sup-copy-email]');
+    if (copyEmailBtn) copyEmailBtn.addEventListener('click', function() { copyStatusEmail(shareLang(), shareAudience()); });
+    var sendEmailBtn = panel.querySelector('[data-sup-send-email]');
+    if (sendEmailBtn) sendEmailBtn.addEventListener('click', function() { sendStatusEmail(shareLang(), shareAudience()); });
     // Per-lesson Set Score: supervisor override for lost/legacy scores
     // (uses the in-page drawer — prompt() is blocked in the sandbox).
     var setScoreBtns = panel.querySelectorAll('[data-sup-set-score]');
@@ -3733,6 +3963,1148 @@ function resetAllProgress() {
 }
 
 /* ═══════════════════════════════════════════
+   STATUS REPORT SHARE (Supervisor View)
+   Copy the completion status as an IMAGE (canvas → clipboard) to paste into
+   WhatsApp, or as a multi-language TEXT message.
+   ═══════════════════════════════════════════ */
+
+/** Languages offered for the WhatsApp text message. */
+var STATUS_MSG_LANGS = [
+  { code: 'en', label: '🇬🇧 English' },
+  { code: 'fr', label: '🇫🇷 Français' },
+  { code: 'tr', label: '🇹🇷 Türkçe' },
+  { code: 'es', label: '🇪🇸 Español' },
+  { code: 'ar', label: '🇸🇦 العربية' },
+  { code: 'ps', label: '🇦🇫 پښتو' },
+  { code: 'ur', label: '🇵🇰 اردو' },
+  { code: 'hi', label: '🇮🇳 हिन्दी' },
+  { code: 'pa', label: '🇮🇳 ਪੰਜਾਬੀ' }
+];
+
+/** Message templates per language. Placeholders: {student}, {overallPct},
+ *  {completed}, {totalLessons}, {courseAvg}, {date}, {section}, {done},
+ *  {total}, {pct}, {avg}. */
+var STATUS_MSG_TEMPLATES = {
+  en: {
+    studentGreeting: '📚 {courseName} — Progress Report for {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — Progress Report of {student}',
+    overall: 'Overall completion: {overallPct}% ({completed} of {totalLessons} lessons completed).',
+    average: 'Course average: {courseAvg}%.',
+    sectionsHeader: '📖 Section progress:',
+    studentInvite: '📖 Continue studying here: {studyLink}',
+    parentInvite: '📖 {student} can continue studying here: {studyLink}',
+    emailSubjectStudent: '{courseName} — Your Progress Report',
+    emailSubjectParent: '{courseName} — Progress Report of {student}',
+    emailCta: '▶ Start Studying',
+    cheerHigh: '🏆 On track to pass the course — keep up the great work!',
+    cheerLow: '💪 You are making real progress — every lesson gets you closer to your goal!',
+    cheerNotStarted: '🌱 Your journey starts now — the first lesson is waiting for you!',
+    cheerRegressed: '💫 Every comeback is a win — get back on track, one lesson at a time!',
+    cheerPassed: '🏆 Course passed — amazing work, congratulations!',
+    cheerAlmostDone: '🏁 The finish line is in sight — one last push and you are done!',
+    scheduleWeek: 'Week {week} of {totalWeeks}',
+    scheduleAhead: 'You are {aheadBy}% ahead of the expected pace — outstanding, keep it up!',
+    scheduleOnTrack: 'You are right on schedule — keep this rhythm!',
+    scheduleBehind: 'You are {behindBy}% behind the expected pace — a small push now makes a big difference!',
+    scheduleEnded: 'The planned course period has ended — time for a finishing plan together!',
+    sectionLine: '• {section}: {done}/{total} lessons completed ({pct}%)',
+    sectionLineAvg: '• {section}: {done}/{total} lessons completed ({pct}%) — avg {avg}%',
+    footer: '🕐 {courseName} · Report generated on {date}'
+  },
+  fr: {
+    studentGreeting: '📚 {courseName} — Rapport de progression : {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — Rapport de progression de {student}',
+    overall: 'Progression globale : {overallPct} % ({completed} leçons terminées sur {totalLessons}).',
+    average: 'Moyenne du cours : {courseAvg} %.',
+    sectionsHeader: '📖 Progression par section :',
+    studentInvite: '📖 Continue à étudier ici : {studyLink}',
+    parentInvite: '📖 {student} peut continuer à étudier ici : {studyLink}',
+    emailSubjectStudent: '{courseName} — Ton rapport de progression',
+    emailSubjectParent: '{courseName} — Rapport de progression de {student}',
+    emailCta: '▶ Commencer à étudier',
+    cheerHigh: '🏆 En route pour réussir le cours — continue comme ça !',
+    cheerLow: '💪 Tu progresses vraiment — chaque leçon te rapproche de ton objectif !',
+    cheerNotStarted: '🌱 Ton parcours commence maintenant — la première leçon t’attend !',
+    cheerRegressed: '💫 Chaque retour en force est une victoire — remets-toi sur les rails, une leçon à la fois !',
+    cheerPassed: '🏆 Cours réussi — travail formidable, félicitations !',
+    cheerAlmostDone: '🏁 La ligne d’arrivée est en vue — un dernier effort et c’est fini !',
+    scheduleWeek: 'Semaine {week} sur {totalWeeks}',
+    scheduleAhead: 'Vous avez {aheadBy}% d’avance sur le rythme prévu — excellent, continuez ainsi !',
+    scheduleOnTrack: 'Vous êtes parfaitement dans les temps — gardez ce rythme !',
+    scheduleBehind: 'Vous avez {behindBy}% de retard sur le rythme prévu — un petit effort maintenant change tout !',
+    scheduleEnded: 'La période prévue du cours est terminée — établissons ensemble un plan pour terminer !',
+    sectionLine: '• {section} : {done}/{total} leçons terminées ({pct} %)',
+    sectionLineAvg: '• {section} : {done}/{total} leçons terminées ({pct} %) — moy. {avg} %',
+    footer: '🕐 {courseName} · Rapport généré le {date}'
+  },
+  tr: {
+    studentGreeting: '📚 {courseName} — İlerleme Raporu · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — {student} İlerleme Raporu',
+    overall: 'Genel tamamlanma: %{overallPct} ({totalLessons} dersten {completed} tamamlandı).',
+    average: 'Kurs ortalaması: %{courseAvg}.',
+    sectionsHeader: '📖 Bölüm ilerlemesi:',
+    studentInvite: '📖 Çalışmaya buradan devam et: {studyLink}',
+    parentInvite: '📖 {student} çalışmaya buradan devam edebilir: {studyLink}',
+    emailSubjectStudent: '{courseName} — İlerleme Raporun',
+    emailSubjectParent: '{courseName} — {student} İlerleme Raporu',
+    emailCta: '▶ Çalışmaya Başla',
+    cheerHigh: '🏆 Kursu geçme yolundasın — böyle devam!',
+    cheerLow: '💪 Gerçekten ilerliyorsun — her ders seni hedefine biraz daha yaklaştırıyor!',
+    cheerNotStarted: '🌱 Yolculuğun şimdi başlıyor — ilk ders seni bekliyor!',
+    cheerRegressed: '💫 Her geri dönüş bir kazanımdır — tekrar yola koyul, ders ders ilerle!',
+    cheerPassed: '🏆 Kursu geçtin — harika iş, tebrikler!',
+    cheerAlmostDone: '🏁 Bitiş çizgisi göründü — son bir gayret, tamamdır!',
+    scheduleWeek: '{totalWeeks} haftanın {week}. haftası',
+    scheduleAhead: 'Beklenen tempodan %{aheadBy} öndesin — harika, böyle devam et!',
+    scheduleOnTrack: 'Tam programındasın — bu tempoyu koru!',
+    scheduleBehind: 'Beklenen tempodan %{behindBy} geridesin — küçük bir gayret büyük fark yaratır!',
+    scheduleEnded: 'Planlanan kurs dönemi sona erdi — birlikte bir bitirme planı yapalım!',
+    sectionLine: '• {section}: {done}/{total} ders tamamlandı (%{pct})',
+    sectionLineAvg: '• {section}: {done}/{total} ders tamamlandı (%{pct}) — ort. %{avg}',
+    footer: '🕐 {courseName} · Rapor tarihi: {date}'
+  },
+  es: {
+    studentGreeting: '📚 {courseName} — Informe de progreso · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — Informe de progreso de {student}',
+    overall: 'Progreso general: {overallPct}% ({completed} de {totalLessons} lecciones completadas).',
+    average: 'Promedio del curso: {courseAvg}%.',
+    sectionsHeader: '📖 Progreso por sección:',
+    studentInvite: '📖 Sigue estudiando aquí: {studyLink}',
+    parentInvite: '📖 {student} puede seguir estudiando aquí: {studyLink}',
+    emailSubjectStudent: '{courseName} — Tu informe de progreso',
+    emailSubjectParent: '{courseName} — Informe de progreso de {student}',
+    emailCta: '▶ Empezar a estudiar',
+    cheerHigh: '🏆 ¡Vas camino de aprobar el curso — sigue así!',
+    cheerLow: '💪 Estás avanzando de verdad — ¡cada lección te acerca a tu meta!',
+    cheerNotStarted: '🌱 Tu viaje empieza ahora — ¡la primera lección te espera!',
+    cheerRegressed: '💫 Cada regreso es una victoria — ¡vuelve a la pista, una lección a la vez!',
+    cheerPassed: '🏆 ¡Curso aprobado — trabajo increíble, felicidades!',
+    cheerAlmostDone: '🏁 La meta está a la vista — ¡un último empujón y listo!',
+    scheduleWeek: 'Semana {week} de {totalWeeks}',
+    scheduleAhead: 'Vas {aheadBy}% por delante del ritmo esperado — ¡excelente, sigue así!',
+    scheduleOnTrack: 'Vas justo a tiempo — ¡mantén este ritmo!',
+    scheduleBehind: 'Vas {behindBy}% por detrás del ritmo esperado — ¡un pequeño empujón ahora marca la diferencia!',
+    scheduleEnded: 'El periodo planificado del curso ha terminado — ¡hagamos juntos un plan para terminarlo!',
+    sectionLine: '• {section}: {done}/{total} lecciones completadas ({pct}%)',
+    sectionLineAvg: '• {section}: {done}/{total} lecciones completadas ({pct}%) — prom. {avg}%',
+    footer: '🕐 {courseName} · Informe generado el {date}'
+  },
+  ar: {
+    studentGreeting: '📚 {courseName} — تقرير تقدمك · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — تقرير تقدم {student}',
+    overall: 'التقدم العام: {overallPct}٪ ({completed} من أصل {totalLessons} درسًا مكتملًا).',
+    average: 'متوسط الدورة: {courseAvg}٪.',
+    sectionsHeader: '📖 تقدم الأقسام:',
+    studentInvite: '📖 تابع الدراسة هنا: {studyLink}',
+    parentInvite: '📖 يمكن لـ{student} متابعة الدراسة هنا: {studyLink}',
+    emailSubjectStudent: '{courseName} — تقرير تقدمك',
+    emailSubjectParent: '{courseName} — تقرير تقدم {student}',
+    emailCta: '▶ ابدأ الدراسة',
+    cheerHigh: '🏆 أنت على طريق اجتياز الدورة — واصل العمل الرائع!',
+    cheerLow: '💪 أنت تحقق تقدماً حقيقياً — كل درس يقربك من هدفك!',
+    cheerNotStarted: '🌱 رحلتك تبدأ الآن — الدرس الأول في انتظارك!',
+    cheerRegressed: '💫 كل عودة قوية هي انتصار — عُد إلى المسار، درساً تلو الآخر!',
+    cheerPassed: '🏆 اجتزت الدورة — عمل رائع، مبروك!',
+    cheerAlmostDone: '🏁 خط النهاية في الأفق — دفعة أخيرة وقد انتهيت!',
+    scheduleWeek: 'الأسبوع {week} من {totalWeeks}',
+    scheduleAhead: 'أنت متقدم {aheadBy}٪ عن الوتيرة المتوقعة — رائع، واصل التقدم!',
+    scheduleOnTrack: 'أنت في الموعد تماماً — حافظ على هذا الإيقاع!',
+    scheduleBehind: 'أنت متأخر {behindBy}٪ عن الوتيرة المتوقعة — دفعة صغيرة الآن تصنع فرقاً كبيراً!',
+    scheduleEnded: 'انتهت الفترة المخططة للدورة — لنضع معاً خطة للإنجاز!',
+    sectionLine: '• {section}: {done}/{total} دروس مكتملة ({pct}٪)',
+    sectionLineAvg: '• {section}: {done}/{total} دروس مكتملة ({pct}٪) — المتوسط {avg}٪',
+    footer: '🕐 {courseName} · أُنشئ التقرير بتاريخ {date}'
+  },
+  ps: {
+    studentGreeting: '📚 {courseName} — ستاسو د پرمختګ راپور · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — د {student} د پرمختګ راپور',
+    overall: 'عمومي بشپړتیا: {overallPct}٪ ({totalLessons} درسونو څخه {completed} بشپړ شوي).',
+    average: 'د کورس اوسط: {courseAvg}٪.',
+    sectionsHeader: '📖 د برخو پرمختګ:',
+    studentInvite: '📖 دلته مطالعه ته دوام ورکړئ: {studyLink}',
+    parentInvite: '📖 {student} کولی شي دلته مطالعه ته دوام ورکړي: {studyLink}',
+    emailSubjectStudent: '{courseName} — ستاسو د پرمختګ راپور',
+    emailSubjectParent: '{courseName} — د {student} د پرمختګ راپور',
+    emailCta: '▶ مطالعه پیل کړئ',
+    cheerHigh: '🏆 تاسې د کورس بریالیتوب ته روان یاست — همداسې دوام ورکړئ!',
+    cheerLow: '💪 تاسې ریښتینی پرمختګ کوئ — هره لوستنه تاسې هدف ته نږدې کوي!',
+    cheerNotStarted: '🌱 ستاسو سفر اوس پیل کیږي — لومړی لوست ستاسو په تمه دی!',
+    cheerRegressed: '💫 هره بېرته راستنېدنه یوه بریا ده — بېرته په لاره شئ، یو درس په یو وخت!',
+    cheerPassed: '🏆 کورس مو بشپړ کړ — ډېر ښه کار، مبارکۍ!',
+    cheerAlmostDone: '🏁 پای کرښه نږدې ده — یو وروستی زور او بس!',
+    scheduleWeek: 'اونۍ {week} له {totalWeeks}',
+    scheduleAhead: 'تاسو د تمې شوې چټکتیا څخه {aheadBy}٪ مخکې یاست — ډېر ښه، همداسې دوام ورکړئ!',
+    scheduleOnTrack: 'تاسو په وخت یاست — همدا تال وساتئ!',
+    scheduleBehind: 'تاسو د تمې شوې چټکتیا څخه {behindBy}٪ وروسته یاست — اوسنی کوچنی هڅه لوی توپیر رامنځته کوي!',
+    scheduleEnded: 'د کورس پلان شوې موده پای ته ورسېده — راځئ چې یوځای د بشپړولو پلان جوړ کړو!',
+    sectionLine: '• {section}: {done}/{total} درسونه بشپړ شوي ({pct}٪)',
+    sectionLineAvg: '• {section}: {done}/{total} درسونه بشپړ شوي ({pct}٪) — اوسط {avg}٪',
+    footer: '🕐 {courseName} · راپور د {date} نېټه جوړ شو'
+  },
+  ur: {
+    studentGreeting: '📚 {courseName} — آپ کی پیش رفت رپورٹ · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — {student} کی پیش رفت رپورٹ',
+    overall: 'مجموعی تکمیل: {overallPct}٪ ({totalLessons} اسباق میں سے {completed} مکمل)۔',
+    average: 'کورس اوسط: {courseAvg}٪۔',
+    sectionsHeader: '📖 سیکشن کی پیش رفت:',
+    studentInvite: '📖 یہاں مطالعہ جاری رکھیں: {studyLink}',
+    parentInvite: '📖 {student} یہاں مطالعہ جاری رکھ سکتے ہیں: {studyLink}',
+    emailSubjectStudent: '{courseName} — آپ کی پیش رفت رپورٹ',
+    emailSubjectParent: '{courseName} — {student} کی پیش رفت رپورٹ',
+    emailCta: '▶ مطالعہ شروع کریں',
+    cheerHigh: '🏆 آپ کورس پاس کرنے کی راہ پر ہیں — اسی طرح محنت جاری رکھیں!',
+    cheerLow: '💪 آپ واقعی ترقی کر رہے ہیں — ہر سبق آپ کو منزل کے قریب لاتا ہے!',
+    cheerNotStarted: '🌱 آپ کا سفر اب شروع ہوتا ہے — پہلا سبق آپ کا منتظر ہے!',
+    cheerRegressed: '💫 واپسی ہی اصل جیت ہے — ایک ایک سبق کر کے دوبارہ راہ پر آئیں!',
+    cheerPassed: '🏆 آپ نے کورس پاس کر لیا — شاندار کام، مبارک ہو!',
+    cheerAlmostDone: '🏁 منزل قریب ہے — بس ایک آخری کوشش اور کام مکمل!',
+    scheduleWeek: 'ہفتہ {week} از {totalWeeks}',
+    scheduleAhead: 'آپ متوقع رفتار سے {aheadBy}٪ آگے ہیں — بہت خوب، اسی طرح جاری رکھیں!',
+    scheduleOnTrack: 'آپ بالکل وقت پر ہیں — یہی رفتار برقرار رکھیں!',
+    scheduleBehind: 'آپ متوقع رفتار سے {behindBy}٪ پیچھے ہیں — ابھی تھوڑی سی محنت بڑا فرق لاتی ہے!',
+    scheduleEnded: 'کورس کی طے شدہ مدت ختم ہو چکی ہے — آئیے مل کر مکمل کرنے کا منصوبہ بنائیں!',
+    sectionLine: '• {section}: {done}/{total} اسباق مکمل ({pct}٪)',
+    sectionLineAvg: '• {section}: {done}/{total} اسباق مکمل ({pct}٪) — اوسط {avg}٪',
+    footer: '🕐 {courseName} · رپورٹ {date} کو تیار کی گئی'
+  },
+  hi: {
+    studentGreeting: '📚 {courseName} — आपकी प्रगति रिपोर्ट · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — {student} की प्रगति रिपोर्ट',
+    overall: 'कुल पूर्णता: {overallPct}% ({totalLessons} में से {completed} पाठ पूरे हुए)।',
+    average: 'कोर्स औसत: {courseAvg}%।',
+    sectionsHeader: '📖 अनुभाग प्रगति:',
+    studentInvite: '📖 यहाँ पढ़ाई जारी रखें: {studyLink}',
+    parentInvite: '📖 {student} यहाँ पढ़ाई जारी रख सकते हैं: {studyLink}',
+    emailSubjectStudent: '{courseName} — आपकी प्रगति रिपोर्ट',
+    emailSubjectParent: '{courseName} — {student} की प्रगति रिपोर्ट',
+    emailCta: '▶ पढ़ाई शुरू करें',
+    cheerHigh: '🏆 आप कोर्स पास करने की राह पर हैं — ऐसे ही मेहनत जारी रखें!',
+    cheerLow: '💪 आप सच में आगे बढ़ रहे हैं — हर पाठ आपको लक्ष्य के करीब लाता है!',
+    cheerNotStarted: '🌱 आपका सफ़र अब शुरू होता है — पहला पाठ आपका इंतज़ार कर रहा है!',
+    cheerRegressed: '💫 हर वापसी एक जीत है — एक-एक पाठ करके फिर से आगे बढ़ें!',
+    cheerPassed: '🏆 आपने कोर्स पास कर लिया — शानदार काम, बधाई हो!',
+    cheerAlmostDone: '🏁 मंज़िल करीब है — बस एक आख़िरी कोशिश और हो गया!',
+    scheduleWeek: 'सप्ताह {week} / {totalWeeks}',
+    scheduleAhead: 'आप अपेक्षित गति से {aheadBy}% आगे हैं — बहुत बढ़िया, ऐसे ही जारी रखें!',
+    scheduleOnTrack: 'आप बिल्कुल समय पर हैं — यही लय बनाए रखें!',
+    scheduleBehind: 'आप अपेक्षित गति से {behindBy}% पीछे हैं — अभी थोड़ा प्रयास बड़ा बदलाव लाता है!',
+    scheduleEnded: 'पाठ्यक्रम की नियोजित अवधि समाप्त हो गई है — आइए मिलकर पूरा करने की योजना बनाएं!',
+    sectionLine: '• {section}: {done}/{total} पाठ पूरे ({pct}%)',
+    sectionLineAvg: '• {section}: {done}/{total} पाठ पूरे ({pct}%) — औसत {avg}%',
+    footer: '🕐 {courseName} · रिपोर्ट {date} को बनाई गई'
+  },
+  pa: {
+    studentGreeting: '📚 {courseName} — ਤੁਹਾਡੀ ਤਰੱਕੀ ਰਿਪੋਰਟ · {student}',
+    parentGreeting: '👨‍👩‍👧 {courseName} — {student} ਦੀ ਤਰੱਕੀ ਰਿਪੋਰਟ',
+    overall: 'ਕੁੱਲ ਮੁਕੰਮਲਤਾ: {overallPct}% ({totalLessons} ਵਿੱਚੋਂ {completed} ਪਾਠ ਮੁਕੰਮਲ)।',
+    average: 'ਕੋਰਸ ਔਸਤ: {courseAvg}%।',
+    sectionsHeader: '📖 ਭਾਗਾਂ ਦੀ ਤਰੱਕੀ:',
+    studentInvite: '📖 ਇੱਥੇ ਪੜ੍ਹਾਈ ਜਾਰੀ ਰੱਖੋ: {studyLink}',
+    parentInvite: '📖 {student} ਇੱਥੇ ਪੜ੍ਹਾਈ ਜਾਰੀ ਰੱਖ ਸਕਦੇ ਹਨ: {studyLink}',
+    emailSubjectStudent: '{courseName} — ਤੁਹਾਡੀ ਤਰੱਕੀ ਰਿਪੋਰਟ',
+    emailSubjectParent: '{courseName} — {student} ਦੀ ਤਰੱਕੀ ਰਿਪੋਰਟ',
+    emailCta: '▶ ਪੜ੍ਹਾਈ ਸ਼ੁਰੂ ਕਰੋ',
+    cheerHigh: '🏆 ਤੁਸੀਂ ਕੋਰਸ ਪਾਸ ਕਰਨ ਦੇ ਰਾਹ ਉੱਤੇ ਹੋ — ਇੰਝ ਹੀ ਮਿਹਨਤ ਜਾਰੀ ਰੱਖੋ!',
+    cheerLow: '💪 ਤੁਸੀਂ ਸੱਚਮੁੱਚ ਅੱਗੇ ਵਧ ਰਹੇ ਹੋ — ਹਰ ਪਾਠ ਤੁਹਾਨੂੰ ਟੀਚੇ ਦੇ ਨੇੜੇ ਲਿਆਉਂਦਾ ਹੈ!',
+    cheerNotStarted: '🌱 ਤੁਹਾਡਾ ਸਫ਼ਰ ਹੁਣ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ — ਪਹਿਲਾ ਪਾਠ ਤੁਹਾਡੀ ਉਡੀਕ ਕਰ ਰਿਹਾ ਹੈ!',
+    cheerRegressed: '💫 ਹਰ ਵਾਪਸੀ ਇੱਕ ਜਿੱਤ ਹੈ — ਇੱਕ-ਇੱਕ ਪਾਠ ਕਰਕੇ ਮੁੜ ਅੱਗੇ ਵਧੋ!',
+    cheerPassed: '🏆 ਤੁਸੀਂ ਕੋਰਸ ਪਾਸ ਕਰ ਲਿਆ — ਸ਼ਾਨਦਾਰ ਕੰਮ, ਵਧਾਈਆਂ!',
+    cheerAlmostDone: '🏁 ਮੰਜ਼ਿਲ ਨੇੜੇ ਹੈ — ਬੱਸ ਇੱਕ ਆਖ਼ਰੀ ਜ਼ੋਰ ਅਤੇ ਮੁਕੰਮਲ!',
+    scheduleWeek: 'ਹਫ਼ਤਾ {week} ਵਿੱਚੋਂ {totalWeeks}',
+    scheduleAhead: 'ਤੁਸੀਂ ਉਮੀਦ ਕੀਤੀ ਰਫ਼ਤਾਰ ਤੋਂ {aheadBy}% ਅੱਗੇ ਹੋ — ਸ਼ਾਨਦਾਰ, ਇਸੇ ਤਰ੍ਹਾਂ ਜਾਰੀ ਰੱਖੋ!',
+    scheduleOnTrack: 'ਤੁਸੀਂ ਬਿਲਕੁਲ ਸਮੇਂ ਉੱਤੇ ਹੋ — ਇਹੀ ਤਾਲ ਬਣਾਈ ਰੱਖੋ!',
+    scheduleBehind: 'ਤੁਸੀਂ ਉਮੀਦ ਕੀਤੀ ਰਫ਼ਤਾਰ ਤੋਂ {behindBy}% ਪਿੱਛੇ ਹੋ — ਹੁਣ ਥੋੜ੍ਹਾ ਜਤਨ ਵੱਡਾ ਫ਼ਰਕ ਪਾਉਂਦਾ ਹੈ!',
+    scheduleEnded: 'ਕੋਰਸ ਦੀ ਯੋਜਨਾਬੱਧ ਮਿਆਦ ਖ਼ਤਮ ਹੋ ਗਈ ਹੈ — ਆਓ ਮਿਲ ਕੇ ਪੂਰਾ ਕਰਨ ਦੀ ਯੋਜਨਾ ਬਣਾਈਏ!',
+    sectionLine: '• {section}: {done}/{total} ਪਾਠ ਮੁਕੰਮਲ ({pct}%)',
+    sectionLineAvg: '• {section}: {done}/{total} ਪਾਠ ਮੁਕੰਮਲ ({pct}%) — ਔਸਤ {avg}%',
+    footer: '🕐 {courseName} · ਰਿਪੋਰਟ {date} ਨੂੰ ਬਣਾਈ ਗਈ'
+  }
+};
+
+/** Fill {placeholders} in a message template from a data object. */
+function fillStatusTemplate(tpl, data) {
+  var out = String(tpl);
+  out = out.replace(/\{courseName\}/g, function() { return (data.courseName || 'Course'); });
+  out = out.replace(/\{tenantName\}/g, function() { return (data.tenantName || ''); });
+  out = out.replace(/\{student\}/g, function() { return (data.studentName || 'Student'); });
+  out = out.replace(/\{overallPct\}/g, data.overallPct);
+  out = out.replace(/\{totalLessons\}/g, data.totalLessons);
+  out = out.replace(/\{completed\}/g, data.completed);
+  out = out.replace(/\{courseAvg\}/g, data.courseAvg);
+  out = out.replace(/\{date\}/g, data.date);
+  out = out.replace(/\{studyLink\}/g, function() { return (data.studyLink || ''); });
+  out = out.replace(/\{section\}/g, function() { return (data.section || ''); });
+  out = out.replace(/\{done\}/g, data.done);
+  out = out.replace(/\{total\}/g, data.total);
+  out = out.replace(/\{pct\}/g, data.pct);
+  out = out.replace(/\{avg\}/g, data.avg);
+  var sch = data.schedule || null;
+  out = out.replace(/\{week\}/g, function() { return (sch ? sch.week : ''); });
+  out = out.replace(/\{totalWeeks\}/g, function() { return (sch ? sch.totalWeeks : ''); });
+  out = out.replace(/\{expectedPct\}/g, function() { return (sch ? sch.expectedPct : ''); });
+  out = out.replace(/\{aheadBy\}/g, function() { return (sch ? sch.aheadBy : ''); });
+  out = out.replace(/\{behindBy\}/g, function() { return (sch ? sch.behindBy : ''); });
+  out = out.replace(/\{daysLeft\}/g, function() { return (sch ? sch.daysLeft : ''); });
+  return out;
+}
+
+/** Best-effort study-page link included in shared messages and emails.
+ *  Priority:
+ *    1. the per-course page link configured in Setup (manual override for
+ *       special cases — always live, never memoized)
+ *    2. the CMS host's own page URL sent via the postMessage bridge
+ *       (tool.getParentPageUrl) — automatically the exact course page the
+ *       supervisor is on, per student, with zero configuration
+ *    3. the admin parameter 'studyPageUrl'
+ *    4. other candidate SDK calls that may return the current record's URL
+ *    5. the parent CMS origin (fallback — the CMS home, not the course) */
+function getStudyPageUrl() {
+  // 1) Direct course page link set by the admin in Setup
+  var courseUrl = String(CONFIG.coursePageUrl || '').trim();
+  if (courseUrl) return courseUrl;
+  if (_studyPageUrlResolved) return _studyPageUrlValue;
+  _studyPageUrlResolved = true;
+  // 2) Candidate SDK calls that may expose the CURRENT record's URL (the
+  //    exact course page the user is on) — defensive, only call what exists.
+  //    getParentPageUrl() = the CMS host's OWN page URL passed via postMessage
+  //    (see html-tool-rules.txt). Query strings and hashes are stripped here
+  //    as defense in depth — they can carry auth tokens and must never leak
+  //    into shared links.
+  var urlProbes = [
+    function() { return tool.getParentPageUrl ? tool.getParentPageUrl() : null; },
+    function() { return tool.getRecordUrl ? tool.getRecordUrl() : null; },
+    function() { return tool.getParentUrl ? tool.getParentUrl() : null; },
+    function() { return tool.getCurrentUrl ? tool.getCurrentUrl() : null; },
+    function() { return tool.getObjectUrl ? tool.getObjectUrl() : null; },
+    function() { return tool.getRecordLink ? tool.getRecordLink() : null; }
+  ];
+  for (var i = 0; i < urlProbes.length; i++) {
+    try {
+      var probedUrl = urlProbes[i]();
+      if (probedUrl && typeof probedUrl === 'string' && /^https?:\/\//i.test(probedUrl.trim())) {
+        _studyPageUrlValue = probedUrl.trim().split('?')[0].split('#')[0].replace(/\/+$/, '');
+        return _studyPageUrlValue;
+      }
+    } catch (e) {}
+  }
+  // 3) Global study-page parameter (admin tool setting — general fallback)
+  try {
+    var paramUrl = tool.param('studyPageUrl', '');
+    if (paramUrl) { _studyPageUrlValue = String(paramUrl).trim(); return _studyPageUrlValue; }
+  } catch (e) {}
+  try {
+    if (window.location && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+      _studyPageUrlValue = String(window.location.ancestorOrigins[0] || '').replace(/\/+$/, '');
+    }
+  } catch (e) {}
+  if (!_studyPageUrlValue) {
+    try {
+      var refMatch = document.referrer.match(/^(https?:\/\/[^/]+)/i);
+      if (refMatch) _studyPageUrlValue = refMatch[1];
+    } catch (e) {}
+  }
+  return _studyPageUrlValue;
+}
+
+/** Best-effort tenant (organization) name of the CMS this tool runs on.
+ *  The SDK has no dedicated tenant API, so we try, in order:
+ *    1. tool.param('tenantName') — the admin can set it in the tool settings
+ *    2. candidate SDK calls that may expose tenant/context info
+ *    3. the parent CMS origin's subdomain (acme.uniconhub.com → "acme")
+ *  Returns '' when nothing usable is found. */
+function getTenantName() {
+  if (_tenantNameResolved) return _tenantNameValue;
+  _tenantNameResolved = true;
+  // 1) Explicit admin parameter
+  try {
+    var paramName = tool.param('tenantName', '');
+    if (paramName) { _tenantNameValue = String(paramName).slice(0, 80); return _tenantNameValue; }
+  } catch (e) {}
+  // 2) Candidate SDK calls (defensive — only call what exists)
+  var probes = [
+    function() { return tool.getTenant ? tool.getTenant() : null; },
+    function() { return tool.getTenantInfo ? tool.getTenantInfo() : null; },
+    function() { return tool.getContext ? tool.getContext() : null; },
+    function() { return tool.getEnvironment ? tool.getEnvironment() : null; }
+  ];
+  for (var i = 0; i < probes.length; i++) {
+    try {
+      var t = probes[i]();
+      if (t && typeof t === 'string' && t.trim()) { _tenantNameValue = t.trim().slice(0, 80); return _tenantNameValue; }
+      if (t && typeof t === 'object') {
+        var n = t.name || t.tenantName || t.displayName || t.companyName || t.organizationName || t.title;
+        if (n && String(n).trim()) { _tenantNameValue = String(n).trim().slice(0, 80); return _tenantNameValue; }
+      }
+    } catch (e) {}
+  }
+  // 3) Parent origin subdomain heuristic — only when a real subdomain exists
+  //    (a bare domain like uniconhub.com says nothing about the tenant).
+  var origin = '';
+  try {
+    if (window.location && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+      origin = String(window.location.ancestorOrigins[0] || '');
+    }
+  } catch (e) {}
+  if (!origin) {
+    try {
+      var refMatch = document.referrer.match(/^(https?:\/\/[^/]+)/i);
+      if (refMatch) origin = refMatch[1];
+    } catch (e) {}
+  }
+  if (origin) {
+    var host = origin.replace(/^https?:\/\//i, '').replace(/:\d+$/, '');
+    var parts = host.split('.');
+    var genericHosts = { 'www': 1, 'app': 1, 'admin': 1, 'cms': 1, 'console': 1, 'dashboard': 1, 'portal': 1, 'login': 1 };
+    if (parts.length >= 3 && parts[0] && !genericHosts[parts[0].toLowerCase()]) {
+      _tenantNameValue = parts[0].slice(0, 80);
+    }
+  }
+  return _tenantNameValue;
+}
+
+/** ── Course schedule helpers (start date + target end date) ── */
+
+/** Parse a YYYY-MM-DD date string into {y,m,d} — null when invalid. */
+function parseIsoDateOnly(str) {
+  var m = String(str || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  var y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  var dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  return { y: y, m: mo, d: d };
+}
+
+/** Day number since epoch (UTC) for a parsed date — timezone-safe math. */
+function isoDayNumber(p) { return Date.UTC(p.y, p.m - 1, p.d) / 86400000; }
+
+/** Whole days from date a to date b (b minus a). */
+function isoDayDiff(a, b) { return Math.round(isoDayNumber(b) - isoDayNumber(a)); }
+
+/** Today's local date as YYYY-MM-DD. */
+function todayIsoDateOnly() {
+  var n = new Date();
+  var pad2 = function(x) { return (x < 10 ? '0' : '') + x; };
+  return n.getFullYear() + '-' + pad2(n.getMonth() + 1) + '-' + pad2(n.getDate());
+}
+
+/** Validate the two schedule date fields — returns '' when acceptable. */
+function validateScheduleDates(startTxt, targetTxt) {
+  var startText = String(startTxt || '').trim();
+  var targetText = String(targetTxt || '').trim();
+  var start = parseIsoDateOnly(startText);
+  var target = parseIsoDateOnly(targetText);
+  if (startText && !start) return 'Course start date is not a valid date.';
+  if (targetText && !target) return 'Target end date is not a valid date.';
+  if (start && target && isoDayNumber(target) <= isoDayNumber(start)) {
+    return 'Target end date must be after the course start date.';
+  }
+  return '';
+}
+
+/** Time-aware schedule facts, or null when the dates are not configured.
+ *  Compares the actual completion % against the % the calendar expects:
+ *  ahead (>=15 above), onSchedule (within 15), behind (>=15 below), or
+ *  ended (target date passed and the course is not finished). */
+function getScheduleInfo() {
+  var startText = String(CONFIG.courseStartDate || '').trim();
+  var targetText = String(CONFIG.targetEndDate || '').trim();
+  if (!startText || !targetText) return null;
+  var start = parseIsoDateOnly(startText);
+  var target = parseIsoDateOnly(targetText);
+  if (!start || !target) return null;
+  var totalDays = isoDayDiff(start, target);
+  if (totalDays <= 0) return null;
+  var today = parseIsoDateOnly(todayIsoDateOnly());
+  var elapsedDays = Math.max(0, isoDayDiff(start, today));
+  var overallPct = getOverallProgressPct();
+  var expectedPct = Math.min(100, Math.round((elapsedDays / totalDays) * 100));
+  var totalWeeks = Math.max(1, Math.ceil(totalDays / 7));
+  var week = Math.min(Math.max(1, Math.floor(elapsedDays / 7) + 1), totalWeeks);
+  var daysLeft = isoDayDiff(today, target);
+  var state = 'onSchedule';
+  var aheadBy = 0, behindBy = 0;
+  if (daysLeft <= 0 && overallPct < 100) {
+    state = 'ended';
+  } else {
+    var gap = overallPct - expectedPct;
+    if (gap >= 15) { state = 'ahead'; aheadBy = Math.min(100, gap); }
+    else if (gap <= -15) { state = 'behind'; behindBy = Math.min(100, -gap); }
+  }
+  return { week: week, totalWeeks: totalWeeks, expectedPct: expectedPct, state: state, aheadBy: aheadBy, behindBy: behindBy, daysLeft: daysLeft };
+}
+
+/** Schedule line (week + pace) for a language — '' when no dates configured. */
+function buildScheduleLine(tpl, r) {
+  if (!r || !r.schedule) return '';
+  var paceKey = {
+    ahead: 'scheduleAhead',
+    onSchedule: 'scheduleOnTrack',
+    behind: 'scheduleBehind',
+    ended: 'scheduleEnded'
+  }[r.schedule.state] || 'scheduleOnTrack';
+  return '📅 ' + fillStatusTemplate(tpl.scheduleWeek, r) + ' · ' + fillStatusTemplate(tpl[paceKey], r);
+}
+
+/** English schedule line for the report image — '' when no dates configured. */
+function getImageScheduleLine(r) {
+  if (!r || !r.schedule) return '';
+  var s = r.schedule;
+  if (s.state === 'ahead') return '📅 Week ' + s.week + ' of ' + s.totalWeeks + ' — ' + s.aheadBy + '% ahead of pace, outstanding!';
+  if (s.state === 'behind') return '📅 Week ' + s.week + ' of ' + s.totalWeeks + ' — ' + s.behindBy + '% behind pace, a small push helps!';
+  if (s.state === 'ended') return '📅 Course period ended — time for a finishing plan!';
+  return '📅 Week ' + s.week + ' of ' + s.totalWeeks + ' — right on schedule, keep the rhythm!';
+}
+
+/** Flat summary of the whole course — shared by the image and the text. */
+function getShareReportData() {
+  var all = getAllLessonsInOrder();
+  var completed = 0, inProgress = 0, notStarted = 0, pendingReview = 0, regressed = 0;
+  for (var i = 0; i < all.length; i++) {
+    var progEntry = getLessonProgress(all[i].sectionId, all[i].lessonId);
+    var st = progEntry.status;
+    if (st === 'completed') completed++;
+    else if (st === 'pending_review') pendingReview++;
+    else if (st === 'in_progress' || st === 'studying') inProgress++;
+    else notStarted++;
+    // A lesson that was completed/approved before but is open again means the
+    // student went back from progress — give them a comeback message.
+    if (st !== 'completed' && wasEverCompleted(progEntry)) regressed++;
+  }
+  var cs = getCourseScore();
+  var sections = [];
+  var sorted = getSortedSections();
+  for (var j = 0; j < sorted.length; j++) {
+    var summary = getSectionProgressSummary(sorted[j].id);
+    var secScore = getSectionScore(sorted[j].id);
+    sections.push({
+      title: sorted[j].title || ('Section ' + (j + 1)),
+      total: summary.total,
+      completed: summary.completed,
+      pct: summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0,
+      avg: secScore.total > 0 ? secScore.average : null
+    });
+  }
+  var now = new Date();
+  var dateTxt = now.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) + ' · ' + timeLabel(now.toISOString());
+  return {
+    courseName: CURRICULUM_NAME || 'Course',
+    tenantName: getTenantName(),
+    studyLink: getStudyPageUrl(),
+    studentName: CONFIG.studentName || getUserDisplayName() || '',
+    overallPct: getOverallProgressPct(),
+    completed: completed,
+    inProgress: inProgress,
+    notStarted: notStarted,
+    pendingReview: pendingReview,
+    regressed: regressed,
+    totalLessons: all.length,
+    courseAvg: cs.scoredLessons > 0 ? cs.average : null,
+    sections: sections,
+    date: dateTxt,
+    courseStartDate: CONFIG.courseStartDate || '',
+    targetEndDate: CONFIG.targetEndDate || '',
+    schedule: getScheduleInfo()
+  };
+}
+
+/** Build the WhatsApp text message for a language code and audience
+ *  ('student' or 'parent'). Falls back to English. */
+function buildStatusMessage(langCode, audience) {
+  var tpl = STATUS_MSG_TEMPLATES[langCode] || STATUS_MSG_TEMPLATES.en;
+  var r = getShareReportData();
+  var forParent = audience === 'parent';
+  var lines = [];
+  lines.push(fillStatusTemplate(forParent ? tpl.parentGreeting : tpl.studentGreeting, r));
+  if (r.tenantName) lines.push('🏫 ' + r.tenantName);
+  lines.push('');
+  lines.push(fillStatusTemplate(tpl.overall, r));
+  if (r.courseAvg !== null) lines.push(fillStatusTemplate(tpl.average, r));
+  var scheduleLine = buildScheduleLine(tpl, r);
+  if (scheduleLine) lines.push(scheduleLine);
+  if (r.sections.length > 0) {
+    lines.push('');
+    lines.push(tpl.sectionsHeader);
+    for (var i = 0; i < r.sections.length; i++) {
+      var s = r.sections[i];
+      var secData = { studentName: r.studentName, overallPct: r.overallPct, completed: r.completed, totalLessons: r.totalLessons, courseAvg: r.courseAvg, date: r.date, studyLink: r.studyLink, section: s.title, done: s.completed, total: s.total, pct: s.pct, avg: s.avg };
+      lines.push(fillStatusTemplate(s.avg !== null ? tpl.sectionLineAvg : tpl.sectionLine, secData));
+    }
+  }
+  lines.push('');
+  lines.push(fillStatusTemplate(tpl[getCheerTemplateKey(getCheerVariant(r))], r));
+  if (r.studyLink) {
+    lines.push('');
+    lines.push(fillStatusTemplate(forParent ? tpl.parentInvite : tpl.studentInvite, r));
+  }
+  lines.push('');
+  lines.push(fillStatusTemplate(tpl.footer, r));
+  return lines.join('\n');
+}
+
+/** Copy the WhatsApp text message in the selected language and audience. */
+function copyStatusMessage(langCode, audience) {
+  var msg = buildStatusMessage(langCode, audience);
+  copyTextToClipboard(msg, function(ok) {
+    if (ok) {
+      tool.notify('💬 WhatsApp message copied! Open WhatsApp, choose the chat and paste.', 'success');
+    } else {
+      showShareTextModal(msg);
+    }
+  });
+}
+
+/** Build the status report as an email-safe HTML body (inline styles + table
+ *  layout only — the CMS wraps it in its branded template on direct send). */
+function buildEmailHtml(langCode, audience, r) {
+  var tpl = STATUS_MSG_TEMPLATES[langCode] || STATUS_MSG_TEMPLATES.en;
+  var forParent = audience === 'parent';
+  var cheerVariant = getCheerVariant(r);
+  var cheer = fillStatusTemplate(tpl[getCheerTemplateKey(cheerVariant)], r);
+  var cheerPositive = cheerVariant === 'passed' || cheerVariant === 'almostDone' || cheerVariant === 'onTrack';
+  var cheerBg = cheerPositive ? '#059669' : '#4f46e5';
+  var cheerBg2 = cheerPositive ? '#10b981' : '#7c3aed';
+  var greet = fillStatusTemplate(forParent ? tpl.parentGreeting : tpl.studentGreeting, r);
+  var overall = fillStatusTemplate(tpl.overall, r);
+  var average = r.courseAvg !== null ? fillStatusTemplate(tpl.average, r) : '';
+  var invite = '';
+  var cta = '';
+  if (r.studyLink) {
+    var inviteRaw = fillStatusTemplate(forParent ? tpl.parentInvite : tpl.studentInvite, r);
+    invite = inviteRaw.split(r.studyLink).join('').replace(/\s+$/, '');
+    cta = '<a href="' + esc(r.studyLink) + '" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;padding:13px 30px;border-radius:8px;">' + esc(tpl.emailCta) + '</a>';
+  }
+  var sectionsHtml = '';
+  for (var i = 0; i < r.sections.length; i++) {
+    var s = r.sections[i];
+    var secData = { studentName: r.studentName, overallPct: r.overallPct, completed: r.completed, totalLessons: r.totalLessons, courseAvg: r.courseAvg, date: r.date, studyLink: r.studyLink, section: s.title, done: s.completed, total: s.total, pct: s.pct, avg: s.avg };
+    var barPct = Math.max(0, Math.min(100, s.pct));
+    var barColor = s.pct === 100 ? '#22c55e' : '#f59e0b';
+    var barRight = barPct < 100 ? '<td style="width:1%;height:10px;background:#e2e8f0;border-radius:0 5px 5px 0;font-size:0;line-height:0;">&nbsp;</td>' : '';
+    sectionsHtml += '<tr>' +
+      '<td style="padding:10px 0 2px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#0f172a;">' + esc(s.title) + '</td>' +
+      '<td align="right" valign="middle" style="padding:10px 0 2px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;color:#475569;white-space:nowrap;">' + esc(s.completed + '/' + s.total + ' · ' + s.pct + '%' + (s.avg !== null ? ' · avg ' + s.avg + '%' : '')) + '</td>' +
+      '</tr>' +
+      '<tr><td colspan="2" style="padding:0 0 12px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+      (barPct > 0 ? '<td style="width:' + barPct + '%;height:10px;background:' + barColor + ';border-radius:5px;font-size:0;line-height:0;">&nbsp;</td>' : '') + barRight +
+      '</tr></table></td></tr>';
+  }
+
+  var html = '';
+  html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">';
+  // Header
+  html += '<tr><td style="background:#0f172a;padding:26px 32px;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:700;color:#f8fafc;">📚 ' + esc(r.courseName || 'Course') + '</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#94a3b8;padding-top:6px;">' + esc(r.date) + (r.tenantName ? ' · 🏫 ' + esc(r.tenantName) : '') + '</div>' +
+    '</td></tr>';
+  // Body
+  html += '<tr><td style="padding:24px 32px 6px;">';
+  html += '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;color:#0f172a;padding-bottom:14px;">' + esc(greet) + '</div>';
+  // Stat cards
+  html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>';
+  html += '<td width="50%" valign="top" style="padding:0 6px 14px 0;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;color:#059669;">' + r.overallPct + '%</div>' +
+    '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;padding-top:4px;">' + esc(overall) + '</div>' +
+    '</td></tr></table></td>';
+  if (average) {
+    html += '<td width="50%" valign="top" style="padding:0 0 14px 6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;">' +
+      '<div style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;color:#0f172a;">' + r.courseAvg + '%</div>' +
+      '<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;padding-top:4px;">' + esc(average) + '</div>' +
+      '</td></tr></table></td>';
+  } else {
+    html += '<td width="50%" valign="top" style="padding:0 0 14px 6px;"></td>';
+  }
+  html += '</tr></table>';
+  // Cheer banner
+  html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:' + cheerBg + ';border-radius:10px;padding:14px 18px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#ffffff;">' + esc(cheer) + '</td></tr></table>';
+  // Schedule banner (week + pace) — only when the course dates are configured
+  if (r.schedule) {
+    var schedColors = {
+      ahead: ['#d1fae5', '#6ee7b7', '#065f46'],
+      onSchedule: ['#d1fae5', '#6ee7b7', '#065f46'],
+      behind: ['#fef3c7', '#fcd34d', '#92400e'],
+      ended: ['#fee2e2', '#fca5a5', '#991b1b']
+    }[r.schedule.state] || ['#d1fae5', '#6ee7b7', '#065f46'];
+    html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;"><tr><td style="background:' + schedColors[0] + ';border:1px solid ' + schedColors[1] + ';border-radius:10px;padding:12px 18px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:' + schedColors[2] + ';">' + esc(buildScheduleLine(tpl, r)) + '</td></tr></table>';
+  }
+  // Sections
+  if (sectionsHtml) {
+    html += '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;color:#334155;padding:18px 0 4px;">' + esc(tpl.sectionsHeader) + '</div>';
+    html += '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">' + sectionsHtml + '</table>';
+  }
+  // Invite + CTA
+  if (invite || cta) {
+    html += '<div style="text-align:center;padding:10px 0 2px;">';
+    if (invite) html += '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#334155;padding-bottom:12px;">' + esc(invite) + '</div>';
+    if (cta) html += '<div style="padding-bottom:18px;">' + cta + '</div>';
+    html += '</div>';
+  }
+  // Footer
+  html += '<div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#94a3b8;text-align:center;padding:4px 0 22px;">' + esc(fillStatusTemplate(tpl.footer, r)) + '</div>';
+  html += '</td></tr>';
+  html += '</table>';
+  return html;
+}
+
+/** Copy rich HTML + plain-text fallback to the clipboard. */
+function copyRichHtmlToClipboard(html, plain, onResult) {
+  var finish = function(ok) { if (onResult) onResult(ok); };
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined' && typeof Blob !== 'undefined') {
+      navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([plain], { type: 'text/plain' })
+      })]).then(function() { finish(true); }, function() { finish(false); });
+      return;
+    }
+  } catch (e) {}
+  copyTextToClipboard(plain, finish);
+}
+
+/** Copy the designed status report email (formatted HTML) to the clipboard. */
+function copyStatusEmail(langCode, audience) {
+  var r = getShareReportData();
+  var htmlBody = buildEmailHtml(langCode, audience, r);
+  var plain = buildStatusMessage(langCode, audience);
+  copyRichHtmlToClipboard(htmlBody, plain, function(ok) {
+    if (ok) {
+      tool.notify('📧 Email copied! Paste it into your email composer (Gmail, Outlook…) and send.', 'success');
+    } else {
+      showShareTextModal(plain);
+      tool.notify('⚠️ Rich email copy is not available here — the plain text was shown instead.', 'warning');
+    }
+  });
+}
+
+/** Send the status report email directly to the editable address field. */
+function sendStatusEmail(langCode, audience) {
+  var emailTo = String(CONFIG.emailAddress || '').trim();
+  var emailInput = document.querySelector('[data-sup-email]');
+  if (!emailTo) {
+    if (emailInput) { try { emailInput.focus(); } catch(e) {} }
+    tool.notify('📧 Enter the recipient email address first (the editable email field).', 'warning');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTo)) {
+    tool.notify('📧 That email address does not look valid.', 'warning');
+    return;
+  }
+  var tpl = STATUS_MSG_TEMPLATES[langCode] || STATUS_MSG_TEMPLATES.en;
+  var r = getShareReportData();
+  var subject = fillStatusTemplate(audience === 'parent' ? tpl.emailSubjectParent : tpl.emailSubjectStudent, r);
+  var htmlBody = buildEmailHtml(langCode, audience, r);
+  if (typeof tool.requestSendEmail !== 'function') {
+    tool.notify('📧 Direct sending is not available here — the email was copied instead. Paste it into your email client and send.', 'warning');
+    copyStatusEmail(langCode, audience);
+    return;
+  }
+  tool.requestSendEmail({ to: emailTo, subject: subject, title: (r.courseName || 'Course'), htmlBody: htmlBody }, function(err, result) {
+    if (err || !result || !result.ok) {
+      tool.notify('📧 Send failed: ' + (err || 'denied — enable "Allow Send Email" in the tool settings and configure the CMS email sender.'), 'error');
+    } else {
+      tool.notify('📧 Email sent to ' + emailTo + ' ✓', 'success');
+    }
+  });
+}
+
+/** Copy plain text via the Clipboard API, with a hidden-textarea fallback. */
+function copyTextToClipboard(text, onResult) {
+  var finish = function(ok) { if (onResult) onResult(ok); };
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(text).then(function() { finish(true); }, function() { finish(false); });
+      return;
+    }
+  } catch (e) {}
+  try {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', 'readonly');
+    ta.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    var okLegacy = false;
+    try { okLegacy = document.execCommand('copy'); } catch (e2) {}
+    document.body.removeChild(ta);
+    finish(okLegacy);
+  } catch (e3) {
+    finish(false);
+  }
+}
+
+function removeShareModal() {
+  var m = document.getElementById('share-image-modal') || document.getElementById('share-text-modal');
+  if (m && m.parentNode) m.parentNode.removeChild(m);
+  try { tool.resize(); } catch (e) {}
+}
+
+/** Modal fallback with the message text when automatic copy is unavailable. */
+function showShareTextModal(text) {
+  removeShareModal();
+  var overlay = document.createElement('div');
+  overlay.id = 'share-text-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.72);display:flex;align-items:center;justify-content:center;z-index:2147483000;padding:20px';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:14px;max-width:min(90vw,520px);width:100%;max-height:92vh;overflow:auto;padding:18px;box-shadow:0 24px 64px rgba(0,0,0,0.45)';
+  var title = document.createElement('div');
+  title.textContent = '💬 WhatsApp Status Message';
+  title.style.cssText = 'font:700 15px system-ui;color:#0f172a;margin-bottom:10px';
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.readOnly = true;
+  ta.style.cssText = 'width:100%;min-height:220px;box-sizing:border-box;border:1px solid #e2e8f0;border-radius:8px;padding:10px;font:13px/1.5 system-ui;color:#0f172a;resize:vertical';
+  var hint = document.createElement('div');
+  hint.textContent = 'Select all and copy, then paste into WhatsApp.';
+  hint.style.cssText = 'font-size:12px;color:#64748b;margin:8px 0;text-align:center';
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center';
+  var retryBtn = document.createElement('button');
+  retryBtn.textContent = '📋 Copy Again';
+  retryBtn.style.cssText = 'padding:8px 16px;border-radius:8px;background:#059669;color:#fff;border:none;font:600 13px system-ui;cursor:pointer';
+  retryBtn.addEventListener('click', function() {
+    copyTextToClipboard(text, function(ok) {
+      if (ok) { removeShareModal(); tool.notify('💬 WhatsApp message copied! Paste it into the chat.', 'success'); }
+      else { tool.notify('⚠️ Copy failed — select the text and copy manually.', 'warning'); }
+    });
+  });
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close';
+  closeBtn.style.cssText = 'padding:8px 16px;border-radius:8px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;font:600 13px system-ui;cursor:pointer';
+  closeBtn.addEventListener('click', removeShareModal);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) removeShareModal(); });
+  btnRow.appendChild(retryBtn);
+  btnRow.appendChild(closeBtn);
+  box.appendChild(title);
+  box.appendChild(ta);
+  box.appendChild(hint);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  try { tool.resize(); } catch (e) {}
+}
+
+/** Truncate a string until it fits the given canvas width. */
+function canvasTruncateText(ctx, text, maxWidth) {
+  var t = String(text || '');
+  if (ctx.measureText(t).width <= maxWidth) return t;
+  while (t.length > 1 && ctx.measureText(t + '…').width > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return t + '…';
+}
+
+/** Rounded-rectangle path helper (ctx.roundRect is not available everywhere). */
+function roundRectCanvas(ctx, x, y, w, h, r) {
+  if (w <= 0 || h <= 0) return;
+  var rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+/** True when this lesson was completed (or approved) before — even if it is
+ *  currently open again. Used to detect "back from progress" students. */
+function wasEverCompleted(prog) {
+  if (prog && prog.completedAt) return true;
+  var log = prog && prog.activityLog;
+  if (log && Array.isArray(log)) {
+    for (var i = 0; i < log.length; i++) {
+      var t = log[i] && log[i].type;
+      if (t === 'completed' || t === 'approved') return true;
+    }
+  }
+  return false;
+}
+
+/** Classify the student's current state into a cheer variant:
+ *  notStarted | regressed | passed | almostDone | onTrack | keepGoing. */
+function getCheerVariant(r) {
+  if (!r || r.totalLessons === 0) return 'keepGoing';
+  if (r.regressed > 0) return 'regressed';
+  if (r.completed === 0) {
+    // "Not started" only when nothing was started at all — a student with an
+    // open lesson gets the keep-going encouragement instead.
+    return (r.inProgress === 0 && r.pendingReview === 0) ? 'notStarted' : 'keepGoing';
+  }
+  if (r.completed >= r.totalLessons) {
+    return (r.courseAvg !== null && r.courseAvg >= MIN_PASS_SCORE) ? 'passed' : 'keepGoing';
+  }
+  if (r.completed >= r.totalLessons - 1) return 'almostDone';
+  if (r.courseAvg !== null && r.courseAvg >= MIN_PASS_SCORE) return 'onTrack';
+  if (r.overallPct >= 50) return 'onTrack';
+  return 'keepGoing';
+}
+
+/** Template key for a cheer variant (falls back to the generic line). */
+function getCheerTemplateKey(variant) {
+  var map = {
+    notStarted: 'cheerNotStarted',
+    regressed: 'cheerRegressed',
+    passed: 'cheerPassed',
+    almostDone: 'cheerAlmostDone',
+    onTrack: 'cheerHigh',
+    keepGoing: 'cheerLow'
+  };
+  return map[variant] || 'cheerLow';
+}
+
+/** Excitement line for the report image — status-aware and student-facing. */
+function getImageCheerLine(r) {
+  var v = getCheerVariant(r);
+  if (v === 'passed') return '🏆 Course passed — amazing work, congratulations!';
+  if (v === 'almostDone') return '🏁 The finish line is in sight — one last push and you are done!';
+  if (v === 'notStarted') return '🌱 Your journey starts now — the first lesson is waiting!';
+  if (v === 'regressed') return '💫 Every comeback is a win — get back on track, one lesson at a time!';
+  if (v === 'onTrack') return '🔥 On track — keep the momentum going!';
+  return '💪 Great progress — every lesson makes you stronger!';
+}
+
+/** Draw the status report card onto a canvas (2x for crispness). */
+function drawStatusReportCanvas() {
+  var r = getShareReportData();
+  if (r.totalLessons === 0) return null;
+
+  var W = 760;
+  var PAD = 26;
+  var headerH = 156;
+  var statsH = 104;
+  var cheerH = 74;
+  var secHeadH = 48;
+  var secRowH = 112;
+  var footerH = 64;
+  var maxRows = Math.floor((4200 - headerH - statsH - cheerH - secHeadH - footerH) / secRowH);
+  var shownSections = r.sections.slice(0, Math.max(1, Math.min(maxRows, r.sections.length)));
+  var omitted = r.sections.length - shownSections.length;
+  var H = headerH + statsH + cheerH + secHeadH + shownSections.length * secRowH + footerH + (omitted > 0 ? 24 : 0);
+
+  var scale = 2;
+  var canvas = document.createElement('canvas');
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Header ──
+  var grad = ctx.createLinearGradient(0, 0, W, headerH);
+  grad.addColorStop(0, '#0f172a');
+  grad.addColorStop(1, '#334155');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, headerH);
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#f1f5f9';
+  ctx.font = 'bold 27px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText(canvasTruncateText(ctx, '📚 ' + (r.courseName || 'Course') + ' — Status Report', W - 2 * PAD), PAD, 42);
+  ctx.fillStyle = '#cbd5e1';
+  ctx.font = '600 17px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText(canvasTruncateText(ctx, 'Student: ' + (r.studentName || '—'), W - 2 * PAD), PAD, 82);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText(canvasTruncateText(ctx, r.date, W - 2 * PAD), PAD, 110);
+  if (r.tenantName) {
+    ctx.font = '13px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText(canvasTruncateText(ctx, '🏫 ' + r.tenantName, W - 2 * PAD), PAD, 134);
+  }
+  // management pill on the right
+  var mgmtTxt = (CONFIG.managementType === 'supervised') ? '🛡️ Supervised' : '🚀 Self-Paced';
+  ctx.font = '600 13px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  var pillW = ctx.measureText(mgmtTxt).width + 26;
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  roundRectCanvas(ctx, W - PAD - pillW, 84, pillW, 30, 15);
+  ctx.fill();
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillText(mgmtTxt, W - PAD - pillW + 13, 100);
+
+  // ── Overall stats strip ──
+  var sy = headerH + 14;
+  var ringX = PAD + 32;
+  var ringY = sy + 32;
+  var ringR = 32;
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.arc(ringX, ringY, ringR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(ringX, ringY, ringR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (r.overallPct / 100));
+  ctx.stroke();
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 20px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(r.overallPct + '%', ringX, ringY + 1);
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 18px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText(r.completed + ' of ' + r.totalLessons + ' lessons completed', PAD + 92, sy + 12);
+  ctx.fillStyle = '#475569';
+  ctx.font = '15px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  var avgTxt = (r.courseAvg !== null) ? 'Course average: ' + r.courseAvg + '%' : 'Course average: no scores recorded';
+  ctx.fillText(avgTxt, PAD + 92, sy + 42);
+  ctx.fillStyle = '#64748b';
+  ctx.font = '14px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText('✅ ' + r.completed + ' completed   📖 ' + r.inProgress + ' in progress   📌 ' + r.notStarted + ' not started' + (r.pendingReview > 0 ? '   ⏳ ' + r.pendingReview + ' awaiting review' : ''), PAD + 92, sy + 72);
+
+  // ── Motivation banner (student-facing excitement) ──
+  var cheerVariant = getCheerVariant(r);
+  var cheerPositive = cheerVariant === 'passed' || cheerVariant === 'almostDone' || cheerVariant === 'onTrack';
+  var bannerY = headerH + statsH + 10;
+  var bannerH = 50;
+  var cheerGrad = ctx.createLinearGradient(PAD, 0, W - PAD, 0);
+  if (cheerPositive) {
+    cheerGrad.addColorStop(0, '#059669');
+    cheerGrad.addColorStop(1, '#10b981');
+  } else {
+    cheerGrad.addColorStop(0, '#4f46e5');
+    cheerGrad.addColorStop(1, '#7c3aed');
+  }
+  ctx.fillStyle = cheerGrad;
+  roundRectCanvas(ctx, PAD, bannerY, W - 2 * PAD, bannerH, 12);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 15px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  var imageScheduleLine = getImageScheduleLine(r);
+  var cheerLineY = imageScheduleLine ? bannerY + 17 : bannerY + bannerH / 2 + 1;
+  ctx.fillText(canvasTruncateText(ctx, getImageCheerLine(r), W - 2 * PAD - 36), PAD + 18, cheerLineY);
+  if (imageScheduleLine) {
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '600 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText(canvasTruncateText(ctx, imageScheduleLine, W - 2 * PAD - 36), PAD + 18, bannerY + 37);
+  }
+
+  // ── Sections ──
+  var dy = bannerY + bannerH + 14;
+  ctx.fillStyle = '#334155';
+  ctx.font = 'bold 17px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  ctx.fillText('Section Progress', PAD, dy + 10);
+
+  for (var i = 0; i < shownSections.length; i++) {
+    var s = shownSections[i];
+    var rowY = dy + 30 + i * secRowH;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText(canvasTruncateText(ctx, s.title, W - 2 * PAD - 200), PAD, rowY);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#475569';
+    ctx.font = '600 15px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText(s.completed + '/' + s.total + ' · ' + s.pct + '%' + (s.avg !== null ? ' · avg ' + s.avg + '%' : ''), W - PAD, rowY);
+    ctx.textAlign = 'left';
+    var barY = rowY + 16;
+    var barW = W - 2 * PAD;
+    var barH = 14;
+    ctx.fillStyle = '#e2e8f0';
+    roundRectCanvas(ctx, PAD, barY, barW, barH, 7);
+    ctx.fill();
+    if (s.pct > 0) {
+      ctx.fillStyle = (s.pct === 100) ? '#22c55e' : '#f59e0b';
+      roundRectCanvas(ctx, PAD, barY, Math.max(barH, barW * s.pct / 100), barH, 7);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#64748b';
+    ctx.font = '13px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+    ctx.fillText(s.completed + ' of ' + s.total + ' lessons completed' + (s.avg !== null ? ' · Section average ' + s.avg + '%' : ' · No quiz scores recorded'), PAD, barY + 34);
+  }
+
+  // ── Footer ──
+  var fy = H - footerH + 10;
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.moveTo(PAD, H - footerH);
+  ctx.lineTo(W - PAD, H - footerH);
+  ctx.stroke();
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+  var courseTxt = r.courseName || 'Course';
+  var footerTxt = omitted > 0
+    ? '🕐 ' + courseTxt + ' · +' + omitted + ' more section(s) not shown'
+    : '🕐 ' + courseTxt;
+  ctx.fillText(canvasTruncateText(ctx, footerTxt, W - 2 * PAD), PAD, fy + 12);
+
+  return canvas;
+}
+
+/** Copy the status report image (PNG) to the clipboard. Falls back to a
+ *  modal with the image when the Clipboard API is unavailable. */
+function copyStatusReportImage() {
+  var canvas = drawStatusReportCanvas();
+  if (!canvas) {
+    tool.notify('There are no lessons to report yet.', 'warning');
+    return;
+  }
+  var canUseClipboard = false;
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem !== 'undefined') {
+      canUseClipboard = true;
+    }
+  } catch (e) {}
+  if (!canUseClipboard) {
+    showShareImageModal(canvas);
+    return;
+  }
+  try {
+    canvas.toBlob(function(blob) {
+      if (!blob) { showShareImageModal(canvas); return; }
+      navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function() {
+        tool.notify('🖼️ Report image copied! Open WhatsApp, tap the chat input and paste it.', 'success');
+      }, function() {
+        showShareImageModal(canvas);
+      });
+    }, 'image/png');
+  } catch (e) {
+    showShareImageModal(canvas);
+  }
+}
+
+/** Modal fallback showing the report image (long-press/right-click to copy or save). */
+function showShareImageModal(canvas) {
+  removeShareModal();
+  var overlay = document.createElement('div');
+  overlay.id = 'share-image-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.72);display:flex;align-items:center;justify-content:center;z-index:2147483000;padding:20px';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#fff;border-radius:14px;max-width:min(90vw,680px);width:100%;max-height:92vh;overflow:auto;padding:18px;box-shadow:0 24px 64px rgba(0,0,0,0.45)';
+  var img = document.createElement('img');
+  img.src = canvas.toDataURL('image/png');
+  img.style.cssText = 'width:100%;display:block;border-radius:10px;border:1px solid #e2e8f0';
+  var hint = document.createElement('div');
+  hint.textContent = 'Automatic copy was not available. Long-press (mobile) or right-click the image and choose Copy / Save, then paste it into WhatsApp.';
+  hint.style.cssText = 'font-size:13px;color:#475569;margin:12px 4px 0;text-align:center;line-height:1.5';
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap';
+  var dl = document.createElement('a');
+  dl.href = img.src;
+  dl.download = 'status-report.png';
+  dl.textContent = '⬇️ Download';
+  dl.style.cssText = 'padding:8px 16px;border-radius:8px;background:#4f46e5;color:#fff;font:600 13px system-ui;text-decoration:none;cursor:pointer';
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ Close';
+  closeBtn.style.cssText = 'padding:8px 16px;border-radius:8px;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;font:600 13px system-ui;cursor:pointer';
+  closeBtn.addEventListener('click', removeShareModal);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) removeShareModal(); });
+  btnRow.appendChild(dl);
+  btnRow.appendChild(closeBtn);
+  box.appendChild(img);
+  box.appendChild(hint);
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  try { tool.resize(); } catch (e) {}
+}
+
+/* ═══════════════════════════════════════════
    CUSTOM DRAWER
    prompt()/confirm() are BLOCKED in the CMS sandboxed iframe ("allow-modals"
    is not set), so supervisor inputs use this in-page drawer instead.
@@ -3791,11 +5163,18 @@ function drawerConfirm() {
    ═══════════════════════════════════════════ */
 
 function bindEvents() {
-  el('btn-back').addEventListener('click', handleBack);
-  el('search-input').addEventListener('input', function() { renderSections(); });
-  el('filter-status').addEventListener('change', function() { renderSections(); });
-  el('btn-setup-save').addEventListener('click', saveSetupConfig);
-  el('btn-setup-cancel').addEventListener('click', cancelSetup);
+  // Every binding is null-guarded so a stale harness embed (missing a newer
+  // element) can never abort the boot and leave the view unrendered.
+  var backBtn = el('btn-back');
+  if (backBtn) backBtn.addEventListener('click', handleBack);
+  var searchInputEl = el('search-input');
+  if (searchInputEl) searchInputEl.addEventListener('input', function() { renderSections(); });
+  var filterStatusEl = el('filter-status');
+  if (filterStatusEl) filterStatusEl.addEventListener('change', function() { renderSections(); });
+  var setupSaveBtn = el('btn-setup-save');
+  if (setupSaveBtn) setupSaveBtn.addEventListener('click', saveSetupConfig);
+  var setupCancelBtn = el('btn-setup-cancel');
+  if (setupCancelBtn) setupCancelBtn.addEventListener('click', cancelSetup);
   var darkBtns = document.querySelectorAll('[data-dark-toggle]');
   for (var di = 0; di < darkBtns.length; di++) darkBtns[di].addEventListener('click', toggleDarkMode);
   // View tabs: supervisor role switch + student sub-tabs
@@ -3850,6 +5229,9 @@ tool.onReady(function(val, fields) {
   tool.declareParams([
     { name: 'builderFieldName', label: 'Builder Field Name (default)', type: 'text', default: '', severity: 'goodToHave', hint: 'Default field ID of the Curriculum Builder tool inside CMS objects. Can be overridden per-object in setup.' },
     { name: 'curriculumBuilderAppId', label: 'Curriculum Builder App ID', type: 'text', default: 'curriculum-builder-uniconbaseapps', severity: 'goodToHave', hint: 'The CMS object type ID of the Curriculum Builder app. Used to query curriculum objects. Default works for most cases.' },
+    { name: 'tenantName', label: 'Tenant / Organization Name', type: 'text', default: '', severity: 'optional', hint: 'Shown on the shared status report image and WhatsApp message. When empty, the tool tries to detect it from the CMS automatically.' },
+    { name: 'studyPageUrl', label: 'Study Page URL', type: 'text', default: '', severity: 'optional', hint: 'Link included in the shared WhatsApp messages and emails so the student can continue studying with one tap. When empty, the tool falls back to the CMS address.' },
+    { name: 'allowSendEmail', label: 'Allow Send Email', type: 'toggle', default: 'no', severity: 'goodToHave', hint: 'Must be "yes" so the supervisor can send the status report email directly from this tool (field setting: Allow Send Email).' },
     { name: 'allowRequestSave', label: 'Allow Save Request', type: 'toggle', default: 'no', severity: 'mandatory', hint: 'Must be "yes" so quiz answers and progress are saved to the CMS record immediately on Submit Answers (field setting: Allow Save Request).' }
   ]);
 
