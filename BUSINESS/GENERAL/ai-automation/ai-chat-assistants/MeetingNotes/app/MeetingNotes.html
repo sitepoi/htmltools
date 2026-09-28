@@ -1,0 +1,203 @@
+<div class="mtn-app" id="mtn-app">
+  <nav class="mtn-tabs" id="mtn-tabs">
+    <button type="button" class="mtn-tab active" data-tab="subjects">Subjects<span class="mtn-tab-count" id="mtn-count-subjects">0</span></button>
+    <button type="button" class="mtn-tab" data-tab="meeting">Meeting</button>
+    <button type="button" class="mtn-tab" data-tab="tasks">Tasks<span class="mtn-tab-count" id="mtn-count-tasks">0</span></button>
+    <button type="button" class="mtn-tab" data-tab="ai">AI Assistant</button>
+    <button type="button" class="mtn-tab" data-tab="exports">Exports</button>
+    <span class="mtn-ro-badge" id="mtn-ro-badge">Read-only</span>
+  </nav>
+
+  <main class="mtn-stage" id="mtn-stage">
+    <!-- ── SUBJECTS (first tab) ── -->
+    <section class="mtn-pane active" id="mtn-pane-subjects">
+      <div class="mtn-section-head">
+        <div>
+          <div class="mtn-card-title">Subjects</div>
+          <div class="mtn-card-sub" id="mtn-subjects-meta">0 subjects</div>
+        </div>
+        <div class="mtn-head-actions">
+          <button type="button" class="mtn-btn mtn-btn-project" data-act="project-open" title="Open the meeting-room view with big text, ready for the projector">Meeting Mode</button>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="add-subject">+ Add subject</button>
+        </div>
+      </div>
+      <div id="mtn-subjects"></div>
+    </section>
+
+    <!-- ── MEETING (second tab) ── -->
+    <section class="mtn-pane" id="mtn-pane-meeting">
+      <div class="mtn-card">
+        <div class="mtn-card-head">
+          <div class="mtn-card-title">Meeting details</div>
+          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 decisions - 0 open tasks</div>
+        </div>
+        <div class="mtn-grid2">
+          <div class="mtn-field mtn-span2">
+            <label class="mtn-label" for="mtn-meet-title">Meeting title</label>
+            <input class="mtn-input" id="mtn-meet-title" data-field="meet.title" placeholder="e.g. Board of Directors - Monthly Meeting" maxlength="160" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-date">Date</label>
+            <input type="date" class="mtn-input" id="mtn-meet-date" data-field="meet.date" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-location">Location / link</label>
+            <input class="mtn-input" id="mtn-meet-location" data-field="meet.location" placeholder="Room A or video link" maxlength="120" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-timestart">Starts at</label>
+            <input type="time" class="mtn-input" id="mtn-meet-timestart" data-field="meet.timestart" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-timeend">Ends at</label>
+            <input type="time" class="mtn-input" id="mtn-meet-timeend" data-field="meet.timeend" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-chair">Chair</label>
+            <input class="mtn-input" id="mtn-meet-chair" data-field="meet.chair" placeholder="Who runs the meeting" maxlength="120" />
+          </div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-minutetaker">Minute taker</label>
+            <input class="mtn-input" id="mtn-meet-minutetaker" data-field="meet.minutetaker" placeholder="Who writes the notes" maxlength="120" />
+          </div>
+          <div class="mtn-field mtn-span2">
+            <label class="mtn-label" for="mtn-meet-attendees">Attendees (one per line)</label>
+            <textarea class="mtn-textarea" id="mtn-meet-attendees" data-field="meet.attendees" rows="3" placeholder="Names of everyone present, one per line"></textarea>
+          </div>
+        </div>
+        <p class="mtn-hint mtn-single-note">One meeting per tool instance - this record holds exactly one meeting. Create a new CMS object for the next meeting.</p>
+      </div>
+
+      <details class="mtn-card mtn-raw">
+        <summary>Import from another meeting (JSON)</summary>
+        <p class="mtn-hint">Paste the "Full Meeting JSON" exported from a previous Meeting Notes record (or the JSON of an old CMS object). The content is resolved and imported into this meeting - merge to continue last week's meeting, or replace to start over from it.</p>
+        <textarea class="mtn-textarea" id="mtn-import-json" rows="6" placeholder='Paste JSON here - e.g. {"meeting":{"title":"..."},"subjects":[...],"tasks":[...]}'></textarea>
+        <div class="mtn-import-actions">
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="import-analyze">Analyze</button>
+        </div>
+        <div id="mtn-import-result"></div>
+      </details>
+
+      <details class="mtn-card mtn-raw">
+        <summary>Raw notes / transcript (optional)</summary>
+        <p class="mtn-hint">Paste quick notes or a full transcript here. The AI Assistant reads it when summarizing the meeting or extracting action items.</p>
+        <textarea class="mtn-textarea" id="mtn-raw-notes" data-field="rawnotes" rows="8" placeholder="Paste raw notes here..."></textarea>
+      </details>
+    </section>
+
+    <!-- ── TASKS ── -->
+    <section class="mtn-pane" id="mtn-pane-tasks">
+      <div class="mtn-card">
+        <div class="mtn-card-head">
+          <div class="mtn-card-title">Action items</div>
+          <div class="mtn-card-sub" id="mtn-task-stats"></div>
+        </div>
+        <div class="mtn-task-filters">
+          <div class="mtn-chips" id="mtn-task-filter-status"></div>
+          <select class="mtn-select mtn-filter-priority" id="mtn-task-filter-priority">
+            <option value="all">All priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <input class="mtn-input mtn-filter-search" id="mtn-task-search" placeholder="Search tasks..." maxlength="80" />
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="ai-extract">Extract from AI</button>
+        </div>
+      </div>
+      <div id="mtn-tasks"></div>
+      <div class="mtn-task-add">
+        <div class="mtn-task-add-head">
+          <span class="mtn-task-add-title">New action item</span>
+          <span class="mtn-task-add-hint">Enter adds it to the list</span>
+        </div>
+        <textarea class="mtn-textarea mtn-task-new-text" id="mtn-task-new-text" rows="2" placeholder="What needs to be done?" maxlength="240"></textarea>
+        <div class="mtn-task-add-row">
+          <label class="mtn-task-meta"><span>Assignee</span><input class="mtn-input" id="mtn-task-new-assignee" placeholder="Assign someone" maxlength="80" /></label>
+          <label class="mtn-task-meta"><span>Due</span><input type="date" class="mtn-input" id="mtn-task-new-due" /></label>
+          <label class="mtn-task-meta"><span>Priority</span><select class="mtn-select" id="mtn-task-new-priority">
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select></label>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="add-task">Add task</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── AI ASSISTANT ── -->
+    <section class="mtn-pane" id="mtn-pane-ai">
+      <div class="mtn-ai-banner" id="mtn-ai-missing">
+        AI features are not enabled for this tool. Ask an admin to set the field setting <code>allowAi: yes</code> in the CMS tool configuration.
+      </div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Summarize meeting</div>
+            <div class="mtn-card-sub">Executive summary, key points, decisions and next steps built from your subjects, notes and raw transcript.</div>
+          </div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-summarize" id="mtn-btn-ai-summarize">Summarize</button>
+        </div>
+        <div class="mtn-ai-out" id="mtn-ai-summary-out"></div>
+      </div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Extract action items</div>
+            <div class="mtn-card-sub">Reads the meeting and lists the tasks with assignees, due dates and priorities. Review, then merge them into the Tasks tab.</div>
+          </div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-extract" id="mtn-btn-ai-extract">Extract tasks</button>
+        </div>
+        <div class="mtn-ai-out" id="mtn-ai-extract-out"></div>
+      </div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Draft board minutes</div>
+            <div class="mtn-card-sub">Formal minutes draft for a board meeting - attendance, agenda, resolutions and signature lines. Copy it or download it as text.</div>
+          </div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-draft" id="mtn-btn-ai-draft">Draft minutes</button>
+        </div>
+        <div class="mtn-ai-out" id="mtn-ai-draft-out"></div>
+      </div>
+    </section>
+
+    <!-- ── EXPORTS ── -->
+    <section class="mtn-pane" id="mtn-pane-exports">
+      <h3 class="mtn-export-h">PDF documents</h3>
+      <div class="mtn-export-grid" id="mtn-exports-pdf"></div>
+      <h3 class="mtn-export-h">Data files (Excel / JSON)</h3>
+      <div class="mtn-export-grid" id="mtn-exports-data"></div>
+      <h3 class="mtn-export-h">Text copies</h3>
+      <div class="mtn-export-grid" id="mtn-exports-text"></div>
+    </section>
+  </main>
+
+  <!-- ── PROJECTION DRAWER (big text for meeting-room screens) ── -->
+  <div class="mtn-projection" id="mtn-projection">
+    <aside class="mtn-project-side">
+      <div class="mtn-project-side-head">
+        <span>Subjects</span>
+        <span class="mtn-project-total-spent" id="mtn-proj-total-spent">Total 0:00</span>
+        <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-close">Close</button>
+      </div>
+      <div class="mtn-project-nav" id="mtn-project-nav"></div>
+    </aside>
+    <div class="mtn-project-main">
+      <div class="mtn-project-bar">
+        <button type="button" class="mtn-btn mtn-btn-ghost" id="mtn-project-side-toggle" data-act="project-side-toggle" title="Collapse / expand the subjects list">&#9664; Subjects</button>
+        <button type="button" class="mtn-icon-btn" data-act="project-prev" title="Previous subject">&#8592;</button>
+        <button type="button" class="mtn-icon-btn" data-act="project-next" title="Next subject">&#8594;</button>
+        <span class="mtn-project-counter" id="mtn-project-counter"></span>
+        <div class="mtn-project-zoom">
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-smaller" title="Smaller text">A-</button>
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-reset" title="Reset text size">1:1</button>
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-bigger" title="Larger text">A+</button>
+        </div>
+      </div>
+      <div class="mtn-project-body" id="mtn-project-body"></div>
+    </div>
+  </div>
+</div>

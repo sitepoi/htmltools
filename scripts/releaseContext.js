@@ -166,7 +166,7 @@ function getDiffSinceCommit(commitRef, maxChars) {
 function findToolRootDirectories() {
   try {
     return readdirSync(ROOT, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && /^(BUSINESS|PERSONAL)_/.test(entry.name))
+      .filter((entry) => entry.isDirectory() && /^(BUSINESS|PERSONAL)(_|$)/.test(entry.name))
       .map((entry) => entry.name)
   } catch (_e) { return [] }
 }
@@ -299,7 +299,7 @@ function folderBaseName(folderName) {
 
 function getTaxonomyContext(tool) {
   const segments = tool.toolDirectory.replace(/\\/g, '/').split('/')
-  const rootIndex = segments.findIndex((segment) => /^(BUSINESS|PERSONAL)_/.test(segment))
+  const rootIndex = segments.findIndex((segment) => /^(BUSINESS|PERSONAL)(_|$)/.test(segment))
   if (rootIndex === -1) return ''
   const parts = segments.slice(rootIndex)
   // parts: [BUSINESS_.., TYPE_.., CATEGORY_.., SUBCATEGORY_.., ToolName]

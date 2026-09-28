@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meeting Notes - Help</title>
+<link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+</head>
+<body>
+<div id="content">
+<h1>Meeting Notes - Help</h1>
+<p class="meta">
+  User help for Meeting Notes. The single source of truth for how this
+  tool works is its SSOT document (<a href="ssot.html">SSOT</a>) -
+  this file explains the same behavior for end users, in plain words.
+  Generated from the tool code + SSOT + AI chat by
+  scripts/generate-docs.js. Updated: 2026-09-28.
+</p>
+
+<!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
+<h2 id="overview">1. Overview</h2>
+<p>Meeting Notes is your board meeting workspace: one agenda with subjects,
+decisions and action items, a projector view with a countdown per subject,
+and exports that turn the meeting into finished minutes.</p>
+<p>It is for meeting chairs, secretaries and board members who want to keep
+agenda items on time and leave the meeting with documents already written.</p>
+
+<h2 id="before">2. Before you start</h2>
+<ul>
+  <li>You need access to the Meeting Notes object in your UniconHub app.
+  Editors can change the meeting; viewers can only read it.</li>
+  <li>Open the tool from the application store or the object list. Your
+  changes save automatically - there is no Save button.</li>
+  <li>If the AI Assistant shows a notice, your app has not enabled AI for
+  this tool; everything else still works.</li>
+</ul>
+
+<h2 id="howto">3. Step by step</h2>
+<ol>
+  <li>Open the Meeting tab and fill in the meeting: title, date, time,
+  location, chair and attendees.</li>
+  <li>On the Subjects tab, click "Add subject" for each agenda item. The
+  tool starts each subject with a 15 minute plan; change it on the edit
+  card if needed.</li>
+  <li>During the meeting, click "Meeting Mode" to project one subject at a
+  time. Press Start on the timer; the time shows when it runs out. The
+  subject keeps earning spent time the whole time it is on screen.</li>
+  <li>Record notes in the big editor, add decisions with "Moved by" and
+  "Seconded by", and tick a subject Done when it closes.</li>
+  <li>Take a break with the "Waiting / break" entry at the bottom of the
+  sidebar - subject time pauses while the break clock runs.</li>
+  <li>On the Tasks tab, add follow-up actions with an assignee, due date and
+  priority. Assignees come from the people permitted on this object.</li>
+  <li>Use the AI Assistant to build the summary, extract action items from
+  the raw notes, or draft the minutes.</li>
+  <li>On the Exports tab, generate the minutes or board PDF, task lists
+  (CSV, XLS, JSON), Markdown or the email summary.</li>
+</ol>
+
+<h2 id="faq">4. Common questions</h2>
+<table>
+  <tr><th>Question</th><th>Answer</th></tr>
+  <tr><td>Why does the timer keep running when I have not pressed Start?</td><td>The spent time counts from the moment the subject is shown - that is the real meeting time. Start only starts the countdown.</td></tr>
+  <tr><td>What happens when the countdown reaches zero?</td><td>It keeps counting in red as overrun, so you can see exactly how long the topic has overshot.</td></tr>
+  <tr><td>Where do the assignee names come from?</td><td>From the permission list of this CMS object. If the list is unavailable, you can type any name instead.</td></tr>
+  <tr><td>Can I reuse last month's meeting?</td><td>Yes - on the Meeting tab, use Import from another meeting and paste the exported JSON, then merge or replace.</td></tr>
+  <tr><td>Do I need to save?</td><td>No. Every change autosaves, including when you close the page.</td></tr>
+</table>
+
+<h2 id="troubleshooting">5. Troubleshooting</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>PDF export downloads an HTML file instead of a PDF</td><td>Your app has PDF export disabled; open the downloaded file and print it to PDF from your browser.</td></tr>
+  <tr><td>The AI Assistant is empty or shows a notice</td><td>The allowAi parameter is off for this tool. Ask an admin to enable it, or use the auto summary fallback.</td></tr>
+  <tr><td>Assignee dropdowns are plain text fields</td><td>The CMS did not return the object permission list. Typing a name still works.</td></tr>
+  <tr><td>The timer jumps after the tab was in the background</td><td>Expected - the timer uses the real wall clock, so time spent with the tab hidden still counts.</td></tr>
+  <tr><td>A subject or task was deleted by mistake</td><td>Re-import it from a previous export, or ask the CMS admin for the object's version history.</td></tr>
+</table>
+<!-- GENERATED-END -->
+
+
+
+<div class="footer">
+  Meeting Notes - help document. Satellite of the SSOT system - not a
+  source of truth; when it disagrees with the SSOT, the SSOT wins.
+</div>
+</div>
+</body>
+</html>

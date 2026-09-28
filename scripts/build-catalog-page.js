@@ -29,6 +29,7 @@ const TOOL_IDEA_MAP = {
   NewsGenerator: { idea: 'AI News Article Generator', code: 'B-G-01-b' },
   VibeCodingHTMLAppBuilder: { idea: 'Vibe Coding HTML App Builder', code: 'B-G-01-b' },
   WebpageBuilder: { idea: 'Webpage Builder Studio', code: 'B-G-01-b' },
+  MeetingNotes: { idea: 'Meeting Notes & Action Recorder', code: 'B-G-01-a' },
   InvoiceAndExpenseCollector: { idea: 'Invoice & Expense Collector', code: 'B-G-02-a' },
   PaymentsManagement: { idea: 'Payments Management Console', code: 'B-G-02-c' },
   BrandSetGenerator: { idea: 'Brand Set Generator', code: 'B-G-04-f' },
@@ -73,12 +74,13 @@ const TOOL_IDEA_MAP = {
   WarehouseManager: { idea: 'Warehouse Manager', code: 'B-V-07-b' },
   AIBlindsConsultation: { idea: 'AI Blinds Consultation', code: 'B-V-11-d' },
   PersonalTaxPreparation: { idea: 'Personal Tax Preparation', code: 'P-G-01-b' },
+  SeniorHelperAICoordinator: { idea: 'Senior Helper AI Coordinator', code: 'P-G-04-c' },
   TravelPlanner: { idea: 'Travel Planner', code: 'P-V-01-a' },
 }
 
 // ---- find tool folders by walking the taxonomy (roots carry dynamic names) ----
 const rootDirs = fs.readdirSync(ROOT, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory() && /^(BUSINESS|PERSONAL)_/.test(entry.name))
+  .filter((entry) => entry.isDirectory() && /^(BUSINESS|PERSONAL)(_|$)/.test(entry.name))
   .map((entry) => entry.name)
 
 const toolLocations = {}

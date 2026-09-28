@@ -137,11 +137,11 @@ changed since the last sync (counts must match reality):
 
 1.2 Verify the result
     Run:
-      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name app | wc -l
+      find BUSINESS PERSONAL -type d -name app | wc -l
         → must equal the number of built tools (50 today)
-      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name docs | wc -l
+      find BUSINESS PERSONAL -type d -name docs | wc -l
         → must equal the same number
-      find BUSINESS_48_of_150 PERSONAL_2_of_40 -name .gitkeep | wc -l
+      find BUSINESS PERSONAL -name .gitkeep | wc -l
         → equals the number of empty subcategories (140 today)
     Run:
       node "C:/Users/Admin/AppData/Local/Temp/alltools-verify2.cjs"
@@ -375,7 +375,7 @@ PHASE 5 - VERIFICATION GATE (every check MUST pass - fix failures, do not
           skip them to reach the push)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 5.1 Docs completeness
-      find BUSINESS_48_of_150 PERSONAL_2_of_40 -type d -name docs | wc -l
+      find BUSINESS PERSONAL -type d -name docs | wc -l
         → equals the number of tools (50 today)
     Every docs folder contains all 7 files: index.html, ssot.html,
     webpage.html, help.html, presentation.html, updates.html, social.html.

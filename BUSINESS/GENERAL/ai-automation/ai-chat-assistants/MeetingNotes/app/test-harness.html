@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meeting Notes - Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="MeetingNotes.css">
+<style>
+body { padding-top: 34px !important; margin: 0; }
+#app-container { height: calc(100vh - 34px); overflow: hidden; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 4px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none; }
+body.th-bare #app-container { height: 100vh; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>TEST HARNESS - Meeting Notes</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB to Console</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready - click "Load Sample Data" to test</span>
+</div>
+<div id="app-container"></div>
+<script>
+
+/* - Mock tool SDK - */
+(function() {
+  var STORAGE_KEY = 'meeting_notes_test_db';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _user = { id: 'usr_test1', name: 'Grace Hopper', email: 'grace@example.com', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false }, locale: 'en' };
+  var _value = null;
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return {}; },
+    setField: function() {},
+    setFields: function() {},
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    _setUser: function(u) { _user = u; listeners.userChange.forEach(function(cb) { try { cb(u); } catch(e) {} }); },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    getPermittedUsers: function() {
+      return [
+        { id: 'u-elif', name: 'Elif Yilmaz' },
+        { id: 'u-omar', name: 'Omar Hassan' },
+        { id: 'u-amina', name: 'Amina Khan' },
+        { id: 'u-mark', name: 'Mark Thompson' },
+        { id: 'u-sara', name: 'Sara Ozturk' }
+      ];
+    },
+    onPermittedUsersChange: function(cb) { /* static list in the harness */ },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    reportMissingParams: function(missing, msg) { if (missing && missing.length) console.warn('[Missing params]', msg, missing); },
+    declareOutput: function() {},
+    declareParams: function() {},
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    requestSave: function(cb) { setTimeout(function() { cb(null, true); }, 50); },
+    requestExportPdf: function(options, cb) {
+      var html = options.html || document.body.innerHTML;
+      try {
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        cb(null, { name: (options.filename || 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+      } catch(e) { cb('Export failed: ' + e.message, null); }
+    },
+    requestAI: function(prompt, context, cb) {
+      setTimeout(function() {
+        var q = (prompt || '');
+        var answer;
+        if (q.indexOf('TASK: EXTRACT_ACTION_ITEMS') !== -1) {
+          answer = '[\n' +
+            '  {"text": "Prepare the Q4 budget draft for the finance committee", "assignee": "Amina K.", "dueDate": "2026-10-10", "priority": "high"},\n' +
+            '  {"text": "Book the venue for the annual general meeting", "assignee": "", "dueDate": "2026-10-15", "priority": "medium"},\n' +
+            '  {"text": "Send thank-you notes to campaign donors", "assignee": "Omar H.", "dueDate": "", "priority": "low"}\n' +
+            ']';
+        } else if (q.indexOf('TASK: DRAFT_MINUTES') !== -1) {
+          answer = 'MINUTES OF THE BOARD MEETING\n\nDate: ' + new Date().toISOString().slice(0, 10) + '\n\nATTENDANCE\nPresent: ' +
+            'Elif Y., Omar H., Amina K., Mark T.\n\nAGENDA\n1. Financial Review\n2. Q3 Fundraising Campaign\n3. Facility and Logistics\n\n' +
+            'RESOLUTIONS\n1. RESOLVED, that the revised fundraising budget of $45,000 is approved.\n\n' +
+            'ACTION ITEMS\n- Amina K. - prepare the Q4 budget draft (due 10 Oct 2026)\n- Omar H. - send thank-you notes to donors\n\n' +
+            'Next meeting: same time next month.\n\nSigned\n______________\nChair\n\n______________\nSecretary';
+        } else if (q.indexOf('TASK: MEETING_SUMMARY') !== -1) {
+          answer = 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position, approved the revised Q3 fundraising budget and agreed to defer the office move until the lease renewal.\n\n' +
+            'KEY POINTS\n- Cash position is healthy; reserves cover four months of operations.\n- The Q3 campaign is tracking 12% above target.\n- The current office lease expires in March; renewal negotiations start in January.\n\n' +
+            'DECISIONS\n- Approve the revised fundraising budget of $45,000.\n- Defer the office relocation decision to the January meeting.\n\n' +
+            'NEXT STEPS\n- Finance to prepare the Q4 budget draft.\n- Operations to shortlist two venues for the annual general meeting.';
+        } else {
+          answer = 'No matching AI task marker found in the prompt.';
+        }
+        cb(null, answer);
+      }, 600);
+    },
+    onReady: function(cb) { load(); cb(_value, {}); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('Meeting Notes DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+
+</script>
+<script>
+
+/* - Dynamic HTML loader (fetch with embedded fallback for file://) - */
+var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
+  <nav class="mtn-tabs" id="mtn-tabs">
+    <button type="button" class="mtn-tab active" data-tab="subjects">Subjects<span class="mtn-tab-count" id="mtn-count-subjects">0<\/span><\/button>
+    <button type="button" class="mtn-tab" data-tab="meeting">Meeting<\/button>
+    <button type="button" class="mtn-tab" data-tab="tasks">Tasks<span class="mtn-tab-count" id="mtn-count-tasks">0<\/span><\/button>
+    <button type="button" class="mtn-tab" data-tab="ai">AI Assistant<\/button>
+    <button type="button" class="mtn-tab" data-tab="exports">Exports<\/button>
+    <span class="mtn-ro-badge" id="mtn-ro-badge">Read-only<\/span>
+  <\/nav>
+
+  <main class="mtn-stage" id="mtn-stage">
+    <!-- ── SUBJECTS (first tab) ── -->
+    <section class="mtn-pane active" id="mtn-pane-subjects">
+      <div class="mtn-section-head">
+        <div>
+          <div class="mtn-card-title">Subjects<\/div>
+          <div class="mtn-card-sub" id="mtn-subjects-meta">0 subjects<\/div>
+        <\/div>
+        <div class="mtn-head-actions">
+          <button type="button" class="mtn-btn mtn-btn-project" data-act="project-open" title="Open the meeting-room view with big text, ready for the projector">Meeting Mode<\/button>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="add-subject">+ Add subject<\/button>
+        <\/div>
+      <\/div>
+      <div id="mtn-subjects"><\/div>
+    <\/section>
+
+    <!-- ── MEETING (second tab) ── -->
+    <section class="mtn-pane" id="mtn-pane-meeting">
+      <div class="mtn-card">
+        <div class="mtn-card-head">
+          <div class="mtn-card-title">Meeting details<\/div>
+          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 decisions - 0 open tasks<\/div>
+        <\/div>
+        <div class="mtn-grid2">
+          <div class="mtn-field mtn-span2">
+            <label class="mtn-label" for="mtn-meet-title">Meeting title<\/label>
+            <input class="mtn-input" id="mtn-meet-title" data-field="meet.title" placeholder="e.g. Board of Directors - Monthly Meeting" maxlength="160" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-date">Date<\/label>
+            <input type="date" class="mtn-input" id="mtn-meet-date" data-field="meet.date" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-location">Location / link<\/label>
+            <input class="mtn-input" id="mtn-meet-location" data-field="meet.location" placeholder="Room A or video link" maxlength="120" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-timestart">Starts at<\/label>
+            <input type="time" class="mtn-input" id="mtn-meet-timestart" data-field="meet.timestart" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-timeend">Ends at<\/label>
+            <input type="time" class="mtn-input" id="mtn-meet-timeend" data-field="meet.timeend" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-chair">Chair<\/label>
+            <input class="mtn-input" id="mtn-meet-chair" data-field="meet.chair" placeholder="Who runs the meeting" maxlength="120" />
+          <\/div>
+          <div class="mtn-field">
+            <label class="mtn-label" for="mtn-meet-minutetaker">Minute taker<\/label>
+            <input class="mtn-input" id="mtn-meet-minutetaker" data-field="meet.minutetaker" placeholder="Who writes the notes" maxlength="120" />
+          <\/div>
+          <div class="mtn-field mtn-span2">
+            <label class="mtn-label" for="mtn-meet-attendees">Attendees (one per line)<\/label>
+            <textarea class="mtn-textarea" id="mtn-meet-attendees" data-field="meet.attendees" rows="3" placeholder="Names of everyone present, one per line"><\/textarea>
+          <\/div>
+        <\/div>
+        <p class="mtn-hint mtn-single-note">One meeting per tool instance - this record holds exactly one meeting. Create a new CMS object for the next meeting.<\/p>
+      <\/div>
+
+      <details class="mtn-card mtn-raw">
+        <summary>Import from another meeting (JSON)<\/summary>
+        <p class="mtn-hint">Paste the "Full Meeting JSON" exported from a previous Meeting Notes record (or the JSON of an old CMS object). The content is resolved and imported into this meeting - merge to continue last week's meeting, or replace to start over from it.<\/p>
+        <textarea class="mtn-textarea" id="mtn-import-json" rows="6" placeholder='Paste JSON here - e.g. {"meeting":{"title":"..."},"subjects":[...],"tasks":[...]}'><\/textarea>
+        <div class="mtn-import-actions">
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="import-analyze">Analyze<\/button>
+        <\/div>
+        <div id="mtn-import-result"><\/div>
+      <\/details>
+
+      <details class="mtn-card mtn-raw">
+        <summary>Raw notes / transcript (optional)<\/summary>
+        <p class="mtn-hint">Paste quick notes or a full transcript here. The AI Assistant reads it when summarizing the meeting or extracting action items.<\/p>
+        <textarea class="mtn-textarea" id="mtn-raw-notes" data-field="rawnotes" rows="8" placeholder="Paste raw notes here..."><\/textarea>
+      <\/details>
+    <\/section>
+
+    <!-- ── TASKS ── -->
+    <section class="mtn-pane" id="mtn-pane-tasks">
+      <div class="mtn-card">
+        <div class="mtn-card-head">
+          <div class="mtn-card-title">Action items<\/div>
+          <div class="mtn-card-sub" id="mtn-task-stats"><\/div>
+        <\/div>
+        <div class="mtn-task-filters">
+          <div class="mtn-chips" id="mtn-task-filter-status"><\/div>
+          <select class="mtn-select mtn-filter-priority" id="mtn-task-filter-priority">
+            <option value="all">All priorities<\/option>
+            <option value="high">High<\/option>
+            <option value="medium">Medium<\/option>
+            <option value="low">Low<\/option>
+          <\/select>
+          <input class="mtn-input mtn-filter-search" id="mtn-task-search" placeholder="Search tasks..." maxlength="80" />
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="ai-extract">Extract from AI<\/button>
+        <\/div>
+      <\/div>
+      <div id="mtn-tasks"><\/div>
+      <div class="mtn-task-add">
+        <div class="mtn-task-add-head">
+          <span class="mtn-task-add-title">New action item<\/span>
+          <span class="mtn-task-add-hint">Enter adds it to the list<\/span>
+        <\/div>
+        <textarea class="mtn-textarea mtn-task-new-text" id="mtn-task-new-text" rows="2" placeholder="What needs to be done?" maxlength="240"><\/textarea>
+        <div class="mtn-task-add-row">
+          <label class="mtn-task-meta"><span>Assignee<\/span><input class="mtn-input" id="mtn-task-new-assignee" placeholder="Assign someone" maxlength="80" /><\/label>
+          <label class="mtn-task-meta"><span>Due<\/span><input type="date" class="mtn-input" id="mtn-task-new-due" /><\/label>
+          <label class="mtn-task-meta"><span>Priority<\/span><select class="mtn-select" id="mtn-task-new-priority">
+            <option value="medium">Medium<\/option>
+            <option value="high">High<\/option>
+            <option value="low">Low<\/option>
+          <\/select><\/label>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="add-task">Add task<\/button>
+        <\/div>
+      <\/div>
+    <\/section>
+
+    <!-- ── AI ASSISTANT ── -->
+    <section class="mtn-pane" id="mtn-pane-ai">
+      <div class="mtn-ai-banner" id="mtn-ai-missing">
+        AI features are not enabled for this tool. Ask an admin to set the field setting <code>allowAi: yes<\/code> in the CMS tool configuration.
+      <\/div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Summarize meeting<\/div>
+            <div class="mtn-card-sub">Executive summary, key points, decisions and next steps built from your subjects, notes and raw transcript.<\/div>
+          <\/div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-summarize" id="mtn-btn-ai-summarize">Summarize<\/button>
+        <\/div>
+        <div class="mtn-ai-out" id="mtn-ai-summary-out"><\/div>
+      <\/div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Extract action items<\/div>
+            <div class="mtn-card-sub">Reads the meeting and lists the tasks with assignees, due dates and priorities. Review, then merge them into the Tasks tab.<\/div>
+          <\/div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-extract" id="mtn-btn-ai-extract">Extract tasks<\/button>
+        <\/div>
+        <div class="mtn-ai-out" id="mtn-ai-extract-out"><\/div>
+      <\/div>
+
+      <div class="mtn-card mtn-ai-card">
+        <div class="mtn-ai-head">
+          <div>
+            <div class="mtn-card-title">Draft board minutes<\/div>
+            <div class="mtn-card-sub">Formal minutes draft for a board meeting - attendance, agenda, resolutions and signature lines. Copy it or download it as text.<\/div>
+          <\/div>
+          <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-draft" id="mtn-btn-ai-draft">Draft minutes<\/button>
+        <\/div>
+        <div class="mtn-ai-out" id="mtn-ai-draft-out"><\/div>
+      <\/div>
+    <\/section>
+
+    <!-- ── EXPORTS ── -->
+    <section class="mtn-pane" id="mtn-pane-exports">
+      <h3 class="mtn-export-h">PDF documents<\/h3>
+      <div class="mtn-export-grid" id="mtn-exports-pdf"><\/div>
+      <h3 class="mtn-export-h">Data files (Excel / JSON)<\/h3>
+      <div class="mtn-export-grid" id="mtn-exports-data"><\/div>
+      <h3 class="mtn-export-h">Text copies<\/h3>
+      <div class="mtn-export-grid" id="mtn-exports-text"><\/div>
+    <\/section>
+  <\/main>
+
+  <!-- ── PROJECTION DRAWER (big text for meeting-room screens) ── -->
+  <div class="mtn-projection" id="mtn-projection">
+    <aside class="mtn-project-side">
+      <div class="mtn-project-side-head">
+        <span>Subjects<\/span>
+        <span class="mtn-project-total-spent" id="mtn-proj-total-spent">Total 0:00<\/span>
+        <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-close">Close<\/button>
+      <\/div>
+      <div class="mtn-project-nav" id="mtn-project-nav"><\/div>
+    <\/aside>
+    <div class="mtn-project-main">
+      <div class="mtn-project-bar">
+        <button type="button" class="mtn-btn mtn-btn-ghost" id="mtn-project-side-toggle" data-act="project-side-toggle" title="Collapse / expand the subjects list">&#9664; Subjects<\/button>
+        <button type="button" class="mtn-icon-btn" data-act="project-prev" title="Previous subject">&#8592;<\/button>
+        <button type="button" class="mtn-icon-btn" data-act="project-next" title="Next subject">&#8594;<\/button>
+        <span class="mtn-project-counter" id="mtn-project-counter"><\/span>
+        <div class="mtn-project-zoom">
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-smaller" title="Smaller text">A-<\/button>
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-reset" title="Reset text size">1:1<\/button>
+          <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-bigger" title="Larger text">A+<\/button>
+        <\/div>
+      <\/div>
+      <div class="mtn-project-body" id="mtn-project-body"><\/div>
+    <\/div>
+  <\/div>
+<\/div>
+`;
+
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'MeetingNotes.js';
+    script.onload = function() { status.textContent = 'Ready - click "Load Sample Data" to test'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 1500);
+
+  fetch('MeetingNotes.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() { /* fallback already triggered */ });
+})();
+
+</script>
+<script>
+
+/* - Sample Data Generator - */
+(function() {
+  function dateISO(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function addDays(n) { var d = new Date(); d.setDate(d.getDate() + n); return dateISO(d); }
+  function uid() { return 'id_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  function generateSampleData() {
+    return {
+      version: '1.0.0',
+      meeting: {
+        title: 'Board of Directors - Monthly Meeting',
+        date: dateISO(new Date()),
+        timestart: '10:00',
+        timeend: '11:30',
+        location: 'Conference Room A',
+        chair: 'Elif Yilmaz',
+        minutetaker: 'Omar Hassan',
+        attendees: 'Elif Yilmaz\nOmar Hassan\nAmina Khan\nMark Thompson\nSara Ozturk'
+      },
+      subjects: [
+        {
+          id: 'subj-financial',
+          title: 'Financial Review',
+          durationMinutes: 15,
+          notes: 'Treasurer presented the current cash position. Reserves cover four months of operating costs.\n\nThe audit preparation is on track; the draft report arrives next week.\n\nNo unexpected expenses were flagged this month.',
+          decisions: [
+            { id: uid(), text: 'Accept the financial review as presented.' }
+          ]
+        },
+        {
+          id: 'subj-fundraising',
+          title: 'Q3 Fundraising Campaign',
+          notes: 'The campaign is tracking 12% above target thanks to the corporate matching round.\n\nSocial media ads are performing well; the email follow-up sequence goes out on Monday.\n\nThe revised budget adds $5,000 for video production.',
+          decisions: [
+            { id: uid(), text: 'Approve the revised fundraising budget of $45,000.', movedBy: 'Amina Khan', secondedBy: 'Omar Hassan' }
+          ]
+        },
+        {
+          id: 'subj-facility',
+          title: 'Facility and Logistics',
+          notes: 'The current office lease expires in March. Renewal terms arrive in January.\n\nThe board prefers to compare two relocation options before deciding.\n\nAnnual general meeting venue: two shortlisted options to review.',
+          decisions: [
+            { id: uid(), text: 'Defer the office relocation decision to the January meeting.' }
+          ]
+        }
+      ],
+      tasks: [
+        { id: uid(), text: 'Prepare the Q4 budget draft for the finance committee', assignee: 'Amina Khan', dueDate: addDays(13), priority: 'high', status: 'open', source: 'manual', subjectId: 'subj-financial' },
+        { id: uid(), text: 'Approve last quarter budget', assignee: '', dueDate: '', priority: 'medium', status: 'done', source: 'manual', subjectId: 'subj-financial' },
+        { id: uid(), text: 'Book the venue for the annual general meeting', assignee: 'Sara Ozturk', dueDate: addDays(18), priority: 'medium', status: 'inProgress', source: 'manual', subjectId: 'subj-facility' },
+        { id: uid(), text: 'Send thank-you notes to campaign donors', assignee: 'Omar Hassan', dueDate: addDays(5), priority: 'medium', status: 'open', source: 'manual' },
+        { id: uid(), text: 'Collect audit documents from the accountant', assignee: 'Mark Thompson', dueDate: addDays(2), priority: 'high', status: 'done', source: 'ai' }
+      ],
+      rawnotes: 'Elif opened the meeting at 10:00. Amina walked through the numbers - we are in good shape, four months of runway. ' +
+        'The fundraiser is going great, 12 percent above target. Elif asked about the video budget, Amina said add 5k. Everyone agreed. ' +
+        'Mark said the lease ends in March and we need to decide. Elif: decide in January, compare two options. ' +
+        'Sara needs the AGM venue booked by mid next month. Omar will send donor thank-you notes this week.',
+      ai: {
+        summary: 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position, approved the revised Q3 fundraising budget and agreed to defer the office move until the lease renewal.\n\n' +
+          'KEY POINTS\n- Cash position is healthy; reserves cover four months of operations.\n- The Q3 campaign is tracking 12% above target.\n- The current office lease expires in March; renewal negotiations start in January.\n\n' +
+          'DECISIONS\n- Approve the revised fundraising budget of $45,000.\n- Defer the office relocation decision to the January meeting.\n\n' +
+          'NEXT STEPS\n- Finance to prepare the Q4 budget draft.\n- Operations to shortlist two venues for the annual general meeting.',
+        minutesDraft: ''
+      }
+    };
+  }
+
+  document.getElementById('th-load-sample').addEventListener('click', function() {
+    window.tool._loadSampleData(generateSampleData());
+  });
+  document.getElementById('th-clear').addEventListener('click', function() {
+    window.tool._clearData();
+  });
+  document.getElementById('th-reload').addEventListener('click', function() {
+    window.location.reload();
+  });
+
+  // QA shortcuts: ?sample=1 loads sample data once, ?role= switches the mock role
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('sample') === '1') {
+      setTimeout(function() {
+        var raw = localStorage.getItem('meeting_notes_test_db');
+        if (!raw) {
+          window.tool._loadSampleData(generateSampleData());
+        }
+      }, 900);
+    }
+    var role = params.get('role');
+    if (role) {
+      var roleMap = {
+        admin: { roles: ['admin'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+        editor: { roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+        viewer: { roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } },
+        none: null
+      };
+      var mapped = roleMap[role];
+      if (mapped !== undefined) {
+        setTimeout(function() {
+          window.tool._setUser(mapped);
+          if (role === 'viewer') window.tool._setReadOnly(true);
+          window.tool.notify('Role: ' + role, 'info');
+        }, 300);
+      }
+    }
+    if (params.get('ro') === '1') {
+      setTimeout(function() { window.tool._setReadOnly(true); }, 300);
+    }
+    if (params.get('bare') === '1') {
+      document.body.classList.add('th-bare');
+    }
+    var page = params.get('page');
+    if (page) {
+      var pageMap = {
+        dashboard: { tab: 'subjects' },
+        documents: { tab: 'exports' },
+        transactions: { tab: 'tasks' },
+        finder: { tab: 'ai' },
+        gst: { tab: 'meeting' },
+        assistant: { tab: 'subjects', drawer: true },
+        reports: { tab: 'exports' },
+        settings: { tab: 'meeting' }
+      };
+      var pageTarget = pageMap[page];
+      if (pageTarget) {
+        setTimeout(function() {
+          var tabButton = document.querySelector('.mtn-tab[data-tab="' + pageTarget.tab + '"]');
+          if (tabButton) tabButton.click();
+          if (pageTarget.drawer) {
+            var projectButton = document.querySelector('.mtn-btn-project');
+            if (projectButton) projectButton.click();
+          }
+        }, 1800);
+      }
+    }
+  })();
+})();
+
+</script>
+<script src="MeetingNotes.js"></script>
+</body>
+</html>
