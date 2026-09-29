@@ -119,13 +119,11 @@ body.th-bare #app-container { height: 100vh; }
         } else if (q.indexOf('TASK: DRAFT_MINUTES') !== -1) {
           answer = 'MINUTES OF THE BOARD MEETING\n\nDate: ' + new Date().toISOString().slice(0, 10) + '\n\nATTENDANCE\nPresent: ' +
             'Elif Y., Omar H., Amina K., Mark T.\n\nAGENDA\n1. Financial Review\n2. Q3 Fundraising Campaign\n3. Facility and Logistics\n\n' +
-            'RESOLUTIONS\n1. RESOLVED, that the revised fundraising budget of $45,000 is approved.\n\n' +
             'ACTION ITEMS\n- Amina K. - prepare the Q4 budget draft (due 10 Oct 2026)\n- Omar H. - send thank-you notes to donors\n\n' +
             'Next meeting: same time next month.\n\nSigned\n______________\nChair\n\n______________\nSecretary';
         } else if (q.indexOf('TASK: MEETING_SUMMARY') !== -1) {
-          answer = 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position, approved the revised Q3 fundraising budget and agreed to defer the office move until the lease renewal.\n\n' +
+          answer = 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position and agreed to defer the office move until the lease renewal.\n\n' +
             'KEY POINTS\n- Cash position is healthy; reserves cover four months of operations.\n- The Q3 campaign is tracking 12% above target.\n- The current office lease expires in March; renewal negotiations start in January.\n\n' +
-            'DECISIONS\n- Approve the revised fundraising budget of $45,000.\n- Defer the office relocation decision to the January meeting.\n\n' +
             'NEXT STEPS\n- Finance to prepare the Q4 budget draft.\n- Operations to shortlist two venues for the annual general meeting.';
         } else {
           answer = 'No matching AI task marker found in the prompt.';
@@ -181,7 +179,7 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
       <div class="mtn-card">
         <div class="mtn-card-head">
           <div class="mtn-card-title">Meeting details<\/div>
-          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 decisions - 0 open tasks<\/div>
+          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 open tasks<\/div>
         <\/div>
         <div class="mtn-grid2">
           <div class="mtn-field mtn-span2">
@@ -286,7 +284,7 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
         <div class="mtn-ai-head">
           <div>
             <div class="mtn-card-title">Summarize meeting<\/div>
-            <div class="mtn-card-sub">Executive summary, key points, decisions and next steps built from your subjects, notes and raw transcript.<\/div>
+            <div class="mtn-card-sub">Executive summary, key points and next steps built from your subjects, notes and raw transcript.<\/div>
           <\/div>
           <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-summarize" id="mtn-btn-ai-summarize">Summarize<\/button>
         <\/div>
@@ -329,11 +327,12 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
 
   <!-- ── PROJECTION DRAWER (big text for meeting-room screens) ── -->
   <div class="mtn-projection" id="mtn-projection">
+    <div class="mtn-proj-backdrop" data-act="project-close-side" title="Close the subjects menu"><\/div>
     <aside class="mtn-project-side">
       <div class="mtn-project-side-head">
+        <button type="button" class="mtn-icon-btn" data-act="project-side-toggle" title="Collapse the subjects list">&#9664;<\/button>
         <span>Subjects<\/span>
         <span class="mtn-project-total-spent" id="mtn-proj-total-spent">Total 0:00<\/span>
-        <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-close">Close<\/button>
       <\/div>
       <div class="mtn-project-nav" id="mtn-project-nav"><\/div>
     <\/aside>
@@ -348,6 +347,7 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
           <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-reset" title="Reset text size">1:1<\/button>
           <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-bigger" title="Larger text">A+<\/button>
         <\/div>
+        <button type="button" class="mtn-btn mtn-btn-ghost mtn-project-exit" data-act="project-close" title="Close Meeting Mode and return to the meeting manager">&#8592; Meeting manager<\/button>
       <\/div>
       <div class="mtn-project-body" id="mtn-project-body"><\/div>
     <\/div>
@@ -419,26 +419,17 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
           id: 'subj-financial',
           title: 'Financial Review',
           durationMinutes: 15,
-          notes: 'Treasurer presented the current cash position. Reserves cover four months of operating costs.\n\nThe audit preparation is on track; the draft report arrives next week.\n\nNo unexpected expenses were flagged this month.',
-          decisions: [
-            { id: uid(), text: 'Accept the financial review as presented.' }
-          ]
+          notes: 'Treasurer presented the current cash position. Reserves cover four months of operating costs.\n\nThe audit preparation is on track; the draft report arrives next week.\n\nNo unexpected expenses were flagged this month.'
         },
         {
           id: 'subj-fundraising',
           title: 'Q3 Fundraising Campaign',
-          notes: 'The campaign is tracking 12% above target thanks to the corporate matching round.\n\nSocial media ads are performing well; the email follow-up sequence goes out on Monday.\n\nThe revised budget adds $5,000 for video production.',
-          decisions: [
-            { id: uid(), text: 'Approve the revised fundraising budget of $45,000.', movedBy: 'Amina Khan', secondedBy: 'Omar Hassan' }
-          ]
+          notes: 'The campaign is tracking 12% above target thanks to the corporate matching round.\n\nSocial media ads are performing well; the email follow-up sequence goes out on Monday.\n\nThe revised budget adds $5,000 for video production.'
         },
         {
           id: 'subj-facility',
           title: 'Facility and Logistics',
-          notes: 'The current office lease expires in March. Renewal terms arrive in January.\n\nThe board prefers to compare two relocation options before deciding.\n\nAnnual general meeting venue: two shortlisted options to review.',
-          decisions: [
-            { id: uid(), text: 'Defer the office relocation decision to the January meeting.' }
-          ]
+          notes: 'The current office lease expires in March. Renewal terms arrive in January.\n\nThe board prefers to compare two relocation options before deciding.\n\nAnnual general meeting venue: two shortlisted options to review.'
         }
       ],
       tasks: [
@@ -453,9 +444,8 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
         'Mark said the lease ends in March and we need to decide. Elif: decide in January, compare two options. ' +
         'Sara needs the AGM venue booked by mid next month. Omar will send donor thank-you notes this week.',
       ai: {
-        summary: 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position, approved the revised Q3 fundraising budget and agreed to defer the office move until the lease renewal.\n\n' +
+        summary: 'EXECUTIVE SUMMARY\nThe board reviewed the current financial position and agreed to defer the office move until the lease renewal.\n\n' +
           'KEY POINTS\n- Cash position is healthy; reserves cover four months of operations.\n- The Q3 campaign is tracking 12% above target.\n- The current office lease expires in March; renewal negotiations start in January.\n\n' +
-          'DECISIONS\n- Approve the revised fundraising budget of $45,000.\n- Defer the office relocation decision to the January meeting.\n\n' +
           'NEXT STEPS\n- Finance to prepare the Q4 budget draft.\n- Operations to shortlist two venues for the annual general meeting.',
         minutesDraft: ''
       }
@@ -529,6 +519,31 @@ var EMBEDDED_HTML = `<div class="mtn-app" id="mtn-app">
           }
         }, 1800);
       }
+    }
+    if (params.get('autostart') === '1') {
+      setTimeout(function() {
+        var startButton = document.getElementById('mtn-proj-timer-start');
+        if (startButton) startButton.click();
+      }, 2600);
+    }
+    if (params.get('sidedrawer') === '1') {
+      setTimeout(function() {
+        var sideToggle = document.getElementById('mtn-project-side-toggle');
+        if (sideToggle) sideToggle.click();
+      }, 2400);
+    }
+    if (params.get('dims') === '1') {
+      setTimeout(function() {
+        var editor = document.getElementById('mtn-proj-editor-page');
+        var bodyEl = document.getElementById('mtn-project-body');
+        var out = document.createElement('div');
+        out.id = 'th-dims';
+        out.textContent = 'win:' + window.innerWidth + ' doc:' + document.documentElement.scrollWidth +
+          ' body:' + (bodyEl ? bodyEl.scrollWidth + '/' + bodyEl.clientWidth : 'none') +
+          ' editor:' + (editor ? editor.scrollWidth + '/' + editor.clientWidth : 'none');
+        out.style.cssText = 'position:fixed;bottom:0;left:0;z-index:99999;background:#000;color:#0f0;font:12px monospace;padding:4px';
+        document.body.appendChild(out);
+      }, 3200);
     }
   })();
 })();

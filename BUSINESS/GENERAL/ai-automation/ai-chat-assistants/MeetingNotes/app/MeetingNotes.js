@@ -2,7 +2,7 @@
 // Class prefix mtn-. Everything is stored in tool.setValue() (no requestObjects).
 // Value shape:
 //   { version, meeting{title,date,timestart,timeend,location,chair,minutetaker,attendees},
-//     subjects[{id,title,notes,decisions[{id,text}]}],
+//     subjects[{id,title,notes}],
 //     tasks[{id,text,assignee,dueDate,priority,status,source}],
 //     rawnotes, ai{summary,minutesDraft} }
 (function () {
@@ -117,7 +117,7 @@
 
   // ── state ──
   var DB = defaultDatabase()
-  var _ui = { tab: 'subjects', taskStatusFilter: 'all', taskPriorityFilter: 'all', taskSearch: '', collapsed: {}, decisionExpanded: {}, projScale: 1, projDecisionsSide: true, projSideCollapsed: false, editingSubjectId: '' }
+  var _ui = { tab: 'subjects', taskStatusFilter: 'all', taskPriorityFilter: 'all', taskSearch: '', collapsed: {}, projScale: 1, projPanelSide: true, projSideCollapsed: false, editingSubjectId: '' }
   var _aiBusy = {}
   var _aiExtracted = null
   var _readOnly = false
@@ -177,18 +177,6 @@
 
   function normalizeSubject(subject) {
     if (!subject || typeof subject !== 'object') return null
-    var decisions = Array.isArray(subject.decisions)
-      ? subject.decisions.map(function (d) {
-          return d && typeof d === 'object' && d.text
-            ? {
-                id: d.id || uid(),
-                text: clampText(d.text, 500),
-                movedBy: clampText(d.movedBy, 80),
-                secondedBy: clampText(d.secondedBy, 80)
-              }
-            : null
-        }).filter(Boolean)
-      : []
     var durationMinutes = parseInt(subject.durationMinutes, 10)
     if (isNaN(durationMinutes) || durationMinutes < 1) durationMinutes = 15 // 15 min is the default for every subject
     if (durationMinutes > 480) durationMinutes = 480
@@ -202,8 +190,7 @@
       notesHtml: subject.notesHtml ? sanitizeNotesHtml(subject.notesHtml) : plainTextToNotesHtml(clampText(subject.notes, 20000)),
       status: subject.status === 'done' ? 'done' : 'open',
       durationMinutes: durationMinutes,
-      spentMs: spentMs,
-      decisions: decisions
+      spentMs: spentMs
     }
   }
 
@@ -392,11 +379,6 @@
     }
     return null
   }
-  function decisionCount() {
-    var count = 0
-    DB.subjects.forEach(function (s) { count += s.decisions.length })
-    return count
-  }
   function taskCounts() {
     var counts = { total: DB.tasks.length, open: 0, inProgress: 0, done: 0 }
     DB.tasks.forEach(function (t) {
@@ -417,12 +399,10 @@
   function renderMeetingMeta() {
     var counts = taskCounts()
     byId('mtn-meet-meta').textContent = DB.subjects.length + ' subject' + (DB.subjects.length === 1 ? '' : 's') +
-      ' - ' + decisionCount() + ' decision' + (decisionCount() === 1 ? '' : 's') +
       ' - ' + counts.open + ' open task' + (counts.open === 1 ? '' : 's')
     var subjectsMeta = byId('mtn-subjects-meta')
     if (subjectsMeta) {
       subjectsMeta.textContent = DB.subjects.length + ' subject' + (DB.subjects.length === 1 ? '' : 's') +
-        ' - ' + decisionCount() + ' decision' + (decisionCount() === 1 ? '' : 's') +
         ' - ' + fmtClockLong(totalSpentMs()) + ' total time' +
         ((DB.meeting.waitingMs || 0) > 0 ? ' - ' + fmtClockLong(DB.meeting.waitingMs) + ' break' : '')
     }
@@ -441,26 +421,12 @@
     return subjectReadCardHtml(subject, index, collapsed, chips)
   }
 
-  // professional reading view: an agenda-style card with styled notes + resolutions
+  // professional reading view: an agenda-style card with styled notes
   function subjectReadCardHtml(subject, index, collapsed, durationLabel) {
     var title = subject.title.trim() || 'Untitled subject'
     var notesContent = subject.notesHtml
       ? '<div class="mtn-subject-notes-read">' + subject.notesHtml + '</div>'
       : '<div class="mtn-subject-notes-empty">No notes recorded for this subject yet.</div>'
-    var decisionRows = subject.decisions.map(function (d, i) {
-      var metaParts = []
-      if (d.movedBy) metaParts.push('Moved by <b>' + esc(d.movedBy) + '</b>')
-      if (d.secondedBy) metaParts.push('Seconded by <b>' + esc(d.secondedBy) + '</b>')
-      return '<div class="mtn-decision-read">' +
-        '<span class="mtn-decision-read-num">' + (i + 1) + '.</span>' +
-        '<div class="mtn-decision-read-body">' +
-        '<div class="mtn-decision-read-text">' + esc(d.text) + '</div>' +
-        (metaParts.length ? '<div class="mtn-decision-read-meta">' + metaParts.join(' - ') + '</div>' : '') +
-        '</div>' +
-        '</div>'
-    }).join('')
-    var decisionsContent = '<div class="mtn-decisions-label">Decisions</div>' +
-      (decisionRows || '<div class="mtn-subject-notes-empty">No decisions recorded.</div>')
     return '<div class="mtn-card mtn-subject mtn-subject-read' +
       (collapsed ? ' mtn-subject-collapsed' : '') +
       (subject.status === 'done' ? ' mtn-subject-done' : '') +
@@ -475,36 +441,13 @@
         ? '<button type="button" class="mtn-btn mtn-btn-soft mtn-subject-edit-btn" data-act="subject-edit" data-subject-id="' + esc(subject.id) + '">Edit</button>'
         : '') +
       '</div>' +
-      '<div class="mtn-subject-body">' + notesContent + decisionsContent + '</div>' +
+      '<div class="mtn-subject-body">' + notesContent + '</div>' +
       '</div>'
   }
 
-  // edit view: the previous card with inputs, move/delete and a Done button
+  // edit view: the card with inputs, move/delete and a Done button
   function subjectEditCardHtml(subject, index, collapsed, durationLabel) {
     var disabled = canWrite() ? '' : ' disabled'
-    var decisions = subject.decisions.map(function (d) {
-      var expanded = !!_ui.decisionExpanded[d.id]
-      var metaParts = []
-      if (d.movedBy) metaParts.push('<b>Moved by</b> ' + esc(d.movedBy))
-      if (d.secondedBy) metaParts.push('<b>Seconded by</b> ' + esc(d.secondedBy))
-      var html = '<div class="mtn-decision-row">' +
-        '<input class="mtn-input" value="' + esc(d.text) + '" placeholder="Decision or resolution..." maxlength="500" data-field="decision.text" data-subject-id="' + esc(subject.id) + '" data-decision-id="' + esc(d.id) + '"' + disabled + ' />' +
-        (canWrite()
-          ? '<button type="button" class="mtn-icon-btn" title="Motion and second (optional)" data-act="decision-expand" data-subject-id="' + esc(subject.id) + '" data-decision-id="' + esc(d.id) + '">' + (expanded ? '-' : '+') + '</button>'
-          : '') +
-        '<button type="button" class="mtn-icon-btn danger" title="Remove decision" data-act="decision-remove" data-subject-id="' + esc(subject.id) + '" data-decision-id="' + esc(d.id) + '"' + (canWrite() ? '' : ' style="display:none"') + '>x</button>' +
-        '</div>'
-      if (metaParts.length) html += '<div class="mtn-decision-meta">' + metaParts.join(' - ') + '</div>'
-      if (expanded) {
-        html += '<div class="mtn-decision-extra">' +
-          '<div class="mtn-field"><label class="mtn-label">Moved by (optional)</label><input class="mtn-input" value="' + esc(d.movedBy) + '" placeholder="Who made the motion" maxlength="80" data-field="decision.moved" data-subject-id="' + esc(subject.id) + '" data-decision-id="' + esc(d.id) + '"' + disabled + ' /></div>' +
-          '<div class="mtn-field"><label class="mtn-label">Seconded by (optional)</label><input class="mtn-input" value="' + esc(d.secondedBy) + '" placeholder="Who seconded it" maxlength="80" data-field="decision.second" data-subject-id="' + esc(subject.id) + '" data-decision-id="' + esc(d.id) + '"' + disabled + ' /></div>' +
-          '</div>'
-      }
-      return html
-    }).join('')
-    var decisionHtml = '<div class="mtn-decisions-label">Decisions</div>' + decisions +
-      (canWrite() ? '<button type="button" class="mtn-btn mtn-btn-soft" data-act="add-decision" data-subject-id="' + esc(subject.id) + '">+ Add decision</button>' : '')
 
     return '<div class="mtn-card mtn-subject mtn-subject-edit' + (collapsed ? ' mtn-subject-collapsed' : '') + (subject.status === 'done' ? ' mtn-subject-done' : '') + '" data-subject-id="' + esc(subject.id) + '">' +
       '<div class="mtn-subject-head">' +
@@ -524,7 +467,6 @@
       '</div>' +
       '<div class="mtn-subject-body">' +
       '<textarea class="mtn-textarea mtn-subject-notes" rows="5" placeholder="Notes for this subject..." data-field="subject.notes" data-subject-id="' + esc(subject.id) + '"' + disabled + '>' + esc(subject.notes) + '</textarea>' +
-      decisionHtml +
       '</div>' +
       '</div>'
   }
@@ -553,10 +495,14 @@
       _projectionIndex = DB.subjects.length - 1
     }
   }
+  function isMobileView() {
+    return typeof window !== 'undefined' && window.innerWidth <= 820
+  }
   function openProjection(subjectId) {
     _projectionOpen = true
     _projectionWaiting = false
     _lastTickAt = Date.now()
+    if (isMobileView()) _ui.projSideCollapsed = true // phone: start with the subject drawer closed
     if (subjectId) {
       for (var i = 0; i < DB.subjects.length; i++) {
         if (DB.subjects[i].id === subjectId) { _projectionIndex = i; break }
@@ -566,11 +512,22 @@
     byId('mtn-projection').classList.add('open')
     byId('mtn-projection').classList.toggle('side-collapsed', !!_ui.projSideCollapsed)
     renderProjection()
+    updateSideToggleButton()
     try { tool.resize() } catch (e) { /* no-op */ }
+  }
+  function applyProjectionSideState() {
+    var projectionEl = byId('mtn-projection')
+    if (projectionEl) projectionEl.classList.toggle('side-collapsed', !!_ui.projSideCollapsed)
+    updateSideToggleButton()
   }
   function updateSideToggleButton() {
     var button = byId('mtn-project-side-toggle')
-    if (button) button.textContent = _ui.projSideCollapsed ? '\u25b6 Subjects' : '\u25c0 Subjects'
+    if (!button) return
+    if (isMobileView()) {
+      button.textContent = _ui.projSideCollapsed ? '\u2630 Subjects' : '\u2715 Subjects'
+    } else {
+      button.textContent = _ui.projSideCollapsed ? '\u25b6 Subjects' : '\u25c0 Subjects'
+    }
   }
   function closeProjection() {
     settleProjectionTime()
@@ -683,16 +640,7 @@
     clampProjectionIndex()
     var s = DB.subjects[_projectionIndex]
     var disabled = canWrite() ? '' : ' disabled'
-    var layoutSide = _ui.projDecisionsSide !== false
-    var decisions = s.decisions.map(function (d) {
-      var metaParts = []
-      if (d.movedBy) metaParts.push('<b>Moved by</b> ' + esc(d.movedBy))
-      if (d.secondedBy) metaParts.push('<b>Seconded by</b> ' + esc(d.secondedBy))
-      return '<div class="mtn-proj-decision">' +
-        '<input class="mtn-proj-decision-input" value="' + esc(d.text) + '" placeholder="Decision or resolution..." maxlength="500" data-field="decision.text" data-subject-id="' + esc(s.id) + '" data-decision-id="' + esc(d.id) + '"' + disabled + ' />' +
-        (metaParts.length ? '<div class="mtn-proj-decision-meta">' + metaParts.join(' - ') + '</div>' : '') +
-        '</div>'
-    }).join('')
+    var layoutSide = _ui.projPanelSide !== false
     var swatches = EDITOR_COLOR_SWATCHES.map(function (sw) {
       return '<button type="button" class="mtn-ed-swatch" style="background:' + sw.color + '" data-act="ed-color" data-color="' + sw.color + '" title="' + sw.title + '"></button>'
     }).join('')
@@ -702,19 +650,19 @@
         '<button type="button" class="mtn-ed-btn" data-act="ed-italic" title="Italic"><i>I</i></button>' +
         '<button type="button" class="mtn-ed-btn" data-act="ed-underline" title="Underline"><u>U</u></button>' +
         '<span class="mtn-ed-sep"></span>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-h2" title="Heading 2">Heading 2</button>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-h3" title="Heading 3">Heading 3</button>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-p" title="Normal text">Normal</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-h2" title="Heading 2">H2</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-h3" title="Heading 3">H3</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-p" title="Normal text">Text</button>' +
         '<button type="button" class="mtn-ed-btn" data-act="ed-quote" title="Quote">Quote</button>' +
         '<span class="mtn-ed-sep"></span>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-ul" title="Bullet list">Bullets</button>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-ol" title="Numbered list">Numbering</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-ul" title="Bullet list">\u2022 List</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-ol" title="Numbered list">1. List</button>' +
         '<button type="button" class="mtn-ed-btn" data-act="ed-indent" title="Indent (nested list)">&#8594;</button>' +
         '<button type="button" class="mtn-ed-btn" data-act="ed-outdent" title="Outdent">&#8592;</button>' +
         '<span class="mtn-ed-sep"></span>' +
         swatches +
         '<span class="mtn-ed-sep"></span>' +
-        '<button type="button" class="mtn-ed-btn" data-act="ed-clear" title="Clear formatting">Clear formatting</button>' +
+        '<button type="button" class="mtn-ed-btn" data-act="ed-clear" title="Clear formatting">Clear</button>' +
         '</div>'
       : ''
     var subjectTasks = DB.tasks.filter(function (task) { return task.subjectId === s.id })
@@ -735,8 +683,11 @@
     var tasksPanel =
       '<section class="mtn-proj-tasks">' +
       '<div class="mtn-proj-panel-head">' +
-      '<span class="mtn-proj-decisions-label">Tasks</span>' +
+      '<span class="mtn-proj-panel-label">Tasks</span>' +
       '<span class="mtn-proj-panel-note">Collected in the Tasks tab</span>' +
+      (canWrite()
+        ? '<button type="button" class="mtn-btn mtn-btn-soft mtn-proj-layout-toggle" data-act="proj-layout-toggle">' + (layoutSide ? 'Move below content' : 'Move to right side') + '</button>'
+        : '') +
       '</div>' +
       (canWrite()
         ? '<div class="mtn-proj-task-add">' +
@@ -747,30 +698,16 @@
           '</div>' +
           '</div>'
         : '') +
-      (subjectTaskRows || '<div class="mtn-proj-no-decisions">No tasks for this subject yet - they also appear in the Tasks tab.</div>') +
-      '</section>'
-    var decisionsPanel =
-      '<section class="mtn-proj-decisions">' +
-      '<div class="mtn-proj-decisions-head">' +
-      '<span class="mtn-proj-decisions-label">Decisions</span>' +
-      (canWrite()
-        ? '<button type="button" class="mtn-btn mtn-btn-soft mtn-proj-layout-toggle" data-act="proj-layout-toggle">' + (layoutSide ? 'Move below content' : 'Move to right side') + '</button>'
-        : '') +
-      '</div>' +
-      (decisions || '<div class="mtn-proj-no-decisions">No decisions recorded yet.</div>') +
-      (canWrite()
-        ? '<button type="button" class="mtn-btn mtn-btn-soft mtn-proj-add-decision" data-act="add-decision" data-subject-id="' + esc(s.id) + '">+ Add decision</button>'
-        : '') +
+      (subjectTaskRows || '<div class="mtn-proj-panel-empty">No tasks for this subject yet - they also appear in the Tasks tab.</div>') +
       '</section>'
     var mainColumn =
-      timerBarHtml(s) +
       '<input class="mtn-proj-title-input" value="' + esc(s.title) + '" placeholder="Subject title" maxlength="160" data-field="subject.title" data-subject-id="' + esc(s.id) + '"' + disabled + ' />' +
       toolbarHtml +
       '<div class="mtn-proj-editor-page" id="mtn-proj-editor-page"' + (canWrite() ? ' contenteditable="true"' : ' contenteditable="false"') + ' spellcheck="true">' + (s.notesHtml || '') + '</div>'
     body.innerHTML =
       '<div class="mtn-proj-layout' + (layoutSide ? ' mtn-proj-layout-side' : ' mtn-proj-layout-bottom') + '">' +
       '<div class="mtn-proj-main-col">' + mainColumn + '</div>' +
-      '<div class="mtn-proj-sidepanel">' + tasksPanel + decisionsPanel + '</div>' +
+      '<div class="mtn-proj-sidepanel">' + timerBarHtml(s) + tasksPanel + '</div>' +
       '</div>'
     // toolbar buttons must not steal the selection
     var toolbar = body.querySelector ? body.querySelector('.mtn-proj-editor-toolbar') : null
@@ -909,7 +846,7 @@
     var over = state.remainingMs <= 0
     if (timeEl) {
       timeEl.textContent = fmtClockSigned(state.remainingMs)
-      timeEl.className = 'mtn-proj-timer-time' + (over ? ' over' : '')
+      timeEl.className = 'mtn-proj-timer-time' + (over ? ' over' : '') + (state.running ? ' primary' : '')
     }
     if (fillEl) {
       var percent = total > 0 ? Math.min(100, Math.max(0, Math.round((1 - state.remainingMs / total) * 100))) : 0
@@ -926,7 +863,10 @@
       statusEl.textContent = statusText
       statusEl.className = 'mtn-proj-timer-status ' + statusClass
     }
-    if (spentEl) spentEl.textContent = 'Spent: ' + fmtClock(subject.spentMs || 0)
+    if (spentEl) {
+      spentEl.textContent = 'Spent: ' + fmtClock(subject.spentMs || 0)
+      spentEl.className = 'mtn-proj-timer-spent' + (state.running ? '' : ' primary')
+    }
   }
   function timerBarHtml(subject) {
     var state = timerStateFor(subject.id)
@@ -939,9 +879,9 @@
     return '<div class="mtn-proj-timer" title="Time on screen counts as spent time for this subject. The countdown runs only after you press Start.">' +
       '<div class="mtn-proj-timer-top">' +
       '<span class="mtn-proj-timer-label">Time for this subject</span>' +
-      '<span class="mtn-proj-timer-time' + (overNow ? ' over' : '') + '" id="mtn-proj-timer-time">' + fmtClockSigned(state.remainingMs) + '</span>' +
+      '<span class="mtn-proj-timer-time' + (overNow ? ' over' : '') + (state.running ? ' primary' : '') + '" id="mtn-proj-timer-time">' + fmtClockSigned(state.remainingMs) + '</span>' +
       '<span class="mtn-proj-timer-status ' + statusClass + '" id="mtn-proj-timer-status">' + statusText + '</span>' +
-      '<span class="mtn-proj-timer-spent" id="mtn-proj-timer-spent">Spent: ' + fmtClock(subject.spentMs || 0) + '</span>' +
+      '<span class="mtn-proj-timer-spent' + (state.running ? '' : ' primary') + '" id="mtn-proj-timer-spent">Spent: ' + fmtClock(subject.spentMs || 0) + '</span>' +
       (canWrite()
         ? '<div class="mtn-proj-timer-controls">' +
           '<button type="button" class="mtn-btn mtn-btn-soft" data-act="timer-start" id="mtn-proj-timer-start">' + (state.running ? 'Pause' : 'Start') + '</button>' +
@@ -980,7 +920,6 @@
     var subjectIdMap = {}
     copy.subjects.forEach(function (subject) {
       subjectIdMap[subject.id] = uid()
-      subject.decisions.forEach(function (decision) { decision.id = uid() })
     })
     copy.subjects.forEach(function (subject) { subject.id = subjectIdMap[subject.id] })
     copy.tasks.forEach(function (task) {
@@ -990,11 +929,7 @@
     return copy
   }
   function importCounts(database) {
-    var decisions = 0
-    database.subjects.forEach(function (s) {
-      decisions += s.decisions.length
-    })
-    return { subjects: database.subjects.length, decisions: decisions, tasks: database.tasks.length }
+    return { subjects: database.subjects.length, tasks: database.tasks.length }
   }
   function renderImportResult() {
     var container = byId('mtn-import-result')
@@ -1013,7 +948,7 @@
       '<div class="mtn-import-preview">' +
       '<div class="mtn-import-found">Resolved: <b>' + esc(_importData.data.meeting.title || '(untitled meeting)') + '</b>' +
       (_importData.data.meeting.date ? ' - ' + esc(fmtDate(_importData.data.meeting.date)) : '') + '</div>' +
-      '<div class="mtn-import-meta">' + counts.subjects + ' subjects - ' + counts.decisions + ' decisions - ' + counts.tasks + ' tasks</div>' +
+      '<div class="mtn-import-meta">' + counts.subjects + ' subjects - ' + counts.tasks + ' tasks</div>' +
       '<div class="mtn-import-actions">' +
       '<button type="button" class="mtn-btn mtn-btn-primary" data-act="import-merge">Merge into current meeting</button>' +
       '<button type="button" class="mtn-btn ' + (armed ? 'mtn-btn-danger' : 'mtn-btn-ghost') + '" data-act="import-replace">' + (armed ? 'Really replace? Click again' : 'Replace everything') + '</button>' +
@@ -1239,7 +1174,7 @@
 
   function renderExportCards() {
     byId('mtn-exports-pdf').innerHTML =
-      exportCardHtml('Meeting Minutes', 'Professional minutes document with agenda, notes per subject, decisions and action items.', exportButtonHtml('Export PDF', 'export-pdf-minutes')) +
+      exportCardHtml('Meeting Minutes', 'Professional minutes document with agenda, notes per subject and action items.', exportButtonHtml('Export PDF', 'export-pdf-minutes')) +
       exportCardHtml('Board Meeting Format', 'Formal board format with numbered resolutions, attendance and signature lines.', exportButtonHtml('Export PDF', 'export-pdf-board')) +
       exportCardHtml('Meeting Summary', 'One-page executive summary. Uses the AI summary when one exists.', exportButtonHtml('Export PDF', 'export-pdf-summary')) +
       exportCardHtml('Action Item List', 'All tasks grouped by status with assignees and due dates.', exportButtonHtml('Export PDF', 'export-pdf-tasks'))
@@ -1248,7 +1183,7 @@
       exportCardHtml('Tasks CSV', 'Comma-separated action items - opens directly in Excel.', exportButtonHtml('Download CSV', 'export-tasks-csv')) +
       exportCardHtml('Tasks XLS', 'Styled spreadsheet table for Excel.', exportButtonHtml('Download XLS', 'export-tasks-xls')) +
       exportCardHtml('Tasks JSON', 'Action items as a clean JSON array for other systems.', exportButtonHtml('Download JSON', 'export-tasks-json')) +
-      exportCardHtml('Full Meeting JSON', 'Everything in one file: meeting, subjects, decisions, tasks and AI results.', exportButtonHtml('Download JSON', 'export-full-json'))
+      exportCardHtml('Full Meeting JSON', 'Everything in one file: meeting, subjects, tasks and AI results.', exportButtonHtml('Download JSON', 'export-full-json'))
 
     byId('mtn-exports-text').innerHTML =
       exportCardHtml('Markdown Minutes', 'Meeting minutes as Markdown for wikis, repos and shared docs.', exportButtonHtml('Download .md', 'export-markdown')) +
@@ -1323,7 +1258,7 @@
 
   function updateValidation() {
     if (!byId('mtn-app')) return
-    var hasContent = DB.subjects.length > 0 || DB.tasks.length > 0 || DB.rawnotes || decisionCount() > 0
+    var hasContent = DB.subjects.length > 0 || DB.tasks.length > 0 || DB.rawnotes
     if (!DB.meeting.title && hasContent) {
       try { tool.reportValid(false, 'Enter a meeting title before saving.') } catch (e) { /* no-op */ }
     } else {
@@ -1347,7 +1282,7 @@
 
   // ── mutations ──
   function addSubject() {
-    var subject = { id: uid(), title: '', notes: '', notesHtml: '', status: 'open', durationMinutes: 15, spentMs: 0, decisions: [] }
+    var subject = { id: uid(), title: '', notes: '', notesHtml: '', status: 'open', durationMinutes: 15, spentMs: 0 }
     DB.subjects.push(subject)
     _ui.collapsed = {}
     _ui.editingSubjectId = subject.id
@@ -1379,31 +1314,6 @@
     if (_ui.editingSubjectId === id) _ui.editingSubjectId = ''
     persistSoon()
     renderAll()
-  }
-  function addDecision(subjectId) {
-    var subject = subjectById(subjectId)
-    if (!subject) return
-    subject.decisions.push({ id: uid(), text: '', movedBy: '', secondedBy: '' })
-    persistSoon()
-    renderSubjects()
-    if (_projectionOpen) {
-      renderProjectionBody()
-      var projectedInputs = byId('mtn-project-body').querySelectorAll('.mtn-proj-decision-input')
-      if (projectedInputs && projectedInputs.length) {
-        projectedInputs[projectedInputs.length - 1].focus()
-        projectedInputs[projectedInputs.length - 1].scrollIntoView({ block: 'nearest' })
-      }
-      return
-    }
-    var lastRow = byId('mtn-subjects').querySelector('[data-subject-id="' + subjectId + '"] .mtn-decision-row:last-of-type input')
-    if (lastRow) lastRow.focus()
-  }
-  function removeDecision(subjectId, decisionId) {
-    var subject = subjectById(subjectId)
-    if (!subject) return
-    subject.decisions = subject.decisions.filter(function (d) { return d.id !== decisionId })
-    persistSoon()
-    renderSubjects()
   }
   function autoGrowTextarea(element) {
     if (!element || !element.style || typeof element.scrollHeight !== 'number') return
@@ -1470,19 +1380,6 @@
         subject[field.slice(8)] = clampText(element.value, field === 'subject.title' ? 160 : 20000)
         if (field === 'subject.notes') subject.notesHtml = plainTextToNotesHtml(subject.notes)
       }
-    } else if (field === 'decision.text' || field === 'decision.moved' || field === 'decision.second') {
-      var subjectForDecision = subjectById(element.getAttribute('data-subject-id'))
-      if (subjectForDecision) {
-        var decisionId = element.getAttribute('data-decision-id')
-        for (var i = 0; i < subjectForDecision.decisions.length; i++) {
-          if (subjectForDecision.decisions[i].id === decisionId) {
-            if (field === 'decision.text') subjectForDecision.decisions[i].text = clampText(element.value, 500)
-            else if (field === 'decision.moved') subjectForDecision.decisions[i].movedBy = clampText(element.value, 80)
-            else subjectForDecision.decisions[i].secondedBy = clampText(element.value, 80)
-            break
-          }
-        }
-      }
     } else if (field === 'task.text' || field === 'task.assignee' || field === 'task.due') {
       var taskId = element.getAttribute('data-task-id')
       for (var j = 0; j < DB.tasks.length; j++) {
@@ -1529,7 +1426,7 @@
     renderAiBusyStates()
     var prompt = 'TASK: MEETING_SUMMARY\nAct as a professional meeting assistant. Summarize the meeting below.\n' +
       'Respond in ' + aiLanguage() + ' with these sections, each headed with the exact marker:\n' +
-      'EXECUTIVE SUMMARY - 3 to 5 sentences.\nKEY POINTS - the important discussion points as short bullets.\nDECISIONS - the decisions made.\nNEXT STEPS - what happens next.\n\nMEETING DATA (JSON):\n' + meetingContextJson()
+      'EXECUTIVE SUMMARY - 3 to 5 sentences.\nKEY POINTS - the important discussion points as short bullets.\nNEXT STEPS - what happens next.\n\nMEETING DATA (JSON):\n' + meetingContextJson()
     tool.requestAI(prompt, '', function (err, text) {
       _aiBusy.summarize = false
       renderAiBusyStates()
@@ -1601,7 +1498,7 @@
     renderAiBusyStates()
     var prompt = 'TASK: DRAFT_MINUTES\nWrite formal minutes of the meeting below, in ' + aiLanguage() + '.\n' +
       'Use this structure: heading with meeting title, date, time, location; ATTENDANCE list; AGENDA (numbered subjects); ' +
-      'NOTES BY SUBJECT; RESOLUTIONS (each decision written as a numbered "RESOLVED, that ..." item); ACTION ITEMS (task, assignee, due date); ' +
+      'NOTES BY SUBJECT; ACTION ITEMS (task, assignee, due date); ' +
       'closing with next meeting, and signature lines for Chair and Secretary.\n\nMEETING DATA (JSON):\n' + meetingContextJson()
     tool.requestAI(prompt, '', function (err, text) {
       _aiBusy.draft = false
@@ -1688,7 +1585,6 @@
     '.pdf-signs { display: flex; justify-content: space-between; gap: 15mm; margin-top: 16mm; }',
     '.pdf-sign { flex: 1; }',
     '.pdf-sign-line { border-top: 1px solid #334155; margin-top: 12mm; padding-top: 1mm; font-size: 10pt; color: #475569; }',
-    '.pdf-decision-meta { font-size: 9.5pt; color: #64748b; font-style: italic; margin-top: 0.5mm; }',
     '.pdf-foot { margin-top: 8mm; font-size: 9pt; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 2mm; }',
     '.pdf-print-hint { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; padding: 3mm 4mm; border-radius: 3mm; font-size: 10pt; margin-bottom: 5mm; font-family: Arial, sans-serif; }',
     '.pdf-badge { display: inline-block; background: #e8f0f8; color: #1e4e79; font-size: 9.5pt; padding: 0.8mm 2.5mm; border-radius: 2mm; margin-right: 2mm; font-family: Arial, sans-serif; }',
@@ -1724,26 +1620,6 @@
     }).join('')
   }
 
-  function decisionMetaHtml(d) {
-    var parts = []
-    if (d.movedBy) parts.push('Moved by ' + esc(d.movedBy))
-    if (d.secondedBy) parts.push('seconded by ' + esc(d.secondedBy))
-    return parts.length ? '<div class="pdf-decision-meta">' + parts.join(', ') + '.</div>' : ''
-  }
-
-  function decisionsHtml() {
-    var all = []
-    DB.subjects.forEach(function (s) {
-      s.decisions.forEach(function (d) {
-        if (d.text) all.push(d)
-      })
-    })
-    if (!all.length) return '<p>No decisions were recorded.</p>'
-    return '<ol>' + all.map(function (d) {
-      return '<li>' + esc(d.text) + decisionMetaHtml(d) + '</li>'
-    }).join('') + '</ol>'
-  }
-
   function tasksTableHtml(tasks) {
     if (!tasks.length) return '<p>No action items.</p>'
     return '<table><thead><tr><th>#</th><th>Task</th><th>Assigned to</th><th>Due</th><th>Priority</th><th>Status</th></tr></thead><tbody>' +
@@ -1767,7 +1643,6 @@
       printHintHtml() +
       metaTableHtml() +
       '<h2>Agenda and Notes</h2>' + subjectsHtml(true) +
-      '<h2>Decisions</h2>' + decisionsHtml() +
       '<h2>Action Items (' + counts.open + ' open of ' + counts.total + ')</h2>' + tasksTableHtml(DB.tasks) +
       '<div class="pdf-foot">Generated by the Meeting Notes tool on ' + fmtDate(todayIso()) + '. Minutes recorded by ' + esc(DB.meeting.minutetaker || 'the minute taker') + '.</div>'
     return wrapExportHtml(body, 'Minutes - ' + meetingTitleOf())
@@ -1775,12 +1650,6 @@
 
   function buildBoardHtml() {
     var attendees = DB.meeting.attendees ? DB.meeting.attendees.split('\n').map(function (line) { return line.trim() }).filter(Boolean) : []
-    var resolutions = []
-    DB.subjects.forEach(function (s) {
-      s.decisions.forEach(function (d) {
-        if (d.text) resolutions.push(d)
-      })
-    })
     var body =
       '<div class="pdf-org">' + esc(boardName() || 'Organization') + '</div>' +
       '<h1>Minutes of the Meeting of the Board</h1>' +
@@ -1797,11 +1666,7 @@
         ? '<ol>' + DB.subjects.map(function (s) { return '<li>' + esc(s.title || '(untitled subject)') + '</li>' }).join('') + '</ol>'
         : '<p>No agenda was recorded.</p>') +
       '<h2>3. Notes by Subject</h2>' + subjectsHtml(true) +
-      '<h2>4. Resolutions</h2>' +
-      (resolutions.length
-        ? '<ol>' + resolutions.map(function (d) { return '<li><strong>RESOLVED, that</strong> ' + esc(d.text) + decisionMetaHtml(d) + '</li>' }).join('') + '</ol>'
-        : '<p>No resolutions were recorded.</p>') +
-      '<h2>5. Action Items</h2>' + tasksTableHtml(DB.tasks.filter(function (t) { return t.status !== 'done' })) +
+      '<h2>4. Action Items</h2>' + tasksTableHtml(DB.tasks.filter(function (t) { return t.status !== 'done' })) +
       '<div class="pdf-signs">' +
       '<div class="pdf-sign"><div class="pdf-sign-line">' + esc(DB.meeting.chair || 'Chair') + '</div></div>' +
       '<div class="pdf-sign"><div class="pdf-sign-line">' + esc(DB.meeting.minutetaker || 'Secretary') + '</div></div>' +
@@ -1816,7 +1681,6 @@
     lines.push(meetingTitleOf() + ' was held on ' + (fmtDate(DB.meeting.date) || 'an unrecorded date') +
       (DB.meeting.location ? ' at ' + DB.meeting.location : '') + '.')
     lines.push('The meeting covered ' + DB.subjects.length + ' subject' + (DB.subjects.length === 1 ? '' : 's') +
-      ', recorded ' + decisionCount() + ' decision' + (decisionCount() === 1 ? '' : 's') +
       ' and tracks ' + counts.total + ' action item' + (counts.total === 1 ? '' : 's') + ' (' + counts.open + ' still open).')
     DB.subjects.forEach(function (s) {
       var firstLine = s.notes ? s.notes.split('\n').map(function (l) { return l.trim() }).filter(Boolean)[0] : ''
@@ -1835,7 +1699,6 @@
       '<div class="pdf-sub">' + esc(meetingTitleOf()) + (DB.meeting.date ? ' - ' + esc(fmtDate(DB.meeting.date)) : '') + '</div>' +
       printHintHtml() +
       '<p><span class="pdf-badge">' + DB.subjects.length + ' subjects</span>' +
-      '<span class="pdf-badge">' + decisionCount() + ' decisions</span>' +
       '<span class="pdf-badge">' + counts.open + ' open tasks</span></p>' +
       '<h2>Summary</h2><div class="pdf-note">' + nl2br(summary) + '</div>' +
       '<h2>Open Action Items</h2>' + tasksTableHtml(openTasks) +
@@ -1948,13 +1811,6 @@
         lines.push('')
         lines.push('### ' + (i + 1) + '. ' + (s.title || 'Untitled'))
         if (s.notes) lines.push(s.notes)
-        s.decisions.forEach(function (d) {
-          if (!d.text) return
-          var decisionMeta = []
-          if (d.movedBy) decisionMeta.push('Moved by ' + d.movedBy)
-          if (d.secondedBy) decisionMeta.push('Seconded by ' + d.secondedBy)
-          lines.push('- **Decision:** ' + d.text + (decisionMeta.length ? ' _(' + decisionMeta.join(' - ') + ')_' : ''))
-        })
       })
     }
     lines.push('')
@@ -2087,9 +1943,11 @@
         _projectionWaiting = false
         _projectionIndex = parseInt(element.getAttribute('data-index'), 10) || 0
         renderProjection()
+        if (isMobileView()) { _ui.projSideCollapsed = true; applyProjectionSideState() }
         break
       case 'project-waiting':
         selectWaiting()
+        if (isMobileView()) { _ui.projSideCollapsed = true; applyProjectionSideState() }
         break
       case 'proj-done-toggle':
         if (!canWrite()) break
@@ -2112,7 +1970,7 @@
         renderProjection()
         break
       case 'proj-layout-toggle':
-        _ui.projDecisionsSide = _ui.projDecisionsSide === false
+        _ui.projPanelSide = _ui.projPanelSide === false
         renderProjection()
         break
       case 'subject-collapse':
@@ -2137,17 +1995,6 @@
         break
       case 'subject-delete':
         if (canWrite()) removeSubject(subjectId)
-        break
-      case 'add-decision':
-        if (canWrite()) addDecision(subjectId)
-        break
-      case 'decision-remove':
-        if (canWrite()) removeDecision(subjectId, element.getAttribute('data-decision-id'))
-        break
-      case 'decision-expand':
-        if (!canWrite()) break
-        _ui.decisionExpanded[element.getAttribute('data-decision-id')] = !_ui.decisionExpanded[element.getAttribute('data-decision-id')]
-        renderSubjects()
         break
       case 'subject-status-cycle':
         if (!canWrite()) break
@@ -2185,9 +2032,11 @@
         break
       case 'project-side-toggle':
         _ui.projSideCollapsed = !_ui.projSideCollapsed
-        var projectionEl = byId('mtn-projection')
-        if (projectionEl) projectionEl.classList.toggle('side-collapsed', !!_ui.projSideCollapsed)
-        updateSideToggleButton()
+        applyProjectionSideState()
+        break
+      case 'project-close-side':
+        _ui.projSideCollapsed = true
+        applyProjectionSideState()
         break
       case 'timer-start':
         if (!canWrite() || !_projectionOpen || _projectionWaiting) break
@@ -2445,8 +2294,7 @@
             type: 'object',
             properties: {
               id: { type: 'string' }, title: { type: 'string' }, notes: { type: 'string' }, notesHtml: { type: 'string' },
-              status: { type: 'string' }, durationMinutes: { type: 'number' }, spentMs: { type: 'number' },
-              decisions: { type: 'array', items: { type: 'object', properties: { id: { type: 'string' }, text: { type: 'string' } } } }
+              status: { type: 'string' }, durationMinutes: { type: 'number' }, spentMs: { type: 'number' }
             }
           }
         },

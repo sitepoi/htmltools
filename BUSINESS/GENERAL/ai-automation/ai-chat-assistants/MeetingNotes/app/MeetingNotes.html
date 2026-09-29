@@ -29,7 +29,7 @@
       <div class="mtn-card">
         <div class="mtn-card-head">
           <div class="mtn-card-title">Meeting details</div>
-          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 decisions - 0 open tasks</div>
+          <div class="mtn-card-sub" id="mtn-meet-meta">0 subjects - 0 open tasks</div>
         </div>
         <div class="mtn-grid2">
           <div class="mtn-field mtn-span2">
@@ -134,7 +134,7 @@
         <div class="mtn-ai-head">
           <div>
             <div class="mtn-card-title">Summarize meeting</div>
-            <div class="mtn-card-sub">Executive summary, key points, decisions and next steps built from your subjects, notes and raw transcript.</div>
+            <div class="mtn-card-sub">Executive summary, key points and next steps built from your subjects, notes and raw transcript.</div>
           </div>
           <button type="button" class="mtn-btn mtn-btn-primary" data-act="ai-summarize" id="mtn-btn-ai-summarize">Summarize</button>
         </div>
@@ -177,11 +177,12 @@
 
   <!-- ── PROJECTION DRAWER (big text for meeting-room screens) ── -->
   <div class="mtn-projection" id="mtn-projection">
+    <div class="mtn-proj-backdrop" data-act="project-close-side" title="Close the subjects menu"></div>
     <aside class="mtn-project-side">
       <div class="mtn-project-side-head">
+        <button type="button" class="mtn-icon-btn" data-act="project-side-toggle" title="Collapse the subjects list">&#9664;</button>
         <span>Subjects</span>
         <span class="mtn-project-total-spent" id="mtn-proj-total-spent">Total 0:00</span>
-        <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-close">Close</button>
       </div>
       <div class="mtn-project-nav" id="mtn-project-nav"></div>
     </aside>
@@ -196,6 +197,7 @@
           <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-reset" title="Reset text size">1:1</button>
           <button type="button" class="mtn-btn mtn-btn-ghost" data-act="project-bigger" title="Larger text">A+</button>
         </div>
+        <button type="button" class="mtn-btn mtn-btn-ghost mtn-project-exit" data-act="project-close" title="Close Meeting Mode and return to the meeting manager">&#8592; Meeting manager</button>
       </div>
       <div class="mtn-project-body" id="mtn-project-body"></div>
     </div>

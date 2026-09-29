@@ -67,8 +67,8 @@
   <h1>Meeting Notes</h1>
   <p class="meta">
     SINGLE SOURCE OF TRUTH for every decision about the Meeting Notes tool:
-    boardroom meeting minutes with subjects, decisions, action items, AI
-    exports and a projector-friendly Meeting Mode that tracks planned,
+    boardroom meeting minutes with subjects, action items, AI exports and a
+    projector-friendly Meeting Mode that tracks planned,
     spent and overrun time per subject. Every decision made for this tool
     is logged in section 11 and this document is updated in the same change
     as the code. When this document or the code disagree, this document is
@@ -76,7 +76,7 @@
     silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>1.0</td></tr>
+    <tr><th>Document version</th><td>1.1</td></tr>
     <tr><th>Last updated</th><td>2026-09-28</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-implemented">IMPLEMENTED</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (MeetingNotes).</td></tr>
@@ -107,7 +107,7 @@
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
   <p>This document defines one tool and one set of invariants around
-  capturing a board meeting end to end - agenda subjects, notes, motions,
+  capturing a board meeting end to end - agenda subjects, notes,
   action items and time tracking - and it is the <strong>single source of
   truth for every decision we make</strong> about this tool, now and in the
   future. No decision is considered made until it is written here. Rules of
@@ -134,7 +134,7 @@
     prose, tables, and headings. Literal identifiers stay as they are.</li>
   </ul>
   <p class="ok"><strong>Core guarantee.</strong> A meeting record - subjects,
-  decisions, tasks, notes, and the tracked times - is always written through
+  tasks, notes, and the tracked times - is always written through
   the same normalized, debounced autosave pipeline, so a viewer can never
   alter data, an older save can never silently overwrite newer edits, and a
   page reload can never lose the last typed change. Everything below serves
@@ -178,7 +178,7 @@
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
     <tr><td>C-01</td><td>Five-tab layout: Subjects (default), Meeting, Tasks, AI Assistant, Exports.</td><td><code>MeetingNotes.html</code> + <code>switchTab()</code></td><td>2026-09-27</td><td>D-MN-02</td></tr>
     <tr><td>C-02</td><td>Subjects in reading mode by default; clicking a card or Edit opens the edit card; Done returns to reading mode.</td><td><code>subjectReadCardHtml()</code>, <code>subjectEditCardHtml()</code></td><td>2026-09-28</td><td>D-MN-07</td></tr>
-    <tr><td>C-03</td><td>Decisions with motion (Moved by) and second (Seconded by), numbered as resolutions in exports.</td><td><code>subject.decisions[]</code>, board PDF export</td><td>2026-09-27</td><td>verified in code 2026-09-27</td></tr>
+    <tr><td>C-03</td><td>Simplified subject model: title, notes, open/done status and time chips only - the decisions layer was removed to keep subjects light.</td><td><code>normalizeSubject()</code>, subject cards</td><td>2026-09-28</td><td>D-MN-17</td></tr>
     <tr><td>C-04</td><td>Task cards with status cycle (open / in progress / done), priority, due date, assignee, search, and per-subject linkage.</td><td><code>taskRowHtml()</code>, <code>renderTasks()</code></td><td>2026-09-28</td><td>D-MN-05</td></tr>
     <tr><td>C-05</td><td>Assignee dropdowns fed from the CMS object permission list; free-text fallback when the list is empty.</td><td><code>assigneeFieldHtml()</code>, <code>loadPermittedUsers()</code></td><td>2026-09-28</td><td>D-MN-14</td></tr>
     <tr><td>C-06</td><td>AI Assistant: meeting summary, action-item extraction with review and merge, and minutes draft via requestAI.</td><td><code>requestAI</code> actions with TASK markers</td><td>2026-09-27</td><td>verified in code 2026-09-27</td></tr>
@@ -203,10 +203,9 @@
   <h2 id="sec-glossary">4. Glossary</h2>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <tr><td>Subject</td><td>One agenda item of the meeting: title, rich notes, decisions, duration in minutes, spent time, open or done status.</td></tr>
-    <tr><td>Decision</td><td>A resolution recorded under a subject, with optional moved-by and seconded-by names; exported as "RESOLVED, that ...".</td></tr>
+    <tr><td>Subject</td><td>One agenda item of the meeting: title, rich notes, duration in minutes, spent time, open or done status.</td></tr>
     <tr><td>Task (action item)</td><td>A follow-up item with text, assignee, due date, priority, status and an optional link to its source subject.</td></tr>
-    <tr><td>Meeting Mode</td><td>The full-screen projector view (drawer) with big text, the subject sidebar, the timer, and the tasks and decisions panels.</td></tr>
+    <tr><td>Meeting Mode</td><td>The full-screen projector view (drawer) with big text, the subject sidebar, and a right-side panel holding the timer above the tasks.</td></tr>
     <tr><td>Screen time</td><td>The wall-clock time a subject is the active view in Meeting Mode; it banks into the subject spentMs even before Start.</td></tr>
     <tr><td>Waiting slot</td><td>The pinned break entry at the bottom of the Meeting Mode sidebar; its accumulated time is stored in meeting.waitingMs.</td></tr>
     <tr><td>Permitted users</td><td>The users allowed on the parent CMS object, read through tool.getPermittedUsers() and used for the assignee dropdowns.</td></tr>
@@ -221,7 +220,7 @@
     knows how long each agenda item really took (observed in the tool ideas
     catalog entry that this tool implements, 2026-09).</li>
     <li>Minutes written after the meeting from scattered notes take hours and
-    miss decisions (same source).</li>
+    miss follow-ups (same source).</li>
     <li>Result for the user: meetings feel unstructured, follow-ups slip,
     and there is no projector view with a per-subject timer.</li>
   </ul>
@@ -232,8 +231,8 @@
   section 8.2.</p>
   <h3>5.3 Structural flaws addressed by the design</h3>
   <ol>
-    <li><strong>No single source of truth for the meeting.</strong> Notes,
-    decisions and tasks were separate artifacts; the tool keeps them in one
+    <li><strong>No single source of truth for the meeting.</strong> Notes
+    and tasks were separate artifacts; the tool keeps them in one
     normalized document that autosaves.</li>
     <li><strong>No time pressure visibility.</strong> Agenda items had no
     countdown; the tool gives every subject a planned duration with a
@@ -333,8 +332,7 @@
   meeting: { title, date, timestart, timeend, location, chair,
              minutetaker, attendees, waitingMs },
   subjects: [{ id, title, notes, notesHtml, status: 'open'|'done',
-               durationMinutes (default 15), spentMs,
-               decisions: [{ id, text, movedBy, secondedBy }] }],
+               durationMinutes (default 15), spentMs }],
   tasks: [{ id, text, assignee, dueDate, priority, status, source,
             subjectId }],
   rawnotes: '',
@@ -364,6 +362,9 @@
   </ul>
   <h3>8.4 Meeting Mode time engine</h3>
   <ul>
+    <li>The timer strip lives in the RIGHT-SIDE panel above the tasks card,
+    so the center column shows only the subject title and the notes page.
+    </li>
     <li>One 500 ms tick drives everything; _lastTickAt stores the previous
     wall-clock sample, so a sleeping tab never earns free time.</li>
     <li>tickTimer() banks the elapsed wall time into the active target:
@@ -449,6 +450,10 @@
     <tr><td>D-MN-14</td><td>2026-09-28</td><td>Assignee dropdowns are fed from tool.getPermittedUsers() (the object permission list), with a text-input fallback when the list is empty; onPermittedUsersChange re-applies the pickers.</td><td>Assignees are always real permitted users; older CMS hosts still work.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-MN-15</td><td>2026-09-28</td><td>Every subject list entry (Subjects tab chips and Meeting Mode sidebar) shows planned minutes, spent time and the percent used, live-updated each tick.</td><td>Progress against the plan is the meeting's heartbeat.</td><td class="status-adopted">Adopted</td></tr>
     <tr><td>D-MN-16</td><td>2026-09-28</td><td>The sidebar toggle button renders real arrow characters (\u25c0 / \u25b6) via textContent instead of HTML entities.</td><td>Entities were shown literally; real characters render everywhere.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-MN-17</td><td>2026-09-28</td><td>Remove the decisions layer entirely (data, cards, Meeting Mode panel, exports); move the timer into the right-side panel above the tasks card so the center is only title + notes; shorten the editor toolbar labels to H2 / H3 / Text / Quote / bullet and numbered list / Clear.</td><td>User: simplify the subject, quiet the toolbar text, and keep the meeting focus on the center content.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-MN-18</td><td>2026-09-28</td><td>Timer hero switch: while the countdown runs, the remaining time is the big hero readout and spent stays small; when it is not running (not started, paused or over), spent time becomes the hero (big, accent color) and remaining shrinks and dims.</td><td>The readout that matters most depends on whether the countdown is actively driving the meeting.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-MN-19</td><td>2026-09-28</td><td>UI cleanup: remove the subject cards' left accent border for a cleaner reading view; make the tab bar stretch to its content with no inner scrollbar; on mobile the Meeting Mode subject list becomes a slide-in menu drawer (with backdrop, closed by default, opens via the bar button) instead of a top strip; on mobile Meeting Mode scrolls as one page with the editor at least 52vh tall.</td><td>User feedback: cards too busy, tab bar scrolled, the mobile strip looked broken, and the editor was clipped on phones.</td><td class="status-adopted">Adopted</td></tr>
+    <tr><td>D-MN-20</td><td>2026-09-28</td><td>Sidebar head rework: the confusing Close button was removed from the subjects head; the head now has a collapse arrow next to SUBJECTS, and exiting Meeting Mode moved to the top bar as a "&#8592; Meeting manager" button on the far right.</td><td>The Close button over the subject list misled users into closing the whole mode; the exit now reads as returning to the meeting manager.</td><td class="status-adopted">Adopted</td></tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -897,13 +902,14 @@
     <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
     <tbody id="release-log-rows">
     <tr><td>2026-09-28</td><td>0.1.6</td><td>2c50d24</td><td>First release: boardroom meeting minutes with subjects, decisions, tasks, AI Assistant, six export formats and Meeting Mode timers.</td></tr>
+    <tr><td>2026-09-28</td><td>0.1.7</td><td>[HASH]</td><td>Mobile-first polish: full responsive layout, mobile subject drawer, removed decisions, panel timer with hero switch, cleaner cards and tab bar.</td></tr>
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
     </tbody>
   </table>
 
   <div class="footer">
     Meeting Notes - single source of truth for all decisions about this
-    tool. Version 1.0, 2026-09-28.
+    tool. Version 1.1, 2026-09-28.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>
