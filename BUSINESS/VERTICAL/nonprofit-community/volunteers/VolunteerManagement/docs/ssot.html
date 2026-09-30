@@ -5,74 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Volunteer Management - Technical Source of Truth</title>
   <!--
-  ────────────────────────────────────────────────────────────────────────────
-  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
-
-  HOW TO USE THIS TEMPLATE
-  1. This template is copied into every tool folder as docs/ssot.html by
-     scripts/init-docs.js - never create a tool SSOT by hand.
-  2. Replace every [PLACEHOLDER] in the document.
-  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
-     Every decision row uses <prefix>-NN in order (01, 02, ...).
-  4. Remove all TEMPLATE comments (like this one) before the first publish.
-  5. Bump "Document version" on EVERY update, with "Last updated" date.
-  6. Never inline styles or scripts - the design lives in
-     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
-     linked below through ../../../../../../_docs/assets/.
-  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
-     marked ONE PUSH must ship in a single push and must never be split; a
-     RELATED group must not be broken across releases either. Each task
-     shows its main name collapsed and full details on click; the done
-     checkbox is remembered by the browser per document.
-  8. The right task panel (always visible on wide screens) is generated from
-     section 15 - never write tasks twice. Edit the board in section 15 and
-     the panel, progress bars, and sidebar counter follow automatically.
-  9. Task statuses: give a task `data-task-status` - `not-started` (default),
-     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
-     done checkbox switches the task to done; unticking returns it to the
-     previous status. Browser ticks stay in that browser only. PERMANENT
-     DONE is written into the file: set `data-task-status="done"` on the
-     task div (or `checked` on its checkbox) - `npm run rel` writes this
-     automatically for every pushed group.
- 10. Ideas (section 16): future ideas are discussed there before they become
-     work. An agreed idea moves to the task list (section 15); a rejected one
-     is marked `data-idea-status="ignored"` with the reason in its details.
-     Done / waiting / ignored statistics update automatically.
- 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
-     change is written in the risk register and linked to its release group
-     (`data-group`). Before every push, re-evaluate every OPEN risk of the
-     groups being pushed: solve them one by one (tick the checkbox), or mark
-     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
-     date, and update the `Last re-evaluation` line. Risk levels:
-     `critical` (mandatory - blocks every push until solved), `high` (blocks
-     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
-     A group shows PUSH READY in the task panel only when its tasks are done
-     AND it has no open risks.
- 12. Push provenance: when running `npm run rel`, set
-     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
-     task in the shipped groups is stamped with the version, commit and
-     date-time of that push, and the groups move to "pushed".
- 13. Satellite documents: docs/webpage.html, docs/help.html,
-     docs/presentation.html, docs/social.html are GENERATED from this file +
-     the code by scripts/generate-docs.js (run by npm run rel). They are
-     satellites - when they disagree with this SSOT, this SSOT wins.
-     docs/updates.html is maintained automatically by npm run rel.
-
-  GOVERNANCE RULES (apply to every tool SSOT in this repo)
-  - A tool SSOT is the REAL single source of truth for one tool (app,
-    listing, or reporting). There is exactly one SSOT per tool folder.
-  - No tool code change is made without updating the related document in
-    the SAME change. A decision that is not in section 11 did not happen.
-  - The decision register is APPEND-ONLY. Never delete rows; reverse a
-    decision by marking it "Reversed (date)" with a reason.
-  - When the code and the document disagree, the document is updated first to
-    capture the final decision, then the code follows. Never silently leave
-    them divergent.
-  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
-    always expanded next to their use.
-  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
-    Status) - the automated change-documentation reads these rows.
-  ────────────────────────────────────────────────────────────────────────────
+  SSOT for the Volunteer Management admin tool (per-event volunteer
+  coordination). Governance: a decision that is not in section 11 did not
+  happen; the register is append-only; when code and this document disagree,
+  this document is updated first, then the code follows. Task board is
+  section 15; risks section 18; releases section 19 (managed by npm run rel).
   -->
   <!-- Optional: nicer webfont (Inter) when online; falls back to the system
        font stack in ssot.css when offline. Remove this line to stay fully offline. -->
@@ -92,7 +29,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.1</span>
+      <span>v0.3</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -128,24 +65,25 @@
   <div id="view-document" class="view">
   <h1>Volunteer Management</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for the Volunteer Management admin tool: a
+    per-event volunteer coordination application for event managers. It owns
+    the decisions about the volunteer master data (shared registry SSOT),
+    event membership (applications), tasks, hours, messaging, and the
+    Firestore size budget. Every decision made for this tool is logged in
+    section 11 and this document is updated in the same change as the code.
+    When this document or the code disagree, this document is the tiebreaker -
+    it is updated to capture the final decision, never silently left
+    divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <tr><th>Document version</th><td>0.3</td></tr>
+    <tr><th>Last updated</th><td>2026-09-29</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (VolunteerManagement).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/test-harness.html</code>, <code>app/volunteer-import-tool.html</code>, <code>app/VolunteerManagement.css</code>, <code>app/VolunteerManagement.html</code>, <code>app/VolunteerManagement.js</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
+    <tr><th>Explicitly out of scope</th><td>The public volunteer registration app (a separate tool folder with its own SSOT), year-level aggregation reporting (idea I-01), certificate design polish, automated email campaigns.</td></tr>
     <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
@@ -171,9 +109,10 @@
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
   <p>This document defines one tool and one set of invariants around
-  [what the tool does] - and it is the <strong>single source of truth for
-  every decision we make</strong> about this tool, now and in the future.
-  No decision is considered made until it is written here. Rules of use:</p>
+  volunteer administration for events - and it is the <strong>single source
+  of truth for every decision we make</strong> about this tool, now and in
+  the future. No decision is considered made until it is written here.
+  Rules of use:</p>
   <ul>
     <li><strong>Every decision is logged here.</strong> Before or together
     with any change to this tool, the decision is added to section 11 with
@@ -195,10 +134,10 @@
     <li><strong>Acronyms are always expanded</strong> next to every use - in
     prose, tables, and headings. Literal identifiers stay as they are.</li>
   </ul>
-  <p class="ok"><strong>Core guarantee.</strong> [One sentence: the property
-  this document exists to protect - e.g. "A stale browser session can NEVER
-  silently revert a record to an older state." Everything below serves this
-  one sentence.]</p>
+  <p class="ok"><strong>Core guarantee.</strong> Volunteer master data exists
+  exactly once - in the shared registry. Event instances never store a copy
+  of a volunteer profile; they store only event-scoped records that reference
+  the registry. Everything below serves this one sentence.</p>
 
   <h2 id="sec-files">2. Related files</h2>
   <p>Every file involved in this tool: what it is for, and exactly which
@@ -207,13 +146,30 @@
   <code>Primary code areas</code> row above.</p>
   <table>
     <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
-    <!-- TEMPLATE: one row per file. Link format:
-         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
-         #L123 to jump to a specific line). -->
     <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
-      <td>[What this file does overall - one line]</td>
-      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerManagement/app/VolunteerManagement.html"><code>app/VolunteerManagement.html</code></a></td>
+      <td>Tool markup: tabs (Dashboard, Volunteers, Tasks, Hours, Messages, Certificate) and all modals.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerManagement/app/VolunteerManagement.css"><code>app/VolunteerManagement.css</code></a></td>
+      <td>Tool stylesheet.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerManagement/app/VolunteerManagement.js"><code>app/VolunteerManagement.js</code></a></td>
+      <td>Tool logic: SDK wiring, CRUD wrappers, renders, role gating, certificate export.</td>
+      <td>Whole file - the type constants (TYPE_*) and the data loading are the parts this redesign rewrites</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerManagement/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone test harness with mock SDK; inlines the tool HTML.</td>
+      <td>Whole file - its mock storage must mirror the type list</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/nonprofit-community/volunteers/VolunteerManagement/app/volunteer-import-tool.html"><code>app/volunteer-import-tool.html</code></a></td>
+      <td>CSV import companion tool - bulk-loads volunteers.</td>
+      <td>Whole file - writes into the shared registry type (section 8)</td>
     </tr>
   </table>
 
@@ -226,24 +182,21 @@
   belongs in the task list (section 15) and the ideas backlog (section 16).</p>
   <table>
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
-    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
-         effect today. "Where it lives" = the code path or file that
-         implements it. "In effect since" = the version or date it shipped.
-         "Known from" = the evidence - decision ID (section 11), release-log
-         row (section 19), or code verified on a date. When a capability
-         ships, move its finished task here from section 15. -->
-    <tr>
-      <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-VM-NN / release-log row / verified in code on YYYY-MM-DD]</td>
-    </tr>
+    <tr><td>C-01</td><td>Role detection: manager vs volunteer from <code>tool.getUser().roles</code></td><td><code>app/VolunteerManagement.js</code> - detectRole()</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-02</td><td>Volunteer registration with manager approval (pending → approved / rejected)</td><td><code>app/VolunteerManagement.js</code> - submitRegistration / approveVolunteer / rejectVolunteer</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-03</td><td>Task creation, assignment, status flow (open → assigned → in-progress → completed)</td><td><code>app/VolunteerManagement.js</code> - saveTask / updateTaskStatus</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-04</td><td>Hour logging with manager approval + batch approve</td><td><code>app/VolunteerManagement.js</code> - saveHours / approveHours / approveAllPendingHours</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-05</td><td>Manager ↔ volunteer messaging with unread tracking</td><td><code>app/VolunteerManagement.js</code> - sendMessage / markMessageRead</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-06</td><td>Volunteer hours certificate: preview, PDF export, email</td><td><code>app/VolunteerManagement.js</code> - exportCertificatePDF / emailCertificate</td><td>v0.1 (2026-09)</td><td>Verified in code on 2026-09-29</td></tr>
+    <tr><td>C-07</td><td>Shared volunteer registry (SSOT) as the source of volunteer identity; <code>registryType</code> param; missing-param report on registry failure</td><td><code>app/VolunteerManagement.js</code> - getRegistryType / loadAllData / reportRegistryConfigError</td><td>v0.3 (2026-09-29)</td><td>D-VM-02, D-VM-04, T-01, T-07</td></tr>
+    <tr><td>C-08</td><td>Registration split: registry profile upsert + event application (invariant REGISTRY-ONLY)</td><td><code>app/VolunteerManagement.js</code> - submitRegistration / addVolunteerToEvent</td><td>v0.3 (2026-09-29)</td><td>D-VM-02, T-02, T-03</td></tr>
+    <tr><td>C-09</td><td>Manager add-to-event from permitted users; approvals operate on applications only with banned-profile guard</td><td><code>app/VolunteerManagement.js</code> - openRegisterModal / approveVolunteer</td><td>v0.3 (2026-09-29)</td><td>T-03</td></tr>
+    <tr><td>C-10</td><td>CSV import writes into the shared registry with email dedupe and batched writes</td><td><code>app/volunteer-import-tool.html</code> - performImport / runImportChunks</td><td>v0.3 (2026-09-29)</td><td>T-06</td></tr>
   </table>
-  <p class="note">When adopting this template for an existing tool, fill
-  this section first: the current behavior is the baseline that the next
-  sections verify and improve. Capabilities listed here are in effect and
-  must keep working unless a decision in section 11 reverses them.</p>
+  <p class="note">Current baseline stores volunteer profiles inside the
+  event-scoped type <code>vm.volunteers-uniconbaseapps</code> - identity and
+  event membership are conflated. The redesign in sections 5-8 separates them
+  into the shared registry (SSOT) and event applications.</p>
 
   <h2 id="sec-glossary">4. Glossary</h2>
   <p>Terms used in this document, with the exact meaning used here. Add a row
@@ -251,109 +204,180 @@
   reader and every AI sees the same definition.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <!-- TEMPLATE: one row per term. -->
-    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+    <tr><td>Volunteer Registry (SSOT)</td><td>The shared CMS type <code>volunteerRegistry-uniconbaseapps</code> holding exactly one profile document per volunteer. Written by the public registration app and by this admin tool; read by both.</td></tr>
+    <tr><td>Public Registration App</td><td>A separate tool (own folder, own SSOT) where anyone can register as a volunteer. It is the primary writer of the registry.</td></tr>
+    <tr><td>Event Instance</td><td>One copy of this tool hosted on one event CMS object. Manages exactly one event.</td></tr>
+    <tr><td>Event Application (membership)</td><td>A record linking one registry volunteer to one event, with status pending / approved / rejected / withdrawn.</td></tr>
+    <tr><td>Event Manager</td><td>CMS user with admin / owner / editor / user-manager role on the event object. Operates this tool.</td></tr>
+    <tr><td>Volunteer</td><td>A person with a registry profile. In the context of an event, a volunteer whose application is approved.</td></tr>
+    <tr><td>Shared scope / Instance scope</td><td>CMS storage scope. Shared = one pool of documents across all events (registry). Instance = documents isolated per event object (applications, tasks, hours, messages).</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
-  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
   <ul>
-    <li>[Observed behavior 1 - with where/when it was seen]</li>
-    <li>[Observed behavior 2]</li>
-    <li>[Result of the behavior - what the user experiences]</li>
+    <li>2026-09-29: the type constants in <code>app/VolunteerManagement.js</code> define <code>TYPE_VOLUNTEERS = 'vm.volunteers-uniconbaseapps'</code> (instance-scoped) and store name, email and skills inside it - no shared registry exists.</li>
+    <li>The same person volunteering for two events gets two separate profiles; skills and contact data are re-entered per event.</li>
+    <li>A future public registration app has no type it can write that this admin tool reads - the two apps cannot share a volunteer list today.</li>
   </ul>
   <h3>5.2 Current implementation (verified in code)</h3>
-  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
   <pre>
-// [file path] - [function name], current logic
-[the actual code]
+// app/VolunteerManagement.js - type constants, current logic
+var TYPE_VOLUNTEERS = 'vm.volunteers-uniconbaseapps'; // profile + membership mixed
+var TYPE_TASKS      = 'vm.tasks-uniconbaseapps';
+var TYPE_HOURS      = 'vm.hours-uniconbaseapps';
+var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
   </pre>
   <h3>5.3 Structural flaws</h3>
-  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
-       fails, not just that it fails. -->
   <ol>
-    <li><strong>[Flaw name].</strong> [Why this flaw allows the bad outcome.]</li>
+    <li><strong>No SSOT for volunteer identity.</strong> Profiles live inside event-scoped documents, so the same human is a different record in every event.</li>
+    <li><strong>No cross-app contract.</strong> Nothing defines which shared type the public registration app writes and the admin tool reads.</li>
+    <li><strong>1 MB risk is undecided.</strong> It is not documented where bulk data may and may not go; <code>tool.setValue()</code> (one Firestore document) could be misused for records.</li>
   </ol>
-  <p class="risk"><strong>Root cause:</strong> [one paragraph that reduces all
-  the flaws to the single underlying cause].</p>
+  <p class="risk"><strong>Root cause:</strong> the data model was designed without
+  separating volunteer identity (global, shared) from event membership and
+  operations (per event), and without a documented storage budget.</p>
 
   <h2 id="sec-requirements">6. Requirements</h2>
   <ol>
-    <li>[Requirement 1 - measurable, testable]</li>
-    <li>[Requirement 2]</li>
-    <li>[Requirement 3 - e.g. multi-tenant, no custom security rules, cost]</li>
-    <li>[Requirement 4 - UX behavior on failure]</li>
-    <li>[Requirement 5 - no loops, no unbounded growth, no polling]</li>
+    <li>The tool manages exactly ONE event: it is hosted on an event object; all event data is instance-scoped.</li>
+    <li>Volunteer master data lives in one shared registry type read and written by this tool and by the future public registration app (SSOT).</li>
+    <li>Event membership is a separate record that references a registry profile by id - profiles are never duplicated into event data.</li>
+    <li>Every record (profile, application, task, hour log, message) is its own Firestore document via <code>tool.requestObjects()</code>; <code>tool.setValue()</code> stores only UI preferences.</li>
+    <li>Estimated size budget per document: profile ≤ 2 KB, application ≤ 1 KB, task ≤ 2 KB, hour log ≤ 1 KB, message ≤ 10 KB - all far below the 1 MB per-document limit, so no single record can hit the cap.</li>
+    <li>Type names follow the CMS naming rules: shared = <code>volunteerRegistry-uniconbaseapps</code>; isolated = <code>vm.*-uniconbaseapps</code>.</li>
+    <li>Role gating: managers write everything; volunteers only apply, update their own task status, log their own hours, and message managers.</li>
+    <li>Graceful degradation when a CRUD channel is not configured: notify + missing-parameter report, never a broken page.</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
   <table>
     <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
-    <!-- TEMPLATE: one row per considered option; keep the VERDICT cells with
-         one of: ADOPTED / REJECTED (reason) / DEFERRED (decision ID). -->
     <tr>
-      <td><strong>A. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
+      <td><strong>A. Per-event tool + shared registry (SSOT)</strong></td>
+      <td>One tool instance per event object; profiles in shared <code>volunteerRegistry-uniconbaseapps</code>; applications / tasks / hours / messages in instance-scoped <code>vm.*</code> types.</td>
+      <td>Yes - identity shared, event data isolated, public app plugs into the same registry.</td>
+      <td>Medium - renames the volunteers type and splits profile vs membership fields</td>
       <td class="status-adopted">ADOPTED</td>
     </tr>
     <tr>
-      <td><strong>B. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
-      <td class="status-rejected">REJECTED ([reason or decision ID])</td>
+      <td><strong>B. One year-level mega tool</strong></td>
+      <td>A single tool instance holding all events, volunteers, tasks and hours for a year in one document.</td>
+      <td>No - a year of records exceeds the 1 MB per-document limit; permissions cannot be scoped per event.</td>
+      <td>High - full rewrite</td>
+      <td class="status-rejected">REJECTED (1 MB limit, no per-event isolation)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Registry-only admin tool</strong></td>
+      <td>Admin tool only maintains the volunteer list, no tasks / hours / messages.</td>
+      <td>No - drops the event operations the user explicitly needs.</td>
+      <td>Medium</td>
+      <td class="status-rejected">REJECTED (incomplete scope)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Per-event with duplicated profiles</strong></td>
+      <td>Keep profiles inside each event but import them from the public app on demand.</td>
+      <td>Partially - list can be imported but duplicates and stale copies return.</td>
+      <td>Low</td>
+      <td class="status-rejected">REJECTED (breaks SSOT - core guarantee)</td>
     </tr>
   </table>
-  <p><strong>Decision: [chosen option(s) and why].</strong> [What happens to
-  the rejected ideas - dropped, deferred, or reused in a smaller role.]</p>
+  <p><strong>Decision: option A.</strong> The registry is the single source of
+  truth for volunteer identity; the tool is per-event and stores only
+  event-scoped records. A year view is a future reporting app that queries
+  across event instances (idea I-01), not this tool.</p>
   <h3>7.1 Answers to open questions</h3>
-  <!-- TEMPLATE: every open question raised during evaluation becomes a dated
-       answer here, and later a row in section 11. -->
   <table>
     <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>[Question]</td><td>[Answer with decision ID when logged]</td></tr>
+    <tr><td>Per-event or per-year?</td><td>Per-event (D-VM-01).</td></tr>
+    <tr><td>Where does the volunteer list come from?</td><td>The shared registry written by the public registration app (D-VM-02).</td></tr>
+    <tr><td>What about the 1 MB limit?</td><td>Records never go into <code>tool.setValue()</code>; every record is its own document via <code>tool.requestObjects()</code> (D-VM-04).</td></tr>
   </table>
 
   <h2 id="sec-design">8. Solution design</h2>
-  <!-- TEMPLATE: the core of the document. Split into sub-sections as the
-       tool needs - invariants, server logic, client contract, callers
-       table, edge cases. Use <h3> per topic. -->
   <h3>8.1 Core invariant</h3>
-  <p class="note"><strong>Invariant [short-code].</strong> [The most important
-  rule of the tool - stated so precisely that a code reviewer can check any
-  call site against it in one look.]</p>
-  <h3>8.2 [Main implementation piece]</h3>
+  <p class="note"><strong>Invariant REGISTRY-ONLY.</strong> A volunteer profile
+  document exists only in <code>volunteerRegistry-uniconbaseapps</code>.
+  Every other type stores the profile id (<code>registryProfileId</code>) and
+  never a copy of name / email / skills.</p>
+  <h3>8.2 Type model</h3>
+  <table>
+    <tr><th>Type</th><th>Scope</th><th>Owner</th><th>Document = one ...</th><th>Key fields</th></tr>
+    <tr><td><code>volunteerRegistry-uniconbaseapps</code></td><td>shared</td><td>Public app + admin tool</td><td>volunteer profile (SSOT)</td><td><code>userId</code>, <code>firstName</code>, <code>lastName</code>, <code>email</code>, <code>phone</code>, <code>city</code>, <code>skills[]</code>, <code>interests[]</code>, <code>availabilityNotes</code>, <code>status</code> (active / inactive / banned), <code>consentGiven</code>, <code>joinedAt</code>, <code>updatedAt</code>, <code>source</code> (public-app / admin / import), <code>notes</code></td></tr>
+    <tr><td><code>vm.eventApplications-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>volunteer → event membership</td><td><code>registryProfileId</code>, <code>volunteerUserId</code>, <code>status</code> (pending / approved / rejected / withdrawn), <code>roleForEvent</code>, <code>appliedAt</code>, <code>reviewedAt</code>, <code>reviewedBy</code>, <code>notes</code></td></tr>
+    <tr><td><code>vm.eventTasks-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>task of this event</td><td><code>description</code>, <code>status</code> (open / assigned / in-progress / completed / cancelled), <code>assignedVolunteerUserId</code>, <code>assignedRegistryProfileId</code>, <code>dueDate</code>, <code>estimatedHours</code>, <code>createdAt</code>, <code>completedAt</code></td></tr>
+    <tr><td><code>vm.eventHours-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one hour log</td><td><code>volunteerUserId</code>, <code>registryProfileId</code>, <code>taskId</code>, <code>date</code>, <code>hoursLogged</code>, <code>description</code>, <code>status</code> (pending / approved / rejected), <code>reviewedBy</code>, <code>reviewedAt</code></td></tr>
+    <tr><td><code>vm.eventMessages-uniconbaseapps</code></td><td>instance</td><td>Admin tool</td><td>one message</td><td><code>fromUserId</code>, <code>fromName</code>, <code>fromRole</code> (manager / volunteer), <code>toUserId</code>, <code>subject</code>, <code>body</code>, <code>sentAt</code>, <code>read</code></td></tr>
+  </table>
+  <p>Renames applied: <code>vm.volunteers-uniconbaseapps</code> →
+  <code>vm.eventApplications-uniconbaseapps</code>;
+  <code>vm.tasks/hours/messages-uniconbaseapps</code> →
+  <code>vm.eventTasks/eventHours/eventMessages-uniconbaseapps</code>.
+  The old names are retired (test-only data, no migration needed).</p>
+  <h3>8.3 Admin configuration contract</h3>
   <pre>
-// [file path] - [function name], new logic
-[the authoritative code snippet]
+// html-tool field settings - settings.allowedObjectTypes
+[
+  { "mainObjectType": "volunteerRegistry-uniconbaseapps",      "role": "editor", "scope": "shared" },
+  { "mainObjectType": "vm.eventApplications-uniconbaseapps",  "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm.eventTasks-uniconbaseapps",         "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm.eventHours-uniconbaseapps",         "role": "editor", "scope": "instance" },
+  { "mainObjectType": "vm.eventMessages-uniconbaseapps",      "role": "editor", "scope": "instance" }
+]
+// settings.toolParams
+{ "allowObjectCRUD": "yes", "allowExportPdf": "yes", "allowSendEmail": "yes" }
+  </pre>
+  <h3>8.4 Firestore size budget (per document, 1 MB cap)</h3>
+  <table>
+    <tr><th>Where</th><th>What is stored</th><th>Typical size</th><th>Cap risk</th></tr>
+    <tr><td><code>tool.setValue()</code> (one doc)</td><td>UI preferences only: <code>{ lastTab }</code></td><td>~0.1 KB</td><td>None - records are FORBIDDEN here (D-VM-04)</td></tr>
+    <tr><td>Registry profile doc</td><td>one volunteer profile</td><td>≤ 2 KB</td><td>None - fixed small shape</td></tr>
+    <tr><td>Application doc</td><td>one event application</td><td>≤ 1 KB</td><td>None</td></tr>
+    <tr><td>Task doc</td><td>one task</td><td>≤ 2 KB</td><td>None</td></tr>
+    <tr><td>Hour log doc</td><td>one hour entry</td><td>≤ 1 KB</td><td>None</td></tr>
+    <tr><td>Message doc</td><td>one message</td><td>≤ 10 KB</td><td>None - cap message body input at 8,000 chars</td></tr>
+  </table>
+  <h3>8.5 Data flow</h3>
+  <pre>
+Public registration app ──write──▶ volunteerRegistry-uniconbaseapps (shared) ◀──read/write── Admin tool (this one)
+                                        │  one doc per volunteer
+                                        ▼
+Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventHours / eventMessages (instance)
   </pre>
   <ul>
-    <li>[Key behavior bullet]</li>
-    <li>[Key behavior bullet]</li>
+    <li>Volunteers tab lists registry profiles; applications tab (merged view) shows who applied to THIS event.</li>
+    <li>Approving an application does not modify the registry - it only changes the application status.</li>
+    <li>The import companion tool writes CSV rows into the registry with <code>source: 'import'</code>.</li>
   </ul>
-  <h3>8.3 Caller contract table</h3>
+  <h3>8.6 Caller contract table</h3>
   <table>
     <tr><th>Caller</th><th>Required change</th></tr>
-    <tr><td><code>[file path]</code> ([call site])</td>
-    <td>[exact obligation of this caller]</td></tr>
+    <tr><td><code>app/VolunteerManagement.js</code> (type constants)</td><td>Use the 5 type names from 8.2; add <code>registryType</code> param</td></tr>
+    <tr><td><code>app/VolunteerManagement.js</code> (register flow)</td><td>Upsert profile in registry, then create event application - never one combined doc</td></tr>
+    <tr><td><code>app/volunteer-import-tool.html</code></td><td>Write rows into <code>volunteerRegistry-uniconbaseapps</code>, not into an event type</td></tr>
+    <tr><td><code>app/test-harness.html</code></td><td>Mock the same 5 types; add registry seed data</td></tr>
+    <tr><td>Public registration app (future)</td><td>Adopt the same registry type name and field ids - its SSOT must reference D-VM-02</td></tr>
   </table>
 
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
-    <!-- TEMPLATE: every scenario has exactly ONE outcome. "Sometimes" is not
-         an acceptable cell value. -->
-    <tr><td>[Scenario]</td><td>[Deterministic outcome]</td></tr>
-    <tr><td>[Failure scenario]</td><td>[How it resolves - which dialog, which retry, which log]</td></tr>
+    <tr><td>Registry query fails (type not authorized)</td><td>Volunteers tab shows an error card with the missing-parameter report (<code>tool.reportMissingParams</code>); other tabs keep working.</td></tr>
+    <tr><td>Registry query returns zero profiles</td><td>Volunteers tab shows empty state with "Add volunteer" and "Import CSV" actions.</td></tr>
+    <tr><td>Volunteer applies who already has a pending application for this event</td><td>Existing application is updated (status back to pending) - never a duplicate application doc.</td></tr>
+    <tr><td>Application approved while registry profile is inactive/banned</td><td>Approval is blocked with a warning; the manager must reactivate the profile first.</td></tr>
+    <tr><td>Public app registers an email that already exists</td><td>Registry dedupe by <code>userId</code> first, <code>email</code> second: same CMS user = same profile doc, updated instead of duplicated.</td></tr>
+    <tr><td><code>requestObjects</code> returns an error mid-save</td><td><code>tool.notify(...,'error')</code> toast; local input preserved; no partial UI state.</td></tr>
+    <tr><td>Certificate export while allowExportPdf missing</td><td>Error toast: "PDF export failed: ..." - preview stays on screen.</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
   <table>
     <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
-    <tr><td>L-01</td><td>[What is NOT covered]</td><td>[What can go wrong because of it]</td><td>[Accepted / deferred to task T-xx / decision ID]</td></tr>
+    <tr><td>L-01</td><td><code>requestObjects('query')</code> returns the full collection with no server-side pagination</td><td>Very large events (thousands of records) load everything client-side once per tab render</td><td>Accepted - events are small-to-medium; revisit if > ~2,000 docs per type</td></tr>
+    <tr><td>L-02</td><td>No year-level aggregation in this tool</td><td>A manager cannot see all events at once here</td><td>Deferred to idea I-01 (separate reporting app)</td></tr>
+    <tr><td>L-03</td><td>Registry dedupe is by CMS user id, then email</td><td>One human with two CMS accounts appears as two profiles</td><td>Accepted - managers can merge manually via notes</td></tr>
+    <tr><td>L-04</td><td>No automatic email notifications on approval</td><td>Volunteers are not emailed when approved</td><td>Deferred to idea I-02</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
@@ -361,14 +385,36 @@
        then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
   <table>
     <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
-    <!--
     <tr>
-      <td>D-VM-01</td><td>YYYY-MM-DD</td>
-      <td>[The decision - what is decided and how it will be implemented]</td>
-      <td>[Why this choice; what risk it trades away]</td>
+      <td>D-VM-01</td><td>2026-09-29</td>
+      <td>The tool is PER-EVENT: one instance hosted on each event CMS object; all operational data is instance-scoped. A year view is NOT this tool.</td>
+      <td>Per-event isolation keeps permissions simple and matches the event-object hosting model. A single year document would exceed the 1 MB Firestore document limit and cannot scope permissions per event.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
-    -->
+    <tr>
+      <td>D-VM-02</td><td>2026-09-29</td>
+      <td>Volunteer master data = one shared registry type <code>volunteerRegistry-uniconbaseapps</code> (scope: shared), written by the future public registration app and read/written by this admin tool. It is the SSOT for volunteer identity.</td>
+      <td>Exactly one profile per volunteer; both apps share the same pool. Removes per-event duplicate profiles.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VM-03</td><td>2026-09-29</td>
+      <td>Event operational data lives in four isolated instance-scoped types: <code>vm.eventApplications-uniconbaseapps</code>, <code>vm.eventTasks-uniconbaseapps</code>, <code>vm.eventHours-uniconbaseapps</code>, <code>vm.eventMessages-uniconbaseapps</code>. Each record is its own document.</td>
+      <td>Every document stays far under 1 MB; per-event isolation via instance scope; names follow the isolation naming rule.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VM-04</td><td>2026-09-29</td>
+      <td><code>tool.setValue()</code> stores ONLY UI preferences (currently <code>{ lastTab }</code>). All records go through <code>tool.requestObjects()</code>. The message body input is capped at 8,000 characters.</td>
+      <td>setValue is one Firestore document (1 MB) - records there would eventually break the field. Per-record documents scale without limit.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-VM-05</td><td>2026-09-29</td>
+      <td>Rename current types: <code>vm.volunteers-uniconbaseapps</code> → <code>vm.eventApplications-uniconbaseapps</code>; <code>vm.tasks/hours/messages-uniconbaseapps</code> → <code>vm.eventTasks/eventHours/eventMessages-uniconbaseapps</code>. Old names are retired without data migration (test-only data).</td>
+      <td>Separates identity (registry) from event membership (applications); clearer ownership of each type.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -379,26 +425,39 @@
     code. A decision that is not in the register did not happen.</li>
     <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
     delete rows.</li>
-    <li>[Tool-specific rule: the invariant from section 8.1 - review every
-    new call site against it.]</li>
-    <li>Never introduce a path that bypasses [the tool's core mechanism].</li>
+    <li>Review every write path against invariant REGISTRY-ONLY (section 8.1):
+    a profile field (name, email, skills) may only be written in the registry
+    type; every other type only references <code>registryProfileId</code>.</li>
+    <li>Never introduce a path that stores records in <code>tool.setValue()</code>
+    - it is reserved for UI preferences (D-VM-04).</li>
     <li>Global naming rule: any update - code or documentation - MUST use
     understandable, self-explanatory names. No cryptic abbreviations. Existing
     misleading names are renamed when their code is touched.</li>
+    <li>The public registration app must adopt the same registry type name
+    and field ids; before building it, re-read D-VM-02 and section 8.2.</li>
   </ol>
 
   <h2 id="sec-checklist">13. Implementation checklist</h2>
   <table>
     <tr><th>#</th><th>Change</th><th>File</th></tr>
-    <tr><td>1</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
-    <tr><td>2</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+    <tr><td>1</td><td>Replace the 4 type constants with the 5 type names from section 8.2; add <code>registryType</code> tool param (default <code>volunteerRegistry-uniconbaseapps</code>)</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Split register flow: upsert profile into registry, create application in <code>vm.eventApplications-uniconbaseapps</code></td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Volunteers tab reads registry; approvals / rejections update the application only</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Rename type usages in tasks / hours / messages flows to the new <code>vm.event*</code> names</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Cap message body at 8,000 chars in the UI</td><td><code>app/VolunteerManagement.js</code> + <code>app/VolunteerManagement.html</code> - DONE</td></tr>
+    <tr><td>6</td><td>Report missing <code>registryType</code> authorization via <code>tool.reportMissingParams</code> when the query fails</td><td><code>app/VolunteerManagement.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Point the CSV import tool at the registry type with <code>source: 'import'</code></td><td><code>app/volunteer-import-tool.html</code> - DONE</td></tr>
+    <tr><td>8</td><td>Mirror the 5 types in the mock SDK storage and add registry seed data</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>9</td><td>Bump document version and move finished tasks into section 3</td><td><code>docs/ssot.html</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11.</p>
   <ol>
-    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+    <li><strong>Exact registry field ids.</strong> Section 8.2 proposes the field set; the public registration app SSOT (when built) is the authority. Until then the admin tool treats the registry as its own contract.</li>
+    <li><strong>One registry per tenant or per region?</strong> Currently one shared registry for the tenant. If the organization runs multiple independent volunteer programs, a <code>program</code> field on the profile can filter later - no extra type for now.</li>
+    <li><strong>Should volunteers self-apply from this tool too?</strong> The current code allows it (registration modal). Keep it for now, but the primary path is the public app; re-evaluate when that app ships.</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -446,56 +505,201 @@
     <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
   </div>
 
-  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
-       the "ships together" reason, and the tasks inside form one unit.
-       Badge variants: "ONE PUSH - do not split" for groups that must ship in
-       a single push, or "RELATED - do not split" for groups that must not be
-       broken across releases.
-       data-group-status: planned | in-progress | testing | pushed.
-       PUSH READY is computed automatically by ssot.js. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
-       uncomment it, and edit).
-  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+  <section class="task-group" data-release-group="g1-registry-ssot" data-group-status="pushed">
     <header class="task-group-header">
-      <span class="task-group-name">Group: [Group name]</span>
+      <span class="task-group-name">Group: Registry SSOT foundation</span>
       <span class="group-status-chip" data-group-status-chip></span>
       <span class="task-group-badge">ONE PUSH - do not split</span>
-      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+      <span class="task-group-progress" data-group-progress="g1-registry-ssot">0/0</span>
     </header>
-    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
-    <p class="task-group-note">Why these belong together: [the shared dependency -
-    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
-    Publishing T-01 alone breaks all writers."]</p>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g1-registry-ssot"></div></div>
+    <p class="task-group-note">Why these belong together: T-01 renames and adds the registry type; T-02 and T-03 can only be written against the new names. Shipping T-01 alone with the old call sites would break every CRUD path.</p>
 
-    TEMPLATE (inside the commented sample): one .task-item block per task.
-    data-task-id must be unique across the whole document; data-group matches
-    the group key above. data-task-status: not-started | in-progress | ignored.
-    Done is the checkbox. The status chip is rendered by ssot.js.
-    PERMANENT DONE: write data-task-status="done" on the task div (or
-    checked="checked" on the checkbox) to mark it done for every browser;
-    npm run rel does this for pushed groups.
-    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+    <div class="task-item" data-task-id="T-01" data-group="g1-registry-ssot" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-01</span>
-          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-title">Adopt the 5-type model in the code</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
         </summary>
         <div class="task-details">
-          <p><strong>Problem it solves:</strong> [why this task exists]</p>
-          <p><strong>How we will solve it:</strong> [approach, files]</p>
-          <p><strong>Benefit:</strong> [what the user or system gains]</p>
-          <p><strong>Files:</strong> <code>[file paths]</code></p>
-          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+          <p><strong>Problem it solves:</strong> old type constants mix profile and membership and have no registry.</p>
+          <p><strong>How we will solve it:</strong> replace the 4 constants with the 5 names from section 8.2; add <code>registryType</code> param with default; update every call site.</p>
+          <p><strong>Benefit:</strong> code matches the decided data model.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.js</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
         </div>
       </details>
     </div>
 
-    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+    <div class="task-item" data-task-id="T-02" data-group="g1-registry-ssot" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Split registration into registry upsert + event application</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> today one doc holds both the profile and the event membership.</p>
+          <p><strong>How we will solve it:</strong> on register: query registry by <code>userId</code> → upsert profile; then create the application doc referencing <code>registryProfileId</code>.</p>
+          <p><strong>Benefit:</strong> invariant REGISTRY-ONLY holds; profile survives across events.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.js</code> - submitRegistration()</p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="g1-registry-ssot" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Volunteers tab reads the registry; approvals touch applications only</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the volunteers list must show the shared list plus this event's application status.</p>
+          <p><strong>How we will solve it:</strong> merge registry profiles with applications client-side; approve/reject updates the application doc only.</p>
+          <p><strong>Benefit:</strong> one shared list; event status layered on top.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.js</code> - renderVolunteers()</p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
   </section>
-  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="g2-rename-event-types" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Event types rename</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g2-rename-event-types">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-rename-event-types"></div></div>
+    <p class="task-group-note">Why these belong together: tasks, hours and messages share the same rename pattern and the same call sites; keeping them in one group avoids half-renamed code.</p>
+
+    <div class="task-item" data-task-id="T-04" data-group="g2-rename-event-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Rename task / hour / message types to vm.event* names</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> old names lack the event prefix and collide with the old volunteers name.</p>
+          <p><strong>How we will solve it:</strong> update <code>TYPE_TASKS</code>, <code>TYPE_HOURS</code>, <code>TYPE_MESSAGES</code> and every use.</p>
+          <p><strong>Benefit:</strong> consistent naming per D-VM-05.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.js</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-05" data-group="g2-rename-event-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Cap message body at 8,000 characters</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> a pasted document could make a single message document approach the 1 MB cap.</p>
+          <p><strong>How we will solve it:</strong> <code>maxlength="8000"</code> on the textarea + JS guard in sendMessage().</p>
+          <p><strong>Benefit:</strong> budget enforced (section 8.4).</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.html</code>, <code>app/VolunteerManagement.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g3-import-and-params" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Import tool + param reporting</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g3-import-and-params">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-import-and-params"></div></div>
+    <p class="task-group-note">Why these belong together: both touch the registry contract - the import writer and the missing-param reporter must agree on the same type name and field ids.</p>
+
+    <div class="task-item" data-task-id="T-06" data-group="g3-import-and-params" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Point the CSV import tool at the registry</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> bulk import must not create event-local duplicates.</p>
+          <p><strong>How we will solve it:</strong> import rows → <code>volunteerRegistry-uniconbaseapps</code> with <code>source: 'import'</code> and email dedupe.</p>
+          <p><strong>Benefit:</strong> SSOT respected even for bulk loads.</p>
+          <p><strong>Files:</strong> <code>app/volunteer-import-tool.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="g3-import-and-params" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Missing-param report for the registry type</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> when allowObjectCRUD misses the registry type, the admin gets no clear guidance.</p>
+          <p><strong>How we will solve it:</strong> on registry query error, call <code>tool.reportMissingParams()</code> with the registry type hint and a clear message.</p>
+          <p><strong>Benefit:</strong> CMS warning banner with a Configure button.</p>
+          <p><strong>Files:</strong> <code>app/VolunteerManagement.js</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g4-harness" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Test harness parity</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g4-harness">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g4-harness"></div></div>
+    <p class="task-group-note">Why these belong together: the harness mocks the same storage the app writes; they must change together or the harness lies.</p>
+
+    <div class="task-item" data-task-id="T-08" data-group="g4-harness" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Mirror the 5 types in the harness mock + registry seed data</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> the mock SDK must emulate shared vs instance scope so local testing matches the CMS.</p>
+          <p><strong>How we will solve it:</strong> keep the registry key shared and the <code>vm.*</code> keys per simulated record id; seed 3-4 profiles.</p>
+          <p><strong>Benefit:</strong> regression-free local testing.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> not-started</p>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
@@ -510,47 +714,79 @@
     <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
   </div>
 
-  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
-       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
   <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
     <details>
       <summary>
         <span class="idea-id">I-01</span>
-        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-title">Year-level reporting app</span>
         <span class="idea-status-chip" data-idea-status-chip></span>
         <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
       </summary>
       <div class="idea-details">
-        <p><strong>Idea:</strong> [what the idea is]</p>
-        <p><strong>Why:</strong> [what it would improve]</p>
-        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+        <p><strong>Idea:</strong> a separate reporting tool that queries across event instances (per-year totals per volunteer).</p>
+        <p><strong>Why:</strong> managers will ask "how many hours did this volunteer do this year" - the registry + event hour logs can answer it without a mega document.</p>
+        <p><strong>Discussion / outcome:</strong> deferred until the registry ships; needs the public app and multiple events in production first.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Email notification on approval</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> send <code>tool.requestSendEmail</code> automatically when an application is approved / rejected.</p>
+        <p><strong>Why:</strong> volunteers currently learn their status only by opening the page.</p>
+        <p><strong>Discussion / outcome:</strong> needs allowSendEmail and a stable email address on the registry profile - revisit after T-02.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Bulk task assignment</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> assign one task to many volunteers at once.</p>
+        <p><strong>Why:</strong> common for shifts - faster than assigning one by one.</p>
+        <p><strong>Discussion / outcome:</strong> not yet needed; single-assignee covers current use.</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
-  <p>[Preparation: what accounts, tenants, browsers, and test data the pass
-  needs. Keep the browser console open and filter by [trace keyword] - every
-  [operation] writes a trace line.]</p>
+  <p>Preparation: open <code>app/test-harness.html</code> in a browser (no
+  server needed). Two simulated accounts: Alice Manager (admin) and Bob
+  Volunteer (viewer), switchable from the harness bar. Keep the browser
+  console open - the mock SDK logs every notify.</p>
   <h3>17.1 Scenarios</h3>
   <ol>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
+    <li><strong>S-01 - Manager loads dashboard.</strong> Steps: open harness as Alice. PASS if: stats cards show 0s and the Pending Approvals card stays hidden.</li>
+    <li><strong>S-02 - Volunteer applies.</strong> Steps: switch to Bob → Register as Volunteer → fill skills → submit. PASS if: status card shows "pending" and a registry profile was created.</li>
+    <li><strong>S-03 - Manager approves.</strong> Steps: switch to Alice → Pending Approvals → Approve. PASS if: the volunteer moves to approved; hours tab counts from that volunteer only.</li>
+    <li><strong>S-04 - Task lifecycle.</strong> Steps: Alice creates a task assigned to Bob with due date; Bob starts it, logs 2.5 hours, marks complete. PASS if: status flows open → assigned → in-progress → completed and the hour log shows pending.</li>
+    <li><strong>S-05 - Hour approval + certificate.</strong> Steps: Alice approves the hour log; Bob opens Certificate. PASS if: certificate shows 2.5 hours and Download produces a file.</li>
+    <li><strong>S-06 - Messaging.</strong> Steps: Bob sends "I have a question" to managers; Alice sees unread badge and marks it read. PASS if: unread badge drops to 0.</li>
+    <li><strong>S-07 - Registry SSOT (after refactor).</strong> Steps: Bob applies; Alice approves; Bob applies to a second simulated event instance. PASS if: Bob's profile is ONE registry doc and the second event only adds an application doc.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
     <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
-    <tr><td>[Group of scenarios]</td><td></td><td></td></tr>
+    <tr><td>S-01 to S-06 (current)</td><td></td><td></td></tr>
+    <tr><td>S-07 (after refactor)</td><td></td><td></td></tr>
   </table>
-  <p><strong>Publish gate:</strong> [the exact condition under which this
-  tool is allowed to be published - e.g. "publish only when every MUST
-  scenario PASSES and T-01..T-03 ship in the same release"].</p>
-  <p><strong>Progress log:</strong> [append one line per completed scenario
-  with the date and the observed evidence - keep this a running history.]</p>
+  <p><strong>Publish gate:</strong> publish the refactor only when S-01 to
+  S-07 all PASS and release group g1-registry-ssot is fully checked.</p>
+  <p><strong>Progress log:</strong> (append one line per completed scenario
+  with the date and the observed evidence - keep this a running history.)</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -575,29 +811,48 @@
        | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
        reported only).
        data-risk-status: open | accepted. Solved = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
-  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+  <div class="risk-item" data-risk-id="R-01" data-group="g1-registry-ssot" data-risk-level="medium" data-risk-status="open">
     <details>
       <summary>
         <span class="risk-id">R-01</span>
-        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-title">Registry type name mismatch with the future public app</span>
         <span class="risk-severity-chip" data-risk-severity-chip></span>
         <span class="risk-status-chip" data-risk-status-chip></span>
         <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
       </summary>
       <div class="risk-details">
-        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
-        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
-        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
-        <p><strong>Mitigation:</strong> [what we do about it]</p>
-        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+        <p><strong>Applies to:</strong> T-01, T-02, T-03 (g1-registry-ssot)</p>
+        <p><strong>What can go wrong:</strong> the public app (built later) picks a different type name and the two apps never share data - the SSOT splits.</p>
+        <p><strong>Likelihood / impact:</strong> low likelihood while we own both tools, high impact if it happens.</p>
+        <p><strong>Mitigation:</strong> the registry name is frozen here (D-VM-02); the public app SSOT must reference this document; the admin tool exposes <code>registryType</code> param so a tenant can override if it already has its own registry type.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-29 - open; re-check when the public app starts.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
 
-  <p class="ok"><strong>Overall verdict.</strong> [One paragraph: is it safe to
-  test locally, is it safe to publish, and under which condition.]</p>
+  <div class="risk-item" data-risk-id="R-02" data-group="g1-registry-ssot" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Test-only data loss on the type rename</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" checked="checked" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01, T-04</p>
+        <p><strong>What can go wrong:</strong> old <code>vm.volunteers-uniconbaseapps</code> documents are orphaned after the rename.</p>
+        <p><strong>Likelihood / impact:</strong> certain, zero impact - data is local test data only (no production tenant yet).</p>
+        <p><strong>Mitigation:</strong> none needed; documented in D-VM-05.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-29 - accepted as documented.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to implement and test
+  locally today. Publish the refactor after S-01..S-07 pass and group
+  g1-registry-ssot is fully checked; R-01 stays open until the public
+  registration app exists.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. The <code>npm run rel</code> script appends
@@ -606,13 +861,19 @@
   <table>
     <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
     <tbody id="release-log-rows">
+    <tr>
+      <td>2026-09-29</td>
+      <td>v0.1.8</td>
+      <td>pending-commit</td>
+      <td>5-type model: shared registry <code>volunteerRegistry-uniconbaseapps</code> + 4 instance types <code>vm.event*</code>; registration split (registry upsert + event application); volunteers tab reads registry; approvals on applications with banned guard; manager add-to-event from permitted users; 8,000-char message cap; CSV import wired to the registry; harness seed data (T-01..T-08).</td>
+    </tr>
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
     </tbody>
   </table>
 
   <div class="footer">
     Volunteer Management - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-09-21.
+    tool. Version 0.3, 2026-09-29.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

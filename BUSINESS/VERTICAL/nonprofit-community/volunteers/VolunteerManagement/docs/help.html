@@ -19,34 +19,55 @@
 
 <!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
 <h2 id="overview">1. Overview</h2>
-<p>[What the tool is, in one plain sentence.]</p>
-<p>[Who it is for and why they use it.]</p>
+<p>Volunteer Management is the event page's volunteer hub: managers approve applications, assign tasks, track hours and issue certificates, while volunteers register, see their tasks and log their hours.</p>
+<p>It is for event managers of charities and nonprofits, and for the volunteers they coordinate. One tool instance manages one event; a shared volunteer registry remembers volunteers across events.</p>
 
 <h2 id="before">2. Before you start</h2>
 <ul>
-  <li>[Permission or setup the user needs]</li>
-  <li>[Where to find the tool in the UI]</li>
+  <li>Event managers need the editor or admin role on the event object; volunteers only need access to the event page.</li>
+  <li>The field settings must enable object CRUD with the volunteer registry type (<code>volunteerRegistry-uniconbaseapps</code>) and the four event types. If the registry type is missing, the tool shows a configuration banner.</li>
+  <li>Open the event object in the CMS and find the Volunteer Management field.</li>
 </ul>
 
 <h2 id="howto">3. Step by step</h2>
 <ol>
-  <li>[Step 1 - exact click or action]</li>
-  <li>[Step 2]</li>
-  <li>[Step 3]</li>
+  <li><strong>Register as a volunteer.</strong> Open the event page, click Register as Volunteer, fill in your skills and availability, and submit. Managers see your application under Pending Approvals.</li>
+  <li><strong>Approve volunteers (managers).</strong> Open the Volunteers tab or the Pending Approvals card and click Approve or Reject. Use Add Volunteer to add a permitted user directly.</li>
+  <li><strong>Create and assign tasks (managers).</strong> Open the Tasks tab, click Create Task, and fill in the name, description, assignee, due date and estimated hours.</li>
+  <li><strong>Work on tasks (volunteers).</strong> Open the Tasks tab, click Start, do the work, then click Mark Complete.</li>
+  <li><strong>Log hours (volunteers).</strong> Click Log Hours, pick the task, date and hours, and describe what you did. Managers approve the hours in the Hours tab.</li>
+  <li><strong>Get the certificate.</strong> Open the Certificate tab to preview your certificate, then download it as PDF or send it by email.</li>
 </ol>
 
 <h2 id="faq">4. Common questions</h2>
 <table>
   <tr><th>Question</th><th>Answer</th></tr>
-  <tr><td>[Question]</td><td>[Short answer]</td></tr>
+  <tr><td>I applied for an event before - why do I apply again?</td><td>Your profile stays in the shared registry, but each event needs its own application. Skills and contact data are not re-entered.</td></tr>
+  <tr><td>When does my certificate show hours?</td><td>Only hours with status Approved count toward the certificate total.</td></tr>
+  <tr><td>Can managers message one volunteer only?</td><td>Yes - in the Messages tab, managers can pick one volunteer or message all approved volunteers.</td></tr>
+  <tr><td>Can I re-apply after a rejection?</td><td>Yes - your status card shows a Re-apply button, and the application goes back to pending.</td></tr>
 </table>
 
 <h2 id="troubleshooting">5. Troubleshooting</h2>
 <table>
   <tr><th>Problem</th><th>What to do</th></tr>
-  <tr><td>[Problem]</td><td>[Fix]</td></tr>
+  <tr><td>The Volunteers tab shows a red registry warning</td><td>The volunteer registry type is not authorized. An admin must add <code>volunteerRegistry-uniconbaseapps</code> to <code>settings.allowedObjectTypes</code> and enable object CRUD.</td></tr>
+  <tr><td>The Approve button is missing for a volunteer</td><td>The application was already processed, or the volunteer's registry profile is banned. Refresh the page and check the Volunteers tab.</td></tr>
+  <tr><td>Hours do not appear in my certificate</td><td>Only approved hours count. Ask the manager to approve pending logs in the Hours tab.</td></tr>
+  <tr><td>A long message was refused</td><td>Messages are limited to 8,000 characters - split longer text into several messages.</td></tr>
 </table>
 <!-- GENERATED-END -->
+
+<h2 id="screenshots">6. What it looks like</h2>
+<p>Screenshots of Volunteer Management with sample data - see exactly what you get.</p>
+<div class="ssot-shots"><figure class="ssot-shot"><img src="screenshots/01-dashboard-desktop.png" alt="Volunteer Management - Dashboard (desktop)" loading="lazy" /><figcaption>Dashboard (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/02-dashboard-mobile.png" alt="Volunteer Management - Dashboard (mobile)" loading="lazy" /><figcaption>Dashboard (mobile)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/03-documents-desktop.png" alt="Volunteer Management - Documents (desktop)" loading="lazy" /><figcaption>Documents (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/04-transactions-desktop.png" alt="Volunteer Management - Transactions (desktop)" loading="lazy" /><figcaption>Transactions (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/05-expense-finder-desktop.png" alt="Volunteer Management - Expense Finder (desktop)" loading="lazy" /><figcaption>Expense Finder (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/06-gst-desktop.png" alt="Volunteer Management - GST / PST (desktop)" loading="lazy" /><figcaption>GST / PST (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/07-assistant-desktop.png" alt="Volunteer Management - AI Assistant (desktop)" loading="lazy" /><figcaption>AI Assistant (desktop)</figcaption></figure>
+<figure class="ssot-shot"><img src="screenshots/08-reports-desktop.png" alt="Volunteer Management - Reports (desktop)" loading="lazy" /><figcaption>Reports (desktop)</figcaption></figure></div>
 
 <div class="footer">
   Volunteer Management - help document. Satellite of the SSOT system - not a

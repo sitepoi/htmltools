@@ -117,7 +117,7 @@
 
   // ── state ──
   var DB = defaultDatabase()
-  var _ui = { tab: 'subjects', taskStatusFilter: 'all', taskPriorityFilter: 'all', taskSearch: '', collapsed: {}, projScale: 1, projPanelSide: true, projSideCollapsed: false, editingSubjectId: '' }
+  var _ui = { tab: 'subjects', taskStatusFilter: 'all', taskPriorityFilter: 'all', taskSearch: '', collapsed: {}, projScale: 1, projPanelSide: true, projSideCollapsed: false }
   var _aiBusy = {}
   var _aiExtracted = null
   var _readOnly = false
@@ -408,6 +408,7 @@
     }
   }
 
+  // the subjects list is a pure reading view - editing happens in Meeting Mode
   function subjectCardHtml(subject, index) {
     var collapsed = !!_ui.collapsed[subject.id]
     var durationLabel = subject.durationMinutes > 0
@@ -415,9 +416,6 @@
       : ''
     var spentLabel = '<span class="mtn-subject-spent">\u23f1 ' + fmtClock(subject.spentMs || 0) + ' spent \u00b7 ' + subjectTimePercent(subject) + '%</span>'
     var chips = durationLabel + spentLabel
-    if (canWrite() && _ui.editingSubjectId === subject.id) {
-      return subjectEditCardHtml(subject, index, collapsed, chips)
-    }
     return subjectReadCardHtml(subject, index, collapsed, chips)
   }
 
@@ -438,46 +436,41 @@
       '<span class="mtn-subject-title-read">' + esc(title) + '</span>' +
       durationLabel +
       (canWrite()
-        ? '<button type="button" class="mtn-btn mtn-btn-soft mtn-subject-edit-btn" data-act="subject-edit" data-subject-id="' + esc(subject.id) + '">Edit</button>'
+        ? '<span class="mtn-subject-tools">' +
+          '<button type="button" class="mtn-icon-btn" title="Move up" data-act="subject-up" data-subject-id="' + esc(subject.id) + '">&#8593;</button>' +
+          '<button type="button" class="mtn-icon-btn" title="Move down" data-act="subject-down" data-subject-id="' + esc(subject.id) + '">&#8595;</button>' +
+          '<button type="button" class="mtn-icon-btn danger" title="Delete subject" data-act="subject-delete" data-subject-id="' + esc(subject.id) + '">x</button>' +
+          '</span>'
         : '') +
       '</div>' +
       '<div class="mtn-subject-body">' + notesContent + '</div>' +
       '</div>'
   }
 
-  // edit view: the card with inputs, move/delete and a Done button
-  function subjectEditCardHtml(subject, index, collapsed, durationLabel) {
-    var disabled = canWrite() ? '' : ' disabled'
-
-    return '<div class="mtn-card mtn-subject mtn-subject-edit' + (collapsed ? ' mtn-subject-collapsed' : '') + (subject.status === 'done' ? ' mtn-subject-done' : '') + '" data-subject-id="' + esc(subject.id) + '">' +
-      '<div class="mtn-subject-head">' +
-      '<button type="button" class="mtn-icon-btn" title="Collapse / expand" data-act="subject-collapse" data-subject-id="' + esc(subject.id) + '">' + (collapsed ? '+' : '-') + '</button>' +
-      (canWrite()
-        ? '<button type="button" class="mtn-subj-status' + (subject.status === 'done' ? ' done' : '') + '" title="Click to mark this subject done / reopen" data-act="subject-status-cycle" data-subject-id="' + esc(subject.id) + '">' + (subject.status === 'done' ? '\u2713 Done' : 'Open') + '</button>'
-        : (subject.status === 'done' ? '<span class="mtn-subj-status done">\u2713 Done</span>' : '')) +
-      '<span class="mtn-subject-num">' + (index + 1) + '</span>' +
-      '<input class="mtn-input mtn-subject-title" value="' + esc(subject.title) + '" placeholder="Subject title" maxlength="160" data-field="subject.title" data-subject-id="' + esc(subject.id) + '"' + disabled + ' />' +
-      durationLabel +
-      (canWrite()
-        ? '<button type="button" class="mtn-icon-btn" title="Move up" data-act="subject-up" data-subject-id="' + esc(subject.id) + '">&#8593;</button>' +
-          '<button type="button" class="mtn-icon-btn" title="Move down" data-act="subject-down" data-subject-id="' + esc(subject.id) + '">&#8595;</button>' +
-          '<button type="button" class="mtn-icon-btn danger" title="Delete subject" data-act="subject-delete" data-subject-id="' + esc(subject.id) + '">x</button>' +
-          '<button type="button" class="mtn-btn mtn-btn-primary mtn-subject-done-btn" data-act="subject-edit-close" data-subject-id="' + esc(subject.id) + '">Done</button>'
-        : '') +
-      '</div>' +
-      '<div class="mtn-subject-body">' +
-      '<textarea class="mtn-textarea mtn-subject-notes" rows="5" placeholder="Notes for this subject..." data-field="subject.notes" data-subject-id="' + esc(subject.id) + '"' + disabled + '>' + esc(subject.notes) + '</textarea>' +
-      '</div>' +
-      '</div>'
+  function allSubjectsCollapsed() {
+    return DB.subjects.length > 0 && DB.subjects.every(function (subject) { return !!_ui.collapsed[subject.id] })
+  }
+  function updateCollapseAllButton() {
+    var button = byId('mtn-collapse-all-btn')
+    if (!button) return
+    button.textContent = allSubjectsCollapsed() ? 'Expand all' : 'Collapse all'
+  }
+  function collapseAllSubjects() {
+    if (!DB.subjects.length) return
+    var shouldCollapse = !allSubjectsCollapsed()
+    DB.subjects.forEach(function (subject) { _ui.collapsed[subject.id] = shouldCollapse })
+    renderSubjects()
   }
 
   function renderSubjects() {
     var container = byId('mtn-subjects')
     if (!DB.subjects.length) {
-      container.innerHTML = '<div class="mtn-subject-empty">No subjects yet. Add the first subject, then write notes under each one subject by subject.</div>'
+      container.innerHTML = '<div class="mtn-subject-empty">No subjects yet. Add the first subject, then open Meeting Mode to write notes under each one.</div>'
+      updateCollapseAllButton()
       return
     }
     container.innerHTML = DB.subjects.map(subjectCardHtml).join('')
+    updateCollapseAllButton()
   }
 
   // ── projection drawer (big text for meeting-room screens) ──
@@ -533,6 +526,26 @@
     settleProjectionTime()
     _projectionOpen = false
     byId('mtn-projection').classList.remove('open')
+  }
+  // add a brand-new subject straight from Meeting Mode and jump into it
+  function addSubjectInProjection() {
+    if (!canWrite() || !_projectionOpen) return
+    settleProjectionTime()
+    _projectionWaiting = false
+    var newSubject = { id: uid(), title: '', notes: '', notesHtml: '', status: 'open', durationMinutes: 15, spentMs: 0 }
+    DB.subjects.push(newSubject)
+    _projectionIndex = DB.subjects.length - 1
+    persistSoon()
+    renderProjection()
+    renderSubjects()
+    renderMeetingMeta()
+    updateTabCounts()
+    try { tool.resize() } catch (e) { /* no-op */ }
+    // the minute taker can name the new subject right away
+    try {
+      var titleInput = document.querySelector ? document.querySelector('.mtn-proj-title-input') : null
+      if (titleInput && titleInput.focus) titleInput.focus()
+    } catch (e) { /* no-op */ }
   }
   function stepProjection(direction) {
     if (!DB.subjects.length) return
@@ -1211,6 +1224,8 @@
     })
     var buttons = byId('mtn-app').querySelectorAll('[data-act="add-subject"], [data-act="add-task"]')
     buttons.forEach(function (button) { button.disabled = !writable })
+    var writerOnlyElements = byId('mtn-app').querySelectorAll('[data-writer-only="1"]')
+    writerOnlyElements.forEach(function (element) { element.style.display = writable ? '' : 'none' })
     renderSubjects()
     renderTasks()
     renderAiOutputs()
@@ -1284,18 +1299,9 @@
   function addSubject() {
     var subject = { id: uid(), title: '', notes: '', notesHtml: '', status: 'open', durationMinutes: 15, spentMs: 0 }
     DB.subjects.push(subject)
-    _ui.collapsed = {}
-    _ui.editingSubjectId = subject.id
     persistSoon()
     renderAll()
-    focusLastSubjectTitle()
-  }
-  function focusLastSubjectTitle() {
-    var inputs = byId('mtn-subjects').querySelectorAll('.mtn-subject-title')
-    if (inputs.length) {
-      inputs[inputs.length - 1].focus()
-      inputs[inputs.length - 1].scrollIntoView({ block: 'nearest' })
-    }
+    tryNotify('Subject added - open Meeting Mode to name it and write its notes.', 'info')
   }
   function moveSubject(id, direction) {
     var index = -1
@@ -1311,7 +1317,6 @@
   }
   function removeSubject(id) {
     DB.subjects = DB.subjects.filter(function (s) { return s.id !== id })
-    if (_ui.editingSubjectId === id) _ui.editingSubjectId = ''
     persistSoon()
     renderAll()
   }
@@ -1929,6 +1934,9 @@
       case 'project-open':
         openProjection()
         break
+      case 'proj-add-subject':
+        addSubjectInProjection()
+        break
       case 'project-close':
         closeProjection()
         break
@@ -1977,15 +1985,8 @@
         _ui.collapsed[subjectId] = !_ui.collapsed[subjectId]
         renderSubjects()
         break
-      case 'subject-edit':
-        if (canWrite()) {
-          _ui.editingSubjectId = subjectId || ''
-          renderSubjects()
-        }
-        break
-      case 'subject-edit-close':
-        _ui.editingSubjectId = ''
-        renderSubjects()
+      case 'subjects-collapse-all':
+        collapseAllSubjects()
         break
       case 'subject-up':
         if (canWrite()) moveSubject(subjectId, -1)
@@ -2143,14 +2144,6 @@
           handleActionClick(element)
           return
         }
-        // clicking a reading-mode subject card opens that subject for editing
-        if (element.classList && element.classList.contains('mtn-subject-read')) {
-          if (canWrite()) {
-            _ui.editingSubjectId = element.getAttribute('data-subject-id') || ''
-            renderSubjects()
-          }
-          return
-        }
         element = element.parentNode
       }
     })
@@ -2197,6 +2190,14 @@
     })
 
     document.addEventListener('keydown', function (event) {
+      // Tab indents the list item inside the editor, Shift+Tab outdents it -
+      // focus stays in the editor instead of jumping out of the page.
+      if (event.key === 'Tab' && _projectionOpen && canWrite() && event.target && event.target.id === 'mtn-proj-editor-page') {
+        event.preventDefault()
+        if (event.shiftKey) runEditorCommand('outdent')
+        else runEditorCommand('indent')
+        return
+      }
       if (event.key === 'Escape') {
         if (_projectionOpen) {
           closeProjection()

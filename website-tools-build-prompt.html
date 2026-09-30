@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Tools Store - Build Prompts (2 steps)</title>
+<style>
+  :root {
+    --bg: #f1f5f9; --panel: #ffffff; --ink: #0f172a; --muted: #64748b;
+    --line: #e2e8f0; --accent: #1e4e79; --accent-soft: #e8f0f8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--ink); line-height: 1.5; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); box-shadow: 0 1px 3px rgba(15,23,42,.06); padding: 12px 20px 14px; }
+  .head-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 19px; color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12.5px; margin: 3px 0 8px; }
+  .actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+  button { border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 7px 14px; font-size: 13px; cursor: pointer; color: var(--ink); font-family: inherit; }
+  button:hover { background: var(--accent-soft); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { background: #163f66; }
+  .status { font-size: 12.5px; color: var(--accent); min-height: 18px; }
+  main { padding: 16px 20px 40px; }
+  .prompt-block { margin-bottom: 30px; }
+  .block-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+  .block-head h2 { margin: 0; font-size: 16px; color: var(--accent); }
+  .block-head .actions { margin-left: auto; }
+  textarea {
+    display: block; width: 100%; min-height: 480px;
+    font-family: Consolas, "Courier New", monospace; font-size: 13px; line-height: 1.5;
+    color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; resize: vertical; white-space: pre; overflow-wrap: normal; overflow-x: auto;
+  }
+  textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hint { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-row">
+    <div>
+      <h1>Website Tools Store - Build Prompts (2 steps)</h1>
+      <div class="sub">Two prompts, run one at a time in the SAME workspace: Step 1 builds only the ideas catalog, then Step 2 builds the folder tree from the reviewed catalog.</div>
+    </div>
+  </div>
+</header>
+<main>
+  <section class="prompt-block">
+    <div class="block-head">
+      <h2>Step 1 - Build the ideas catalog only</h2>
+      <div class="actions">
+        <button class="primary copy-btn" type="button" data-target="promptText1">Copy Prompt 1</button>
+        <button class="select-btn" type="button" data-target="promptText1">Select all</button>
+        <span class="status"></span>
+      </div>
+    </div>
+  <textarea id="promptText1" readonly spellcheck="false"># TASK: Build the Website Tools Ideas Catalog (CATALOG ONLY - NO FOLDER TREE)
+
+You are building a NEW, standalone workspace: the **WEBSITE TOOLS STORE SKELETON**. It is the website-tool sibling of an existing application-tool store, but scoped to **embeddable website tools** - widgets, forms, calculators, booking tools, image tools and everything else that runs on a PUBLIC WEBSITE PAGE. A tool may sit behind a login (member area), but it is still a website component or website form - NOT an application-style back-office tool (no admin CRUD apps, no document editors, no CMS consoles).
+
+Your deliverables are ONLY the catalog files inside one folder:
+1. `WEBSITE-TOOLS/tools-catalog/folder-hierarchy-import.json`
+2. `WEBSITE-TOOLS/tools-catalog/tool-ideas-catalog.json`
+3. `WEBSITE-TOOLS/tools-catalog/catalog-data.js`
+4. `WEBSITE-TOOLS/tools-catalog/tool-ideas-catalog.html`
+
+IMPORTANT: do NOT create the physical folder tree (`BUSINESS/`, `PERSONAL/` folders with `.gitkeep` files) and do NOT create any example tool folders. A separate later prompt builds the folder tree from this catalog after it has been reviewed. Build the catalog only, then stop.
+
+Create all of it in the current workspace root. Nothing else exists yet. Do not use any backend, build step, npm packages, or network calls in the catalog page - it must work by double-clicking the HTML file.
+
+---
+
+## 1. WHAT A "WEBSITE TOOL" IS (scope filter - apply to every idea)
+
+- Runs entirely on the visitor's browser (HTML + CSS + JS). No own server.
+- Embedded on a public website page as a widget, section, form or interactive element.
+- May integrate with services the host website platform already provides (an SDK such as `window.gw`, CMS data, email, payment gateways), but the tool itself is a page component.
+- Member-area tools (login, registration, order history, profile) are allowed - they are website forms/pages, not admin apps.
+- REJECTED ideas: back-office/admin consoles, document management apps, internal workflow apps, CRM/ERP dashboards, anything the public website visitor never sees.
+
+## 2. THE TAXONOMY (category hierarchy)
+
+Same filing scheme as the existing application-tool store:
+
+- Two roots: **BUSINESS** (B) and **PERSONAL** (P).
+- Each root has two types: **GENERAL** (G) and **VERTICAL** (V). Type node codes have NO dash: `BG`, `BV`, `PG`, `PV`.
+- Category codes: `&lt;root&gt;-&lt;type&gt;-&lt;NN&gt;` (e.g. `B-G-01`). Subcategory codes: `&lt;category&gt;-&lt;letter&gt;` (e.g. `B-G-01-a`). Codes are STABLE - never renamed, never reused.
+- Folder names are COUNT-FREE plain slugs: `BUSINESS/GENERAL/&lt;cat-slug&gt;/&lt;sub-slug&gt;/`. Kebab-case slugs for categories and subcategories, PascalCase for tool folders. NO `_N_of_M` counts anywhere.
+
+### Boundary rules
+- BUSINESS is the default. PERSONAL only when the tool manages the user's OWN life.
+- VERTICAL only when industry-specific content or workflow is baked in (a BMI calculator is health-vertical; a loan calculator used by banks is finance-vertical; a generic contact form is GENERAL).
+- One tool = one folder = one subcategory. Multi-audience tools may be multi-listed in a store app later, but have one home here.
+- Utilities / Misc Helpers leaves (`B-G-14`, `P-G-06`) are parking spots only - keep them near-empty.
+
+### Scaling rule
+When a subcategory would pass 60 tools, split it. New subcategory codes are appended (next letter). Existing codes never change.
+
+### The category skeleton (complete and expand this - you MAY add 1-2 more categories per branch if a real gap exists, but never remove one)
+
+**BUSINESS &gt; GENERAL (BG)**
+- `B-G-01` Ecommerce &amp; Storefront (`ecommerce-storefront`): product-catalog-widgets, cart-checkout-widgets, product-configurators, product-finder-quizzes, price-calculators, coupon-discount-tools, reviews-ratings-widgets, shipping-delivery-calculators, order-tracking-widgets, wishlist-compare-tools, stock-availability-badges, subscription-gift-card-tools
+- `B-G-02` Appointments &amp; Calendar (`appointments-calendar`): booking-scheduling-widgets, event-calendars, availability-date-pickers, class-session-booking, waiting-list-queues, rsvp-event-registration, countdown-timers
+- `B-G-03` Webforms &amp; Data Collection (`webforms-data-collection`): contact-forms, multi-step-forms, surveys-polls, quizzes-assessments, lead-capture-popups, quote-request-builders, feedback-widgets, newsletter-signup-forms, application-forms, consent-compliance-forms
+- `B-G-04` Calculators &amp; Converters (`calculators-converters`): financial-calculators, unit-converters, currency-converters, date-time-calculators, health-calculators, business-calculators, percentage-discount-calculators, science-engineering-calculators
+- `B-G-05` Image &amp; Media Tools (`image-media-tools`): image-compressors, image-resizers-croppers, image-editors-filters, color-pickers-palettes, qr-barcode-generators, logo-favicon-generators, background-removers, mockup-generators, meme-quote-image-makers, collage-photo-tools
+- `B-G-06` Content &amp; Text Tools (`content-text-tools`): word-character-counters, text-case-converters, lorem-ipsum-generators, text-diff-comparers, markdown-html-editors, keyword-density-tools, text-summarizers, readability-checkers, spell-grammar-checkers, hashtag-generators
+- `B-G-07` SEO &amp; Marketing Tools (`seo-marketing-tools`): meta-tag-generators, schema-markup-generators, sitemap-robots-generators, keyword-research-tools, utm-link-builders, headline-analyzers, open-graph-generators, domain-name-generators, email-signature-builders
+- `B-G-08` Social &amp; Engagement (`social-engagement`): share-buttons, social-feed-embeds, testimonial-widgets, live-chat-widgets, chatbot-faq-widgets, notification-bars, popup-modal-tools, gamification-wheels, comment-systems, polls-voting-widgets, reaction-widgets
+- `B-G-09` Maps &amp; Location (`maps-location`): store-locators, distance-calculators, delivery-zone-checkers, route-planners, branch-finders, radius-search-widgets
+- `B-G-10` Accounts &amp; Membership (`accounts-membership`): login-registration-forms, password-reset-tools, password-generators-strength-checkers, profile-widgets, membership-plan-pages, order-history-widgets, loyalty-rewards-widgets, member-dashboard-widgets
+- `B-G-11` Media &amp; Documents (`media-documents`): video-players, audio-players, pdf-viewers-converters, file-converters, document-generators, image-galleries-sliders, file-compression-tools
+- `B-G-12` Analytics &amp; Feedback (`analytics-feedback`): visitor-counters, embeddable-analytics-dashboards, nps-survey-widgets, star-rating-widgets, session-feedback-widgets, uptime-status-badges
+- `B-G-13` Communication (`communication`): contact-widgets, click-to-call-whatsapp-buttons, callback-request-forms, email-template-builders, sms-widgets
+- `B-G-14` Utilities &amp; Misc Helpers (`utilities-misc-helpers`): cookie-consent-banners, age-verification-gates, back-to-top-buttons, sticky-action-bars, language-switchers, dark-mode-togglers, print-friendly-buttons, html-css-generators, iframe-embed-helpers
+
+**BUSINESS &gt; VERTICAL (BV)**
+- `B-V-01` Food &amp; Restaurant (`food-restaurant`): menu-widgets, online-ordering-widgets, table-reservation-widgets, delivery-zone-estimators, nutrition-calculators, qr-menu-generators
+- `B-V-02` Real Estate &amp; Property (`real-estate-property`): mortgage-calculators, property-listing-widgets, home-value-estimators, rental-yield-calculators, affordability-calculators, commission-calculators
+- `B-V-03` Education &amp; Training (`education-training`): course-catalog-widgets, enrollment-forms, tuition-calculators, gpa-grade-calculators, quiz-exam-builders, study-timers
+- `B-V-04` Health &amp; Medical (`health-medical`): appointment-booking-widgets, bmi-calorie-calculators, symptom-checker-widgets, dosage-calculators, due-date-calculators, insurance-coverage-checkers
+- `B-V-05` Travel &amp; Hospitality (`travel-hospitality`): trip-cost-calculators, booking-widgets, itinerary-planners, currency-tip-calculators, packing-list-tools, visa-requirement-checkers
+- `B-V-06` Finance &amp; Insurance (`finance-insurance`): insurance-premium-estimators, loan-calculators, claim-form-widgets, coverage-wizards, retirement-planners, savings-goal-calculators
+- `B-V-07` Automotive &amp; Transport (`automotive-transport`): car-loan-calculators, vehicle-configurators, service-booking-widgets, fuel-cost-calculators, vehicle-comparison-tools
+- `B-V-08` Nonprofit &amp; Community (`nonprofit-community`): donation-forms, fundraising-thermometers, volunteer-signup-forms, event-registration-forms, petition-widgets, impact-calculators
+- `B-V-09` Legal &amp; Professional Services (`legal-professional-services`): consultation-booking-widgets, fee-estimators, document-request-forms, case-evaluation-quizzes, settlement-calculators
+- `B-V-10` Beauty &amp; Fitness (`beauty-fitness`): salon-booking-widgets, membership-price-calculators, macro-calorie-calculators, fitness-plan-builders, class-schedule-widgets
+- `B-V-11` Construction &amp; Home Services (`construction-home-services`): quote-estimate-calculators, project-cost-estimators, material-calculators, service-area-checkers, renovation-wizards
+- `B-V-12` Events &amp; Entertainment (`events-entertainment`): ticket-booking-widgets, event-countdown-widgets, seat-picker-widgets, wedding-budget-calculators, party-planning-tools
+
+**PERSONAL &gt; GENERAL (PG)**
+- `P-G-01` Personal Finance (`personal-finance`): budget-calculators, savings-goal-calculators, loan-payoff-calculators, net-worth-trackers, investment-calculators
+- `P-G-02` Health &amp; Wellness (`health-wellness`): bmi-calculators, calorie-counters, hydration-trackers, sleep-calculators, workout-timers, meditation-timers
+- `P-G-03` Lifestyle &amp; Daily Life (`lifestyle-daily-life`): recipe-converters, meal-planners, shopping-list-tools, chore-schedulers, home-project-planners
+- `P-G-04` Learning &amp; Skills (`learning-skills`): flashcard-makers, quiz-makers, typing-test-widgets, reading-speed-tools, language-practice-widgets, study-timers
+- `P-G-05` Creative &amp; Hobbies (`creative-hobbies`): color-palette-generators, journal-tools, mood-board-makers, habit-trackers, reading-list-tools
+- `P-G-06` Utilities &amp; Misc Helpers (`utilities-misc-helpers`): personal-qr-generators, personal-password-tools, personal-file-tools, age-date-calculators, personal-countdown-tools
+
+**PERSONAL &gt; VERTICAL (PV)**
+- `P-V-01` Travel &amp; Outdoor (`travel-outdoor`): trip-cost-estimators, itinerary-builders, packing-list-tools, trail-route-finders, weather-widgets
+- `P-V-02` Sports &amp; Fitness (`sports-fitness`): pace-calculators, training-plan-calculators, tournament-bracket-builders, score-trackers
+- `P-V-03` Gaming &amp; Esports (`gaming-esports`): build-cost-calculators, dps-calculators, team-clan-tools, tournament-widgets
+- `P-V-04` Events &amp; Celebrations (`events-celebrations`): wedding-budget-calculators, gift-finder-quizzes, invitation-makers, birthday-planning-tools
+
+For every subcategory listed above, write **2-5 ideas**. Where a subcategory name is a group (e.g. `financial-calculators`), break it into 3-5 CONCRETE ideas (e.g. "Loan Repayment Calculator", "Compound Interest Calculator", "Salary Take-Home Calculator"). Add extra subcategories under a category when you find a real website need that does not fit (3-6 subcategories per category is the norm). Do not duplicate an idea name within a subcategory.
+
+---
+
+## 3. FILE 1: `WEBSITE-TOOLS/tools-catalog/folder-hierarchy-import.json`
+
+Exact schema (mirror this, complete all nodes, all leaves present):
+
+```json
+{
+  "meta": {
+    "schema": "uniconhub-website-tool-folder-taxonomy",
+    "version": "1.0.0",
+    "updatedAt": "2026-09-29",
+    "versionHistory": [
+      { "version": "1.0.0", "exportedAt": "2026-09-29", "note": "Initial website-tool hierarchy" }
+    ],
+    "importNote": "Folders are created ONLY by importing this file. Codes are stable - never rename or reuse a code. One tool = one folder = one subcategory."
+  },
+  "scalingRules": [
+    "Folders are created only by importing this file - never manually in a CMS UI.",
+    "Split rule - when a subcategory passes 60 tools, split it; new subcategory codes append the next letter; existing codes never change.",
+    "Utilities enforcement - B-G-14 and P-G-06 are parking spots only and must stay near-empty.",
+    "New categories or subcategories are deliberate decisions made in this file first.",
+    "Boundary rules - PERSONAL only for the user's own life (default BUSINESS); VERTICAL only for industry-specific content or workflow.",
+    "One tool = one folder = one subcategory in this file."
+  ],
+  "folders": [
+    {
+      "name": "Business",
+      "code": "B",
+      "slug": "business",
+      "order": 10,
+      "categories": [],
+      "children": [
+        {
+          "name": "General",
+          "code": "BG",
+          "slug": "general",
+          "order": 10,
+          "categories": [],
+          "children": [
+            {
+              "name": "Ecommerce &amp; Storefront",
+              "code": "B-G-01",
+              "slug": "ecommerce-storefront",
+              "order": 10,
+              "categories": [],
+              "children": [
+                {
+                  "name": "Product Catalog Widgets",
+                  "code": "B-G-01-a",
+                  "slug": "product-catalog-widgets",
+                  "order": 10,
+                  "categories": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Every node carries `name`, `code`, `slug`, `order` and `categories` (empty array for now). Orders are 10, 20, 30... in display sequence.
+
+## 4. FILE 2: `WEBSITE-TOOLS/tools-catalog/tool-ideas-catalog.json`
+
+```json
+{
+  "schema": "uniconhub-website-tool-idea-catalog",
+  "version": "1.0.0",
+  "generatedAt": "2026-09-29",
+  "disclaimer": "Directional planning estimates (order of magnitude), not market research. Validate user counts, TAM/SAM/SOM and licensing per idea before development.",
+  "licensingTypes": [
+    "freemium", "one-time", "per-site-license",
+    "subscription-monthly", "subscription-annual",
+    "usage-based", "white-label", "marketplace-commission"
+  ],
+  "metricNotes": {
+    "users": "Rough worldwide count of potential website owners or users for this widget niche.",
+    "tam": "Estimated global annual software spend (USD) for this niche - order of magnitude.",
+    "sam": "TAM narrowed to the SMB / reachable segment (about 10-25 percent).",
+    "som": "What a tool store could realistically capture within about 3 years (about 0.1-0.5 percent of SAM)."
+  },
+  "ideas": [
+    {
+      "code": "B-G-01-a",
+      "folder": "B-G-01-a",
+      "name": "Embeddable Product Catalog Grid",
+      "purpose": "Grid or list widget that displays products on any page with filters and quick view",
+      "users": "~2M online stores",
+      "tam": "$1.2B",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "per-site-license"
+    },
+    {
+      "code": "B-G-01-a",
+      "folder": "B-G-01-a",
+      "name": "Category Filter &amp; Sort Bar",
+      "purpose": "Faceted category filter bar for product listing pages",
+      "users": "~2M online stores",
+      "tam": "$900M",
+      "sam": "$130M",
+      "som": "$260K",
+      "licensing": "subscription-monthly",
+      "id": "B-G-01-a-2"
+    }
+  ]
+}
+```
+
+Rules: `code` = the subcategory code the idea belongs to; `folder` = same code; `name` = self-explanatory product name (no cryptic abbreviations); `purpose` = ONE sentence saying what the widget does on a public page; the FIRST idea in a subcategory has NO `id` field, every later idea gets `"id": "&lt;code&gt;-&lt;N&gt;"` (2, 3, 4... in catalog order). Every code in every idea must exist in the hierarchy file. Numbers must be believable order-of-magnitude estimates - vary them, do not stamp the same numbers everywhere.
+
+## 5. FILE 3: `WEBSITE-TOOLS/tools-catalog/catalog-data.js` (the single source of truth)
+
+A plain script file (no module syntax, no imports) declaring globals, so the page can load it with `&lt;script src="catalog-data.js"&gt;&lt;/script&gt;` from file:// (fetch/XHR are blocked on file:// - a script tag is NOT):
+
+```js
+// WEBSITE TOOLS CATALOG DATA - single source of truth.
+// Regenerate/export JSON copies from here. Do not edit the JSONs by hand.
+var WEBSITE_IDEA_GROUPS = [
+  {
+    branch: 'Business', type: 'General', categoryCode: 'B-G-01', category: 'Ecommerce &amp; Storefront',
+    subcategories: [
+      {
+        code: 'B-G-01-a', name: 'Product Catalog Widgets',
+        ideas: [
+          { id: 'B-G-01-a', name: 'Embeddable Product Catalog Grid', purpose: '...', users: '~2M online stores', tam: '$1.2B', sam: '$180M', som: '$360K', licensing: 'per-site-license' }
+        ]
+      }
+    ]
+  }
+];
+var WEBSITE_FOLDER_HIERARCHY = { /* the full hierarchy object from File 1, as one JS object literal */ };
+var WEBSITE_PUBLISH_STATE = { schema: 'uniconhub-website-tool-publish-state', tools: {} };
+var WEBSITE_IDEA_TOOLS = {}; // tool folder name -> idea id; empty until tools are built
+var WEBSITE_CATALOG_BUILT_AT = '2026-09-29';
+```
+
+Total target: **200-250 ideas**, every subcategory populated. The hierarchy object in `catalog-data.js` must be identical to File 1, and the ideas must be identical to File 2.
+
+## 6. FILE 4: `WEBSITE-TOOLS/tools-catalog/tool-ideas-catalog.html`
+
+A fully working, self-contained catalog page. `&lt;html lang="en"&gt;`, loads ONLY `catalog-data.js` as an external resource. Feature spec:
+
+**Layout (3 columns)**
+- LEFT: collapsible sidebar (a slim strip when collapsed, pushes content - never overlays). Shows branch (Business/Personal) -&gt; type (General/Vertical) -&gt; category -&gt; subcategory navigation with live idea counts next to each node. Clicking a node filters the main list. Active node highlighted.
+- MIDDLE: header with title "Website Tools Ideas Catalog" + stat chips (total ideas, subcategories, categories, built tools), then a sticky toolbar (search box, status filter select, sort select), then the list.
+- RIGHT: inline details pane (not a modal), sticky, ~460px. Shows the selected idea's name, subcategory path, purpose, market metrics (Users/TAM/SAM/SOM in a 4-cell grid), licensing, and a work-state block: status select + priority select + notes textarea that AUTOSAVE to localStorage on change.
+- Footer of the middle column: a collapsible `&lt;details&gt;` "About this page (reference notes)" explaining the taxonomy, the idea id scheme, and that built status is derived from tool folders.
+
+**List (one item per line, table)**
+Columns: Status | Idea | Market | Licensing | Built as | Details. Sortable column headers (click to sort, click again to flip direction, sort indicator arrow). Idea cell shows name + one-line purpose underneath. Built as shows the tool folder name when built, dash otherwise.
+
+**Behavior**
+- Status values: `backlog` (default), `planned`, `in-progress`, `built`, `skipped`. Built status is AUTO-DERIVED: if a tool folder in `WEBSITE_IDEA_TOOLS` maps to an idea, that idea shows `built` and the folder name, regardless of the stored status. All other statuses persist per-idea id in localStorage under one key.
+- Filters: search matches idea name + purpose. Status filter includes a "Built" option. Sort modes: order (catalog order), name, status, licensing, tam (numeric parse of `$..B/M/K` strings), som.
+- URL shortcuts on load: `?details=&lt;ideaId&gt;` (selects the idea's category so the row is visible, then opens the details pane), `?status=&lt;status&gt;`, `?sort=&lt;mode&gt;`.
+- Esc clears the details pane. Row click selects it (highlight + details pane).
+
+**Style**
+Professional slate palette: background `#f1f5f9`, panels white with `1px solid #e2e8f0` borders and `0 1px 3px rgba(15,23,42,.06)` shadows, ink `#0f172a`, muted `#64748b`, accent `#1e4e79`, accent-soft `#e8f0f8`. Font stack: `"Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif`. Status badges color-coded: planned blue, progress amber, built green, skipped red, backlog gray. Rounded corners ~10px. Responsive: below ~1200px the details pane drops below the list; below ~900px the sidebar collapses.
+
+**Constraints**
+- Vanilla JS in ONE inline `&lt;script&gt;` block at the end of `&lt;body&gt;`. No jQuery, no frameworks, no CDN, no fetch/XHR, no localStorage access outside the page itself, no alert/confirm (inline two-step buttons where confirmation is needed).
+- All text uses a hyphen `-`, never an em dash. No emojis in the UI - use plain text or simple glyphs (arrow characters are fine).
+- Every id referenced in JS must exist in the HTML. Validate by loading the page and clicking around before finishing.
+
+## 7. WRITING RULES (apply everywhere)
+
+- Hyphen `-`, never em dash. No emojis in files. No cryptic abbreviations - every name must be self-explanatory.
+- Idea names are product names a website owner would recognize (e.g. "Mortgage Payment Calculator", not "mort calc widget").
+- The catalog must work when opened by double-clicking `tool-ideas-catalog.html` on Windows (file:// protocol). No server, no build step.
+
+## 8. FINISHING CHECKS (run these yourself before reporting done)
+
+1. Validate all three data files (syntax-check `catalog-data.js`; the two JSON files must be valid JSON).
+2. Cross-check: every idea `code` exists as a subcategory in the hierarchy; every subcategory has 2-5 ideas; no duplicate idea names in a subcategory; ids follow the `code-N` scheme.
+3. Load the HTML, click through: sidebar navigation, search, status filter, sort, details pane, localStorage persistence of a status change, and the `?details=` deep link.
+4. Report: total counts (ideas, categories, subcategories) and a short list of the category tree you produced. Then STOP - the folder tree is built by a second prompt after this catalog is reviewed.
+</textarea>
+  </section>
+
+  <section class="prompt-block">
+    <div class="block-head">
+      <h2>Step 2 - Build the folder tree from the reviewed catalog</h2>
+      <div class="actions">
+        <button class="primary copy-btn" type="button" data-target="promptText2">Copy Prompt 2</button>
+        <button class="select-btn" type="button" data-target="promptText2">Select all</button>
+        <span class="status"></span>
+      </div>
+    </div>
+  <textarea id="promptText2" readonly spellcheck="false"># TASK: Build the Website Tools Folder Tree from the Existing Catalog
+
+You are continuing a workspace that already contains a REVIEWED website tools ideas catalog. Read it first - do not modify it.
+
+## 0. READ FIRST (single source of truth)
+
+- `WEBSITE-TOOLS/tools-catalog/catalog-data.js` is the single source of truth. It declares `WEBSITE_FOLDER_HIERARCHY` (the full taxonomy object), `WEBSITE_IDEA_GROUPS` (ideas grouped per subcategory) and `WEBSITE_IDEA_TOOLS`.
+- `WEBSITE-TOOLS/tools-catalog/folder-hierarchy-import.json` and `tool-ideas-catalog.json` are export copies.
+- If the JSONs disagree with `catalog-data.js`, follow `catalog-data.js` and REPORT the discrepancy - do not silently fix either file.
+
+## 1. YOUR DELIVERABLES
+
+1. The complete physical folder tree under `WEBSITE-TOOLS/BUSINESS/` and `WEBSITE-TOOLS/PERSONAL/` mirroring the hierarchy exactly.
+2. One example built-tool placeholder folder so the per-tool pattern is visible (see section 3).
+3. `WEBSITE-TOOLS/README.md` (see section 4).
+
+Do NOT touch the files in `WEBSITE-TOOLS/tools-catalog/`. Do NOT rename folders that already exist. Do NOT create folders that are not in the hierarchy.
+
+## 2. THE FOLDER TREE RULES
+
+- Mirror `WEBSITE_FOLDER_HIERARCHY` node by node. Each node becomes a real folder using its `slug` field, except the top two levels which use uppercase names: `BUSINESS`, `PERSONAL`, and under each `GENERAL`, `VERTICAL`.
+- Categories and subcategories use their kebab-case `slug` values, exactly as in the file.
+- Every LEAF subcategory folder (a node with no children) contains a `.gitkeep` file.
+- Folder names are COUNT-FREE - no `_N_of_M` counts anywhere.
+- No PascalCase at the taxonomy levels - PascalCase is reserved for tool folders.
+
+The result looks like:
+
+```
+WEBSITE-TOOLS/
+  BUSINESS/
+    GENERAL/
+      ecommerce-storefront/         &lt;- category slug
+        product-catalog-widgets/    &lt;- subcategory slug, contains .gitkeep
+        cart-checkout-widgets/      &lt;- .gitkeep
+        ...
+      appointments-calendar/
+        ...
+    VERTICAL/
+      food-restaurant/
+        menu-widgets/
+        ...
+      ...
+  PERSONAL/
+    GENERAL/
+    VERTICAL/
+```
+
+## 3. EXAMPLE TOOL PLACEHOLDER (proves the per-tool pattern)
+
+Create one example tool so the pattern is visible, e.g. `WEBSITE-TOOLS/BUSINESS/GENERAL/appointments-calendar/booking-scheduling-widgets/BookingWidget/app/` containing `BookingWidget.html`, `BookingWidget.css`, `BookingWidget.js`, `test-harness.html`, plus a `README.md` at the `BookingWidget/` level. The per-tool skeleton is:
+
+```
+&lt;ToolName&gt;/                 &lt;- PascalCase, no spaces
+  app/
+    &lt;ToolName&gt;.html         &lt;- body markup only (no html/head/style/script tags)
+    &lt;ToolName&gt;.css          &lt;- stylesheet rules only (no &lt;style&gt; tag)
+    &lt;ToolName&gt;.js           &lt;- JavaScript only (no &lt;script&gt; tag)
+    test-harness.html       &lt;- standalone demo page (full HTML, embeds the three files)
+  README.md                 &lt;- what the widget does + how to embed it
+```
+
+The example files can be minimal but must actually work as a static demo (e.g. the BookingWidget renders a date picker + time slot list and confirms a booking in the demo page).
+
+## 4. `WEBSITE-TOOLS/README.md`
+
+Explain: what the store is, the taxonomy rules (boundary rules, split rule, utilities parking spots), the folder naming convention, the catalog data flow (`catalog-data.js` is the single source of truth; the two JSON files are export copies), the per-tool skeleton, and the idea id scheme.
+
+## 5. FINISHING CHECKS
+
+1. Cross-check: every folder on disk matches a node in the hierarchy file, and every leaf has `.gitkeep`. No extra folders.
+2. If you found gaps in the catalog (a subcategory with zero ideas, an idea code missing from the hierarchy), do NOT fix them - list them in your report.
+3. Report: total counts (folders created, leaves, .gitkeep files) and the list of any discrepancies you found.</textarea>
+  </section>
+  <div class="hint">How to use: run Step 1 in the other AI app, review the catalog it produces, then run Step 2 in the SAME workspace so it can read the catalog files.</div>
+</main>
+<script>
+(function () {
+  function showStatus(statusEl, msg) {
+    statusEl.textContent = msg;
+    if (statusEl.__timer) { clearTimeout(statusEl.__timer); }
+    statusEl.__timer = setTimeout(function () { statusEl.textContent = ''; }, 4000);
+  }
+  function setupButtons(selector, onClick) {
+    var buttons = document.querySelectorAll(selector);
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', onClick);
+    }
+  }
+  setupButtons('.copy-btn', function () {
+    var ta = document.getElementById(this.getAttribute('data-target'));
+    var statusEl = this.parentNode.querySelector('.status');
+    function fallbackCopy() {
+      ta.focus();
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      showStatus(statusEl, ok ? 'Copied - ready to paste.' : 'Copy blocked - use Select all, then Ctrl+C.');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(function () {
+        showStatus(statusEl, 'Copied - ready to paste.');
+      }, fallbackCopy);
+    } else {
+      fallbackCopy();
+    }
+  });
+  setupButtons('.select-btn', function () {
+    var ta = document.getElementById(this.getAttribute('data-target'));
+    var statusEl = this.parentNode.querySelector('.status');
+    ta.focus();
+    ta.select();
+    showStatus(statusEl, 'Text selected - press Ctrl+C to copy.');
+  });
+})();
+</script>
+</body>
+</html>

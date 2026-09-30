@@ -416,6 +416,140 @@
       updateButtons();
     });
 
+    var REGISTRY_TYPE = 'volunteerRegistry-uniconbaseapps';
+
+    function isoNow() { return new Date().toISOString(); }
+
+    function mapRow(row) {
+      var v = row.values;
+      var first = v.firstName || v['first name'] || v.firstname || '';
+      var last = v.lastName || v['last name'] || v.lastname || '';
+      var email = v.email || v['e-mail'] || v['email address'] || '';
+      var phone = v.phone || v['phone number'] || v.mobile || '';
+      var city = v.city || v.town || '';
+      var skills = v.skills || '';
+      var availability = v.availability || v['availability notes'] || '';
+      if (!first && !last && v.name) {
+        var parts = String(v.name).trim().split(/\s+/);
+        first = parts[0] || '';
+        last = parts.slice(1).join(' ');
+      }
+      return {
+        firstName: String(first).trim(),
+        lastName: String(last).trim(),
+        email: String(email).trim().toLowerCase(),
+        phone: String(phone).trim(),
+        city: String(city).trim(),
+        skills: String(skills).trim(),
+        availabilityNotes: String(availability).trim()
+      };
+    }
+
+    function runImportChunks(ops, onDone) {
+      var size = 450; // keep each batch well under the Firestore writeBatch limits
+      var idx = 0;
+      function nextChunk() {
+        if (!state.busy) { onDone(true); return; }
+        if (idx >= ops.length) { onDone(false); return; }
+        var chunk = ops.slice(idx, idx + size);
+        idx += chunk.length;
+        tool.requestObjects('batch', { operations: chunk }, function (err) {
+          if (err) {
+            state.busy = false;
+            setStatus('Import failed: ' + err, '');
+            setError('Import failed: ' + err);
+            updateButtons();
+            return;
+          }
+          setStatus('Imported ' + Math.min(idx, ops.length) + ' of ' + ops.length + ' volunteers...', 'is-loading');
+          nextChunk();
+        });
+      }
+      nextChunk();
+    }
+
+    function performImport() {
+      if (state.busy) return;
+      state.busy = true;
+      updateButtons();
+      cancelBtn.hidden = false;
+      setStatus('Checking existing registry...', 'is-loading');
+      setError('');
+
+      tool.requestObjects('query', { mainObjectType: REGISTRY_TYPE }, function (err, result) {
+        if (err) {
+          state.busy = false;
+          setStatus('', '');
+          setError('Cannot read the volunteer registry: ' + err);
+          updateButtons();
+          return;
+        }
+        var existing = (result && result.objects) ? result.objects : [];
+        var byEmail = {};
+        existing.forEach(function (obj) {
+          var d = obj.productData && obj.productData.data_categoriesBased ? obj.productData.data_categoriesBased : {};
+          if (d.email) byEmail[String(d.email).toLowerCase()] = obj;
+        });
+
+        var ops = [];
+        var skipped = 0;
+        state.rows.forEach(function (row) {
+          var m = mapRow(row);
+          if (!m.email && !m.firstName && !m.lastName) { skipped++; return; }
+          var now = isoNow();
+          var profileData = {
+            firstName: m.firstName,
+            lastName: m.lastName,
+            email: m.email,
+            phone: m.phone,
+            city: m.city,
+            skills: m.skills,
+            availabilityNotes: m.availabilityNotes,
+            status: 'active',
+            consentGiven: true,
+            source: 'import',
+            joinedAt: now,
+            updatedAt: now
+          };
+          var found = m.email && byEmail[m.email];
+          if (found) {
+            ops.push({
+              action: 'update',
+              mainObjectType: REGISTRY_TYPE,
+              objectId: found.id,
+              productData: { data_categoriesBased: profileData }
+            });
+          } else {
+            var name = (m.firstName + ' ' + m.lastName).trim() || m.email || 'Imported Volunteer';
+            ops.push({
+              action: 'create',
+              mainObjectType: REGISTRY_TYPE,
+              name: name,
+              productData: { data_categoriesBased: profileData }
+            });
+          }
+        });
+
+        if (!ops.length) {
+          state.busy = false;
+          setStatus('Nothing to import' + (skipped ? ' (' + skipped + ' row(s) without name or email skipped).' : '.'), 'warning');
+          updateButtons();
+          return;
+        }
+
+        var skippedNote = skipped ? ' (' + skipped + ' empty row(s) skipped)' : '';
+        runImportChunks(ops, function (canceled) {
+          state.busy = false;
+          updateButtons();
+          if (canceled) {
+            setStatus('Import canceled.', 'warning');
+          } else {
+            setStatus('Imported ' + ops.length + ' volunteer' + (ops.length === 1 ? '' : 's') + ' into the registry.' + skippedNote, 'success');
+          }
+        });
+      });
+    }
+
     importBtn.addEventListener('click', function () {
       if (!canWrite()) {
         setError('You do not have permission to import volunteers.');
@@ -427,7 +561,7 @@
         setError(invalidMessage);
         return;
       }
-      setStatus('Importing is not wired yet.', 'warning');
+      performImport();
     });
 
     root.__vltRefresh = function () {

@@ -237,7 +237,7 @@
 
 /* ── Subjects ── */
 
-.mtn-head-actions { display: flex; align-items: center; gap: 8px; }
+.mtn-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .mtn-subject-head {
   display: flex;
@@ -260,19 +260,8 @@
   justify-content: center;
 }
 
-.mtn-subject-title {
-  flex: 1;
-  font-weight: 700;
-  font-size: 17px;
-  border-color: transparent;
-  background: #f8fafc;
-}
-.mtn-subject-title:focus { background: #ffffff; }
-
 .mtn-subject-body { display: none; padding-left: 2px; }
 .mtn-subject:not(.mtn-subject-collapsed) .mtn-subject-body { display: block; }
-
-.mtn-subject-notes { margin-bottom: 12px; font-size: 16px; line-height: 1.6; }
 
 .mtn-subject-empty {
   padding: 26px 12px;
@@ -776,7 +765,26 @@
   flex-wrap: wrap;
 }
 
-.mtn-project-zoom { display: flex; gap: 6px; margin-left: auto; }
+.mtn-project-zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+
+.mtn-project-zoom-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.mtn-project-bar .mtn-btn { padding: 6px 12px; font-size: 13px; }
+.mtn-bar-add-subject { font-weight: 700; }
 
 .mtn-project-counter {
   font-size: 13px;
@@ -1228,14 +1236,9 @@
 }
 .mtn-subj-status.done { background: #dcfce7; color: #166534; }
 .mtn-subject-done { opacity: 0.75; }
-.mtn-subject-done .mtn-subject-title { text-decoration: line-through; color: var(--muted); }
 
 /* ── Subjects reading mode (professional agenda view) ── */
-.mtn-subject-read { cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s; }
-.mtn-subject-read:hover {
-  border-color: var(--primary-soft);
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.09);
-}
+.mtn-subject-read { transition: border-color 0.12s, box-shadow 0.12s; }
 
 .mtn-subject-title-read {
   flex: 1;
@@ -1247,6 +1250,8 @@
   word-break: break-word;
 }
 .mtn-subject-done .mtn-subject-title-read { text-decoration: line-through; color: var(--muted); }
+
+.mtn-subject-tools { flex: 0 0 auto; display: inline-flex; gap: 4px; margin-left: 4px; }
 
 .mtn-subject-duration {
   flex: 0 0 auto;
@@ -1269,9 +1274,6 @@
   font-weight: 700;
   white-space: nowrap;
 }
-
-.mtn-subject-edit-btn { flex: 0 0 auto; }
-.mtn-subject-done-btn { flex: 0 0 auto; }
 
 .mtn-subject-notes-read {
   font-size: 15.5px;
@@ -1328,6 +1330,10 @@
   .mtn-section-head { flex-wrap: wrap; row-gap: 8px; }
   .mtn-card-head { flex-wrap: wrap; }
 
+  /* subjects head buttons share one full-width row on phones */
+  .mtn-head-actions { width: 100%; }
+  .mtn-head-actions .mtn-btn { flex: 1 1 0; padding-left: 8px; padding-right: 8px; }
+
   /* tab bar scrolls without showing a scrollbar */
   .mtn-tabs {
     padding: 0 6px;
@@ -1349,7 +1355,6 @@
   /* subject cards: head wraps, chips flow under the title */
   .mtn-subject-head { flex-wrap: wrap; gap: 6px 8px; }
   .mtn-subject-title-read { font-size: 18px; flex: 1 1 100%; }
-  .mtn-subject-edit-btn { margin-left: 0; }
   .mtn-subject-duration, .mtn-subject-spent { padding: 3px 10px; font-size: 11.5px; }
 
   /* task cards: labeled fields become full-width rows */
@@ -1389,6 +1394,17 @@
 
   /* raw notes + import textareas are comfortable to type in */
   .mtn-raw .mtn-textarea, #mtn-import-json { min-height: 110px; }
+
+  /* meeting mode bar: denser rows, text-size group gets its own row */
+  .mtn-project-bar { gap: 6px; padding: 8px 12px; }
+  .mtn-project-bar .mtn-btn { padding: 5px 10px; font-size: 12px; }
+  .mtn-project-zoom {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }
 
 /* ── Very small phones (≤ 400px) ── */
@@ -1399,4 +1415,5 @@
   .mtn-tab-count { margin-left: 4px; padding: 1px 6px; }
   .mtn-btn { padding: 8px 10px; }
   .mtn-project-zoom { gap: 4px; }
+  .mtn-head-actions .mtn-btn { font-size: 12px; padding-left: 6px; padding-right: 6px; }
 }

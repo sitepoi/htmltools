@@ -28,6 +28,15 @@ GOLDEN RULE (never broken)
 - If any phase fails, STOP, fix it, and report - never skip a phase to reach
   the push.
 
+DOCUMENTATION CADENCE (never broken)
+- The SSOT (docs/ssot.html) is updated with EVERY code change - in the same
+  change, immediately. It is the living source of truth.
+- ALL other documents are built ONLY on SHIP, never on routine updates: the
+  5 satellite documents (webpage, help, presentation, social and the
+  updates Highlights), the release rows, the screenshots, the index code
+  panes and the screenshots viewer payload. Regenerating them between ships
+  is wasted effort - SHIP rebuilds them all in one pass.
+
 CODE PROTECTION RULES (public pages - never broken)
 The tool's code is the store's product. Public pages must make it
 IMPOSSIBLE - not just hard - for a visitor, scraper or AI to reach it:
@@ -313,8 +322,8 @@ between the GENERATED markers).
     the actual files on disk - never hand-write shot paths into content.)
 
 3.8 Code panes freshness (docs/index.html)
-    The index embeds the tool's HTML/CSS/JS for viewing and copying - after
-    every code change, refresh those panes for each changed tool:
+    The index embeds the tool's HTML/CSS/JS for viewing and copying -
+    refresh those panes here on SHIP (never on routine updates):
       npm run docs:index-code -- <ToolName>
     (Mode A: npm run rel does this automatically for changed tools.)
     CENTRALIZED SHELL: docs/index.html carries ONLY the tool's data (the
@@ -323,8 +332,9 @@ between the GENERATED markers).
     a per-tool index; change the shared assets instead.
 
 3.9 Screenshots freshness (docs/screenshots/)
-    After code changes that touch what a customer sees (dashboard, lists,
-    reports, documents areas), refresh the tool's marketing screenshots:
+    On SHIP, refresh the tool's marketing screenshots (the customer-visible
+    areas: dashboard, lists, reports, documents). Captures happen on SHIP
+    only - never on routine updates:
       npm run screenshots -- <ToolName>
     Nine shots per tool: 01-dashboard-desktop (1440x900), 02-dashboard-
     mobile (390x844), 03-documents, 04-transactions, 05-expense-finder,
@@ -346,8 +356,8 @@ between the GENERATED markers).
     The index has a MEDIA → Screenshots viewer: large preview with
     prev/next, an info panel below (file, shot label, page, viewport,
     dimensions, capture time, which docs use the shot) and a thumbnail
-    strip - all from the embedded SCREENSHOTS-PAYLOAD. After capturing or
-    after any doc starts using a shot, refresh the payload:
+    strip - all from the embedded SCREENSHOTS-PAYLOAD. During SHIP, after
+    capturing or after any doc starts using a shot, refresh the payload:
       npm run docs:index-shots -- <ToolName>
     (Mode A: npm run rel does this automatically right after the capture.)
     The "Used in" row must list every document that references the shot -

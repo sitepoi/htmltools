@@ -15,6 +15,9 @@ body { padding-top: 28px !important; margin: 0; }
 #th-bar .btn-clear { background: #dc2626; color: #fff; }
 #th-bar .btn-reload { background: #16a34a; color: #fff; }
 #th-bar .hint { color: #64748b; font-size: 10px; }
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none; }
+body.th-bare #app-container { min-height: 100vh; }
 </style>
 </head>
 <body>
@@ -81,10 +84,10 @@ body { padding-top: 28px !important; margin: 0; }
   </div>
 </div>
 <!-- Modals -->
-<div class="modal-overlay" id="modalRegister"><div class="modal"><div class="modal-header"><h3>🙋 Register as Volunteer</h3><button class="modal-close" onclick="closeModal('modalRegister')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Your Skills & Experience</label><textarea class="form-textarea" id="regSkills" placeholder="Describe your relevant skills, experience, and what you can help with..."></textarea></div><div class="form-group"><label class="form-label">Availability Notes</label><textarea class="form-textarea" id="regAvailability" placeholder="Your availability during the event (dates, times, constraints)..."></textarea></div><div class="form-group"><label class="form-label">Why do you want to volunteer?</label><textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button><button class="btn btn-primary" onclick="submitRegistration()">Submit Registration</button></div></div></div>
+<div class="modal-overlay" id="modalRegister"><div class="modal"><div class="modal-header"><h3>🙋 Register as Volunteer</h3><button class="modal-close" onclick="closeModal('modalRegister')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">Your Skills & Experience</label><textarea class="form-textarea" id="regSkills" placeholder="Describe your relevant skills, experience, and what you can help with..."></textarea></div><div class="form-group"><label class="form-label">Availability Notes</label><textarea class="form-textarea" id="regAvailability" placeholder="Your availability during the event (dates, times, constraints)..."></textarea></div><div class="form-group"><label class="form-label">Why do you want to volunteer?</label><textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea></div><div class="form-group" id="regUserPickerGroup" style="display:none;"><label class="form-label">Volunteer (permitted user)</label><select class="form-select" id="regUserPicker"><option value="">-- Select a permitted user --</option></select><div class="form-hint">Only users with permission on this event are listed.</div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button><button class="btn btn-primary" onclick="submitRegistration()">Submit Registration</button></div></div></div>
 <div class="modal-overlay" id="modalTask"><div class="modal"><div class="modal-header"><h3 id="modalTaskTitle">📋 Create Task</h3><button class="modal-close" onclick="closeModal('modalTask')">✕</button></div><div class="modal-body"><input type="hidden" id="editTaskId"><div class="form-group"><label class="form-label">Task Name</label><input type="text" class="form-input" id="taskName" placeholder="e.g. Setup Registration Desk"></div><div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="taskDesc" placeholder="Describe the task in detail..."></textarea></div><div class="form-row"><div class="form-group"><label class="form-label">Assign To</label><select class="form-select" id="taskAssignee"><option value="">-- Unassigned (Open) --</option></select></div><div class="form-group"><label class="form-label">Due Date</label><input type="date" class="form-input" id="taskDueDate"></div></div><div class="form-row"><div class="form-group"><label class="form-label">Estimated Hours</label><input type="number" class="form-input" id="taskEstHours" placeholder="e.g. 4" min="0.5" step="0.5"></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="taskStatus"><option value="open">Open</option><option value="assigned">Assigned</option><option value="in-progress">In Progress</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select></div></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalTask')">Cancel</button><button class="btn btn-primary" id="btnSaveTask" onclick="saveTask()">Create Task</button></div></div></div>
 <div class="modal-overlay" id="modalHours"><div class="modal"><div class="modal-header"><h3>⏱️ Log Hours</h3><button class="modal-close" onclick="closeModal('modalHours')">✕</button></div><div class="modal-body"><input type="hidden" id="editHourId"><div class="form-group"><label class="form-label">Task</label><select class="form-select" id="hourTaskId"><option value="">-- Select Task --</option></select></div><div class="form-row"><div class="form-group"><label class="form-label">Date Worked</label><input type="date" class="form-input" id="hourDate"></div><div class="form-group"><label class="form-label">Hours</label><input type="number" class="form-input" id="hourAmount" placeholder="e.g. 3.5" min="0.5" step="0.5"></div></div><div class="form-group"><label class="form-label">Description of Work Done</label><textarea class="form-textarea" id="hourDesc" placeholder="Describe what you accomplished..."></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalHours')">Cancel</button><button class="btn btn-primary" id="btnSaveHours" onclick="saveHours()">Log Hours</button></div></div></div>
-<div class="modal-overlay" id="modalMessage"><div class="modal"><div class="modal-header"><h3>💬 Send Message</h3><button class="modal-close" onclick="closeModal('modalMessage')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">To</label><select class="form-select" id="msgTo"><option value="managers">All Event Managers</option></select></div><div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="msgSubject" placeholder="Message subject..."></div><div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="msgBody" placeholder="Type your message..." style="min-height:120px;"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalMessage')">Cancel</button><button class="btn btn-primary" onclick="sendMessage()">Send Message</button></div></div></div>
+<div class="modal-overlay" id="modalMessage"><div class="modal"><div class="modal-header"><h3>💬 Send Message</h3><button class="modal-close" onclick="closeModal('modalMessage')">✕</button></div><div class="modal-body"><div class="form-group"><label class="form-label">To</label><select class="form-select" id="msgTo"><option value="managers">All Event Managers</option></select></div><div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="msgSubject" placeholder="Message subject..."></div><div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" id="msgBody" maxlength="8000" placeholder="Type your message..." style="min-height:120px;"></textarea></div></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalMessage')">Cancel</button><button class="btn btn-primary" onclick="sendMessage()">Send Message</button></div></div></div>
 <div class="modal-overlay" id="modalConfirm"><div class="modal"><div class="modal-header"><h3 id="confirmTitle">Confirm</h3><button class="modal-close" onclick="closeModal('modalConfirm')">✕</button></div><div class="modal-body" id="confirmBody"></div><div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modalConfirm')">Cancel</button><button class="btn btn-primary" id="confirmBtn">Confirm</button></div></div></div>
 <!-- ═══════════════ END INLINED TOOL HTML ═══════════════ -->
 </div>
@@ -265,9 +268,60 @@ body { padding-top: 28px !important; margin: 0; }
           localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify(_user));
           localStorage.setItem(STORAGE_PREFIX + 'permitted_users', JSON.stringify(_permittedUsers));
         }
+
+        // Seed the full sample set once so the tool is never empty
+        if (!loadObjects('volunteerRegistry-uniconbaseapps').length) {
+          seedSampleData();
+        }
         cb(_value, _fields);
       }, 50);
     }
+  };
+
+  // ── Sample data (used by first load and the screenshot pipeline) ──
+  function seedSampleData() {
+    var nowIso = new Date().toISOString();
+    var day = 24 * 60 * 60 * 1000;
+    function isoDays(n) { return new Date(Date.now() + n * day).toISOString(); }
+
+    saveObjects('volunteerRegistry-uniconbaseapps', [
+      { id: 'reg_vol1', name: 'Bob Volunteer', productData: { data_categoriesBased: { userId: 'usr_vol1', firstName: 'Bob', lastName: 'Volunteer', email: 'bob@example.com', phone: '+1 555 0101', city: 'Springfield', skills: 'Registration, Setup', interests: 'Community events', availabilityNotes: 'Weekends', status: 'active', consentGiven: true, joinedAt: isoDays(-120), updatedAt: nowIso, source: 'public-app', notes: '' } } },
+      { id: 'reg_vol2', name: 'Carol Helper', productData: { data_categoriesBased: { userId: 'usr_vol2', firstName: 'Carol', lastName: 'Helper', email: 'carol@example.com', phone: '+1 555 0102', city: 'Springfield', skills: 'Food service, Cleaning', interests: 'Fundraising', availabilityNotes: 'Weekday evenings', status: 'active', consentGiven: true, joinedAt: isoDays(-90), updatedAt: nowIso, source: 'public-app', notes: '' } } },
+      { id: 'reg_vol3', name: 'Dave Supporter', productData: { data_categoriesBased: { userId: 'usr_vol3', firstName: 'Dave', lastName: 'Supporter', email: 'dave@example.com', phone: '+1 555 0103', city: 'Riverside', skills: 'Driving, Logistics', interests: 'Youth programs', availabilityNotes: 'Flexible', status: 'active', consentGiven: true, joinedAt: isoDays(-60), updatedAt: nowIso, source: 'import', notes: '' } } }
+    ]);
+
+    saveObjects('vm.eventApplications-uniconbaseapps', [
+      { id: 'app_1', name: 'Carol Helper', productData: { data_categoriesBased: { registryProfileId: 'reg_vol2', volunteerUserId: 'usr_vol2', status: 'pending', appliedAt: isoDays(-2), notes: 'Happy to help with food service during the event.', reviewedAt: '', reviewedBy: '' } } },
+      { id: 'app_2', name: 'Bob Volunteer', productData: { data_categoriesBased: { registryProfileId: 'reg_vol1', volunteerUserId: 'usr_vol1', status: 'approved', appliedAt: isoDays(-10), notes: 'Experienced with registration desks.', reviewedAt: isoDays(-8), reviewedBy: 'Alice Manager' } } },
+      { id: 'app_3', name: 'Dave Supporter', productData: { data_categoriesBased: { registryProfileId: 'reg_vol3', volunteerUserId: 'usr_vol3', status: 'approved', appliedAt: isoDays(-5), notes: 'Can drive the supply van.', reviewedAt: isoDays(-4), reviewedBy: 'Alice Manager' } } }
+    ]);
+
+    saveObjects('vm.eventTasks-uniconbaseapps', [
+      { id: 'task_1', name: 'Welcome Desk Setup', productData: { data_categoriesBased: { description: 'Set up the welcome and registration desk before doors open.', status: 'in-progress', assignedVolunteerUserId: 'usr_vol1', assignedRegistryProfileId: 'reg_vol1', dueDate: isoDays(1).slice(0, 10) + 'T00:00:00Z', estimatedHours: 3, createdAt: isoDays(-5), completedAt: '' } } },
+      { id: 'task_2', name: 'Food Service Shift', productData: { data_categoriesBased: { description: 'Serve lunch and keep the dining area tidy.', status: 'assigned', assignedVolunteerUserId: 'usr_vol3', assignedRegistryProfileId: 'reg_vol3', dueDate: isoDays(2).slice(0, 10) + 'T00:00:00Z', estimatedHours: 4, createdAt: isoDays(-4), completedAt: '' } } },
+      { id: 'task_3', name: 'Signage and Banners', productData: { data_categoriesBased: { description: 'Place directional signage around the venue.', status: 'open', assignedVolunteerUserId: '', assignedRegistryProfileId: '', dueDate: isoDays(3).slice(0, 10) + 'T00:00:00Z', estimatedHours: 2, createdAt: isoDays(-3), completedAt: '' } } },
+      { id: 'task_4', name: 'Registration Check-in', productData: { data_categoriesBased: { description: 'Check attendees in at the registration desk.', status: 'completed', assignedVolunteerUserId: 'usr_vol1', assignedRegistryProfileId: 'reg_vol1', dueDate: isoDays(-1).slice(0, 10) + 'T00:00:00Z', estimatedHours: 2, createdAt: isoDays(-7), completedAt: isoDays(-1) } } }
+    ]);
+
+    saveObjects('vm.eventHours-uniconbaseapps', [
+      { id: 'hour_1', name: 'Hours - Registration Check-in', productData: { data_categoriesBased: { volunteerUserId: 'usr_vol1', registryProfileId: 'reg_vol1', taskId: 'task_4', taskName: 'Registration Check-in', date: isoDays(-1).slice(0, 10) + 'T00:00:00Z', hoursLogged: 2, description: 'Checked in 80 attendees.', status: 'approved', reviewedBy: 'Alice Manager', reviewedAt: isoDays(-1) } } },
+      { id: 'hour_2', name: 'Hours - Welcome Desk Setup', productData: { data_categoriesBased: { volunteerUserId: 'usr_vol1', registryProfileId: 'reg_vol1', taskId: 'task_1', taskName: 'Welcome Desk Setup', date: nowIso.slice(0, 10) + 'T00:00:00Z', hoursLogged: 1.5, description: 'Assembled the welcome desk and signage stands.', status: 'pending', reviewedBy: '', reviewedAt: '' } } },
+      { id: 'hour_3', name: 'Hours - Food Service Shift', productData: { data_categoriesBased: { volunteerUserId: 'usr_vol3', registryProfileId: 'reg_vol3', taskId: 'task_2', taskName: 'Food Service Shift', date: nowIso.slice(0, 10) + 'T00:00:00Z', hoursLogged: 3, description: 'Served the first lunch shift.', status: 'pending', reviewedBy: '', reviewedAt: '' } } }
+    ]);
+
+    saveObjects('vm.eventMessages-uniconbaseapps', [
+      { id: 'msg_1', name: 'Can I also help with cleanup?', productData: { data_categoriesBased: { fromUserId: 'usr_vol1', fromName: 'Bob Volunteer', fromRole: 'volunteer', toUserId: 'managers', toLabel: 'Event Managers', subject: 'Can I also help with cleanup?', body: 'Hi! My registration shift ends at 2pm - I can stay for the cleanup crew afterwards if you still need people.', sentAt: isoDays(-1), read: false } } },
+      { id: 'msg_2', name: 'Welcome briefing', productData: { data_categoriesBased: { fromUserId: 'usr_manager1', fromName: 'Alice Manager', fromRole: 'manager', toUserId: 'all-volunteers', toLabel: 'All Volunteers', subject: 'Welcome briefing', body: 'Thanks everyone for joining! The welcome briefing is on Friday at 5pm at the main hall entrance.', sentAt: isoDays(-2), read: false } } }
+    ]);
+  }
+
+  window.tool._seedSampleData = function() {
+    ['volunteerRegistry-uniconbaseapps', 'vm.eventApplications-uniconbaseapps', 'vm.eventTasks-uniconbaseapps', 'vm.eventHours-uniconbaseapps', 'vm.eventMessages-uniconbaseapps'].forEach(function(t) {
+      localStorage.removeItem(storageKey(t));
+    });
+    seedSampleData();
+    localStorage.setItem(STORAGE_PREFIX + 'seeded', '1');
+    location.reload();
   };
 
   function el(id) { return document.getElementById(id); }
@@ -295,6 +349,47 @@ body { padding-top: 28px !important; margin: 0; }
     });
     el('th-reload').addEventListener('click', function() { location.reload(); });
   });
+
+  // ── QA shortcuts for the screenshot pipeline: ?bare=1&sample=1&page=<page>&role=<role> ──
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('bare') === '1') {
+      document.body.classList.add('th-bare');
+    }
+    var page = params.get('page');
+    var role = params.get('role');
+    if (page === 'documents' || role === 'volunteer') {
+      localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify({ id: 'usr_vol1', name: 'Bob Volunteer', email: 'bob@example.com', roles: ['viewer'] }));
+    } else if (role === 'manager') {
+      localStorage.setItem(STORAGE_PREFIX + 'mock_user', JSON.stringify({ id: 'usr_manager1', name: 'Alice Manager', email: 'alice@example.com', roles: ['admin', 'editor'] }));
+    }
+    if (params.get('sample') === '1') {
+      setTimeout(function() {
+        if (!localStorage.getItem(STORAGE_PREFIX + 'seeded')) {
+          window.tool._seedSampleData();
+        }
+      }, 400);
+    }
+    if (page) {
+      var pageMap = {
+        dashboard: 'dashboard',
+        documents: 'certificate',
+        transactions: 'hours',
+        finder: 'volunteers',
+        gst: 'tasks',
+        assistant: 'messages',
+        reports: 'hours',
+        settings: 'volunteers'
+      };
+      var targetTab = pageMap[page];
+      if (targetTab) {
+        setTimeout(function() {
+          var tabButton = document.querySelector('.tab-btn[data-tab="' + targetTab + '"]');
+          if (tabButton) tabButton.click();
+        }, 1600);
+      }
+    }
+  })();
 })();
 </script>
 

@@ -171,6 +171,13 @@
         <label class="form-label">Why do you want to volunteer?</label>
         <textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea>
       </div>
+      <div class="form-group" id="regUserPickerGroup" style="display:none;">
+        <label class="form-label">Volunteer (permitted user)</label>
+        <select class="form-select" id="regUserPicker">
+          <option value="">-- Select a permitted user --</option>
+        </select>
+        <div class="form-hint">Only users with permission on this event are listed.</div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button>
@@ -289,7 +296,7 @@
       </div>
       <div class="form-group">
         <label class="form-label">Message</label>
-        <textarea class="form-textarea" id="msgBody" placeholder="Type your message..." style="min-height:120px;"></textarea>
+        <textarea class="form-textarea" id="msgBody" maxlength="8000" placeholder="Type your message..." style="min-height:120px;"></textarea>
       </div>
     </div>
     <div class="modal-footer">

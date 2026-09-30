@@ -28,11 +28,12 @@ function fmtDateTime(d) {
 
 function isoNow() { return new Date().toISOString(); }
 
-/* ── CMS Type Names ── */
-var TYPE_VOLUNTEERS = 'vm.volunteers-uniconbaseapps';
-var TYPE_TASKS      = 'vm.tasks-uniconbaseapps';
-var TYPE_HOURS      = 'vm.hours-uniconbaseapps';
-var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
+/* ── CMS Type Names (D-VM-02, D-VM-03, D-VM-05) ── */
+var TYPE_REGISTRY     = 'volunteerRegistry-uniconbaseapps'; // shared SSOT - one doc per volunteer profile
+var TYPE_APPLICATIONS = 'vm.eventApplications-uniconbaseapps';
+var TYPE_TASKS        = 'vm.eventTasks-uniconbaseapps';
+var TYPE_HOURS        = 'vm.eventHours-uniconbaseapps';
+var TYPE_MESSAGES     = 'vm.eventMessages-uniconbaseapps';
 
 /* ── State ── */
 var APP = {
@@ -42,17 +43,21 @@ var APP = {
   currentTab: 'dashboard',
 
   // Data caches
-  volunteers: [],      // volunteer registration records
+  registry: [],        // volunteer profile records (shared SSOT)
+  applications: [],    // event membership records (instance)
   tasks: [],           // task records
   hours: [],           // hour log records
   messages: [],        // message records
   permittedUsers: [],  // from tool.getPermittedUsers()
 
-  // My volunteer record (if current user is registered)
-  myVolunteer: null,
+  registryError: '',   // non-empty when the registry could not be loaded
+
+  // My records (if current user is registered)
+  myProfile: null,     // my registry profile
+  myApplication: null, // my application for THIS event
 
   // Data loaded flags
-  loaded: { volunteers: false, tasks: false, hours: false, messages: false },
+  loaded: { registry: false, applications: false, tasks: false, hours: false, messages: false },
 
   // Pending confirm callback
   _confirmCb: null
@@ -119,14 +124,31 @@ function deleteObject(type, objectId, cb) {
 }
 
 /* ── Data Loading ── */
+function getRegistryType() {
+  try { return tool.param('registryType', TYPE_REGISTRY); } catch(e) { return TYPE_REGISTRY; }
+}
+
 function loadAllData(cb) {
-  var pending = 4;
+  var pending = 5;
   function done() { pending--; if (pending <= 0 && cb) cb(); }
 
-  queryObjects(TYPE_VOLUNTEERS, function(err, objs) {
-    APP.volunteers = objs || [];
-    APP.loaded.volunteers = true;
-    findMyVolunteer();
+  queryObjects(getRegistryType(), function(err, objs) {
+    if (err) {
+      APP.registryError = err;
+      APP.registry = [];
+      reportRegistryConfigError();
+    } else {
+      APP.registryError = '';
+      APP.registry = objs || [];
+    }
+    APP.loaded.registry = true;
+    findMyRecords();
+    done();
+  });
+  queryObjects(TYPE_APPLICATIONS, function(err, objs) {
+    APP.applications = objs || [];
+    APP.loaded.applications = true;
+    findMyRecords();
     done();
   });
   queryObjects(TYPE_TASKS, function(err, objs) {
@@ -146,34 +168,58 @@ function loadAllData(cb) {
   });
 }
 
-function findMyVolunteer() {
-  if (!APP.user) { APP.myVolunteer = null; return; }
+function findMyRecords() {
+  if (!APP.user) { APP.myProfile = null; APP.myApplication = null; return; }
   var uid = APP.user.id;
-  APP.myVolunteer = null;
-  for (var i = 0; i < APP.volunteers.length; i++) {
-    var v = APP.volunteers[i];
-    var d = (v.productData && v.productData.data_categoriesBased) ? v.productData.data_categoriesBased : {};
-    if (d.userId === uid) { APP.myVolunteer = v; return; }
-  }
+  APP.myProfile = getRegistryProfileByUserId(uid);
+  APP.myApplication = getApplicationByUserId(uid);
 }
 
 /* ── Get data helpers ── */
 function vd(v) { return (v && v.productData && v.productData.data_categoriesBased) ? v.productData.data_categoriesBased : {}; }
 
-function getApprovedVolunteers() {
-  return APP.volunteers.filter(function(v) { return vd(v).status === 'approved'; });
+function profileName(p) {
+  var d = vd(p);
+  if (d.firstName || d.lastName) return (d.firstName + ' ' + d.lastName).trim();
+  return d.email || p.name || 'Unknown';
 }
 
-function getVolunteerByUserId(uid) {
-  for (var i = 0; i < APP.volunteers.length; i++) {
-    if (vd(APP.volunteers[i]).userId === uid) return APP.volunteers[i];
+function getRegistryProfileByUserId(uid) {
+  for (var i = 0; i < APP.registry.length; i++) {
+    if (vd(APP.registry[i]).userId === uid) return APP.registry[i];
   }
   return null;
 }
 
-function getVolunteerName(volunteerObj) {
-  var d = vd(volunteerObj);
-  return d.userName || volunteerObj.name || 'Unknown';
+function getRegistryProfileById(profileId) {
+  for (var i = 0; i < APP.registry.length; i++) {
+    if (APP.registry[i].id === profileId) return APP.registry[i];
+  }
+  return null;
+}
+
+function getApplicationByUserId(uid) {
+  for (var i = 0; i < APP.applications.length; i++) {
+    if (vd(APP.applications[i]).volunteerUserId === uid) return APP.applications[i];
+  }
+  return null;
+}
+
+function getApplicationById(id) {
+  for (var i = 0; i < APP.applications.length; i++) {
+    if (APP.applications[i].id === id) return APP.applications[i];
+  }
+  return null;
+}
+
+function getApprovedVolunteers() {
+  return APP.applications.filter(function(a) { return vd(a).status === 'approved'; });
+}
+
+function approvedUserName(application) {
+  var d = vd(application);
+  var profile = getRegistryProfileByUserId(d.volunteerUserId);
+  return profile ? profileName(profile) : 'Unknown';
 }
 
 function getTaskById(id) {
@@ -181,6 +227,23 @@ function getTaskById(id) {
     if (APP.tasks[i].id === id) return APP.tasks[i];
   }
   return null;
+}
+
+/* ── Missing registry configuration report (T-07) ── */
+function reportRegistryConfigError() {
+  try {
+    tool.reportMissingParams([
+      {
+        name: 'registryType',
+        label: 'Volunteer Registry Type ID',
+        type: 'text',
+        default: 'volunteerRegistry-uniconbaseapps',
+        hint: 'CMS object type for volunteer profiles (shared registry SSOT)',
+        reason: 'Cannot load the volunteer registry without this type in settings.allowedObjectTypes.',
+        severity: 'mandatory'
+      }
+    ], 'This tool needs the volunteer registry type authorized before it can list volunteers.');
+  } catch(e) {}
 }
 
 /* ── UI: Tab Switching ── */
@@ -213,8 +276,8 @@ function renderCurrentTab() {
 function renderDashboard() {
   // Stats
   var approved = getApprovedVolunteers();
-  var totalVols = APP.volunteers.length;
-  var pendingVols = APP.volunteers.filter(function(v) { return vd(v).status === 'pending'; }).length;
+  var totalProfiles = APP.registry.length;
+  var pendingVols = APP.applications.filter(function(a) { return vd(a).status === 'pending'; }).length;
   var openTasks = APP.tasks.filter(function(t) { var s = vd(t).status; return s === 'open' || s === 'assigned' || s === 'in-progress'; }).length;
   var completedTasks = APP.tasks.filter(function(t) { return vd(t).status === 'completed'; }).length;
   var totalHours = 0;
@@ -239,25 +302,31 @@ function renderDashboard() {
   statsHtml += '<div class="stat-card"><div class="stat-icon" style="background:#d1fae5;">✅</div><div class="stat-value">' + completedTasks + '</div><div class="stat-label">Completed Tasks</div></div>';
   statsHtml += '<div class="stat-card"><div class="stat-icon" style="background:#ede9fe;">⏱️</div><div class="stat-value">' + totalHours.toFixed(1) + '</div><div class="stat-label">Total Approved Hours</div></div>';
   statsHtml += '<div class="stat-card"><div class="stat-icon" style="background:#fee2e2;">💬</div><div class="stat-value">' + unreadMsgs + '</div><div class="stat-label">Unread Messages</div></div>';
+  if (APP.isManager) {
+    statsHtml += '<div class="stat-card"><div class="stat-icon" style="background:#fef3c7;">🗂️</div><div class="stat-value">' + totalProfiles + '</div><div class="stat-label">Registry Profiles</div></div>';
+  }
+  if (APP.registryError) {
+    statsHtml = '<div class="card" style="margin-bottom:14px;"><div class="card-body" style="color:var(--danger);">⚠️ Volunteer registry unavailable: ' + esc(APP.registryError) + '. Configure the registry type in the tool settings (see the banner above).</div></div>' + statsHtml;
+  }
   el('dashStats').innerHTML = statsHtml;
 
   // My Status
   var myStatus = el('dashMyStatus');
   var myStatusBody = el('dashMyStatusBody');
   if (!APP.isManager) {
-    if (APP.myVolunteer) {
-      var md = vd(APP.myVolunteer);
-      var statusClass = 'badge-' + md.status;
-      myStatus.style.display = '';
+    myStatus.style.display = '';
+    if (APP.myApplication) {
+      var ma = vd(APP.myApplication);
+      var mp = APP.myProfile ? vd(APP.myProfile) : {};
+      var statusClass = 'badge-' + ma.status;
       myStatusBody.innerHTML =
-        '<p><strong>Status:</strong> <span class="badge ' + statusClass + '">' + esc(md.status) + '</span></p>' +
-        (md.skills ? '<p><strong>Skills:</strong> ' + esc(md.skills) + '</p>' : '') +
-        (md.reviewedAt ? '<p><strong>Reviewed:</strong> ' + fmtDate(md.reviewedAt) + ' by ' + esc(md.reviewedBy || '—') + '</p>' : '');
-      if (md.status === 'rejected') {
+        '<p><strong>Status:</strong> <span class="badge ' + statusClass + '">' + esc(ma.status) + '</span></p>' +
+        (mp.skills ? '<p><strong>Skills:</strong> ' + esc(mp.skills) + '</p>' : '') +
+        (ma.reviewedAt ? '<p><strong>Reviewed:</strong> ' + fmtDate(ma.reviewedAt) + ' by ' + esc(ma.reviewedBy || '—') + '</p>' : '');
+      if (ma.status === 'rejected') {
         myStatusBody.innerHTML += '<button class="btn btn-sm btn-primary" style="margin-top:8px;" onclick="openRegisterModal()">🔄 Re-apply</button>';
       }
     } else {
-      myStatus.style.display = '';
       myStatusBody.innerHTML =
         '<div class="empty-state"><div class="empty-state-icon">🙋</div><h4>Not Registered Yet</h4><p>Join as a volunteer for this event! Click below to submit your registration.</p>' +
         '<button class="btn btn-primary btn-lg" onclick="openRegisterModal()">🙋 Register as Volunteer</button></div>';
@@ -271,16 +340,18 @@ function renderDashboard() {
   if (APP.isManager && pendingVols > 0) {
     pendingDiv.style.display = '';
     var pendHTML = '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Skills</th><th>Applied</th><th></th></tr></thead><tbody>';
-    APP.volunteers.forEach(function(v) {
-      var d = vd(v);
+    APP.applications.forEach(function(a) {
+      var d = vd(a);
       if (d.status !== 'pending') return;
+      var profile = getRegistryProfileByUserId(d.volunteerUserId);
+      var pd = profile ? vd(profile) : {};
       pendHTML += '<tr>' +
-        '<td><strong>' + esc(d.userName || v.name) + '</strong></td>' +
-        '<td>' + esc(d.userEmail || '') + '</td>' +
-        '<td>' + esc((d.skills || '').slice(0, 60)) + '</td>' +
-        '<td>' + fmtDate(d.registeredAt) + '</td>' +
-        '<td><button class="btn btn-sm btn-success" onclick="approveVolunteer(\'' + v.id + '\')">✅ Approve</button> ' +
-        '<button class="btn btn-sm btn-danger" onclick="rejectVolunteer(\'' + v.id + '\')">❌ Reject</button></td>' +
+        '<td><strong>' + esc(profile ? profileName(profile) : 'Unknown') + '</strong></td>' +
+        '<td>' + esc(pd.email || '') + '</td>' +
+        '<td>' + esc((pd.skills || '').slice(0, 60)) + '</td>' +
+        '<td>' + fmtDate(d.appliedAt) + '</td>' +
+        '<td><button class="btn btn-sm btn-success" onclick="approveVolunteer(\'' + a.id + '\')">✅ Approve</button> ' +
+        '<button class="btn btn-sm btn-danger" onclick="rejectVolunteer(\'' + a.id + '\')">❌ Reject</button></td>' +
         '</tr>';
     });
     pendHTML += '</tbody></table></div>';
@@ -297,9 +368,9 @@ function renderDashboard() {
     if (d.status === 'completed' || d.status === 'cancelled') return;
     if (APP.isManager) {
       if (d.status === 'open') myTasks.push(t);
-      else if (d.assignedToUserId === (APP.user ? APP.user.id : '')) myTasks.push(t);
+      else if (d.assignedVolunteerUserId === (APP.user ? APP.user.id : '')) myTasks.push(t);
     } else {
-      if (d.assignedToUserId === (APP.user ? APP.user.id : '')) myTasks.push(t);
+      if (d.assignedVolunteerUserId === (APP.user ? APP.user.id : '')) myTasks.push(t);
     }
   });
   if (myTasks.length === 0) {
@@ -308,10 +379,11 @@ function renderDashboard() {
     myTaskHTML = '<div class="table-wrap"><table><thead><tr><th>Task</th><th>Status</th><th>Assigned To</th><th>Due</th><th>Est. Hours</th></tr></thead><tbody>';
     myTasks.forEach(function(t) {
       var d = vd(t);
+      var assigneeProfile = getRegistryProfileByUserId(d.assignedVolunteerUserId);
       myTaskHTML += '<tr>' +
         '<td><strong>' + esc(t.name) + '</strong></td>' +
         '<td><span class="badge badge-' + d.status + '">' + esc(d.status) + '</span></td>' +
-        '<td>' + esc(d.assignedToName || '—') + '</td>' +
+        '<td>' + esc(assigneeProfile ? profileName(assigneeProfile) : '—') + '</td>' +
         '<td>' + fmtDate(d.dueDate) + '</td>' +
         '<td>' + (d.estimatedHours || '—') + '</td>' +
         '</tr>';
@@ -347,7 +419,7 @@ function renderDashboard() {
 /* ── UI: Volunteers ── */
 function renderVolunteers() {
   var actHTML = '';
-  if (!APP.isManager && !APP.myVolunteer) {
+  if (!APP.isManager && !APP.myApplication) {
     actHTML += '<button class="btn btn-primary" onclick="openRegisterModal()">🙋 Register as Volunteer</button>';
   }
   if (APP.isManager) {
@@ -356,82 +428,115 @@ function renderVolunteers() {
   }
   el('volActions').innerHTML = actHTML;
 
-  var filter = el('volFilterStatus').value || 'all';
-  var filtered = APP.volunteers.filter(function(v) {
-    if (filter === 'all') return true;
-    return vd(v).status === filter;
-  });
+  if (APP.registryError) {
+    el('volListTitle').textContent = 'Volunteer Registry';
+    el('volFilterStatus').style.display = 'none';
+    el('volList').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><h4>Registry unavailable</h4><p>' + esc(APP.registryError) + '</p></div>';
+    updateBadges();
+    tool.resize();
+    return;
+  }
 
   // If not manager, only show own record
   if (!APP.isManager) {
-    filtered = APP.myVolunteer ? [APP.myVolunteer] : [];
     el('volListTitle').textContent = 'My Volunteer Status';
     el('volFilterStatus').style.display = 'none';
-  } else {
-    el('volListTitle').textContent = 'All Volunteers (' + filtered.length + ')';
-    el('volFilterStatus').style.display = '';
+    renderMyVolunteerCard();
+    updateBadges();
+    tool.resize();
+    return;
+  }
+
+  el('volListTitle').textContent = 'All Volunteers';
+  el('volFilterStatus').style.display = '';
+  var filter = el('volFilterStatus').value || 'all';
+
+  // Manager view: registry profiles with this event's application status layered on top
+  var rows = APP.registry.map(function(p) {
+    var d = vd(p);
+    var app = getApplicationByUserId(d.userId);
+    return { profile: p, pd: d, app: app };
+  });
+
+  if (filter !== 'all') {
+    rows = rows.filter(function(r) {
+      if (!r.app) return false;
+      return vd(r.app).status === filter;
+    });
   }
 
   var html = '';
-  if (filtered.length === 0) {
-    html = '<div class="empty-state"><div class="empty-state-icon">👥</div><h4>No Volunteers Found</h4><p>' + (APP.isManager ? 'Volunteers will appear here once they register.' : 'You haven\'t registered as a volunteer yet.') + '</p></div>';
-  } else if (APP.isManager) {
-    // Manager view: table
-    html = '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Skills</th><th>Registered</th><th>Total Hours</th><th></th></tr></thead><tbody>';
-    filtered.forEach(function(v) {
-      var d = vd(v);
+  if (rows.length === 0) {
+    html = '<div class="empty-state"><div class="empty-state-icon">👥</div><h4>No Volunteers Found</h4><p>' + (APP.registry.length === 0 ? 'The registry is empty. Add a volunteer or use the CSV import tool.' : 'No volunteers match this status.') + '</p></div>';
+  } else {
+    html = '<div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Profile</th><th>Event Status</th><th>Skills</th><th>Approved Hours</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(r) {
       var totalHrs = 0;
       APP.hours.forEach(function(h) {
         var hd = vd(h);
-        if (hd.volunteerUserId === d.userId && hd.status === 'approved') totalHrs += (Number(hd.hoursLogged) || 0);
+        if (hd.volunteerUserId === r.pd.userId && hd.status === 'approved') totalHrs += (Number(hd.hoursLogged) || 0);
       });
+      var app = r.app;
+      var appStatus = app ? vd(app).status : 'not-applied';
+      var profileBadgeClass = r.pd.status === 'banned' ? 'badge-rejected' : (r.pd.status === 'inactive' ? 'badge-withdrawn' : 'badge-approved');
       html += '<tr>' +
-        '<td><strong>' + esc(d.userName || v.name) + '</strong></td>' +
-        '<td>' + esc(d.userEmail || '') + '</td>' +
-        '<td><span class="badge badge-' + d.status + '">' + esc(d.status) + '</span></td>' +
-        '<td>' + esc((d.skills || '').slice(0, 50)) + '</td>' +
-        '<td>' + fmtDate(d.registeredAt) + '</td>' +
+        '<td><strong>' + esc(profileName(r.profile)) + '</strong></td>' +
+        '<td>' + esc(r.pd.email || '') + '</td>' +
+        '<td><span class="badge ' + profileBadgeClass + '">' + esc(r.pd.status || 'active') + '</span></td>' +
+        '<td><span class="badge badge-' + appStatus + '">' + esc(appStatus) + '</span></td>' +
+        '<td>' + esc((r.pd.skills || '').slice(0, 50)) + '</td>' +
         '<td><strong>' + totalHrs.toFixed(1) + ' hrs</strong></td>' +
         '<td class="actions-cell">';
-      if (d.status === 'pending') {
-        html += '<button class="btn btn-sm btn-success" onclick="approveVolunteer(\'' + v.id + '\')">✅ Approve</button> ';
-        html += '<button class="btn btn-sm btn-danger" onclick="rejectVolunteer(\'' + v.id + '\')">❌ Reject</button>';
-      } else if (d.status === 'approved') {
-        html += '<button class="btn btn-sm btn-outline" onclick="messageVolunteer(\'' + escJs(d.userId) + '\',\'' + escJs(d.userName || '') + '\')">💬 Message</button> ';
-        html += '<button class="btn btn-sm btn-outline" onclick="viewVolunteerTasks(\'' + d.userId + '\')">📋 Tasks</button>';
+      if (!app) {
+        html += '<button class="btn btn-sm btn-primary" onclick="addVolunteerToEvent(\'' + escJs(r.profile.id) + '\')">➕ Add to Event</button> ';
+      } else if (appStatus === 'pending') {
+        html += '<button class="btn btn-sm btn-success" onclick="approveVolunteer(\'' + app.id + '\')">✅ Approve</button> ';
+        html += '<button class="btn btn-sm btn-danger" onclick="rejectVolunteer(\'' + app.id + '\')">❌ Reject</button>';
+      } else if (appStatus === 'approved') {
+        html += '<button class="btn btn-sm btn-outline" onclick="messageVolunteer(\'' + escJs(r.pd.userId) + '\')">💬 Message</button> ';
+        html += '<button class="btn btn-sm btn-outline" onclick="viewVolunteerTasks(\'' + escJs(r.pd.userId) + '\')">📋 Tasks</button>';
       }
       html += '</td></tr>';
     });
     html += '</tbody></table></div>';
-  } else if (APP.myVolunteer) {
-    // Volunteer view: card
-    var d = vd(APP.myVolunteer);
-    var totalHrs = 0;
-    APP.hours.forEach(function(h) {
-      var hd = vd(h);
-      if (hd.volunteerUserId === d.userId && hd.status === 'approved') totalHrs += (Number(hd.hoursLogged) || 0);
-    });
+  }
+  el('volList').innerHTML = html;
+  updateBadges();
+  tool.resize();
+}
+
+function renderMyVolunteerCard() {
+  var html = '';
+  var totalHrs = 0;
+  APP.hours.forEach(function(h) {
+    var hd = vd(h);
+    if (hd.volunteerUserId === (APP.user ? APP.user.id : '') && hd.status === 'approved') totalHrs += (Number(hd.hoursLogged) || 0);
+  });
+  if (!APP.myProfile && !APP.myApplication) {
+    html = '<div class="empty-state"><div class="empty-state-icon">👥</div><h4>No Volunteers Found</h4><p>You haven\'t registered as a volunteer yet.</p></div>';
+  } else {
+    var d = APP.myProfile ? vd(APP.myProfile) : {};
+    var app = APP.myApplication ? vd(APP.myApplication) : {};
+    var displayName = APP.myProfile ? profileName(APP.myProfile) : (APP.user ? APP.user.name : 'Volunteer');
     html = '<div class="volunteer-card">' +
       '<div class="vol-card-header">' +
-      '<div class="vol-card-avatar">' + (d.userName || '?').charAt(0).toUpperCase() + '</div>' +
-      '<div><div class="vol-card-name">' + esc(d.userName) + '</div><div class="vol-card-email">' + esc(d.userEmail || '') + '</div></div>' +
+      '<div class="vol-card-avatar">' + (displayName || '?').charAt(0).toUpperCase() + '</div>' +
+      '<div><div class="vol-card-name">' + esc(displayName) + '</div><div class="vol-card-email">' + esc(d.email || (APP.user ? APP.user.email : '')) + '</div></div>' +
       '</div>' +
-      '<p><strong>Status:</strong> <span class="badge badge-' + d.status + '">' + esc(d.status) + '</span></p>' +
+      '<p><strong>Event Status:</strong> <span class="badge badge-' + (app.status || 'not-applied') + '">' + esc(app.status || 'not-applied') + '</span></p>' +
       (d.skills ? '<div class="vol-card-skills">' + d.skills.split(',').map(function(s) { return '<span class="skill-tag">' + esc(s.trim()) + '</span>'; }).join('') + '</div>' : '') +
       '<p style="margin-top:8px;"><strong>Availability:</strong> ' + esc(d.availabilityNotes || 'Not specified') + '</p>' +
-      '<p><strong>Motivation:</strong> ' + esc(d.motivation || 'Not specified') + '</p>' +
+      (app.notes ? '<p><strong>Motivation:</strong> ' + esc(app.notes) + '</p>' : '') +
       '<div class="vol-card-footer">' +
       '<span><strong>Total Hours:</strong> ' + totalHrs.toFixed(1) + ' hrs</span>' +
-      '<span>Registered: ' + fmtDate(d.registeredAt) + '</span>' +
+      '<span>Registered: ' + fmtDate(app.appliedAt || d.joinedAt) + '</span>' +
       '</div>';
-    if (d.status === 'rejected') {
+    if (app.status === 'rejected') {
       html += '<button class="btn btn-sm btn-primary" style="margin-top:8px;" onclick="openRegisterModal()">🔄 Re-apply</button>';
     }
     html += '</div>';
   }
   el('volList').innerHTML = html;
-  updateBadges();
-  tool.resize();
 }
 
 /* ── UI: Tasks ── */
@@ -440,7 +545,7 @@ function renderTasks() {
   if (APP.isManager) {
     actHTML += '<button class="btn btn-primary" onclick="openTaskModal()">➕ Create Task</button> ';
   }
-  if (APP.myVolunteer && vd(APP.myVolunteer).status === 'approved') {
+  if (APP.myApplication && vd(APP.myApplication).status === 'approved') {
     actHTML += '<button class="btn btn-accent" onclick="openHoursModal()">⏱️ Log Hours</button>';
   }
   el('taskActions').innerHTML = actHTML;
@@ -452,10 +557,13 @@ function renderTasks() {
     var d = vd(t);
     if (statusFilter !== 'all' && d.status !== statusFilter) return false;
     if (assigneeFilter === 'me') {
-      return d.assignedToUserId === (APP.user ? APP.user.id : '');
+      return d.assignedVolunteerUserId === (APP.user ? APP.user.id : '');
     }
     if (assigneeFilter === 'unassigned') {
-      return !d.assignedToUserId;
+      return !d.assignedVolunteerUserId;
+    }
+    if (assigneeFilter !== 'all') {
+      return d.assignedVolunteerUserId === assigneeFilter;
     }
     return true;
   });
@@ -463,7 +571,7 @@ function renderTasks() {
   // For non-managers, only show their tasks
   if (!APP.isManager) {
     filtered = filtered.filter(function(t) {
-      return vd(t).assignedToUserId === (APP.user ? APP.user.id : '');
+      return vd(t).assignedVolunteerUserId === (APP.user ? APP.user.id : '');
     });
     el('taskFilterAssignee').style.display = 'none';
   } else {
@@ -489,7 +597,7 @@ function renderTasks() {
         '</div>' +
         '<div class="task-card-meta">' +
         (d.description ? esc(d.description.slice(0, 150)) + (d.description.length > 150 ? '...' : '') + '<br>' : '') +
-        '<strong>Assigned:</strong> ' + esc(d.assignedToName || 'Unassigned') + ' · ' +
+        '<strong>Assigned:</strong> ' + esc(d.assignedVolunteerUserId ? (getRegistryProfileByUserId(d.assignedVolunteerUserId) ? profileName(getRegistryProfileByUserId(d.assignedVolunteerUserId)) : 'Unknown') : 'Unassigned') + ' · ' +
         '<strong>Due:</strong> ' + fmtDate(d.dueDate) + ' · ' +
         '<strong>Est. Hours:</strong> ' + (d.estimatedHours || '—') +
         '</div>' +
@@ -502,7 +610,7 @@ function renderTasks() {
         html += '<button class="btn btn-sm btn-danger" onclick="deleteTask(\'' + t.id + '\')">🗑️ Delete</button>';
       } else {
         // Volunteer actions
-        if (d.assignedToUserId === (APP.user ? APP.user.id : '')) {
+        if (d.assignedVolunteerUserId === (APP.user ? APP.user.id : '')) {
           if (d.status === 'assigned') {
             html += '<button class="btn btn-sm btn-accent" onclick="updateTaskStatus(\'' + t.id + '\',\'in-progress\')">▶️ Start</button> ';
           }
@@ -525,7 +633,7 @@ function renderTasks() {
 /* ── UI: Hours ── */
 function renderHours() {
   var actHTML = '';
-  if (APP.myVolunteer && vd(APP.myVolunteer).status === 'approved') {
+  if (APP.myApplication && vd(APP.myApplication).status === 'approved') {
     actHTML += '<button class="btn btn-primary" onclick="openHoursModal()">⏱️ Log Hours</button> ';
   }
   if (APP.isManager) {
@@ -544,11 +652,11 @@ function renderHours() {
     // Populate volunteer filter
     var volSelect = el('hourFilterVolunteer');
     if (volSelect.options.length <= 2) {
-      getApprovedVolunteers().forEach(function(v) {
-        var d = vd(v);
+      getApprovedVolunteers().forEach(function(a) {
+        var d = vd(a);
         var opt = document.createElement('option');
-        opt.value = d.userId;
-        opt.textContent = d.userName || v.name;
+        opt.value = d.volunteerUserId;
+        opt.textContent = approvedUserName(a);
         volSelect.appendChild(opt);
       });
     }
@@ -572,7 +680,7 @@ function renderHours() {
       var d = vd(h);
       html += '<tr>' +
         '<td>' + fmtDate(d.date) + '</td>' +
-        '<td>' + esc(d.volunteerName || '') + '</td>' +
+        '<td>' + esc((getRegistryProfileByUserId(d.volunteerUserId) ? profileName(getRegistryProfileByUserId(d.volunteerUserId)) : 'Unknown')) + '</td>' +
         '<td>' + esc(d.taskName || '—') + '</td>' +
         '<td><strong>' + (Number(d.hoursLogged) || 0).toFixed(1) + '</strong></td>' +
         '<td>' + esc((d.description || '').slice(0, 60)) + '</td>' +
@@ -655,9 +763,9 @@ function renderCertificate() {
   var html = '';
   if (!APP.user) {
     html = '<div class="empty-state"><div class="empty-state-icon">🔒</div><h4>Login Required</h4><p>Please log in to view your volunteer certificate.</p></div>';
-  } else if (!APP.myVolunteer) {
+  } else if (!APP.myApplication) {
     html = '<div class="empty-state"><div class="empty-state-icon">🙋</div><h4>Not a Volunteer</h4><p>You need to register and be approved as a volunteer first.</p></div>';
-  } else if (vd(APP.myVolunteer).status !== 'approved') {
+  } else if (vd(APP.myApplication).status !== 'approved') {
     html = '<div class="empty-state"><div class="empty-state-icon">⏳</div><h4>Pending Approval</h4><p>Your volunteer application must be approved before you can generate a certificate.</p></div>';
   } else {
     // Calculate stats for certificate
@@ -670,18 +778,19 @@ function renderCertificate() {
     myHours.forEach(function(h) { totalApproved += (Number(vd(h).hoursLogged) || 0); });
 
     var myTasks = APP.tasks.filter(function(t) {
-      return vd(t).assignedToUserId === myUserId;
+      return vd(t).assignedVolunteerUserId === myUserId;
     });
     var completedTasks = myTasks.filter(function(t) { return vd(t).status === 'completed'; });
 
-    var d = vd(APP.myVolunteer);
+    var d = APP.myProfile ? vd(APP.myProfile) : {};
+    var certName = APP.myProfile ? profileName(APP.myProfile) : (APP.user ? APP.user.name : 'Volunteer');
 
     // Certificate preview
     html = '<div class="cert-preview" id="certPreview">' +
       '<div class="cert-org">' + esc(tool.param('orgName', 'Our Organization')) + '</div>' +
       '<div class="cert-title">Certificate of Volunteer Appreciation</div>' +
       '<div class="cert-subtitle">In grateful recognition of outstanding volunteer service</div>' +
-      '<div class="cert-name">' + esc(d.userName || APP.user.name) + '</div>' +
+      '<div class="cert-name">' + esc(certName) + '</div>' +
       '<div class="cert-body">' +
       'Thank you for your dedicated service and invaluable contributions.<br>' +
       'Your commitment of <strong>' + totalApproved.toFixed(1) + ' hours</strong> has made a meaningful difference.' +
@@ -713,7 +822,7 @@ function renderCertificate() {
 
 /* ── Badge Updates ── */
 function updateBadges() {
-  var pendingVols = APP.volunteers.filter(function(v) { return vd(v).status === 'pending'; }).length;
+  var pendingVols = APP.applications.filter(function(a) { return vd(a).status === 'pending'; }).length;
   var openTasks = APP.tasks.filter(function(t) { var s = vd(t).status; return s === 'open' || s === 'assigned' || s === 'in-progress'; }).length;
 
   var unreadMsgs = 0;
@@ -727,7 +836,7 @@ function updateBadges() {
   var bt = el('badgeTasks');
   var bm = el('badgeMessages');
   if (bv) {
-    bv.textContent = APP.isManager ? pendingVols : (APP.volunteers.length || '0');
+    bv.textContent = APP.isManager ? pendingVols : (APP.myApplication ? '1' : '0');
     bv.className = 'tab-badge' + (pendingVols > 0 ? ' pending' : '');
   }
   if (bt) {
@@ -742,13 +851,33 @@ function updateBadges() {
 
 /* ── Actions: Volunteer Registration ── */
 function openRegisterModal() {
-  if (APP.myVolunteer && vd(APP.myVolunteer).status !== 'rejected') {
-    tool.notify('You are already registered. Status: ' + vd(APP.myVolunteer).status, 'info');
-    return;
+  // Managers add a chosen permitted user; volunteers register themselves.
+  var pickerGroup = el('regUserPickerGroup');
+  if (pickerGroup) pickerGroup.style.display = APP.isManager ? '' : 'none';
+
+  if (APP.isManager) {
+    var sel = el('regUserPicker');
+    sel.innerHTML = '<option value="">-- Select a permitted user --</option>';
+    APP.permittedUsers.forEach(function(pu) {
+      if (!pu.id) return;
+      var opt = document.createElement('option');
+      opt.value = pu.id;
+      opt.textContent = pu.name || pu.email || pu.id;
+      if (pu.email && pu.name && pu.email !== pu.name) opt.textContent += ' (' + pu.email + ')';
+      sel.appendChild(opt);
+    });
+    el('regSkills').value = '';
+    el('regAvailability').value = '';
+    el('regMotivation').value = '';
+  } else {
+    if (APP.myApplication && vd(APP.myApplication).status !== 'rejected') {
+      tool.notify('You are already registered. Status: ' + vd(APP.myApplication).status, 'info');
+      return;
+    }
+    el('regSkills').value = APP.myProfile ? (vd(APP.myProfile).skills || '') : '';
+    el('regAvailability').value = APP.myProfile ? (vd(APP.myProfile).availabilityNotes || '') : '';
+    el('regMotivation').value = APP.myApplication ? (vd(APP.myApplication).notes || '') : '';
   }
-  el('regSkills').value = APP.myVolunteer ? (vd(APP.myVolunteer).skills || '') : '';
-  el('regAvailability').value = APP.myVolunteer ? (vd(APP.myVolunteer).availabilityNotes || '') : '';
-  el('regMotivation').value = APP.myVolunteer ? (vd(APP.myVolunteer).motivation || '') : '';
   openModal('modalRegister');
 }
 
@@ -762,83 +891,166 @@ function submitRegistration() {
     return;
   }
 
-  var u = APP.user;
-  if (!u) { tool.notify('You must be logged in.', 'error'); return; }
+  var targetUser = null;
+  if (APP.isManager) {
+    var sel = el('regUserPicker');
+    var pickedId = sel ? sel.value : '';
+    if (!pickedId) { tool.notify('Select the volunteer to add.', 'warning'); return; }
+    for (var i = 0; i < APP.permittedUsers.length; i++) {
+      if (APP.permittedUsers[i].id === pickedId) { targetUser = APP.permittedUsers[i]; break; }
+    }
+    if (!targetUser) { tool.notify('Selected user not found in the permitted users list.', 'error'); return; }
+  } else {
+    targetUser = APP.user;
+  }
 
-  var data = {
-    userId: u.id,
-    userName: u.name || 'Unknown',
-    userEmail: u.email || '',
-    status: APP.isManager ? 'approved' : 'pending',  // Managers auto-approve themselves
-    registeredAt: isoNow(),
+  if (!targetUser) { tool.notify('You must be logged in.', 'error'); return; }
+
+  var appStatus = APP.isManager ? 'approved' : 'pending';
+
+  // Step 1: upsert the registry profile (invariant REGISTRY-ONLY, D-VM-02)
+  var existingProfile = getRegistryProfileByUserId(targetUser.id);
+  var registryData = {
+    userId: targetUser.id,
+    firstName: targetUser.name || 'Unknown',
+    lastName: '',
+    email: targetUser.email || '',
     skills: skills,
     availabilityNotes: availability,
-    motivation: motivation,
-    reviewedAt: APP.isManager ? isoNow() : '',
-    reviewedBy: APP.isManager ? (u.name || 'Self') : ''
+    status: existingProfile ? (vd(existingProfile).status || 'active') : 'active',
+    consentGiven: existingProfile ? (vd(existingProfile).consentGiven !== undefined ? vd(existingProfile).consentGiven : true) : true,
+    source: existingProfile ? (vd(existingProfile).source || 'admin') : (APP.isManager ? 'admin' : 'volunteer'),
+    updatedAt: isoNow()
   };
+  if (!existingProfile) registryData.joinedAt = isoNow();
 
-  if (APP.myVolunteer && vd(APP.myVolunteer).status === 'rejected') {
-    // Update existing rejected record
-    data.status = 'pending';
-    updateObject(TYPE_VOLUNTEERS, APP.myVolunteer.id, data, u.name || 'Volunteer', function(err) {
+  var profileLabel = targetUser.name || targetUser.email || 'Volunteer';
+
+  function finishRegistration() {
+    tool.notify(APP.isManager ? 'Volunteer added to the event!' : 'Registration submitted! Waiting for approval.', 'success');
+    closeModal('modalRegister');
+    reloadAndRender();
+  }
+
+  // Step 2: create or update the event application (D-VM-03)
+  function step2(profileId) {
+    var existingApp = getApplicationByUserId(targetUser.id);
+    var appData = {
+      registryProfileId: profileId,
+      volunteerUserId: targetUser.id,
+      status: appStatus,
+      appliedAt: isoNow(),
+      notes: motivation,
+      reviewedAt: APP.isManager ? isoNow() : '',
+      reviewedBy: APP.isManager ? (APP.user ? APP.user.name : '') : ''
+    };
+    if (existingApp) {
+      var cur = vd(existingApp);
+      var merged = {};
+      for (var k in cur) { if (cur.hasOwnProperty(k)) merged[k] = cur[k]; }
+      merged.status = appStatus;
+      merged.appliedAt = appData.appliedAt;
+      merged.notes = motivation;
+      merged.registryProfileId = profileId;
+      merged.reviewedAt = appData.reviewedAt;
+      merged.reviewedBy = appData.reviewedBy;
+      updateObject(TYPE_APPLICATIONS, existingApp.id, merged, profileLabel, function(err) {
+        if (err) { tool.notify('Error: ' + err, 'error'); return; }
+        finishRegistration();
+      });
+    } else {
+      createObject(TYPE_APPLICATIONS, profileLabel, appData, function(err) {
+        if (err) { tool.notify('Error: ' + err, 'error'); return; }
+        finishRegistration();
+      });
+    }
+  }
+
+  if (existingProfile) {
+    updateObject(TYPE_REGISTRY, existingProfile.id, registryData, profileLabel, function(err) {
       if (err) { tool.notify('Error: ' + err, 'error'); return; }
-      tool.notify('Re-application submitted!', 'success');
-      closeModal('modalRegister');
-      reloadAndRender();
+      step2(existingProfile.id);
     });
   } else {
-    createObject(TYPE_VOLUNTEERS, u.name || 'Volunteer', data, function(err, obj) {
+    createObject(TYPE_REGISTRY, profileLabel, registryData, function(err, obj) {
       if (err) { tool.notify('Error: ' + err, 'error'); return; }
-      tool.notify(APP.isManager ? 'Volunteer added!' : 'Registration submitted! Waiting for approval.', 'success');
-      closeModal('modalRegister');
-      reloadAndRender();
+      step2(obj ? obj.id : '');
     });
   }
 }
 
-function approveVolunteer(id) {
-  var v = APP.volunteers.find(function(x) { return x.id === id; });
-  if (!v) return;
+function approveVolunteer(appId) {
+  var app = getApplicationById(appId);
+  if (!app) return;
+  var d = vd(app);
+  var profile = getRegistryProfileByUserId(d.volunteerUserId);
+  if (profile && vd(profile).status === 'banned') {
+    tool.notify('Cannot approve: this volunteer profile is banned.', 'error');
+    return;
+  }
   var u = APP.user;
-  var data = vd(v);
+  var data = {};
+  for (var k in d) { if (d.hasOwnProperty(k)) data[k] = d[k]; }
   data.status = 'approved';
   data.reviewedAt = isoNow();
   data.reviewedBy = u ? u.name : 'Manager';
-  updateObject(TYPE_VOLUNTEERS, id, data, v.name, function(err) {
+  updateObject(TYPE_APPLICATIONS, appId, data, app.name, function(err) {
     if (err) { tool.notify('Error: ' + err, 'error'); return; }
-    tool.notify(data.userName + ' approved!', 'success');
+    tool.notify((profile ? profileName(profile) : 'Volunteer') + ' approved!', 'success');
     reloadAndRender();
   });
 }
 
-function rejectVolunteer(id) {
-  var v = APP.volunteers.find(function(x) { return x.id === id; });
-  if (!v) return;
-  showConfirm('Reject Volunteer?', 'Are you sure you want to reject <strong>' + esc(vd(v).userName || v.name) + '</strong>?', function() {
+function rejectVolunteer(appId) {
+  var app = getApplicationById(appId);
+  if (!app) return;
+  var d = vd(app);
+  var profile = getRegistryProfileByUserId(d.volunteerUserId);
+  showConfirm('Reject Volunteer?', 'Are you sure you want to reject <strong>' + esc(profile ? profileName(profile) : (app.name || 'Volunteer')) + '</strong>?', function() {
     var u = APP.user;
-    var data = vd(v);
+    var data = {};
+    for (var k in d) { if (d.hasOwnProperty(k)) data[k] = d[k]; }
     data.status = 'rejected';
     data.reviewedAt = isoNow();
     data.reviewedBy = u ? u.name : 'Manager';
-    updateObject(TYPE_VOLUNTEERS, id, data, v.name, function(err) {
+    updateObject(TYPE_APPLICATIONS, appId, data, app.name, function(err) {
       if (err) { tool.notify('Error: ' + err, 'error'); return; }
-      tool.notify(data.userName + ' rejected.', 'info');
+      tool.notify('Application rejected.', 'info');
       reloadAndRender();
     });
+  });
+}
+
+function addVolunteerToEvent(profileId) {
+  var profile = getRegistryProfileById(profileId);
+  if (!profile) { tool.notify('Profile not found.', 'error'); return; }
+  var d = vd(profile);
+  var data = {
+    registryProfileId: profile.id,
+    volunteerUserId: d.userId || '',
+    status: 'approved',
+    appliedAt: isoNow(),
+    notes: 'Added by manager',
+    reviewedAt: isoNow(),
+    reviewedBy: APP.user ? APP.user.name : ''
+  };
+  createObject(TYPE_APPLICATIONS, profileName(profile), data, function(err) {
+    if (err) { tool.notify('Error: ' + err, 'error'); return; }
+    tool.notify(profileName(profile) + ' added to this event!', 'success');
+    reloadAndRender();
   });
 }
 
 /* ── Actions: Tasks ── */
 function openTaskModal(taskId) {
-  // Populate assignee dropdown
+  // Populate assignee dropdown from approved volunteers (names from the registry)
   var sel = el('taskAssignee');
   sel.innerHTML = '<option value="">-- Unassigned (Open) --</option>';
-  getApprovedVolunteers().forEach(function(v) {
-    var d = vd(v);
+  getApprovedVolunteers().forEach(function(a) {
+    var d = vd(a);
     var opt = document.createElement('option');
-    opt.value = d.userId;
-    opt.textContent = d.userName || v.name;
+    opt.value = d.volunteerUserId;
+    opt.textContent = approvedUserName(a);
     sel.appendChild(opt);
   });
 
@@ -850,7 +1062,7 @@ function openTaskModal(taskId) {
     el('editTaskId').value = taskId;
     el('taskName').value = t.name || '';
     el('taskDesc').value = d.description || '';
-    el('taskAssignee').value = d.assignedToUserId || '';
+    el('taskAssignee').value = d.assignedVolunteerUserId || '';
     el('taskDueDate').value = (d.dueDate || '').slice(0, 10);
     el('taskEstHours').value = d.estimatedHours || '';
     el('taskStatus').value = d.status || 'open';
@@ -874,17 +1086,17 @@ function saveTask() {
   if (!name) { tool.notify('Task name is required.', 'warning'); return; }
 
   var assigneeUserId = el('taskAssignee').value;
-  var assigneeName = '';
+  var assigneeProfileId = '';
   if (assigneeUserId) {
-    var sel = el('taskAssignee');
-    assigneeName = sel.options[sel.selectedIndex].textContent;
+    var profile = getRegistryProfileByUserId(assigneeUserId);
+    assigneeProfileId = profile ? profile.id : '';
   }
 
   var data = {
     description: el('taskDesc').value.trim(),
     status: el('taskStatus').value,
-    assignedToUserId: assigneeUserId,
-    assignedToName: assigneeName,
+    assignedVolunteerUserId: assigneeUserId,
+    assignedRegistryProfileId: assigneeProfileId,
     dueDate: el('taskDueDate').value ? el('taskDueDate').value + 'T00:00:00Z' : '',
     estimatedHours: parseFloat(el('taskEstHours').value) || 0,
     createdBy: APP.user ? APP.user.name : '',
@@ -960,7 +1172,7 @@ function openHoursModal(taskId) {
   sel.innerHTML = '<option value="">-- Select Task --</option>';
   APP.tasks.forEach(function(t) {
     var d = vd(t);
-    if (d.assignedToUserId === (APP.user ? APP.user.id : '') && d.status !== 'cancelled') {
+    if (d.assignedVolunteerUserId === (APP.user ? APP.user.id : '') && d.status !== 'cancelled') {
       var opt = document.createElement('option');
       opt.value = t.id;
       opt.textContent = t.name;
@@ -1012,12 +1224,11 @@ function saveHours() {
   var t = getTaskById(taskId);
   var taskName = t ? t.name : 'General';
   var u = APP.user;
-  var v = APP.myVolunteer;
+  var v = APP.myProfile;
 
   var data = {
-    volunteerId: v ? v.id : '',
     volunteerUserId: u ? u.id : '',
-    volunteerName: u ? u.name : 'Unknown',
+    registryProfileId: v ? v.id : '',
     taskId: taskId,
     taskName: taskName,
     date: date + 'T00:00:00Z',
@@ -1100,12 +1311,12 @@ function openMessageModal(toUserId, toName) {
   if (APP.isManager) {
     // Manager can message individual volunteers or broadcast
     sel.innerHTML = '<option value="all-volunteers">📢 All Approved Volunteers</option>';
-    getApprovedVolunteers().forEach(function(v) {
-      var d = vd(v);
+    getApprovedVolunteers().forEach(function(a) {
+      var d = vd(a);
       var opt = document.createElement('option');
-      opt.value = d.userId;
-      opt.textContent = d.userName || v.name;
-      if (toUserId && d.userId === toUserId) opt.selected = true;
+      opt.value = d.volunteerUserId;
+      opt.textContent = approvedUserName(a);
+      if (toUserId && d.volunteerUserId === toUserId) opt.selected = true;
       sel.appendChild(opt);
     });
   } else {
@@ -1137,6 +1348,7 @@ function sendMessage() {
 
   if (!subject) { tool.notify('Please enter a subject.', 'warning'); return; }
   if (!body) { tool.notify('Please enter a message.', 'warning'); return; }
+  if (body.length > 8000) { tool.notify('Message is too long - maximum 8,000 characters.', 'warning'); return; }
 
   var u = APP.user;
   if (!u) { tool.notify('You must be logged in.', 'error'); return; }
@@ -1150,8 +1362,8 @@ function sendMessage() {
     recipientUserIds.push('managers'); // Special marker
   } else if (to === 'all-volunteers') {
     recipientLabel = 'All Volunteers';
-    getApprovedVolunteers().forEach(function(v) {
-      recipientUserIds.push(vd(v).userId);
+    getApprovedVolunteers().forEach(function(a) {
+      recipientUserIds.push(vd(a).volunteerUserId);
     });
   } else {
     // Individual user
@@ -1205,12 +1417,13 @@ function markMessageRead(id) {
 
 /* ── Certificate Export ── */
 function exportCertificatePDF() {
-  if (!APP.myVolunteer || vd(APP.myVolunteer).status !== 'approved') {
+  if (!APP.myApplication || vd(APP.myApplication).status !== 'approved') {
     tool.notify('No approved volunteer record found.', 'warning');
     return;
   }
 
-  var d = vd(APP.myVolunteer);
+  var d = APP.myProfile ? vd(APP.myProfile) : {};
+  var certName = APP.myProfile ? profileName(APP.myProfile) : (APP.user ? APP.user.name : 'Volunteer');
   var myUserId = APP.user ? APP.user.id : '';
   var totalApproved = 0;
   APP.hours.forEach(function(h) {
@@ -1218,14 +1431,14 @@ function exportCertificatePDF() {
     if (hd.volunteerUserId === myUserId && hd.status === 'approved') totalApproved += (Number(hd.hoursLogged) || 0);
   });
 
-  var myTasks = APP.tasks.filter(function(t) { return vd(t).assignedToUserId === myUserId; });
+  var myTasks = APP.tasks.filter(function(t) { return vd(t).assignedVolunteerUserId === myUserId; });
   var completedTasks = myTasks.filter(function(t) { return vd(t).status === 'completed'; });
 
   var certHTML = '<div style="font-family:Georgia,serif;max-width:700px;margin:0 auto;padding:60px 40px;border:4px double #0d7377;text-align:center;">' +
     '<div style="font-size:14px;text-transform:uppercase;letter-spacing:3px;color:#0d7377;margin-bottom:20px;">' + esc(tool.param('orgName', 'Our Organization')) + '</div>' +
     '<h1 style="font-size:32px;color:#0a5558;margin-bottom:8px;">Certificate of Volunteer Appreciation</h1>' +
     '<p style="font-size:18px;color:#6b7280;margin-bottom:28px;">In grateful recognition of outstanding volunteer service</p>' +
-    '<div style="font-size:26px;font-weight:700;color:#111827;border-bottom:2px solid #f59e0b;display:inline-block;padding:0 24px 10px;margin-bottom:24px;">' + esc(d.userName || (APP.user ? APP.user.name : 'Volunteer')) + '</div>' +
+    '<div style="font-size:26px;font-weight:700;color:#111827;border-bottom:2px solid #f59e0b;display:inline-block;padding:0 24px 10px;margin-bottom:24px;">' + esc(certName) + '</div>' +
     '<p style="font-size:15px;color:#374151;line-height:1.8;margin-bottom:28px;">Thank you for your dedicated service and invaluable contributions.<br>Your commitment of <strong>' + totalApproved.toFixed(1) + ' hours</strong> has made a meaningful difference.</p>' +
     '<div style="font-size:42px;font-weight:800;color:#0d7377;margin-bottom:4px;">' + totalApproved.toFixed(1) + '</div>' +
     '<div style="font-size:13px;text-transform:uppercase;letter-spacing:2px;color:#6b7280;">Total Volunteer Hours</div>' +
@@ -1238,7 +1451,7 @@ function exportCertificatePDF() {
 
   tool.requestExportPdf({
     html: certHTML,
-    filename: 'volunteer-certificate-' + (d.userName || 'volunteer').replace(/\s+/g, '-').toLowerCase()
+    filename: 'volunteer-certificate-' + certName.replace(/\s+/g, '-').toLowerCase()
   }, function(err, file) {
     if (err) {
       tool.notify('PDF export failed: ' + err, 'error');
@@ -1250,12 +1463,13 @@ function exportCertificatePDF() {
 }
 
 function emailCertificate() {
-  if (!APP.myVolunteer || vd(APP.myVolunteer).status !== 'approved') {
+  if (!APP.myApplication || vd(APP.myApplication).status !== 'approved') {
     tool.notify('No approved volunteer record found.', 'warning');
     return;
   }
 
-  var d = vd(APP.myVolunteer);
+  var d = APP.myProfile ? vd(APP.myProfile) : {};
+  var certName = APP.myProfile ? profileName(APP.myProfile) : (APP.user ? APP.user.name : 'Volunteer');
   var myUserId = APP.user ? APP.user.id : '';
   var totalApproved = 0;
   APP.hours.forEach(function(h) {
@@ -1264,12 +1478,12 @@ function emailCertificate() {
   });
 
   var emailBody = '<h2>Volunteer Certificate</h2>' +
-    '<p>Dear ' + esc(d.userName || 'Volunteer') + ',</p>' +
+    '<p>Dear ' + esc(certName) + ',</p>' +
     '<p>Thank you for your volunteer service! You have completed <strong>' + totalApproved.toFixed(1) + ' hours</strong> of volunteer work.</p>' +
     '<p>To download your official certificate, please visit the event page and navigate to the Certificate tab.</p>';
 
   tool.requestSendEmail({
-    to: APP.user ? APP.user.email : d.userEmail,
+    to: (APP.user && APP.user.email) || d.email,
     subject: 'Your Volunteer Certificate - ' + totalApproved.toFixed(1) + ' Hours',
     title: 'Volunteer Certificate',
     htmlBody: emailBody
@@ -1284,15 +1498,16 @@ function emailCertificate() {
 
 /* ── CSV Export ── */
 function exportVolunteersCSV() {
-  var rows = [['Name', 'Email', 'Status', 'Skills', 'Registered', 'Approved Hours']];
-  APP.volunteers.forEach(function(v) {
-    var d = vd(v);
+  var rows = [['Name', 'Email', 'Profile Status', 'Event Status', 'Skills', 'Joined', 'Approved Hours']];
+  APP.registry.forEach(function(p) {
+    var d = vd(p);
+    var app = getApplicationByUserId(d.userId);
     var totalHrs = 0;
     APP.hours.forEach(function(h) {
       var hd = vd(h);
       if (hd.volunteerUserId === d.userId && hd.status === 'approved') totalHrs += (Number(hd.hoursLogged) || 0);
     });
-    rows.push([d.userName || v.name, d.userEmail || '', d.status, (d.skills || '').replace(/,/g, ';'), d.registeredAt || '', totalHrs.toFixed(1)]);
+    rows.push([profileName(p), d.email || '', d.status || 'active', app ? vd(app).status : 'not-applied', (d.skills || '').replace(/,/g, ';'), d.joinedAt || '', totalHrs.toFixed(1)]);
   });
   var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
 
@@ -1349,6 +1564,14 @@ function lockUI(ro) {
 
 /* ── Initialize ── */
 tool.declareParams([
+  {
+    name: 'registryType',
+    label: 'Volunteer Registry Type ID',
+    type: 'text',
+    default: 'volunteerRegistry-uniconbaseapps',
+    hint: 'CMS object type for volunteer profiles (shared registry SSOT). Also authorize it in settings.allowedObjectTypes.',
+    severity: 'goodToHave'
+  },
   {
     name: 'orgName',
     label: 'Organization Name',
@@ -1407,11 +1630,8 @@ tool.onReady(function(val, fields) {
   if (!eventName) eventName = 'Event';
   el('topEventName').textContent = eventName;
 
-  // Report missing params
-  var missing = [];
-  if (missing.length > 0) {
-    tool.reportMissingParams(missing, 'Configure these parameters to enable full functionality.');
-  }
+  // Missing registry authorization is reported by reportRegistryConfigError()
+  // when the registry query fails (see loadAllData).
 
   // Load permitted users
   try {
@@ -1441,7 +1661,7 @@ tool.onReady(function(val, fields) {
       roleBadge.textContent = 'Volunteer';
       roleBadge.className = 'top-bar-role role-volunteer';
     }
-    findMyVolunteer();
+    findMyRecords();
     renderCurrentTab();
   });
 

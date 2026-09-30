@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sınav Takvimi</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    background: #e8edf3;
+    padding: 34px 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .card {
+    max-width: 840px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.20);
+    overflow: hidden;
+  }
+
+  /* ---- header band ---- */
+  .head {
+    background: linear-gradient(130deg, #1e4e79 0%, #245c8e 45%, #0f766e 120%);
+    color: #ffffff;
+    padding: 30px 36px 26px;
+  }
+  .head-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .head-logo {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 8px 14px;
+  }
+  .logo-mark { height: 64px; width: auto; max-width: 260px; display: block; }
+  .head-logo + .head-text { border-left: 1px solid rgba(255, 255, 255, 0.28); padding-left: 20px; }
+  @media (max-width: 640px) {
+    .head-logo + .head-text { border-left: none; padding-left: 0; }
+  }
+  .head-text { flex: 1; min-width: 0; }
+  .head-kicker {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.8px;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+  .head-title {
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+    margin-top: 6px;
+  }
+
+  /* ---- table ---- */
+  .tab-wrap { padding: 26px 36px 30px; }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  th {
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #64748b;
+    background: #f8fafc;
+    padding: 12px 14px;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  th:first-child { border-radius: 10px 0 0 0; }
+  th:last-child { border-radius: 0 10px 0 0; }
+
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 14.5px;
+    color: #0f172a;
+    vertical-align: middle;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+
+  .evt { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+
+  .badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .b-real  { background: #e0f2fe; color: #075985; }
+  .b-reg   { background: #fee2e2; color: #991b1b; }
+  .b-mock  { background: #fef3c7; color: #92400e; }
+  .b-camp  { background: #ccfbf1; color: #115e59; }
+
+  .chip {
+    display: inline-block;
+    background: #eef4fa;
+    color: #1e4e79;
+    font-weight: 700;
+    padding: 4px 11px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  .chip-ann { background: #f1f5f9; color: #334155; font-weight: 600; }
+  .chip-empty { color: #cbd5e1; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <div class="head">
+    <div class="head-row">
+      <div class="head-logo">
+        <img class="logo-mark" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-Q4ZA.png?alt=media&token=809b88ad-6f91-4a74-8030-e8f39de22fcc" alt="Future Bridge Academy">
+      </div>
+      <div class="head-text">
+        <div class="head-kicker">CEMC Deneme Sınavları Programı</div>
+        <div class="head-title">Sınav Takvimi</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Etkinlik</th>
+          <th>Gerçekleşme</th>
+          <th>Duyuru</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="evt"><span class="badge b-reg">Son Kayıt</span><span>Grade 5-6 Gerçek Sınav</span></div></td>
+          <td><span class="chip">26 Oct</span></td>
+          <td><span class="chip chip-ann">28 Sep - 20 Oct</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-mock">CEMC</span><span>1. Deneme Sınavı</span></div></td>
+          <td><span class="chip">7 Nov</span></td>
+          <td><span class="chip chip-ann">28 Sep - 5 Oct</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-real">Gerçek</span><span>Grade 5-6 Gerçek Sınav</span></div></td>
+          <td><span class="chip">9-20 Nov</span></td>
+          <td><span class="chip-empty">-</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-mock">CEMC</span><span>2. Deneme Sınavı</span></div></td>
+          <td><span class="chip">5 Dec</span></td>
+          <td><span class="chip chip-ann">15 Nov - 2 Dec</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-camp">Camp</span><span>Math Camp (Grade 9-10)</span></div></td>
+          <td><span class="chip">23 Jan</span></td>
+          <td><span class="chip chip-ann">5 Jan - 18 Jan</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-reg">Son Kayıt</span><span>Grade 9-10 Gerçek Sınav</span></div></td>
+          <td><span class="chip">1 Feb</span></td>
+          <td><span class="chip chip-ann">1 Jan - 30 Jan</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-mock">CEMC</span><span>3. Deneme Sınavı</span></div></td>
+          <td><span class="chip">20 Feb</span></td>
+          <td><span class="chip chip-ann">3 Feb - 18 Feb</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-real">Gerçek</span><span>Grade 9-10 Gerçek Sınav</span></div></td>
+          <td><span class="chip">23-24 Feb</span></td>
+          <td><span class="chip-empty">-</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-camp">Camp</span><span>Math Camp (Grade 7-8)</span></div></td>
+          <td><span class="chip">20 Mar</span></td>
+          <td><span class="chip-empty">-</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-mock">CEMC</span><span>4. Deneme Sınavı</span></div></td>
+          <td><span class="chip">17 Apr</span></td>
+          <td><span class="chip chip-ann">1 Apr - 16 Apr</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-reg">Son Kayıt</span><span>Grade 7-8 Gerçek Sınav</span></div></td>
+          <td><span class="chip">April</span></td>
+          <td><span class="chip-empty">-</span></td>
+        </tr>
+        <tr>
+          <td><div class="evt"><span class="badge b-real">Gerçek</span><span>Grade 7-8 Gerçek Sınav</span></div></td>
+          <td><span class="chip">May</span></td>
+          <td><span class="chip-empty">-</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

@@ -11,6 +11,16 @@ a quick reference.
 
 ---
 
+## Documentation cadence (rule)
+
+- **SSOT** (`docs/ssot.html`): updated with EVERY code change - in the same
+  change, immediately.
+- **Everything else** (the 5 satellites, release rows, screenshots, index
+  code panes, screenshots viewer payload): built ONLY on SHIP. Never
+  regenerate them on routine updates.
+
+---
+
 ## Mode B - the checklist Copilot follows when you say publish/push
 
 1. **State check**
