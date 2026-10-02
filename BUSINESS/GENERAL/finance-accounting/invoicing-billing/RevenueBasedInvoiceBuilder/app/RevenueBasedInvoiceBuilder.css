@@ -1,0 +1,272 @@
+/* RevenueBasedInvoiceBuilder - revenue-based (waterfall) invoicing */
+
+/* Variables are declared on BOTH the shell and the modal backdrop: the
+   invoice modal is a sibling of .rbi-shell and must not lose the palette. */
+.rbi-shell, .rbi-backdrop {
+  --rbi-primary: #4f46e5;
+  --rbi-primary-dark: #4338ca;
+  --rbi-primary-soft: #eef2ff;
+  --rbi-ink: #0f172a;
+  --rbi-muted: #64748b;
+  --rbi-line: #e2e8f0;
+  --rbi-bg: #f8fafc;
+  --rbi-card: #ffffff;
+  --rbi-red: #dc2626;
+  --rbi-amber: #d97706;
+  --rbi-blue: #2563eb;
+  --rbi-green: #16a34a;
+  --rbi-gray: #64748b;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--rbi-ink);
+}
+.rbi-shell {
+  padding: 18px 20px 26px;
+  max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.rbi-shell *, .rbi-shell *::before, .rbi-shell *::after,
+.rbi-backdrop *, .rbi-backdrop *::before, .rbi-backdrop *::after { box-sizing: border-box; }
+
+/* ── Lock banner ── */
+.rbi-lockbanner {
+  background: #fef3c7; border: 1px solid #fcd34d; color: #92400e;
+  border-radius: 8px; padding: 8px 14px; font-size: 13px; margin-bottom: 14px;
+}
+
+/* ── Stats ribbon ── */
+.rbi-stats {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  background: var(--rbi-card); border: 1px solid var(--rbi-line); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 16px;
+}
+.rbi-stat { flex: 1; min-width: 130px; }
+.rbi-stat-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--rbi-muted); font-weight: 600; }
+.rbi-stat-value { font-size: 19px; font-weight: 700; margin-top: 3px; color: var(--rbi-ink); }
+.rbi-stat-value.rbi-stat-accent { color: var(--rbi-primary); }
+
+/* ── Tabs ── */
+.rbi-tabs {
+  display: flex; gap: 4px; border-bottom: 2px solid var(--rbi-line); margin-bottom: 16px;
+  overflow-x: auto;
+}
+.rbi-tab-btn {
+  background: transparent; border: none; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--rbi-muted);
+  padding: 10px 14px; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  white-space: nowrap;
+}
+.rbi-tab-btn:hover { color: var(--rbi-ink); }
+.rbi-tab-btn.active { color: var(--rbi-primary); border-bottom-color: var(--rbi-primary); }
+
+.rbi-pane { display: none; }
+.rbi-pane.active { display: block; animation: rbiFadeIn 0.18s ease; }
+@keyframes rbiFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── Toolbar ── */
+.rbi-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.rbi-spacer { flex: 1; }
+.rbi-toolbar-hint { font-size: 12.5px; color: var(--rbi-muted); line-height: 1.5; }
+.rbi-search { display: flex; align-items: center; gap: 6px; background: var(--rbi-card); border: 1px solid var(--rbi-line); border-radius: 8px; padding: 7px 10px; min-width: 240px; }
+.rbi-search-ic { color: var(--rbi-muted); font-size: 12px; }
+.rbi-search .rbi-input { border: none; box-shadow: none; padding: 0; flex: 1; }
+
+/* ── Inputs ── */
+.rbi-input {
+  width: 100%; font: inherit; font-size: 13.5px; color: var(--rbi-ink);
+  border: 1px solid var(--rbi-line); border-radius: 8px; padding: 8px 10px;
+  background: var(--rbi-card); outline: none; transition: border-color 0.15s;
+}
+.rbi-input:focus { border-color: var(--rbi-primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+.rbi-input:disabled, .rbi-select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+.rbi-select { appearance: auto; }
+
+/* ── Buttons ── */
+.rbi-btn {
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  border-radius: 8px; padding: 8px 14px; border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.rbi-btn-primary { background: var(--rbi-primary); color: #fff; }
+.rbi-btn-primary:hover { background: var(--rbi-primary-dark); }
+.rbi-btn-ghost { background: var(--rbi-card); color: var(--rbi-ink); border-color: var(--rbi-line); }
+.rbi-btn-ghost:hover { background: #f1f5f9; }
+.rbi-btn-danger { background: #fff; color: var(--rbi-red); border-color: #fecaca; }
+.rbi-btn-danger:hover { background: #fef2f2; }
+.rbi-btn-sm { padding: 5px 10px; font-size: 12px; }
+.rbi-rowbtn {
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--rbi-line); border-radius: 6px; padding: 4px 10px;
+  background: var(--rbi-card); color: var(--rbi-ink);
+}
+.rbi-rowbtn:hover { background: #f1f5f9; }
+.rbi-rowbtn.rbi-rowbtn-danger { color: var(--rbi-red); border-color: #fecaca; }
+.rbi-rowbtn.rbi-rowbtn-danger:hover { background: #fef2f2; }
+
+.rbi-ro .rbi-btn-primary, .rbi-ro .rbi-btn-danger, .rbi-ro .rbi-btn-ghost { display: none; }
+.rbi-ro .rbi-rowbtn.rbi-rowbtn-danger { display: none; }
+.rbi-shell:not(.rbi-admin-mode) .rbi-admin { display: none; }
+
+/* ── List ── */
+.rbi-list { display: flex; flex-direction: column; gap: 8px; }
+.rbi-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--rbi-card); border: 1px solid var(--rbi-line); border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rbi-row:hover { border-color: #cbd5e1; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06); }
+.rbi-row-main { flex: 1; min-width: 0; }
+.rbi-row-title { font-size: 14px; font-weight: 650; }
+.rbi-row-sub { font-size: 12px; color: var(--rbi-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rbi-row-total { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.rbi-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Status chips ── */
+.rbi-status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+  border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+.rbi-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.rbi-status.st-draft { background: #f1f5f9; color: var(--rbi-gray); }
+.rbi-status.st-sent { background: #eff6ff; color: var(--rbi-blue); }
+.rbi-status.st-paid { background: #f0fdf4; color: var(--rbi-green); }
+.rbi-status.st-void { background: #fef2f2; color: var(--rbi-red); }
+
+/* ── Customer waterfall badges ── */
+.rbi-cu-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px;
+  border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+}
+.rbi-cu-badge.rbi-cu-badge-default { background: #f1f5f9; color: var(--rbi-muted); }
+.rbi-cu-badge.rbi-cu-badge-custom { background: var(--rbi-primary-soft); color: var(--rbi-primary); }
+
+/* ── Empty state ── */
+.rbi-empty { text-align: center; padding: 40px 16px; color: var(--rbi-muted); }
+.rbi-empty-ic { font-size: 30px; margin-bottom: 8px; }
+.rbi-empty-title { font-size: 15px; font-weight: 650; color: var(--rbi-ink); }
+.rbi-empty-sub { font-size: 12.5px; max-width: 420px; margin: 6px auto 0; }
+
+/* ── Cards ── */
+.rbi-card {
+  background: var(--rbi-card); border: 1px solid var(--rbi-line); border-radius: 12px;
+  padding: 16px; margin-bottom: 14px;
+}
+.rbi-card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.rbi-card-title { font-size: 14px; font-weight: 700; }
+.rbi-card-sub { font-size: 11.5px; color: var(--rbi-muted); }
+.rbi-card-foot { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.rbi-note { font-size: 12.5px; color: var(--rbi-muted); line-height: 1.55; margin: 6px 0 10px; }
+.rbi-danger-card { border-color: #fecaca; }
+.rbi-danger-card .rbi-card-title { color: var(--rbi-red); }
+.rbi-cu-pricing-card { background: var(--rbi-bg); border: 1px solid var(--rbi-line); margin: 12px 0 4px; }
+
+/* ── Form grid ── */
+.rbi-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+.rbi-fld { display: flex; flex-direction: column; gap: 4px; }
+.rbi-fld-full { grid-column: 1 / -1; }
+.rbi-label { font-size: 11.5px; font-weight: 600; color: var(--rbi-muted); }
+.rbi-settings-actions { margin: 6px 0 10px; }
+
+/* ── Tables ── */
+.rbi-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.rbi-table th {
+  text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--rbi-muted); font-weight: 700; padding: 8px 10px; border-bottom: 2px solid var(--rbi-line);
+}
+.rbi-table td { padding: 8px 10px; border-bottom: 1px solid var(--rbi-line); vertical-align: middle; }
+.rbi-table tr:last-child td { border-bottom: none; }
+.rbi-price-wrap { overflow-x: auto; }
+.rbi-px-input { width: 110px; }
+.rbi-px-input.rbi-px-input-wide { width: 100%; min-width: 240px; }
+.rbi-num-right, .rbi-table td.rbi-num-right, .rbi-table th.rbi-num-right { text-align: right; }
+
+/* ── Breakdown ── */
+.rbi-breakdown-card { background: var(--rbi-bg); border: 1px solid var(--rbi-line); border-radius: 10px; padding: 14px; margin-top: 6px; }
+.rbi-breakdown-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.rbi-breakdown { width: 100%; border-collapse: collapse; font-size: 12.5px; display: table; }
+.rbi-breakdown-row { display: table-row; }
+.rbi-breakdown-row > span { display: table-cell; padding: 6px 8px; border-bottom: 1px solid var(--rbi-line); }
+.rbi-breakdown-row:last-child > span { border-bottom: none; }
+.rbi-bd-label { font-weight: 600; }
+.rbi-bd-amount { text-align: right; white-space: nowrap; }
+.rbi-bd-applied { text-align: right; white-space: nowrap; font-weight: 650; }
+.rbi-bd-capped { color: var(--rbi-amber); font-size: 11px; font-weight: 600; }
+.rbi-bd-row-negotiated .rbi-bd-label { color: var(--rbi-amber); }
+.rbi-total-row {
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 2px solid var(--rbi-line); margin-top: 10px; padding-top: 10px;
+}
+.rbi-total-label { font-size: 12px; font-weight: 600; color: var(--rbi-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.rbi-total-value { font-size: 20px; font-weight: 800; color: var(--rbi-primary); }
+
+/* ── Modal ── */
+.rbi-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px; z-index: 9997; overflow-y: auto;
+}
+.rbi-modal {
+  background: var(--rbi-card); border-radius: 14px; width: 100%; max-width: 760px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.3); overflow: hidden;
+}
+.rbi-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--rbi-line);
+}
+.rbi-modal-title { font-size: 16px; font-weight: 750; margin: 0; }
+.rbi-modal-x { background: none; border: none; font-size: 15px; cursor: pointer; color: var(--rbi-muted); padding: 4px 8px; border-radius: 6px; }
+.rbi-modal-x:hover { background: #f1f5f9; color: var(--rbi-ink); }
+.rbi-modal-body { padding: 16px 18px; max-height: calc(100vh - 220px); overflow-y: auto; }
+.rbi-modal-foot {
+  display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+  border-top: 1px solid var(--rbi-line); background: var(--rbi-bg); flex-wrap: wrap;
+}
+.rbi-foot-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.rbi-viewbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--rbi-bg); border: 1px solid var(--rbi-line); border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 12px;
+}
+.rbi-view-number { font-size: 14px; font-weight: 700; }
+.rbi-view-dates { font-size: 12px; color: var(--rbi-muted); }
+
+.rbi-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 550; margin: 10px 0; cursor: pointer; }
+.rbi-check-row input { width: 15px; height: 15px; accent-color: var(--rbi-primary); }
+.rbi-negotiated {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px;
+  padding: 12px 14px; margin: 10px 0;
+}
+
+/* ── Additional invoice lines ── */
+.rbi-lines-block {
+  background: var(--rbi-bg); border: 1px solid var(--rbi-line); border-radius: 10px;
+  padding: 12px 14px; margin: 10px 0;
+}
+.rbi-lines-block .rbi-card-head { margin-bottom: 6px; }
+.rbi-line-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.rbi-line-row .rbi-input.rbi-line-desc { flex: 1; }
+.rbi-line-row .rbi-input.rbi-line-amt { width: 140px; flex: 0 0 auto; }
+
+/* ── Support type manager (settings) ── */
+.rbi-sup-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.rbi-sup-row .rbi-input.rbi-sup-name { flex: 1; }
+.rbi-sup-row .rbi-input.rbi-sup-fee { width: 130px; flex: 0 0 auto; }
+
+/* ── Company logo ── */
+.rbi-logo-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.rbi-logo-thumb {
+  width: 64px; height: 64px; border: 1px dashed var(--rbi-line); border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--rbi-bg); color: var(--rbi-muted); font-size: 10px;
+  overflow: hidden; flex: 0 0 auto;
+}
+.rbi-logo-thumb img { width: 100%; height: 100%; object-fit: contain; }
+
+@media (max-width: 760px) {
+  .rbi-form-grid { grid-template-columns: 1fr; }
+  .rbi-row { flex-wrap: wrap; }
+  .rbi-row-total { width: 100%; text-align: left; }
+}

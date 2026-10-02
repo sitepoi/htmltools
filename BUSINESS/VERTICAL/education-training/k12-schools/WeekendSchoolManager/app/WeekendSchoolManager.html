@@ -1,0 +1,183 @@
+<div id="wsm-app">
+	<aside class="wsm-sidebar">
+		<div class="wsm-brand">
+			<div class="wsm-brand-icon">🏫</div>
+			<div class="wsm-brand-name" id="wsm-school-name">Weekend School</div>
+			<div class="wsm-brand-sub">All student records in one place</div>
+		</div>
+		<nav class="wsm-nav" id="wsm-nav">
+			<div class="wsm-nav-item active" data-page="students"><span class="wsm-nav-icon">🧑‍🎓</span>Students<span class="wsm-nav-badge" id="wsm-nav-students">0</span></div>
+			<div class="wsm-nav-item" data-page="attendance"><span class="wsm-nav-icon">📅</span>Attendance</div>
+			<div class="wsm-nav-item" data-page="payments"><span class="wsm-nav-icon">💳</span>Payments<span class="wsm-nav-badge" id="wsm-nav-payments">0</span></div>
+			<div class="wsm-nav-item" data-page="progress"><span class="wsm-nav-icon">📈</span>Progress<span class="wsm-nav-badge" id="wsm-nav-flags">0</span></div>
+			<div class="wsm-nav-item" data-page="communication"><span class="wsm-nav-icon">💬</span>Communication</div>
+			<div class="wsm-nav-item" data-page="reports"><span class="wsm-nav-icon">📊</span>Reports</div>
+			<div class="wsm-nav-item" data-page="settings"><span class="wsm-nav-icon">⚙️</span>Settings</div>
+		</nav>
+		<div class="wsm-sidebar-foot">
+			<div class="wsm-size-meter" id="wsm-size-meter" title="Stored data size against the 1 MB Firestore document limit">-- KB</div>
+		</div>
+	</aside>
+
+	<main class="wsm-main">
+
+		<!-- STUDENTS -->
+		<section id="wsm-page-students" class="wsm-page active">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Students</div>
+				<div class="wsm-page-sub">Registration, parent contact, health notes and photo consent for every student</div>
+				<div class="wsm-page-actions">
+					<button class="wsm-btn wsm-btn-primary" data-act="add-student">+ Add Student</button>
+					<input type="text" id="wsm-student-search" class="wsm-search" placeholder="Search students...">
+				</div>
+			</div>
+			<div class="wsm-chips" id="wsm-student-group-chips"></div>
+			<div class="wsm-student-list" id="wsm-student-list"></div>
+		</section>
+
+		<!-- ATTENDANCE -->
+		<section id="wsm-page-attendance" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Attendance</div>
+				<div class="wsm-page-sub">Lesson-based marks for each Sunday, entered within 24 hours</div>
+				<div class="wsm-page-actions">
+					<div class="wsm-week-nav">
+						<button class="wsm-btn wsm-btn-icon" data-act="att-prev" title="Previous Sunday">◀</button>
+						<button class="wsm-btn wsm-btn-ghost" data-act="att-today">This Sunday</button>
+						<button class="wsm-btn wsm-btn-icon" data-act="att-next" title="Next Sunday">▶</button>
+						<h3 class="wsm-week-title" id="wsm-att-week-label"></h3>
+					</div>
+					<div class="wsm-att-status" id="wsm-att-status"></div>
+				</div>
+			</div>
+			<div class="wsm-att-tools">
+				<button class="wsm-btn wsm-btn-ghost" data-act="att-mark-all-present">✓ All Present</button>
+				<button class="wsm-btn wsm-btn-ghost" data-act="att-mark-all-absent">✗ All Absent</button>
+				<button class="wsm-btn wsm-btn-primary" data-act="att-complete">Mark Week Complete</button>
+			</div>
+			<div class="wsm-att-table-wrap">
+				<table class="wsm-table wsm-att-table" id="wsm-att-table"></table>
+			</div>
+			<div class="wsm-att-legend" id="wsm-att-legend"></div>
+			<div class="wsm-att-open" id="wsm-att-open-weeks"></div>
+		</section>
+
+		<!-- PAYMENTS -->
+		<section id="wsm-page-payments" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Payments</div>
+				<div class="wsm-page-sub">Monthly payment status per student with polite late reminders</div>
+				<div class="wsm-page-actions">
+					<div class="wsm-week-nav">
+						<button class="wsm-btn wsm-btn-icon" data-act="pay-prev">◀</button>
+						<button class="wsm-btn wsm-btn-ghost" data-act="pay-today">This Month</button>
+						<button class="wsm-btn wsm-btn-icon" data-act="pay-next">▶</button>
+						<h3 class="wsm-week-title" id="wsm-pay-month-label"></h3>
+					</div>
+					<button class="wsm-btn wsm-btn-outline" data-act="pay-reminder">📨 Build Late Reminder</button>
+				</div>
+			</div>
+			<div class="wsm-pay-summary" id="wsm-pay-summary"></div>
+			<div class="wsm-pay-table-wrap">
+				<table class="wsm-table wsm-pay-table" id="wsm-pay-table"></table>
+			</div>
+			<div id="wsm-pay-waiting"></div>
+		</section>
+
+		<!-- PROGRESS -->
+		<section id="wsm-page-progress" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Progress</div>
+				<div class="wsm-page-sub">General notes, weekly teacher contact and Quran level and memorization</div>
+				<div class="wsm-page-actions">
+					<div class="wsm-select-wrap">
+						<select id="wsm-progress-student" class="wsm-select"></select>
+					</div>
+				</div>
+			</div>
+			<div class="wsm-flag-strip" id="wsm-flag-strip"></div>
+			<div class="wsm-progress-grid" id="wsm-progress-grid"></div>
+		</section>
+
+		<!-- COMMUNICATION -->
+		<section id="wsm-page-communication" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Communication</div>
+				<div class="wsm-page-sub">Group message archive, one-on-one feedback, absence calls and suggestions</div>
+				<div class="wsm-page-actions">
+					<button class="wsm-btn wsm-btn-primary" data-act="comm-add-group">+ New Group Message</button>
+				</div>
+			</div>
+			<div class="wsm-comm-tabs" id="wsm-comm-tabs">
+				<button class="wsm-comm-tab active" data-comm-tab="group">Group Messages</button>
+				<button class="wsm-comm-tab" data-comm-tab="onetoone">One-on-One</button>
+				<button class="wsm-comm-tab" data-comm-tab="absence">Absence Calls</button>
+				<button class="wsm-comm-tab" data-comm-tab="suggestions">Suggestions</button>
+			</div>
+			<div class="wsm-comm-content" id="wsm-comm-content"></div>
+		</section>
+
+		<!-- REPORTS -->
+		<section id="wsm-page-reports" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Reports</div>
+				<div class="wsm-page-sub">Weekly and monthly summaries with WhatsApp export and meeting report</div>
+				<div class="wsm-page-actions">
+					<div class="wsm-comm-tabs" id="wsm-report-kinds">
+						<button class="wsm-comm-tab active" data-report-kind="monthly">Monthly</button>
+						<button class="wsm-comm-tab" data-report-kind="weekly">Weekly</button>
+					</div>
+				</div>
+			</div>
+			<div class="wsm-week-nav" id="wsm-report-nav">
+				<button class="wsm-btn wsm-btn-icon" data-act="rep-prev">◀</button>
+				<button class="wsm-btn wsm-btn-ghost" data-act="rep-today">Current</button>
+				<button class="wsm-btn wsm-btn-icon" data-act="rep-next">▶</button>
+				<h3 class="wsm-week-title" id="wsm-report-period-label"></h3>
+				<span class="wsm-flex-spacer"></span>
+				<button class="wsm-btn wsm-btn-outline" data-act="rep-copy">📋 Copy Text</button>
+				<button class="wsm-btn wsm-btn-outline" data-act="rep-download">⬇ Download .txt</button>
+				<button class="wsm-btn wsm-btn-outline" data-act="rep-pdf">🖨 Print / PDF</button>
+			</div>
+			<div class="wsm-report-content" id="wsm-report-content"></div>
+		</section>
+
+		<!-- SETTINGS -->
+		<section id="wsm-page-settings" class="wsm-page">
+			<div class="wsm-page-head">
+				<div class="wsm-page-title">Settings</div>
+				<div class="wsm-page-sub">School name, class groups, lessons and payment brackets</div>
+			</div>
+			<div class="wsm-settings-grid" id="wsm-settings-grid"></div>
+		</section>
+
+	</main>
+</div>
+
+<!-- MODAL -->
+<div class="wsm-overlay" id="wsm-modal-overlay">
+	<div class="wsm-modal">
+		<div class="wsm-modal-head">
+			<h3 id="wsm-modal-title">Title</h3>
+			<button class="wsm-btn wsm-btn-icon" data-act="modal-close">✕</button>
+		</div>
+		<div class="wsm-modal-body" id="wsm-modal-body"></div>
+		<div class="wsm-modal-foot" id="wsm-modal-foot"></div>
+	</div>
+</div>
+
+<!-- STUDENT DRAWER -->
+<div class="wsm-overlay" id="wsm-drawer-overlay">
+	<div class="wsm-drawer">
+		<div class="wsm-drawer-head">
+			<div class="wsm-drawer-avatar" id="wsm-drawer-avatar">?</div>
+			<div class="wsm-drawer-heading">
+				<div class="wsm-drawer-name" id="wsm-drawer-name"></div>
+				<div class="wsm-drawer-meta" id="wsm-drawer-meta"></div>
+			</div>
+			<button class="wsm-btn wsm-btn-icon" data-act="drawer-close">✕</button>
+		</div>
+		<div class="wsm-drawer-tabs" id="wsm-drawer-tabs"></div>
+		<div class="wsm-drawer-body" id="wsm-drawer-body"></div>
+	</div>
+</div>

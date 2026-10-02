@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Development Quote - UniConHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   UniConHub - Website Development Quote
+   Brand: navy #2B2E4A | gold accent #B99A5B | Inter only
+   ============================================================ */
+:root{
+  --navy:#2B2E4A;
+  --navy-deep:#1F2138;
+  --navy-mid:#41466B;
+  --navy-soft:#666C8D;
+  --ink:#25273D;
+  --muted:#6E738A;
+  --line:#E4E6EE;
+  --wash:#F5F6F9;
+  --gold:#B99A5B;
+  --gold-deep:#9C8044;
+  --gold-soft:#F7F2E6;
+  --paper:#FFFFFF;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+html{font-size:16px;}
+body{
+  font-family:'Inter','Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+  background:#E9EBF2;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+/* ---------- page shell ---------- */
+.page{
+  width:210mm;
+  min-height:297mm;
+  margin:26px auto;
+  background:var(--paper);
+  box-shadow:0 2px 20px rgba(31,33,56,.16),0 1px 4px rgba(31,33,56,.10);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  padding:15mm 16mm 0;
+}
+.page-body{flex:1;}
+.page-foot{
+  border-top:1px solid var(--line);
+  padding:4.5mm 0 6mm;
+  margin-top:7mm;
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  font-size:8.5pt;
+  color:var(--muted);
+  letter-spacing:.02em;
+}
+.foot-brand{font-weight:700;color:var(--navy);letter-spacing:.10em;font-size:8pt;text-transform:uppercase;}
+.foot-brand span{color:var(--gold-deep);}
+.foot-page{font-weight:600;color:var(--navy);}
+/* ---------- shared typography ---------- */
+.kicker{
+  font-size:8.5pt;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--gold-deep);margin-bottom:3mm;
+}
+h1{font-size:30pt;font-weight:800;letter-spacing:-.02em;line-height:1.08;color:var(--navy);}
+.lead{font-size:10.5pt;line-height:1.65;color:var(--muted);margin-top:4.5mm;max-width:150mm;}
+.sec{margin-bottom:5mm;}
+.sec:last-child{margin-bottom:0;}
+.sec-head{display:flex;align-items:center;gap:3.5mm;margin-bottom:2.6mm;}
+.sec-num{
+  font-size:8.5pt;font-weight:800;letter-spacing:.08em;color:var(--gold-deep);
+  border:1px solid var(--line);background:var(--wash);
+  padding:1.6mm 2.6mm;border-radius:1.4mm;flex:none;
+}
+.sec-title{
+  font-size:14.5pt;font-weight:700;letter-spacing:-.01em;color:var(--navy);
+  display:flex;align-items:center;gap:4mm;white-space:nowrap;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--line);}
+.sec p{font-size:9.8pt;line-height:1.68;color:var(--ink);}
+.sec p + p{margin-top:2.5mm;}
+.body-note{font-size:9.8pt;line-height:1.68;color:var(--muted);}
+/* ---------- check list ---------- */
+.checks{display:grid;gap:1.8mm;margin-top:1mm;}
+.chk{display:flex;gap:3.2mm;align-items:flex-start;font-size:9.8pt;line-height:1.62;color:var(--ink);}
+.chk svg{flex:none;width:4.4mm;height:4.4mm;margin-top:.7mm;}
+.chk b{color:var(--navy);font-weight:600;}
+/* ---------- numbered mini list ---------- */
+.mini-list{list-style:none;display:grid;gap:1.5mm;}
+.mini-list li{position:relative;padding-left:7mm;font-size:9.8pt;line-height:1.6;color:var(--ink);}
+.mini-list li::before{
+  content:'';position:absolute;left:0;top:1.55mm;width:2.1mm;height:2.1mm;
+  background:var(--navy);border-radius:.6mm;
+}
+.mini-list li b{color:var(--navy);font-weight:600;}
+/* ---------- cover ---------- */
+.cover-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.logo-img{height:10.5mm;display:block;}
+.logo-fallback{display:none;font-weight:800;font-size:17pt;color:var(--navy);letter-spacing:-.01em;}
+.qno{text-align:right;font-size:9pt;color:var(--muted);line-height:1.75;}
+.qno .q-label{display:block;font-size:8pt;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-deep);}
+.qno strong{color:var(--navy);font-weight:700;}
+.cover-hero{margin-top:21mm;}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:4mm;margin-top:10mm;}
+.fact{
+  border:1px solid var(--line);border-radius:2mm;background:var(--paper);
+  padding:4.2mm 4.5mm 3.8mm;position:relative;overflow:hidden;
+}
+.fact::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1mm;background:var(--navy);}
+.fact-label{font-size:7.8pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1.6mm;}
+.fact-value{font-size:11pt;font-weight:700;color:var(--navy);line-height:1.4;}
+.fact-sub{font-size:8.5pt;color:var(--muted);margin-top:1mm;line-height:1.45;}
+.prepared{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin-top:10mm;}
+.prep-card{border:1px solid var(--line);border-radius:2mm;padding:5mm 5.5mm;background:var(--paper);}
+.prep-label{
+  font-size:8pt;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--navy);display:flex;align-items:center;gap:2.4mm;margin-bottom:3.4mm;
+}
+.prep-label::before{content:'';width:2mm;height:2mm;background:var(--gold);border-radius:.5mm;flex:none;}
+.prep-row{font-size:9.5pt;line-height:2.0;color:var(--muted);}
+.prep-row strong{color:var(--navy);font-weight:600;margin-right:2mm;}
+.ph{
+  display:inline-block;min-width:34mm;border-bottom:1px dashed #B9BDCC;
+  color:var(--navy-soft);padding:0 1mm;font-weight:500;
+}
+.prep-brand{font-size:13pt;font-weight:800;color:var(--navy);letter-spacing:-.01em;margin-bottom:2.2mm;}
+.cover-band{
+  margin:0 -16mm 0 -16mm;margin-top:auto;
+  background:linear-gradient(115deg,var(--navy-deep) 0%,var(--navy) 62%,var(--navy-mid) 100%);
+  color:#FFFFFF;padding:9mm 16mm 10mm;
+  display:flex;align-items:stretch;
+}
+.band-note{
+  flex:1.35;padding-right:10mm;border-right:1px solid rgba(255,255,255,.16);
+  display:flex;flex-direction:column;justify-content:center;
+}
+.band-note .kicker{color:#D9C28F;margin-bottom:2.2mm;}
+.band-note p{font-size:10.5pt;line-height:1.6;color:#D8DBE8;font-weight:500;}
+.band-stats{flex:2;display:flex;align-items:center;justify-content:space-between;padding-left:10mm;gap:6mm;}
+.band-stat{flex:1;}
+.band-stat-value{font-size:17pt;font-weight:800;letter-spacing:-.01em;color:#FFFFFF;white-space:nowrap;}
+.band-stat-value small{font-size:9pt;font-weight:600;color:#A9B0C9;letter-spacing:.02em;}
+.band-stat-label{
+  font-size:7.6pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:#A9B0C9;margin-top:1.6mm;line-height:1.5;
+}
+.band-div{width:1px;align-self:stretch;background:rgba(255,255,255,.16);flex:none;}
+/* ---------- page structure cards ---------- */
+.pcards{display:grid;gap:3mm;margin-top:1mm;}
+.pcard{
+  border:1px solid var(--line);border-radius:2mm;background:var(--paper);
+  padding:3.8mm 4.6mm;display:flex;gap:4.6mm;align-items:flex-start;
+}
+.pcard-body{flex:1;}
+.pcard-name{font-size:10.5pt;font-weight:700;color:var(--navy);line-height:1.35;}
+.pcard-name span{color:var(--muted);font-weight:600;font-size:9pt;letter-spacing:.04em;margin-left:1.6mm;}
+.pcard-desc{font-size:9.2pt;line-height:1.6;color:var(--muted);margin-top:1.2mm;}
+/* ---------- investment table ---------- */
+.inv-table{width:100%;border-collapse:collapse;margin-top:1mm;font-size:9.8pt;}
+.inv-table th{
+  background:var(--navy);color:#FFFFFF;text-align:left;
+  font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:3.2mm 4mm;
+}
+.inv-table th:first-child{border-radius:1.6mm 0 0 0;}
+.inv-table th:last-child{border-radius:0 1.6mm 0 0;text-align:right;}
+.inv-table td{
+  padding:2.8mm 4mm;border-bottom:1px solid var(--line);vertical-align:top;
+  color:var(--ink);line-height:1.5;
+}
+.inv-table td:last-child{text-align:right;font-weight:700;color:var(--navy);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.inv-table tr.inv-main td{background:var(--wash);font-weight:600;}
+.inv-table tr.inv-main td:last-child{font-weight:800;}
+.inv-item{font-weight:600;color:var(--navy);}
+.inv-scope{font-size:8.8pt;color:var(--muted);margin-top:.8mm;line-height:1.5;}
+.range-wrap{margin-top:2.5mm;}
+.range-labels{display:flex;justify-content:space-between;margin-bottom:2mm;}
+.range-label{font-size:8.2pt;color:var(--muted);font-weight:500;}
+.range-label b{display:block;font-size:10.5pt;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;}
+.range-bar{display:flex;gap:1.5px;height:2.8mm;border-radius:1.4mm;overflow:hidden;}
+.range-seg1{flex:1;background:var(--navy);}
+.range-seg2{flex:1;background:var(--navy-mid);}
+.range-seg3{flex:1;background:var(--navy-soft);}
+.range-note{font-size:8.6pt;color:var(--muted);margin-top:2.6mm;line-height:1.55;}
+.range-note b{color:var(--navy);font-weight:600;}
+/* ---------- payment cards ---------- */
+.pay-row{display:grid;grid-template-columns:1fr 1fr;gap:4mm;margin-top:1mm;}
+.pay-card{
+  border:1px solid var(--line);border-radius:2mm;background:var(--paper);
+  padding:4.6mm 5mm;display:flex;gap:4mm;align-items:center;
+}
+.pay-pct{
+  flex:none;font-size:19pt;font-weight:800;color:var(--navy);letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;
+}
+.pay-txt{font-size:9.2pt;line-height:1.55;color:var(--muted);}
+.pay-txt b{display:block;font-size:10pt;font-weight:700;color:var(--navy);margin-bottom:.8mm;}
+/* ---------- exclusions two column ---------- */
+.excl-grid{display:grid;grid-template-columns:1fr 1fr;gap:2.4mm 5mm;margin-top:1mm;}
+.excl{display:flex;gap:2.8mm;align-items:flex-start;font-size:9pt;line-height:1.55;color:var(--ink);}
+.excl-x{flex:none;width:3.6mm;height:3.6mm;margin-top:.6mm;}
+/* ---------- signature ---------- */
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:6mm;margin-top:2mm;}
+.sig-card{border:1px solid var(--line);border-radius:2mm;padding:5.5mm 6mm;background:var(--paper);}
+.sig-title{font-size:11pt;font-weight:700;color:var(--navy);margin-bottom:5.5mm;}
+.sig-row{margin-bottom:5mm;}
+.sig-row:last-child{margin-bottom:0;}
+.sig-label{font-size:7.8pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:1.4mm;}
+.sig-line{height:7mm;border-bottom:1px solid var(--navy);}
+.thanks{
+  margin-top:8mm;background:var(--navy);border-radius:2.5mm;color:#FFFFFF;
+  padding:7mm 8mm;text-align:center;position:relative;overflow:hidden;
+}
+.thanks::before,.thanks::after{
+  content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.05);
+}
+.thanks::before{width:34mm;height:34mm;top:-16mm;left:-10mm;}
+.thanks::after{width:26mm;height:26mm;bottom:-13mm;right:-8mm;}
+.thanks-title{font-size:13.5pt;font-weight:700;letter-spacing:-.01em;}
+.thanks-sub{font-size:9pt;color:#C6CADC;margin-top:2mm;font-weight:500;}
+.thanks-brand{
+  margin-top:4.5mm;font-size:8.2pt;font-weight:700;letter-spacing:.28em;
+  text-transform:uppercase;color:#D9C28F;
+}
+/* ---------- print ---------- */
+@page{size:A4;margin:0;}
+@media print{
+  body{background:#FFFFFF;}
+  .page{
+    margin:0 auto;box-shadow:none;width:210mm;height:297mm;min-height:0;
+    page-break-after:always;position:relative;overflow:hidden;
+  }
+  .page:last-child{page-break-after:auto;}
+  .page-body{padding-bottom:24mm;}
+  .page-foot{position:absolute;left:16mm;right:16mm;bottom:0;margin-top:0;background:#FFFFFF;}
+  .pcard,.pay-card,.sig-card,.fact,.prep-card,.chk,.excl{page-break-inside:avoid;break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+}
+@media screen and (max-width:850px){
+  .page{width:auto;min-height:0;margin:12px;padding:10mm 9mm 0;}
+  .cover-band{margin:12px -9mm 0 -9mm;flex-direction:column;gap:7mm;padding:8mm 9mm;}
+  .band-note{border-right:none;padding-right:0;}
+  .band-stats{padding-left:0;gap:4mm;}
+  .facts{grid-template-columns:1fr 1fr;}
+  .prepared,.pay-row,.sig-grid,.excl-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================ PAGE 1 - COVER -->
+<div class="page">
+  <div class="page-body">
+    <div class="cover-top">
+      <!-- To use the logo file, keep this HTML file next to the WebsiteQuotes folder.
+           The logo sits one folder up: ../uniconhub-logo-transparent.png -->
+      <img class="logo-img" src="../uniconhub-logo-transparent.png" alt="UniConHub logo"
+           onerror="this.style.display='none';document.getElementById('logoFallback').style.display='block';">
+      <span class="logo-fallback" id="logoFallback">UniConHub</span>
+      <div class="qno">
+        <span class="q-label">Quote</span>
+        <!-- EDIT: quote number -->
+        <strong>UCH-Q-2026-101</strong><br>
+        <!-- EDIT: quote date -->
+        October 1, 2026<br>
+        Valid for 30 days
+      </div>
+    </div>
+
+    <div class="cover-hero">
+      <div class="kicker">Website Services</div>
+      <h1>Website Development<br>Quote</h1>
+      <p class="lead">
+        Professional website design, custom development, responsive
+        implementation and launch. A polished 5-page business website on
+        the UniConHub CMS, built to present your company at its best.
+      </p>
+    </div>
+
+    <div class="facts">
+      <div class="fact">
+        <div class="fact-label">Project</div>
+        <div class="fact-value">5-Page Business<br>Website</div>
+      </div>
+      <div class="fact">
+        <div class="fact-label">Development</div>
+        <div class="fact-value">Custom-Built,<br>Human Reviewed</div>
+      </div>
+      <div class="fact">
+        <div class="fact-label">Timeline</div>
+        <div class="fact-value">7-10 Business<br>Days</div>
+        <div class="fact-sub">After final content and approvals</div>
+      </div>
+      <div class="fact">
+        <div class="fact-label">Investment</div>
+        <div class="fact-value">$800<br>CAD</div>
+        <div class="fact-sub">Complete 5-page package</div>
+      </div>
+    </div>
+
+    <div class="prepared">
+      <div class="prep-card">
+        <div class="prep-label">Prepared For</div>
+        <div class="prep-row">
+          <strong>Company</strong>Sunfix Canada
+        </div>
+      </div>
+      <div class="prep-card">
+        <div class="prep-label">Prepared By</div>
+        <div class="prep-brand">UniConHub</div>
+        <div class="prep-row">
+          <strong>Website</strong><span class="ph">[www.uniconhub.com]</span><br>
+          <strong>Email</strong>info@uniconhub.com<br>
+          <strong>Phone</strong>604 704 9117
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cover-band">
+    <div class="band-note">
+      <div class="kicker">Investment Summary</div>
+      <p>Transparent, fixed pricing with no surprises. Applicable taxes, if required, are additional.</p>
+    </div>
+    <div class="band-stats">
+      <div class="band-stat">
+        <div class="band-stat-value">$800 <small>CAD</small></div>
+        <div class="band-stat-label">Complete Website<br>5 pages included</div>
+      </div>
+      <div class="band-div"></div>
+      <div class="band-stat">
+        <div class="band-stat-value">$150 <small>/ page</small></div>
+        <div class="band-stat-label">Additional Pages<br>Beyond page 5</div>
+      </div>
+      <div class="band-div"></div>
+      <div class="band-stat">
+        <div class="band-stat-value">$150 <small>CAD</small></div>
+        <div class="band-stat-label">LinkedIn Company Page<br>Optional add-on</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================================ PAGE 2 - SCOPE + STRUCTURE -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">01</span>
+        <h2 class="sec-title">Project Scope</h2>
+      </div>
+      <p>
+        The project includes the design and development of a polished corporate website
+        consisting of five (5) pages, built on the UniConHub CMS, optimized for presentation,
+        speed and responsive viewing.
+      </p>
+      <div class="checks">
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Modern, professional visual design</b> aligned with the client's brand, colours, typography and content.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Custom page layouts</b> developed individually with refined coding and design iteration.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Responsive desktop, tablet and mobile layouts.</b></span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Interactive navigation, buttons, hover states, scroll effects</b> and tasteful animations where appropriate.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Reusable visual components</b> and a consistent spacing, typography and design system across all pages.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Integration of supplied logos, images, icons</b> and other brand assets.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Basic on-page SEO structure</b> including page titles, headings, semantic HTML and image alt text.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Cross-browser testing</b> and a final visual and functional quality review.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">02</span>
+        <h2 class="sec-title">Suggested Page Structure</h2>
+      </div>
+      <p style="margin-bottom:3.5mm;">
+        The final page names and content can be adjusted during the project. A typical structure is:
+      </p>
+      <div class="pcards">
+        <div class="pcard">
+          <div class="pcard-body">
+            <div class="pcard-name">Home <span>Page 1</span></div>
+            <div class="pcard-desc">Hero section, company introduction, key services, value proposition, trust indicators, call-to-action and contact entry points.</div>
+          </div>
+        </div>
+        <div class="pcard">
+          <div class="pcard-body">
+            <div class="pcard-name">About / Company <span>Page 2</span></div>
+            <div class="pcard-desc">Company story, capabilities, statistics, certifications and awards, locations, values and supporting imagery.</div>
+          </div>
+        </div>
+        <div class="pcard">
+          <div class="pcard-body">
+            <div class="pcard-name">Services <span>Page 3</span></div>
+            <div class="pcard-desc">Detailed presentation of core services, technology and platform offerings, service benefits and relevant calls-to-action.</div>
+          </div>
+        </div>
+        <div class="pcard">
+          <div class="pcard-body">
+            <div class="pcard-name">Locations / Contact <span>Page 4</span></div>
+            <div class="pcard-desc">Office information, contact details, location presentation, enquiry call-to-action and global presence.</div>
+          </div>
+        </div>
+        <div class="pcard">
+          <div class="pcard-body">
+            <div class="pcard-name">Additional Content <span>Page 5</span></div>
+            <div class="pcard-desc">A dedicated page for another business area, solution, industry, case study, portfolio or other approved content.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="foot-brand">UniConHub <span>|</span> Website Development Quote</span>
+    <span class="foot-page">Page 2 of 6</span>
+  </div>
+</div>
+
+<!-- ================================================================ PAGE 3 - DESIGN + TECHNICAL -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">03</span>
+        <h2 class="sec-title">Design &amp; User Experience</h2>
+      </div>
+      <div class="checks">
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Clean corporate aesthetic</b> with strong visual hierarchy and clear calls-to-action.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Responsive navigation</b> suitable for desktop and mobile users.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Large-format hero imagery</b> and supporting visual sections where appropriate.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Cards, statistics, badges, service blocks</b> and content sections designed for easy scanning.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Subtle motion and scroll-based interactions</b> to improve perceived quality without making the site heavy.</span>
+        </div>
+        <div class="chk">
+          <svg viewBox="0 0 12 12" fill="none"><rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.6" fill="#F5F6F9" stroke="#D5D8E2"/><path d="M3.1 6.3l1.9 1.9 3.9-4.4" stroke="#2B2E4A" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span><b>Consistent treatment</b> of buttons, links, headings, spacing, imagery and content blocks.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">04</span>
+        <h2 class="sec-title">Technical Scope</h2>
+      </div>
+      <ul class="mini-list">
+        <li><b>Fast, reliable performance</b> - pages load quickly and the website stays smooth and responsive on every device.</li>
+        <li><b>UniConHub CMS included</b> - the client can edit website content at any time, with database and authentication managed by the platform.</li>
+        <li><b>No custom backend or API development</b> included.</li>
+        <li><b>Hosting on the UniConHub cloud platform</b> - the first year is included in the project fee, then $80 CAD per year.</li>
+        <li><b>Third-party services</b>, if required for forms, analytics, maps or other functionality, are subject to the provider's availability and fees.</li>
+      </ul>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="foot-brand">UniConHub <span>|</span> Website Development Quote</span>
+    <span class="foot-page">Page 3 of 6</span>
+  </div>
+</div>
+
+<!-- ================================================================ PAGE 4 - INVESTMENT + REVISIONS -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">05</span>
+        <h2 class="sec-title">Investment</h2>
+      </div>
+      <p style="margin-bottom:3mm;">The proposed project fee is structured as follows:</p>
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th style="width:30%;">Item</th>
+            <th>Scope</th>
+            <th style="width:24%;">Fee (CAD)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="inv-main">
+            <td><span class="inv-item">5-Page Website</span></td>
+            <td>All 5 pages designed and developed
+              <div class="inv-scope">The complete website: Home, About / Company, Services, Locations / Contact and Additional Content. Includes all scope, design, development and review items in sections 01-04.</div>
+            </td>
+            <td>$800</td>
+          </tr>
+          <tr>
+            <td><span class="inv-item">Additional Page</span></td>
+            <td>Any page beyond the 5-page maximum, if required
+              <div class="inv-scope">Each additional page receives the same full design and development treatment.</div>
+            </td>
+            <td>$150 / page</td>
+          </tr>
+          <tr>
+            <td><span class="inv-item">LinkedIn Company Page</span></td>
+            <td>Optional add-on: professional company page setup
+              <div class="inv-scope">Page creation assistance, logo and banner design, tagline, about section and starter posts.</div>
+            </td>
+            <td>$150</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="range-wrap">
+        <div class="range-note">
+          <b>Project fee: $800 CAD for the complete 5-page website.</b> Additional pages beyond the
+          5-page maximum are $150 CAD each. The first year of hosting on the UniConHub cloud
+          platform is included; hosting renews at $80 CAD per year. Taxes: applicable taxes,
+          if required, are additional.
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">06</span>
+        <h2 class="sec-title">Included Revisions &amp; Approval</h2>
+      </div>
+      <ul class="mini-list">
+        <li><b>Up to two (2) reasonable revision rounds</b> during the design and development process.</li>
+        <li>Revisions cover adjustments to <b>layout, text placement, styling, colours and visual presentation</b>.</li>
+        <li><b>Major changes</b> to approved page structure, or adding new functionality or pages, are treated as additional scope.</li>
+        <li><b>Final approval</b> is requested before launch.</li>
+      </ul>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="foot-brand">UniConHub <span>|</span> Website Development Quote</span>
+    <span class="foot-page">Page 4 of 6</span>
+  </div>
+</div>
+
+<!-- ================================================================ PAGE 5 - RESPONSIBILITIES + EXCLUSIONS + PAYMENT -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">07</span>
+        <h2 class="sec-title">Client Responsibilities</h2>
+      </div>
+      <ul class="mini-list">
+        <li>Provide <b>final text and content, logos, brand assets and preferred images</b> before development of the relevant page.</li>
+        <li>Provide <b>timely feedback and approvals</b>.</li>
+        <li>Provide the <b>preferred domain name</b> and any registrar or DNS access needed to connect it to the website.</li>
+        <li>Ensure the client <b>owns or has permission to use</b> supplied text, images, logos and other materials.</li>
+        <li>If the <b>LinkedIn Company Page add-on</b> is accepted: the client creates the page with their own personal LinkedIn account (they remain the page owner), then adds the personal account provided by UniConHub as an admin to complete the setup.</li>
+      </ul>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">08</span>
+        <h2 class="sec-title">Exclusions / Optional Services</h2>
+      </div>
+      <div class="excl-grid">
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Customer membership or customer portal features beyond the UniConHub CMS.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>E-commerce, payment processing or shopping cart functionality.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Custom backend or API development.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Complex booking, quotation or application systems.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Ongoing SEO campaigns, paid advertising or content marketing.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Professional copywriting, photography, video production or licensed stock assets unless separately agreed.</span>
+        </div>
+        <div class="excl">
+          <svg class="excl-x" viewBox="0 0 12 12" fill="none"><path d="M2.8 9.2L9.2 2.8M2.8 2.8l6.4 6.4" stroke="#B99A5B" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <span>Ongoing maintenance after the included launch period.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">09</span>
+        <h2 class="sec-title">Payment Terms</h2>
+      </div>
+      <div class="pay-row" style="grid-template-columns:1fr;">
+        <div class="pay-card">
+          <div class="pay-pct">100%</div>
+          <div class="pay-txt"><b>Full Payment</b>Due at the end of the project, upon final approval and before or at launch. No deposit required.</div>
+        </div>
+      </div>
+      <p style="margin-top:3.5mm;">
+        Additional work outside the agreed scope will be quoted and approved before implementation.
+      </p>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="foot-brand">UniConHub <span>|</span> Website Development Quote</span>
+    <span class="foot-page">Page 5 of 6</span>
+  </div>
+</div>
+
+<!-- ================================================================ PAGE 6 - PAYMENT + DELIVERY + ACCEPTANCE -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">10</span>
+        <h2 class="sec-title">Delivery</h2>
+      </div>
+      <p>
+        Final delivery includes the completed website source files and agreed project
+        assets. The site is published to the UniConHub cloud platform after final approval,
+        with the first year of hosting included.
+      </p>
+    </div>
+
+    <div class="sec">
+      <div class="sec-head">
+        <span class="sec-num">11</span>
+        <h2 class="sec-title">Acceptance</h2>
+      </div>
+      <div class="sig-grid">
+        <div class="sig-card">
+          <div class="sig-title">Client</div>
+          <div class="sig-row">
+            <div class="sig-label">Company</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Authorized By</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Signature</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Date</div>
+            <div class="sig-line"></div>
+          </div>
+        </div>
+        <div class="sig-card">
+          <div class="sig-title">UniConHub</div>
+          <div class="sig-row">
+            <div class="sig-label">Company</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Authorized By</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Signature</div>
+            <div class="sig-line"></div>
+          </div>
+          <div class="sig-row">
+            <div class="sig-label">Date</div>
+            <div class="sig-line"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="thanks">
+      <div class="thanks-title">Thank you for the opportunity to work on your website.</div>
+      <div class="thanks-sub">We look forward to building a website that presents your business at its best.</div>
+      <div class="thanks-brand">UniConHub</div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="foot-brand">UniConHub <span>|</span> Website Development Quote</span>
+    <span class="foot-page">Page 6 of 6</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekend School Manager - Test Harness</title>
+<link rel="stylesheet" href="WeekendSchoolManager.css">
+<style>
+body { padding-top: 30px !important; margin: 0; }
+#app-container { min-height: calc(100vh - 30px); }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-role { background: #334155; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+/* ?bare=1 - marketing screenshots show the real app only */
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none !important; }
+body.th-bare #app-container { min-height: 100vh; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS - Weekend School Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-role" id="th-role">Role: admin</button>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  // ?bare=1 hides the harness toolbar (marketing screenshots show the real app only)
+  if (new URLSearchParams(window.location.search).get('bare') === '1') {
+    document.body.classList.add('th-bare');
+  }
+  var STORAGE_KEY = 'weekend_school_manager_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _fields = {}, _value = null;
+  var ROLES = ['admin', 'editor', 'viewer', 'none'];
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+  function currentRole() {
+    var p = (new URLSearchParams(window.location.search)).get('role');
+    if (p && ROLES.indexOf(p) > -1) return p;
+    return localStorage.getItem(STORAGE_KEY + '_role') || 'admin';
+  }
+  function roleUser(role) {
+    if (role === 'none') return null;
+    return { id: 'u_' + role, name: 'Harness ' + role, email: role + '@harness.test', roles: [role], effectiveAccess: { isViewer: true, isEditor: role !== 'viewer', isManager: role === 'admin' } };
+  }
+  function setRole(role) {
+    localStorage.setItem(STORAGE_KEY + '_role', role);
+    _user = roleUser(role);
+    var btn = document.getElementById('th-role');
+    if (btn) btn.textContent = 'Role: ' + role;
+    listeners.userChange.forEach(function(cb) { try { cb(_user); } catch(e) {} });
+  }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return Object.assign({}, _fields); },
+    setField: function(id, value) { _fields[id] = value; },
+    setFields: function(obj) { Object.assign(_fields, obj); },
+    watchField: function(id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    requestSave: function(cb) { setTimeout(function() { cb(null, true); }, 10); },
+    requestUpload: function(accept, cb) {
+      setTimeout(function() { cb(null, { name: 'signed-form.pdf', url: 'mock://uploads/signed-form-' + Date.now() + '.pdf', size: 2048, type: 'application/pdf' }); }, 30);
+    },
+    requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted document text.'); }, 30); },
+    requestSendEmail: function(options, cb) { console.log('[harness] requestSendEmail to:', options.to, '| subject:', options.subject); setTimeout(function() { cb(null, { ok: true }); }, 30); },
+    requestExportPdf: function(options, cb) { console.log('[harness] requestExportPdf', options.filename); cb(null, ''); },
+    openUrl: function(url) { console.log('[harness] openUrl', url); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2500);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    onReady: function(cb) {
+      load();
+      var qa = new URLSearchParams(window.location.search);
+      if (qa.get('fresh') === '1') { _value = null; save(_value); }
+      if (qa.get('sample') === '1' && !_value && typeof buildSample === 'function') { _value = buildSample(); save(_value); }
+      // Only real WESM page names are forwarded to the tool. Generic capture
+      // page names (documents, finder, ...) are mapped to views after boot.
+      var WSM_PAGES = ['students', 'attendance', 'payments', 'progress', 'communication', 'reports', 'settings'];
+      var qaPage = qa.get('page');
+      if (qaPage && WSM_PAGES.indexOf(qaPage) > -1 && _value) { _value.ui = _value.ui || {}; _value.ui.activePage = qaPage; save(_value); }
+      _user = roleUser(currentRole()); setRole(currentRole()); cb(_value, _fields);
+    },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _setActivePage: function(page) {
+      load();
+      _value = _value || {};
+      _value.ui = _value.ui || {};
+      if (_value.ui.activePage === page) return;
+      _value.ui.activePage = page;
+      save(_value);
+      window.location.reload();
+    },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { _readOnly = !_readOnly; listeners.readonlyChange.forEach(function(cb) { try { cb(_readOnly); } catch(e) {} }); },
+    _cycleRole: function() {
+      var idx = ROLES.indexOf(currentRole());
+      setRole(ROLES[(idx + 1) % ROLES.length]);
+      window.location.reload();
+    },
+    _dump: function() { console.log('WSM DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+})();
+</script>
+
+<script>
+/* ── Sample data ── */
+function isoOfDate(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function sundayOf(d) { var c = new Date(d.getFullYear(), d.getMonth(), d.getDate()); var day = c.getDay(); if (day !== 0) c.setDate(c.getDate() - day); return c; }
+function monthKeyOf(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+function addMonthsToKey(ym, n) { var p = ym.split('-'); var d = new Date(Number(p[0]), Number(p[1]) - 1 + n, 1); return monthKeyOf(d); }
+function addDaysIso(iso, n) { var p = iso.split('-').map(Number); var d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() + n); return isoOfDate(d); }
+
+function buildSample() {
+  var today = new Date();
+  var thisSunday = isoOfDate(sundayOf(today));
+  var lastSunday = addDaysIso(thisSunday, -7);
+  var thisMonth = monthKeyOf(today);
+  var lastMonth = addMonthsToKey(thisMonth, -1);
+  var bracketFull = 'b_full', bracketSibling = 'b_sibling';
+
+  function student(firstName, lastName, group, bracket, extra) {
+    var s = {
+      id: 's_' + firstName.toLowerCase(), firstName: firstName, lastName: lastName,
+      gender: '', dateOfBirth: '', classGroup: group, startDate: lastMonth + '-05', status: 'active', paymentBracketId: bracket,
+      parentName: extra.parentName, parentPhone: extra.parentPhone, parentEmail: extra.parentEmail || '', parentRelation: 'Mother',
+      secondParentName: '', secondParentPhone: '',
+      address: '', emergencyContactName: '', emergencyContactPhone: '', emergencyContactRelation: '',
+      allergies: extra.allergies || '', healthNotes: '', pickupAuthorizedNames: '', pickupNotes: '',
+      photoConsent: 'yes',
+      paymentEntries: [], documents: [], progressNotes: [], teacherContactLog: [],
+      quranReading: { currentLevel: extra.quranLevel, levelHistory: [{ date: lastMonth + '-10', level: extra.prevLevel }] },
+      quranMemorization: { surahs: extra.surahs, nextTarget: extra.nextTarget },
+      parentCommunication: { oneOnOne: [], absenceCalls: [] },
+      attendanceByDate: {}
+    };
+    s.paymentEntries.push({ id: 'pe_' + firstName.toLowerCase() + '_last', month: lastMonth, amount: extra.fee, dueDate: lastMonth + '-01', status: 'paid', paidDate: lastMonth + '-03', note: '', recordedBy: 'Harness admin' });
+    s.paymentEntries.push({ id: 'pe_' + firstName.toLowerCase() + '_this', month: thisMonth, amount: extra.fee, dueDate: thisMonth + '-01', status: extra.thisMonthStatus, paidDate: extra.thisMonthStatus === 'paid' ? thisMonth + '-02' : '', note: '', recordedBy: 'Harness admin' });
+    if (extra.extraDebt) {
+      s.paymentEntries.push({ id: 'pe_' + firstName.toLowerCase() + '_debt', month: addMonthsToKey(thisMonth, -2), amount: extra.extraDebt.amount, dueDate: extra.extraDebt.dueDate, status: 'late', paidDate: '', note: extra.extraDebt.note, recordedBy: 'Harness admin' });
+    }
+    if (extra.documents) s.documents = extra.documents;
+    var lessons = ['Quran Reading', 'Islamic Studies', 'Prayer Practice', 'Quran Memorization'];
+    if (extra.absentLastWeek) {
+      s.attendanceByDate[lastSunday] = { lessons: { 'Quran Reading': { mark: 'A', teacherName: 'Harness admin', teacherAt: '' }, 'Islamic Studies': { mark: 'A', teacherName: 'Harness admin', teacherAt: '' }, 'Prayer Practice': { mark: 'A', teacherName: 'Harness admin', teacherAt: '' }, 'Quran Memorization': { mark: 'A', teacherName: 'Harness admin', teacherAt: '' } }, note: '' };
+      s.parentCommunication.absenceCalls.push({ date: addDaysIso(lastSunday, 1), reason: 'Sick', outcome: 'Spoke to mother, will return next week.' });
+    } else {
+      s.attendanceByDate[lastSunday] = { lessons: { 'Quran Reading': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Islamic Studies': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Prayer Practice': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Quran Memorization': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' } }, note: '' };
+    }
+    if (extra.absentThisWeek) s.attendanceByDate[thisSunday] = { lessons: { 'Quran Reading': { mark: 'L', teacherName: 'Harness admin', teacherAt: '' }, 'Islamic Studies': { mark: '', teacherName: '', teacherAt: '' }, 'Prayer Practice': { mark: '', teacherName: '', teacherAt: '' }, 'Quran Memorization': { mark: '', teacherName: '', teacherAt: '' } }, note: 'Arrived late' };
+    else s.attendanceByDate[thisSunday] = { lessons: { 'Quran Reading': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Islamic Studies': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Prayer Practice': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' }, 'Quran Memorization': { mark: 'P', teacherName: 'Harness admin', teacherAt: '' } }, note: '' };
+    if (extra.note) s.progressNotes.push({ date: thisMonth + '-08', note: extra.note.text, flag: extra.note.flag || 'none', recordedBy: 'Harness admin' });
+    if (extra.contact) s.teacherContactLog.push({ date: thisMonth + '-05', method: 'WhatsApp', summary: extra.contact, recordedBy: 'Harness admin' });
+    return s;
+  }
+
+  var students = [
+    student('Yusuf', 'Demir', 'Quran Level 1', bracketFull, { parentName: 'Ayse Demir', parentPhone: '604-555-0101', parentEmail: 'ayse.demir@example.com', fee: 40, quranLevel: 'Elifba 2', prevLevel: 'Elifba 1', surahs: [{ name: 'Surah Al-Fatiha', status: 'memorized', portions: '' }, { name: 'Surah Al-Ikhlas', status: 'inProgress', portions: '1/2' }], nextTarget: 'Finish Surah Al-Ikhlas', thisMonthStatus: 'paid', note: { text: 'Reading letters much faster now.', flag: 'none' }, contact: 'Mother confirmed daily home practice.', documents: [{ id: 'd1', name: 'photo-consent-yusuf.pdf', url: 'mock://uploads/photo-consent-yusuf.pdf', kind: 'photoConsent', uploadedAt: lastMonth + '-06T10:00:00.000Z', uploadedBy: 'Harness admin' }, { id: 'd2', name: 'emergency-info-yusuf.pdf', url: 'mock://uploads/emergency-info-yusuf.pdf', kind: 'emergencyInfo', uploadedAt: lastMonth + '-06T10:05:00.000Z', uploadedBy: 'Harness admin' }] }),
+    student('Zeynep', 'Kaya', 'Quran Level 1', bracketSibling, { parentName: 'Fatma Kaya', parentPhone: '604-555-0102', fee: 30, quranLevel: 'Quran Level 1', prevLevel: 'Elifba 2', surahs: [{ name: 'Surah Al-Fatiha', status: 'memorized', portions: '' }], nextTarget: 'Surah Al-Nas', thisMonthStatus: 'unpaid', absentLastWeek: true, note: { text: 'Absent twice in a row, parent did not answer messages.', flag: 'attention' }, extraDebt: { amount: 25, dueDate: addMonthsToKey(thisMonth, -2) + '-15', note: 'Registration fee' } }),
+    student('Omar', 'Hassan', 'Quran Level 2', bracketFull, { parentName: 'Layla Hassan', parentPhone: '604-555-0103', fee: 40, quranLevel: 'Quran Level 2', prevLevel: 'Quran Level 1', surahs: [{ name: 'Surah Al-Fil', status: 'inProgress', portions: '1/3' }], nextTarget: 'Surah Quraysh', thisMonthStatus: 'paid', note: { text: 'Excellent tajweed progress.', flag: 'none' } }),
+    student('Meryem', 'Ozturk', 'Quran Level 2', bracketSibling, { parentName: 'Elif Ozturk', phone: '604-555-0104', parentPhone: '604-555-0104', fee: 30, quranLevel: 'Quran Level 2', prevLevel: 'Quran Level 1', surahs: [], nextTarget: '', thisMonthStatus: 'late', absentThisWeek: true, note: { text: 'Has missed 3 of the last 4 weeks, seems to be losing interest.', flag: 'droppingInterest' } }),
+    student('Ali', 'Yildiz', 'Quran Level 3', bracketFull, { parentName: 'Zehra Yildiz', parentPhone: '604-555-0105', fee: 40, quranLevel: 'Quran Level 3', prevLevel: 'Quran Level 2', surahs: [{ name: 'Juz 30 first half', status: 'revision', portions: '' }], nextTarget: 'Finish Juz 30 revision', thisMonthStatus: 'paid', contact: 'Asked about moving to Level 4 next term.' }),
+    student('Huda', 'Farah', 'Quran Level 3', bracketFull, { parentName: 'Mariam Farah', parentPhone: '604-555-0106', fee: 40, quranLevel: 'Quran Level 3', prevLevel: 'Quran Level 2', surahs: [], nextTarget: '', thisMonthStatus: 'paid', allergies: 'Peanut allergy' })
+  ];
+
+  return {
+    version: 1,
+    school: {
+      name: 'Horizon Weekend School',
+      classGroups: ['Quran Level 1', 'Quran Level 2', 'Quran Level 3'],
+      lessons: ['Quran Reading', 'Islamic Studies', 'Prayer Practice', 'Quran Memorization'],
+      paymentBrackets: [{ id: bracketFull, name: 'Full', monthlyFee: 40 }, { id: bracketSibling, name: 'Sibling', monthlyFee: 30 }],
+      currency: 'CAD', paymentDueDay: 1, requiredAttendanceChecksPerDay: 4, seeded: true
+    },
+    students: students,
+    attendanceWeeks: {},
+    schoolLogs: {
+      groupMessages: [
+        { id: 'gm1', date: addDaysIso(lastSunday, 1), language: 'en', title: 'Week summary', text: 'Assalamu alaikum parents, thank you for another great Sunday. This week we studied the meaning of Surah Al-Fatiha. Please practice at home with your children for 10 minutes a day.' },
+        { id: 'gm2', date: addDaysIso(lastSunday, 1), language: 'tr', title: 'Haftalik ozet', text: 'Selamun aleykum veliler, guzel bir Pazar icin tesekkurler. Bu hafta Fatiha Suresi uzerinde calistik. Lutfen evde cocuklarinizla gunde 10 dakika tekrar yapin.' }
+      ],
+      suggestionsComplaints: [
+        { id: 'sc1', date: lastMonth + '-12', from: 'Ayse Demir', text: 'Could we add a 10 minute break between lessons?', status: 'open', followUp: 'Discuss with teachers this week.' }
+      ]
+    },
+    ui: { activePage: 'students' }
+  };
+}
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = "\u003cdiv id=\"wsm-app\">\n\t\u003caside class=\"wsm-sidebar\">\n\t\t\u003cdiv class=\"wsm-brand\">\n\t\t\t\u003cdiv class=\"wsm-brand-icon\">🏫\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-brand-name\" id=\"wsm-school-name\">Weekend School\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-brand-sub\">All student records in one place\u003c/div>\n\t\t\u003c/div>\n\t\t\u003cnav class=\"wsm-nav\" id=\"wsm-nav\">\n\t\t\t\u003cdiv class=\"wsm-nav-item active\" data-page=\"students\">\u003cspan class=\"wsm-nav-icon\">🧑‍🎓\u003c/span>Students\u003cspan class=\"wsm-nav-badge\" id=\"wsm-nav-students\">0\u003c/span>\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"attendance\">\u003cspan class=\"wsm-nav-icon\">📅\u003c/span>Attendance\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"payments\">\u003cspan class=\"wsm-nav-icon\">💳\u003c/span>Payments\u003cspan class=\"wsm-nav-badge\" id=\"wsm-nav-payments\">0\u003c/span>\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"progress\">\u003cspan class=\"wsm-nav-icon\">📈\u003c/span>Progress\u003cspan class=\"wsm-nav-badge\" id=\"wsm-nav-flags\">0\u003c/span>\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"communication\">\u003cspan class=\"wsm-nav-icon\">💬\u003c/span>Communication\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"reports\">\u003cspan class=\"wsm-nav-icon\">📊\u003c/span>Reports\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-nav-item\" data-page=\"settings\">\u003cspan class=\"wsm-nav-icon\">⚙️\u003c/span>Settings\u003c/div>\n\t\t\u003c/nav>\n\t\t\u003cdiv class=\"wsm-sidebar-foot\">\n\t\t\t\u003cdiv class=\"wsm-size-meter\" id=\"wsm-size-meter\" title=\"Stored data size against the 1 MB Firestore document limit\">-- KB\u003c/div>\n\t\t\u003c/div>\n\t\u003c/aside>\n\n\t\u003cmain class=\"wsm-main\">\n\n\t\t\u003c!-- STUDENTS -->\n\t\t\u003csection id=\"wsm-page-students\" class=\"wsm-page active\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Students\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">Registration, parent contact, health notes and photo consent for every student\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-primary\" data-act=\"add-student\">+ Add Student\u003c/button>\n\t\t\t\t\t\u003cinput type=\"text\" id=\"wsm-student-search\" class=\"wsm-search\" placeholder=\"Search students...\">\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-chips\" id=\"wsm-student-group-chips\">\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-student-list\" id=\"wsm-student-list\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- ATTENDANCE -->\n\t\t\u003csection id=\"wsm-page-attendance\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Attendance\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">Lesson-based marks for each Sunday, entered within 24 hours\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cdiv class=\"wsm-week-nav\">\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"att-prev\" title=\"Previous Sunday\">◀\u003c/button>\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-ghost\" data-act=\"att-today\">This Sunday\u003c/button>\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"att-next\" title=\"Next Sunday\">▶\u003c/button>\n\t\t\t\t\t\t\u003ch3 class=\"wsm-week-title\" id=\"wsm-att-week-label\">\u003c/h3>\n\t\t\t\t\t\u003c/div>\n\t\t\t\t\t\u003cdiv class=\"wsm-att-status\" id=\"wsm-att-status\">\u003c/div>\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-att-tools\">\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-ghost\" data-act=\"att-mark-all-present\">✓ All Present\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-ghost\" data-act=\"att-mark-all-absent\">✗ All Absent\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-primary\" data-act=\"att-complete\">Mark Week Complete\u003c/button>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-att-table-wrap\">\n\t\t\t\t\u003ctable class=\"wsm-table wsm-att-table\" id=\"wsm-att-table\">\u003c/table>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-att-legend\" id=\"wsm-att-legend\">\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-att-open\" id=\"wsm-att-open-weeks\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- PAYMENTS -->\n\t\t\u003csection id=\"wsm-page-payments\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Payments\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">Monthly payment status per student with polite late reminders\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cdiv class=\"wsm-week-nav\">\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"pay-prev\">◀\u003c/button>\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-ghost\" data-act=\"pay-today\">This Month\u003c/button>\n\t\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"pay-next\">▶\u003c/button>\n\t\t\t\t\t\t\u003ch3 class=\"wsm-week-title\" id=\"wsm-pay-month-label\">\u003c/h3>\n\t\t\t\t\t\u003c/div>\n\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-outline\" data-act=\"pay-reminder\">📨 Build Late Reminder\u003c/button>\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-pay-summary\" id=\"wsm-pay-summary\">\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-pay-table-wrap\">\n\t\t\t\t\u003ctable class=\"wsm-table wsm-pay-table\" id=\"wsm-pay-table\">\u003c/table>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv id=\"wsm-pay-waiting\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- PROGRESS -->\n\t\t\u003csection id=\"wsm-page-progress\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Progress\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">General notes, weekly teacher contact and Quran level and memorization\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cdiv class=\"wsm-select-wrap\">\n\t\t\t\t\t\t\u003cselect id=\"wsm-progress-student\" class=\"wsm-select\">\u003c/select>\n\t\t\t\t\t\u003c/div>\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-flag-strip\" id=\"wsm-flag-strip\">\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-progress-grid\" id=\"wsm-progress-grid\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- COMMUNICATION -->\n\t\t\u003csection id=\"wsm-page-communication\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Communication\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">Group message archive, one-on-one feedback, absence calls and suggestions\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-primary\" data-act=\"comm-add-group\">+ New Group Message\u003c/button>\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-comm-tabs\" id=\"wsm-comm-tabs\">\n\t\t\t\t\u003cbutton class=\"wsm-comm-tab active\" data-comm-tab=\"group\">Group Messages\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-comm-tab\" data-comm-tab=\"onetoone\">One-on-One\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-comm-tab\" data-comm-tab=\"absence\">Absence Calls\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-comm-tab\" data-comm-tab=\"suggestions\">Suggestions\u003c/button>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-comm-content\" id=\"wsm-comm-content\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- REPORTS -->\n\t\t\u003csection id=\"wsm-page-reports\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Reports\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">Weekly and monthly summaries with WhatsApp export and meeting report\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-actions\">\n\t\t\t\t\t\u003cdiv class=\"wsm-comm-tabs\" id=\"wsm-report-kinds\">\n\t\t\t\t\t\t\u003cbutton class=\"wsm-comm-tab active\" data-report-kind=\"monthly\">Monthly\u003c/button>\n\t\t\t\t\t\t\u003cbutton class=\"wsm-comm-tab\" data-report-kind=\"weekly\">Weekly\u003c/button>\n\t\t\t\t\t\u003c/div>\n\t\t\t\t\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-week-nav\" id=\"wsm-report-nav\">\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"rep-prev\">◀\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-ghost\" data-act=\"rep-today\">Current\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"rep-next\">▶\u003c/button>\n\t\t\t\t\u003ch3 class=\"wsm-week-title\" id=\"wsm-report-period-label\">\u003c/h3>\n\t\t\t\t\u003cspan class=\"wsm-flex-spacer\">\u003c/span>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-outline\" data-act=\"rep-copy\">📋 Copy Text\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-outline\" data-act=\"rep-download\">⬇ Download .txt\u003c/button>\n\t\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-outline\" data-act=\"rep-pdf\">🖨 Print / PDF\u003c/button>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-report-content\" id=\"wsm-report-content\">\u003c/div>\n\t\t\u003c/section>\n\n\t\t\u003c!-- SETTINGS -->\n\t\t\u003csection id=\"wsm-page-settings\" class=\"wsm-page\">\n\t\t\t\u003cdiv class=\"wsm-page-head\">\n\t\t\t\t\u003cdiv class=\"wsm-page-title\">Settings\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-page-sub\">School name, class groups, lessons and payment brackets\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-settings-grid\" id=\"wsm-settings-grid\">\u003c/div>\n\t\t\u003c/section>\n\n\t\u003c/main>\n\u003c/div>\n\n\u003c!-- MODAL -->\n\u003cdiv class=\"wsm-overlay\" id=\"wsm-modal-overlay\">\n\t\u003cdiv class=\"wsm-modal\">\n\t\t\u003cdiv class=\"wsm-modal-head\">\n\t\t\t\u003ch3 id=\"wsm-modal-title\">Title\u003c/h3>\n\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"modal-close\">✕\u003c/button>\n\t\t\u003c/div>\n\t\t\u003cdiv class=\"wsm-modal-body\" id=\"wsm-modal-body\">\u003c/div>\n\t\t\u003cdiv class=\"wsm-modal-foot\" id=\"wsm-modal-foot\">\u003c/div>\n\t\u003c/div>\n\u003c/div>\n\n\u003c!-- STUDENT DRAWER -->\n\u003cdiv class=\"wsm-overlay\" id=\"wsm-drawer-overlay\">\n\t\u003cdiv class=\"wsm-drawer\">\n\t\t\u003cdiv class=\"wsm-drawer-head\">\n\t\t\t\u003cdiv class=\"wsm-drawer-avatar\" id=\"wsm-drawer-avatar\">?\u003c/div>\n\t\t\t\u003cdiv class=\"wsm-drawer-heading\">\n\t\t\t\t\u003cdiv class=\"wsm-drawer-name\" id=\"wsm-drawer-name\">\u003c/div>\n\t\t\t\t\u003cdiv class=\"wsm-drawer-meta\" id=\"wsm-drawer-meta\">\u003c/div>\n\t\t\t\u003c/div>\n\t\t\t\u003cbutton class=\"wsm-btn wsm-btn-icon\" data-act=\"drawer-close\">✕\u003c/button>\n\t\t\u003c/div>\n\t\t\u003cdiv class=\"wsm-drawer-tabs\" id=\"wsm-drawer-tabs\">\u003c/div>\n\t\t\u003cdiv class=\"wsm-drawer-body\" id=\"wsm-drawer-body\">\u003c/div>\n\t\u003c/div>\n\u003c/div>\n";
+
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+
+  function loadJS() {
+    status.textContent = 'Loading JS...';
+    var script = document.createElement('script');
+    script.src = 'WeekendSchoolManager.js';
+    script.onload = function() {
+      status.textContent = 'Ready - click "Load Sample Data" to test';
+      var qa = new URLSearchParams(window.location.search);
+      if (qa.get('drawer') === '1') {
+        setTimeout(function() { var row = document.querySelector('.wsm-student-row'); if (row) row.click(); }, 400);
+      }
+      if (qa.get('modal') === '1') {
+        setTimeout(function() { var btn = document.querySelector('[data-act="add-student"]'); if (btn) btn.click(); }, 400);
+      }
+      if (qa.get('reminder') === '1') {
+        setTimeout(function() { var btn = document.querySelector('[data-act="pay-reminder"]'); if (btn) btn.click(); }, 400);
+      }
+      if (qa.get('paytab') === '1') {
+        setTimeout(function() {
+          var row = document.querySelector('.wsm-student-row'); if (row) row.click();
+          setTimeout(function() {
+            var tab = document.querySelector('.wsm-drawer-tab[data-tab="payments"]'); if (tab) tab.click();
+          }, 300);
+        }, 400);
+      }
+      if (qa.get('paymsg') === '1') {
+        setTimeout(function() {
+          var row = document.querySelector('.wsm-student-row'); if (row) row.click();
+          setTimeout(function() {
+            var tab = document.querySelector('.wsm-drawer-tab[data-tab="payments"]'); if (tab) tab.click();
+            setTimeout(function() { var btn = document.querySelector('[data-act="drawer-pay-message"]'); if (btn) btn.click(); }, 300);
+          }, 300);
+        }, 400);
+      }
+      if (qa.get('quranmsg') === '1') {
+        setTimeout(function() {
+          var row = document.querySelector('.wsm-student-row'); if (row) row.click();
+          setTimeout(function() {
+            var tab = document.querySelector('.wsm-drawer-tab[data-tab="quran"]'); if (tab) tab.click();
+            setTimeout(function() { var btn = document.querySelector('[data-act="quran-message"]'); if (btn) btn.click(); }, 300);
+          }, 300);
+        }, 400);
+      }
+      // Screenshot views: the capture script sends generic ?page= names - map
+      // each one to a real WESM view and navigate by clicking the real UI.
+      var pageMap = {
+        dashboard: 'students',
+        documents: 'drawer',
+        transactions: 'payments',
+        finder: 'attendance',
+        gst: 'progress',
+        assistant: 'communication',
+        reports: 'reports',
+        settings: 'settings'
+      };
+      var pageName = qa.get('page');
+      if (pageName && pageMap[pageName]) {
+        setTimeout(function() {
+          var target = pageMap[pageName];
+          if (target === 'drawer') {
+            var row = document.querySelector('.wsm-student-row'); if (row) row.click();
+          } else {
+            var navItem = document.querySelector('.wsm-nav-item[data-page="' + target + '"]');
+            if (navItem) navItem.click();
+          }
+        }, 400);
+      }
+    };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    loadJS();
+  }
+
+  function tryFetch() {
+    fetch('WeekendSchoolManager.html')
+      .then(function(r) { return r.text(); })
+      .then(function(t) { status.textContent = 'HTML loaded via fetch'; injectHTML(t); })
+      .catch(function() { status.textContent = 'Using embedded HTML (file:// mode)'; injectHTML(EMBEDDED_HTML); });
+  }
+
+  // Harness buttons
+  document.getElementById('th-load-sample').onclick = function() { window.tool._loadSampleData(buildSample()); };
+  document.getElementById('th-clear').onclick = function() { window.tool._clearData(); };
+  document.getElementById('th-reload').onclick = function() { window.location.reload(); };
+  document.getElementById('th-role').onclick = function() { window.tool._cycleRole(); };
+  document.getElementById('th-role').textContent = 'Role: ' + ((new URLSearchParams(window.location.search)).get('role') || localStorage.getItem('weekend_school_manager_test_db_role') || 'admin');
+
+  // QA params (?sample=1, ?page=, ?fresh=1) are applied inside the mock onReady.
+
+  tryFetch();
+})();
+</script>
+</body>
+</html>

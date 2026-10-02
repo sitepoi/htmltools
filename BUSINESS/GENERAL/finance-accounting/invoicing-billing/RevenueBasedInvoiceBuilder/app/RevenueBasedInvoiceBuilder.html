@@ -1,0 +1,258 @@
+<div class="rbi-shell" id="rbi-shell">
+
+  <div class="rbi-lockbanner" id="rbi-lock-banner" style="display:none">🔒 View only - you do not have edit permission on this record</div>
+
+  <div class="rbi-stats" id="rbi-stats"></div>
+
+  <nav class="rbi-tabs" id="rbi-tabs">
+    <button type="button" class="rbi-tab-btn active" data-tab="invoices">📑 Invoices</button>
+    <button type="button" class="rbi-tab-btn" data-tab="customers">👥 Customers</button>
+    <button type="button" class="rbi-tab-btn" data-tab="pricing">⚖️ Pricing Agreement</button>
+    <button type="button" class="rbi-tab-btn" data-tab="settings">⚙️ Settings</button>
+  </nav>
+
+  <section class="rbi-pane active" id="pane-invoices">
+    <div class="rbi-toolbar">
+      <div class="rbi-search">
+        <span class="rbi-search-ic">🔍</span>
+        <input type="text" id="rbi-inv-search" class="rbi-input" placeholder="Search number, month, notes…">
+      </div>
+      <select id="rbi-inv-filter" class="rbi-input rbi-select">
+        <option value="all" selected>All invoices</option>
+        <option value="draft">Drafts</option>
+        <option value="sent">Sent</option>
+        <option value="paid">Paid</option>
+        <option value="void">Void</option>
+      </select>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-new-invoice">＋ New Invoice</button>
+    </div>
+    <div class="rbi-list" id="rbi-inv-list"></div>
+    <div class="rbi-empty" id="rbi-inv-empty" style="display:none">
+      <div class="rbi-empty-ic">🧾</div>
+      <div class="rbi-empty-title">No invoices yet</div>
+      <div class="rbi-empty-sub">Create the first invoice for this customer. The fee is calculated automatically from the monthly ticket revenue using the pricing agreement.</div>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-customers">
+    <div class="rbi-toolbar">
+      <div class="rbi-toolbar-hint">👥 Each customer is billed with the <strong>default waterfall</strong> or their <strong>own waterfall</strong> - new invoices pick the customer and use their rates automatically.</div>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-new-customer">＋ Add Customer</button>
+    </div>
+    <div class="rbi-list" id="rbi-cu-list"></div>
+    <div class="rbi-empty" id="rbi-cu-empty" style="display:none">
+      <div class="rbi-empty-ic">👥</div>
+      <div class="rbi-empty-title">No customers yet</div>
+      <div class="rbi-empty-sub">Add the first customer, then create their invoices. Each customer can use the default waterfall or their own rates.</div>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-pricing">
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">⚖️ Revenue-based pricing agreement</span>
+        <span class="rbi-card-sub" id="rbi-pricing-saved">changes apply to new invoices only</span>
+      </div>
+      <p class="rbi-note">The subscription fee is computed from the customer's <strong>monthly ticket revenue</strong> with a waterfall: each rate applies only to the revenue inside its bracket, never to the whole amount. Values below are the agreement defaults.</p>
+      <div class="rbi-price-wrap">
+        <table class="rbi-table rbi-price-table">
+          <thead>
+            <tr>
+              <th>Monthly ticket revenue</th>
+              <th>Rate</th>
+              <th>Fee on this portion (max)</th>
+              <th>Cumulative max</th>
+            </tr>
+          </thead>
+          <tbody id="rbi-price-body"></tbody>
+        </table>
+      </div>
+      <div class="rbi-card-foot">
+        <button type="button" class="rbi-btn rbi-btn-primary rbi-admin" id="rbi-btn-save-pricing">💾 Save Pricing Changes</button>
+        <button type="button" class="rbi-btn rbi-btn-ghost rbi-admin" id="rbi-btn-reset-pricing">↺ Reset to Agreement Defaults</button>
+      </div>
+    </div>
+
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🧮 How the waterfall works</span>
+        <span class="rbi-card-sub">worked example with the current pricing</span>
+      </div>
+      <p class="rbi-note">A company with <strong>CA $160,000</strong> monthly revenue pays the minimum on the first $20,000, then the rate of each bracket applied only to the revenue inside that bracket:</p>
+      <div class="rbi-breakdown" id="rbi-example-box"></div>
+      <p class="rbi-note">Revenue above CA $3,000,000 is <strong>negotiated</strong> - the invoice form asks for the agreed fee on the portion above the last bracket.</p>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-settings">
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🏢 Provider - your company</span>
+        <span class="rbi-card-sub">appears on the invoice header</span>
+      </div>
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-name">Company name</label><input type="text" id="rbi-st-name" class="rbi-input" placeholder="Acme Software Inc."></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxid">Tax / GST ID</label><input type="text" id="rbi-st-taxid" class="rbi-input" placeholder="123456789 RT0001"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-email">Email</label><input type="text" id="rbi-st-email" class="rbi-input" placeholder="billing@company.com"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-phone">Phone</label><input type="text" id="rbi-st-phone" class="rbi-input" placeholder="+1 …"></div>
+        <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-st-address">Address</label><input type="text" id="rbi-st-address" class="rbi-input" placeholder="Street, city, province, postal code"></div>
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label">Company logo</label>
+          <div class="rbi-logo-row">
+            <span class="rbi-logo-thumb" id="rbi-logo-thumb">No logo</span>
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-upload-logo">⬆ Upload logo</button>
+            <button type="button" class="rbi-btn rbi-btn-danger rbi-btn-sm" id="rbi-btn-remove-logo">Remove</button>
+            <span class="rbi-card-sub" id="rbi-logo-name"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🧾 Invoicing defaults</span>
+        <span class="rbi-card-sub">pre-filled on every new invoice</span>
+      </div>
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-defaultcustomer">Default customer</label><select id="rbi-st-defaultcustomer" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-defaultsupport">Default support type</label><select id="rbi-st-defaultsupport" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label">Support types (name + optional monthly fee)</label>
+          <div id="rbi-support-types"></div>
+          <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-add-support-type">＋ Add support type</button>
+        </div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-currency">Default currency</label><select id="rbi-st-currency" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxrate">Default tax rate %</label><input type="number" min="0" max="100" step="0.01" id="rbi-st-taxrate" class="rbi-input"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-prefix">Invoice prefix</label><input type="text" id="rbi-st-prefix" class="rbi-input" placeholder="INV"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-nextseq">Next invoice number</label><input type="number" min="1" step="1" id="rbi-st-nextseq" class="rbi-input"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-terms">Payment terms</label><select id="rbi-st-terms" class="rbi-input rbi-select"></select></div>
+      </div>
+    </div>
+
+    <div class="rbi-card rbi-danger-card rbi-admin">
+      <div class="rbi-card-head"><span class="rbi-card-title">🗑 Danger zone</span></div>
+      <p class="rbi-note">Delete all invoices and reset this tool to a fresh state. This cannot be undone.</p>
+      <div class="rbi-card-foot">
+        <button type="button" class="rbi-btn rbi-btn-danger" id="rbi-btn-reset-data">🗑 Delete All Data</button>
+      </div>
+    </div>
+
+    <div class="rbi-settings-actions">
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-save-settings">💾 Save Settings</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="rbi-backdrop" id="rbi-backdrop" style="display:none">
+  <div class="rbi-modal" id="rbi-modal" role="dialog" aria-modal="true">
+    <div class="rbi-modal-head">
+      <h2 class="rbi-modal-title" id="rbi-modal-title">New Invoice</h2>
+      <button type="button" class="rbi-modal-x" id="rbi-modal-x" aria-label="Close">✕</button>
+    </div>
+    <div class="rbi-modal-body" id="rbi-modal-body">
+
+      <div class="rbi-viewbar" id="rbi-view-bar" style="display:none">
+        <span class="rbi-status" id="rbi-view-status"></span>
+        <span class="rbi-view-number" id="rbi-view-number"></span>
+        <div class="rbi-spacer"></div>
+        <span class="rbi-view-dates" id="rbi-view-dates"></span>
+      </div>
+
+      <div id="rbi-form-fields">
+        <div class="rbi-form-grid">
+          <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-inv-customer">Customer</label><select id="rbi-inv-customer" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-month">Billing month</label><input type="month" id="rbi-inv-month" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-revenue">Monthly ticket revenue</label><input type="number" min="0" step="0.01" id="rbi-inv-revenue" class="rbi-input" placeholder="160000"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-currency">Currency</label><select id="rbi-inv-currency" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-support">Support type</label><select id="rbi-inv-support" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-taxrate">Tax rate %</label><input type="number" min="0" max="100" step="0.01" id="rbi-inv-taxrate" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-due">Due date</label><input type="date" id="rbi-inv-due" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-notes">Notes</label><input type="text" id="rbi-inv-notes" class="rbi-input" placeholder="Optional note on the invoice"></div>
+        </div>
+        <label class="rbi-check-row"><input type="checkbox" id="rbi-inv-minimum"> Charge the minimum fee on the first $20,000 of revenue</label>
+        <div class="rbi-negotiated" id="rbi-negotiated-block" style="display:none">
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-negotiated">Negotiated fee for the revenue above CA $3,000,000</label><input type="number" min="0" step="0.01" id="rbi-inv-negotiated" class="rbi-input"></div>
+          <p class="rbi-note" id="rbi-negotiated-hint"></p>
+        </div>
+        <div class="rbi-lines-block">
+          <div class="rbi-card-head">
+            <span class="rbi-card-title">➕ Additional lines</span>
+            <span class="rbi-card-sub">custom work, one-time integrations or new agreements from this month</span>
+          </div>
+          <div id="rbi-inv-lines"></div>
+          <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-add-line">＋ Add line</button>
+        </div>
+      </div>
+
+      <div class="rbi-breakdown-card">
+        <div class="rbi-breakdown-head">
+          <span class="rbi-card-title">💧 Waterfall fee breakdown</span>
+          <span class="rbi-card-sub" id="rbi-breakdown-sub">computed from the pricing agreement</span>
+        </div>
+        <div class="rbi-breakdown" id="rbi-breakdown"></div>
+        <div class="rbi-total-row">
+          <span class="rbi-total-label" id="rbi-total-label">Invoice total</span>
+          <strong class="rbi-total-value" id="rbi-inv-total"></strong>
+        </div>
+      </div>
+
+      <p class="rbi-note" id="rbi-note-tax"></p>
+    </div>
+    <div class="rbi-modal-foot">
+      <button type="button" class="rbi-btn rbi-btn-ghost" id="rbi-inv-cancel">Cancel</button>
+      <div class="rbi-foot-actions" id="rbi-inv-actions"></div>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-inv-save">💾 Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<div class="rbi-backdrop" id="rbi-cu-backdrop" style="display:none">
+  <div class="rbi-modal" role="dialog" aria-modal="true">
+    <div class="rbi-modal-head">
+      <h2 class="rbi-modal-title" id="rbi-cu-modal-title">Customer</h2>
+      <button type="button" class="rbi-modal-x" id="rbi-cu-close" aria-label="Close">✕</button>
+    </div>
+    <div class="rbi-modal-body">
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-cu-name">Customer name</label><input type="text" id="rbi-cu-name" class="rbi-input" placeholder="Lakeside Cinemas Group"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-cu-email">Email</label><input type="text" id="rbi-cu-email" class="rbi-input" placeholder="accounts@customer.com"></div>
+        <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-cu-address">Billing address</label><input type="text" id="rbi-cu-address" class="rbi-input" placeholder="Street, city, province, postal code"></div>
+      </div>
+
+      <div class="rbi-card rbi-cu-pricing-card">
+        <label class="rbi-check-row"><input type="checkbox" id="rbi-cu-use-default"> Use the default waterfall for this customer</label>
+        <div id="rbi-cu-price-block" style="display:none">
+          <div class="rbi-card-head">
+            <span class="rbi-card-title">💧 Custom waterfall for this customer</span>
+            <span class="rbi-card-sub">each rate applies only to the revenue inside its bracket</span>
+          </div>
+          <div class="rbi-price-wrap">
+            <table class="rbi-table rbi-price-table">
+              <thead>
+                <tr>
+                  <th>Monthly ticket revenue</th>
+                  <th>Rate</th>
+                  <th>Fee on this portion (max)</th>
+                  <th>Cumulative max</th>
+                </tr>
+              </thead>
+              <tbody id="rbi-cu-price-body"></tbody>
+            </table>
+          </div>
+          <div class="rbi-card-foot">
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-cu-copy-default">↺ Copy the default waterfall</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rbi-modal-foot">
+      <button type="button" class="rbi-btn rbi-btn-ghost" id="rbi-cu-cancel">Cancel</button>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-cu-save">💾 Save Customer</button>
+    </div>
+  </div>
+</div>

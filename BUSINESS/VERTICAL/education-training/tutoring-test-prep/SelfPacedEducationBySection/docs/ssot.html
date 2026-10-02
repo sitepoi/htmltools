@@ -76,8 +76,8 @@
     decision, never silently left divergent.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.2</td></tr>
-    <tr><th>Last updated</th><td>2026-09-25</td></tr>
+    <tr><th>Document version</th><td>0.3</td></tr>
+    <tr><th>Last updated</th><td>2026-09-30</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (SelfPacedEducationBySection).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/SelfPacedEducationBySection.html</code>, <code>app/SelfPacedEducationBySection.css</code>, <code>app/SelfPacedEducationBySection.js</code>, <code>app/test-harness.html</code></td></tr>
@@ -226,6 +226,13 @@
       <td>2026-09-25</td>
       <td>D-SPEB-08 / D-SPEB-09 / verified in code on 2026-09-25</td>
     </tr>
+    <tr>
+      <td>C-09</td>
+      <td>Student name on shared reports: a Setup field and an editable supervisor-panel chip store the student name (CONFIG.studentName), and every shared report (image, WhatsApp message, email) uses it. A student opening a record without a name captures their own name at boot; the supervisor's own name never appears on a report.</td>
+      <td><code>renderSetup / saveSetupConfig / renderSupervisorPanel / getShareReportData</code></td>
+      <td>2026-09-30</td>
+      <td>D-SPEB-10 / verified in code on 2026-09-30</td>
+    </tr>
   </table>
   <p class="note">Capabilities listed here are in effect and must keep working
   unless a decision in section 11 reverses them.</p>
@@ -241,6 +248,7 @@
     <tr><td>Pace state</td><td>ahead / on schedule / behind / ended - computed from start date, target end date and overall progress.</td></tr>
     <tr><td>Study link</td><td>The URL embedded in shared messages - resolved by getStudyPageUrl priority.</td></tr>
     <tr><td>Parent page URL</td><td>Origin + pathname of the CMS page the tool iframe is on, provided by the host SDK as tool.getParentPageUrl().</td></tr>
+    <tr><td>Student name</td><td>The per-record name shown on every shared status report (image, WhatsApp message, email), stored in CONFIG.studentName.</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
@@ -445,6 +453,12 @@
       <td>D-SPEB-09</td><td>2026-09-25</td>
       <td>The CMS host will send its own page URL through the postMessage bridge as tool.getParentPageUrl(). SECURITY CONTRACT: host sends location.origin + location.pathname ONLY (query string and hash stripped host-side - they can carry auth tokens); the tool treats the value as display/share data, never as an authorization signal; the tool strips '?' and '#' again as defense in depth. Tool-side probe shipped first among the automatic sources (before the studyPageUrl param).</td>
       <td>Removes the per-student link workload entirely - the shared link is the exact page the supervisor is on. Manual Setup link stays as top override for non-course pages.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-SPEB-10</td><td>2026-09-30</td>
+      <td>Student name on shared reports: the name shown on every shared status report is ONLY the stored per-record name (CONFIG.studentName), set from Setup or from the editable supervisor-panel chip. When the record has no name yet, a student opening it captures their own name at boot; the supervisor's own display name never falls back into a report (an administrator's name as the student would be wrong data).</td>
+      <td>Reports are read by parents and students - a report showing the supervisor's name as the student would be wrong. The boot capture keeps the student flow automatic while the supervisor stays in control through the editable chip.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
@@ -746,6 +760,38 @@
     </div>
   </section>
 
+  <section class="task-group" data-release-group="SPEB-4" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Student name on shared reports</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="SPEB-4">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="SPEB-4"></div></div>
+    <p class="task-group-note">Why these belong together: the Setup field, the supervisor chip and the
+    report data source are one feature - publishing them separately would
+    show the name in some places and not others.</p>
+
+    <div class="task-item" data-task-id="T-10" data-group="SPEB-4" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Student name field, editable chip and report data source</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Shared reports carry no student name until the record is opened by a student, and the supervisor's own name could leak in as the student.</p>
+          <p><strong>How we will solve it:</strong> A Setup "Student Name" field plus an editable supervisor-panel chip; getShareReportData reads ONLY CONFIG.studentName, with student boot capture and never the administrator name.</p>
+          <p><strong>Benefit:</strong> Every shared image, WhatsApp message and email is addressed to the right student.</p>
+          <p><strong>Files:</strong> <code>app/SelfPacedEducationBySection.js</code>, <code>app/SelfPacedEducationBySection.html</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> DONE - shipped 2026-09-30 (D-SPEB-10)</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
@@ -834,17 +880,25 @@
     <li><strong>TST-05 - email.</strong> Steps: with a recipient set, copy
     the email and send it (allowSendEmail mock). PASS if: the copied HTML
     contains the study-link call-to-action and the send path reports ok.</li>
+    <li><strong>TST-06 - student name on reports.</strong> Steps: open
+    Setup, type a student name and save; open the supervisor panel and
+    read the student chip; copy the WhatsApp report. Then clear the name
+    and rebuild the report as an administrator. PASS if: every report
+    carries the saved name and the administrator's own name never appears
+    as the student.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
     <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
-    <tr><td>TST-01 .. TST-05 (node vm smoke suites)</td><td>PASS</td><td>57-assert schedule suite, 30-assert target-lines suite, 13-assert link suite, 9-assert parent-URL suite - all green, temp files deleted</td></tr>
+    <tr><td>TST-01 .. TST-06 (node vm smoke suites + harness checks)</td><td>PASS</td><td>57-assert schedule suite, 30-assert target-lines suite, 13-assert link suite, 9-assert parent-URL suite - all green, temp files deleted</td></tr>
   </table>
-  <p><strong>Publish gate:</strong> publish only when TST-01..TST-05 pass and
-  the groups SPEB-1..SPEB-3 ship together.</p>
+  <p><strong>Publish gate:</strong> publish only when TST-01..TST-06 pass and
+  the groups SPEB-1..SPEB-4 ship together.</p>
   <p><strong>Progress log:</strong> 2026-09-25 - smoke suites for rounds 1-9
   all passed; node --check clean; link resolution suite verified the
-  query/hash stripping and the override priority.</p>
+  query/hash stripping and the override priority. 2026-09-30 - student
+  name flow verified in the harness (Setup save, supervisor chip, report
+  data source) and node --check clean.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -900,10 +954,30 @@
     </details>
   </div>
 
-  <p class="ok"><strong>Overall verdict.</strong> Safe to publish: all three
-  release groups are shipped and tested, the only medium risk (host method
-  not live yet) is accepted with working fallbacks, and the link leak risk
-  is covered by defense-in-depth stripping on the tool side.</p>
+  <div class="risk-item" data-risk-id="R-03" data-group="SPEB-4" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">A student opening an unnamed record captures their own name automatically</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> task T-10 / group SPEB-4</p>
+        <p><strong>What can go wrong:</strong> The first person to open the record fixes the name; if that person is not the student, reports would carry the wrong name until edited.</p>
+        <p><strong>Likelihood / impact:</strong> Possible on first open / low - the supervisor chip edits the name in one click.</p>
+        <p><strong>Mitigation:</strong> The editable chip on the supervisor panel and the Setup field both correct the name anytime; the administrator name never falls back.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-09-30 - open, low; the correction path is the editable chip in the supervisor panel.</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> Safe to publish: all release
+  groups are shipped and tested, the only medium risk (host method not live
+  yet) is accepted with working fallbacks, the link leak risk is covered by
+  defense-in-depth stripping on the tool side, and the new student-name
+  feature carries a low open risk with an in-tool correction path.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. The <code>npm run rel</code> script appends
@@ -913,6 +987,7 @@
     <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
     <tbody id="release-log-rows">
     <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    <tr><td>2026-09-30</td><td>v0.1.9</td><td>&lt;commit&gt;</td><td>Student name on shared reports: Setup field, editable supervisor chip and a report data source that only ever uses the stored student name.</td></tr>
     <tr><td>2026-09-25</td><td>v0.1.5</td><td>7621301</td><td>First release with documentation: multilingual status report share (9 languages, student/parent), email channel, time-aware schedule with pace guide, milestone toasts, correct course links via the CMS parent page URL with query/hash stripping.</td></tr>
     </tbody>
   </table>

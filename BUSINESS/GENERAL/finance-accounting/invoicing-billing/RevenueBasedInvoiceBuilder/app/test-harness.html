@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revenue Based Invoice Builder - Test Harness</title>
+<link rel="stylesheet" href="RevenueBasedInvoiceBuilder.css">
+<style>
+body { padding-top: 32px !important; margin: 0; background: #eef1f5; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#th-bar strong { color: #a5b4fc; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar select { font-size: 10px; padding: 2px 6px; border-radius: 4px; border: none; }
+#th-bar .btn-sample { background: #4f46e5; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar .btn-dump { background: #7c3aed; color: #fff; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+/* ?bare=1 - marketing screenshots show the real app only */
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none !important; }
+body.th-bare #app-container { min-height: 100vh; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#app-container { max-width: 1140px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS - Revenue Based Invoice Builder</strong><span class="sep">|</span>
+  <button class="btn-sample" id="th-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <label style="color:#94a3b8">Role:</label>
+  <select id="th-role">
+    <option value="admin">Admin (owner)</option>
+    <option value="editor">Editor</option>
+    <option value="viewer">Viewer</option>
+    <option value="none">Not signed in</option>
+  </select>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Toggle Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">New Invoice shows the live waterfall breakdown</span>
+  <span class="sep">|</span>
+  <button class="btn-dump" id="th-dump">Dump Value</button>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Ready - click "Load Sample Data"</span>
+</div>
+
+<div id="app-container">
+<!-- TOOL HTML START -->
+<div class="rbi-shell" id="rbi-shell">
+
+  <div class="rbi-lockbanner" id="rbi-lock-banner" style="display:none">🔒 View only - you do not have edit permission on this record</div>
+
+  <div class="rbi-stats" id="rbi-stats"></div>
+
+  <nav class="rbi-tabs" id="rbi-tabs">
+    <button type="button" class="rbi-tab-btn active" data-tab="invoices">📑 Invoices</button>
+    <button type="button" class="rbi-tab-btn" data-tab="customers">👥 Customers</button>
+    <button type="button" class="rbi-tab-btn" data-tab="pricing">⚖️ Pricing Agreement</button>
+    <button type="button" class="rbi-tab-btn" data-tab="settings">⚙️ Settings</button>
+  </nav>
+
+  <section class="rbi-pane active" id="pane-invoices">
+    <div class="rbi-toolbar">
+      <div class="rbi-search">
+        <span class="rbi-search-ic">🔍</span>
+        <input type="text" id="rbi-inv-search" class="rbi-input" placeholder="Search number, month, notes…">
+      </div>
+      <select id="rbi-inv-filter" class="rbi-input rbi-select">
+        <option value="all" selected>All invoices</option>
+        <option value="draft">Drafts</option>
+        <option value="sent">Sent</option>
+        <option value="paid">Paid</option>
+        <option value="void">Void</option>
+      </select>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-new-invoice">＋ New Invoice</button>
+    </div>
+    <div class="rbi-list" id="rbi-inv-list"></div>
+    <div class="rbi-empty" id="rbi-inv-empty" style="display:none">
+      <div class="rbi-empty-ic">🧾</div>
+      <div class="rbi-empty-title">No invoices yet</div>
+      <div class="rbi-empty-sub">Create the first invoice for this customer. The fee is calculated automatically from the monthly ticket revenue using the pricing agreement.</div>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-customers">
+    <div class="rbi-toolbar">
+      <div class="rbi-toolbar-hint">👥 Each customer is billed with the <strong>default waterfall</strong> or their <strong>own waterfall</strong> - new invoices pick the customer and use their rates automatically.</div>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-new-customer">＋ Add Customer</button>
+    </div>
+    <div class="rbi-list" id="rbi-cu-list"></div>
+    <div class="rbi-empty" id="rbi-cu-empty" style="display:none">
+      <div class="rbi-empty-ic">👥</div>
+      <div class="rbi-empty-title">No customers yet</div>
+      <div class="rbi-empty-sub">Add the first customer, then create their invoices. Each customer can use the default waterfall or their own rates.</div>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-pricing">
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">⚖️ Revenue-based pricing agreement</span>
+        <span class="rbi-card-sub" id="rbi-pricing-saved">changes apply to new invoices only</span>
+      </div>
+      <p class="rbi-note">The subscription fee is computed from the customer's <strong>monthly ticket revenue</strong> with a waterfall: each rate applies only to the revenue inside its bracket, never to the whole amount. Values below are the agreement defaults.</p>
+      <div class="rbi-price-wrap">
+        <table class="rbi-table rbi-price-table">
+          <thead>
+            <tr>
+              <th>Monthly ticket revenue</th>
+              <th>Rate</th>
+              <th>Fee on this portion (max)</th>
+              <th>Cumulative max</th>
+            </tr>
+          </thead>
+          <tbody id="rbi-price-body"></tbody>
+        </table>
+      </div>
+      <div class="rbi-card-foot">
+        <button type="button" class="rbi-btn rbi-btn-primary rbi-admin" id="rbi-btn-save-pricing">💾 Save Pricing Changes</button>
+        <button type="button" class="rbi-btn rbi-btn-ghost rbi-admin" id="rbi-btn-reset-pricing">↺ Reset to Agreement Defaults</button>
+      </div>
+    </div>
+
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🧮 How the waterfall works</span>
+        <span class="rbi-card-sub">worked example with the current pricing</span>
+      </div>
+      <p class="rbi-note">A company with <strong>CA $160,000</strong> monthly revenue pays the minimum on the first $20,000, then the rate of each bracket applied only to the revenue inside that bracket:</p>
+      <div class="rbi-breakdown" id="rbi-example-box"></div>
+      <p class="rbi-note">Revenue above CA $3,000,000 is <strong>negotiated</strong> - the invoice form asks for the agreed fee on the portion above the last bracket.</p>
+    </div>
+  </section>
+
+  <section class="rbi-pane" id="pane-settings">
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🏢 Provider - your company</span>
+        <span class="rbi-card-sub">appears on the invoice header</span>
+      </div>
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-name">Company name</label><input type="text" id="rbi-st-name" class="rbi-input" placeholder="Acme Software Inc."></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxid">Tax / GST ID</label><input type="text" id="rbi-st-taxid" class="rbi-input" placeholder="123456789 RT0001"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-email">Email</label><input type="text" id="rbi-st-email" class="rbi-input" placeholder="billing@company.com"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-phone">Phone</label><input type="text" id="rbi-st-phone" class="rbi-input" placeholder="+1 …"></div>
+        <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-st-address">Address</label><input type="text" id="rbi-st-address" class="rbi-input" placeholder="Street, city, province, postal code"></div>
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label">Company logo</label>
+          <div class="rbi-logo-row">
+            <span class="rbi-logo-thumb" id="rbi-logo-thumb">No logo</span>
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-upload-logo">⬆ Upload logo</button>
+            <button type="button" class="rbi-btn rbi-btn-danger rbi-btn-sm" id="rbi-btn-remove-logo">Remove</button>
+            <span class="rbi-card-sub" id="rbi-logo-name"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rbi-card">
+      <div class="rbi-card-head">
+        <span class="rbi-card-title">🧾 Invoicing defaults</span>
+        <span class="rbi-card-sub">pre-filled on every new invoice</span>
+      </div>
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-defaultcustomer">Default customer</label><select id="rbi-st-defaultcustomer" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-defaultsupport">Default support type</label><select id="rbi-st-defaultsupport" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld rbi-fld-full">
+          <label class="rbi-label">Support types (name + optional monthly fee)</label>
+          <div id="rbi-support-types"></div>
+          <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-add-support-type">＋ Add support type</button>
+        </div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-currency">Default currency</label><select id="rbi-st-currency" class="rbi-input rbi-select"></select></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-taxrate">Default tax rate %</label><input type="number" min="0" max="100" step="0.01" id="rbi-st-taxrate" class="rbi-input"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-prefix">Invoice prefix</label><input type="text" id="rbi-st-prefix" class="rbi-input" placeholder="INV"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-nextseq">Next invoice number</label><input type="number" min="1" step="1" id="rbi-st-nextseq" class="rbi-input"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-st-terms">Payment terms</label><select id="rbi-st-terms" class="rbi-input rbi-select"></select></div>
+      </div>
+    </div>
+
+    <div class="rbi-card rbi-danger-card rbi-admin">
+      <div class="rbi-card-head"><span class="rbi-card-title">🗑 Danger zone</span></div>
+      <p class="rbi-note">Delete all invoices and reset this tool to a fresh state. This cannot be undone.</p>
+      <div class="rbi-card-foot">
+        <button type="button" class="rbi-btn rbi-btn-danger" id="rbi-btn-reset-data">🗑 Delete All Data</button>
+      </div>
+    </div>
+
+    <div class="rbi-settings-actions">
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-btn-save-settings">💾 Save Settings</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="rbi-backdrop" id="rbi-backdrop" style="display:none">
+  <div class="rbi-modal" id="rbi-modal" role="dialog" aria-modal="true">
+    <div class="rbi-modal-head">
+      <h2 class="rbi-modal-title" id="rbi-modal-title">New Invoice</h2>
+      <button type="button" class="rbi-modal-x" id="rbi-modal-x" aria-label="Close">✕</button>
+    </div>
+    <div class="rbi-modal-body" id="rbi-modal-body">
+
+      <div class="rbi-viewbar" id="rbi-view-bar" style="display:none">
+        <span class="rbi-status" id="rbi-view-status"></span>
+        <span class="rbi-view-number" id="rbi-view-number"></span>
+        <div class="rbi-spacer"></div>
+        <span class="rbi-view-dates" id="rbi-view-dates"></span>
+      </div>
+
+      <div id="rbi-form-fields">
+        <div class="rbi-form-grid">
+          <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-inv-customer">Customer</label><select id="rbi-inv-customer" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-month">Billing month</label><input type="month" id="rbi-inv-month" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-revenue">Monthly ticket revenue</label><input type="number" min="0" step="0.01" id="rbi-inv-revenue" class="rbi-input" placeholder="160000"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-currency">Currency</label><select id="rbi-inv-currency" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-support">Support type</label><select id="rbi-inv-support" class="rbi-input rbi-select"></select></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-taxrate">Tax rate %</label><input type="number" min="0" max="100" step="0.01" id="rbi-inv-taxrate" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-due">Due date</label><input type="date" id="rbi-inv-due" class="rbi-input"></div>
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-notes">Notes</label><input type="text" id="rbi-inv-notes" class="rbi-input" placeholder="Optional note on the invoice"></div>
+        </div>
+        <label class="rbi-check-row"><input type="checkbox" id="rbi-inv-minimum"> Charge the minimum fee on the first $20,000 of revenue</label>
+        <div class="rbi-negotiated" id="rbi-negotiated-block" style="display:none">
+          <div class="rbi-fld"><label class="rbi-label" for="rbi-inv-negotiated">Negotiated fee for the revenue above CA $3,000,000</label><input type="number" min="0" step="0.01" id="rbi-inv-negotiated" class="rbi-input"></div>
+          <p class="rbi-note" id="rbi-negotiated-hint"></p>
+        </div>
+        <div class="rbi-lines-block">
+          <div class="rbi-card-head">
+            <span class="rbi-card-title">➕ Additional lines</span>
+            <span class="rbi-card-sub">custom work, one-time integrations or new agreements from this month</span>
+          </div>
+          <div id="rbi-inv-lines"></div>
+          <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-btn-add-line">＋ Add line</button>
+        </div>
+      </div>
+
+      <div class="rbi-breakdown-card">
+        <div class="rbi-breakdown-head">
+          <span class="rbi-card-title">💧 Waterfall fee breakdown</span>
+          <span class="rbi-card-sub" id="rbi-breakdown-sub">computed from the pricing agreement</span>
+        </div>
+        <div class="rbi-breakdown" id="rbi-breakdown"></div>
+        <div class="rbi-total-row">
+          <span class="rbi-total-label" id="rbi-total-label">Invoice total</span>
+          <strong class="rbi-total-value" id="rbi-inv-total"></strong>
+        </div>
+      </div>
+
+      <p class="rbi-note" id="rbi-note-tax"></p>
+    </div>
+    <div class="rbi-modal-foot">
+      <button type="button" class="rbi-btn rbi-btn-ghost" id="rbi-inv-cancel">Cancel</button>
+      <div class="rbi-foot-actions" id="rbi-inv-actions"></div>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-inv-save">💾 Save Invoice</button>
+    </div>
+  </div>
+</div>
+
+<div class="rbi-backdrop" id="rbi-cu-backdrop" style="display:none">
+  <div class="rbi-modal" role="dialog" aria-modal="true">
+    <div class="rbi-modal-head">
+      <h2 class="rbi-modal-title" id="rbi-cu-modal-title">Customer</h2>
+      <button type="button" class="rbi-modal-x" id="rbi-cu-close" aria-label="Close">✕</button>
+    </div>
+    <div class="rbi-modal-body">
+      <div class="rbi-form-grid">
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-cu-name">Customer name</label><input type="text" id="rbi-cu-name" class="rbi-input" placeholder="Lakeside Cinemas Group"></div>
+        <div class="rbi-fld"><label class="rbi-label" for="rbi-cu-email">Email</label><input type="text" id="rbi-cu-email" class="rbi-input" placeholder="accounts@customer.com"></div>
+        <div class="rbi-fld rbi-fld-full"><label class="rbi-label" for="rbi-cu-address">Billing address</label><input type="text" id="rbi-cu-address" class="rbi-input" placeholder="Street, city, province, postal code"></div>
+      </div>
+
+      <div class="rbi-card rbi-cu-pricing-card">
+        <label class="rbi-check-row"><input type="checkbox" id="rbi-cu-use-default"> Use the default waterfall for this customer</label>
+        <div id="rbi-cu-price-block" style="display:none">
+          <div class="rbi-card-head">
+            <span class="rbi-card-title">💧 Custom waterfall for this customer</span>
+            <span class="rbi-card-sub">each rate applies only to the revenue inside its bracket</span>
+          </div>
+          <div class="rbi-price-wrap">
+            <table class="rbi-table rbi-price-table">
+              <thead>
+                <tr>
+                  <th>Monthly ticket revenue</th>
+                  <th>Rate</th>
+                  <th>Fee on this portion (max)</th>
+                  <th>Cumulative max</th>
+                </tr>
+              </thead>
+              <tbody id="rbi-cu-price-body"></tbody>
+            </table>
+          </div>
+          <div class="rbi-card-foot">
+            <button type="button" class="rbi-btn rbi-btn-ghost rbi-btn-sm" id="rbi-cu-copy-default">↺ Copy the default waterfall</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="rbi-modal-foot">
+      <button type="button" class="rbi-btn rbi-btn-ghost" id="rbi-cu-cancel">Cancel</button>
+      <div class="rbi-spacer"></div>
+      <button type="button" class="rbi-btn rbi-btn-primary" id="rbi-cu-save">💾 Save Customer</button>
+    </div>
+  </div>
+</div>
+<!-- TOOL HTML END -->
+</div>
+
+<script>
+/* == MOCK tool SDK (must load BEFORE main JS) == */
+(function () {
+  var STORAGE_KEY = 'rbi_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _value = null, _fields = {};
+
+  var MOCK_USERS = {
+    admin:  { id: 'u_ada',  name: 'Ada Owner',    email: 'ada@uniconhub.com',  roles: ['admin'],  effectiveAccess: { isViewer: true, isEditor: true, isManager: true } },
+    editor: { id: 'u_ali',  name: 'Ali Billing',  email: 'ali@uniconhub.com',  roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } },
+    viewer: { id: 'u_vera', name: 'Vera Viewer',  email: 'vera@uniconhub.com', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } }
+  };
+
+  function load() { try { _value = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { _value = null; } }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch (e) {} }
+
+  var qp = new URLSearchParams(location.search);
+  var initialRole = qp.get('role') || 'admin';
+  _readOnly = qp.get('ro') === '1';
+
+  window.tool = {
+    getValue: function () { return _value; },
+    setValue: function (data) { save(data); listeners.valueChange.forEach(function (cb) { try { cb(data); } catch (e) {} }); },
+    onValueChange: function (cb) { listeners.valueChange.push(cb); },
+    getFields: function () { return Object.assign({}, _fields); },
+    setField: function (id, v) { _fields[id] = v; },
+    setFields: function (o) { Object.assign(_fields, o); },
+    watchField: function (id, cb) { listeners.fieldsChange.push(cb); },
+    onFieldsChange: function (cb) { listeners.fieldsChange.push(cb); },
+    param: function (name, fb) {
+      var p = qp.get(name);
+      // Screenshot page mapping: the capture script sends generic ?page= names.
+      if (name === 'demoView' && (p === null || p === '') && qp.get('page') === 'documents') p = '1';
+      if (name === 'demoModal' && (p === null || p === '') && qp.get('page') === 'assistant') p = '160000';
+      if (name === 'demoCustomer' && (p === null || p === '') && qp.get('page') === 'reports') p = '1';
+      return p !== null && p !== '' ? p : fb;
+    },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function (v) { _readOnly = v; listeners.readonlyChange.forEach(function (cb) { try { cb(v); } catch (e) {} }); },
+    getUser: function () { return _role === 'none' ? null : MOCK_USERS[_role]; },
+    onUserChange: function (cb) { listeners.userChange.push(cb); },
+    _setRole: function (r) { _role = r; listeners.userChange.forEach(function (cb) { try { cb(window.tool.getUser()); } catch (e) {} }); },
+    reportValid: function () {},
+    reportMissingParams: function () {},
+    requestSave: function (cb) { console.log('[mock] requestSave'); if (cb) cb(null, true); },
+    notify: function (msg, sev) {
+      sev = sev || 'info';
+      var cols = { info: '#4f46e5', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var t = document.createElement('div');
+      t.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (cols[sev] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font:13px system-ui;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s;max-width:400px';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(function () { t.remove(); }, 300); }, 2500);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    openUrl: function (url) { if (url && url !== '#') window.open(url, '_blank'); else window.tool.notify('(harness: no URL)', 'info'); },
+    openObjectDetail: function () {},
+    getPermittedUsers: function () { return []; },
+    onPermittedUsersChange: function () {},
+    requestExportPdf: function (opts, cb) {
+      setTimeout(function () {
+        var html = (opts.html || '');
+        var blob = new Blob([html], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        window.tool.notify('Export opened in a new tab - use Print to save as PDF (' + (opts.filename || 'export') + ')', 'info');
+        if (cb) cb(null, { name: (opts.filename || 'export') + '.html', url: url, size: blob.size, type: 'text/html' });
+      }, 150);
+    },
+    requestSendEmail: function (opts, cb) {
+      console.log('[mock] requestSendEmail ->', opts.to, '| subject:', opts.subject);
+      setTimeout(function () {
+        window.tool.notify('Email sent (mock) to ' + opts.to, 'success');
+        if (cb) cb(null, { ok: true });
+      }, 400);
+    },
+    requestUpload: function (accept, cb) {
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = accept || '';
+      input.style.display = 'none';
+      document.body.appendChild(input);
+      input.addEventListener('change', function () {
+        var f = input.files && input.files[0];
+        input.remove();
+        if (!f) { cb('No file selected', null); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          cb(null, { name: f.name, url: reader.result, size: f.size, type: f.type || '' });
+        };
+        reader.onerror = function () { cb('Could not read file', null); };
+        reader.readAsDataURL(f);
+      });
+      input.click();
+    },
+    requestFileContent: function (url, cb) { if (cb) cb('File content not used by this tool', null); },
+    requestAI: function (prompt, ctx, cb) { if (cb) cb('AI not used by this tool', null); },
+    requestAIStream: function (prompt, ctx, callbacks) {
+      if (callbacks && callbacks.onError) callbacks.onError('requestAIStream not mocked');
+    },
+    requestObjects: function (action, params, cb) { if (cb) cb('CMS objects not used by this tool', null); },
+    onReady: function (cb) { load(); cb(_value, _fields); },
+    _loadSample: function () {
+      localStorage.removeItem(STORAGE_KEY);
+      _value = null;
+      if (typeof loadSample === 'function') { loadSample(); }
+      else { location.reload(); }
+    },
+    _clearAll: function () { localStorage.removeItem(STORAGE_KEY); _value = null; location.reload(); },
+    _toggleRO: function () { this._setReadOnly(!_readOnly); },
+    _dumpValue: function () { console.log('Tool value:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  var _role = initialRole;
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+      e.preventDefault();
+      window.tool._toggleRO();
+      window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY' : 'EDIT MODE', 'info');
+    }
+  });
+})();
+</script>
+<script src="RevenueBasedInvoiceBuilder.js"></script>
+<script>
+/* == WIRE TEST HARNESS BUTTONS == */
+document.getElementById('th-sample').addEventListener('click', function () {
+  window.tool._loadSample();
+  document.getElementById('th-status').textContent = 'Sample data loaded';
+});
+document.getElementById('th-clear').addEventListener('click', function () {
+  window.tool._clearAll();
+  document.getElementById('th-status').textContent = 'Cleared';
+});
+document.getElementById('th-reload').addEventListener('click', function () { location.reload(); });
+document.getElementById('th-role').addEventListener('change', function () {
+  window.tool._setRole(this.value);
+  window.tool.notify('Role: ' + (this.value === 'none' ? 'not signed in' : this.value), 'info');
+});
+document.getElementById('th-dump').addEventListener('click', function () {
+  window.tool._dumpValue();
+  window.tool.notify('Tool value dumped to console', 'info');
+});
+var qp = new URLSearchParams(location.search);
+/* ?bare=1 hides the harness toolbar (marketing screenshots show the real app only) */
+if (qp.get('bare') === '1') { document.body.classList.add('th-bare'); }
+window.addEventListener('error', function (ev) {
+  var st = document.getElementById('th-status');
+  if (st) st.textContent = 'JS ERROR: ' + (ev.message || ev.error || 'unknown');
+});
+if (qp.get('sample') === '1') {
+  try {
+    window.tool._loadSample();
+    document.getElementById('th-status').textContent = 'Sample data loaded (QA param)';
+  } catch (err) {
+    document.getElementById('th-status').textContent = 'CAUGHT: ' + (err && err.stack ? err.stack.split('\n').slice(0, 3).join(' | ') : err);
+  }
+}
+/* Screenshot page mapping: switch to the matching tab after the sample loads. */
+var tabByPage = { transactions: 'customers', finder: 'pricing', gst: 'settings', settings: 'settings' };
+var pageName = qp.get('page') || '';
+if (tabByPage[pageName]) {
+  setTimeout(function () {
+    var tabButton = document.querySelector('.rbi-tab-btn[data-tab="' + tabByPage[pageName] + '"]');
+    if (tabButton) tabButton.click();
+  }, 400);
+}
+</script>
+</body>
+</html>

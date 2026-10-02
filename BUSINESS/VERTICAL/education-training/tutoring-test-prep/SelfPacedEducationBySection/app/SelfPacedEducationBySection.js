@@ -3405,6 +3405,20 @@ function renderSetup() {
   }
   select.innerHTML = optionsHtml;
 
+  // Student name — update value if present, create if not (same pattern as
+  // the other setup fields, for older harness embeds). It is the name shown
+  // on every shared status report (image, WhatsApp message, email).
+  var studentNameInput = el('setup-student-name');
+  if (!studentNameInput) {
+    var nameHtml = '<label class="setup-label">👤 Student Name <span style="font-weight:400;color:var(--text-muted)">(shown on the shared status reports)</span></label>';
+    nameHtml += '<input class="setup-input" type="text" id="setup-student-name" placeholder="e.g. Ahmed Yılmaz">';
+    var tempDivN = document.createElement('div');
+    tempDivN.innerHTML = nameHtml;
+    while (tempDivN.firstElementChild) selectContainer.insertBefore(tempDivN.firstElementChild, selectContainer.firstElementChild);
+    studentNameInput = el('setup-student-name');
+  }
+  if (studentNameInput) studentNameInput.value = CONFIG.studentName || '';
+
   // Management type selector — update value if it exists, create if not
   var selectContainer = select.parentNode;
   var existingMgmt = el('setup-management-type');
@@ -3480,6 +3494,8 @@ function saveSetupConfig() {
   }
 
   var selectedId = el('setup-curriculum-select').value;
+  var studentNameInput = el('setup-student-name');
+  var studentName = studentNameInput ? String(studentNameInput.value || '').trim() : '';
   var mgmtSelect = el('setup-management-type');
   var mgmtType = mgmtSelect ? mgmtSelect.value : 'self_paced';
   var startInput = el('setup-course-start-date');
@@ -3509,6 +3525,7 @@ function saveSetupConfig() {
   }
 
   CONFIG.curriculumSourceId = selectedId;
+  CONFIG.studentName = studentName;
   CONFIG.managementType = mgmtType;
   CONFIG.courseStartDate = startDate;
   CONFIG.targetEndDate = targetDate;
@@ -3599,13 +3616,18 @@ function renderSupervisorPanel() {
 
   // ── Header ──
   var html = '<div style="background:linear-gradient(135deg,#1e293b,#334155);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
-  html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📊</span><div><div style="font-weight:700;color:#f1f5f9;font-size:15px">Supervisor Dashboard' + (CONFIG.studentName ? ' — ' + esc(CONFIG.studentName) : '') + '</div><div style="font-size:11px;color:#94a3b8">' + esc(CONFIG.managementType === 'supervised' ? '🛡️ Supervised' : '🚀 Self-Paced') + ' · ' + totalLessons + ' lessons in ' + Object.keys(sectionStats).length + ' section(s)' + '</div></div></div>';
+  html += '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📊</span><div><div style="font-weight:700;color:#f1f5f9;font-size:15px">Supervisor Dashboard</div><div style="font-size:11px;color:#94a3b8">' + esc(CONFIG.managementType === 'supervised' ? '🛡️ Supervised' : '🚀 Self-Paced') + ' · ' + totalLessons + ' lessons in ' + Object.keys(sectionStats).length + ' section(s)' + '</div></div></div>';
   // Overall progress ring
   html += '<div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:8px 16px">';
   html += '<svg width="44" height="44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-dasharray="' + (2*Math.PI*18) + '" stroke-dashoffset="' + (2*Math.PI*18*(1-overallPct/100)) + '" transform="rotate(-90,22,22)"/><text x="22" y="22" text-anchor="middle" dominant-baseline="central" style="font-size:10px;font-weight:800;fill:#f1f5f9">' + overallPct + '%</text></svg>';
   html += '<div style="color:#f1f5f9;font-size:12px;line-height:1.5"><strong>' + completed + '</strong> done<br><span style="color:#94a3b8">' + inProgress + ' active · ' + notStarted + ' new</span><br><span style="color:#fbbf24;font-weight:800">★ ' + (avgScore !== null ? avgScore + '%' : '—') + '</span> <span style="color:#94a3b8">avg score · ' + scoreCount + ' lesson' + (scoreCount === 1 ? '' : 's') + '</span></div>';
   html += '</div>';
+  // Right side: student identity chip (the name shown on every shared report)
+  // + change-course button. The chip is editable - click it to set the name.
+  html += '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+  html += '<button data-sup-edit-student title="Set the student name shown on the shared status reports" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">👤 Student: ' + esc(CONFIG.studentName || '—') + ' <span style="opacity:0.8">✏️</span></button>';
   html += '<button data-sup-change-course title="Change which curriculum this module uses" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🔄 Change Course</button>';
+  html += '</div>';
   html += '</div>';
 
   // ── Quick stats bar ──
@@ -3757,6 +3779,23 @@ function renderSupervisorPanel() {
     var resetBtn = panel.querySelector('[data-sup-reset-all]');
     if (resetBtn) {
       resetBtn.addEventListener('click', resetAllProgress);
+    }
+    var editStudentBtn = panel.querySelector('[data-sup-edit-student]');
+    if (editStudentBtn) {
+      editStudentBtn.addEventListener('click', function() {
+        openDrawer({
+          title: '👤 Student Name',
+          desc: 'The student name shown on the shared status report image, WhatsApp message and email. Leave empty until the student opens the record.',
+          inputType: 'text', placeholder: 'Student name', value: CONFIG.studentName || '',
+          onConfirm: function(val) {
+            CONFIG.studentName = String(val || '').trim();
+            saveProgress(true, function(res) { reportSaveResult(res, 'Student name saved'); });
+            renderSupervisorPanel();
+            applyViewVisibility();
+            updateProgressBar();
+          }
+        });
+      });
     }
     var changeCourseBtn = panel.querySelector('[data-sup-change-course]');
     if (changeCourseBtn) changeCourseBtn.addEventListener('click', function() { showSetup(); });
@@ -4491,7 +4530,12 @@ function getShareReportData() {
     courseName: CURRICULUM_NAME || 'Course',
     tenantName: getTenantName(),
     studyLink: getStudyPageUrl(),
-    studentName: CONFIG.studentName || getUserDisplayName() || '',
+    // The student's name is ONLY the stored per-record name. When the record
+    // was never opened by the student yet, a student opening it captures
+    // their own name at boot; the supervisor never does. The supervisor's
+    // own name must NEVER appear here (a report showing the supervisor as
+    // the student is wrong data).
+    studentName: CONFIG.studentName || (!isAdmin() ? getUserDisplayName() : ''),
     overallPct: getOverallProgressPct(),
     completed: completed,
     inProgress: inProgress,

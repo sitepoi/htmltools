@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revenue Based Invoice Builder - Help</title>
+<link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+</head>
+<body>
+<div id="content">
+<h1>Revenue Based Invoice Builder - Help</h1>
+<p class="meta">
+  User help for Revenue Based Invoice Builder. The single source of truth for how this
+  tool works is its SSOT document (<a href="ssot.html">SSOT</a>) -
+  this file explains the same behavior for end users, in plain words.
+  Generated from the tool code + SSOT + AI chat by
+  scripts/generate-docs.js. Updated: 2026-09-30.
+</p>
+
+<!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
+<h2 id="overview">1. Overview</h2>
+<p>Revenue Based Invoice Builder creates the monthly invoices for a software product whose price is based on the customer's monthly ticket revenue.</p>
+<p>Billing teams use it to turn each month's revenue into a correct, explainable invoice: the tool applies the pricing agreement's waterfall brackets, shows the math while you type, and freezes issued amounts forever.</p>
+
+<h2 id="before">2. Before you start</h2>
+<ul>
+  <li>Editors can create invoices and manage customers; only admins can edit the default pricing agreement, delete customers or invoices, or reset data.</li>
+  <li>One tool instance is one vendor record with many customers - add them in the Customers tab.</li>
+  <li>Fill Settings first: your company details, currency, tax rate, invoice prefix and the default customer.</li>
+</ul>
+
+<h2 id="howto">3. Step by step</h2>
+<ol>
+  <li>Add your customers in the <strong>Customers</strong> tab - each one uses the default waterfall unless you give them their own rates.</li>
+  <li>In Settings, define your <strong>support types</strong> (name + optional monthly fee), pick the default, and <strong>upload your company logo</strong>.</li>
+  <li>Click <strong>+ New Invoice</strong>, pick the <strong>customer</strong>, the <strong>support type</strong> and the billing month.</li>
+  <li>Enter the <strong>monthly ticket revenue</strong> - the waterfall breakdown updates on every keystroke using that customer's rates.</li>
+  <li>Add <strong>additional lines</strong> for custom work, integrations or new agreements from this month.</li>
+  <li>Check the breakdown, tax and due date, then click <strong>Save Invoice</strong>.</li>
+  <li>Open the invoice to <strong>Print / PDF</strong> it or <strong>Email</strong> it to the customer.</li>
+  <li>Mark it <strong>sent</strong>, then <strong>paid</strong> when the money arrives.</li>
+</ol>
+
+<h2 id="faq">4. Common questions</h2>
+<table>
+  <tr><th>Question</th><th>Answer</th></tr>
+  <tr><td>Why does a CA $160,000 month invoice CA $1,530?</td><td>Waterfall: CA $300 minimum on the first $20,000 + CA $550 (1.1% on $20k-$75k, capped) + CA $680 (0.8% on $75k-$160k).</td></tr>
+  <tr><td>Which waterfall does an invoice use?</td><td>The selected customer's own waterfall when they have one, otherwise the default Pricing Agreement.</td></tr>
+  <tr><td>How do I add extra work to an invoice?</td><td>Use the Additional lines box on the invoice: a description and an amount per line (integrations, custom work, one-time agreements).</td></tr>
+  <tr><td>How does the support type work?</td><td>Each support type has a name and an optional monthly fee. The invoice uses the default from Settings unless you pick another one; the fee is added as its own line.</td></tr>
+  <tr><td>Why does my printed invoice only show some bracket rows?</td><td>Only the brackets that actually contributed to the fee are printed - zero rows are omitted so the invoice stays clean. The in-app breakdown still shows the full waterfall.</td></tr>
+  <tr><td>How do I get my logo on invoices?</td><td>Settings &gt; Company logo &gt; Upload. The field needs allowUpload: yes in the CMS field settings; the logo then appears on printed and emailed invoices.</td></tr>
+  <tr><td>How do I give one customer different rates?</td><td>Open the customer in the Customers tab, uncheck "Use the default waterfall" and edit their brackets (or copy the default first).</td></tr>
+  <tr><td>What happens when revenue is above CA $3,000,000?</td><td>The standard brackets apply up to $3,000,000 and the form asks for the negotiated fee for the rest - you cannot save without it.</td></tr>
+  <tr><td>Can a rate change later?</td><td>Admins edit the default waterfall in the Pricing Agreement tab and editors edit per-customer waterfalls; already saved invoices keep the amounts they were issued with.</td></tr>
+  <tr><td>Is tax included?</td><td>Each invoice has its own tax rate (0 by default). Tax is applied to the subtotal (subscription + support + extra lines) and shown as its own line.</td></tr>
+</table>
+
+<h2 id="troubleshooting">5. Troubleshooting</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>New Invoice says to add a customer</td><td>Open the Customers tab and add at least one customer first.</td></tr>
+  <tr><td>Logo upload says uploads are not enabled</td><td>Set allowUpload: yes on the html-tool field in the CMS Field Group Designer.</td></tr>
+  <tr><td>Email button warns the customer has no email</td><td>Open the customer in the Customers tab and fill their email, then try again.</td></tr>
+  <tr><td>The total shows "Enter the negotiated fee"</td><td>Revenue is above CA $3,000,000 - enter the agreed fee in the highlighted box.</td></tr>
+  <tr><td>Changes do not seem to save</td><td>If a warning about autosave appeared, enable allowRequestSave in the field settings; the value is still staged.</td></tr>
+  <tr><td>The default pricing fields are greyed out</td><td>Only admins can edit the default agreement; per-customer waterfalls are editable by editors.</td></tr>
+</table>
+<!-- GENERATED-END -->
+
+
+
+<div class="footer">
+  Revenue Based Invoice Builder - help document. Satellite of the SSOT system - not a
+  source of truth; when it disagrees with the SSOT, the SSOT wins.
+</div>
+</div>
+</body>
+</html>

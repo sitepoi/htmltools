@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Improvement Report - Weekend School Principal Job Description</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --line: #d8dee6;
+    --paper: #ffffff;
+    --red: #a52a1e;
+    --red-soft: #fbeae8;
+    --amber: #9a6b00;
+    --amber-soft: #fdf3e0;
+    --green: #1d6b34;
+    --green-soft: #e8f3ea;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 30px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-eng {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 26px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 {
+    font-size: 13.5px;
+    color: var(--ink);
+    margin: 16px 0 6px;
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  ul, ol { margin: 0 0 10px 22px; }
+  li { font-size: 13.5px; margin-bottom: 6px; }
+  li strong { color: var(--ink); }
+
+  .highlight-box {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+
+  /* ---------- Report tables ---------- */
+  table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px;
+    font-size: 12.5px;
+  }
+  table.report-table th {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: #f5f8fb;
+    color: var(--accent);
+    text-align: left;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  table.report-table td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  /* ---------- Priority badges ---------- */
+  .pr-badge {
+    display: inline-block;
+    padding: 1px 9px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pr-high { background: var(--red-soft); color: var(--red); }
+  .pr-med { background: var(--amber-soft); color: var(--amber); }
+  .pr-low { background: var(--green-soft); color: var(--green); }
+  .pr-adopted { background: var(--accent-soft); color: var(--accent); }
+
+  /* ---------- Task list ---------- */
+  .task-group {
+    font-size: 12.5px;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 18px 0 8px;
+  }
+  ul.task-list { list-style: none; margin: 0 0 12px 0; }
+  ul.task-list li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  ul.task-list li:last-child { border-bottom: none; }
+  ul.task-list input[type="checkbox"] {
+    margin-top: 3px;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+  }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    section, h2, h3, p, li, tr { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+    ul.task-list input[type="checkbox"] {
+      border: 1px solid #999;
+      print-color-adjust: exact;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">CentreCanada Newcomer Services Society</div>
+    <div class="doc-title">Improvement Report</div>
+    <div class="doc-subtitle">Weekend School Principal Job Description</div>
+    <div class="doc-eng">(JD review and action plan)</div>
+    <div class="doc-meta">
+      Date: <span class="placeholder">30 September 2026</span> |
+      Related Doc: <span class="placeholder">JD-2026-04</span> |
+      Version: <span class="placeholder">1.0</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>1. Purpose of This Report</h2>
+    <p>
+      Two source documents for the Weekend School Principal role were combined into one English
+      Job Description:
+    </p>
+    <ul>
+      <li><strong>Source A:</strong> the Turkish JD-2026-04 (Görev Tanımı - Hafta Sonu Okulu Müdürü), a formal agreement-style job description.</li>
+      <li><strong>Source B:</strong> the Horizon Weekend School School Principal Job Description (PDF), a detailed operating guide with duties, rules, schedule and pay tiers.</li>
+    </ul>
+    <p>
+      The combined document is <strong>Job-Description-Weekend-School-Principal.html</strong> in
+      this folder. This report lists the conflicts found between the two sources, recommends
+      further improvements, proposes HTML tools to support the school operations, and ends with a
+      task list to finalize the document.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Conflicts Between the Two Sources</h2>
+    <p>
+      The two documents disagreed on several points. The table below shows each conflict and the
+      decision taken in the combined JD. Open decisions are carried into the task list in Section 7.
+    </p>
+    <table class="report-table">
+      <tr>
+        <th>Topic</th>
+        <th>Turkish JD (JD-2026-04)</th>
+        <th>Horizon PDF</th>
+        <th>Decision in the combined JD</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>Reporting line</td>
+        <td>Executive Director</td>
+        <td>Education Coordinator</td>
+        <td>Education Coordinator (Lumina Unit) for supervision.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+      <tr>
+        <td>School days</td>
+        <td>Saturday and Sunday</td>
+        <td>Every Sunday (10:00 a.m. - 3:00 p.m.)</td>
+        <td>Sunday-only school day confirmed, plus flexible weekday duties.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+      <tr>
+        <td>School name</td>
+        <td>Unnamed ("Weekend School")</td>
+        <td>Horizon Weekend School</td>
+        <td>Horizon Weekend School confirmed.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+      <tr>
+        <td>Pay</td>
+        <td>Blank placeholder</td>
+        <td>Tiers by student count ($750 / $1,000 / $1,500)</td>
+        <td>Student-count tiers confirmed; placeholders removed from the JD.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+      <tr>
+        <td>Duration</td>
+        <td>Minimum 2 years, no fixed end date</td>
+        <td>Not stated</td>
+        <td>Minimum one education year (October 2026 - July 2027).</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+      <tr>
+        <td>Registration target</td>
+        <td>Not stated</td>
+        <td>At least 26 students, annual target 30</td>
+        <td>Target adopted.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. Improvements Already Adopted</h2>
+    <p>
+      The combined JD absorbed the stronger parts of the Horizon document. These improvements are
+      already in place:
+    </p>
+    <table class="report-table">
+      <tr>
+        <th>#</th>
+        <th>Improvement</th>
+        <th>Why it matters</th>
+        <th>Status</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>Measurable enrollment target (at least 26, target 30)</td>
+        <td>Gives the Principal a concrete yearly goal instead of an open-ended duty.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Success indicators section</td>
+        <td>Makes the performance review objective and comparable over time.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>"Must not do" list</td>
+        <td>Sets clear boundaries on money, discipline, privacy and social media.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Child safety rules</td>
+        <td>Two-adult rule, authorized pick-up and Criminal Record Checks reduce legal risk.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Pay scale defined by student count</td>
+        <td>Removes ambiguity about pay and ties it to enrollment growth.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>ATLAS 24-hour entry rule</td>
+        <td>Keeps student records current; gives a clear daily completion standard.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Sample Sunday schedule</td>
+        <td>Shows exactly what a school day looks like, including before and after class.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Photo consent rule</td>
+        <td>Protects children's privacy and the organization from consent mistakes.</td>
+        <td><span class="pr-badge pr-adopted">Adopted</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>4. Improvement Review - Medium Priority (Mostly Resolved)</h2>
+    <p>
+      Most of these items are now resolved; the remaining ones stay open for later rounds.
+    </p>
+    <table class="report-table">
+      <tr>
+        <th>#</th>
+        <th>Improvement</th>
+        <th>Why it matters</th>
+        <th>Owner action / decision</th>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>Confirm the reporting line</td>
+        <td>Two sources disagree; the employee must know who supervises and approves.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Lumina Unit - Education Coordinator.</td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>Confirm the school day (Sunday-only)</td>
+        <td>Affects pay, workload and the Saturday expectations of the original JD.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Sunday-only confirmed.</td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>Confirm the pay tiers</td>
+        <td>Adopted from the Horizon document; must be approved before hiring.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Student-count brackets confirmed.</td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td>Define the weekly report format</td>
+        <td>Still marked "to be clarified" in both sources.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Everything on ATLAS; weekly export / report over WhatsApp to the coordinator; in-person meeting; weekly parent information.</td>
+      </tr>
+      <tr>
+        <td>13</td>
+        <td>Define the monthly review format</td>
+        <td>In person or written? Still open in both sources.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Written report plus in-person meeting showing the reports collected in ATLAS.</td>
+      </tr>
+      <tr>
+        <td>14</td>
+        <td>Add a probation period clause</td>
+        <td>Standard in BC employment agreements; gives both sides an early exit.</td>
+        <td><span class="pr-badge pr-adopted">Decided</span> No probation needed.</td>
+      </tr>
+      <tr>
+        <td>15</td>
+        <td>Define leave rules for a Sunday-only role</td>
+        <td>What happens when a school day falls on a holiday, or the Principal is sick?</td>
+        <td><span class="pr-badge pr-med">Open</span> Review with HR / accountant.</td>
+      </tr>
+      <tr>
+        <td>16</td>
+        <td>Add a revision history table to the JD</td>
+        <td>Makes future updates traceable (who changed what and when).</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> Added as JD Section 14.</td>
+      </tr>
+      <tr>
+        <td>17</td>
+        <td>Fill in the remaining placeholders</td>
+        <td>Location, start date, duration, education, languages and tools are now all filled.</td>
+        <td><span class="pr-badge pr-adopted">Resolved</span> All JD placeholders filled.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>5. Polish Items - Low Priority</h2>
+    <table class="report-table">
+      <tr>
+        <th>#</th>
+        <th>Improvement</th>
+        <th>Why it matters</th>
+      </tr>
+      <tr>
+        <td>18</td>
+        <td>Add a short glossary (ATLAS, hifz, Kandil)</td>
+        <td>New staff or reviewers may not know these terms.</td>
+      </tr>
+      <tr>
+        <td>19</td>
+        <td>Reference the child discipline policy</td>
+        <td>The JD forbids punishment but does not point to the positive guidance approach to use instead.</td>
+      </tr>
+      <tr>
+        <td>20</td>
+        <td>Add a document owner and HR contact footer</td>
+        <td>So proposed changes reach the right person.</td>
+      </tr>
+      <tr>
+        <td>21</td>
+        <td>Distribute bilingual copies</td>
+        <td>Parents and staff who read Turkish only should also get the document.</td>
+      </tr>
+      <tr>
+        <td>22</td>
+        <td>Verify printed page numbers</td>
+        <td>Handled by the browser print dialog; check once when printing.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. HTML Tools to Support Operations</h2>
+
+    <h3>6.1 Student-Based Application (to develop later)</h3>
+    <p>
+      One student-centered application where each student record holds all the modules below.
+      The modules are sections of the same app, not separate apps. More modules can be added to
+      the student record later as needs appear.
+    </p>
+    <table class="report-table">
+      <tr>
+        <th>Module</th>
+        <th>Supports (JD section)</th>
+        <th>What it holds per student</th>
+      </tr>
+      <tr>
+        <td>a. Registration and Parent Information</td>
+        <td>4B, 4D, 4G</td>
+        <td>Student registration record, parent contact details, emergency contacts, allergies and health notes, pick-up authorization, photo consent.</td>
+      </tr>
+      <tr>
+        <td>b. Payments - Monthly Tracker</td>
+        <td>4I, 5 (pay brackets)</td>
+        <td>Monthly payment status per student, polite late reminders, monthly payment list, unique-student count for the pay bracket.</td>
+      </tr>
+      <tr>
+        <td>c. Student Progress Tracker (general)</td>
+        <td>4C.5, 4B.3</td>
+        <td>General progress notes, weekly teacher contact log, flag for dropping attendance / interest.</td>
+      </tr>
+      <tr>
+        <td>d. Student Quran Level Tracker</td>
+        <td>4C.5</td>
+        <td>Current Quran reading level per student and its history.</td>
+      </tr>
+      <tr>
+        <td>e. Student Quran Memorization Level Tracker</td>
+        <td>4C.5</td>
+        <td>Hifz progress per student: surahs and portions memorized, next targets.</td>
+      </tr>
+      <tr>
+        <td>f. Parent Communication Log</td>
+        <td>4A, 9</td>
+        <td>Weekly group message archive (English and Turkish), one-on-one feedback, same-day absent-student call log, suggestions and complaints follow-up.</td>
+      </tr>
+      <tr>
+        <td>g. Weekly and Monthly Reports Generator</td>
+        <td>4J, 9, 10</td>
+        <td>Aggregates attendance, payments, progress highlights and issues per student; produces the WhatsApp export and the report for the monthly in-person meeting.</td>
+      </tr>
+      <tr>
+        <td>h. Attendance - Weekly, Lesson-Based</td>
+        <td>4C.1 - 4C.3</td>
+        <td>Attendance per lesson for each Sunday, completed within 24 hours, missing-entry reminders.</td>
+      </tr>
+    </table>
+    <p>
+      Note: the JD requires everything to be recorded in ATLAS today (JD Section 4C and the
+      Qualifications section). Until the student application is ready, ATLAS stays the source of
+      record; the app can later export to or sync with ATLAS.
+    </p>
+    <p>
+      Optional future modules for the student record: term progress reports (report cards),
+      awards and certificates per student, Quran level change history.
+    </p>
+
+    <h3>6.2 Other Apps (Not Student-Based)</h3>
+    <table class="report-table">
+      <tr>
+        <th>#</th>
+        <th>Tool</th>
+        <th>Supports (JD section)</th>
+        <th>What it tracks</th>
+        <th>Tool type</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>Teacher and Volunteer Board</td>
+        <td>4E</td>
+        <td>Class schedule, substitute planning, per-term class observation log, volunteer tasks, volunteer hours and certificates.</td>
+        <td>html-tool</td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Event and Calendar Planner</td>
+        <td>4F, 7</td>
+        <td>Annual calendar, Kandil / Eid / camp task lists, end-of-year show and certificate ceremony checklists.</td>
+        <td>html-tool</td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>School-Level Safety and Records Registry</td>
+        <td>4G.6, 4H</td>
+        <td>Criminal Record Check status for teachers and volunteers, opening / closing checks, building issues reported to the coordinator.</td>
+        <td>html-tool</td>
+      </tr>
+    </table>
+
+    <h3>Suggested build order</h3>
+    <ol>
+      <li>Student-Based Application - registration, payments, attendance, progress and reports first.</li>
+      <li>Teacher and Volunteer Board.</li>
+      <li>School-Level Safety and Records Registry.</li>
+      <li>Event and Calendar Planner.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>7. Task List</h2>
+    <p>
+      Checklist to finalize the Job Description. Check items off as they are completed.
+    </p>
+
+    <div class="task-group">A. Owner Decisions</div>
+    <ul class="task-list">
+      <li><input type="checkbox" checked aria-label="Task 1"> 1. Reporting line: resolved - Lumina Unit - Education Coordinator (JD Section 5 updated).</li>
+      <li><input type="checkbox" checked aria-label="Task 2"> 2. School day: resolved - Sunday only confirmed.</li>
+      <li><input type="checkbox" checked aria-label="Task 3"> 3. Pay: resolved - student-count brackets confirmed, placeholders removed from the JD.</li>
+      <li><input type="checkbox" checked aria-label="Task 4"> 4. School name: resolved - Horizon Weekend School confirmed.</li>
+    </ul>
+
+    <div class="task-group">B. Fill in Placeholders in the Combined JD</div>
+    <ul class="task-list">
+      <li><input type="checkbox" checked aria-label="Task 5"> 5. Location: resolved - New Westminster, BC.</li>
+      <li><input type="checkbox" checked aria-label="Task 6"> 6. Start date: resolved - 11 October 2026.</li>
+      <li><input type="checkbox" checked aria-label="Task 7"> 7. Duration: resolved - minimum one education year (October 2026 - June 2027). The end year must be verified, see Group F item 20.</li>
+      <li><input type="checkbox" checked aria-label="Task 8"> 8. Education and languages: resolved - "Any educational training, experience or graduation" and "Fluency in English; additional languages (Turkish, Arabic, Persian, etc.) are an asset".</li>
+    </ul>
+
+    <div class="task-group">C. Define the Open Formats</div>
+    <ul class="task-list">
+      <li><input type="checkbox" checked aria-label="Task 9"> 9. Weekly report format: resolved - everything on ATLAS; weekly export / report over WhatsApp to the coordinator; in-person meeting; weekly parent information.</li>
+      <li><input type="checkbox" checked aria-label="Task 10"> 10. Monthly review format: resolved - written report and in-person meeting showing the reports collected in ATLAS.</li>
+    </ul>
+
+    <div class="task-group">D. Optional Additions</div>
+    <ul class="task-list">
+      <li><input type="checkbox" checked aria-label="Task 11"> 11. Probation period: decided - no probation needed (no action).</li>
+      <li><input type="checkbox" aria-label="Task 12"> 12. Add leave rules for a Sunday-only role (open).</li>
+      <li><input type="checkbox" checked aria-label="Task 13"> 13. Revision history: resolved - added as JD Section 14.</li>
+      <li><input type="checkbox" aria-label="Task 14"> 14. Add a short glossary of terms (ATLAS, hifz, Kandil) (open).</li>
+      <li><input type="checkbox" aria-label="Task 15"> 15. Add a reference to the child discipline policy (open).</li>
+    </ul>
+
+    <div class="task-group">E. Sign-Off and Distribution</div>
+    <ul class="task-list">
+      <li><input type="checkbox" aria-label="Task 16"> 16. Both parties review and sign the combined JD (Section 13).</li>
+      <li><input type="checkbox" checked aria-label="Task 17"> 17. Distribution: resolved - English version only, no Turkish copy needed.</li>
+      <li><input type="checkbox" aria-label="Task 18"> 18. Archive the two source documents so only the combined JD is used going forward.</li>
+      <li><input type="checkbox" checked aria-label="Task 19"> 19. First quarterly review: resolved - scheduled on or around 11 January 2027 (noted in the JD approval note).</li>
+    </ul>
+
+    <div class="task-group">F. Clarifications Found (New)</div>
+    <ul class="task-list">
+      <li><input type="checkbox" checked aria-label="Task 20"> 20. Duration end year: resolved - July 2027 (JD Section 5 updated).</li>
+      <li><input type="checkbox" checked aria-label="Task 21"> 21. Education requirement: resolved - "Any educational training, experience or graduation" (JD Section 8).</li>
+      <li><input type="checkbox" checked aria-label="Task 22"> 22. Languages: resolved - "Fluency in English; additional languages (Turkish, Arabic, Persian, etc.) are an asset" (JD Section 8).</li>
+      <li><input type="checkbox" checked aria-label="Task 23"> 23. Pay bracket measurement: resolved - the bracket is based on the total number of unique registered students in the month (JD Section 5).</li>
+      <li><input type="checkbox" aria-label="Task 24"> 24. Weekday duties: defined in JD Section 5 (Weekday Duties row) - flexible hours during the week; the specific days / hours still need to be agreed with the Education Coordinator.</li>
+      <li><input type="checkbox" aria-label="Task 25"> 25. Financial reports: JD Section 3.E still says financial reports go to the Executive Director - confirm whether they should go to the Education Coordinator (Lumina Unit) instead.</li>
+      <li><input type="checkbox" aria-label="Task 26"> 26. Saturday exceptions: confirm whether occasional Saturday events (camps, Kandil programs) are expected outside regular Sundays.</li>
+      <li><input type="checkbox" aria-label="Task 27"> 27. Parent satisfaction: define how the "parent satisfaction" success indicator is measured (survey, feedback form).</li>
+      <li><input type="checkbox" aria-label="Task 28"> 28. JD effective date: the header was updated to 11 October 2026 to match the start date - confirm.</li>
+    </ul>
+  </section>
+
+  <div class="highlight-box">
+    Note: This report is a working document. After the task list is completed, this report can be
+    archived together with the source documents.
+  </div>
+
+</div>
+</body>
+</html>
