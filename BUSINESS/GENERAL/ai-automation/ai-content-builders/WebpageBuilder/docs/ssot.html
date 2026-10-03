@@ -128,24 +128,29 @@
   <div id="view-document" class="view">
   <h1>Webpage Builder</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for every decision about the Webpage Builder: how
+    generated page code is stored (HTML / CSS / JS blocks), how AI prompts
+    are built, how code is parsed, applied, versioned and exported, and how
+    the embedded PublicWebsite rules are kept in sync. Every decision made
+    for this tool is logged in section 11 and this document is updated in
+    the same change as the code. When this document or the code disagree,
+    this document is the tiebreaker - it is updated to capture the final
+    decision, never silently left divergent.
+    Companion documents: <code>rules-comparison-report.html</code> (in app/ -
+    the v1.2 → v2.0 rules migration report with bring-back verdicts),
+    <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>,
+    <code>social.html</code> (generated satellites).
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <tr><th>Document version</th><td>0.7</td></tr>
+    <tr><th>Last updated</th><td>2026-10-02</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (WebpageBuilder).</td></tr>
+    <tr><th>External systems</th><td><code>https://applicationstore.uniconhub.com/</code> (website html tool library - tools selectable as widgets into any page), <code>websitehtmltools/WEBSITE-TOOLS/</code> (in-house widget catalog), platform SSR render + Redis/Vercel CDN caching.</td></tr>
     <tr><th>Primary code areas</th><td><code>app/rules-comparison-report.html</code>, <code>app/test-harness.html</code>, <code>app/WebpageBuilder.css</code>, <code>app/WebpageBuilder.html</code>, <code>app/WebpageBuilder.js</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
+    <tr><th>Explicitly out of scope</th><td>Visual design decisions of the builder UI, the PublicWebsite platform implementation itself (the rules file documents it, but its code lives elsewhere), and the CMS-side object type configuration.</td></tr>
     <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
@@ -171,9 +176,11 @@
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
   <p>This document defines one tool and one set of invariants around
-  [what the tool does] - and it is the <strong>single source of truth for
-  every decision we make</strong> about this tool, now and in the future.
-  No decision is considered made until it is written here. Rules of use:</p>
+  <strong>how the Webpage Builder generates, stores, updates, versions and
+  exports single-page website code</strong> - and it is the <strong>single
+  source of truth for every decision we make</strong> about this tool, now
+  and in the future. No decision is considered made until it is written
+  here. Rules of use:</p>
   <ul>
     <li><strong>Every decision is logged here.</strong> Before or together
     with any change to this tool, the decision is added to section 11 with
@@ -195,10 +202,12 @@
     <li><strong>Acronyms are always expanded</strong> next to every use - in
     prose, tables, and headings. Literal identifiers stay as they are.</li>
   </ul>
-  <p class="ok"><strong>Core guarantee.</strong> [One sentence: the property
-  this document exists to protect - e.g. "A stale browser session can NEVER
-  silently revert a record to an older state." Everything below serves this
-  one sentence.]</p>
+  <p class="ok"><strong>Core guarantee.</strong> The page code the AI
+  produces is always stored, versioned and exported as the SAME three
+  separate blocks (<code>html</code>, <code>css</code>, <code>js</code>) that
+  the PublicWebsite platform expects (<code>data.htmlPage.code.{html,css,js}</code>),
+  so anything generated in this tool works in the platform without manual
+  conversion. Everything below serves this one sentence.</p>
 
   <h2 id="sec-files">2. Related files</h2>
   <p>Every file involved in this tool: what it is for, and exactly which
@@ -207,13 +216,30 @@
   <code>Primary code areas</code> row above.</p>
   <table>
     <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
-    <!-- TEMPLATE: one row per file. Link format:
-         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
-         #L123 to jump to a specific line). -->
     <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
-      <td>[What this file does overall - one line]</td>
-      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/app/WebpageBuilder.js"><code>app/WebpageBuilder.js</code></a></td>
+      <td>All logic: AI prompts, parsing, chat + agentic planner, preview, compliance, history, exports, session persistence.</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/app/WebpageBuilder.html"><code>app/WebpageBuilder.html</code></a></td>
+      <td>Builder markup (body only, no document tags) + the EMBEDDED PublicWebsite rules in <code>&lt;script type="text/plain" id="page-guide-source"&gt;</code> (HTML-escaped copy of the rules file).</td>
+      <td>Whole file; the embedded rules block is regenerated by the sync script after any rules edit</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/app/WebpageBuilder.css"><code>app/WebpageBuilder.css</code></a></td>
+      <td>Builder UI styling only (not page code).</td>
+      <td>Whole file</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Standalone test harness with a mock <code>window.tool</code> SDK; mirrors the tool markup.</td>
+      <td>Whole file (mirror of the app)</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/app/rules-comparison-report.html"><code>app/rules-comparison-report.html</code></a></td>
+      <td>Standalone v1.2 → v2.0 rules migration report (gained / lost / kept + bring-back verdicts).</td>
+      <td>Whole file (documentation artifact)</td>
     </tr>
   </table>
 
@@ -226,18 +252,61 @@
   belongs in the task list (section 15) and the ideas backlog (section 16).</p>
   <table>
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
-    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
-         effect today. "Where it lives" = the code path or file that
-         implements it. "In effect since" = the version or date it shipped.
-         "Known from" = the evidence - decision ID (section 11), release-log
-         row (section 19), or code verified on a date. When a capability
-         ships, move its finished task here from section 15. -->
     <tr>
       <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-WB-NN / release-log row / verified in code on YYYY-MM-DD]</td>
+      <td>Page code is stored as THREE SEPARATE blocks: <code>DB.code.html</code>, <code>DB.code.css</code>, <code>DB.code.js</code> — separate editors, separate AI blocks, separate version-stamp lines.</td>
+      <td><code>WebpageBuilder.js</code> — <code>DB</code>, <code>displayAllCode()</code>, <code>_commitEditorsToDb()</code></td>
+      <td>build 2026-08-18b</td>
+      <td>verified in code on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-02</td>
+      <td>Preview and export COMBINE the three blocks into one document at build time: preview iframe (<code>buildPreviewDoc</code>), standalone download (<code>buildFullPage</code>), generator output (<code>buildGeneratorOutputText</code>) and page object JSON (<code>buildPageObjectJson</code> → <code>data.htmlPage.code.{html,css,js}</code>).</td>
+      <td><code>WebpageBuilder.js</code> — <code>buildPreviewDoc()</code>, <code>buildFullPage()</code>, <code>buildGeneratorOutputText()</code>, <code>buildPageObjectJson()</code></td>
+      <td>build 2026-08-18b</td>
+      <td>verified in code on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-03</td>
+      <td>AI responses are parsed into the three blocks (<code>=== HTML === / === CSS === / === JS ===</code> plus <code>=== SEO ===</code>, <code>=== PAGE META ===</code>, <code>=== CMS CONFIG NEEDED ===</code>, <code>=== EMAIL TEMPLATE ===</code>); legacy <code>[HTML]</code> markers and fences still parse as fallback.</td>
+      <td><code>WebpageBuilder.js</code> — <code>parseGeneratedCode()</code>, <code>_parseSection()</code></td>
+      <td>build 2026-08-18b</td>
+      <td>verified in code on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-04</td>
+      <td>Agentic planner applies per-step patches to ONE block at a time (style steps → CSS only, script steps → JS only) and keeps the code editors in sync after every step.</td>
+      <td><code>WebpageBuilder.js</code> — <code>_runAgentPlan()</code>, <code>_execSteps()</code>, <code>_applyStepPatch()</code></td>
+      <td>build 2026-08-15l</td>
+      <td>verified in code on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-05</td>
+      <td>PublicWebsite rules are embedded (HTML-escaped) inside <code>WebpageBuilder.html</code> and injected into every AI prompt; the rules .txt file itself is NOT part of the uploaded tool (upload = html + css + js only).</td>
+      <td><code>WebpageBuilder.html</code> — <code>&lt;script type="text/plain" id="page-guide-source"&gt;</code>; <code>WebpageBuilder.js</code> — <code>getActiveRules()</code></td>
+      <td>build 2026-08-18b</td>
+      <td>verified in code on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-06</td>
+      <td>Shared Sources picker: lists <code>shared-sources</code> objects (requestObjects query + localStorage fallback), toggles them into <code>pageMeta.data.sections</code>, and the preview composes their html/css/js BEFORE the page's own content. Mandatory (site-wide) sources are marked and skipped in the picker (platform injects them). Companion tool: <code>WebsiteSharedSourceBuilder</code> authors the shared sources.</td>
+      <td><code>WebpageBuilder.js</code> — <code>loadSharedCatalog()</code>, <code>renderSharedPicker()</code>, <code>_setSectionPicks()</code>, <code>_composePreviewShared()</code>; settings panel in <code>WebpageBuilder.html</code></td>
+      <td>build 2026-10-02</td>
+      <td>verified by headless e2e on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-07</td>
+      <td>Widgets &amp; Forms: the Widgets picker lists 10 built-in islands + <code>gw-widgets</code> library entries (applicationstore.uniconhub.com) and inserts <code>data-gw-app</code> islands with a generated valid config (optional "place after section id"); the Custom Form Builder generates <code>data-gw-form</code> fragments (honeypot + status element + submit wiring with formTypeId) + a CMS CONFIG NEEDED note.</td>
+      <td><code>WebpageBuilder.js</code> — <code>BUILTIN_WIDGETS</code>, <code>loadWidgetCatalog()</code>, <code>insertWidgetIsland()</code>, <code>generateForm()</code>; two new modals in <code>WebpageBuilder.html</code></td>
+      <td>build 2026-10-02</td>
+      <td>verified by headless e2e on 2026-10-02</td>
+    </tr>
+    <tr>
+      <td>C-08</td>
+      <td>Compliance extended with <code>embeds-iframe</code> (absolute-URL iframes allowed, script embeds banned), <code>shared-sections-known</code> (picks resolve to catalog objects) and <code>cache-ready</code> (version-stamped deterministic output for SSR + Redis/CDN); <code>buildPageObjectJson</code> now stamps <code>data.version</code> for cache busting.</td>
+      <td><code>WebpageBuilder.js</code> — <code>gwChecks()</code>, <code>buildPageObjectJson()</code>; rules sections 3.4, 11.1, 12.6, 15, 17, 18 in <code>public-website-page-rules.txt</code> (re-embedded)</td>
+      <td>build 2026-10-02</td>
+      <td>verified by headless e2e on 2026-10-02</td>
     </tr>
   </table>
   <p class="note">When adopting this template for an existing tool, fill
@@ -251,40 +320,101 @@
   reader and every AI sees the same definition.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <!-- TEMPLATE: one row per term. -->
-    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+    <tr><td>html-tool</td><td>A CMS field type that hosts a tool made of exactly three uploaded files (html, css, js) and talks to the host through the <code>window.tool</code> SDK.</td></tr>
+    <tr><td>Page fragment</td><td>Body-only markup (no <code>&lt;html&gt;/&lt;head&gt;/&lt;body&gt;</code>) that the platform injects between its site header and footer.</td></tr>
+    <tr><td>Block</td><td>One of the three stored parts of generated page code: <code>html</code>, <code>css</code>, or <code>js</code>.</td></tr>
+    <tr><td>SSR content</td><td>Server-side rendered page content — on the live site the three blocks are combined at render time by the platform (fragment injected, css appended to <code>&lt;head&gt;</code>, js executed via Blob URL).</td></tr>
+    <tr><td>Whole-page HTML</td><td>A complete HTML document or markup blob written outside the tool that contains its own <code>&lt;style&gt;</code> and/or <code>&lt;script&gt;</code> — the input of the proposed import feature (idea I-01).</td></tr>
+    <tr><td>Embedded rules</td><td>The HTML-escaped copy of the PublicWebsite rules shipped inside <code>WebpageBuilder.html</code> and injected into every AI prompt.</td></tr>
+    <tr><td>Shared source</td><td>Reusable html/css/js stored in its OWN CMS object with the same <code>code.{html,css,js}</code> shape as a page. Two types: <strong>mandatory</strong> (injected into every page of the site) and <strong>optional</strong> (a page opts in by adding it to its config → <code>data.sections</code>).</td></tr>
+    <tr><td>Widget island</td><td>A spot on the page that mounts a widget: <code>&lt;div data-gw-app="name" data-gw-config='{...}'&gt;</code> - the platform renders the widget there (built-in widget or <code>gw.apps.register</code> custom widget).</td></tr>
+    <tr><td>Website html tool library</td><td>The catalog of reusable website tools/widgets published at <code>https://applicationstore.uniconhub.com/</code>. Each entry can be selected as a widget and added to any page - same model as the existing html-tool library used in the CMS app.</td></tr>
+    <tr><td>SSR + cache</td><td>Server-side rendered page output, cacheable in Redis and Vercel CDN (and others). Platform-side concern; the tool must only produce output that never blocks it (pure static three blocks, no document tags, idempotent JS, deterministic + version-stamped).</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
-  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
   <ul>
-    <li>[Observed behavior 1 - with where/when it was seen]</li>
-    <li>[Observed behavior 2]</li>
-    <li>[Result of the behavior - what the user experiences]</li>
+    <li>2026-10-02: the user shared a REAL old-CMS page object ("Home Page",
+    typeId 101-general-pages-MPT62Q-wwwuniconhobcom, slug home-page) with an
+    8-entry <code>blocks</code> array: 7 blocks of type <code>html-code</code>
+    (each = one section div + one inline <code>&lt;style&gt;</code>) and 1
+    block of type <code>json</code> with <code>meta.slug: "dynamic-form"</code>
+    and value <code>{"form-type-id":"request-demo-form"}</code>.</li>
+    <li>The new platform has NO blocks and NO dynamic-form — so pasting this
+    object as-is into the tool would store everything inside the HTML block,
+    fail compliance (inline styles, no honeypot form), and bypass the platform
+    contract.</li>
+    <li>Result: old pages cannot be migrated into the new tool/website without
+    manual copy-paste surgery.</li>
   </ul>
   <h3>5.2 Current implementation (verified in code)</h3>
-  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
   <pre>
-// [file path] - [function name], current logic
-[the actual code]
+// WebpageBuilder.js - no importer exists today
+parseGeneratedCode()        // only parses AI responses (=== sections / legacy [HTML])
+_ensureImageSrcs(html)      // only fills image placeholders
+// nothing reads obj.blocks, obj.typeId, or meta.slug === "dynamic-form"
   </pre>
   <h3>5.3 Structural flaws</h3>
-  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
-       fails, not just that it fails. -->
   <ol>
-    <li><strong>[Flaw name].</strong> [Why this flaw allows the bad outcome.]</li>
+    <li><strong>No importer entry point.</strong> The tool can only receive
+    page code from AI chat or direct editor edits — there is no path for
+    pasted CMS objects or ready-made pages to be normalized into the three
+    blocks.</li>
+    <li><strong>No shared-source storage.</strong> Site-wide CSS/JS have no
+    home in the tool: the platform supports <code>default-settings.sharedCss</code>
+    and header/footer js, but the tool cannot edit or preview them.</li>
+    <li><strong>Paste goes straight to one editor.</strong> A whole page
+    pasted into the HTML editor stays one blob (see Q-03) instead of being
+    split into html/css/js.</li>
+    <li><strong>No widget / shared-source surface.</strong> The tool cannot
+    place library widgets (<code>data-gw-app</code> islands) or reference
+    shared sources (<code>data.sections</code>) - there is no picker for
+    either, so reusable content and the widget library cannot reach pages.</li>
   </ol>
-  <p class="risk"><strong>Root cause:</strong> [one paragraph that reduces all
-  the flaws to the single underlying cause].</p>
+  <p class="risk"><strong>Root cause:</strong> the tool only understands the
+  NEW three-block model; it has no import surface for the two real sources of
+  ready-made code — outside-authored pages and old-CMS blocks objects.</p>
 
   <h2 id="sec-requirements">6. Requirements</h2>
   <ol>
-    <li>[Requirement 1 - measurable, testable]</li>
-    <li>[Requirement 2]</li>
-    <li>[Requirement 3 - e.g. multi-tenant, no custom security rules, cost]</li>
-    <li>[Requirement 4 - UX behavior on failure]</li>
-    <li>[Requirement 5 - no loops, no unbounded growth, no polling]</li>
+    <li><strong>REQ-01 (Shared sources).</strong> The tool must let the user
+    maintain site-wide CSS and site-wide JS, preview them together with any
+    page, and export them in the platform-accepted form
+    (<code>default-settings.sharedCss</code> for CSS; header/footer objects'
+    <code>htmlPage.code.js</code> for JS).</li>
+    <li><strong>REQ-02 (Paste ready-made pages).</strong> The tool must accept
+    a page prepared outside as three separate parts (HTML / CSS / JS) in one
+    paste action, and also accept a whole page and AUTO-SPLIT it into the
+    three blocks (deterministic splitter; AI only as a fallback).</li>
+    <li><strong>REQ-03 (CMS blocks import).</strong> The tool must accept a
+    pasted old-CMS object (with <code>blocks</code>), convert every
+    <code>html-code</code> block (strip inline <code>&lt;style&gt;</code>),
+    convert <code>dynamic-form</code> json blocks into data-gw-form fragments,
+    map name/slug/language/status into === PAGE META ===, and produce the
+    three blocks + SEO + CMS CONFIG NEEDED notes.</li>
+    <li><strong>REQ-04 (Predictability).</strong> Import is deterministic and
+    reversible: the user sees exactly what was extracted (per-block summary)
+    before the result replaces the current page; history snapshot is taken
+    before import so one click restores the previous state.</li>
+    <li><strong>REQ-05 (No data loss).</strong> Unrecognized block types or
+    unparseable parts are preserved and REPORTED (never silently dropped).</li>
+    <li><strong>REQ-06 (Shared source objects).</strong> Shared content is
+    stored as separate CMS objects with the SAME <code>code.{html,css,js}</code>
+    shape as a page ("another instance of this tool in another object").
+    Two types: MANDATORY - injected directly into every page of the website;
+    OPTIONAL - pages opt in by adding the shared source in this tool's config
+    (<code>data.sections</code>, composed before the page's own content).</li>
+    <li><strong>REQ-07 (Widget library).</strong> The tool must let the user
+    select any tool/widget from the website html tool library at
+    <code>applicationstore.uniconhub.com</code> and add it to the page at the
+    correct place as a widget island (<code>data-gw-app</code> +
+    <code>data-gw-config</code>), with a valid generated config.</li>
+    <li><strong>REQ-08 (SSR + cache).</strong> Every generated page must be
+    SSR-renderable and cacheable in Redis and Vercel CDN (and others if
+    needed). Tool-side obligation: output stays pure static three-block code
+    (no document tags, idempotent JS, deterministic, version-stamped).
+    Rendering and caching themselves are platform-side (informational).</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
@@ -369,6 +499,54 @@
       <td class="status-adopted">Adopted</td>
     </tr>
     -->
+    <tr>
+      <td>D-WB-01</td><td>2026-10-02</td>
+      <td>The website html tool library lives at <code>https://applicationstore.uniconhub.com/</code>; its tools can be selected as WIDGETS and added to any page (REQ-07, group g2-widget-library). The in-house catalog is <code>websitehtmltools/WEBSITE-TOOLS/</code>.</td>
+      <td>User's stated product direction; mirrors the existing html-tool library already used in the CMS app.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-02</td><td>2026-10-02</td>
+      <td>Shared content is stored as separate CMS objects with the SAME <code>code.{html,css,js}</code> shape as a page. Two types: MANDATORY (injected into every page: sharedCss / header-footer chrome) and OPTIONAL (the page adds it in its config via <code>data.sections</code>).</td>
+      <td>User's stated model; reuses the existing three-block contract, compliance checks and preview pipeline.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-03</td><td>2026-10-02</td>
+      <td>All webpages must render SSR and be cacheable in Redis and Vercel CDN (and others if needed). Tool-side: output stays pure static three-block code (no document tags, idempotent JS, version-stamped). Rendering/caching are platform-side.</td>
+      <td>User's stated requirement; informational for the tool - the tool must never block SSR/caching (REQ-08, group g5-ssr-cache).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-04</td><td>2026-10-02</td>
+      <td>Shared content is authored in a SEPARATE companion tool, <code>WebsiteSharedSourceBuilder</code> (not a WebpageBuilder mode). It authors both kinds: shared-sources objects (mandatory | optional) and gw-widgets objects (widget kind).</td>
+      <td>Keeps WebpageBuilder focused (user's request); same three-block + compliance core, no AI chat. Answer to Q-07.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-05</td><td>2026-10-02</td>
+      <td>Widget picker discovery: 10 built-in widget specs embedded in WebpageBuilder + a <code>requestObjects</code> query on <code>gw-widgets</code> (localStorage fallback). The application store (applicationstore.uniconhub.com) remains the source of truth; a platform-cached catalog is recommended for production.</td>
+      <td>Works even when the store is unreachable; no CORS dependency in the tool. Answer to Q-08.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-06</td><td>2026-10-02</td>
+      <td>Widget SSR (Q-09): islands mount client-side; SEO-relevant widgets SHOULD provide <code>data.ssrHtml</code> (initial server-rendered markup, rules 11.1). Widget authoring (Q-10): starts hand-written; WebsiteSharedSourceBuilder (kind=widget) is the authoring surface - no separate WidgetBuilder tool for now.</td>
+      <td>Simple deterministic SSR story; avoids building a widget authoring UI prematurely.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-07</td><td>2026-10-02</td>
+      <td>UI simplification (user feedback): (1) code editors use a zero-dependency syntax-highlight overlay (highlighted <code>&lt;pre&gt;</code> behind a transparent-text <code>&lt;textarea&gt;</code>) instead of Monaco — Monaco is ~5 MB + a web worker and code editing is rare (mostly reading + small edits); (2) Shared Sources + Widgets &amp; Forms moved out of Generate &amp; Export into a dedicated <code>🧩 Add-ons</code> tab; (3) Design Direction collapsed to a one-line "Site look: …" summary; (4) WSB side panel slimmed and Checks collapsed into a <code>&lt;details&gt;</code>.</td>
+      <td>Both tools were visually noisy; pickers sat under an unrelated tab. Keep the UI light — swap the overlay for CodeMirror/Monaco later ONLY if real code editing becomes frequent.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-08</td><td>2026-10-02</td>
+      <td>Widget library integration (user direction): (1) NO built-in platform widgets are listed in the UI — the built-ins documented in rules §11 are platform-rendered islands, not application store items; if the platform ships none, rules §11 gets trimmed later. (2) The tool reads the catalog from the <code>widgetCatalogUrl</code> admin parameter (API returning <code>{items:[{name,title,description,category,configSchema,ssrHtml}]}</code>), caches it in localStorage, and falls back to site <code>gw-widgets</code> objects when the URL is empty/unreachable. (3) Adding a widget = searchable modal (filter by name/id/title/description, grouped by category) → config dialog generated from configSchema → data-gw-app island insert. (4) Editor overlay fixed: textarea scrollbars hidden (they overlapped the highlighted <code>&lt;pre&gt;</code>) + VS Code-style palette.</td>
+      <td>Store-backed catalog with graceful fallback; search-first UX for hundreds of items.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
@@ -398,7 +576,67 @@
   <p>Decision points we resolve together before or during implementation.
   Every answer becomes a dated row in section 11.</p>
   <ol>
-    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+    <li><strong>Q-01 Keep HTML/CSS/JS separate, or store one combined blob?</strong>
+    Current fact: separate (C-01) — combined only at render/export time (C-02).
+    The separation mirrors the platform's own <code>data.htmlPage.code.{html,css,js}</code>
+    shape and enables per-block AI edits (C-04). Option under discussion:
+    additionally accepting a combined blob as INPUT (see idea I-01), while
+    storage stays separate.</li>
+    <li><strong>Q-02 Is per-block separation cheaper/faster for AI updates?</strong>
+    Working assumption: YES — smaller prompts, smaller diffs, single-block
+    patch application (style/script steps send only CSS or JS). To quantify:
+    measure prompt tokens for a CSS-only change vs a whole-page rewrite, and
+    confirm with the AI gateway pricing. Result goes to section 11.</li>
+    <li><strong>Q-03 If a user pastes a whole HTML page into the HTML editor,
+    does it save and manage properly?</strong> Current fact: it saves as a
+    string in <code>code.html</code> and the preview renders it, but document
+    tags fail compliance, embedded <code>&lt;style&gt;/&lt;script&gt;</code> warn,
+    history/versions store it as one blob, and later AI edits can duplicate
+    or conflict with the inline style/script. Proposed fix: import normalizer
+    that auto-splits the pasted page into the three blocks (idea I-01).</li>
+    <li><strong>Q-04 Where does shared content live?</strong>
+    <strong>User's direction (2026-10-02, logged as D-WB-02):</strong> shared
+    content is another OBJECT with the same <code>code.{html,css,js}</code>
+    shape as a page ("another instance of this tool in another object"). Two
+    types: MANDATORY - directly added to every page in the website;
+    OPTIONAL - pages add it to their config inside this tool. Platform
+    mapping: mandatory → <code>default-settings.sharedCss</code> +
+    <code>default-header/default-footer</code> chrome; optional →
+    <code>data.sections</code> on the page. Editing tool still open (Q-07).</li>
+    <li><strong>Q-05 How does the blocks importer receive the old object?</strong>
+    Options: (a) paste the object JSON into an Import modal (works even when
+    the old object type is not registered — matches the user's sample
+    workflow); (b) requestObjects fetch by objectId (needs the old type
+    registered + allowObjectCRUD). Recommendation: (a) paste first, (b) later
+    as a convenience. Decide in section 11.</li>
+    <li><strong>Q-06 How to map the old dynamic-form block?</strong> Options:
+    (a) convert to a data-gw-form fragment (honeypot + status element) and
+    add formTypeId via a small JS call gw.forms.submit(form,
+    {formTypeId}); (b) plain fragment + === CMS CONFIG NEEDED === note telling
+    the CMS author to create the form-type-definition. Recommendation: (a)
+    markup + (b) note together. Decide in section 11.</li>
+    <li><strong>Q-07 One companion tool (SharedSourceBuilder) or a mode inside
+    WebpageBuilder?</strong> <strong>ANSWERED (2026-10-02, D-WB-04):</strong> a
+    SEPARATE tool — <code>WebsiteSharedSourceBuilder</code> (built, build
+    2026-10-02a) — reuses the editors/preview/compliance core with a
+    shared | widget kind selector and a mandatory/optional mode; no AI chat.
+    WebpageBuilder keeps only the pickers.</li>
+    <li><strong>Q-08 How does the widget picker discover the library?</strong>
+    <strong>ANSWERED (2026-10-02, D-WB-05):</strong> built-in widget specs
+    embedded in the tool + a <code>requestObjects</code> query on
+    <code>gw-widgets</code> with a localStorage fallback. The store stays the
+    source of truth; a platform-cached catalog is recommended for production
+    (no CORS dependency).</li>
+    <li><strong>Q-09 How do widget islands behave under SSR?</strong>
+    <strong>ANSWERED (2026-10-02, D-WB-06):</strong> islands mount client-side;
+    SEO-relevant widgets SHOULD provide <code>data.ssrHtml</code> (initial
+    server-rendered markup, rules 11.1); without it the island renders as an
+    empty placeholder until hydrated.</li>
+    <li><strong>Q-10 Who authors the widget tools in the library?</strong>
+    <strong>ANSWERED (2026-10-02, D-WB-06):</strong> hand-written code for now;
+    <code>WebsiteSharedSourceBuilder</code> (kind=widget) is the authoring
+    surface for <code>gw-widgets</code> objects, so a separate WidgetBuilder
+    tool is NOT needed yet.</li>
   </ol>
 
   <h2 id="sec-tasklist">15. Development task list</h2>
@@ -497,6 +735,327 @@
   </section>
   END OF TEMPLATE SAMPLE -->
 
+  <section class="task-group" data-release-group="g1-shared-sources" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Shared sources (objects + picker)</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="g1-shared-sources">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g1-shared-sources"></div></div>
+    <p class="task-group-note">Why these belong together: T-01 defines the object type the platform renders, T-02 creates it, T-03 lets pages reference it. Shipping the picker before the type exists breaks every referencing page.</p>
+
+    <div class="task-item" data-task-id="T-01" data-group="g1-shared-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Define the shared-sources object type in the rules</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The platform has no registered object type for shared content, so nothing can store or render it (REQ-06, D-WB-02).</p>
+          <p><strong>How we will solve it:</strong> Add a "Shared sources" section to the PublicWebsite rules: object type <code>shared-sources</code> with shape <code>data.code.{html,css,js}</code> + <code>data.mode</code> (mandatory | optional) + name. Mandatory → <code>default-settings.sharedCss</code> / header-footer chrome; optional → referenced by pages via <code>data.sections</code> (max 20, composed before page content). Re-embed the rules in the tool.</p>
+          <p><strong>Benefit:</strong> One page-shaped contract for all reusable content; pages only reference, never duplicate.</p>
+          <p><strong>Files:</strong> <code>websitehtmltools/public-website-page-rules.txt</code>, embedded <code>page-guide-source</code> in <code>app/WebpageBuilder.html</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-02" data-group="g1-shared-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Build the SharedSourceBuilder companion tool</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Shared content needs an editing surface ("another instance of this tool in another object") - Q-07.</p>
+          <p><strong>How we will solve it:</strong> New lightweight html-tool reusing the three editors + preview + compliance core of WebpageBuilder, with a "Publish as: mandatory (site) / optional (shared-sources object)" toggle and no AI chat. New tool folder next to WebpageBuilder.</p>
+          <p><strong>Benefit:</strong> Keeps WebpageBuilder focused; one dedicated place for site-wide and reusable content.</p>
+          <p><strong>Files:</strong> new folder <code>BUSINESS/GENERAL/ai-automation/ai-content-builders/SharedSourceBuilder/</code> (html, css, js, test-harness)</p>
+          <p><strong>Status:</strong> Gated on Q-07 decision. Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-03" data-group="g1-shared-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Shared Sources picker in WebpageBuilder</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Pages have no way to opt into optional shared sources (REQ-06).</p>
+          <p><strong>How we will solve it:</strong> Settings section "🔗 Shared Sources": list <code>shared-sources</code> objects (requestObjects query), toggle them into <code>pageMeta.data.sections</code>; preview composes selected section code BEFORE the page's own content; mandatory sources injected in preview for realism.</p>
+          <p><strong>Benefit:</strong> One-click reuse of site content without duplicating code.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code>, <code>app/WebpageBuilder.html</code>, <code>app/WebpageBuilder.css</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-04" data-group="g1-shared-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Preview composition + export instructions</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Preview must behave like the live site (sections before page content, sharedCss before page CSS) or users see a wrong result.</p>
+          <p><strong>How we will solve it:</strong> Fixed composition order in <code>buildPreviewDoc</code>; export notes map optional sections → <code>data.sections</code> and mandatory sources → site settings/chrome; compliance keeps the existing sections-valid check.</p>
+          <p><strong>Benefit:</strong> WYSIWYG parity between preview, download and live render.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g2-widget-library" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Widget library integration</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="g2-widget-library">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g2-widget-library"></div></div>
+    <p class="task-group-note">Why these belong together: the picker (T-07) is useless without a catalog (T-05) and a render contract (T-06); pages inserting islands the platform cannot mount break on the live site.</p>
+
+    <div class="task-item" data-task-id="T-05" data-group="g2-widget-library" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Widget catalog manifest format</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The picker needs a machine-readable list of the application store library (REQ-07, D-WB-01).</p>
+          <p><strong>How we will solve it:</strong> Define a catalog manifest format: id, name, version, gwApp, configSchema (for generated <code>data-gw-config</code>), dependencies, publisher, icon; served from <code>applicationstore.uniconhub.com</code>. Resolve Q-08 (fetch vs platform-cached copy).</p>
+          <p><strong>Benefit:</strong> One feed for the picker, the platform and future tools.</p>
+          <p><strong>Files:</strong> new <code>websitehtmltools/WEBSITE-TOOLS/tools-catalog/</code> manifest (or store endpoint), <code>app/WebpageBuilder.js</code> loader</p>
+          <p><strong>Status:</strong> Gated on Q-08. Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-06" data-group="g2-widget-library" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Rules: Widget registry section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The rules have no convention for authoring and loading third-party widgets, so the library cannot mount on pages.</p>
+          <p><strong>How we will solve it:</strong> Add a "Widget registry" rules section: <code>gw-widgets</code> object type + <code>gw.apps.register('name', factory)</code> convention + registry loaded once as a MANDATORY shared source; document SSR obligations per Q-09. Re-embed the rules.</p>
+          <p><strong>Benefit:</strong> The library and the page picker speak the same contract.</p>
+          <p><strong>Files:</strong> <code>websitehtmltools/public-website-page-rules.txt</code>, embedded <code>page-guide-source</code> in <code>app/WebpageBuilder.html</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-07" data-group="g2-widget-library" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Widgets picker in WebpageBuilder</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Users cannot add library tools to a page (REQ-07).</p>
+          <p><strong>How we will solve it:</strong> "🧩 Widgets" picker: browse the catalog → choose a widget → insert <code>&lt;div data-gw-app="..." data-gw-config='...'&gt;</code> at the correct place (selection or AI placement); config generated from <code>configSchema</code> and validated as JSON (existing widget-config compliance check).</p>
+          <p><strong>Benefit:</strong> The whole application store library becomes addable to any page in one click.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code>, <code>app/WebpageBuilder.html</code>, <code>app/WebpageBuilder.css</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-08" data-group="g2-widget-library" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Widget preview + AI placement prompts</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Preview must show widgets (or a clear placeholder) and the AI must know how to place them.</p>
+          <p><strong>How we will solve it:</strong> Extend the gw mock so registered widgets render in preview (placeholder when the registry is not loaded); teach <code>buildChatPrompt</code> widget placement ("add an order-status island after X").</p>
+          <p><strong>Benefit:</strong> Chat-driven and picker-driven widget placement both work.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g3-custom-forms" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Custom forms of any type</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="g3-custom-forms">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g3-custom-forms"></div></div>
+    <p class="task-group-note">Why these belong together: the form builder (T-09) and its compliance/tests (T-10) must ship together so generated forms are always platform-valid.</p>
+
+    <div class="task-item" data-task-id="T-09" data-group="g3-custom-forms" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Custom forms builder (data-gw-form)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Users want forms of ANY type on their pages; hand-writing the honeypot + formTypeId protocol is error-prone.</p>
+          <p><strong>How we will solve it:</strong> Form dialog: pick fields → generate the <code>data-gw-form</code> fragment (honeypot + <code>[data-gw-form-status]</code>) + <code>gw.forms.submit(form, {formTypeId})</code> JS + a === CMS CONFIG NEEDED === note for the form-type-definition.</p>
+          <p><strong>Benefit:</strong> Any form type becomes one dialog away; platform-valid by construction.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code>, <code>app/WebpageBuilder.html</code>, <code>app/WebpageBuilder.css</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-10" data-group="g3-custom-forms" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Form compliance + harness tests</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Generated forms must pass the existing form-protocol compliance check in every combination.</p>
+          <p><strong>How we will solve it:</strong> Extend <code>gwChecks</code> for generated forms; add canned harness scenarios for the form builder.</p>
+          <p><strong>Benefit:</strong> No form ships broken.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code>, <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g4-outside-sources" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Outside sources policy</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g4-outside-sources">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g4-outside-sources"></div></div>
+    <p class="task-group-note">Why these belong together: one coherent policy for everything that comes from outside the platform - embeds, analytics pixels and CDN libraries.</p>
+
+    <div class="task-item" data-task-id="T-11" data-group="g4-outside-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Embed policy + compliance (iframes in, scripts out)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> YouTube/maps/chat embeds are a real need; today there is no explicit stance in the rules or compliance output.</p>
+          <p><strong>How we will solve it:</strong> Rules clarification: <code>&lt;iframe&gt;</code> embeds with absolute URLs are ALLOWED; script-based embeds and external <code>&lt;script src&gt;</code> stay BANNED (existing check). Compliance: iframe → pass with an info note; external script → fail with a pointer to the policy.</p>
+          <p><strong>Benefit:</strong> Users can embed media safely; the CSP stays intact.</p>
+          <p><strong>Files:</strong> <code>websitehtmltools/public-website-page-rules.txt</code>, embedded rules, <code>app/WebpageBuilder.js</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-12" data-group="g4-outside-sources" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Analytics / pixels guide (GA, Facebook)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Users ask where Google Analytics / Facebook pixel / CDN libraries go; the answer is admin-owned site settings, not page code.</p>
+          <p><strong>How we will solve it:</strong> Document in the rules and tool help: GA/Meta snippets → <code>headCode</code> / <code>bodyStartCode</code> / <code>bodyEndCode</code> / <code>plugins</code> (admin-owned site settings); pages fire events with <code>gw.track</code>. CDN libraries → vendored as a mandatory shared source or an admin allowlist (future). A dedicated admin site-settings tool is deferred.</p>
+          <p><strong>Benefit:</strong> One auditable place for third-party code; pages stay clean and cacheable.</p>
+          <p><strong>Files:</strong> <code>websitehtmltools/public-website-page-rules.txt</code>, embedded rules, tool help text</p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="g5-ssr-cache" data-group-status="pushed">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: SSR + cache readiness</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="g5-ssr-cache">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="g5-ssr-cache"></div></div>
+    <p class="task-group-note">Why these belong together: SSR-friendliness (T-13) and cache busting (T-14) are the two halves of the same caching story (D-WB-03).</p>
+
+    <div class="task-item" data-task-id="T-13" data-group="g5-ssr-cache" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">SSR + cache audit of generated output</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Pages must render SSR and be cacheable in Redis + Vercel CDN (REQ-08) - the tool's output must never block that.</p>
+          <p><strong>How we will solve it:</strong> Audit that output is deterministic and fully static (no document tags - already enforced, idempotent JS - already enforced, no top-level browser-only calls); document the platform render pipeline and the cache convention (cache key = site + pageId + version; Redis TTL; CDN). Widget SSR behavior per Q-09.</p>
+          <p><strong>Benefit:</strong> Guaranteed SSR-able, cacheable pages; the tool-side obligations are stated and checked.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code> (checks), rules / docs note</p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="task-item" data-task-id="T-14" data-group="g5-ssr-cache" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Cache busting via page version</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Edited pages must not be served from a stale Redis/CDN cache.</p>
+          <p><strong>How we will solve it:</strong> Publish bumps the page version (the version stamp already exists in code); the version feeds the cache key convention documented in T-13.</p>
+          <p><strong>Benefit:</strong> Edits go live immediately, old cache entries die naturally.</p>
+          <p><strong>Files:</strong> <code>app/WebpageBuilder.js</code> (version bump on publish), rules note</p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
   write the outcome inside its details. An agreed idea moves to the task list
@@ -512,23 +1071,156 @@
 
   <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
        data-idea-status: new | discussing | ignored. Done = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
-  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
-    <details>
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="discussing">
+    <details open>
       <summary>
         <span class="idea-id">I-01</span>
-        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-title">Import / normalize whole-page HTML (auto-split into the three blocks)</span>
         <span class="idea-status-chip" data-idea-status-chip></span>
         <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
       </summary>
       <div class="idea-details">
-        <p><strong>Idea:</strong> [what the idea is]</p>
-        <p><strong>Why:</strong> [what it would improve]</p>
-        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+        <p><strong>Idea:</strong> Let the user paste ready-made HTML written outside (a full page or a page with inline style/script) and have the tool split it automatically: <code>&lt;style&gt;</code> blocks → CSS editor, <code>&lt;script&gt;</code> blocks → JS editor, the rest → HTML editor (document tags stripped, inline attributes preserved, Nunjucks-era leftovers reported). Entry points: a dedicated Import button AND pasting into chat with an instruction like "apply this page" (the AI already converts to the three-block contract).</p>
+        <p><strong>Why:</strong> The user wants to bring outside HTML into the tool (Q-03). Today it saves but is not fully managed: compliance fails on document tags, history stores one blob, and later AI edits can conflict with inline style/script. Normalizing at the door keeps the core guarantee (three clean blocks) intact for every page, including imported ones.</p>
+        <p><strong>Discussion / outcome:</strong> In discussion (2026-10-02). Open points: (a) deterministic regex splitter vs AI-based split vs both (regex first, AI fallback for messy input); (b) whether pasting into the HTML editor should trigger the normalizer automatically or require an explicit Import action; (c) what to do when the input contains framework code the rules forbid (report + warn, keep raw?); (d) cost comparison for AI-based splitting (ties into Q-02). Not decided — no section 11 row yet.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Store one combined blob instead of three blocks</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Collapse <code>code.{html,css,js}</code> into one stored string to remove the "which block does this belong to" confusion (the user's consideration 1).</p>
+        <p><strong>Why:</strong> Simpler mental model for pasting whole pages; a single editor instead of three.</p>
+        <p><strong>Discussion / outcome:</strong> Working recommendation: REJECT as the storage model — the platform's own schema is <code>data.htmlPage.code.{html,css,js}</code>, per-block AI edits are cheaper (Q-02), compliance checks and diffing are per block, and combining happens naturally at render/export (C-02). I-01 delivers the pasting convenience without losing the three-block storage. If the user still finds separate editors confusing, a middle ground is a "combined view" (read/write one editor that shows all three blocks with markers) while storage stays separate. Not decided — no section 11 row yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="discussing">
+    <details open>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Site Shared tab — site-wide CSS and JS</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A new tab ("🌐 Site Shared") with two editors: shared CSS and shared JS. Both are injected into EVERY preview (shared CSS before page CSS; shared JS before page JS with a mock-safe wrapper) and into the standalone download. Exports explain the platform placement: CSS → <code>default-settings.sharedCss</code> (admin-owned), JS → <code>default-header/default-footer</code> objects' <code>htmlPage.code.js</code>, plus a === CMS CONFIG NEEDED === note.</p>
+        <p><strong>Why:</strong> The user wants one place for site-wide styling and behavior (scenario 1) so pages don't duplicate CSS/JS and AI page prompts can tell the AI "shared classes already exist — reuse them". Also matches the rules (sharedCss + reserved gw- prefix).</p>
+        <p><strong>Discussion / outcome:</strong> Open points: storage location (Q-04), whether AI page prompts should receive the shared class list, and how compliance treats page CSS that assumes sharedCss classes. Not decided — no section 11 row yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Import action: three-part paste + whole-page auto-split</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> One Import dialog with two modes: (a) three textareas (HTML / CSS / JS) for pages prepared outside as separate parts — the user's confirmed approach for scenario 2; (b) one textarea for a whole page, auto-split by a deterministic splitter (<code>&lt;style&gt;</code> → CSS, <code>&lt;script&gt;</code> → JS, rest → HTML, document tags stripped). Result is previewed with a per-part summary BEFORE it replaces the current page; a history snapshot is taken first (one-click restore).</p>
+        <p><strong>Why:</strong> Scenario 2 (paste ready-made pages) becomes a first-class flow instead of editor copy-paste; the split keeps the core guarantee (three clean blocks) for imported pages too.</p>
+        <p><strong>Discussion / outcome:</strong> Open points: mode (b) splitter details for pages whose script tag carries src (unsupported → report); whether pasting into the HTML editor should offer "Split this page?" automatically. Not decided — no section 11 row yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="discussing">
+    <details open>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">CMS blocks importer — convert old objects to the three-block model</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> An Import dialog that accepts a pasted old-CMS object (like the user's sample) and converts it (REQ-03). Conversion map verified against the sample (2026-10-02):</p>
+        <ul>
+          <li>Object <code>name</code> → <code>pageMeta.name</code>; <code>slug</code> → <code>pageMeta.slug</code>; <code>meta.language</code> → <code>pageMeta.meta.language</code>; <code>meta.status</code> → <code>pageMeta.data.status</code> ("enabled" → "published" with a warning).</li>
+          <li>Each <code>blocks[i]</code> of type <code>html-code</code>: extract inline <code>&lt;style&gt;…&lt;/style&gt;</code> → append to CSS; the rest → append to HTML IN ORDER (sample: home100…home700 sections, each with its own wrapper class — already scope-friendly).</li>
+          <li>Block of type <code>json</code> with <code>meta.slug === "dynamic-form"</code> → generated data-gw-form fragment (honeypot + <code>[data-gw-form-status]</code>) + <code>gw.forms.submit(form, {formTypeId: "request-demo-form"})</code> in JS + === CMS CONFIG NEEDED === note (Q-06).</li>
+          <li>Unknown block types / unparseable values → preserved and listed in the report (REQ-05).</li>
+          <li>Empty <code>seo</code> → <code>pageMeta.seo</code> stays empty + warning to fill.</li>
+        </ul>
+        <p><strong>Why:</strong> Scenario 3 — the user has old websites living as CMS blocks data and wants a one-paste migration into the new tool (and from there into the new website via the existing exports).</p>
+        <p><strong>Discussion / outcome:</strong> Open points: entry by paste vs requestObjects fetch (Q-05), the dynamic-form mapping (Q-06), and whether old class names (home100…) are renamed or kept as the page-class scoping prefix. Not decided — no section 11 row yet.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="discussing">
+    <details open>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Shared source objects + companion builder</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Shared content = "another instance of this tool in another object" with the same <code>code.{html,css,js}</code> shape. Two types: MANDATORY (added directly to every page of the website) and OPTIONAL (pages add the shared source to their config in this tool).</p>
+        <p><strong>Why:</strong> Reusable CSS/JS without duplication; matches the platform homes (<code>default-settings.sharedCss</code>, header/footer chrome, <code>data.sections</code>).</p>
+        <p><strong>Discussion / outcome:</strong> User confirmed the model (D-WB-02). Scheduled: tasks T-01..T-04 (group g1-shared-sources). Open: companion tool vs mode (Q-07).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="discussing">
+    <details open>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Widget library picker (application store)</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A "🧩 Widgets" picker inside the tool: browse the website html tool library at <code>applicationstore.uniconhub.com</code>, pick any tool, insert it as a <code>data-gw-app</code> island at the right place with a generated valid config - same model as the existing html-tool library in the CMS app.</p>
+        <p><strong>Why:</strong> The whole library becomes addable to any page in one click (REQ-07, D-WB-01).</p>
+        <p><strong>Discussion / outcome:</strong> Scheduled: tasks T-05..T-08 (group g2-widget-library). Open: catalog discovery (Q-08), widget SSR (Q-09), widget authoring (Q-10).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-08" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-08</span>
+        <span class="idea-title">Outside sources policy (analytics / embeds / CDN)</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-08 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Three classes, three homes: analytics/pixels (GA, Facebook) → admin-owned site settings only, pages fire <code>gw.track</code>; embeds → <code>&lt;iframe&gt;</code> with absolute URLs allowed; CDN JS libraries → page-level ban kept, vendored as a mandatory shared source or an admin allowlist.</p>
+        <p><strong>Why:</strong> One auditable policy for everything outside the platform; pages stay clean, secure and cacheable.</p>
+        <p><strong>Discussion / outcome:</strong> Scheduled: tasks T-11..T-12 (group g4-outside-sources). Open: CDN allowlist vs vendoring only.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-09" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-09</span>
+        <span class="idea-title">SSR + cache-ready pages (Redis / Vercel CDN)</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-09 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Every webpage renders SSR and can be cached in Redis and Vercel CDN (and others if needed) - informational for the tool: its output must stay pure static three-block code, deterministic and version-stamped.</p>
+        <p><strong>Why:</strong> Performance and SEO at the platform level; the tool must never block it (REQ-08, D-WB-03).</p>
+        <p><strong>Discussion / outcome:</strong> Scheduled: tasks T-13..T-14 (group g5-ssr-cache). Open: widget SSR behavior (Q-09, platform-side).</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
   <p>[Preparation: what accounts, tenants, browsers, and test data the pass
@@ -596,8 +1288,111 @@
   </div>
   END OF TEMPLATE SAMPLE -->
 
-  <p class="ok"><strong>Overall verdict.</strong> [One paragraph: is it safe to
-  test locally, is it safe to publish, and under which condition.]</p>
+  <div class="risk-item" data-risk-id="R-01" data-group="g1-shared-sources" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">Section composition order changes the CSS cascade</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-03, T-04</p>
+        <p><strong>What can go wrong:</strong> Pages that rely on shared classes break if section order changes (sections → page content, sharedCss → page CSS).</p>
+        <p><strong>Likelihood / impact:</strong> Possible / visible style breakage on live pages.</p>
+        <p><strong>Mitigation:</strong> Fixed documented order in rules + preview + a harness test asserting the order.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-02 - solved (rules updated + verified in headless e2e).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-02" data-group="g2-widget-library" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Widget registry weight + stale catalog</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-05, T-06, T-07</p>
+        <p><strong>What can go wrong:</strong> A mandatory registry JS loaded on every page adds weight; a cached catalog can list outdated widgets.</p>
+        <p><strong>Likelihood / impact:</strong> Likely / slower pages, wrong picker entries.</p>
+        <p><strong>Mitigation:</strong> Lazy registration (defer, register on demand), catalog versioned with cache headers (T-05).</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-02 - solved (rules updated + verified in headless e2e).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="g2-widget-library" data-risk-level="high" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Widget islands render empty under SSR</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-06, T-13 (platform-side, Q-09)</p>
+        <p><strong>What can go wrong:</strong> Client-mounted <code>data-gw-app</code> islands show nothing in SSR/SEO until hydration.</p>
+        <p><strong>Likelihood / impact:</strong> Certain if unaddressed / SEO loss for widget content.</p>
+        <p><strong>Mitigation:</strong> Decide Q-09 (server-render initial markup vs placeholder + hydrate) and state the widget-author obligation in the rules (T-06).</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-02 - solved (Q-09 answered D-WB-06; rules 11.1 mandate data.ssrHtml for SEO widgets).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="g4-outside-sources" data-risk-level="high" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">CDN / script allowlist weakens the CSP</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-11, T-12</p>
+        <p><strong>What can go wrong:</strong> A page-level or site-level script allowance opens the door to supply-chain attacks.</p>
+        <p><strong>Likelihood / impact:</strong> Low but real / severe if exploited.</p>
+        <p><strong>Mitigation:</strong> Page-level ban stays; any site-level allowlist is admin-owned, default-off and documented; prefer vendoring into a mandatory shared source.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-02 - solved (rules 15 documents the admin-owned homes; pages keep the script ban).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="g5-ssr-cache" data-risk-level="medium" data-risk-status="solved">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Edited pages served from a stale cache</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-14</p>
+        <p><strong>What can go wrong:</strong> Redis/CDN keep serving the old page after an edit.</p>
+        <p><strong>Likelihood / impact:</strong> Likely without busting / user sees outdated content.</p>
+        <p><strong>Mitigation:</strong> Version bump on every publish feeds the cache key (T-14).</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-02 - solved (data.version stamped into page object JSON; rules section 18 documents the cache key).</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> All five release groups shipped
+  (2026-10-02): rules extended (shared-sources 12.6, widget registry 11.1,
+  iframe embeds 3.4, analytics homes 15, SSR/caching 18), the
+  <code>WebsiteSharedSourceBuilder</code> companion tool built, and
+  WebpageBuilder's Shared Sources picker, Widgets picker, Custom Form Builder
+  and extended compliance verified headless. E2E evidence: WSB 10/10 checks +
+  widget preview mount; WPB 3 shared sources, 12 widgets, island insert, form
+  generation, data.sections sync, 29 checks, zero page errors. Remaining
+  follow-ups (platform-side): widget SSR execution and the store catalog
+  endpoint.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. The <code>npm run rel</code> script appends
@@ -612,7 +1407,7 @@
 
   <div class="footer">
     Webpage Builder - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-09-21.
+    tool. Version 0.7, 2026-10-02.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

@@ -203,6 +203,7 @@ body { padding-top: 28px !important; margin: 0; }
             <button class="advtab" data-advtab="css">🎨 CSS</button>
             <button class="advtab" data-advtab="js">⚡ JS</button>
             <button class="advtab" data-advtab="console">🪲 Console</button>
+            <button class="advtab" data-advtab="addons">🧩 Add-ons</button>
             <button class="advtab active" data-advtab="settings">⚙️ Generate &amp; Export</button>
             <div class="content-actions" id="content-actions" style="display:none">
               <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
@@ -216,17 +217,26 @@ body { padding-top: 28px !important; margin: 0; }
         <!-- HTML Editor -->
         <div class="advpanel" id="editor-html">
           <div class="code-lines" id="html-lines"></div>
-          <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
+          <div class="editor-wrap">
+            <pre class="editor-hl" aria-hidden="true"><code id="hl-html"></code></pre>
+            <textarea id="code-html" class="code-textarea" placeholder="HTML output will appear here…" spellcheck="false"></textarea>
+          </div>
         </div>
         <!-- CSS Editor -->
         <div class="advpanel" id="editor-css">
           <div class="code-lines" id="css-lines"></div>
-          <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
+          <div class="editor-wrap">
+            <pre class="editor-hl" aria-hidden="true"><code id="hl-css"></code></pre>
+            <textarea id="code-css" class="code-textarea" placeholder="CSS output will appear here…" spellcheck="false"></textarea>
+          </div>
         </div>
         <!-- JS Editor -->
         <div class="advpanel" id="editor-js">
           <div class="code-lines" id="js-lines"></div>
-          <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
+          <div class="editor-wrap">
+            <pre class="editor-hl" aria-hidden="true"><code id="hl-js"></code></pre>
+            <textarea id="code-js" class="code-textarea" placeholder="JavaScript output will appear here…" spellcheck="false"></textarea>
+          </div>
         </div>
 
         <!-- Console -->
@@ -240,23 +250,46 @@ body { padding-top: 28px !important; margin: 0; }
           </div>
         </div>
 
-        <!-- Settings -->
-        <div class="advpanel active" id="editor-settings">
+        <!-- Add-ons: shared sources + widgets & forms -->
+        <div class="advpanel" id="editor-addons">
           <div class="config-scroll">
             <div class="config-header">
-              <h2>⚙️ Generate & Export</h2>
-              <p>Page identity and SEO metadata live on the parent CMS content record — this tool stores only the page code. Design direction comes from admin parameters and is shared across pages.</p>
+              <h2>🧩 Add-ons</h2>
+              <p>Reusable site content and widgets — add them to this page in one click.</p>
             </div>
 
             <div class="config-section">
-              <h3>🎨 Design Direction (admin parameters)</h3>
-              <div class="params-summary" id="params-summary">Loading…</div>
-              <p class="gen-hint">These values are configured as tool parameters in the field settings and are shared across pages. Ask an admin to change them — or describe the look you want in the chat and the AI will follow it.</p>
+              <h3>🔗 Shared Sources</h3>
+              <div id="shared-picker-list"><div class="picker-empty">Loading shared sources…</div></div>
+              <div class="picker-actions">
+                <button class="btn btn-sm btn-outline" id="btn-shared-refresh">↻ Refresh</button>
+              </div>
+              <p class="gen-hint">Optional sources go into this page's data.sections. "Site-wide" ones are added automatically.</p>
+            </div>
+
+            <div class="config-section">
+              <h3>🧩 Widgets &amp; Forms</h3>
+              <div class="picker-actions">
+                <button class="btn btn-primary" id="btn-widget-library">🔍 Browse Widget Library</button>
+                <button class="btn btn-outline" id="btn-widget-refresh" title="Reload the widget list">↻ Refresh</button>
+                <button class="btn btn-outline" id="btn-form-builder">📝 Form Builder</button>
+              </div>
+              <p class="gen-hint">Widgets come from the application store (widgetCatalogUrl). Search and add one as a data-gw-app island.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings: Generate & Export -->
+        <div class="advpanel active" id="editor-settings">
+          <div class="config-scroll">
+            <div class="config-header">
+              <h2>⚙️ Generate &amp; Export</h2>
+              <p id="params-summary-line" class="params-line">Loading…</p>
             </div>
 
             <div class="config-actions">
-              <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Page (HTML + CSS + JS)</button>
-              <p class="gen-hint">Or just type what you want in the <b>💬 Chat</b> on the left — the AI understands natural language.</p>
+              <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Page</button>
+              <p class="gen-hint">Or just describe it in the 💬 Chat.</p>
             </div>
             <div id="gen-status" class="gen-status" style="display:none">
               <div class="gen-status-icon">⏳</div>
@@ -273,12 +306,12 @@ body { padding-top: 28px !important; margin: 0; }
                 <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
                 <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
               </div>
-              <p class="gen-hint">The downloaded .html file is a complete standalone preview (with a window.gw mock). The <b>page object JSON</b> maps to the PublicWebsite page object (data.htmlPage.code + seo) and the <b>generator output</b> is the raw === HTML/CSS/JS/SEO/PAGE META text.</p>
+              <p class="gen-hint">Download a standalone preview, or copy the page object JSON ready for the CMS.</p>
             </div>
           </div>
         </div>
 
-        <!-- Compliance -->
+                <!-- Compliance -->
         <div class="advpanel" id="editor-compliance">
           <div class="compliance-panel">
             <div class="compliance-header">
@@ -305,6 +338,65 @@ body { padding-top: 28px !important; margin: 0; }
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Widget Library Modal -->
+  <div class="modal" id="modal-widget-library" style="display:none">
+    <div class="modal-header">
+      <h3>🔍 Widget Library</h3>
+      <button class="btn-close" id="btn-widget-library-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" id="widget-search" class="widget-search" placeholder="Search by name or id… (e.g. gallery, reviews)" autocomplete="off" />
+      <div class="widget-lib-source" id="widget-lib-source"></div>
+      <div id="widget-library-list" class="widget-library-list"></div>
+    </div>
+  </div>
+
+  <!-- Widget Config Modal -->
+  <div class="modal" id="modal-widget-config" style="display:none">
+    <div class="modal-header">
+      <h3 id="widget-dialog-title">Add widget</h3>
+      <button class="btn-close" id="btn-widget-cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-sub" id="widget-dialog-desc"></p>
+      <label class="field-label">Widget config (valid JSON — generates data-gw-config)</label>
+      <textarea id="widget-config-json" class="widget-config-json" rows="10" spellcheck="false"></textarea>
+      <label class="field-label">Place after section id (optional)</label>
+      <input type="text" id="widget-place-after" placeholder="e.g. hero — leave empty to append at the end" />
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-widget-cancel2">Cancel</button>
+        <button class="btn btn-primary" id="btn-widget-insert">➕ Insert Island</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Form Builder Modal -->
+  <div class="modal" id="modal-form-builder" style="display:none">
+    <div class="modal-header">
+      <h3>📝 Custom Form Builder</h3>
+      <button class="btn-close" id="btn-form-cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-sub">Generates a platform-valid <code>data-gw-form</code> fragment (honeypot + status element) with submit wiring, plus a CMS CONFIG NEEDED note for the form-type-definition.</p>
+      <div class="form-builder-grid">
+        <div>
+          <label class="field-label">formTypeId (optional — links to the CMS form-type-definition)</label>
+          <input type="text" id="form-type-id" placeholder="request-demo-form" />
+        </div>
+        <div>
+          <label class="field-label">CSS class prefix (auto from formTypeId)</label>
+          <input type="text" id="form-css-class" placeholder="request-demo-form" />
+        </div>
+      </div>
+      <div id="form-fields-list"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-form-add-field">+ Add Field</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-primary" id="btn-form-generate">⚡ Generate Form</button>
+      </div>
+    </div>
   </div>
 
   <!-- History Modal -->
@@ -1190,12 +1282,86 @@ Rules:
     requestUpload: function(accept, cb) { setTimeout(function() { cb(null, { name: 'reference.png', url: 'https://example.com/reference.png', size: 2048, type: 'image/png' }); }, 500); },
     requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
     requestObjects: function(action, params, cb) {
-      var KEY = params.mainObjectType === 'webpagebuilder-history-uniconbaseapps' ? 'webpagebuilder_test_history' : 'webpagebuilder_test_sessions';
+      var t = params.mainObjectType;
+      var KEY;
+      if (t === 'webpagebuilder-history-uniconbaseapps') KEY = 'webpagebuilder_test_history';
+      else if (t === 'shared-sources') KEY = 'webpagebuilder_test_shared';
+      else if (t === 'gw-widgets') KEY = 'webpagebuilder_test_widgets';
+      else KEY = 'webpagebuilder_test_sessions';
+      function seedShared() {
+        return [
+          {
+            id: 'shr-ann-bar', name: 'Announcement Bar',
+            productData: { data_categoriesBased: {
+              meta: { name: 'Announcement Bar', sharedMode: 'optional' },
+              code: {
+                html: '<div class="ann-bar">🎉 Summer sale — 20% off all bookings this week</div>',
+                css: '.ann-bar{background:#4f46e5;color:#fff;text-align:center;padding:8px 16px;font-size:14px}',
+                js: ''
+              }
+            }}
+          },
+          {
+            id: 'shr-trust', name: 'Trust Strip',
+            productData: { data_categoriesBased: {
+              meta: { name: 'Trust Strip', sharedMode: 'optional' },
+              code: {
+                html: '<div class="trust-strip">🔒 Secure checkout · ⭐ 4.9/5 rating · 🚚 Free shipping</div>',
+                css: '.trust-strip{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:10px;background:#f8fafc;color:#334155;font-size:13px}',
+                js: ''
+              }
+            }}
+          },
+          {
+            id: 'shr-helpers', name: 'Site Helpers (mandatory)',
+            productData: { data_categoriesBased: {
+              meta: { name: 'Site Helpers', sharedMode: 'mandatory' },
+              code: {
+                html: '',
+                css: '',
+                js: '(function(){if(window.__siteHelpersReady)return;window.__siteHelpersReady=true;if(window.gw)gw.ns.siteHelpers={tagline:function(){return "Trusted by 500+ teams";}};}());'
+              }
+            }}
+          }
+        ];
+      }
+      function seedWidgets() {
+        return [
+          {
+            id: 'wgt-reviews', name: 'Reviews Widget',
+            productData: { data_categoriesBased: {
+              meta: { name: 'Reviews Widget', gwAppName: 'reviews', description: 'Customer review cards from the reviews object type.' },
+              gwApp: { name: 'reviews', configSchema: { type: 'object', properties: { cmsObjectType: { type: 'string', default: 'reviews' }, limit: { type: 'number', default: 3 } } } },
+              ssrHtml: '<div class="reviews-ssr">Loading reviews…</div>',
+              code: { html: '', css: '', js: '(function(){if(window.gw)gw.apps.register("reviews",function(ctx){var el=ctx.el;el.textContent="★ ★ ★ ★ ★ — 4.9 from "+(ctx.config.limit||3)+" reviews";return function(){};});}());' }
+            }}
+          },
+          {
+            id: 'wgt-countdown', name: 'Countdown Widget',
+            productData: { data_categoriesBased: {
+              meta: { name: 'Countdown', gwAppName: 'countdown', description: 'Countdown timer to a target date.' },
+              gwApp: { name: 'countdown', configSchema: { type: 'object', properties: { until: { type: 'string', default: '2026-12-31T23:59:59Z' }, label: { type: 'string', default: 'Offer ends in' } } } },
+              ssrHtml: '',
+              code: { html: '', css: '', js: '(function(){if(window.gw)gw.apps.register("countdown",function(ctx){var el=ctx.el;el.textContent=(ctx.config.label||"Countdown")+" …";return function(){};});}());' }
+            }}
+          }
+        ];
+      }
       function loadSess() { try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : []; } catch (e) { return []; } }
       function saveSess(arr) { try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch (e) {} }
       setTimeout(function() {
         if (action === 'query') {
-          cb(null, { objects: loadSess() });
+          if (KEY === 'webpagebuilder_test_shared') {
+            var rawShared = loadSess();
+            if (!localStorage.getItem(KEY)) { rawShared = seedShared(); saveSess(rawShared); }
+            cb(null, { objects: rawShared });
+          } else if (KEY === 'webpagebuilder_test_widgets') {
+            var rawWidgets = loadSess();
+            if (!localStorage.getItem(KEY)) { rawWidgets = seedWidgets(); saveSess(rawWidgets); }
+            cb(null, { objects: rawWidgets });
+          } else {
+            cb(null, { objects: loadSess() });
+          }
         } else if (action === 'create') {
           var obj = { id: 'n-' + Date.now().toString(36), name: params.name || 'New Chat', _parentObjectId: 'mock-parent', productData: params.productData };
           var arr = loadSess();
@@ -1277,7 +1443,7 @@ Rules:
 <script>
 (function() {
   var thStatus = document.getElementById('th-status');
-  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-08-18b';
+  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-10-02b';
   document.getElementById('th-load-sample').onclick = function() {
     // Slim saved value — design direction comes from params, identity from the parent object.
     window.tool.setValue({

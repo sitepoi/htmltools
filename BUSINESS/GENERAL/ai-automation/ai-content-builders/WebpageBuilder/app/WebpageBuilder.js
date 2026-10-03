@@ -48,7 +48,9 @@ var DB = {
   configNeeded: '',   // === CMS CONFIG NEEDED === notes for the CMS author
   emailTemplate: '',  // === EMAIL TEMPLATE === artifact (for email hooks)
   activeSessionId: '',
-  version: '1.0.0'
+  version: '1.0.0',
+  sharedCatalog: [],  // known shared-sources objects (in-memory + localStorage fallback)
+  widgetCatalog: []   // known library widgets from the application store (in-memory + localStorage fallback)
 };
 
 var _theme = 'light';          // builder UI theme (in-memory only)
@@ -89,6 +91,12 @@ var HISTORY_TYPE = 'webpagebuilder-history-uniconbaseapps'; // version snapshots
 var HISTORY_MAX = 50;
 var _historyMigrated = false; // one-shot migration of legacy `history` arrays found inside the saved value
 var _imagesUpgraded = false; // one-shot: random picsum placeholders → concept-relevant keyword images
+
+/* ── Shared sources + widget library types ── */
+var SHARED_TYPE = 'shared-sources';
+var WIDGET_TYPE = 'gw-widgets';
+var SHARED_LS = 'webpagebuilder_shared_cache_v1';
+var WIDGET_LS = 'webpagebuilder_widget_cache_v1';
 
 /* ── Rules text — loaded from embedded DOM element ──
    Priority: admin tool.param('pageRules') → built-in embedded copy of
@@ -187,6 +195,443 @@ function _parentSeo() {
     desc: String(seo.metaDesc || f.seoDesc || ''),
     keywords: String(seo.metaKeywords || f.seoKeywords || '')
   };
+}
+
+/* ── Shared sources (shared-sources objects) + widget library (gw-widgets) ──
+   The Shared Sources picker writes pageMeta.data.sections; the Widgets picker
+   inserts data-gw-app islands; the forms builder generates data-gw-form
+   fragments. Catalogs load via tool.requestObjects with a localStorage
+   fallback so preview works even when object CRUD is unavailable. ── */
+var _previewShared = { html: '', css: '', js: '' };
+var _widgetDialogName = '';
+var _formFields = [];
+// NOTE: no built-in platform widgets are listed in the UI — the widget
+// library comes from the application store (widgetCatalogUrl API) with a
+// fallback to site gw-widgets objects. (D-WB-08)
+function _lsGet(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
+function _lsSet(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+
+function _sectionPicks() {
+  var pm = DB.pageMeta;
+  var secs = (pm && pm.data && Array.isArray(pm.data.sections)) ? pm.data.sections : [];
+  var picks = [];
+  for (var i = 0; i < secs.length; i++) {
+    if (secs[i] && secs[i].cmsObjectType === SHARED_TYPE && secs[i].objectId) picks.push(secs[i].objectId);
+  }
+  return picks;
+}
+function _setSectionPicks(picks) {
+  if (!DB.pageMeta) DB.pageMeta = {};
+  if (!DB.pageMeta.data) DB.pageMeta.data = {};
+  var existing = Array.isArray(DB.pageMeta.data.sections) ? DB.pageMeta.data.sections : [];
+  var kept = [];
+  for (var i = 0; i < existing.length; i++) {
+    if (!(existing[i] && existing[i].cmsObjectType === SHARED_TYPE)) kept.push(existing[i]);
+  }
+  for (var j = 0; j < picks.length; j++) kept.push({ cmsObjectType: SHARED_TYPE, objectId: picks[j] });
+  DB.pageMeta.data.sections = kept.slice(0, 20);
+}
+
+function loadSharedCatalog(cb) {
+  function finish(list) {
+    DB.sharedCatalog = list || [];
+    var ls = _lsGet(SHARED_LS) || {};
+    ls.catalog = DB.sharedCatalog;
+    _lsSet(SHARED_LS, ls);
+    if (cb) cb(DB.sharedCatalog);
+  }
+  try {
+    tool.requestObjects('query', { mainObjectType: SHARED_TYPE }, function(err, result) {
+      var list = [];
+      if (!err && result && result.objects) {
+        for (var i = 0; i < result.objects.length; i++) {
+          var o = result.objects[i];
+          var dcb = (o.productData && o.productData.data_categoriesBased) || {};
+          var code = (dcb.code && typeof dcb.code === 'object') ? dcb.code : {};
+          var item = {
+            objectId: String(o.id || ''),
+            name: String((dcb.meta && dcb.meta.name) || o.name || 'Shared source'),
+            mode: String((dcb.meta && dcb.meta.sharedMode) || 'optional'),
+            code: { html: code.html || '', css: code.css || '', js: code.js || '' }
+          };
+          if (item.objectId) list.push(item);
+        }
+      }
+      finish(list);
+    });
+  } catch (e) {
+    finish((_lsGet(SHARED_LS) || {}).catalog || []);
+  }
+}
+function _cachedSharedCodes() {
+  var ls = _lsGet(SHARED_LS) || {};
+  var codes = {};
+  if (DB.sharedCatalog) {
+    for (var i = 0; i < DB.sharedCatalog.length; i++) {
+      var it = DB.sharedCatalog[i];
+      if (it && it.objectId && it.code) codes[it.objectId] = it.code;
+    }
+  }
+  if (ls.codes) for (var k in ls.codes) if (Object.prototype.hasOwnProperty.call(ls.codes, k)) codes[k] = ls.codes[k];
+  return codes;
+}
+function _composePreviewShared() {
+  var picks = _sectionPicks();
+  var codes = _cachedSharedCodes();
+  var out = { html: '', css: '', js: '' };
+  for (var i = 0; i < picks.length; i++) {
+    var c = codes[picks[i]];
+    if (!c) continue;
+    out.html += (out.html ? '\n' : '') + (c.html || '');
+    out.css += (out.css ? '\n' : '') + (c.css || '');
+    out.js += (out.js ? '\n' : '') + (c.js || '');
+  }
+  return out;
+}
+function renderSharedPickerLoading() {
+  var l = el('shared-picker-list');
+  if (l) l.innerHTML = '<div class="picker-empty">Loading shared sources…</div>';
+}
+function renderSharedPicker() {
+  var list = el('shared-picker-list');
+  if (!list) return;
+  if (!DB.sharedCatalog || !DB.sharedCatalog.length) {
+    list.innerHTML = '<div class="picker-empty">No shared sources found. Create them with the <b>WebsiteSharedSourceBuilder</b> tool (object type "shared-sources"), then refresh.</div>';
+    return;
+  }
+  var picks = _sectionPicks();
+  var h = '';
+  for (var i = 0; i < DB.sharedCatalog.length; i++) {
+    var it = DB.sharedCatalog[i];
+    var on = picks.indexOf(it.objectId) !== -1;
+    var badge = it.mode === 'mandatory'
+      ? '<span class="picker-badge mandatory" title="Injected into every page automatically — no need to select">site-wide</span>'
+      : '<span class="picker-badge optional">optional</span>';
+    h += '<label class="picker-row"><input type="checkbox" data-shared-id="' + esc(it.objectId) + '"' + (on ? ' checked' : '') + ' />' +
+      '<span class="picker-name">' + esc(it.name) + '</span>' + badge + '</label>';
+  }
+  list.innerHTML = h;
+  var boxes = list.querySelectorAll('[data-shared-id]');
+  for (var j = 0; j < boxes.length; j++) {
+    boxes[j].onchange = function() {
+      var picks2 = [];
+      var all = list.querySelectorAll('[data-shared-id]:checked');
+      for (var p = 0; p < all.length; p++) picks2.push(all[p].getAttribute('data-shared-id'));
+      _setSectionPicks(picks2);
+      persist();
+      _previewShared = _composePreviewShared();
+      updatePreview();
+      showToast('Shared sources updated — ' + picks2.length + ' selected (data.sections).', 'success');
+    };
+  }
+}
+
+function _normalizeStoreCatalog(payload) {
+  var items = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.items) ? payload.items : []);
+  var out = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i] || {};
+    var name = String(it.name || it.id || it.gwApp || '').trim();
+    if (!name) continue;
+    out.push({
+      name: name,
+      title: String(it.title || it.label || it.name || name),
+      desc: String(it.description || it.desc || ''),
+      category: String(it.category || 'general'),
+      configSchema: it.configSchema || null,
+      ssrHtml: String(it.ssrHtml || '')
+    });
+  }
+  return out;
+}
+function loadWidgetCatalog(cb) {
+  function finish(list, source) {
+    DB.widgetCatalog = list || [];
+    _lsSet(WIDGET_LS, { catalog: DB.widgetCatalog, source: source, fetchedAt: new Date().toISOString() });
+    if (cb) cb(DB.widgetCatalog);
+  }
+  function fromObjects() {
+    try {
+      tool.requestObjects('query', { mainObjectType: WIDGET_TYPE }, function(err, result) {
+        var list = [];
+        if (!err && result && result.objects) {
+          for (var i = 0; i < result.objects.length; i++) {
+            var o = result.objects[i];
+            var dcb = (o.productData && o.productData.data_categoriesBased) || {};
+            var meta = dcb.meta || {};
+            var gwa = String(meta.gwAppName || (dcb.gwApp && dcb.gwApp.name) || '').trim();
+            if (!gwa) continue;
+            list.push({
+              name: gwa,
+              title: String(meta.name || o.name || gwa),
+              desc: String(meta.description || 'Site widget (gw-widgets object).'),
+              category: String(meta.category || 'site widgets'),
+              configSchema: (dcb.gwApp && dcb.gwApp.configSchema) || null,
+              ssrHtml: String(meta.ssrHtml || dcb.ssrHtml || '')
+            });
+          }
+        }
+        if (!list.length) list = (_lsGet(WIDGET_LS) || {}).catalog || [];
+        finish(list, list.length ? 'site widgets' : 'cached');
+      });
+    } catch (e) {
+      finish((_lsGet(WIDGET_LS) || {}).catalog || [], 'cached');
+    }
+  }
+  var url = String(_p('widgetCatalogUrl', '') || '').trim();
+  if (url && typeof fetch === 'function') {
+    fetch(url)
+      .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function(json) { finish(_normalizeStoreCatalog(json), 'application store'); })
+      .catch(function() { fromObjects(); });
+  } else {
+    fromObjects();
+  }
+}
+function renderWidgetLibraryList(filter) {
+  var list = el('widget-library-list');
+  if (!list) return;
+  var entries = DB.widgetCatalog || [];
+  var f = String(filter || '').trim().toLowerCase();
+  var grouped = {};
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    if (f) {
+      var hay = ((e.name || '') + ' ' + (e.title || '') + ' ' + (e.desc || '') + ' ' + (e.category || '')).toLowerCase();
+      if (hay.indexOf(f) === -1) continue;
+    }
+    var cat = e.category || 'general';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(e);
+  }
+  var cats = [];
+  for (var c in grouped) if (Object.prototype.hasOwnProperty.call(grouped, c)) cats.push(c);
+  cats.sort();
+  if (!cats.length) {
+    list.innerHTML = '<div class="picker-empty">No widgets found' + (f ? ' for "' + esc(f) + '"' : ' — set the widgetCatalogUrl admin parameter or create gw-widgets objects') + '.</div>';
+    return;
+  }
+  var h = '';
+  for (var ci = 0; ci < cats.length; ci++) {
+    h += '<div class="picker-section-label">' + esc(cats[ci]) + '</div>';
+    var arr = grouped[cats[ci]];
+    for (var j = 0; j < arr.length; j++) {
+      var e2 = arr[j];
+      h += '<div class="widget-row"><div class="widget-row-body">' +
+        '<div class="widget-row-name">' + esc(e2.title || e2.name) + ' <span class="widget-row-id">' + esc(e2.name) + '</span></div>' +
+        '<div class="widget-row-desc">' + esc(e2.desc || '') + '</div></div>' +
+        '<button class="btn btn-sm btn-outline" data-widget-add="' + esc(e2.name) + '">+ Add</button></div>';
+    }
+  }
+  list.innerHTML = h;
+  var btns = list.querySelectorAll('[data-widget-add]');
+  for (var k = 0; k < btns.length; k++) {
+    btns[k].onclick = function() {
+      openWidgetDialog(this.getAttribute('data-widget-add'));
+    };
+  }
+}
+function openWidgetLibrary() {
+  renderWidgetLibraryList('');
+  var srcEl = el('widget-lib-source');
+  if (srcEl) {
+    var src = _lsGet(WIDGET_LS) || {};
+    var label = src.source === 'application store' ? 'Application store API (widgetCatalogUrl)'
+      : src.source === 'site widgets' ? 'Site widgets (gw-widgets objects)'
+      : 'Cached list';
+    var when = src.fetchedAt ? ' · fetched ' + new Date(src.fetchedAt).toLocaleTimeString() : '';
+    srcEl.textContent = 'Source: ' + label + when;
+  }
+  openModal('modal-widget-library');
+  var s = el('widget-search');
+  if (s) { s.value = ''; s.focus(); }
+}
+
+/* ── Widget insertion (data-gw-app island) ── */
+function _defaultsFromSchema(schema) {
+  var out = {};
+  if (!schema || typeof schema !== 'object') return out;
+  var props = schema.properties || {};
+  for (var k in props) {
+    if (!Object.prototype.hasOwnProperty.call(props, k)) continue;
+    var p = props[k] || {};
+    if (typeof p.default !== 'undefined') out[k] = p.default;
+    else if (p.type === 'object') out[k] = _defaultsFromSchema(p);
+    else if (p.type === 'array') out[k] = [];
+    else out[k] = '';
+  }
+  return out;
+}
+function _defaultConfigFor(name) {
+  var list = DB.widgetCatalog || [];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].name === name) return _defaultsFromSchema(list[i].configSchema);
+  }
+  return {};
+}
+function openWidgetDialog(name) {
+  _widgetDialogName = name;
+  var cfg = _defaultConfigFor(name);
+  var ta = el('widget-config-json');
+  if (ta) ta.value = JSON.stringify(cfg, null, 2);
+  var t = el('widget-dialog-title');
+  if (t) t.textContent = 'Add widget: ' + name;
+  openModal('modal-widget-config');
+}
+function insertWidgetFromDialog() {
+  var ta = el('widget-config-json');
+  var cfgText = (ta ? ta.value : '').trim();
+  if (!cfgText) cfgText = '{}';
+  try { JSON.parse(cfgText); } catch (e) {
+    showToast('Widget config must be VALID JSON — ' + e.message, 'error');
+    return;
+  }
+  var placement = el('widget-place-after');
+  insertWidgetIsland(_widgetDialogName, cfgText, placement ? placement.value.trim() : '');
+  closeAllModals();
+}
+function insertWidgetIsland(name, cfgJson, placeAfter) {
+  if (!name) return;
+  var div = '<div data-gw-app="' + esc(name) + '" data-gw-config=\'' + cfgJson + '\'></div>';
+  var ta = el('code-html');
+  if (ta) {
+    var html = ta.value;
+    if (placeAfter) {
+      var re = new RegExp('id=["\']' + placeAfter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'][^>]*>');
+      var m = re.exec(html);
+      if (m) {
+        var idx = m.index + m[0].length;
+        html = html.substring(0, idx) + '\n  ' + div + html.substring(idx);
+      } else {
+        html = html + '\n' + div;
+      }
+    } else {
+      html = html + '\n' + div;
+    }
+    ta.value = html;
+    DB.code.html = html;
+    refreshEditorHighlight('html');
+    updateLineNumbers();
+  }
+  persist();
+  showToast('Widget "' + name + '" island added — edit its data-gw-config in the HTML tab if needed.', 'success');
+  switchTab('advanced');
+  switchAdvTab('html');
+  updatePreview();
+}
+
+/* ── Custom forms builder (data-gw-form) ── */
+function openFormBuilder() {
+  var list = el('form-fields-list');
+  if (list) list.innerHTML = '';
+  _formFields = [];
+  var tid = el('form-type-id');
+  if (tid) tid.value = '';
+  addFormFieldRow();
+  openModal('modal-form-builder');
+}
+function addFormFieldRow() {
+  var list = el('form-fields-list');
+  if (!list) return;
+  var idx = _formFields.length;
+  _formFields.push({ name: '', label: '', type: 'text', required: true });
+  var row = document.createElement('div');
+  row.className = 'form-field-row';
+  row.setAttribute('data-row', String(idx));
+  row.innerHTML =
+    '<input type="text" class="ff-name" placeholder="field name (e.g. email)" />' +
+    '<input type="text" class="ff-label" placeholder="label (e.g. Email)" />' +
+    '<select class="ff-type">' +
+      '<option value="text">Text</option><option value="email">Email</option>' +
+      '<option value="tel">Phone</option><option value="number">Number</option>' +
+      '<option value="textarea">Text area</option><option value="select">Select</option>' +
+      '<option value="date">Date</option><option value="checkbox">Checkbox</option>' +
+    '</select>' +
+    '<label class="ff-required"><input type="checkbox" class="ff-req" checked /> required</label>' +
+    '<button class="btn btn-sm btn-ghost ff-remove" title="Remove field">✕</button>';
+  list.appendChild(row);
+  (function(rowEl, i) {
+    rowEl.querySelector('.ff-name').oninput = function() { _formFields[i].name = this.value; };
+    rowEl.querySelector('.ff-label').oninput = function() { _formFields[i].label = this.value; };
+    rowEl.querySelector('.ff-type').onchange = function() { _formFields[i].type = this.value; };
+    rowEl.querySelector('.ff-req').onchange = function() { _formFields[i].required = this.checked; };
+    rowEl.querySelector('.ff-remove').onclick = function() {
+      rowEl.parentNode.removeChild(rowEl);
+      _formFields[i] = null;
+    };
+  })(row, idx);
+}
+function generateForm() {
+  var formTypeId = (el('form-type-id').value || '').trim();
+  var className = (el('form-css-class').value || '').trim() || slugify(formTypeId || 'custom') + '-form';
+  var fields = [];
+  for (var i = 0; i < _formFields.length; i++) {
+    var f = _formFields[i];
+    if (!f || !f.name.trim() || !f.label.trim()) continue;
+    fields.push({ name: f.name.trim(), label: f.label.trim(), type: f.type, required: !!f.required });
+  }
+  if (!fields.length) { showToast('Add at least one field (name + label).', 'warning'); return; }
+  var parts = ['<form data-gw-form class="' + className + '">'];
+  for (var j = 0; j < fields.length; j++) {
+    var f2 = fields[j];
+    var req = f2.required ? ' required' : '';
+    if (f2.type === 'textarea') {
+      parts.push('  <label>' + esc(f2.label) + '<textarea name="' + esc(f2.name) + '"' + req + '></textarea></label>');
+    } else if (f2.type === 'select') {
+      parts.push('  <label>' + esc(f2.label) + '<select name="' + esc(f2.name) + '"' + req + '><option value="">— choose —</option></select></label>');
+    } else if (f2.type === 'checkbox') {
+      parts.push('  <label><input type="checkbox" name="' + esc(f2.name) + '"' + req + ' /> ' + esc(f2.label) + '</label>');
+    } else {
+      parts.push('  <label>' + esc(f2.label) + '<input type="' + esc(f2.type) + '" name="' + esc(f2.name) + '"' + req + ' /></label>');
+    }
+  }
+  parts.push('  <input type="text" name="website" class="' + className + '-hp" tabindex="-1" autocomplete="off" aria-hidden="true" />');
+  parts.push('  <button type="submit">Submit</button>');
+  parts.push('  <div data-gw-form-status role="status"></div>');
+  parts.push('</form>');
+  var htmlFrag = parts.join('\n');
+  var cssFrag = '/* form: ' + className + ' */\n' +
+    '.' + className + '{display:grid;gap:10px;max-width:520px}\n' +
+    '.' + className + ' label{display:grid;gap:4px;font-size:14px;font-weight:600}\n' +
+    '.' + className + ' input,.' + className + ' textarea,.' + className + ' select{padding:8px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}\n' +
+    '.' + className + ' button{padding:10px 16px;background:var(--gw-color-primary,#4f46e5);color:#fff;border:none;border-radius:8px;cursor:pointer}\n' +
+    '.' + className + '-hp{position:absolute;left:-9999px}\n' +
+    '.' + className + ' [data-gw-form-status]{min-height:1.2em;font-size:13px}';
+  var submitLine = formTypeId
+    ? '      e.preventDefault();\n      gw.forms.submit(form, { formTypeId: "' + formTypeId + '" }).catch(function(){});'
+    : '      /* no formTypeId — gw.forms.bind() handles the submit; add formTypeId to route it to a CMS form-type-definition */';
+  var jsFrag = '/* form submit: ' + className + ' */\n(function(){\n' +
+    '  var form = document.querySelector(".' + className + '");\n' +
+    '  if (!form) return;\n' +
+    '  gw.forms.bind();\n' +
+    '  form.addEventListener("submit", function(e){\n' +
+    submitLine + '\n' +
+    '  });\n' +
+    '  form.addEventListener("gw:form-success", function(){ var st = form.querySelector("[data-gw-form-status]"); if (st) st.textContent = "✓ Sent — we will get back to you."; });\n' +
+    '  form.addEventListener("gw:form-error", function(){ var st = form.querySelector("[data-gw-form-status]"); if (st) st.textContent = "Something went wrong — please try again."; });\n' +
+    '}());';
+  var ta = el('code-html');
+  ta.value = ta.value + '\n\n' + htmlFrag;
+  DB.code.html = ta.value;
+  var tc = el('code-css');
+  tc.value = tc.value + '\n\n' + cssFrag;
+  DB.code.css = tc.value;
+  var tj = el('code-js');
+  tj.value = tj.value + '\n\n' + jsFrag;
+  DB.code.js = tj.value;
+  refreshEditorHighlight('html');
+  refreshEditorHighlight('css');
+  refreshEditorHighlight('js');
+  updateLineNumbers();
+  DB.configNeeded = (DB.configNeeded ? DB.configNeeded + '\n' : '') +
+    'Form "' + className + '"' + (formTypeId ? ' submits with formTypeId "' + formTypeId + '"' : ' has no formTypeId yet') +
+    ' — create the matching form-type-definition object in the CMS (destination table + server hooks). The page can never set the destination itself.';
+  persist();
+  closeAllModals();
+  switchTab('advanced');
+  switchAdvTab('html');
+  showToast('Form "' + className + '" added (honeypot + status element + submit wiring). Set the formTypeId in the JS tab.', 'success');
+  updatePreview();
 }
 
 /* ── Persistence (with automatic patch-version bumping) ── */
@@ -2284,7 +2729,9 @@ function buildSettingsSummary() {
     '- Page sections are decided per request in chat — never apply a fixed default section list.',
     '- REUSABLE SECTIONS: a page may declare data.sections (flat, ordered, max 20) of {cmsObjectType, objectId} refs — the platform composes them BEFORE the page\'s own html. Use for shared strips (promo bars, CTAs, social proof, disclaimers). Sections contribute html/css/js only — no SEO, no chrome.',
     '- TEMPLATE PAGES: for one-template-many-objects flows, set data.templateContentType in === PAGE META ===. LAYOUT lives in the template page, DATA in content objects (read via gw.getPageParams() + gw.db.get). Content objects may override with their own htmlPage.',
-    '- WIDGETS: prefer islands over hand-coding — menu, cart, checkout-flow, slot-picker, seat-map, account-dashboard, rewards, order-status, search-box and the no-code `list` widget (config-only reads rendered as inert text).',
+    '- WIDGETS: the user adds library widgets from the application store as data-gw-app islands (Add-ons tab). You may also build custom islands with gw.apps.register when asked — keep their data-gw-config valid JSON.',
+    '- SHARED SOURCES: the user may pick OPTIONAL shared sources in Settings → Shared Sources; they appear in === PAGE META === as data.sections (shared-sources objects, composed before page content). MANDATORY shared sources (site-wide) are injected automatically by the platform — never re-emit them.',
+    '- WIDGET LIBRARY: library widgets from applicationstore.uniconhub.com can be added via Settings → Widgets (data-gw-app islands). Reference widget names only — never inline widget code into pages.',
     '- CSS is injected GLOBALLY: scope EVERY rule under one unique page class (e.g. .shop-home). The gw- prefix is RESERVED for the platform/sharedCss — you may USE --gw-color-* variables and gw-shared-* classes but NEVER define gw-* rules. Never style bare html/body/*/a/button/h1.',
     '- JS re-runs on every visit and every SPA navigation: idempotent (IIFE + guards for window/document listeners), vanilla only, no top-level await, no external <script src>. Attach page helpers to gw.ns (fresh per visit) — never rely on hoisted window functions.',
     '- Theme: use --gw-color-* CSS variables; default-settings.sharedCss provides site-level classes. Format money with gw.formatCurrency.',
@@ -2390,6 +2837,10 @@ function buildChatPrompt(userMsg) {
   parts.push('  - Forms: data-gw-form + gw.forms.bind() + honeypot (names gw_hp/website/company reserved) + [data-gw-form-status]. Never auto-submit on load.');
   parts.push('  - data-gw-config attributes must be VALID JSON (no comments, no trailing commas). Prefer built-in islands (menu, cart, checkout-flow, slot-picker, search-box, list…).');
   parts.push('  - data.sections (when used): flat, ordered, max 20, each {cmsObjectType, objectId}.');
+  parts.push('  - SHARED SOURCES: user-selected shared sources already live in data.sections — never duplicate their html/css/js into the page; mandatory site-wide sources are injected automatically.');
+  parts.push('  - WIDGET LIBRARY: islands come from the application store (applicationstore.uniconhub.com) via data-gw-app + valid JSON data-gw-config — never inline widget code. Custom islands use gw.apps.register.');
+  parts.push('  - EMBEDS: <iframe> with absolute https URLs is allowed; script-based embeds and external <script src> are banned.');
+  parts.push('  - SSR/CACHE: output must stay deterministic (no Math.random at top level) — pages are SSR-rendered and cached in Redis/CDN keyed by the page version.');
   parts.push('  - User/data content rendered with textContent or gw.sanitize — never innerHTML with interpolated values.');
   parts.push('  - Mobile-first: @media queries, 48px tap targets, prefers-reduced-motion, overflow-x:auto on tables.');
   parts.push('  - Size budgets: HTML < 100 KB, CSS < 50 KB, JS < 200 KB.');
@@ -2418,6 +2869,8 @@ function buildMinimalPrompt(userMsg) {
     _thinkingDirective(),
     'JS idempotent (IIFE + guard), helpers on gw.ns, no top-level await; use window.gw SDK for reads/forms/operations/widgets (incl. the no-code list island); forms need data-gw-form + honeypot.',
     'Reusable shared strips via data.sections (flat, max 20); template pages via data.templateContentType when asked.',
+    'Widgets: library widgets come from applicationstore.uniconhub.com as data-gw-app islands; custom islands use gw.apps.register — never inline widget code. Shared sources selected by the user are in data.sections — never duplicate them.',
+    'Embeds: <iframe> with absolute https URLs allowed; script embeds banned. Output must stay deterministic (SSR + Redis/CDN caching).',
     'If a needed operation/flow/email hook is missing, append === CMS CONFIG NEEDED === (+ === EMAIL TEMPLATE === with {{key}} placeholders for email hooks).',
     'Real copy, no lorem ipsum. No placeholders, no TODOs.',
     ''
@@ -3236,7 +3689,10 @@ function displayCode(part, code) {
   var ta = el('code-' + part);
   var linesEl = el(part + '-lines');
   if (ta) {
-    if (document.activeElement !== ta) ta.value = code || '';
+    if (document.activeElement !== ta) {
+      ta.value = code || '';
+      refreshEditorHighlight(part);
+    }
     var lc = (code || '').split('\n').length;
     if (linesEl) {
       var n = '';
@@ -3244,7 +3700,7 @@ function displayCode(part, code) {
       linesEl.innerHTML = n;
     }
   }
-  if (ta && linesEl) ta.onscroll = function() { linesEl.scrollTop = ta.scrollTop; };
+  if (ta && linesEl) ta.onscroll = function() { linesEl.scrollTop = ta.scrollTop; _syncHighlightScroll(part); };
 }
 function displayAllCode(c) {
   displayCode('html', c.html || '');
@@ -3263,6 +3719,62 @@ function updateLineNumbers() {
     for (var j = 1; j <= lc; j++) n += '<div>' + j + '</div>';
     linesEl.innerHTML = n;
   }
+}
+
+/* ── Lightweight syntax highlighting (zero dependencies) ──
+   Monaco would be ~5 MB + a web worker for a use case where users mostly
+   READ code and make small edits. This overlay technique (highlighted <pre>
+   behind a transparent-text <textarea>) gives real syntax colors for
+   HTML/CSS/JS at ~3 KB and works fully offline. ── */
+function _hlEscape(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function _hlRun(src, re, groups) {
+  var out = '';
+  var last = 0;
+  var m;
+  re.lastIndex = 0;
+  while ((m = re.exec(src)) !== null) {
+    if (m.index > last) out += _hlEscape(src.substring(last, m.index));
+    var cls = null;
+    for (var i = 0; i < groups.length; i++) {
+      if (m[i + 1] !== undefined) { cls = groups[i]; break; }
+    }
+    if (cls === 'tag') out += _hlFmtTag(m[0]);
+    else if (cls) out += '<span class="tk-' + cls + '">' + _hlEscape(m[0]) + '</span>';
+    else out += _hlEscape(m[0]);
+    last = m.index + m[0].length;
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  out += _hlEscape(src.substring(last));
+  return out;
+}
+function _hlFmtTag(t) {
+  var m = t.match(/^(<\/?)([a-zA-Z][\w-]*)([\s\S]*?)(\/?>)$/);
+  if (!m) return _hlEscape(t);
+  var attrs = m[3].replace(/([\w-]+)(=)("[^"]*"|'[^']*')/g, function(all, n, eq, v) {
+    return '<span class="tk-attr">' + _hlEscape(n) + '</span><span class="tk-punc">=</span><span class="tk-string">' + _hlEscape(v) + '</span>';
+  });
+  return '<span class="tk-punc">&lt;' + (m[1] === '</' ? '/' : '') + '</span><span class="tk-tag">' + _hlEscape(m[2]) + '</span>' + attrs + '<span class="tk-punc">&gt;</span>';
+}
+var HL_HTML_RE = /(<!--[\s\S]*?-->)|(<\/?[a-zA-Z][^>]*>)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')/g;
+function _hlHtml(src) { return _hlRun(src, HL_HTML_RE, ['comment', 'tag', 'string']); }
+var HL_CSS_RE = /(\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|(@[a-zA-Z-]+)|(#[0-9a-fA-F]{3,8}\b)|(-?\d*\.?\d+(?:px|em|rem|%|vh|vw|s|ms)?\b)|([.#]?[a-zA-Z_-][\w-]*(?=\s*\{))|([a-zA-Z-]+(?=\s*:))|(\{|\}|:|;|,)/g;
+function _hlCss(src) { return _hlRun(src, HL_CSS_RE, ['comment', 'string', 'at', 'num', 'num', 'sel', 'prop', 'punc']); }
+var HL_JS_RE = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|\b(var|function|return|if|else|for|while|do|new|const|let|typeof|instanceof|this|in|of|true|false|null|undefined|try|catch|finally|throw|switch|case|break|continue|class|extends|import|export|default|async|await)\b|(\b\d[\d_.]*\b)|(\b(?:window|document|gw|tool|console|localStorage|JSON|Math|Date|Promise|setTimeout|setInterval)\b)/g;
+function _hlJs(src) { return _hlRun(src, HL_JS_RE, ['comment', 'string', 'keyword', 'num', 'builtin']); }
+function refreshEditorHighlight(part) {
+  var code = el('hl-' + part);
+  var ta = el('code-' + part);
+  if (!code || !ta) return;
+  var fn = part === 'html' ? _hlHtml : part === 'css' ? _hlCss : _hlJs;
+  code.innerHTML = fn(ta.value);
+  _syncHighlightScroll(part);
+}
+function _syncHighlightScroll(part) {
+  var code = el('hl-' + part);
+  var ta = el('code-' + part);
+  if (code && ta) { code.scrollTop = ta.scrollTop; code.scrollLeft = ta.scrollLeft; }
 }
 
 /* Flush any edits typed in the HTML/CSS/JS editors into DB.code immediately —
@@ -3304,9 +3816,9 @@ function setDevice(d) {
 
 function buildPreviewDoc() {
   var lang = _p('lang', 'en');
-  var html = DB.code.html || '';
-  var css = DB.code.css || '';
-  var jsSan = _sanitizeJs(DB.code.js || '');
+  var html = (_previewShared.html || '') + '\n' + (DB.code.html || '');
+  var css = (_previewShared.css || '') + '\n' + (DB.code.css || '');
+  var jsSan = _sanitizeJs((_previewShared.js || '') + '\n' + (DB.code.js || ''));
   _lastJsFixCount = jsSan.fixed;
   var js = jsSan.code;
   var scrollScript = '';
@@ -3363,6 +3875,7 @@ function updatePreview() {
   if (fw) fw.classList.add('has-content');
   if (pe) pe.style.display = 'none';
   _applyDeviceClass();
+  _previewShared = _composePreviewShared();
   try {
     // Unique build stamp + a FRESH iframe node every render: Chromium can fail
     // to repaint a sandboxed srcdoc iframe after its ancestor was display:none,
@@ -3971,7 +4484,8 @@ function gwChecks() {
       id: 'js-idempotent', section: '3.3', label: 'JS idempotent (SPA re-runs)',
       run: function(h, c, j) {
         if (!j.trim()) return { status: 'pass', detail: 'No JavaScript needed.' };
-        var iife = /^\(function|^\(\s*function|^;?\(function/.test(j.trim());
+        var j2 = j.trim().replace(/^(?:\/\*\s*v[\d.]+\s*\*\/|<!--\s*v[\d.]+\s*-->)[ \t]*[\r\n]+/, '');
+        var iife = /^\(function|^\(\s*function|^;?\(function/.test(j2);
         var guard = /__[A-Za-z_$][\w$]*(Init|Ready|Mounted|Loaded)/.test(j);
         var usesNs = /gw\.ns/.test(j);
         var winListeners = /(window|document)\.addEventListener/.test(j);
@@ -4043,6 +4557,44 @@ function gwChecks() {
         if (pm.slug && /^(default-settings|default-header|default-footer)$/.test(String(pm.slug))) problems.push('slug is a reserved platform slug');
         if (problems.length) return { status: 'warn', detail: problems.join('; ') + '.' };
         return { status: 'pass', detail: 'Page meta captured (slug: ' + (pm.slug || pm.name || '?') + ').' };
+      }
+    },
+    {
+      id: 'embeds-iframe', section: '3.4', label: 'Embeds (iframes allowed)',
+      run: function(h) {
+        var iframes = (h.match(/<iframe\b/gi) || []).length;
+        if (!iframes) return { status: 'pass', detail: 'No embeds on this page.' };
+        var bad = h.match(/<iframe\b[^>]*src=["'](?!https?:\/\/)/gi) || [];
+        if (bad.length) return { status: 'warn', detail: bad.length + ' iframe(s) without an absolute https URL — embeds need absolute URLs.' };
+        return { status: 'pass', detail: iframes + ' iframe embed(s) with absolute URLs — allowed (script-based embeds stay banned).' };
+      }
+    },
+    {
+      id: 'shared-sections-known', section: '12.6', label: 'Shared sources resolve to known objects',
+      run: function() {
+        var picks = _sectionPicks();
+        if (!picks.length) return { status: 'pass', detail: 'No shared sources selected.' };
+        if (!DB.sharedCatalog || !DB.sharedCatalog.length) return { status: 'warn', detail: picks.length + ' shared source(s) selected but the catalog is empty — refresh Settings → Shared Sources (object CRUD may be disabled).' };
+        var unknown = [];
+        for (var i = 0; i < picks.length; i++) {
+          var found = false;
+          for (var j = 0; j < DB.sharedCatalog.length; j++) {
+            if (DB.sharedCatalog[j].objectId === picks[i]) { found = true; break; }
+          }
+          if (!found) unknown.push(picks[i]);
+        }
+        if (unknown.length) return { status: 'warn', detail: unknown.length + ' selected shared source id(s) not in the catalog — the platform skips missing/draft sections silently.' };
+        return { status: 'pass', detail: picks.length + ' shared source(s) resolved and composed before page content.' };
+      }
+    },
+    {
+      id: 'cache-ready', section: '18', label: 'SSR / cache ready (deterministic + version-stamped)',
+      run: function(h, c, j) {
+        var stamped = /^<!-- v[\d.]+/.test((h || '').trim()) || /^\/\* v[\d.]+/.test((c || '').trim()) || /^\/\* v[\d.]+/.test((j || '').trim());
+        var randomTop = /Math\.random\s*\(\s*\)/.test(j || '');
+        if (!stamped) return { status: 'warn', detail: 'Code is not version-stamped — the platform uses data.version for cache busting (Redis/Vercel CDN); edits may be served from a stale cache.' };
+        if (randomTop) return { status: 'warn', detail: 'Math.random() found in JS — output must stay deterministic for SSR/caching; derive values from data instead.' };
+        return { status: 'pass', detail: 'Version-stamped deterministic output — SSR + Redis/Vercel CDN cacheable.' };
       }
     },
     {
@@ -4383,7 +4935,8 @@ function buildPageObjectJson() {
     meta: { language: (pm.meta && pm.meta.language) || _p('lang', 'en') },
     data: {
       status: (pm.data && pm.data.status) || 'published',
-      htmlPage: { code: { html: DB.code.html || '', css: DB.code.css || '', js: DB.code.js || '' } }
+      htmlPage: { code: { html: DB.code.html || '', css: DB.code.css || '', js: DB.code.js || '' } },
+      version: DB.version || '1.0.0'
     },
     seo: DB.seo || {}
   };
@@ -4619,21 +5172,22 @@ function clearConsole() {
   renderConsole();
 }
 
-/* ── Design-direction parameter summary (Settings tab) ── */
+/* ── Design-direction parameter summary (Settings tab, one compact line) ── */
 function renderParamsSummary() {
-  var box = el('params-summary');
+  var box = el('params-summary-line');
   if (!box) return;
   var items = [
-    ['Color Scheme', _p('colorScheme', 'indigo')],
-    ['Typography', _p('typography', 'modern-sans')],
-    ['Thinking Depth', _p('thinkingLevel', 'balanced')],
-    ['Skills', _activeSkillIds().join(', ') || 'none'],
-    ['Language', _p('lang', 'en')]
-  ];
-  var h = '';
+    _p('colorScheme', 'indigo'),
+    _p('typography', 'modern-sans'),
+    _p('thinkingLevel', 'balanced'),
+    _activeSkillIds().length ? ('skills: ' + _activeSkillIds().join(', ')) : '',
+    _p('lang', 'en')
+  ].filter(Boolean);
+  var h = 'Site look: ';
   for (var i = 0; i < items.length; i++) {
-    h += '<div class="param-chip"><span class="param-key">' + esc(items[i][0]) + '</span><span class="param-val">' + esc(items[i][1]) + '</span></div>';
+    h += '<b>' + esc(items[i]) + '</b>' + (i < items.length - 1 ? ' · ' : '');
   }
+  h += ' <span class="params-admin" title="Configured by admins in the tool field settings — shared across pages">(admin setting)</span>';
   box.innerHTML = h;
 }
 
@@ -4684,6 +5238,7 @@ var ADV_PANELS = {
   css: 'editor-css',
   js: 'editor-js',
   console: 'editor-console',
+  addons: 'editor-addons',
   settings: 'editor-settings',
   compliance: 'editor-compliance'
 };
@@ -4712,6 +5267,7 @@ function switchAdvTab(name) {
   else if (name === 'js') { var bj = el('btn-copy-js'); if (bj) bj.style.display = ''; }
   if (name === 'console') renderConsole();
   if (name === 'settings') renderParamsSummary();
+  if (name === 'addons') { renderSharedPicker(); }
   if (name === 'compliance') renderCompliance();
   tool.resize();
 }
@@ -4894,6 +5450,40 @@ function bindEvents() {
 
   el('btn-console-clear').onclick = clearConsole;
 
+  var btnSharedRefresh = el('btn-shared-refresh');
+  if (btnSharedRefresh) btnSharedRefresh.onclick = function() { renderSharedPickerLoading(); loadSharedCatalog(function() { renderSharedPicker(); updatePreview(); }); };
+  var btnWidgetRefresh = el('btn-widget-refresh');
+  if (btnWidgetRefresh) btnWidgetRefresh.onclick = function() {
+    showToast('Reloading widget list…', 'info');
+    loadWidgetCatalog(function() {
+      showToast('Widget list refreshed (' + DB.widgetCatalog.length + ' widgets).', 'success');
+      var libModal = el('modal-widget-library');
+      if (libModal && libModal.style.display === 'flex') {
+        renderWidgetLibraryList(el('widget-search') ? el('widget-search').value : '');
+      }
+    });
+  };
+  var btnWidgetLibrary = el('btn-widget-library');
+  if (btnWidgetLibrary) btnWidgetLibrary.onclick = openWidgetLibrary;
+  var btnWidgetLibraryClose = el('btn-widget-library-close');
+  if (btnWidgetLibraryClose) btnWidgetLibraryClose.onclick = closeAllModals;
+  var widgetSearch = el('widget-search');
+  if (widgetSearch) widgetSearch.oninput = function() { renderWidgetLibraryList(this.value); };
+  var btnFormBuilder = el('btn-form-builder');
+  if (btnFormBuilder) btnFormBuilder.onclick = openFormBuilder;
+  var btnWidgetInsert = el('btn-widget-insert');
+  if (btnWidgetInsert) btnWidgetInsert.onclick = insertWidgetFromDialog;
+  var btnWidgetCancel = el('btn-widget-cancel');
+  if (btnWidgetCancel) btnWidgetCancel.onclick = closeAllModals;
+  var btnWidgetCancel2 = el('btn-widget-cancel2');
+  if (btnWidgetCancel2) btnWidgetCancel2.onclick = closeAllModals;
+  var btnFormAddField = el('btn-form-add-field');
+  if (btnFormAddField) btnFormAddField.onclick = addFormFieldRow;
+  var btnFormGenerate = el('btn-form-generate');
+  if (btnFormGenerate) btnFormGenerate.onclick = generateForm;
+  var btnFormCancel = el('btn-form-cancel');
+  if (btnFormCancel) btnFormCancel.onclick = closeAllModals;
+
   el('btn-upload').onclick = handleFileUpload;
   el('attach-remove').onclick = clearAttachment;
 
@@ -4938,6 +5528,9 @@ function bindEvents() {
     DB.code.html = h ? h.value : '';
     DB.code.css = c ? c.value : '';
     DB.code.js = j ? j.value : '';
+    refreshEditorHighlight('html');
+    refreshEditorHighlight('css');
+    refreshEditorHighlight('js');
     updateLineNumbers();
     persist();
     renderSections();
@@ -4965,7 +5558,7 @@ var _initialized = false;
 tool.onReady(function(val, fields) {
   if (_initialized) { console.warn('[WEBPAGEBUILDER:INIT] Already initialized — skipping'); return; }
   _initialized = true;
-  console.log('[WEBPAGEBUILDER] build 2026-08-18b — full capability coverage: sections, gw.ns, list widget, email templates');
+  console.log('[WEBPAGEBUILDER] build 2026-10-02b — integration + simplified UI: add-ons tab (shared sources / widgets / forms), syntax-highlighted editors, compact design direction');
 
   _loadSkills();
   _loadAgenticPref();
@@ -5006,6 +5599,7 @@ tool.onReady(function(val, fields) {
     { name: 'allowExportPdf', label: 'Enable PDF Export', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Enables the Export PDF button in Settings → Export.' },
     { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Chat history is stored in CMS type ai-chat-sessions-uniconbaseapps. Add it to allowedObjectTypes with role: editor, scope: instance.' },
     { name: 'pageRules', label: 'Page Rules Override', type: 'text', default: '', severity: 'optional', hint: 'Optional: paste the full public-website-page-rules.txt (v2.0) text here to override the built-in rules for every instance of this tool.' },
+    { name: 'widgetCatalogUrl', label: 'Widget Catalog API URL', type: 'text', default: '', severity: 'optional', hint: 'Application store API returning the widget list. JSON shape: { "items": [ { "id": "...", "name": "<data-gw-app name>", "title": "...", "description": "...", "category": "media", "configSchema": { "type": "object", "properties": { ... } }, "ssrHtml": "..." } ] } — a bare array also works. Leave empty to fall back to site gw-widgets objects.' },
     { name: 'colorScheme', label: 'Color Scheme', type: 'text', default: 'indigo', severity: 'optional', hint: 'Site-wide palette shared across pages. Options: emerald | blue | indigo | violet | rose | amber | teal | ocean | forest | sunset | mono.' },
     { name: 'typography', label: 'Typography', type: 'text', default: 'modern-sans', severity: 'optional', hint: 'Site-wide font pairing: modern-sans | elegant-serif | friendly-rounded | tech-mono | editorial.' },
     { name: 'thinkingLevel', label: 'AI Thinking Depth', type: 'text', default: 'balanced', severity: 'optional', hint: 'How much reasoning effort the AI spends per request: quick | balanced | deep. Deeper = more thoughtful structure and copy, but slower. Works best when the AI gateway runs a reasoning-capable model (e.g. DeepSeek V4 Pro).' },
@@ -5068,6 +5662,12 @@ tool.onReady(function(val, fields) {
   switchTab('preview');
   renderSections();
   if (hasCode) runComplianceChecks();
+  loadSharedCatalog(function() {
+    renderSharedPicker();
+    _previewShared = _composePreviewShared();
+    updatePreview(); // saved data.sections picks now have their code — refresh
+  });
+  loadWidgetCatalog();
   tool.resize();
 });
 

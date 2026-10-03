@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebsiteSharedSourceBuilder — Test Harness</title>
+<link rel="stylesheet" href="WebsiteSharedSourceBuilder.css">
+<style>
+  body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  .th-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 8px 12px; background: #0f1420; color: #e5e9f0; }
+  .th-bar strong { font-size: 13px; }
+  .th-bar button { background: #4f46e5; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+  .th-bar button:hover { background: #4338ca; }
+  .th-status { font-size: 11px; color: #9aa4b8; }
+  #app { height: calc(100vh - 48px); }
+</style>
+</head>
+<body>
+  <div class="th-bar">
+    <strong>🧩 WebsiteSharedSourceBuilder — Test Harness</strong>
+    <span class="sep">|</span>
+    <button onclick="seedShared()">Seed: optional shared source</button>
+    <button onclick="seedMandatory()">Seed: mandatory shared source</button>
+    <button onclick="seedWidget()">Seed: reviews widget</button>
+    <button onclick="clearDb()">Clear storage</button>
+    <span class="th-status" id="th-status">Ready · harness build 2026-10-02b</span>
+  </div>
+
+<!-- TOOL HTML INLINED (mirrors WebsiteSharedSourceBuilder.html) -->
+<!-- Website Shared Source Builder
+     UniconHub html-tool: author reusable site content for the PublicWebsite
+     platform — shared-sources objects (mandatory / optional) and gw-widgets
+     objects (widget library entries mounted as data-gw-app islands).
+     Build 2026-10-02b -->
+<div id="app">
+  <header class="wssb-header">
+    <div class="wssb-title">
+      <span class="wssb-logo">🧩</span>
+      <div>
+        <h1>Website Shared Source Builder</h1>
+        <p>Shared content &amp; widgets for the website</p>
+      </div>
+    </div>
+    <div class="wssb-header-actions">
+      <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
+      <button class="btn btn-sm btn-ghost" id="btn-export-json" title="Copy the object JSON for the CMS">📋 Copy Object JSON</button>
+      <button class="btn btn-sm btn-ghost" id="btn-export-sections" title="Copy the generator output (=== sections)">📋 Copy Generator Output</button>
+      <button class="btn btn-sm btn-ghost" id="btn-download" title="Download standalone preview (.html)">📥 Download</button>
+    </div>
+  </header>
+
+  <div class="wssb-body">
+    <aside class="wssb-side">
+      <div class="side-section">
+        <h2>What am I building?</h2>
+        <label class="side-label">
+          <input type="radio" name="kind" value="shared" checked />
+          <b>Shared source</b> — reusable html/css/js for pages
+        </label>
+        <label class="side-label">
+          <input type="radio" name="kind" value="widget" />
+          <b>Widget</b> — a library tool mounted as a <code>data-gw-app</code> island
+        </label>
+      </div>
+
+      <div class="side-section">
+        <h2>Name &amp; slug</h2>
+        <input type="text" id="meta-name" placeholder="Announcement Bar" />
+        <input type="text" id="meta-slug" placeholder="announcement-bar" style="margin-top:6px" />
+      </div>
+
+      <div class="side-section" id="kind-shared-fields">
+        <h2>Shared mode</h2>
+        <label class="side-label">
+          <input type="radio" name="sharedMode" value="mandatory" />
+          <b>Mandatory</b> — every page of the site
+        </label>
+        <label class="side-label">
+          <input type="radio" name="sharedMode" value="optional" checked />
+          <b>Optional</b> — pages add it themselves
+        </label>
+      </div>
+
+      <div class="side-section" id="kind-widget-fields" style="display:none">
+        <h2>Widget contract</h2>
+        <label class="field-label">Island name (data-gw-app)</label>
+        <input type="text" id="meta-gwapp" placeholder="my-gallery" />
+        <label class="field-label">Config schema (JSON, optional)</label>
+        <textarea id="meta-configschema" rows="4" placeholder='{"type":"object","properties":{"limit":{"type":"number","default":6}}}' spellcheck="false"></textarea>
+        <label class="field-label">SSR initial markup (optional)</label>
+        <textarea id="meta-ssrhtml" rows="3" placeholder="<div class='my-gallery-ssr'>…</div>" spellcheck="false"></textarea>
+      </div>
+
+      <div class="side-section">
+        <details id="compliance-details">
+          <summary>🧪 Checks</summary>
+          <div class="compliance-mini">
+            <button class="btn btn-sm btn-outline" id="btn-run-checks">Run</button>
+            <span id="compliance-score"></span>
+          </div>
+          <div id="compliance-list"></div>
+        </details>
+      </div>
+    </aside>
+
+    <main class="wssb-main">
+      <div class="wssb-tabs">
+        <button class="ctab active" data-tab="preview">👁 Preview</button>
+        <button class="ctab" data-tab="html">📄 HTML</button>
+        <button class="ctab" data-tab="css">🎨 CSS</button>
+        <button class="ctab" data-tab="js">⚡ JS</button>
+      </div>
+
+      <div class="editor-pane active" id="pane-preview">
+        <div class="preview-toolbar">
+          <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+          <span class="preview-hint" id="preview-hint"></span>
+        </div>
+        <div class="preview-frame-wrap">
+          <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups"></iframe>
+        </div>
+      </div>
+      <div class="editor-pane" id="pane-html">
+        <div class="editor-wrap">
+          <pre class="editor-hl" aria-hidden="true"><code id="hl-html"></code></pre>
+          <textarea id="code-html" class="code-textarea" placeholder="<!-- shared HTML fragment -->" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="editor-pane" id="pane-css">
+        <div class="editor-wrap">
+          <pre class="editor-hl" aria-hidden="true"><code id="hl-css"></code></pre>
+          <textarea id="code-css" class="code-textarea" placeholder="/* shared CSS — scope under your wrapper class */" spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div class="editor-pane" id="pane-js">
+        <div class="editor-wrap">
+          <pre class="editor-hl" aria-hidden="true"><code id="hl-js"></code></pre>
+          <textarea id="code-js" class="code-textarea" placeholder="/* shared JS — idempotent, guarded, vanilla */" spellcheck="false"></textarea>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+
+<!-- MOCK TOOL SDK -->
+<script>
+(function() {
+  var DB_KEY = 'websitesharedsourcebuilder_test_db';
+  var listeners = { valueChange: [], fieldsChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false;
+  var _value = null;
+  function load() { try { _value = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { _value = null; } }
+  function save() { try { localStorage.setItem(DB_KEY, JSON.stringify(_value)); } catch (e) {} }
+  function fire(evt, arg) { (listeners[evt] || []).forEach(function(cb) { try { cb(arg); } catch (e) {} }); }
+
+  window.tool = {
+    onReady: function(cb) { load(); setTimeout(function() { cb(_value, {}); }, 10); },
+    getValue: function() { return _value; },
+    setValue: function(data) { _value = data; save(); fire('valueChange', _value); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return { name: 'Harness Record', slug: 'harness-record' }; },
+    onFieldsChange: function(cb) { listeners.fieldsChange.push(cb); },
+    param: function(name, def) { return def; },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    getUser: function() { return { id: 'u-test', name: 'Test User', roles: ['developer'] }; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    reportValid: function(valid, msg) { console.log('reportValid:', valid, msg); },
+    notify: function(msg, sev) {
+      var s = document.getElementById('th-status');
+      if (s) { s.textContent = (sev || 'info') + ': ' + msg; setTimeout(function() { s.textContent = 'Ready · harness build 2026-10-02b'; }, 3000); }
+    },
+    resize: function() {},
+    openUrl: function(url) { window.open(url, '_blank'); },
+    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 160)); },
+    declareParams: function(p) { console.log('declareParams:', p ? p.length : 0, 'params'); },
+    reportMissingParams: function() {},
+    requestAI: function(p, ctx, cb) { cb('AI not available in harness', null); },
+    requestAIStream: function() {},
+    requestUpload: function() {},
+    requestFileContent: function() {},
+    requestExportPdf: function() {},
+    requestObjects: function(action, params, cb) { if (cb) cb('requestObjects not available in harness', null); }
+  };
+
+  window.seedShared = function() {
+    window.tool.setValue({
+      code: {
+        html: '<div class="ann-bar">🎉 Summer sale — 20% off all bookings this week</div>',
+        css: '.ann-bar{background:#4f46e5;color:#fff;text-align:center;padding:8px 16px;font-size:14px}',
+        js: '(function(){}());'
+      },
+      meta: { kind: 'shared', name: 'Announcement Bar', slug: 'announcement-bar', sharedMode: 'optional', gwAppName: '', configSchema: '', ssrHtml: '' },
+      version: '1.0.0'
+    });
+  };
+  window.seedMandatory = function() {
+    window.tool.setValue({
+      code: {
+        html: '',
+        css: '.wssb-helper{--brand-accent:#4f46e5}',
+        js: '(function(){if(window.__siteHelpersReady)return;window.__siteHelpersReady=true;if(window.gw)gw.ns.siteHelpers={hello:function(){return "hi";}};}());'
+      },
+      meta: { kind: 'shared', name: 'Site Helpers', slug: 'site-helpers', sharedMode: 'mandatory', gwAppName: '', configSchema: '', ssrHtml: '' },
+      version: '1.0.0'
+    });
+  };
+  window.seedWidget = function() {
+    window.tool.setValue({
+      code: {
+        html: '<div data-gw-app="reviews" data-gw-config=\'{"limit":3}\'></div>',
+        css: '.reviews-box{border:1px solid #e2e5ea;border-radius:12px;padding:12px;font-family:inherit}\n.reviews-box p{margin:4px 0}',
+        js: '(function(){if(window.gw)gw.apps.register("reviews",function(ctx){var el=ctx.el,cfg=ctx.config||{};var box=document.createElement("div");box.className="reviews-box";for(var i=1;i<=(cfg.limit||3);i++){var p=document.createElement("p");p.textContent="★ Review #"+i+" — great service";box.appendChild(p);}el.appendChild(box);return function(){box.remove();};});}());'
+      },
+      meta: { kind: 'widget', name: 'Reviews Widget', slug: 'reviews-widget', sharedMode: 'optional', gwAppName: 'reviews', configSchema: '{"type":"object","properties":{"limit":{"type":"number","default":3}}}', ssrHtml: '' },
+      version: '1.0.0'
+    });
+  };
+  window.clearDb = function() {
+    try { localStorage.removeItem(DB_KEY); } catch (e) {}
+    _value = null;
+    location.reload();
+  };
+})();
+</script>
+
+<!-- TOOL CSS (harness already linked in head) -->
+<!-- TOOL JS -->
+<script src="WebsiteSharedSourceBuilder.js"></script>
+</body>
+</html>
