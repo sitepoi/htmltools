@@ -1,0 +1,72 @@
+<!-- SchoolConsole html-tool (TYPE 3 - application level listing tool)
+     Reusable school console: lists students, attendance, payments and
+     builds reports across the whole school application. Placed on the
+     application level, not on an object. -->
+<div class="sco-app" id="sco-app">
+  <header class="sco-header">
+    <div class="sco-head-main">
+      <h1 class="sco-title">School Console</h1>
+      <p class="sco-subtitle">Students, attendance, payments and reports across the school application.</p>
+    </div>
+    <div class="sco-head-side">
+      <button class="sco-btn sco-btn-outline sco-btn-sm" id="sco-refresh">Refresh</button>
+    </div>
+  </header>
+
+  <nav class="sco-tabs" id="sco-tabs">
+    <button class="sco-tab active" data-tab="students">Students</button>
+    <button class="sco-tab" data-tab="attendance">Attendance</button>
+    <button class="sco-tab" data-tab="payments">Payments</button>
+    <button class="sco-tab" data-tab="reports">Reports</button>
+  </nav>
+
+  <main class="sco-body">
+
+    <section class="sco-pane active" data-pane="students">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <input class="sco-input sco-search" id="sco-student-search" placeholder="Search student name...">
+          <input class="sco-input sco-search" id="sco-student-class" placeholder="Class group filter...">
+          <span class="sco-hint" id="sco-student-count"></span>
+        </div>
+        <div id="sco-student-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="attendance">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <label class="sco-label" for="sco-attendance-date">Day</label>
+          <input class="sco-input" id="sco-attendance-date" type="date">
+          <span class="sco-hint" id="sco-attendance-summary"></span>
+        </div>
+        <div id="sco-attendance-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="payments">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <input class="sco-input sco-search" id="sco-payment-search" placeholder="Search student...">
+          <label class="sco-label"><input type="checkbox" id="sco-payment-waiting-only" checked> Waiting only</label>
+          <span class="sco-hint" id="sco-payment-summary"></span>
+        </div>
+        <div id="sco-payment-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="reports">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <label class="sco-label" for="sco-report-week">Week of</label>
+          <input class="sco-input" id="sco-report-week" type="date">
+          <button class="sco-btn sco-btn-primary" id="sco-report-build">Build report</button>
+          <button class="sco-btn" id="sco-report-copy">Copy</button>
+          <button class="sco-btn" id="sco-report-download">Download .txt</button>
+        </div>
+        <pre class="sco-report-text" id="sco-report-text">Select a week and press Build report.</pre>
+      </div>
+    </section>
+
+  </main>
+</div>

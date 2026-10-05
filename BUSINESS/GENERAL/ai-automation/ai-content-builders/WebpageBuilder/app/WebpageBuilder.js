@@ -1,13 +1,30 @@
+/* build 2026-10-04-7 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
    Preview updates live on every code change. Built for UniconHub CMS HTML-tool system.
 ────────────────────────────────────────── */
 
+/* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
+   visible in the UI badge (#tool-build), logged on boot, and stamped as a
+   comment at the top of all three files. INCREMENT on EVERY code change. */
+var TOOL_BUILD = '2026-10-04-7';
+
+/* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
+   element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
+   opener, only ever written in this file as '\u003C!--') inside script text
+   as an escaped state — if no closer appears on the SAME line, later script
+   end tags get swallowed as text and the whole file never executes. Builds
+   -4 and -5 were dead in the CMS exactly because of the compliance regex
+   /^\u003C!-- v[\d.]+/. NEVER write the raw comment-opener sequence in this
+   file — write '\u003C!--' (same rendered meaning, tokenizer-safe). */
+
 /* ── Helpers ── */
 function el(id) { return document.getElementById(id); }
 function qs(sel) { return document.querySelector(sel); }
-function qsa(sel) { return document.querySelectorAll(sel); }
+function qsa(sel) {
+  try { return Array.prototype.slice.call(document.querySelectorAll(sel)); } catch (e) { return []; }
+}
 function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function debounce(fn, ms) {
   var t = null;
@@ -16,6 +33,18 @@ function debounce(fn, ms) {
     if (t) clearTimeout(t);
     t = setTimeout(function() { fn.apply(self, args); }, ms);
   };
+}
+
+/* ── SDK-safe wrappers: a CMS SDK quirk must NEVER kill the UI ── */
+function _renderBuildBadge() {
+  var b = el('tool-build');
+  if (b) b.textContent = 'tool build ' + TOOL_BUILD;
+}
+function _resize() { try { tool.resize(); } catch (e) {} }
+function _bind(id, fn) {
+  try { var e = el(id); if (e) e.onclick = fn; } catch (err) {
+    console.warn('[WEBPAGEBUILDER:BIND] ' + id + ': ' + (err && err.message ? err.message : err));
+  }
 }
 
 /* ── Turkish-safe slugifier (NFKD before transliteration — avoids İ → i- artifacts) ── */
@@ -205,6 +234,11 @@ function _parentSeo() {
 var _previewShared = { html: '', css: '', js: '' };
 var _widgetDialogName = '';
 var _formFields = [];
+var _storeTotal = 0;      // total widgets in the store catalog (API v2 objects list)
+var _storeRevealed = 0;   // how many of the loaded catalog are currently revealed (client-side paging)
+var _searchSeq = 0;       // token to discard stale search responses
+var WIDGET_PAGE_SIZE = 100;      // reveal step for client-side paging
+var WIDGET_INITIAL_PAGES = 2;    // how many reveal steps show initially
 // NOTE: no built-in platform widgets are listed in the UI — the widget
 // library comes from the application store (widgetCatalogUrl API) with a
 // fallback to site gw-widgets objects. (D-WB-08)
@@ -326,28 +360,99 @@ function renderSharedPicker() {
   }
 }
 
+function _normPick(d, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    var v = d[keys[i]];
+    if (v !== undefined && v !== null && String(v).trim() !== '') return v;
+  }
+  return '';
+}
 function _normalizeStoreCatalog(payload) {
-  var items = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.items) ? payload.items : []);
+  // Accepts the documented API v2 shapes: a bare array of ObjectRecords, or
+  // { items: [...] } / { objects: [...] } / { data: [...] } wrappers.
+  var items = Array.isArray(payload) ? payload
+    : (payload && Array.isArray(payload.items)) ? payload.items
+    : (payload && Array.isArray(payload.objects)) ? payload.objects
+    : (payload && Array.isArray(payload.data)) ? payload.data : [];
   var out = [];
   for (var i = 0; i < items.length; i++) {
-    var it = items[i] || {};
-    var name = String(it.name || it.id || it.gwApp || '').trim();
+    var raw = items[i] || {};
+    // v2 ObjectRecord anatomy (CMS Application System Reference §11.3):
+    // field values live in productData.data_categoriesBased.{fieldId}.
+    var dcb = (raw.productData && raw.productData.data_categoriesBased && typeof raw.productData.data_categoriesBased === 'object')
+      ? raw.productData.data_categoriesBased : {};
+    var legacy = (raw.data && typeof raw.data === 'object') ? raw.data : {};
+    var d = {};
+    var k;
+    for (k in legacy) if (Object.prototype.hasOwnProperty.call(legacy, k)) d[k] = legacy[k];
+    for (k in dcb) if (Object.prototype.hasOwnProperty.call(dcb, k)) d[k] = dcb[k];
+    var name = String(_normPick(d, ['gwAppName', 'gwApp', 'widgetName', 'name', 'code', 'id']) || _normPick(raw, ['name', 'slug']) || '').trim();
     if (!name) continue;
+    var schema = _normPick(d, ['configSchema', 'gwConfigSchema', 'schema']);
+    if (typeof schema === 'string') {
+      try { schema = JSON.parse(schema); } catch (e) { schema = null; }
+    }
     out.push({
       name: name,
-      title: String(it.title || it.label || it.name || name),
-      desc: String(it.description || it.desc || ''),
-      category: String(it.category || 'general'),
-      configSchema: it.configSchema || null,
-      ssrHtml: String(it.ssrHtml || '')
+      title: String(_normPick(d, ['title', 'displayName', 'label', 'name']) || name),
+      desc: String(_normPick(d, ['description', 'summary', 'desc']) || ''),
+      category: String(_normPick(d, ['category', 'folder', 'categoryName']) || 'general'),
+      configSchema: (schema && typeof schema === 'object') ? schema : null,
+      ssrHtml: String(_normPick(d, ['ssrHtml', 'ssrMarkup']) || '')
     });
   }
   return out;
 }
+function fetchWithTimeout(url, opts) {
+  if (typeof AbortController === 'function') {
+    var ctrl = new AbortController();
+    var t = setTimeout(function() { try { ctrl.abort(); } catch (e) {} }, 8000);
+    opts = opts || {};
+    opts.signal = ctrl.signal;
+    return fetch(url, opts).then(function(res) { clearTimeout(t); return res; });
+  }
+  return fetch(url, opts);
+}
+function _widgetStatusLine(source, list) {
+  var st = el('widget-lib-status');
+  if (!st) return;
+  var label = source === 'application store' ? 'connected — application store via parent CMS (' + _widgetCatalogTypeName() + ')'
+    : source === 'site widgets' ? 'fallback — site widgets (gw-widgets)'
+    : 'offline — cached list';
+  st.textContent = '🛰 Library: ' + label + ' · ' + (list ? list.length : 0) + ' widgets · ' + new Date().toLocaleTimeString();
+  st.className = 'widget-lib-source ' + (source === 'application store' ? 'ok' : 'warn');
+}
+function _v2Base() {
+  // UniconHub Public API v2 base (CMS Application System Reference §8).
+  // Prefer the explicit apiV2BaseUrl param; applicationStoreHost (legacy) is
+  // only used as the host when apiV2BaseUrl is empty (base = <host>/api/v2).
+  var explicit = String(_p('apiV2BaseUrl', '') || '').trim().replace(/\/+$/, '');
+  if (explicit) return explicit;
+  var host = String(_p('applicationStoreHost', 'https://applicationstore.uniconhub.com') || '').trim().replace(/\/+$/, '');
+  if (!host) return '';
+  return host + '/api/v2';
+}
+function _v2Headers() {
+  // Public API v2 auth: x-api-key header (CMS Application System Reference §8).
+  var h = { 'Accept': 'application/json' };
+  var key = String(_p('apiV2Key', '') || '').trim();
+  if (key) h['x-api-key'] = key;
+  return h;
+}
+function _widgetCatalogTypeName() {
+  return String(_p('widgetCatalogType', 'website-html-tool-library-applicationstore') || '').trim();
+}
 function loadWidgetCatalog(cb) {
-  function finish(list, source) {
+  function finish(list, source, total) {
     DB.widgetCatalog = list || [];
-    _lsSet(WIDGET_LS, { catalog: DB.widgetCatalog, source: source, fetchedAt: new Date().toISOString() });
+    if (typeof total === 'number') _storeTotal = total;
+    _storeRevealed = (source === 'application store')
+      ? Math.min(WIDGET_PAGE_SIZE * WIDGET_INITIAL_PAGES, DB.widgetCatalog.length)
+      : DB.widgetCatalog.length;
+    _lsSet(WIDGET_LS, { catalog: DB.widgetCatalog, source: source, fetchedAt: new Date().toISOString(), total: _storeTotal });
+    _widgetStatusLine(source, DB.widgetCatalog);
+    _updateWidgetMoreButton();
+    _updateWidgetCount();
     if (cb) cb(DB.widgetCatalog);
   }
   function fromObjects() {
@@ -372,58 +477,119 @@ function loadWidgetCatalog(cb) {
           }
         }
         if (!list.length) list = (_lsGet(WIDGET_LS) || {}).catalog || [];
-        finish(list, list.length ? 'site widgets' : 'cached');
+        _storeTotal = 0;
+        finish(list, list.length ? 'site widgets' : 'cached', list.length);
       });
     } catch (e) {
-      finish((_lsGet(WIDGET_LS) || {}).catalog || [], 'cached');
+      finish((_lsGet(WIDGET_LS) || {}).catalog || [], 'cached', 0);
     }
   }
-  var url = String(_p('widgetCatalogUrl', '') || '').trim();
-  if (url && typeof fetch === 'function') {
-    fetch(url)
+  function fromOverrideUrl() {
+    fetchWithTimeout(url)
       .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-      .then(function(json) { finish(_normalizeStoreCatalog(json), 'application store'); })
+      .then(function(json) { _storeTotal = 0; finish(_normalizeStoreCatalog(json), 'application store', 0); })
       .catch(function() { fromObjects(); });
-  } else {
-    fromObjects();
   }
+  function fromStoreApi() {
+    // DIRECT fetch fallback — UniconHub Public API v2 objects resource:
+    // GET {base}/objects/{mainObjectType} returns the catalog ObjectRecords.
+    // Search/filter/pagination are CLIENT-SIDE (documented "query semantics
+    // TODAY", CMS Application System Reference §7.2).
+    var base = _v2Base();
+    if (!base) { fromObjects(); return; }
+    var endpoint = base + '/objects/' + encodeURIComponent(_widgetCatalogTypeName());
+    fetchWithTimeout(endpoint, { method: 'GET', headers: _v2Headers() })
+      .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
+      .then(function(json) {
+        var list = _normalizeStoreCatalog(json);
+        if (list.length) finish(list, 'application store', list.length);
+        else fromObjects();
+      })
+      .catch(function() { fromObjects(); });
+  }
+  function fromApplicationStoreObjects() {
+    // PRIMARY path (parent CMS relay): the tool asks the PARENT CMS for the
+    // application-store catalog via tool.requestObjects — the CMS host
+    // reaches the store API and hands the ObjectRecords into the iframe.
+    // No direct network from the sandboxed iframe; auth is the host's job.
+    try {
+      tool.requestObjects('query', { mainObjectType: _widgetCatalogTypeName() }, function(err, result) {
+        if (err || !result || !result.objects) { fromStoreApi(); return; }
+        var list = _normalizeStoreCatalog(result.objects);
+        if (list.length) finish(list, 'application store', list.length);
+        else fromStoreApi();
+      });
+    } catch (e) { fromStoreApi(); }
+  }
+  var url = String(_p('widgetCatalogUrl', '') || '').trim();
+  if (url && typeof fetch === 'function') fromOverrideUrl();
+  else if (typeof fetch === 'function') fromApplicationStoreObjects();
+  else fromObjects();
 }
-function renderWidgetLibraryList(filter) {
+
+function loadMoreWidgets() {
+  // Client-side reveal of the next WIDGET_PAGE_SIZE items of the already-loaded
+  // v2 objects list (server-side pagination is not part of the API v2 contract yet).
+  var list = DB.widgetCatalog || [];
+  if (!list.length) { showToast('No widgets loaded yet — refresh the library.', 'warning'); return; }
+  if (_storeRevealed >= list.length) {
+    showToast('All ' + list.length + ' widgets already shown.', 'info');
+    _updateWidgetMoreButton();
+    return;
+  }
+  _storeRevealed = Math.min(_storeRevealed + WIDGET_PAGE_SIZE, list.length);
+  renderWidgetLibraryList('');
+  _updateWidgetCount();
+  showToast('Showing ' + _storeRevealed + ' of ' + list.length + ' widgets.', 'success');
+}
+
+function searchStoreWidgets(q, cb) {
+  // Client-side search over the v2 objects list (server-side filters are not
+  // implemented in the public API yet — CMS Application System Reference §7.2).
+  var f = String(q || '').trim().toLowerCase();
+  var list = DB.widgetCatalog || [];
+  var hits = [];
+  for (var i = 0; i < list.length && hits.length < 100; i++) {
+    var e = list[i];
+    var hay = ((e.name || '') + ' ' + (e.title || '') + ' ' + (e.desc || '') + ' ' + (e.category || '')).toLowerCase();
+    if (hay.indexOf(f) !== -1) hits.push(e);
+  }
+  cb(hits, true);
+}
+
+function _handleWidgetSearch(q) {
+  var f = String(q || '').trim();
+  if (!f) { renderWidgetLibraryList(''); return; }
   var list = el('widget-library-list');
-  if (!list) return;
-  var entries = DB.widgetCatalog || [];
-  var f = String(filter || '').trim().toLowerCase();
+  if (list) list.innerHTML = '<div class="picker-empty">🔍 Searching the application store…</div>';
+  var seq = ++_searchSeq;
+  searchStoreWidgets(f, function(results, ok) {
+    if (seq !== _searchSeq) return; // stale response — ignore
+    if (ok && results) _renderWidgetResults(results, 'results');
+    else {
+      var listEl = el('widget-library-list');
+      if (listEl) listEl.innerHTML = '<div class="picker-empty">No widgets found — try a different name or id.</div>';
+    }
+  });
+}
+
+function _groupWidgets(entries) {
   var grouped = {};
   for (var i = 0; i < entries.length; i++) {
     var e = entries[i];
-    if (f) {
-      var hay = ((e.name || '') + ' ' + (e.title || '') + ' ' + (e.desc || '') + ' ' + (e.category || '')).toLowerCase();
-      if (hay.indexOf(f) === -1) continue;
-    }
     var cat = e.category || 'general';
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(e);
   }
-  var cats = [];
-  for (var c in grouped) if (Object.prototype.hasOwnProperty.call(grouped, c)) cats.push(c);
-  cats.sort();
-  if (!cats.length) {
-    list.innerHTML = '<div class="picker-empty">No widgets found' + (f ? ' for "' + esc(f) + '"' : ' — set the widgetCatalogUrl admin parameter or create gw-widgets objects') + '.</div>';
-    return;
-  }
-  var h = '';
-  for (var ci = 0; ci < cats.length; ci++) {
-    h += '<div class="picker-section-label">' + esc(cats[ci]) + '</div>';
-    var arr = grouped[cats[ci]];
-    for (var j = 0; j < arr.length; j++) {
-      var e2 = arr[j];
-      h += '<div class="widget-row"><div class="widget-row-body">' +
-        '<div class="widget-row-name">' + esc(e2.title || e2.name) + ' <span class="widget-row-id">' + esc(e2.name) + '</span></div>' +
-        '<div class="widget-row-desc">' + esc(e2.desc || '') + '</div></div>' +
-        '<button class="btn btn-sm btn-outline" data-widget-add="' + esc(e2.name) + '">+ Add</button></div>';
-    }
-  }
-  list.innerHTML = h;
+  return grouped;
+}
+function _widgetRowHtml(e) {
+  return '<div class="widget-row"><div class="widget-row-body">' +
+    '<div class="widget-row-name">' + esc(e.title || e.name) + ' <span class="widget-row-id">' + esc(e.name) + '</span></div>' +
+    '<div class="widget-row-desc">' + esc(e.desc || '') + '</div></div>' +
+    '<button class="btn btn-sm btn-outline" data-widget-add="' + esc(e.name) + '">+ Add</button></div>';
+}
+function _bindWidgetRows(list) {
   var btns = list.querySelectorAll('[data-widget-add]');
   for (var k = 0; k < btns.length; k++) {
     btns[k].onclick = function() {
@@ -431,17 +597,76 @@ function renderWidgetLibraryList(filter) {
     };
   }
 }
+function _renderWidgetResults(entries, mode) {
+  var list = el('widget-library-list');
+  if (!list) return;
+  if (!entries.length) {
+    list.innerHTML = '<div class="picker-empty">No widgets found' + (mode === 'results' ? ' — try a different name or id.' : '') + '</div>';
+    return;
+  }
+  var grouped = _groupWidgets(entries);
+  var cats = [];
+  for (var c in grouped) if (Object.prototype.hasOwnProperty.call(grouped, c)) cats.push(c);
+  cats.sort();
+  var h = '';
+  if (mode === 'results') h += '<div class="picker-section-label">🔍 ' + entries.length + ' store result(s)</div>';
+  for (var ci = 0; ci < cats.length; ci++) {
+    h += '<div class="picker-section-label">' + esc(cats[ci]) + '</div>';
+    var arr = grouped[cats[ci]];
+    for (var j = 0; j < arr.length; j++) h += _widgetRowHtml(arr[j]);
+  }
+  list.innerHTML = h;
+  _bindWidgetRows(list);
+}
+function _updateWidgetMoreButton() {
+  var btn = el('btn-widget-more');
+  if (!btn) return;
+  var src = (_lsGet(WIDGET_LS) || {}).source;
+  if (src === 'application store' && _storeRevealed < DB.widgetCatalog.length) {
+    btn.style.display = '';
+    btn.textContent = '⬇ Load more (' + _storeRevealed + '/' + DB.widgetCatalog.length + ')';
+  } else {
+    btn.style.display = 'none';
+  }
+}
+function _updateWidgetCount() {
+  var c = el('widget-lib-count');
+  if (!c) return;
+  var src = (_lsGet(WIDGET_LS) || {}).source;
+  var txt = (src === 'application store') ? String(_storeRevealed) + ' of ' + DB.widgetCatalog.length : String(DB.widgetCatalog.length);
+  txt += ' widgets';
+  c.textContent = txt;
+}
+function renderWidgetLibraryList(filter) {
+  var list = el('widget-library-list');
+  if (!list) return;
+  var f = String(filter || '').trim();
+  if (f) { _handleWidgetSearch(f); return; }
+  var isStoreSrc = ((_lsGet(WIDGET_LS) || {}).source === 'application store');
+  var entries = isStoreSrc ? (DB.widgetCatalog || []).slice(0, _storeRevealed) : (DB.widgetCatalog || []);
+  if (!entries.length) {
+    list.innerHTML = '<div class="picker-empty">No widgets loaded yet. This tool asks the <b>parent CMS</b> for the application-store library (<b>tool.requestObjects</b> on object type <b>' + esc(_widgetCatalogTypeName()) + '</b>) — the CMS host reaches the store API and returns the catalog into this iframe. In the CMS field settings, add <b>' + esc(_widgetCatalogTypeName()) + '</b> to <b>allowedObjectTypes</b> (role: reader). Fallbacks (in order): direct API v2 GET {apiV2BaseUrl}/objects/' + esc(_widgetCatalogTypeName()) + ' (x-api-key = apiV2Key) → site <b>gw-widgets</b> objects → cached list. Or open the library directly: <a href="https://applicationstore.uniconhub.com/objects/website-html-tool-library-applicationstore" target="_blank" rel="noopener">application store ↗</a></div>';
+    _updateWidgetMoreButton();
+    _updateWidgetCount();
+    return;
+  }
+  _renderWidgetResults(entries, 'browse');
+  _updateWidgetMoreButton();
+  _updateWidgetCount();
+}
 function openWidgetLibrary() {
   renderWidgetLibraryList('');
   var srcEl = el('widget-lib-source');
   if (srcEl) {
     var src = _lsGet(WIDGET_LS) || {};
-    var label = src.source === 'application store' ? 'Application store API (widgetCatalogUrl)'
+    var label = src.source === 'application store' ? 'Application store via parent CMS (tool.requestObjects) — ' + _widgetCatalogTypeName()
       : src.source === 'site widgets' ? 'Site widgets (gw-widgets objects)'
       : 'Cached list';
     var when = src.fetchedAt ? ' · fetched ' + new Date(src.fetchedAt).toLocaleTimeString() : '';
     srcEl.textContent = 'Source: ' + label + when;
   }
+  _updateWidgetCount();
+  _updateWidgetMoreButton();
   openModal('modal-widget-library');
   var s = el('widget-search');
   if (s) { s.value = ''; s.focus(); }
@@ -699,7 +924,7 @@ function persist() {
   DB.chatCache = { sessionId: _activeSessionId, messages: _trimChatCache(DB.chatMessages) };
   try { tool.setValue(_slimValue()); } catch (e) {}
   if (_activeSessionId) saveCurrentSession();
-  tool.resize();
+  _resize();
 }
 
 /* ── Bounded chat cache: last N messages with capped text, kept in the record
@@ -1284,7 +1509,7 @@ function toggleInterviewMode() {
     ? '🪄 **Guided Mode active.** I\'ll interview you step by step about your page. Just answer each question — or type freely.'
     : '📝 **Guided Mode off.** Back to free-form chat.';
   addChatMessage('ai', msg);
-  tool.resize();
+  _resize();
 }
 
 function buildInterviewSystemPrompt() {
@@ -2415,39 +2640,88 @@ function applyGeneratedCode(code) {
   try { tool.notify('💾 Saved — page v' + DB.version + ' is stored in this record', 'success'); } catch (e) {}
 }
 
-/* ── Visual line diff (jsdiff CDN with fallback) — developers only ── */
+/* ── Visual line diff — SELF-CONTAINED Myers algorithm (developers only) ──
+   NO CDN: an external <script src> blocks all later inline scripts until it
+   loads or fails — in the CMS sandbox a stalled CDN request meant the probe,
+   the SDK and this whole file never executed (dead tool + red banner). */
 function computeUnifiedDiff(oldCode, newCode) {
-  if (typeof diff === 'undefined' || !diff.diffLines) {
-    var oldLines = (oldCode || '').split('\n');
-    var newLines = (newCode || '').split('\n');
-    var result = [];
-    var max = Math.max(oldLines.length, newLines.length);
-    for (var i = 0; i < max; i++) {
-      var ol = i < oldLines.length ? oldLines[i] : null;
-      var nl = i < newLines.length ? newLines[i] : null;
-      if (ol === nl) result.push({ type: 'same', text: ol || '' });
-      else if (ol === null && nl !== null) result.push({ type: 'add', text: nl });
-      else if (nl === null && ol !== null) result.push({ type: 'remove', text: ol });
-      else { result.push({ type: 'remove', text: ol }); result.push({ type: 'add', text: nl }); }
-    }
-    return result;
-  }
-  var changes = diff.diffLines(oldCode || '', newCode || '');
+  var oc = oldCode || '', nc = newCode || '';
+  if (oc.slice(-1) === '\n') oc = oc.slice(0, -1);
+  if (nc.slice(-1) === '\n') nc = nc.slice(0, -1);
+  var a = oc === '' ? [] : oc.split('\n');
+  var b = nc === '' ? [] : nc.split('\n');
+  var start = 0, aEnd = a.length, bEnd = b.length;
+  while (start < aEnd && start < bEnd && a[start] === b[start]) start++;
+  while (aEnd > start && bEnd > start && a[aEnd - 1] === b[bEnd - 1]) { aEnd--; bEnd--; }
+  var aMid = a.slice(start, aEnd);
+  var bMid = b.slice(start, bEnd);
+  var n = aMid.length, m = bMid.length;
   var result = [];
-  for (var i = 0; i < changes.length; i++) {
-    var change = changes[i];
-    var lines = change.value.replace(/\n$/, '').split('\n');
-    var type;
-    if (change.added) type = 'add';
-    else if (change.removed) type = 'remove';
-    else type = 'same';
-    for (var j = 0; j < lines.length; j++) {
-      if (lines[j] !== '' || j < lines.length - 1 || change.value === '\n') {
-        result.push({ type: type, text: lines[j] });
+  for (var i = 0; i < start; i++) result.push({ type: 'same', text: a[i] });
+  var mid;
+  if (n === 0) {
+    mid = [];
+    for (var j = 0; j < m; j++) mid.push({ type: 'add', text: bMid[j] });
+  } else if (m === 0) {
+    mid = [];
+    for (var k = 0; k < n; k++) mid.push({ type: 'remove', text: aMid[k] });
+  } else if (n * m > 4000000) {
+    mid = [];
+    var maxL = Math.max(n, m);
+    for (var l = 0; l < maxL; l++) {
+      var ol = l < n ? aMid[l] : null;
+      var nl = l < m ? bMid[l] : null;
+      if (ol === nl) mid.push({ type: 'same', text: ol || '' });
+      else {
+        if (ol !== null) mid.push({ type: 'remove', text: ol });
+        if (nl !== null) mid.push({ type: 'add', text: nl });
       }
     }
+  } else {
+    mid = _wbMyersDiff(aMid, bMid);
   }
+  result = result.concat(mid);
+  for (var s = aEnd; s < a.length; s++) result.push({ type: 'same', text: a[s] });
   return result;
+}
+
+function _wbMyersDiff(a, b) {
+  var N = a.length, M = b.length, MAX = N + M;
+  var v = {}; v[1] = 0;
+  var trace = [];
+  for (var d = 0; d <= MAX; d++) {
+    var vd = {};
+    trace.push(vd);
+    for (var k = -d; k <= d; k += 2) {
+      var x;
+      if (k === -d || (k !== d && v[k - 1] < v[k + 1])) x = v[k + 1];
+      else x = v[k - 1] + 1;
+      var y = x - k;
+      while (x < N && y < M && a[x] === b[y]) { x++; y++; }
+      vd[k] = x;
+      if (x >= N && y >= M) return _wbMyersPath(trace, a, b, d);
+    }
+    v = vd;
+  }
+  return [];
+}
+
+function _wbMyersPath(trace, a, b, D) {
+  var x = a.length, y = b.length, res = [];
+  for (var d = D; d > 0; d--) {
+    var v = trace[d - 1];
+    var k = x - y;
+    var prevK;
+    if (k === -d || (k !== d && v[k - 1] < v[k + 1])) prevK = k + 1;
+    else prevK = k - 1;
+    var prevX = v[prevK];
+    var prevY = prevX - prevK;
+    while (x > prevX && y > prevY) { res.push({ type: 'same', text: a[x - 1] }); x--; y--; }
+    if (x === prevX) { res.push({ type: 'add', text: b[y - 1] }); y--; }
+    else { res.push({ type: 'remove', text: a[x - 1] }); x--; }
+  }
+  while (x > 0 && y > 0) { res.push({ type: 'same', text: a[x - 1] }); x--; y--; }
+  return res.reverse();
 }
 
 function buildDiffTabs(diffs) {
@@ -2929,7 +3203,7 @@ function setAiTimeout(promptLen) {
       '🔧 Try sending again or simplifying your request.';
     addChatMessage('ai', errMsg, { isError: true });
     updateConnStatus('error');
-    tool.resize();
+    _resize();
   }, 605000);
 }
 function clearAiTimeout() {
@@ -2955,7 +3229,7 @@ function cancelAiRequest() {
   var devStatus = el('dev-raw-status');
   if (devStatus) devStatus.textContent = '⏹ Cancelled';
   addChatMessage('ai', '⏹ **Generation stopped.** You can send another message to continue.');
-  tool.resize();
+  _resize();
 }
 
 function sendChatMessage() {
@@ -3384,7 +3658,7 @@ function _finishPlan(steps, runStart) {
   clearAttachment();
   try { tool.notify('💾 Auto-saved — page v' + DB.version + ' is stored in this record', 'success'); } catch (e) {}
   switchTab('preview'); // show the result immediately
-  tool.resize();
+  _resize();
 }
 
 function _abortPlan() {
@@ -3484,7 +3758,7 @@ function _runSingleGeneration(msg, tok) {
                   _tryLastResort(msg, tok);
                 }
                 clearAttachment();
-                tool.resize();
+                _resize();
               });
             } catch (e2) {
               _aiCallActive = false;
@@ -3495,7 +3769,7 @@ function _runSingleGeneration(msg, tok) {
               _setAiUIActive(false);
               addChatMessage('ai', '⚠️ **AI retry failed:** ' + (e2.message || 'Unknown'), { isError: true });
               clearAttachment();
-              tool.resize();
+              _resize();
             }
           }
         },
@@ -3510,7 +3784,7 @@ function _runSingleGeneration(msg, tok) {
           _setAiUIActive(false);
           addChatMessage('ai', '⚠️ **AI Stream Error:** ' + (err || 'Unknown failure') + '\n\n🔧 Check that allowAi is set to "yes" in field settings.', { isError: true });
           clearAttachment();
-          tool.resize();
+          _resize();
         }
       });
     } catch (e) {
@@ -3522,7 +3796,7 @@ function _runSingleGeneration(msg, tok) {
       _setAiUIActive(false);
       addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error'), { isError: true });
       clearAttachment();
-      tool.resize();
+      _resize();
     }
   } else {
     showThinkingBubble('AI is designing…', false);
@@ -3549,7 +3823,7 @@ function _runSingleGeneration(msg, tok) {
           addChatMessage('ai', '⚠️ **No AI response received.**\n\nPossible causes:\n• allowAi not set to "yes" in field settings\n• AI service not configured for this tenant\n\n🔧 Ask your CMS admin to verify the AI configuration.', { isError: true });
         }
         clearAttachment();
-        tool.resize();
+        _resize();
       });
     } catch (e) {
       _aiCallActive = false;
@@ -3560,7 +3834,7 @@ function _runSingleGeneration(msg, tok) {
       _setAiUIActive(false);
       addChatMessage('ai', '⚠️ **AI call failed:** ' + (e.message || 'Unknown error'), { isError: true });
       clearAttachment();
-      tool.resize();
+      _resize();
     }
   }
 }
@@ -3587,7 +3861,7 @@ function _tryLastResort(msg, tok) {
         addChatMessage('ai', '⚠️ **AI service appears to be unavailable.**\n\nAll attempts failed. Contact your CMS administrator to verify the AI gateway configuration.', { isError: true });
       }
       clearAttachment();
-      tool.resize();
+      _resize();
     });
   } catch (e) {
     _aiCallActive = false;
@@ -3597,7 +3871,7 @@ function _tryLastResort(msg, tok) {
     updateConnStatus('error');
     _setAiUIActive(false);
     clearAttachment();
-    tool.resize();
+    _resize();
   }
 }
 
@@ -3615,7 +3889,7 @@ function _finalizeStreamingMessage(fullText, hasCode) {
   updateConnStatus('ok');
   processAIResponse(fullText, hasCode);
   clearAttachment();
-  tool.resize();
+  _resize();
 }
 
 /* ── Dev panel ── */
@@ -3757,7 +4031,7 @@ function _hlFmtTag(t) {
   });
   return '<span class="tk-punc">&lt;' + (m[1] === '</' ? '/' : '') + '</span><span class="tk-tag">' + _hlEscape(m[2]) + '</span>' + attrs + '<span class="tk-punc">&gt;</span>';
 }
-var HL_HTML_RE = /(<!--[\s\S]*?-->)|(<\/?[a-zA-Z][^>]*>)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')/g;
+var HL_HTML_RE = /(\u003C!--[\s\S]*?-->)|(<\/?[a-zA-Z][^>]*>)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')/g;
 function _hlHtml(src) { return _hlRun(src, HL_HTML_RE, ['comment', 'tag', 'string']); }
 var HL_CSS_RE = /(\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|(@[a-zA-Z-]+)|(#[0-9a-fA-F]{3,8}\b)|(-?\d*\.?\d+(?:px|em|rem|%|vh|vw|s|ms)?\b)|([.#]?[a-zA-Z_-][\w-]*(?=\s*\{))|([a-zA-Z-]+(?=\s*:))|(\{|\}|:|;|,)/g;
 function _hlCss(src) { return _hlRun(src, HL_CSS_RE, ['comment', 'string', 'at', 'num', 'num', 'sel', 'prop', 'punc']); }
@@ -3788,7 +4062,7 @@ function _commitEditorsToDb() {
   if (j && j.value !== DB.code.js) { DB.code.js = j.value; changed = true; }
   if (changed) {
     updateLineNumbers();
-    persist();
+    try { persist(); } catch (e) {}
     renderSections();
     runComplianceChecks();
   }
@@ -4484,7 +4758,7 @@ function gwChecks() {
       id: 'js-idempotent', section: '3.3', label: 'JS idempotent (SPA re-runs)',
       run: function(h, c, j) {
         if (!j.trim()) return { status: 'pass', detail: 'No JavaScript needed.' };
-        var j2 = j.trim().replace(/^(?:\/\*\s*v[\d.]+\s*\*\/|<!--\s*v[\d.]+\s*-->)[ \t]*[\r\n]+/, '');
+        var j2 = j.trim().replace(/^(?:\/\*\s*v[\d.]+\s*\*\/|\u003C!--\s*v[\d.]+\s*-->)[ \t]*[\r\n]+/, '');
         var iife = /^\(function|^\(\s*function|^;?\(function/.test(j2);
         var guard = /__[A-Za-z_$][\w$]*(Init|Ready|Mounted|Loaded)/.test(j);
         var usesNs = /gw\.ns/.test(j);
@@ -4590,7 +4864,7 @@ function gwChecks() {
     {
       id: 'cache-ready', section: '18', label: 'SSR / cache ready (deterministic + version-stamped)',
       run: function(h, c, j) {
-        var stamped = /^<!-- v[\d.]+/.test((h || '').trim()) || /^\/\* v[\d.]+/.test((c || '').trim()) || /^\/\* v[\d.]+/.test((j || '').trim());
+        var stamped = /^\u003C!-- v[\d.]+/.test((h || '').trim()) || /^\/\* v[\d.]+/.test((c || '').trim()) || /^\/\* v[\d.]+/.test((j || '').trim());
         var randomTop = /Math\.random\s*\(\s*\)/.test(j || '');
         if (!stamped) return { status: 'warn', detail: 'Code is not version-stamped — the platform uses data.version for cache busting (Redis/Vercel CDN); edits may be served from a stale cache.' };
         if (randomTop) return { status: 'warn', detail: 'Math.random() found in JS — output must stay deterministic for SSR/caching; derive values from data instead.' };
@@ -4736,7 +5010,7 @@ function runAiReview() {
     _reviewActive = false;
     _reviewToken = null;
     if (status) status.textContent = err ? ('❌ Review failed: ' + err) : '✓ Review complete. Use 🔧 Fix with AI to resolve the findings.';
-    tool.resize();
+    _resize();
   };
   if (typeof tool.requestAIStream === 'function') {
     try {
@@ -5135,7 +5409,10 @@ function restoreHistory(idx) {
 }
 
 /* ── Console ── */
+var _consoleCaptureOn = false;
 function initConsoleCapture() {
+  if (_consoleCaptureOn) return;
+  _consoleCaptureOn = true;
   window.addEventListener('message', function(e) {
     var d = e.data;
     if (d && d.wbConsole) addConsoleEntry(d.wbConsole.level, d.wbConsole.msg);
@@ -5244,53 +5521,63 @@ var ADV_PANELS = {
 };
 
 function switchAdvTab(name) {
-  if (!ADV_PANELS[name]) name = 'settings';
-  if (!isDeveloper() && (name === 'html' || name === 'css' || name === 'js' || name === 'console')) name = 'settings';
-  _advSubCurrent = name;
-  qsa('.advtab').forEach(function(t) { t.classList.remove('active'); });
-  var tb = qs('.advtab[data-advtab="' + name + '"]');
-  if (tb) tb.classList.add('active');
-  var compBtn = el('btn-compliance-open');
-  if (compBtn) {
-    if (name === 'compliance') compBtn.classList.add('header-btn-active');
-    else compBtn.classList.remove('header-btn-active');
+  try {
+    if (!ADV_PANELS[name]) name = 'settings';
+    if (!isDeveloper() && (name === 'html' || name === 'css' || name === 'js' || name === 'console')) name = 'settings';
+    _advSubCurrent = name;
+    qsa('.advtab').forEach(function(t) { t.classList.remove('active'); });
+    var tb = qs('.advtab[data-advtab="' + name + '"]');
+    if (tb) tb.classList.add('active');
+    var compBtn = el('btn-compliance-open');
+    if (compBtn) {
+      if (name === 'compliance') compBtn.classList.add('header-btn-active');
+      else compBtn.classList.remove('header-btn-active');
+    }
+    qsa('.advpanel').forEach(function(p) { p.classList.remove('active'); });
+    var p = el(ADV_PANELS[name]);
+    if (p) p.classList.add('active');
+    var isCodeTab = (name === 'html' || name === 'css' || name === 'js');
+    var actions = el('content-actions');
+    if (actions) actions.style.display = isCodeTab ? '' : 'none';
+    qsa('#btn-copy-html, #btn-copy-css, #btn-copy-js').forEach(function(b) { b.style.display = 'none'; });
+    if (name === 'html') { var bh = el('btn-copy-html'); if (bh) bh.style.display = ''; }
+    else if (name === 'css') { var bc = el('btn-copy-css'); if (bc) bc.style.display = ''; }
+    else if (name === 'js') { var bj = el('btn-copy-js'); if (bj) bj.style.display = ''; }
+    if (name === 'console') renderConsole();
+    if (name === 'settings') renderParamsSummary();
+    if (name === 'addons') { renderSharedPicker(); }
+    if (name === 'compliance') renderCompliance();
+    _resize();
+  } catch (e) {
+    console.warn('[WEBPAGEBUILDER:TAB] switchAdvTab failed: ' + (e && e.message ? e.message : e));
   }
-  qsa('.advpanel').forEach(function(p) { p.classList.remove('active'); });
-  var p = el(ADV_PANELS[name]);
-  if (p) p.classList.add('active');
-  var isCodeTab = (name === 'html' || name === 'css' || name === 'js');
-  var actions = el('content-actions');
-  if (actions) actions.style.display = isCodeTab ? '' : 'none';
-  qsa('#btn-copy-html, #btn-copy-css, #btn-copy-js').forEach(function(b) { b.style.display = 'none'; });
-  if (name === 'html') { var bh = el('btn-copy-html'); if (bh) bh.style.display = ''; }
-  else if (name === 'css') { var bc = el('btn-copy-css'); if (bc) bc.style.display = ''; }
-  else if (name === 'js') { var bj = el('btn-copy-js'); if (bj) bj.style.display = ''; }
-  if (name === 'console') renderConsole();
-  if (name === 'settings') renderParamsSummary();
-  if (name === 'addons') { renderSharedPicker(); }
-  if (name === 'compliance') renderCompliance();
-  tool.resize();
 }
 
 function switchTab(tab) {
-  if (tab !== 'advanced' && tab !== 'preview' && tab !== 'suggestions') tab = 'preview';
-  _commitEditorsToDb();
-  currentTab = tab;
-  qsa('.ctab').forEach(function(t) { t.classList.remove('active'); });
-  qsa('.content-editor').forEach(function(e) { e.classList.remove('active'); });
-  var tb = qs('.ctab[data-tab="' + tab + '"]');
-  if (tb) tb.classList.add('active');
-  var ed = el('editor-' + tab);
-  if (ed) ed.classList.add('active');
-  var cfgBtn = el('btn-config');
-  if (cfgBtn) {
-    if (tab === 'advanced') cfgBtn.classList.add('header-btn-active');
-    else cfgBtn.classList.remove('header-btn-active');
+  try {
+    if (tab !== 'advanced' && tab !== 'preview' && tab !== 'suggestions') tab = 'preview';
+    try { _commitEditorsToDb(); } catch (e) {
+      console.warn('[WEBPAGEBUILDER:TAB] commit failed: ' + (e && e.message ? e.message : e));
+    }
+    currentTab = tab;
+    qsa('.ctab').forEach(function(t) { t.classList.remove('active'); });
+    qsa('.content-editor').forEach(function(e) { e.classList.remove('active'); });
+    var tb = qs('.ctab[data-tab="' + tab + '"]');
+    if (tb) tb.classList.add('active');
+    var ed = el('editor-' + tab);
+    if (ed) ed.classList.add('active');
+    var cfgBtn = el('btn-config');
+    if (cfgBtn) {
+      if (tab === 'advanced') cfgBtn.classList.add('header-btn-active');
+      else cfgBtn.classList.remove('header-btn-active');
+    }
+    if (tab === 'preview') updatePreview();
+    if (tab === 'suggestions') renderSections();
+    if (tab === 'advanced') switchAdvTab(_advSubCurrent || 'settings');
+    _resize();
+  } catch (e) {
+    console.warn('[WEBPAGEBUILDER:TAB] switchTab failed: ' + (e && e.message ? e.message : e));
   }
-  if (tab === 'preview') updatePreview();
-  if (tab === 'suggestions') renderSections();
-  if (tab === 'advanced') switchAdvTab(_advSubCurrent || 'settings');
-  tool.resize();
 }
 
 function switchChatTab(tabName) {
@@ -5335,7 +5622,7 @@ function applyTheme(t) {
 function toggleTheme() {
   applyTheme(_theme === 'dark' ? 'light' : 'dark');
 }
-function showToast(msg, sev) { tool.notify(msg, sev || 'info'); }
+function showToast(msg, sev) { try { tool.notify(msg, sev || 'info'); } catch (e) {} }
 function lockUI(ro) {
   isReadOnly = ro === true;
   document.body.classList.toggle('readonly', isReadOnly);
@@ -5401,59 +5688,72 @@ function render(v) {
   _applyDeviceClass();
   var active = qs('.content-editor.active');
   if (active && active.id === 'editor-preview') updatePreview();
-  tool.resize();
+  _resize();
 }
 
 /* ── Event bindings ── */
+var _bindEventsDone = false;
+function _routeClick(target) {
+  // ONE delegated router for the main click families. Console logs give
+  // visible proof in the CMS console that clicks are being handled.
+  var t = target;
+  while (t && t.getAttribute) {
+    var tab = t.getAttribute('data-tab');
+    if (tab) { console.log('[WEBPAGEBUILDER:CLICK] tab=' + tab); switchTab(tab); return true; }
+    var adv = t.getAttribute('data-advtab');
+    if (adv) { console.log('[WEBPAGEBUILDER:CLICK] advtab=' + adv); switchTab('advanced'); switchAdvTab(adv); return true; }
+    var ct = t.getAttribute('data-chat-tab');
+    if (ct) { console.log('[WEBPAGEBUILDER:CLICK] chattab=' + ct); switchChatTab(ct); return true; }
+    var dv = t.getAttribute('data-device');
+    if (dv) { console.log('[WEBPAGEBUILDER:CLICK] device=' + dv); setDevice(dv); return true; }
+    var qa = t.getAttribute('data-qa');
+    if (qa) { quickAddSection(qa); return true; }
+    var wa = t.getAttribute('data-widget-add');
+    if (wa) { openWidgetDialog(wa); return true; }
+    var sid = t.getAttribute('data-sid');
+    if (sid) { switchSession(sid); return true; }
+    t = t.parentNode;
+  }
+  return false;
+}
 function bindEvents() {
-  el('btn-config').onclick = function() { switchTab('advanced'); switchAdvTab('settings'); };
-  el('btn-history').onclick = openHistoryFromChat;
-  el('btn-export').onclick = downloadFullPage;
-  el('btn-theme').onclick = toggleTheme;
-  el('btn-close-history').onclick = closeAllModals;
-  el('modal-backdrop').onclick = closeAllModals;
-  var verBadge = el('tool-version');
-  if (verBadge) verBadge.onclick = _onVersionClick;
+  if (_bindEventsDone) return;
+  _bindEventsDone = true;
+  // Delegated click routing FIRST — one document-level listener that works
+  // even if every individual binding below fails. Tab-family clicks no longer
+  // depend on per-element onclick assignment at all.
+  try {
+    document.addEventListener('click', function(e) { _routeClick(e.target); });
+  } catch (e) {
+    console.warn('[WEBPAGEBUILDER:BIND] delegated router failed: ' + (e && e.message ? e.message : e));
+  }
 
-  qsa('.ctab').forEach(function(t) {
-    t.onclick = function() { switchTab(this.getAttribute('data-tab')); };
-  });
-  qsa('.advtab').forEach(function(t) {
-    t.onclick = function() { switchTab('advanced'); switchAdvTab(this.getAttribute('data-advtab')); };
-  });
-  var compOpenBtn = el('btn-compliance-open');
-  if (compOpenBtn) compOpenBtn.onclick = openComplianceTab;
-  qsa('.chat-tab').forEach(function(t) {
-    t.onclick = function() { switchChatTab(this.getAttribute('data-chat-tab')); };
-  });
-  qsa('.dev-btn').forEach(function(b) {
-    b.onclick = function() { setDevice(this.getAttribute('data-device')); };
-  });
-
-  el('btn-copy-html').onclick = copyCurrentTab;
-  el('btn-copy-css').onclick = copyCurrentTab;
-  el('btn-copy-js').onclick = copyCurrentTab;
-  el('btn-refresh-preview').onclick = updatePreview;
-  el('btn-sections-refresh').onclick = renderSections;
-
-  el('btn-export-html').onclick = downloadFullPage;
-  el('btn-export-pdf').onclick = exportPdf;
-  el('btn-export-gw-block').onclick = copyPageObject;
-  el('btn-export-gw-value').onclick = copyGeneratorOutput;
-  el('btn-export-copy-full').onclick = copyFullPage;
-  el('btn-export-copy-blocks').onclick = copyThreeBlocks;
-  el('btn-generate-all').onclick = runFullGeneration;
-
-  el('btn-run-checks').onclick = function() { runComplianceChecks(); renderCompliance(); showToast('Compliance checks refreshed.', 'info'); };
-  el('btn-ai-review').onclick = runAiReview;
-  el('btn-compliance-fix').onclick = fixWithAi;
-
-  el('btn-console-clear').onclick = clearConsole;
-
-  var btnSharedRefresh = el('btn-shared-refresh');
-  if (btnSharedRefresh) btnSharedRefresh.onclick = function() { renderSharedPickerLoading(); loadSharedCatalog(function() { renderSharedPicker(); updatePreview(); }); };
-  var btnWidgetRefresh = el('btn-widget-refresh');
-  if (btnWidgetRefresh) btnWidgetRefresh.onclick = function() {
+  _bind('btn-config', function() { switchTab('advanced'); switchAdvTab('settings'); });
+  _bind('btn-history', openHistoryFromChat);
+  _bind('btn-export', downloadFullPage);
+  _bind('btn-theme', toggleTheme);
+  _bind('btn-close-history', closeAllModals);
+  _bind('modal-backdrop', closeAllModals);
+  _bind('tool-version', _onVersionClick);
+  _bind('btn-compliance-open', openComplianceTab);
+  _bind('btn-copy-html', copyCurrentTab);
+  _bind('btn-copy-css', copyCurrentTab);
+  _bind('btn-copy-js', copyCurrentTab);
+  _bind('btn-refresh-preview', updatePreview);
+  _bind('btn-sections-refresh', renderSections);
+  _bind('btn-export-html', downloadFullPage);
+  _bind('btn-export-pdf', exportPdf);
+  _bind('btn-export-gw-block', copyPageObject);
+  _bind('btn-export-gw-value', copyGeneratorOutput);
+  _bind('btn-export-copy-full', copyFullPage);
+  _bind('btn-export-copy-blocks', copyThreeBlocks);
+  _bind('btn-generate-all', runFullGeneration);
+  _bind('btn-run-checks', function() { runComplianceChecks(); renderCompliance(); showToast('Compliance checks refreshed.', 'info'); });
+  _bind('btn-ai-review', runAiReview);
+  _bind('btn-compliance-fix', fixWithAi);
+  _bind('btn-console-clear', clearConsole);
+  _bind('btn-shared-refresh', function() { renderSharedPickerLoading(); loadSharedCatalog(function() { renderSharedPicker(); updatePreview(); }); });
+  _bind('btn-widget-refresh', function() {
     showToast('Reloading widget list…', 'info');
     loadWidgetCatalog(function() {
       showToast('Widget list refreshed (' + DB.widgetCatalog.length + ' widgets).', 'success');
@@ -5462,37 +5762,26 @@ function bindEvents() {
         renderWidgetLibraryList(el('widget-search') ? el('widget-search').value : '');
       }
     });
-  };
-  var btnWidgetLibrary = el('btn-widget-library');
-  if (btnWidgetLibrary) btnWidgetLibrary.onclick = openWidgetLibrary;
-  var btnWidgetLibraryClose = el('btn-widget-library-close');
-  if (btnWidgetLibraryClose) btnWidgetLibraryClose.onclick = closeAllModals;
+  });
+  _bind('btn-widget-library', openWidgetLibrary);
+  _bind('btn-widget-library-close', closeAllModals);
+  _bind('btn-widget-more', loadMoreWidgets);
   var widgetSearch = el('widget-search');
-  if (widgetSearch) widgetSearch.oninput = function() { renderWidgetLibraryList(this.value); };
-  var btnFormBuilder = el('btn-form-builder');
-  if (btnFormBuilder) btnFormBuilder.onclick = openFormBuilder;
-  var btnWidgetInsert = el('btn-widget-insert');
-  if (btnWidgetInsert) btnWidgetInsert.onclick = insertWidgetFromDialog;
-  var btnWidgetCancel = el('btn-widget-cancel');
-  if (btnWidgetCancel) btnWidgetCancel.onclick = closeAllModals;
-  var btnWidgetCancel2 = el('btn-widget-cancel2');
-  if (btnWidgetCancel2) btnWidgetCancel2.onclick = closeAllModals;
-  var btnFormAddField = el('btn-form-add-field');
-  if (btnFormAddField) btnFormAddField.onclick = addFormFieldRow;
-  var btnFormGenerate = el('btn-form-generate');
-  if (btnFormGenerate) btnFormGenerate.onclick = generateForm;
-  var btnFormCancel = el('btn-form-cancel');
-  if (btnFormCancel) btnFormCancel.onclick = closeAllModals;
-
-  el('btn-upload').onclick = handleFileUpload;
-  el('attach-remove').onclick = clearAttachment;
-
-  el('btn-chat-send').onclick = sendChatMessage;
-  el('btn-chat-stop').onclick = cancelAiRequest;
-  el('btn-guided-mode').onclick = toggleInterviewMode;
-  el('btn-agentic-mode').onclick = _toggleAgentic;
-
-  el('btn-new-session').onclick = function() {
+  if (widgetSearch) widgetSearch.oninput = debounce(function() { _handleWidgetSearch(this.value); }, 300);
+  _bind('btn-form-builder', openFormBuilder);
+  _bind('btn-widget-insert', insertWidgetFromDialog);
+  _bind('btn-widget-cancel', closeAllModals);
+  _bind('btn-widget-cancel2', closeAllModals);
+  _bind('btn-form-add-field', addFormFieldRow);
+  _bind('btn-form-generate', generateForm);
+  _bind('btn-form-cancel', closeAllModals);
+  _bind('btn-upload', handleFileUpload);
+  _bind('attach-remove', clearAttachment);
+  _bind('btn-chat-send', sendChatMessage);
+  _bind('btn-chat-stop', cancelAiRequest);
+  _bind('btn-guided-mode', toggleInterviewMode);
+  _bind('btn-agentic-mode', _toggleAgentic);
+  _bind('btn-new-session', function() {
     createSession(function(session) {
       if (session) {
         if (_activeSessionId) saveCurrentSession();
@@ -5506,7 +5795,7 @@ function bindEvents() {
         showToast('New chat created', 'info');
       }
     });
-  };
+  });
 
   var chatInput = el('chat-input');
   if (chatInput) {
@@ -5555,19 +5844,44 @@ function bindEvents() {
 
 /* ── Entry point ── */
 var _initialized = false;
-tool.onReady(function(val, fields) {
+
+/* ── EARLY UI BOOT — bind events as soon as the DOM allows, INDEPENDENT of the
+   CMS SDK's onReady timing. A host that delays or never fires onReady can no
+   longer leave the tabs/buttons unclickable. ── */
+(function _earlyBoot() {
+  function boot() {
+    console.log('[WEBPAGEBUILDER:BOOT] build ' + TOOL_BUILD + ' — UI events bound (delegated router active) — ' + new Date().toLocaleTimeString());
+    try { bindEvents(); } catch (e) { console.warn('[WEBPAGEBUILDER:BOOT] bind failed: ' + (e && e.message ? e.message : e)); }
+    try { initConsoleCapture(); } catch (e) {}
+    try { _renderBuildBadge(); } catch (e) {}
+    try { window.__wbBootDone = true; } catch (e) {}
+    try { document.body.setAttribute('data-wb-ready', '1'); } catch (e) {}
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+try { tool.onReady(function(val, fields) {
   if (_initialized) { console.warn('[WEBPAGEBUILDER:INIT] Already initialized — skipping'); return; }
   _initialized = true;
-  console.log('[WEBPAGEBUILDER] build 2026-10-02b — integration + simplified UI: add-ons tab (shared sources / widgets / forms), syntax-highlighted editors, compact design direction');
+  console.log('[WEBPAGEBUILDER] build ' + TOOL_BUILD + ' — application store integration: widget catalog via parent CMS relay (tool.requestObjects on ' + _widgetCatalogTypeName() + ') with direct API v2 GET + gw-widgets fallbacks');
 
-  _loadSkills();
-  _loadAgenticPref();
-  renderSkillChips();
+  // 1) UI events are ALREADY bound by the early DOM boot above (before this
+  //    callback) — tab switching works even if this SDK callback is delayed
+  //    or fails. bindEvents/initConsoleCapture are idempotent, so calling
+  //    them again here is harmless belt-and-braces.
+  try { bindEvents(); } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] bindEvents failed: ' + (e && e.message ? e.message : e)); }
+  try { initConsoleCapture(); } catch (e) {}
 
-  var guideSrc = el('page-guide-source');
-  if (guideSrc) pageGuideText = _decodeEmbedded(guideSrc.textContent || '');
+  // 2) Optional bootstrapping + SDK declarations — every step guarded so a
+  //    single failure cannot break the rest of the init.
+  try { _loadSkills(); _loadAgenticPref(); renderSkillChips(); } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] skills failed: ' + (e && e.message ? e.message : e)); }
+  try {
+    var guideSrc = el('page-guide-source');
+    if (guideSrc) pageGuideText = _decodeEmbedded(guideSrc.textContent || '');
+  } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] rules decode failed: ' + (e && e.message ? e.message : e)); }
 
-  tool.declareOutput({
+  try { tool.declareOutput({
     type: 'object',
     title: 'WebpageBuilder Value',
     description: 'Slim saved value: page code + SEO + page meta + version + session plumbing + a bounded chat cache. Version snapshots live as separate objects in webpagebuilder-history-uniconbaseapps so this object stays far below the 1 MB Firestore limit.',
@@ -5591,37 +5905,43 @@ tool.onReady(function(val, fields) {
       _instanceId: { type: 'string', title: 'Instance ID', description: 'Deterministic per-instance identifier (derived from the parent record id) used to isolate chat sessions.' },
       _parentRecordId: { type: 'string', title: 'Parent Record ID', description: 'Parent CMS record id, captured from the first created chat session.' }
     }
-  });
-  tool.declareParams([
+  }); } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] declareOutput failed: ' + (e && e.message ? e.message : e)); }
+  try { tool.declareParams([
     { name: 'allowAi', label: 'Enable AI Prompt Relay', type: 'toggle', default: 'yes', severity: 'mandatory', hint: 'Required for AI page generation via chat.' },
     { name: 'allowUpload', label: 'Enable File Upload', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Lets users attach reference images or spec docs for the AI to use as design references.' },
     { name: 'allowFileContent', label: 'Enable File Content Extraction', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Extracts text from uploaded PDFs/DOCX to include in AI prompts.' },
     { name: 'allowExportPdf', label: 'Enable PDF Export', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Enables the Export PDF button in Settings → Export.' },
     { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Chat history is stored in CMS type ai-chat-sessions-uniconbaseapps. Add it to allowedObjectTypes with role: editor, scope: instance.' },
     { name: 'pageRules', label: 'Page Rules Override', type: 'text', default: '', severity: 'optional', hint: 'Optional: paste the full public-website-page-rules.txt (v2.0) text here to override the built-in rules for every instance of this tool.' },
-    { name: 'widgetCatalogUrl', label: 'Widget Catalog API URL', type: 'text', default: '', severity: 'optional', hint: 'Application store API returning the widget list. JSON shape: { "items": [ { "id": "...", "name": "<data-gw-app name>", "title": "...", "description": "...", "category": "media", "configSchema": { "type": "object", "properties": { ... } }, "ssrHtml": "..." } ] } — a bare array also works. Leave empty to fall back to site gw-widgets objects.' },
+    { name: 'widgetCatalogUrl', label: 'Widget Catalog URL (override)', type: 'text', default: '', severity: 'optional', hint: 'Optional FULL override for the catalog list (e.g. a proxy endpoint returning the v2 objects list: bare array or { items: [...] }). Leave empty — the tool first asks the parent CMS (tool.requestObjects) for the catalog.' },
+    { name: 'apiV2BaseUrl', label: 'Application Store API v2 Base URL', type: 'text', default: 'https://applicationstore.uniconhub.com/api/v2', severity: 'optional', hint: 'Fallback/diagnostics only: direct API v2 base used when the parent CMS relay returns no catalog. The parent-CMS path is primary and handles auth itself.' },
+    { name: 'apiV2Key', label: 'API v2 Key (x-api-key)', type: 'text', default: '', severity: 'optional', hint: 'Public API v2 key for the DIRECT-fetch fallback only (sent as the x-api-key header). The parent CMS handles authentication for the primary path. Leave empty for public/readable endpoints.' },
+    { name: 'applicationStoreHost', label: 'Application Store Host (legacy)', type: 'text', default: 'https://applicationstore.uniconhub.com', severity: 'optional', hint: 'Legacy host parameter — only used when apiV2BaseUrl is empty (the base becomes <host>/api/v2).' },
+    { name: 'widgetCatalogType', label: 'Widget Catalog Object Type', type: 'text', default: 'website-html-tool-library-applicationstore', severity: 'optional', hint: 'cmsObjectType of the published website html tool library on the application store. The parent CMS must include this type in allowedObjectTypes (role: reader) so the tool can receive the catalog.' },
     { name: 'colorScheme', label: 'Color Scheme', type: 'text', default: 'indigo', severity: 'optional', hint: 'Site-wide palette shared across pages. Options: emerald | blue | indigo | violet | rose | amber | teal | ocean | forest | sunset | mono.' },
     { name: 'typography', label: 'Typography', type: 'text', default: 'modern-sans', severity: 'optional', hint: 'Site-wide font pairing: modern-sans | elegant-serif | friendly-rounded | tech-mono | editorial.' },
     { name: 'thinkingLevel', label: 'AI Thinking Depth', type: 'text', default: 'balanced', severity: 'optional', hint: 'How much reasoning effort the AI spends per request: quick | balanced | deep. Deeper = more thoughtful structure and copy, but slower. Works best when the AI gateway runs a reasoning-capable model (e.g. DeepSeek V4 Pro).' },
     { name: 'skills', label: 'Default Skills', type: 'text', default: '', severity: 'optional', hint: 'Comma-separated default skills the AI applies to every page: creative | a11y | seo | nonprofit | luxury | playful | minimal | copy. Page-type guidance is added automatically from the page content.' },
     { name: 'lang', label: 'Page Language', type: 'text', default: 'en', severity: 'optional', hint: 'Language used in generated copy (en, tr, fr, de, es, ar).' }
-  ]);
+  ]); } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] declareParams failed: ' + (e && e.message ? e.message : e)); }
 
-  var aiParam = tool.param('allowAi');
-  if (!aiParam || aiParam !== 'yes') {
-    tool.reportMissingParams([{
-      name: 'allowAi', label: 'Enable AI Prompt Relay',
-      type: 'toggle', default: 'yes', severity: 'mandatory',
-      hint: 'Set to "yes" to enable AI page generation via tool.requestAI().',
-      reason: 'This tool requires AI access to design webpages. Without it, chat generation will not work.'
-    }], 'AI Prompt Relay must be enabled for this tool to function. Set allowAi: yes in the field settings.');
-  }
+  try {
+    var aiParam = tool.param('allowAi');
+    if (!aiParam || aiParam !== 'yes') {
+      tool.reportMissingParams([{
+        name: 'allowAi', label: 'Enable AI Prompt Relay',
+        type: 'toggle', default: 'yes', severity: 'mandatory',
+        hint: 'Set to "yes" to enable AI page generation via tool.requestAI().',
+        reason: 'This tool requires AI access to design webpages. Without it, chat generation will not work.'
+      }], 'AI Prompt Relay must be enabled for this tool to function. Set allowAi: yes in the field settings.');
+    }
+  } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] missing-params report failed: ' + (e && e.message ? e.message : e)); }
   try { tool.reportValid(true); } catch (e) {}
 
-  render(val);
-  _resolveInstanceId();
-  bindEvents();
-  initConsoleCapture();
+  // 3) Render + restore — guarded; bindEvents already ran above so the tabs
+  //    stay clickable no matter what happens here.
+  try { render(val); } catch (e) { console.warn('[WEBPAGEBUILDER:INIT] render failed: ' + (e && e.message ? e.message : e)); }
+  try { _resolveInstanceId(); } catch (e) {}
   applyTheme('light');
 
   loadSessions(function() {
@@ -5655,23 +5975,25 @@ tool.onReady(function(val, fields) {
   });
 
   updateConnStatus('ok');
-  if (tool.isReadOnly()) lockUI(true);
-  updateDeveloperUI();
+  try { if (tool.isReadOnly()) lockUI(true); } catch (e) {}
+  try { updateDeveloperUI(); } catch (e) {}
 
   var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   switchTab('preview');
-  renderSections();
-  if (hasCode) runComplianceChecks();
+  try { renderSections(); } catch (e) {}
+  try { if (hasCode) runComplianceChecks(); } catch (e) {}
   loadSharedCatalog(function() {
     renderSharedPicker();
     _previewShared = _composePreviewShared();
     updatePreview(); // saved data.sections picks now have their code — refresh
   });
   loadWidgetCatalog();
-  tool.resize();
-});
+  _resize();
+}); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReady registration failed: ' + (e && e.message ? e.message : e)); }
 
-tool.onValueChange(function(v) { render(v); });
-tool.onFieldsChange(function(f) {});
-tool.onReadonlyChange(function(ro) { lockUI(ro); });
-tool.onUserChange(function() { updateDeveloperUI(); });
+try { tool.onValueChange(function(v) { render(v); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onValueChange failed: ' + (e && e.message ? e.message : e)); }
+try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onFieldsChange failed: ' + (e && e.message ? e.message : e)); }
+try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
+try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
+try { window.__wbJsEnd = true; } catch (e) {}
+/* WEBPAGEBUILDER-JS-END build 2026-10-04-7 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

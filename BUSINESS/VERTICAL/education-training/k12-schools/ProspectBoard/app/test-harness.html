@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProspectBoard - Test Harness</title>
+<link rel="stylesheet" href="ProspectBoard.css">
+<style>
+  body { margin: 0; background: #eef1f5; }
+  #th-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #16213a; color: #fff; font: 13px "Segoe UI", sans-serif; }
+  #th-bar button { font: inherit; padding: 4px 10px; border-radius: 5px; border: 1px solid #556; background: #24324e; color: #fff; cursor: pointer; }
+  #th-bar .th-info { color: #b9c3d6; font-size: 12px; }
+  #th-host { background: #fff; margin: 10px; border-radius: 8px; border: 1px solid #d8dce3; min-height: 640px; }
+  #th-log { margin: 10px; padding: 8px 12px; background: #0f172a; color: #7dd3fc; font: 11px Consolas, monospace; border-radius: 6px; max-height: 130px; overflow-y: auto; white-space: pre-wrap; }
+  #th-toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+  .th-toast { background: #16213a; color: #fff; font: 13px "Segoe UI", sans-serif; padding: 9px 14px; border-radius: 8px; border-left: 4px solid #2dd4bf; box-shadow: 0 4px 14px rgba(0,0,0,.25); max-width: 360px; }
+  .th-toast.th-warning { border-left-color: #f59e0b; }
+  .th-toast.th-error { border-left-color: #ef4444; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>ProspectBoard harness</strong>
+  <button id="th-role">role: admin</button>
+  <button id="th-user">user: Admin User</button>
+  <button id="th-ro">read-only: off</button>
+  <button id="th-sample">Load sample</button>
+  <button id="th-reset">Reset storage</button>
+  <button id="th-dump">Dump objects</button>
+  <span class="th-info" id="th-info"></span>
+</div>
+<div id="th-host">
+<div class="prb-app" id="prb-app">
+  <header class="prb-header">
+    <div class="prb-head-main">
+      <h1 class="prb-title">Prospect Board</h1>
+      <p class="prb-subtitle">Track new families and convert them to enrolled students.</p>
+    </div>
+    <div class="prb-head-side">
+      <span class="prb-save-note">Changes save automatically</span>
+    </div>
+  </header>
+
+  <nav class="prb-tabs" id="prb-tabs">
+    <button class="prb-tab active" data-act="tab" data-tab="dashboard">Dashboard</button>
+    <button class="prb-tab" data-act="tab" data-tab="prospects">Prospects</button>
+    <button class="prb-tab" data-act="tab" data-tab="mytasks">My tasks</button>
+    <button class="prb-tab" data-act="tab" data-tab="distribution" id="prb-tab-distribution">Distribution</button>
+  </nav>
+
+  <main class="prb-body">
+
+    <section class="prb-pane" id="pane-dashboard">
+      <section class="prb-kpi-band">
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-prospects">0</div><div class="prb-kpi-label">Prospects</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-open">0</div><div class="prb-kpi-label">Open follow-ups</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-today">0</div><div class="prb-kpi-label">To reach today</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-calls">0</div><div class="prb-kpi-label">Calls logged (7 days)</div></div>
+      </section>
+      <section class="prb-card">
+        <div class="prb-card-title">Call rounds
+          <span class="prb-counts" id="prb-round-label"></span>
+        </div>
+        <div id="prb-dashboard-rounds"></div>
+      </section>
+      <div class="prb-grid-2">
+        <section class="prb-card">
+          <div class="prb-card-title">Recent activity</div>
+          <div id="prb-recent-calls"></div>
+        </section>
+        <section class="prb-card">
+          <div class="prb-card-title">Open tasks by team member</div>
+          <div id="prb-workload"></div>
+        </section>
+      </div>
+      <section class="prb-card">
+        <div class="prb-card-title">My open tasks</div>
+        <div id="prb-my-open-tasks"></div>
+      </section>
+    </section>
+
+    <section class="prb-pane" id="pane-prospects" hidden>
+      <section class="prb-card prb-toolbar">
+        <div class="prb-search-wrap">
+          <input class="prb-input" id="prb-search" placeholder="Search name, parent or phone...">
+        </div>
+        <button class="prb-btn prb-btn-primary" id="prb-add" data-act="prospect-add">+ New prospect</button>
+        <button class="prb-btn" data-act="import-open">Import</button>
+        <button class="prb-btn" data-act="export-csv">Export CSV</button>
+        <button class="prb-btn" data-act="export-json">Export JSON</button>
+      </section>
+      <div class="prb-split">
+        <aside class="prb-card prb-filters">
+          <div class="prb-filter-title">Status</div>
+          <div class="prb-chips prb-chips-vertical" id="prb-chips"></div>
+          <div class="prb-filter-title">Source</div>
+          <select class="prb-select" id="prb-source-filter"><option value="all">All sources</option></select>
+        </aside>
+        <section class="prb-card prb-list-card">
+          <div class="prb-card-title">All prospects
+            <span class="prb-counts" id="prb-counts"></span>
+          </div>
+          <div id="prb-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="prb-pane" id="pane-mytasks" hidden>
+      <section class="prb-card">
+        <div class="prb-card-title">My tasks
+          <span class="prb-counts" id="prb-my-task-counts"></span>
+        </div>
+        <p class="prb-hint" style="margin:0 0 10px">Follow-ups assigned to you. Tick one off when the contact is done - logging the call in the pipeline also completes the task.</p>
+        <div class="prb-chips" id="prb-mytask-chips"></div>
+        <div id="prb-my-task-list"></div>
+      </section>
+    </section>
+
+    <section class="prb-pane" id="pane-distribution" hidden>
+      <section class="prb-card">
+        <div class="prb-card-title">Task distribution
+          <span class="prb-counts" id="prb-task-counts"></span>
+        </div>
+        <p class="prb-hint" style="margin:0 0 10px">Call in rounds until every family gives a solid answer. Each round assigns only the families that still have no decision. Finish every call of the active round before starting the next one.</p>
+        <div class="prb-team-row">
+          <span class="prb-label">Team:</span>
+          <div class="prb-team-chips" id="prb-team-chips"></div>
+        </div>
+        <div class="prb-dist-tabs">
+          <button class="prb-dist-tab active" data-act="dist-view" data-id="progress">Round progress</button>
+          <button class="prb-dist-tab" data-act="dist-view" data-id="results">Round results</button>
+        </div>
+        <div id="prb-view-progress">
+          <div class="prb-task-actions">
+            <button class="prb-btn prb-btn-primary prb-btn-sm" data-act="round-start" id="prb-btn-round-start">Start call round</button>
+            <button class="prb-btn prb-btn-sm" data-act="task-distribute">Auto-assign round-robin</button>
+            <select class="prb-select prb-filter-select" id="prb-task-assignee-filter" data-act="task-assignee-filter"><option value="">All assignees</option></select>
+            <select class="prb-select prb-filter-select" id="prb-task-status-filter" data-act="task-status-filter">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="done">Done</option>
+              <option value="skipped">Skipped</option>
+            </select>
+          </div>
+          <div class="prb-round-status" id="prb-round-status"></div>
+          <div id="prb-task-list"></div>
+        </div>
+        <div id="prb-view-results" hidden>
+          <div id="prb-round-report"></div>
+          <div id="prb-round-history"></div>
+        </div>
+      </section>
+    </section>
+
+  </main>
+
+    <div class="prb-modal-overlay" id="prb-modal-overlay">
+    <div class="prb-modal">
+      <div class="prb-modal-title" id="prb-modal-title">Title</div>
+      <div class="prb-modal-body" id="prb-modal-body"></div>
+      <div class="prb-modal-foot" id="prb-modal-foot"></div>
+    </div>
+  </div>
+</div>
+<div id="th-log"></div>
+<div id="th-toasts"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "prb_test_value_v1";
+  var OBJECTS_KEY = "prb_test_objects_v1";
+
+  function thLog(message) {
+    var log = document.getElementById("th-log");
+    log.textContent = (log.textContent ? log.textContent + "\n" : "") + message;
+  }
+
+  function showToast(message, severity) {
+    var box = document.getElementById("th-toasts");
+    var toast = document.createElement("div");
+    toast.className = "th-toast" + (severity === "warning" ? " th-warning" : severity === "error" ? " th-error" : "");
+    toast.textContent = message;
+    box.appendChild(toast);
+    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 4000);
+  }
+
+  function loadObjects() {
+    try { return JSON.parse(localStorage.getItem(OBJECTS_KEY) || "[]"); } catch (e) { return []; }
+  }
+  function saveObjects(list) { localStorage.setItem(OBJECTS_KEY, JSON.stringify(list)); }
+
+  function seedObjects() {
+    if (loadObjects().length) return;
+    var folderMap = {
+      settings: "folder-0-setup", lessons: "folder-1-lessons", prospects: "folder-1-prospects",
+      students: "folder-2-students", attendance: "folder-3-attendance", progress: "folder-4-progress",
+      payments: "folder-5-payments", contacts: "folder-8-contacts", communication: "folder-6-communication"
+    };
+    saveObjects([{
+      id: "obj-settings", cmsObjectType: "weekendSchool", typeId: "folder-0-setup",
+      name: "School Settings", version: 1,
+      productData: { data_categoriesBased: { schoolSetup: { recordKind: "schoolSettings", schoolName: "Horizon Weekend School", folderMap: folderMap } } }
+    }]);
+    thLog("seeded settings object with folderMap");
+  }
+
+  var mockValue = null;
+  var readyCallback = null;
+  var valueChangeCallback = null;
+  var readonlyCallback = null;
+  var userChangeCallback = null;
+  var permittedUsersChangeCallback = null;
+  var roleState = "admin";
+  var readOnlyState = false;
+  var userNameState = "Admin User";
+  var USER_NAMES = ["Admin User", "Principal", "Teacher One", "Volunteer A"];
+  var PERMITTED_USERS = [
+    { id: "u_admin_user", name: "Admin User", email: "admin_user@school.test", roles: ["admin"] },
+    { id: "u_principal", name: "Principal", email: "principal@school.test", roles: ["editor"] },
+    { id: "u_teacher_one", name: "Teacher One", email: "teacher_one@school.test", roles: ["editor"] },
+    { id: "u_volunteer_a", name: "Volunteer A", email: "volunteer_a@school.test", roles: ["viewer"] }
+  ];
+  var params = { appObjectType: "weekendSchool", folderMapJson: "" };
+
+  function currentUser() {
+    if (roleState === "none") return null;
+    return {
+      id: "u_" + userNameState.replace(/\W+/g, "_").toLowerCase(),
+      name: userNameState,
+      email: userNameState.replace(/\W+/g, "_").toLowerCase() + "@school.test",
+      roles: [roleState],
+      effectiveAccess: { isManager: userNameState === "Admin User", isEditor: roleState === "admin" || roleState === "editor", isViewer: true }
+    };
+  }
+
+  var tool = {
+    onReady: function (cb) { readyCallback = cb; fireReady(); },
+    getValue: function () { return mockValue; },
+    setValue: function (v) { mockValue = v; localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); thLog("setValue " + JSON.stringify(v).length + " chars"); },
+    onValueChange: function (cb) { valueChangeCallback = cb; },
+    getFields: function () { return { id: "obj-prospects", cmsObjectType: "weekendSchool", typeId: "folder-1-prospects", name: "Prospect Board" }; },
+    param: function (n, d) { return params.hasOwnProperty(n) && params[n] !== "" ? params[n] : d; },
+    isReadOnly: function () { return readOnlyState; },
+    onReadonlyChange: function (cb) { readonlyCallback = cb; },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (cb) { userChangeCallback = cb; },
+    getPermittedUsers: function () { return PERMITTED_USERS; },
+    onPermittedUsersChange: function (cb) { permittedUsersChangeCallback = cb; },
+    requestSave: function (cb) { thLog("requestSave accepted"); if (cb) cb(null, true); },
+    requestObjects: function (action, callParams, cb) {
+      setTimeout(function () {
+        var objects = loadObjects();
+        if (action === "query") {
+          var filtered = objects.filter(function (o) {
+            if (!o || o.cmsObjectType !== callParams.mainObjectType) return false;
+            if (callParams.typeId && o.typeId !== callParams.typeId) return false;
+            return true;
+          });
+          cb(null, { objects: filtered });
+        } else if (action === "create") {
+          var object = {
+            id: "obj-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            cmsObjectType: callParams.mainObjectType, typeId: callParams.typeId || "folder-default",
+            name: callParams.name || "Object", productData: callParams.productData || { data_categoriesBased: {} }, version: 1
+          };
+          objects.push(object);
+          saveObjects(objects);
+          cb(null, { object: object });
+        } else if (action === "update") {
+          var target = null;
+          objects.forEach(function (o) { if (o.id === callParams.objectId) target = o; });
+          if (!target) { cb("object not found", null); return; }
+          var dcb = target.productData.data_categoriesBased || {};
+          Object.keys(callParams.productData.data_categoriesBased || {}).forEach(function (k) {
+            dcb[k] = callParams.productData.data_categoriesBased[k];
+          });
+          target.productData.data_categoriesBased = dcb;
+          target.version = (target.version || 0) + 1;
+          saveObjects(objects);
+          cb(null, { ok: true });
+        } else if (action === "delete") {
+          objects = objects.filter(function (o) { return o.id !== callParams.objectId; });
+          saveObjects(objects);
+          cb(null, { ok: true });
+        } else if (action === "batch") {
+          (callParams.operations || []).forEach(function (op) {
+            if (op.action === "create") {
+              objects.push({
+                id: "obj-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                cmsObjectType: op.mainObjectType, typeId: op.typeId || "folder-default",
+                name: op.name || "Object", productData: op.productData || { data_categoriesBased: {} }, version: 1
+              });
+            }
+          });
+          saveObjects(objects);
+          cb(null, { ok: true });
+        } else {
+          cb("unknown action", null);
+        }
+      }, 30);
+    },
+    notify: function (m, sev) { showToast(m, sev || "success"); },
+    resize: function () { },
+    declareOutput: function () { },
+    declareParams: function () { },
+    reportMissingParams: function () { }
+  };
+  window.tool = tool;
+
+  function dateOffsetIso(dayOffset) {
+    var d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function buildSample() {
+    var students = [
+      ["Ahmet", "Kaya"], ["Yusuf", "Demir"], ["Elif", "Yilmaz"], ["Zeynep", "Sahin"],
+      ["Mehmet", "Ozturk"], ["Fatma", "Celik"], ["Emre", "Aydin"], ["Meryem", "Dogan"],
+      ["Ali", "Korkmaz"], ["Hatice", "Aksoy"], ["Mustafa", "Yildiz"], ["Ayse", "Kurt"],
+      ["Ibrahim", "Polat"], ["Esra", "Gul"], ["Hasan", "Can"], ["Selin", "Arslan"],
+      ["Osman", "Tekin"], ["Betul", "Ozkan"], ["Murat", "Erdem"], ["Nisa", "Karaca"]
+    ];
+    var parents = [
+      "Fatma Kaya", "Ali Demir", "Selma Yilmaz", "Huseyin Sahin", "Zehra Ozturk",
+      "Murat Celik", "Elif Aydin", "Ismail Dogan", "Ayten Korkmaz", "Necati Aksoy",
+      "Sevim Yildiz", "Recep Kurt", "Gulseren Polat", "Halil Gul", "Suna Can",
+      "Bulent Arslan", "Nuran Tekin", "Kadir Ozkan", "Leyla Erdem", "Sami Karaca"
+    ];
+    var sources = ["friend", "flyer", "website", "social media", "event", "referral"];
+    var statuses = [
+      "new", "contacted", "interested", "new", "interested", "contacted",
+      "enrolled", "new", "interested", "inactive",
+      "new", "contacted", "interested", "new", "contacted", "interested",
+      "new", "contacted", "enrolled", "new"
+    ];
+    var lessons = ["Quran Level 1", "Quran Level 2", "Islamic Studies", "Quran Level 3", "Arabic Basics"];
+    var assignees = [
+      ["u_principal", "Principal"], ["u_teacher_one", "Teacher One"],
+      ["u_volunteer_a", "Volunteer A"], ["u_admin_user", "Admin User"]
+    ];
+    var channels = ["call", "call", "email", "whatsapp"];
+    var notes = [
+      "Wants to start next month.", "Asked about sibling discount.", "Needs the bus route info.",
+      "Left voicemail - try again.", "Interested in Saturday class.", "Asked about the fees.",
+      "Will visit next Sunday.", "Wants a call after 6pm.", "Asked about Quran Level 3.",
+      "No answer twice - try WhatsApp.", "Wants to enroll two siblings.", "Asked about the school calendar."
+    ];
+    var prospects = [];
+    var tasks = [];
+    var assigneeIndex = 0;
+    var round2Index = 0;
+    for (var i = 0; i < students.length; i++) {
+      var status = statuses[i];
+      var fullName = students[i][0] + " " + students[i][1];
+      var createdDay = -(42 - i);
+      var callLog = [];
+      var nextCallDate = "";
+      var decision = status === "enrolled" ? "positive" : status === "inactive" ? "negative" : "none";
+      if (status === "contacted" || status === "interested") {
+        callLog.push({ at: dateOffsetIso(createdDay), note: "First contact - " + notes[i % notes.length], outcome: "none" });
+      }
+      if (status === "contacted" && i % 2 === 0) {
+        callLog.push({ at: dateOffsetIso(-3), note: "Follow-up call made this week.", outcome: "none" });
+      }
+      if (status === "interested") {
+        callLog.push({ at: dateOffsetIso(-1), note: "Second call - family is positive.", outcome: "positive" });
+        nextCallDate = dateOffsetIso(i % 2 === 0 ? 2 : -1);
+      }
+      if (status === "inactive") {
+        callLog.push({ at: dateOffsetIso(-6), note: "Family said the timing does not work this year.", outcome: "negative" });
+      }
+      if (status === "new" && i % 3 === 0) {
+        nextCallDate = dateOffsetIso(0);
+      }
+      var prospect = {
+        id: "p" + (i + 1),
+        firstName: students[i][0],
+        lastName: students[i][1],
+        parentName: parents[i],
+        parentPhone: "416-555-01" + String(i + 1).padStart(2, "0"),
+        parentEmail: i % 3 === 0 ? students[i][0].toLowerCase() + "@example.com" : "",
+        source: sources[i % sources.length],
+        interestedLessons: lessons[i % lessons.length],
+        status: status,
+        decision: decision,
+        nextCallDate: nextCallDate,
+        notes: notes[i % notes.length],
+        createdAt: dateOffsetIso(createdDay),
+        callLog: callLog
+      };
+      prospects.push(prospect);
+      // Round 1 called EVERY reachable family (not enrolled/inactive).
+      if (status === "enrolled" || status === "inactive") continue;
+      var round1Assignee = assignees[assigneeIndex % assignees.length];
+      assigneeIndex++;
+      tasks.push({
+        id: "t1-" + (i + 1),
+        prospectId: prospect.id,
+        prospectName: fullName,
+        channel: "call",
+        assigneeId: round1Assignee[0],
+        assignee: round1Assignee[1],
+        dueDate: dateOffsetIso(-10),
+        status: "done",
+        note: i % 4 === 0 ? "Reached the family - no answer, try again." : "Reached the family.",
+        round: 1,
+        createdAt: dateOffsetIso(createdDay)
+      });
+      // Round 2 calls ONLY the undecided families.
+      if (decision !== "none") continue;
+      var round2Assignee = assignees[round2Index % assignees.length];
+      round2Index++;
+      var round2Status = i % 3 === 2 ? "done" : "open";
+      tasks.push({
+        id: "t2-" + (i + 1),
+        prospectId: prospect.id,
+        prospectName: fullName,
+        channel: i % 3 === 1 ? "whatsapp" : "call",
+        assigneeId: round2Assignee[0],
+        assignee: round2Assignee[1],
+        dueDate: i % 3 === 2 ? dateOffsetIso(-1) : (i % 2 === 0 ? dateOffsetIso(0) : dateOffsetIso(2)),
+        status: round2Status,
+        note: round2Status === "done" ? "Talked - no decision yet." : "",
+        round: 2,
+        createdAt: dateOffsetIso(-4)
+      });
+    }
+    if (window.location.search.indexOf("round2done=1") > -1) {
+      tasks.forEach(function (task) { if (task.round === 2) task.status = "done"; });
+      thLog("QA: round 2 marked complete");
+    }
+    thLog("sample: " + prospects.length + " prospects, " + tasks.length + " tasks (round 1 + round 2)");
+    return { version: 1, recordKind: "prospectBoard", seeded: true, currentRound: 2, tasks: tasks, prospects: prospects };
+  }
+
+  function fireReady() {
+    if (!readyCallback) return;
+    mockValue = null;
+    if (window.location.search.indexOf("sample=1") > -1) {
+      localStorage.removeItem(STORAGE_KEY);
+      seedObjects();
+      mockValue = buildSample();
+    } else {
+      try { mockValue = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (e) { mockValue = null; }
+    }
+    readyCallback(mockValue, tool.getFields());
+    var actionsParam = new URLSearchParams(window.location.search).get("actions");
+    if (actionsParam) {
+      var actionSpecs = actionsParam.indexOf(";") > -1 ? actionsParam.split(";") : actionsParam.split(",");
+      var actionIndex = 0;
+      var runNextAction = function () {
+        if (actionIndex >= actionSpecs.length) return;
+        var spec = actionSpecs[actionIndex++].split(":");
+        var actionName = spec[0];
+        if (actionName === "set-input") {
+          var inputEl = document.getElementById(spec[1]);
+          if (inputEl) inputEl.value = spec[2] || "";
+          runNextAction();
+          return;
+        }
+        if (actionName === "set-select") {
+          var selectEl = document.getElementById(spec[1]);
+          if (selectEl) {
+            selectEl.value = spec[2] || "";
+            try { selectEl.dispatchEvent(new Event("change", { bubbles: true })); } catch (e) {}
+          }
+          runNextAction();
+          return;
+        }
+        var button;
+        if (actionName === "tab") {
+          button = document.querySelector('[data-act="tab"][data-tab="' + spec[1] + '"]');
+        } else if (actionName === "dist-view") {
+          button = document.querySelector('[data-act="dist-view"][data-id="' + spec[1] + '"]');
+        } else if (actionName === "click-id") {
+          button = document.getElementById(spec[1]);
+        } else {
+          button = document.querySelector('[data-act="' + actionName + '"]');
+        }
+        if (button) button.click();
+        setTimeout(runNextAction, 250);
+      };
+      setTimeout(runNextAction, 500);
+    }
+  }
+
+  var roleButton = document.getElementById("th-role");
+  var userButton = document.getElementById("th-user");
+  var roButton = document.getElementById("th-ro");
+  var ROLES = ["admin", "editor", "viewer", "none"];
+
+  roleButton.addEventListener("click", function () {
+    var i = ROLES.indexOf(roleState);
+    roleState = ROLES[(i + 1) % ROLES.length];
+    roleButton.textContent = "role: " + roleState;
+    if (userChangeCallback) userChangeCallback(currentUser());
+  });
+  userButton.addEventListener("click", function () {
+    var i = USER_NAMES.indexOf(userNameState);
+    userNameState = USER_NAMES[(i + 1) % USER_NAMES.length];
+    userButton.textContent = "user: " + userNameState;
+    if (userChangeCallback) userChangeCallback(currentUser());
+  });
+  roButton.addEventListener("click", function () {
+    readOnlyState = !readOnlyState;
+    roButton.textContent = "read-only: " + (readOnlyState ? "on" : "off");
+    if (readonlyCallback) readonlyCallback(readOnlyState);
+  });
+  document.getElementById("th-sample").addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.href = window.location.pathname + "?sample=1";
+  });
+  document.getElementById("th-reset").addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(OBJECTS_KEY);
+    fireReady();
+  });
+  document.getElementById("th-dump").addEventListener("click", function () {
+    thLog("objects: " + JSON.stringify(loadObjects(), null, 2));
+  });
+  document.getElementById("th-info").textContent = "field id prospectBoard | appObjectType=weekendSchool";
+})();
+</script>
+<script src="ProspectBoard.js"></script>
+</body>
+</html>

@@ -488,7 +488,7 @@ function openExportWindow(html, filename) {
 function openFallbackWindow(html) {
   var w = window.open('', '_blank');
   if (!w) { tool.notify('Lütfen pop-up engelleyiciyi devre dışı bırakın', 'warning'); return; }
-  w.document.write('<html><head><meta charset="UTF-8"><title>Future Bridge Academy</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0}.slide-card{border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px;margin-bottom:8px;background:#fff;page-break-inside:avoid}.page-break{page-break-after:always}</style></head><body>' + html + '<script>window.onload=function(){window.print();}</script></body></html>');
+  w.document.write('<html><head><meta charset="UTF-8"><title>Future Bridge Academy</title><style>body{font-family:Arial,sans-serif;margin:0;padding:0}.slide-card{border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px;margin-bottom:8px;background:#fff;page-break-inside:avoid}.page-break{page-break-after:always}</style></head><body>' + html + '<scr' + 'ipt>window.onload=function(){window.print();}</scr' + 'ipt></body></html>');
   w.document.close();
 }
 

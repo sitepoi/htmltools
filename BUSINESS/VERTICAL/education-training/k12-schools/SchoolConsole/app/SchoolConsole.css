@@ -1,0 +1,104 @@
+/* SchoolConsole styles */
+.sco-app {
+  --sco-ink: #1f2430;
+  --sco-muted: #5c6370;
+  --sco-line: #d8dce3;
+  --sco-panel: #ffffff;
+  --sco-bg: #f3f5f8;
+  --sco-accent: #0f766e;
+  --sco-accent-soft: #e6f2f0;
+  --sco-danger: #b3261e;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--sco-ink);
+  background: var(--sco-bg);
+  min-height: 100%;
+}
+.sco-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--sco-line);
+  background: var(--sco-panel);
+}
+.sco-title { margin: 0; font-size: 19px; font-weight: 600; }
+.sco-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--sco-muted); }
+.sco-tabs { display: flex; gap: 4px; padding: 10px 22px 0; background: var(--sco-panel); border-bottom: 1px solid var(--sco-line); }
+.sco-tab {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: none;
+  cursor: pointer;
+  color: var(--sco-muted);
+}
+.sco-tab.active { color: var(--sco-accent); border-bottom-color: var(--sco-accent); font-weight: 600; }
+.sco-body { padding: 16px 22px 40px; max-width: 1100px; margin: 0 auto; }
+.sco-pane { display: none; }
+.sco-pane.active { display: block; }
+.sco-card { background: var(--sco-panel); border: 1px solid var(--sco-line); border-radius: 8px; padding: 14px 16px; }
+.sco-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.sco-search { max-width: 240px; }
+.sco-input, .sco-textarea, .sco-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border: 1px solid var(--sco-line);
+  border-radius: 6px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+.sco-input:focus, .sco-textarea:focus, .sco-select:focus { outline: 2px solid var(--sco-accent); outline-offset: -1px; }
+.sco-label { font-size: 12px; color: var(--sco-muted); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.sco-btn {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: #e8eaee;
+  color: var(--sco-ink);
+}
+.sco-btn-primary { background: var(--sco-accent); color: #fff; }
+.sco-btn-outline { background: #fff; border-color: var(--sco-accent); color: var(--sco-accent); }
+.sco-btn-sm { padding: 4px 10px; font-size: 12px; }
+.sco-btn:disabled { opacity: .5; cursor: default; }
+.sco-hint { font-size: 12px; color: var(--sco-muted); }
+.sco-empty { color: var(--sco-muted); font-size: 13px; padding: 10px 2px; }
+.sco-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sco-table th, .sco-table td { text-align: left; padding: 7px 8px; border-top: 1px solid var(--sco-line); }
+.sco-table th { font-size: 11px; color: var(--sco-muted); text-transform: uppercase; letter-spacing: .3px; border-top: none; }
+.sco-table tr:hover td { background: #f7f9fb; }
+.sco-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  background: #e3e8f0;
+  color: #334;
+}
+.sco-pill.good { background: #e2f2e4; color: #1e6b32; }
+.sco-pill.warn { background: #fdf0d5; color: #8a5a00; }
+.sco-pill.bad { background: #fbe3e3; color: #8a1f1f; }
+.sco-link { color: var(--sco-accent); cursor: pointer; font-weight: 600; background: none; border: none; padding: 0; font: inherit; }
+.sco-lesson-block { margin-bottom: 14px; }
+.sco-lesson-block-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.sco-report-text {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: #f7f9fb;
+  border: 1px solid var(--sco-line);
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 180px;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .sco-search { max-width: 100%; }
+}

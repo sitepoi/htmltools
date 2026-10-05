@@ -1,0 +1,203 @@
+<!-- Prospect Board - marketing webpage fragment.
+     SSOT: ssot.html - this fragment retells the SSOT; when they disagree,
+     the SSOT wins. Updated: 2026-10-04.
+
+     WEBPAGE DESIGN SYSTEM (stable, shared by every tool page)
+     - Design + behavior come from _docs/assets/webpage.css + webpage.js
+       (linked below). The design is IDENTICAL across all tool pages - pages
+       pasted together on the website never fight.
+     - Each tool expresses its own identity ONLY through the accent colors
+       in the small inline <style> below (--wp-accent / --wp-accent-2),
+       extracted from the tool's own CSS --primary when the page is built.
+     - Customize the DESIGN once in _docs/assets/webpage.css; customize a
+       tool's COLOR here.
+     - CODE PROTECTION: the public page carries SCREENSHOTS ONLY - the
+       gallery band below is the "demo". The tool's HTML/CSS/JS is NEVER
+       embedded in this page, so no visitor, scraper or AI can reach the
+       code from here. Never add iframes, <script> of tool code, or code
+       blocks to this file.
+     - Screenshots live in docs/screenshots/ (captured by
+       npm run screenshots -- <ToolName>; 5-10 shots = the gallery) and
+       are used in the highlight rows and the gallery band.
+     - For the website: paste the WHOLE file, or run
+       `npm run webpage:export -- <ToolName>` to get a fully self-contained
+       copy with the shared css/js inlined. Replace the two [CTA link]s.
+-->
+<style>
+  .wp-page { --wp-accent: #4f46e5; --wp-accent-2: #3932a5; }
+</style>
+<link rel="stylesheet" href="../../../../../../_docs/assets/webpage.css" />
+<script src="../../../../../../_docs/assets/webpage.js" defer="defer"></script>
+<div class="wp-page">
+
+  <!-- HERO - full width -->
+  <section class="wp-hero">
+    <span class="wp-eyebrow">[Eyebrow - e.g. New in your app]</span>
+    <h1>[Headline - the value in one strong sentence]</h1>
+    <p class="wp-hero-sub">[Subheadline - one or two sentences expanding the promise.]</p>
+    <div class="wp-hero-actions">
+      <a class="wp-btn wp-btn-primary" href="[CTA link]">[Primary button text]</a>
+      <a class="wp-btn wp-btn-ghost" href="#wp-demo">See it in action</a>
+    </div>
+    <div class="wp-trust">
+      <span>[Trust point 1]</span><span>[Trust point 2]</span><span>[Trust point 3]</span>
+    </div>
+  </section>
+
+  <!-- GENERATED-START - generate-docs.js replaces the content between the two markers -->
+  <!-- STATS - overlapping the hero edge -->
+  <div class="wp-container">
+    <div class="wp-stats">
+      <div class="wp-stats-grid">
+        <div class="wp-stat"><b>[Number]</b><span>[Label]</span></div>
+        <div class="wp-stat"><b>[Number]</b><span>[Label]</span></div>
+        <div class="wp-stat"><b>[Number]</b><span>[Label]</span></div>
+        <div class="wp-stat"><b>[Number]</b><span>[Label]</span></div>
+      </div>
+    </div>
+
+    <!-- BENEFITS -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Why Prospect Board</span>
+        <h2>[Benefits heading]</h2>
+        <p>[One line under the heading.]</p>
+      </div>
+      <div class="wp-grid-3">
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+          <h3>[Benefit 1]</h3><p>[Why it matters.]</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6z"/></svg></div>
+          <h3>[Benefit 2]</h3><p>[Why it matters.]</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+          <h3>[Benefit 3]</h3><p>[Why it matters.]</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+          <h3>[Benefit 4]</h3><p>[Why it matters.]</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h3>[Benefit 5]</h3><p>[Why it matters.]</p>
+        </div>
+        <div class="wp-card">
+          <div class="wp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/></svg></div>
+          <h3>[Benefit 6]</h3><p>[Why it matters.]</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HIGHLIGHT ROWS - real screenshots from docs/screenshots/ -->
+    <section class="wp-section">
+      <div class="wp-split">
+        <div class="wp-visual"><img src="" alt="[Feature Name] - screenshot 1" loading="lazy" /></div>
+        <div>
+          <h2>[Highlight 1 heading]</h2>
+          <p>[Highlight 1 description.]</p>
+          <ul class="wp-checklist">
+            <li>[Point 1]</li>
+            <li>[Point 2]</li>
+            <li>[Point 3]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="wp-split wp-reverse">
+        <div class="wp-visual"><img src="" alt="[Feature Name] - screenshot 2" loading="lazy" /></div>
+        <div>
+          <h2>[Highlight 2 heading]</h2>
+          <p>[Highlight 2 description.]</p>
+          <ul class="wp-checklist">
+            <li>[Point 1]</li>
+            <li>[Point 2]</li>
+            <li>[Point 3]</li>
+          </ul>
+        </div>
+      </div>
+      
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Get started</span>
+        <h2>[How it works heading]</h2>
+        <p>[One line under the heading.]</p>
+      </div>
+      <div class="wp-steps">
+        <div class="wp-step"><div class="wp-step-num">1</div><h3>[Step 1]</h3><p>[What happens.]</p></div>
+        <div class="wp-step"><div class="wp-step-num">2</div><h3>[Step 2]</h3><p>[What happens.]</p></div>
+        <div class="wp-step"><div class="wp-step-num">3</div><h3>[Step 3]</h3><p>[What happens.]</p></div>
+      </div>
+    </section>
+
+    <!-- COMPARISON -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <h2>[How it compares]</h2>
+        <p>[One line under the heading.]</p>
+      </div>
+      <div class="wp-table-wrap">
+        <table>
+          <thead><tr><th></th><th>The usual way</th><th>Prospect Board</th></tr></thead>
+          <tbody>
+            <tr><td>[Dimension 1]</td><td class="wp-no">✕ [What others offer]</td><td class="wp-yes">✓ [What we offer]</td></tr>
+            <tr><td>[Dimension 2]</td><td class="wp-no">✕ [What others offer]</td><td class="wp-yes">✓ [What we offer]</td></tr>
+            <tr><td>[Dimension 3]</td><td class="wp-no">✕ [What others offer]</td><td class="wp-yes">✓ [What we offer]</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- QUOTE / TESTIMONIALS -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <span class="wp-section-eyebrow">Testimonials</span>
+        <h2>[Testimonials heading]</h2>
+      </div>
+      <div class="wp-testimonials">
+        <div class="wp-testimonial"><div class="wp-stars">★★★★★</div><p>“[Quote 1 - the outcome delivered.]”</p><cite>[Name], [Role] at [Company]</cite></div>
+        <div class="wp-testimonial"><div class="wp-stars">★★★★★</div><p>“[Quote 2 - the outcome delivered.]”</p><cite>[Name], [Role] at [Company]</cite></div>
+        <div class="wp-testimonial"><div class="wp-stars">★★★★★</div><p>“[Quote 3 - the outcome delivered.]”</p><cite>[Name], [Role] at [Company]</cite></div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="wp-section">
+      <div class="wp-section-head">
+        <h2>[Buyer questions]</h2>
+      </div>
+      <div class="wp-faq">
+        <details><summary>[Question 1]</summary><p>[Answer 1]</p></details>
+        <details><summary>[Question 2]</summary><p>[Answer 2]</p></details>
+        <details><summary>[Question 3]</summary><p>[Answer 3]</p></details>
+      </div>
+    </section>
+  </div>
+  <!-- GENERATED-END -->
+
+  <!-- SCREENSHOT GALLERY - images only (the tool's code NEVER ships to a public page) -->
+  <section class="wp-section">
+    <div class="wp-container">
+      <div class="wp-gallery-band" id="wp-demo">
+        <h2>See it in action</h2>
+        <p>Browse real screenshots of Prospect Board with sample data - click any image to open it full size.</p>
+        <div class="wp-gallery-grid">
+          <p class="wp-gallery-empty">Screenshots are being prepared - check back soon.</p>
+        </div>
+        <p class="wp-gallery-note">Screenshots show the tool with mock data - the real tool connects to your own account. <a href="[CTA link]">Get Prospect Board</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA - full width -->
+  <section class="wp-cta">
+    <h2>[Closing headline]</h2>
+    <p>[One sentence nudge.]</p>
+    <a class="wp-btn wp-btn-primary" href="[CTA link]">[Button text]</a>
+  </section>
+
+</div>

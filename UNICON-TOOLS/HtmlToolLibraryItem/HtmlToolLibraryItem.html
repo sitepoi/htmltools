@@ -5,7 +5,7 @@
         <div class="htl-logo-mark">T</div>
         <div>
           <h1>HTML Tool Item Editor</h1>
-          <p>Details and code of one CMS html-tool, saved back to this record's fields</p>
+          <p>Details, code and documents of one CMS html-tool, kept in this tool's own saved value</p>
         </div>
       </div>
       <div class="htl-header-actions">
@@ -27,23 +27,15 @@
       <button class="htl-tab" data-tab="docs">Docs</button>
       <button class="htl-tab" data-tab="screenshots">Screenshots</button>
       <button class="htl-tab" data-tab="versions">Versions</button>
-      <button class="htl-tab" data-tab="synclogs">Sync &amp; Logs</button>
+      <button class="htl-tab" data-tab="synclogs">Logs</button>
     </nav>
-  </div>
-
-  <div class="htl-banner" id="htl-fields-banner" style="display:none">
-    <span id="htl-fields-banner-text"></span>
-    <div class="htl-banner-actions">
-      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-pull">⇩ Import from fields</button>
-      <button class="htl-btn htl-btn-ghost htl-btn-sm" id="htl-btn-banner-dismiss">Dismiss</button>
-    </div>
   </div>
 
   <main class="htl-main">
     <section class="htl-pane" id="pane-details">
       <div class="htl-card">
         <h2>Tool details</h2>
-        <p class="htl-hint">Field IDs match your Tool Definition app exactly - existing values load here automatically and edits write back to the same fields.</p>
+        <p class="htl-hint">These values are stored in this tool's own saved value - edit and they stage automatically.</p>
         <div class="htl-form-grid">
           <div class="htl-field">
             <label for="htl-f-toolName">Tool name <span class="htl-required">*</span></label>
@@ -63,10 +55,6 @@
           <div class="htl-field htl-field-wide">
             <label for="htl-f-toolDescription">Description</label>
             <textarea class="htl-textarea" id="htl-f-toolDescription" spellcheck="false" placeholder="What the tool does and what value it stores."></textarea>
-          </div>
-          <div class="htl-field htl-field-wide">
-            <label>Linked CMS field IDs</label>
-            <p class="htl-hint">Saved to these sibling fields: <span class="htl-field-id-list" id="htl-field-id-list"></span></p>
           </div>
         </div>
       </div>
@@ -291,16 +279,11 @@
 
     <section class="htl-pane" id="pane-synclogs" style="display:none">
       <div class="htl-card">
-        <h2>Field sync</h2>
-        <p class="htl-hint">Edits auto-save to this record's CMS fields as you type - the form Save button still commits them. Use Import to overwrite the editor with the form field values.</p>
-        <p class="htl-hint" id="htl-sync-note">Auto-saves to CMS fields as you edit.</p>
-        <div class="htl-sync-actions">
-          <button class="htl-btn htl-btn-ghost" id="htl-btn-pull">⇩ Import from form fields</button>
-          <button class="htl-btn htl-btn-ghost" id="htl-btn-check-js">✓ Check JS</button>
-        </div>
+        <h2>Activity log</h2>
+        <p class="htl-hint">Recent actions of this tool - pushes, pulls, version snapshots and uploads. Memory-only: nothing here is stored in the CMS.</p>
       </div>
-      <details class="htl-debug" open>
-        <summary>Diagnostics log - open to see the field-import steps</summary>
+      <details class="htl-debug">
+        <summary>Diagnostics log</summary>
         <pre class="htl-debug-log" id="htl-debug-log">(no entries yet)</pre>
       </details>
     </section>

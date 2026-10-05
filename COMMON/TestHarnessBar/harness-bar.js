@@ -3,7 +3,7 @@
 
    HOW TO USE (in any tool's test-harness.html):
      1. <link rel="stylesheet" href="<relative path>/COMMON/TestHarnessBar/harness-bar.css">
-     2. <script src="<relative path>/COMMON/TestHarnessBar/harness-bar.js"></script>
+     2. <script src="<relative path>/COMMON/TestHarnessBar/harness-bar.js"> (with its closing tag)
         (include both BEFORE the tool's own harness script)
      3. In the harness script, instead of building your own bar:
         HarnessBar.init({

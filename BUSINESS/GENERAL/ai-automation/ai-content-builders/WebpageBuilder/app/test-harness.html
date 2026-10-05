@@ -37,6 +37,8 @@ body { padding-top: 28px !important; margin: 0; }
   <span class="hint">Shortcut: Ctrl+Shift+Y (or click 📋)</span>
   <span class="sep">|</span>
   <span id="th-status" class="hint">Ready</span>
+  <span class="sep">|</span>
+  <span id="th-store-badge" class="hint">store: probing…</span>
 </div>
 <div id="th-dump-wrap">
   <div class="dump-title">Saved value (what tool.setValue sends to the parent CMS object):</div>
@@ -45,8 +47,8 @@ body { padding-top: 28px !important; margin: 0; }
 
 <!-- TOOL HTML INLINED (mirrors WebpageBuilder.html) -->
 <div id="app">
-  <!-- DIFF LIBRARY CDN — loaded before all other scripts (developer visual line diff in chat) -->
-  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
+  <!-- NO DIFF CDN: self-contained Myers diff lives in WebpageBuilder.js
+       (an external script stalled the CMS parser and killed the tool). -->
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
@@ -57,10 +59,11 @@ body { padding-top: 28px !important; margin: 0; }
       </div>
     </div>
     <div class="header-right">
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-7</span>
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
+      <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
   </header>
@@ -274,6 +277,7 @@ body { padding-top: 28px !important; margin: 0; }
                 <button class="btn btn-outline" id="btn-widget-refresh" title="Reload the widget list">↻ Refresh</button>
                 <button class="btn btn-outline" id="btn-form-builder">📝 Form Builder</button>
               </div>
+              <div class="widget-lib-source" id="widget-lib-status">🛰 Checking library connection…</div>
               <p class="gen-hint">Widgets come from the application store (widgetCatalogUrl). Search and add one as a data-gw-app island.</p>
             </div>
           </div>
@@ -349,6 +353,10 @@ body { padding-top: 28px !important; margin: 0; }
     <div class="modal-body">
       <input type="text" id="widget-search" class="widget-search" placeholder="Search by name or id… (e.g. gallery, reviews)" autocomplete="off" />
       <div class="widget-lib-source" id="widget-lib-source"></div>
+      <div class="widget-lib-meta">
+        <span id="widget-lib-count"></span>
+        <button class="btn btn-sm btn-outline" id="btn-widget-more" style="display:none">⬇ Load more</button>
+      </div>
       <div id="widget-library-list" class="widget-library-list"></div>
     </div>
   </div>
@@ -500,6 +508,11 @@ CAPABILITY MAP (how to reach every platform feature):
   Theme               -&gt; --gw-color-* CSS vars + sharedCss (admin-owned)
   SEO / discovery     -&gt; seo section; /sitemap.xml, /robots.txt, /llms.txt
   Analytics           -&gt; site plugins (admin-owned); gw.track in pages
+  Shared sources      -&gt; shared-sources objects + data.sections
+                         (WebsiteSharedSourceBuilder, Section 12.6)
+  Widget library      -&gt; website-html-tool-library-applicationstore catalog
+                         (applicationstore.uniconhub.com) + gw-widgets
+                         registry + [data-gw-app] islands (Section 11.1)
 
 If the page needs an operation, a flow or an email template that the user
 has not confirmed exists, still generate the page but append:
@@ -615,6 +628,9 @@ has not confirmed exists, still generate the page but append:
 - EXTERNAL scripts (`&lt;script src="..."&gt;`) in the html are NOT supported.
   Never load frameworks/CDN JS (no jQuery, no React, no lodash). Plain
   vanilla JavaScript only. External images/fonts by absolute URL are fine.
+- EMBEDS: &lt;iframe&gt; elements with absolute https URLs are ALLOWED
+  (YouTube, maps, chat widgets, calendars). Script-based embeds and any
+  external &lt;script src="..."&gt; remain FORBIDDEN.
 - Your `css` is injected GLOBALLY into the page (header, footer and other
   pages share &lt;head&gt; while yours is mounted). Scope everything:
   * give your root element a unique class (e.g. `.shop-home`) and prefix
@@ -1013,6 +1029,44 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
     return function cleanup() { /* remove listeners */ };
   });
 
+11.1 Website html tool library (application store widgets)
+- The site's website html tool library is published at
+  https://applicationstore.uniconhub.com/. Each library tool can be
+  selected as a WIDGET and added to any page as a [data-gw-app] island.
+- CATALOG API — UniconHub Public API v2 (the binding contract; v2 is ACTIVE
+  since 2026-09-24, v1 is frozen and ignored). The store publishes the
+  library as PUBLIC objects of cmsObjectType
+  `website-html-tool-library-applicationstore`
+  (https://applicationstore.uniconhub.com/objects/website-html-tool-library-applicationstore).
+  Page builders read it by asking the PARENT CMS: tool.requestObjects('query',
+  { mainObjectType: 'website-html-tool-library-applicationstore' }) — the CMS
+  host reaches the store API and returns the catalog into the tool iframe
+  (add the type to allowedObjectTypes, role: reader). DIRECT fallback:
+  GET https://applicationstore.uniconhub.com/api/v2/objects/website-html-tool-library-applicationstore
+  with header `x-api-key: &lt;api key&gt;` (or `Authorization: Bearer &lt;key&gt;`).
+  Health probe: GET /api/v2/health (no auth) -&gt;
+  { success:true, status:"ok", apiVersion:"v2" }.
+  Failures: { success:false, error:{ code, message } }
+  (401 = MISSING_API_KEY — set the api key).
+  Each ObjectRecord declares the island and its metadata as FIELD VALUES in
+  productData.data_categoriesBased: gwAppName (island), title, description,
+  category, configSchema (optional, generates data-gw-config), ssrHtml.
+- Search and pagination over the catalog are CLIENT-SIDE over the returned
+  list (server-side filters/sort/limit are not implemented in the public
+  API yet — CMS Application System Reference 7.2).
+- Widget code lives in `gw-widgets` objects (Section 12.6): the object's
+  data.gwApp declares the island name and a config schema; its
+  data.htmlPage.code.{html,css,js} must call gw.apps.register once.
+- The registry (all active gw-widgets objects) is loaded site-wide as a
+  MANDATORY shared source, so islands mount on every page that uses them.
+- Pages NEVER copy widget code; they only embed the island div with a
+  config built from the widget's configSchema.
+- SSR: the platform server-renders page HTML+CSS. Widgets mount
+  client-side after hydration; for SEO-relevant widgets the gw-widgets
+  object should provide data.ssrHtml (initial server-rendered markup that
+  the widget replaces/hydrates). Without data.ssrHtml the island renders
+  as an empty placeholder until hydrated.
+
 ----------------------------------------------------------------------------
 12. TEMPLATES AND REUSABLE CONTENT (build flexible pages)
 ----------------------------------------------------------------------------
@@ -1077,6 +1131,30 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
   data (gw.db.query { language: gw.language }; /api/search lang=...).
 - Generate one page object per language when text differs; all variants
   share the same contentId (siblings — see Section 1).
+
+12.6 Shared sources (shared-sources objects)
+- A shared source is an object of type `shared-sources` carrying the SAME
+  three-block contract as a page: data.htmlPage.code.{html,css,js}.
+- Two modes, declared in data.sharedMode:
+  * "mandatory" — the platform injects this source into EVERY page of the
+    site automatically: its html is composed before the page content, its
+    css after default-settings.sharedCss but before page css, its js
+    before page js. Use for site-wide behavior (widget registries, common
+    helpers, announcement strips).
+  * "optional" — pages opt in by adding
+    { cmsObjectType: "shared-sources", objectId } to their data.sections
+    (Section 12.3 — same composition rules: ordered, flat, max 20,
+    composed before the page's own content).
+- Shared sources contribute html/css/js ONLY — no SEO, no chrome. Editing
+  a shared source updates every page using it.
+- Scope each shared source's CSS under its own wrapper class (the gw-
+  prefix stays reserved — Section 3.4). Its JS must be idempotent and
+  guarded (it runs on every page and every SPA navigation).
+- Mandatory sources must stay LIGHT (they run site-wide on every page).
+- Shared sources are authored with the WebsiteSharedSourceBuilder
+  html-tool (or any tool writing the same object shape). Pages created
+  with the Webpage Builder pick optional sources via their "Shared
+  Sources" setting (data.sections).
 
 ----------------------------------------------------------------------------
 13. PAGE STRUCTURE + COOKBOOK (compose, don't invent)
@@ -1183,6 +1261,14 @@ Rules:
   over hard-coded locales. Static text should match the page's language.
 - headCode / bodyStartCode / bodyEndCode / plugins (analytics) are
   ADMIN-owned site settings — the generator NEVER emits them.
+- Google Analytics / Facebook pixel / similar snippets go ONLY in those
+  admin-owned site settings. Pages never include analytics scripts — they
+  fire gw.track(event, data) / gw.trackPageView() instead (guarded no-ops
+  when the site has no analytics configured).
+- CDN JS libraries cannot be loaded from pages (guardrail 5). Site-level
+  needs are covered by VENDORING the library into a mandatory shared
+  source (Section 12.6) or by an admin-owned allowlist (if the platform
+  adds one) — never from page code.
 
 ----------------------------------------------------------------------------
 16. PERFORMANCE, QUALITY AND LIMITS SUMMARY
@@ -1220,6 +1306,30 @@ Rules:
 [ ] Chrome (header/footer) is light, scoped, idempotent, SPA-nav links.
 [ ] Email templates use {{key}} placeholders (full document allowed there).
 [ ] Language variants share contentId; text branched on gw.language.
+[ ] Shared sources referenced via data.sections are flat/ordered/max 20
+    (shared-sources objects, Section 12.6).
+[ ] Widget islands come from built-ins or the widget library
+    (applicationstore.uniconhub.com); widget code is never copied into
+    pages; SEO-relevant widgets provide data.ssrHtml (Section 11.1).
+[ ] No analytics/CDN scripts in page code (admin site settings only).
+[ ] Output is deterministic and version-stamped (SSR/caching, Section 18).
+
+----------------------------------------------------------------------------
+18. SSR AND CACHING (informational — platform-side)
+----------------------------------------------------------------------------
+- Every page is rendered server-side (SSR): the platform composes the html
+  fragment + css into the response; js runs client-side on hydration.
+- Pages are cached in Redis and Vercel CDN (and other layers if needed).
+  The cache key is derived from: site + page identity + language +
+  data.version (page version). Authenticated/gated pages are never
+  publicly cached.
+- TOOL-SIDE OBLIGATIONS (so pages never block SSR/caching):
+  * output must be deterministic and pure static three-block code;
+  * no browser-only side effects in the html/css themselves;
+  * js must be idempotent (Section 3.3) so hydration can re-run safely;
+  * bump data.version on every meaningful edit so caches invalidate.
+- The auto trace comment and --gw-* CSS variables are injected by the
+  platform server-side.
 </script>
 </div>
 
@@ -1257,8 +1367,8 @@ Rules:
     notify: function(msg, sev) { console.log('NOTIFY [' + (sev || 'info') + ']:', msg); },
     resize: function() {},
     openUrl: function(url) { window.open(url, '_blank'); },
-    declareOutput: function(s) { console.log('declareOutput:', JSON.stringify(s).substring(0, 200)); },
-    declareParams: function(p) { console.log('declareParams:', p.length, 'params'); },
+    declareOutput: function(s) { if (window.__breakDeclareOutput) throw new Error('hostile declareOutput'); console.log('declareOutput:', JSON.stringify(s).substring(0, 200)); },
+    declareParams: function(p) { if (window.__breakDeclareParams) throw new Error('hostile declareParams'); console.log('declareParams:', p.length, 'params'); },
     reportMissingParams: function(m, msg) { console.log('reportMissingParams:', m, msg); },
     requestAI: function(prompt, context, callback) {
       console.log('AI REQUEST (batch) — prompt length:', prompt.length);
@@ -1283,6 +1393,22 @@ Rules:
     requestFileContent: function(url, cb) { setTimeout(function() { cb(null, 'Mock extracted content from ' + url); }, 300); },
     requestObjects: function(action, params, cb) {
       var t = params.mainObjectType;
+      // Parent-CMS relay simulation: the tool asks the CMS for the application
+      // store catalog via requestObjects. The harness plays the parent CMS and
+      // dials the store through the live-first bridge (mock / auto / off modes
+      // behave exactly like the direct-fetch path).
+      if (t === 'website-html-tool-library-applicationstore') {
+        var storeBase = 'https://applicationstore.uniconhub.com/api/v2';
+        window.fetch(storeBase + '/objects/' + encodeURIComponent(t), { method: 'GET', headers: { Accept: 'application/json' } })
+          .then(function(res) { if (!res.ok) { cb('HTTP ' + res.status, null); return null; } return res.json(); })
+          .then(function(json) {
+            if (json === null) return;
+            var items = Array.isArray(json) ? json : ((json && (json.items || json.objects)) || []);
+            cb(null, { objects: items });
+          })
+          .catch(function(err) { cb(String((err && err.message) || err), null); });
+        return;
+      }
       var KEY;
       if (t === 'webpagebuilder-history-uniconbaseapps') KEY = 'webpagebuilder_test_history';
       else if (t === 'shared-sources') KEY = 'webpagebuilder_test_shared';
@@ -1436,14 +1562,136 @@ Rules:
 })();
 </script>
 
-<!-- TOOL JS -->
-<script src="WebpageBuilder.js"></script>
+<!-- JS-BOOT PROBE (inline in the HTML): logs this HTML build and EVERY click
+     from the HTML file itself, so a stale/missing [JS] block is provable even
+     when the tool JS never boots. The CSS also shows a red banner until the JS
+     boot sets data-wb-ready on <body>. -->
+<script>
+(function() {
+  var BUILD = '2026-10-04-7';
+  try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
+  try {
+    window.__wbHtmlProbe = true;
+    document.addEventListener('click', function(e) {
+      var t = e.target;
+      var desc = '';
+      try { desc = (t && t.tagName ? t.tagName.toLowerCase() : '?') + (t && t.id ? '#' + t.id : '') + (t && t.className && typeof t.className === 'string' && t.className.trim() ? '.' + t.className.trim().split(/\s+/)[0] : ''); } catch (e2) {}
+      try { console.log('[WEBPAGEBUILDER:CLICK-PROBE] click on ' + desc + (window.__wbBootDone ? '' : ' | NOTE: main JS has NOT booted')); } catch (e3) {}
+    }, true);
+  } catch (e) {
+    try { console.warn('[WEBPAGEBUILDER:HTML-PROBE] failed: ' + (e && e.message ? e.message : e)); } catch (e3) {}
+  }
+})();
+</script>
+
+<!-- STORE API BRIDGE — LIVE FIRST (UniconHub Public API v2): store calls really dial
+     https://applicationstore.uniconhub.com/api/v2/* (GET {base}/objects/{type} + GET {base}/health).
+     The 250 generated v2-shaped ObjectRecords below are ONLY a fallback, served when the live API
+     fails (404 / CORS / network). Controls: window.__storeMode = 'auto' (default) | 'mock' | 'off';
+     legacy window.__serveStore = false forces 'off'. Watch #th-store-badge in the top bar. -->
+<script>
+(function() {
+  var STORE_TYPE = 'website-html-tool-library-applicationstore';
+  function v2Item(id, name, slug, gwAppName, title, description, category, configSchema) {
+    // v2 ObjectRecord anatomy (CMS Application System Reference §11.3):
+    // field values live in productData.data_categoriesBased.{fieldId}.
+    return { id: id, name: name, slug: slug, cmsObjectType: STORE_TYPE, productData: { data_categoriesBased: { gwAppName: gwAppName, title: title, description: description, category: category, configSchema: configSchema, ssrHtml: '' } } };
+  }
+  var STORE_ITEMS = [
+    v2Item('lib-1', 'Photo Gallery', 'photo-gallery', 'gallery', 'Photo Gallery', 'Responsive image gallery with lightbox.', 'media', { type: 'object', properties: { limit: { type: 'number', default: 12 } } }),
+    v2Item('lib-2', 'Testimonials', 'testimonials', 'testimonials', 'Testimonials', 'Customer quotes slider.', 'social', { type: 'object', properties: { cmsObjectType: { type: 'string', default: 'reviews' } } }),
+    v2Item('lib-3', 'Countdown', 'countdown', 'countdown', 'Countdown', 'Countdown timer to a target date.', 'media', { type: 'object', properties: { until: { type: 'string', default: '2026-12-31T23:59:59Z' } } })
+  ];
+  var CATS = ['media', 'social', 'commerce', 'forms'];
+  for (var n = 1; n <= 247; n++) {
+    var cat = CATS[n % CATS.length];
+    STORE_ITEMS.push(v2Item('tool-' + n, 'Tool ' + n, 'tool-' + n, 'tool-' + n, 'Tool ' + n + ' (' + cat + ')', 'Sample library tool number ' + n + '.', cat, { type: 'object', properties: { limit: { type: 'number', default: n % 10 + 1 } } }));
+  }
+  var realFetch = window.fetch ? window.fetch.bind(window) : null;
+
+  function isStoreUrl(u) {
+    return u.indexOf('/api/v2/') !== -1 || u.indexOf('/api/search') !== -1 || u.indexOf('/api/data/query') !== -1;
+  }
+  function serveSample(u, opts) {
+    if (u.indexOf('/api/v2/health') !== -1) {
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve({ status: 'ok', service: 'applicationstore-sample', api: 'v2' }); } });
+    }
+    if (u.indexOf('/api/v2/objects') !== -1) {
+      // v2 objects resource — the FULL list; the tool filters/pages client-side.
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve({ items: STORE_ITEMS, total: STORE_ITEMS.length }); } });
+    }
+    return Promise.resolve({ ok: false, status: 404, json: function() { return Promise.resolve({}); } });
+  }
+  function serveOff() {
+    return Promise.resolve({ ok: false, status: 404, json: function() { return Promise.resolve({}); } });
+  }
+  function setBadge(text) {
+    var b = document.getElementById('th-store-badge');
+    if (b) b.textContent = text;
+  }
+
+  window.fetch = function(url, opts) {
+    var u = String(url);
+    if (!isStoreUrl(u)) {
+      return realFetch ? realFetch(url, opts) : Promise.reject(new Error('no fetch'));
+    }
+    var mode = (window.__serveStore === false) ? 'off' : (window.__storeMode || 'auto');
+    if (mode === 'off') { setBadge('store: off (forced fallback test)'); return serveOff(); }
+    if (mode === 'mock') { setBadge('store: sample (mock mode)'); return serveSample(u, opts); }
+    if (!realFetch) {
+      window.__storeMockActive = true;
+      window.__storeMockReason = 'no native fetch';
+      setBadge('store: sample (no native fetch)');
+      return serveSample(u, opts);
+    }
+    // LIVE FIRST — dial the real application store. Sample data only on failure.
+    return realFetch(url, opts).then(function(res) {
+      if (res && res.ok) {
+        setBadge('store: LIVE ' + new Date().toLocaleTimeString());
+        return res;
+      }
+      window.__storeMockActive = true;
+      window.__storeMockReason = 'HTTP ' + (res ? res.status : '?');
+      setBadge('store: sample (live HTTP ' + (res ? res.status : '?') + ')');
+      return serveSample(u, opts);
+    }).catch(function(err) {
+      window.__storeMockActive = true;
+      window.__storeMockReason = String((err && err.message) || err);
+      setBadge('store: sample (network error)');
+      return serveSample(u, opts);
+    });
+  };
+})();
+</script>
+
+<!-- TOOL JS: external by default; ?inlinejs=1 injects the SAME file as an INLINE
+     script — the exact tokenization the CMS uses (this caught the '<!--' bug
+     that killed the tool in the CMS while the external load stayed green). -->
+<script>
+(function() {
+  var inline = /[?&]inlinejs=1/.test(window.location.search) || window.__inlineJs;
+  if (inline) {
+    fetch('WebpageBuilder.js')
+      .then(function(r) { return r.text(); })
+      .then(function(code) {
+        var s = document.createElement('script');
+        s.textContent = code;
+        document.body.appendChild(s);
+      })
+      .catch(function(e) { console.warn('[HARNESS:inlinejs] load failed: ' + (e && e.message ? e.message : e)); });
+  } else {
+    var s = document.createElement('script');
+    s.src = 'WebpageBuilder.js';
+    document.body.appendChild(s);
+  }
+})();
+</script>
 
 <!-- HARNESS CONTROLS -->
 <script>
 (function() {
   var thStatus = document.getElementById('th-status');
-  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-10-02b';
+  if (thStatus) thStatus.textContent = 'Ready · harness build 2026-10-04 · store live-first';
   document.getElementById('th-load-sample').onclick = function() {
     // Slim saved value — design direction comes from params, identity from the parent object.
     window.tool.setValue({

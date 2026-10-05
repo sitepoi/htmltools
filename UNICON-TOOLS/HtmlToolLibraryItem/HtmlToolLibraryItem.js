@@ -80,19 +80,11 @@
   var _polled = false;
   var _activeTab = 'details';
   var _previewBuilt = false;
-  var _fieldIdOverrides = {};
   var _previewMockValue = {};
   var _previewMockParams = {};
-  var _lastPullSnapshot = null;
-  var _fieldsBannerDismissed = false;
-  var _fieldsBannerTimer = null;
-  var _pullArmTimer = null;
-  var _pullArmed = false;
   var _gutterTimers = {};
-  var _warnedAutosave = false;
   var _diagnosticsLines = [];
   var DIAGNOSTICS_LINE_LIMIT = 60;
-  var _readyFields = null;
   var _activeDocKey = 'webpage';
   var _versionsCache = [];
   var _docPushArmed = {};
@@ -170,14 +162,8 @@
   }
 
   /* --------------------------------------------------------
-     Field mapping + defaults
+     Defaults
   -------------------------------------------------------- */
-  function fieldIdOf(fieldKey) {
-    return (_fieldIdOverrides && _fieldIdOverrides[fieldKey]) || fieldKey;
-  }
-  function allFieldIdsText() {
-    return FIELD_DEFINITIONS.map(function (definition) { return fieldIdOf(definition.key); }).join(', ');
-  }
   function defaultDraft() {
     var draft = {};
     FIELD_DEFINITIONS.forEach(function (definition) {
@@ -198,10 +184,7 @@
   function normalize(value) {
     var normalized = {
       version: 1,
-      draft: defaultDraft(),
-      seeded: false,
-      fieldsSnapshot: null,
-      lastSavedToFieldsAt: null
+      draft: defaultDraft()
     };
     if (value && typeof value === 'object') {
       var savedDraft = value.draft;
@@ -212,9 +195,6 @@
           }
         });
       }
-      normalized.seeded = !!value.seeded;
-      normalized.fieldsSnapshot = value.fieldsSnapshot || null;
-      normalized.lastSavedToFieldsAt = value.lastSavedToFieldsAt || null;
       normalized.version = typeof value.version === 'number' ? Math.max(2, value.version) : 2;
       var savedCategories = savedDraft ? savedDraft.toolCategories : undefined;
       if (Array.isArray(savedCategories)) {
@@ -289,59 +269,6 @@
       pushedSignature: typeof target.pushedSignature === 'string' ? target.pushedSignature : ''
     };
   }
-  function extractFieldValues(source) {
-    var values = {};
-    if (!source || typeof source !== 'object') return values;
-    var nestedSources = [];
-    if (source.objectData && source.objectData.data_categoriesBased) nestedSources.push(source.objectData.data_categoriesBased);
-    if (source.productData && source.productData.data_categoriesBased) nestedSources.push(source.productData.data_categoriesBased);
-    FIELD_DEFINITIONS.forEach(function (definition) {
-      var fieldId = fieldIdOf(definition.key);
-      if (typeof source[fieldId] !== 'undefined') { values[fieldId] = source[fieldId]; return; }
-      for (var sourceIndex = 0; sourceIndex < nestedSources.length; sourceIndex++) {
-        if (typeof nestedSources[sourceIndex][fieldId] !== 'undefined') {
-          values[fieldId] = nestedSources[sourceIndex][fieldId];
-          return;
-        }
-      }
-    });
-    return values;
-  }
-  function describeFieldSource(source) {
-    if (!source || typeof source !== 'object') return 'type=' + typeof source;
-    var parts = ['type=object', 'keys=[' + Object.keys(source).join(', ') + ']'];
-    var nested = source.objectData && source.objectData.data_categoriesBased;
-    if (nested) parts.push('objectData.data_categoriesBased keys=[' + Object.keys(nested).join(', ') + ']');
-    var productNested = source.productData && source.productData.data_categoriesBased;
-    if (productNested) parts.push('productData.data_categoriesBased keys=[' + Object.keys(productNested).join(', ') + ']');
-    return parts.join(' ');
-  }
-  function mergedFieldValues() {
-    var mergedValues = extractFieldValues(_readyFields || null);
-    var getFieldsSource = null;
-    try { getFieldsSource = tool.getFields ? tool.getFields() : null; } catch (error) {}
-    var currentValues = extractFieldValues(getFieldsSource);
-    Object.keys(currentValues).forEach(function (fieldId) { mergedValues[fieldId] = currentValues[fieldId]; });
-    return mergedValues;
-  }
-  function buildFieldPayload() {
-    var payload = {};
-    FIELD_DEFINITIONS.forEach(function (definition) {
-      payload[fieldIdOf(definition.key)] = DB.draft[definition.key];
-    });
-    return payload;
-  }
-  function buildPayloadFromFields(sourceFields) {
-    var extractedValues = extractFieldValues(sourceFields);
-    var payload = {};
-    FIELD_DEFINITIONS.forEach(function (definition) {
-      var fieldId = fieldIdOf(definition.key);
-      var fieldValue = extractedValues[fieldId];
-      payload[fieldId] = typeof fieldValue === 'undefined' ? '' : String(fieldValue);
-    });
-    return payload;
-  }
-
   /* --------------------------------------------------------
      Persist (staged draft in this tool's own value)
   -------------------------------------------------------- */
@@ -353,7 +280,6 @@
         tool.setValue(JSON.parse(JSON.stringify(DB)));
         setSaveState('staged');
         updateSizeMeter();
-        commitToFields();
       } catch (error) {}
       setTimeout(function () { _saving = false; }, 400);
     }, 350);
@@ -363,14 +289,6 @@
     if (!element) return;
     if (kind === 'saved') { element.textContent = '✓ Saved'; element.classList.add('ok'); }
     else { element.textContent = 'Draft staged'; element.classList.remove('ok'); }
-  }
-  function updateSyncNote(text) {
-    var noteElement = $('htl-sync-note');
-    if (noteElement) noteElement.textContent = text;
-  }
-  function updateSyncNoteFromDb() {
-    if (DB.lastSavedToFieldsAt) updateSyncNote('Last auto-saved to CMS fields - ' + formatDateTime(DB.lastSavedToFieldsAt));
-    else updateSyncNote('Auto-saves to CMS fields as you edit.');
   }
 
   /* --------------------------------------------------------
@@ -456,10 +374,6 @@
       var inputElement = $('htl-f-' + definition.key);
       if (inputElement) inputElement.value = DB.draft[definition.key];
     });
-  }
-  function renderFieldIdList() {
-    var element = $('htl-field-id-list');
-    if (element) element.textContent = allFieldIdsText();
   }
   function refreshJsonFieldValidity(fieldKey) {
     var element = $('htl-f-' + fieldKey);
@@ -663,7 +577,6 @@
   }
   function renderAll() {
     renderDetails();
-    renderFieldIdList();
     renderCodeEditors();
     renderCategories();
     renderCategorySelected();
@@ -672,7 +585,6 @@
       if (definition.type === 'json') refreshJsonFieldValidity(definition.key);
     });
     renderUser();
-    updateSyncNoteFromDb();
     ensureDocsStructure();
     renderShots();
     renderSchemaEditors();
@@ -700,157 +612,6 @@
   }
 
   /* --------------------------------------------------------
-     Field sync (pull / save)
-  -------------------------------------------------------- */
-  function pullFromFields() {
-    if (typeof tool.getFields !== 'function') {
-      notify('Field reading is unavailable in this environment.', 'warning');
-      return;
-    }
-    if (!_pullArmed) {
-      _pullArmed = true;
-      logDiagnostics('import-arm', 'first click - click Import again within 10 seconds to confirm');
-      clearTimeout(_pullArmTimer);
-      _pullArmTimer = setTimeout(function () {
-        _pullArmed = false;
-        var pullButton = $('htl-btn-pull');
-        if (pullButton) pullButton.textContent = '⇩ Import from form fields';
-        logDiagnostics('import-arm-expired', 'confirm window closed - next click arms again');
-      }, 10000);
-      var armButton = $('htl-btn-pull');
-      if (armButton) armButton.textContent = '⚠ Click again to import from the form fields';
-      notify('Import replaces the editor with the form field values - click Import again within 10 seconds to confirm.', 'warning');
-      return;
-    }
-    _pullArmed = false;
-    var pullButtonReset = $('htl-btn-pull');
-    if (pullButtonReset) pullButtonReset.textContent = '⇩ Import from form fields';
-
-    var getFieldsSource = null;
-    try { getFieldsSource = tool.getFields(); } catch (error) {}
-    logDiagnostics('import-getFields', describeFieldSource(getFieldsSource));
-    var fieldValues = mergedFieldValues();
-    var pulledCount = 0;
-    var missingFieldIds = [];
-    FIELD_DEFINITIONS.forEach(function (definition) {
-      var fieldId = fieldIdOf(definition.key);
-      var fieldValue = fieldValues[fieldId];
-      if (typeof fieldValue !== 'undefined' && fieldValue !== null && String(fieldValue) !== '') {
-        DB.draft[definition.key] = String(fieldValue);
-        pulledCount++;
-        logDiagnostics('import-field-' + definition.key, 'found "' + String(fieldValue).slice(0, 100).replace(/\n/g, ' ') + '"');
-      } else if (typeof fieldValue === 'undefined' || fieldValue === null) {
-        missingFieldIds.push(fieldId);
-        logDiagnostics('import-field-' + definition.key, 'MISSING under id "' + fieldId + '"');
-      } else {
-        logDiagnostics('import-field-' + definition.key, 'present but EMPTY under id "' + fieldId + '"');
-      }
-    });
-    if (!pulledCount) {
-      logDiagnostics('import-result', 'imported 0 fields - compare the getFields keys above with: ' + allFieldIdsText());
-      notify('No matching CMS fields found. Expected field IDs: ' + allFieldIdsText(), 'error');
-      return;
-    }
-    DB.fieldsSnapshot = JSON.stringify(buildFieldPayload());
-    _lastPullSnapshot = DB.fieldsSnapshot;
-    _fieldsBannerDismissed = false;
-    hideFieldsBanner();
-    persist();
-    renderAll();
-    reportValidation();
-    updateSyncNote('Imported from CMS fields - ' + formatTime(new Date()));
-    logDiagnostics('import-result', 'imported ' + pulledCount + ' field(s)' + (missingFieldIds.length ? ', missing: ' + missingFieldIds.join(', ') : ''));
-    notify(
-      'Imported ' + pulledCount + ' field value(s) from the form.' +
-      (missingFieldIds.length ? ' Not found: ' + missingFieldIds.join(', ') : ''),
-      missingFieldIds.length ? 'warning' : 'success'
-    );
-  }
-
-  function seedFromFieldsOnFirstLoad() {
-    if (DB.seeded) { logDiagnostics('seed-skip', 'already seeded in a previous session'); return; }
-    if (typeof tool.getFields !== 'function') {
-      logDiagnostics('seed-skip', 'tool.getFields is not available');
-      DB.seeded = true; persist(); return;
-    }
-    var getFieldsSource = null;
-    try { getFieldsSource = tool.getFields(); } catch (error) {}
-    logDiagnostics('seed-getFields', describeFieldSource(getFieldsSource));
-    var fieldValues = mergedFieldValues();
-    var pulledCount = 0;
-    FIELD_DEFINITIONS.forEach(function (definition) {
-      var fieldId = fieldIdOf(definition.key);
-      var fieldValue = fieldValues[fieldId];
-      if (typeof fieldValue !== 'undefined' && fieldValue !== null && String(fieldValue) !== '') {
-        DB.draft[definition.key] = String(fieldValue);
-        pulledCount++;
-      }
-    });
-    DB.seeded = true;
-    logDiagnostics('seed-result', 'imported ' + pulledCount + ' field(s) on first load');
-    if (pulledCount) {
-      DB.fieldsSnapshot = JSON.stringify(buildFieldPayload());
-      _lastPullSnapshot = DB.fieldsSnapshot;
-      updateSyncNote('Imported ' + pulledCount + ' field value(s) from the form fields');
-    }
-    persist();
-    renderAll();
-  }
-
-  function commitToFields() {
-    if (typeof tool.setFields !== 'function') return;
-    var payload = buildFieldPayload();
-    var payloadJson = JSON.stringify(payload);
-    if (payloadJson === DB.fieldsSnapshot) return;
-    _lastPullSnapshot = payloadJson;
-    tool.setFields(payload);
-    DB.fieldsSnapshot = payloadJson;
-    DB.lastSavedToFieldsAt = new Date().toISOString();
-    updateSyncNote('Auto-saved to CMS fields - ' + formatTime(new Date()));
-    logDiagnostics('autosave', 'wrote ' + Object.keys(payload).length + ' field(s) via setFields');
-    if (typeof tool.requestSave === 'function') {
-      tool.requestSave(function (error, saveAccepted) {
-        logDiagnostics('autosave-request', error ? ('error: ' + error) : (saveAccepted ? 'save request accepted' : 'save request denied'));
-        if (error || !saveAccepted) {
-          setSaveState('staged');
-          if (!_warnedAutosave) {
-            _warnedAutosave = true;
-            notify('Fields updated, but auto-commit was ' + (error || 'denied') + ' - the form Save button still commits. Enable allowRequestSave for full auto-save.', 'warning');
-          }
-        } else {
-          setSaveState('saved');
-        }
-      });
-    }
-  }
-
-  /* --------------------------------------------------------
-     External field-change banner
-  -------------------------------------------------------- */
-  function scheduleFieldsBannerCheck() {
-    clearTimeout(_fieldsBannerTimer);
-    _fieldsBannerTimer = setTimeout(checkForExternalFieldChanges, 600);
-  }
-  function checkForExternalFieldChanges() {
-    if (_fieldsBannerDismissed || typeof tool.getFields !== 'function') return;
-    if (!_lastPullSnapshot) return;
-    var allFields = tool.getFields() || {};
-    var currentSnapshot = JSON.stringify(buildPayloadFromFields(mergedFieldValues()));
-    if (currentSnapshot !== _lastPullSnapshot) {
-      var banner = $('htl-fields-banner');
-      var bannerText = $('htl-fields-banner-text');
-      if (bannerText) {
-        bannerText.textContent = 'The CMS fields of this record changed outside the editor. Press Import from form fields to load them - or ignore if the change came from your own edit.';
-      }
-      if (banner) banner.style.display = '';
-    }
-  }
-  function hideFieldsBanner() {
-    var banner = $('htl-fields-banner');
-    if (banner) banner.style.display = 'none';
-  }
-
-  /* --------------------------------------------------------
      JS syntax check
   -------------------------------------------------------- */
   function checkJsSyntax(codeText) {
@@ -859,11 +620,6 @@
     try { new Function(source); return null; } catch (error) {
       return String(error && error.message ? error.message : error);
     }
-  }
-  function notifyJsSyntaxCheck() {
-    var syntaxError = checkJsSyntax(DB.draft.toolJsCode);
-    if (syntaxError) notify('JS syntax error: ' + syntaxError, 'error');
-    else notify('JS syntax OK ✓', 'success');
   }
 
   /* --------------------------------------------------------
@@ -1101,6 +857,9 @@
     var doc = DB.draft.docs[docKey];
     var seo = {};
     SEO_FIELDS.forEach(function (seoField) { if (doc.seo[seoField]) seo[seoField] = doc.seo[seoField]; });
+    var pageStatusValue = String(readParam('pageStatus', '') || '').trim();
+    var pageMetaData = {};
+    if (pageStatusValue) pageMetaData.status = pageStatusValue;
     return {
       code: { html: String(doc.html || ''), css: String(doc.css || ''), js: String(doc.js || '') },
       seo: seo,
@@ -1108,7 +867,7 @@
         name: docDisplayName(docKey),
         slug: docSlugOf(docKey),
         meta: { language: readParam('docLanguage', 'en') || 'en' },
-        data: { status: readParam('pageStatus', 'published') || 'published' }
+        data: pageMetaData
       },
       version: '1.0.0',
       activeSessionId: '',
@@ -1206,7 +965,6 @@
       _docPushArmed[docKey] = false;
       persist();
       renderDocStatus(docKey);
-      updateSyncNote(DOC_LABELS[docKey] + ' pushed to ' + objectType + ' - ' + formatTime(new Date()));
       notify(DOC_LABELS[docKey] + ' pushed (' + (docKey === 'social' ? 'social object' : 'page object with SEO') + ').', 'success');
     }
 
@@ -1289,7 +1047,6 @@
       _docPushArmed[docKey] = false;
       persist();
       refreshDocPaneValues();
-      updateSyncNote(DOC_LABELS[docKey] + ' pulled from ' + objectType + ' - ' + formatTime(new Date()));
       logDiagnostics('doc-pull-' + docKey, 'loaded ' + objectType + ' ' + (cmsObject.id || '?'));
       notify(DOC_LABELS[docKey] + ' loaded from the target object.', 'success');
     }
@@ -1840,7 +1597,6 @@
     DB.draft.toolJsCode = String(dcb.jsCode || '');
     persist();
     renderCodeEditors();
-    updateSyncNote('Loaded version v' + dcb.versionNumber + ' into the editors - changes are staged, not pushed');
     logDiagnostics('version-load', 'loaded v' + dcb.versionNumber + ' from ' + objectId);
     notify('Version v' + dcb.versionNumber + ' loaded into the editors.', 'success');
   }
@@ -2020,8 +1776,6 @@
 
     CODE_KEYS.forEach(bindCodeEditor);
 
-    on('htl-btn-pull', 'click', pullFromFields);
-    on('htl-btn-check-js', 'click', notifyJsSyntaxCheck);
     on('htl-btn-rebuild', 'click', renderPreview);
     on('htl-category-search', 'input', debounce(renderCategories, 150));
     on('htl-tags-input', 'keydown', function (event) {
@@ -2038,16 +1792,6 @@
         tagsInput.value = '';
       }
     });
-    on('htl-btn-banner-pull', 'click', function () {
-      hideFieldsBanner();
-      _fieldsBannerDismissed = true;
-      pullFromFields();
-    });
-    on('htl-btn-banner-dismiss', 'click', function () {
-      hideFieldsBanner();
-      _fieldsBannerDismissed = true;
-    });
-
     on('htl-doc-tabs', 'click', function (event) {
       var button = event.target && event.target.closest ? event.target.closest('[data-doc-tab]') : null;
       if (!button) return;
@@ -2107,15 +1851,8 @@
   }
 
   tool.onReady(function (value, readyFields) {
-    _readyFields = readyFields || null;
     logDiagnostics('ready', 'tool API keys: ' + Object.keys(tool || {}).join(', '));
     logDiagnostics('ready-value', JSON.stringify(value).slice(0, 300));
-    logDiagnostics('ready-fields-arg', describeFieldSource(readyFields));
-    try {
-      var readyGetFields = tool.getFields ? tool.getFields() : null;
-      logDiagnostics('ready-getFields', describeFieldSource(readyGetFields));
-      if (readyGetFields) logDiagnostics('ready-getFields-json', JSON.stringify(readyGetFields).slice(0, 800));
-    } catch (error) { logDiagnostics('ready-getFields', 'error: ' + error.message); }
     var ownTypeIdSource = (readyFields && readyFields.typeId) ? readyFields.typeId : '';
     if (!ownTypeIdSource) {
       try {
@@ -2141,10 +1878,6 @@
         }
       });
       tool.declareParams([
-        {
-          name: 'fieldIdOverrides', label: 'CMS Field ID Overrides', type: 'text', default: '', severity: 'optional',
-          hint: 'JSON map to rename the target sibling field IDs, e.g. {"toolName":"name","toolHtmlCode":"htmlCode"}. Leave empty to use the default IDs.'
-        },
         {
           name: 'previewMockValue', label: 'Preview Mock Value', type: 'text', default: '{}', severity: 'goodToHave',
           hint: 'JSON value returned by the mock tool.getValue() in the Preview tab, e.g. {"config":{}}.'
@@ -2182,8 +1915,8 @@
           hint: 'JSON override for the social object field ids, e.g. {"name":"name","slug":"slug","contentHtml":"contentHtml","updatedAt":"updatedAt"}.'
         },
         {
-          name: 'pageStatus', label: 'Page Status', type: 'text', default: 'published', severity: 'goodToHave',
-          hint: 'Status written to page objects: published or draft.'
+          name: 'pageStatus', label: 'Page Status', type: 'text', default: '', severity: 'goodToHave',
+          hint: 'Optional. Leave empty so the CMS Publish action owns the page status - set to draft or published only to override it.'
         },
         {
           name: 'docLanguage', label: 'Document Language', type: 'text', default: 'en', severity: 'goodToHave',
@@ -2192,7 +1925,6 @@
       ]);
     } catch (error) {}
 
-    _fieldIdOverrides = safeJsonObject(readParam('fieldIdOverrides', ''));
     _previewMockValue = parseJsonLenient(readParam('previewMockValue', '{}')) || {};
     _previewMockParams = parseJsonLenient(readParam('previewMockParams', '{}')) || {};
 
@@ -2202,7 +1934,6 @@
     renderAll();
     lockUI();
     refreshUser();
-    seedFromFieldsOnFirstLoad();
     reportValidation();
 
     tool.onValueChange(function (newValue) {
@@ -2221,6 +1952,5 @@
       renderUser();
       lockUI();
     });
-    tool.onFieldsChange(function () { scheduleFieldsBannerCheck(); });
   });
 })();

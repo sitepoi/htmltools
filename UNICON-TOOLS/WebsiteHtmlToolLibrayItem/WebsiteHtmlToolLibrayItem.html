@@ -1,0 +1,241 @@
+<div class="wht-root" id="wht-root">
+  <header class="wht-header">
+    <div class="wht-header-inner">
+      <div class="wht-brand">
+        <div class="wht-logo-mark">W</div>
+        <div>
+          <h1>Website HTML Tool Item Editor</h1>
+          <p>Details, code and documents of one website html-tool widget, kept in this tool's own saved value</p>
+        </div>
+      </div>
+      <div class="wht-header-actions">
+        <span class="wht-size-meter" id="wht-size-meter" title="Stored value size"></span>
+        <span class="wht-save-state" id="wht-save-state">Draft staged</span>
+        <span class="wht-role-badge" id="wht-role-badge"></span>
+        <span class="wht-lock-note" id="wht-lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wht-tabbar">
+    <nav class="wht-tabs" id="wht-tabs">
+      <button class="wht-tab active" data-tab="details">Details</button>
+      <button class="wht-tab" data-tab="html">HTML</button>
+      <button class="wht-tab" data-tab="css">CSS</button>
+      <button class="wht-tab" data-tab="js">JS</button>
+      <button class="wht-tab" data-tab="preview">Preview</button>
+      <button class="wht-tab" data-tab="docs">Docs</button>
+      <button class="wht-tab" data-tab="screenshots">Screenshots</button>
+      <button class="wht-tab" data-tab="logs">Logs</button>
+    </nav>
+  </div>
+
+  <main class="wht-main">
+    <section class="wht-pane" id="pane-details">
+      <div class="wht-card">
+        <h2>Tool details</h2>
+        <p class="wht-hint">Identity of this website tool. Everything is stored in this tool's own saved value - edits stage automatically and save with the CMS record.</p>
+        <div class="wht-form-grid">
+          <div class="wht-field">
+            <label for="wht-f-toolName">Tool name <span class="wht-required">*</span></label>
+            <input class="wht-input" id="wht-f-toolName" placeholder="e.g. Testimonials Slider" maxlength="120">
+          </div>
+          <div class="wht-field">
+            <label for="wht-f-toolIcon">Icon <span class="wht-label-hint">(single emoji)</span></label>
+            <input class="wht-input" id="wht-f-toolIcon" placeholder="e.g. 💬" maxlength="8">
+          </div>
+          <div class="wht-field">
+            <label for="wht-f-toolStatus">Status</label>
+            <select class="wht-input" id="wht-f-toolStatus">
+              <option value="draft">Draft — hidden from the widget library</option>
+              <option value="active">Active — selectable in pages</option>
+            </select>
+          </div>
+          <div class="wht-field wht-field-wide">
+            <label for="wht-f-toolDescription">Description</label>
+            <textarea class="wht-textarea" id="wht-f-toolDescription" spellcheck="false" placeholder="What the widget shows on a page and which data it reads."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>Categories &amp; tags</h2>
+        <p class="wht-hint">Pick any number of categories from the website widget taxonomy and add search keywords for the widget library.</p>
+        <div class="wht-form-grid">
+          <div class="wht-field">
+            <label>Categories <span class="wht-label-hint" id="wht-category-count">0 selected</span></label>
+            <input class="wht-input" id="wht-category-search" placeholder="Filter categories...">
+            <div class="wht-cat-box" id="wht-category-list"></div>
+            <div class="wht-chips" id="wht-category-selected"></div>
+          </div>
+          <div class="wht-field">
+            <label>Tags <span class="wht-label-hint">(type and press Enter or comma)</span></label>
+            <div class="wht-tags-list" id="wht-tags-list"></div>
+            <input class="wht-input" id="wht-tags-input" placeholder="e.g. slider, testimonials" maxlength="200">
+            <div class="wht-tag-suggest" id="wht-tag-suggest"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>Embedding parameters schema</h2>
+        <p class="wht-hint">Maps each parameter name to its default value. When the tool is added to a page, these values are passed to the widget - it reads them from <code>gw.getPageParams()</code> or its own config.</p>
+        <div class="wht-schema-editor" id="wht-schema-params">
+          <div class="wht-schema-tabs">
+            <button class="wht-schema-tab active" data-schema-part="json">JSON code</button>
+            <button class="wht-schema-tab" data-schema-part="sample">Sample</button>
+            <button class="wht-schema-tab" data-schema-part="editor">Editor</button>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-json">
+            <textarea class="wht-json-field" id="wht-f-toolParams" spellcheck="false" placeholder='{ "maxItems": 6, "autoplay": true }'></textarea>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-sample" style="display:none">
+            <div class="wht-schema-sample">
+              <p>A parameters schema is a JSON object that maps each parameter name to its default value. The platform passes these to the widget when it is embedded on a page.</p>
+              <pre>{
+  "maxItems": 6,
+  "autoplay": true,
+  "cmsObjectType": "testimonials",
+  "headings": ["Fresh", "Popular"]
+}</pre>
+              <p>Allowed value types: string (in quotes), number, boolean, array or object (JSON).</p>
+            </div>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-editor" style="display:none">
+            <p class="wht-hint">Values are JSON: strings need quotes ("USD"), numbers and booleans as-is, arrays and objects as JSON text.</p>
+            <div class="wht-schema-rows" id="wht-schema-rows-params"></div>
+            <button class="wht-btn wht-btn-ghost wht-btn-sm wht-schema-add" id="wht-schema-add-params">+ Add parameter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>External API connections</h2>
+        <p class="wht-hint">Website tools are embedded into pages server-side and may talk to outside APIs. Keep credentials here instead of inside the widget code - they are configured once and consumed by the platform when the tool runs. Secrets must never appear in the HTML/CSS/JS code.</p>
+        <div class="wht-api-list" id="wht-api-list"></div>
+        <button class="wht-btn wht-btn-ghost wht-btn-sm" id="wht-api-add">+ Add API connection</button>
+        <div class="wht-api-form" id="wht-api-form" style="display:none">
+          <span class="wht-api-form-title" id="wht-api-form-title">New API connection</span>
+          <div class="wht-form-grid">
+            <div class="wht-field">
+              <label for="wht-api-name">API name <span class="wht-required">*</span></label>
+              <input class="wht-input" id="wht-api-name" placeholder="e.g. OpenWeather" maxlength="80">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-baseUrl">Base URL</label>
+              <input class="wht-input" id="wht-api-baseUrl" placeholder="https://api.example.com" maxlength="300">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authType">Authentication</label>
+              <select class="wht-input" id="wht-api-authType">
+                <option value="none">None — public endpoint</option>
+                <option value="apiKey">API key in a header</option>
+                <option value="bearerToken">Bearer token</option>
+              </select>
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authHeaderName">Header name <span class="wht-label-hint">(auto-filled when empty)</span></label>
+              <input class="wht-input" id="wht-api-authHeaderName" placeholder="e.g. x-api-key" maxlength="80">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authValue">Key / token value</label>
+              <input class="wht-input" id="wht-api-authValue" placeholder="Secret value - never copy it into the widget code" maxlength="500">
+            </div>
+            <div class="wht-field wht-field-wide">
+              <label for="wht-api-usageNote">Usage note</label>
+              <textarea class="wht-textarea wht-textarea-sm" id="wht-api-usageNote" spellcheck="false" placeholder="Where the widget uses this API, e.g. weather cards on the homepage."></textarea>
+            </div>
+          </div>
+          <div class="wht-api-form-actions">
+            <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-api-save">Save connection</button>
+            <button class="wht-btn wht-btn-ghost wht-btn-sm" id="wht-api-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-html" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">HTML code</span>
+          <span class="wht-editor-hint">Body fragment only - no &lt;html&gt; / &lt;head&gt; / &lt;body&gt; tags. One root wrapper class on the first element. The gw- prefix is reserved for the platform.</span>
+          <span class="wht-editor-meta" id="wht-meta-html">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-html" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolHtmlCode" spellcheck="false" wrap="off" placeholder="Paste the === HTML === fragment here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-css" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">CSS code</span>
+          <span class="wht-editor-hint">Scoped under the root wrapper class - never style bare html / body / a / button / h1. Use the --gw-color-* theme variables.</span>
+          <span class="wht-editor-meta" id="wht-meta-css">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-css" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolCssCode" spellcheck="false" wrap="off" placeholder="Paste the === CSS === rules here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-js" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">JS code</span>
+          <span class="wht-editor-hint">Vanilla JS only - no CDN libraries, no &lt;script&gt; tag. Must be idempotent (re-runs on every SPA navigation). Integrate through window.gw.</span>
+          <span class="wht-editor-meta" id="wht-meta-js">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-js" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolJsCode" spellcheck="false" wrap="off" placeholder="Paste the === JS === block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-preview" style="display:none">
+      <div class="wht-preview-bar">
+        <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-btn-rebuild">▶ Rebuild preview</button>
+        <span class="wht-hint">Runs the three code blocks with a mock <code>window.gw</code> SDK inside a sandboxed frame. A log panel appears inside the preview.</span>
+        <label class="wht-preview-params-label" for="wht-preview-params">Params JSON</label>
+        <input class="wht-preview-params" id="wht-preview-params" placeholder='{"maxItems": 6}' spellcheck="false">
+        <span class="wht-preview-status" id="wht-preview-status">Not built yet</span>
+      </div>
+      <div class="wht-preview-frame-wrap">
+        <iframe class="wht-preview-frame" id="wht-preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Website tool preview"></iframe>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-docs" style="display:none">
+      <div class="wht-doc-tabs" id="wht-doc-tabs"></div>
+      <div class="wht-doc-content" id="wht-doc-content"></div>
+    </section>
+
+    <section class="wht-pane" id="pane-screenshots" style="display:none">
+      <div class="wht-card">
+        <h2>Screenshots</h2>
+        <p class="wht-hint">Upload to CMS storage - only the URL is kept, never file bytes. Insert places the image into the HTML editor you last focused.</p>
+        <div class="wht-shots-bar">
+          <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-shots-upload">⬆ Upload screenshot</button>
+          <span class="wht-hint" id="wht-shots-count">0 screenshots</span>
+          <span class="wht-hint wht-shots-upload-hint" id="wht-shots-upload-hint"></span>
+        </div>
+        <div class="wht-shots-list" id="wht-shots-list"></div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-logs" style="display:none">
+      <div class="wht-card">
+        <h2>Activity log</h2>
+        <p class="wht-hint">Recent actions of this tool - uploads, preview builds and API edits. Memory-only: nothing here is stored in the CMS.</p>
+      </div>
+      <details class="wht-debug">
+        <summary>Diagnostics log</summary>
+        <pre class="wht-debug-log" id="wht-debug-log">(no entries yet)</pre>
+      </details>
+    </section>
+  </main>
+</div>

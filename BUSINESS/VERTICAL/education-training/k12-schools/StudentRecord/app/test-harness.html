@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudentRecord - Test Harness</title>
+<link rel="stylesheet" href="StudentRecord.css">
+<style>
+  body { margin: 0; background: #eef1f5; }
+  #th-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #16213a; color: #fff; font: 13px "Segoe UI", sans-serif; }
+  #th-bar button { font: inherit; padding: 4px 10px; border-radius: 5px; border: 1px solid #556; background: #24324e; color: #fff; cursor: pointer; }
+  #th-bar .th-info { color: #b9c3d6; font-size: 12px; }
+  #th-host { background: #fff; margin: 10px; border-radius: 8px; border: 1px solid #d8dce3; min-height: 640px; }
+  #th-log { margin: 10px; padding: 8px 12px; background: #0f172a; color: #7dd3fc; font: 11px Consolas, monospace; border-radius: 6px; max-height: 130px; overflow-y: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>StudentRecord harness</strong>
+  <button id="th-role">role: admin</button>
+  <button id="th-ro">read-only: off</button>
+  <button id="th-sample">Load sample</button>
+  <button id="th-reset">Reset storage</button>
+  <button id="th-dump">Dump objects</button>
+  <span class="th-info" id="th-info"></span>
+</div>
+<div id="th-host">
+<!-- StudentRecord html-tool (TYPE 1)
+     Reusable student file tool: identity, health, documents, and
+     read-only views of attendance and progress, plus principal-only
+     communication log and parent contact. -->
+<div class="srec-app" id="srec-app">
+  <header class="srec-header">
+    <div class="srec-head-main">
+      <h1 class="srec-title" id="srec-title">Student</h1>
+      <p class="srec-subtitle" id="srec-subtitle"></p>
+    </div>
+    <div class="srec-head-side">
+      <span class="srec-save-note">Changes save automatically</span>
+      <button class="srec-btn srec-btn-outline srec-btn-sm" id="srec-edit" data-act="edit-open">Edit</button>
+    </div>
+  </header>
+
+  <nav class="srec-tabs" id="srec-tabs">
+    <button class="srec-tab active" data-tab="overview">Overview</button>
+    <button class="srec-tab" data-tab="attendance">Attendance</button>
+    <button class="srec-tab" data-tab="progress">Progress</button>
+    <button class="srec-tab" data-tab="communication">Communication</button>
+    <button class="srec-tab" data-tab="contact">Parent contact</button>
+  </nav>
+
+  <main class="srec-body">
+
+    <section class="srec-pane active" data-pane="overview">
+      <div class="srec-card">
+        <div class="srec-card-title">Identity</div>
+        <div class="srec-grid" id="srec-identity-grid"></div>
+      </div>
+      <div class="srec-card">
+        <div class="srec-card-title">Health and pickup</div>
+        <div class="srec-grid" id="srec-health-grid"></div>
+      </div>
+      <div class="srec-card">
+        <div class="srec-card-title">Documents
+          <span class="srec-card-actions"><button class="srec-btn srec-btn-ghost srec-btn-sm" id="srec-doc-add" data-act="doc-add-open">+ Add document</button></span>
+        </div>
+        <div id="srec-doc-list"></div>
+      </div>
+    </section>
+
+    <section class="srec-pane" data-pane="attendance">
+      <div class="srec-card">
+        <div class="srec-card-title">Attendance</div>
+        <div id="srec-attendance-list"></div>
+      </div>
+    </section>
+
+    <section class="srec-pane" data-pane="progress">
+      <div class="srec-card">
+        <div class="srec-card-title">Lesson progress</div>
+        <div id="srec-progress-list"></div>
+      </div>
+    </section>
+
+    <section class="srec-pane" data-pane="communication">
+      <div class="srec-card">
+        <div class="srec-card-title">One-on-one communication
+          <span class="srec-card-actions"><button class="srec-btn srec-btn-ghost srec-btn-sm" id="srec-comm-add" data-act="comm-add-open">+ Add entry</button></span>
+        </div>
+        <div id="srec-comm-list"></div>
+      </div>
+      <div class="srec-card">
+        <div class="srec-card-title">Absence calls</div>
+        <div id="srec-absence-list"></div>
+      </div>
+    </section>
+
+    <section class="srec-pane" data-pane="contact">
+      <div class="srec-card">
+        <div class="srec-card-title">Parent contact</div>
+        <div id="srec-contact-view"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="srec-modal-overlay" id="srec-modal-overlay">
+    <div class="srec-modal">
+      <div class="srec-modal-title" id="srec-modal-title">Title</div>
+      <div class="srec-modal-body" id="srec-modal-body"></div>
+      <div class="srec-modal-foot" id="srec-modal-foot"></div>
+    </div>
+  </div>
+</div>
+</div>
+<div id="th-log"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "srec_test_value_v1";
+  var OBJECTS_KEY = "srec_test_objects_v1";
+  var OWN_OBJECT_ID = "obj-st1";
+
+  function thLog(message) {
+    var log = document.getElementById("th-log");
+    log.textContent = (log.textContent ? log.textContent + "\n" : "") + message;
+  }
+
+  function loadObjects() {
+    try { return JSON.parse(localStorage.getItem(OBJECTS_KEY) || "[]"); } catch (e) { return []; }
+  }
+  function saveObjects(list) { localStorage.setItem(OBJECTS_KEY, JSON.stringify(list)); }
+
+  function seedObjects() {
+    if (loadObjects().length) return;
+    var folderMap = {
+      settings: "folder-0-setup", lessons: "folder-1-lessons", prospects: "folder-1-prospects",
+      students: "folder-2-students", attendance: "folder-3-attendance", progress: "folder-4-progress",
+      payments: "folder-5-payments", contacts: "folder-8-contacts", communication: "folder-6-communication"
+    };
+    var today = new Date();
+    var sunday = new Date();
+    sunday.setDate(today.getDate() + (7 - today.getDay()) % 7);
+    function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+    saveObjects([
+      { id: "obj-settings", cmsObjectType: "weekendSchool", typeId: "folder-0-setup", name: "School Settings", version: 1, productData: { data_categoriesBased: { schoolSetup: { recordKind: "schoolSettings", schoolName: "Horizon Weekend School", folderMap: folderMap } } } },
+      { id: OWN_OBJECT_ID, cmsObjectType: "weekendSchool", typeId: "folder-2-students", name: "Ahmet Kaya", version: 1, productData: { data_categoriesBased: { studentRecord: { recordKind: "studentRecord", firstName: "Ahmet", lastName: "Kaya", gender: "M", dateOfBirth: "2015-03-02", classGroup: "Quran Level 1", status: "active", startDate: "2026-09-14", photoConsent: "yes", emergencyContactName: "Fatma Kaya", emergencyContactPhone: "416-555-0101", emergencyContactRelation: "mother", allergies: "", healthNotes: "", pickupAuthorizedNames: "Fatma Kaya", pickupNotes: "", documents: [{ id: "d1", name: "Registration form", url: "https://example.com/form.pdf", kind: "form", uploadedAt: "2026-09-14", uploadedBy: "Admin" }], registeredYear: "2026-2027" } } } },
+      { id: "obj-att1", cmsObjectType: "weekendSchool", typeId: "sub-att-1", name: "Attendance - Quran Level 1", version: 1, productData: { data_categoriesBased: { attendanceRecord: { recordKind: "attendanceRecord", lessonDate: iso(sunday), lessonName: "Quran Level 1", teacherName: "Teacher One", entries: [{ studentId: OWN_OBJECT_ID, studentName: "Ahmet Kaya", mark: "P", note: "" }] } } } },
+      { id: "obj-prog1", cmsObjectType: "weekendSchool", typeId: "sub-prog-1", name: "Progress - Ahmet Kaya", version: 1, productData: { data_categoriesBased: { lessonProgress: { recordKind: "lessonProgress", studentId: OWN_OBJECT_ID, lessonName: "Quran Level 1", activityLog: [{ at: iso(sunday), note: "Memorized page 12." }], checklist: [{ id: "c1", label: "Page 12 memorized", markedAt: iso(sunday) }] } } } },
+      { id: "obj-comm1", cmsObjectType: "weekendSchool", typeId: "folder-6-communication", name: "Ahmet Kaya - Communication", version: 1, productData: { data_categoriesBased: { communicationLog: { recordKind: "communicationLog", studentId: OWN_OBJECT_ID, oneOnOne: [{ at: "2026-09-20", note: "Parent asked about homework." }], absenceCalls: [] } } } },
+      { id: "obj-cont1", cmsObjectType: "weekendSchool", typeId: "folder-8-contacts", name: "Ahmet Kaya - Parents", version: 1, productData: { data_categoriesBased: { parentContact: { recordKind: "parentContact", studentId: OWN_OBJECT_ID, parentName: "Fatma Kaya", parentRelation: "mother", parentPhone: "416-555-0101", parentEmail: "fatma@example.com", secondParentName: "Mehmet Kaya", secondParentPhone: "416-555-0103", address: "12 Maple Street" } } } }
+    ]);
+    thLog("seeded student + related objects");
+  }
+
+  var mockValue = null;
+  var readyCallback = null;
+  var valueChangeCallback = null;
+  var readonlyCallback = null;
+  var userChangeCallback = null;
+  var roleState = "admin";
+  var readOnlyState = false;
+  var params = { appObjectType: "weekendSchool", communicationFolderId: "" };
+
+  function currentUser() {
+    if (roleState === "none") return null;
+    return {
+      id: "u_" + roleState,
+      name: roleState === "admin" ? "Admin User" : (roleState === "editor" ? "Editor User" : "Viewer User"),
+      email: roleState + "@school.test",
+      roles: [roleState],
+      effectiveAccess: { isManager: roleState === "admin", isEditor: roleState === "admin" || roleState === "editor", isViewer: true }
+    };
+  }
+
+  var tool = {
+    onReady: function (cb) { readyCallback = cb; fireReady(); },
+    getValue: function () { return mockValue; },
+    setValue: function (v) { mockValue = v; localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); thLog("setValue " + JSON.stringify(v).length + " chars"); },
+    onValueChange: function (cb) { valueChangeCallback = cb; },
+    getFields: function () {
+      return { id: OWN_OBJECT_ID, _id: OWN_OBJECT_ID, cmsObjectType: "weekendSchool", typeId: "folder-2-students", name: "Ahmet Kaya" };
+    },
+    param: function (n, d) { return params.hasOwnProperty(n) && params[n] !== "" ? params[n] : d; },
+    isReadOnly: function () { return readOnlyState; },
+    onReadonlyChange: function (cb) { readonlyCallback = cb; },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (cb) { userChangeCallback = cb; },
+    requestSave: function (cb) { thLog("requestSave accepted"); if (cb) cb(null, true); },
+    requestObjects: function (action, callParams, cb) {
+      setTimeout(function () {
+        var objects = loadObjects();
+        if (action === "query") {
+          var filtered = objects.filter(function (o) {
+            if (!o || o.cmsObjectType !== callParams.mainObjectType) return false;
+            if (callParams.typeId && o.typeId !== callParams.typeId) return false;
+            return true;
+          });
+          cb(null, { objects: filtered });
+        } else if (action === "create") {
+          var object = {
+            id: "obj-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            cmsObjectType: callParams.mainObjectType, typeId: callParams.typeId || "folder-default",
+            name: callParams.name || "Object", productData: callParams.productData || { data_categoriesBased: {} }, version: 1
+          };
+          objects.push(object);
+          saveObjects(objects);
+          cb(null, { object: object });
+        } else if (action === "update") {
+          var target = null;
+          objects.forEach(function (o) { if (o.id === callParams.objectId) target = o; });
+          if (!target) { cb("object not found", null); return; }
+          var dcb = target.productData.data_categoriesBased || {};
+          Object.keys(callParams.productData.data_categoriesBased || {}).forEach(function (k) {
+            dcb[k] = callParams.productData.data_categoriesBased[k];
+          });
+          target.productData.data_categoriesBased = dcb;
+          target.version = (target.version || 0) + 1;
+          saveObjects(objects);
+          cb(null, { ok: true });
+        } else if (action === "batch") {
+          (callParams.operations || []).forEach(function (op) {
+            if (op.action === "create") {
+              objects.push({
+                id: "obj-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+                cmsObjectType: op.mainObjectType, typeId: op.typeId || "folder-default",
+                name: op.name || "Object", productData: op.productData || { data_categoriesBased: {} }, version: 1
+              });
+            }
+          });
+          saveObjects(objects);
+          cb(null, { ok: true });
+        } else {
+          cb("unknown action", null);
+        }
+      }, 30);
+    },
+    notify: function (m, sev) { thLog("notify [" + (sev || "success") + "] " + m); },
+    resize: function () { },
+    declareOutput: function () { },
+    declareParams: function () { },
+    reportMissingParams: function () { }
+  };
+  window.tool = tool;
+
+  function fireReady() {
+    if (!readyCallback) return;
+    mockValue = null;
+    if (window.location.search.indexOf("sample=1") > -1) {
+      localStorage.removeItem(STORAGE_KEY);
+      seedObjects();
+      mockValue = null;
+      loadObjects().forEach(function (o) {
+        if (o.id === OWN_OBJECT_ID) mockValue = o.productData.data_categoriesBased.studentRecord;
+      });
+    } else {
+      try { mockValue = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (e) { mockValue = null; }
+    }
+    readyCallback(mockValue, tool.getFields());
+    var actionsParam = new URLSearchParams(window.location.search).get("actions");
+    if (actionsParam) {
+      var actionSpecs = actionsParam.split(",");
+      var actionIndex = 0;
+      var runNextAction = function () {
+        if (actionIndex >= actionSpecs.length) return;
+        var spec = actionSpecs[actionIndex++].split(":");
+        var actionName = spec[0];
+        if (actionName === "set-input") {
+          var inputEl = document.getElementById(spec[1]);
+          if (inputEl) inputEl.value = spec[2] || "";
+          runNextAction();
+          return;
+        }
+        var button = document.querySelector('[data-act="' + actionName + '"]');
+        if (button) button.click();
+        setTimeout(runNextAction, 250);
+      };
+      setTimeout(runNextAction, 500);
+    }
+  }
+
+  var roleButton = document.getElementById("th-role");
+  var roButton = document.getElementById("th-ro");
+  var ROLES = ["admin", "editor", "viewer", "none"];
+
+  roleButton.addEventListener("click", function () {
+    var i = ROLES.indexOf(roleState);
+    roleState = ROLES[(i + 1) % ROLES.length];
+    roleButton.textContent = "role: " + roleState;
+    if (userChangeCallback) userChangeCallback(currentUser());
+  });
+  roButton.addEventListener("click", function () {
+    readOnlyState = !readOnlyState;
+    roButton.textContent = "read-only: " + (readOnlyState ? "on" : "off");
+    if (readonlyCallback) readonlyCallback(readOnlyState);
+  });
+  document.getElementById("th-sample").addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    window.location.href = window.location.pathname + "?sample=1";
+  });
+  document.getElementById("th-reset").addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(OBJECTS_KEY);
+    fireReady();
+  });
+  document.getElementById("th-dump").addEventListener("click", function () {
+    thLog("objects: " + JSON.stringify(loadObjects(), null, 2));
+  });
+  document.getElementById("th-info").textContent = "field id studentRecord | own object " + OWN_OBJECT_ID + " | appObjectType=weekendSchool";
+})();
+</script>
+<script src="StudentRecord.js"></script>
+</body>
+</html>

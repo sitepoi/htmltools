@@ -1,0 +1,136 @@
+<!-- ProspectBoard html-tool (TYPE 1)
+     Reusable enrollment pipeline tool: tracks prospects and converts
+     them into student, ledger, parent contact and communication log
+     objects in one batch. -->
+<div class="prb-app" id="prb-app">
+  <header class="prb-header">
+    <div class="prb-head-main">
+      <h1 class="prb-title">Prospect Board</h1>
+      <p class="prb-subtitle">Track new families and convert them to enrolled students.</p>
+    </div>
+    <div class="prb-head-side">
+      <span class="prb-save-note">Changes save automatically</span>
+    </div>
+  </header>
+
+  <nav class="prb-tabs" id="prb-tabs">
+    <button class="prb-tab active" data-act="tab" data-tab="dashboard">Dashboard</button>
+    <button class="prb-tab" data-act="tab" data-tab="prospects">Prospects</button>
+    <button class="prb-tab" data-act="tab" data-tab="mytasks">My tasks</button>
+    <button class="prb-tab" data-act="tab" data-tab="distribution" id="prb-tab-distribution">Distribution</button>
+  </nav>
+
+  <main class="prb-body">
+
+    <section class="prb-pane" id="pane-dashboard">
+      <section class="prb-kpi-band">
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-prospects">0</div><div class="prb-kpi-label">Prospects</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-open">0</div><div class="prb-kpi-label">Open follow-ups</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-today">0</div><div class="prb-kpi-label">To reach today</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-calls">0</div><div class="prb-kpi-label">Calls logged (7 days)</div></div>
+      </section>
+      <section class="prb-card">
+        <div class="prb-card-title">Call rounds
+          <span class="prb-counts" id="prb-round-label"></span>
+        </div>
+        <div id="prb-dashboard-rounds"></div>
+      </section>
+      <div class="prb-grid-2">
+        <section class="prb-card">
+          <div class="prb-card-title">Recent activity</div>
+          <div id="prb-recent-calls"></div>
+        </section>
+        <section class="prb-card">
+          <div class="prb-card-title">Open tasks by team member</div>
+          <div id="prb-workload"></div>
+        </section>
+      </div>
+      <section class="prb-card">
+        <div class="prb-card-title">My open tasks</div>
+        <div id="prb-my-open-tasks"></div>
+      </section>
+    </section>
+
+    <section class="prb-pane" id="pane-prospects" hidden>
+      <section class="prb-card prb-toolbar">
+        <div class="prb-search-wrap">
+          <input class="prb-input" id="prb-search" placeholder="Search name, parent or phone...">
+        </div>
+        <button class="prb-btn prb-btn-primary" id="prb-add" data-act="prospect-add">+ New prospect</button>
+        <button class="prb-btn" data-act="import-open">Import</button>
+        <button class="prb-btn" data-act="export-csv">Export CSV</button>
+        <button class="prb-btn" data-act="export-json">Export JSON</button>
+      </section>
+      <div class="prb-split">
+        <aside class="prb-card prb-filters">
+          <div class="prb-filter-title">Status</div>
+          <div class="prb-chips prb-chips-vertical" id="prb-chips"></div>
+          <div class="prb-filter-title">Source</div>
+          <select class="prb-select" id="prb-source-filter"><option value="all">All sources</option></select>
+        </aside>
+        <section class="prb-card prb-list-card">
+          <div class="prb-card-title">All prospects
+            <span class="prb-counts" id="prb-counts"></span>
+          </div>
+          <div id="prb-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="prb-pane" id="pane-mytasks" hidden>
+      <section class="prb-card">
+        <div class="prb-card-title">My tasks
+          <span class="prb-counts" id="prb-my-task-counts"></span>
+        </div>
+        <p class="prb-hint" style="margin:0 0 10px">Follow-ups assigned to you. Tick one off when the contact is done - logging the call in the pipeline also completes the task.</p>
+        <div class="prb-chips" id="prb-mytask-chips"></div>
+        <div id="prb-my-task-list"></div>
+      </section>
+    </section>
+
+    <section class="prb-pane" id="pane-distribution" hidden>
+      <section class="prb-card">
+        <div class="prb-card-title">Task distribution
+          <span class="prb-counts" id="prb-task-counts"></span>
+        </div>
+        <p class="prb-hint" style="margin:0 0 10px">Call in rounds until every family gives a solid answer. Each round assigns only the families that still have no decision. Finish every call of the active round before starting the next one.</p>
+        <div class="prb-team-row">
+          <span class="prb-label">Team:</span>
+          <div class="prb-team-chips" id="prb-team-chips"></div>
+        </div>
+        <div class="prb-dist-tabs">
+          <button class="prb-dist-tab active" data-act="dist-view" data-id="progress">Round progress</button>
+          <button class="prb-dist-tab" data-act="dist-view" data-id="results">Round results</button>
+        </div>
+        <div id="prb-view-progress">
+          <div class="prb-task-actions">
+            <button class="prb-btn prb-btn-primary prb-btn-sm" data-act="round-start" id="prb-btn-round-start">Start call round</button>
+            <button class="prb-btn prb-btn-sm" data-act="task-distribute">Auto-assign round-robin</button>
+            <select class="prb-select prb-filter-select" id="prb-task-assignee-filter" data-act="task-assignee-filter"><option value="">All assignees</option></select>
+            <select class="prb-select prb-filter-select" id="prb-task-status-filter" data-act="task-status-filter">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="done">Done</option>
+              <option value="skipped">Skipped</option>
+            </select>
+          </div>
+          <div class="prb-round-status" id="prb-round-status"></div>
+          <div id="prb-task-list"></div>
+        </div>
+        <div id="prb-view-results" hidden>
+          <div id="prb-round-report"></div>
+          <div id="prb-round-history"></div>
+        </div>
+      </section>
+    </section>
+
+  </main>
+
+  <div class="prb-modal-overlay" id="prb-modal-overlay">
+    <div class="prb-modal">
+      <div class="prb-modal-title" id="prb-modal-title">Title</div>
+      <div class="prb-modal-body" id="prb-modal-body"></div>
+      <div class="prb-modal-foot" id="prb-modal-foot"></div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Website HTML Tool Item Editor - test harness</title>
+<link rel="stylesheet" href="WebsiteHtmlToolLibrayItem.css">
+<link rel="stylesheet" href="../../COMMON/TestHarnessBar/harness-bar.css">
+<style>
+  body { margin: 0; background: #e8ebf3; font-family: 'Segoe UI', Arial, sans-serif; }
+  #app { max-width: 1200px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="th-bar" id="th-bar"></div>
+<div id="app">
+<!-- TOOL HTML START -->
+<div class="wht-root" id="wht-root">
+  <header class="wht-header">
+    <div class="wht-header-inner">
+      <div class="wht-brand">
+        <div class="wht-logo-mark">W</div>
+        <div>
+          <h1>Website HTML Tool Item Editor</h1>
+          <p>Details, code and documents of one website html-tool widget, kept in this tool's own saved value</p>
+        </div>
+      </div>
+      <div class="wht-header-actions">
+        <span class="wht-size-meter" id="wht-size-meter" title="Stored value size"></span>
+        <span class="wht-save-state" id="wht-save-state">Draft staged</span>
+        <span class="wht-role-badge" id="wht-role-badge"></span>
+        <span class="wht-lock-note" id="wht-lock-note" style="display:none">🔒 Read-only</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wht-tabbar">
+    <nav class="wht-tabs" id="wht-tabs">
+      <button class="wht-tab active" data-tab="details">Details</button>
+      <button class="wht-tab" data-tab="html">HTML</button>
+      <button class="wht-tab" data-tab="css">CSS</button>
+      <button class="wht-tab" data-tab="js">JS</button>
+      <button class="wht-tab" data-tab="preview">Preview</button>
+      <button class="wht-tab" data-tab="docs">Docs</button>
+      <button class="wht-tab" data-tab="screenshots">Screenshots</button>
+      <button class="wht-tab" data-tab="logs">Logs</button>
+    </nav>
+  </div>
+
+  <main class="wht-main">
+    <section class="wht-pane" id="pane-details">
+      <div class="wht-card">
+        <h2>Tool details</h2>
+        <p class="wht-hint">Identity of this website tool. Everything is stored in this tool's own saved value - edits stage automatically and save with the CMS record.</p>
+        <div class="wht-form-grid">
+          <div class="wht-field">
+            <label for="wht-f-toolName">Tool name <span class="wht-required">*</span></label>
+            <input class="wht-input" id="wht-f-toolName" placeholder="e.g. Testimonials Slider" maxlength="120">
+          </div>
+          <div class="wht-field">
+            <label for="wht-f-toolIcon">Icon <span class="wht-label-hint">(single emoji)</span></label>
+            <input class="wht-input" id="wht-f-toolIcon" placeholder="e.g. 💬" maxlength="8">
+          </div>
+          <div class="wht-field">
+            <label for="wht-f-toolStatus">Status</label>
+            <select class="wht-input" id="wht-f-toolStatus">
+              <option value="draft">Draft — hidden from the widget library</option>
+              <option value="active">Active — selectable in pages</option>
+            </select>
+          </div>
+          <div class="wht-field wht-field-wide">
+            <label for="wht-f-toolDescription">Description</label>
+            <textarea class="wht-textarea" id="wht-f-toolDescription" spellcheck="false" placeholder="What the widget shows on a page and which data it reads."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>Categories &amp; tags</h2>
+        <p class="wht-hint">Pick any number of categories from the website widget taxonomy and add search keywords for the widget library.</p>
+        <div class="wht-form-grid">
+          <div class="wht-field">
+            <label>Categories <span class="wht-label-hint" id="wht-category-count">0 selected</span></label>
+            <input class="wht-input" id="wht-category-search" placeholder="Filter categories...">
+            <div class="wht-cat-box" id="wht-category-list"></div>
+            <div class="wht-chips" id="wht-category-selected"></div>
+          </div>
+          <div class="wht-field">
+            <label>Tags <span class="wht-label-hint">(type and press Enter or comma)</span></label>
+            <div class="wht-tags-list" id="wht-tags-list"></div>
+            <input class="wht-input" id="wht-tags-input" placeholder="e.g. slider, testimonials" maxlength="200">
+            <div class="wht-tag-suggest" id="wht-tag-suggest"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>Embedding parameters schema</h2>
+        <p class="wht-hint">Maps each parameter name to its default value. When the tool is added to a page, these values are passed to the widget - it reads them from <code>gw.getPageParams()</code> or its own config.</p>
+        <div class="wht-schema-editor" id="wht-schema-params">
+          <div class="wht-schema-tabs">
+            <button class="wht-schema-tab active" data-schema-part="json">JSON code</button>
+            <button class="wht-schema-tab" data-schema-part="sample">Sample</button>
+            <button class="wht-schema-tab" data-schema-part="editor">Editor</button>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-json">
+            <textarea class="wht-json-field" id="wht-f-toolParams" spellcheck="false" placeholder='{ "maxItems": 6, "autoplay": true }'></textarea>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-sample" style="display:none">
+            <div class="wht-schema-sample">
+              <p>A parameters schema is a JSON object that maps each parameter name to its default value. The platform passes these to the widget when it is embedded on a page.</p>
+              <pre>{
+  "maxItems": 6,
+  "autoplay": true,
+  "cmsObjectType": "testimonials",
+  "headings": ["Fresh", "Popular"]
+}</pre>
+              <p>Allowed value types: string (in quotes), number, boolean, array or object (JSON).</p>
+            </div>
+          </div>
+          <div class="wht-schema-part" id="wht-schema-pane-params-editor" style="display:none">
+            <p class="wht-hint">Values are JSON: strings need quotes ("USD"), numbers and booleans as-is, arrays and objects as JSON text.</p>
+            <div class="wht-schema-rows" id="wht-schema-rows-params"></div>
+            <button class="wht-btn wht-btn-ghost wht-btn-sm wht-schema-add" id="wht-schema-add-params">+ Add parameter</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wht-card">
+        <h2>External API connections</h2>
+        <p class="wht-hint">Website tools are embedded into pages server-side and may talk to outside APIs. Keep credentials here instead of inside the widget code - they are configured once and consumed by the platform when the tool runs. Secrets must never appear in the HTML/CSS/JS code.</p>
+        <div class="wht-api-list" id="wht-api-list"></div>
+        <button class="wht-btn wht-btn-ghost wht-btn-sm" id="wht-api-add">+ Add API connection</button>
+        <div class="wht-api-form" id="wht-api-form" style="display:none">
+          <span class="wht-api-form-title" id="wht-api-form-title">New API connection</span>
+          <div class="wht-form-grid">
+            <div class="wht-field">
+              <label for="wht-api-name">API name <span class="wht-required">*</span></label>
+              <input class="wht-input" id="wht-api-name" placeholder="e.g. OpenWeather" maxlength="80">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-baseUrl">Base URL</label>
+              <input class="wht-input" id="wht-api-baseUrl" placeholder="https://api.example.com" maxlength="300">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authType">Authentication</label>
+              <select class="wht-input" id="wht-api-authType">
+                <option value="none">None — public endpoint</option>
+                <option value="apiKey">API key in a header</option>
+                <option value="bearerToken">Bearer token</option>
+              </select>
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authHeaderName">Header name <span class="wht-label-hint">(auto-filled when empty)</span></label>
+              <input class="wht-input" id="wht-api-authHeaderName" placeholder="e.g. x-api-key" maxlength="80">
+            </div>
+            <div class="wht-field">
+              <label for="wht-api-authValue">Key / token value</label>
+              <input class="wht-input" id="wht-api-authValue" placeholder="Secret value - never copy it into the widget code" maxlength="500">
+            </div>
+            <div class="wht-field wht-field-wide">
+              <label for="wht-api-usageNote">Usage note</label>
+              <textarea class="wht-textarea wht-textarea-sm" id="wht-api-usageNote" spellcheck="false" placeholder="Where the widget uses this API, e.g. weather cards on the homepage."></textarea>
+            </div>
+          </div>
+          <div class="wht-api-form-actions">
+            <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-api-save">Save connection</button>
+            <button class="wht-btn wht-btn-ghost wht-btn-sm" id="wht-api-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-html" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">HTML code</span>
+          <span class="wht-editor-hint">Body fragment only - no &lt;html&gt; / &lt;head&gt; / &lt;body&gt; tags. One root wrapper class on the first element. The gw- prefix is reserved for the platform.</span>
+          <span class="wht-editor-meta" id="wht-meta-html">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-html" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolHtmlCode" spellcheck="false" wrap="off" placeholder="Paste the === HTML === fragment here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-css" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">CSS code</span>
+          <span class="wht-editor-hint">Scoped under the root wrapper class - never style bare html / body / a / button / h1. Use the --gw-color-* theme variables.</span>
+          <span class="wht-editor-meta" id="wht-meta-css">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-css" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolCssCode" spellcheck="false" wrap="off" placeholder="Paste the === CSS === rules here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-js" style="display:none">
+      <div class="wht-editor">
+        <div class="wht-editor-head">
+          <span class="wht-editor-title">JS code</span>
+          <span class="wht-editor-hint">Vanilla JS only - no CDN libraries, no &lt;script&gt; tag. Must be idempotent (re-runs on every SPA navigation). Integrate through window.gw.</span>
+          <span class="wht-editor-meta" id="wht-meta-js">0 lines · 0 chars</span>
+        </div>
+        <div class="wht-editor-body">
+          <pre class="wht-gutter" id="wht-gutter-js" aria-hidden="true">1</pre>
+          <textarea class="wht-code" id="wht-code-toolJsCode" spellcheck="false" wrap="off" placeholder="Paste the === JS === block here"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-preview" style="display:none">
+      <div class="wht-preview-bar">
+        <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-btn-rebuild">▶ Rebuild preview</button>
+        <span class="wht-hint">Runs the three code blocks with a mock <code>window.gw</code> SDK inside a sandboxed frame. A log panel appears inside the preview.</span>
+        <label class="wht-preview-params-label" for="wht-preview-params">Params JSON</label>
+        <input class="wht-preview-params" id="wht-preview-params" placeholder='{"maxItems": 6}' spellcheck="false">
+        <span class="wht-preview-status" id="wht-preview-status">Not built yet</span>
+      </div>
+      <div class="wht-preview-frame-wrap">
+        <iframe class="wht-preview-frame" id="wht-preview-frame" sandbox="allow-scripts allow-forms allow-downloads allow-popups" title="Website tool preview"></iframe>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-docs" style="display:none">
+      <div class="wht-doc-tabs" id="wht-doc-tabs"></div>
+      <div class="wht-doc-content" id="wht-doc-content"></div>
+    </section>
+
+    <section class="wht-pane" id="pane-screenshots" style="display:none">
+      <div class="wht-card">
+        <h2>Screenshots</h2>
+        <p class="wht-hint">Upload to CMS storage - only the URL is kept, never file bytes. Insert places the image into the HTML editor you last focused.</p>
+        <div class="wht-shots-bar">
+          <button class="wht-btn wht-btn-primary wht-btn-sm" id="wht-shots-upload">⬆ Upload screenshot</button>
+          <span class="wht-hint" id="wht-shots-count">0 screenshots</span>
+          <span class="wht-hint wht-shots-upload-hint" id="wht-shots-upload-hint"></span>
+        </div>
+        <div class="wht-shots-list" id="wht-shots-list"></div>
+      </div>
+    </section>
+
+    <section class="wht-pane" id="pane-logs" style="display:none">
+      <div class="wht-card">
+        <h2>Activity log</h2>
+        <p class="wht-hint">Recent actions of this tool - uploads, preview builds and API edits. Memory-only: nothing here is stored in the CMS.</p>
+      </div>
+      <details class="wht-debug">
+        <summary>Diagnostics log</summary>
+        <pre class="wht-debug-log" id="wht-debug-log">(no entries yet)</pre>
+      </details>
+    </section>
+  </main>
+</div>
+<!-- TOOL HTML END -->
+</div>
+
+<script src="../../COMMON/TestHarnessBar/harness-bar.js"></script>
+<script>
+(function () {
+  'use strict';
+  var STORAGE_KEY = 'wht_library_item_test_v1';
+  var query = new URLSearchParams(window.location.search);
+  var role = 'admin';
+  var readOnly = false;
+  var listeners = {};
+  function register(eventName, callback) { (listeners[eventName] = listeners[eventName] || []).push(callback); }
+  function fire(eventName, payload) {
+    (listeners[eventName] || []).slice().forEach(function (callback) {
+      try { callback(payload); } catch (error) { logLine('listener error: ' + error.message); }
+    });
+  }
+  function logLine(text) {
+    if (window.HarnessBar && HarnessBar.log) HarnessBar.log(text);
+  }
+  function savedValue() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (error) { return null; }
+  }
+  function persistValue(value) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (error) {}
+  }
+  function currentUser() {
+    if (role === 'none') return null;
+    if (role === 'viewer') return { id: 'u_viewer', name: 'Viewer', email: 'viewer@test.local', roles: ['viewer'], effectiveAccess: { isViewer: true, isEditor: false, isManager: false } };
+    if (role === 'editor') return { id: 'u_editor', name: 'Editor', email: 'editor@test.local', roles: ['editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: false } };
+    return { id: 'u_admin', name: 'Admin', email: 'admin@test.local', roles: ['admin', 'editor'], effectiveAccess: { isViewer: true, isEditor: true, isManager: true } };
+  }
+
+  var sampleWidgetHtml = [
+    '<section class="ts-slider" id="ts-slider">',
+    '  <h2 class="ts-slider-title">What our customers say</h2>',
+    '  <p class="ts-slider-sub" id="ts-slider-count">Loading testimonials...</p>',
+    '  <div class="ts-slider-track" id="ts-slider-track"></div>',
+    '  <div class="ts-slider-controls">',
+    '    <button class="ts-slider-btn" id="ts-slider-prev" type="button">‹ Prev</button>',
+    '    <button class="ts-slider-btn" id="ts-slider-next" type="button">Next ›</button>',
+    '  </div>',
+    '  <form class="ts-newsletter" data-gw-form>',
+    '    <label>Get updates <input type="email" name="email" required placeholder="you@example.com"></label>',
+    '    <input type="text" name="website" class="ts-hp" tabindex="-1" autocomplete="off" aria-hidden="true">',
+    '    <button type="submit">Subscribe</button>',
+    '    <div data-gw-form-status role="status"></div>',
+    '  </form>',
+    '</section>'
+  ].join('\n');
+  var sampleWidgetCss = [
+    '.ts-slider { font-family: Segoe UI, Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 24px 16px; }',
+    '.ts-slider-title { font-size: 1.5rem; margin: 0 0 4px; color: var(--gw-color-ink, #0f172a); }',
+    '.ts-slider-sub { color: var(--gw-color-muted, #64748b); font-size: .9rem; }',
+    '.ts-slider-track { display: grid; gap: 14px; margin: 18px 0; }',
+    '.ts-slider-card { border: 1px solid var(--gw-color-line, #e2e8f0); border-radius: 12px; padding: 16px 18px; background: var(--gw-color-surface, #f8fafc); }',
+    '.ts-slider-quote { font-size: 1rem; line-height: 1.5; margin: 0 0 10px; color: var(--gw-color-ink, #0f172a); }',
+    '.ts-slider-author { font-weight: 700; font-size: .9rem; color: var(--gw-color-primary, #1e4e79); }',
+    '.ts-slider-controls { display: flex; gap: 10px; }',
+    '.ts-slider-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--gw-color-line, #e2e8f0); background: var(--gw-color-card, #fff); cursor: pointer; }',
+    '.ts-slider-btn:hover { border-color: var(--gw-color-accent, #2563eb); color: var(--gw-color-accent, #2563eb); }',
+    '.ts-newsletter { margin-top: 22px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }',
+    '.ts-newsletter input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--gw-color-line, #e2e8f0); }',
+    '.ts-hp { position: absolute; left: -9999px; }'
+  ].join('\n');
+  var sampleWidgetJs = [
+    '(function () {',
+    "  if (window.__tsInit) return;",
+    '  window.__tsInit = true;',
+    "  var root = document.getElementById('ts-slider');",
+    '  if (!root) return;',
+    '  var pageParams = gw.getPageParams();',
+    '  var maxItems = Number(pageParams.maxItems) || 6;',
+    "  var countLabel = document.getElementById('ts-slider-count');",
+    "  var track = document.getElementById('ts-slider-track');",
+    "  var nextButton = document.getElementById('ts-slider-next');",
+    "  var prevButton = document.getElementById('ts-slider-prev');",
+    '  var items = [];',
+    '  var currentOffset = 0;',
+    '  function render() {',
+    '    var visibleItems = items.slice(currentOffset, currentOffset + 3);',
+    "    track.innerHTML = '';",
+    '    visibleItems.forEach(function (item) {',
+    "      var card = document.createElement('article');",
+    "      card.className = 'ts-slider-card';",
+    "      var quote = document.createElement('p');",
+    "      quote.className = 'ts-slider-quote';",
+    '      quote.textContent = item.quote;',
+    "      var author = document.createElement('div');",
+    "      author.className = 'ts-slider-author';",
+    '      author.textContent = item.author;',
+    '      card.appendChild(quote);',
+    '      card.appendChild(author);',
+    '      track.appendChild(card);',
+    '    });',
+    '  }',
+    "  gw.db.query({ cmsObjectType: 'testimonials', pageSize: 50 }).then(function (result) {",
+    '    items = (result.items || []).slice(0, maxItems);',
+    "    countLabel.textContent = items.length ? items.length + ' testimonials' : 'No testimonials yet';",
+    '    render();',
+    '  });',
+    "  nextButton.addEventListener('click', function () {",
+    '    currentOffset = items.length ? (currentOffset + 1) % items.length : 0;',
+    '    render();',
+    '  });',
+    "  prevButton.addEventListener('click', function () {",
+    '    currentOffset = items.length ? (currentOffset - 1 + items.length) % items.length : 0;',
+    '    render();',
+    '  });',
+    '  gw.forms.bind();',
+    "  gw.track('widget-mounted', { widget: 'testimonials-slider' });",
+    '})();'
+  ].join('\n');
+
+  var sampleValue = {
+    version: 1,
+    draft: {
+      toolName: 'Testimonials Slider',
+      toolIcon: '💬',
+      toolStatus: 'active',
+      toolDescription: 'Slides customer testimonials onto any page. Reads quotes from a CMS object type and renders them with scoped styles and the gw SDK.',
+      toolCategories: ['media', 'social'],
+      toolTags: ['slider', 'testimonials', 'social-proof'],
+      toolHtmlCode: sampleWidgetHtml,
+      toolCssCode: sampleWidgetCss,
+      toolJsCode: sampleWidgetJs,
+      toolParams: { maxItems: 6, cmsObjectType: 'testimonials' },
+      externalApis: [{
+        id: 'api-weather-1',
+        apiName: 'OpenWeather',
+        baseUrl: 'https://api.openweathermap.org/data/2.5',
+        authType: 'apiKey',
+        authHeaderName: 'x-api-key',
+        authValue: 'demo-secret-key',
+        usageNote: 'Weather strip on the homepage hero.'
+      }],
+      docs: {
+        webpage: {
+          html: '<div class="ts-page"><header class="ts-page-hero"><h1>Testimonials Slider</h1><p>Show social proof on any page in minutes.</p></header><section class="ts-page-grid"><article><h2>Scoped styles</h2><p>Theme-aware colors from the site.</p></article><article><h2>SSR friendly</h2><p>No iframe, no libraries.</p></article></section></div>',
+          css: '.ts-page { font-family: Segoe UI, Arial, sans-serif; color: #0f172a; padding: 24px; }\n.ts-page-hero { background: linear-gradient(135deg, #0d9488, #6366f1); color: #fff; padding: 36px; border-radius: 16px; }\n.ts-page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }\n.ts-page-grid article { border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; }',
+          js: '(function () { var hero = document.querySelector(".ts-page-hero"); if (hero) hero.setAttribute("data-ready", "yes"); })();'
+        },
+        help: {
+          html: '<div class="ts-help"><h1>How to use Testimonials Slider</h1><ol><li>Add the widget to a page</li><li>Set maxItems in the parameters</li><li>Keep quotes in the testimonials object type</li></ol></div>',
+          css: '.ts-help { font-family: Segoe UI, Arial, sans-serif; padding: 24px; }',
+          js: ''
+        },
+        updates: {
+          html: '<div class="ts-updates"><h1>Updates</h1><ul><li>v1.1 - keyboard navigation</li><li>v1.0 - first release</li></ul></div>',
+          css: '.ts-updates { font-family: Segoe UI, Arial, sans-serif; padding: 24px; }',
+          js: ''
+        }
+      },
+      shots: []
+    }
+  };
+
+  var value = savedValue();
+  if (query.get('sample') === '1' && !value) value = sampleValue;
+
+  var mockParams = {
+    allowUpload: query.get('allowUpload') || 'yes',
+    previewMockParams: query.get('previewMockParams') || '{}',
+    previewMockData: query.get('previewMockData') || '{"testimonials":[{"id":"t1","quote":"Great widget, exactly what our site needed.","author":"Aylin K."},{"id":"t2","quote":"Setup took five minutes and it just works.","author":"Mehmet D."},{"id":"t3","quote":"The theme colors adapt perfectly.","author":"Sofia R."}]}',
+    categoryList: query.get('categoryList') || ''
+  };
+
+  window.tool = {
+    onReady: function (callback) {
+      if (typeof callback === 'function') {
+        try { callback(value); } catch (error) { logLine('onReady threw: ' + error.message); }
+      }
+    },
+    getValue: function () { return value; },
+    setValue: function (newValue) { value = newValue; persistValue(newValue); fire('valueChange', newValue); },
+    onValueChange: function (callback) { register('valueChange', callback); },
+    getFields: function () { return {}; },
+    watchField: function (fieldId, callback) { register('field:' + fieldId, callback); },
+    setField: function (fieldId, fieldValue) { fire('fieldsChange', {}); },
+    setFields: function (fieldMap) { fire('fieldsChange', fieldMap || {}); },
+    onFieldsChange: function (callback) { register('fieldsChange', callback); },
+    param: function (paramName, defaultValue) {
+      return (typeof mockParams[paramName] !== 'undefined' && mockParams[paramName] !== '') ? mockParams[paramName] : defaultValue;
+    },
+    isReadOnly: function () { return readOnly; },
+    onReadonlyChange: function (callback) { register('readonlyChange', callback); },
+    reportValid: function (isValid, message) { logLine('reportValid(' + isValid + ')' + (message ? ' - ' + message : '')); },
+    requestSave: function (callback) { logLine('requestSave - parent Save simulated'); if (typeof callback === 'function') callback(null, true); },
+    notify: function (message, severity) { logLine('[' + (severity || 'info') + '] ' + message); },
+    resize: function () {},
+    declareOutput: function (schema) { logLine('declareOutput called'); },
+    declareParams: function (params) { logLine('declareParams: ' + (params || []).length + ' param(s)'); },
+    reportMissingParams: function (missing, message) { logLine('reportMissingParams: ' + (message || '')); },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (callback) { register('userChange', callback); },
+    getPermittedUsers: function () { var user = currentUser(); return user ? [user] : []; },
+    onPermittedUsersChange: function (callback) { register('permittedUsersChange', callback); },
+    openUrl: function (url) { logLine('openUrl: ' + url); },
+    openObjectDetail: function (objectType, objectId) { logLine('openObjectDetail: ' + objectType + '/' + objectId); },
+    requestAI: function (prompt, context, callback) { callback('AI unavailable in harness mock', null); },
+    requestAIStream: function (prompt, context, callbacks) { if (callbacks && callbacks.onError) callbacks.onError('AI unavailable in harness mock'); },
+    requestUpload: function (accept, callback) {
+      logLine('requestUpload(' + accept + ') - returning a mock storage file');
+      setTimeout(function () {
+        if (typeof callback === 'function') callback(null, {
+          name: 'widget-dashboard.png',
+          url: 'https://storage.example.test/shots/widget-dashboard.png',
+          size: 90112,
+          type: 'image/png'
+        });
+      }, 30);
+    },
+    requestFileContent: function (url, callback) { callback('FileContent unavailable in harness mock', null); },
+    requestExportPdf: function (options, callback) { callback('ExportPdf unavailable in harness mock', null); },
+    requestSendEmail: function (options, callback) { callback('SendEmail unavailable in harness mock', null); },
+    requestObjects: function (action, params, callback) { setTimeout(function () { callback('Objects unavailable in harness mock', null); }, 30); }
+  };
+
+  HarnessBar.init({
+    title: 'WebsiteHtmlToolLibrayItem harness',
+    storageKeys: [STORAGE_KEY],
+    info: 'QA: ?role=admin|editor|viewer|none&ro=1&sample=1&tab=docs&doctab=help&previewMockParams=&previewMockData=',
+    buttons: [
+      { id: 'dump-value', label: 'Dump value', onClick: function () { logLine('value: ' + JSON.stringify(value).slice(0, 700)); } }
+    ]
+  });
+  HarnessBar.onChange(function (state) {
+    role = state.role;
+    readOnly = state.readOnly;
+    fire('userChange', currentUser());
+    fire('readonlyChange', readOnly);
+  });
+})();
+</script>
+<script src="WebsiteHtmlToolLibrayItem.js"></script>
+<script>
+(function () {
+  var tabQuery = new URLSearchParams(window.location.search);
+  function clickMainTab(tabName) {
+    var tabButton = document.querySelector('.wht-tab[data-tab="' + tabName + '"]');
+    if (tabButton) tabButton.click();
+  }
+  var tabName = tabQuery.get('tab');
+  if (tabName) clickMainTab(tabName);
+  var docTabName = tabQuery.get('doctab');
+  if (docTabName) {
+    clickMainTab('docs');
+    setTimeout(function () {
+      var subButton = document.querySelector('.wht-doc-tab[data-doc-tab="' + docTabName + '"]');
+      if (subButton) subButton.click();
+    }, 120);
+  }
+})();
+</script>
+</body>
+</html>

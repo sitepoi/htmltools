@@ -1,6 +1,8 @@
+<!-- build 2026-10-04-7 -->
 <div id="app">
-  <!-- DIFF LIBRARY CDN — loaded before all other scripts (developer visual line diff in chat) -->
-  <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
+  <!-- NO EXTERNAL SCRIPTS: self-contained line diff in WebpageBuilder.js.
+       An external <script src> blocks every later inline script until it
+       loads — in the CMS sandbox a stalled CDN request killed the whole tool. -->
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-left">
@@ -14,7 +16,8 @@
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="version-badge" id="tool-version" title="Click to change version (increment only)">v1.0.0</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-7</span>
+      <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
   </header>
@@ -228,6 +231,7 @@
                 <button class="btn btn-outline" id="btn-widget-refresh" title="Reload the widget list">↻ Refresh</button>
                 <button class="btn btn-outline" id="btn-form-builder">📝 Form Builder</button>
               </div>
+              <div class="widget-lib-source" id="widget-lib-status">🛰 Checking library connection…</div>
               <p class="gen-hint">Widgets come from the application store (widgetCatalogUrl). Search and add one as a data-gw-app island.</p>
             </div>
           </div>
@@ -335,6 +339,10 @@
     <div class="modal-body">
       <input type="text" id="widget-search" class="widget-search" placeholder="Search by name or id… (e.g. gallery, reviews)" autocomplete="off" />
       <div class="widget-lib-source" id="widget-lib-source"></div>
+      <div class="widget-lib-meta">
+        <span id="widget-lib-count"></span>
+        <button class="btn btn-sm btn-outline" id="btn-widget-more" style="display:none">⬇ Load more</button>
+      </div>
       <div id="widget-library-list" class="widget-library-list"></div>
     </div>
   </div>
@@ -456,8 +464,9 @@ CAPABILITY MAP (how to reach every platform feature):
   Analytics           -&gt; site plugins (admin-owned); gw.track in pages
   Shared sources      -&gt; shared-sources objects + data.sections
                          (WebsiteSharedSourceBuilder, Section 12.6)
-  Widget library      -&gt; gw-widgets registry + [data-gw-app] islands
-                         (applicationstore.uniconhub.com, Section 11.1)
+  Widget library      -&gt; website-html-tool-library-applicationstore catalog
+                         (applicationstore.uniconhub.com) + gw-widgets
+                         registry + [data-gw-app] islands (Section 11.1)
 
 If the page needs an operation, a flow or an email template that the user
 has not confirmed exists, still generate the page but append:
@@ -978,6 +987,27 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
 - The site's website html tool library is published at
   https://applicationstore.uniconhub.com/. Each library tool can be
   selected as a WIDGET and added to any page as a [data-gw-app] island.
+- CATALOG API — UniconHub Public API v2 (the binding contract; v2 is ACTIVE
+  since 2026-09-24, v1 is frozen and ignored). The store publishes the
+  library as PUBLIC objects of cmsObjectType
+  `website-html-tool-library-applicationstore`
+  (https://applicationstore.uniconhub.com/objects/website-html-tool-library-applicationstore).
+  Page builders read it by asking the PARENT CMS: tool.requestObjects('query',
+  { mainObjectType: 'website-html-tool-library-applicationstore' }) — the CMS
+  host reaches the store API and returns the catalog into the tool iframe
+  (add the type to allowedObjectTypes, role: reader). DIRECT fallback:
+  GET https://applicationstore.uniconhub.com/api/v2/objects/website-html-tool-library-applicationstore
+  with header `x-api-key: &lt;api key&gt;` (or `Authorization: Bearer &lt;key&gt;`).
+  Health probe: GET /api/v2/health (no auth) -&gt;
+  { success:true, status:"ok", apiVersion:"v2" }.
+  Failures: { success:false, error:{ code, message } }
+  (401 = MISSING_API_KEY — set the api key).
+  Each ObjectRecord declares the island and its metadata as FIELD VALUES in
+  productData.data_categoriesBased: gwAppName (island), title, description,
+  category, configSchema (optional, generates data-gw-config), ssrHtml.
+- Search and pagination over the catalog are CLIENT-SIDE over the returned
+  list (server-side filters/sort/limit are not implemented in the public
+  API yet — CMS Application System Reference 7.2).
 - Widget code lives in `gw-widgets` objects (Section 12.6): the object's
   data.gwApp declares the island name and a config schema; its
   data.htmlPage.code.{html,css,js} must call gw.apps.register once.
@@ -1256,3 +1286,25 @@ Rules:
   platform server-side.
 </script>
 </div>
+
+<!-- JS-BOOT PROBE (inline in the HTML file): logs this HTML build and EVERY
+     click from the HTML itself, so a stale/missing [JS] block is provable even
+     when the tool JS never boots. The CSS also shows a red banner until the JS
+     boot sets data-wb-ready on <body>. -->
+<script>
+(function() {
+  var BUILD = '2026-10-04-7';
+  try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
+  try {
+    window.__wbHtmlProbe = true;
+    document.addEventListener('click', function(e) {
+      var t = e.target;
+      var desc = '';
+      try { desc = (t && t.tagName ? t.tagName.toLowerCase() : '?') + (t && t.id ? '#' + t.id : '') + (t && t.className && typeof t.className === 'string' && t.className.trim() ? '.' + t.className.trim().split(/\s+/)[0] : ''); } catch (e2) {}
+      try { console.log('[WEBPAGEBUILDER:CLICK-PROBE] click on ' + desc + (window.__wbBootDone ? '' : ' | NOTE: main JS has NOT booted')); } catch (e3) {}
+    }, true);
+  } catch (e) {
+    try { console.warn('[WEBPAGEBUILDER:HTML-PROBE] failed: ' + (e && e.message ? e.message : e)); } catch (e3) {}
+  }
+})();
+</script>

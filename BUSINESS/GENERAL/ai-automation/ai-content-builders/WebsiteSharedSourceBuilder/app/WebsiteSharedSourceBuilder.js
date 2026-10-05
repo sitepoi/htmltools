@@ -22,6 +22,10 @@ function debounce(fn, ms) {
   };
 }
 
+/* ── SDK-safe wrappers: a CMS SDK quirk must NEVER kill the UI ── */
+function _resize() { try { tool.resize(); } catch (e) {} }
+function _notify(msg, sev) { try { tool.notify(msg, sev); } catch (e) {} }
+
 /* Turkish-safe slugifier (NFKD before transliteration — avoids İ → i- artifacts) */
 function slugify(s) {
   var str = String(s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
@@ -88,7 +92,7 @@ function persist() {
   }
   _justEdited = false;
   try { tool.setValue(_slimValue()); } catch (e) {}
-  tool.resize();
+  _resize();
 }
 
 function _bumpVersion(level) {
@@ -214,7 +218,7 @@ function switchTab(name) {
     if (pane) pane.classList.toggle('active', p === name);
   });
   if (name === 'preview') updatePreview();
-  tool.resize();
+  _resize();
 }
 
 /* ── Kind switching ── */
@@ -507,7 +511,7 @@ function buildGeneratorOutputText() {
   return out;
 }
 function copyToClipboard(text, label) {
-  function done(ok) { tool.notify(ok ? (label || 'Copied!') : 'Copy failed', ok ? 'success' : 'error'); }
+  function done(ok) { _notify(ok ? (label || 'Copied!') : 'Copy failed', ok ? 'success' : 'error'); }
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function() { done(true); }).catch(function() { fallbackCopy(text, done); });
   } else fallbackCopy(text, done);
@@ -526,12 +530,12 @@ function fallbackCopy(text, cb) {
 }
 function copyObjectJson() {
   _commitEditors();
-  if (!DB.code.html && !DB.code.css && !DB.code.js) { tool.notify('Nothing to export yet — write some code first.', 'warning'); return; }
+  if (!DB.code.html && !DB.code.css && !DB.code.js) { _notify('Nothing to export yet — write some code first.', 'warning'); return; }
   copyToClipboard(buildSharedObjectJson(), 'Object JSON copied — create the object in the CMS with this shape.');
 }
 function copyGeneratorOutput() {
   _commitEditors();
-  if (!DB.code.html && !DB.code.css && !DB.code.js) { tool.notify('Nothing to export yet — write some code first.', 'warning'); return; }
+  if (!DB.code.html && !DB.code.css && !DB.code.js) { _notify('Nothing to export yet — write some code first.', 'warning'); return; }
   copyToClipboard(buildGeneratorOutputText(), 'Generator output copied (=== sections).');
 }
 function downloadPreview() {
@@ -545,7 +549,7 @@ function downloadPreview() {
   a.click();
   document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(u); }, 1000);
-  tool.notify('Downloaded: ' + a.download, 'success');
+  _notify('Downloaded: ' + a.download, 'success');
 }
 
 /* ── Meta sync (side panel → DB) ── */
@@ -586,7 +590,7 @@ function render(v) {
   _renderVersion();
   renderChecks();
   updatePreview();
-  tool.resize();
+  _resize();
 }
 
 /* ── Events ── */
@@ -596,7 +600,7 @@ function bindEvents() {
   el('btn-export-sections').onclick = copyGeneratorOutput;
   el('btn-download').onclick = downloadPreview;
   el('btn-refresh-preview').onclick = updatePreview;
-  el('btn-run-checks').onclick = function() { _commitEditors(); renderChecks(); tool.notify('Checks refreshed.', 'info'); };
+  el('btn-run-checks').onclick = function() { _commitEditors(); renderChecks(); _notify('Checks refreshed.', 'info'); };
 
   qsa('.ctab').forEach(function(t) {
     t.onclick = function() { switchTab(this.getAttribute('data-tab')); };
@@ -650,7 +654,7 @@ function bindEvents() {
       e.preventDefault();
       _commitEditors();
       persist();
-      tool.notify('Saved.', 'info');
+      _notify('Saved.', 'info');
     }
   });
 }
@@ -685,7 +689,7 @@ tool.onReady(function(val, fields) {
   render(val);
   bindEvents();
   updatePreview();
-  tool.resize();
+  _resize();
 });
 
 tool.onValueChange(function(v) { render(v); });

@@ -24,6 +24,11 @@ size-report.html (1 MB budget proof), SHIP-CMS-PLAN.md (root).
   register any application's object types as read-only content sources
   served from om_objects over a public API - and guarantees that
   om_private_objects is NEVER exposed by that API.
+- B5 Hide or disable the Publish action for the
+  html-tool-library-item-uniconbaseapps object type (the tool records
+  hold raw code and stay private - publishing must not be possible for
+  them). Publish stays meaningful only for the website-builder page
+  objects.
 
 ## 1. Tool Library application (tools-applicationstore - EXISTS, extend)
 
@@ -278,7 +283,9 @@ listings / social content are single fixed folders, NOT taxonomy copies.
 ### 9.7 Doc object contract (add to the <website page type> field list)
 
 name (text), slug (text - also mirrored in pageMeta.slug), status
-(draft | published), docKind (webpage | help | updates | presentation),
+(draft | published - owned by the CMS Publish action; the tool leaves
+it empty by default, the pageStatus param can override), docKind
+(webpage | help | updates | presentation),
 sourceToolSlug (text), updatedAt (text), webpageContentWithBuilder
 (html-tool field - the WebpageBuilder _slimValue shape), seo object
 (metaTitle, metaDesc, metaKeywords, metaRobots, ogTitle, ogDesc,

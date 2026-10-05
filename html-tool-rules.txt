@@ -39,6 +39,84 @@ code blocks, labeled and ordered as shown:
 Do not merge them. Do not add extra explanation between the blocks.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GLOBAL REQUIREMENT - VISIBLE TOOL BUILD NUMBER (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every tool MUST carry a visible build identifier that changes on EVERY code
+change, so anyone can tell at a glance whether the CMS is running the latest
+upload (old uploads/caches are the #1 cause of "nothing responds to clicks"):
+
+  1. Define a build string in the [JS] block, e.g.
+       var TOOL_BUILD = '2026-10-04-1';
+     Format: YYYY-MM-DD-rN — date + revision counter of the day.
+     INCREMENT it on EVERY single code change of the [HTML], [CSS] or [JS]
+     block. Never leave it unchanged after an edit.
+
+  2. Render it in the VISIBLE UI (a small badge in the tool header):
+       "tool build 2026-10-04-1"
+     This is NOT the page/data version — the build number describes the TOOL
+     CODE itself. Saved-data versions must not be reused for this purpose.
+
+  3. Log it on load as the FIRST console line:
+       console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
+     so the browser console proves which build is actually running.
+
+  4. Stamp the SAME build string as a comment at the top of ALL THREE files:
+       [HTML] <!-- build 2026-10-04-1 -->
+       [CSS]  /* build 2026-10-04-1 */
+       [JS]   /* build 2026-10-04-1 */
+     This lets the admin open each uploaded file in the CMS Tool Builder and
+     verify the uploaded code matches the running build.
+
+  5. Verification: if the CMS badge/log shows an OLD build number while the
+     files contain a new one, the CMS is serving a stale upload/cache —
+     re-save/re-upload the tool in the CMS and check again.
+
+  Applies to ALL tool types. WebpageBuilder is the first tool using it.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GLOBAL REQUIREMENT - INLINE-SCRIPT TOKENIZER SAFETY (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The platform INLINES the uploaded files into the tool page. Inside inline
+script text the HTML tokenizer switches state on raw character sequences that
+are completely harmless in an EXTERNAL .js file. One wrong line silently
+kills the WHOLE script: the UI loads (HTML+CSS are fine) but nothing
+responds, no boot log appears, and the only console evidence is a red
+"Uncaught SyntaxError". Harnesses that load the JS as an external file will
+stay green while the CMS stays dead. These rules are MANDATORY in the [JS]
+block (and in any inline script inside the [HTML] block):
+
+  1. NEVER write a raw <!-- (HTML comment opener) unless --> closes it on
+     the SAME line. Inside inline script text, an unclosed opener switches
+     the tokenizer to an escaped state; a later literal <script in the same
+     file switches it to DOUBLE-escaped state, where </script> is treated as
+     text — the closing tag gets swallowed and the script never executes.
+     Write \u003C!-- instead (same meaning, tokenizer-safe) or split
+     '<' + '!--'.
+
+  2. NEVER write a raw </script sequence anywhere in the [JS] block — it
+     terminates the inline script element immediately, even inside strings
+     or comments. Always write <\/script. Avoid raw <script literals too:
+     write '<scr' + 'ipt>' or '\u003Cscript'.
+
+  3. NEVER reference external resources from the three files: no <script
+     src="https://cdn…"> includes and no <link> to external stylesheets.
+     A classic external script blocks every later inline script until it
+     loads or fails — in the CMS sandbox a stalled CDN request freezes the
+     whole tool. Everything the tool needs must live inside the three files.
+
+  4. Every test harness MUST offer an inline mode (e.g. ?inlinejs=1) that
+     injects the same [JS] block as an INLINE script — the exact
+     tokenization the CMS uses — and the e2e checks must boot the tool
+     through it, not only through the external-file path.
+
+  History: WebpageBuilder builds -4/-5 were dead in the CMS for days because
+  one compliance regex contained /^<!-- v[\d.]+/ (rule 1 violation). Fixed
+  in build -6 by writing \u003C!-- and adding an inline-mode e2e probe.
+  Applies to ALL tool types.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HOW THE SYSTEM WORKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 The system wraps your three files into a full HTML page and injects the `window.tool`

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>School Setup - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="not-started"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body><body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">SchoolSetup</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>School Setup - school year definition (weekend school application)</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the <strong>school year definition</strong> of the
+    weekend school application (mainObjectType <code>weekendSchool</code>). One
+    School Setup object per school year holds the school profile, payment
+    settings and brackets, lessons (subjects with levels), classes (student
+    groups), teachers, the school calendar and the folder ids that connect
+    every other school tool. Every decision made for this tool is logged in
+    section 11 and this document is updated in the same change as the code.
+    When this document and the code disagree, this document is the tiebreaker.
+    Companion documents: <code>WEEKEND-SCHOOL-APP-PLAN.md</code> (architecture
+    of the whole application) and <code>WEEKEND-SCHOOL-BUILD-REPORT.md</code>
+    (build report) in the <code>WeekendSchoolManager</code> folder.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-10-04</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>the app part of the SchoolSetup tool folder (field <code>schoolSetup</code>)</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/SchoolSetup.html</code>, <code>app/SchoolSetup.css</code>, <code>app/SchoolSetup.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>CMS permission configuration (folder ACL setup is done in the CMS), the other school tools (they have their own SSOTs), UI styling details</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
+  </table>
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-big" id="kpi-decisions">0</div><div class="summary-label">Decisions logged</div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-tasks">0/0</div><div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-ideas">0/0</div><div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-status">-</div><div class="summary-label">Document status</div></div>
+  </div>
+  
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>This document defines the school year setup tool and is the single source
+  of truth for every decision about it. Rules of use:</p>
+  <ul>
+    <li><strong>Every decision is logged here</strong> in section 11 with a
+    date; the affected section is updated in the same change as the code.</li>
+    <li><strong>The register is append-only.</strong> Reversed decisions are
+    marked "Reversed (date)", never deleted.</li>
+    <li><strong>This document wins ties.</strong> Resolve discrepancies here
+    first, then change the code.</li>
+    <li><strong>Names must be self-explanatory.</strong> No cryptic
+    abbreviations anywhere in code or documents.</li>
+  </ul>
+  <p class="ok"><strong>Core guarantee.</strong> The school year definition
+  (settings, classes, teachers, lessons, payments, calendar, folder ids) lives
+  in exactly ONE settings object per school year, and every other school tool
+  reads it from there - the definition is never duplicated anywhere else.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr><td><code>app/SchoolSetup.html</code></td><td>Body markup: header, 7 tabs, calendar dialogs, shared modal</td><td>whole file</td></tr>
+    <tr><td><code>app/SchoolSetup.css</code></td><td>Visual design (teal accent)</td><td>whole file</td></tr>
+    <tr><td><code>app/SchoolSetup.js</code></td><td>All logic: state, persistence, tabs, lessons, classes, teachers, calendar, folders</td><td>whole file</td></tr>
+    <tr><td><code>app/test-harness.html</code></td><td>Local test harness with mock CMS SDK and sample data</td><td>whole file</td></tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>School profile (name, school year)</td><td><code>renderOverview()</code></td><td>2026-10-04</td><td>verified in harness</td></tr>
+    <tr><td>C-02</td><td>Payment settings (currency, monthly due day) on the Payments tab</td><td><code>renderPaymentsPane()</code></td><td>2026-10-04</td><td>D-SSU-07</td></tr>
+    <tr><td>C-03</td><td>Payment brackets with monthly fee and optional discounted fee</td><td><code>renderBrackets()</code></td><td>2026-10-04</td><td>D-SSU-07</td></tr>
+    <tr><td>C-04</td><td>Lessons = subjects with levels; create / edit / remove lesson objects in the Lessons folder</td><td><code>openLessonModal()</code>, <code>saveLessonFromModal()</code></td><td>2026-10-04</td><td>D-SSU-04</td></tr>
+    <tr><td>C-05</td><td>Inline add / remove of lesson levels (CAS update of the lesson object)</td><td><code>addLessonLevel()</code></td><td>2026-10-04</td><td>D-SSU-04</td></tr>
+    <tr><td>C-06</td><td>Attendance rule selector (all / first / firstAndAfternoon / custom) with derived per-lesson badges</td><td><code>lessonNeedsAttendance()</code></td><td>2026-10-04</td><td>D-SSU-06</td></tr>
+    <tr><td>C-07</td><td>Classes (student groups) with optional homeroom teacher</td><td><code>renderClasses()</code></td><td>2026-10-04</td><td>D-SSU-05</td></tr>
+    <tr><td>C-08</td><td>Teacher directory (name + email, email = CMS login identity) with dropdown assignment to lessons and classes</td><td><code>renderTeachers()</code>, <code>teacherOptionsHtml()</code></td><td>2026-10-04</td><td>D-SSU-08</td></tr>
+    <tr><td>C-09</td><td>School calendar: explicit <code>schoolDays[]</code> list; recurring pattern dialog, single date dialog, click-to-add cells, remove with x, clear with confirmation</td><td><code>renderCalendarView()</code>, <code>generateSchoolDays()</code></td><td>2026-10-04</td><td>D-SSU-09</td></tr>
+    <tr><td>C-10</td><td>Folder ids form (9 folders) with suggested id generation, save with change confirmation, Copy/Paste JSON</td><td><code>renderFolderRows()</code>, <code>saveFolderIds()</code></td><td>2026-10-04</td><td>D-SSU-10</td></tr>
+    <tr><td>C-11</td><td>Automatic save (300 ms debounce) of the settings object</td><td><code>persistSoon()</code></td><td>2026-10-04</td><td>D-SSU-11</td></tr>
+    <tr><td>C-12</td><td>Legacy class groups migration ("Create lesson objects from these classes")</td><td><code>createLessonsFromClasses()</code></td><td>2026-10-04</td><td>D-SSU-04</td></tr>
+    <tr><td>C-13</td><td>Role-aware read-only state and identity polling</td><td><code>applyReadonlyState()</code></td><td>2026-10-04</td><td>conventions</td></tr>
+    <tr><td>C-14</td><td>Test harness with sample data, tab switch and click-action hooks</td><td><code>app/test-harness.html</code></td><td>2026-10-04</td><td>D-SSU-12</td></tr>
+    <tr><td>C-15</td><td>School contact block (address, phone, website, principal name + email)</td><td><code>renderOverview()</code></td><td>2026-10-04</td><td>D-SSU-15</td></tr>
+    <tr><td>C-16</td><td>One-time payments at school level and class level (scope school | class + classId)</td><td><code>renderOneTimeFees()</code></td><td>2026-10-04</td><td>D-SSU-16</td></tr>
+    <tr><td>C-17</td><td>Attendance policy (late threshold + absence call rule) stored for the attendance tool</td><td><code>renderAttendanceRule()</code></td><td>2026-10-04</td><td>D-SSU-17</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Lesson</td><td>A subject taught at the school (e.g. Quran), stored as one lesson object with levels, teacher, schedule, checklist, subfolders and attendance flag.</td></tr>
+    <tr><td>Level</td><td>A subdivision of a lesson (Level 1, Level 2). Students enroll in a lesson level.</td></tr>
+    <tr><td>Class</td><td>The group a student belongs to (Grade 1-A, Grade 3-4). Separate from lessons; a student sits in one class and attends several lessons.</td></tr>
+    <tr><td>Teacher</td><td>A real application user; stored here as name + email. The email is the CMS login identity.</td></tr>
+    <tr><td>Payment bracket</td><td>A pricing plan for the school year: monthly fee + optional discounted monthly fee; assigned per student as the monthly installment.</td></tr>
+    <tr><td>Attendance rule</td><td>The rule deciding which lessons need attendance checks: all, first lesson only, first + afternoon lessons, or custom per lesson.</td></tr>
+    <tr><td>School day</td><td>One explicit date in the <code>schoolDays[]</code> list; attendance sheets use exactly this list.</td></tr>
+    <tr><td>Folder map</td><td>The 9 folder ids of the application (settings, lessons, prospects, students, attendance, progress, payments, contacts, communication) stored in the settings object.</td></tr>
+    <tr><td>CAS</td><td>Compare-and-set update: a lesson object update carries the version it was read with; on conflict, reload and retry.</td></tr>
+  </table>
+
+  <h2 id="sec-problem">5. Verified problem and root cause</h2>
+  <p>This tool replaces the settings page of the old all-in-one
+  WeekendSchoolManager prototype. The prototype mixed settings, students,
+  attendance and payments in one 2300-line tool with no per-year separation and
+  no reusable structure for other school tools.</p>
+  <p class="risk"><strong>Root cause:</strong> no single, per-year settings
+  object existed, so every feature stored its own configuration and nothing
+  could be reused across school applications. The fix is this tool: one
+  settings object per school year, readable by every other tool.</p>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>One settings object per school year; the object lives in the year's
+    <code>0-Setup</code> folder (folder permission: principal only).</li>
+    <li>Everything is school-year scoped: payments, classes, teachers, lessons,
+    calendar and folder ids belong to this object.</li>
+    <li>Lessons are created as real objects in the Lessons folder with CAS
+    updates - no lesson data duplicated in settings.</li>
+    <li>The calendar is an explicit, visible list of dates; the user can build,
+    inspect and correct it without guessing a formula.</li>
+    <li>Folder id changes that would disconnect existing data require an
+    explicit confirmation with the old and new values shown.</li>
+    <li>All changes save automatically (allowRequestSave = yes); no manual
+    Save button required for the settings itself.</li>
+    <li>UI stays understandable without reading documentation - every tab
+    starts with a short explainer.</li>
+  </ol>
+
+  <h2 id="sec-options">7. Option evaluation and decision</h2>
+  <table>
+    <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
+    <tr><td><strong>A. One settings object per year</strong></td><td>Single tool on a settings object in 0-Setup; folder map stored inside it</td><td>Yes</td><td>Low</td><td class="status-adopted">ADOPTED (D-SSU-01)</td></tr>
+    <tr><td><strong>B. Settings as app-level parameters</strong></td><td>Admin passes everything via tool params</td><td>Partially - no per-year isolation</td><td>Low</td><td class="status-rejected">REJECTED (no year isolation)</td></tr>
+    <tr><td><strong>C. Tabbed UI</strong></td><td>Overview / Payments / Lessons / Classes / Teachers / Calendar / Folders tabs</td><td>Yes - one scrolling page was unprofessional</td><td>Low</td><td class="status-adopted">ADOPTED (D-SSU-02)</td></tr>
+    <tr><td><strong>D. Lessons carry levels (class = subject)</strong></td><td>Lessons are subjects with levels; classes are separate student groups</td><td>Yes - two distinct concepts modeled correctly</td><td>Medium (data model)</td><td class="status-adopted">ADOPTED (D-SSU-04, D-SSU-05)</td></tr>
+    <tr><td><strong>E. Explicit calendar list</strong></td><td>schoolDays[] built by pattern dialog + single dates + click-to-add</td><td>Yes - flexible and inspectable</td><td>Medium</td><td class="status-adopted">ADOPTED (D-SSU-09)</td></tr>
+    <tr><td><strong>F. Teacher directory here</strong></td><td>Teachers (name + email) in settings; email = CMS identity</td><td>Yes - tools cannot query CMS users</td><td>Low</td><td class="status-adopted">ADOPTED (D-SSU-08)</td></tr>
+  </table>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Core invariant</h3>
+  <p class="note"><strong>Invariant SSU-1.</strong> The <code>schoolSetup</code>
+  field value of the settings object is the ONLY stored definition of the
+  school year. Other tools query the settings object and read
+  <code>recordKind: "schoolSettings"</code> - they never write it (except T1
+  itself).</p>
+  <h3>8.2 Default data format (the value of field schoolSetup)</h3>
+  <pre>{
+  "version": 1,
+  "recordKind": "schoolSettings",
+  "schoolName": "Horizon Weekend School",
+  "schoolYear": "2026-2027",
+  "currency": "CAD",
+  "paymentDueDay": 1,
+  "attendanceRule": "all",            // all | first | firstAndAfternoon | custom
+  "classGroups": [],                  // legacy; migration source only
+  "paymentBrackets": [ { "id": "b1", "name": "Full", "monthlyFee": 40, "discountedFee": 0 } ],
+  "folderMap": {
+    "settings": "", "lessons": "", "prospects": "", "students": "",
+    "attendance": "", "progress": "", "payments": "", "contacts": "", "communication": ""
+  },
+  "schoolCalendar": { "firstDay": "2026-09-06", "excludedDates": [], "schoolDays": ["2026-09-06"] },
+  "classes": [ { "id": "c1", "name": "Grade 1-A", "teacherUserId": "", "teacherName": "" } ],
+  "teachers": [ { "id": "t1", "name": "Teacher One", "email": "teacher1@school.test" } ],
+  "schoolContact": { "address": "", "phone": "", "website": "", "principalName": "", "principalEmail": "" },
+  "schoolFees": { "oneTimeFees": [ { "id": "f1", "name": "Registration fee", "amount": 25, "scope": "school", "classId": "" } ] },
+  "attendancePolicy": { "lateAfterMin": 15, "absenceCallAfter": 2 },
+  "seeded": true
+}</pre>
+  <h3>8.3 Lesson object format (field lessonBoard, objects in the Lessons folder)</h3>
+  <pre>{
+  "name": "Quran",
+  "lessonType": "class",              // class | support
+  "dayOfWeek": 0,
+  "startTime": "10:00",
+  "durationMin": 45,
+  "levels": ["Level 1", "Level 2"],
+  "teacherUserId": "teacher1@school.test",
+  "teacherName": "Teacher One",
+  "room": "",
+  "requiresAttendance": true,
+  "progressChecklist": [ { "id": "c1", "label": "Memorized page 12", "kind": "checkbox" } ],
+  "attendanceFolderId": "",
+  "progressFolderId": "",
+  "folderMap": { },                   // copy of the year folder map at creation
+  "active": true,
+  "schoolYear": "2026-2027"
+}</pre>
+  <h3>8.4 Caller contract table (what other tools read from here)</h3>
+  <table>
+    <tr><th>Caller</th><th>Required change / what it reads</th></tr>
+    <tr><td>ProspectBoard (T2)</td><td>folderMap (query settings by recordKind) for the convert batch</td></tr>
+    <tr><td>SchoolConsole (T3)</td><td>folderMap + schoolName for its tabs and reports; schoolDays for attendance sheets (future)</td></tr>
+    <tr><td>StudentRecord (T4)</td><td>class names and teacher names for display; communicationFolderId fallback</td></tr>
+    <tr><td>Attendance / Progress tools (T5, T6 - future)</td><td>folderMap, schoolDays[], attendanceRule, lesson requiresAttendance</td></tr>
+  </table>
+  <h3>8.5 Attendance rule derivation</h3>
+  <ul>
+    <li><code>all</code> - every lesson requires attendance.</li>
+    <li><code>first</code> - only the lesson with the earliest startTime.</li>
+    <li><code>firstAndAfternoon</code> - earliest startTime plus every lesson starting at 12:00 or later.</li>
+    <li><code>custom</code> - each lesson's own <code>requiresAttendance</code> flag.</li>
+  </ul>
+
+  <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
+  <table>
+    <tr><th>Scenario</th><th>Outcome</th></tr>
+    <tr><td>Lessons folder id missing and Add lesson pressed</td><td>Lessons tab shows "set the Folders tab first"; create returns a clear error</td></tr>
+    <tr><td>Folder id changed and saved</td><td>Confirmation dialog lists old - new per folder; nothing saved until "Yes, change"</td></tr>
+    <tr><td>Pattern produces no dates (no weekday checked)</td><td>Warning "Pick at least one school weekday"; dialog stays open</td></tr>
+    <tr><td>Clicking an empty calendar cell</td><td>Date added to schoolDays[], sorted, saved, cell turns teal</td></tr>
+    <tr><td>Removing a teacher in use</td><td>Teacher removed from directory; lessons/classes keep teacherUserId + teacherName with a notice to reassign</td></tr>
+    <tr><td>requestSave rejected</td><td>One-time warning to set allowRequestSave = yes</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>No year rollover (removed on user request 2026-10-03)</td><td>New years are created manually as new settings objects</td><td>Deferred to idea I-03</td></tr>
+    <tr><td>L-02</td><td>No legacy all-in-one import (removed on user request 2026-10-03)</td><td>Old prototype data must be re-entered or migrated manually</td><td>Deferred to idea I-04</td></tr>
+    <tr><td>L-03</td><td>Folder ids are pasted manually</td><td>Typing a wrong id disconnects a tool (mitigated by confirm-on-change)</td><td>Accepted</td></tr>
+    <tr><td>L-04</td><td>Teacher permissions are NOT configured by this tool</td><td>Admin must grant folder permissions in the CMS with the same emails</td><td>Accepted - CMS job</td></tr>
+    <tr><td>L-05</td><td>Calendar assumes one session per school day</td><td>Two sessions on one day need two lesson objects with different times - covered by design</td><td>Accepted</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-SSU-01</td><td>2026-09-30</td><td>One settings object per school year (tool field schoolSetup) instead of app-level parameters</td><td>Per-year isolation; every year has its own folders, brackets, calendar and lessons</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-02</td><td>2026-10-03</td><td>Tabbed UI: Overview / Payments / Lessons / Classes / Teachers / Calendar / Folders</td><td>One scrolling config page looked unprofessional; tabs group concerns and each starts with an explainer</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-03</td><td>2026-10-03</td><td>Payment config (currency, due day) moved from Overview to the Payments tab together with brackets</td><td>Related settings live together; brackets are pricing plans of the school year</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-04</td><td>2026-10-04</td><td>Lessons are subjects with levels[]; levels are part of the lesson object, editable inline and in the dialog</td><td>A lesson (Quran) is a subject; its levels (Level 1, Level 2) are an array under it - the user confirmed this model</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-05</td><td>2026-10-04</td><td>Classes are SEPARATE student groups (Grade 1-A, Grade 3-4, flower names) with optional homeroom teacher</td><td>A student sits in one class but attends several lessons; the two concepts must not be merged</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-06</td><td>2026-10-04</td><td>Attendance requirement as a rule (all/first/firstAndAfternoon/custom) instead of "checks per day"</td><td>The user needs "first lesson only" or "first + afternoon" flexibility, changeable during the year</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-07</td><td>2026-10-04</td><td>Payment brackets carry monthlyFee + optional discountedFee; assigned to a student = monthly installment</td><td>Discounts are per-bracket; brackets are year-scoped because the settings object lives in the year folder</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-08</td><td>2026-10-04</td><td>Teacher directory (name + email) maintained in SchoolSetup; lessons and classes pick from it</td><td>Tools cannot query the CMS user list; the email is the join key to the CMS login and to folder permissions</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-09</td><td>2026-10-04</td><td>School calendar = explicit schoolDays[] list built by a pattern dialog, single-date dialog and click-to-add cells</td><td>Stable and inspectable; patterns can differ between weeks by adding/removing single dates</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-10</td><td>2026-10-04</td><td>Folder ids managed as a form with suggested ids (school-slug-schoolYear-suffix), confirm-on-change and Copy/Paste JSON</td><td>Changing ids disconnects existing objects, so changes need explicit confirmation; copy/paste backs up and restores</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-11</td><td>2026-10-03</td><td>Autosave via setValue + requestSave (300 ms debounce); allowRequestSave required</td><td>Config pages must never lose changes; one-time warning if requestSave is rejected</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-12</td><td>2026-10-04</td><td>Every interactive button carries a data-act attribute handled in one click switch</td><td>Id-only buttons silently do nothing with closest("[data-act]") handling - this bug hit Add lesson/Add bracket/Add group/New prospect</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-13</td><td>2026-10-04</td><td>Year rollover and legacy import REMOVED on user request</td><td>No previous year exists yet; both return as mature features later (I-03, I-04)</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-14</td><td>2026-10-04</td><td>Generic reusable name "SchoolSetup" with appObjectType param (default weekendSchool)</td><td>The tool serves any school/student/lesson application without rebranding</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-15</td><td>2026-10-04</td><td>School contact block (address, phone, website, principal name + email) on the Overview tab</td><td>Reports and parent communications must carry the real school identity</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-16</td><td>2026-10-04</td><td>One-time payments defined at school level AND class level: schoolFees.oneTimeFees with scope school | class + classId</td><td>Registration fees apply to everyone; class fees (trips) apply to one class; event-based fees are a separate tool (D-SSU-18)</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-17</td><td>2026-10-04</td><td>Attendance policy stored in settings: lateAfterMin (late threshold) + absenceCallAfter (absence call rule)</td><td>The attendance tool applies the policy and tracks absence calls with a checklist - the rule must live with the school definition</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SSU-18</td><td>2026-10-04</td><td>Event-based fees (trips, events) are a SEPARATE tool's subject - not SchoolSetup</td><td>They grow over time with their own participants and payment statuses; SchoolSetup keeps only recurring + school/class one-time fee definitions</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-maintenance">12. Maintenance rules</h2>
+  <ol>
+    <li>This document is the single source of truth; every decision goes to section 11 with a date.</li>
+    <li>Never delete decision rows; reverse with "Reversed (date)".</li>
+    <li>Never add a second storage place for the school year definition - other tools read the settings object (invariant SSU-1).</li>
+    <li>Every new button gets data-act + a switch case and a harness action test.</li>
+    <li>Global naming rule: self-explanatory names, no cryptic abbreviations.</li>
+  </ol>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Tabbed UI + explainers</td><td><code>SchoolSetup.html</code> - DONE</td></tr>
+    <tr><td>2</td><td>Payments tab (settings + brackets with discount)</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Lessons with levels + attendance rule</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Classes + teachers + assignment dropdowns</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>5</td><td>Calendar builder + click-to-add + modals</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Folders form + confirm + copy/paste</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Remove rollover + import</td><td><code>SchoolSetup.js</code> - DONE</td></tr>
+    <tr><td>8</td><td>Base school definition additions</td><td><code>SchoolSetup.*</code> - PENDING (group G-SSU-BASE)</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Which base school definition fields matter most?</strong> See group G-SSU-BASE: contact block, registration fee, attendance policy, document checklist, grading scale. Pick the ones to implement first.</li>
+    <li><strong>Does the school ever run two different weekday patterns in one year?</strong> Covered today by adding/removing single dates; a second pattern could later be an idea.</li>
+    <li><strong>Should teachers be synced to the CMS automatically?</strong> Not possible from a tool - CMS user management is manual; this stays a directory.</li>
+  </ol>
+
+  
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <p>Ordered backlog, developed one by one. Tasks are grouped into release
+  groups. Tick the checkbox when done - progress is remembered per browser.</p>
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box"><strong>Definition of READY</strong>
+      <ul><li>Requirement written in section 6.</li><li>Decision logged in section 11.</li><li>Belongs to exactly one release group.</li></ul>
+    </div>
+    <div class="dor-dod-box"><strong>Definition of DONE</strong>
+      <ul><li>All group tasks checked.</li><li>Open risks solved or accepted.</li><li>Document version bumped.</li></ul>
+    </div>
+  </div>
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+
+  <section class="task-group" data-release-group="G-SSU-BASE" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Base school definition</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="G-SSU-BASE">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="G-SSU-BASE"></div></div>
+    <p class="task-group-note">The base school definition fields the user asked about (2026-10-04). Decide together which ship first; all belong to the settings schema.</p>
+    <div class="task-item" data-task-id="T-01" data-group="G-SSU-BASE" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">School contact block (address, phone, principal name + email, website)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> New Overview card "School contact" with 4-5 fields in the settings schema</p>
+          <p><strong>How we will solve it:</strong> Reports and parent communication show real school identity</p>
+          <p><strong>Benefit:</strong> SchoolSetup.html/.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-02" data-group="G-SSU-BASE" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">One-time payment definitions at school level and class level</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add schoolFees: { registrationFee, annualFee } to the settings schema + Payments tab card</p>
+          <p><strong>How we will solve it:</strong> Prospect conversion and ledgers can charge one-time fees</p>
+          <p><strong>Benefit:</strong> SchoolSetup.html/.js + ProspectBoard</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-03" data-group="G-SSU-BASE" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Attendance policy block (late threshold, absence call rule)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add attendancePolicy: { lateAfterMin, absenceCallAfter } to the schema + Lessons tab card</p>
+          <p><strong>How we will solve it:</strong> Attendance tools auto-flag parents to call</p>
+          <p><strong>Benefit:</strong> SchoolSetup.html/.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-04" data-group="G-SSU-BASE" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Required document checklist defaults for student records</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add documentChecklist: [] to the schema + a card; T4 reads it as its document kinds</p>
+          <p><strong>How we will solve it:</strong> Student files start with the right document list</p>
+          <p><strong>Benefit:</strong> SchoolSetup + StudentRecord</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-05" data-group="G-SSU-BASE" data-task-status="not-started"checkbox"; some schools grade 1-5">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Progress grading scale / checklist kind defaults</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add progressScale to the schema; lesson checklist items use it</p>
+          <p><strong>How we will solve it:</strong> Progress tool matches the school grading style</p>
+          <p><strong>Benefit:</strong> SchoolSetup + future progress tool</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-06" data-group="G-SSU-BASE" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Language(s) of instruction + school hours overview</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add languages[] + schoolHours to the schema + profile card</p>
+          <p><strong>How we will solve it:</strong> Reports and communications use the right language</p>
+          <p><strong>Benefit:</strong> SchoolSetup.html/.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div>
+  </section>
+  <section class="task-group" data-release-group="G-SSU-ROADMAP" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Application roadmap follow-ups</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="G-SSU-ROADMAP">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="G-SSU-ROADMAP"></div></div>
+    <p class="task-group-note">The remaining school tools; detailed specs live in WEEKEND-SCHOOL-APP-PLAN.md. Listed here so the SSOT shows the whole picture.</p>
+    <div class="task-item" data-task-id="T-07" data-group="G-SSU-ROADMAP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">T4C ParentContact tool (field parentContact)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Reusable tool ParentContact under k12-schools/</p>
+          <p><strong>How we will solve it:</strong> Contacts editable without touching T4</p>
+          <p><strong>Benefit:</strong> new tool folder</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-08" data-group="G-SSU-ROADMAP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">T5 attendance tool (per-lesson sheets from schoolDays)</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Reusable AttendanceBoard tool reading folderMap + schoolDays</p>
+          <p><strong>How we will solve it:</strong> Core weekend school operation</p>
+          <p><strong>Benefit:</strong> new tool folder</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-09" data-group="G-SSU-ROADMAP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">T6 progress tool, T8 payment ledger tool, T9 communication board</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Same reusable pattern (appObjectType + folderMap)</p>
+          <p><strong>How we will solve it:</strong> Complete school operation</p>
+          <p><strong>Benefit:</strong> new tool folders</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Sibling discount rule</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A bracket-level rule "second sibling pays the discounted fee automatically"</p>
+        <p><strong>Why:</strong> Removes manual discount bookkeeping</p>
+        <p><strong>Discussion / outcome:</strong> Waiting for the payment ledger tool; revisit then</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Late payment fee</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Automatic late fee after the due day + grace days</p>
+        <p><strong>Why:</strong> The principal currently tracks this manually</p>
+        <p><strong>Discussion / outcome:</strong> Belongs with the payment ledger tool (T8)</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Year rollover</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> One click to create next year settings + copy lessons and teachers</p>
+        <p><strong>Why:</strong> Removed in 2026-10-03 as premature; becomes useful when a second year starts</p>
+        <p><strong>Discussion / outcome:</strong> Deferred until at least one full year exists (D-SSU-13)</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Legacy all-in-one import</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Import the old WeekendSchoolManager JSON export</p>
+        <p><strong>Why:</strong> One-time migration of the prototype data</p>
+        <p><strong>Discussion / outcome:</strong> Deferred (D-SSU-13); revisit only if old data must move</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Turkish / bilingual UI</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Language switcher on the tool</p>
+        <p><strong>Why:</strong> The school may serve Turkish-speaking parents</p>
+        <p><strong>Discussion / outcome:</strong> Depends on the CMS language support</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Two patterns per year in the calendar</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A second recurring pattern (e.g. weekday program + weekend program)</p>
+        <p><strong>Why:</strong> Current solution: add the second pattern dates manually or via a second dialog run</p>
+        <p><strong>Discussion / outcome:</strong> Possible improvement of the calendar builder</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">Event-based payments tool</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> A separate tool for trips and event fees with its own participant list and payment tracking</p>
+        <p><strong>Why:</strong> Event fees grow over time and do not belong in the school definition</p>
+        <p><strong>Discussion / outcome:</strong> Agreed 2026-10-04: separate tool's subject (D-SSU-18; APP-PLAN section 10 and 13). Not built in SchoolSetup.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>All tests run in the local test harness (<code>app/test-harness.html</code>)
+  served with <code>python -m http.server 8765</code> and driven by headless
+  Edge. The harness supports <code>?sample=1</code> (fresh sample data),
+  <code>?tab=&lt;pane&gt;</code> and <code>?actions=&lt;list&gt;</code>
+  (runs clicks after 500 ms; sub-actions <code>set-input:&lt;id&gt;:&lt;value&gt;</code>,
+  <code>clear-folder:&lt;key&gt;</code>, <code>check:&lt;id&gt;</code>,
+  <code>set-select:&lt;id&gt;:&lt;value&gt;</code>).</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>H-01 - renders with sample data.</strong> Steps: open the
+    harness with <code>?sample=1</code> and each <code>?tab=</code>. PASS if:
+    every pane renders data without console errors.</li>
+    <li><strong>H-02 - every button reacts.</strong> Steps: run the recorded
+    <code>?actions=</code> sequences for each button. PASS if: the expected
+    dialog opens / row appears / cell toggles.</li>
+    <li><strong>H-03 - persistence.</strong> Steps: edit a field, wait 500 ms,
+    press "Show log". PASS if: <code>requestSave</code> was accepted and the
+    value survives a reload.</li>
+    <li><strong>H-04 - role cycle.</strong> Steps: switch role to editor /
+    viewer / none. PASS if: write controls disable for read-only roles and
+    nothing throws.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>H-01 renders</td><td></td><td></td></tr>
+    <tr><td>H-02 buttons</td><td></td><td></td></tr>
+    <tr><td>H-03 persistence</td><td></td><td></td></tr>
+    <tr><td>H-04 roles</td><td></td><td></td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when every scenario PASSES
+  and all tasks of the pushed groups are checked in section 15.</p>
+  <p><strong>Progress log:</strong> 2026-10-04 - H-01, H-02 and H-03 verified
+  with headless Edge on the current build for all four school tools.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted</span>
+  </div>
+  
+  <div class="risk-item" data-risk-id="R-01" data-group="G-SSU-BASE" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">Schema additions break older settings objects</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01..T-06 change the schoolSetup JSON</p>
+        <p><strong>What can go wrong:</strong> Old objects without the new fields must keep loading</p>
+        <p><strong>Likelihood / impact:</strong> Low / Medium - normalization defaults cover missing fields</p>
+        <p><strong>Mitigation:</strong> normalizeDatabase() keeps defaults for every missing field</p>
+        <p><strong>Last re-evaluation:</strong> ${DATE} - open; re-check when G-SSU-BASE ships</p>
+      </div>
+    </details>
+  </div>
+  <div class="risk-item" data-risk-id="R-02" data-group="" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">Folder ids drift from real CMS folders</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> manual id entry</p>
+        <p><strong>What can go wrong:</strong> A wrong id disconnects a tool until fixed</p>
+        <p><strong>Likelihood / impact:</strong> Low / Medium</p>
+        <p><strong>Mitigation:</strong> Confirm-on-change dialog + status count</p>
+        <p><strong>Last re-evaluation:</strong> ${DATE} - accepted for now (manual entry)</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> The current build was verified
+  in the harness (renders, buttons, persistence). Before a real publish,
+  resolve the open risks above and run the 17.1 scenarios once more.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. <code>npm run rel</code> appends rows
+  automatically after each successful push - do not edit the marker below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    School Setup - single source of truth for all decisions about this tool.
+    Version 0.1, 2026-10-04. Keep in sync with code; when in doubt, update this
+    document in the same change as the code.
+  </div>
+  </div>
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved state.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div>
+</body>
+</html>

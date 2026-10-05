@@ -166,7 +166,7 @@ inside the tool's own 1 MB object):
   - socialTargetType        - social app object type
   - socialTargetFieldMap    - JSON override for the social dcb field ids
   - versionsTargetType      - code version object type
-  - pageStatus              - "published" | "draft" for page targets
+  - pageStatus              - optional; empty = the CMS Publish action owns the page status
   - docLanguage             - meta.language for page targets (default "en")
 - CMS field settings the admin must set:
   settings.allowObjectCRUD: 'yes'

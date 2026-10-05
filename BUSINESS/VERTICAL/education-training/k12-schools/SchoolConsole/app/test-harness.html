@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SchoolConsole - Test Harness</title>
+<link rel="stylesheet" href="SchoolConsole.css">
+<style>
+  body { margin: 0; background: #eef1f5; }
+  #th-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: #16213a; color: #fff; font: 13px "Segoe UI", sans-serif; }
+  #th-bar button { font: inherit; padding: 4px 10px; border-radius: 5px; border: 1px solid #556; background: #24324e; color: #fff; cursor: pointer; }
+  #th-bar .th-info { color: #b9c3d6; font-size: 12px; }
+  #th-host { background: #fff; margin: 10px; border-radius: 8px; border: 1px solid #d8dce3; min-height: 640px; }
+  #th-log { margin: 10px; padding: 8px 12px; background: #0f172a; color: #7dd3fc; font: 11px Consolas, monospace; border-radius: 6px; max-height: 130px; overflow-y: auto; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>SchoolConsole harness</strong>
+  <button id="th-role">role: admin</button>
+  <button id="th-refresh-data">Seed sample data</button>
+  <button id="th-reset">Reset storage</button>
+  <span class="th-info" id="th-info"></span>
+</div>
+<div id="th-host">
+<!-- SchoolConsole html-tool (TYPE 3 - application level listing tool)
+     Reusable school console: lists students, attendance, payments and
+     builds reports across the whole school application. Placed on the
+     application level, not on an object. -->
+<div class="sco-app" id="sco-app">
+  <header class="sco-header">
+    <div class="sco-head-main">
+      <h1 class="sco-title">School Console</h1>
+      <p class="sco-subtitle">Students, attendance, payments and reports across the school application.</p>
+    </div>
+    <div class="sco-head-side">
+      <button class="sco-btn sco-btn-outline sco-btn-sm" id="sco-refresh">Refresh</button>
+    </div>
+  </header>
+
+  <nav class="sco-tabs" id="sco-tabs">
+    <button class="sco-tab active" data-tab="students">Students</button>
+    <button class="sco-tab" data-tab="attendance">Attendance</button>
+    <button class="sco-tab" data-tab="payments">Payments</button>
+    <button class="sco-tab" data-tab="reports">Reports</button>
+  </nav>
+
+  <main class="sco-body">
+
+    <section class="sco-pane active" data-pane="students">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <input class="sco-input sco-search" id="sco-student-search" placeholder="Search student name...">
+          <input class="sco-input sco-search" id="sco-student-class" placeholder="Class group filter...">
+          <span class="sco-hint" id="sco-student-count"></span>
+        </div>
+        <div id="sco-student-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="attendance">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <label class="sco-label" for="sco-attendance-date">Day</label>
+          <input class="sco-input" id="sco-attendance-date" type="date">
+          <span class="sco-hint" id="sco-attendance-summary"></span>
+        </div>
+        <div id="sco-attendance-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="payments">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <input class="sco-input sco-search" id="sco-payment-search" placeholder="Search student...">
+          <label class="sco-label"><input type="checkbox" id="sco-payment-waiting-only" checked> Waiting only</label>
+          <span class="sco-hint" id="sco-payment-summary"></span>
+        </div>
+        <div id="sco-payment-list"></div>
+      </div>
+    </section>
+
+    <section class="sco-pane" data-pane="reports">
+      <div class="sco-card">
+        <div class="sco-toolbar">
+          <label class="sco-label" for="sco-report-week">Week of</label>
+          <input class="sco-input" id="sco-report-week" type="date">
+          <button class="sco-btn sco-btn-primary" id="sco-report-build">Build report</button>
+          <button class="sco-btn" id="sco-report-copy">Copy</button>
+          <button class="sco-btn" id="sco-report-download">Download .txt</button>
+        </div>
+        <pre class="sco-report-text" id="sco-report-text">Select a week and press Build report.</pre>
+      </div>
+    </section>
+
+  </main>
+</div>
+</div>
+<div id="th-log"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "sco_test_value_v1";
+  var OBJECTS_KEY = "sco_test_objects_v1";
+
+  function thLog(message) {
+    var log = document.getElementById("th-log");
+    log.textContent = (log.textContent ? log.textContent + "\n" : "") + message;
+  }
+
+  function loadObjects() {
+    try { return JSON.parse(localStorage.getItem(OBJECTS_KEY) || "[]"); } catch (e) { return []; }
+  }
+  function saveObjects(list) { localStorage.setItem(OBJECTS_KEY, JSON.stringify(list)); }
+
+  function seedObjects() {
+    var folderMap = {
+      settings: "folder-0-setup", lessons: "folder-1-lessons", prospects: "folder-1-prospects",
+      students: "folder-2-students", attendance: "folder-3-attendance", progress: "folder-4-progress",
+      payments: "folder-5-payments", contacts: "folder-8-contacts", communication: "folder-6-communication"
+    };
+    var today = new Date();
+    var sunday = new Date();
+    sunday.setDate(today.getDate() + (7 - today.getDay()) % 7);
+    function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+    saveObjects([
+      { id: "obj-settings", cmsObjectType: "weekendSchool", typeId: "folder-0-setup", name: "School Settings", version: 1, productData: { data_categoriesBased: { schoolSetup: { recordKind: "schoolSettings", schoolName: "Horizon Weekend School", schoolYear: "2026-2027", folderMap: folderMap } } } },
+      { id: "obj-st1", cmsObjectType: "weekendSchool", typeId: "folder-2-students", name: "Ahmet Kaya", version: 1, productData: { data_categoriesBased: { studentRecord: { recordKind: "studentRecord", studentId: "obj-st1", firstName: "Ahmet", lastName: "Kaya", classGroup: "Quran Level 1", status: "active", startDate: "2026-09-14", emergencyContactPhone: "416-555-0101" } } } },
+      { id: "obj-st2", cmsObjectType: "weekendSchool", typeId: "folder-2-students", name: "Yusuf Demir", version: 1, productData: { data_categoriesBased: { studentRecord: { recordKind: "studentRecord", studentId: "obj-st2", firstName: "Yusuf", lastName: "Demir", classGroup: "Quran Level 2", status: "active", startDate: "2026-09-14", emergencyContactPhone: "416-555-0102" } } } },
+      { id: "obj-les1", cmsObjectType: "weekendSchool", typeId: "folder-1-lessons", name: "Quran Level 1", version: 1, productData: { data_categoriesBased: { lessonBoard: { name: "Quran Level 1", lessonType: "class", teacherName: "Teacher One", attendanceFolderId: "sub-att-1" } } } },
+      { id: "obj-att1", cmsObjectType: "weekendSchool", typeId: "sub-att-1", name: "Attendance 2026-09-27 - Quran Level 1", version: 1, productData: { data_categoriesBased: { attendanceRecord: { recordKind: "attendanceRecord", lessonDate: iso(sunday), lessonId: "obj-les1", lessonName: "Quran Level 1", teacherName: "Teacher One", entries: [{ studentId: "obj-st1", studentName: "Ahmet Kaya", mark: "P" }, { studentId: "obj-st2", studentName: "Yusuf Demir", mark: "A" }] } } } },
+      { id: "obj-led1", cmsObjectType: "weekendSchool", typeId: "folder-5-payments", name: "Ahmet Kaya - Ledger", version: 1, productData: { data_categoriesBased: { paymentLedger: { recordKind: "paymentLedger", studentId: "obj-st1", studentName: "Ahmet Kaya", entries: [{ id: "e1", month: "2026-09", amount: 40, status: "paid", paidDate: "2026-09-05" }, { id: "e2", month: "2026-10", amount: 40, status: "unpaid" }] } } } },
+      { id: "obj-led2", cmsObjectType: "weekendSchool", typeId: "folder-5-payments", name: "Yusuf Demir - Ledger", version: 1, productData: { data_categoriesBased: { paymentLedger: { recordKind: "paymentLedger", studentId: "obj-st2", studentName: "Yusuf Demir", entries: [{ id: "e3", month: "2026-10", amount: 40, status: "unpaid" }] } } } }
+    ]);
+    thLog("seeded students, lessons, attendance and ledgers");
+  }
+
+  var FOLDERS = [
+    { id: "folder-0-setup", name: "0-Setup", parentId: "", mainObjectType: "weekendSchool" },
+    { id: "folder-1-lessons", name: "1-Lessons", parentId: "folder-year", mainObjectType: "weekendSchool" },
+    { id: "folder-2-students", name: "2-Students", parentId: "folder-year", mainObjectType: "weekendSchool" },
+    { id: "folder-3-attendance", name: "3-Attendance", parentId: "folder-year", mainObjectType: "weekendSchool" },
+    { id: "sub-att-1", name: "3-Attendance / Quran Level 1", parentId: "folder-3-attendance", mainObjectType: "weekendSchool" },
+    { id: "folder-5-payments", name: "5-Payments", parentId: "folder-year", mainObjectType: "weekendSchool" }
+  ];
+
+  var mockValue = null;
+  var readyCallback = null;
+  var valueChangeCallback = null;
+  var roleState = "admin";
+
+  function currentUser() {
+    if (roleState === "none") return null;
+    return {
+      id: "u_" + roleState,
+      name: roleState === "admin" ? "Admin User" : (roleState === "editor" ? "Editor User" : "Viewer User"),
+      email: roleState + "@school.test",
+      roles: [roleState],
+      effectiveAccess: { isManager: roleState === "admin", isEditor: roleState === "admin" || roleState === "editor", isViewer: true }
+    };
+  }
+
+  var tool = {
+    onReady: function (cb) { readyCallback = cb; fireReady(); },
+    getValue: function () { return mockValue; },
+    setValue: function (v) { mockValue = v; localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); },
+    onValueChange: function (cb) { valueChangeCallback = cb; },
+    param: function (n, d) { return n === "appObjectType" ? "weekendSchool" : d; },
+    isReadOnly: function () { return false; },
+    getUser: function () { return currentUser(); },
+    requestObjects: function (action, callParams, cb) {
+      setTimeout(function () {
+        var objects = loadObjects();
+        if (action === "query") {
+          var filtered = objects.filter(function (o) {
+            if (!o || o.cmsObjectType !== callParams.mainObjectType) return false;
+            if (callParams.typeId && o.typeId !== callParams.typeId) return false;
+            return true;
+          });
+          cb(null, { objects: filtered });
+        } else {
+          cb("unsupported action", null);
+        }
+      }, 25);
+    },
+    requestFolders: function (cb) {
+      setTimeout(function () { cb(null, { folders: FOLDERS }); }, 25);
+    },
+    openObjectDetail: function (mainType, objectId, cb) {
+      thLog("openObjectDetail(" + mainType + ", " + objectId + ")");
+      if (cb) cb(null);
+    },
+    notify: function (m, sev) { thLog("notify [" + (sev || "success") + "] " + m); },
+    resize: function () { },
+    declareOutput: function () { },
+    declareParams: function () { },
+    reportMissingParams: function () { }
+  };
+  window.tool = tool;
+
+  function fireReady() {
+    if (!readyCallback) return;
+    mockValue = null;
+    try { mockValue = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (e) { mockValue = null; }
+    if (!loadObjects().length) seedObjects();
+    readyCallback(mockValue, {});
+  }
+
+  var roleButton = document.getElementById("th-role");
+  var ROLES = ["admin", "editor", "viewer", "none"];
+  roleButton.addEventListener("click", function () {
+    var i = ROLES.indexOf(roleState);
+    roleState = ROLES[(i + 1) % ROLES.length];
+    roleButton.textContent = "role: " + roleState;
+  });
+  document.getElementById("th-refresh-data").addEventListener("click", function () {
+    seedObjects();
+    fireReady();
+  });
+  document.getElementById("th-reset").addEventListener("click", function () {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(OBJECTS_KEY);
+    fireReady();
+  });
+  document.getElementById("th-info").textContent = "TYPE 3 listing tool | mode replace-listings | appObjectType=weekendSchool";
+})();
+</script>
+<script src="SchoolConsole.js"></script>
+</body>
+</html>

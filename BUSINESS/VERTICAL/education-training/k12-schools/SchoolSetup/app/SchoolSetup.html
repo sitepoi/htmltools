@@ -1,0 +1,266 @@
+<!-- SchoolSetup html-tool (TYPE 1)
+     Reusable school settings tool. One School Setup object per school
+     year. Tabs: Overview, Class Groups, Payments, Lessons, Folders. -->
+<div class="ssu-app" id="ssu-app">
+  <header class="ssu-header">
+    <div class="ssu-head-main">
+      <div class="ssu-title-row">
+        <h1 class="ssu-title">School Setup</h1>
+        <span class="ssu-year-pill" id="ssu-year-pill">No school year yet</span>
+      </div>
+      <p class="ssu-subtitle">The yearly setup for this school: profile, payment settings and brackets, lessons with their levels, and the folder ids that connect every tool.</p>
+    </div>
+    <div class="ssu-head-side">
+      <span class="ssu-save-note">Changes save automatically</span>
+    </div>
+  </header>
+
+  <nav class="ssu-tabs" id="ssu-tabs">
+    <button class="ssu-tab active" data-tab="overview">Overview</button>
+    <button class="ssu-tab" data-tab="payments">Payments</button>
+    <button class="ssu-tab" data-tab="lessons">Lessons</button>
+    <button class="ssu-tab" data-tab="classes">Classes</button>
+    <button class="ssu-tab" data-tab="teachers">Teachers</button>
+    <button class="ssu-tab" data-tab="calendar">Calendar</button>
+    <button class="ssu-tab" data-tab="folders">Folders</button>
+  </nav>
+
+  <main class="ssu-body">
+
+    <section class="ssu-pane active" data-pane="overview">
+      <div class="ssu-note">
+        <div class="ssu-note-title">What is this page?</div>
+        <p>This is the setup of the <strong id="ssu-note-year">current</strong> school year of
+          <strong id="ssu-note-school">this school</strong>. Everything you configure here - classes,
+          payment brackets, lessons, the school calendar and folder ids - belongs to this school
+          year only. When a new school year starts, create a new School Setup object inside that
+          year's <em>0-Setup</em> folder.</p>
+      </div>
+
+      <div class="ssu-card">
+        <div class="ssu-card-title">School contact</div>
+        <div class="ssu-grid-3">
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-contact-address">Address</label>
+            <input class="ssu-input" id="ssu-contact-address" placeholder="Street, city">
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-contact-phone">Phone</label>
+            <input class="ssu-input" id="ssu-contact-phone" placeholder="+1...">
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-contact-website">Website (optional)</label>
+            <input class="ssu-input" id="ssu-contact-website" placeholder="https://...">
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-contact-principal-name">Principal name</label>
+            <input class="ssu-input" id="ssu-contact-principal-name">
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-contact-principal-email">Principal email</label>
+            <input class="ssu-input" id="ssu-contact-principal-email">
+            <span class="ssu-hint">Used on reports and parent communications.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ssu-card">
+        <div class="ssu-card-title">School profile</div>
+        <div class="ssu-grid-3">
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-school-name">School name</label>
+            <input class="ssu-input" id="ssu-school-name" placeholder="e.g. Horizon Weekend School">
+            <span class="ssu-hint">Shown on reports and on the school console.</span>
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-school-year">School year</label>
+            <input class="ssu-input" id="ssu-school-year" placeholder="e.g. 2026-2027">
+            <span class="ssu-hint">One School Setup object per school year. Everything on this page belongs to this year.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="payments">
+      <div class="ssu-note">
+        <div class="ssu-note-title">What are payment brackets?</div>
+        <p>Payment brackets are the pricing plans of this school year. Each bracket has a
+          <strong>monthly fee</strong> and an optional <strong>discounted monthly fee</strong>.
+          When a bracket is assigned to a student, its fee becomes that student's monthly
+          installment. Because this School Setup object lives in the school year's
+          <em>0-Setup</em> folder, brackets are automatically scoped to this school year - next
+          year's setup gets its own brackets.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Payment settings</div>
+        <div class="ssu-grid-2">
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-currency">Currency</label>
+            <input class="ssu-input" id="ssu-currency" placeholder="CAD">
+            <span class="ssu-hint">Shown next to every price on this page.</span>
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-payment-due-day">Payment due day</label>
+            <input class="ssu-input" id="ssu-payment-due-day" type="number" min="1" max="31">
+            <span class="ssu-hint">The day of the month when monthly installments are due.</span>
+          </div>
+        </div>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">One-time payments
+          <span class="ssu-card-actions"><button class="ssu-btn ssu-btn-ghost" data-act="one-time-add">+ Add one-time payment</button></span>
+        </div>
+        <p class="ssu-hint" style="margin-bottom:10px">One-time payments are not monthly installments - for example a registration fee for the whole school, or a class trip fee for one class. School-level fees apply to every student; class-level fees apply to the students of the selected class. Event-based fees (trips, events) belong to a separate tool, not here.</p>
+        <div class="ssu-one-time-head"><span>Name</span><span>Amount</span><span>Applies to</span><span></span></div>
+        <div id="ssu-one-time-rows"></div>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Payment brackets for <span id="ssu-payments-year">this year</span>
+          <span class="ssu-card-actions"><button class="ssu-btn ssu-btn-ghost" id="ssu-bracket-add" data-act="bracket-add">+ Add bracket</button></span>
+        </div>
+        <div class="ssu-bracket-head">
+          <span>Bracket name</span><span>Monthly fee</span><span>Discounted monthly fee</span><span></span>
+        </div>
+        <div id="ssu-bracket-rows"></div>
+        <p class="ssu-hint">Removing a bracket does not touch students who were already assigned to it - their ledger entries stay as recorded.</p>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="lessons">
+      <div class="ssu-note">
+        <div class="ssu-note-title">Why are lessons managed here?</div>
+        <p>Every lesson is a <strong>subject</strong> taught at the school - for example the
+          subject <em>Quran</em> with its levels <em>Level 1</em> and <em>Level 2</em>. Students
+          belong to a class (see the <strong>Classes</strong> tab) and attend one or more lessons.
+          The lesson also carries the teacher, schedule, progress checklist, its attendance and
+          progress subfolders, and its attendance requirement - so the other school tools
+          (attendance, progress, reports) reuse it as is.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Attendance requirement</div>
+        <select class="ssu-select ssu-rule-select" id="ssu-attendance-rule">
+          <option value="all">Every lesson</option>
+          <option value="first">First lesson of the day only</option>
+          <option value="firstAndAfternoon">First lesson + afternoon lessons</option>
+          <option value="custom">Choose per lesson (custom)</option>
+        </select>
+        <p class="ssu-hint" id="ssu-attendance-rule-hint"></p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Attendance policy</div>
+        <div class="ssu-grid-2">
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-policy-late">Late threshold (minutes)</label>
+            <input class="ssu-input" id="ssu-policy-late" type="number" min="0" max="180">
+            <span class="ssu-hint">A student arriving this many minutes after the lesson start is marked Late.</span>
+          </div>
+          <div class="ssu-field">
+            <label class="ssu-label" for="ssu-policy-call">Absence call rule</label>
+            <input class="ssu-input" id="ssu-policy-call" type="number" min="1" max="30">
+            <span class="ssu-hint">After this many absences, the attendance tool flags a parent call. The attendance tool tracks whether the calls were done with its own checklist.</span>
+          </div>
+        </div>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Lessons of <span id="ssu-lessons-year">this year</span>
+          <span class="ssu-card-actions"><button class="ssu-btn ssu-btn-primary" id="ssu-lesson-add" data-act="lesson-add">+ Add lesson</button></span>
+        </div>
+        <div id="ssu-lesson-list"></div>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="classes">
+      <div class="ssu-note">
+        <div class="ssu-note-title">What are classes?</div>
+        <p>Classes are the <strong>groups students belong to</strong> - for example <em>Grade 1-A</em>,
+          <em>Grade 1-B</em>, <em>Grade 3-4</em>, or flower names. They are separate from lessons: a
+          student sits in one class but attends several lessons. Define the class names here, then
+          assign each student to a class in the student record tool.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Classes of <span id="ssu-classes-year">this year</span></div>
+        <div class="ssu-add-row">
+          <input class="ssu-input" id="ssu-class-name-input" placeholder="New class name, e.g. Grade 1-A...">
+          <button class="ssu-btn ssu-btn-primary" data-act="class-name-add">Add class</button>
+        </div>
+        <div id="ssu-class-list"></div>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="teachers">
+      <div class="ssu-note">
+        <div class="ssu-note-title">What are teachers?</div>
+        <p>Teachers are the <strong>real users</strong> of this application. Record their name and
+          email here - the email is their login identity. Then assign teachers to lessons and
+          classes from these lists. In the application's permission settings, grant the same email
+          access to the teacher's lesson folders so they only see their own lessons.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Teachers of <span id="ssu-teachers-year">this year</span></div>
+        <div class="ssu-add-row">
+          <input class="ssu-input" id="ssu-teacher-name-input" placeholder="Teacher name...">
+          <input class="ssu-input" id="ssu-teacher-email-input" placeholder="Email (login identity)...">
+          <button class="ssu-btn ssu-btn-primary" data-act="teacher-add">Add teacher</button>
+        </div>
+        <div id="ssu-teacher-list"></div>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="calendar">
+      <div class="ssu-note">
+        <div class="ssu-note-title">How does the school calendar work?</div>
+        <p>You build an <strong>explicit list of school days</strong>. Add a recurring weekly pattern
+          (one day per week, several days per week, or every second week), then add or remove single
+          dates for weeks that differ - a different day in one week, an extra session, or a make-up
+          day. Attendance tools use exactly this list.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">School days of <span id="ssu-calendar-year">this year</span>
+          <span class="ssu-card-actions">
+            <button class="ssu-btn ssu-btn-primary" data-act="cal-recurring-open">+ Add recurring days</button>
+            <button class="ssu-btn ssu-btn-outline" data-act="cal-single-open">+ Add a single date</button>
+            <button class="ssu-btn ssu-btn-ghost" data-act="cal-clear">Clear</button>
+          </span>
+        </div>
+        <p class="ssu-hint" id="ssu-cal-stats"></p>
+        <div id="ssu-calendar-view"></div>
+      </div>
+    </section>
+
+    <section class="ssu-pane" data-pane="folders">
+      <div class="ssu-note">
+        <div class="ssu-note-title">What are folder ids?</div>
+        <p>All school tools live inside the <strong>same application</strong>. The folders below are
+          folders of that application, and the folder ids are the connection between them: students
+          are stored in the <em>Students</em> folder, lesson objects in the <em>Lessons</em> folder,
+          payment ledgers in the <em>Payments</em> folder and so on. Set them once per year - teachers
+          and other tools read them automatically and never need to type them.</p>
+        <p><strong>Changing an id later can disconnect data:</strong> objects already created keep
+          living in the old folder, and the tools would start reading the new folder instead. When
+          you save changed ids, you will be asked to confirm.</p>
+      </div>
+      <div class="ssu-card">
+        <div class="ssu-card-title">Folder ids of <span id="ssu-folders-year">this year</span></div>
+        <div class="ssu-folder-head"><span>Folder</span><span>What is stored there</span><span>Folder id</span></div>
+        <div id="ssu-folder-rows"></div>
+        <div class="ssu-folder-actions">
+          <button class="ssu-btn ssu-btn-outline" id="ssu-folder-generate" data-act="folder-generate">Fill suggested ids</button>
+          <button class="ssu-btn ssu-btn-primary" id="ssu-folder-save" data-act="folder-save">Save folder ids</button>
+          <button class="ssu-btn ssu-btn-ghost" id="ssu-folder-copy" data-act="folder-copy">Copy JSON</button>
+          <button class="ssu-btn ssu-btn-ghost" id="ssu-folder-paste" data-act="folder-paste">Paste JSON</button>
+          <span class="ssu-hint" id="ssu-folder-status"></span>
+        </div>
+        <p class="ssu-hint" style="margin-top:8px">Copy JSON backs up these ids or carries them to another School Setup or another tool's folderMapJson parameter. Paste JSON restores a copied set into the fields above.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="ssu-modal-overlay" id="ssu-modal-overlay">
+    <div class="ssu-modal">
+      <div class="ssu-modal-title" id="ssu-modal-title">Title</div>
+      <div class="ssu-modal-body" id="ssu-modal-body"></div>
+      <div class="ssu-modal-foot" id="ssu-modal-foot"></div>
+    </div>
+  </div>
+</div>

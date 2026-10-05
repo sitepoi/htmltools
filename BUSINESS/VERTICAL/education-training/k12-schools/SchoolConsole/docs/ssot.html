@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>School Console - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="not-started"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body><body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">SchoolConsole</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>School Console - application listing tool (weekend school application)</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the <strong>application level listing tool</strong>
+    (TYPE 3, mode replace-listings) of the weekend school application: lists
+    students, attendance records and payment ledgers and builds text reports.
+    Companion: <code>WEEKEND-SCHOOL-APP-PLAN.md</code> in the
+    <code>WeekendSchoolManager</code> folder.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-10-04</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>the listing part of the SchoolConsole tool folder (the application's single listingTool slot)</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/SchoolConsole.html</code>, <code>app/SchoolConsole.css</code>, <code>app/SchoolConsole.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>editing objects (drill-down opens the object's own tool), the D-RPTL report host screen (future)</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
+  </table>
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-big" id="kpi-decisions">0</div><div class="summary-label">Decisions logged</div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-tasks">0/0</div><div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-ideas">0/0</div><div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-status">-</div><div class="summary-label">Document status</div></div>
+  </div>
+  
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>Single source of truth for the school console. Same governance rules as
+  the tool family: decisions in section 11, append-only register, this
+  document wins ties.</p>
+  <p class="ok"><strong>Core guarantee.</strong> The console never edits
+  objects - it only lists and opens them; the folder map is resolved from the
+  settings object BEFORE any folder-based query runs, so every tab shows the
+  correct year.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr><td><code>app/SchoolConsole.html</code></td><td>Header, 4 tabs, report pane</td><td>whole file</td></tr>
+    <tr><td><code>app/SchoolConsole.css</code></td><td>Visual design</td><td>whole file</td></tr>
+    <tr><td><code>app/SchoolConsole.js</code></td><td>Staged loading, tab rendering, reports</td><td>whole file</td></tr>
+    <tr><td><code>app/test-harness.html</code></td><td>Harness with seeded students, lessons, attendance and ledgers</td><td>whole file</td></tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Students tab: search, class filter, live count, open student object</td><td><code>renderStudents()</code></td><td>2026-10-03</td><td>verified in harness</td></tr>
+    <tr><td>C-02</td><td>Attendance tab: discovers per-lesson subfolders via requestFolders (parentId = year attendance folder), date filter, mark counts</td><td><code>loadFolderList()</code>, <code>renderAttendance()</code></td><td>2026-10-03</td><td>D-SCO-01</td></tr>
+    <tr><td>C-03</td><td>Payments tab: waiting list, expected / collected totals</td><td><code>renderPayments()</code></td><td>2026-10-03</td><td>D-SCO-02</td></tr>
+    <tr><td>C-04</td><td>Reports tab: weekly attendance + payment summary text, copy and download</td><td><code>buildWeeklyReport()</code></td><td>2026-10-03</td><td>D-SCO-03</td></tr>
+    <tr><td>C-05</td><td>Own value stores only UI state (active tab)</td><td><code>UI</code></td><td>2026-10-03</td><td>D-SCO-04</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Listing tool</td><td>An application level tool (TYPE 3) occupying the single listingTool slot; mode replace-listings.</td></tr>
+    <tr><td>Drill-down</td><td>Opening an object with its own tool via openObjectDetail / openObjectInShell.</td></tr>
+    <tr><td>Staged loading</td><td>Folder map is resolved first, then folder-based queries run - never in parallel.</td></tr>
+  </table>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>Never edit objects; only list and open.</li>
+    <li>Folder map resolved BEFORE any folder-based query (D-SCO-01 - a race
+    made every tab empty on the first build).</li>
+    <li>Teacher users see only what the CMS ACL returns - no client-side
+    permission guessing.</li>
+    <li>Own value stays light: only UI state.</li>
+  </ol>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Default data format (own value - UI state only)</h3>
+  <pre>{ "version": 1, "ui": { "tab": "students" } }</pre>
+  <h3>8.2 Load pipeline (staged)</h3>
+  <pre>loadAll() - query settings (recordKind schoolSettings) - resolve folderMap
+          - requestFolders - find attendance subfolders (parentId match)
+          - query students / lessons / attendance subfolders / payments
+          - render active tab</pre>
+  <h3>8.3 Params</h3>
+  <table>
+    <tr><th>Param</th><th>Purpose</th></tr>
+    <tr><td>appObjectType</td><td>Application id, default weekendSchool</td></tr>
+    <tr><td>folderMapJson</td><td>Fallback when no settings object is readable</td></tr>
+    <tr><td>attendanceFolderIds</td><td>Fallback comma-separated subfolder ids when requestFolders is unavailable</td></tr>
+  </table>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-SCO-01</td><td>2026-10-03</td><td>Staged loading: settings query first, folder queries after</td><td>The first build queried folders before the folder map resolved - every tab rendered empty</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SCO-02</td><td>2026-10-03</td><td>Payments tab computes waiting list and totals client-side from ledger objects</td><td>The CMS query has no server-side filters or aggregates today</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SCO-03</td><td>2026-10-03</td><td>Reports tab builds plain-text weekly + payment summaries with copy/download</td><td>D-RPTL report host screen is not built yet; the same code moves there later</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SCO-04</td><td>2026-10-03</td><td>Own value stores only UI state (active tab)</td><td>Listing tools must not cache business data in their own value</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SCO-05</td><td>2026-10-03</td><td>Attendance subfolders discovered via requestFolders (parentId = year attendance folder) with param fallback</td><td>Per-lesson subfolders are the ACL unit; listing tools can see the folder tree</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>Attendance tab shows one selected day, not the school calendar yet</td><td>Day picker is manual</td><td>Task T-01</td></tr>
+    <tr><td>L-02</td><td>Reports are text only</td><td>No PDF/CSV export yet</td><td>Task T-02</td></tr>
+  </table>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Four tabs + staged loading + reports</td><td><code>SchoolConsole.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Calendar-driven attendance tab</td><td><code>SchoolConsole.js</code> - PENDING (T-01)</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Should the Attendance tab read schoolDays from the settings object?</strong> Yes - planned as T-01 once the attendance tool exists.</li>
+  </ol>
+
+  
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box"><strong>Definition of READY</strong><ul><li>Decision logged in section 11.</li><li>Belongs to exactly one release group.</li></ul></div>
+    <div class="dor-dod-box"><strong>Definition of DONE</strong><ul><li>All group tasks checked.</li><li>Open risks solved or accepted.</li></ul></div>
+  </div>
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+  <section class="task-group" data-release-group="G-SCO-CAL" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Calendar-driven console</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="G-SCO-CAL">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="G-SCO-CAL"></div></div>
+    <p class="task-group-note">The console becomes the school day board once it reads the school calendar.</p>
+    <div class="task-item" data-task-id="T-01" data-group="G-SCO-CAL" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Attendance tab uses schoolDays[] from the settings object</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Read the settings object schoolCalendar; list only valid school days; keep manual picker as fallback</p>
+          <p><strong>How we will solve it:</strong> No invalid attendance dates can be selected</p>
+          <p><strong>Benefit:</strong> SchoolConsole.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-02" data-group="G-SCO-CAL" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">CSV export of reports</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Add CSV download next to the txt download</p>
+          <p><strong>How we will solve it:</strong> Reports open in Excel</p>
+          <p><strong>Benefit:</strong> SchoolConsole.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">PDF export via requestExportPdf</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> One-click PDF of the weekly report</p>
+        <p><strong>Why:</strong> Printed reports for the board</p>
+        <p><strong>Discussion / outcome:</strong> When requestExportPdf is available (D-RPTL work)</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Live aggregates per class</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Students tab grouped by class with counts</p>
+        <p><strong>Why:</strong> Quick overview for the principal</p>
+        <p><strong>Discussion / outcome:</strong> After the class assignment lands in T4</p>
+      </div>
+    </details>
+  </div>
+
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>All tests run in the local test harness (<code>app/test-harness.html</code>)
+  served with <code>python -m http.server 8765</code> and driven by headless
+  Edge. The harness supports <code>?sample=1</code> (fresh sample data),
+  <code>?tab=&lt;pane&gt;</code> and <code>?actions=&lt;list&gt;</code>
+  (runs clicks after 500 ms; sub-actions <code>set-input:&lt;id&gt;:&lt;value&gt;</code>,
+  <code>clear-folder:&lt;key&gt;</code>, <code>check:&lt;id&gt;</code>,
+  <code>set-select:&lt;id&gt;:&lt;value&gt;</code>).</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>H-01 - renders with sample data.</strong> Steps: open the
+    harness with <code>?sample=1</code> and each <code>?tab=</code>. PASS if:
+    every pane renders data without console errors.</li>
+    <li><strong>H-02 - every button reacts.</strong> Steps: run the recorded
+    <code>?actions=</code> sequences for each button. PASS if: the expected
+    dialog opens / row appears / cell toggles.</li>
+    <li><strong>H-03 - persistence.</strong> Steps: edit a field, wait 500 ms,
+    press "Show log". PASS if: <code>requestSave</code> was accepted and the
+    value survives a reload.</li>
+    <li><strong>H-04 - role cycle.</strong> Steps: switch role to editor /
+    viewer / none. PASS if: write controls disable for read-only roles and
+    nothing throws.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>H-01 renders</td><td></td><td></td></tr>
+    <tr><td>H-02 buttons</td><td></td><td></td></tr>
+    <tr><td>H-03 persistence</td><td></td><td></td></tr>
+    <tr><td>H-04 roles</td><td></td><td></td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when every scenario PASSES
+  and all tasks of the pushed groups are checked in section 15.</p>
+  <p><strong>Progress log:</strong> 2026-10-04 - H-01, H-02 and H-03 verified
+  with headless Edge on the current build for all four school tools.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted</span>
+  </div>
+  
+  <div class="risk-item" data-risk-id="R-01" data-group="G-SCO-CAL" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">requestFolders shape differs in the real CMS</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> folder discovery</p>
+        <p><strong>What can go wrong:</strong> Subfolder discovery falls back to attendanceFolderIds param</p>
+        <p><strong>Likelihood / impact:</strong> Low / Medium</p>
+        <p><strong>Mitigation:</strong> Shape-tolerant parsing + param fallback already in place</p>
+        <p><strong>Last re-evaluation:</strong> ${DATE} - open; verify on first real CMS run</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> The current build was verified
+  in the harness (renders, buttons, persistence). Before a real publish,
+  resolve the open risks above and run the 17.1 scenarios once more.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. <code>npm run rel</code> appends rows
+  automatically after each successful push - do not edit the marker below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    School Console - single source of truth for all decisions about this tool.
+    Version 0.1, 2026-10-04. Keep in sync with code; when in doubt, update this
+    document in the same change as the code.
+  </div>
+  </div>
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved state.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div>
+</body>
+</html>

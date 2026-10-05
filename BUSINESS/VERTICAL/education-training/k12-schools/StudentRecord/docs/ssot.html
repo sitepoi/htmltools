@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Student Record - Technical Source of Truth</title>
+  <!--
+  ────────────────────────────────────────────────────────────────────────────
+  SSOT TOOL TEMPLATE - _docs/templates/_ssot-template.html
+
+  HOW TO USE THIS TEMPLATE
+  1. This template is copied into every tool folder as docs/ssot.html by
+     scripts/init-docs.js - never create a tool SSOT by hand.
+  2. Replace every [PLACEHOLDER] in the document.
+  3. Pick a UNIQUE decision ID prefix for this tool (e.g. D-AICPB, D-RTM).
+     Every decision row uses <prefix>-NN in order (01, 02, ...).
+  4. Remove all TEMPLATE comments (like this one) before the first publish.
+  5. Bump "Document version" on EVERY update, with "Last updated" date.
+  6. Never inline styles or scripts - the design lives in
+     _docs/assets/ssot.css and the shared behavior in _docs/assets/ssot.js,
+     linked below through ../../../../../../_docs/assets/.
+  7. Task management (section 15): group tasks into RELEASE GROUPS. A group
+     marked ONE PUSH must ship in a single push and must never be split; a
+     RELATED group must not be broken across releases either. Each task
+     shows its main name collapsed and full details on click; the done
+     checkbox is remembered by the browser per document.
+  8. The right task panel (always visible on wide screens) is generated from
+     section 15 - never write tasks twice. Edit the board in section 15 and
+     the panel, progress bars, and sidebar counter follow automatically.
+  9. Task statuses: give a task `data-task-status` - `not-started` (default),
+     `in-progress`, or `ignored` (excluded from the statistics). Ticking the
+     done checkbox switches the task to done; unticking returns it to the
+     previous status. Browser ticks stay in that browser only. PERMANENT
+     DONE is written into the file: set `data-task-status="not-started"` on the
+     task div (or `checked` on its checkbox) - `npm run rel` writes this
+     automatically for every pushed group.
+ 10. Ideas (section 16): future ideas are discussed there before they become
+     work. An agreed idea moves to the task list (section 15); a rejected one
+     is marked `data-idea-status="ignored"` with the reason in its details.
+     Done / waiting / ignored statistics update automatically.
+ 11. Push gate (section 18): every risk or side effect of a NOT-yet-pushed
+     change is written in the risk register and linked to its release group
+     (`data-group`). Before every push, re-evaluate every OPEN risk of the
+     groups being pushed: solve them one by one (tick the checkbox), or mark
+     the risk Accepted (`data-risk-status="accepted"`) with a reason and the
+     date, and update the `Last re-evaluation` line. Risk levels:
+     `critical` (mandatory - blocks every push until solved), `high` (blocks
+     unless accepted), `medium` (warns), `low` (nice-to-have, reported only).
+     A group shows PUSH READY in the task panel only when its tasks are done
+     AND it has no open risks.
+ 12. Push provenance: when running `npm run rel`, set
+     RELEASE_SSOT_GROUPS=all (or a comma-separated list of group keys) - every
+     task in the shipped groups is stamped with the version, commit and
+     date-time of that push, and the groups move to "pushed".
+ 13. Satellite documents: docs/webpage.html, docs/help.html,
+     docs/presentation.html, docs/social.html are GENERATED from this file +
+     the code by scripts/generate-docs.js (run by npm run rel). They are
+     satellites - when they disagree with this SSOT, this SSOT wins.
+     docs/updates.html is maintained automatically by npm run rel.
+
+  GOVERNANCE RULES (apply to every tool SSOT in this repo)
+  - A tool SSOT is the REAL single source of truth for one tool (app,
+    listing, or reporting). There is exactly one SSOT per tool folder.
+  - No tool code change is made without updating the related document in
+    the SAME change. A decision that is not in section 11 did not happen.
+  - The decision register is APPEND-ONLY. Never delete rows; reverse a
+    decision by marking it "Reversed (date)" with a reason.
+  - When the code and the document disagree, the document is updated first to
+    capture the final decision, then the code follows. Never silently leave
+    them divergent.
+  - Names must be self-explanatory. No cryptic abbreviations; acronyms are
+    always expanded next to their use.
+  - Keep the table structure of section 11 (ID, Date, Decision, Rationale,
+    Status) - the automated change-documentation reads these rows.
+  ────────────────────────────────────────────────────────────────────────────
+  -->
+  <!-- Optional: nicer webfont (Inter) when online; falls back to the system
+       font stack in ssot.css when offline. Remove this line to stay fully offline. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="../../../../../../_docs/assets/ssot.css" />
+  <script src="../../../../../../_docs/assets/ssot.js" defer="defer"></script>
+</head>
+<body><body>
+
+  <div id="sidebar-overlay"></div>
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <button id="sidebar-close" class="sidebar-close" aria-label="Close table of contents">&#10005;</button>
+      <div class="sidebar-doc-name">SSOT - single source of truth</div>
+      <div class="sidebar-doc-title">StudentRecord</div>
+    </div>
+    <nav id="sidebar-toc" aria-label="Table of contents"></nav>
+    <div class="sidebar-footer">
+      <span>v0.1</span>
+      <span id="sidebar-progress"></span>
+    </div>
+  </aside>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Open table of contents">&#9776;</button>
+
+  <aside id="task-panel">
+    <header class="task-panel-header">
+      <span class="task-panel-title">Task list</span>
+      <button id="task-panel-show-all" class="task-panel-show-all">Show all groups</button>
+      <span class="task-panel-header-right">
+        <span id="task-panel-risk-count" class="task-panel-risk-count" title="Open risks"></span>
+        <span id="task-panel-progress" class="task-panel-progress">0/0</span>
+      </span>
+    </header>
+    <div class="task-panel-progress-bar"><div id="task-panel-progress-fill"></div></div>
+    <div id="task-panel-groups"></div>
+    <div class="task-panel-footer">Progress is saved in this browser. Click a task to jump to its details.</div>
+  </aside>
+  <button id="task-panel-toggle" class="task-panel-toggle" aria-label="Open task list">Tasks</button>
+
+  <div id="content">
+
+  <nav id="tab-bar">
+    <button class="tab-button active" data-tab="document">Document</button>
+    <button class="tab-button" data-tab="tasks">Tasks</button>
+    <button class="tab-button" data-tab="push">Push</button>
+    <button class="tab-button" data-tab="risks">Risks</button>
+  </nav>
+
+  <div id="view-document" class="view">
+  <h1>Student Record - student file (weekend school application)</h1>
+  <p class="meta">
+    SINGLE SOURCE OF TRUTH for the <strong>student file</strong> of the weekend
+    school application: identity, health, documents, and read views of
+    attendance and progress, plus principal-only communication log and parent
+    contact. Companion: <code>WEEKEND-SCHOOL-APP-PLAN.md</code> in the
+    <code>WeekendSchoolManager</code> folder.
+  </p>
+  <table>
+    <tr><th>Document version</th><td>0.1</td></tr>
+    <tr><th>Last updated</th><td>2026-10-04</td></tr>
+    <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
+    <tr><th>Applies to</th><td>the app part of the StudentRecord tool folder (field <code>studentRecord</code>), placed on each student object</td></tr>
+    <tr><th>Primary code areas</th><td><code>app/StudentRecord.html</code>, <code>app/StudentRecord.css</code>, <code>app/StudentRecord.js</code>, <code>app/test-harness.html</code></td></tr>
+    <tr><th>Explicitly out of scope</th><td>student creation (ProspectBoard or admin), payment ledger editing (T8 future), CMS permission configuration</td></tr>
+    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code>, <code>help.html</code>, <code>presentation.html</code>, <code>social.html</code>, <code>updates.html</code></td></tr>
+  </table>
+  <div class="summary-grid">
+    <div class="summary-card"><div class="summary-big" id="kpi-decisions">0</div><div class="summary-label">Decisions logged</div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-tasks">0/0</div><div class="summary-label">Tasks done <span id="kpi-tasks-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-ideas">0/0</div><div class="summary-label">Ideas done <span id="kpi-ideas-pct" class="summary-pct"></span></div></div>
+    <div class="summary-card"><div class="summary-big" id="kpi-status">-</div><div class="summary-label">Document status</div></div>
+  </div>
+  
+  <h2 id="sec-purpose">1. Purpose and governance</h2>
+  <p>Single source of truth for the student record tool. Same governance rules
+  as the tool family.</p>
+  <p class="ok"><strong>Core guarantee.</strong> Cross-record reads (attendance,
+  progress, communication, contact) are ACL-limited queries with no typeId -
+  the CMS returns only what the acting user may read, so a teacher can never
+  see another lesson's records through this tool.</p>
+
+  <h2 id="sec-files">2. Related files</h2>
+  <table>
+    <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
+    <tr><td><code>app/StudentRecord.html</code></td><td>Header, 5 tabs, edit/document dialogs</td><td>whole file</td></tr>
+    <tr><td><code>app/StudentRecord.css</code></td><td>Visual design</td><td>whole file</td></tr>
+    <tr><td><code>app/StudentRecord.js</code></td><td>State, documents, comm log CAS write, cross reads</td><td>whole file</td></tr>
+    <tr><td><code>app/test-harness.html</code></td><td>Harness with a full student + related objects</td><td>whole file</td></tr>
+  </table>
+
+  <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
+  <table>
+    <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
+    <tr><td>C-01</td><td>Identity / health / pickup overview + edit dialog</td><td><code>renderOverview()</code>, <code>openEditModal()</code></td><td>2026-10-03</td><td>verified in harness</td></tr>
+    <tr><td>C-02</td><td>Documents with upload (requestUpload) or URL fallback, open and remove</td><td><code>saveDocumentFromModal()</code></td><td>2026-10-03</td><td>D-SRC-01</td></tr>
+    <tr><td>C-03</td><td>Attendance + progress read-only views filtered by own studentId</td><td><code>renderAttendance()</code>, <code>renderProgress()</code></td><td>2026-10-03</td><td>D-SRC-02</td></tr>
+    <tr><td>C-04</td><td>Principal-only communication tab: one-on-one + absence call entries via CAS update (create on first entry)</td><td><code>saveCommEntry()</code></td><td>2026-10-03</td><td>D-SRC-03</td></tr>
+    <tr><td>C-05</td><td>Principal-only parent contact view</td><td><code>renderContact()</code></td><td>2026-10-03</td><td>D-SRC-04</td></tr>
+    <tr><td>C-06</td><td>Wired Edit / Add document / Add entry buttons (data-act)</td><td>click switch</td><td>2026-10-04</td><td>D-SRC-05</td></tr>
+  </table>
+
+  <h2 id="sec-glossary">4. Glossary</h2>
+  <table>
+    <tr><th>Term</th><th>Meaning</th></tr>
+    <tr><td>Own object id</td><td>The id of this student object; used as studentId in every related record.</td></tr>
+    <tr><td>Cross read</td><td>A query-all (no typeId) filtered client-side by studentId - ACL limited.</td></tr>
+    <tr><td>Communication log</td><td>An object in the communication folder with recordKind communicationLog.</td></tr>
+  </table>
+
+  <h2 id="sec-requirements">6. Requirements</h2>
+  <ol>
+    <li>Cross reads are query-all + client filter - never a folder the user may
+    not read.</li>
+    <li>Communication and parent contact tabs are visible only to the principal.</li>
+    <li>Documents accept a real file upload when requestUpload exists, otherwise
+    a URL.</li>
+    <li>Every button carries data-act.</li>
+  </ol>
+
+  <h2 id="sec-design">8. Solution design</h2>
+  <h3>8.1 Default data format (field studentRecord)</h3>
+  <pre>{
+  "version": 1,
+  "recordKind": "studentRecord",
+  "firstName": "Ahmet", "lastName": "Kaya",
+  "gender": "M", "dateOfBirth": "2015-03-02",
+  "classGroup": "Grade 1-A", "status": "active", "startDate": "2026-09-14",
+  "photoConsent": "yes",                 // notAsked | yes | no
+  "emergencyContactName": "Fatma Kaya",
+  "emergencyContactPhone": "416-555-0101",
+  "emergencyContactRelation": "mother",
+  "allergies": "", "healthNotes": "",
+  "pickupAuthorizedNames": "Fatma Kaya", "pickupNotes": "",
+  "documents": [ { "id": "d1", "name": "Registration form", "url": "", "kind": "form", "uploadedAt": "", "uploadedBy": "" } ],
+  "registeredYear": "2026-2027",
+  "seeded": true
+}</pre>
+  <h3>8.2 Related record formats (read / written by this tool)</h3>
+  <pre>// parentContact (read only here; T4C edits it)
+{ "recordKind": "parentContact", "studentId": "obj-st1", "parentName": "", "parentRelation": "",
+  "parentPhone": "", "parentEmail": "", "secondParentName": "", "secondParentPhone": "", "address": "" }
+
+// communicationLog (written by the principal from this tool)
+{ "recordKind": "communicationLog", "studentId": "obj-st1",
+  "oneOnOne": [ { "at": "2026-09-20", "note": "" } ], "absenceCalls": [] }
+
+// attendanceRecord (read only here)
+{ "recordKind": "attendanceRecord", "lessonDate": "2026-09-27", "lessonName": "Quran",
+  "entries": [ { "studentId": "obj-st1", "studentName": "Ahmet Kaya", "mark": "P", "note": "" } ] }</pre>
+
+  <h2 id="sec-decisions">11. Decision register</h2>
+  <table>
+    <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
+    <tr><td>D-SRC-01</td><td>2026-10-03</td><td>Documents: requestUpload when available, URL fallback, no PDF viewer inside the tool</td><td>The CMS upload API returns a URL; opening happens in a new tab</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SRC-02</td><td>2026-10-03</td><td>Cross reads via query-all + client filter by studentId</td><td>The CMS query has no server-side filters; ACL limits what teachers can even see</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SRC-03</td><td>2026-10-03</td><td>Communication log written with CAS; first entry creates the object in the communication folder</td><td>The log belongs to the communication folder; principal only via ACL</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SRC-04</td><td>2026-10-03</td><td>Communication and parent contact tabs hidden for non-principal roles</td><td>No per-field visibility exists; separation is by folder, and only the principal can read those folders</td><td class="status-adopted">Adopted</td></tr><tr><td>D-SRC-05</td><td>2026-10-04</td><td>Edit / Add document / Add entry buttons wired with data-act</td><td>Same id-only button bug class as SchoolSetup and ProspectBoard</td><td class="status-adopted">Adopted</td></tr>
+  </table>
+
+  <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
+  <table>
+    <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
+    <tr><td>L-01</td><td>Class group is a free-text field, not a picker of the Classes tab</td><td>Typos possible</td><td>Task T-01</td></tr>
+    <tr><td>L-02</td><td>Payment bracket assignment does not exist yet</td><td>Ledger entries are created by ProspectBoard only</td><td>Task T-02 / T8</td></tr>
+  </table>
+
+  <h2 id="sec-checklist">13. Implementation checklist</h2>
+  <table>
+    <tr><th>#</th><th>Change</th><th>File</th></tr>
+    <tr><td>1</td><td>Five tabs + documents + comm log</td><td><code>StudentRecord.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Wire header buttons (data-act)</td><td><code>StudentRecord.html/.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Class picker from SchoolSetup classes</td><td><code>StudentRecord.js</code> - PENDING (T-01)</td></tr>
+  </table>
+
+  <h2 id="sec-questions">14. Open questions</h2>
+  <ol>
+    <li><strong>Should the class field become a picker?</strong> Yes - reads the
+    classes list from the settings object; planned as T-01.</li>
+  </ol>
+
+  
+  <h2 id="sec-tasklist">15. Development task list</h2>
+  <div class="dor-dod-grid">
+    <div class="dor-dod-box"><strong>Definition of READY</strong><ul><li>Decision logged in section 11.</li><li>Belongs to exactly one release group.</li></ul></div>
+    <div class="dor-dod-box"><strong>Definition of DONE</strong><ul><li>All group tasks checked.</li><li>Open risks solved or accepted.</li></ul></div>
+  </div>
+  <div class="task-stats-bar">
+    <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
+    <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
+  </div>
+  <section class="task-group" data-release-group="G-SRC-SETUP" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: School setup integration</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="G-SRC-SETUP">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="G-SRC-SETUP"></div></div>
+    <p class="task-group-note">The student file must follow the school definition: classes and brackets from SchoolSetup.</p>
+    <div class="task-item" data-task-id="T-01" data-group="G-SRC-SETUP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-01</span>
+          <span class="task-title">Class group picker from the settings object classes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Read classes from the settings object; replace the free-text field with a select</p>
+          <p><strong>How we will solve it:</strong> Students always belong to a defined class</p>
+          <p><strong>Benefit:</strong> StudentRecord.js</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div><div class="task-item" data-task-id="T-02" data-group="G-SRC-SETUP" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Payment bracket assignment on the student file</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-optional">Optional - needs decision</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Show the bracket select (from settings) for the principal; T8 uses it</p>
+          <p><strong>How we will solve it:</strong> One place to set the student price</p>
+          <p><strong>Benefit:</strong> StudentRecord.js + future T8</p>
+          <p><strong>Files:</strong> <code>not-started</code></p>
+          <p><strong>Status:</strong> edit data-task-status above - the chip updates automatically</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  
+  <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
+  <div class="idea-stats-bar">
+    <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
+    <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
+  </div>
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-01</span>
+        <span class="idea-title">Sibling link</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Link siblings so discounts and parent contacts are shared</p>
+        <p><strong>Why:</strong> Sibling discount automation (SchoolSetup I-01)</p>
+        <p><strong>Discussion / outcome:</strong> Later, with the payment ledger tool</p>
+      </div>
+    </details>
+  </div>
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Photo upload</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Student photo with consent flag</p>
+        <p><strong>Why:</strong> Teachers recognize students</p>
+        <p><strong>Discussion / outcome:</strong> Needs the document upload flow; revisit</p>
+      </div>
+    </details>
+  </div>
+
+
+  <h2 id="sec-testplan">17. Test plan - step by step</h2>
+  <p>All tests run in the local test harness (<code>app/test-harness.html</code>)
+  served with <code>python -m http.server 8765</code> and driven by headless
+  Edge. The harness supports <code>?sample=1</code> (fresh sample data),
+  <code>?tab=&lt;pane&gt;</code> and <code>?actions=&lt;list&gt;</code>
+  (runs clicks after 500 ms; sub-actions <code>set-input:&lt;id&gt;:&lt;value&gt;</code>,
+  <code>clear-folder:&lt;key&gt;</code>, <code>check:&lt;id&gt;</code>,
+  <code>set-select:&lt;id&gt;:&lt;value&gt;</code>).</p>
+  <h3>17.1 Scenarios</h3>
+  <ol>
+    <li><strong>H-01 - renders with sample data.</strong> Steps: open the
+    harness with <code>?sample=1</code> and each <code>?tab=</code>. PASS if:
+    every pane renders data without console errors.</li>
+    <li><strong>H-02 - every button reacts.</strong> Steps: run the recorded
+    <code>?actions=</code> sequences for each button. PASS if: the expected
+    dialog opens / row appears / cell toggles.</li>
+    <li><strong>H-03 - persistence.</strong> Steps: edit a field, wait 500 ms,
+    press "Show log". PASS if: <code>requestSave</code> was accepted and the
+    value survives a reload.</li>
+    <li><strong>H-04 - role cycle.</strong> Steps: switch role to editor /
+    viewer / none. PASS if: write controls disable for read-only roles and
+    nothing throws.</li>
+  </ol>
+  <h3>17.2 Recording and publish gate</h3>
+  <table>
+    <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
+    <tr><td>H-01 renders</td><td></td><td></td></tr>
+    <tr><td>H-02 buttons</td><td></td><td></td></tr>
+    <tr><td>H-03 persistence</td><td></td><td></td></tr>
+    <tr><td>H-04 roles</td><td></td><td></td></tr>
+  </table>
+  <p><strong>Publish gate:</strong> publish only when every scenario PASSES
+  and all tasks of the pushed groups are checked in section 15.</p>
+  <p><strong>Progress log:</strong> 2026-10-04 - H-01, H-02 and H-03 verified
+  with headless Edge on the current build for all four school tools.</p>
+
+  <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
+  <div class="risk-stats-bar">
+    <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
+    <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted</span>
+  </div>
+  
+  <div class="risk-item" data-risk-id="R-01" data-group="G-SRC-SETUP" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-01</span>
+        <span class="risk-title">Settings object unreadable for teachers</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01 reads classes from settings</p>
+        <p><strong>What can go wrong:</strong> Teachers see no class options; fallback to free text</p>
+        <p><strong>Likelihood / impact:</strong> Low</p>
+        <p><strong>Mitigation:</strong> Keep free text fallback when the settings query is denied</p>
+        <p><strong>Last re-evaluation:</strong> ${DATE} - open; re-check when T-01 ships</p>
+      </div>
+    </details>
+  </div>
+
+  <p class="ok"><strong>Overall verdict.</strong> The current build was verified
+  in the harness (renders, buttons, persistence). Before a real publish,
+  resolve the open risks above and run the 17.1 scenarios once more.</p>
+
+  <h2 id="sec-releases">19. Release log</h2>
+  <p>One row per published release. <code>npm run rel</code> appends rows
+  automatically after each successful push - do not edit the marker below.</p>
+  <table>
+    <tr><th>Date</th><th>Version</th><th>Commit</th><th>What shipped</th></tr>
+    <tbody id="release-log-rows">
+    <!-- RELEASE-LOG-ROWS - release.js appends new rows before this marker -->
+    </tbody>
+  </table>
+
+  <div class="footer">
+    Student Record - single source of truth for all decisions about this tool.
+    Version 0.1, 2026-10-04. Keep in sync with code; when in doubt, update this
+    document in the same change as the code.
+  </div>
+  </div>
+
+  <div id="view-tasks" class="view" style="display:none">
+    <h1>Task board</h1>
+    <p>Every task of every release group with full details, generated live
+    from section 15. Tick a checkbox here or in the Document view - both stay
+    in sync.</p>
+    <div id="task-board-view" class="task-board-view"></div>
+  </div>
+
+  <div id="view-push" class="view" style="display:none">
+    <h1>Push management</h1>
+    <p>Generated live from the task groups (section 15) and the risk register
+    (section 18). Gate rule: a group is PUSH READY when all tasks are done and
+    it has no open risks.</p>
+    <div id="push-gate-summary" class="push-gate-summary"></div>
+    <div id="push-group-cards" class="push-group-cards"></div>
+  </div>
+
+  <div id="view-risks" class="view" style="display:none">
+    <h1>Risk dashboard</h1>
+    <p>All risks of this tool by level, with open / accepted / solved state.</p>
+    <div id="risk-dashboard" class="risk-dashboard"></div>
+  </div>
+
+  </div>
+</body>
+</html>
