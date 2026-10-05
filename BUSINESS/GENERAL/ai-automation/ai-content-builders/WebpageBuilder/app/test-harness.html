@@ -55,12 +55,13 @@ body { padding-top: 28px !important; margin: 0; }
       <div class="app-logo">🎨</div>
       <div class="header-title">
         <h1>Webpage Builder</h1>
-        <span class="header-sub">AI-First • Chat-Driven • Single-Page Web Design Studio</span>
+        <span class="header-sub">Design your webpage by chat</span>
       </div>
     </div>
     <div class="header-right">
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-7</span>
-      <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
+      <button class="btn btn-sm btn-primary" id="btn-widget-library-top" title="Add a widget">🧩 Widgets</button>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-15</span>
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
       <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
@@ -73,6 +74,7 @@ body { padding-top: 28px !important; margin: 0; }
     <!-- LEFT: Chat Panel -->
     <aside class="chat-panel" id="chat-panel">
       <div class="chat-tab-bar" id="chat-tab-bar">
+        <span class="side-label">💬 Design Chat</span>
         <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
         <button class="chat-tab chat-tab-dev" data-chat-tab="response" style="display:none">📥 Response</button>
         <button class="chat-tab chat-tab-dev" data-chat-tab="prompt" style="display:none">📤 Prompt</button>
@@ -163,6 +165,9 @@ body { padding-top: 28px !important; margin: 0; }
               <button class="dev-btn" data-device="mobile" title="Mobile view (390px)">📲</button>
             </div>
             <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+            <button class="btn btn-sm btn-outline" id="btn-page-widgets" title="Widgets on this page" style="display:none">🧩 0</button>
+            <button class="btn btn-sm btn-outline header-btn-active" id="btn-render-widgets" title="Show or hide widgets in this preview only">🧩 Widget preview: On</button>
+            <span class="island-render-status" id="island-render-status"></span>
           </div>
           <div class="preview-stage" id="preview-stage">
             <div class="preview-frame-wrap" id="preview-frame-wrap">
@@ -278,7 +283,7 @@ body { padding-top: 28px !important; margin: 0; }
                 <button class="btn btn-outline" id="btn-form-builder">📝 Form Builder</button>
               </div>
               <div class="widget-lib-source" id="widget-lib-status">🛰 Checking library connection…</div>
-              <p class="gen-hint">Widgets come from the application store (widgetCatalogUrl). Search and add one as a data-gw-app island.</p>
+              <p class="gen-hint">Widgets come from the UniconHub application store — search and add one as a data-gw-app island.</p>
             </div>
           </div>
         </div>
@@ -351,7 +356,7 @@ body { padding-top: 28px !important; margin: 0; }
       <button class="btn-close" id="btn-widget-library-close">✕</button>
     </div>
     <div class="modal-body">
-      <input type="text" id="widget-search" class="widget-search" placeholder="Search by name or id… (e.g. gallery, reviews)" autocomplete="off" />
+      <input type="text" id="widget-search" class="widget-search" placeholder="Search widgets…" autocomplete="off" />
       <div class="widget-lib-source" id="widget-lib-source"></div>
       <div class="widget-lib-meta">
         <span id="widget-lib-count"></span>
@@ -368,14 +373,29 @@ body { padding-top: 28px !important; margin: 0; }
       <button class="btn-close" id="btn-widget-cancel">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-sub" id="widget-dialog-desc"></p>
-      <label class="field-label">Widget config (valid JSON — generates data-gw-config)</label>
-      <textarea id="widget-config-json" class="widget-config-json" rows="10" spellcheck="false"></textarea>
-      <label class="field-label">Place after section id (optional)</label>
-      <input type="text" id="widget-place-after" placeholder="e.g. hero — leave empty to append at the end" />
+      <p class="modal-sub" id="widget-dialog-desc">It will appear right in your page preview.</p>
+      <label class="field-label">Settings (JSON — optional)</label>
+      <textarea id="widget-config-json" class="widget-config-json" rows="6" spellcheck="false"></textarea>
+      <label class="field-label">Place in (optional)</label>
+      <select id="widget-place-after"><option value="">— end of page —</option></select>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="btn-widget-cancel2">Cancel</button>
-        <button class="btn btn-primary" id="btn-widget-insert">➕ Insert Island</button>
+        <button class="btn btn-primary" id="btn-widget-insert">➕ Add to Page</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Widgets Modal -->
+  <div class="modal" id="modal-page-widgets" style="display:none">
+    <div class="modal-header">
+      <h3>🧩 Widgets on this page</h3>
+      <button class="btn-close" id="btn-page-widgets-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-sub">These widgets are part of your page. ↑↓ to reorder · choose a section to place each one.</p>
+      <div id="page-widgets-list"></div>
+      <div class="page-widgets-actions">
+        <button class="btn btn-primary" id="btn-page-widgets-add">🧩 Add from library</button>
       </div>
     </div>
   </div>
@@ -1399,10 +1419,12 @@ Rules:
       // behave exactly like the direct-fetch path).
       if (t === 'website-html-tool-library-applicationstore') {
         var storeBase = 'https://applicationstore.uniconhub.com/api/v2';
-        window.fetch(storeBase + '/objects/' + encodeURIComponent(t), { method: 'GET', headers: { Accept: 'application/json' } })
+        var storeUrl = storeBase + '/objects/' + encodeURIComponent(t) + (action === 'get' && params.objectId ? ('/' + encodeURIComponent(params.objectId)) : '');
+        window.fetch(storeUrl, { method: 'GET', headers: { Accept: 'application/json' } })
           .then(function(res) { if (!res.ok) { cb('HTTP ' + res.status, null); return null; } return res.json(); })
           .then(function(json) {
             if (json === null) return;
+            if (json.object) { cb(null, { object: json.object }); return; }
             var items = Array.isArray(json) ? json : ((json && (json.items || json.objects)) || []);
             cb(null, { objects: items });
           })
@@ -1568,7 +1590,7 @@ Rules:
      boot sets data-wb-ready on <body>. -->
 <script>
 (function() {
-  var BUILD = '2026-10-04-7';
+  var BUILD = '2026-10-04-15';
   try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
   try {
     window.__wbHtmlProbe = true;
@@ -1615,6 +1637,20 @@ Rules:
   function serveSample(u, opts) {
     if (u.indexOf('/api/v2/health') !== -1) {
       return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve({ status: 'ok', service: 'applicationstore-sample', api: 'v2' }); } });
+    }
+    // Object DETAIL (get-by-id): the detail may carry the widget code even
+    // when the catalog LIST omits it — mirrors the parent-CMS 'get' relay.
+    var dm = u.match(/\/api\/v2\/objects\/[^\/?#]+\/([^\/?#]+)/);
+    if (dm) {
+      var did = decodeURIComponent(dm[1]);
+      var found = null;
+      for (var i = 0; i < STORE_ITEMS.length; i++) if (STORE_ITEMS[i].id === did) found = STORE_ITEMS[i];
+      if (!found) return Promise.resolve({ ok: false, status: 404, json: function() { return Promise.resolve({}); } });
+      var detail = JSON.parse(JSON.stringify(found));
+      if (did === 'lib-1') {
+        detail.productData.data_categoriesBased.code = { html: '', css: '', js: '(function(){if(window.gw)gw.apps.register("gallery",function(ctx){var el=ctx.el;el.textContent="🖼 Gallery preview — "+(ctx.config.limit||12)+" items";return function(){};});}());' };
+      }
+      return Promise.resolve({ ok: true, status: 200, json: function() { return Promise.resolve({ object: detail }); } });
     }
     if (u.indexOf('/api/v2/objects') !== -1) {
       // v2 objects resource — the FULL list; the tool filters/pages client-side.

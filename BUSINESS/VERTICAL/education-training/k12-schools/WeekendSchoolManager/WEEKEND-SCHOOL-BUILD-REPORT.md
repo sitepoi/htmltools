@@ -1,6 +1,6 @@
 # Weekend School - Build Report
 
-Version 1.0 - 2026-10-03
+Version 1.1 - 2026-10-05
 
 Consolidated from the verified CMS application reference (`cms-application-system.html`
 section 15) and the user's decisions:
@@ -68,6 +68,22 @@ Tool field settings (all tools): `allowObjectCRUD: 'yes'` +
 `allowedObjectTypes: [{mainObjectType: 'weekendSchool', role: 'editor',
 scope: 'shared'}]` - role `'viewer'` for T3 only. `targetCollection` is
 omitted so the app's private routing applies.
+
+## 4.1 Build status (2026-10-05)
+
+| # | Tool | Status |
+|---|---|---|
+| T1 | SchoolSetup | BUILT 2026-10-03; updated 2026-10-04 (base definition: school contact, one-time fees with scope, attendance policy, classes, teachers, calendar) |
+| T2 | ProspectBoard | BUILT 2026-10-03; CRM upgrade 2026-10-04/05 (4 tabs, CMS team, gated call rounds, communication log, decision semantics Registered / Not registering / Waiting, three Distribution sub-tabs) |
+| T3 | Weekend School Console | BUILT 2026-10-03; updated 2026-10-05 (enrollment strip + ENROLLMENT report section, data-act button wiring fix, schema-aligned sample) |
+| T4 | StudentRecord | BUILT 2026-10-03 |
+| T4C | ParentContact | TO DEVELOP - Phase 2 polish |
+| T5 | LessonBoard | TO DEVELOP - Phase 3 |
+| T6 | AttendanceRecord | TO DEVELOP - Phase 3 (class + support modes, attendance policy, absence call checklist) |
+| T7 | LessonProgress | TO DEVELOP - Phase 3 |
+| T8 | PaymentLedger | TO DEVELOP - Phase 4 (payment plan, one-time fees, reports, reminders) |
+| T9 | CommunicationBoard | TO DEVELOP - Phase 4 |
+| T10 | SchoolReports | Lives as the T3 Reports tab today; moves to an app-menu tab when the CMS report host (D-RPTL) ships |
 
 ## 5. Runtime plane: folder tree per year
 
@@ -146,8 +162,8 @@ write another lesson's records - the CMS rejects the queries.
 | Phase | Deliverables |
 |---|---|
 | 0 Platform setup | app + categories + field groups + tools registered + year tree + ACLs (admin, guided by section 7) |
-| 1 Foundation | T1 SchoolSetup, T4 StudentRecord, T4C ParentContact, T3 Console (Students tab) |
-| 2 CRM | T2 ProspectBoard + convert-to-student batch (student + ledger + comm-log + contact) |
+| 1 Foundation | DONE 2026-10-04 - T1 SchoolSetup, T4 StudentRecord, T4C ParentContact, T3 Console (Students tab) |
+| 2 CRM | DONE 2026-10-05 - T2 ProspectBoard + convert-to-student batch (student + ledger + comm-log + contact); CRM upgrade with tabs, rounds, communication log and decision semantics |
 | 3 Teaching day | T5 LessonBoard, T6 AttendanceRecord (class + support), T7 LessonProgress |
 | 4 Money + parents | T8 PaymentLedger, T9 CommunicationBoard |
 | 5 Oversight | T3 Attendance, Payments, Reports tabs + text/CSV/HTML export |

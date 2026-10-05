@@ -1,0 +1,105 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PUBLICWEBSITE — WIDGET ISLAND PUBLISH CONTRACT (SSR DEFAULT)
+How data-gw-app islands from the application-store library must render
+on the publish side. Hand this to the PublicWebsite codebase.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. THE ISLAND MARKUP (what page builders emit — already the binding
+   contract, do not change it)
+
+     <div data-gw-app="Food Ordering Cart" data-gw-config='{}'></div>
+
+   - data-gw-app       = the widget NAME as published in the library
+                         catalog (gwAppName).
+   - data-gw-config    = VALID JSON (double-quoted). The page builder
+                         generates it from the widget's configSchema; it
+                         may be '{}' when the schema has no fields.
+   - Convention: single-quoted attribute holding double-quoted JSON
+     (if the JSON must contain apostrophes, double-quote the attribute
+     and &amp;-escape inner quotes).
+
+2. CATALOG RECORD (website-html-tool-library-applicationstore)
+   Each library ObjectRecord declares, as field values:
+     gwAppName      string   island name (== data-gw-app value)
+     title          string
+     description    string
+     category       string
+     configSchema   object?  JSON schema; page builders generate the
+                             data-gw-config defaults from it
+     ssrHtml        string?  SERVER-RENDERED MARKUP for the widget —
+                             optional; when absent the island is
+                             client-only or empty on the server
+     code           object   { html, css, js } — the widget's own three
+                             blocks (the library tools are html tools)
+   The code + ssrHtml MUST be available to the SSR pipeline server-side
+   (the store host is platform-owned — fetch it at render time, never
+   from the browser).
+
+   IMPORTANT FOR TOOLS: the catalog LIST response SHOULD include the
+   `code` block for every record (tools render a CLIENT-SIDE-ONLY
+   preview — they do not use ssrHtml). If the list must stay lean, the
+   platform MUST expose the record detail through the parent-CMS relay
+   (tool.requestObjects('get', { mainObjectType, objectId }) ->
+   { object }) so tools can fetch the code on demand.
+     2. If the record has ssrHtml: inject it INSIDE the island div
+        (after any existing content) and mark the island
+        data-gw-ssr="1". Output must stay DETERMINISTIC (Redis/CDN
+        cache keyed by page version).
+     3. If the record has NO ssrHtml: leave the island empty on the
+        server and mark data-gw-ssr="none" (no error, no crash).
+     4. Unknown island name: render nothing (or an inert placeholder
+        only in preview mode), log a server warning — never break the
+        page.
+     5. Widget css: append the record's code.css to the page <head>
+        AFTER page css, scoped under the widget's own wrapper class
+        (the gw- prefix rules of Section 3.4 apply to it).
+
+   STEP B — HYDRATION (after page scripts, before auto-mount completes):
+     1. The widget's code.js runs (like page js: idempotent, no
+        top-level await) and MUST call
+        gw.apps.register(name, factory) — factory receives
+        { el, config, gw } and may return a cleanup function.
+     2. The platform auto-mounts every [data-gw-app] island
+        (idempotent — mark data-gw-mounted="1", never double-mount):
+        config = JSON.parse(data-gw-config), with configSchema defaults
+        applied for missing keys.
+     3. The factory REPLACES or hydrates the SSR placeholder it finds
+        inside el (SSR is a progressive-enhancement first paint — the
+        client render wins after hydration).
+     4. A failing island is isolated (gw:app-error event, console
+        warning) and never breaks the app shell.
+
+   STEP C — CLIENT-ONLY MODE (opt-in, NOT the default):
+     A catalog record may set ssrEnabled:false. Then:
+       - no server markup (data-gw-ssr="client" or "none");
+       - the island renders fully client-side in Step B.
+     Use ONLY when the widget needs browser-only APIs, auth/session
+     state, or non-deterministic content. SSR stays the default because
+     it is better for SEO, first paint and caching — and it is SAFE
+     here because the island code is platform/admin-authored library
+     code (trusted), the config is treated as DATA (widgets must render
+     values with textContent / gw.sanitize), and no raw client writes
+     are allowed (same guardrails as page code).
+
+4. SECURITY / CONSISTENCY NOTES
+   - Island code is library code, not tenant content: trusted at build
+     time, but config values are data — escape on render.
+   - Determinism: SSR output must not depend on Math.random/time.
+   - The WebpageBuilder tool's PREVIEW is CLIENT-SIDE ONLY (no SSR): it
+     runs the widget's code.{js} via gw.apps.register + auto-mount with
+     {el, config, gw}; if a record lacks code it asks the parent CMS for
+     the record detail (requestObjects 'get') and re-renders; unknown
+     widgets get a clearly-marked placeholder chip.
+
+5. ACCEPTANCE TESTS
+   A. A page with <div data-gw-app="X" data-gw-config='{"limit":3}'>
+      renders, in the SSR HTML, X's ssrHtml inside the island with
+      data-gw-ssr="1"; after hydration the island shows the client
+      render and data-gw-mounted="1".
+   B. Same page cached: SSR output identical across two renders.
+   C. Widget with ssrEnabled:false → empty island server-side,
+      rendered client-side after hydration.
+   D. Unknown name → page still renders; a warning is logged; no
+      runtime error.
+   E. Invalid data-gw-config JSON → island mounts with {} and a
+      warning (page unaffected).

@@ -59,13 +59,15 @@
   var ATTENDANCE_FIELD_ID = "attendanceRecord";
   var LEDGER_FIELD_ID = "paymentLedger";
   var LESSON_FIELD_ID = "lessonBoard";
+  var PROSPECT_FIELD_ID = "prospectBoard";
   var MARK_LABELS = { P: "Present", A: "Absent", L: "Late", E: "Excused" };
+  var DECISION_LABELS = { positive: "Registered", negative: "Not registering", none: "Waiting" };
 
   var UI = { version: 1, ui: { tab: "students" } };
   var _folderMap = null;
   var _state = {
     students: [], attendanceFolders: [], attendanceRecords: [],
-    ledgers: [], lessons: [], settingsName: ""
+    ledgers: [], lessons: [], prospects: [], settings: null, settingsName: ""
   };
   var _paymentSearch = "";
   var _studentSearch = "";
@@ -148,10 +150,12 @@
     queryAll(function (error, objects) {
       _folderMap = null;
       _state.settingsName = "";
+      _state.settings = null;
       (objects || []).forEach(function (object) {
         var setup = fieldJsonOf(object, SETUP_FIELD_ID);
         if (setup && setup.recordKind === "schoolSettings" && !_folderMap && setup.folderMap) {
           _folderMap = setup.folderMap;
+          _state.settings = setup;
           _state.settingsName = setup.schoolName || "";
         }
       });
@@ -178,7 +182,7 @@
   }
 
   function stepLoadData() {
-    var pending = 4;
+    var pending = 5;
     var finish = function () { pending--; if (pending <= 0) { _loading = false; setPaneBusy(false); renderActivePane(); } };
     var fail = function (error) { if (error) notify("Load problem: " + error, "warning"); };
 
@@ -190,6 +194,11 @@
     queryFolder(_folderMap && _folderMap.lessons, function (error, objects) {
       fail(error);
       _state.lessons = objects;
+      finish();
+    });
+    queryFolder(_folderMap && _folderMap.prospects, function (error, objects) {
+      fail(error);
+      _state.prospects = objects;
       finish();
     });
     var subIds = attendanceSubFolderIdsFromState();
@@ -251,7 +260,33 @@
   }
 
   /* Students tab */
+  function classNameOf(student) {
+    if (student.classGroup) return student.classGroup;
+    if (!student.classGroupId) return "-";
+    var classes = (_state.settings && Array.isArray(_state.settings.classes)) ? _state.settings.classes : [];
+    var match = classes.filter(function (classItem) {
+      return String(classItem.id) === String(student.classGroupId);
+    })[0];
+    return (match && match.name) || student.classGroupId;
+  }
+
+  function renderEnrollment() {
+    var holder = $("#sco-enrollment");
+    if (!holder) return;
+    var stats = decisionCounts();
+    if (!stats.total) {
+      holder.innerHTML = '<span class="sco-hint">No prospect board found - the enrollment overview reads the ProspectBoard object of the prospects folder.</span>';
+      return;
+    }
+    holder.innerHTML = '<span class="sco-label">Enrollment:</span>' +
+      '<span class="sco-pill good">Registered ' + stats.counts.positive + "</span>" +
+      '<span class="sco-pill warn">Waiting ' + stats.counts.none + "</span>" +
+      '<span class="sco-pill bad">Not registering ' + stats.counts.negative + "</span>" +
+      (stats.currentRound ? '<span class="sco-pill">Current round ' + stats.currentRound + "</span>" : "");
+  }
+
   function renderStudents() {
+    renderEnrollment();
     var holder = $("#sco-student-list");
     var count = $("#sco-student-count");
     if (!_folderMap || !_folderMap.students) {
@@ -263,7 +298,7 @@
       var s = fieldJsonOf(object, STUDENT_FIELD_ID) || {};
       var fullName = [(s.firstName || ""), (s.lastName || "")].join(" ").toLowerCase();
       if (_studentSearch && fullName.indexOf(_studentSearch.toLowerCase()) === -1) return false;
-      if (_studentClassFilter && String(s.classGroup || "").toLowerCase().indexOf(_studentClassFilter.toLowerCase()) === -1) return false;
+      if (_studentClassFilter && String(classNameOf(s)).toLowerCase().indexOf(_studentClassFilter.toLowerCase()) === -1) return false;
       return true;
     });
     list.sort(function (a, b) {
@@ -271,16 +306,17 @@
       var sb = fieldJsonOf(b, STUDENT_FIELD_ID) || {};
       return String(sa.firstName || "").localeCompare(String(sb.firstName || ""));
     });
-    if (count) count.textContent = list.length + " student(s)";
+    if (count) count.textContent = list.length === 1 ? "1 student" : list.length + " students";
     if (!holder) return;
     if (!list.length) { holder.innerHTML = '<p class="sco-empty">No students match.</p>'; return; }
     var rows = list.map(function (object) {
       var s = fieldJsonOf(object, STUDENT_FIELD_ID) || {};
       var fullName = [(s.firstName || ""), (s.lastName || "")].join(" ") || object.name || "Student";
+      var statusPill = "sco-pill" + (s.status === "active" ? " good" : s.status === "paused" ? " warn" : s.status === "left" ? " bad" : "");
       return "<tr>" +
         '<td><button class="sco-link" data-act="open-student" data-id="' + esc(object.id) + '">' + esc(fullName) + "</button></td>" +
-        "<td>" + esc(s.classGroup || "-") + "</td>" +
-        "<td><span class='sco-pill'>" + esc(s.status || "active") + "</span></td>" +
+        "<td>" + esc(classNameOf(s)) + "</td>" +
+        '<td><span class="' + statusPill + '">' + esc(s.status || "active") + "</span></td>" +
         "<td>" + esc(s.startDate || "-") + "</td>" +
         "<td>" + esc(s.emergencyContactPhone || "-") + "</td>" +
         "</tr>";
@@ -467,11 +503,63 @@
     return lines.join("\n");
   }
 
+  /* Enrollment - the console only READS prospect decisions (Registered /
+     Not registering / Waiting, same semantics as ProspectBoard D-PRB-17). */
+  function prospectBoardValues() {
+    var boards = [];
+    _state.prospects.forEach(function (object) {
+      var board = fieldJsonOf(object, PROSPECT_FIELD_ID);
+      if (board && Array.isArray(board.prospects)) boards.push(board);
+    });
+    return boards;
+  }
+
+  function decisionCounts() {
+    var counts = { positive: 0, negative: 0, none: 0 };
+    var currentRound = 0;
+    prospectBoardValues().forEach(function (board) {
+      if (Number(board.currentRound || 0) > currentRound) currentRound = Number(board.currentRound || 0);
+      board.prospects.forEach(function (prospect) {
+        var decision = prospect.decision === "positive" ? "positive" : prospect.decision === "negative" ? "negative" : "none";
+        counts[decision]++;
+      });
+    });
+    return { counts: counts, currentRound: currentRound, total: counts.positive + counts.negative + counts.none };
+  }
+
+  function buildEnrollmentSummaryText() {
+    var stats = decisionCounts();
+    var lines = [];
+    lines.push("ENROLLMENT - " + (_state.settingsName || "School"));
+    lines.push("Generated " + todayIso());
+    lines.push("");
+    if (!stats.total) {
+      lines.push("No prospect board found.");
+      return lines.join("\n");
+    }
+    lines.push("Registered: " + stats.counts.positive + " | Waiting: " + stats.counts.none + " | Not registering: " + stats.counts.negative + (stats.currentRound ? " | Current round: " + stats.currentRound : ""));
+    lines.push("");
+    var groups = { positive: [], negative: [], none: [] };
+    prospectBoardValues().forEach(function (board) {
+      board.prospects.forEach(function (prospect) {
+        var key = prospect.decision === "positive" ? "positive" : prospect.decision === "negative" ? "negative" : "none";
+        groups[key].push([prospect.firstName, prospect.lastName].filter(Boolean).join(" ") || "Family");
+      });
+    });
+    var groupOrder = ["positive", "none", "negative"];
+    groupOrder.forEach(function (key) {
+      var names = groups[key].sort();
+      lines.push(DECISION_LABELS[key] + " (" + names.length + "): " + (names.length ? names.join(", ") : "-"));
+    });
+    return lines.join("\n");
+  }
+
   function buildReport() {
     var sundayIso = $("#sco-report-week").value || thisSundayIso();
     var weekly = buildWeeklyReport(sundayIso);
     var payments = buildPaymentSummaryText();
-    var text = weekly + "\n\n" + payments;
+    var enrollment = buildEnrollmentSummaryText();
+    var text = weekly + "\n\n" + payments + "\n\n" + enrollment;
     $("#sco-report-text").textContent = text;
     resize();
   }

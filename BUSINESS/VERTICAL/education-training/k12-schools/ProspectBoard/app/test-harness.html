@@ -55,7 +55,7 @@
         <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-prospects">0</div><div class="prb-kpi-label">Prospects</div></div>
         <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-open">0</div><div class="prb-kpi-label">Open follow-ups</div></div>
         <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-today">0</div><div class="prb-kpi-label">To reach today</div></div>
-        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-calls">0</div><div class="prb-kpi-label">Calls logged (7 days)</div></div>
+        <div class="prb-kpi"><div class="prb-kpi-big" id="prb-kpi-calls">0</div><div class="prb-kpi-label">Communications (7 days)</div></div>
       </section>
       <section class="prb-card">
         <div class="prb-card-title">Call rounds
@@ -110,7 +110,7 @@
         <div class="prb-card-title">My tasks
           <span class="prb-counts" id="prb-my-task-counts"></span>
         </div>
-        <p class="prb-hint" style="margin:0 0 10px">Follow-ups assigned to you. Tick one off when the contact is done - logging the call in the pipeline also completes the task.</p>
+        <p class="prb-hint" style="margin:0 0 10px">Your families to contact this round. Press Log after each communication and write the result: Registered, Not registering or still waiting. Saving closes the task and updates the family status - no extra steps.</p>
         <div class="prb-chips" id="prb-mytask-chips"></div>
         <div id="prb-my-task-list"></div>
       </section>
@@ -121,14 +121,15 @@
         <div class="prb-card-title">Task distribution
           <span class="prb-counts" id="prb-task-counts"></span>
         </div>
-        <p class="prb-hint" style="margin:0 0 10px">Call in rounds until every family gives a solid answer. Each round assigns only the families that still have no decision. Finish every call of the active round before starting the next one.</p>
+        <p class="prb-hint" style="margin:0 0 10px">Contact every family until it gives a solid answer. Each round assigns only the families still waiting. Log the result of every communication - Registered and Not registering families leave the loop, the rest appear in the next round automatically. A new round opens only after every call of this round is logged.</p>
         <div class="prb-team-row">
           <span class="prb-label">Team:</span>
           <div class="prb-team-chips" id="prb-team-chips"></div>
         </div>
         <div class="prb-dist-tabs">
-          <button class="prb-dist-tab active" data-act="dist-view" data-id="progress">Round progress</button>
-          <button class="prb-dist-tab" data-act="dist-view" data-id="results">Round results</button>
+          <button class="prb-dist-tab active" data-act="dist-view" data-id="progress">Active round</button>
+          <button class="prb-dist-tab" data-act="dist-view" data-id="history">Previous rounds</button>
+          <button class="prb-dist-tab" data-act="dist-view" data-id="groups">Decision groups</button>
         </div>
         <div id="prb-view-progress">
           <div class="prb-task-actions">
@@ -145,9 +146,11 @@
           <div class="prb-round-status" id="prb-round-status"></div>
           <div id="prb-task-list"></div>
         </div>
-        <div id="prb-view-results" hidden>
-          <div id="prb-round-report"></div>
+        <div id="prb-view-history" hidden>
           <div id="prb-round-history"></div>
+        </div>
+        <div id="prb-view-groups" hidden>
+          <div id="prb-decision-groups"></div>
         </div>
       </section>
     </section>
@@ -356,21 +359,24 @@
       var status = statuses[i];
       var fullName = students[i][0] + " " + students[i][1];
       var createdDay = -(42 - i);
-      var callLog = [];
+      var communicationLog = [];
       var nextCallDate = "";
       var decision = status === "enrolled" ? "positive" : status === "inactive" ? "negative" : "none";
       if (status === "contacted" || status === "interested") {
-        callLog.push({ at: dateOffsetIso(createdDay), note: "First contact - " + notes[i % notes.length], outcome: "none" });
+        communicationLog.push({ at: dateOffsetIso(createdDay), note: "First contact - " + notes[i % notes.length], outcome: "none" });
       }
       if (status === "contacted" && i % 2 === 0) {
-        callLog.push({ at: dateOffsetIso(-3), note: "Follow-up call made this week.", outcome: "none" });
+        communicationLog.push({ at: dateOffsetIso(-3), note: "Follow-up call made this week.", outcome: "none" });
       }
       if (status === "interested") {
-        callLog.push({ at: dateOffsetIso(-1), note: "Second call - family is positive.", outcome: "positive" });
+        communicationLog.push({ at: dateOffsetIso(-1), note: "Second call - family is warming up.", outcome: "none" });
         nextCallDate = dateOffsetIso(i % 2 === 0 ? 2 : -1);
       }
+      if (status === "enrolled") {
+        communicationLog.push({ at: dateOffsetIso(-8), note: "Registered - family enrolled.", outcome: "positive" });
+      }
       if (status === "inactive") {
-        callLog.push({ at: dateOffsetIso(-6), note: "Family said the timing does not work this year.", outcome: "negative" });
+        communicationLog.push({ at: dateOffsetIso(-6), note: "Family said the timing does not work this year.", outcome: "negative" });
       }
       if (status === "new" && i % 3 === 0) {
         nextCallDate = dateOffsetIso(0);
@@ -389,7 +395,7 @@
         nextCallDate: nextCallDate,
         notes: notes[i % notes.length],
         createdAt: dateOffsetIso(createdDay),
-        callLog: callLog
+        communicationLog: communicationLog
       };
       prospects.push(prospect);
       // Round 1 called EVERY reachable family (not enrolled/inactive).

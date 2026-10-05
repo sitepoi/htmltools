@@ -117,6 +117,55 @@ block (and in any inline script inside the [HTML] block):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GLOBAL REQUIREMENT - EXTERNAL CONTENT VIA PARENT CMS RELAY (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tools run in a sandboxed iframe. Direct network calls from the iframe to
+outside hosts (fetch/XHR, <script src="https://cdn…">, external <link> or
+fonts) are NOT allowed — they stall or get blocked, and a stalled external
+script freezes the whole tool. ALL outside content — JS libraries, CSS,
+images, fonts, API data — MUST come through the PARENT CMS. Two channels:
+
+  1. CMS OBJECT DATA — tool.requestObjects(...). Anything that is (or
+     should be) a CMS object: the application-store widget library
+     (website-html-tool-library-applicationstore), shared sources, site
+     widgets, etc. The tool passes the cmsObjectType; the CMS host
+     resolves it and returns the ObjectRecords into the iframe.
+
+  2. RAW EXTERNAL RESOURCES — tool.requestFetch(url, opts, cb), the
+     platform fetch relay. REQUIRED PLATFORM CAPABILITY (contract for the
+     platform team):
+       tool.requestFetch(url, {
+         method: 'GET',        // GET only in v1
+         timeoutMs: 15000,
+         maxBytes: 512000      // 500 KB cap, server-enforced
+       }, function(err, res) {
+         // text:     { status, contentType, text }
+         // binary:   { status, contentType, dataUrl }
+       })
+     The PARENT CMS performs the HTTP request server-side and returns the
+     content into the iframe. The tool NEVER dials the outside URL itself.
+
+  DEFAULT ALLOWLIST — platform-owned hosts need NO per-tenant configuration:
+     - https://applicationstore.uniconhub.com        (application store)
+     - https://applicationstore.uniconhub.com/api/*  (Public API v2)
+     - any other *.uniconhub.com platform-owned host
+     These hosts MUST be reachable through the relay for EVERY tenant,
+     automatically — installing a tool must never require per-tenant
+     allowlisting, keys or allowedObjectTypes entries for the platform's
+     own store. Non-platform (third-party) hosts remain admin-gated.
+
+  TOOL-SIDE RULES:
+     - NEVER fetch/XHR outside hosts directly from the 3 files.
+     - Degrade gracefully when the relay fails: show a USER-FRIENDLY
+       message ("could not load — try again / contact your administrator").
+       Developer details (which host, which config) go to console.log/
+       console.warn ONLY — never into the visible UI. End users do not
+       care how the tool reaches its data.
+     - Cache relay responses locally (localStorage) to survive brief
+       outages.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HOW THE SYSTEM WORKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 The system wraps your three files into a full HTML page and injects the `window.tool`

@@ -1,0 +1,65 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REQUEST TO PARENT CMS / PLATFORM TEAM
+Tool fetch relay — platform-owned hosts must work for EVERY tenant with
+ZERO per-tenant configuration
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTEXT
+HTML tools run inside a sandboxed iframe. Direct network calls from the
+iframe to outside hosts are blocked or stall, so a tool cannot reach any
+outside URL on its own. WebpageBuilder (installed on nearly ALL tenants)
+reads the widget library catalog from the platform's own application store
+at https://applicationstore.uniconhub.com/. That URL is platform-owned and
+identical for every tenant — reaching it must NOT require any per-tenant
+configuration (no allowlists, no API keys, no allowedObjectTypes entries).
+
+REQUIREMENTS
+
+1. Fetch relay capability
+   Expose a relay on the tool SDK so the CMS HOST performs the HTTP
+   request server-side and returns the result into the iframe:
+
+     tool.requestFetch(url, { method: 'GET', timeoutMs: 15000,
+                              maxBytes: 512000 }, function(err, res) {
+       // text:   { status, contentType, text }
+       // binary: { status, contentType, dataUrl }
+     })
+
+   Server-enforced: GET only in v1, 15 s timeout, 500 KB response cap,
+   content-type allowlist (no HTML script execution inside the iframe).
+
+2. Default allowlist for platform-owned hosts (no per-tenant setup)
+   These hosts must be reachable through the relay for EVERY tenant,
+   automatically, without any configuration:
+     - https://applicationstore.uniconhub.com
+     - https://applicationstore.uniconhub.com/api/*   (Public API v2)
+     - any other *.uniconhub.com platform-owned host
+   Third-party (non-uniconhub.com) hosts may remain admin-gated.
+
+3. requestObjects resolves the store type for every tenant
+   A query with mainObjectType = 'website-html-tool-library-applicationstore'
+   must return the store catalog for every tenant by default. The store is
+   a platform-owned PUBLIC system type — treat it as such, not as a
+   tenant-scoped entry that each admin must add to allowedObjectTypes.
+
+ACCEPTANCE TESTS
+   - Install WebpageBuilder on any tenant with no extra configuration →
+     the Widget Library shows the store catalog.
+   - From any tenant's tool iframe:
+     tool.requestFetch('https://applicationstore.uniconhub.com/api/v2/health', {}, cb)
+     → cb(null, { status: 200, contentType: 'application/json', text: '{"status":"ok",...}' })
+   - A third-party URL (e.g. https://example.com/x.js) still fails for a
+     tenant that did not allowlist it.
+
+WHY THIS MATTERS
+   - WebpageBuilder and similar tools ship to almost all tenants; the
+     platform's own store must be zero-config by default.
+   - Without this, every tenant installation requires manual
+     allowlisting — an installation burden and a support burden.
+   - The relay keeps the sandbox intact: tools still cannot reach the
+     outside world directly; only the platform's own hosts are proxied by
+     default.
+
+Related tool-side rules (html-tool-rules.txt):
+   GLOBAL REQUIREMENT - EXTERNAL CONTENT VIA PARENT CMS RELAY
+   GLOBAL REQUIREMENT - INLINE-SCRIPT TOKENIZER SAFETY

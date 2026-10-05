@@ -131,8 +131,8 @@
     <code>WeekendSchoolManager</code> folder.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-10-04</td></tr>
+    <tr><th>Document version</th><td>0.2</td></tr>
+    <tr><th>Last updated</th><td>2026-10-05</td></tr>
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>the listing part of the SchoolConsole tool folder (the application's single listingTool slot)</td></tr>
     <tr><th>Primary code areas</th><td><code>app/SchoolConsole.html</code>, <code>app/SchoolConsole.css</code>, <code>app/SchoolConsole.js</code>, <code>app/test-harness.html</code></td></tr>
@@ -161,7 +161,7 @@
     <tr><td><code>app/SchoolConsole.html</code></td><td>Header, 4 tabs, report pane</td><td>whole file</td></tr>
     <tr><td><code>app/SchoolConsole.css</code></td><td>Visual design</td><td>whole file</td></tr>
     <tr><td><code>app/SchoolConsole.js</code></td><td>Staged loading, tab rendering, reports</td><td>whole file</td></tr>
-    <tr><td><code>app/test-harness.html</code></td><td>Harness with seeded students, lessons, attendance and ledgers</td><td>whole file</td></tr>
+    <tr><td><code>app/test-harness.html</code></td><td>Harness with seeded settings, prospects, students, lessons, attendance and ledgers; supports <code>?actions=tab:&lt;name&gt;;&lt;button-id&gt;</code></td><td>whole file</td></tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
@@ -172,6 +172,9 @@
     <tr><td>C-03</td><td>Payments tab: waiting list, expected / collected totals</td><td><code>renderPayments()</code></td><td>2026-10-03</td><td>D-SCO-02</td></tr>
     <tr><td>C-04</td><td>Reports tab: weekly attendance + payment summary text, copy and download</td><td><code>buildWeeklyReport()</code></td><td>2026-10-03</td><td>D-SCO-03</td></tr>
     <tr><td>C-05</td><td>Own value stores only UI state (active tab)</td><td><code>UI</code></td><td>2026-10-03</td><td>D-SCO-04</td></tr>
+    <tr><td>C-06</td><td>Students tab opens with an Enrollment strip: Registered / Waiting / Not registering counts + current round, read from the ProspectBoard object of the prospects folder</td><td><code>renderEnrollment()</code>, <code>decisionCounts()</code></td><td>2026-10-05</td><td>D-SCO-06</td></tr>
+    <tr><td>C-07</td><td>Weekly report gained an ENROLLMENT section: decision counts + the family names of each group (Registered / Waiting / Not registering)</td><td><code>buildEnrollmentSummaryText()</code></td><td>2026-10-05</td><td>D-SCO-07</td></tr>
+    <tr><td>C-08</td><td>Sample data follows the T1/T2/T4 schemas: settings with classes / teachers / schoolCalendar / attendancePolicy / schoolFees, prospects with decision + communicationLog + tasks + currentRound, ledgers with paid / partial / late; classGroupId maps to class names via settings.classes</td><td><code>test-harness.html</code>, <code>classNameOf()</code></td><td>2026-10-05</td><td>D-SCO-08</td></tr>
   </table>
 
   <h2 id="sec-glossary">4. Glossary</h2>
@@ -180,6 +183,7 @@
     <tr><td>Listing tool</td><td>An application level tool (TYPE 3) occupying the single listingTool slot; mode replace-listings.</td></tr>
     <tr><td>Drill-down</td><td>Opening an object with its own tool via openObjectDetail / openObjectInShell.</td></tr>
     <tr><td>Staged loading</td><td>Folder map is resolved first, then folder-based queries run - never in parallel.</td></tr>
+    <tr><td>Enrollment overview</td><td>The decision counts of the prospect board (Registered / Waiting / Not registering) shown on the Students tab and in the weekly report.</td></tr>
   </table>
 
   <h2 id="sec-requirements">6. Requirements</h2>
@@ -198,7 +202,7 @@
   <h3>8.2 Load pipeline (staged)</h3>
   <pre>loadAll() - query settings (recordKind schoolSettings) - resolve folderMap
           - requestFolders - find attendance subfolders (parentId match)
-          - query students / lessons / attendance subfolders / payments
+          - query students / lessons / prospects / attendance subfolders / payments
           - render active tab</pre>
   <h3>8.3 Params</h3>
   <table>
@@ -226,6 +230,9 @@
     <tr><th>#</th><th>Change</th><th>File</th></tr>
     <tr><td>1</td><td>Four tabs + staged loading + reports</td><td><code>SchoolConsole.js</code> - DONE</td></tr>
     <tr><td>2</td><td>Calendar-driven attendance tab</td><td><code>SchoolConsole.js</code> - PENDING (T-01)</td></tr>
+    <tr><td>3</td><td>Enrollment strip on Students tab + ENROLLMENT section in the weekly report</td><td><code>SchoolConsole.html/.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Wire report buttons with data-act (build / copy / download)</td><td><code>SchoolConsole.html</code> - DONE</td></tr>
+    <tr><td>5</td><td>Sample data aligned with T1/T2/T4 schemas (settings classes / teachers / calendar / policy / fees, prospect decisions + rounds, ledger statuses)</td><td><code>test-harness.html</code> - DONE</td></tr>
   </table>
 
   <h2 id="sec-questions">14. Open questions</h2>
@@ -349,6 +356,11 @@
     <li><strong>H-04 - role cycle.</strong> Steps: switch role to editor /
     viewer / none. PASS if: write controls disable for read-only roles and
     nothing throws.</li>
+    <li><strong>H-05 - enrollment + report.</strong> Steps: open Students,
+    then Reports and press Build report. PASS if: the enrollment strip shows
+    the decision counts, the report contains WEEKLY + PAYMENT SUMMARY +
+    ENROLLMENT sections, and the family names per group match the prospect
+    board.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
@@ -357,6 +369,7 @@
     <tr><td>H-02 buttons</td><td></td><td></td></tr>
     <tr><td>H-03 persistence</td><td></td><td></td></tr>
     <tr><td>H-04 roles</td><td></td><td></td></tr>
+    <tr><td>H-05 enrollment + report</td><td>PASS</td><td>2026-10-05 - enrollment strip and 3-section report verified headless</td></tr>
   </table>
   <p><strong>Publish gate:</strong> publish only when every scenario PASSES
   and all tasks of the pushed groups are checked in section 15.</p>
@@ -404,7 +417,7 @@
 
   <div class="footer">
     School Console - single source of truth for all decisions about this tool.
-    Version 0.1, 2026-10-04. Keep in sync with code; when in doubt, update this
+    Version 0.2, 2026-10-05. Keep in sync with code; when in doubt, update this
     document in the same change as the code.
   </div>
   </div>

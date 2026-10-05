@@ -1,6 +1,6 @@
 # Weekend School - One-Application Architecture Plan
 
-Version 2.0 - 2026-10-03
+Version 2.1 - 2026-10-05
 
 Basis: `cms-application-system.html` section 15 - verified Q&A against the
 platform's tool host, object storage and permission code (2026-10-03).
@@ -158,9 +158,24 @@ result); T5/T6/T7 read them to create records in the right subfolder.
 
 ### 3.3 Prospect board (`prospectBoard`, one object per year, principal only)
 
-    { prospects: [{id, childName, parentName, parentPhone, parentEmail,
-      source, interestedLessons, status, nextCallDate, lastCallNote, notes[]}],
-      callLog: [{date, prospectId, outcome, by}] }
+    { prospects: [{id, firstName, lastName, parentName, parentPhone, parentEmail,
+      source, interestedLessons, status, decision, nextCallDate, notes,
+      communicationLog: [{at, note, outcome}], createdAt}],
+      tasks: [{id, prospectId, prospectName, channel: call|email|whatsapp,
+        assigneeId, assignee, dueDate, status: open|done|skipped, note,
+        round, createdAt}],
+      currentRound }
+
+Decision semantics (2026-10-05): a prospect has exactly ONE decision with
+only 3 results - `positive` = Registered (status enrolled), `negative` =
+Not registering (status inactive), `none` = Waiting (not decided yet).
+Being interested is NOT a decision; interest level is a future separate
+field, never mixed into the decision. Iterative call rounds: each round
+assigns only the Waiting families; a new round is GATED - it starts only
+after every task of the active round is done. Every contact (call,
+WhatsApp or email) is logged through one communication modal with an
+outcome, and logging closes the family's open tasks. The team comes from
+the CMS permitted users of the object (`tool.getPermittedUsers()`).
 
 ~0.8 KB per prospect - one object fits ~1000 prospects within 1 MB (the tool
 shows a live size meter and warns at 800 KB; beyond that, section 10).
@@ -270,7 +285,15 @@ the final gate).
   prospect `enrolled`. Folder ids come from the settings object's folderMap
   (found by querying the app and matching `recordKind: 'schoolSettings'`).
 - Role: editor.
-- **Built (2026-10-03)**: reusable tool `k12-schools/ProspectBoard/app/ProspectBoard.{html,css,js}` + test-harness. Params: `appObjectType`, `folderMapJson` fallback.
+- **Built (2026-10-03, CRM upgrade 2026-10-04 / 2026-10-05)**: reusable tool
+  `k12-schools/ProspectBoard/app/ProspectBoard.{html,css,js}` + test-harness.
+  Params: `appObjectType`, `folderMapJson` fallback. Full CRM: 4 tabs
+  (Dashboard / Prospects / My tasks / Distribution), filter sidebar, team
+  from the CMS permitted users, iterative GATED call rounds, communication
+  log as the single record of every contact, decision semantics
+  (Registered / Not registering / Waiting), and Distribution split into
+  three sub-tabs (Active round / Previous rounds / Decision groups).
+  Verified headless on a 20-prospect sample.
 
 ### T3 - Weekend School Console (THE app listingTool, mode 'replace-listings')
 - One listingTool slot exists per app, so this ONE tool is the school
@@ -286,7 +309,7 @@ the final gate).
   on teacherUserId). Principal sees everything.
 - T10 = the Reports tab today; when the CMS report host screen (D-RPTL)
   ships, the same report code moves to an app-menu tab without redesign.
-- **Built (2026-10-03)**: reusable tool `k12-schools/SchoolConsole/app/SchoolConsole.{html,css,js}` + test-harness. TYPE 3 listing tool, mode `replace-listings`. Params: `appObjectType`, `folderMapJson` fallback, `attendanceFolderIds` fallback. Attendance subfolders are discovered with `requestFolders` (parentId = year attendance folder); reports tab builds weekly attendance + payment summary text with copy/download.
+- **Built (2026-10-03, updated 2026-10-05)**: reusable tool `k12-schools/SchoolConsole/app/SchoolConsole.{html,css,js}` + test-harness. TYPE 3 listing tool, mode `replace-listings`. Params: `appObjectType`, `folderMapJson` fallback, `attendanceFolderIds` fallback. Attendance subfolders are discovered with `requestFolders` (parentId = year attendance folder); reports tab builds weekly attendance + payment summary text with copy/download. 2026-10-05: Students tab opens with an Enrollment strip (Registered / Waiting / Not registering counts + current round, read from the prospect board), the weekly report gained an ENROLLMENT section with the family names per group, report buttons wired with `data-act` (they silently did nothing before), and the sample data follows the T1/T2/T4 schemas (classes, teachers, schoolCalendar, attendancePolicy, schoolFees).
 
 ### T4 - StudentRecord (field `studentRecord`, cat-student)
 - Placed on: each student object in `2-Students`.
@@ -567,9 +590,11 @@ visible to every other authorized tool - one copy of the data, in the CMS.
 - **Phase 0 - Platform setup** (admin, guided by section 7): application +
   categories + field groups + year tree import + tool registration + T1
   first run.
-- **Phase 1 - Foundation**: T1 SchoolSetup, T4 StudentRecord, T4C
-  ParentContact, T3 Console (Students tab).
-- **Phase 2 - CRM**: T2 ProspectBoard + convert-to-student batch.
+- **Phase 1 - Foundation** (DONE 2026-10-04): T1 SchoolSetup, T4
+  StudentRecord, T4C ParentContact, T3 Console (Students tab).
+- **Phase 2 - CRM** (DONE 2026-10-05): T2 ProspectBoard + convert-to-student
+  batch; CRM upgrade with tabs, gated call rounds, communication log and
+  decision semantics.
 - **Phase 3 - Teaching day**: T5 LessonBoard, T6 AttendanceRecord (class +
   support modes), T7 LessonProgress.
 - **Phase 4 - Money + parents**: T8 PaymentLedger, T9 CommunicationBoard.
@@ -729,6 +754,18 @@ Answered (2026-10-04):
    attendance policy are implemented in T1 (2026-10-04). Remaining
    candidates (document checklist defaults, grading scale, languages) are
    logged as tasks in the SchoolSetup SSOT (group G-SSU-BASE).
+
+Answered (2026-10-05):
+
+7. Prospect decision semantics: only 3 results - Registered (positive),
+   Not registering (negative), Waiting (none). Interest level is a future
+   separate field, never part of the decision.
+8. Distribution UX: Active round / Previous rounds / Decision groups are
+   three sub-tabs instead of one scrolling page; the flat overall report
+   was removed because the grouped report shows the same rows.
+9. The school console READS prospect decisions (enrollment strip on the
+   Students tab + ENROLLMENT section in the weekly report) and never
+   writes them - the console stays a read-only oversight hub.
 
 Remaining questions for you:
 

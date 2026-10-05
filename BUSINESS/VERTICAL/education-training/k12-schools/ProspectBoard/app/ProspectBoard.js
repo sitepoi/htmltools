@@ -55,7 +55,7 @@
   var STATUSES = ["new", "contacted", "interested", "enrolled", "inactive"];
   var STATUS_LABELS = { new: "New", contacted: "Contacted", interested: "Interested", enrolled: "Enrolled", inactive: "Inactive" };
   var DECISIONS = ["none", "positive", "negative"];
-  var DECISION_LABELS = { none: "No decision", positive: "Positive", negative: "Negative" };
+  var DECISION_LABELS = { none: "Waiting", positive: "Registered", negative: "Not registering" };
   var DEFAULT_FOLDER_KEYS = ["settings", "lessons", "prospects", "students", "attendance", "progress", "payments", "contacts", "communication"];
 
   function defaultDatabase() {
@@ -71,6 +71,11 @@
           : p.status === "enrolled" ? "positive"
           : p.status === "inactive" ? "negative"
           : "none";
+        var status = STATUSES.indexOf(p.status) > -1 ? p.status : "new";
+        // Positive means REGISTERED, negative means NOT REGISTERING - keep
+        // the status in sync with the decision so reports never disagree.
+        if (decision === "positive" && status !== "enrolled") status = "enrolled";
+        else if (decision === "negative" && status !== "inactive") status = "inactive";
         return {
           id: String(p.id || uid()),
           firstName: String(p.firstName || ""),
@@ -80,12 +85,18 @@
           parentEmail: String(p.parentEmail || ""),
           source: String(p.source || ""),
           interestedLessons: String(p.interestedLessons || ""),
-          status: STATUSES.indexOf(p.status) > -1 ? p.status : "new",
+          status: status,
           decision: decision,
           nextCallDate: String(p.nextCallDate || ""),
           notes: String(p.notes || ""),
           createdAt: p.createdAt || todayIso(),
-          callLog: Array.isArray(p.callLog) ? p.callLog.map(function (c) {
+          communicationLog: Array.isArray(p.communicationLog) ? p.communicationLog.map(function (c) {
+            return {
+              at: String(c.at || ""),
+              note: String(c.note || ""),
+              outcome: DECISIONS.indexOf(c.outcome) > -1 ? c.outcome : "none"
+            };
+          }) : Array.isArray(p.callLog) ? p.callLog.map(function (c) {
             return {
               at: String(c.at || ""),
               note: String(c.note || ""),
@@ -273,11 +284,11 @@
     var weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     var weekAgoIso = isoOfDate(weekAgo);
-    var callsThisWeek = 0;
+    var communicationsThisWeek = 0;
     DB.prospects.forEach(function (p) {
-      (p.callLog || []).forEach(function (entry) { if (entry.at >= weekAgoIso) callsThisWeek++; });
+      (p.communicationLog || []).forEach(function (entry) { if (entry.at >= weekAgoIso) communicationsThisWeek++; });
     });
-    setValueText("prb-kpi-calls", String(callsThisWeek));
+    setValueText("prb-kpi-calls", String(communicationsThisWeek));
   }
 
   function setValueText(id, value) {
@@ -317,19 +328,19 @@
     holder.innerHTML = filtered.map(function (p) {
       var fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
       var initials = (p.firstName.charAt(0) || "?") + (p.lastName ? p.lastName.charAt(0) : "");
-      var callCount = (p.callLog || []).length;
-      var lastCall = callCount ? p.callLog[p.callLog.length - 1].at : "";
+      var commCount = (p.communicationLog || []).length;
+      var lastComm = commCount ? p.communicationLog[p.communicationLog.length - 1].at : "";
       return '<div class="prb-row">' +
         '<div class="prb-avatar">' + esc(initials.toUpperCase()) + "</div>" +
         '<div><div class="prb-row-name">' + esc(fullName || "Unnamed") + '</div>' +
         '<div class="prb-row-parent">' + esc(p.parentName) + (p.interestedLessons ? " - " + esc(p.interestedLessons) : "") + "</div></div>" +
         '<div class="prb-row-phone">' + esc(p.parentPhone) + (p.parentEmail ? "<br>" + esc(p.parentEmail) : "") + "</div>" +
-        '<div class="prb-row-phone">Source: ' + esc(p.source || "-") + "<br>" + callCount + " call" + (callCount === 1 ? "" : "s") + (lastCall ? " - last " + esc(fmtDate(lastCall)) : "") + "</div>" +
+        '<div class="prb-row-phone">Source: ' + esc(p.source || "-") + "<br>" + commCount + " communication" + (commCount === 1 ? "" : "s") + (lastComm ? " - last " + esc(fmtDate(lastComm)) : "") + "</div>" +
         '<div><span class="prb-status ' + esc(p.status) + '">' + esc(STATUS_LABELS[p.status]) + "</span></div>" +
         '<div><div class="prb-nextcall">Next call: ' + esc(fmtDate(p.nextCallDate) || "-") + "</div>" +
-        '<button class="prb-btn prb-btn-sm" data-act="call" data-id="' + esc(p.id) + '">Log call</button> ' +
+        '<button class="prb-btn prb-btn-sm prb-btn-primary" data-act="comm" data-id="' + esc(p.id) + '">Log communication</button> ' +
         '<button class="prb-btn prb-btn-sm" data-act="edit" data-id="' + esc(p.id) + '">Edit</button> ' +
-        '<button class="prb-btn prb-btn-primary prb-btn-sm" data-act="convert" data-id="' + esc(p.id) + '">Convert</button>' +
+        '<button class="prb-btn prb-btn-sm" data-act="convert" data-id="' + esc(p.id) + '">Convert</button>' +
         "</div></div>";
     }).join("");
   }
@@ -370,12 +381,12 @@
       '<div class="prb-field"><label class="prb-label">Next call date</label><input class="prb-input" id="prbf-next-call" type="date" value="' + esc(v("nextCallDate", "")) + '"></div>' +
       "</div>" +
       '<div class="prb-field" style="margin-top:10px"><label class="prb-label">Notes</label><textarea class="prb-textarea" id="prbf-notes" rows="3">' + esc(v("notes", "")) + "</textarea></div>" +
-      (p ? '<div class="prb-history"><div class="prb-history-title">Call history</div>' +
-        ((p.callLog || []).length ? p.callLog.slice().reverse().map(function (entry) {
+      (p ? '<div class="prb-history"><div class="prb-history-title">Communication log</div>' +
+        ((p.communicationLog || []).length ? p.communicationLog.slice().reverse().map(function (entry) {
           var badge = entry.outcome && entry.outcome !== "none"
             ? ' <span class="prb-decision-badge ' + esc(entry.outcome) + '">' + esc(DECISION_LABELS[entry.outcome]) + "</span>" : "";
           return '<div class="prb-call-entry"><span class="prb-call-at">' + esc(fmtDate(entry.at)) + "</span> - " + esc(entry.note) + badge + "</div>";
-        }).join("") : '<p class="prb-hint">No calls logged yet.</p>') + "</div>" : ""),
+        }).join("") : '<p class="prb-hint">No communication logged yet.</p>') + "</div>" : ""),
       '<button class="prb-btn" data-act="modal-close">Cancel</button>' +
       '<button class="prb-btn prb-btn-primary" data-act="prospect-save" data-id="' + esc(p ? p.id : "") + '">Save</button>');
   }
@@ -398,7 +409,8 @@
     } else {
       data.id = uid();
       data.createdAt = todayIso();
-      data.callLog = [];
+      data.communicationLog = [];
+      data.decision = "none";
       DB.prospects.push(data);
     }
     persistSoon();
@@ -406,56 +418,64 @@
     notify("Prospect saved.");
   }
 
-  /* Call log modal */
-  function openCallModal(prospectId) {
+  /* Communication log modal - one place for every contact: call, WhatsApp or email.
+     Logging here closes the open tasks of this family and sets the decision:
+     positive / negative / still waiting (goes to the next round automatically). */
+  function openCommunicationModal(prospectId) {
     var p = prospectById(prospectId);
     if (!p) return;
-    var logHtml = (p.callLog.length ? p.callLog.slice().reverse().map(function (c) {
+    var logHtml = ((p.communicationLog || []).length ? p.communicationLog.slice().reverse().map(function (c) {
       var badge = c.outcome && c.outcome !== "none"
         ? ' <span class="prb-decision-badge ' + esc(c.outcome) + '">' + esc(DECISION_LABELS[c.outcome]) + "</span>" : "";
       return '<div class="prb-call-entry"><span class="prb-call-at">' + esc(fmtDate(c.at)) + "</span> - " + esc(c.note) + badge + "</div>";
-    }).join("") : '<p class="prb-hint">No calls logged yet.</p>');
+    }).join("") : '<p class="prb-hint">No communication logged yet.</p>');
     var outcomeOptions = [
-      ['none', 'No decision - call again next round'],
-      ['positive', 'Positive - family is interested'],
-      ['negative', 'Negative - family is not interested']
+      ['none', 'Waiting - no decision yet, next round'],
+      ['positive', 'Registered - the family enrolled'],
+      ['negative', 'Not registering - the family decided no']
     ].map(function (pair) {
       return '<option value="' + pair[0] + '"' + (p.decision === pair[0] ? " selected" : "") + ">" + pair[1] + "</option>";
     }).join("");
-    openModal("Log Call - " + [p.firstName, p.lastName].filter(Boolean).join(" "),
+    openModal("Log Communication - " + [p.firstName, p.lastName].filter(Boolean).join(" "),
       logHtml +
-      '<div class="prb-field" style="margin-top:10px"><label class="prb-label">Call outcome</label>' +
-      '<select class="prb-select" id="prbf-call-outcome">' + outcomeOptions + "</select></div>" +
-      '<div class="prb-field" style="margin-top:10px"><label class="prb-label">Call note</label>' +
-      '<textarea class="prb-textarea" id="prbf-call-note" rows="3" placeholder="What did you talk about?"></textarea></div>' +
+      '<div class="prb-field" style="margin-top:10px"><label class="prb-label">Result of this communication</label>' +
+      '<select class="prb-select" id="prbf-comm-outcome">' + outcomeOptions + "</select></div>" +
+      '<div class="prb-field" style="margin-top:10px"><label class="prb-label">What happened</label>' +
+      '<textarea class="prb-textarea" id="prbf-comm-note" rows="3" placeholder="What did you talk about or write?"></textarea></div>' +
       '<div class="prb-field" style="margin-top:10px"><label class="prb-label">Next call date</label>' +
-      '<input class="prb-input" id="prbf-call-next" type="date" value="' + esc(p.nextCallDate || "") + '"></div>',
+      '<input class="prb-input" id="prbf-comm-next" type="date" value="' + esc(p.nextCallDate || "") + '"></div>' +
+      '<p class="prb-hint">Saving closes this family\'s open tasks and updates the decision. "Waiting" puts the family into the next round automatically. Only 3 results exist: Registered, Not registering, Waiting - interest level can be noted in the text.</p>',
       '<button class="prb-btn" data-act="modal-close">Cancel</button>' +
-      '<button class="prb-btn prb-btn-primary" data-act="call-save" data-id="' + esc(p.id) + '">Save call</button>');
+      '<button class="prb-btn prb-btn-primary" data-act="comm-save" data-id="' + esc(p.id) + '">Save communication</button>');
   }
 
-  function saveCallFromModal(prospectId) {
+  function saveCommunicationFromModal(prospectId) {
     var p = prospectById(prospectId);
     if (!p) return;
-    var note = $("#prbf-call-note").value.trim();
-    var nextDate = $("#prbf-call-next").value.trim();
-    var outcome = $("#prbf-call-outcome").value;
+    var note = $("#prbf-comm-note").value.trim();
+    var nextDate = $("#prbf-comm-next").value.trim();
+    var outcome = $("#prbf-comm-outcome").value;
     if (DECISIONS.indexOf(outcome) === -1) outcome = "none";
     if (note || outcome !== "none") {
-      p.callLog.push({ at: todayIso(), note: note || "(no note)", outcome: outcome });
+      p.communicationLog.push({ at: todayIso(), note: note || "(no note)", outcome: outcome });
     }
     p.decision = outcome;
-    if (outcome === "positive" && p.status !== "enrolled") p.status = "interested";
-    if (outcome === "negative") p.status = "inactive";
+    if (outcome === "positive") p.status = "enrolled";
+    else if (outcome === "negative") p.status = "inactive";
+    else if (p.status === "new") p.status = "contacted";
     p.nextCallDate = nextDate || p.nextCallDate;
     var completedTasks = 0;
     DB.tasks.forEach(function (task) {
-      if (task.prospectId === p.id && task.status === "open") { task.status = "done"; completedTasks++; }
+      if (task.prospectId === p.id && task.status === "open") {
+        task.status = "done";
+        task.note = note || DECISION_LABELS[outcome];
+        completedTasks++;
+      }
     });
     closeModal();
     persistSoon();
     renderActivePane();
-    notify("Call logged." + (completedTasks ? " Follow-up task(s) for this prospect marked done." : ""));
+    notify("Communication logged: " + DECISION_LABELS[outcome] + "." + (completedTasks ? " " + completedTasks + " open task(s) closed for this family." : ""));
   }
 
   /* Convert to student */
@@ -525,6 +545,7 @@
     callObjects("batch", { operations: ops }, function (error) {
       if (error) { notify("Conversion failed: " + error, "error"); return; }
       p.status = "enrolled";
+      p.decision = "positive";
       persistSoon();
       renderList();
       notify("Prospect converted. Student, ledger, contact and communication objects created.");
@@ -711,7 +732,8 @@
         nextCallDate: String(row[mapping.nextCallDate] || "").trim(),
         notes: String(row[mapping.notes] || "").trim(),
         createdAt: todayIso(),
-        callLog: []
+        communicationLog: [],
+        decision: "none"
       });
       importedCount++;
     });
@@ -899,7 +921,7 @@
     renderStats();
     if (!holder) return;
     if (!currentRoundTasks().length) {
-      holder.innerHTML = '<p class="prb-empty">No calls yet. Press Start call round - it assigns every family without a decision to the team. Each next round only contains the families still undecided.</p>';
+      holder.innerHTML = '<p class="prb-empty">No calls yet. Press Start call round - it assigns every family without a decision to the team. Each next round only contains the families still waiting.</p>';
       return;
     }
     if (!tasks.length) {
@@ -913,16 +935,19 @@
     holder.innerHTML = tasks.map(function (task) {
       var prospect = prospectById(task.prospectId);
       var rowClass = task.status === "done" ? " prb-task-done" : "";
+      var decision = prospect ? prospect.decision : "none";
       return '<div class="prb-task-row' + rowClass + '">' +
-        '<input type="checkbox" class="prb-task-done-checkbox" data-act="task-done-toggle" data-id="' + esc(task.id) + '"' + (task.status === "done" ? " checked" : "") + ' title="Mark done">' +
         '<div><div class="prb-task-name">' + esc(task.prospectName || (prospect ? prospect.firstName : "?")) + "</div>" +
-        '<div class="prb-task-sub">' + esc(task.prospectId ? "#" + task.prospectId.slice(0, 6) : "") + (prospect && prospect.parentPhone ? " - " + esc(prospect.parentPhone) : "") + "</div></div>" +
+        '<div class="prb-task-sub">R' + task.round + " - " + esc(task.prospectId ? "#" + task.prospectId.slice(0, 6) : "") + (prospect && prospect.parentPhone ? " - " + esc(prospect.parentPhone) : "") + "</div>" +
+        (task.note ? '<div class="prb-task-note">' + esc(task.note) + "</div>" : "") + "</div>" +
         '<select class="prb-select" data-act="task-channel" data-id="' + esc(task.id) + '">' + taskChannelOptions(task.channel) + "</select>" +
         '<select class="prb-select" data-act="task-assignee" data-id="' + esc(task.id) + '">' + taskAssigneeOptions(task) + "</select>" +
         '<input class="prb-input" type="date" data-act="task-due" data-id="' + esc(task.id) + '" value="' + esc(task.dueDate) + '">' +
-        '<input class="prb-input" data-act="task-note" data-id="' + esc(task.id) + '" placeholder="Outcome note..." value="' + esc(task.note) + '">' +
+        '<span class="prb-task-status-' + esc(task.status) + '">' + esc(task.status) + '</span> <span class="prb-decision-badge ' + esc(decision) + '">' + esc(DECISION_LABELS[decision]) + "</span>" +
+        '<span>' +
+        (task.status === "open" ? '<button class="prb-btn prb-btn-primary prb-btn-sm" data-act="comm" data-id="' + esc(task.prospectId) + '">Log</button> ' : "") +
         '<button class="prb-btn prb-btn-danger prb-btn-sm" data-act="task-remove" data-id="' + esc(task.id) + '">x</button>' +
-        "</div>";
+        "</span></div>";
     }).join("");
   }
 
@@ -957,7 +982,7 @@
     });
     persistSoon();
     renderActivePane();
-    var parts = ["Call round " + round + " started - " + undecided.length + " undecided prospect(s) assigned"];
+    var parts = ["Call round " + round + " started - " + undecided.length + " waiting prospect(s) assigned"];
     if (_permittedUsers.length) parts.push("round-robin across " + _permittedUsers.length + " team member(s)");
     notify(parts.join(", ") + ". Round " + round + " must be fully completed before the next round can start.");
   }
@@ -1019,8 +1044,24 @@
     box.innerHTML = html;
   }
 
-  function renderRoundReport() {
-    var box = $("#prb-round-report");
+  function switchDistView(view) {
+    _distView = ["progress", "history", "groups"].indexOf(view) > -1 ? view : "progress";
+    var tabs = document.querySelectorAll(".prb-dist-tab");
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.toggle("active", tabs[i].getAttribute("data-id") === _distView);
+    }
+    var views = {
+      progress: $("#prb-view-progress"),
+      history: $("#prb-view-history"),
+      groups: $("#prb-view-groups")
+    };
+    Object.keys(views).forEach(function (key) {
+      if (views[key]) views[key].hidden = _distView !== key;
+    });
+  }
+
+  function renderDecisionGroups() {
+    var box = $("#prb-decision-groups");
     if (!box) return;
     var undecidedCount = 0, positiveCount = 0, negativeCount = 0;
     DB.prospects.forEach(function (prospect) {
@@ -1028,59 +1069,56 @@
       else if (prospect.decision === "negative") negativeCount++;
       else undecidedCount++;
     });
-    var chips = '<div class="prb-decision-band">' +
-      '<span class="prb-decision-chip none">Undecided ' + undecidedCount + "</span>" +
-      '<span class="prb-decision-chip positive">Positive ' + positiveCount + "</span>" +
-      '<span class="prb-decision-chip negative">Negative ' + negativeCount + "</span>" +
+    var chips = '<div class="prb-decision-band" style="margin-bottom:10px">' +
+      '<span class="prb-decision-chip none">Waiting ' + undecidedCount + "</span>" +
+      '<span class="prb-decision-chip positive">Registered ' + positiveCount + "</span>" +
+      '<span class="prb-decision-chip negative">Not registering ' + negativeCount + "</span>" +
       '<span class="prb-decision-chip round">Current round ' + (DB.currentRound || 0) + "</span>" +
       "</div>";
-    var rows = DB.prospects.map(function (prospect) {
-      var taskCount = 0;
-      var lastRound = 0;
+    var groups = { positive: [], negative: [], none: [] };
+    DB.prospects.forEach(function (prospect) {
+      var taskCount = 0, lastRound = 0;
       DB.tasks.forEach(function (task) {
         if (task.prospectId !== prospect.id) return;
         taskCount++;
         if (task.round > lastRound) lastRound = task.round;
       });
-      var callCount = (prospect.callLog || []).length;
-      var lastCall = callCount ? prospect.callLog[prospect.callLog.length - 1].at : "";
-      var lastEntry = callCount ? prospect.callLog[prospect.callLog.length - 1] : null;
-      var lastOutcome = lastEntry && lastEntry.outcome ? lastEntry.outcome : prospect.decision;
+      var commCount = (prospect.communicationLog || []).length;
       var fullName = [prospect.firstName, prospect.lastName].filter(Boolean).join(" ");
-      return {
-        undecided: prospect.decision !== "positive" && prospect.decision !== "negative",
-        html: '<div class="prb-report-row">' +
+      var key = prospect.decision === "positive" ? "positive" : prospect.decision === "negative" ? "negative" : "none";
+      groups[key].push({
+        name: fullName,
+        html: '<div class="prb-decision-row">' +
           '<span class="prb-report-name">' + esc(fullName) + "</span>" +
           '<span class="prb-report-cell">' + esc(prospect.parentPhone) + "</span>" +
-          '<span class="prb-report-cell" title="Times assigned to call">' + taskCount + " assignment" + (taskCount === 1 ? "" : "s") + (lastRound ? " (last R" + lastRound + ")" : "") + "</span>" +
-          '<span class="prb-report-cell">' + callCount + " call" + (callCount === 1 ? "" : "s") + (lastCall ? " - last " + esc(fmtDate(lastCall)) : "") + "</span>" +
-          '<span class="prb-decision-badge ' + esc(lastOutcome || "none") + '">' + esc(DECISION_LABELS[lastOutcome || "none"]) + "</span>" +
+          '<span class="prb-report-cell">' + taskCount + " assignment" + (taskCount === 1 ? "" : "s") + (lastRound ? " (R" + lastRound + ")" : "") + "</span>" +
+          '<span class="prb-report-cell">' + commCount + " communication" + (commCount === 1 ? "" : "s") + "</span>" +
           "</div>"
-      };
+      });
     });
-    rows.sort(function (rowA, rowB) { return (rowA.undecided === rowB.undecided) ? 0 : (rowA.undecided ? -1 : 1); });
-    var rowsHtml = "";
-    for (var ri = 0; ri < rows.length; ri++) rowsHtml += rows[ri].html;
-    box.innerHTML = chips + '<div class="prb-report-head"><span>Prospect</span><span>Phone</span><span>Assigned</span><span>Calls</span><span>Decision</span></div>' + rowsHtml;
-  }
-
-  function switchDistView(view) {
-    _distView = view === "results" ? "results" : "progress";
-    var tabs = document.querySelectorAll(".prb-dist-tab");
-    for (var i = 0; i < tabs.length; i++) {
-      tabs[i].classList.toggle("active", tabs[i].getAttribute("data-id") === _distView);
-    }
-    var progress = $("#prb-view-progress");
-    var results = $("#prb-view-results");
-    if (progress) progress.hidden = _distView !== "progress";
-    if (results) results.hidden = _distView !== "results";
+    var sections = [
+      { key: "positive", title: "Registered" },
+      { key: "none", title: "Waiting" },
+      { key: "negative", title: "Not registering" }
+    ];
+    var html = "";
+    sections.forEach(function (section) {
+      var list = groups[section.key];
+      list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+      html += '<div class="prb-decision-group-head"><span>' + esc(section.title) + '</span><span class="prb-decision-group-count">' + list.length + " famil" + (list.length === 1 ? "y" : "ies") + "</span></div>";
+      if (!list.length) html += '<p class="prb-hint" style="padding:2px 2px 8px">None yet.</p>';
+      else {
+        for (var i = 0; i < list.length; i++) html += list[i].html;
+      }
+    });
+    box.innerHTML = chips + html;
   }
 
   function renderDistPane() {
     renderTeam();
     renderTasks();
-    renderRoundReport();
     renderRoundHistory();
+    renderDecisionGroups();
   }
 
   function distributeTasks() {
@@ -1109,8 +1147,6 @@
         task.assignee = user ? (user.name || user.email || user.id) : "";
       }
       else if (field === "due") task.dueDate = value;
-      else if (field === "note") task.note = value;
-      else if (field === "done-toggle") task.status = task.status === "done" ? "open" : "done";
     });
     persistSoon();
     renderActivePane();
@@ -1165,16 +1201,18 @@
       var entries = [];
       DB.prospects.forEach(function (p) {
         var fullName = [p.firstName, p.lastName].filter(Boolean).join(" ");
-        (p.callLog || []).forEach(function (entry) {
-          entries.push({ at: entry.at, note: entry.note, name: fullName });
+        (p.communicationLog || []).forEach(function (entry) {
+          entries.push({ at: entry.at, note: entry.note, name: fullName, outcome: entry.outcome });
         });
       });
       entries.sort(function (a, b) { return a.at < b.at ? 1 : -1; });
       recent.innerHTML = entries.length
         ? entries.slice(0, 6).map(function (entry) {
-            return '<div class="prb-call-entry"><span class="prb-call-at">' + esc(fmtDate(entry.at)) + '</span> - <strong>' + esc(entry.name) + "</strong> - " + esc(entry.note) + "</div>";
+            var badge = entry.outcome && entry.outcome !== "none"
+              ? ' <span class="prb-decision-badge ' + esc(entry.outcome) + '">' + esc(DECISION_LABELS[entry.outcome]) + "</span>" : "";
+            return '<div class="prb-call-entry"><span class="prb-call-at">' + esc(fmtDate(entry.at)) + '</span> - <strong>' + esc(entry.name) + "</strong> - " + esc(entry.note) + badge + "</div>";
           }).join("")
-        : '<p class="prb-hint">No calls logged yet. Log calls from the Prospects tab.</p>';
+        : '<p class="prb-hint">No communication logged yet. Use Log communication from the Prospects, My tasks or Distribution view.</p>';
     }
     var workload = $("#prb-workload");
     if (workload) {
@@ -1222,13 +1260,13 @@
       else if (prospect.decision === "negative") negativeCount++;
       else undecidedCount++;
     });
-    if (label) label.textContent = "Round " + (DB.currentRound || 0) + " - " + undecidedCount + " still undecided";
+    if (label) label.textContent = "Round " + (DB.currentRound || 0) + " - " + undecidedCount + " still waiting";
     box.innerHTML = '<div class="prb-decision-band">' +
-      '<span class="prb-decision-chip none">Undecided ' + undecidedCount + "</span>" +
-      '<span class="prb-decision-chip positive">Positive ' + positiveCount + "</span>" +
-      '<span class="prb-decision-chip negative">Negative ' + negativeCount + "</span>" +
+      '<span class="prb-decision-chip none">Waiting ' + undecidedCount + "</span>" +
+      '<span class="prb-decision-chip positive">Registered ' + positiveCount + "</span>" +
+      '<span class="prb-decision-chip negative">Not registering ' + negativeCount + "</span>" +
       "</div>" +
-      '<p class="prb-hint" style="margin-top:8px">Each round calls only the families without a decision. Every new round gets smaller until everyone is positive or negative. Log outcomes from the Prospects tab - Log call.</p>';
+      '<p class="prb-hint" style="margin-top:8px">Each round contacts only the families still waiting. Log the result of every communication: Registered and Not registering leave the loop, the rest continue to the next round automatically.</p>';
   }
 
   function renderMyTasks() {
@@ -1266,13 +1304,15 @@
     holder.innerHTML = tasks.map(function (task) {
       var prospect = prospectById(task.prospectId);
       var rowClass = task.status === "done" ? " prb-task-done" : "";
+      var decision = prospect ? prospect.decision : "none";
       return '<div class="prb-task-row prb-task-row-mine' + rowClass + '">' +
-        '<input type="checkbox" class="prb-task-done-checkbox" data-act="task-done-toggle" data-id="' + esc(task.id) + '"' + (task.status === "done" ? " checked" : "") + ' title="Mark done">' +
         '<div><div class="prb-task-name">' + esc(task.prospectName || (prospect ? prospect.firstName : "?")) + "</div>" +
-        '<div class="prb-task-sub">R' + task.round + " - " + (prospect && prospect.parentPhone ? esc(prospect.parentPhone) : "") + (task.note ? " - " + esc(task.note) : "") + "</div></div>" +
+        '<div class="prb-task-sub">R' + task.round + " - " + (prospect && prospect.parentPhone ? esc(prospect.parentPhone) : "") + "</div>" +
+        (task.note ? '<div class="prb-task-note">' + esc(task.note) + "</div>" : "") + "</div>" +
         '<select class="prb-select" data-act="task-channel" data-id="' + esc(task.id) + '">' + taskChannelOptions(task.channel) + "</select>" +
         '<input class="prb-input" type="date" data-act="task-due" data-id="' + esc(task.id) + '" value="' + esc(task.dueDate) + '">' +
-        '<input class="prb-input" data-act="task-note" data-id="' + esc(task.id) + '" placeholder="Outcome note..." value="' + esc(task.note) + '">' +
+        '<span class="prb-task-status-' + esc(task.status) + '">' + esc(task.status) + '</span> <span class="prb-decision-badge ' + esc(decision) + '">' + esc(DECISION_LABELS[decision]) + "</span>" +
+        (task.status === "open" ? '<button class="prb-btn prb-btn-primary prb-btn-sm" data-act="comm" data-id="' + esc(task.prospectId) + '">Log</button>' : "") +
         "</div>";
     }).join("");
   }
@@ -1311,8 +1351,10 @@
       case "task-remove": removeTask(id); break;
       case "filter": _statusFilter = id; renderList(); break;
       case "edit": openProspectModal(id); break;
-      case "call": openCallModal(id); break;
-      case "call-save": saveCallFromModal(id); break;
+      case "call": openCommunicationModal(id); break;
+      case "call-save": saveCommunicationFromModal(id); break;
+      case "comm": openCommunicationModal(id); break;
+      case "comm-save": saveCommunicationFromModal(id); break;
       case "prospect-save": saveProspectFromModal(id); break;
       case "convert": openConvertModal(id); break;
       case "convert-retry":
@@ -1340,8 +1382,6 @@
     if (act === "task-channel") updateTask(id, "channel", el.value);
     else if (act === "task-assignee") updateTask(id, "assignee", el.value);
     else if (act === "task-due") updateTask(id, "due", el.value);
-    else if (act === "task-note") updateTask(id, "note", el.value);
-    else if (act === "task-done-toggle") updateTask(id, "done-toggle", el.value);
     else if (act === "task-assignee-filter" || act === "task-status-filter") renderTasks();
   });
 

@@ -1,4 +1,4 @@
-/* build 2026-10-04-7 */
+/* build 2026-10-04-15 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-04-7';
+var TOOL_BUILD = '2026-10-04-15';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -79,7 +79,8 @@ var DB = {
   activeSessionId: '',
   version: '1.0.0',
   sharedCatalog: [],  // known shared-sources objects (in-memory + localStorage fallback)
-  widgetCatalog: []   // known library widgets from the application store (in-memory + localStorage fallback)
+  widgetCatalog: [],  // known library widgets from the application store (in-memory + localStorage fallback)
+  widgets: []         // widgets added to THIS page (name + config + placement) — rendered in preview & publish, never in the HTML editor
 };
 
 var _theme = 'light';          // builder UI theme (in-memory only)
@@ -110,6 +111,7 @@ var _streamCallback = null;
 var _pendingScrollId = '';
 var _consoleEntries = [];
 var _previewBuildSeq = 0;   // stamp counter — forces the preview iframe to re-navigate every render
+var _renderWidgets = true;  // preview mode: render widget islands client-side (toggle in the preview toolbar)
 
 /* ── Session state ── */
 var _sessions = [];
@@ -125,7 +127,7 @@ var _imagesUpgraded = false; // one-shot: random picsum placeholders → concept
 var SHARED_TYPE = 'shared-sources';
 var WIDGET_TYPE = 'gw-widgets';
 var SHARED_LS = 'webpagebuilder_shared_cache_v1';
-var WIDGET_LS = 'webpagebuilder_widget_cache_v1';
+var WIDGET_LS = 'webpagebuilder_widget_cache_v2'; // v2: fixed code classification (js-as-html text bug)
 
 /* ── Rules text — loaded from embedded DOM element ──
    Priority: admin tool.param('pageRules') → built-in embedded copy of
@@ -330,7 +332,7 @@ function renderSharedPicker() {
   var list = el('shared-picker-list');
   if (!list) return;
   if (!DB.sharedCatalog || !DB.sharedCatalog.length) {
-    list.innerHTML = '<div class="picker-empty">No shared sources found. Create them with the <b>WebsiteSharedSourceBuilder</b> tool (object type "shared-sources"), then refresh.</div>';
+    list.innerHTML = '<div class="picker-empty">No shared sources yet — create them with the <b>WebsiteSharedSourceBuilder</b> tool.</div>';
     return;
   }
   var picks = _sectionPicks();
@@ -367,6 +369,112 @@ function _normPick(d, keys) {
   }
   return '';
 }
+function _findCodeTriple(obj, depth) {
+  // Deep scan for any {html,css,js} triple anywhere in the record — the
+  // real store keeps the widget code in different places per tool type.
+  if (!obj || typeof obj !== 'object') return null;
+  if (depth === undefined) depth = 0;
+  if (depth > 6) return null;
+  if ((typeof obj.html === 'string' && obj.html) || (typeof obj.css === 'string' && obj.css) || (typeof obj.js === 'string' && obj.js)) {
+    var h = typeof obj.html === 'string' ? obj.html : '';
+    var c = typeof obj.css === 'string' ? obj.css : '';
+    var j = typeof obj.js === 'string' ? obj.js : '';
+    if (h || c || j) return { html: h, css: c, js: j };
+  }
+  for (var k in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+    var v = obj[k];
+    if (v && typeof v === 'object') {
+      var r = _findCodeTriple(v, depth + 1);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+function _classifyCodeString(s) {
+  // Decide what a store string REALLY is. STRONG JS signals win over html,
+  // because widget JS routinely CONTAINS html template strings (e.g.
+  // '<div class="...">' inside innerHTML/createElement) — that must never
+  // make a script get injected as page markup. (D-WB-30)
+  var t = String(s || '').trim();
+  if (!t) return '';
+  var strongJs = /'use strict'|gw\.apps\.register|addEventListener|document\.|window\.|\(function\s*\(|=>\s*\{|\.querySelector|\.innerHTML/.test(t);
+  if (strongJs) return 'js';
+  var startsTag = /^</.test(t);
+  var hasTags = /<(div|section|form|table|ul|nav|img|button|input|span|h[1-6])\b/i.test(t);
+  var jsDecl = /\b(var|const|let|function)\s+[A-Za-z_$][\w$]*/.test(t);
+  if (startsTag && hasTags && !jsDecl) return 'html';
+  if (jsDecl && !startsTag) return 'js';
+  var cssDecl = t.charAt(0) !== '{' && /[a-zA-Z-]+\s*:\s*[^;}]+;/.test(t);
+  if (cssDecl && !hasTags) return 'css';
+  return startsTag ? 'html' : '';
+}
+function _saneCodeParts(html, css, js) {
+  // Store records sometimes keep the WHOLE tool source in one field — a
+  // field named "html" can actually contain JavaScript (which would show
+  // as raw text if injected as markup). Re-home mislabeled parts.
+  html = String(html || '');
+  css = String(css || '');
+  js = String(js || '');
+  var hk = _classifyCodeString(html);
+  if (hk === 'js' && !js) { js = html; html = ''; }
+  else if (hk === 'css' && !css) { css = html; html = ''; }
+  var jk = _classifyCodeString(js);
+  if (jk === 'html' && !html) { html = js; js = ''; }
+  else if (jk === 'css' && !css) { css = js; js = ''; }
+  return { html: html, css: css, js: js };
+}
+function _extractWidgetCode(d) {
+  // Widget implementation code, accepted from ANY anatomy the store may use:
+  // {code:{html,css,js}} | code as JSON string | top-level html/css/js or
+  // htmlCode/cssCode/jsCode or toolHtml/toolCss/toolJs fields — then a deep
+  // scan for any html/css/js triple anywhere in the object.
+  if (!d) return null;
+  var codeRaw = _normPick(d, ['code', 'widgetCode', 'toolCode', 'appCode', 'htmlToolCode']);
+  var codeObj = {};
+  if (typeof codeRaw === 'string') {
+    try { codeObj = JSON.parse(codeRaw) || {}; } catch (e) { codeObj = {}; }
+  } else if (codeRaw && typeof codeRaw === 'object') codeObj = codeRaw;
+  var html = _normPick(codeObj, ['html']) || _normPick(d, ['html', 'htmlCode', 'toolHtml']);
+  var css = _normPick(codeObj, ['css']) || _normPick(d, ['css', 'cssCode', 'toolCss']);
+  var js = _normPick(codeObj, ['js', 'javascript']) || _normPick(d, ['js', 'jsCode', 'javascript', 'toolJs']);
+  if (!html && !css && !js) {
+    var triple = _findCodeTriple(d);
+    if (triple) return _saneCodeParts(triple.html, triple.css, triple.js);
+    return _harvestCodeFromRecord(d);
+  }
+  return _saneCodeParts(html, css, js);
+}
+/* LAST-RESORT code harvester: the real store keeps widget code in different
+   fields per tool type. Walk EVERY string value in the record and classify
+   the ones that look like markup / css / js — even if the field names are
+   completely unknown. (D-WB-28) */
+function _harvestCodeFromRecord(obj, depth) {
+  if (!obj || typeof obj !== 'object') return null;
+  if (depth === undefined) depth = 0;
+  if (depth > 8) return null;
+  var out = { html: '', css: '', js: '' };
+  for (var k in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+    var v = obj[k];
+    if (typeof v === 'string') {
+      var s = v.trim();
+      if (!s || s.length < 12) continue;
+      var kind = _classifyCodeString(s);
+      if (kind === 'js' && !out.js) out.js = s;
+      else if (kind === 'html' && !out.html) out.html = s;
+      else if (kind === 'css' && !out.css) out.css = s;
+    } else if (typeof v === 'object') {
+      var r = _harvestCodeFromRecord(v, depth + 1);
+      if (r) {
+        if (!out.html && r.html) out.html = r.html;
+        if (!out.css && r.css) out.css = r.css;
+        if (!out.js && r.js) out.js = r.js;
+      }
+    }
+  }
+  return (out.html || out.css || out.js) ? out : null;
+}
 function _normalizeStoreCatalog(payload) {
   // Accepts the documented API v2 shapes: a bare array of ObjectRecords, or
   // { items: [...] } / { objects: [...] } / { data: [...] } wrappers.
@@ -392,13 +500,17 @@ function _normalizeStoreCatalog(payload) {
     if (typeof schema === 'string') {
       try { schema = JSON.parse(schema); } catch (e) { schema = null; }
     }
+    var code = _extractWidgetCode(d);
     out.push({
+      objectId: String(raw.id || ''),
+      objectType: String(raw.cmsObjectType || _widgetCatalogTypeName()),
       name: name,
       title: String(_normPick(d, ['title', 'displayName', 'label', 'name']) || name),
       desc: String(_normPick(d, ['description', 'summary', 'desc']) || ''),
       category: String(_normPick(d, ['category', 'folder', 'categoryName']) || 'general'),
       configSchema: (schema && typeof schema === 'object') ? schema : null,
-      ssrHtml: String(_normPick(d, ['ssrHtml', 'ssrMarkup']) || '')
+      ssrHtml: String(_normPick(d, ['ssrHtml', 'ssrMarkup']) || ''),
+      code: code || { html: '', css: '', js: '' }
     });
   }
   return out;
@@ -416,10 +528,10 @@ function fetchWithTimeout(url, opts) {
 function _widgetStatusLine(source, list) {
   var st = el('widget-lib-status');
   if (!st) return;
-  var label = source === 'application store' ? 'connected — application store via parent CMS (' + _widgetCatalogTypeName() + ')'
-    : source === 'site widgets' ? 'fallback — site widgets (gw-widgets)'
-    : 'offline — cached list';
-  st.textContent = '🛰 Library: ' + label + ' · ' + (list ? list.length : 0) + ' widgets · ' + new Date().toLocaleTimeString();
+  var label = source === 'application store' ? ''
+    : source === 'site widgets' ? ' · site widgets'
+    : ' · cached';
+  st.textContent = '🧩 ' + (list ? list.length : 0) + ' widgets' + label + ' · ' + new Date().toLocaleTimeString();
   st.className = 'widget-lib-source ' + (source === 'application store' ? 'ok' : 'warn');
 }
 function _v2Base() {
@@ -453,6 +565,12 @@ function loadWidgetCatalog(cb) {
     _widgetStatusLine(source, DB.widgetCatalog);
     _updateWidgetMoreButton();
     _updateWidgetCount();
+    // If the library modal is open while the catalog arrives, refresh it —
+    // otherwise the user would stare at a stale empty list.
+    var libOpen = el('modal-widget-library');
+    if (libOpen && libOpen.style.display === 'flex') {
+      renderWidgetLibraryList(el('widget-search') ? (el('widget-search').value || '') : '');
+    }
     if (cb) cb(DB.widgetCatalog);
   }
   function fromObjects() {
@@ -467,12 +585,15 @@ function loadWidgetCatalog(cb) {
             var gwa = String(meta.gwAppName || (dcb.gwApp && dcb.gwApp.name) || '').trim();
             if (!gwa) continue;
             list.push({
+              objectId: String(o.id || ''),
+              objectType: String(o.cmsObjectType || WIDGET_TYPE),
               name: gwa,
               title: String(meta.name || o.name || gwa),
               desc: String(meta.description || 'Site widget (gw-widgets object).'),
               category: String(meta.category || 'site widgets'),
               configSchema: (dcb.gwApp && dcb.gwApp.configSchema) || null,
-              ssrHtml: String(meta.ssrHtml || dcb.ssrHtml || '')
+              ssrHtml: String(meta.ssrHtml || dcb.ssrHtml || ''),
+              code: _extractWidgetCode(dcb) || { html: '', css: '', js: '' }
             });
           }
         }
@@ -568,7 +689,7 @@ function _handleWidgetSearch(q) {
     if (ok && results) _renderWidgetResults(results, 'results');
     else {
       var listEl = el('widget-library-list');
-      if (listEl) listEl.innerHTML = '<div class="picker-empty">No widgets found — try a different name or id.</div>';
+      if (listEl) listEl.innerHTML = '<div class="picker-empty">No widgets found.</div>';
     }
   });
 }
@@ -645,7 +766,17 @@ function renderWidgetLibraryList(filter) {
   var isStoreSrc = ((_lsGet(WIDGET_LS) || {}).source === 'application store');
   var entries = isStoreSrc ? (DB.widgetCatalog || []).slice(0, _storeRevealed) : (DB.widgetCatalog || []);
   if (!entries.length) {
-    list.innerHTML = '<div class="picker-empty">No widgets loaded yet. This tool asks the <b>parent CMS</b> for the application-store library (<b>tool.requestObjects</b> on object type <b>' + esc(_widgetCatalogTypeName()) + '</b>) — the CMS host reaches the store API and returns the catalog into this iframe. In the CMS field settings, add <b>' + esc(_widgetCatalogTypeName()) + '</b> to <b>allowedObjectTypes</b> (role: reader). Fallbacks (in order): direct API v2 GET {apiV2BaseUrl}/objects/' + esc(_widgetCatalogTypeName()) + ' (x-api-key = apiV2Key) → site <b>gw-widgets</b> objects → cached list. Or open the library directly: <a href="https://applicationstore.uniconhub.com/objects/website-html-tool-library-applicationstore" target="_blank" rel="noopener">application store ↗</a></div>';
+    var lsSrc = (_lsGet(WIDGET_LS) || {}).source;
+    if (!lsSrc) {
+      // Catalog still loading — show progress instead of an error.
+      list.innerHTML = '<div class="picker-empty">⏳ Loading the widget library…</div>';
+      _updateWidgetMoreButton();
+      _updateWidgetCount();
+      return;
+    }
+    // USER-FACING: keep it simple. Developer details go to the console only.
+    console.warn('[WEBPAGEBUILDER:STORE] widget catalog empty — developer check: (1) parent CMS must resolve the platform-owned type ' + _widgetCatalogTypeName() + ' by default (no per-tenant config); (2) direct fallback GET ' + _v2Base() + '/objects/' + _widgetCatalogTypeName() + ' with x-api-key = apiV2Key; (3) site gw-widgets fallback; (4) localStorage cache.');
+    list.innerHTML = '<div class="picker-empty">😕 Library unavailable.<br><br>Tap <b>↻ Refresh</b> to try again.</div>';
     _updateWidgetMoreButton();
     _updateWidgetCount();
     return;
@@ -659,9 +790,9 @@ function openWidgetLibrary() {
   var srcEl = el('widget-lib-source');
   if (srcEl) {
     var src = _lsGet(WIDGET_LS) || {};
-    var label = src.source === 'application store' ? 'Application store via parent CMS (tool.requestObjects) — ' + _widgetCatalogTypeName()
-      : src.source === 'site widgets' ? 'Site widgets (gw-widgets objects)'
-      : 'Cached list';
+    var label = src.source === 'application store' ? 'application store'
+      : src.source === 'site widgets' ? 'site widgets'
+      : 'cached list';
     var when = src.fetchedAt ? ' · fetched ' + new Date(src.fetchedAt).toLocaleTimeString() : '';
     srcEl.textContent = 'Source: ' + label + when;
   }
@@ -695,12 +826,24 @@ function _defaultConfigFor(name) {
   return {};
 }
 function openWidgetDialog(name) {
+  _fetchWidgetCodeByName(name); // proactive: load the code NOW so the preview can render it after insertion
   _widgetDialogName = name;
   var cfg = _defaultConfigFor(name);
   var ta = el('widget-config-json');
   if (ta) ta.value = JSON.stringify(cfg, null, 2);
   var t = el('widget-dialog-title');
   if (t) t.textContent = 'Add widget: ' + name;
+  var d = el('widget-dialog-desc');
+  if (d) d.textContent = 'It will appear right in your page preview — no code needed.';
+  var sel = el('widget-place-after');
+  if (sel) {
+    var opts = '<option value="">— end of page —</option>';
+    var secs = detectSections(DB.code.html || '');
+    for (var i = 0; i < secs.length; i++) {
+      if (secs[i].id) opts += '<option value="' + esc(secs[i].id) + '">' + esc(secs[i].label + ' (#' + secs[i].id + ')') + '</option>';
+    }
+    sel.innerHTML = opts;
+  }
   openModal('modal-widget-config');
 }
 function insertWidgetFromDialog() {
@@ -712,37 +855,163 @@ function insertWidgetFromDialog() {
     return;
   }
   var placement = el('widget-place-after');
-  insertWidgetIsland(_widgetDialogName, cfgText, placement ? placement.value.trim() : '');
+  insertWidgetIsland(_widgetDialogName, cfgText, placement ? placement.value : '');
   closeAllModals();
 }
 function insertWidgetIsland(name, cfgJson, placeAfter) {
+  // The widget goes into the VISUAL page (DB.widgets), never into the HTML
+  // editor. The preview renders it immediately; the publish pipeline gets
+  // the island composed into htmlPage.code.html at save/export time. (D-WB-27)
   if (!name) return;
-  var div = '<div data-gw-app="' + esc(name) + '" data-gw-config=\'' + cfgJson + '\'></div>';
-  var ta = el('code-html');
-  if (ta) {
-    var html = ta.value;
-    if (placeAfter) {
-      var re = new RegExp('id=["\']' + placeAfter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'][^>]*>');
-      var m = re.exec(html);
-      if (m) {
-        var idx = m.index + m[0].length;
-        html = html.substring(0, idx) + '\n  ' + div + html.substring(idx);
-      } else {
-        html = html + '\n' + div;
-      }
-    } else {
-      html = html + '\n' + div;
-    }
-    ta.value = html;
-    DB.code.html = html;
-    refreshEditorHighlight('html');
-    updateLineNumbers();
-  }
+  DB.widgets = DB.widgets || [];
+  DB.widgets.push({ name: name, config: cfgJson || '{}', placeAfter: String(placeAfter || '').trim() });
+  while (DB.widgets.length > 20) DB.widgets.shift();
   persist();
-  showToast('Widget "' + name + '" island added — edit its data-gw-config in the HTML tab if needed.', 'success');
-  switchTab('advanced');
-  switchAdvTab('html');
+  _updatePageWidgetsBtn();
+  switchTab('preview'); // show the result immediately — a visual tool, not a code editor
+  showToast('🧩 "' + name + '" added to your page.', 'success');
+}
+
+/* ── Page widgets helpers (compose / migrate / manage) ── */
+function _islandAttrRe() {
+  return /<div\b[^>]*data-gw-app="([^"]+)"[^>]*>[\s\S]*?<\/div>/g;
+}
+function _composeIslandDiv(name, cfgJson) {
+  return '<div data-gw-app="' + esc(String(name || '')) + '" data-gw-config=\'' + String(cfgJson || '{}').replace(/'/g, '&#39;') + '\'></div>';
+}
+function _composeIslandsInto(html) {
+  var list = DB.widgets || [];
+  var out = html || '';
+  for (var i = 0; i < list.length; i++) {
+    var w = list[i];
+    if (!w || !w.name) continue;
+    var div = _composeIslandDiv(w.name, w.config || '{}');
+    if (w.placeAfter) {
+      var re = new RegExp('id\\s*=\\s*["\']' + String(w.placeAfter).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\']');
+      var m = re.exec(out);
+      if (m) {
+        // insert right after the matched element's OPEN tag → the widget lives inside that section
+        var openEnd = out.indexOf('>', m.index) + 1;
+        out = out.substring(0, openEnd) + '\n' + div + out.substring(openEnd);
+        continue;
+      }
+    }
+    out += '\n' + div;
+  }
+  return out;
+}
+function _stripIslandDivsFromHtml(html) {
+  var out = html || '';
+  var found = [];
+  out = out.replace(_islandAttrRe(), function(full, name) {
+    var cfg = '{}';
+    var cm = /data-gw-config=(["'])([\s\S]*?)\1/.exec(full);
+    if (cm) cfg = cm[2].replace(/&#39;/g, "'");
+    found.push({ name: name, config: cfg, placeAfter: '' });
+    return '';
+  });
+  return { html: out, widgets: found };
+}
+function _mergePageWidgets(newList) {
+  if (!newList || !newList.length) return false;
+  DB.widgets = DB.widgets || [];
+  var have = {};
+  var changed = false;
+  for (var i = 0; i < DB.widgets.length; i++) have[DB.widgets[i].name] = true;
+  for (var j = 0; j < newList.length; j++) {
+    if (!have[newList[j].name]) {
+      DB.widgets.push(newList[j]);
+      have[newList[j].name] = true;
+      changed = true;
+    }
+  }
+  return changed;
+}
+function _updatePageWidgetsBtn() {
+  var b = el('btn-page-widgets');
+  if (!b) return;
+  var n = (DB.widgets || []).length;
+  b.textContent = '🧩 ' + n;
+  b.title = 'Widgets on this page';
+  b.style.display = n ? '' : 'none';
+}
+function openPageWidgets() {
+  renderPageWidgetsList();
+  openModal('modal-page-widgets');
+}
+function renderPageWidgetsList() {
+  var list = el('page-widgets-list');
+  if (!list) return;
+  var wl = DB.widgets || [];
+  if (!wl.length) {
+    list.innerHTML = '<div class="picker-empty">No widgets yet — tap "🧩 Add" to pick one.</div>';
+    return;
+  }
+  var secs = detectSections(DB.code.html || '');
+  var placeOpts = '<option value="">End of page</option>';
+  for (var s = 0; s < secs.length; s++) {
+    if (secs[s].id) placeOpts += '<option value="' + esc(secs[s].id) + '">' + esc(secs[s].label + ' (#' + secs[s].id + ')') + '</option>';
+  }
+  var h = '';
+  for (var i = 0; i < wl.length; i++) {
+    var w = wl[i];
+    var selOpts = placeOpts.replace('value="' + esc(w.placeAfter || '') + '"', 'value="' + esc(w.placeAfter || '') + '" selected');
+    h += '<div class="page-widget-row">' +
+      '<span class="page-widget-name">🧩 ' + esc(w.name) + '</span>' +
+      '<select class="pw-pos" data-pw-pos="' + i + '" title="Place this widget inside a section">' + selOpts + '</select>' +
+      '<button class="btn btn-sm btn-ghost" data-pw-up="' + i + '" title="Move up">↑</button>' +
+      '<button class="btn btn-sm btn-ghost" data-pw-down="' + i + '" title="Move down">↓</button>' +
+      '<button class="btn btn-sm btn-ghost" data-pw-rm="' + i + '" title="Remove">✕</button>' +
+    '</div>';
+  }
+  list.innerHTML = h;
+  var posEls = list.querySelectorAll('[data-pw-pos]');
+  for (var p = 0; p < posEls.length; p++) {
+    posEls[p].onchange = function() {
+      _setPageWidgetPlace(parseInt(this.getAttribute('data-pw-pos'), 10), this.value);
+    };
+  }
+  var upEls = list.querySelectorAll('[data-pw-up]');
+  for (var u = 0; u < upEls.length; u++) {
+    upEls[u].onclick = function() {
+      _movePageWidget(parseInt(this.getAttribute('data-pw-up'), 10), -1);
+    };
+  }
+  var downEls = list.querySelectorAll('[data-pw-down]');
+  for (var dn = 0; dn < downEls.length; dn++) {
+    downEls[dn].onclick = function() {
+      _movePageWidget(parseInt(this.getAttribute('data-pw-down'), 10), 1);
+    };
+  }
+  var btns = list.querySelectorAll('[data-pw-rm]');
+  for (var k = 0; k < btns.length; k++) {
+    btns[k].onclick = function() {
+      var idx = parseInt(this.getAttribute('data-pw-rm'), 10);
+      if (DB.widgets && DB.widgets[idx]) DB.widgets.splice(idx, 1);
+      persist();
+      _updatePageWidgetsBtn();
+      updatePreview();
+      renderPageWidgetsList();
+      showToast('Widget removed.', 'info');
+    };
+  }
+}
+function _setPageWidgetPlace(idx, place) {
+  if (!DB.widgets || !DB.widgets[idx]) return;
+  DB.widgets[idx].placeAfter = String(place || '').trim();
+  persist();
   updatePreview();
+  renderPageWidgetsList();
+  showToast('Widget placed at ' + (place ? '#' + place : 'the end of the page') + '.', 'info');
+}
+function _movePageWidget(idx, dir) {
+  var wl = DB.widgets || [];
+  var j = idx + dir;
+  if (idx < 0 || j < 0 || j >= wl.length) return;
+  var t = wl[idx]; wl[idx] = wl[j]; wl[j] = t;
+  persist();
+  updatePreview();
+  renderPageWidgetsList();
 }
 
 /* ── Custom forms builder (data-gw-form) ── */
@@ -866,7 +1135,8 @@ function _dbSnapshot() {
     JSON.stringify(DB.seo || null),
     JSON.stringify(DB.pageMeta || null),
     DB.configNeeded || '',
-    DB.emailTemplate || ''
+    DB.emailTemplate || '',
+    JSON.stringify(DB.widgets || [])
   ].join('\u0001');
 }
 
@@ -897,7 +1167,9 @@ function _stampVersionInCode() {
 /* The slim payload actually saved to the parent CMS object ── */
 function _slimValue() {
   return {
-    code: { html: DB.code.html, css: DB.code.css, js: DB.code.js },
+    // Widgets stay OUT of the editor, but the publish pipeline needs the
+    // islands in htmlPage.code.html — compose them at save time. (D-WB-27)
+    code: { html: _composeIslandsInto(DB.code.html), css: DB.code.css, js: DB.code.js },
     seo: DB.seo || null,
     pageMeta: DB.pageMeta || null,
     configNeeded: DB.configNeeded || '',
@@ -905,6 +1177,7 @@ function _slimValue() {
     version: DB.version,
     activeSessionId: DB.activeSessionId || '',
     chatCache: { sessionId: _activeSessionId || '', messages: _trimChatCache(DB.chatMessages) },
+    widgets: (DB.widgets || []).slice(0, 20),
     _instanceId: DB._instanceId || '',
     _parentRecordId: DB._parentRecordId || ''
   };
@@ -1502,8 +1775,8 @@ function toggleInterviewMode() {
   var inp = el('chat-input');
   if (inp) {
     inp.placeholder = interviewMode
-      ? 'Answer the AI\'s question or describe your page… (Enter to send)'
-      : 'Describe your webpage or ask for changes… (Enter to send, Shift+Enter for new line)';
+      ? 'Answer the question… (Enter to send)'
+      : 'Describe your page or ask for changes… (Enter to send)';
   }
   var msg = interviewMode
     ? '🪄 **Guided Mode active.** I\'ll interview you step by step about your page. Just answer each question — or type freely.'
@@ -1651,11 +1924,11 @@ function optionsHtml(options) {
 var WELCOME_HTML =
   '<div class="chat-welcome">' +
     '<div class="chat-welcome-icon">🪄</div>' +
-    '<h3>Describe your webpage</h3>' +
-    '<p>Tell me what page you need — <b>a restaurant menu page, a company profile, a product launch page…</b> — and I\'ll design &amp; build it for you, section by section.</p>' +
+    '<h3>Describe your page</h3>' +
+    '<p>Tell me what you need and I\'ll design it — then we refine it together in this chat.</p>' +
     '<div class="template-gallery" id="template-gallery"></div>' +
-    '<div class="template-view-all"><button id="btn-view-all-templates">View all 8 page templates →</button></div>' +
-    '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> Try <b>🪄 Guided</b> mode — I\'ll interview you about your page step by step.</p>' +
+    '<div class="template-view-all"><button id="btn-view-all-templates">View all 8 templates →</button></div>' +
+    '<p style="font-size:10px;color:var(--text3);margin-top:12px">💡 <b>Tip:</b> 🪄 Guided asks you questions step by step.</p>' +
   '</div>';
 
 function renderChatMessages() {
@@ -4090,11 +4363,20 @@ function setDevice(d) {
 
 function buildPreviewDoc() {
   var lang = _p('lang', 'en');
-  var html = (_previewShared.html || '') + '\n' + (DB.code.html || '');
+  var html = _composeIslandsInto((_previewShared.html || '') + '\n' + (DB.code.html || ''));
   var css = (_previewShared.css || '') + '\n' + (DB.code.css || '');
   var jsSan = _sanitizeJs((_previewShared.js || '') + '\n' + (DB.code.js || ''));
   _lastJsFixCount = jsSan.fixed;
   var js = jsSan.code;
+  // ── ISLAND PREVIEW PIPELINE (mirrors the publish contract):
+  //   SSR    → the catalog record's ssrHtml is injected INSIDE the island.
+  //   CLIENT → the record's code css/js are injected so gw.apps.register()
+  //            runs and the preview MOUNTS the island like the publish side.
+  //   UNKNOWN → a clearly-marked placeholder chip shows the slot.
+  var islands = _previewIslands(html);
+  html = islands.html;
+  css = css + islands.css;   // island css after page css
+  var islandJs = _sanitizeJs(islands.js).code;
   var scrollScript = '';
   if (_pendingScrollId) {
     var sid = _pendingScrollId;
@@ -4104,13 +4386,145 @@ function buildPreviewDoc() {
   var doc =
     '<!DOCTYPE html><html lang="' + esc(lang) + '">' +
     '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>' +
-    '<style>\nhtml{scroll-behavior:smooth}\nsection,[id]{scroll-margin-top:80px}\n' + css + '\n</style></head>' +
+    '<style>\nhtml{scroll-behavior:smooth}\nsection,[id]{scroll-margin-top:80px}\n.gw-island-preview-chip{border:1px dashed #a78bfa;border-radius:8px;padding:10px 12px;font-size:12px;color:#6d28d9;background:rgba(124,58,237,.08);text-align:center}\n' + css + '\n</style></head>' +
     '<body>\n' + html + '\n' +
     scrollScript +
     _gwPreviewMockScript(lang) + '\n' +
+    (islandJs ? '<script>\n' + islandJs + '\n<\/script>\n' : '') +
     '<script>\n(function(){var oc={log:console.log,warn:console.warn,error:console.error};function post(l,args){var msg=Array.prototype.slice.call(args).map(function(a){try{return typeof a==="object"?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(" ");try{parent.postMessage({wbConsole:{level:l,msg:msg,time:new Date().toISOString()}},"*")}catch(e){}}console.log=function(){post("log",arguments);oc.log.apply(console,arguments)};console.warn=function(){post("warn",arguments);oc.warn.apply(console,arguments)};console.error=function(){post("error",arguments);oc.error.apply(console,arguments)};window.onerror=function(m){post("error",["Error:",m]);return true};window.addEventListener("keydown",function(e){if(e.ctrlKey&&e.shiftKey&&(e.key==="Y"||e.key==="y")){try{parent.postMessage({wbDump:true},"*")}catch(err){}}});})();\n<\/script>\n' +
-    '<script>\n' + js + '\n<\/script>\n</body></html>';
+    '<script>\n' + js + '\n<\/script>\n' +
+    '<script>\n(function(){try{var G=(window.gw||{}).apps;if(!G)return;if(typeof G.mount==="function"){G.mount(document);}else{var els=document.querySelectorAll("[data-gw-app]:not([data-gw-mounted])");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");var f=G._f?G._f[n]:null;if(!f&&G._f){var keys=Object.keys(G._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=G._f[keys[k]];}if(!f&&keys.length===1)f=G._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:window.gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}}}catch(e){try{console.warn("island mount failed",e);}catch(e2){}}})();\n<\/script>\n</body></html>';
   return doc;
+}
+
+function _widgetByName(name) {
+  var list = DB.widgetCatalog || [];
+  var i;
+  for (i = 0; i < list.length; i++) {
+    if (list[i].name === name) return list[i];
+  }
+  // Display-name vs registry-name differences (e.g. "Food Ordering Cart" vs
+  // "food-ordering-cart") — match on the slug as a fallback.
+  var slug = slugify(name);
+  for (i = 0; i < list.length; i++) {
+    if (slugify(list[i].name) === slug) return list[i];
+  }
+  return null;
+}
+function _previewIslands(html) {
+  var islandCss = '', islandJs = '';
+  var total = 0, missing = 0, ssrCount = 0;
+  var outHtml = (html || '').replace(/<div\b[^>]*data-gw-app="([^"]+)"[^>]*>[\s\S]*?<\/div>/g, function(full) {
+    var nm = /data-gw-app="([^"]+)"/.exec(full);
+    var w = nm ? _widgetByName(nm[1]) : null;
+    var inner = '';
+    var hasCode = false;
+    var hasSsr = false;
+    if (_renderWidgets && w) {
+      // FULL WIDGET IN PREVIEW: run the widget's own client code; if the
+      // store record only ships SSR markup, show that instead — the preview
+      // must never degrade to a placeholder when a real version exists.
+      if (w.code && (w.code.html || w.code.css || w.code.js)) {
+        var sane = _saneCodeParts(w.code.html, w.code.css, w.code.js);
+        hasCode = true;
+        if (sane.css) islandCss += '\n/* island: ' + nm[1] + ' */\n' + sane.css;
+        if (sane.js) islandJs += '\n/* island: ' + nm[1] + ' */\n' + sane.js;
+        // The widget's template markup goes INSIDE the island — its own JS
+        // then hydrates it. Embedded <style>/<script> are hoisted out and
+        // run like the platform does (inline scripts injected via innerHTML
+        // would never execute).
+        if (sane.html) {
+          var hh = sane.html;
+          hh = hh.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, function(all, body) {
+            islandCss += '\n/* island style: ' + nm[1] + ' */\n' + body;
+            return '';
+          });
+          hh = hh.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, function(all, body) {
+            if (!/\bsrc\s*=/.test(all)) islandJs += '\n/* island script: ' + nm[1] + ' */\n' + body;
+            return '';
+          });
+          inner = hh;
+        }
+      } else if (w.ssrHtml) {
+        hasSsr = true;
+        ssrCount++;
+        inner = w.ssrHtml; // published/server version — visible now
+      }
+    }
+    total++;
+    if (!hasCode && !hasSsr) {
+      missing++;
+      inner = '<div class="gw-island-preview-chip">🧩 ' + esc(nm ? nm[1] : '?') + (_renderWidgets ? ' — no preview code in the store record' : '') + '</div>';
+      if (_renderWidgets && w) {
+        try {
+          console.warn('[WEBPAGEBUILDER:ISLAND] widget "' + nm[1] + '" has no client code and no ssrHtml, so the preview shows a placeholder. Record id: ' + (w.objectId || '?') + ', type: ' + (w.objectType || '?') + '. The store record must include code.{html,css,js} or ssrHtml (or support requestObjects get-by-id).');
+        } catch (e) {}
+      }
+    }
+    if (!inner) return full;
+    var openEnd = full.indexOf('>') + 1;
+    var close = full.lastIndexOf('</div>');
+    return full.substring(0, openEnd) + full.substring(openEnd, close) + inner + full.substring(close);
+  });
+  // Visible render status in the preview toolbar (tool DOM, not the iframe).
+  try {
+    var st = el('island-render-status');
+    if (st) {
+      if (!total) st.textContent = '';
+      else if (!_renderWidgets) st.textContent = '🧩 Widget preview off';
+      else if (missing === 0 && ssrCount === 0) st.textContent = '🧩 ' + total + ' rendering';
+      else if (missing === 0) st.textContent = '🧩 ' + (total - ssrCount) + ' running · ' + ssrCount + ' server version';
+      else st.textContent = '🧩 ' + (total - missing) + ' of ' + total + ' rendering';
+    }
+  } catch (e) {}
+  return { html: outHtml, css: islandCss, js: islandJs };
+}
+
+function _toggleRenderWidgets() {
+  _renderWidgets = !_renderWidgets;
+  var b = el('btn-render-widgets');
+  if (b) {
+    b.textContent = '🧩 Widget preview: ' + (_renderWidgets ? 'On' : 'Off');
+    b.classList.toggle('header-btn-active', _renderWidgets);
+  }
+  updatePreview();
+}
+
+function _fetchWidgetCodeByName(name) {
+  // Fetch the widget's FULL record through the parent CMS (requestObjects
+  // 'get') when the catalog list omitted its code. On success the code is
+  // cached on the catalog entry and the preview re-renders.
+  var w = _widgetByName(name);
+  if (!w || w._codeFetchTried) return;
+  if (w.code && (w.code.html || w.code.css || w.code.js)) return;
+  if (!w.objectId) return;
+  w._codeFetchTried = true;
+  var done = function(code) {
+    if (!code) return;
+    w.code = code;
+    try { _lsSet(WIDGET_LS, { catalog: DB.widgetCatalog, source: (_lsGet(WIDGET_LS) || {}).source, fetchedAt: new Date().toISOString(), total: _storeTotal }); } catch (e) {}
+    try { updatePreview(); } catch (e) {}
+  };
+  try {
+    tool.requestObjects('get', { mainObjectType: w.objectType || _widgetCatalogTypeName(), objectId: w.objectId }, function(err, result) {
+      if (err || !result) return;
+      var obj = result.object || result;
+      var dcb = (obj && obj.productData && obj.productData.data_categoriesBased) || {};
+      var legacy = (obj && obj.data && typeof obj.data === 'object') ? obj.data : {};
+      var d = {};
+      for (var k in legacy) if (Object.prototype.hasOwnProperty.call(legacy, k)) d[k] = legacy[k];
+      for (var k2 in dcb) if (Object.prototype.hasOwnProperty.call(dcb, k2)) d[k2] = dcb[k2];
+      done(_extractWidgetCode(d) || _findCodeTriple(obj) || _harvestCodeFromRecord(obj));
+    });
+  } catch (e) {}
+}
+function _fetchMissingIslandCodes(html) {
+  var names = {};
+  var re = /<div\b[^>]*data-gw-app="([^"]+)"/g, m;
+  while ((m = re.exec(html || '')) !== null) names[m[1]] = true;
+  for (var n in names) {
+    if (Object.prototype.hasOwnProperty.call(names, n)) _fetchWidgetCodeByName(n);
+  }
 }
 
 function _mountPreviewDoc(doc) {
@@ -4121,7 +4535,10 @@ function _mountPreviewDoc(doc) {
   var f = document.createElement('iframe');
   f.id = 'preview-frame';
   f.className = 'preview-frame';
-  f.setAttribute('sandbox', 'allow-scripts allow-forms allow-downloads allow-popups');
+  // allow-same-origin: the preview runs OUR OWN generated page code (srcdoc
+  // inherits the tool origin) — it lets the tool inspect/mount islands and
+  // lets the harness assert mounted widgets. Scripts still run sandboxed.
+  f.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-downloads allow-popups');
   f.srcdoc = doc;
   wrap.appendChild(f);
   return true;
@@ -4150,6 +4567,7 @@ function updatePreview() {
   if (pe) pe.style.display = 'none';
   _applyDeviceClass();
   _previewShared = _composePreviewShared();
+  _fetchMissingIslandCodes(_composeIslandsInto(html)); // async: fills code for islands that lack it, then re-renders
   try {
     // Unique build stamp + a FRESH iframe node every render: Chromium can fail
     // to repaint a sandboxed srcdoc iframe after its ancestor was display:none,
@@ -4212,8 +4630,8 @@ function renderSections() {
   if (typeEl) {
     var hasCode = !!(DB.code.html || '').trim() || !!(DB.code.css || '').trim() || !!(DB.code.js || '').trim();
     typeEl.textContent = hasCode
-      ? '🔍 Detected page type: ' + _detectPageType(DB.code.html || '') + ' — these are the sections your page is missing ↓'
-      : '🌱 No page yet — describe it in the chat and tailored suggestions will appear here.';
+      ? '🔍 Page type: ' + _detectPageType(DB.code.html || '') + ' — missing sections below ↓'
+      : '🌱 Describe your page in the chat to get suggestions.';
   }
   renderSkillChips();
   renderSectionSuggestions();
@@ -4431,7 +4849,7 @@ function renderSectionSuggestions() {
   var hasAnyContent = !!(htmlCode.trim() || (DB.code.css || '').trim() || (DB.code.js || '').trim());
   if (!hasAnyContent) {
     if (row) row.style.display = '';
-    box.innerHTML = '<span class="qa-hint">🌱 No page yet — describe your page in the chat and tailored suggestions will appear here.</span>';
+    box.innerHTML = '<span class="qa-hint">🌱 Describe your page in the chat to get suggestions.</span>';
     return;
   }
 
@@ -4439,7 +4857,7 @@ function renderSectionSuggestions() {
 
   if (row) row.style.display = '';
   if (!picks.length) {
-    box.innerHTML = '<span class="qa-hint">✅ No obvious gaps — your page already covers the common sections. Describe anything else in the chat.</span>';
+    box.innerHTML = '<span class="qa-hint">✅ Page looks complete — ask the AI for anything else.</span>';
     return;
   }
   var h = '';
@@ -4887,7 +5305,7 @@ function gwChecks() {
 }
 
 function runComplianceChecks() {
-  var h = DB.code.html || '';
+  var h = _composeIslandsInto(DB.code.html || '');
   var c = DB.code.css || '';
   var j = DB.code.js || '';
   var defs = gwChecks();
@@ -4933,7 +5351,7 @@ function renderCompliance() {
 
   var hasCode = !!(DB.code.html || DB.code.css || DB.code.js);
   if (!hasCode) {
-    list.innerHTML = '<div class="sections-empty">No page code yet. Generate a page first, then run the checks.</div>';
+    list.innerHTML = '<div class="sections-empty">Generate a page first.</div>';
     score.innerHTML = '';
     return;
   }
@@ -5087,10 +5505,11 @@ function _gwPreviewMockScript(lang) {
     'track:function(){},trackPageView:function(){},\n' +
     'forms:{bind:function(){},submit:function(){return Promise.resolve({ok:true});}},\n' +
     'db:{query:function(){return Promise.resolve({items:[],total:0,page:1,pageSize:0,facets:{},relations:{}});},get:function(){return Promise.resolve(null);},operation:function(){return Promise.resolve({ok:true,result:{}});},subscribe:function(){return function(){};}},\n' +
-    'apps:{register:function(){},mount:function(){},unmount:function(){}},\n' +
+    'apps:{_f:{},register:function(n,f){if(n&&typeof f==="function"){gw.apps._f[n]=f;}},mount:function(root){var r=root||document;if(!r.querySelectorAll)return;var els=r.querySelectorAll("[data-gw-app]");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");if(!n||el.getAttribute("data-gw-mounted"))return;var f=gw.apps._f[n];if(!f){var keys=Object.keys(gw.apps._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=gw.apps._f[keys[k]];}if(!f&&keys.length===1)f=gw.apps._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}},unmount:function(root){var r=root||document;if(!r.querySelectorAll)return;var els=r.querySelectorAll("[data-gw-app]");for(var i=0;i<els.length;i++)els[i].removeAttribute("data-gw-mounted");}},\n' +
     'service:function(){return Promise.reject(new Error("gw.service not available"));}\n' +
     '};\n' +
     'if(!window.gw){window.gw=gw;}\n' +
+    'if(!window.tool){window.tool={onReady:function(cb){try{setTimeout(function(){cb({});},20);}catch(e){}},onValueChange:function(){},onReadOnlyChange:function(){},notify:function(){},resize:function(){},isReadOnly:function(){return false;},requestObjects:function(){},param:function(){return "";},getUser:function(){return null;}};}\n' +
     'window.__gwPreviewMock=true;\n' +
     'setTimeout(function(){try{window.dispatchEvent(new CustomEvent("gw:ready",{detail:{pageId:"preview"}}));window.dispatchEvent(new CustomEvent("gw:content-ready",{detail:{contentId:"preview"}}));}catch(e){}},0);\n' +
     '})();\n<\/script>';
@@ -5111,7 +5530,7 @@ function buildFullPage() {
   if (seoKw) meta += '<meta name="keywords" content="' + esc(seoKw) + '">\n';
   meta += '<link rel="icon" href="' + favUri + '">\n';
   return '<!DOCTYPE html>\n<html lang="' + esc(lang) + '">\n<head>\n' + meta +
-    '<style>\n' + (c.css || '') + '\n</style>\n</head>\n<body>\n' + (c.html || '') + '\n' +
+    '<style>\n' + (c.css || '') + '\n</style>\n</head>\n<body>\n' + _composeIslandsInto(c.html || '') + '\n' +
     _gwPreviewMockScript(lang) + '\n' +
     '<script>\n' + (c.js || '') + '\n<\/script>\n</body>\n</html>';
 }
@@ -5196,7 +5615,7 @@ function copyFullPage() {
 function buildGeneratorOutputText() {
   var seo = DB.seo ? JSON.stringify(DB.seo, null, 2) : '{\n  "metaTitle": "",\n  "metaDesc": ""\n}';
   var pm = DB.pageMeta ? JSON.stringify(DB.pageMeta, null, 2) : '{\n  "name": "Page",\n  "slug": "' + pageSlug() + '",\n  "meta": { "language": "en" }\n}';
-  var out = '=== HTML ===\n' + (DB.code.html || '') + '\n\n=== CSS ===\n' + (DB.code.css || '') + '\n\n=== JS ===\n' + (DB.code.js || '') + '\n\n=== SEO ===\n' + seo + '\n\n=== PAGE META ===\n' + pm;
+  var out = '=== HTML ===\n' + _composeIslandsInto(DB.code.html || '') + '\n\n=== CSS ===\n' + (DB.code.css || '') + '\n\n=== JS ===\n' + (DB.code.js || '') + '\n\n=== SEO ===\n' + seo + '\n\n=== PAGE META ===\n' + pm;
   if (DB.configNeeded) out += '\n\n=== CMS CONFIG NEEDED ===\n' + DB.configNeeded;
   if (DB.emailTemplate) out += '\n\n=== EMAIL TEMPLATE ===\n' + DB.emailTemplate;
   return out;
@@ -5209,7 +5628,7 @@ function buildPageObjectJson() {
     meta: { language: (pm.meta && pm.meta.language) || _p('lang', 'en') },
     data: {
       status: (pm.data && pm.data.status) || 'published',
-      htmlPage: { code: { html: DB.code.html || '', css: DB.code.css || '', js: DB.code.js || '' } },
+      htmlPage: { code: { html: _composeIslandsInto(DB.code.html || ''), css: DB.code.css || '', js: DB.code.js || '' } },
       version: DB.version || '1.0.0'
     },
     seo: DB.seo || {}
@@ -5464,7 +5883,7 @@ function renderParamsSummary() {
   for (var i = 0; i < items.length; i++) {
     h += '<b>' + esc(items[i]) + '</b>' + (i < items.length - 1 ? ' · ' : '');
   }
-  h += ' <span class="params-admin" title="Configured by admins in the tool field settings — shared across pages">(admin setting)</span>';
+  h += ' <span class="params-admin" title="Configured by admins">(admin)</span>';
   box.innerHTML = h;
 }
 
@@ -5629,7 +6048,7 @@ function lockUI(ro) {
 }
 
 /* ── Render (restore from saved value) ── */
-var KNOWN_KEYS = ['version', 'activeSessionId', 'chatCache', 'seo', 'pageMeta', 'configNeeded', 'emailTemplate', '_instanceId', '_parentRecordId'];
+var KNOWN_KEYS = ['version', 'activeSessionId', 'chatCache', 'seo', 'pageMeta', 'configNeeded', 'emailTemplate', 'widgets', '_instanceId', '_parentRecordId'];
 function render(v) {
   if (v && typeof v === 'object') {
     try {
@@ -5658,6 +6077,16 @@ function render(v) {
       var k = KNOWN_KEYS[i];
       if (typeof v[k] !== 'undefined') DB[k] = v[k];
     }
+    // Widgets stay OUT of the HTML editor: any islands arriving in the saved
+    // HTML (composed at save time for the publish pipeline, or from older
+    // pages) are pulled into DB.widgets and removed from the editor copy.
+    var strip = _stripIslandDivsFromHtml(DB.code.html);
+    if (strip.widgets.length || strip.html !== DB.code.html) {
+      DB.code.html = strip.html;
+      if (_mergePageWidgets(strip.widgets)) _aiJustUpdated = true; // migration, not a user edit — no version bump
+      try { persist(); } catch (e) {}
+    }
+    _updatePageWidgetsBtn();
     if (v.chatCache && typeof v.chatCache === 'object') {
       if (Array.isArray(v.chatCache)) {
         // older shape: bare message array
@@ -5683,6 +6112,7 @@ function render(v) {
   }
   displayAllCode(DB.code);
   _renderVersion();
+  _updatePageWidgetsBtn();
   updateChatBadge();
   renderSections();
   _applyDeviceClass();
@@ -5740,6 +6170,7 @@ function bindEvents() {
   _bind('btn-copy-css', copyCurrentTab);
   _bind('btn-copy-js', copyCurrentTab);
   _bind('btn-refresh-preview', updatePreview);
+  _bind('btn-render-widgets', _toggleRenderWidgets);
   _bind('btn-sections-refresh', renderSections);
   _bind('btn-export-html', downloadFullPage);
   _bind('btn-export-pdf', exportPdf);
@@ -5764,6 +6195,10 @@ function bindEvents() {
     });
   });
   _bind('btn-widget-library', openWidgetLibrary);
+  _bind('btn-widget-library-top', openWidgetLibrary);
+  _bind('btn-page-widgets', openPageWidgets);
+  _bind('btn-page-widgets-add', function() { closeAllModals(); openWidgetLibrary(); });
+  _bind('btn-page-widgets-close', closeAllModals);
   _bind('btn-widget-library-close', closeAllModals);
   _bind('btn-widget-more', loadMoreWidgets);
   var widgetSearch = el('widget-search');
@@ -5917,7 +6352,7 @@ try { tool.onReady(function(val, fields) {
     { name: 'apiV2BaseUrl', label: 'Application Store API v2 Base URL', type: 'text', default: 'https://applicationstore.uniconhub.com/api/v2', severity: 'optional', hint: 'Fallback/diagnostics only: direct API v2 base used when the parent CMS relay returns no catalog. The parent-CMS path is primary and handles auth itself.' },
     { name: 'apiV2Key', label: 'API v2 Key (x-api-key)', type: 'text', default: '', severity: 'optional', hint: 'Public API v2 key for the DIRECT-fetch fallback only (sent as the x-api-key header). The parent CMS handles authentication for the primary path. Leave empty for public/readable endpoints.' },
     { name: 'applicationStoreHost', label: 'Application Store Host (legacy)', type: 'text', default: 'https://applicationstore.uniconhub.com', severity: 'optional', hint: 'Legacy host parameter — only used when apiV2BaseUrl is empty (the base becomes <host>/api/v2).' },
-    { name: 'widgetCatalogType', label: 'Widget Catalog Object Type', type: 'text', default: 'website-html-tool-library-applicationstore', severity: 'optional', hint: 'cmsObjectType of the published website html tool library on the application store. The parent CMS must include this type in allowedObjectTypes (role: reader) so the tool can receive the catalog.' },
+    { name: 'widgetCatalogType', label: 'Widget Catalog Object Type', type: 'text', default: 'website-html-tool-library-applicationstore', severity: 'optional', hint: 'cmsObjectType of the published website html tool library on the application store — a platform-owned public type the parent CMS resolves by default (no per-tenant setup).' },
     { name: 'colorScheme', label: 'Color Scheme', type: 'text', default: 'indigo', severity: 'optional', hint: 'Site-wide palette shared across pages. Options: emerald | blue | indigo | violet | rose | amber | teal | ocean | forest | sunset | mono.' },
     { name: 'typography', label: 'Typography', type: 'text', default: 'modern-sans', severity: 'optional', hint: 'Site-wide font pairing: modern-sans | elegant-serif | friendly-rounded | tech-mono | editorial.' },
     { name: 'thinkingLevel', label: 'AI Thinking Depth', type: 'text', default: 'balanced', severity: 'optional', hint: 'How much reasoning effort the AI spends per request: quick | balanced | deep. Deeper = more thoughtful structure and copy, but slower. Works best when the AI gateway runs a reasoning-capable model (e.g. DeepSeek V4 Pro).' },
@@ -5996,4 +6431,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-04-7 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-04-15 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

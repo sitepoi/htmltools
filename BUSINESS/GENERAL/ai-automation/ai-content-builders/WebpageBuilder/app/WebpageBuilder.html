@@ -1,4 +1,4 @@
-<!-- build 2026-10-04-7 -->
+<!-- build 2026-10-04-15 -->
 <div id="app">
   <!-- NO EXTERNAL SCRIPTS: self-contained line diff in WebpageBuilder.js.
        An external <script src> blocks every later inline script until it
@@ -9,14 +9,15 @@
       <div class="app-logo">🎨</div>
       <div class="header-title">
         <h1>Webpage Builder</h1>
-        <span class="header-sub">AI-First • Chat-Driven • Single-Page Web Design Studio</span>
+        <span class="header-sub">Design your webpage by chat</span>
       </div>
     </div>
     <div class="header-right">
-      <button class="btn btn-sm btn-ghost" id="btn-config" title="Generate &amp; Export">⚙️ Generate &amp; Export</button>
+      <button class="btn btn-sm btn-primary" id="btn-widget-library-top" title="Add a widget">🧩 Widgets</button>
+      <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-7</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-04-15</span>
       <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
@@ -27,6 +28,7 @@
     <!-- LEFT: Chat Panel -->
     <aside class="chat-panel" id="chat-panel">
       <div class="chat-tab-bar" id="chat-tab-bar">
+        <span class="side-label">💬 Design Chat</span>
         <button class="chat-tab active" data-chat-tab="chat">💬 Chat</button>
         <button class="chat-tab chat-tab-dev" data-chat-tab="response" style="display:none">📥 Response</button>
         <button class="chat-tab chat-tab-dev" data-chat-tab="prompt" style="display:none">📤 Prompt</button>
@@ -92,7 +94,7 @@
           <button class="guided-toggle" id="btn-guided-mode" title="Guided Mode — AI interviews you about your page">🪄 Guided</button>
         </div>
         <div class="chat-input-row">
-          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your webpage or ask for changes… (Enter to send, Shift+Enter for new line)" spellcheck="false"></textarea>
+          <textarea id="chat-input" class="chat-input" rows="1" placeholder="Describe your page or ask for changes… (Enter to send)" spellcheck="false"></textarea>
           <button class="btn btn-primary btn-sm" id="btn-chat-send" title="Send (Enter)">▶</button>
           <button class="btn btn-sm" id="btn-chat-stop" title="Stop AI generation" style="display:none">⏹</button>
         </div>
@@ -117,6 +119,9 @@
               <button class="dev-btn" data-device="mobile" title="Mobile view (390px)">📲</button>
             </div>
             <button class="btn btn-sm btn-ghost" id="btn-refresh-preview" title="Refresh preview">↻</button>
+            <button class="btn btn-sm btn-outline" id="btn-page-widgets" title="Widgets on this page" style="display:none">🧩 0</button>
+            <button class="btn btn-sm btn-outline header-btn-active" id="btn-render-widgets" title="Show or hide widgets in this preview only">🧩 Widget preview: On</button>
+            <span class="island-render-status" id="island-render-status"></span>
           </div>
           <div class="preview-stage" id="preview-stage">
             <div class="preview-frame-wrap" id="preview-frame-wrap">
@@ -135,12 +140,12 @@
           <div class="sections-panel">
             <div class="sections-header">
               <h2>💡 Suggestions</h2>
-              <p>Computed from your current page — these are the sections your page is missing. Click one and the AI adds it with a prompt tailored to your content.</p>
+              <p>Tap a section to add it with AI.</p>
               <button class="btn btn-sm btn-ghost" id="btn-sections-refresh">↻ Rescan</button>
             </div>
             <div id="suggest-page-type" class="suggest-page-type"></div>
             <div class="quick-add-row" id="quick-add-row" style="display:none">
-              <span class="quick-add-label">Suggested next sections:</span>
+              <span class="quick-add-label">Add a section:</span>
               <div class="qa-chips" id="qa-chips"></div>
             </div>
             <div class="skills-block" id="skills-row-wrap">
@@ -148,7 +153,7 @@
                 <span class="quick-add-label">🧠 Skills</span>
                 <div class="qa-chips" id="skills-row"></div>
               </div>
-              <span class="qa-hint">Extra expertise the AI applies when designing. Page-type guidance (menu, pricing, listings…) is added automatically from your content.</span>
+              <span class="qa-hint">Extra AI expertise. Page-type guidance is automatic.</span>
             </div>
           </div>
         </div>
@@ -161,7 +166,7 @@
             <button class="advtab" data-advtab="js">⚡ JS</button>
             <button class="advtab" data-advtab="console">🪲 Console</button>
             <button class="advtab" data-advtab="addons">🧩 Add-ons</button>
-            <button class="advtab active" data-advtab="settings">⚙️ Generate &amp; Export</button>
+            <button class="advtab active" data-advtab="settings">⚙️ Settings</button>
             <div class="content-actions" id="content-actions" style="display:none">
               <button class="btn btn-sm btn-ghost" id="btn-copy-html" title="Copy HTML">📋 Copy</button>
               <button class="btn btn-sm btn-ghost" id="btn-copy-css" title="Copy CSS">📋 Copy</button>
@@ -199,7 +204,7 @@
         <!-- Console -->
         <div class="advpanel" id="editor-console">
           <div class="console-output" id="console-output">
-            <div class="console-empty">🪲 Console output from the preview appears here.<br>Click buttons in the Preview tab and watch for logs and errors.</div>
+            <div class="console-empty">🪲 Preview logs appear here.</div>
           </div>
           <div class="console-actions">
             <button class="btn btn-sm btn-ghost" id="btn-console-clear">🗑️ Clear</button>
@@ -212,7 +217,7 @@
           <div class="config-scroll">
             <div class="config-header">
               <h2>🧩 Add-ons</h2>
-              <p>Reusable site content and widgets — add them to this page in one click.</p>
+              <p>Add shared content and widgets to this page.</p>
             </div>
 
             <div class="config-section">
@@ -221,7 +226,7 @@
               <div class="picker-actions">
                 <button class="btn btn-sm btn-outline" id="btn-shared-refresh">↻ Refresh</button>
               </div>
-              <p class="gen-hint">Optional sources go into this page's data.sections. "Site-wide" ones are added automatically.</p>
+              <p class="gen-hint">Optional sources are added to this page. Site-wide ones are automatic.</p>
             </div>
 
             <div class="config-section">
@@ -231,8 +236,8 @@
                 <button class="btn btn-outline" id="btn-widget-refresh" title="Reload the widget list">↻ Refresh</button>
                 <button class="btn btn-outline" id="btn-form-builder">📝 Form Builder</button>
               </div>
-              <div class="widget-lib-source" id="widget-lib-status">🛰 Checking library connection…</div>
-              <p class="gen-hint">Widgets come from the application store (widgetCatalogUrl). Search and add one as a data-gw-app island.</p>
+              <div class="widget-lib-source" id="widget-lib-status">🧩 Checking library…</div>
+              <p class="gen-hint">Widgets appear in your page preview instantly.</p>
             </div>
           </div>
         </div>
@@ -241,13 +246,13 @@
         <div class="advpanel active" id="editor-settings">
           <div class="config-scroll">
             <div class="config-header">
-              <h2>⚙️ Generate &amp; Export</h2>
+              <h2>⚙️ Settings &amp; Export</h2>
               <p id="params-summary-line" class="params-line">Loading…</p>
             </div>
 
             <div class="config-actions">
               <button class="btn btn-primary btn-lg" id="btn-generate-all">🤖 Generate Full Page</button>
-              <p class="gen-hint">Or just describe it in the 💬 Chat.</p>
+              <p class="gen-hint">…or describe it in the Chat.</p>
             </div>
             <div id="gen-status" class="gen-status" style="display:none">
               <div class="gen-status-icon">⏳</div>
@@ -264,7 +269,7 @@
                 <button class="btn btn-outline" id="btn-export-copy-full">📋 Copy Full Page</button>
                 <button class="btn btn-outline" id="btn-export-copy-blocks">📋 Copy 3 Blocks</button>
               </div>
-              <p class="gen-hint">Download a standalone preview, or copy the page object JSON ready for the CMS.</p>
+              <p class="gen-hint">Standalone file or CMS-ready JSON.</p>
             </div>
           </div>
         </div>
@@ -274,7 +279,7 @@
           <div class="compliance-panel">
             <div class="compliance-header">
               <h2>🧪 Page Quality Checker</h2>
-              <p>Automated quality checks — verifies SEO, structure, safety, performance and platform constraints of the generated page.</p>
+              <p>Checks SEO, structure, safety and performance.</p>
               <div class="compliance-actions">
                 <button class="btn btn-primary btn-sm" id="btn-run-checks">🔍 Run Checks</button>
                 <button class="btn btn-outline btn-sm" id="btn-ai-review" title="Ask the AI to review the page">🤖 AI Review</button>
@@ -301,7 +306,7 @@
   <!-- History Modal -->
   <div class="modal-backdrop" id="modal-backdrop" hidden></div>
   <div class="modal" id="modal-history" style="display:none">
-    <div class="modal-header"><div><h3>📋 Version History</h3><p class="modal-sub">Every generation is saved as a version. Click ↩️ Restore to go back — the current version is always visible in the header and at the top of the code blocks.</p></div><button class="btn-close" id="btn-close-history">✕</button></div>
+    <div class="modal-header"><div><h3>📋 Version History</h3><p class="modal-sub">Every generation is saved. Restore any version.</p></div><button class="btn-close" id="btn-close-history">✕</button></div>
     <div class="modal-body" id="history-list"><div class="empty-state">No generations yet. Design your first page!</div></div>
   </div>
 
@@ -337,7 +342,7 @@
       <button class="btn-close" id="btn-widget-library-close">✕</button>
     </div>
     <div class="modal-body">
-      <input type="text" id="widget-search" class="widget-search" placeholder="Search by name or id… (e.g. gallery, reviews)" autocomplete="off" />
+      <input type="text" id="widget-search" class="widget-search" placeholder="Search widgets…" autocomplete="off" />
       <div class="widget-lib-source" id="widget-lib-source"></div>
       <div class="widget-lib-meta">
         <span id="widget-lib-count"></span>
@@ -354,14 +359,29 @@
       <button class="btn-close" id="btn-widget-cancel">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-sub" id="widget-dialog-desc"></p>
-      <label class="field-label">Widget config (valid JSON — generates data-gw-config)</label>
-      <textarea id="widget-config-json" class="widget-config-json" rows="10" spellcheck="false"></textarea>
-      <label class="field-label">Place after section id (optional)</label>
-      <input type="text" id="widget-place-after" placeholder="e.g. hero — leave empty to append at the end" />
+      <p class="modal-sub" id="widget-dialog-desc">It will appear right in your page preview.</p>
+      <label class="field-label">Settings (JSON — optional)</label>
+      <textarea id="widget-config-json" class="widget-config-json" rows="6" spellcheck="false"></textarea>
+      <label class="field-label">Place in (optional)</label>
+      <select id="widget-place-after"><option value="">— end of page —</option></select>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="btn-widget-cancel2">Cancel</button>
-        <button class="btn btn-primary" id="btn-widget-insert">➕ Insert Island</button>
+        <button class="btn btn-primary" id="btn-widget-insert">➕ Add to Page</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Page Widgets Modal -->
+  <div class="modal" id="modal-page-widgets" style="display:none">
+    <div class="modal-header">
+      <h3>🧩 Widgets on this page</h3>
+      <button class="btn-close" id="btn-page-widgets-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-sub">These widgets are part of your page. ↑↓ to reorder · choose a section to place each one.</p>
+      <div id="page-widgets-list"></div>
+      <div class="page-widgets-actions">
+        <button class="btn btn-primary" id="btn-page-widgets-add">🧩 Add from library</button>
       </div>
     </div>
   </div>
@@ -373,7 +393,7 @@
       <button class="btn-close" id="btn-form-cancel">✕</button>
     </div>
     <div class="modal-body">
-      <p class="modal-sub">Generates a platform-valid <code>data-gw-form</code> fragment (honeypot + status element) with submit wiring, plus a CMS CONFIG NEEDED note for the form-type-definition.</p>
+      <p class="modal-sub">Creates a form with spam protection and submit wiring.</p>
       <div class="form-builder-grid">
         <div>
           <label class="field-label">formTypeId (optional — links to the CMS form-type-definition)</label>
@@ -1293,7 +1313,7 @@ Rules:
      boot sets data-wb-ready on <body>. -->
 <script>
 (function() {
-  var BUILD = '2026-10-04-7';
+  var BUILD = '2026-10-04-15';
   try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
   try {
     window.__wbHtmlProbe = true;

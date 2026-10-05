@@ -1,4 +1,4 @@
-/* build 2026-10-04-7 */
+/* build 2026-10-04-15 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Built for UniconHub CMS HTML-tool system.
@@ -17,7 +17,7 @@
    visible proof that the [JS] block did NOT run, even if inline scripts are
    stripped by the host. ── */
 body:not([data-wb-ready])::before {
-  content: '⚠ WebpageBuilder JS NOT running — HTML build 2026-10-04-7 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).';
+  content: '⚠ WebpageBuilder JS NOT running — HTML build 2026-10-04-15 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).';
   position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
   background: #dc2626; color: #ffffff;
   font: bold 12px/1.5 'Segoe UI', system-ui, sans-serif;
@@ -29,6 +29,7 @@ body:not([data-wb-ready])::before {
 /* ── Variables ── */
 :root {
   --bg: #f8fafc; --bg2: #ffffff; --bg3: #f1f5f9;
+  --chat-bg: #eef2f8;
   --text: #1e1b2e; --text2: #5b5570; --text3: #a5a0b8;
   --border: #e6e2ef; --border-light: #f3f1f8;
   --accent: #7c3aed; --accent-light: #f1e9fe; --accent-dark: #6d28d9; --accent-text: #ffffff;
@@ -48,6 +49,7 @@ body:not([data-wb-ready])::before {
 }
 [data-theme="dark"] {
   --bg: #14101f; --bg2: #1d1730; --bg3: #2a2244;
+  --chat-bg: #171229;
   --text: #ece9f5; --text2: #a89fc4; --text3: #6f6790;
   --border: #33294e; --border-light: #241d3a;
   --accent: #a78bfa; --accent-light: #2e2355; --accent-dark: #c4b5fd;
@@ -112,17 +114,22 @@ code { font-family: var(--font-mono); font-size: 0.875em; background: var(--bg3)
 /* ── Main Layout ── */
 .main-layout { display: flex; flex: 1; overflow: hidden; }
 
-/* ── Chat Panel ── */
+/* ── Chat Panel (left = design chat; right = website — visually distinct) ── */
 .chat-panel {
   width: 380px; min-width: 320px; max-width: 430px;
-  background: var(--bg2); border-right: 1px solid var(--border);
+  background: var(--chat-bg); border-right: 2px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
 }
 .chat-tab-bar {
   display: flex; align-items: center; gap: 2px;
-  padding: 4px 6px; background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--border);
   flex-shrink: 0; flex-wrap: wrap;
 }
+.side-label {
+  font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--text3); padding: 2px 6px; user-select: none; white-space: nowrap;
+}
+.chat-tab-bar .side-label { color: var(--accent); margin-right: 4px; }
 .chat-tab {
   padding: 4px 9px; border: none; background: transparent; color: var(--text3);
   font-family: var(--font); font-size: 11px; font-weight: 600; cursor: pointer;
@@ -399,6 +406,7 @@ code { font-family: var(--font-mono); font-size: 0.875em; background: var(--bg3)
 .preview-frame-wrap.device-tablet { max-width: 768px; }
 .preview-frame-wrap.device-mobile { max-width: 390px; }
 .preview-frame { width: 100%; height: 100%; border: none; background: #fff; display: block; min-height: 480px; }
+.island-render-status { font-size: 10.5px; color: var(--text3); white-space: nowrap; }
 .preview-empty {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 6px; text-align: center; pointer-events: none;
@@ -841,6 +849,13 @@ body.readonly .chat-input, body.readonly .code-textarea { pointer-events: none; 
 .widget-lib-source { font-size: 11px; color: var(--text3); margin-bottom: 6px; }
 .widget-library-list { max-height: 52vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .widget-row-id { font-size: 10.5px; color: var(--text3); background: var(--bg3); border-radius: 4px; padding: 1px 6px; margin-left: 4px; font-family: var(--font-mono); }
+
+/* ── Page widgets (visual widget list — no HTML editing) ── */
+.page-widget-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-bottom: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+.page-widget-name { font-size: 12.5px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.page-widget-pos { font-size: 10px; color: var(--text3); flex-shrink: 0; }
+.page-widgets-actions { display: flex; gap: 8px; margin-top: 10px; }
+.pw-pos { font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); color: var(--text2); max-width: 190px; min-width: 0; flex-shrink: 1; }
 
 /* Widget library: count + load-more meta (2026-10-04) */
 .widget-lib-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
