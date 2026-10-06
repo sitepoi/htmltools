@@ -96,6 +96,8 @@
   }
   .nf-footer { margin-top: 26px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); padding-top: 10px; }
   .nf-print-header, .nf-print-footer { display: none; }
+  .nf-print-table, .nf-print-table tbody, .nf-print-table tr, .nf-print-table td { display: block; }
+  .nf-print-table thead, .nf-print-table tfoot { display: none; }
   @media (max-width: 700px) {
     .nf-shell { padding: 18px 16px 36px; }
     .nf-areas { grid-template-columns: 1fr; }
@@ -107,19 +109,20 @@
     .nf-shell { max-width: none; padding: 0; min-height: 0; }
     .nf-top { display: none; }
     .nf-print-btn { display: none; }
+    .nf-print-table { display: table; width: 100%; border-collapse: collapse; }
+    .nf-print-table thead { display: table-header-group; }
+    .nf-print-table tfoot { display: table-footer-group; }
+    .nf-print-table tbody { display: table-row-group; }
+    .nf-print-table tr { display: table-row; }
+    .nf-print-table td { display: table-cell; padding: 0; }
+    .nf-print-content-cell { padding: 0 0 4mm; }
     .nf-print-header {
       display: flex;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 12mm;
       align-items: center;
       gap: 3mm;
-      padding: 0 16mm;
+      padding: 3mm 0;
       border-bottom: 0.5mm solid #c8102e;
       background: #ffffff;
-      overflow: hidden;
     }
     .nf-print-header img { height: 8mm; width: auto; }
     .nf-print-header-text { flex: 1; overflow: hidden; }
@@ -127,14 +130,9 @@
     .nf-print-header-sub { font-size: 7.5pt; color: var(--muted); line-height: 1.2; }
     .nf-print-footer {
       display: flex;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 10mm;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16mm;
+      padding: 3mm 0;
       border-top: 0.4mm solid var(--line);
       font-size: 8pt;
       color: var(--muted);
@@ -149,23 +147,32 @@
     .nf-write-line { margin: 6mm 0; }
     .nf-write-line .nf-line { border-bottom: 0.5mm solid var(--accent); height: 13mm; }
     .nf-note, .nf-question-box, h2 { break-inside: avoid; }
+    /* Ink-friendly: strip fills, keep lines */
+    .nf-area, .nf-note { background: none; }
+    .nf-write-no { background: none; border: 0.4mm solid var(--accent); color: var(--accent); }
   }
 </style>
 </head>
 <body>
 
-<!-- Print-only running header and footer -->
-<div class="nf-print-header">
-  <img src="centrecanada-logo.png" alt="" />
-  <div class="nf-print-header-text">
-    <div class="nf-print-header-title">AI for Seniors - What is hard for you?</div>
-    <div class="nf-print-header-sub">CentreCanada Newcomer Services Society</div>
-  </div>
-</div>
-<div class="nf-print-footer">
-  <span>CentreCanada - AI for Seniors - Needs Form</span>
-  <span>Take this form home with you</span>
-</div>
+<!-- Repeating print header and footer: in-flow table header rows, so they never overlap content -->
+<table class="nf-print-table">
+  <thead>
+    <tr>
+      <td>
+        <div class="nf-print-header">
+          <img src="centrecanada-logo.png" alt="" />
+          <div class="nf-print-header-text">
+            <div class="nf-print-header-title">AI for Seniors - What is hard for you?</div>
+            <div class="nf-print-header-sub">CentreCanada Newcomer Services Society</div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="nf-print-content-cell">
 
 <div class="nf-shell">
 
@@ -262,6 +269,21 @@
 
   <div class="nf-footer">AI Education for Seniors - CentreCanada Newcomer Services Society - print one copy per learner - Version 1.0 - 26 September 2026</div>
 </div>
+
+      </td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td>
+        <div class="nf-print-footer">
+          <span>CentreCanada - AI for Seniors - Needs Form</span>
+          <span>Take this form home with you</span>
+        </div>
+      </td>
+    </tr>
+  </tfoot>
+</table>
 
 </body>
 </html>

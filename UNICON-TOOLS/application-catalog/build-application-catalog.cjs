@@ -1,0 +1,1927 @@
+#!/usr/bin/env node
+/* ============================================================================
+   APPLICATION IDEAS CATALOG BUILDER
+   ----------------------------------------------------------------------------
+   SSOT for the "applications" side of the UniconHub store. An APPLICATION
+   (cmsObjectType) is the cover / container: html-tools live inside FIELD
+   GROUPS inside OBJECTS of the application. One application can bundle many
+   html-tools, reuse the same tool in several objects, and one html-tool can
+   be a single field of an object that also carries many other fields.
+
+   This script is the single source of truth. It writes:
+     - application-ideas-catalog.json   (export copy, release/sync consumers)
+     - application-ideas-catalog.html   (self-contained browser page)
+
+   Usage:  node build-application-catalog.cjs
+   ========================================================================== */
+
+const fs = require('fs');
+const path = require('path');
+
+const DIR = __dirname;
+
+/* ----------------------------------------------------------------------------
+   FOLDER HIERARCHY (application taxonomy)
+   Mirrors the html-tool taxonomy 1:1 (same codes + subcategory names/slugs)
+   so an application and the html-tools it bundles live in the same
+   conceptual space. Leaf folders carry `categories` =
+   "application-library-item-uniconbaseapps" (the application store object
+   type) instead of the html-tool-library object type.
+   ---------------------------------------------------------------------------- */
+
+const HIERARCHY = {
+  meta: {
+    schema: "uniconhub-application-folder-taxonomy",
+    version: "1.0.0",
+    updatedAt: "2026-10-05",
+    versionHistory: [
+      {
+        version: "1.0.0",
+        exportedAt: "2026-10-05",
+        note: "Initial application hierarchy - mirrors the html-tool taxonomy. One application = one folder = one subcategory."
+      }
+    ],
+    importNote: "The CMS import consumes the folders array. Each folder carries stable code and slug fields. Never rename or reuse a code. Applications (cmsObjectTypes) are filed here; the html-tools they bundle are filed separately in the html-tool library taxonomy."
+  },
+  scalingRules: [
+    "CMS folders are created ONLY by importing this file. Never create, rename or delete folders manually in the CMS UI - change this file first, then re-import.",
+    "Split rule - when a subcategory passes 60 applications, split it into new subcategories under the same category. New subcategory codes are appended (next letter). Existing codes are never renamed or reused.",
+    "Utilities enforcement - the Utilities / Misc Helpers leaves (B-G-14, P-G-06) are parking spots only. Whenever a real category exists for an application, it moves there. Utilities must stay near-empty.",
+    "Boundary rules - PERSONAL only when the user manages their own life (default is BUSINESS). VERTICAL only when industry-specific objects or workflow are baked in, otherwise GENERAL.",
+    "One application = one folder = one subcategory. An application that serves several audiences can be multi-listed in the store app, but has one home here.",
+    "Applications and html-tools are FILED SEPARATELY. An application records WHICH html-tools it bundles (the toolsInside/tools field), but the tools themselves keep their own folders in the html-tool library taxonomy.",
+    "Tags and search facets are managed inside the AppStoreItem application, not in this hierarchy. This hierarchy is only the filing system for applications entering the CMS."
+  ],
+  folders: [
+    {
+      name: "Business",
+      code: "B",
+      slug: "business",
+      order: 10,
+      categories: ["application-library-item-uniconbaseapps"],
+      children: [
+        {
+          name: "General",
+          code: "BG",
+          slug: "general",
+          order: 10,
+          categories: ["application-library-item-uniconbaseapps"],
+          children: [
+            {
+              name: "AI & Automation",
+              code: "B-G-01",
+              slug: "ai-automation",
+              order: 10,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "AI Chat Assistants", code: "B-G-01-a", slug: "ai-chat-assistants", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "AI Content Builders", code: "B-G-01-b", slug: "ai-content-builders", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "AI Agents & Workflows", code: "B-G-01-c", slug: "ai-agents-workflows", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Prompt & Model Utilities", code: "B-G-01-d", slug: "prompt-model-utilities", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Finance & Accounting",
+              code: "B-G-02",
+              slug: "finance-accounting",
+              order: 20,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Invoicing & Billing", code: "B-G-02-a", slug: "invoicing-billing", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Expense Management", code: "B-G-02-b", slug: "expense-management", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Payments & Collections", code: "B-G-02-c", slug: "payments-collections", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Budgeting & Planning", code: "B-G-02-d", slug: "budgeting-planning", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Payroll", code: "B-G-02-e", slug: "payroll", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Tax & Compliance", code: "B-G-02-f", slug: "tax-compliance", order: 60, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Financial Reporting", code: "B-G-02-g", slug: "financial-reporting", order: 70, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Sales & CRM",
+              code: "B-G-03",
+              slug: "sales-crm",
+              order: 30,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "CRM & Contacts", code: "B-G-03-a", slug: "crm-contacts", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Leads & Pipelines", code: "B-G-03-b", slug: "leads-pipelines", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Quotes & Proposals", code: "B-G-03-c", slug: "quotes-proposals", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Order Management", code: "B-G-03-d", slug: "order-management", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Commissions", code: "B-G-03-e", slug: "commissions", order: 50, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Marketing & Brand",
+              code: "B-G-04",
+              slug: "marketing-brand",
+              order: 40,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Email Campaigns", code: "B-G-04-a", slug: "email-campaigns", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Social Media Publishing", code: "B-G-04-b", slug: "social-publishing", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "SEO & Content Marketing", code: "B-G-04-c", slug: "seo-content-marketing", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Ads & Promotions", code: "B-G-04-d", slug: "ads-promotions", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Reviews & Reputation", code: "B-G-04-e", slug: "reviews-reputation", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Brand & Design Assets", code: "B-G-04-f", slug: "brand-design-assets", order: 60, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Content & Media",
+              code: "B-G-05",
+              slug: "content-media",
+              order: 50,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Document Creation & Editing", code: "B-G-05-a", slug: "document-creation-editing", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Presentation Tools", code: "B-G-05-b", slug: "presentation-tools", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Publishing & Distribution", code: "B-G-05-c", slug: "publishing-distribution", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Media Libraries", code: "B-G-05-d", slug: "media-libraries", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Communications",
+              code: "B-G-06",
+              slug: "communications",
+              order: 60,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Announcements & Broadcasts", code: "B-G-06-a", slug: "announcements-broadcasts", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Team Chat & Messaging", code: "B-G-06-b", slug: "team-chat", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Feedback & Surveys", code: "B-G-06-c", slug: "feedback-surveys", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Approvals & Sign-off", code: "B-G-06-d", slug: "approvals-sign-off", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "People & HR",
+              code: "B-G-07",
+              slug: "people-hr",
+              order: 70,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Recruiting & Interviews", code: "B-G-07-a", slug: "recruiting-interviews", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Onboarding & Handbooks", code: "B-G-07-b", slug: "onboarding-handbooks", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Employee Records", code: "B-G-07-c", slug: "employee-records", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Time & Attendance", code: "B-G-07-d", slug: "time-attendance", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Daily Logs & Supervision", code: "B-G-07-e", slug: "daily-logs-supervision", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Permits & Leave", code: "B-G-07-f", slug: "permits-leave", order: 60, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Training & Verification", code: "B-G-07-g", slug: "training-verification", order: 70, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Performance & Mentoring", code: "B-G-07-h", slug: "performance-mentoring", order: 80, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Safety & Incidents", code: "B-G-07-i", slug: "safety-incidents", order: 90, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Offboarding", code: "B-G-07-j", slug: "offboarding", order: 100, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Operations & Management",
+              code: "B-G-08",
+              slug: "operations-management",
+              order: 80,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Task & To-do Management", code: "B-G-08-a", slug: "task-todo", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Project & Sprint Management", code: "B-G-08-b", slug: "project-sprint", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Recurring & Scheduled Tasks", code: "B-G-08-c", slug: "recurring-scheduled", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Checklists & Hierarchies", code: "B-G-08-d", slug: "checklists-hierarchies", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Matching & Rostering", code: "B-G-08-e", slug: "matching-rostering", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Scheduling & Bookings", code: "B-G-08-f", slug: "scheduling-bookings", order: 60, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Work Orders & Maintenance", code: "B-G-08-g", slug: "work-orders-maintenance", order: 70, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Quality & Inspections", code: "B-G-08-h", slug: "quality-inspections", order: 80, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Forms & Data Collection",
+              code: "B-G-09",
+              slug: "forms-data-collection",
+              order: 90,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Forms & Surveys", code: "B-G-09-a", slug: "forms-surveys", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Registrations & Applications", code: "B-G-09-b", slug: "registrations-applications", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Business Profiles & Directories", code: "B-G-09-c", slug: "business-profiles-directories", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Audits & Inspections", code: "B-G-09-d", slug: "audits-inspections", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Reporting & Analytics",
+              code: "B-G-10",
+              slug: "reporting-analytics",
+              order: 100,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Dashboards & KPIs", code: "B-G-10-a", slug: "dashboards-kpis", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Report Builders", code: "B-G-10-b", slug: "report-builders", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Data Visualization", code: "B-G-10-c", slug: "data-visualization", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "IT & Development",
+              code: "B-G-11",
+              slug: "it-development",
+              order: 110,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Website & Page Builders", code: "B-G-11-a", slug: "website-page-builders", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Code Editors & IDEs", code: "B-G-11-b", slug: "code-editors-ides", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "API & Integration Tools", code: "B-G-11-c", slug: "api-integration", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Testing & QA", code: "B-G-11-d", slug: "testing-qa", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "System Design & Architecture", code: "B-G-11-e", slug: "system-design-architecture", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Web Content Editing", code: "B-G-11-f", slug: "web-content-editing", order: 60, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "File & Media",
+              code: "B-G-12",
+              slug: "file-media",
+              order: 120,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Image Editing", code: "B-G-12-a", slug: "image-editing", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Video & Audio Editing", code: "B-G-12-b", slug: "video-audio-editing", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "File Conversion", code: "B-G-12-c", slug: "file-conversion", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "PDF Tools", code: "B-G-12-d", slug: "pdf-tools", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "OCR & Scanning", code: "B-G-12-e", slug: "ocr-scanning", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Compression & Optimization", code: "B-G-12-f", slug: "compression-optimization", order: 60, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Translation & Localization",
+              code: "B-G-13",
+              slug: "translation-localization",
+              order: 130,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Text Translation", code: "B-G-13-a", slug: "text-translation", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Document & HTML Translation", code: "B-G-13-b", slug: "document-html-translation", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Localization Management", code: "B-G-13-c", slug: "localization-management", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Glossary & Terminology", code: "B-G-13-d", slug: "glossary-terminology", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Utilities",
+              code: "B-G-14",
+              slug: "utilities",
+              order: 140,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Misc Helpers", code: "B-G-14-a", slug: "misc-helpers", order: 10, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Vertical",
+          code: "BV",
+          slug: "vertical",
+          order: 20,
+          categories: ["application-library-item-uniconbaseapps"],
+          children: [
+            {
+              name: "Education & Training",
+              code: "B-V-01",
+              slug: "education-training",
+              order: 10,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "K-12 Schools", code: "B-V-01-a", slug: "k12-schools", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Higher Education", code: "B-V-01-b", slug: "higher-education", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Tutoring & Test Prep", code: "B-V-01-c", slug: "tutoring-test-prep", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Corporate Training & LMS", code: "B-V-01-d", slug: "corporate-training-lms", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Vocational Training", code: "B-V-01-e", slug: "vocational-training", order: 50, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Food & Beverage",
+              code: "B-V-02",
+              slug: "food-beverage",
+              order: 20,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Restaurants & Cafes", code: "B-V-02-a", slug: "restaurants-cafes", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Catering", code: "B-V-02-b", slug: "catering", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Bars & Nightlife", code: "B-V-02-c", slug: "bars-nightlife", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Food Delivery & Ghost Kitchens", code: "B-V-02-d", slug: "food-delivery-ghost-kitchens", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Grocery & Meal Kits", code: "B-V-02-e", slug: "grocery-meal-kits", order: 50, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Health & Wellness",
+              code: "B-V-03",
+              slug: "health-wellness",
+              order: 30,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Clinics & Practices", code: "B-V-03-a", slug: "clinics-practices", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Dental", code: "B-V-03-b", slug: "dental", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Mental Health", code: "B-V-03-c", slug: "mental-health", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Fitness & Gyms", code: "B-V-03-d", slug: "fitness-gyms", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Pharmacy", code: "B-V-03-e", slug: "pharmacy", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Senior Care", code: "B-V-03-f", slug: "senior-care", order: 60, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Nonprofit & Community",
+              code: "B-V-04",
+              slug: "nonprofit-community",
+              order: 40,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Fundraising Campaigns", code: "B-V-04-a", slug: "fundraising-campaigns", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Grants", code: "B-V-04-b", slug: "grants", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Donations & Pledges", code: "B-V-04-c", slug: "donations-pledges", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Volunteers", code: "B-V-04-d", slug: "volunteers", order: 40, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Membership & Clubs", code: "B-V-04-e", slug: "membership-clubs", order: 50, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Religious & Community Orgs", code: "B-V-04-f", slug: "religious-community-orgs", order: 60, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Real Estate & Property",
+              code: "B-V-05",
+              slug: "real-estate-property",
+              order: 50,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Sales & Rentals", code: "B-V-05-a", slug: "sales-rentals", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Property Management", code: "B-V-05-b", slug: "property-management", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Valuation & Listings", code: "B-V-05-c", slug: "valuation-listings", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Retail & E-Commerce",
+              code: "B-V-06",
+              slug: "retail-ecommerce",
+              order: 60,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Store Operations", code: "B-V-06-a", slug: "store-operations", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Product & Catalog", code: "B-V-06-b", slug: "product-catalog", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Orders & Fulfillment", code: "B-V-06-c", slug: "orders-fulfillment", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Marketplaces", code: "B-V-06-d", slug: "marketplaces", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Logistics & Transport",
+              code: "B-V-07",
+              slug: "logistics-transport",
+              order: 70,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Fleet & Dispatch", code: "B-V-07-a", slug: "fleet-dispatch", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Warehousing", code: "B-V-07-b", slug: "warehousing", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Shipping & Delivery", code: "B-V-07-c", slug: "shipping-delivery", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Public Transit", code: "B-V-07-d", slug: "public-transit", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Construction & Trades",
+              code: "B-V-08",
+              slug: "construction-trades",
+              order: 80,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Contractors", code: "B-V-08-a", slug: "contractors", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Job Sites & Inspections", code: "B-V-08-b", slug: "job-sites-inspections", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Equipment Rental", code: "B-V-08-c", slug: "equipment-rental", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Building Materials", code: "B-V-08-d", slug: "building-materials", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Professional Services",
+              code: "B-V-09",
+              slug: "professional-services",
+              order: 90,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Legal Firms", code: "B-V-09-a", slug: "legal-firms", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Accounting Firms", code: "B-V-09-b", slug: "accounting-firms", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Consulting", code: "B-V-09-c", slug: "consulting", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Marketing Agencies", code: "B-V-09-d", slug: "marketing-agencies", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Hospitality & Travel",
+              code: "B-V-10",
+              slug: "hospitality-travel",
+              order: 100,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Hotels & Lodging", code: "B-V-10-a", slug: "hotels-lodging", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Travel Agencies", code: "B-V-10-b", slug: "travel-agencies", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Tours & Attractions", code: "B-V-10-c", slug: "tours-attractions", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Event Venues", code: "B-V-10-d", slug: "event-venues", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Home Services",
+              code: "B-V-11",
+              slug: "home-services",
+              order: 110,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Cleaning", code: "B-V-11-a", slug: "cleaning", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Landscaping", code: "B-V-11-b", slug: "landscaping", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Repair & Maintenance", code: "B-V-11-c", slug: "repair-maintenance", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Home Improvement & Decor", code: "B-V-11-d", slug: "home-improvement-decor", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Events & Entertainment",
+              code: "B-V-12",
+              slug: "events-entertainment",
+              order: 120,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Event Planning", code: "B-V-12-a", slug: "event-planning", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Ticketing", code: "B-V-12-b", slug: "ticketing", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Sports Clubs", code: "B-V-12-c", slug: "sports-clubs", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Media & Publishing", code: "B-V-12-d", slug: "media-publishing", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Manufacturing",
+              code: "B-V-13",
+              slug: "manufacturing",
+              order: 130,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Production & BOM", code: "B-V-13-a", slug: "production-bom", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Quality Control", code: "B-V-13-b", slug: "quality-control", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Maintenance", code: "B-V-13-c", slug: "maintenance", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Agriculture",
+              code: "B-V-14",
+              slug: "agriculture",
+              order: 140,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Farm Management", code: "B-V-14-a", slug: "farm-management", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Livestock", code: "B-V-14-b", slug: "livestock", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Produce & Distribution", code: "B-V-14-c", slug: "produce-distribution", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Automotive",
+              code: "B-V-15",
+              slug: "automotive",
+              order: 150,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Dealerships", code: "B-V-15-a", slug: "dealerships", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Service Shops", code: "B-V-15-b", slug: "service-shops", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Rental & Fleet", code: "B-V-15-c", slug: "rental-fleet", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      name: "Personal",
+      code: "P",
+      slug: "personal",
+      order: 20,
+      categories: ["application-library-item-uniconbaseapps"],
+      children: [
+        {
+          name: "General",
+          code: "PG",
+          slug: "general",
+          order: 10,
+          categories: ["application-library-item-uniconbaseapps"],
+          children: [
+            {
+              name: "Personal Finance",
+              code: "P-G-01",
+              slug: "personal-finance",
+              order: 10,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Budgeting & Spending", code: "P-G-01-a", slug: "budgeting-spending", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Tax Preparation", code: "P-G-01-b", slug: "tax-preparation", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Banking & Loans", code: "P-G-01-c", slug: "banking-loans", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Investments", code: "P-G-01-d", slug: "investments", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Productivity",
+              code: "P-G-02",
+              slug: "productivity",
+              order: 20,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "To-do & Habits", code: "P-G-02-a", slug: "todo-habits", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Notes & Journaling", code: "P-G-02-b", slug: "notes-journaling", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Calendar & Reminders", code: "P-G-02-c", slug: "calendar-reminders", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Goal Setting", code: "P-G-02-d", slug: "goal-setting", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Health & Fitness",
+              code: "P-G-03",
+              slug: "health-fitness",
+              order: 30,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Exercise & Diet", code: "P-G-03-a", slug: "exercise-diet", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Habit Tracking", code: "P-G-03-b", slug: "habit-tracking", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Personal Medical Records", code: "P-G-03-c", slug: "personal-medical-records", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Learning & Study",
+              code: "P-G-04",
+              slug: "learning-study",
+              order: 40,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Language Learning", code: "P-G-04-a", slug: "language-learning", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Exam Prep", code: "P-G-04-b", slug: "exam-prep", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Skill Courses", code: "P-G-04-c", slug: "skill-courses", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Creative & Hobbies",
+              code: "P-G-05",
+              slug: "creative-hobbies",
+              order: 50,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Writing", code: "P-G-05-a", slug: "writing", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Drawing & Music", code: "P-G-05-b", slug: "drawing-music", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "DIY Projects", code: "P-G-05-c", slug: "diy-projects", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "File & Utilities",
+              code: "P-G-06",
+              slug: "file-utilities",
+              order: 60,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Document Converters", code: "P-G-06-a", slug: "document-converters", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Photo Organizers", code: "P-G-06-b", slug: "photo-organizers", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Misc Helpers", code: "P-G-06-c", slug: "misc-helpers", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            }
+          ]
+        },
+        {
+          name: "Vertical",
+          code: "PV",
+          slug: "vertical",
+          order: 20,
+          categories: ["application-library-item-uniconbaseapps"],
+          children: [
+            {
+              name: "Travel & Outdoors",
+              code: "P-V-01",
+              slug: "travel-outdoors",
+              order: 10,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Trip Planning", code: "P-V-01-a", slug: "trip-planning", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Itineraries", code: "P-V-01-b", slug: "itineraries", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Packing", code: "P-V-01-c", slug: "packing", order: 30, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Outdoor Activities", code: "P-V-01-d", slug: "outdoor-activities", order: 40, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Family & Parenting",
+              code: "P-V-02",
+              slug: "family-parenting",
+              order: 20,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Chores & Allowance", code: "P-V-02-a", slug: "chores-allowance", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Baby Tracking", code: "P-V-02-b", slug: "baby-tracking", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Family Calendars", code: "P-V-02-c", slug: "family-calendars", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Home & Living",
+              code: "P-V-03",
+              slug: "home-living",
+              order: 30,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Shopping Lists", code: "P-V-03-a", slug: "shopping-lists", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Home Inventory", code: "P-V-03-b", slug: "home-inventory", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Smart Home", code: "P-V-03-c", slug: "smart-home", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Relationships & Events",
+              code: "P-V-04",
+              slug: "relationships-events",
+              order: 40,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Weddings", code: "P-V-04-a", slug: "weddings", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Parties", code: "P-V-04-b", slug: "parties", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Gift Planning", code: "P-V-04-c", slug: "gift-planning", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Faith & Spirituality",
+              code: "P-V-05",
+              slug: "faith-spirituality",
+              order: 50,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Scripture Study", code: "P-V-05-a", slug: "scripture-study", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Prayer", code: "P-V-05-b", slug: "prayer", order: 20, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Congregation", code: "P-V-05-c", slug: "congregation", order: 30, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Vehicles",
+              code: "P-V-06",
+              slug: "vehicles",
+              order: 60,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Car Maintenance Logs", code: "P-V-06-a", slug: "car-maintenance-logs", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Trip Logs", code: "P-V-06-b", slug: "trip-logs", order: 20, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            },
+            {
+              name: "Pets",
+              code: "P-V-07",
+              slug: "pets",
+              order: 70,
+              categories: ["application-library-item-uniconbaseapps"],
+              children: [
+                { name: "Care Schedules", code: "P-V-07-a", slug: "care-schedules", order: 10, categories: ["application-library-item-uniconbaseapps"] },
+                { name: "Health Records", code: "P-V-07-b", slug: "health-records", order: 20, categories: ["application-library-item-uniconbaseapps"] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+/* ----------------------------------------------------------------------------
+   APPLICATIONS
+   Each entry: code (leaf subcategory), name, purpose, objects (the business
+   objects / cmsObjectTypes the application defines), tools (the html-tools it
+   bundles, by name from the html-tool library), users/tam/sam/som/licensing.
+   `singleObject: true` marks apps that are essentially ONE object per tenant.
+   ---------------------------------------------------------------------------- */
+
+const APPLICATIONS = [
+  // ================= BUSINESS / GENERAL =================
+  // --- B-G-01 AI & Automation ---
+  { code: "B-G-01-a", name: "AI Support & Helpdesk Desk", purpose: "A support application where a helpdesk object, knowledge articles, chat sessions and agents work together with Q&A bots to answer questions automatically.", objects: ["tickets", "kbArticles", "chatSessions", "agents", "customers"], tools: ["Document Q&A Assistant", "Customer Support Answer Bot", "Handbook Q&A Bot"], users: "40M knowledge workers", tam: "$6.5B", sam: "$1.3B", som: "$2.6M", licensing: "subscription-monthly" },
+  { code: "B-G-01-a", name: "AI Front-Office Assistant", purpose: "A single workspace that turns meetings into notes and action items, drafts replies and finds contract clauses.", objects: ["conversations", "meetingNotes", "actionItems", "followUps"], tools: ["Meeting Notes & Action Recorder", "Email & Reply Drafter", "Contract Clause Finder"], users: "30M professionals", tam: "$3.8B", sam: "$760M", som: "$1.5M", licensing: "freemium" },
+  { code: "B-G-01-b", name: "AI Content Command Center", purpose: "One cover for producing articles, posts, decks and pages with AI builders, then publishing them.", objects: ["articles", "posts", "pages", "decks", "documents"], tools: ["AI News Article Generator", "Social Caption & Ad Copy Studio", "AI Chat Presentation Builder", "Webpage Builder Studio"], users: "25M professionals", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "subscription-monthly" },
+  { code: "B-G-01-b", name: "AI Documents & Legal Desk", purpose: "Drafts proposals, contracts, job descriptions and plain-language rewrites from a chat brief.", objects: ["proposals", "contracts", "legalDocs", "jobDescriptions"], tools: ["AI Proposal Builder", "AI Legal Document Builder", "AI Job Description Writer", "Plain Language Rewriter"], users: "12M legal and business users", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-monthly" },
+  { code: "B-G-01-b", name: "AI Web Builder Studio", purpose: "A website application that designs pages and single-page apps with chat and previews the result live.", objects: ["pages", "components", "sites", "sessions"], tools: ["Webpage Builder Studio", "Vibe Coding HTML App Builder", "HTML Content Editor & Viewer"], users: "20M SMBs", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "subscription-monthly" },
+  { code: "B-G-01-c", name: "Office Automation Hub", purpose: "Multi-step agents handle routine office workflows: triage inbox, write reports, clean data and prep meetings.", objects: ["workflows", "runs", "reports", "dataJobs", "briefings"], tools: ["Admin Task Automation Agent", "Inbox Triage Agent", "Report Writing Agent", "Data Cleanup Agent", "Meeting Prep Agent"], users: "25M operations workers", tam: "$7.8B", sam: "$1.6B", som: "$3.1M", licensing: "usage-based" },
+  { code: "B-G-01-d", name: "AI Ops Console", purpose: "A developer application to store prompts, compare models, watch token cost and run evaluation sets.", objects: ["prompts", "models", "evals", "budgets", "apiKeys"], tools: ["Prompt & Model Router", "Prompt Template Library", "Model Comparison Playground", "Cost & Token Monitor", "Evaluation Set Builder"], users: "2M developers", tam: "$900M", sam: "$180M", som: "$540K", licensing: "usage-based" },
+
+  // --- B-G-02 Finance & Accounting ---
+  { code: "B-G-02-a", name: "Invoicing & Billing Suite", purpose: "Customers, invoices, recurring billing and payment links in one billing application.", objects: ["customers", "invoices", "recurringPlans", "payments"], tools: ["Smart Invoice Suite", "Invoice & Expense Collector", "Revenue-Based Billing & Invoicing"], users: "35M freelancers and SMBs", tam: "$9.5B", sam: "$1.9B", som: "$3.8M", licensing: "subscription-monthly" },
+  { code: "B-G-02-b", name: "Expense Management Suite", purpose: "Expenses, receipts, approval chains and reimbursements with AI receipt scanning.", objects: ["expenses", "receipts", "approvals", "reimbursements"], tools: ["Receipt & Expense Scanner", "Invoice & Expense Collector"], users: "20M businesses", tam: "$4.8B", sam: "$960M", som: "$1.9M", licensing: "freemium" },
+  { code: "B-G-02-c", name: "Accounts Receivable Desk", purpose: "Tracks invoices, payments and dunning reminders until every receivable is collected.", objects: ["invoices", "payments", "collections", "dunning"], tools: ["Collections Manager", "Payments Management Console"], users: "12M SMBs", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "subscription-monthly" },
+  { code: "B-G-02-c", name: "Payments Management Console", purpose: "Payment tracking with approvals, departments and month views for finance teams.", objects: ["payments", "approvals", "departments", "schedules"], tools: ["Payments Management Console"], users: "10M SMBs", tam: "$1.5B", sam: "$300M", som: "$600K", licensing: "subscription-monthly" },
+  { code: "B-G-02-d", name: "Budget & Forecast Suite", purpose: "Annual budgets with forecast comparisons and variance reporting per department.", objects: ["budgets", "forecasts", "actuals", "variances"], tools: ["SMB Budget Planner"], users: "15M SMBs", tam: "$2.1B", sam: "$420M", som: "$840K", licensing: "subscription-monthly" },
+  { code: "B-G-02-e", name: "Payroll Suite", purpose: "Employees, payslips, government remittances and a payroll calendar in one payroll application.", objects: ["employees", "payslips", "remittances", "calendars"], tools: ["Payroll & Payslip Builder", "Recurring Task Manager"], users: "8M small employers", tam: "$11B", sam: "$2.2B", som: "$2.2M", licensing: "per-seat-monthly" },
+  { code: "B-G-02-f", name: "Tax Calendar & Filing Suite", purpose: "Filing deadlines and document checklists per jurisdiction, with reminders and status.", objects: ["deadlines", "filings", "checklists", "jurisdictions"], tools: ["Tax Calendar & Filing Reminder", "Personal Tax Preparation"], users: "20M SMBs", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-annual" },
+  { code: "B-G-02-g", name: "Financial Reporting Pack", purpose: "P&L, balance sheet and cashflow report packs assembled into board-ready documents.", objects: ["reports", "statements", "boardPacks", "dashboards"], tools: ["Board Report Pack", "Report to Deck Converter", "KPI Wallboard"], users: "5M accountants", tam: "$2.9B", sam: "$580M", som: "$1.2M", licensing: "subscription-monthly" },
+
+  // --- B-G-03 Sales & CRM ---
+  { code: "B-G-03-a", name: "Light CRM Suite", purpose: "Contacts, companies, deals and activities for teams that outgrew spreadsheets.", objects: ["contacts", "companies", "deals", "activities"], tools: ["Light CRM & Contacts"], users: "30M SMBs", tam: "$48B", sam: "$9.6B", som: "$3.8M", licensing: "subscription-monthly" },
+  { code: "B-G-03-b", name: "Lead Management Desk", purpose: "A lead board with pipeline stages and follow-up reminders for salespeople.", objects: ["leads", "stages", "followUps", "sources"], tools: ["Lead Tracker Board"], users: "18M salespeople", tam: "$8.4B", sam: "$1.7B", som: "$1.7M", licensing: "subscription-monthly" },
+  { code: "B-G-03-c", name: "Quote to Sign Suite", purpose: "Quote builder with an electronic signature flow from proposal to signed deal.", objects: ["quotes", "proposals", "signatures", "templates"], tools: ["Quote to Sign", "AI Proposal Builder"], users: "25M sellers", tam: "$3.8B", sam: "$760M", som: "$1.5M", licensing: "subscription-monthly" },
+  { code: "B-G-03-d", name: "Order Desk", purpose: "Order intake and status tracking for small merchants through fulfillment.", objects: ["orders", "lineItems", "statuses", "shipments"], tools: ["Order Desk"], users: "10M merchants", tam: "$5.2B", sam: "$1B", som: "$1M", licensing: "subscription-monthly" },
+  { code: "B-G-03-e", name: "Commission Management Console", purpose: "Sales rep commission plans and statements with payout tracking.", objects: ["plans", "statements", "payouts", "reps"], tools: ["Commission Calculator"], users: "6M sales organizations", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "per-seat-monthly" },
+
+  // --- B-G-04 Marketing & Brand ---
+  { code: "B-G-04-a", name: "Newsletter & Email Suite", purpose: "Email builder with templates, list segmentation and campaign sending.", objects: ["lists", "campaigns", "templates", "sends"], tools: ["Newsletter Studio", "Email & Reply Drafter"], users: "40M marketers", tam: "$7.5B", sam: "$1.5B", som: "$3M", licensing: "freemium" },
+  { code: "B-G-04-b", name: "Social Publishing Suite", purpose: "Multi-channel post scheduling with a content calendar and approvals.", objects: ["posts", "calendars", "channels", "approvals"], tools: ["Social Scheduler Lite", "Social Caption & Ad Copy Studio"], users: "30M businesses", tam: "$8.6B", sam: "$1.7B", som: "$2.6M", licensing: "freemium" },
+  { code: "B-G-04-c", name: "Content & SEO Suite", purpose: "Keyword briefs, a content queue and quality linting for publishing teams.", objects: ["briefs", "contentQueue", "keywords", "publishing"], tools: ["SEO Brief Generator", "Content Publishing Queue", "CMS Content Quality Linter"], users: "6M marketers", tam: "$3.4B", sam: "$680M", som: "$1.4M", licensing: "subscription-monthly" },
+  { code: "B-G-04-d", name: "Ads & Promotions Studio", purpose: "Ad copy and image variants for A/B testing across campaigns.", objects: ["campaigns", "variants", "tests", "budgets"], tools: ["Ad Creative Variant Maker"], users: "4M advertisers", tam: "$2.8B", sam: "$560M", som: "$1.1M", licensing: "usage-based" },
+  { code: "B-G-04-e", name: "Review & Reputation Hub", purpose: "Google review requests and response templates for local reputation.", objects: ["reviews", "requests", "responses", "nps"], tools: ["Review Request & Response Hub"], users: "15M local businesses", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "subscription-monthly" },
+  { code: "B-G-04-f", name: "Brand Kit & Assets", purpose: "Brand kits, generated assets and a media library with usage guidelines.", objects: ["brandKits", "assets", "guidelines", "media"], tools: ["Brand Asset Manager", "Brand Set Generator", "Brand Media Library"], users: "12M SMBs", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "one-time" },
+
+  // --- B-G-05 Content & Media ---
+  { code: "B-G-05-a", name: "Document Studio", purpose: "Policy, handbook and legal documents from templates with approval workflows.", objects: ["documents", "templates", "approvals", "exports"], tools: ["Policy & Handbook Writer", "Plain Language Rewriter", "AI Legal Document Builder"], users: "10M organizations", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-monthly" },
+  { code: "B-G-05-b", name: "Presentation Studio", purpose: "Chat-driven decks and report-to-slide conversion with reusable slide components.", objects: ["decks", "slides", "templates", "reports"], tools: ["AI Chat Presentation Builder", "Report to Deck Converter"], users: "25M professionals", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-monthly" },
+  { code: "B-G-05-c", name: "Publishing & Distribution Hub", purpose: "An editorial calendar with review stages and multi-channel distribution.", objects: ["content", "calendars", "stages", "channels"], tools: ["Content Publishing Queue", "Publishing Workflow Board"], users: "5M publishers", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-G-05-d", name: "Media Library", purpose: "Light digital asset management with search, tags and usage tracking.", objects: ["assets", "folders", "tags", "usages"], tools: ["Brand Media Library", "Web Asset Optimizer"], users: "8M teams", tam: "$2.6B", sam: "$520M", som: "$1M", licensing: "subscription-monthly" },
+
+  // --- B-G-06 Communications ---
+  { code: "B-G-06-a", name: "Company Announcements Hub", purpose: "Broadcasts with read receipts and acknowledgements for the whole company.", objects: ["broadcasts", "receipts", "acknowledgements"], tools: ["Team Announcement Board"], users: "12M organizations", tam: "$1.5B", sam: "$300M", som: "$600K", licensing: "app-bundle" },
+  { code: "B-G-06-b", name: "Shift Chat & Handover Suite", purpose: "Shift notes and handover threads for frontline teams.", objects: ["shifts", "handovers", "threads"], tools: ["Shift Chat & Handover", "Crew Task & Handover Log"], users: "9M frontline teams", tam: "$2.3B", sam: "$460M", som: "$920K", licensing: "app-bundle" },
+  { code: "B-G-06-c", name: "Feedback & Pulse Suite", purpose: "Employee and customer pulse surveys with scoring and action plans.", objects: ["surveys", "responses", "scores", "actions"], tools: ["Pulse Survey Builder"], users: "15M organizations", tam: "$3.1B", sam: "$620M", som: "$1.2M", licensing: "freemium" },
+  { code: "B-G-06-d", name: "Approvals Workflow Hub", purpose: "Multi-step approval chains with comments and full history.", objects: ["requests", "steps", "comments", "histories"], tools: ["Approval Workflow Board"], users: "10M operations teams", tam: "$2.8B", sam: "$560M", som: "$1.1M", licensing: "subscription-monthly" },
+
+  // --- B-G-07 People & HR ---
+  { code: "B-G-07-a", name: "Recruiting Suite", purpose: "Job descriptions, interview scorecards, candidates and hiring pipelines.", objects: ["jobs", "scorecards", "candidates", "interviews"], tools: ["Interview Scorecard Kit", "AI Job Description Writer"], users: "5M hiring managers", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-monthly" },
+  { code: "B-G-07-b", name: "Onboarding & Handbook Suite", purpose: "Onboarding checklists, employee handbooks and agreements for new hires.", objects: ["checklists", "handbooks", "agreements", "newHires"], tools: ["New Hire Onboarding Hub", "Employment Agreement Builder", "Policy & Handbook Writer"], users: "12M organizations", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-G-07-c", name: "Employee Records Vault", purpose: "Digital personnel files with expiry alerts and document storage.", objects: ["personnelFiles", "expiries", "documents"], tools: ["Employee File Cabinet", "Employee Daily Log Book"], users: "10M SMBs", tam: "$2.1B", sam: "$420M", som: "$840K", licensing: "subscription-monthly" },
+  { code: "B-G-07-d", name: "Time & Attendance Suite", purpose: "Check-in, timesheets, overtime and shift matching for frontline employers.", objects: ["timeclocks", "timesheets", "overtime", "shifts"], tools: ["Simple Time Clock", "Skill-based Shift Matcher"], users: "18M frontline employers", tam: "$3.6B", sam: "$720M", som: "$1.4M", licensing: "per-seat-monthly" },
+  { code: "B-G-07-e", name: "Daily Log & Supervision Suite", purpose: "Individual daily logs with supervisor review and weekly summaries.", objects: ["dailyLogs", "supervisors", "weeklySummaries", "approvals"], tools: ["Crew Task & Handover Log", "Employee Daily Log Book"], users: "8M supervisors", tam: "$900M", sam: "$180M", som: "$360K", licensing: "app-bundle" },
+  { code: "B-G-07-f", name: "Leave & Permit Desk", purpose: "Leave requests and permit tracking with balances and approvals.", objects: ["requests", "balances", "permits", "approvals"], tools: ["Leave & Permit Desk"], users: "14M organizations", tam: "$1.7B", sam: "$340M", som: "$680K", licensing: "subscription-monthly" },
+  { code: "B-G-07-g", name: "Training & Certification Suite", purpose: "Certificate expiry and training verification for regulated employers.", objects: ["certs", "expiries", "training", "verification"], tools: ["Training Cert Tracker"], users: "9M regulated employers", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-G-07-h", name: "Performance & 1:1 Suite", purpose: "One-on-one agendas, goals and follow-ups for managers.", objects: ["goals", "meetings", "followUps", "reviews"], tools: ["1:1 Meeting & Goal Tracker"], users: "12M managers", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "app-bundle" },
+  { code: "B-G-07-i", name: "Safety & Incidents Suite", purpose: "Safety audits with risk scoring plus incident and accident report forms.", objects: ["audits", "risks", "incidents", "actions"], tools: ["Safety Audit & Risk Register", "Incident & Accident Reports"], users: "7M work sites", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+  { code: "B-G-07-j", name: "Offboarding Suite", purpose: "Asset return and access revocation checklists for departing staff.", objects: ["exitChecklists", "assetReturns", "revocations"], tools: ["Offboarding Checklist & Exit Kit"], users: "12M organizations", tam: "$900M", sam: "$180M", som: "$360K", licensing: "one-time" },
+
+  // --- B-G-08 Operations & Management ---
+  { code: "B-G-08-a", name: "Team To-do & Tasks Board", purpose: "A shared to-do board with due dates and assignees for teams.", objects: ["todos", "assignees", "dueDates", "boards"], tools: ["Team To-do Board"], users: "50M teams", tam: "$6.8B", sam: "$1.4B", som: "$2.7M", licensing: "freemium" },
+  { code: "B-G-08-b", name: "Project & Sprint Suite", purpose: "Portfolio-level project status and sprint task boards with risk views.", objects: ["projects", "sprints", "tasks", "risks"], tools: ["Project Portfolio Dashboard", "Sprint Task Manager"], users: "15M teams", tam: "$4.2B", sam: "$840M", som: "$840K", licensing: "subscription-monthly" },
+  { code: "B-G-08-c", name: "Recurring Task Manager App", purpose: "A yearly recurring task board with definitions, dashboards and a bookkeeper-administration confirmation workflow - the generic recurring tool shipped as its own application.", objects: ["definitions", "occurrences", "statuses", "requests"], tools: ["Recurring Task Manager", "Scheduled Maintenance Calendar"], users: "10M operators", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-G-08-d", name: "SOP & Checklist Suite", purpose: "Standard operating procedures stored and run as checklists.", objects: ["sops", "checklists", "runs", "results"], tools: ["SOP Builder & Checklist Runner", "Checklist QA Runner"], users: "11M operations teams", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+  { code: "B-G-08-e", name: "Shift Matching & Rostering Suite", purpose: "Matches people to shifts by skill and availability and builds rosters.", objects: ["people", "skills", "shifts", "rosters"], tools: ["Skill-based Shift Matcher"], users: "5M schedulers", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-G-08-f", name: "Appointment & Booking Suite", purpose: "Booking pages with reminders for service providers.", objects: ["bookings", "providers", "reminders", "pages"], tools: ["Appointment Scheduler", "AI Blinds Consultation"], users: "25M service providers", tam: "$5.4B", sam: "$1.1B", som: "$2.2M", licensing: "freemium" },
+  { code: "B-G-08-g", name: "Facility Work Order Desk", purpose: "Maintenance requests tracked from intake to completion.", objects: ["requests", "workOrders", "completion", "assets"], tools: ["Facility Work Order Desk", "Scheduled Maintenance Calendar"], users: "9M facilities teams", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-monthly" },
+  { code: "B-G-08-g", name: "Maintenance & Asset Suite", purpose: "Preventive maintenance calendars, asset history and compliance.", objects: ["assets", "maintenanceCalendar", "history", "compliance"], tools: ["Scheduled Maintenance Calendar", "Machine Maintenance Scheduler"], users: "6M facility teams", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-G-08-h", name: "Inspection & Audit Suite", purpose: "Scored inspections and audits with photo evidence and actions.", objects: ["inspections", "scores", "photos", "actions"], tools: ["Inspection Checklist Mobile", "Safety Audit & Risk Register"], users: "7M inspectors", tam: "$1.5B", sam: "$300M", som: "$600K", licensing: "subscription-monthly" },
+
+  // --- B-G-09 Forms & Data Collection ---
+  { code: "B-G-09-a", name: "Forms & Surveys Suite", purpose: "Form builder with logic, scoring and approval routing.", objects: ["forms", "logic", "responses", "scoring"], tools: ["Smart Form Builder", "Pulse Survey Builder"], users: "30M organizations", tam: "$4.6B", sam: "$920M", som: "$1.8M", licensing: "freemium" },
+  { code: "B-G-09-b", name: "Intake & Application Desk", purpose: "Application intake with review pipelines and decisions.", objects: ["applications", "pipelines", "reviews", "decisions"], tools: ["Application Intake Manager", "Student Application File Builder"], users: "8M admissions teams", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-G-09-c", name: "Company Profile & Directory", purpose: "One company profile object per tenant, with directory listings and business cards - the single-object application pattern.", objects: ["companyProfile", "businessCards", "directory"], tools: ["Company Profile Builder"], users: "15M SMBs", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly", singleObject: true },
+  { code: "B-G-09-c", name: "Vendor & Company Directory", purpose: "Vendor profiles with evaluation scores and company profiles for procurement.", objects: ["vendors", "profiles", "evaluations", "scores"], tools: ["Vendor Directory & Profiles", "Company Profile Builder"], users: "10M procurement teams", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+  { code: "B-G-09-d", name: "Audit & Evidence Vault", purpose: "Evidence collection with an audit trail for auditors.", objects: ["evidence", "trails", "audits", "controls"], tools: ["Audit Evidence Vault"], users: "5M auditors", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-annual" },
+
+  // --- B-G-10 Reporting & Analytics ---
+  { code: "B-G-10-a", name: "KPI Wallboard & Dashboards", purpose: "Live metric tiles fed from forms and logs across the company.", objects: ["tiles", "metrics", "feeds", "dashboards"], tools: ["KPI Wallboard"], users: "12M managers", tam: "$3.9B", sam: "$780M", som: "$1.6M", licensing: "subscription-monthly" },
+  { code: "B-G-10-b", name: "Report Builder Suite", purpose: "Drag-drop reports with PDF and CSV export, fed by report-writing agents.", objects: ["reports", "templates", "exports", "schedules"], tools: ["Drag-drop Report Builder", "Report Writing Agent"], users: "8M analysts", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "freemium" },
+  { code: "B-G-10-c", name: "Chart & Analytics Studio", purpose: "Chart packs generated from datasets with export options.", objects: ["charts", "datasets", "packs", "exports"], tools: ["Chart Studio"], users: "6M analysts", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "one-time" },
+
+  // --- B-G-11 IT & Development ---
+  { code: "B-G-11-a", name: "Website Builder App", purpose: "The public website application: pages, components and SEO built with the webpage builder and splash-page kits.", objects: ["pages", "components", "sites", "seo"], tools: ["Webpage Builder Studio", "Coming Soon & Splash Page Kit"], users: "20M SMBs", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "subscription-monthly" },
+  { code: "B-G-11-b", name: "Snippet & Code Library", purpose: "A team code snippet library with search and tags.", objects: ["snippets", "languages", "tags", "usages"], tools: ["Snippet Library Manager"], users: "3M developers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "one-time" },
+  { code: "B-G-11-c", name: "API & Webhook Console", purpose: "Endpoint tester with request history and environment profiles.", objects: ["endpoints", "requests", "histories", "envs"], tools: ["Webhook & API Tester"], users: "4M developers", tam: "$600M", sam: "$120M", som: "$240K", licensing: "one-time" },
+  { code: "B-G-11-d", name: "QA & Test Suite", purpose: "Manual test scripts run as checklists with results and defect tracking.", objects: ["scripts", "runs", "results", "defects"], tools: ["Checklist QA Runner"], users: "2.5M testers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-G-11-e", name: "Architecture & Design Review Suite", purpose: "System architecture reviews with risk flags and end-to-end AI system design.", objects: ["reviews", "risks", "designs", "aiSystems"], tools: ["Architecture Review Assistant", "AI System Design Studio"], users: "2M AI engineers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-G-11-f", name: "HTML Content Editing Suite", purpose: "Edit and preview HTML content blocks with live rendering and quality linting.", objects: ["contentBlocks", "previews", "lint", "history"], tools: ["HTML Content Editor & Viewer", "CMS Content Quality Linter"], users: "6M editors", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+
+  // --- B-G-12 File & Media ---
+  { code: "B-G-12-a", name: "Image Studio", purpose: "Browser image editing: filters, crops, watermarks, background removal and OCR.", objects: ["images", "filters", "crops", "watermarks", "ocr"], tools: ["Product Photo Studio", "Image Editing Toolkit"], users: "30M creators", tam: "$2.8B", sam: "$560M", som: "$1.1M", licensing: "freemium" },
+  { code: "B-G-12-b", name: "Video & Subtitle Studio", purpose: "Video trimming with auto captions and export.", objects: ["clips", "captions", "exports"], tools: ["Clip Trimmer & Subtitle Maker"], users: "15M creators", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "freemium" },
+  { code: "B-G-12-c", name: "File Conversion Desk", purpose: "Conversion across 200 file formats with history.", objects: ["files", "conversions", "formats"], tools: ["Universal File Converter", "Any-to-PDF Converter"], users: "40M users", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "freemium" },
+  { code: "B-G-12-d", name: "PDF Toolkit", purpose: "Merge, split, sign and form filling for PDF documents.", objects: ["pdfs", "merges", "signs", "forms"], tools: ["PDF Toolkit"], users: "50M users", tam: "$3.4B", sam: "$680M", som: "$1.4M", licensing: "freemium" },
+  { code: "B-G-12-e", name: "Scan & OCR Suite", purpose: "Receipt and document scanning into structured data exports.", objects: ["scans", "documents", "exports", "receipts"], tools: ["Receipt & Document OCR", "Image Editing Toolkit"], users: "18M businesses", tam: "$2.1B", sam: "$420M", som: "$840K", licensing: "usage-based" },
+  { code: "B-G-12-f", name: "Web Asset Optimizer", purpose: "Image and video compression for web builders.", objects: ["assets", "compressions", "builds"], tools: ["Web Asset Optimizer"], users: "5M web builders", tam: "$700M", sam: "$140M", som: "$280K", licensing: "one-time" },
+
+  // --- B-G-13 Translation & Localization ---
+  { code: "B-G-13-a", name: "Translation Desk", purpose: "Instant multi-language text translation with history.", objects: ["texts", "translations", "languages", "history"], tools: ["Quick Text Translator"], users: "60M users", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "usage-based" },
+  { code: "B-G-13-b", name: "Document Translation Suite", purpose: "Translate whole HTML documents and app strings into many languages.", objects: ["documents", "htmlPages", "strings", "languages"], tools: ["HTML Bulk Translator", "App Strings Localization Manager"], users: "8M site owners", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "usage-based" },
+  { code: "B-G-13-c", name: "Localization Workflow Suite", purpose: "Translator review queues with comments and project management.", objects: ["projects", "queues", "comments", "reviews"], tools: ["Locale Review Workflow"], users: "1.5M localization teams", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-G-13-d", name: "Terminology & Glossary Suite", purpose: "Shared glossaries enforced across translation projects.", objects: ["glossaries", "terms", "styles", "enforcements"], tools: ["Terminology & Style Guide Manager"], users: "800K localization teams", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-annual" },
+
+  // --- B-G-14 Utilities ---
+  { code: "B-G-14-a", name: "Utilities Kit", purpose: "Text and data utilities: diff, format, regex and data cleanup helpers.", objects: ["utilities", "helpers", "conversions"], tools: ["Text & Data Utilities Kit", "Everyday Utilities Pack"], users: "10M users", tam: "$600M", sam: "$120M", som: "$240K", licensing: "one-time" },
+
+  // ================= BUSINESS / VERTICAL =================
+  // --- B-V-01 Education & Training ---
+  { code: "B-V-01-a", name: "School Management Suite", purpose: "Classes, students, attendance, progress and parent communication for K-12 schools.", objects: ["classes", "students", "attendance", "progress", "parents"], tools: ["Class Attendance Checker", "Parent-Teacher Communication Hub", "Curriculum Builder"], users: "30M teachers", tam: "$5.2B", sam: "$1B", som: "$2.1M", licensing: "subscription-annual" },
+  { code: "B-V-01-a", name: "Parent-Teacher Communication Hub", purpose: "School announcements, RSVPs and progress notes between teachers and parents.", objects: ["announcements", "rsvps", "progressNotes"], tools: ["Parent-Teacher Communication Hub", "Team Announcement Board"], users: "30M teachers", tam: "$5.2B", sam: "$1B", som: "$2.1M", licensing: "subscription-annual" },
+  { code: "B-V-01-a", name: "Weekend School Manager", purpose: "All records of a weekend school in one place: registration, Sunday attendance, payments, Quran progress and meeting-ready reports.", objects: ["registrations", "sundayAttendance", "payments", "quranProgress", "reports"], tools: ["Weekend School Manager", "Class Attendance Checker"], users: "2M weekend schools", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-01-a", name: "Education Program Showcase", purpose: "Interactive education program presentations and draft education materials for schools and parents.", objects: ["programs", "showcases", "presentations", "sections"], tools: ["Education Program Presentation Builder", "Interactive Program Showcase", "Draft Education Material Builder"], users: "2M schools", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-01-b", name: "Scholarship Matching Suite", purpose: "Matches student profiles to scholarships and tracks applications.", objects: ["profiles", "scholarships", "matches", "applications"], tools: ["Scholarship Matching Engine", "Student Application File Builder"], users: "200M students", tam: "$2.6B", sam: "$520M", som: "$1M", licensing: "freemium" },
+  { code: "B-V-01-b", name: "Student Application File Builder", purpose: "Build and track student application files for programs.", objects: ["files", "documents", "statuses", "programs"], tools: ["Student Application File Builder"], users: "3M advisors", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+  { code: "B-V-01-c", name: "Tutor Business Suite", purpose: "Tutor business operations: students, lessons, scheduling and payments.", objects: ["students", "lessons", "scheduling", "payments"], tools: ["Tutor CRM & Scheduling"], users: "10M tutors", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-V-01-c", name: "Learning & Curriculum Studio", purpose: "Bloom objectives, curriculum units, essay subjects and rubrics for educators.", objects: ["objectives", "curriculum", "subjects", "rubrics"], tools: ["Bloom Learning Manager", "Curriculum Builder", "Essay Subject Builder"], users: "6M educators", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+  { code: "B-V-01-c", name: "Exam & Assessment Suite", purpose: "Question banks, rubric-based essay evaluation and progress charts.", objects: ["questions", "exams", "rubrics", "essays", "progress"], tools: ["AI Essay Writing Evaluator", "Essay Subject Builder", "Exam Question Bank Builder"], users: "4M educators", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-01-c", name: "Self-Paced Education Tracker", purpose: "Section-based self-paced progress tracking for students.", objects: ["sections", "progress", "students", "lessons"], tools: ["Self-Paced Education Tracker"], users: "5M educators", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-01-d", name: "Micro-LMS Suite", purpose: "Courses, quizzes and certificates for small teams.", objects: ["courses", "quizzes", "certificates", "learners"], tools: ["Micro-LMS for SMBs"], users: "8M SMBs", tam: "$12B", sam: "$2.4B", som: "$2.4M", licensing: "per-seat-monthly" },
+  { code: "B-V-01-e", name: "Apprenticeship & Logbook Suite", purpose: "Skill tracking for apprentices and mentors with signed-off logs.", objects: ["apprentices", "skills", "mentors", "logs"], tools: ["Apprentice Logbook"], users: "6M apprentices", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-annual" },
+
+  // --- B-V-02 Food & Beverage ---
+  { code: "B-V-02-a", name: "Restaurant Operations Suite", purpose: "Menus, allergen mapping, delivery zones and store settings for restaurants.", objects: ["menus", "allergens", "zones", "settings"], tools: ["Menu Engineering & Allergy Matrix", "Delivery Zone Mapper", "Restaurant Operations Console", "Restaurant Menu & Content Manager"], users: "15M restaurants", tam: "$3.1B", sam: "$620M", som: "$1.2M", licensing: "subscription-monthly" },
+  { code: "B-V-02-b", name: "Catering Business Suite", purpose: "Quotes, tastings and production sheets for caterers.", objects: ["quotes", "tastings", "productionSheets", "events"], tools: ["Catering Event Manager"], users: "900K caterers", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-02-c", name: "Bar & Pour Cost Suite", purpose: "Stock control and pour cost tracking for bars.", objects: ["inventory", "pourCosts", "stock", "counts"], tools: ["Bar Inventory & Pour Cost"], users: "800K bars", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-02-d", name: "Ghost Kitchen Ops Suite", purpose: "Multi-brand order and production management for ghost kitchens.", objects: ["brands", "orders", "production", "boards"], tools: ["Ghost Kitchen Ops Board"], users: "300K kitchens", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-02-e", name: "Meal Kit Subscription Suite", purpose: "Meal kit plan management with packing lists.", objects: ["plans", "packingLists", "boxes", "customers"], tools: ["Meal Kit Subscription Manager"], users: "400K providers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+
+  // --- B-V-03 Health & Wellness ---
+  { code: "B-V-03-a", name: "Clinic Front Desk Suite", purpose: "Bookings, intake forms and reminders for clinics and practices.", objects: ["bookings", "intakeForms", "reminders", "patients"], tools: ["Clinic Front Desk Suite", "Appointment Scheduler"], users: "2M clinics", tam: "$6.8B", sam: "$1.4B", som: "$2.7M", licensing: "subscription-monthly" },
+  { code: "B-V-03-b", name: "Dental Practice Suite", purpose: "Dental charts, treatment plans and recall scheduling.", objects: ["charts", "treatmentPlans", "recall", "patients"], tools: ["Dental Chart & Recall Manager"], users: "1.8M dentists", tam: "$2.1B", sam: "$420M", som: "$840K", licensing: "subscription-monthly" },
+  { code: "B-V-03-c", name: "Therapy Practice Suite", purpose: "Session notes and intake questionnaires for therapists.", objects: ["sessions", "notes", "intake", "clients"], tools: ["Therapy Notes & Intake"], users: "1.2M therapists", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+  { code: "B-V-03-d", name: "Gym & Class Suite", purpose: "Memberships and class booking for gyms.", objects: ["members", "classes", "bookings", "plans"], tools: ["Gym Member & Class Manager"], users: "200K gyms", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "subscription-monthly" },
+  { code: "B-V-03-e", name: "Pharmacy Suite", purpose: "Stock levels and expiry alerts for pharmacies.", objects: ["inventory", "expiries", "stock", "orders"], tools: ["Pharmacy Inventory & Expiry Tracker"], users: "500K pharmacies", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-03-f", name: "Senior Care & Meds Suite", purpose: "Daily care notes and medication schedules for senior care facilities.", objects: ["careNotes", "medications", "schedules", "residents"], tools: ["Caregiver Log & Meds Tracker", "Senior Helper AI Coordinator"], users: "300K care facilities", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+
+  // --- B-V-04 Nonprofit & Community ---
+  { code: "B-V-04-a", name: "Fundraising Suite", purpose: "Plan and track fundraising campaigns with goals, events and sponsors.", objects: ["campaigns", "goals", "events", "sponsors", "donors"], tools: ["Fundraising Campaign Manager", "Gala & Event Fundraiser Manager"], users: "2M nonprofits", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-annual" },
+  { code: "B-V-04-b", name: "Grant Management Suite", purpose: "End-to-end grant application workflow with tasks, documents and impact reporting.", objects: ["grants", "applications", "tasks", "reports"], tools: ["Grant Workflow Manager", "Grant Impact Reporter"], users: "1.5M organizations", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+  { code: "B-V-04-c", name: "Donor & Recurring Giving Suite", purpose: "Donor portals with recurring gift plans and pledge tracking.", objects: ["donors", "portals", "plans", "pledges"], tools: ["Recurring Giving Manager", "Fundraising Campaign Manager"], users: "2M organizations", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-04-d", name: "Volunteer Suite", purpose: "Volunteer hour tracking with recognition badges.", objects: ["volunteers", "hours", "recognition", "events"], tools: ["Volunteer Hour Tracker & Awards"], users: "2M organizations", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "B-V-04-e", name: "Club & Membership Suite", purpose: "Renewals, dues and club events for membership organizations.", objects: ["members", "dues", "renewals", "events"], tools: ["Club Membership & Dues Manager"], users: "4M clubs", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-annual" },
+  { code: "B-V-04-f", name: "Congregation Suite", purpose: "Member care records and offerings tracking for congregations.", objects: ["directory", "giving", "care", "events"], tools: ["Congregation Directory & Giving", "Recurring Giving Manager"], users: "5M congregations", tam: "$700M", sam: "$140M", som: "$280K", licensing: "app-bundle" },
+
+  // --- B-V-05 Real Estate & Property ---
+  { code: "B-V-05-a", name: "Real Estate Agency Suite", purpose: "Property pages with lead capture, showings and client records.", objects: ["listings", "leads", "showings", "clients"], tools: ["Listing Showcase & Lead Capture"], users: "3M agents", tam: "$4.8B", sam: "$960M", som: "$1.9M", licensing: "subscription-monthly" },
+  { code: "B-V-05-b", name: "Landlord & Tenant Hub", purpose: "Rent, requests and records for landlords.", objects: ["units", "tenants", "rent", "requests", "records"], tools: ["Landlord & Tenant Hub"], users: "4M landlords", tam: "$3.6B", sam: "$720M", som: "$1.4M", licensing: "subscription-monthly" },
+  { code: "B-V-05-c", name: "Valuation & Comparables Suite", purpose: "Comparables and price guidance for rentals and appraisals.", objects: ["comparables", "valuations", "guidance"], tools: ["Rental Comparables Finder"], users: "1M agents and appraisers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "usage-based" },
+
+  // --- B-V-06 Retail & E-Commerce ---
+  { code: "B-V-06-a", name: "Retail Store Ops Suite", purpose: "Daily checklist, cash-up and shift notes for retail stores.", objects: ["checklists", "cashUps", "shifts", "notes"], tools: ["Retail Store Ops Binder", "Simple Time Clock"], users: "9M stores", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-V-06-b", name: "Catalog Enrichment Studio", purpose: "Product descriptions and specs at scale for catalogs.", objects: ["products", "descriptions", "specs", "variants"], tools: ["Catalog Enrichment Studio"], users: "8M sellers", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "usage-based" },
+  { code: "B-V-06-c", name: "Seller Fulfillment Desk", purpose: "Orders through shipment and tracking for small sellers.", objects: ["orders", "shipments", "tracking", "returns"], tools: ["Small Seller Fulfillment Desk"], users: "10M sellers", tam: "$2.8B", sam: "$560M", som: "$1.1M", licensing: "subscription-monthly" },
+  { code: "B-V-06-d", name: "Marketplace Vendor Portal", purpose: "Seller onboarding and catalog submission for marketplaces.", objects: ["sellers", "onboarding", "catalogs", "submissions"], tools: ["Marketplace Vendor Portal Kit"], users: "200K marketplaces", tam: "$700M", sam: "$140M", som: "$280K", licensing: "white-label" },
+
+  // --- B-V-07 Logistics & Transport ---
+  { code: "B-V-07-a", name: "Fleet & Compliance Suite", purpose: "Hours of service and inspection logs for fleets.", objects: ["vehicles", "hosLogs", "inspections", "drivers"], tools: ["Driver Compliance Pack"], users: "2M fleets", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "per-seat-monthly" },
+  { code: "B-V-07-a", name: "Bus Company Dispatch Suite", purpose: "Work orders and dispatch for bus companies.", objects: ["workOrders", "dispatch", "buses", "routes"], tools: ["Bus Company Work Orders"], users: "600K operators", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-07-b", name: "Warehouse Suite", purpose: "Warehouse inventory and operation management with receiving logs.", objects: ["inventory", "receiving", "damage", "locations"], tools: ["Inbound Receiving Log", "Warehouse Manager"], users: "4M warehouses", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-monthly" },
+  { code: "B-V-07-c", name: "Last-Mile Delivery Suite", purpose: "Routes with proof of delivery capture for couriers.", objects: ["routes", "deliveries", "pod", "couriers"], tools: ["Last-mile Delivery Run Sheet"], users: "3M courier firms", tam: "$2.9B", sam: "$580M", som: "$1.2M", licensing: "per-seat-monthly" },
+  { code: "B-V-07-d", name: "Transit Operations Logbook", purpose: "Incidents and schedule adherence logs for transit agencies.", objects: ["incidents", "adherence", "vehicles", "routes"], tools: ["Transit Operations Logbook"], users: "20K transit agencies", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+
+  // --- B-V-08 Construction & Trades ---
+  { code: "B-V-08-a", name: "Contractor Suite", purpose: "Jobs, crews, materials and quotes for contractors.", objects: ["jobs", "crews", "materials", "quotes"], tools: ["Contractor Job & Quote Board", "Material Takeoff & Order Sheet"], users: "6M contractors", tam: "$2.7B", sam: "$540M", som: "$1.1M", licensing: "subscription-monthly" },
+  { code: "B-V-08-b", name: "Site Safety & Progress Suite", purpose: "Daily reports with photos and weather for job sites.", objects: ["dailyReports", "photos", "weather", "safety"], tools: ["Site Safety & Progress Log"], users: "5M job sites", tam: "$1.5B", sam: "$300M", som: "$600K", licensing: "subscription-monthly" },
+  { code: "B-V-08-c", name: "Equipment Rental Suite", purpose: "Availability, reservations and billing for equipment rentals.", objects: ["equipment", "availability", "reservations", "billing"], tools: ["Equipment Rental Tracker"], users: "800K rental firms", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-08-d", name: "Material Takeoff & Order Suite", purpose: "Quantities and supplier orders per job for builders.", objects: ["quantities", "orders", "suppliers", "jobs"], tools: ["Material Takeoff & Order Sheet"], users: "4M builders", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "one-time" },
+
+  // --- B-V-09 Professional Services ---
+  { code: "B-V-09-a", name: "Law Firm Suite", purpose: "Case calendars, deadlines and document tracking for law firms.", objects: ["matters", "deadlines", "documents", "clients"], tools: ["Matter & Deadline Manager", "Contract Clause Finder"], users: "800K law firms", tam: "$3.9B", sam: "$780M", som: "$1.6M", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Client Onboarding & Document Collector", purpose: "Client portals for document collection at firms.", objects: ["portals", "documents", "intakes", "clients"], tools: ["Client Onboarding & Document Collector"], users: "1.2M firms", tam: "$2.6B", sam: "$520M", som: "$1M", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Accounting Firm Suite", purpose: "Clients, recurring bookkeeping (Recurring Task Manager customized for accountants), year-end and T3010 compliance.", objects: ["clients", "recurringTasks", "yearEnd", "compliance"], tools: ["Recurring Task Manager", "Board Report Pack", "Tax Calendar & Filing Reminder"], users: "5M accountants", tam: "$2.9B", sam: "$580M", som: "$1.2M", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Tax Preparation Suite", purpose: "Tax-file preparation with ledgers, deductions and GST/PST.", objects: ["taxFiles", "ledgers", "deductions", "returns"], tools: ["Personal Tax Preparation", "Side-income Tax Estimator"], users: "6M self-employed", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-annual" },
+  { code: "B-V-09-c", name: "Consulting Engagement Suite", purpose: "SOW scope through delivery tracking for consultants.", objects: ["sows", "deliverables", "timelines", "clients"], tools: ["Engagement & Deliverable Tracker"], users: "1.5M consultants", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-V-09-d", name: "Agency Client Hub", purpose: "Approvals and reporting per client for marketing agencies.", objects: ["clients", "approvals", "reports", "projects"], tools: ["Agency Client Hub", "Publishing Workflow Board"], users: "400K agencies", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+
+  // --- B-V-10 Hospitality & Travel ---
+  { code: "B-V-10-a", name: "Hotel Operations Suite", purpose: "Room status and housekeeping assignments for lodgings.", objects: ["rooms", "housekeeping", "guests", "statuses"], tools: ["Guest Ledger & Housekeeping Board"], users: "700K lodgings", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "subscription-monthly" },
+  { code: "B-V-10-b", name: "Itinerary & Voucher Suite", purpose: "Trip documents and service vouchers for travel agencies.", objects: ["trips", "itineraries", "vouchers", "clients"], tools: ["Itinerary Builder & Voucher Desk"], users: "300K agencies", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-10-c", name: "Tour & Roster Suite", purpose: "Tour slots and guide rosters for operators.", objects: ["tours", "slots", "guides", "rosters"], tools: ["Tour Booking & Roster Manager"], users: "500K operators", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-10-d", name: "Venue Inquiry & Contract Suite", purpose: "Inquiries through signed contracts for event venues.", objects: ["inquiries", "contracts", "events", "venues"], tools: ["Venue Inquiry & Contract Tracker"], users: "600K venues", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+
+  // --- B-V-11 Home Services ---
+  { code: "B-V-11-a", name: "Cleaning Business Suite", purpose: "Client scheduling with per-job checklists for cleaning businesses.", objects: ["clients", "jobs", "checklists", "scheduling"], tools: ["Cleaning Job & Checklist App"], users: "3M cleaning businesses", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-monthly" },
+  { code: "B-V-11-b", name: "Landscaping Route Suite", purpose: "Recurring job routes and crew lists for landscapers.", objects: ["routes", "crews", "jobs", "clients"], tools: ["Lawn & Landscape Route Planner"], users: "2M landscapers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-11-c", name: "Handyman Suite", purpose: "Quotes with parts lists per job for handymen.", objects: ["quotes", "jobs", "parts", "clients"], tools: ["Home Repair Quote & Parts"], users: "4M handymen", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "one-time" },
+  { code: "B-V-11-d", name: "Home Design & Product Board", purpose: "Moodboards with product links for homeowners.", objects: ["moodboards", "products", "rooms", "links"], tools: ["Room Design & Product Board"], users: "10M homeowners", tam: "$1.7B", sam: "$340M", som: "$680K", licensing: "freemium" },
+  { code: "B-V-11-d", name: "Blinds & Window Consultation Suite", purpose: "AI consultation for blinds and window coverings.", objects: ["consultations", "windows", "products", "quotes"], tools: ["AI Blinds Consultation"], users: "1.5M providers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+
+  // --- B-V-12 Events & Entertainment ---
+  { code: "B-V-12-a", name: "Event Command Center", purpose: "Vendors, budget and run-of-show timeline for planners.", objects: ["vendors", "budget", "runOfShow", "events"], tools: ["Event Planning Command Center"], users: "2M planners", tam: "$2.1B", sam: "$420M", som: "$840K", licensing: "subscription-monthly" },
+  { code: "B-V-12-b", name: "Community Ticketing Suite", purpose: "Tickets and check-in for community events.", objects: ["tickets", "checkIn", "events", "attendees"], tools: ["Community Event Ticketing"], users: "5M community organizers", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "freemium" },
+  { code: "B-V-12-c", name: "Club Team & Fixture Suite", purpose: "Rosters, fixtures and match sheets for sports clubs.", objects: ["rosters", "fixtures", "matchSheets", "teams"], tools: ["Club Team & Fixture Manager"], users: "4M clubs", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-annual" },
+  { code: "B-V-12-d", name: "Publishing Workflow Suite", purpose: "Editorial calendar with review stages for publishers.", objects: ["calendars", "stages", "articles", "reviews"], tools: ["Publishing Workflow Board", "Content Publishing Queue"], users: "900K publishers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+
+  // --- B-V-13 Manufacturing ---
+  { code: "B-V-13-a", name: "Production & BOM Suite", purpose: "Product structure with step routings for factories.", objects: ["boms", "routings", "products", "steps"], tools: ["BOM & Routing Sheet Builder"], users: "1.5M factories", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-V-13-b", name: "QC & Inspection Suite", purpose: "Defect tracking with control charts for factories.", objects: ["defects", "charts", "inspections", "lots"], tools: ["QC Inspection Log"], users: "1.2M factories", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-monthly" },
+  { code: "B-V-13-c", name: "Machine Maintenance Suite", purpose: "Preventive maintenance calendar and history for plants.", objects: ["machines", "schedules", "history", "compliance"], tools: ["Machine Maintenance Scheduler"], users: "1.5M plants", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+
+  // --- B-V-14 Agriculture ---
+  { code: "B-V-14-a", name: "Farm Plot & Crop Suite", purpose: "Planting calendar and field records for farms.", objects: ["plots", "crops", "calendars", "fieldRecords"], tools: ["Farm Plot & Crop Planner"], users: "20M commercial farms", tam: "$2.4B", sam: "$480M", som: "$960K", licensing: "subscription-annual" },
+  { code: "B-V-14-b", name: "Livestock Herd Register", purpose: "Births, health events and sales records for livestock farms.", objects: ["animals", "births", "healthEvents", "sales"], tools: ["Livestock Herd Register"], users: "8M livestock farms", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-annual" },
+  { code: "B-V-14-c", name: "Produce Lot & Trace Suite", purpose: "Harvest-to-sale lot traceability for distributors.", objects: ["lots", "harvests", "sales", "traces"], tools: ["Produce Lot & Trace Tracker"], users: "2M distributors", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+
+  // --- B-V-15 Automotive ---
+  { code: "B-V-15-a", name: "Dealership Suite", purpose: "Leads, inventory and test drive scheduling for dealerships.", objects: ["leads", "inventory", "testDrives", "deals"], tools: ["Dealership Lead & Test Drive Desk"], users: "400K dealerships", tam: "$2.6B", sam: "$520M", som: "$1M", licensing: "subscription-monthly" },
+  { code: "B-V-15-b", name: "Auto Service Desk", purpose: "Work orders with parts and labor for auto service shops.", objects: ["workOrders", "parts", "labor", "vehicles"], tools: ["Auto Service Job & Parts Desk"], users: "2M service shops", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "subscription-monthly" },
+  { code: "B-V-15-c", name: "Rental Fleet Suite", purpose: "Vehicle condition, fuel and damage logs for rental fleets.", objects: ["vehicles", "checkInOut", "condition", "fuel"], tools: ["Rental Fleet Check-in/out"], users: "300K rental firms", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+
+  // ================= PERSONAL / GENERAL =================
+  { code: "P-G-01-a", name: "Personal Budget Suite", purpose: "Zero-based envelope budgeting for households.", objects: ["envelopes", "budgets", "spending", "categories"], tools: ["Envelope Budget Planner"], users: "120M budgeters", tam: "$3.8B", sam: "$760M", som: "$1.5M", licensing: "freemium" },
+  { code: "P-G-01-b", name: "Personal Tax Suite", purpose: "Tax-file prep with ledgers, deductions and GST/PST for self-employed people.", objects: ["taxFiles", "ledgers", "deductions", "returns"], tools: ["Personal Tax Preparation", "Side-income Tax Estimator"], users: "6M self-employed", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-annual" },
+  { code: "P-G-01-c", name: "Debt Payoff Suite", purpose: "Snowball and avalanche payoff plans for borrowers.", objects: ["loans", "plans", "payments", "progress"], tools: ["Loan & Debt Payoff Planner"], users: "60M borrowers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "freemium" },
+  { code: "P-G-01-d", name: "Portfolio Tracker", purpose: "Holdings tracking with price alerts for investors.", objects: ["holdings", "alerts", "transactions", "prices"], tools: ["Portfolio Tracker Lite"], users: "30M investors", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "freemium" },
+
+  { code: "P-G-02-a", name: "Habit & Routine Suite", purpose: "Daily habit check-ins with streaks.", objects: ["habits", "streaks", "checkIns", "reminders"], tools: ["Habit Streak Tracker"], users: "200M users", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "freemium" },
+  { code: "P-G-02-b", name: "Journal Suite", purpose: "Guided journaling with daily prompts.", objects: ["entries", "prompts", "moods", "tags"], tools: ["Daily Journal & Prompts"], users: "150M users", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "freemium" },
+  { code: "P-G-02-c", name: "Occasion & Reminder Suite", purpose: "Occasion reminders with gift lead time.", objects: ["occasions", "reminders", "gifts", "contacts"], tools: ["Occasion & Birthday Reminder"], users: "100M users", tam: "$700M", sam: "$140M", som: "$280K", licensing: "freemium" },
+  { code: "P-G-02-d", name: "Goal Mapper Suite", purpose: "Goal maps with milestones and reviews.", objects: ["goals", "milestones", "reviews", "maps"], tools: ["Personal Goal Mapper"], users: "80M users", tam: "$600M", sam: "$120M", som: "$240K", licensing: "one-time" },
+
+  { code: "P-G-03-a", name: "Workout Plan Suite", purpose: "Program cards for gym and home workouts.", objects: ["programs", "workouts", "cards", "progress"], tools: ["Workout Plan Builder"], users: "180M exercisers", tam: "$3.1B", sam: "$620M", som: "$1.2M", licensing: "freemium" },
+  { code: "P-G-03-b", name: "Sleep & Mood Suite", purpose: "Daily sleep and mood check-ins.", objects: ["checkIns", "sleep", "mood", "trends"], tools: ["Sleep & Mood Logger"], users: "120M users", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "freemium" },
+  { code: "P-G-03-c", name: "Family Health Vault", purpose: "Family records storage with appointment reminders.", objects: ["records", "appointments", "reminders", "family"], tools: ["Family Health Vault"], users: "90M families", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-annual" },
+
+  { code: "P-G-04-a", name: "Language Trainer Suite", purpose: "Spaced repetition vocabulary trainer.", objects: ["vocabulary", "phrases", "reviews", "decks"], tools: ["Vocabulary & Phrase Trainer"], users: "500M learners", tam: "$4.8B", sam: "$960M", som: "$1.9M", licensing: "freemium" },
+  { code: "P-G-04-b", name: "Exam Prep Suite", purpose: "Practice tests with explanations.", objects: ["questions", "tests", "explanations", "scores"], tools: ["Exam Question Bank Builder"], users: "150M students", tam: "$3.2B", sam: "$640M", som: "$1.3M", licensing: "subscription-monthly" },
+  { code: "P-G-04-c", name: "Micro-Course Studio", purpose: "Course creation toolkit for instructors.", objects: ["courses", "lessons", "quizzes", "students"], tools: ["Micro-course Author Studio"], users: "10M instructors", tam: "$1.9B", sam: "$380M", som: "$760K", licensing: "subscription-monthly" },
+  { code: "P-G-04-c", name: "Senior Companion & Learning Hub", purpose: "Daily companion and task coordinator for seniors.", objects: ["companions", "tasks", "lessons", "reminders"], tools: ["Senior Helper AI Coordinator"], users: "900M seniors", tam: "$6B", sam: "$1.2B", som: "$2.4M", licensing: "freemium" },
+
+  { code: "P-G-05-a", name: "Writing Studio", purpose: "Chapter drafts with writing goals.", objects: ["chapters", "drafts", "goals", "projects"], tools: ["Novel & Draft Manager"], users: "50M writers", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "freemium" },
+  { code: "P-G-05-b", name: "Music & Practice Suite", purpose: "Musician practice logs with repertoire.", objects: ["repertoire", "logs", "practice", "instruments"], tools: ["Practice Log & Repertoire"], users: "40M musicians", tam: "$800M", sam: "$160M", som: "$320K", licensing: "freemium" },
+  { code: "P-G-05-c", name: "DIY Project Suite", purpose: "Materials, steps and costs per project.", objects: ["projects", "materials", "steps", "costs"], tools: ["DIY Project Planner"], users: "70M makers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "one-time" },
+
+  { code: "P-G-06-a", name: "Personal File Converter", purpose: "Personal document conversion to PDF.", objects: ["files", "conversions", "formats"], tools: ["Any-to-PDF Converter"], users: "200M users", tam: "$700M", sam: "$140M", som: "$280K", licensing: "one-time" },
+  { code: "P-G-06-b", name: "Photo Organizer", purpose: "Duplicate cleanup and album sorting.", objects: ["photos", "albums", "dedupe", "tags"], tools: ["Photo Deduper & Organizer"], users: "100M users", tam: "$600M", sam: "$120M", som: "$240K", licensing: "one-time" },
+  { code: "P-G-06-c", name: "Everyday Utilities", purpose: "Timers, converters and generators for everyday use.", objects: ["timers", "converters", "generators"], tools: ["Everyday Utilities Pack"], users: "150M users", tam: "$500M", sam: "$100M", som: "$200K", licensing: "one-time" },
+
+  // ================= PERSONAL / VERTICAL =================
+  { code: "P-V-01-a", name: "Travel Planner Suite", purpose: "Chat-driven trip planner with day components and shared group coordination.", objects: ["trips", "days", "components", "chat"], tools: ["Travel Planner", "Group Trip Coordinator"], users: "60M travelers", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "freemium" },
+  { code: "P-V-01-b", name: "Itinerary & Day Pack Suite", purpose: "Day-by-day itinerary documents for travelers.", objects: ["itineraries", "days", "documents", "exports"], tools: ["Itinerary Printer & Day Pack"], users: "80M travelers", tam: "$600M", sam: "$120M", som: "$240K", licensing: "one-time" },
+  { code: "P-V-01-c", name: "Packing List Suite", purpose: "Weather-aware packing checklists.", objects: ["lists", "weather", "items", "trips"], tools: ["Smart Packing List"], users: "70M travelers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-01-d", name: "Hike & Gear Log", purpose: "Hike logs with gear checklists.", objects: ["hikes", "logs", "gear", "checklists"], tools: ["Trail & Gear Log"], users: "90M hikers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "freemium" },
+
+  { code: "P-V-02-a", name: "Family Chore & Allowance Suite", purpose: "Kid chore economy with rewards.", objects: ["chores", "rewards", "allowances", "kids"], tools: ["Chore & Allowance Board"], users: "60M families", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "freemium" },
+  { code: "P-V-02-b", name: "Baby Tracker Suite", purpose: "Newborn feeding and sleep tracking.", objects: ["feeds", "sleeps", "logs", "babies"], tools: ["Baby Feed & Sleep Log"], users: "80M parents", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "freemium" },
+  { code: "P-V-02-c", name: "Family Command Center", purpose: "Shared calendar with lists and notes for families.", objects: ["calendars", "lists", "notes", "family"], tools: ["Family Command Center"], users: "100M families", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "freemium" },
+
+  { code: "P-V-03-a", name: "Grocery & Meal Suite", purpose: "Synced lists with meal planning for households.", objects: ["lists", "meals", "plans", "households"], tools: ["Shared Grocery List"], users: "120M households", tam: "$900M", sam: "$180M", som: "$360K", licensing: "freemium" },
+  { code: "P-V-03-b", name: "Home Inventory & Warranty Vault", purpose: "Items with receipts and warranties.", objects: ["items", "receipts", "warranties", "rooms"], tools: ["Home Inventory & Warranty Vault"], users: "40M homeowners", tam: "$500M", sam: "$100M", som: "$200K", licensing: "one-time" },
+  { code: "P-V-03-c", name: "Smart Home Control Suite", purpose: "Smart device settings and routines log.", objects: ["devices", "routines", "scenes", "rooms"], tools: ["Device & Routine Dashboard"], users: "50M smart homes", tam: "$800M", sam: "$160M", som: "$320K", licensing: "freemium" },
+
+  { code: "P-V-04-a", name: "Wedding Planning Suite", purpose: "Budget, vendors and RSVP management for couples.", objects: ["budget", "vendors", "rsvps", "timeline"], tools: ["Wedding Planning Hub"], users: "20M couples", tam: "$2.6B", sam: "$520M", som: "$1M", licensing: "one-time" },
+  { code: "P-V-04-b", name: "Party Planning Suite", purpose: "Invitations, guests and potluck lists for hosts.", objects: ["invitations", "guests", "potlucks", "budget"], tools: ["Party Planner & Guest Tracker"], users: "30M hosts", tam: "$500M", sam: "$100M", som: "$200K", licensing: "one-time" },
+  { code: "P-V-04-c", name: "Gift & Occasion Suite", purpose: "Wish lists with occasion reminders.", objects: ["wishLists", "occasions", "reminders", "gifts"], tools: ["Gift Idea & Occasion Tracker"], users: "50M users", tam: "$700M", sam: "$140M", som: "$280K", licensing: "freemium" },
+
+  { code: "P-V-05-a", name: "Scripture Study Suite", purpose: "Reading plans with verse notes.", objects: ["plans", "verses", "notes", "progress"], tools: ["Scripture Study & Notes"], users: "600M readers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "freemium" },
+  { code: "P-V-05-b", name: "Prayer & Devotion Suite", purpose: "Prayer requests with an answered log.", objects: ["prayerLists", "requests", "answered", "journals"], tools: ["Prayer List & Journal"], users: "400M users", tam: "$600M", sam: "$120M", som: "$240K", licensing: "freemium" },
+  { code: "P-V-05-c", name: "Faith Community Suite", purpose: "Groups, schedules and member care for small groups.", objects: ["groups", "schedules", "members", "care"], tools: ["Small Group Organizer"], users: "50M community members", tam: "$500M", sam: "$100M", som: "$200K", licensing: "app-bundle" },
+
+  { code: "P-V-06-a", name: "Vehicle Maintenance Suite", purpose: "Service history with reminders for car owners.", objects: ["vehicles", "services", "reminders", "logs"], tools: ["Car Maintenance Logbook"], users: "300M car owners", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "freemium" },
+  { code: "P-V-06-b", name: "Mileage & Trip Log", purpose: "Tax-ready mileage records for drivers.", objects: ["trips", "mileage", "records", "expenses"], tools: ["Mileage & Trip Logger"], users: "80M drivers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "freemium" },
+
+  { code: "P-V-07-a", name: "Pet Care Suite", purpose: "Feeding, meds and vet reminders for pet owners.", objects: ["pets", "schedules", "feeding", "meds"], tools: ["Pet Care Scheduler"], users: "400M pet owners", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "freemium" },
+  { code: "P-V-07-b", name: "Pet Health Vault", purpose: "Vaccinations and vet visit history for pets.", objects: ["pets", "vaccinations", "visits", "records"], tools: ["Pet Health Passport"], users: "350M pet owners", tam: "$900M", sam: "$180M", som: "$360K", licensing: "freemium" }
+];
+
+/* ----------------------------------------------------------------------------
+   VERTICAL CUSTOMIZATIONS OF GENERAL TOOLS
+   The same generic html-tool becomes a DIFFERENT application in each vertical.
+   These are filed under a vertical leaf (B-V-xx / P-V-xx) while the generic
+   tool keeps its general home. This is the main reason applications outnumber
+   tools: one reusable tool spawns many customized covers.
+   ---------------------------------------------------------------------------- */
+
+const VERTICALIZED = [
+  // ==== B-G-01 AI & Automation, verticalized ====
+  { code: "B-V-01-a", name: "School Handbook & Policy Q&A", purpose: "Answers staff and parent questions from the school handbook and policies.", objects: ["handbook", "questions", "policies", "answers"], tools: ["Handbook Q&A Bot", "Document Q&A Assistant"], users: "30M teachers", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-annual" },
+  { code: "B-V-02-a", name: "Restaurant Menu & Recipe AI Assistant", purpose: "Answers staff questions about menus and recipes and drafts social posts.", objects: ["menu", "recipes", "posts", "answers"], tools: ["Document Q&A Assistant", "Social Caption & Ad Copy Studio"], users: "15M restaurants", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Intake & FAQ Assistant", purpose: "Answers patient questions and captures intake before the visit.", objects: ["faq", "intake", "chat", "answers"], tools: ["Customer Support Answer Bot", "Smart Form Builder"], users: "2M clinics", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Donor FAQ & Grant Writer AI", purpose: "Answers donor questions and drafts grant proposals from a brief.", objects: ["faq", "proposals", "grants", "answers"], tools: ["Document Q&A Assistant", "AI Proposal Builder"], users: "2M nonprofits", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-annual" },
+  { code: "B-V-05-a", name: "Listing & Contract AI Assistant", purpose: "Finds clauses and drafts listing briefs and contracts for agents.", objects: ["listings", "contracts", "clauses", "briefs"], tools: ["Contract Clause Finder", "AI Proposal Builder"], users: "3M agents", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Product Q&A & Catalog AI", purpose: "Answers product questions and writes catalog descriptions for sellers.", objects: ["products", "qa", "descriptions", "answers"], tools: ["Document Q&A Assistant", "Catalog Enrichment Studio"], users: "8M sellers", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "usage-based" },
+  { code: "B-V-07-a", name: "Fleet Compliance Q&A & Docs", purpose: "Answers driver questions from regulation handbooks and rewrites them plainly.", objects: ["policies", "regs", "logs", "answers"], tools: ["Handbook Q&A Bot", "Plain Language Rewriter"], users: "2M fleets", tam: "$800M", sam: "$160M", som: "$320K", licensing: "per-seat-monthly" },
+  { code: "B-V-08-a", name: "Site Spec & Change Order AI", purpose: "Drafts change orders and compares site clauses from the job spec.", objects: ["specs", "changeOrders", "contracts", "briefs"], tools: ["AI Proposal Builder", "Contract Clause Finder"], users: "6M contractors", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Legal Research & Clause Finder", purpose: "Searches and compares clauses across contracts and drafts legal documents.", objects: ["matters", "clauses", "documents", "briefs"], tools: ["Contract Clause Finder", "AI Legal Document Builder"], users: "800K law firms", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Tax & Advisory AI Assistant", purpose: "Answers client questions and writes advisory reports for accountants.", objects: ["clients", "advisory", "reports", "answers"], tools: ["Document Q&A Assistant", "Report Writing Agent"], users: "5M accountants", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Guest FAQ & Concierge AI", purpose: "Answers guest questions and drafts concierge replies.", objects: ["faq", "guests", "concierge", "messages"], tools: ["Customer Support Answer Bot", "Email & Reply Drafter"], users: "700K lodgings", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-11-a", name: "Home Service Quote & Chat AI", purpose: "Drafts quotes and replies for home service inquiries.", objects: ["quotes", "chat", "jobs", "replies"], tools: ["AI Proposal Builder", "Email & Reply Drafter"], users: "3M home services", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-12-a", name: "Event Brief & Proposal AI", purpose: "Turns an event brief into proposals and promotion posts.", objects: ["events", "briefs", "proposals", "posts"], tools: ["AI Proposal Builder", "Social Caption & Ad Copy Studio"], users: "2M planners", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-13-a", name: "Shop Floor SOP Q&A", purpose: "Answers shop floor questions from procedures and rewrites them plainly.", objects: ["sops", "procedures", "questions", "answers"], tools: ["Handbook Q&A Bot", "Plain Language Rewriter"], users: "1.5M factories", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-14-a", name: "Farm Guide & Compliance Q&A", purpose: "Answers farm questions from guides and regulation handbooks.", objects: ["guides", "regs", "questions", "answers"], tools: ["Document Q&A Assistant", "Handbook Q&A Bot"], users: "20M farms", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-annual" },
+  { code: "B-V-15-a", name: "Service Advisor & Repair Q&A", purpose: "Answers service questions and walks advisors through repairs.", objects: ["vehicles", "repairs", "faq", "answers"], tools: ["Customer Support Answer Bot", "Document Q&A Assistant"], users: "2M service shops", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+
+  // ==== B-G-02 Finance & Accounting, verticalized ====
+  { code: "B-V-02-a", name: "Restaurant Invoicing & Payables", purpose: "Vendor invoices, payables and payments for restaurants.", objects: ["vendors", "invoices", "payables", "payments"], tools: ["Smart Invoice Suite", "Invoice & Expense Collector"], users: "15M restaurants", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-V-02-b", name: "Catering Deposit & Invoice Tracker", purpose: "Quotes, deposits, invoices and payments for catering events.", objects: ["quotes", "deposits", "invoices", "payments"], tools: ["Smart Invoice Suite", "Payments Management Console"], users: "900K caterers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Billing & Collections", purpose: "Patient claims, invoices and collections for clinics.", objects: ["patients", "claims", "invoices", "collections"], tools: ["Smart Invoice Suite", "Collections Manager"], users: "2M clinics", tam: "$2.2B", sam: "$440M", som: "$880K", licensing: "subscription-monthly" },
+  { code: "B-V-03-d", name: "Gym Membership Billing", purpose: "Member plans, invoices and recurring payments for gyms.", objects: ["members", "plans", "invoices", "payments"], tools: ["Smart Invoice Suite", "Revenue-Based Billing & Invoicing"], users: "200K gyms", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Nonprofit Fund Accounting & Budget", purpose: "Fund budgets, pledge reports and board packs for nonprofits.", objects: ["funds", "budgets", "reports", "pledges"], tools: ["SMB Budget Planner", "Board Report Pack"], users: "2M nonprofits", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+  { code: "B-V-05-b", name: "Rent Collection & Trust Ledger", purpose: "Rent collection, payments and ledgers for landlords.", objects: ["units", "rents", "ledgers", "payments"], tools: ["Collections Manager", "Payments Management Console"], users: "4M landlords", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Store Cash-up & Daily Sales Ledger", purpose: "Daily cash-ups, sales and expense receipts for stores.", objects: ["cashUps", "sales", "expenses", "receipts"], tools: ["Payments Management Console", "Receipt & Expense Scanner"], users: "9M stores", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-06-c", name: "Seller Payouts & Fees Ledger", purpose: "Marketplace fees, payouts and statements for sellers.", objects: ["orders", "fees", "payouts", "statements"], tools: ["Revenue-Based Billing & Invoicing", "Collections Manager"], users: "10M sellers", tam: "$1.1B", sam: "$220M", som: "$440K", licensing: "subscription-monthly" },
+  { code: "B-V-07-a", name: "Fleet Fuel & Maintenance Cost Ledger", purpose: "Fuel, maintenance and expense records per vehicle.", objects: ["vehicles", "fuel", "maintenance", "expenses"], tools: ["Invoice & Expense Collector", "Receipt & Expense Scanner"], users: "2M fleets", tam: "$1B", sam: "$200M", som: "$400K", licensing: "per-seat-monthly" },
+  { code: "B-V-07-b", name: "Warehouse Expense & Vendor Payables", purpose: "Vendor invoices, payables and expense records for warehouses.", objects: ["vendors", "payables", "expenses", "invoices"], tools: ["Invoice & Expense Collector", "Smart Invoice Suite"], users: "4M warehouses", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-08-a", name: "Contractor Job Costing & Invoicing", purpose: "Job costs, budgets and progress invoices for contractors.", objects: ["jobs", "costs", "invoices", "budgets"], tools: ["Smart Invoice Suite", "SMB Budget Planner"], users: "6M contractors", tam: "$1.3B", sam: "$260M", som: "$520K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Law Firm Trust Accounting", purpose: "Trust ledgers, invoices and collections for law firms.", objects: ["matters", "trust", "invoices", "payments"], tools: ["Payments Management Console", "Collections Manager"], users: "800K law firms", tam: "$1.5B", sam: "$300M", som: "$600K", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Accounting Firm Payroll & Remittance", purpose: "Client payroll, government remittances and filing deadlines.", objects: ["clients", "payroll", "remittances", "deadlines"], tools: ["Payroll & Payslip Builder", "Tax Calendar & Filing Reminder"], users: "5M accountants", tam: "$1.8B", sam: "$360M", som: "$720K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Hotel Front Desk Billing", purpose: "Guest folios, invoices and payments at the front desk.", objects: ["guests", "folios", "invoices", "payments"], tools: ["Smart Invoice Suite", "Payments Management Console"], users: "700K lodgings", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-11-a", name: "Cleaning Business Invoicing & Recurring Billing", purpose: "Client invoices, jobs and recurring billing for cleaning businesses.", objects: ["clients", "jobs", "invoices", "plans"], tools: ["Smart Invoice Suite", "Revenue-Based Billing & Invoicing"], users: "3M cleaning businesses", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-12-a", name: "Event Budget & Vendor Payments", purpose: "Event budgets, vendor payments and reconciliation for planners.", objects: ["events", "budgets", "vendors", "payments"], tools: ["SMB Budget Planner", "Payments Management Console"], users: "2M planners", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-13-a", name: "Factory Job Cost & Material Ledger", purpose: "Job costs, material expenses and budgets for factories.", objects: ["jobs", "materials", "costs", "budgets"], tools: ["Invoice & Expense Collector", "SMB Budget Planner"], users: "1.5M factories", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-14-a", name: "Farm Expense & Sales Ledger", purpose: "Crop sales, expenses and invoices for farms.", objects: ["crops", "sales", "expenses", "invoices"], tools: ["Receipt & Expense Scanner", "Smart Invoice Suite"], users: "20M farms", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-annual" },
+  { code: "B-V-15-a", name: "Dealership Sales & F&I Accounting", purpose: "Deal invoices, finance & insurance and sales commissions.", objects: ["deals", "fAndI", "invoices", "commissions"], tools: ["Smart Invoice Suite", "Commission Calculator"], users: "400K dealerships", tam: "$1B", sam: "$200M", som: "$400K", licensing: "subscription-monthly" },
+  { code: "B-V-15-b", name: "Auto Shop Parts & Labor Invoicing", purpose: "Work orders, parts, labor and invoices for auto shops.", objects: ["workOrders", "parts", "labor", "invoices"], tools: ["Smart Invoice Suite", "Receipt & Expense Scanner"], users: "2M service shops", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+
+  // ==== B-G-03 Sales & CRM, verticalized ====
+  { code: "B-V-02-b", name: "Catering Client & Event CRM", purpose: "Clients, events and quotes for caterers.", objects: ["clients", "events", "quotes", "contacts"], tools: ["Light CRM & Contacts", "Quote to Sign"], users: "900K caterers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Patient & Referral CRM", purpose: "Patients, referrals and activities for clinics.", objects: ["patients", "referrals", "contacts", "activities"], tools: ["Light CRM & Contacts"], users: "2M clinics", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-03-d", name: "Gym Member & Prospect CRM", purpose: "Members, prospects and follow-ups for gyms.", objects: ["members", "prospects", "leads", "followUps"], tools: ["Lead Tracker Board", "Light CRM & Contacts"], users: "200K gyms", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Donor & Sponsor CRM", purpose: "Donors, sponsors and pledges for nonprofits.", objects: ["donors", "sponsors", "pledges", "contacts"], tools: ["Light CRM & Contacts", "Lead Tracker Board"], users: "2M nonprofits", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-annual" },
+  { code: "B-V-05-a", name: "Real Estate Agent & Lead CRM", purpose: "Listings, leads and showings for agents.", objects: ["listings", "leads", "contacts", "showings"], tools: ["Lead Tracker Board", "Quote to Sign"], users: "3M agents", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-V-06-d", name: "Marketplace Seller Pipeline", purpose: "Seller leads, onboarding and orders for marketplaces.", objects: ["sellers", "leads", "orders", "onboarding"], tools: ["Lead Tracker Board", "Order Desk"], users: "200K marketplaces", tam: "$500M", sam: "$100M", som: "$200K", licensing: "white-label" },
+  { code: "B-V-07-c", name: "Courier Client & Contract CRM", purpose: "Clients, contracts and quotes for courier firms.", objects: ["clients", "contracts", "quotes", "contacts"], tools: ["Light CRM & Contacts", "Quote to Sign"], users: "3M courier firms", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-08-a", name: "Contractor Bid & Client Pipeline", purpose: "Bids, quotes and client pipeline for contractors.", objects: ["bids", "clients", "quotes", "pipeline"], tools: ["Quote to Sign", "Lead Tracker Board"], users: "6M contractors", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Law Firm Client & Matter CRM", purpose: "Clients, matters and activities for law firms.", objects: ["clients", "matters", "contacts", "activities"], tools: ["Light CRM & Contacts", "Matter & Deadline Manager"], users: "800K law firms", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-09-c", name: "Consultant Client & Engagement CRM", purpose: "Clients, engagements and quotes for consultants.", objects: ["clients", "engagements", "quotes", "contacts"], tools: ["Light CRM & Contacts", "Quote to Sign"], users: "1.5M consultants", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-09-d", name: "Agency Client & Retainer CRM", purpose: "Clients, retainers and commissions for agencies.", objects: ["clients", "retainers", "contacts", "commissions"], tools: ["Light CRM & Contacts", "Commission Calculator"], users: "400K agencies", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-10-b", name: "Travel Agency Booking & Client CRM", purpose: "Clients, bookings and itineraries for travel agencies.", objects: ["clients", "bookings", "itineraries", "contacts"], tools: ["Light CRM & Contacts", "Order Desk"], users: "300K agencies", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-11-c", name: "Handyman Quote & Client CRM", purpose: "Clients, jobs and quotes for handymen.", objects: ["clients", "jobs", "quotes", "contacts"], tools: ["Quote to Sign", "Light CRM & Contacts"], users: "4M handymen", tam: "$400M", sam: "$80M", som: "$160K", licensing: "one-time" },
+  { code: "B-V-15-a", name: "Dealership Lead & Inventory Pipeline", purpose: "Leads, inventory and deals for dealerships.", objects: ["leads", "inventory", "testDrives", "deals"], tools: ["Lead Tracker Board", "Order Desk"], users: "400K dealerships", tam: "$1B", sam: "$200M", som: "$400K", licensing: "subscription-monthly" },
+
+  // ==== B-G-04 Marketing & Brand, verticalized ====
+  { code: "B-V-01-a", name: "School Newsletter & Parent Comms", purpose: "Newsletters and announcements to parents.", objects: ["newsletters", "parents", "lists", "sends"], tools: ["Newsletter Studio", "Team Announcement Board"], users: "30M teachers", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-annual" },
+  { code: "B-V-02-a", name: "Restaurant Social & Menu Marketing", purpose: "Menu posts and social campaigns for restaurants.", objects: ["menus", "posts", "channels", "campaigns"], tools: ["Social Scheduler Lite", "Social Caption & Ad Copy Studio"], users: "15M restaurants", tam: "$1.6B", sam: "$320M", som: "$640K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Reputation & Reviews Hub", purpose: "Review requests and responses for clinics.", objects: ["reviews", "requests", "responses", "nps"], tools: ["Review Request & Response Hub"], users: "2M clinics", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Nonprofit Campaign & Donor Marketing", purpose: "Campaign emails and social posts for nonprofits.", objects: ["campaigns", "donors", "posts", "lists"], tools: ["Newsletter Studio", "Social Scheduler Lite"], users: "2M nonprofits", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-annual" },
+  { code: "B-V-05-a", name: "Listing Showcase & Social Ads", purpose: "Listing pages, ads and variants for agents.", objects: ["listings", "ads", "variants", "leads"], tools: ["Listing Showcase & Lead Capture", "Ad Creative Variant Maker"], users: "3M agents", tam: "$1.4B", sam: "$280M", som: "$560K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Store Promotions & Reviews Hub", purpose: "Promotions, review requests and responses for stores.", objects: ["promotions", "reviews", "ads", "responses"], tools: ["Review Request & Response Hub", "Ad Creative Variant Maker"], users: "9M stores", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-06-b", name: "Catalog SEO & Product Marketing", purpose: "Product briefs and descriptions for catalog SEO.", objects: ["products", "briefs", "keywords", "descriptions"], tools: ["SEO Brief Generator", "Catalog Enrichment Studio"], users: "8M sellers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "usage-based" },
+  { code: "B-V-07-a", name: "Fleet Company Brand & Signage Kit", purpose: "Brand kits and signage assets for fleets.", objects: ["brandKits", "signage", "assets", "guidelines"], tools: ["Brand Set Generator", "Brand Asset Manager"], users: "2M fleets", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "B-V-08-a", name: "Contractor Brand & Portfolio Showcase", purpose: "Brand kits and portfolio pages for contractors.", objects: ["portfolio", "brandKits", "pages", "assets"], tools: ["Brand Set Generator", "Webpage Builder Studio"], users: "6M contractors", tam: "$500M", sam: "$100M", som: "$200K", licensing: "one-time" },
+  { code: "B-V-09-d", name: "Agency Client Reporting & Social Pack", purpose: "Client reports, decks and social posts for agencies.", objects: ["clients", "posts", "reports", "decks"], tools: ["Social Scheduler Lite", "Report to Deck Converter"], users: "400K agencies", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Hotel Reputation & Social Suite", purpose: "Review responses and social posts for hotels.", objects: ["reviews", "posts", "channels", "responses"], tools: ["Review Request & Response Hub", "Social Scheduler Lite"], users: "700K lodgings", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-11-d", name: "Home Design Brand & Moodboards", purpose: "Moodboards and product links with brand assets.", objects: ["moodboards", "brands", "products", "assets"], tools: ["Brand Asset Manager", "Room Design & Product Board"], users: "10M homeowners", tam: "$500M", sam: "$100M", som: "$200K", licensing: "freemium" },
+  { code: "B-V-12-a", name: "Event Promotion & Ticket Marketing", purpose: "Promotion posts and emails for events.", objects: ["events", "promotions", "posts", "tickets"], tools: ["Social Caption & Ad Copy Studio", "Newsletter Studio"], users: "2M planners", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-15-a", name: "Dealership Ads & Lead Gen", purpose: "Ad variants and lead capture for dealerships.", objects: ["ads", "variants", "leads", "campaigns"], tools: ["Ad Creative Variant Maker", "Lead Tracker Board"], users: "400K dealerships", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+
+  // ==== B-G-05 Content & Media, verticalized ====
+  { code: "B-V-01-a", name: "School Handbook & Policy Pack", purpose: "School handbooks and policies from templates with approvals.", objects: ["handbooks", "policies", "documents", "approvals"], tools: ["Policy & Handbook Writer", "Plain Language Rewriter"], users: "2M schools", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-01-c", name: "Curriculum & Lesson Document Pack", purpose: "Curriculum and lesson documents from templates.", objects: ["curriculum", "lessons", "documents", "templates"], tools: ["Policy & Handbook Writer", "Curriculum Builder"], users: "6M educators", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Intake & Consent Forms Pack", purpose: "Intake and consent forms with policy templates.", objects: ["intake", "consents", "forms", "policies"], tools: ["Smart Form Builder", "Policy & Handbook Writer"], users: "2M clinics", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Nonprofit Grant & Policy Pack", purpose: "Grant proposals, policies and report decks for nonprofits.", objects: ["grants", "policies", "reports", "decks"], tools: ["Policy & Handbook Writer", "Report to Deck Converter"], users: "1.5M organizations", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-annual" },
+  { code: "B-V-09-a", name: "Legal Document & Contract Pack", purpose: "Contract and legal document drafting for law firms.", objects: ["contracts", "documents", "clauses", "templates"], tools: ["AI Legal Document Builder", "Contract Clause Finder"], users: "800K law firms", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-09-c", name: "Consulting Deliverable & Report Pack", purpose: "Deliverables, reports and decks for consultants.", objects: ["deliverables", "reports", "decks", "clients"], tools: ["Report to Deck Converter", "Report Writing Agent"], users: "1.5M consultants", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-12-d", name: "Editorial Calendar & Publishing Suite", purpose: "Editorial calendar with review stages for publishers.", objects: ["calendar", "articles", "stages", "reviews"], tools: ["Content Publishing Queue", "Publishing Workflow Board"], users: "900K publishers", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-15-a", name: "Dealership Brochure & Spec Sheet Pack", purpose: "Brochures, spec sheets and decks for dealerships.", objects: ["brochures", "specSheets", "decks", "vehicles"], tools: ["AI News Article Generator", "AI Chat Presentation Builder"], users: "400K dealerships", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-monthly" },
+
+  // ==== B-G-06 Communications, verticalized ====
+  { code: "B-V-01-a", name: "School Announcements & RSVP Hub", purpose: "Announcements, RSVPs and surveys for schools.", objects: ["announcements", "rsvps", "surveys", "parents"], tools: ["Team Announcement Board", "Pulse Survey Builder"], users: "30M teachers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-03-f", name: "Caregiver Shift Handover & Notes", purpose: "Shift handovers and care notes for senior care facilities.", objects: ["shifts", "handovers", "residents", "notes"], tools: ["Shift Chat & Handover", "Crew Task & Handover Log"], users: "300K care facilities", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Volunteer & Donor Broadcast Hub", purpose: "Broadcasts and pulse surveys for volunteers and donors.", objects: ["broadcasts", "volunteers", "donors", "surveys"], tools: ["Team Announcement Board", "Pulse Survey Builder"], users: "2M nonprofits", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "B-V-06-a", name: "Store Shift Notes & Team Broadcast", purpose: "Shift notes and team broadcasts for stores.", objects: ["shifts", "notes", "broadcasts", "teams"], tools: ["Shift Chat & Handover", "Team Announcement Board"], users: "9M stores", tam: "$500M", sam: "$100M", som: "$200K", licensing: "app-bundle" },
+  { code: "B-V-07-a", name: "Fleet Dispatch & Driver Handover", purpose: "Dispatch broadcasts and driver handovers for fleets.", objects: ["shifts", "handovers", "dispatch", "drivers"], tools: ["Shift Chat & Handover", "Team Announcement Board"], users: "2M fleets", tam: "$600M", sam: "$120M", som: "$240K", licensing: "per-seat-monthly" },
+  { code: "B-V-10-a", name: "Hotel Shift Handover & Guest Alerts", purpose: "Shift handovers and guest alerts for hotels.", objects: ["shifts", "handovers", "guests", "alerts"], tools: ["Shift Chat & Handover", "Team Announcement Board"], users: "700K lodgings", tam: "$400M", sam: "$80M", som: "$160K", licensing: "app-bundle" },
+  { code: "B-V-13-a", name: "Factory Shift Handover & Safety Briefs", purpose: "Shift handovers and safety briefs for factories.", objects: ["shifts", "handovers", "safety", "briefs"], tools: ["Shift Chat & Handover", "Team Announcement Board"], users: "1.5M factories", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-15-b", name: "Shop Bay Handover & Work Broadcasts", purpose: "Bay handovers and work broadcasts for auto shops.", objects: ["bays", "handovers", "workOrders", "broadcasts"], tools: ["Shift Chat & Handover", "Team Announcement Board"], users: "2M service shops", tam: "$300M", sam: "$60M", som: "$120K", licensing: "app-bundle" },
+
+  // ==== B-G-07 People & HR, verticalized ====
+  { code: "B-V-01-a", name: "School Staff HR & Attendance", purpose: "Staff time, leave and permits for schools.", objects: ["staff", "timeclocks", "leave", "permits"], tools: ["Simple Time Clock", "Leave & Permit Desk"], users: "30M teachers", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-annual" },
+  { code: "B-V-02-a", name: "Restaurant Crew Scheduling & HR", purpose: "Crew shifts, timeclocks and scheduling for restaurants.", objects: ["crew", "shifts", "timeclocks", "schedules"], tools: ["Skill-based Shift Matcher", "Simple Time Clock"], users: "15M restaurants", tam: "$1.2B", sam: "$240M", som: "$480K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Staff Credential & Training", purpose: "Staff credentials, training and expiries for clinics.", objects: ["staff", "credentials", "training", "expiries"], tools: ["Training Cert Tracker", "Employee File Cabinet"], users: "2M clinics", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-03-f", name: "Caregiver Hiring & Certification", purpose: "Caregiver scorecards, certs and hiring.", objects: ["caregivers", "scorecards", "certs", "hires"], tools: ["Interview Scorecard Kit", "Training Cert Tracker"], users: "300K care facilities", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Volunteer & Staff HR Lite", purpose: "Volunteer hours, goals and 1:1s for nonprofits.", objects: ["volunteers", "hours", "goals", "meetings"], tools: ["Volunteer Hour Tracker & Awards", "1:1 Meeting & Goal Tracker"], users: "2M nonprofits", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "B-V-05-a", name: "Agency Agent Onboarding & Compliance", purpose: "Agent onboarding, certs and checklists.", objects: ["agents", "onboarding", "certs", "checklists"], tools: ["New Hire Onboarding Hub", "Training Cert Tracker"], users: "3M agents", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Retail Staff Time & Leave", purpose: "Staff time, leave and shifts for stores.", objects: ["staff", "timeclocks", "leave", "shifts"], tools: ["Simple Time Clock", "Leave & Permit Desk"], users: "9M stores", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-07-a", name: "Driver Hours & Compliance HR", purpose: "Driver hours and compliance records for fleets.", objects: ["drivers", "hours", "compliance", "timeclocks"], tools: ["Simple Time Clock", "Driver Compliance Pack"], users: "2M fleets", tam: "$900M", sam: "$180M", som: "$360K", licensing: "per-seat-monthly" },
+  { code: "B-V-07-b", name: "Warehouse Crew Time & Safety Training", purpose: "Crew time and safety training for warehouses.", objects: ["crew", "timeclocks", "training", "safety"], tools: ["Simple Time Clock", "Training Cert Tracker"], users: "4M warehouses", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-08-a", name: "Crew Scheduling & Safety Cards", purpose: "Crew skills, certs and shift matching for contractors.", objects: ["crews", "skills", "certs", "shifts"], tools: ["Skill-based Shift Matcher", "Training Cert Tracker"], users: "6M contractors", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Law Firm Staff & CPD Tracking", purpose: "Staff files and CPD tracking for law firms.", objects: ["staff", "cpd", "certs", "files"], tools: ["Training Cert Tracker", "Employee File Cabinet"], users: "800K law firms", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Accounting Firm Staff & CPD Tracking", purpose: "Staff CPD, goals and 1:1s for accounting firms.", objects: ["staff", "cpd", "goals", "meetings"], tools: ["Training Cert Tracker", "1:1 Meeting & Goal Tracker"], users: "5M accountants", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Hotel Staff Time & Housekeeping Roster", purpose: "Staff time and housekeeping rosters for hotels.", objects: ["staff", "rosters", "timeclocks", "shifts"], tools: ["Simple Time Clock", "Skill-based Shift Matcher"], users: "700K lodgings", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-11-a", name: "Cleaning Crew Scheduling & Time", purpose: "Crew shifts and timeclocks for cleaning businesses.", objects: ["crews", "shifts", "timeclocks", "jobs"], tools: ["Skill-based Shift Matcher", "Simple Time Clock"], users: "3M cleaning businesses", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-12-a", name: "Event Staff & Volunteer Roster", purpose: "Staff, rosters and shifts for events.", objects: ["staff", "rosters", "shifts", "volunteers"], tools: ["Skill-based Shift Matcher", "Simple Time Clock"], users: "2M planners", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-13-a", name: "Factory Shift Roster & Time", purpose: "Worker shifts, rosters and timeclocks for factories.", objects: ["workers", "shifts", "timeclocks", "rosters"], tools: ["Simple Time Clock", "Skill-based Shift Matcher"], users: "1.5M factories", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-14-a", name: "Farm Labor & Harvest Crew Scheduling", purpose: "Harvest crew shifts and time for farms.", objects: ["crews", "harvests", "shifts", "timeclocks"], tools: ["Skill-based Shift Matcher", "Simple Time Clock"], users: "20M farms", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-annual" },
+  { code: "B-V-15-a", name: "Dealership Staff Time & Training", purpose: "Staff time, training and certs for dealerships.", objects: ["staff", "timeclocks", "training", "certs"], tools: ["Simple Time Clock", "Training Cert Tracker"], users: "400K dealerships", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+
+  // ==== B-G-08 Operations & Management, verticalized ====
+  { code: "B-V-01-a", name: "School Operations & Event Tasks", purpose: "School event and recurring task boards.", objects: ["tasks", "events", "schedules", "boards"], tools: ["Team To-do Board", "Recurring Task Manager"], users: "30M teachers", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-annual" },
+  { code: "B-V-02-a", name: "Restaurant Shift Tasks & Checklists", purpose: "Shift tasks and runnable checklists for restaurants.", objects: ["shifts", "tasks", "checklists", "sops"], tools: ["Team To-do Board", "SOP Builder & Checklist Runner"], users: "15M restaurants", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-02-b", name: "Catering Production & Event Checklists", purpose: "Production sheets and event checklists for caterers.", objects: ["events", "production", "checklists", "tasks"], tools: ["SOP Builder & Checklist Runner", "Team To-do Board"], users: "900K caterers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Booking & Front Desk Tasks", purpose: "Bookings, reminders and front desk tasks for clinics.", objects: ["bookings", "tasks", "providers", "reminders"], tools: ["Appointment Scheduler", "Team To-do Board"], users: "2M clinics", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Nonprofit Event & Volunteer Tasks", purpose: "Event and volunteer task boards for nonprofits.", objects: ["events", "volunteers", "tasks", "schedules"], tools: ["Team To-do Board", "Recurring Task Manager"], users: "2M nonprofits", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "B-V-05-b", name: "Property Maintenance & Work Orders", purpose: "Maintenance requests and work orders for landlords.", objects: ["units", "workOrders", "maintenance", "tenants"], tools: ["Facility Work Order Desk", "Scheduled Maintenance Calendar"], users: "4M landlords", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Store Opening & Closing Checklists", purpose: "Opening and closing checklists for stores.", objects: ["checklists", "shifts", "tasks", "stores"], tools: ["SOP Builder & Checklist Runner", "Team To-do Board"], users: "9M stores", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-06-c", name: "Fulfillment & Shipping Tasks", purpose: "Order and shipment task queues for sellers.", objects: ["orders", "tasks", "shipments", "queues"], tools: ["Team To-do Board", "Order Desk"], users: "10M sellers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-07-a", name: "Fleet Dispatch & Maintenance Calendar", purpose: "Vehicle maintenance and dispatch schedules for fleets.", objects: ["vehicles", "maintenance", "dispatch", "schedules"], tools: ["Scheduled Maintenance Calendar", "Recurring Task Manager"], users: "2M fleets", tam: "$900M", sam: "$180M", som: "$360K", licensing: "per-seat-monthly" },
+  { code: "B-V-07-b", name: "Warehouse Operations & Inspection Tasks", purpose: "Warehouse tasks and inspections.", objects: ["tasks", "inspections", "inventory", "workOrders"], tools: ["Team To-do Board", "Inspection Checklist Mobile"], users: "4M warehouses", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-08-a", name: "Job Site Daily Tasks & Punch Lists", purpose: "Daily job site tasks and punch lists for contractors.", objects: ["jobs", "punchLists", "tasks", "inspections"], tools: ["Team To-do Board", "Inspection Checklist Mobile"], users: "6M contractors", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Case & Deadline Calendar", purpose: "Matter deadlines and recurring tasks for law firms.", objects: ["matters", "deadlines", "tasks", "schedules"], tools: ["Recurring Task Manager", "Team To-do Board"], users: "800K law firms", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-09-b", name: "Bookkeeping Year Plan (Recurring Tasks)", purpose: "A yearly bookkeeping task plan with confirmations for accountants.", objects: ["clients", "recurringTasks", "yearPlan", "statuses"], tools: ["Recurring Task Manager", "Team To-do Board"], users: "5M accountants", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Hotel Housekeeping & Maintenance Tasks", purpose: "Housekeeping and maintenance work orders for hotels.", objects: ["rooms", "workOrders", "housekeeping", "checklists"], tools: ["Facility Work Order Desk", "SOP Builder & Checklist Runner"], users: "700K lodgings", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-11-a", name: "Cleaning Route & Recurring Job Tasks", purpose: "Recurring jobs and routes for cleaning businesses.", objects: ["clients", "routes", "jobs", "schedules"], tools: ["Recurring Task Manager", "Appointment Scheduler"], users: "3M cleaning businesses", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-12-a", name: "Event Run-of-Show & Vendor Tasks", purpose: "Run-of-show timelines and vendor tasks for planners.", objects: ["events", "runOfShow", "vendors", "tasks"], tools: ["Team To-do Board", "SOP Builder & Checklist Runner"], users: "2M planners", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-13-a", name: "Production Schedule & Changeover Tasks", purpose: "Production schedules and changeover tasks for factories.", objects: ["production", "schedules", "changeovers", "tasks"], tools: ["Recurring Task Manager", "SOP Builder & Checklist Runner"], users: "1.5M factories", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-13-c", name: "Machine Maintenance Calendar", purpose: "Preventive maintenance calendars and history for plants.", objects: ["machines", "maintenance", "schedules", "history"], tools: ["Scheduled Maintenance Calendar", "Recurring Task Manager"], users: "1.5M plants", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-14-a", name: "Farm Seasonal Task Calendar", purpose: "Seasonal farm task calendars.", objects: ["crops", "seasons", "tasks", "schedules"], tools: ["Recurring Task Manager", "Team To-do Board"], users: "20M farms", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-annual" },
+  { code: "B-V-15-b", name: "Shop Work Order & Bay Scheduling", purpose: "Work orders and bay scheduling for auto shops.", objects: ["workOrders", "bays", "scheduling", "vehicles"], tools: ["Appointment Scheduler", "Facility Work Order Desk"], users: "2M service shops", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+
+  // ==== B-G-09 Forms & Data Collection, verticalized ====
+  { code: "B-V-01-a", name: "School Enrollment & Permission Forms", purpose: "Enrollment and permission forms with review pipelines.", objects: ["enrollments", "permissions", "forms", "reviews"], tools: ["Smart Form Builder", "Application Intake Manager"], users: "30M teachers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-annual" },
+  { code: "B-V-03-a", name: "Clinic Intake & Pre-Visit Forms", purpose: "Intake and pre-visit forms for clinics.", objects: ["intake", "forms", "patients", "responses"], tools: ["Smart Form Builder"], users: "2M clinics", tam: "$700M", sam: "$140M", som: "$280K", licensing: "subscription-monthly" },
+  { code: "B-V-03-c", name: "Therapy Intake Questionnaires", purpose: "Intake questionnaires for therapy practices.", objects: ["intake", "questionnaires", "clients", "responses"], tools: ["Smart Form Builder", "Therapy Notes & Intake"], users: "1.2M therapists", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Grant Application & Intake Forms", purpose: "Grant applications and intake forms for nonprofits.", objects: ["applications", "grants", "forms", "reviews"], tools: ["Application Intake Manager", "Smart Form Builder"], users: "1.5M organizations", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-annual" },
+  { code: "B-V-05-b", name: "Tenant Application & Screening Forms", purpose: "Tenant applications and screenings for landlords.", objects: ["applications", "tenants", "screenings", "reviews"], tools: ["Application Intake Manager", "Smart Form Builder"], users: "4M landlords", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-monthly" },
+  { code: "B-V-07-a", name: "Driver & Vehicle Inspection Forms", purpose: "Driver and vehicle inspection forms for fleets.", objects: ["inspections", "forms", "vehicles", "drivers"], tools: ["Smart Form Builder", "Inspection Checklist Mobile"], users: "2M fleets", tam: "$500M", sam: "$100M", som: "$200K", licensing: "per-seat-monthly" },
+  { code: "B-V-08-b", name: "Site Safety & Incident Forms", purpose: "Safety and incident report forms for job sites.", objects: ["safety", "incidents", "forms", "reports"], tools: ["Smart Form Builder", "Incident & Accident Reports"], users: "5M job sites", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Client Intake & Matter Forms", purpose: "Client intake and matter forms for law firms.", objects: ["intakes", "matters", "forms", "clients"], tools: ["Application Intake Manager", "Smart Form Builder"], users: "800K law firms", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-12-b", name: "Event Registration & Ticket Forms", purpose: "Registrations and tickets for community events.", objects: ["registrations", "tickets", "forms", "events"], tools: ["Smart Form Builder", "Community Event Ticketing"], users: "5M community organizers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "B-V-15-a", name: "Test Drive & Lead Capture Forms", purpose: "Test drive and lead capture forms for dealerships.", objects: ["testDrives", "leads", "forms", "inventory"], tools: ["Smart Form Builder", "Lead Tracker Board"], users: "400K dealerships", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-monthly" },
+
+  // ==== B-G-10 Reporting & Analytics, verticalized ====
+  { code: "B-V-01-a", name: "School Attendance & Progress Reports", purpose: "Attendance and progress dashboards for schools.", objects: ["attendance", "progress", "reports", "dashboards"], tools: ["KPI Wallboard", "Drag-drop Report Builder"], users: "30M teachers", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+  { code: "B-V-03-a", name: "Clinic KPI & Billing Reports", purpose: "Billing and KPI dashboards for clinics.", objects: ["billing", "kpis", "reports", "dashboards"], tools: ["KPI Wallboard", "Drag-drop Report Builder"], users: "2M clinics", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-04-a", name: "Nonprofit Impact & Fund Reports", purpose: "Impact and fund reports for nonprofits.", objects: ["funds", "impact", "reports", "grants"], tools: ["Drag-drop Report Builder", "Grant Impact Reporter"], users: "1.5M organizations", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-annual" },
+  { code: "B-V-05-a", name: "Market & Listing Performance Reports", purpose: "Market and listing performance charts for agents.", objects: ["listings", "markets", "reports", "charts"], tools: ["KPI Wallboard", "Chart Studio"], users: "3M agents", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-06-a", name: "Store Sales & Inventory Dashboards", purpose: "Sales and inventory dashboards for stores.", objects: ["sales", "inventory", "dashboards", "charts"], tools: ["KPI Wallboard", "Chart Studio"], users: "9M stores", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-07-a", name: "Fleet Utilization & Cost Reports", purpose: "Utilization and cost reports for fleets.", objects: ["vehicles", "utilization", "costs", "reports"], tools: ["KPI Wallboard", "Drag-drop Report Builder"], users: "2M fleets", tam: "$400M", sam: "$80M", som: "$160K", licensing: "per-seat-monthly" },
+  { code: "B-V-09-b", name: "Client Portfolio & Tax Reports", purpose: "Client portfolio and tax report packs for accountants.", objects: ["clients", "portfolios", "reports", "packs"], tools: ["Drag-drop Report Builder", "Board Report Pack"], users: "5M accountants", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-15-a", name: "Dealership Sales & F&I Reports", purpose: "Sales and F&I dashboards for dealerships.", objects: ["sales", "fAndI", "reports", "dashboards"], tools: ["KPI Wallboard", "Chart Studio"], users: "400K dealerships", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-monthly" },
+
+  // ==== B-G-11 IT & Development, verticalized ====
+  { code: "B-V-01-a", name: "School Website & Page Builder", purpose: "School websites and pages with SEO.", objects: ["pages", "sites", "seo", "components"], tools: ["Webpage Builder Studio", "Coming Soon & Splash Page Kit"], users: "2M schools", tam: "$600M", sam: "$120M", som: "$240K", licensing: "subscription-annual" },
+  { code: "B-V-02-a", name: "Restaurant Website & Menu Pages", purpose: "Restaurant websites and menu pages.", objects: ["pages", "menus", "sites", "seo"], tools: ["Webpage Builder Studio", "Restaurant Menu & Content Manager"], users: "15M restaurants", tam: "$900M", sam: "$180M", som: "$360K", licensing: "subscription-monthly" },
+  { code: "B-V-03-a", name: "Clinic Website & Booking Pages", purpose: "Clinic websites and booking pages.", objects: ["pages", "bookings", "sites", "seo"], tools: ["Webpage Builder Studio", "Appointment Scheduler"], users: "2M clinics", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-05-a", name: "Agent Listing Website & Pages", purpose: "Agent websites with listing pages and lead capture.", objects: ["listings", "pages", "sites", "leads"], tools: ["Webpage Builder Studio", "Listing Showcase & Lead Capture"], users: "3M agents", tam: "$800M", sam: "$160M", som: "$320K", licensing: "subscription-monthly" },
+  { code: "B-V-09-a", name: "Law Firm Website & Practice Pages", purpose: "Law firm websites and practice pages.", objects: ["pages", "practice", "sites", "seo"], tools: ["Webpage Builder Studio", "AI Legal Document Builder"], users: "800K law firms", tam: "$400M", sam: "$80M", som: "$160K", licensing: "subscription-monthly" },
+  { code: "B-V-10-a", name: "Hotel Website & Booking Pages", purpose: "Hotel websites and booking pages.", objects: ["pages", "bookings", "rooms", "seo"], tools: ["Webpage Builder Studio", "Guest Ledger & Housekeeping Board"], users: "700K lodgings", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+  { code: "B-V-11-c", name: "Handyman Website & Quote Pages", purpose: "Handyman websites with quote pages.", objects: ["pages", "quotes", "sites", "jobs"], tools: ["Webpage Builder Studio", "Home Repair Quote & Parts"], users: "4M handymen", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "B-V-15-a", name: "Dealership Website & Inventory Pages", purpose: "Dealership websites and inventory pages.", objects: ["pages", "inventory", "sites", "leads"], tools: ["Webpage Builder Studio", "Dealership Lead & Test Drive Desk"], users: "400K dealerships", tam: "$500M", sam: "$100M", som: "$200K", licensing: "subscription-monthly" },
+
+  // ==== B-G-12 File & Media, verticalized ====
+  { code: "B-V-02-a", name: "Menu Photo & Asset Studio", purpose: "Menu photo editing and assets for restaurants.", objects: ["menus", "photos", "assets", "edits"], tools: ["Product Photo Studio", "Image Editing Toolkit"], users: "15M restaurants", tam: "$500M", sam: "$100M", som: "$200K", licensing: "freemium" },
+  { code: "B-V-05-a", name: "Listing Photo & Virtual Tour Studio", purpose: "Listing photo editing and tours for agents.", objects: ["listings", "photos", "tours", "edits"], tools: ["Product Photo Studio", "Image Editing Toolkit"], users: "3M agents", tam: "$600M", sam: "$120M", som: "$240K", licensing: "freemium" },
+  { code: "B-V-06-b", name: "Product Photo Studio for Sellers", purpose: "Product photos with background removal for sellers.", objects: ["products", "photos", "backgrounds", "edits"], tools: ["Product Photo Studio", "Image Editing Toolkit"], users: "12M sellers", tam: "$700M", sam: "$140M", som: "$280K", licensing: "freemium" },
+  { code: "B-V-09-d", name: "Agency Video & Social Clip Studio", purpose: "Video clips and captions for agency social posts.", objects: ["clips", "captions", "posts", "channels"], tools: ["Clip Trimmer & Subtitle Maker", "Social Scheduler Lite"], users: "400K agencies", tam: "$500M", sam: "$100M", som: "$200K", licensing: "freemium" },
+  { code: "B-V-03-a", name: "Clinic Document Scan & OCR Vault", purpose: "Document scanning and OCR for clinics.", objects: ["documents", "scans", "records", "pdfs"], tools: ["Receipt & Document OCR", "PDF Toolkit"], users: "2M clinics", tam: "$500M", sam: "$100M", som: "$200K", licensing: "usage-based" },
+  { code: "B-V-09-a", name: "Legal Document Scan & OCR Vault", purpose: "Document scanning and OCR for law firms.", objects: ["documents", "scans", "records", "pdfs"], tools: ["Receipt & Document OCR", "PDF Toolkit"], users: "800K law firms", tam: "$600M", sam: "$120M", som: "$240K", licensing: "usage-based" },
+  { code: "B-V-09-b", name: "Accounting Receipt & Document OCR", purpose: "Receipt and document OCR for accountants.", objects: ["receipts", "documents", "exports", "records"], tools: ["Receipt & Document OCR", "Receipt & Expense Scanner"], users: "5M accountants", tam: "$600M", sam: "$120M", som: "$240K", licensing: "usage-based" },
+  { code: "B-V-12-d", name: "Publisher Image & Asset Optimizer", purpose: "Image compression and optimization for publishers.", objects: ["images", "assets", "compression", "builds"], tools: ["Web Asset Optimizer", "Image Editing Toolkit"], users: "900K publishers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "B-V-13-a", name: "Factory Drawing & Spec PDF Pack", purpose: "Drawing and spec PDF conversion for factories.", objects: ["drawings", "specs", "pdfs", "files"], tools: ["PDF Toolkit", "Universal File Converter"], users: "1.5M factories", tam: "$400M", sam: "$80M", som: "$160K", licensing: "one-time" },
+  { code: "B-V-15-a", name: "Dealership Brochure & PDF Studio", purpose: "Brochure PDFs and vehicle photos for dealerships.", objects: ["brochures", "pdfs", "photos", "vehicles"], tools: ["PDF Toolkit", "Product Photo Studio"], users: "400K dealerships", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+
+  // ==== B-G-13 Translation & Localization, verticalized ====
+  { code: "B-V-01-a", name: "School Parent Comms Translator", purpose: "Translates parent messages and pages into many languages.", objects: ["messages", "translations", "languages", "parents"], tools: ["Quick Text Translator", "HTML Bulk Translator"], users: "30M teachers", tam: "$500M", sam: "$100M", som: "$200K", licensing: "usage-based" },
+  { code: "B-V-02-a", name: "Restaurant Menu Translator", purpose: "Translates menus and pages for restaurants.", objects: ["menus", "translations", "languages", "pages"], tools: ["HTML Bulk Translator", "Quick Text Translator"], users: "15M restaurants", tam: "$400M", sam: "$80M", som: "$160K", licensing: "usage-based" },
+  { code: "B-V-03-a", name: "Clinic Patient Forms Translator", purpose: "Translates patient forms and pages for clinics.", objects: ["forms", "translations", "languages", "patients"], tools: ["HTML Bulk Translator", "Quick Text Translator"], users: "2M clinics", tam: "$400M", sam: "$80M", som: "$160K", licensing: "usage-based" },
+  { code: "B-V-04-a", name: "Nonprofit Outreach Translator", purpose: "Translates outreach messages and pages for nonprofits.", objects: ["messages", "translations", "languages", "outreach"], tools: ["Quick Text Translator", "HTML Bulk Translator"], users: "2M nonprofits", tam: "$300M", sam: "$60M", som: "$120K", licensing: "usage-based" },
+  { code: "B-V-10-a", name: "Hotel Guest Content Translator", purpose: "Translates guest content and pages for hotels.", objects: ["content", "translations", "languages", "pages"], tools: ["HTML Bulk Translator", "Quick Text Translator"], users: "700K lodgings", tam: "$300M", sam: "$60M", som: "$120K", licensing: "usage-based" },
+  { code: "B-V-06-b", name: "Catalog & Listing Translator", purpose: "Translates product catalogs and listings for sellers.", objects: ["products", "listings", "translations", "languages"], tools: ["HTML Bulk Translator", "App Strings Localization Manager"], users: "8M sellers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "usage-based" },
+
+  // ==== B-G-14 Utilities, verticalized ====
+  { code: "B-V-09-b", name: "Accounting Data Cleanup Utilities", purpose: "Data cleanup jobs for messy accounting records.", objects: ["dataJobs", "cleanups", "records", "exports"], tools: ["Data Cleanup Agent", "Text & Data Utilities Kit"], users: "5M accountants", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "B-V-06-b", name: "Catalog Data Cleanup Utilities", purpose: "Data cleanup jobs for messy product catalogs.", objects: ["products", "cleanups", "records", "exports"], tools: ["Data Cleanup Agent", "Text & Data Utilities Kit"], users: "8M sellers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+
+  // ==== P-G-01 Personal Finance, verticalized ====
+  { code: "P-V-01-a", name: "Trip Budget & Split Expenses", purpose: "Trip budgets and shared expense splits for travelers.", objects: ["trips", "budgets", "expenses", "splits"], tools: ["Envelope Budget Planner", "Group Trip Coordinator"], users: "60M travelers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-02-a", name: "Family Allowance & Chore Economy", purpose: "Kid allowances tied to chores and rewards.", objects: ["kids", "allowances", "chores", "budgets"], tools: ["Envelope Budget Planner", "Chore & Allowance Board"], users: "60M families", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-03-b", name: "Home & Warranty Spending Tracker", purpose: "Home items, warranties and spending in one vault.", objects: ["items", "warranties", "spending", "budgets"], tools: ["Envelope Budget Planner", "Home Inventory & Warranty Vault"], users: "40M homeowners", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "P-V-04-a", name: "Wedding Budget & Vendor Payments", purpose: "Wedding budget, vendor payments and RSVPs.", objects: ["budget", "vendors", "payments", "rsvps"], tools: ["Envelope Budget Planner", "Wedding Planning Hub"], users: "20M couples", tam: "$400M", sam: "$80M", som: "$160K", licensing: "one-time" },
+  { code: "P-V-06-a", name: "Vehicle Cost & Maintenance Budget", purpose: "Vehicle service and cost budgets.", objects: ["vehicles", "costs", "budgets", "services"], tools: ["Envelope Budget Planner", "Car Maintenance Logbook"], users: "300M car owners", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-07-a", name: "Pet Care & Vet Budget", purpose: "Pet care, vet and budget tracking.", objects: ["pets", "budgets", "vet", "schedules"], tools: ["Envelope Budget Planner", "Pet Care Scheduler"], users: "400M pet owners", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+
+  // ==== P-G-02 Productivity, verticalized ====
+  { code: "P-V-01-a", name: "Trip Planning To-dos & Itinerary Habits", purpose: "Trip to-dos and itinerary habits for travelers.", objects: ["trips", "todos", "habits", "itineraries"], tools: ["Habit Streak Tracker", "Travel Planner"], users: "60M travelers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-02-c", name: "Family Calendar & Shared To-dos", purpose: "Shared calendar, lists and to-dos for families.", objects: ["calendars", "lists", "todos", "family"], tools: ["Family Command Center", "Habit Streak Tracker"], users: "100M families", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-03-a", name: "Meal Plan & Grocery Habits", purpose: "Meal plans, grocery lists and habits.", objects: ["meals", "lists", "habits", "households"], tools: ["Shared Grocery List", "Habit Streak Tracker"], users: "120M households", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-04-a", name: "Wedding To-do & Countdown Goals", purpose: "Wedding to-dos and countdown goals.", objects: ["goals", "todos", "countdown", "vendors"], tools: ["Personal Goal Mapper", "Occasion & Birthday Reminder"], users: "20M couples", tam: "$300M", sam: "$60M", som: "$120K", licensing: "one-time" },
+  { code: "P-V-05-a", name: "Scripture Reading & Habit Plans", purpose: "Reading plans and verse habits.", objects: ["plans", "habits", "verses", "progress"], tools: ["Habit Streak Tracker", "Scripture Study & Notes"], users: "600M readers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-06-b", name: "Driving & Trip Mileage Journal", purpose: "Trip journals and tax-ready mileage logs.", objects: ["trips", "journals", "mileage", "logs"], tools: ["Daily Journal & Prompts", "Mileage & Trip Logger"], users: "80M drivers", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+
+  // ==== P-G-03 Health & Fitness, verticalized ====
+  { code: "P-V-01-d", name: "Hike Fitness & Trail Log", purpose: "Hike workouts, trails and gear logs.", objects: ["hikes", "workouts", "logs", "gear"], tools: ["Workout Plan Builder", "Trail & Gear Log"], users: "90M hikers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-02-b", name: "Baby Sleep & Feeding Tracker", purpose: "Newborn feeding and sleep logs.", objects: ["feeds", "sleeps", "logs", "babies"], tools: ["Baby Feed & Sleep Log", "Sleep & Mood Logger"], users: "80M parents", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-03-c", name: "Smart Home Routine & Health Hub", purpose: "Device routines with sleep and mood check-ins.", objects: ["devices", "routines", "sleep", "mood"], tools: ["Device & Routine Dashboard", "Sleep & Mood Logger"], users: "50M smart homes", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-04-a", name: "Wedding Wellness & Fitness Plan", purpose: "Pre-wedding wellness and fitness plans.", objects: ["plans", "workouts", "goals", "progress"], tools: ["Workout Plan Builder", "Personal Goal Mapper"], users: "20M couples", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-07-b", name: "Pet Health & Vet Visit Vault", purpose: "Pet records and vet visit reminders.", objects: ["pets", "records", "vet", "reminders"], tools: ["Family Health Vault", "Pet Health Passport"], users: "350M pet owners", tam: "$300M", sam: "$60M", som: "$120K", licensing: "subscription-annual" },
+  { code: "P-V-05-c", name: "Group Wellness & Prayer Routine", purpose: "Group wellness and prayer routines for small groups.", objects: ["groups", "wellness", "routines", "members"], tools: ["Sleep & Mood Logger", "Small Group Organizer"], users: "50M community members", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+
+  // ==== P-G-04 Learning & Study, verticalized ====
+  { code: "P-V-01-a", name: "Travel Phrase & Language Trainer", purpose: "Travel phrases and language decks for trips.", objects: ["phrases", "trips", "languages", "decks"], tools: ["Vocabulary & Phrase Trainer", "Travel Planner"], users: "60M travelers", tam: "$400M", sam: "$80M", som: "$160K", licensing: "freemium" },
+  { code: "P-V-02-a", name: "Kids Chore & Learning Rewards", purpose: "Chores tied to learning rewards for kids.", objects: ["chores", "rewards", "learning", "kids"], tools: ["Chore & Allowance Board", "Vocabulary & Phrase Trainer"], users: "60M families", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-04-a", name: "Wedding Vow & Speech Writer", purpose: "Drafting vows and speeches for couples.", objects: ["vows", "speeches", "drafts", "projects"], tools: ["Novel & Draft Manager", "Email & Reply Drafter"], users: "20M couples", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-05-a", name: "Scripture Study & Verse Memorization", purpose: "Verse memorization decks and study plans.", objects: ["verses", "decks", "plans", "notes"], tools: ["Vocabulary & Phrase Trainer", "Scripture Study & Notes"], users: "600M readers", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-05-b", name: "Prayer & Devotional Journal", purpose: "Prayer journals with daily prompts.", objects: ["prayers", "journals", "prompts", "requests"], tools: ["Daily Journal & Prompts", "Prayer List & Journal"], users: "400M users", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+  { code: "P-V-06-a", name: "Car DIY & Maintenance Learning", purpose: "DIY car maintenance guides and logs.", objects: ["projects", "guides", "logs", "vehicles"], tools: ["DIY Project Planner", "Car Maintenance Logbook"], users: "300M car owners", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-07-a", name: "Pet Training & Care Lessons", purpose: "Pet training courses and care schedules.", objects: ["courses", "lessons", "pets", "schedules"], tools: ["Micro-course Author Studio", "Pet Care Scheduler"], users: "400M pet owners", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+  { code: "P-V-01-d", name: "Outdoor Skills & Safety Courses", purpose: "Outdoor skills courses and hike logs.", objects: ["courses", "skills", "hikes", "gear"], tools: ["Micro-course Author Studio", "Trail & Gear Log"], users: "90M hikers", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+  { code: "P-V-02-b", name: "Parenting & Baby Care Courses", purpose: "Parenting and baby care courses with logs.", objects: ["courses", "lessons", "babies", "logs"], tools: ["Micro-course Author Studio", "Baby Feed & Sleep Log"], users: "80M parents", tam: "$300M", sam: "$60M", som: "$120K", licensing: "freemium" },
+  { code: "P-V-03-c", name: "Smart Home Setup & DIY Courses", purpose: "Smart home setup courses and device routines.", objects: ["courses", "devices", "routines", "lessons"], tools: ["Micro-course Author Studio", "Device & Routine Dashboard"], users: "50M smart homes", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+
+  // ==== P-G-05 Creative & Hobbies, verticalized ====
+  { code: "P-V-01-a", name: "Travel Journal & Story Writer", purpose: "Travel journals and trip stories.", objects: ["trips", "stories", "drafts", "journals"], tools: ["Novel & Draft Manager", "Travel Planner"], users: "60M travelers", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+  { code: "P-V-02-c", name: "Family Memory & Scrapbook Studio", purpose: "Family memories and photo albums.", objects: ["memories", "photos", "albums", "stories"], tools: ["Novel & Draft Manager", "Photo Deduper & Organizer"], users: "100M families", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-04-a", name: "Wedding Invitation & Keepsake Studio", purpose: "Invitations and keepsake drafting for weddings.", objects: ["invitations", "keepsakes", "drafts", "rsvps"], tools: ["Wedding Planning Hub", "Novel & Draft Manager"], users: "20M couples", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-04-b", name: "Party Theme & Invitation Studio", purpose: "Party themes and invitations for hosts.", objects: ["themes", "invitations", "guests", "assets"], tools: ["Party Planner & Guest Tracker", "Brand Set Generator"], users: "30M hosts", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-05-b", name: "Prayer & Devotional Writing", purpose: "Devotional and prayer writing.", objects: ["devotionals", "prayers", "drafts", "journals"], tools: ["Novel & Draft Manager", "Prayer List & Journal"], users: "400M users", tam: "$200M", sam: "$40M", som: "$80K", licensing: "freemium" },
+  { code: "P-V-07-b", name: "Pet Photo & Memory Album", purpose: "Pet photo albums and memories.", objects: ["photos", "albums", "pets", "memories"], tools: ["Photo Deduper & Organizer", "Pet Health Passport"], users: "350M pet owners", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+
+  // ==== P-G-06 File & Utilities, verticalized ====
+  { code: "P-V-01-a", name: "Trip Document & Itinerary PDF", purpose: "Trip documents and itineraries as PDF.", objects: ["trips", "itineraries", "pdfs", "documents"], tools: ["Any-to-PDF Converter", "Itinerary Printer & Day Pack"], users: "80M travelers", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-03-b", name: "Home Receipt & Warranty PDF Vault", purpose: "Receipts and warranties stored as PDF.", objects: ["receipts", "warranties", "pdfs", "items"], tools: ["Any-to-PDF Converter", "Home Inventory & Warranty Vault"], users: "40M homeowners", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-05-a", name: "Scripture & Study Notes PDF", purpose: "Scripture study notes exported as PDF.", objects: ["verses", "notes", "pdfs", "plans"], tools: ["Any-to-PDF Converter", "Scripture Study & Notes"], users: "600M readers", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" },
+  { code: "P-V-06-a", name: "Vehicle Service Record PDF", purpose: "Vehicle service records exported as PDF.", objects: ["vehicles", "services", "pdfs", "logs"], tools: ["Any-to-PDF Converter", "Car Maintenance Logbook"], users: "300M car owners", tam: "$200M", sam: "$40M", som: "$80K", licensing: "one-time" }
+];
+
+/* ----------------------------------------------------------------------------
+   BUILD THE CATALOG DATA OBJECT
+   ---------------------------------------------------------------------------- */
+
+const LICENSING_LABELS = {
+  "freemium": "Freemium",
+  "subscription-monthly": "Monthly subscription",
+  "subscription-annual": "Annual subscription",
+  "one-time": "One-time purchase",
+  "per-seat-monthly": "Per-seat monthly",
+  "usage-based": "Usage based",
+  "white-label": "White label",
+  "app-bundle": "App bundle"
+};
+
+// Build code -> folder path map from the hierarchy.
+function buildPathMap(folders) {
+  const map = {};
+  function walk(node, parts) {
+    const next = parts.concat([node.name]);
+    if (Array.isArray(node.children) && node.children.length) {
+      node.children.forEach(function (child) { walk(child, next); });
+    } else {
+      map[node.code] = next.join(" / ");
+    }
+  }
+  folders.forEach(function (top) { walk(top, []); });
+  return map;
+}
+
+const pathMap = buildPathMap(HIERARCHY.folders);
+
+// Assign stable ids: <code>-<n> (n = order within the same subcategory).
+const idCounter = {};
+const applications = APPLICATIONS.concat(VERTICALIZED).map(function (app) {
+  idCounter[app.code] = (idCounter[app.code] || 0) + 1;
+  const entry = {
+    id: app.code + "-" + idCounter[app.code],
+    code: app.code,
+    folder: pathMap[app.code] || app.code,
+    name: app.name,
+    purpose: app.purpose,
+    objects: app.objects,
+    tools: app.tools,
+    users: app.users,
+    tam: app.tam,
+    sam: app.sam,
+    som: app.som,
+    licensing: app.licensing
+  };
+  if (app.singleObject) entry.singleObject = true;
+  return entry;
+});
+
+const data = {
+  schema: "uniconhub-application-idea-catalog",
+  version: "1.0.0",
+  generatedAt: "2026-10-05",
+  disclaimer: "Directional planning estimates (order of magnitude), not market research. Validate user counts, TAM/SAM/SOM and licensing per application before development.",
+  licensingTypes: ["freemium", "subscription-monthly", "subscription-annual", "one-time", "per-seat-monthly", "usage-based", "white-label", "app-bundle"],
+  metricNotes: {
+    users: "Rough worldwide count of potential users or organizations for this application niche.",
+    tam: "Estimated global annual software spend (USD) for this application niche - order of magnitude.",
+    sam: "TAM narrowed to the SMB / reachable segment UniconHub can realistically serve (about 10-25 percent).",
+    som: "What the UniconHub store could realistically capture within about 3 years (about 0.1-0.5 percent of SAM)."
+  },
+  concepts: {
+    application: "An application (cmsObjectType) is the container or 'cover'. It holds folders, and folders hold objects.",
+    object: "An object (cmsObject) is a record inside the application, grouped in field groups. Objects live under folders, folders live under an application.",
+    fieldGroup: "A field group is a named set of fields on an object. An object can have many field groups.",
+    field: "A field holds one piece of data. A field can be a plain CMS field (text, number, date, ...) OR an html-tool that renders its own interface.",
+    htmlTool: "An html-tool manages one object (or one field) inside an application. It is reusable across many applications, is generic and can be customized per vertical (e.g. the Recurring Task Manager customized for accountants).",
+    singleObject: "Some applications are essentially ONE object per tenant (e.g. a company profile). They are marked with singleObject: true.",
+    bundling: "One application can bundle different html-tools in different objects and at different levels, and can reuse the same tool several times. The 'tools' field of each application lists example html-tools it bundles; the tools themselves are filed separately in the html-tool library taxonomy."
+  },
+  hierarchy: HIERARCHY,
+  applications: applications
+};
+
+/* ----------------------------------------------------------------------------
+   WRITE JSON
+   ---------------------------------------------------------------------------- */
+fs.writeFileSync(
+  path.join(DIR, "application-ideas-catalog.json"),
+  JSON.stringify(data, null, 2) + "\n",
+  "utf8"
+);
+
+// Standalone folder-hierarchy import file, same shape as the tool-side
+// folder-hierarchy-import.json (meta + scalingRules + folders). This is the
+// file the CMS folder system consumes to create the application folders.
+fs.writeFileSync(
+  path.join(DIR, "application-folder-hierarchy-import.json"),
+  JSON.stringify(HIERARCHY, null, 2) + "\n",
+  "utf8"
+);
+
+/* ----------------------------------------------------------------------------
+   BUILD HTML (self-contained: embeds the data inline)
+   ---------------------------------------------------------------------------- */
+const CATALOG_JSON = JSON.stringify(data).replace(/<\//g, "<\\/");
+
+const HTML = buildHtml(CATALOG_JSON);
+
+fs.writeFileSync(path.join(DIR, "application-ideas-catalog.html"), HTML, "utf8");
+
+console.log("Wrote application-ideas-catalog.json  (" + applications.length + " applications)");
+console.log("Wrote application-ideas-catalog.html");
+console.log("Wrote application-folder-hierarchy-import.json");
+
+/* ============================================================================
+   HTML TEMPLATE
+   ============================================================================ */
+function buildHtml(catalogJson) {
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="UTF-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    "<title>Application Ideas Catalog - UniconHub</title>",
+    "<style>",
+    "  :root{--bg:#f1f5f9;--panel:#fff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--accent:#1e4e79;--accent-soft:#e8f0f8;}",
+    "  *{box-sizing:border-box;}",
+    "  body{margin:0;font-family:'Segoe UI Variable Text',Inter,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:15.5px;}",
+    "  .layout{display:flex;gap:14px;padding:18px 16px 70px;align-items:flex-start;}",
+    "  .sidebar{width:292px;flex-shrink:0;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;}",
+    "  .side-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;font-size:14px;font-weight:700;color:var(--accent);}",
+    "  .side-total{padding:0 14px 10px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted);line-height:1.6;}",
+    "  .side-total b{color:var(--ink);}",
+    "  .side-group{border-bottom:1px solid var(--line);}",
+    "  .side-group:last-child{border-bottom:none;}",
+    "  .side-group-head{padding:8px 12px;cursor:pointer;user-select:none;}",
+    "  .side-group-head:hover{background:var(--accent-soft);}",
+    "  .side-group-title{font-size:12.5px;font-weight:700;display:flex;justify-content:space-between;gap:6px;}",
+    "  .side-group-title .count{color:var(--accent);}",
+    "  .side-group-totals{font-size:10.5px;color:var(--muted);margin-top:3px;}",
+    "  .side-group-totals span{margin-right:7px;white-space:nowrap;}",
+    "  .side-group-totals b{color:var(--ink);}",
+    "  .side-cats{display:none;border-top:1px solid #edf1f5;padding:3px 0;}",
+    "  .side-group.open .side-cats{display:block;}",
+    "  .side-item{display:flex;justify-content:space-between;gap:6px;padding:4px 12px 4px 18px;font-size:11.5px;cursor:pointer;color:var(--ink);}",
+    "  .side-item:hover{background:#f2f6fa;}",
+    "  .side-item.active{background:var(--accent-soft);font-weight:600;}",
+    "  .side-item .meta{color:var(--muted);white-space:nowrap;}",
+    "  .side-subitem{display:flex;justify-content:space-between;gap:6px;padding:3px 10px 3px 32px;font-size:11px;cursor:pointer;color:var(--ink);}",
+    "  .side-subitem:hover{background:#f2f6fa;}",
+    "  .side-subitem.active{background:var(--accent-soft);font-weight:600;}",
+    "  .side-subitem .meta{color:var(--muted);white-space:nowrap;}",
+    "  .main{flex:1;min-width:0;}",
+    "  header.page-head{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px;}",
+    "  h1{margin:0 0 5px;font-size:21px;color:var(--accent);}",
+    "  .head-sub{color:var(--muted);font-size:12.5px;}",
+    "  .stats-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}",
+    "  .stat-chip{background:var(--accent-soft);border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:12px;}",
+    "  .stat-chip strong{color:var(--accent);font-size:14px;margin-right:4px;}",
+    "  .toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px;position:sticky;top:8px;z-index:5;}",
+    "  .toolbar label{font-size:12px;color:var(--muted);margin-right:3px;}",
+    "  .toolbar input[type=search],.toolbar select{border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:13px;background:#fff;color:var(--ink);}",
+    "  .toolbar input[type=search]{width:180px;}",
+    "  .toolbar .spacer{flex:1;}",
+    "  .toolbar .tb-btn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;font-size:12.5px;cursor:pointer;color:var(--ink);}",
+    "  .toolbar .tb-btn:hover{background:var(--accent-soft);}",
+    "  .tb-menu-wrap{position:relative;}",
+    "  .tb-menu{display:none;position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(15,23,42,.12);min-width:220px;z-index:30;padding:5px;}",
+    "  .tb-menu.open{display:block;}",
+    "  .tb-menu-item{display:block;width:100%;text-align:left;border:none;background:none;padding:7px 10px;font-size:12.5px;border-radius:6px;cursor:pointer;color:var(--ink);}",
+    "  .tb-menu-item:hover{background:var(--accent-soft);}",
+    "  .sel-bar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;}",
+    "  .sel-title{font-size:15px;font-weight:700;}",
+    "  .sel-path{font-size:11.5px;color:var(--muted);}",
+    "  .sel-totals{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);}",
+    "  .sel-totals b{color:var(--ink);}",
+    "  section.branch{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;}",
+    "  .branch-head{display:flex;align-items:center;gap:10px;padding:11px 15px;background:#f8fafc;border-bottom:1px solid var(--line);}",
+    "  .branch-title{font-size:14.5px;font-weight:700;}",
+    "  .branch-counts{margin-left:auto;font-size:12px;color:var(--muted);}",
+    "  .branch-counts b{color:var(--ink);}",
+    "  .idea-table-wrap{overflow-x:auto;}",
+    "  table.idea-table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;}",
+    "  table.idea-table th{text-align:left;padding:7px 9px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);border-bottom:2px solid var(--line);background:#f8fafc;white-space:nowrap;}",
+    "  table.idea-table th.sortable{cursor:pointer;}",
+    "  table.idea-table th.sortable:hover{color:var(--accent);}",
+    "  table.idea-table th.sorted{color:var(--accent);}",
+    "  table.idea-table td{padding:7px 9px;border-bottom:1px solid #edf1f5;vertical-align:top;}",
+    "  table.idea-table tr[data-id]{cursor:pointer;}",
+    "  table.idea-table tr[data-id].selected td{background:var(--accent-soft);}",
+    "  .idea-name{font-weight:700;font-size:13px;display:block;}",
+    "  .idea-purpose{font-size:11.5px;color:var(--muted);margin-top:1px;max-width:560px;}",
+    "  .idea-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;max-width:520px;}",
+    "  .chip{border-radius:999px;padding:1px 8px;font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);white-space:nowrap;}",
+    "  .chip.tool{background:#e4f4e8;color:#1d7a36;border-color:#9fd8ad;}",
+    "  .chip.obj{background:#f6f0e4;color:#7a5a12;border-color:#e2d3a8;}",
+    "  .chip.single{background:#fbeaea;color:#b02a2a;border-color:#eab4b4;}",
+    "  td.idea-metrics-cell{white-space:nowrap;color:var(--muted);}",
+    "  td.idea-metrics-cell b{color:var(--ink);}",
+    "  .lic-badge{border-radius:999px;padding:2px 9px;font-size:10.5px;font-weight:600;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);white-space:nowrap;}",
+    "  .st-badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;border:1px solid var(--line);white-space:nowrap;}",
+    "  .st-planned{background:#e8f0f8;color:#1e4e79;border-color:#b6cde4;}",
+    "  .st-progress{background:#fdf3df;color:#96680a;border-color:#eed8a6;}",
+    "  .st-built{background:#e4f4e8;color:#1d7a36;border-color:#9fd8ad;}",
+    "  .st-skipped{background:#fbeaea;color:#b02a2a;border-color:#eab4b4;}",
+    "  .st-backlog{background:#f1f5f9;color:#475569;border-color:#cbd5e1;}",
+    "  .detail-pane{width:460px;flex-shrink:0;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;}",
+    "  .detail-placeholder{padding:22px 16px;text-align:center;color:var(--muted);font-size:12.5px;}",
+    "  .dp-head{display:flex;align-items:flex-start;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2;}",
+    "  .dp-title{font-size:15px;font-weight:700;flex:1;line-height:1.35;}",
+    "  .dp-sub{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;}",
+    "  .dp-close{border:1px solid var(--line);background:#fff;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:12px;color:var(--muted);flex-shrink:0;}",
+    "  .dp-close:hover{background:var(--accent-soft);}",
+    "  .dp-body{padding:12px 14px 18px;}",
+    "  .dp-body h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 6px;}",
+    "  .dp-body h3:first-child{margin-top:0;}",
+    "  .details-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:6px;margin-bottom:4px;}",
+    "  .metric{background:#f8fafc;border:1px solid var(--line);border-radius:7px;padding:5px 8px;min-width:0;}",
+    "  .metric .ml{display:block;font-size:10px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase;}",
+    "  .metric .mv{display:block;font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}",
+    "  .details-work{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}",
+    "  .details-work select{border:1px solid var(--line);border-radius:6px;font-size:12px;padding:4px 7px;background:#fff;}",
+    "  .details-notes textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12.5px;font-family:inherit;resize:vertical;}",
+    "  .empty-note{padding:24px 16px;text-align:center;color:var(--muted);font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:10px;}",
+    "  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:50;}",
+    "  .modal-overlay.open{display:flex;}",
+    "  .modal-box{background:#fff;border-radius:10px;padding:16px 18px;width:min(640px,92vw);max-height:86vh;display:flex;flex-direction:column;}",
+    "  .modal-box h2{margin:0 0 8px;font-size:15px;}",
+    "  .modal-box textarea{width:100%;flex:1;min-height:260px;border:1px solid var(--line);border-radius:6px;padding:8px;font-family:Consolas,monospace;font-size:12px;}",
+    "  .modal-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}",
+    "  .modal-actions button{border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12.5px;}",
+    "  .modal-actions button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}",
+    "  footer.page-foot{margin-top:14px;font-size:11.5px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;}",
+    "  @media (max-width:1200px){.detail-pane{position:static;width:100%;max-height:none;}}",
+    "  @media (max-width:980px){.layout{flex-direction:column;}.sidebar{width:100%;position:static;max-height:none;}}",
+    "</style>",
+    "</head>",
+    "<body>",
+    '<div class="layout">',
+    '  <aside class="sidebar" id="sidebar">',
+    '    <div class="side-head"><span>Groups</span></div>',
+    '    <div class="side-total" id="sideTotals"></div>',
+    '    <nav id="sideNav"></nav>',
+    "  </aside>",
+    '  <div class="main">',
+    '    <header class="page-head">',
+    "      <h1>Application Ideas Catalog</h1>",
+    '      <div class="head-sub">Applications (cmsObjectType) are the covers that bundle html-tools inside field groups inside objects. Each application lists the business objects it defines and the html-tools it bundles.</div>',
+    '      <div class="stats-row" id="statsRow"></div>',
+    "    </header>",
+    '    <div class="toolbar">',
+    '      <label for="searchInput">Search</label>',
+    '      <input type="search" id="searchInput" placeholder="Name, purpose, object, tool...">',
+    '      <label for="statusFilter">Status</label>',
+    '      <select id="statusFilter"><option value="all">All</option><option value="backlog">Backlog</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="built">Built</option><option value="skipped">Skipped</option></select>',
+    '      <label for="licensingFilter">Licensing</label>',
+    '      <select id="licensingFilter"><option value="all">All</option></select>',
+    '      <label for="sortSelect">Sort</label>',
+    '      <select id="sortSelect"><option value="order">Catalog order</option><option value="som">SOM (high first)</option><option value="tam">TAM (high first)</option><option value="name">Name</option><option value="status">Status</option><option value="licensing">Licensing</option></select>',
+    '      <div class="spacer"></div>',
+    '      <div class="tb-menu-wrap">',
+    '        <button class="tb-btn" id="btnActionsMenu">&#9881; Actions &#9662;</button>',
+    '        <div class="tb-menu" id="actionsMenu">',
+    '          <button class="tb-menu-item" data-action="export-json">&#128196; Export ideas catalog (JSON)</button>',
+    '          <button class="tb-menu-item" data-action="import-json">&#128229; Import ideas catalog (JSON)</button>',
+    '          <button class="tb-menu-item" data-action="export-hierarchy">&#128230; Export folder hierarchy</button>',
+    '          <button class="tb-menu-item" data-action="export-work">Export work state</button>',
+    '          <button class="tb-menu-item" data-action="import-work">Import work state</button>',
+    "        </div>",
+    "      </div>",
+    "    </div>",
+    '    <div id="selectionBar"></div>',
+    '    <div id="groupsContainer"></div>',
+    "    <footer class=\"page-foot\">",
+    "      <details><summary>About this page (reference notes)</summary>",
+    "        <p>Pick a group, category or subcategory on the left to browse its applications; click an item to see its details on the right. An <b>application (cmsObjectType)</b> is the container: html-tools live inside <b>field groups</b> inside <b>objects</b> of the application. Each application records the business objects it defines (the <i>Objects</i> chips) and the html-tools it bundles (the <i>Bundled html-tools</i> chips) - the tools themselves are filed separately in the html-tool library taxonomy.</p>",
+    "        <p>This page mirrors the html-tool folder taxonomy 1:1 so an application and the html-tools it bundles live in the same conceptual space. Master data lives in <b>application-ideas-catalog.json</b>; the page embeds the same data inline and can re-export it from the Actions menu. Manual work state (status, priority, notes) is saved in this browser (localStorage key uniconhub_application_ideas_work_v1).</p>",
+    "      </details>",
+    "    </footer>",
+    "  </div>",
+    '  <aside class="detail-pane" id="detailsPane">',
+    '    <div class="detail-placeholder">Select an item from the list to see its details.</div>',
+    "  </aside>",
+    "</div>",
+    '<div class="modal-overlay" id="workModal">',
+    '  <div class="modal-box">',
+    '    <h2 id="workModalTitle">Work state JSON</h2>',
+    '    <textarea id="workModalText"></textarea>',
+    '    <div class="modal-actions">',
+    '      <button id="workModalClose">Close</button>',
+    '      <button class="primary" id="workModalApply">Apply</button>',
+    "    </div>",
+    "  </div>",
+    "</div>",
+    "<script>var APP_CATALOG = " + catalogJson + ";</scr" + "ipt>",
+    "<script>",
+    "(function(){",
+    "  'use strict';",
+    "  var Q = String.fromCharCode(34);",
+    "  var D = APP_CATALOG;",
+    "  var WORK_KEY = 'uniconhub_application_ideas_work_v1';",
+    "  var STATUSES = [",
+    "    { id: 'backlog', label: 'Backlog', cls: 'st-backlog' },",
+    "    { id: 'planned', label: 'Planned', cls: 'st-planned' },",
+    "    { id: 'in-progress', label: 'In Progress', cls: 'st-progress' },",
+    "    { id: 'built', label: 'Built', cls: 'st-built' },",
+    "    { id: 'skipped', label: 'Skipped', cls: 'st-skipped' }",
+    "  ];",
+    "  var PRIORITIES = [",
+    "    { id: 'none', label: 'Priority: -' },",
+    "    { id: 'low', label: 'Priority: Low' },",
+    "    { id: 'medium', label: 'Priority: Medium' },",
+    "    { id: 'high', label: 'Priority: High' }",
+    "  ];",
+    "  var LICENSING_LABELS = {",
+    "    'freemium': 'Freemium',",
+    "    'subscription-monthly': 'Monthly subscription',",
+    "    'subscription-annual': 'Annual subscription',",
+    "    'one-time': 'One-time purchase',",
+    "    'per-seat-monthly': 'Per-seat monthly',",
+    "    'usage-based': 'Usage based',",
+    "    'white-label': 'White label',",
+    "    'app-bundle': 'App bundle'",
+    "  };",
+    "",
+    "  var GROUPS = buildGroups(D.hierarchy.folders);",
+    "  var APPS = D.applications.slice();",
+    "  var appIndex = {};",
+    "  APPS.forEach(function (a, i) { a._idx = i; });",
+    "  var appBySub = {};",
+    "  APPS.forEach(function (a) { (appBySub[a.code] = appBySub[a.code] || []).push(a); });",
+    "",
+    "  var _work = loadWork();",
+    "  var _filters = { search: '', status: 'all', licensing: 'all', sort: 'order' };",
+    "  var _selection = firstSelection();",
+    "  var _collapsed = {};",
+    "  var _sortDir = -1;",
+    "  var _detailsId = null;",
+    "  var _modalMode = 'work';",
+    "",
+    "  function buildGroups(folders) {",
+    "    var groups = [];",
+    "    folders.forEach(function (top) {",
+    "      (top.children || []).forEach(function (level) {",
+    "        var group = { key: top.code + '-' + level.slug, label: top.name + ' / ' + level.name, cats: [] };",
+    "        (level.children || []).forEach(function (cat) {",
+    "          var entry = { key: cat.code, label: cat.name, subs: [] };",
+    "          (cat.children || []).forEach(function (sub) {",
+    "            entry.subs.push({ code: sub.code, label: sub.name });",
+    "          });",
+    "          group.cats.push(entry);",
+    "        });",
+    "        groups.push(group);",
+    "      });",
+    "    });",
+    "    return groups;",
+    "  }",
+    "",
+    "  function firstSelection() {",
+    "    var g = GROUPS[0];",
+    "    return { kind: 'cat', key: g.cats[0].key };",
+    "  }",
+    "",
+    "  function findGroup(key) { for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].key === key) return GROUPS[i]; return null; }",
+    "  function findCat(key) {",
+    "    for (var i = 0; i < GROUPS.length; i++) {",
+    "      var g = GROUPS[i];",
+    "      for (var j = 0; j < g.cats.length; j++) if (g.cats[j].key === key) return { group: g, cat: g.cats[j] };",
+    "    }",
+    "    return null;",
+    "  }",
+    "  function findSub(key) {",
+    "    for (var i = 0; i < GROUPS.length; i++) {",
+    "      var g = GROUPS[i];",
+    "      for (var j = 0; j < g.cats.length; j++) {",
+    "        var c = g.cats[j];",
+    "        for (var k = 0; k < c.subs.length; k++) if (c.subs[k].code === key) return { group: g, cat: c, sub: c.subs[k] };",
+    "      }",
+    "    }",
+    "    return null;",
+    "  }",
+    "",
+    "  function appsOfGroup(g) {",
+    "    var out = [];",
+    "    g.cats.forEach(function (c) { c.subs.forEach(function (s) { out = out.concat(appBySub[s.code] || []); }); });",
+    "    return out;",
+    "  }",
+    "  function appsOfCat(c) {",
+    "    var out = [];",
+    "    c.subs.forEach(function (s) { out = out.concat(appBySub[s.code] || []); });",
+    "    return out;",
+    "  }",
+    "  function appsOfSub(code) { return appBySub[code] || []; }",
+    "",
+    "  function appsInScope() {",
+    "    if (_selection.kind === 'group') { var g = findGroup(_selection.key); return g ? appsOfGroup(g) : []; }",
+    "    if (_selection.kind === 'sub') return appsOfSub(_selection.key);",
+    "    var found = findCat(_selection.key); return found ? appsOfCat(found.cat) : [];",
+    "  }",
+    "",
+    "  function loadWork() { try { var raw = localStorage.getItem(WORK_KEY); return raw ? JSON.parse(raw) : {}; } catch (e) { return {}; } }",
+    "  function saveWork() { try { localStorage.setItem(WORK_KEY, JSON.stringify(_work)); } catch (e) {} }",
+    "  function workOf(id) { if (!_work[id]) _work[id] = { status: 'backlog', priority: 'none', notes: '' }; return _work[id]; }",
+    "",
+    "  function moneyOf(str) {",
+    "    if (!str) return 0;",
+    "    var cleaned = String(str).replace(/[$,]/g, '');",
+    "    if (/B$/.test(cleaned)) return parseFloat(cleaned) * 1e9;",
+    "    if (/M$/.test(cleaned)) return parseFloat(cleaned) * 1e6;",
+    "    if (/K$/.test(cleaned)) return parseFloat(cleaned) * 1e3;",
+    "    return parseFloat(cleaned) || 0;",
+    "  }",
+    "  function fmtMoney(v) {",
+    "    if (v >= 1e9) return '$' + (v / 1e9).toFixed(1).replace(/.0$/, '') + 'B';",
+    "    if (v >= 1e6) return '$' + (v / 1e6).toFixed(1).replace(/.0$/, '') + 'M';",
+    "    if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';",
+    "    return '$' + v;",
+    "  }",
+    "  function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }",
+    "",
+    "  function totalsOf(list) {",
+    "    var t = { tam: 0, sam: 0, som: 0, count: list.length };",
+    "    list.forEach(function (a) { t.tam += moneyOf(a.tam); t.sam += moneyOf(a.sam); t.som += moneyOf(a.som); });",
+    "    return t;",
+    "  }",
+    "",
+    "  function renderSidebar() {",
+    "    var all = APPS;",
+    "    var total = totalsOf(all);",
+    "    document.getElementById('sideTotals').innerHTML = '<b>' + total.count + '</b> applications<br>TAM <b>' + fmtMoney(total.tam) + '</b> - SAM <b>' + fmtMoney(total.sam) + '</b> - SOM <b>' + fmtMoney(total.som) + '</b>';",
+    "    var nav = '';",
+    "    GROUPS.forEach(function (g) {",
+    "      var gt = totalsOf(appsOfGroup(g));",
+    "      var active = _selection.kind === 'group' && _selection.key === g.key;",
+    "      var contains = g.cats.some(function (c) { return c.key === _selection.key || c.subs.some(function (s) { return s.code === _selection.key; }); });",
+    "      nav += '<div class=\"side-group' + ((active || contains) && !_collapsed[g.key] ? ' open' : '') + '\">';",
+    "      nav += '<div class=\"side-group-head\" data-act=\"select-group\" data-key=\"' + g.key + '\">';",
+    "      nav += '<div class=\"side-group-title\"><span>' + esc(g.label) + '</span><span class=\"count\">' + gt.count + '</span></div>';",
+    "      nav += '<div class=\"side-group-totals\"><span>TAM <b>' + fmtMoney(gt.tam) + '</b></span><span>SAM <b>' + fmtMoney(gt.sam) + '</b></span><span>SOM <b>' + fmtMoney(gt.som) + '</b></span></div>';",
+    "      nav += '</div><div class=\"side-cats\">';",
+    "      g.cats.forEach(function (c) {",
+    "        var ct = totalsOf(appsOfCat(c));",
+    "        var catActive = _selection.kind === 'cat' && _selection.key === c.key;",
+    "        nav += '<div class=\"side-item' + (catActive ? ' active' : '') + '\" data-act=\"select-cat\" data-key=\"' + c.key + '\" title=\"TAM ' + fmtMoney(ct.tam) + ' - SOM ' + fmtMoney(ct.som) + '\"><span>' + esc(c.label) + '</span><span class=\"meta\">' + ct.count + ' - ' + fmtMoney(ct.som) + '</span></div>';",
+    "        c.subs.forEach(function (s) {",
+    "          var st = totalsOf(appsOfSub(s.code));",
+    "          var subActive = _selection.kind === 'sub' && _selection.key === s.code;",
+    "          nav += '<div class=\"side-subitem' + (subActive ? ' active' : '') + '\" data-act=\"select-sub\" data-key=\"' + s.code + '\" title=\"TAM ' + fmtMoney(st.tam) + ' - SOM ' + fmtMoney(st.som) + '\"><span>' + esc(s.label) + '</span><span class=\"meta\">' + st.count + ' - ' + fmtMoney(st.som) + '</span></div>';",
+    "        });",
+    "      });",
+    "      nav += '</div></div>';",
+    "    });",
+    "    document.getElementById('sideNav').innerHTML = nav;",
+    "  }",
+    "",
+    "  function buildStats() {",
+    "    var counts = { backlog: 0, planned: 0, 'in-progress': 0, built: 0, skipped: 0 };",
+    "    var totalSom = 0;",
+    "    APPS.forEach(function (a) {",
+    "      counts[workOf(a.id).status]++;",
+    "      totalSom += moneyOf(a.som);",
+    "    });",
+    "    var html = '';",
+    "    html += chip('Applications', APPS.length);",
+    "    html += chip('Catalog SOM (3yr)', fmtMoney(totalSom));",
+    "    html += chip('Backlog', counts.backlog);",
+    "    html += chip('Planned', counts.planned);",
+    "    html += chip('In Progress', counts['in-progress']);",
+    "    html += chip('Built', counts.built);",
+    "    html += chip('Skipped', counts.skipped);",
+    "    document.getElementById('statsRow').innerHTML = html;",
+    "  }",
+    "  function chip(label, value) { return '<div class=\"stat-chip\"><strong>' + value + '</strong>' + esc(label) + '</div>'; }",
+    "",
+    "  function ideaMatches(a) {",
+    "    var q = _filters.search;",
+    "    if (q) {",
+    "      var hay = (a.name + ' ' + a.purpose + ' ' + (a.objects || []).join(' ') + ' ' + (a.tools || []).join(' ')).toLowerCase();",
+    "      if (hay.indexOf(q) === -1) return false;",
+    "    }",
+    "    if (_filters.status !== 'all' && workOf(a.id).status !== _filters.status) return false;",
+    "    if (_filters.licensing !== 'all' && a.licensing !== _filters.licensing) return false;",
+    "    return true;",
+    "  }",
+    "",
+    "  var STATUS_SORT_RANK = { 'in-progress': 0, planned: 1, backlog: 2, built: 3, skipped: 4 };",
+    "  function defaultSortDir(mode) { return (mode === 'som' || mode === 'tam') ? -1 : 1; }",
+    "  function sortApps(list) {",
+    "    var mode = _filters.sort;",
+    "    if (mode === 'order') return list.slice().sort(function (a, b) { return a._idx - b._idx; });",
+    "    return list.slice().sort(function (a, b) {",
+    "      var cmp;",
+    "      if (mode === 'som' || mode === 'tam') cmp = moneyOf(a[mode]) - moneyOf(b[mode]);",
+    "      else if (mode === 'name') cmp = a.name.localeCompare(b.name);",
+    "      else if (mode === 'status') cmp = (STATUS_SORT_RANK[workOf(a.id).status] || 9) - (STATUS_SORT_RANK[workOf(b.id).status] || 9);",
+    "      else if (mode === 'licensing') cmp = String(a.licensing).localeCompare(String(b.licensing));",
+    "      else cmp = 0;",
+    "      if (cmp === 0) cmp = a.name.localeCompare(b.name);",
+    "      return cmp * _sortDir;",
+    "    });",
+    "  }",
+    "",
+    "  function thHtml(mode, label) {",
+    "    var mark = _filters.sort === mode ? (_sortDir > 0 ? ' \u25B2' : ' \u25BC') : '';",
+    "    return '<th class=\"sortable' + (_filters.sort === mode ? ' sorted' : '') + '\" data-sort=\"' + mode + '\">' + label + mark + '</th>';",
+    "  }",
+    "",
+    "  function rowHtml(a) {",
+    "    var w = workOf(a.id);",
+    "    var st = null; STATUSES.forEach(function (s) { if (s.id === w.status) st = s; });",
+    "    var badge = st ? '<span class=\"st-badge ' + st.cls + '\">' + st.label + '</span>' : '';",
+    "    var chips = '';",
+    "    if (a.singleObject) chips += '<span class=\"chip single\">single object / tenant</span>';",
+    "    (a.objects || []).slice(0, 4).forEach(function (o) { chips += '<span class=\"chip obj\">' + esc(o) + '</span>'; });",
+    "    (a.tools || []).slice(0, 4).forEach(function (t) { chips += '<span class=\"chip tool\">' + esc(t) + '</span>'; });",
+    "    return '<tr data-id=\"' + a.id + '\" title=\"Click to open details\">' +",
+    "      '<td>' + badge + '</td>' +",
+    "      '<td><span class=\"idea-name\">' + esc(a.name) + '</span><div class=\"idea-purpose\">' + esc(a.purpose) + '</div><div class=\"idea-chips\">' + chips + '</div></td>' +",
+    "      '<td class=\"idea-metrics-cell\">' + esc(a.users) + '<br><b>' + esc(a.tam) + '</b> TAM<br><b>' + esc(a.som) + '</b> SOM</td>' +",
+    "      '<td><span class=\"lic-badge\">' + (LICENSING_LABELS[a.licensing] || a.licensing) + '</span></td>' +",
+    "    '</tr>';",
+    "  }",
+    "",
+    "  function catSectionHtml(cat, visible) {",
+    "    var totals = totalsOf(appsOfCat(cat));",
+    "    return '<section class=\"branch\">' +",
+    "      '<div class=\"branch-head\"><span class=\"branch-title\">' + esc(cat.label) + '</span>' +",
+    "      '<span class=\"branch-counts\">' + cat.subs.length + ' subcategories - ' + totals.count + ' apps - TAM <b>' + fmtMoney(totals.tam) + '</b> - SOM <b>' + fmtMoney(totals.som) + '</b></span></div>' +",
+    "      '<div class=\"idea-table-wrap\"><table class=\"idea-table\"><thead><tr>' + thHtml('status', 'Status') + thHtml('name', 'Application') + thHtml('som', 'Market') + thHtml('licensing', 'Licensing') + '</tr></thead>' +",
+    "      '<tbody>' + visible.map(rowHtml).join('') + '</tbody></table></div></section>';",
+    "  }",
+    "",
+    "  function renderSelection() {",
+    "    var out = ''; var pathText = ''; var titleText = ''; var totals = { tam: 0, sam: 0, som: 0, count: 0 };",
+    "    if (_selection.kind === 'group') {",
+    "      var g = findGroup(_selection.key);",
+    "      if (!g) { renderEmpty(); return; }",
+    "      pathText = g.label; titleText = g.label;",
+    "      totals = totalsOf(appsOfGroup(g));",
+    "      g.cats.forEach(function (c) { var vis = sortApps(appsOfCat(c).filter(ideaMatches)); if (vis.length) out += catSectionHtml(c, vis); });",
+    "    } else if (_selection.kind === 'cat') {",
+    "      var found = findCat(_selection.key);",
+    "      if (!found) { renderEmpty(); return; }",
+    "      pathText = found.group.label + ' / ' + found.cat.label; titleText = found.cat.label;",
+    "      totals = totalsOf(appsOfCat(found.cat));",
+    "      var vis = sortApps(appsOfCat(found.cat).filter(ideaMatches));",
+    "      if (vis.length) out += catSectionHtml(found.cat, vis);",
+    "    } else if (_selection.kind === 'sub') {",
+    "      var sub = findSub(_selection.key);",
+    "      if (!sub) { renderEmpty(); return; }",
+    "      pathText = sub.group.label + ' / ' + sub.cat.label + ' / ' + sub.sub.label; titleText = sub.sub.label;",
+    "      var list = appsOfSub(sub.sub.code);",
+    "      totals = totalsOf(list);",
+    "      var visSub = sortApps(list.filter(ideaMatches));",
+    "      if (visSub.length) out += catSectionHtml(sub.cat, visSub);",
+    "    }",
+    "    var bar = '<div class=\"sel-bar\"><div><div class=\"sel-title\">' + esc(titleText) + '</div><div class=\"sel-path\">' + esc(pathText) + '</div></div>' +",
+    "      '<div class=\"sel-totals\"><span><b>' + totals.count + '</b> apps</span><span>TAM <b>' + fmtMoney(totals.tam) + '</b></span><span>SAM <b>' + fmtMoney(totals.sam) + '</b></span><span>SOM <b>' + fmtMoney(totals.som) + '</b></span></div></div>';",
+    "    document.getElementById('selectionBar').innerHTML = bar;",
+    "    document.getElementById('groupsContainer').innerHTML = out || '<div class=\"empty-note\">No applications match the current filters.</div>';",
+    "    updateSelectedRow(_detailsId);",
+    "  }",
+    "",
+    "  function renderEmpty() {",
+    "    document.getElementById('selectionBar').innerHTML = '';",
+    "    document.getElementById('groupsContainer').innerHTML = '<div class=\"empty-note\">Selection not found.</div>';",
+    "  }",
+    "",
+    "  function applyFilters() {",
+    "    _filters.search = document.getElementById('searchInput').value.trim().toLowerCase();",
+    "    _filters.status = document.getElementById('statusFilter').value;",
+    "    _filters.licensing = document.getElementById('licensingFilter').value;",
+    "    _filters.sort = document.getElementById('sortSelect').value;",
+    "    _sortDir = defaultSortDir(_filters.sort);",
+    "    renderSelection();",
+    "  }",
+    "",
+    "  function selectGroup(key) {",
+    "    if (_selection.kind === 'group' && _selection.key === key) { _collapsed[key] = !_collapsed[key]; }",
+    "    else { _selection = { kind: 'group', key: key }; delete _collapsed[key]; }",
+    "    renderSidebar(); renderSelection();",
+    "  }",
+    "  function selectCat(key) { _selection = { kind: 'cat', key: key }; renderSidebar(); renderSelection(); }",
+    "  function selectSub(key) { _selection = { kind: 'sub', key: key }; renderSidebar(); renderSelection(); }",
+    "",
+    "  function findIdea(id) { for (var i = 0; i < APPS.length; i++) if (APPS[i].id === id) return APPS[i]; return null; }",
+    "",
+    "  function renderDetails(id) {",
+    "    var a = findIdea(id);",
+    "    var pane = document.getElementById('detailsPane');",
+    "    if (!a) { pane.innerHTML = '<div class=\"detail-placeholder\">Item not found.</div>'; return; }",
+    "    _detailsId = id;",
+    "    var w = workOf(id);",
+    "    var st = null; STATUSES.forEach(function (s) { if (s.id === w.status) st = s; });",
+    "    var found = findSub(a.code);",
+    "    var pathText = found ? found.group.label + ' / ' + found.cat.label + ' / ' + found.sub.label : a.folder;",
+    "    var html = '';",
+    "    html += '<div class=\"dp-head\"><div class=\"dp-title\">' + esc(a.name) + '<span class=\"dp-sub\">' + esc(pathText) + '</span></div>' +",
+    "      '<button class=\"dp-close\" data-act=\"clear-details\" title=\"Close\">&#10005;</button></div>';",
+    "    html += '<div class=\"dp-body\">';",
+    "    html += '<div class=\"details-grid\">' +",
+    "      '<div class=\"metric\"><span class=\"ml\">Users</span><span class=\"mv\">' + esc(a.users) + '</span></div>' +",
+    "      '<div class=\"metric\"><span class=\"ml\">TAM</span><span class=\"mv\">' + esc(a.tam) + '</span></div>' +",
+    "      '<div class=\"metric\"><span class=\"ml\">SAM</span><span class=\"mv\">' + esc(a.sam) + '</span></div>' +",
+    "      '<div class=\"metric\"><span class=\"ml\">SOM (3yr)</span><span class=\"mv\">' + esc(a.som) + '</span></div>' +",
+    "    '</div>';",
+    "    html += '<p style=\"font-size:12.5px;color:var(--muted);margin:8px 0 0\">' + esc(a.purpose) + '</p>';",
+    "    html += '<h3>Business objects (cmsObjectTypes inside the app)</h3><div class=\"idea-chips\">' +",
+    "      (a.objects || []).map(function (o) { return '<span class=\"chip obj\">' + esc(o) + '</span>'; }).join('') +",
+    "      (a.singleObject ? '<span class=\"chip single\">single object per tenant</span>' : '') + '</div>';",
+    "    html += '<h3>Bundled html-tools</h3><div class=\"idea-chips\">' +",
+    "      (a.tools || []).map(function (t) { return '<span class=\"chip tool\">' + esc(t) + '</span>'; }).join('') + '</div>';",
+    "    html += '<h3>Work state</h3><div class=\"details-work\">' +",
+    "      '<span class=\"st-badge ' + st.cls + '\">' + st.label + '</span>' +",
+    "      '<select id=\"detailsStatus\" data-id=\"' + id + '\">' + STATUSES.map(function (s) { return '<option value=\"' + s.id + '\"' + (w.status === s.id ? ' selected' : '') + '>' + s.label + '</option>'; }).join('') + '</select>' +",
+    "      '<select id=\"detailsPriority\" data-id=\"' + id + '\">' + PRIORITIES.map(function (p) { return '<option value=\"' + p.id + '\"' + (w.priority === p.id ? ' selected' : '') + '>' + p.label + '</option>'; }).join('') + '</select>' +",
+    "    '</div>';",
+    "    html += '<h3>Notes</h3><div class=\"details-notes\"><textarea data-act=\"notes-text\" data-id=\"' + id + '\" placeholder=\"Working notes for this application...\">' + esc(w.notes || '') + '</textarea></div>';",
+    "    html += '</div>';",
+    "    pane.innerHTML = html;",
+    "    updateSelectedRow(id);",
+    "  }",
+    "",
+    "  function clearDetails() {",
+    "    _detailsId = null;",
+    "    document.getElementById('detailsPane').innerHTML = '<div class=\"detail-placeholder\">Select an item from the list to see its details.</div>';",
+    "    updateSelectedRow('');",
+    "  }",
+    "  function updateSelectedRow(id) {",
+    "    var rows = document.querySelectorAll('#groupsContainer tr[data-id]');",
+    "    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('selected', rows[i].getAttribute('data-id') === id);",
+    "  }",
+    "",
+    "  function exportIdeasJson() { downloadJson(APP_CATALOG, 'application-ideas-catalog.json'); }",
+    "  function exportHierarchy() { downloadJson(APP_CATALOG.hierarchy, 'application-folder-hierarchy-import.json'); }",
+    "  function exportWork() { downloadJson(_work, 'application-work-state.json'); }",
+    "  function downloadJson(obj, filename) {",
+    "    var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });",
+    "    var url = URL.createObjectURL(blob);",
+    "    var link = document.createElement('a');",
+    "    link.href = url; link.download = filename;",
+    "    document.body.appendChild(link); link.click(); document.body.removeChild(link);",
+    "    setTimeout(function () { URL.revokeObjectURL(url); }, 500);",
+    "  }",
+    "",
+    "  function openWorkModal(mode) {",
+    "    _modalMode = mode;",
+    "    document.getElementById('workModalTitle').textContent = mode === 'export' ? 'Work state JSON - copy to save' : 'Paste JSON and Apply';",
+    "    document.getElementById('workModalText').value = mode === 'export' ? JSON.stringify(_work, null, 2) : '';",
+    "    document.getElementById('workModal').classList.add('open');",
+    "  }",
+    "",
+    "  function bindEvents() {",
+    "    var container = document.getElementById('groupsContainer');",
+    "    ['searchInput', 'statusFilter', 'licensingFilter', 'sortSelect'].forEach(function (id) {",
+    "      document.getElementById(id).addEventListener('input', applyFilters);",
+    "    });",
+    "    container.addEventListener('click', function (e) {",
+    "      var th = e.target.closest ? e.target.closest('th[data-sort]') : null;",
+    "      if (th) { var mode = th.getAttribute('data-sort'); if (_filters.sort === mode && mode !== 'order') _sortDir = -_sortDir; else { _filters.sort = mode; _sortDir = defaultSortDir(mode); } document.getElementById('sortSelect').value = mode; renderSelection(); return; }",
+    "      var row = e.target.closest ? e.target.closest('tr[data-id]') : null;",
+    "      if (row) renderDetails(row.getAttribute('data-id'));",
+    "    });",
+    "    var pane = document.getElementById('detailsPane');",
+    "    pane.addEventListener('change', function (e) {",
+    "      var t = e.target; if (!t.getAttribute) return;",
+    "      var id = t.getAttribute('data-id'); if (!id) return;",
+    "      if (t.classList.contains('status-select') || t.id === 'detailsStatus') { workOf(id).status = t.value; saveWork(); buildStats(); if (_filters.status !== 'all') renderSelection(); }",
+    "      else if (t.classList.contains('priority-select') || t.id === 'detailsPriority') { workOf(id).priority = t.value; saveWork(); }",
+    "    });",
+    "    pane.addEventListener('input', function (e) {",
+    "      var t = e.target;",
+    "      if (t.getAttribute && t.getAttribute('data-act') === 'notes-text') { workOf(t.getAttribute('data-id')).notes = t.value; saveWork(); }",
+    "    });",
+    "    pane.addEventListener('click', function (e) {",
+    "      var node = e.target.closest ? e.target.closest('[data-act=\"clear-details\"]') : null;",
+    "      if (node) clearDetails();",
+    "    });",
+    "    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _detailsId) clearDetails(); });",
+    "    document.getElementById('sideNav').addEventListener('click', function (e) {",
+    "      var node = e.target.closest ? e.target.closest('[data-act]') : null; if (!node) return;",
+    "      var act = node.getAttribute('data-act'); var key = node.getAttribute('data-key');",
+    "      if (act === 'select-group') selectGroup(key);",
+    "      if (act === 'select-cat') selectCat(key);",
+    "      if (act === 'select-sub') selectSub(key);",
+    "    });",
+    "    var menu = document.getElementById('actionsMenu');",
+    "    document.getElementById('btnActionsMenu').addEventListener('click', function (e) { e.stopPropagation(); menu.classList.toggle('open'); });",
+    "    menu.addEventListener('click', function (e) {",
+    "      var item = e.target.closest ? e.target.closest('[data-action]') : null; if (!item) return;",
+    "      menu.classList.remove('open');",
+    "      var action = item.getAttribute('data-action');",
+    "      if (action === 'export-json') exportIdeasJson();",
+    "      if (action === 'import-json') openWorkModal('import-json');",
+    "      if (action === 'export-hierarchy') exportHierarchy();",
+    "      if (action === 'export-work') openWorkModal('export');",
+    "      if (action === 'import-work') openWorkModal('import');",
+    "    });",
+    "    document.addEventListener('click', function (e) { if (menu.classList.contains('open') && !menu.parentNode.contains(e.target)) menu.classList.remove('open'); });",
+    "    document.getElementById('workModalClose').addEventListener('click', function () { document.getElementById('workModal').classList.remove('open'); });",
+    "    document.getElementById('workModalApply').addEventListener('click', function () {",
+    "      try {",
+    "        var text = document.getElementById('workModalText').value;",
+    "        if (_modalMode === 'import-json') {",
+    "          var parsed = JSON.parse(text);",
+    "          if (!parsed || !Array.isArray(parsed.applications)) { alert('Invalid catalog: missing applications array.'); return; }",
+    "          APP_CATALOG = parsed;",
+    "          GROUPS = buildGroups(APP_CATALOG.hierarchy.folders);",
+    "          APPS = APP_CATALOG.applications.slice();",
+    "          appBySub = {}; APPS.forEach(function (a, i) { a._idx = i; (appBySub[a.code] = appBySub[a.code] || []).push(a); });",
+    "          document.getElementById('workModal').classList.remove('open');",
+    "          populateLicensing(); buildStats(); renderSidebar(); renderSelection();",
+    "        } else {",
+    "          _work = JSON.parse(text); saveWork();",
+    "          document.getElementById('workModal').classList.remove('open');",
+    "          buildStats(); renderSelection(); renderSidebar();",
+    "        }",
+    "      } catch (err) { alert('Invalid JSON: ' + err.message); }",
+    "    });",
+    "  }",
+    "",
+    "  function populateLicensing() {",
+    "    var select = document.getElementById('licensingFilter');",
+    "    var seen = {}; APPS.forEach(function (a) { seen[a.licensing] = true; });",
+    "    select.innerHTML = '<option value=\"all\">All</option>';",
+    "    Object.keys(LICENSING_LABELS).forEach(function (key) { if (seen[key]) { var o = document.createElement('option'); o.value = key; o.textContent = LICENSING_LABELS[key]; select.appendChild(o); } });",
+    "  }",
+    "",
+    "  populateLicensing();",
+    "  buildStats();",
+    "  renderSidebar();",
+    "  renderSelection();",
+    "  bindEvents();",
+    "})();",
+    "</scr" + "ipt>",
+    "</body>",
+    "</html>"
+  ].join("\n");
+}

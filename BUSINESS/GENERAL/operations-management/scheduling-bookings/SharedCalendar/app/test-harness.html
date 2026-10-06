@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SharedCal — Test Harness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="SharedCalendar.css">
+<style>
+body { padding-top: 30px !important; margin: 0; }
+#th-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: #0f172a; color: #e6edf5; font-family: system-ui; font-size: 11px; padding: 5px 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#th-bar strong { color: #2dd4bf; letter-spacing: 0.5px; }
+#th-bar .sep { color: #475569; }
+#th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui; font-weight: 600; }
+#th-bar .btn-load { background: #0d9488; color: #fff; }
+#th-bar .btn-clear { background: #dc2626; color: #fff; }
+#th-bar .btn-reload { background: #16a34a; color: #fff; }
+#th-bar select { font-size: 11px; font-family: system-ui; padding: 2px 4px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #e6edf5; }
+#th-bar .hint { color: #64748b; font-size: 10px; }
+@keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div id="th-bar">
+  <strong>TEST HARNESS — SharedCal</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Data</button>
+  <button class="btn-clear" id="th-clear">Clear All</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <span class="sep">|</span>
+  <span class="hint">User:</span>
+  <select id="th-user">
+    <option value="u-admin">Alex Admin (admin)</option>
+    <option value="u-alice">Alice — Fine Arts (editor)</option>
+    <option value="u-bob">Bob — Sciences (editor)</option>
+    <option value="u-carol">Carol (viewer)</option>
+  </select>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+R = Read-Only</span>
+  <span class="sep">|</span>
+  <span class="hint">Ctrl+Shift+D = Dump DB</span>
+  <span class="sep">|</span>
+  <span id="th-status" class="hint">Loading...</span>
+</div>
+<div id="app-container"></div>
+
+<script>
+/* ── Mock tool SDK ── */
+(function() {
+  var STORAGE_KEY = 'sharedcal_test_db';
+  var listeners = { valueChange: [], readonlyChange: [], userChange: [] };
+  var _readOnly = false, _user = null, _value = null;
+
+  var USERS = {
+    'u-admin': { id: 'u-admin', name: 'Alex Admin', email: 'alex@acme.edu', roles: ['admin', 'editor'] },
+    'u-alice': { id: 'u-alice', name: 'Alice Fine Arts', email: 'alice@acme.edu', roles: ['editor'] },
+    'u-bob':   { id: 'u-bob', name: 'Bob Sciences', email: 'bob@acme.edu', roles: ['editor'] },
+    'u-carol': { id: 'u-carol', name: 'Carol Viewer', email: 'carol@acme.edu', roles: ['viewer'] }
+  };
+
+  function load() {
+    try { var raw = localStorage.getItem(STORAGE_KEY); _value = raw ? JSON.parse(raw) : null; }
+    catch(e) { _value = null; }
+    try { _user = JSON.parse(localStorage.getItem(STORAGE_KEY + '_user') || 'null') || USERS['u-admin']; }
+    catch(e) { _user = USERS['u-admin']; }
+  }
+  function save(v) { _value = v; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }
+
+  window.tool = {
+    getValue: function() { return _value; },
+    setValue: function(data) { save(data); listeners.valueChange.forEach(function(cb) { try { cb(data); } catch(e) {} }); },
+    onValueChange: function(cb) { listeners.valueChange.push(cb); },
+    getFields: function() { return {}; },
+    setField: function() {}, setFields: function() {}, watchField: function() {}, onFieldsChange: function() {},
+    param: function(name, fallback) {
+      var p = (new URLSearchParams(window.location.search)).get(name);
+      return p !== null && p !== '' ? p : fallback;
+    },
+    isReadOnly: function() { return _readOnly; },
+    onReadonlyChange: function(cb) { listeners.readonlyChange.push(cb); },
+    _setReadOnly: function(v) { _readOnly = v; listeners.readonlyChange.forEach(function(cb) { try { cb(v); } catch(e) {} }); },
+    getUser: function() { return _user; },
+    onUserChange: function(cb) { listeners.userChange.push(cb); },
+    _setUser: function(u) { _user = u; try { localStorage.setItem(STORAGE_KEY + '_user', JSON.stringify(u)); } catch(e) {} listeners.userChange.forEach(function(cb) { try { cb(u); } catch(e) {} }); },
+    reportValid: function(bool, msg) { if (!bool) console.warn('[Validation]', msg); },
+    notify: function(message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#0d9488', success: '#16a34a', warning: '#d97706', error: '#dc2626' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') + ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);animation:toolFadeIn .3s ease;max-width:400px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function() { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(function() { toast.remove(); }, 300); }, 2600);
+    },
+    resize: function() {},
+    declareOutput: function() {},
+    declareParams: function() {},
+    reportMissingParams: function() {},
+    onReady: function(cb) { load(); cb(_value, {}); },
+    _loadSampleData: function(data) { save(data); window.location.reload(); },
+    _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); },
+    _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
+    _dump: function() { console.log('SharedCal DB:', JSON.parse(JSON.stringify(_value))); }
+  };
+
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') { e.preventDefault(); window.tool._toggleReadOnly(); window.tool.notify(window.tool.isReadOnly() ? 'READ-ONLY MODE' : 'EDIT MODE', 'info'); }
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); window.tool._dump(); window.tool.notify('DB dumped to console', 'info'); }
+  });
+
+  document.getElementById('th-user').onchange = function() {
+    window.tool._setUser(USERS[this.value]);
+    window.tool.notify('Now acting as: ' + USERS[this.value].name, 'info');
+  };
+})();
+</script>
+
+<script>
+/* ── Dynamic HTML loader (fetch with embedded fallback for file://) ── */
+var EMBEDDED_HTML = '<div id="app"><aside class="sidebar"><div class="sidebar-brand"><div class="brand-icon">📅</div><div class="brand-name">SharedCal</div><div class="brand-sub">Shared Calendar</div></div><nav class="nav"><div class="nav-item active" data-page="calendar"><span class="nav-icon">📅</span>Calendar<span class="nav-badge" id="nav-cal-count">0</span></div><div class="nav-item" data-page="events"><span class="nav-icon">🗓</span>Events<span class="nav-badge" id="nav-events-count">0</span></div><div class="nav-item" data-page="departments"><span class="nav-icon">🏢</span>Departments<span class="nav-badge" id="nav-dept-count">0</span></div><div class="nav-item" data-page="locations"><span class="nav-icon">📍</span>Locations<span class="nav-badge" id="nav-loc-count">0</span></div><div class="nav-item" data-page="conflicts"><span class="nav-icon">⚠️</span>Conflicts<span class="nav-badge nav-badge-warn" id="nav-conflict-count">0</span></div></nav><button class="btn btn-primary btn-full" id="btn-quick-event">+ New Event</button><div class="sidebar-user" id="sidebar-user"></div></aside><main class="main"><div class="topbar"><div class="topbar-left"><h2 class="page-title" id="page-title">Calendar</h2><span class="build-badge" id="build-badge">build —</span></div><div class="topbar-actions"><button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button><button class="btn btn-outline btn-sm" id="btn-print">🖨 Print</button><button class="btn btn-outline btn-sm" id="btn-export">⬇ CSV</button><button class="btn btn-primary" id="btn-add-event-top">+ New Event</button></div></div><section id="sec-calendar" class="section active"><div class="cal-toolbar"><div class="cal-nav"><button class="btn btn-icon" id="cal-prev" title="Previous">◀</button><button class="btn btn-ghost" id="cal-today">Today</button><button class="btn btn-icon" id="cal-next" title="Next">▶</button><h3 class="cal-title" id="cal-title">—</h3></div><div class="cal-views"><button class="btn btn-ghost btn-sm cal-view-btn active" data-view="month">Month</button><button class="btn btn-ghost btn-sm cal-view-btn" data-view="week">Week</button><button class="btn btn-ghost btn-sm cal-view-btn" data-view="day">Day</button></div><div class="cal-filters"><select id="filter-dept" class="select-input"><option value="">All departments</option></select><select id="filter-location" class="select-input"><option value="">All locations</option></select><input type="text" id="cal-search" class="search-input" placeholder="Search…"></div></div><div class="cal-legend" id="cal-legend"></div><div class="calendar-container" id="calendar-container"></div></section><section id="sec-events" class="section"><div class="page-header"><div><div class="page-title">Events</div><div class="page-sub">All one-time and recurring entries across every department</div></div><div class="page-actions"><button class="btn btn-primary" id="btn-add-event">+ New Event</button></div></div><div class="filterbar"><input type="text" id="events-search" class="search-input" placeholder="Search title, location, description…"><select id="events-dept" class="select-input"><option value="">All departments</option></select><select id="events-location" class="select-input"><option value="">All locations</option></select><select id="events-category" class="select-input"><option value="">All categories</option></select><select id="events-kind" class="select-input"><option value="all">One-time + Recurring</option><option value="once">One-time only</option><option value="recur">Recurring only</option></select></div><div class="events-list" id="events-list"></div></section><section id="sec-departments" class="section"><div class="page-header"><div><div class="page-title">Departments</div><div class="page-sub">Every department shares one calendar — color-coded for clarity</div></div><div class="page-actions"><button class="btn btn-primary" id="btn-add-department">+ Add Department</button></div></div><div class="cards-grid" id="departments-grid"></div></section><section id="sec-locations" class="section"><div class="page-header"><div><div class="page-title">Locations</div><div class="page-sub">Rooms, halls and spaces — see who is where and when</div></div><div class="page-actions"><button class="btn btn-primary" id="btn-add-location">+ Add Location</button></div></div><div class="cards-grid" id="locations-grid"></div></section><section id="sec-conflicts" class="section"><div class="page-header"><div><div class="page-title">Conflicts</div><div class="page-sub">Overlaps are allowed — they stay visible here so nothing is a surprise</div></div><div class="page-actions"><button class="btn btn-outline" id="btn-refresh-conflicts">↻ Refresh</button></div></div><div class="conflict-list" id="conflicts-list"></div></section></main></div><div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal"><div class="modal-header"><h3 id="modal-title">Title</h3><button class="btn btn-icon modal-close" id="modal-close">✕</button></div><div class="modal-body" id="modal-body"></div><div class="modal-footer" id="modal-footer"></div></div></div><div class="toast-container" id="toast-container"></div>';
+</script>
+
+<script>
+(function() {
+  var status = document.getElementById('th-status');
+  var container = document.getElementById('app-container');
+  var inlineMode = /[?&]inlinejs=1/.test(window.location.search);
+
+  function loadExternalJS() {
+    status.textContent = 'Loading JS (external)...';
+    var script = document.createElement('script');
+    script.src = 'SharedCalendar.js';
+    script.onload = function() { status.textContent = 'Ready — click "Load Sample Data" to test'; };
+    script.onerror = function() { status.textContent = 'JS FAILED - check console'; };
+    document.body.appendChild(script);
+  }
+
+  function loadInlineJS() {
+    status.textContent = 'Loading JS (inline mode)...';
+    fetch('SharedCalendar.js')
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function(code) {
+        var script = document.createElement('script');
+        script.textContent = code;
+        document.body.appendChild(script);
+        status.textContent = 'Ready (inline mode)';
+      })
+      .catch(function() {
+        status.textContent = 'Inline fetch failed — falling back to external';
+        loadExternalJS();
+      });
+  }
+
+  function injectHTML(html) {
+    container.innerHTML = html;
+    if (inlineMode) loadInlineJS();
+    else loadExternalJS();
+  }
+
+  status.textContent = 'Fetching HTML...';
+  var fallbackTimer = setTimeout(function() {
+    status.textContent = 'Using embedded HTML (file:// mode)';
+    injectHTML(EMBEDDED_HTML);
+  }, 2000);
+
+  fetch('SharedCalendar.html')
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(html) {
+      clearTimeout(fallbackTimer);
+      status.textContent = 'HTML loaded (live)';
+      injectHTML(html);
+    })
+    .catch(function() { /* fallback timer handles it */ });
+})();
+</script>
+
+<script>
+/* ── Sample Data Generator ── */
+(function() {
+  var today = new Date();
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function generateSampleData() {
+    var deptArts = uid(), deptSci = uid(), deptReg = uid(), deptFac = uid(), deptLife = uid();
+    var locHall = uid(), loc101 = uid(), loc202 = uid(), locLab = uid(), locGym = uid(), locOnline = uid();
+
+    var departments = [
+      { id: deptArts, name: "Fine Arts", color: "#be185d", head: "Alice Fine Arts", notes: "Music, theatre and visual arts" },
+      { id: deptSci, name: "Sciences", color: "#0ea5e9", head: "Bob Sciences", notes: "Biology, chemistry, physics" },
+      { id: deptReg, name: "Registrar", color: "#16a34a", head: "Alex Admin", notes: "Enrollment, records, exams" },
+      { id: deptFac, name: "Facilities", color: "#d97706", head: "Alex Admin", notes: "Campus & room management" },
+      { id: deptLife, name: "Student Life", color: "#7c3aed", head: "Alice Fine Arts", notes: "Clubs, events and wellbeing" }
+    ];
+
+    var locations = [
+      { id: locHall, name: "Main Hall", type: "Hall", capacity: "300", building: "Central", notes: "" },
+      { id: loc101, name: "Room 101", type: "Room", capacity: "40", building: "A", notes: "" },
+      { id: loc202, name: "Room 202", type: "Room", capacity: "30", building: "A", notes: "" },
+      { id: locLab, name: "Science Lab", type: "Lab", capacity: "24", building: "B", notes: "" },
+      { id: locGym, name: "Gymnasium", type: "Auditorium", capacity: "500", building: "Sports", notes: "" },
+      { id: locOnline, name: "Online / Zoom", type: "Online", capacity: "500", building: "", notes: "" }
+    ];
+
+    var events = [];
+    function ev(o) {
+      var base = { id: uid(), title: "", deptId: deptReg, locationId: null, category: "Meeting", date: iso(today), allDay: false, startTime: "09:00", endTime: "10:00", repeat: "none", repeatEvery: 1, repeatUntil: "", description: "", status: "active", createdBy: "u-admin", createdByName: "Alex Admin" };
+      for (var k in o) base[k] = o[k];
+      events.push(base);
+    }
+
+    // Weekly recurring staff meeting (Sciences) — Mondays
+    var monday = addDays(today, -((today.getDay() + 6) % 7));
+    ev({ title: "Sciences Team Meeting", deptId: deptSci, locationId: loc101, category: "Meeting", date: iso(monday), startTime: "09:00", endTime: "10:00", repeat: "weekly", repeatEvery: 1, repeatUntil: iso(addDays(today, 60)), createdBy: "u-bob", createdByName: "Bob Sciences" });
+
+    // Monthly faculty seminar
+    ev({ title: "All-Faculty Seminar", deptId: deptReg, locationId: locHall, category: "Workshop", date: iso(addDays(today, 3)), startTime: "14:00", endTime: "16:00", repeat: "monthly", repeatEvery: 1, repeatUntil: iso(addDays(today, 120)), description: "Professional development series." });
+
+    // One-time exam tomorrow
+    var examDay = addDays(today, 1);
+    ev({ title: "Biology Midterm Exam", deptId: deptSci, locationId: locLab, category: "Exam", date: iso(examDay), startTime: "10:00", endTime: "12:00", description: "Chapters 1–6." });
+
+    // INTENTIONAL CONFLICT: Arts recital also books the Science Lab at overlapping time
+    ev({ title: "Choir Rehearsal", deptId: deptArts, locationId: locLab, category: "Event", date: iso(examDay), startTime: "11:00", endTime: "13:00", description: "Intentional double-booking demo.", createdBy: "u-alice", createdByName: "Alice Fine Arts" });
+
+    // Holiday (all-day) this week
+    ev({ title: "Staff Development Day", deptId: deptReg, locationId: null, category: "Holiday", date: iso(addDays(today, 5)), allDay: true, startTime: "", endTime: "" });
+
+    // Facility maintenance weekly
+    ev({ title: "Gym Floor Maintenance", deptId: deptFac, locationId: locGym, category: "Maintenance", date: iso(addDays(today, -1)), startTime: "07:00", endTime: "09:00", repeat: "weekly", repeatEvery: 1, repeatUntil: iso(addDays(today, 45)), createdBy: "u-admin", createdByName: "Alex Admin" });
+
+    // Student life club fair
+    ev({ title: "Club Fair", deptId: deptLife, locationId: locGym, category: "Event", date: iso(addDays(today, 10)), startTime: "11:00", endTime: "15:00" });
+
+    return { departments: departments, locations: locations, events: events, _theme: "light", _view: "month" };
+  }
+
+  document.getElementById('th-load-sample').onclick = function() {
+    window.tool._loadSampleData(generateSampleData());
+  };
+  document.getElementById('th-clear').onclick = function() {
+    window.tool._clearData();
+  };
+  document.getElementById('th-reload').onclick = function() {
+    window.location.reload();
+  };
+})();
+</script>
+</body>
+</html>

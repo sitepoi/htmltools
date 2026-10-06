@@ -1,0 +1,133 @@
+<!-- build 2026-10-05-3 -->
+<div id="app">
+	<aside class="sidebar">
+		<div class="sidebar-brand">
+			<div class="brand-icon">📅</div>
+			<div class="brand-name">SharedCal</div>
+			<div class="brand-sub">Shared Calendar</div>
+		</div>
+		<nav class="nav">
+			<div class="nav-item active" data-page="calendar"><span class="nav-icon">📅</span>Calendar<span class="nav-badge" id="nav-cal-count">0</span></div>
+			<div class="nav-item" data-page="events"><span class="nav-icon">🗓</span>Events<span class="nav-badge" id="nav-events-count">0</span></div>
+			<div class="nav-item" data-page="departments"><span class="nav-icon">🏢</span>Departments<span class="nav-badge" id="nav-dept-count">0</span></div>
+			<div class="nav-item" data-page="locations"><span class="nav-icon">📍</span>Locations<span class="nav-badge" id="nav-loc-count">0</span></div>
+			<div class="nav-item" data-page="conflicts"><span class="nav-icon">⚠️</span>Conflicts<span class="nav-badge nav-badge-warn" id="nav-conflict-count">0</span></div>
+		</nav>
+		<button class="btn btn-primary btn-full" id="btn-quick-event">+ New Event</button>
+		<div class="sidebar-user" id="sidebar-user"></div>
+	</aside>
+
+	<main class="main">
+		<div class="topbar">
+			<div class="topbar-left">
+				<h2 class="page-title" id="page-title">Calendar</h2>
+				<span class="build-badge" id="build-badge">build —</span>
+			</div>
+			<div class="topbar-actions">
+				<button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+				<button class="btn btn-outline btn-sm" id="btn-print">🖨 Print</button>
+				<button class="btn btn-outline btn-sm" id="btn-export">⬇ CSV</button>
+				<button class="btn btn-primary" id="btn-add-event-top">+ New Event</button>
+			</div>
+		</div>
+
+		<section id="sec-calendar" class="section active">
+			<div class="cal-toolbar">
+				<div class="cal-nav">
+					<button class="btn btn-icon" id="cal-prev" title="Previous">◀</button>
+					<button class="btn btn-ghost" id="cal-today">Today</button>
+					<button class="btn btn-icon" id="cal-next" title="Next">▶</button>
+					<h3 class="cal-title" id="cal-title">—</h3>
+				</div>
+				<div class="cal-views">
+					<button class="btn btn-ghost btn-sm cal-view-btn active" data-view="month">Month</button>
+					<button class="btn btn-ghost btn-sm cal-view-btn" data-view="week">Week</button>
+					<button class="btn btn-ghost btn-sm cal-view-btn" data-view="day">Day</button>
+				</div>
+				<div class="cal-filters">
+					<select id="filter-dept" class="select-input"><option value="">All departments</option></select>
+					<select id="filter-location" class="select-input"><option value="">All locations</option></select>
+					<input type="text" id="cal-search" class="search-input" placeholder="Search…">
+				</div>
+			</div>
+			<div class="cal-legend" id="cal-legend"></div>
+			<div class="calendar-container" id="calendar-container"></div>
+		</section>
+
+		<section id="sec-events" class="section">
+			<div class="page-header">
+				<div>
+					<div class="page-title">Events</div>
+					<div class="page-sub">All one-time and recurring entries across every department</div>
+				</div>
+				<div class="page-actions">
+					<button class="btn btn-primary" id="btn-add-event">+ New Event</button>
+				</div>
+			</div>
+			<div class="filterbar">
+				<input type="text" id="events-search" class="search-input" placeholder="Search title, location, description…">
+				<select id="events-dept" class="select-input"><option value="">All departments</option></select>
+				<select id="events-location" class="select-input"><option value="">All locations</option></select>
+				<select id="events-category" class="select-input"><option value="">All categories</option></select>
+				<select id="events-kind" class="select-input">
+					<option value="all">One-time + Recurring</option>
+					<option value="once">One-time only</option>
+					<option value="recur">Recurring only</option>
+				</select>
+			</div>
+			<div class="events-list" id="events-list"></div>
+		</section>
+
+		<section id="sec-departments" class="section">
+			<div class="page-header">
+				<div>
+					<div class="page-title">Departments</div>
+					<div class="page-sub">Every department shares one calendar — color-coded for clarity</div>
+				</div>
+				<div class="page-actions">
+					<button class="btn btn-primary" id="btn-add-department">+ Add Department</button>
+				</div>
+			</div>
+			<div class="cards-grid" id="departments-grid"></div>
+		</section>
+
+		<section id="sec-locations" class="section">
+			<div class="page-header">
+				<div>
+					<div class="page-title">Locations</div>
+					<div class="page-sub">Rooms, halls and spaces — see who is where and when</div>
+				</div>
+				<div class="page-actions">
+					<button class="btn btn-primary" id="btn-add-location">+ Add Location</button>
+				</div>
+			</div>
+			<div class="cards-grid" id="locations-grid"></div>
+		</section>
+
+		<section id="sec-conflicts" class="section">
+			<div class="page-header">
+				<div>
+					<div class="page-title">Conflicts</div>
+					<div class="page-sub">Overlaps are allowed — they stay visible here so nothing is a surprise</div>
+				</div>
+				<div class="page-actions">
+					<button class="btn btn-outline" id="btn-refresh-conflicts">↻ Refresh</button>
+				</div>
+			</div>
+			<div class="conflict-list" id="conflicts-list"></div>
+		</section>
+	</main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+	<div class="modal" id="modal">
+		<div class="modal-header">
+			<h3 id="modal-title">Title</h3>
+			<button class="btn btn-icon modal-close" id="modal-close">✕</button>
+		</div>
+		<div class="modal-body" id="modal-body"></div>
+		<div class="modal-footer" id="modal-footer"></div>
+	</div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>

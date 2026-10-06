@@ -322,6 +322,21 @@
     }
     .deck-slide:last-child { page-break-after: auto; }
     .deck-controls, .deck-progress { display: none; }
+    /* Ink-friendly: strip fills, keep lines */
+    .deck-title-slide, .deck-closing-slide { background: #ffffff !important; color: var(--ink); }
+    .deck-title-slide h1, .deck-closing-slide h2 { color: var(--ink) !important; }
+    .deck-title-slide .deck-sub, .deck-closing-slide .deck-sub { color: var(--muted) !important; }
+    .deck-title-slide .deck-kicker { color: var(--accent-2) !important; }
+    .deck-closing-slide .deck-kicker, .deck-closing-slide .deck-note { color: var(--muted) !important; }
+    .deck-chip { background: none !important; border: 0.3mm solid var(--accent-2); color: var(--accent-2) !important; }
+    .deck-card, .deck-card.warm,
+    .deck-recipe-step, .deck-prompt-box, .deck-prompt-box.strong,
+    .deck-reveal, .deck-question,
+    table.deck-table th, table.deck-table tr:nth-child(even) td { background: none; }
+    .deck-recipe-step { border-top: 1mm solid var(--accent); }
+    .deck-big-number { color: var(--accent); }
+    .deck-question-mark { background: none; border: 0.4mm solid var(--accent-2); color: var(--accent-2); }
+    .deck-choice.deck-choice-picked { background: none; border: 0.4mm solid var(--accent); color: var(--accent); }
   }
   @media (max-width: 860px) {
     .deck-slide { padding: 32px 24px 80px; }

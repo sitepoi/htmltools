@@ -98,13 +98,82 @@
     padding: 12px 16px;
     margin: 14px 0;
   }
+  .ld-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .ld-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e6ecf2;
+    border-radius: 12px;
+    padding: 16px 18px 14px;
+    box-shadow: 0 1px 2px rgba(16, 42, 67, 0.04), 0 8px 20px rgba(16, 42, 67, 0.06);
+  }
+  .ld-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 12px 12px 0 0;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+  .ld-card-title {
+    margin: 0 0 10px;
+    font-size: 13.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--accent);
+  }
+  .ld-card-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .ld-card-list li {
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent-2);
+    border-radius: 8px;
+    background: #fafcfe;
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .ld-weak {
+    list-style: none;
+    margin: 14px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ld-weak li {
+    margin: 0;
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2);
+    border-radius: 10px;
+    background: #fbfcfe;
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+  .ld-weak li strong { color: var(--accent-dark); }
   .ld-footer { margin-top: 26px; color: var(--muted); font-size: 13px; border-top: 2px solid var(--line); padding-top: 10px; }
   .ld-print-header, .ld-print-footer { display: none; }
   .ld-print-table, .ld-print-table tbody, .ld-print-table tr, .ld-print-table td { display: block; }
   .ld-print-table thead, .ld-print-table tfoot { display: none; }
   @media (max-width: 700px) {
     .ld-shell { padding: 18px 14px 36px; }
-    table.ld-table th, table.ld-table td { font-size: 13px; padding: 6px 6px; }
+    .ld-cards { grid-template-columns: 1fr; }
   }
   @media print {
     @page { size: A4; margin: 18mm 14mm 14mm; }
@@ -147,6 +216,14 @@
     table.ld-table th, table.ld-table td { font-size: 9.5pt; padding: 2mm 2.5mm; }
     table.ld-table tr { break-inside: avoid; }
     a { color: inherit; text-decoration: none; }
+    /* Ink-friendly: strip fills, keep lines */
+    .ld-prompt, .ld-prompt.strong, .ld-note,
+    table.ld-table th, table.ld-table tr:nth-child(even) td { background: none; }
+    .ld-cards { gap: 3.5mm; }
+    .ld-card { break-inside: avoid; background: none; box-shadow: none; border: 0.3mm solid #b9c4cf; padding: 4mm 4.5mm 3.5mm; }
+    .ld-card::before { height: 0.5mm; border-radius: 0; background: var(--accent); }
+    .ld-card-list li { background: none; border-left-width: 1mm; }
+    .ld-weak li { background: none; }
   }
 </style>
 </head>
@@ -196,18 +273,61 @@
 
   <h2>The palette - universal follow-ups</h2>
   <p>Each line works no matter what the AI wrote. Pick by looking at the draft - never by guessing.</p>
-  <table class="ld-table">
-    <thead><tr><th style="width:30%">What to fix</th><th>The words to say</th></tr></thead>
-    <tbody>
-      <tr><td><strong>Length</strong></td><td>"Shorter." - "Under 150 words." - "Longer - keep going."</td></tr>
-      <tr><td><strong>Tone</strong></td><td>"Warmer." - "More polite." - "More formal." - "Simpler words."</td></tr>
-      <tr><td><strong>Pointing at parts</strong></td><td>"Remove the second paragraph." - "Move the price to the end." - "Add one sentence about the refund."</td></tr>
-      <tr><td><strong>Options</strong></td><td>"Give me two versions - one formal, one warm." - "Write three different openings."</td></tr>
-      <tr><td><strong>The editor</strong></td><td>"What would make this better? Three ideas - but do only the ones I choose." - "Check for mistakes and fix them."</td></tr>
-      <tr><td><strong>Voice</strong></td><td>"Read it back to me." - "Read only the first paragraph."</td></tr>
-      <tr><td><strong>The check</strong></td><td>"Translate it back into Turkish." - "Translate this letter into English, natural tone."</td></tr>
-    </tbody>
-  </table>
+  <div class="ld-cards">
+    <article class="ld-card">
+      <h3 class="ld-card-title">Length</h3>
+      <ul class="ld-card-list">
+        <li>"Shorter."</li>
+        <li>"Under 150 words."</li>
+        <li>"Longer - keep going."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">Tone</h3>
+      <ul class="ld-card-list">
+        <li>"Warmer."</li>
+        <li>"More polite."</li>
+        <li>"More formal."</li>
+        <li>"Simpler words."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">Pointing at parts</h3>
+      <ul class="ld-card-list">
+        <li>"Remove the second paragraph."</li>
+        <li>"Move the price to the end."</li>
+        <li>"Add one sentence about the refund."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">Options</h3>
+      <ul class="ld-card-list">
+        <li>"Give me two versions - one formal, one warm."</li>
+        <li>"Write three different openings."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">The editor</h3>
+      <ul class="ld-card-list">
+        <li>"What would make this better? Three ideas - but do only the ones I choose."</li>
+        <li>"Check for mistakes and fix them."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">Voice</h3>
+      <ul class="ld-card-list">
+        <li>"Read it back to me."</li>
+        <li>"Read only the first paragraph."</li>
+      </ul>
+    </article>
+    <article class="ld-card">
+      <h3 class="ld-card-title">The check</h3>
+      <ul class="ld-card-list">
+        <li>"Translate it back into Turkish."</li>
+        <li>"Translate this letter into English, natural tone."</li>
+      </ul>
+    </article>
+  </div>
 
   <h2>How to run it live - four minutes</h2>
   <ol class="ld-steps">
@@ -228,6 +348,19 @@
     <li><strong>The check:</strong> "Translate it back into Turkish" - and read the Turkish back to the room.</li>
     <li><strong>Finish:</strong> "Now read the final version aloud, slowly."</li>
   </ol>
+
+  <h2>The weak points of AI</h2>
+  <p>AI sounds confident even when it is wrong. Name the weakness out loud when it shows - it makes you the expert.</p>
+  <ul class="ld-weak">
+    <li><strong>It agrees too easily.</strong> If you do not challenge it, AI may smooth things over and tell you what you want to hear instead of the correct answer.</li>
+    <li><strong>It can hallucinate.</strong> It can confidently invent facts, names, or details that are not real.</li>
+    <li><strong>It gives wrong or unbalanced answers.</strong> Sometimes too little, sometimes unnecessarily long, and sometimes simply incorrect.</li>
+    <li><strong>It sounds sure even when it is wrong.</strong> Confidence is not proof - always check anything important.</li>
+    <li><strong>It cannot see your real world.</strong> It does not know your situation, your private details, or today's news unless you tell it.</li>
+  </ul>
+  <div class="ld-note">
+    <strong>What to do when it happens:</strong> "Are you sure?" - "Where did you get that?" - "Check that again." Never let a confident answer replace a human decision on money, health, or family.
+  </div>
 
   <div class="ld-note">
     <strong>Presenter tips:</strong> speak every prompt - never type - it looks like magic. Announce what you will fix before saying it: "The letter is cold. Watch: warmer." Keep every round visible on the big screen. If the room is mostly Turkish, run the whole demo in Turkish and translate at the end.

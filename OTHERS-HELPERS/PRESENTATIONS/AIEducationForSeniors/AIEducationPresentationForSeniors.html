@@ -95,6 +95,8 @@
   .deck-card.warm { background: var(--soft-warm); border-color: #ecdcc8; }
   .deck-card h3 { margin-top: 0; }
   .deck-card p { font-size: 18.5px; margin: 6px 0; }
+  .deck-card ul, .deck-card ol { font-size: 16.5px; line-height: 1.45; padding-left: 20px; margin: 6px 0 0; }
+  .deck-card li { margin: 5px 0; }
   .deck-big-number {
     font-size: 44px;
     font-weight: 800;
@@ -441,6 +443,21 @@
     }
     .deck-slide:last-child { page-break-after: auto; }
     .deck-controls, .deck-progress { display: none; }
+    /* Ink-friendly: strip fills, keep lines */
+    .deck-title-slide, .deck-closing-slide { background: #ffffff !important; color: var(--ink); }
+    .deck-title-slide h1, .deck-closing-slide h2 { color: var(--ink) !important; }
+    .deck-title-slide .deck-sub, .deck-closing-slide .deck-sub { color: var(--muted) !important; }
+    .deck-title-slide .deck-kicker { color: var(--accent-2) !important; }
+    .deck-closing-slide .deck-kicker, .deck-closing-slide .deck-note { color: var(--muted) !important; }
+    .deck-chip { background: none !important; border: 0.3mm solid var(--accent-2); color: var(--accent-2) !important; }
+    .deck-card, .deck-card.warm,
+    .deck-recipe-step, .deck-prompt-box, .deck-prompt-box.strong,
+    .deck-reveal, .deck-question,
+    table.deck-table th, table.deck-table tr:nth-child(even) td { background: none; }
+    .deck-recipe-step { border-top: 1mm solid var(--accent); }
+    .deck-big-number { color: var(--accent); }
+    .deck-question-mark { background: none; border: 0.4mm solid var(--accent-2); color: var(--accent-2); }
+    .deck-choice.deck-choice-picked { background: none; border: 0.4mm solid var(--accent); color: var(--accent); }
   }
 
   /* ---------- Small screens ---------- */
@@ -854,9 +871,33 @@
       <span class="deck-kicker">Your next appointment</span>
       <h2>Talk to your doctor with confidence</h2>
       <div class="deck-grid-3">
-        <div class="deck-card"><h3>Before the visit</h3><p>AI interviews you, then gives a short list: what to tell the doctor and five questions to ask.</p></div>
-        <div class="deck-card"><h3>During the visit</h3><p>Bring your printed medication list. Language trouble? Open ChatGPT Voice (best) or Copilot voice and hand the phone over.</p></div>
-        <div class="deck-card warm"><h3>After the visit</h3><p>Tell AI what you remember, in your own words - it rewrites it clearly with what to do next.</p></div>
+        <div class="deck-card">
+          <h3>Before the visit</h3>
+          <ul>
+            <li>Tell AI who you are seeing and why: "I am visiting my heart doctor about chest pain."</li>
+            <li>AI interviews you one question at a time - answer in your own words.</li>
+            <li>You get a short list of what to tell the doctor: symptoms, when they started, what worries you.</li>
+            <li>You get five clear questions to ask. Print them and bring the page.</li>
+          </ul>
+        </div>
+        <div class="deck-card">
+          <h3>During the visit</h3>
+          <ul>
+            <li>Bring your printed medication list and your printed questions.</li>
+            <li>Do not understand something? Say: "Please explain that again, simpler."</li>
+            <li>Language trouble? Open ChatGPT Voice (best) or Copilot voice and hand the phone over - it translates both ways.</li>
+            <li>Write down (or record, with permission) what the doctor says.</li>
+          </ul>
+        </div>
+        <div class="deck-card warm">
+          <h3>After the visit</h3>
+          <ul>
+            <li>Tell AI what you remember, in your own words - messy is fine.</li>
+            <li>AI rewrites it clearly: what the doctor said, medicines and doses, what to do next.</li>
+            <li>It lists your next appointment and any warning signs to watch for.</li>
+            <li>Keep this summary with your medication list.</li>
+          </ul>
+        </div>
       </div>
       <div class="deck-prompt-box">
         <span class="deck-prompt-label">Try this before your next visit</span>
