@@ -1,19 +1,13 @@
 #!/usr/bin/env node
 /* ============================================================================
-   APPLICATION IDEAS CATALOG BUILDER
-   ----------------------------------------------------------------------------
-   SSOT for the "applications" side of the UniconHub store. An APPLICATION
-   (cmsObjectType) is the cover / container: html-tools live inside FIELD
-   GROUPS inside OBJECTS of the application. One application can bundle many
-   html-tools, reuse the same tool in several objects, and one html-tool can
-   be a single field of an object that also carries many other fields.
-
-   This script is the single source of truth. It writes:
-     - application-ideas-catalog.json   (export copy, release/sync consumers)
-     - application-ideas-catalog.html   (self-contained browser page)
-
-   Usage:  node build-application-catalog.cjs
+   SUPERSEDED SCRIPT - kept only for command-name compatibility.
+   The application ideas data NO LONGER lives in this file.
+   Single source of truth: application-ideas-catalog.json
+   This stub delegates to the new builder and exits; everything below this
+   block is dead code that must never run again.
    ========================================================================== */
+require('./build-catalog-data.cjs');
+process.exit(0);
 
 const fs = require('fs');
 const path = require('path');

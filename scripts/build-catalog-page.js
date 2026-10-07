@@ -29,7 +29,7 @@ const TOOL_IDEA_MAP = {
   NewsGenerator: { idea: 'AI News Article Generator', code: 'B-G-01-b' },
   VibeCodingHTMLAppBuilder: { idea: 'Vibe Coding HTML App Builder', code: 'B-G-01-b' },
   WebpageBuilder: { idea: 'Webpage Builder Studio', code: 'B-G-01-b' },
-  MeetingNotes: { idea: 'Meeting Notes & Action Recorder', code: 'B-G-01-a' },
+  MeetingNotes: { idea: 'Meeting Notes & Action Recorder', code: 'B-G-06-e' },
   InvoiceAndExpenseCollector: { idea: 'Invoice & Expense Collector', code: 'B-G-02-a' },
   RevenueBasedInvoiceBuilder: { idea: 'Revenue-Based Billing & Invoicing', code: 'B-G-02-a' },
   PaymentsManagement: { idea: 'Payments Management Console', code: 'B-G-02-c' },

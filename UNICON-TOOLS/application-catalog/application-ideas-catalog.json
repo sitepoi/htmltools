@@ -2,6 +2,7 @@
   "schema": "uniconhub-application-idea-catalog",
   "version": "1.0.0",
   "generatedAt": "2026-10-05",
+  "ssotNote": "Single source of truth for the application ideas catalog. Edit this file directly, then run `node build-catalog-data.cjs` (or `npm run catalog:apps`) to refresh application-catalog-data.js - the file:// fallback copy the page loads when fetch is unavailable. Over http the page reads this file live.",
   "disclaimer": "Directional planning estimates (order of magnitude), not market research. Validate user counts, TAM/SAM/SOM and licensing per application before development.",
   "licensingTypes": [
     "freemium",
@@ -31,9 +32,19 @@
   "hierarchy": {
     "meta": {
       "schema": "uniconhub-application-folder-taxonomy",
-      "version": "1.0.0",
-      "updatedAt": "2026-10-05",
+      "version": "1.1.0",
+      "updatedAt": "2026-10-06",
       "versionHistory": [
+        {
+          "version": "1.1.0",
+          "exportedAt": "2026-10-06",
+          "note": "Stabilization pass before store import: added Procurement & Purchasing, Support & Helpdesk, Assets & Inventory, Early Years & Childcare, Salons & Spa, Veterinary & Pet Services, the Insurance vertical, Insurance & Protection, Cooking & Nutrition and Gardening & Plants. Moved the support app and the Customer Support Answer Bot idea into Support & Helpdesk."
+        },
+        {
+          "version": "1.0.1",
+          "exportedAt": "2026-10-06",
+          "note": "Added Meetings & Minutes (B-G-06-e) under Communications and moved the Meeting Notes & Action Recorder application there - classification by what the application does, not by AI technology."
+        },
         {
           "version": "1.0.0",
           "exportedAt": "2026-10-05",
@@ -188,6 +199,15 @@
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
+                  },
+                  {
+                    "name": "Procurement & Purchasing",
+                    "code": "B-G-02-h",
+                    "slug": "procurement-purchasing",
+                    "order": 80,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
                   }
                 ]
               },
@@ -241,6 +261,15 @@
                     "code": "B-G-03-e",
                     "slug": "commissions",
                     "order": 50,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Support & Helpdesk",
+                    "code": "B-G-03-f",
+                    "slug": "support-helpdesk",
+                    "order": 60,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -400,6 +429,15 @@
                     "code": "B-G-06-d",
                     "slug": "approvals-sign-off",
                     "order": 40,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Meetings & Minutes",
+                    "code": "B-G-06-e",
+                    "slug": "meetings-minutes",
+                    "order": 50,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -584,6 +622,15 @@
                     "code": "B-G-08-h",
                     "slug": "quality-inspections",
                     "order": 80,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Assets & Inventory",
+                    "code": "B-G-08-i",
+                    "slug": "assets-inventory",
+                    "order": 90,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -936,6 +983,15 @@
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
+                  },
+                  {
+                    "name": "Early Years & Childcare",
+                    "code": "B-V-01-f",
+                    "slug": "early-years-childcare",
+                    "order": 60,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
                   }
                 ]
               },
@@ -1054,6 +1110,24 @@
                     "code": "B-V-03-f",
                     "slug": "senior-care",
                     "order": 60,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Salons & Spa",
+                    "code": "B-V-03-g",
+                    "slug": "salons-spa",
+                    "order": 70,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Veterinary & Pet Services",
+                    "code": "B-V-03-h",
+                    "slug": "veterinary-pet-services",
+                    "order": 80,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -1605,6 +1679,35 @@
                     ]
                   }
                 ]
+              },
+              {
+                "name": "Insurance",
+                "code": "B-V-16",
+                "slug": "insurance",
+                "order": 160,
+                "categories": [
+                  "application-library-item-uniconbaseapps"
+                ],
+                "children": [
+                  {
+                    "name": "Agencies & Brokers",
+                    "code": "B-V-16-a",
+                    "slug": "agencies-brokers",
+                    "order": 10,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Claims & Policy Admin",
+                    "code": "B-V-16-b",
+                    "slug": "claims-policy-admin",
+                    "order": 20,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  }
+                ]
               }
             ]
           }
@@ -1669,6 +1772,15 @@
                     "code": "P-G-01-d",
                     "slug": "investments",
                     "order": 40,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Insurance & Protection",
+                    "code": "P-G-01-e",
+                    "slug": "insurance-protection",
+                    "order": 50,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -1830,6 +1942,24 @@
                     "code": "P-G-05-c",
                     "slug": "diy-projects",
                     "order": 30,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Cooking & Nutrition",
+                    "code": "P-G-05-d",
+                    "slug": "cooking-nutrition",
+                    "order": 40,
+                    "categories": [
+                      "application-library-item-uniconbaseapps"
+                    ]
+                  },
+                  {
+                    "name": "Gardening & Plants",
+                    "code": "P-G-05-e",
+                    "slug": "gardening-plants",
+                    "order": 50,
                     "categories": [
                       "application-library-item-uniconbaseapps"
                     ]
@@ -2150,9 +2280,9 @@
   },
   "applications": [
     {
-      "id": "B-G-01-a-1",
-      "code": "B-G-01-a",
-      "folder": "Business / General / AI & Automation / AI Chat Assistants",
+      "id": "B-G-03-f-1",
+      "code": "B-G-03-f",
+      "folder": "Business / General / Sales & CRM / Support & Helpdesk",
       "name": "AI Support & Helpdesk Desk",
       "purpose": "A support application where a helpdesk object, knowledge articles, chat sessions and agents work together with Q&A bots to answer questions automatically.",
       "objects": [
@@ -2178,7 +2308,7 @@
       "code": "B-G-01-a",
       "folder": "Business / General / AI & Automation / AI Chat Assistants",
       "name": "AI Front-Office Assistant",
-      "purpose": "A single workspace that turns meetings into notes and action items, drafts replies and finds contract clauses.",
+      "purpose": "A bundle workspace combining the Meeting Notes & Action Recorder, Email & Reply Drafter and Contract Clause Finder tools - each of the three is also available as its own standalone application, so tenants only take the tools they request.",
       "objects": [
         "conversations",
         "meetingNotes",
@@ -10673,6 +10803,835 @@
       "sam": "$40M",
       "som": "$80K",
       "licensing": "one-time"
+    },
+    {
+      "id": "B-G-01-b-4",
+      "code": "B-G-01-b",
+      "folder": "Business / General / AI & Automation / AI Content Builders",
+      "name": "AI Chat Presentation Builder",
+      "purpose": "Chat-driven presentation deck builder with slide components",
+      "objects": [
+        "decks",
+        "slides",
+        "chatSessions"
+      ],
+      "tools": [
+        "AI Chat Presentation Builder"
+      ],
+      "users": "25M professionals",
+      "tam": "$2.4B",
+      "sam": "$480M",
+      "som": "$960K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-01-b-5",
+      "code": "B-G-01-b",
+      "folder": "Business / General / AI & Automation / AI Content Builders",
+      "name": "AI Legal Document Builder",
+      "purpose": "Chat-driven legal document drafting with components and exports",
+      "objects": [
+        "documents",
+        "blocks",
+        "templates"
+      ],
+      "tools": [
+        "AI Legal Document Builder"
+      ],
+      "users": "12M legal and business users",
+      "tam": "$1.9B",
+      "sam": "$380M",
+      "som": "$760K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-01-b-6",
+      "code": "B-G-01-b",
+      "folder": "Business / General / AI & Automation / AI Content Builders",
+      "name": "AI News Article Generator",
+      "purpose": "Newsroom-style article generation with components and publishing",
+      "objects": [
+        "articles",
+        "briefs",
+        "publications"
+      ],
+      "tools": [
+        "AI News Article Generator"
+      ],
+      "users": "4M publishers",
+      "tam": "$1.1B",
+      "sam": "$220M",
+      "som": "$440K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-01-b-7",
+      "code": "B-G-01-b",
+      "folder": "Business / General / AI & Automation / AI Content Builders",
+      "name": "Vibe Coding HTML App Builder",
+      "purpose": "Chat-driven single-page HTML app builder",
+      "objects": [
+        "projects",
+        "code",
+        "chatSessions"
+      ],
+      "tools": [
+        "Vibe Coding HTML App Builder"
+      ],
+      "users": "8M makers",
+      "tam": "$1.6B",
+      "sam": "$320M",
+      "som": "$640K",
+      "licensing": "freemium"
+    },
+    {
+      "id": "B-G-01-b-8",
+      "code": "B-G-01-b",
+      "folder": "Business / General / AI & Automation / AI Content Builders",
+      "name": "Webpage Builder Studio",
+      "purpose": "AI-first webpage design studio for public sites",
+      "objects": [
+        "pages",
+        "sections",
+        "chatSessions"
+      ],
+      "tools": [
+        "Webpage Builder Studio"
+      ],
+      "users": "20M SMBs",
+      "tam": "$3.2B",
+      "sam": "$640M",
+      "som": "$1.3M",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-06-e-1",
+      "code": "B-G-06-e",
+      "folder": "Business / General / Communications / Meetings & Minutes",
+      "name": "Meeting Notes & Action Recorder",
+      "purpose": "Turns meeting transcripts into notes and action items",
+      "objects": [
+        "meetings",
+        "actionItems",
+        "attendees",
+        "templates"
+      ],
+      "tools": [
+        "Meeting Notes & Action Recorder"
+      ],
+      "users": "30M professionals",
+      "tam": "$2.6B",
+      "sam": "$520M",
+      "som": "$1M",
+      "licensing": "freemium"
+    },
+    {
+      "id": "B-G-02-a-2",
+      "code": "B-G-02-a",
+      "folder": "Business / General / Finance & Accounting / Invoicing & Billing",
+      "name": "Invoice & Expense Collector",
+      "purpose": "Invoices and expenses collected with AI receipt scanning and VAT",
+      "objects": [
+        "invoices",
+        "expenses",
+        "clients",
+        "reports"
+      ],
+      "tools": [
+        "Invoice & Expense Collector"
+      ],
+      "users": "20M SMBs",
+      "tam": "$3.6B",
+      "sam": "$720M",
+      "som": "$1.4M",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-02-a-3",
+      "code": "B-G-02-a",
+      "folder": "Business / General / Finance & Accounting / Invoicing & Billing",
+      "name": "Revenue-Based Billing & Invoicing",
+      "purpose": "Invoices for software priced on the customer monthly ticket revenue with a waterfall bracket agreement",
+      "objects": [
+        "revenuePlans",
+        "invoices",
+        "periods",
+        "reports"
+      ],
+      "tools": [
+        "Revenue-Based Billing & Invoicing"
+      ],
+      "users": "2M software vendors",
+      "tam": "$1.2B",
+      "sam": "$240M",
+      "som": "$480K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-04-f-2",
+      "code": "B-G-04-f",
+      "folder": "Business / General / Marketing & Brand / Brand & Design Assets",
+      "name": "Brand Set Generator",
+      "purpose": "Generate a complete brand kit: logos, assets, guidelines",
+      "objects": [
+        "brandKits",
+        "logos",
+        "assets"
+      ],
+      "tools": [
+        "Brand Set Generator"
+      ],
+      "users": "12M SMBs",
+      "tam": "$1.4B",
+      "sam": "$280M",
+      "som": "$560K",
+      "licensing": "one-time"
+    },
+    {
+      "id": "B-G-07-a-2",
+      "code": "B-G-07-a",
+      "folder": "Business / General / People & HR / Recruiting & Interviews",
+      "name": "Interview Scorecard Kit",
+      "purpose": "Structured interview questions and scoring",
+      "objects": [
+        "interviews",
+        "scorecards",
+        "candidates"
+      ],
+      "tools": [
+        "Interview Scorecard Kit"
+      ],
+      "users": "5M hiring managers",
+      "tam": "$1.3B",
+      "sam": "$260M",
+      "som": "$520K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-07-b-2",
+      "code": "B-G-07-b",
+      "folder": "Business / General / People & HR / Onboarding & Handbooks",
+      "name": "Employment Agreement Builder",
+      "purpose": "Draft employment agreements from templates with variables and review workflow",
+      "objects": [
+        "agreements",
+        "templates",
+        "signatures"
+      ],
+      "tools": [
+        "Employment Agreement Builder"
+      ],
+      "users": "8M SMBs",
+      "tam": "$1.2B",
+      "sam": "$240M",
+      "som": "$480K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-07-b-3",
+      "code": "B-G-07-b",
+      "folder": "Business / General / People & HR / Onboarding & Handbooks",
+      "name": "New Hire Onboarding Hub",
+      "purpose": "Onboarding checklists plus employee handbook",
+      "objects": [
+        "onboardingPlans",
+        "newHires",
+        "tasks",
+        "documents"
+      ],
+      "tools": [
+        "New Hire Onboarding Hub"
+      ],
+      "users": "12M organizations",
+      "tam": "$1.8B",
+      "sam": "$360M",
+      "som": "$720K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-07-c-2",
+      "code": "B-G-07-c",
+      "folder": "Business / General / People & HR / Employee Records",
+      "name": "Employee File Cabinet",
+      "purpose": "Digital personnel files with expiry alerts",
+      "objects": [
+        "employees",
+        "documents",
+        "folders"
+      ],
+      "tools": [
+        "Employee File Cabinet"
+      ],
+      "users": "10M SMBs",
+      "tam": "$2.1B",
+      "sam": "$420M",
+      "som": "$840K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-07-e-2",
+      "code": "B-G-07-e",
+      "folder": "Business / General / People & HR / Daily Logs & Supervision",
+      "name": "Crew Task & Handover Log",
+      "purpose": "Daily crew logs with supervisor review",
+      "objects": [
+        "shifts",
+        "handovers",
+        "tasks"
+      ],
+      "tools": [
+        "Crew Task & Handover Log"
+      ],
+      "users": "8M supervisors",
+      "tam": "$900M",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "app-bundle"
+    },
+    {
+      "id": "B-G-07-e-3",
+      "code": "B-G-07-e",
+      "folder": "Business / General / People & HR / Daily Logs & Supervision",
+      "name": "Employee Daily Log Book",
+      "purpose": "Individual daily logs with supervisor review and weekly summaries",
+      "objects": [
+        "logEntries",
+        "employees",
+        "projects"
+      ],
+      "tools": [
+        "Employee Daily Log Book"
+      ],
+      "users": "8M supervisors",
+      "tam": "$900M",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "app-bundle"
+    },
+    {
+      "id": "B-G-07-i-2",
+      "code": "B-G-07-i",
+      "folder": "Business / General / People & HR / Safety & Incidents",
+      "name": "Incident & Accident Reports",
+      "purpose": "Incident and accident report forms with follow-ups",
+      "objects": [
+        "incidents",
+        "accidents",
+        "actions",
+        "reports"
+      ],
+      "tools": [
+        "Incident & Accident Reports"
+      ],
+      "users": "6M organizations",
+      "tam": "$600M",
+      "sam": "$120M",
+      "som": "$240K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-08-b-2",
+      "code": "B-G-08-b",
+      "folder": "Business / General / Operations & Management / Project & Sprint Management",
+      "name": "Sprint Task Manager",
+      "purpose": "Sprint board task management with statuses and filters",
+      "objects": [
+        "sprints",
+        "tasks",
+        "backlogs"
+      ],
+      "tools": [
+        "Sprint Task Manager"
+      ],
+      "users": "15M teams",
+      "tam": "$2.1B",
+      "sam": "$420M",
+      "som": "$840K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-08-c-2",
+      "code": "B-G-08-c",
+      "folder": "Business / General / Operations & Management / Recurring & Scheduled Tasks",
+      "name": "Recurring Task Manager",
+      "purpose": "Year-plan recurring task board with definitions and dashboards",
+      "objects": [
+        "taskDefinitions",
+        "statuses",
+        "requests",
+        "reports"
+      ],
+      "tools": [
+        "Recurring Task Manager"
+      ],
+      "users": "10M operators",
+      "tam": "$1.2B",
+      "sam": "$240M",
+      "som": "$480K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-08-d-2",
+      "code": "B-G-08-d",
+      "folder": "Business / General / Operations & Management / Checklists & Hierarchies",
+      "name": "SOP Builder & Checklist Runner",
+      "purpose": "Standard operating procedures as runnable checklists",
+      "objects": [
+        "procedures",
+        "checklists",
+        "runs"
+      ],
+      "tools": [
+        "SOP Builder & Checklist Runner"
+      ],
+      "users": "11M operations teams",
+      "tam": "$1.4B",
+      "sam": "$280M",
+      "som": "$560K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-11-e-2",
+      "code": "B-G-11-e",
+      "folder": "Business / General / IT & Development / System Design & Architecture",
+      "name": "AI System Design Studio",
+      "purpose": "Design AI systems end to end with architecture and prompts",
+      "objects": [
+        "designs",
+        "components",
+        "reviews"
+      ],
+      "tools": [
+        "AI System Design Studio"
+      ],
+      "users": "2M AI engineers",
+      "tam": "$800M",
+      "sam": "$160M",
+      "som": "$320K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-11-f-2",
+      "code": "B-G-11-f",
+      "folder": "Business / General / IT & Development / Web Content Editing",
+      "name": "HTML Content Editor & Viewer",
+      "purpose": "Edit and preview HTML content blocks with live rendering",
+      "objects": [
+        "documents",
+        "snippets",
+        "previews"
+      ],
+      "tools": [
+        "HTML Content Editor & Viewer"
+      ],
+      "users": "6M editors",
+      "tam": "$700M",
+      "sam": "$140M",
+      "som": "$280K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-G-12-a-2",
+      "code": "B-G-12-a",
+      "folder": "Business / General / File & Media / Image Editing",
+      "name": "Image Editing Toolkit",
+      "purpose": "Browser image editing: filters, crops, watermarks, OCR",
+      "objects": [
+        "projects",
+        "images",
+        "exports"
+      ],
+      "tools": [
+        "Image Editing Toolkit"
+      ],
+      "users": "30M creators",
+      "tam": "$2.8B",
+      "sam": "$560M",
+      "som": "$1.1M",
+      "licensing": "freemium"
+    },
+    {
+      "id": "B-G-13-b-2",
+      "code": "B-G-13-b",
+      "folder": "Business / General / Translation & Localization / Document & HTML Translation",
+      "name": "HTML Bulk Translator",
+      "purpose": "Translate whole HTML documents into many languages",
+      "objects": [
+        "documents",
+        "languages",
+        "translations"
+      ],
+      "tools": [
+        "HTML Bulk Translator"
+      ],
+      "users": "8M site owners",
+      "tam": "$900M",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "usage-based"
+    },
+    {
+      "id": "B-V-01-a-15",
+      "code": "B-V-01-a",
+      "folder": "Business / Vertical / Education & Training / K-12 Schools",
+      "name": "Class Attendance Checker",
+      "purpose": "Daily class attendance with reports and follow-ups",
+      "objects": [
+        "classes",
+        "sessions",
+        "attendance"
+      ],
+      "tools": [
+        "Class Attendance Checker"
+      ],
+      "users": "30M teachers",
+      "tam": "$1.6B",
+      "sam": "$320M",
+      "som": "$640K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-01-a-16",
+      "code": "B-V-01-a",
+      "folder": "Business / Vertical / Education & Training / K-12 Schools",
+      "name": "Education Program Presentation Builder",
+      "purpose": "Visual education program presentations for schools and parents",
+      "objects": [
+        "programs",
+        "decks",
+        "sections"
+      ],
+      "tools": [
+        "Education Program Presentation Builder"
+      ],
+      "users": "2M schools",
+      "tam": "$800M",
+      "sam": "$160M",
+      "som": "$320K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-01-a-17",
+      "code": "B-V-01-a",
+      "folder": "Business / Vertical / Education & Training / K-12 Schools",
+      "name": "Interactive Program Showcase",
+      "purpose": "Enhanced program showcase presentations with interactive sections",
+      "objects": [
+        "programs",
+        "showcases",
+        "sections"
+      ],
+      "tools": [
+        "Interactive Program Showcase"
+      ],
+      "users": "2M schools",
+      "tam": "$800M",
+      "sam": "$160M",
+      "som": "$320K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-01-c-6",
+      "code": "B-V-01-c",
+      "folder": "Business / Vertical / Education & Training / Tutoring & Test Prep",
+      "name": "Bloom Learning Manager",
+      "purpose": "Learning objectives and levels organized by Bloom taxonomy",
+      "objects": [
+        "learningUnits",
+        "students",
+        "progress"
+      ],
+      "tools": [
+        "Bloom Learning Manager"
+      ],
+      "users": "6M educators",
+      "tam": "$900M",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-01-c-7",
+      "code": "B-V-01-c",
+      "folder": "Business / Vertical / Education & Training / Tutoring & Test Prep",
+      "name": "Curriculum Builder",
+      "purpose": "Curriculum and unit planning with standard task checklists",
+      "objects": [
+        "curricula",
+        "units",
+        "lessons",
+        "tasks"
+      ],
+      "tools": [
+        "Curriculum Builder"
+      ],
+      "users": "6M educators",
+      "tam": "$1.1B",
+      "sam": "$220M",
+      "som": "$440K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-01-c-8",
+      "code": "B-V-01-c",
+      "folder": "Business / Vertical / Education & Training / Tutoring & Test Prep",
+      "name": "Essay Subject Builder",
+      "purpose": "Define essay subjects with rubrics and word-count rules",
+      "objects": [
+        "subjects",
+        "rubrics",
+        "definitions"
+      ],
+      "tools": [
+        "Essay Subject Builder"
+      ],
+      "users": "4M educators",
+      "tam": "$500M",
+      "sam": "$100M",
+      "som": "$200K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-01-c-9",
+      "code": "B-V-01-c",
+      "folder": "Business / Vertical / Education & Training / Tutoring & Test Prep",
+      "name": "AI Essay Writing Evaluator",
+      "purpose": "Rubric-based essay evaluation with progress charts",
+      "objects": [
+        "essays",
+        "evaluations",
+        "rubrics"
+      ],
+      "tools": [
+        "AI Essay Writing Evaluator"
+      ],
+      "users": "4M educators",
+      "tam": "$700M",
+      "sam": "$140M",
+      "som": "$280K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-02-a-10",
+      "code": "B-V-02-a",
+      "folder": "Business / Vertical / Food & Beverage / Restaurants & Cafes",
+      "name": "Restaurant Menu & Content Manager",
+      "purpose": "Menu content management for restaurant pages",
+      "objects": [
+        "menus",
+        "items",
+        "categories"
+      ],
+      "tools": [
+        "Restaurant Menu & Content Manager"
+      ],
+      "users": "15M restaurants",
+      "tam": "$1.4B",
+      "sam": "$280M",
+      "som": "$560K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-02-a-11",
+      "code": "B-V-02-a",
+      "folder": "Business / Vertical / Food & Beverage / Restaurants & Cafes",
+      "name": "Delivery Zone Mapper",
+      "purpose": "Define and manage restaurant delivery zones",
+      "objects": [
+        "deliveryZones",
+        "postalCodes",
+        "fees"
+      ],
+      "tools": [
+        "Delivery Zone Mapper"
+      ],
+      "users": "6M restaurants",
+      "tam": "$700M",
+      "sam": "$140M",
+      "som": "$280K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-02-a-12",
+      "code": "B-V-02-a",
+      "folder": "Business / Vertical / Food & Beverage / Restaurants & Cafes",
+      "name": "Menu Engineering & Allergy Matrix",
+      "purpose": "Menu profitability and allergen mapping",
+      "objects": [
+        "menuItems",
+        "allergens",
+        "matrices"
+      ],
+      "tools": [
+        "Menu Engineering & Allergy Matrix"
+      ],
+      "users": "15M restaurants",
+      "tam": "$3.1B",
+      "sam": "$620M",
+      "som": "$1.2M",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-02-a-13",
+      "code": "B-V-02-a",
+      "folder": "Business / Vertical / Food & Beverage / Restaurants & Cafes",
+      "name": "Restaurant Operations Console",
+      "purpose": "Restaurant store settings and operations configuration",
+      "objects": [
+        "branches",
+        "settings",
+        "operations"
+      ],
+      "tools": [
+        "Restaurant Operations Console"
+      ],
+      "users": "15M restaurants",
+      "tam": "$900M",
+      "sam": "$180M",
+      "som": "$360K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "B-V-04-a-13",
+      "code": "B-V-04-a",
+      "folder": "Business / Vertical / Nonprofit & Community / Fundraising Campaigns",
+      "name": "Fundraising Campaign Manager",
+      "purpose": "Plan and track fundraising campaigns with goals",
+      "objects": [
+        "campaigns",
+        "donations",
+        "donors"
+      ],
+      "tools": [
+        "Fundraising Campaign Manager"
+      ],
+      "users": "2M nonprofits",
+      "tam": "$700M",
+      "sam": "$140M",
+      "som": "$280K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-04-b-2",
+      "code": "B-V-04-b",
+      "folder": "Business / Vertical / Nonprofit & Community / Grants",
+      "name": "Grant Impact Reporter",
+      "purpose": "Outcome reporting for grant funders",
+      "objects": [
+        "grants",
+        "impacts",
+        "reports"
+      ],
+      "tools": [
+        "Grant Impact Reporter"
+      ],
+      "users": "1.5M organizations",
+      "tam": "$500M",
+      "sam": "$100M",
+      "som": "$200K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-04-b-3",
+      "code": "B-V-04-b",
+      "folder": "Business / Vertical / Nonprofit & Community / Grants",
+      "name": "Grant Workflow Manager",
+      "purpose": "End-to-end grant application workflow with tasks and documents",
+      "objects": [
+        "grants",
+        "applications",
+        "tasks",
+        "documents"
+      ],
+      "tools": [
+        "Grant Workflow Manager"
+      ],
+      "users": "1.5M organizations",
+      "tam": "$600M",
+      "sam": "$120M",
+      "som": "$240K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-04-c-2",
+      "code": "B-V-04-c",
+      "folder": "Business / Vertical / Nonprofit & Community / Donations & Pledges",
+      "name": "Recurring Giving Manager",
+      "purpose": "Donor portals with recurring gift plans",
+      "objects": [
+        "donors",
+        "pledges",
+        "givingPlans"
+      ],
+      "tools": [
+        "Recurring Giving Manager"
+      ],
+      "users": "2M organizations",
+      "tam": "$800M",
+      "sam": "$160M",
+      "som": "$320K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "B-V-07-b-5",
+      "code": "B-V-07-b",
+      "folder": "Business / Vertical / Logistics & Transport / Warehousing",
+      "name": "Warehouse Manager",
+      "purpose": "Warehouse inventory and operation management",
+      "objects": [
+        "warehouses",
+        "items",
+        "movements"
+      ],
+      "tools": [
+        "Warehouse Manager"
+      ],
+      "users": "4M warehouses",
+      "tam": "$1.1B",
+      "sam": "$220M",
+      "som": "$440K",
+      "licensing": "subscription-monthly"
+    },
+    {
+      "id": "P-G-01-b-2",
+      "code": "P-G-01-b",
+      "folder": "Personal / General / Personal Finance / Tax Preparation",
+      "name": "Personal Tax Preparation",
+      "purpose": "Tax-file prep with AI: ledgers, deductions, GST/PST",
+      "objects": [
+        "taxYears",
+        "incomes",
+        "deductions",
+        "reports"
+      ],
+      "tools": [
+        "Personal Tax Preparation"
+      ],
+      "users": "6M self-employed",
+      "tam": "$1.3B",
+      "sam": "$260M",
+      "som": "$520K",
+      "licensing": "subscription-annual"
+    },
+    {
+      "id": "P-V-01-a-7",
+      "code": "P-V-01-a",
+      "folder": "Personal / Vertical / Travel & Outdoors / Trip Planning",
+      "name": "Travel Planner",
+      "purpose": "Chat-driven trip planner with day components",
+      "objects": [
+        "trips",
+        "itineraries",
+        "chatSessions"
+      ],
+      "tools": [
+        "Travel Planner"
+      ],
+      "users": "60M travelers",
+      "tam": "$2.2B",
+      "sam": "$440M",
+      "som": "$880K",
+      "licensing": "freemium"
     }
   ]
 }

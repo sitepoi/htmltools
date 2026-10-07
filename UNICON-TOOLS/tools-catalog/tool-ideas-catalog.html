@@ -41,6 +41,10 @@
   .side-subitem:hover { background: #f2f6fa; }
   .side-subitem.active { background: var(--accent-soft); font-weight: 600; }
   .side-subitem .meta { color: var(--muted); white-space: nowrap; }
+  .side-all { display: flex; justify-content: space-between; gap: 6px; padding: 7px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; border-bottom: 1px solid var(--line); }
+  .side-all:hover { background: var(--accent-soft); }
+  .side-all.active { background: var(--accent-soft); }
+  .side-all .meta { color: var(--muted); font-weight: 400; white-space: nowrap; }
   .main { flex: 1; min-width: 0; }
   header.page-head { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
   h1 { margin: 0 0 5px; font-size: 21px; color: var(--accent); }
@@ -230,8 +234,8 @@
     </header>
 
     <div class="toolbar">
-      <label for="searchInput">Search</label>
-      <input type="search" id="searchInput" placeholder="Name, purpose...">
+      <label for="searchInput">Find</label>
+      <input type="search" id="searchInput" placeholder="Global search - name, purpose, folder..." title="Typing searches every idea in the catalog, across all folders">
       <label for="statusFilter">Status</label>
       <select id="statusFilter"><option value="all">All</option><option value="backlog">Backlog</option><option value="planned">Planned</option><option value="in-progress">In Progress</option><option value="built">Built</option><option value="skipped">Skipped</option></select>
       <label for="licensingFilter">Licensing</label>
@@ -259,7 +263,7 @@
     <footer class="page-foot">
       <details>
         <summary>About this page (reference notes)</summary>
-        <p>Pick a group, category or subcategory on the left to browse its ideas; click an item in the list to see its details on the right. The <b>Built</b> status is derived AUTOMATICALLY from the repo - every tool folder under BUSINESS*/PERSONAL* is detected with its code files, docs and screenshots. Manual status (Backlog / Planned / In Progress / Skipped) applies to ideas without a built folder and is saved in this browser.</p>
+        <p>Pick a group, category or subcategory on the left to browse its ideas; click an item in the list to see its details on the right. The <b>Built</b> status is derived AUTOMATICALLY from the repo - every tool folder under BUSINESS*/PERSONAL* is detected with its code files, docs and screenshots. Manual status (Backlog / Planned / In Progress / Skipped) applies to ideas without a built folder and is saved in this browser. <b>Global search:</b> typing in the search box searches every idea across all folders - each row shows the subcategory it belongs to. Clear the search to browse all ideas, or click a group / category / subcategory to drill down.</p>
         <p>This page is the <b>SSOT for the folder hierarchy</b> - <b>Export folder hierarchy</b> downloads the structure in the folder-hierarchy-import.json schema with a <b>new version number on every export</b>.</p>
         <p>Master data lives in <b>catalog-data.js</b> (the SSOT - the MANUAL region is edited via AI conversation; the GENERATED region is the repo scan). The JSON files in this folder (<b>tool-ideas-catalog.json</b>, <b>folder-hierarchy-import.json</b>, <b>tool-publish-state.json</b>) are exported copies refreshed by <b>npm run catalog:build</b>, and can also be exported on demand from the Actions menu. Manual work state (status for ideas without a folder, priority, notes) is saved in this browser (localStorage key uniconhub_tool_ideas_work_v1).</p>
       </details>
@@ -450,6 +454,11 @@ function renderSidebar() {
     "TAM <b>" + fmtMoney(total.tam) + "</b> - SAM <b>" + fmtMoney(total.sam) + "</b> - SOM <b>" + fmtMoney(total.som) + "</b>";
 
   var nav = "";
+  nav += (
+    "<div class=" + Q + "side-all" + (_selection.kind === "all" ? " active" : "") + Q + " data-act=select-all title=" + Q + "Browse or search every idea, across all folders" + Q + ">" +
+      "<span>All ideas</span><span class=meta>" + all.length + "</span>" +
+    "</div>"
+  );
   IDEA_GROUPS.forEach(function (group) {
     var groupTotals = totalsOf(group.categories.reduce(function (acc, c) { return acc.concat(c.ideas); }, []));
     var groupActive = _selection.kind === "group" && _selection.key === group.key;
@@ -657,6 +666,21 @@ function catSectionHtml(cat, visibleIdeas) {
   );
 }
 
+function groupSectionHtml(title, countsText, visibleIdeas) {
+  return (
+    "<section class=branch>" +
+      "<div class=branch-head>" +
+        "<span class=branch-title>" + esc(title) + "</span>" +
+        "<span class=branch-counts>" + countsText + "</span>" +
+      "</div>" +
+      "<div class=branch-body><div class=idea-table-wrap><table class=idea-table>" +
+        tableHeadHtml() +
+        "<tbody>" + visibleIdeas.map(ideaRowHtml).join("") + "</tbody>" +
+      "</table></div></div>" +
+    "</section>"
+  );
+}
+
 function renderSelection() {
   var out = "";
   var visible = [];
@@ -705,6 +729,19 @@ function renderSelection() {
         "</section>"
       );
     }
+  } else if (_selection.kind === "all") {
+    pathText = _filters.search ? "Global search results" : "All ideas";
+    titleText = _filters.search ? "Search: " + document.getElementById("searchInput").value.trim() : "All ideas";
+    var allIdeasList = sortIdeas(allIdeas().filter(ideaMatches));
+    totals = totalsOf(allIdeasList);
+    IDEA_GROUPS.forEach(function (g) {
+      var groupIdeasList = g.categories.reduce(function (acc, c) { return acc.concat(c.ideas); }, []);
+      var visibleInGroup = sortIdeas(groupIdeasList.filter(ideaMatches));
+      if (visibleInGroup.length) {
+        var groupTotals = totalsOf(groupIdeasList);
+        out += groupSectionHtml(g.label, groupTotals.count + " ideas in group - TAM <b>" + fmtMoney(groupTotals.tam) + "</b> - SOM <b>" + fmtMoney(groupTotals.som) + "</b>", visibleInGroup);
+      }
+    });
   }
 
   var barHtml = (
@@ -734,6 +771,7 @@ function applyFilters() {
   _filters.licensing = document.getElementById("licensingFilter").value;
   _filters.sort = document.getElementById("sortSelect").value;
   _sortDir = defaultSortDir(_filters.sort);
+  if (_filters.search && _selection.kind !== "all") { _selection = { kind: "all" }; renderSidebar(); }
   renderSelection();
 }
 
@@ -748,6 +786,7 @@ function selectGroup(key) {
 }
 function selectCat(key) { _selection = { kind: "cat", key: key }; renderSidebar(); renderSelection(); }
 function selectSub(key) { _selection = { kind: "sub", key: key }; renderSidebar(); renderSelection(); }
+function selectAll() { _selection = { kind: "all" }; renderSidebar(); renderSelection(); }
 
 function findIdea(id) {
   for (var i = 0; i < IDEA_GROUPS.length; i++) {
@@ -1226,6 +1265,7 @@ function bindEvents() {
     if (!node) return;
     var act = node.getAttribute("data-act");
     var key = node.getAttribute("data-key");
+    if (act === "select-all") selectAll();
     if (act === "select-group") selectGroup(key);
     if (act === "select-cat") selectCat(key);
     if (act === "select-sub") selectSub(key);
@@ -1313,6 +1353,15 @@ buildStats();
 renderSidebar();
 renderSelection();
 bindEvents();
+try {
+  var requestedSearch = new URLSearchParams(window.location.search).get("search");
+  if (requestedSearch !== null) {
+    document.getElementById("searchInput").value = requestedSearch;
+    applyFilters();
+  } else if (new URLSearchParams(window.location.search).get("scope") === "all") {
+    selectAll();
+  }
+} catch (err) { /* ignore */ }
 initFontZoom();
 try {
   var collapsedByQuery = new URLSearchParams(window.location.search).get("collapsed");
