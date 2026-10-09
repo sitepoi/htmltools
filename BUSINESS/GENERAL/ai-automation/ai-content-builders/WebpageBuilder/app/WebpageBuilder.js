@@ -1,4 +1,4 @@
-/* build 2026-10-04-15 */
+/* build 2026-10-09-1 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-04-15';
+var TOOL_BUILD = '2026-10-09-1';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -836,14 +836,7 @@ function openWidgetDialog(name) {
   var d = el('widget-dialog-desc');
   if (d) d.textContent = 'It will appear right in your page preview — no code needed.';
   var sel = el('widget-place-after');
-  if (sel) {
-    var opts = '<option value="">— end of page —</option>';
-    var secs = detectSections(DB.code.html || '');
-    for (var i = 0; i < secs.length; i++) {
-      if (secs[i].id) opts += '<option value="' + esc(secs[i].id) + '">' + esc(secs[i].label + ' (#' + secs[i].id + ')') + '</option>';
-    }
-    sel.innerHTML = opts;
-  }
+  if (sel) sel.innerHTML = _sectionOptionsHtml('');
   openModal('modal-widget-config');
 }
 function insertWidgetFromDialog() {
@@ -876,6 +869,41 @@ function insertWidgetIsland(name, cfgJson, placeAfter) {
 function _islandAttrRe() {
   return /<div\b[^>]*data-gw-app="([^"]+)"[^>]*>[\s\S]*?<\/div>/g;
 }
+/* Section placement helpers: the dropdown anchors widgets by SECTION INDEX
+   (":i0", ":i1", …) so placement works even on pages with NO ids. Legacy
+   id-based anchors from older saved values are still honored. */
+function _sectionOpenEndIndex(html, nth) {
+  var re = /<(section|article|header|footer|aside|nav)\b[^>]*>/gi;
+  var m, i = 0;
+  while ((m = re.exec(html)) !== null) {
+    if (i === nth) return m.index + m[0].length;
+    i++;
+  }
+  return -1;
+}
+function _sectionOptionsHtml(selected) {
+  var secs = detectSections(DB.code.html || '');
+  var h = '<option value=""' + (!selected ? ' selected' : '') + '>End of page</option>';
+  for (var i = 0; i < secs.length; i++) {
+    var v = ':i' + i;
+    var isSel = String(selected) === v;
+    var label = secs[i].label || secs[i].tag;
+    if (secs[i].id) label += ' (#' + secs[i].id + ')';
+    h += '<option value="' + v + '"' + (isSel ? ' selected' : '') + '>' + (i + 1) + '. ' + esc(label) + '</option>';
+  }
+  return h;
+}
+function _placementLabel(place) {
+  var pa = String(place || '');
+  if (!pa) return 'the end of the page';
+  var im = /^:i(\d+)$/.exec(pa);
+  if (im) {
+    var secs = detectSections(DB.code.html || '');
+    var i = parseInt(im[1], 10);
+    return 'section ' + (i + 1) + (secs[i] ? ' (' + (secs[i].label || secs[i].tag) + ')' : '');
+  }
+  return '#' + pa;
+}
 function _composeIslandDiv(name, cfgJson) {
   return '<div data-gw-app="' + esc(String(name || '')) + '" data-gw-config=\'' + String(cfgJson || '{}').replace(/'/g, '&#39;') + '\'></div>';
 }
@@ -887,7 +915,19 @@ function _composeIslandsInto(html) {
     if (!w || !w.name) continue;
     var div = _composeIslandDiv(w.name, w.config || '{}');
     if (w.placeAfter) {
-      var re = new RegExp('id\\s*=\\s*["\']' + String(w.placeAfter).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\']');
+      var pa = String(w.placeAfter);
+      var im = /^:i(\d+)$/.exec(pa);
+      if (im) {
+        // Index-based anchor: insert right after the open tag of the Nth
+        // section element — works even when the page has NO ids.
+        var openEndIdx = _sectionOpenEndIndex(out, parseInt(im[1], 10));
+        if (openEndIdx >= 0) {
+          out = out.substring(0, openEndIdx) + '\n' + div + out.substring(openEndIdx);
+          continue;
+        }
+      }
+      // Legacy id-based anchor (kept for older saved values).
+      var re = new RegExp('id\\s*=\\s*["\']' + pa.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\']');
       var m = re.exec(out);
       if (m) {
         // insert right after the matched element's OPEN tag → the widget lives inside that section
@@ -947,18 +987,12 @@ function renderPageWidgetsList() {
     list.innerHTML = '<div class="picker-empty">No widgets yet — tap "🧩 Add" to pick one.</div>';
     return;
   }
-  var secs = detectSections(DB.code.html || '');
-  var placeOpts = '<option value="">End of page</option>';
-  for (var s = 0; s < secs.length; s++) {
-    if (secs[s].id) placeOpts += '<option value="' + esc(secs[s].id) + '">' + esc(secs[s].label + ' (#' + secs[s].id + ')') + '</option>';
-  }
   var h = '';
   for (var i = 0; i < wl.length; i++) {
     var w = wl[i];
-    var selOpts = placeOpts.replace('value="' + esc(w.placeAfter || '') + '"', 'value="' + esc(w.placeAfter || '') + '" selected');
     h += '<div class="page-widget-row">' +
       '<span class="page-widget-name">🧩 ' + esc(w.name) + '</span>' +
-      '<select class="pw-pos" data-pw-pos="' + i + '" title="Place this widget inside a section">' + selOpts + '</select>' +
+      '<select class="pw-pos" data-pw-pos="' + i + '" title="Place this widget inside a section">' + _sectionOptionsHtml(w.placeAfter || '') + '</select>' +
       '<button class="btn btn-sm btn-ghost" data-pw-up="' + i + '" title="Move up">↑</button>' +
       '<button class="btn btn-sm btn-ghost" data-pw-down="' + i + '" title="Move down">↓</button>' +
       '<button class="btn btn-sm btn-ghost" data-pw-rm="' + i + '" title="Remove">✕</button>' +
@@ -1002,7 +1036,7 @@ function _setPageWidgetPlace(idx, place) {
   persist();
   updatePreview();
   renderPageWidgetsList();
-  showToast('Widget placed at ' + (place ? '#' + place : 'the end of the page') + '.', 'info');
+  showToast('Widget placed at ' + _placementLabel(DB.widgets[idx].placeAfter) + '.', 'info');
 }
 function _movePageWidget(idx, dir) {
   var wl = DB.widgets || [];
@@ -4363,7 +4397,10 @@ function setDevice(d) {
 
 function buildPreviewDoc() {
   var lang = _p('lang', 'en');
-  var html = _composeIslandsInto((_previewShared.html || '') + '\n' + (DB.code.html || ''));
+  // Compose islands into the PAGE html FIRST, then prepend shared html — so
+  // ":iN" section-index anchors always match the sections the user saw in
+  // the placement dropdown.
+  var html = (_previewShared.html || '') + '\n' + _composeIslandsInto(DB.code.html || '');
   var css = (_previewShared.css || '') + '\n' + (DB.code.css || '');
   var jsSan = _sanitizeJs((_previewShared.js || '') + '\n' + (DB.code.js || ''));
   _lastJsFixCount = jsSan.fixed;
@@ -4376,7 +4413,21 @@ function buildPreviewDoc() {
   var islands = _previewIslands(html);
   html = islands.html;
   css = css + islands.css;   // island css after page css
-  var islandJs = _sanitizeJs(islands.js).code;
+  var islandJs = _sanitizeJs(islands.js).code; // legacy concatenated block
+  var islandFixTotal = 0;
+  var islandScripts = '';
+  if (islands.jsBlocks && islands.jsBlocks.length) {
+    // ONE <script> per island: a single widget's syntax error can no longer
+    // kill the other widgets' scripts.
+    for (var ib = 0; ib < islands.jsBlocks.length; ib++) {
+      var ibs = _sanitizeJs(islands.jsBlocks[ib].js || '');
+      islandFixTotal += ibs.fixed;
+      if (ibs.code) islandScripts += '<script>\n/* island: ' + islands.jsBlocks[ib].name + ' */\n' + ibs.code + '\n<\/script>\n';
+    }
+  } else if (islandJs) {
+    islandScripts = '<script>\n' + islandJs + '\n<\/script>\n';
+  }
+  _lastJsFixCount += islandFixTotal;
   var scrollScript = '';
   if (_pendingScrollId) {
     var sid = _pendingScrollId;
@@ -4390,13 +4441,25 @@ function buildPreviewDoc() {
     '<body>\n' + html + '\n' +
     scrollScript +
     _gwPreviewMockScript(lang) + '\n' +
-    (islandJs ? '<script>\n' + islandJs + '\n<\/script>\n' : '') +
+    islandScripts +
     '<script>\n(function(){var oc={log:console.log,warn:console.warn,error:console.error};function post(l,args){var msg=Array.prototype.slice.call(args).map(function(a){try{return typeof a==="object"?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(" ");try{parent.postMessage({wbConsole:{level:l,msg:msg,time:new Date().toISOString()}},"*")}catch(e){}}console.log=function(){post("log",arguments);oc.log.apply(console,arguments)};console.warn=function(){post("warn",arguments);oc.warn.apply(console,arguments)};console.error=function(){post("error",arguments);oc.error.apply(console,arguments)};window.onerror=function(m){post("error",["Error:",m]);return true};window.addEventListener("keydown",function(e){if(e.ctrlKey&&e.shiftKey&&(e.key==="Y"||e.key==="y")){try{parent.postMessage({wbDump:true},"*")}catch(err){}}});})();\n<\/script>\n' +
     '<script>\n' + js + '\n<\/script>\n' +
     '<script>\n(function(){try{var G=(window.gw||{}).apps;if(!G)return;if(typeof G.mount==="function"){G.mount(document);}else{var els=document.querySelectorAll("[data-gw-app]:not([data-gw-mounted])");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");var f=G._f?G._f[n]:null;if(!f&&G._f){var keys=Object.keys(G._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=G._f[keys[k]];}if(!f&&keys.length===1)f=G._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:window.gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}}}catch(e){try{console.warn("island mount failed",e);}catch(e2){}}})();\n<\/script>\n</body></html>';
   return doc;
 }
 
+function _warnIslandApiDeps(name, js) {
+  // Preview diagnostics: a widget stuck on its loading state usually waits
+  // on a platform API the preview mock cannot fully serve.
+  var hints = [];
+  if (/gw\.service\s*\(/.test(js)) hints.push('gw.service (the preview mock rejects it)');
+  if (/gw\.db\.subscribe/.test(js)) hints.push('gw.db.subscribe (no live events fire in the preview)');
+  if (/gw\.db\.query\s*\(/.test(js)) hints.push('gw.db.query (the preview returns an EMPTY sample)');
+  if (/\bfetch\s*\(/.test(js)) hints.push('fetch (network calls may be blocked in the preview sandbox)');
+  if (hints.length) {
+    try { console.warn('[WEBPAGEBUILDER:ISLAND] "' + name + '" relies on ' + hints.join(', ') + ' — if it stays on a loading state in the preview, that is the likely cause. The published site provides the real APIs.'); } catch (e) {}
+  }
+}
 function _widgetByName(name) {
   var list = DB.widgetCatalog || [];
   var i;
@@ -4413,6 +4476,7 @@ function _widgetByName(name) {
 }
 function _previewIslands(html) {
   var islandCss = '', islandJs = '';
+  var islandJsBlocks = []; // one script block per island (see buildPreviewDoc)
   var total = 0, missing = 0, ssrCount = 0;
   var outHtml = (html || '').replace(/<div\b[^>]*data-gw-app="([^"]+)"[^>]*>[\s\S]*?<\/div>/g, function(full) {
     var nm = /data-gw-app="([^"]+)"/.exec(full);
@@ -4420,6 +4484,7 @@ function _previewIslands(html) {
     var inner = '';
     var hasCode = false;
     var hasSsr = false;
+    var blockJs = '';
     if (_renderWidgets && w) {
       // FULL WIDGET IN PREVIEW: run the widget's own client code; if the
       // store record only ships SSR markup, show that instead — the preview
@@ -4428,7 +4493,12 @@ function _previewIslands(html) {
         var sane = _saneCodeParts(w.code.html, w.code.css, w.code.js);
         hasCode = true;
         if (sane.css) islandCss += '\n/* island: ' + nm[1] + ' */\n' + sane.css;
-        if (sane.js) islandJs += '\n/* island: ' + nm[1] + ' */\n' + sane.js;
+        if (sane.js) {
+          var jsPart = '\n/* island: ' + nm[1] + ' */\n' + sane.js;
+          blockJs += jsPart;
+          islandJs += jsPart;
+          _warnIslandApiDeps(nm[1], sane.js);
+        }
         // The widget's template markup goes INSIDE the island — its own JS
         // then hydrates it. Embedded <style>/<script> are hoisted out and
         // run like the platform does (inline scripts injected via innerHTML
@@ -4440,7 +4510,11 @@ function _previewIslands(html) {
             return '';
           });
           hh = hh.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, function(all, body) {
-            if (!/\bsrc\s*=/.test(all)) islandJs += '\n/* island script: ' + nm[1] + ' */\n' + body;
+            if (!/\bsrc\s*=/.test(all)) {
+              var emb = '\n/* island script: ' + nm[1] + ' */\n' + body;
+              blockJs += emb;
+              islandJs += emb;
+            }
             return '';
           });
           inner = hh;
@@ -4461,6 +4535,7 @@ function _previewIslands(html) {
         } catch (e) {}
       }
     }
+    if (blockJs) islandJsBlocks.push({ name: (nm ? nm[1] : '?'), js: blockJs });
     if (!inner) return full;
     var openEnd = full.indexOf('>') + 1;
     var close = full.lastIndexOf('</div>');
@@ -4477,7 +4552,7 @@ function _previewIslands(html) {
       else st.textContent = '🧩 ' + (total - missing) + ' of ' + total + ' rendering';
     }
   } catch (e) {}
-  return { html: outHtml, css: islandCss, js: islandJs };
+  return { html: outHtml, css: islandCss, js: islandJs, jsBlocks: islandJsBlocks };
 }
 
 function _toggleRenderWidgets() {
@@ -6431,4 +6506,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-04-15 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-09-1 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
