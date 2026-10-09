@@ -142,7 +142,7 @@
     <code>social.html</code> (generated satellites).
   </p>
   <table>
-    <tr><th>Document version</th><td>0.22</td></tr>
+    <tr><th>Document version</th><td>0.23</td></tr>
     <tr><th>Last updated</th><td>2026-10-09</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
@@ -701,6 +701,12 @@ _ensureImageSrcs(html)      // only fills image placeholders
       <td>D-WB-34</td><td>2026-10-09</td>
       <td>Island script-end escaping (user evidence: after re-uploading the widget's real JS to the store, the preview console shows <code>Uncaught SyntaxError: Unexpected token '.' (VM659 about:srcdoc:12:1)</code> twice). Root cause: the HTML parser ends a <code>&lt;script&gt;</code> block at ANY <code>&lt;/script</code> sequence — even INSIDE a JS string. Website html tools embed <code>'&lt;script …&gt;&lt;/script&gt;'</code> as string content; injected unescaped, the island script is truncated at that point and the leftover is re-parsed as a NEW script whose first line starts with “.” — exactly the reported error. <code>new Function</code> validation (D-WB-33) cannot see this because it never parses HTML. FIX: NEW <code>_escapeScriptEnd(code)</code> rewrites every <code>&lt;/script</code> to <code>&lt;\/script</code> (inside a JS string “\/” is the same character, so it is semantics-preserving) — applied to every island script block, the legacy concatenated island block, AND the page JS before injection into the preview srcdoc. Build <code>2026-10-09-3</code>; e2e all green, zero page errors.</td>
       <td>The preview now survives the most common self-embedding pattern in store tools — a widget's code can no longer truncate its own script block.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-35</td><td>2026-10-09</td>
+      <td>Widget rendering MILESTONE + publish-with-data contract (user evidence: the builder preview now renders the REAL widget UI — “Online ordering menu / Closed today / Nothing available right now / Your order is empty / View cart” — proving the whole island pipeline works end-to-end in the tool; the published website still shows nothing because the publishing app does not load <code>data-gw-app</code> islands at all). The widget shows its empty state in the preview because it relies on <code>fetch</code> for its data (console diagnostic confirmed exactly that) and the preview sandbox cannot serve it — by design. Delivered <code>PUBLICWEBSITE-REQUEST--publish-widget-with-data.txt</code> (repo root): the ready-to-send pure-text explanation + contract for the PublicWebsite project covering (1) what a website-html-tool widget is and where its code lives (API v2 catalog + record detail); (2) the full fix pipeline in order — SSR island fill (ssrHtml → code.html → empty), css/js hoisted once per unique widget, the <code>window.tool</code> shim BEFORE widget JS, <code>gw.apps.register</code> + idempotent auto-mount with <code>data-gw-mounted</code>, SPA unmount/remount; (3) the DATA step (“processed properly”) — CORS + CSP must allow the widget's fetch endpoints (or proxy same-origin), preferring <code>gw.db</code>; (4) a 4-step debug order starting with “is the island div actually in the published page source”; (5) acceptance tests A–G including a data-loading assertion for “Food Ordering Cart”.</td>
+      <td>The builder side is proven complete; the only remaining half is the publish-side island pipeline — now specified with the data/CORS step that makes widgets fully functional.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
