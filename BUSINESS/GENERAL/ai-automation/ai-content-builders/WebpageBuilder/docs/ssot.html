@@ -142,8 +142,8 @@
     <code>social.html</code> (generated satellites).
   </p>
   <table>
-    <tr><th>Document version</th><td>0.18</td></tr>
-    <tr><th>Last updated</th><td>2026-10-03</td></tr>
+    <tr><th>Document version</th><td>0.19</td></tr>
+    <tr><th>Last updated</th><td>2026-10-09</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
@@ -677,6 +677,12 @@ _ensureImageSrcs(html)      // only fills image placeholders
       <td>D-WB-30</td><td>2026-10-05</td>
       <td>“Preview shows the widget's CODE as text, not the running widget” (screenshot: EmbeddedFoodOrderingCart JS rendered as raw text). Root cause: the store record keeps the whole tool source in one field; the old classifier saw html-template strings inside the JS and labeled the script as <code>html</code> → it was injected into the island as markup and displayed as text. FIXES: (1) NEW <code>_classifyCodeString()</code> — STRONG JS signals ('use strict', gw.apps.register, addEventListener, document./window., (function(, =>{, .querySelector, .innerHTML) win over html; html requires ^&lt; + real tags and no JS declarations; css requires declarations ending in `;`. (2) NEW <code>_saneCodeParts(html,css,js)</code> re-homes mislabeled parts (html-field-that-is-JS → js; js-that-is-html → html); applied in _extractWidgetCode (both paths), _harvestCodeFromRecord, and AGAIN in _previewIslands at render time so even stale caches are safe. (3) _previewIslands hoists embedded &lt;style&gt;/&lt;script&gt; OUT of the widget's markup into the injected css/js (inline scripts inside innerHTML never run). (4) The preview mock now defines a minimal <code>window.tool</code> stub (onReady cb({}), notify, resize, isReadOnly…) so tool-style library widgets (like EmbeddedFoodOrderingCart, which boots via tool.onReady) can run their own UI instead of dying. (5) Widget cache key bumped to <code>webpagebuilder_widget_cache_v2</code> so previously misclassified cached catalogs are discarded. e2e gained classifier + re-home assertions; build <code>2026-10-04-15</code>, all green.</td>
       <td>The preview runs the widget's code — it never displays code as text.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-31</td><td>2026-10-09</td>
+      <td>Publish-side loading contract consolidated (user evidence: catalog list NOW resolves in the CMS — the relay works — but an added widget “does not load properly in preview and shows nothing in the published page”). Diagnosis: (1) “not visible in the HTML code” is BY DESIGN (D-WB-27: widgets live in <code>DB.widgets</code> and are composed into <code>htmlPage.code.html</code> only at save/export); (2) “adds at the end” = the placement dropdown adds the island after the chosen section, and falls back to end-of-page when the page HTML is empty or the section id is not detected; (3) preview renders client-side from the record's <code>code.{html,css,js}</code> — if the catalog LIST omits <code>code</code>, the tool asks for the record detail via <code>requestObjects('get')</code>; without that relay the preview can only show the placeholder chip; (4) “nothing in the published page” = the publishing app does not yet load website-html-tool widgets AT ALL — it must implement the island pipeline. Delivered <code>PUBLICWEBSITE-REQUEST--load-website-html-tool-widgets.txt</code> (repo root): the ready-to-send contract for the PublicWebsite project covering what a website-html-tool is (three blocks booting via <code>window.tool.onReady</code> and/or <code>gw.apps.register</code>), where the publish app gets the code server-side (API v2 catalog list + record detail by objectId), the full load pipeline (SSR: resolve records → inject ssrHtml or code.html inside the island → hoist css/js once per unique widget → provide a <code>window.tool</code> shim; hydration: <code>gw.apps.register</code> + idempotent auto-mount with <code>data-gw-mounted</code>, configSchema defaults, isolated failures, SPA unmount/remount), client-only opt-in via <code>ssrEnabled:false</code>, caching/determinism rules, and acceptance tests A–H.</td>
+      <td>The publish side is the missing half of the island contract — with this spec the publishing app and the builder preview converge on the same pipeline.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
