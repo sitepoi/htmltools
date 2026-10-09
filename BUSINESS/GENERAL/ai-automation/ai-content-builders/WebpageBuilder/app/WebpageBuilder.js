@@ -1,4 +1,4 @@
-/* build 2026-10-09-1 */
+/* build 2026-10-09-2 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-09-1';
+var TOOL_BUILD = '2026-10-09-2';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -461,9 +461,13 @@ function _harvestCodeFromRecord(obj, depth) {
       var s = v.trim();
       if (!s || s.length < 12) continue;
       var kind = _classifyCodeString(s);
-      if (kind === 'js' && !out.js) out.js = s;
-      else if (kind === 'html' && !out.html) out.html = s;
-      else if (kind === 'css' && !out.css) out.css = s;
+      // APPEND same-kind fragments in record order — the store sometimes
+      // splits one tool's code across several string fields; keeping only
+      // the FIRST fragment left broken scripts like ".then(...)" and threw
+      // "Uncaught SyntaxError: Unexpected token '.'" in the preview.
+      if (kind === 'js') out.js = out.js ? out.js + '\n' + s : s;
+      else if (kind === 'html') out.html = out.html ? out.html + '\n' + s : s;
+      else if (kind === 'css') out.css = out.css ? out.css + '\n' + s : s;
     } else if (typeof v === 'object') {
       var r = _harvestCodeFromRecord(v, depth + 1);
       if (r) {
@@ -835,6 +839,8 @@ function openWidgetDialog(name) {
   if (t) t.textContent = 'Add widget: ' + name;
   var d = el('widget-dialog-desc');
   if (d) d.textContent = 'It will appear right in your page preview — no code needed.';
+  var rm = el('btn-widget-remove');
+  if (rm) rm.style.display = _widgetIsOnPage(name) ? '' : 'none';
   var sel = el('widget-place-after');
   if (sel) sel.innerHTML = _sectionOptionsHtml('');
   openModal('modal-widget-config');
@@ -851,6 +857,27 @@ function insertWidgetFromDialog() {
   insertWidgetIsland(_widgetDialogName, cfgText, placement ? placement.value : '');
   closeAllModals();
 }
+function _widgetIsOnPage(name) {
+  var wl = DB.widgets || [];
+  for (var i = 0; i < wl.length; i++) if (wl[i] && wl[i].name === name) return true;
+  return false;
+}
+function removeWidgetFromDialog() {
+  // Remove-from-page action inside the add dialog: visible when the widget
+  // is already on the page ("I cannot remove when I add it").
+  if (!_widgetDialogName) return;
+  var name = _widgetDialogName;
+  var wl = DB.widgets || [];
+  var kept = [];
+  for (var i = 0; i < wl.length; i++) if (wl[i] && wl[i].name !== name) kept.push(wl[i]);
+  if (kept.length === wl.length) { showToast('"' + name + '" is not on this page.', 'info'); return; }
+  DB.widgets = kept;
+  persist();
+  _updatePageWidgetsBtn();
+  updatePreview();
+  closeAllModals();
+  showToast('🧩 "' + name + '" removed from the page.', 'info');
+}
 function insertWidgetIsland(name, cfgJson, placeAfter) {
   // The widget goes into the VISUAL page (DB.widgets), never into the HTML
   // editor. The preview renders it immediately; the publish pipeline gets
@@ -862,7 +889,7 @@ function insertWidgetIsland(name, cfgJson, placeAfter) {
   persist();
   _updatePageWidgetsBtn();
   switchTab('preview'); // show the result immediately — a visual tool, not a code editor
-  showToast('🧩 "' + name + '" added to your page.', 'success');
+  showToast('🧩 "' + name + '" added — manage or remove it with the 🧩 button above the preview.', 'success');
 }
 
 /* ── Page widgets helpers (compose / migrate / manage) ── */
@@ -4418,11 +4445,20 @@ function buildPreviewDoc() {
   var islandScripts = '';
   if (islands.jsBlocks && islands.jsBlocks.length) {
     // ONE <script> per island: a single widget's syntax error can no longer
-    // kill the other widgets' scripts.
+    // kill the other widgets' scripts. Each block is pre-validated — a broken
+    // block is skipped with a NAMED console error instead of a bare
+    // "Uncaught SyntaxError" that says nothing about which widget failed.
     for (var ib = 0; ib < islands.jsBlocks.length; ib++) {
       var ibs = _sanitizeJs(islands.jsBlocks[ib].js || '');
       islandFixTotal += ibs.fixed;
-      if (ibs.code) islandScripts += '<script>\n/* island: ' + islands.jsBlocks[ib].name + ' */\n' + ibs.code + '\n<\/script>\n';
+      if (!ibs.code) continue;
+      var ibErr = _validateIslandJs(ibs.code);
+      if (ibErr) {
+        addConsoleEntry('error', '🧩 Widget "' + islands.jsBlocks[ib].name + '" JavaScript has a syntax error and was NOT injected into the preview. Error: ' + ibErr + ' — the store record for this widget needs a fix.');
+        continue;
+      }
+      islandScripts += '<script>try{window.__wbIslandNow=' + JSON.stringify(islands.jsBlocks[ib].name) + ';}catch(e){}<\/script>\n' +
+        '<script>\n/* island: ' + islands.jsBlocks[ib].name + ' */\n' + ibs.code + '\n<\/script>\n';
     }
   } else if (islandJs) {
     islandScripts = '<script>\n' + islandJs + '\n<\/script>\n';
@@ -4434,6 +4470,8 @@ function buildPreviewDoc() {
     scrollScript = '<script>setTimeout(function(){try{var t=document.getElementById(' + JSON.stringify(sid) + ');if(t){t.scrollIntoView({behavior:"smooth",block:"start"});t.style.outline="3px solid #7c3aed";t.style.outlineOffset="-3px";setTimeout(function(){t.style.outline="";},2600);}}catch(e){}},200);<\/script>';
     _pendingScrollId = '';
   }
+  var consoleBridge =
+    '<script>\n(function(){var oc={log:console.log,warn:console.warn,error:console.error};function post(l,args){var msg=Array.prototype.slice.call(args).map(function(a){try{return typeof a==="object"?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(" ");try{parent.postMessage({wbConsole:{level:l,msg:msg,time:new Date().toISOString()}},"*")}catch(e){}}console.log=function(){post("log",arguments);oc.log.apply(console,arguments)};console.warn=function(){post("warn",arguments);oc.warn.apply(console,arguments)};console.error=function(){post("error",arguments);oc.error.apply(console,arguments)};try{window.__wbIslandNow="page";}catch(e){}window.onerror=function(m,s,l){post("error",["["+(window.__wbIslandNow||"page")+(l?(" l"+l):"")+"] Error:",m]);return true};window.addEventListener("keydown",function(e){if(e.ctrlKey&&e.shiftKey&&(e.key==="Y"||e.key==="y")){try{parent.postMessage({wbDump:true},"*")}catch(err){}}});})();\n<\/script>\n';
   var doc =
     '<!DOCTYPE html><html lang="' + esc(lang) + '">' +
     '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title>' +
@@ -4441,13 +4479,20 @@ function buildPreviewDoc() {
     '<body>\n' + html + '\n' +
     scrollScript +
     _gwPreviewMockScript(lang) + '\n' +
+    consoleBridge +
     islandScripts +
-    '<script>\n(function(){var oc={log:console.log,warn:console.warn,error:console.error};function post(l,args){var msg=Array.prototype.slice.call(args).map(function(a){try{return typeof a==="object"?JSON.stringify(a):String(a)}catch(e){return String(a)}}).join(" ");try{parent.postMessage({wbConsole:{level:l,msg:msg,time:new Date().toISOString()}},"*")}catch(e){}}console.log=function(){post("log",arguments);oc.log.apply(console,arguments)};console.warn=function(){post("warn",arguments);oc.warn.apply(console,arguments)};console.error=function(){post("error",arguments);oc.error.apply(console,arguments)};window.onerror=function(m){post("error",["Error:",m]);return true};window.addEventListener("keydown",function(e){if(e.ctrlKey&&e.shiftKey&&(e.key==="Y"||e.key==="y")){try{parent.postMessage({wbDump:true},"*")}catch(err){}}});})();\n<\/script>\n' +
     '<script>\n' + js + '\n<\/script>\n' +
     '<script>\n(function(){try{var G=(window.gw||{}).apps;if(!G)return;if(typeof G.mount==="function"){G.mount(document);}else{var els=document.querySelectorAll("[data-gw-app]:not([data-gw-mounted])");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");var f=G._f?G._f[n]:null;if(!f&&G._f){var keys=Object.keys(G._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=G._f[keys[k]];}if(!f&&keys.length===1)f=G._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:window.gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}}}catch(e){try{console.warn("island mount failed",e);}catch(e2){}}})();\n<\/script>\n</body></html>';
   return doc;
 }
 
+function _validateIslandJs(code) {
+  // Pre-validate widget code BEFORE injecting it into the preview iframe: a
+  // parse error would otherwise surface as a bare "Uncaught SyntaxError"
+  // inside the iframe with no clue which widget caused it.
+  try { new Function(String(code || '')); return ''; }
+  catch (e) { return (e && e.message) ? String(e.message) : 'unknown syntax error'; }
+}
 function _warnIslandApiDeps(name, js) {
   // Preview diagnostics: a widget stuck on its loading state usually waits
   // on a platform API the preview mock cannot fully serve.
@@ -6280,6 +6325,7 @@ function bindEvents() {
   if (widgetSearch) widgetSearch.oninput = debounce(function() { _handleWidgetSearch(this.value); }, 300);
   _bind('btn-form-builder', openFormBuilder);
   _bind('btn-widget-insert', insertWidgetFromDialog);
+  _bind('btn-widget-remove', removeWidgetFromDialog);
   _bind('btn-widget-cancel', closeAllModals);
   _bind('btn-widget-cancel2', closeAllModals);
   _bind('btn-form-add-field', addFormFieldRow);
@@ -6506,4 +6552,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-09-1 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-09-2 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

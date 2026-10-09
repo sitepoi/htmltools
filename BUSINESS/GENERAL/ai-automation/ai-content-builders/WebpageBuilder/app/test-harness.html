@@ -60,7 +60,7 @@ body { padding-top: 28px !important; margin: 0; }
     </div>
     <div class="header-right">
       <button class="btn btn-sm btn-primary" id="btn-widget-library-top" title="Add a widget">🧩 Widgets</button>
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-09-1</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-09-2</span>
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
@@ -379,6 +379,7 @@ body { padding-top: 28px !important; margin: 0; }
       <label class="field-label">Place in (optional)</label>
       <select id="widget-place-after"><option value="">— end of page —</option></select>
       <div class="modal-actions">
+        <button class="btn btn-ghost" id="btn-widget-remove" style="display:none;color:#dc2626">🗑 Remove from page</button>
         <button class="btn btn-ghost" id="btn-widget-cancel2">Cancel</button>
         <button class="btn btn-primary" id="btn-widget-insert">➕ Add to Page</button>
       </div>
@@ -1590,7 +1591,7 @@ Rules:
      boot sets data-wb-ready on <body>. -->
 <script>
 (function() {
-  var BUILD = '2026-10-09-1';
+  var BUILD = '2026-10-09-2';
   try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
   try {
     window.__wbHtmlProbe = true;

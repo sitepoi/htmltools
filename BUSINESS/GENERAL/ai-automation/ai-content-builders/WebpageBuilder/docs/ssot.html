@@ -142,7 +142,7 @@
     <code>social.html</code> (generated satellites).
   </p>
   <table>
-    <tr><th>Document version</th><td>0.20</td></tr>
+    <tr><th>Document version</th><td>0.21</td></tr>
     <tr><th>Last updated</th><td>2026-10-09</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
@@ -689,6 +689,12 @@ _ensureImageSrcs(html)      // only fills image placeholders
       <td>D-WB-32</td><td>2026-10-09</td>
       <td>Precise widget placement WITHOUT section ids + isolated island scripts + preview API diagnostics (user evidence: “I don't see any section ID, only end of page — the location mechanism is not precise”; widget “loads the code but JS is not in effect — stays on 'Loading menu…'”). DECISIONS: (1) Widgets STAY out of the editor HTML (D-WB-27 upheld) — the AI rewrites the whole page on every generation, so editor-embedded islands would be silently deleted; the composed saved value (<code>htmlPage.code.html</code>) still receives each island at its exact spot. (2) NEW index-based anchors: the placement dropdown now lists EVERY section element (section/article/header/footer/aside/nav) by number with its heading label — <code>:i0, :i1, …</code> — no ids required; <code>_composeIslandsInto</code> inserts the island right after the open tag of the Nth section; legacy id anchors still work; the preview now composes islands into the page html BEFORE prepending shared html so indexes always line up; the page-widgets modal uses the same options and reports “section N (label)”. (3) NEW preview isolation: each island's JS is emitted as its OWN <code>&lt;script&gt;</code> block — one widget's syntax error can no longer kill the others' scripts. (4) NEW <code>_warnIslandApiDeps()</code>: console warnings name the exact platform API a widget depends on (gw.service / gw.db.subscribe / gw.db.query / fetch) when the preview mock cannot fully serve it — a widget stuck on “Loading…” now explains itself in the Console panel. e2e all green (build <code>2026-10-09-1</code>), zero page errors.</td>
       <td>Placement is precise on id-less AI-generated pages; a stuck widget preview now tells the user exactly which platform API it is waiting for.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-WB-33</td><td>2026-10-09</td>
+      <td>Remove control + named island syntax errors + harvest concatenation (user evidence: (1) “I cannot remove when I add it”; (2) “Online ordering menu / Loading menu…” with <code>Uncaught SyntaxError: Unexpected token '.' (about:srcdoc:2666:1)</code>). FIXES: (1) NEW “🗑 Remove from page” button in the add dialog (shown only when that widget is already on the page) wired to <code>removeWidgetFromDialog()</code>; the add toast now points at the 🧩 button for manage/remove; the page-widgets modal ✕ stays as the second path. (2) The '.' syntax error is a FRAGMENT problem: the store sometimes splits one tool's JS across several string fields, and <code>_harvestCodeFromRecord</code> kept only the FIRST fragment — a tail like <code>.then(...)</code> then failed to parse. It now APPENDS same-kind fragments in record order (js/html/css), reconstructing the whole script. (3) NEW <code>_validateIslandJs()</code>: every island script is pre-parsed with <code>new Function</code> BEFORE injection — a broken block is skipped and a NAMED error lands in the tool's Console panel (“Widget X JavaScript has a syntax error … the store record needs a fix”) instead of a bare iframe error. (4) The preview console bridge moved BEFORE the island scripts and <code>window.onerror</code> now reports which island (or page) threw and the srcdoc line. Build <code>2026-10-09-2</code>; e2e all green, zero page errors. NOTE: if the widget still shows only its loading UI after this, its record must be inspected — the error text now says exactly what to fix.</td>
+      <td>Removal is one obvious click; a widget that cannot run now explains itself by name instead of failing silently.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
   </table>
