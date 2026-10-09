@@ -1,4 +1,4 @@
-/* build 2026-10-09-2 */
+/* build 2026-10-09-3 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-09-2';
+var TOOL_BUILD = '2026-10-09-3';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -4431,7 +4431,7 @@ function buildPreviewDoc() {
   var css = (_previewShared.css || '') + '\n' + (DB.code.css || '');
   var jsSan = _sanitizeJs((_previewShared.js || '') + '\n' + (DB.code.js || ''));
   _lastJsFixCount = jsSan.fixed;
-  var js = jsSan.code;
+  var js = _escapeScriptEnd(jsSan.code); // same guard as island scripts
   // ── ISLAND PREVIEW PIPELINE (mirrors the publish contract):
   //   SSR    → the catalog record's ssrHtml is injected INSIDE the island.
   //   CLIENT → the record's code css/js are injected so gw.apps.register()
@@ -4452,6 +4452,7 @@ function buildPreviewDoc() {
       var ibs = _sanitizeJs(islands.jsBlocks[ib].js || '');
       islandFixTotal += ibs.fixed;
       if (!ibs.code) continue;
+      ibs.code = _escapeScriptEnd(ibs.code); // </script inside widget strings would end this block early
       var ibErr = _validateIslandJs(ibs.code);
       if (ibErr) {
         addConsoleEntry('error', '🧩 Widget "' + islands.jsBlocks[ib].name + '" JavaScript has a syntax error and was NOT injected into the preview. Error: ' + ibErr + ' — the store record for this widget needs a fix.');
@@ -4461,7 +4462,7 @@ function buildPreviewDoc() {
         '<script>\n/* island: ' + islands.jsBlocks[ib].name + ' */\n' + ibs.code + '\n<\/script>\n';
     }
   } else if (islandJs) {
-    islandScripts = '<script>\n' + islandJs + '\n<\/script>\n';
+    islandScripts = '<script>\n' + _escapeScriptEnd(islandJs) + '\n<\/script>\n';
   }
   _lastJsFixCount += islandFixTotal;
   var scrollScript = '';
@@ -4486,6 +4487,16 @@ function buildPreviewDoc() {
   return doc;
 }
 
+function _escapeScriptEnd(code) {
+  // The HTML parser ends a <script> block at ANY "</script" sequence —
+  // even inside a JS string. Website html tools routinely embed
+  // '<script ...></script>' as string content; injected unescaped, the
+  // island script gets truncated there and the leftover is re-parsed as a
+  // NEW script, producing "Uncaught SyntaxError: Unexpected token '.'" at
+  // the first leftover line. Inside a JS string, "\/" is the same
+  // character as "/", so this rewrite is semantics-preserving.
+  return String(code || '').replace(/<\/script/gi, '<\\/script');
+}
 function _validateIslandJs(code) {
   // Pre-validate widget code BEFORE injecting it into the preview iframe: a
   // parse error would otherwise surface as a bare "Uncaught SyntaxError"
@@ -6552,4 +6563,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-09-2 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-09-3 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
