@@ -1,4 +1,4 @@
-/* build 2026-10-09-3 */
+/* build 2026-10-10-3 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-09-3';
+var TOOL_BUILD = '2026-10-10-3';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -235,6 +235,7 @@ function _parentSeo() {
    fallback so preview works even when object CRUD is unavailable. ── */
 var _previewShared = { html: '', css: '', js: '' };
 var _widgetDialogName = '';
+var _widgetEditIndex = -1;  // -1 = ADD mode; >= 0 = edit that DB.widgets entry (config + placement)
 var _formFields = [];
 var _storeTotal = 0;      // total widgets in the store catalog (API v2 objects list)
 var _storeRevealed = 0;   // how many of the loaded catalog are currently revealed (client-side paging)
@@ -832,6 +833,9 @@ function _defaultConfigFor(name) {
 function openWidgetDialog(name) {
   _fetchWidgetCodeByName(name); // proactive: load the code NOW so the preview can render it after insertion
   _widgetDialogName = name;
+  _widgetEditIndex = -1; // ADD mode (the edit path sets a DB.widgets index instead)
+  var ins = el('btn-widget-insert');
+  if (ins) ins.textContent = '➕ Add to Page';
   var cfg = _defaultConfigFor(name);
   var ta = el('widget-config-json');
   if (ta) ta.value = JSON.stringify(cfg, null, 2);
@@ -845,6 +849,35 @@ function openWidgetDialog(name) {
   if (sel) sel.innerHTML = _sectionOptionsHtml('');
   openModal('modal-widget-config');
 }
+function openWidgetEditFromPreview(name) {
+  // Edit-from-preview action (the per-island badge inside the preview iframe
+  // posts wbEditWidget here): opens the SAME config dialog but in EDIT mode
+  // - the current config and placement of the FIRST DB.widgets entry with
+  // this name are pre-filled, and Save updates that entry in place.
+  if (!name) return;
+  var wl = DB.widgets || [];
+  var idx = -1;
+  for (var i = 0; i < wl.length; i++) if (wl[i] && wl[i].name === name) { idx = i; break; }
+  if (idx === -1) { showToast('🧩 "' + name + '" is not on this page.', 'info'); return; }
+  _widgetEditIndex = idx;
+  _widgetDialogName = name;
+  var w = wl[idx];
+  var ta = el('widget-config-json');
+  if (ta) {
+    try { ta.value = JSON.stringify(JSON.parse(w.config || '{}'), null, 2); } catch (e) { ta.value = String(w.config || '{}'); }
+  }
+  var t = el('widget-dialog-title');
+  if (t) t.textContent = 'Edit widget: ' + name;
+  var d = el('widget-dialog-desc');
+  if (d) d.textContent = 'Config and placement apply to this widget on the page.';
+  var rm = el('btn-widget-remove');
+  if (rm) rm.style.display = '';
+  var sel = el('widget-place-after');
+  if (sel) sel.innerHTML = _sectionOptionsHtml(w.placeAfter || '');
+  var ins = el('btn-widget-insert');
+  if (ins) ins.textContent = '💾 Save changes';
+  openModal('modal-widget-config');
+}
 function insertWidgetFromDialog() {
   var ta = el('widget-config-json');
   var cfgText = (ta ? ta.value : '').trim();
@@ -854,7 +887,20 @@ function insertWidgetFromDialog() {
     return;
   }
   var placement = el('widget-place-after');
-  insertWidgetIsland(_widgetDialogName, cfgText, placement ? placement.value : '');
+  var place = placement ? placement.value : '';
+  // EDIT mode: update the existing entry in place (no duplicate is added).
+  if (_widgetEditIndex >= 0 && DB.widgets && DB.widgets[_widgetEditIndex]) {
+    DB.widgets[_widgetEditIndex].config = cfgText;
+    DB.widgets[_widgetEditIndex].placeAfter = String(place || '').trim();
+    _widgetEditIndex = -1;
+    persist();
+    _updatePageWidgetsBtn();
+    updatePreview();
+    closeAllModals();
+    showToast('🧩 "' + _widgetDialogName + '" updated.', 'success');
+    return;
+  }
+  insertWidgetIsland(_widgetDialogName, cfgText, place);
   closeAllModals();
 }
 function _widgetIsOnPage(name) {
@@ -877,6 +923,25 @@ function removeWidgetFromDialog() {
   updatePreview();
   closeAllModals();
   showToast('🧩 "' + name + '" removed from the page.', 'info');
+}
+function removeWidgetByNameFromPreview(name) {
+  // Remove-from-preview action (the per-island badge inside the preview
+  // iframe posts wbRemoveWidget here): removes the FIRST DB.widgets entry
+  // with that name and refreshes the preview. Duplicate widgets are removed
+  // one click at a time, matching the badges' per-island buttons.
+  if (!name) return;
+  var wl = DB.widgets || [];
+  for (var i = 0; i < wl.length; i++) {
+    if (wl[i] && wl[i].name === name) {
+      wl.splice(i, 1);
+      persist();
+      _updatePageWidgetsBtn();
+      updatePreview();
+      showToast('🧩 "' + name + '" removed from the page.', 'info');
+      return;
+    }
+  }
+  showToast('🧩 "' + name + '" is not on this page.', 'info');
 }
 function insertWidgetIsland(name, cfgJson, placeAfter) {
   // The widget goes into the VISUAL page (DB.widgets), never into the HTML
@@ -1017,12 +1082,27 @@ function renderPageWidgetsList() {
   var h = '';
   for (var i = 0; i < wl.length; i++) {
     var w = wl[i];
+    var rec = _widgetByName(w.name || '');
+    var cfgPretty = '';
+    try { cfgPretty = JSON.stringify(JSON.parse(w.config || '{}'), null, 2); } catch (e) { cfgPretty = String(w.config || '{}'); }
+    var island = _composeIslandDiv(w.name, w.config || '{}');
     h += '<div class="page-widget-row">' +
       '<span class="page-widget-name">🧩 ' + esc(w.name) + '</span>' +
       '<select class="pw-pos" data-pw-pos="' + i + '" title="Place this widget inside a section">' + _sectionOptionsHtml(w.placeAfter || '') + '</select>' +
       '<button class="btn btn-sm btn-ghost" data-pw-up="' + i + '" title="Move up">↑</button>' +
       '<button class="btn btn-sm btn-ghost" data-pw-down="' + i + '" title="Move down">↓</button>' +
       '<button class="btn btn-sm btn-ghost" data-pw-rm="' + i + '" title="Remove">✕</button>' +
+    '</div>' +
+    '<div class="page-widget-meta">' +
+      '<div class="pw-meta-line">Placement: <b>' + esc(_placementLabel(w.placeAfter || '')) + '</b></div>' +
+      (rec ? '<div class="pw-meta-line">Store record: <code>' + esc(String(rec.objectId || rec.id || '?')) + '</code>' + (rec.objectType ? ' · type ' + esc(String(rec.objectType)) : '') + '</div>' : '<div class="pw-meta-line">Store record: not in the loaded catalog — code loads via get-by-id when inserted.</div>') +
+      '<details class="pw-details"><summary>Island markup (what is written into the page HTML)</summary>' +
+        '<pre class="pw-code">' + esc(island) + '</pre>' +
+      '</details>' +
+      '<details class="pw-details"><summary>Config JSON (edit, then save)</summary>' +
+        '<textarea class="pw-config" data-pw-cfg="' + i + '" rows="5" spellcheck="false">' + esc(cfgPretty) + '</textarea>' +
+        '<button class="btn btn-sm btn-outline" data-pw-save="' + i + '">💾 Save config</button>' +
+      '</details>' +
     '</div>';
   }
   list.innerHTML = h;
@@ -1054,6 +1134,25 @@ function renderPageWidgetsList() {
       updatePreview();
       renderPageWidgetsList();
       showToast('Widget removed.', 'info');
+    };
+  }
+  var saveEls = list.querySelectorAll('[data-pw-save]');
+  for (var s2 = 0; s2 < saveEls.length; s2++) {
+    saveEls[s2].onclick = function() {
+      var idx = parseInt(this.getAttribute('data-pw-save'), 10);
+      var ta = list.querySelector('[data-pw-cfg="' + idx + '"]');
+      if (!ta || !DB.widgets || !DB.widgets[idx]) return;
+      var txt = (ta.value || '').trim();
+      if (!txt) txt = '{}';
+      try { JSON.parse(txt); } catch (e) {
+        showToast('Config must be VALID JSON — ' + e.message, 'error');
+        return;
+      }
+      DB.widgets[idx].config = txt;
+      persist();
+      updatePreview();
+      renderPageWidgetsList();
+      showToast('🧩 "' + DB.widgets[idx].name + '" config saved.', 'success');
     };
   }
 }
@@ -4372,12 +4471,10 @@ function _hlCss(src) { return _hlRun(src, HL_CSS_RE, ['comment', 'string', 'at',
 var HL_JS_RE = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|\b(var|function|return|if|else|for|while|do|new|const|let|typeof|instanceof|this|in|of|true|false|null|undefined|try|catch|finally|throw|switch|case|break|continue|class|extends|import|export|default|async|await)\b|(\b\d[\d_.]*\b)|(\b(?:window|document|gw|tool|console|localStorage|JSON|Math|Date|Promise|setTimeout|setInterval)\b)/g;
 function _hlJs(src) { return _hlRun(src, HL_JS_RE, ['comment', 'string', 'keyword', 'num', 'builtin']); }
 function refreshEditorHighlight(part) {
-  var code = el('hl-' + part);
-  var ta = el('code-' + part);
-  if (!code || !ta) return;
-  var fn = part === 'html' ? _hlHtml : part === 'css' ? _hlCss : _hlJs;
-  code.innerHTML = fn(ta.value);
-  _syncHighlightScroll(part);
+  // Syntax-highlight overlay disabled (build 2026-10-10-2): the editors are
+  // plain light textareas now. Kept as a hook so the highlight code can be
+  // re-enabled later without touching the callers.
+  return;
 }
 function _syncHighlightScroll(part) {
   var code = el('hl-' + part);
@@ -4422,6 +4519,46 @@ function setDevice(d) {
   _applyDeviceClass();
 }
 
+function _widgetHudScript() {
+  // Preview-only widget controls (build 2026-10-10-2): EVERY data-gw-app
+  // island in the preview iframe gets a small Edit/Remove badge overlaid on
+  // the island itself (not a separate panel), so the widget can be edited
+  // or removed exactly where it renders - in both preview modes. Edit posts
+  // wbEditWidget to the tool (opens the config/placement dialog); Remove
+  // posts wbRemoveWidget. Built with DOM APIs only - no HTML strings, so
+  // nothing can violate the inline-tokenizer rules.
+  return '<script>\n' +
+    '(function(){try{' +
+    'var els=document.querySelectorAll("[data-gw-app]");' +
+    'for(var i=0;i<els.length;i++){' +
+    '(function(el){' +
+    'var n=el.getAttribute("data-gw-app")||"?";' +
+    'var cs="";try{cs=window.getComputedStyle(el).position;}catch(e){}' +
+    'if(cs==="static"){try{el.style.position="relative";}catch(e){}}' +
+    'var bar=document.createElement("div");' +
+    'bar.style.cssText="position:absolute;top:4px;right:4px;z-index:2147483000;display:inline-flex;gap:4px;align-items:center;background:rgba(17,24,39,.85);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:2px 6px;font:11px/1.4 system-ui,sans-serif;color:#ffffff";' +
+    'var nm=document.createElement("span");' +
+    'nm.style.cssText="opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px";' +
+    'nm.textContent=n;' +
+    'var bE=document.createElement("button");' +
+    'bE.type="button";' +
+    'bE.textContent="Edit";' +
+    'bE.title="Edit this widget - config and placement";' +
+    'bE.style.cssText="border:1px solid rgba(165,180,252,.6);background:rgba(99,102,241,.35);color:#ffffff;border-radius:6px;cursor:pointer;font-size:10.5px;padding:1px 7px";' +
+    'var bR=document.createElement("button");' +
+    'bR.type="button";' +
+    'bR.textContent="Remove";' +
+    'bR.title="Remove this widget from the page";' +
+    'bR.style.cssText="border:1px solid rgba(252,165,165,.6);background:rgba(220,38,38,.45);color:#ffffff;border-radius:6px;cursor:pointer;font-size:10.5px;padding:1px 7px";' +
+    'bE.onclick=function(){try{parent.postMessage({wbEditWidget:n},"*")}catch(err){}};' +
+    'bR.onclick=function(){try{parent.postMessage({wbRemoveWidget:n},"*")}catch(err){}};' +
+    'bar.appendChild(nm);bar.appendChild(bE);bar.appendChild(bR);' +
+    'el.appendChild(bar);' +
+    '})(els[i]);' +
+    '}' +
+    '}catch(e){}})' +
+    '();\n<\/script>\n';
+}
 function buildPreviewDoc() {
   var lang = _p('lang', 'en');
   // Compose islands into the PAGE html FIRST, then prepend shared html — so
@@ -4452,7 +4589,7 @@ function buildPreviewDoc() {
       var ibs = _sanitizeJs(islands.jsBlocks[ib].js || '');
       islandFixTotal += ibs.fixed;
       if (!ibs.code) continue;
-      ibs.code = _escapeScriptEnd(ibs.code); // </script inside widget strings would end this block early
+      ibs.code = _escapeScriptEnd(ibs.code); // a script-end sequence inside widget strings would end this block early
       var ibErr = _validateIslandJs(ibs.code);
       if (ibErr) {
         addConsoleEntry('error', '🧩 Widget "' + islands.jsBlocks[ib].name + '" JavaScript has a syntax error and was NOT injected into the preview. Error: ' + ibErr + ' — the store record for this widget needs a fix.');
@@ -4483,14 +4620,16 @@ function buildPreviewDoc() {
     consoleBridge +
     islandScripts +
     '<script>\n' + js + '\n<\/script>\n' +
-    '<script>\n(function(){try{var G=(window.gw||{}).apps;if(!G)return;if(typeof G.mount==="function"){G.mount(document);}else{var els=document.querySelectorAll("[data-gw-app]:not([data-gw-mounted])");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");var f=G._f?G._f[n]:null;if(!f&&G._f){var keys=Object.keys(G._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=G._f[keys[k]];}if(!f&&keys.length===1)f=G._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:window.gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}}}catch(e){try{console.warn("island mount failed",e);}catch(e2){}}})();\n<\/script>\n</body></html>';
+    '<script>\n(function(){try{var G=(window.gw||{}).apps;if(!G)return;if(typeof G.mount==="function"){G.mount(document);}else{var els=document.querySelectorAll("[data-gw-app]:not([data-gw-mounted])");for(var i=0;i<els.length;i++){(function(el){var n=el.getAttribute("data-gw-app");var f=G._f?G._f[n]:null;if(!f&&G._f){var keys=Object.keys(G._f);var slug=n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");for(var k=0;k<keys.length;k++){if(!f&&slug&&String(keys[k]).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")===slug)f=G._f[keys[k]];}if(!f&&keys.length===1)f=G._f[keys[0]];}if(!f)return;var cfg={};try{cfg=JSON.parse(el.getAttribute("data-gw-config")||"{}");}catch(e){}try{el.setAttribute("data-gw-mounted","1");f({el:el,config:cfg,gw:window.gw});}catch(e){try{console.warn("island "+n+" failed:",e);}catch(e2){}}})(els[i]);}}}catch(e){try{console.warn("island mount failed",e);}catch(e2){}}})();\n<\/script>\n' +
+    _widgetHudScript() +
+    '</body></html>';
   return doc;
 }
 
 function _escapeScriptEnd(code) {
-  // The HTML parser ends a <script> block at ANY "</script" sequence —
+  // The HTML parser ends an inline script block at ANY script-end sequence —
   // even inside a JS string. Website html tools routinely embed
-  // '<script ...></script>' as string content; injected unescaped, the
+  // script-element markup as string content; injected unescaped, the
   // island script gets truncated there and the leftover is re-parsed as a
   // NEW script, producing "Uncaught SyntaxError: Unexpected token '.'" at
   // the first leftover line. Inside a JS string, "\/" is the same
@@ -5966,6 +6105,8 @@ function initConsoleCapture() {
   window.addEventListener('message', function(e) {
     var d = e.data;
     if (d && d.wbConsole) addConsoleEntry(d.wbConsole.level, d.wbConsole.msg);
+    if (d && d.wbRemoveWidget) removeWidgetByNameFromPreview(String(d.wbRemoveWidget || ''));
+    if (d && d.wbEditWidget) openWidgetEditFromPreview(String(d.wbEditWidget || ''));
   });
 }
 function addConsoleEntry(level, msg) {
@@ -6563,4 +6704,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-09-3 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-10-3 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

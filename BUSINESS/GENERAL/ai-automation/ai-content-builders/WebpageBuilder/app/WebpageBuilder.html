@@ -1,4 +1,5 @@
-<!-- build 2026-10-09-3 -->
+<!-- build 2026-10-10-3 -->
+<div id="js-boot-banner" role="alert">⚠ WebpageBuilder JS NOT running — HTML build 2026-10-10-3 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).</div>
 <div id="app">
   <!-- NO EXTERNAL SCRIPTS: self-contained line diff in WebpageBuilder.js.
        An external <script src> blocks every later inline script until it
@@ -17,7 +18,7 @@
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-09-3</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-10-3</span>
       <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
@@ -755,8 +756,7 @@ style, e.g. 'data.rows').
 
 Access limits: only object types registered in the site app's
 `cms-settings.objectTypes[]` with rules.publicAccess != 'no' are queryable;
-private/unregistered types -&gt; 403/404. The folder's fieldAllowlist /
-publicFields projects fields (id is always kept). Read data with
+private/unregistered types -&gt; 403/404. Read data with
 `language` filter to match gw.language when available.
 
 Service endpoints (for hand-rolled UI beyond the built-in widgets)
@@ -1314,7 +1314,7 @@ Rules:
      boot sets data-wb-ready on <body>. -->
 <script>
 (function() {
-  var BUILD = '2026-10-09-3';
+  var BUILD = '2026-10-10-3';
   try { console.log('[WEBPAGEBUILDER:HTML-PROBE] inline script executed — html build ' + BUILD + ' — ' + new Date().toLocaleTimeString()); } catch (e) {}
   try {
     window.__wbHtmlProbe = true;

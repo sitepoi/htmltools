@@ -1,4 +1,4 @@
-/* build 2026-10-09-3 */
+/* build 2026-10-10-3 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Built for UniconHub CMS HTML-tool system.
@@ -12,19 +12,20 @@
   padding: 2px 8px; cursor: default; user-select: none; white-space: nowrap;
 }
 
-/* ── JS-BOOT BANNER (CSS-only proof): <body> gets data-wb-ready="1" only when
-   the tool JS boots. Until then this red banner appears (after a 2s delay) —
-   visible proof that the [JS] block did NOT run, even if inline scripts are
-   stripped by the host. ── */
-body:not([data-wb-ready])::before {
-  content: '⚠ WebpageBuilder JS NOT running — HTML build 2026-10-09-3 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).';
+/* ── JS-BOOT BANNER (copyable text): <body> gets data-wb-ready="1" only when
+   the tool JS boots. The banner is a REAL #js-boot-banner element in the HTML
+   (hidden by default) and this CSS reveals it when the [JS] block never
+   booted — so the message text is selectable/copyable, unlike CSS ::before
+   content. ── */
+#js-boot-banner {
+  display: none;
   position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
   background: #dc2626; color: #ffffff;
   font: bold 12px/1.5 'Segoe UI', system-ui, sans-serif;
   padding: 6px 10px; text-align: center;
-  opacity: 0; animation: wb-js-missing-in 0.4s ease 2s forwards;
+  user-select: text; cursor: text;
 }
-@keyframes wb-js-missing-in { to { opacity: 1; } }
+body:not([data-wb-ready]) #js-boot-banner { display: block; }
 
 /* ── Variables ── */
 :root {
@@ -861,3 +862,25 @@ body.readonly .chat-input, body.readonly .code-textarea { pointer-events: none; 
 .widget-lib-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 #widget-lib-count { font-size: 11.5px; color: var(--text2); font-weight: 600; }
 #btn-widget-more { font-size: 11px; }
+
+/* ── Page-widgets modal: meta + island markup + config editor (2026-10-10-2) ── */
+.page-widget-meta { margin: 0 0 10px 6px; padding: 6px 10px; background: var(--bg3); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.pw-meta-line { font-size: 11px; color: var(--text2); padding: 2px 0; }
+.pw-meta-line b { color: var(--text); font-weight: 600; }
+.pw-details { margin: 4px 0; }
+.pw-details summary { font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; user-select: none; padding: 2px 0; }
+.pw-code { margin: 4px 0; padding: 8px 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5; color: #1f2937; white-space: pre-wrap; word-break: break-all; }
+.pw-config { width: 100%; margin: 4px 0 6px; padding: 8px 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5; color: #1f2937; resize: vertical; }
+
+/* ── Light code editors, no syntax highlight (2026-10-10-2) ── */
+#editor-html, #editor-css, #editor-js { background: #ffffff; }
+#editor-html .code-lines, #editor-css .code-lines, #editor-js .code-lines { background: #f3f4f6; color: #6b7280; border-right-color: #d1d5db; }
+.editor-wrap { background: #ffffff; }
+.editor-hl { display: none; }
+.code-textarea { background: #ffffff; color: #1f2937; caret-color: #111827; -webkit-text-fill-color: #1f2937; }
+.code-textarea::placeholder { color: #9ca3af; }
+.code-textarea::selection { background: rgba(59, 130, 246, 0.25); color: #1f2937; -webkit-text-fill-color: #1f2937; }
+.code-textarea::-webkit-scrollbar { width: 10px; height: 10px; display: block; }
+.code-textarea::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
+.code-textarea::-webkit-scrollbar-track { background: #f3f4f6; }
+.code-textarea { scrollbar-width: auto; }

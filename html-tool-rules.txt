@@ -113,6 +113,11 @@ block (and in any inline script inside the [HTML] block):
   History: WebpageBuilder builds -4/-5 were dead in the CMS for days because
   one compliance regex contained /^<!-- v[\d.]+/ (rule 1 violation). Fixed
   in build -6 by writing \u003C!-- and adding an inline-mode e2e probe.
+  2026-10-10: build 2026-10-09-4 died the same way through RULE 2 - raw
+  </script text inside two COMMENTS terminated the inline script element
+  immediately. Comments give NO protection from the HTML tokenizer; node
+  syntax checks and external-file harnesses stay green while the CMS stays
+  dead. Fixed in build 2026-10-10-1.
   Applies to ALL tool types.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

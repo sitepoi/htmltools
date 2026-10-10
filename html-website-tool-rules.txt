@@ -1,0 +1,277 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TYPE 4 OF 4 - WEBSITE HTML TOOL (widget for the published public website)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Placement: INSIDE a published webpage. A website-html-tool is embedded in a
+page as a WIDGET ISLAND:
+
+    <div data-gw-app="<gwAppName>" data-gw-config='{"k":"v"}'></div>
+
+The publicwebsite renderer discovers the island, fetches the tool's code
+server-side from the application store catalog and mounts the tool INSIDE
+that same div - on window.gw, NEVER in an iframe. This is NOT the CMS
+html-tool SDK of TYPE 1 (window.tool inside a sandboxed iframe); the two
+runtimes are different by design.
+
+OWNERSHIP (per html-tool-rules.txt): TYPE 4 rules are owned by the CONSUMER
+APPS TEAM (the publicwebsite project) and travel as
+public-website-page-rules.txt. This file is the HTMLBasedTools working copy
+of that contract, written from the VERIFIED cross-project SSOT
+(BUSINESS/GENERAL/ai-automation/ai-content-builders/WebpageBuilder/docs/
+webpage-widget-flow-ssot.html v0.9, 2026-10-09). When the two disagree, the
+SSOT is the tiebreaker.
+
+This file is the CONTRACT every website-html-tool (widget) must be built to.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--- OUTPUT FORMAT ---
+[HTML]
+...body fragment only, no <html>/<head>/<style>/<script> tags...
+(optional full-document form: see SHELL markers below)
+
+[CSS]
+...stylesheet rules only, no <style> tag...
+
+[JS]
+...JavaScript only, no <script> tag...
+--- END FORMAT ---
+
+Do not merge them. Do not add extra explanation between the blocks.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. HOW A WIDGET REACHES A PAGE (the serving chain)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  publish tool ──► store catalog record ──► renderer fetches SERVER-SIDE
+  (store side)     type: website-html-tool-         at render time (x-api-key,
+                   library-applicationstore         TTL cache, fail-open)
+                                                          │
+  page stores ONLY the island div ────────────────────────┘
+  (never the tool's code/css/js)
+
+Rules:
+  - The page HTML contains ONLY the island markup. NEVER copy the tool's
+    code into the page - tool updates would never reach published pages.
+  - The renderer never descends INSIDE an island div: one div = one tool.
+  - Islands are flat; anything the renderer did not inject is ignored.
+  - The x-api-key IS the server-side env var GW_APP_STORE_API_KEY, kept on
+    the PUBLICWEBSITE deployment (Vercel publish env). It is read by the
+    renderer only; it must never appear in page markup, tool code or the
+    visitor's browser. Status: created & delivered (SSOT Q-11, D-WFLOW-23).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. CATALOG RECORD CONTRACT (what the store must serve)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The renderer's strict parser accepts ONLY:
+
+  (a) CONTRACT FIELDS on the record:
+      gwAppName    string  REQUIRED - the exact registry name. Must match
+                           the island's data-gw-app case- and space-sensitively.
+      title, description, category   strings - listing metadata.
+      configSchema object  draft-07 subset JSON schema of the config;
+                           properties[].default values are applied at mount.
+      code         object  { html, css, js } - strings; code may also arrive
+                           as a JSON string.
+      ssrHtml      string  OPTIONAL server-rendered first-paint markup.
+      ssrEnabled   boolean OPTIONAL - false = client-only rendering.
+
+  (b) OR the CMS NESTED ENVELOPE:
+      productData.data_categoriesBased.html_tool_definition.draft
+      { toolName, toolDescription, toolCategories, toolParams, toolStatus,
+        toolCssCode, toolHtmlCode, toolJsCode }
+      which the renderer maps to the contract fields.
+
+  - FLAT tool* fields WITHOUT the nested draft FAIL the schema (record
+    rejected -> the island renders data-gw-ssr="none"). Store-side
+    enrichment into shape (a) or (b) is MANDATORY.
+  - SHELL MARKERS: toolHtmlCode may be a FULL html document. The embeddable
+    fragment is the part between <!-- SHELL-START --> and <!-- SHELL-END -->.
+    A <body> pair is the fallback; a full document WITHOUT markers yields an
+    EMPTY shell. Prefer shipping the body fragment directly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. ISLAND MARKUP CONTRACT (what the page embeds)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    <div data-gw-app="<gwAppName>" data-gw-config='{"k":"v"}'></div>
+
+  - data-gw-app  = the record's gwAppName, EXACTLY (case/space-sensitive).
+  - data-gw-config = the tool config, VALID JSON. The builder emits it with
+    single quotes escaped (&#39;). Invalid JSON: the island still mounts
+    with {} + a console.warn + gw:app-error - the page never breaks.
+  - The same widget CAN appear multiple times on one page (each island
+    mounts independently with its own config).
+  - The builder's preview chips/placeholders exist only inside the builder
+    and never appear on publish.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. RUNTIME CONTRACT (how the code runs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Plain JavaScript ONLY: IIFE-friendly, no ES modules, no top-level
+    await, no external <script src>, no frameworks.
+  - Runs on window.gw (gw.db, gw.apps, gw.forms, gw.auth, gw.currency,
+    gw.storage, gw.ns) + a window.tool SHIM for tool-style islands:
+    onReady (queue, flushed once per page), param/getFields (read the
+    mounted island's config), getUser/notify/resize/isReadOnly,
+    requestObjects (read-only query/get relay to the data API).
+    There is NO requestAI on the published shim.
+  - Registration: code.js MUST call gw.apps.register(name, factory).
+    The factory receives { el, config, gw } and REPLACES the SSR placeholder
+    inside el - the client render wins. Registration MUST be idempotent:
+    SPA navigation re-runs everything and re-mounts every island.
+  - Tool-style islands (SSR modes 1/template/client, no factory) mount
+    silently and are marked data-gw-mounted="1".
+  - Widget scripts run sequentially after page js; failures are isolated as
+    gw:script-error; the app shell survives.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SSR MODES (per record - deterministic)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ssrHtml present            -> ssrHtml injected inside the island +
+                                data-gw-ssr="1"        (default)
+  ssrEnabled:false           -> no server markup,
+                                data-gw-ssr="client"
+  no ssrHtml, code.html set  -> code.html injected,
+                                data-gw-ssr="template"
+  neither                    -> empty island,
+                                data-gw-ssr="none"
+  unknown name / store down  -> empty island + data-gw-ssr="none" + warning
+                                (the PAGE never breaks)
+
+  - Scripts are ALWAYS stripped from the emitted SSR islands: SSR output
+    never executes code early.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. CONFIG (configSchema + data-gw-config)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - Ship a draft-07 subset configSchema describing the config keys.
+  - Missing keys are filled from properties[].default AT MOUNT - the widget
+    must tolerate partial configs.
+  - The builder pre-fills data-gw-config from the schema defaults and
+    JSON-validates before insert; page authors may edit it.
+  - No configSchema -> the builder's pre-fill is {} and authors configure
+    manually.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. DATA ACCESS (content from another CMS application)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Widget declares its data source through data-gw-config:
+      cmsObjectType  REQUIRED
+      folder         optional folder filter
+      filters        optional query filters
+      orderBy / orderDir
+      language       'auto' | language code
+      fields         requested fields
+      pageSize
+  (document + default them in configSchema.)
+
+  Runtime paths (never direct Firestore from the browser):
+      gw.db.query / gw.db.get / gw.db.subscribe (SSE)
+        -> GET /api/data/query, GET /api/data/{type}/{id}, SSE /api/subscribe
+      window.tool.requestObjects('query'/'get', ...) - the same read-only
+        gw.db relay for tool-style islands.
+      Browser-side STORE fetches (widget's own data from the store):
+        GET /api/appstore/objects/[[...path]] - same-origin proxy that adds
+        the API key; only the html-tool library type is served.
+
+  Guards the server applies (a widget can NOT bypass these):
+      rate limit -> zod validation -> site resolution -> type access
+      (publicAccess 'no' = 403; unregistered type = 404) -> 30s cache ->
+      query -> meta.language filter -> private records excluded.
+
+  - A widget stays on its loading/empty state when the data API returns
+    empty - design for the empty state (the builder preview ALWAYS serves an
+    empty gw.db and no network).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. STYLING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - code.css is appended to <head> AFTER page css as style[data-gw-widget-css],
+    deduped per widget name.
+  - Avoid gw-* class collisions - prefix your classes.
+  - The --gw-color-* platform variables are fine to use.
+  - Never restyle the page chrome (header/footer) or global elements.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. INLINE-SCRIPT SAFETY (widget code is inlined on publish)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  The renderer injects code.js inline into the generated page. The same
+  tokenizer hazards as TYPE 1 apply to the widget's own code:
+    - NEVER write a raw </script sequence inside strings or comments -
+      it ends the injected script element early. Write <\/script.
+    - Avoid raw <script literals in strings; write '<scr'+'ipt>'.
+    - No external <script src> and no external <link> from the widget.
+  The builder's preview pre-validates each island script and escapes
+  </script before injection - the PUBLISHED page gets the same protection
+  from the renderer, but a widget must not rely on it being re-escaped.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. FAILURE MATRIX (deterministic outcomes)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Store unreachable at render   -> fail-open: cached catalog or empty;
+                                   islands render data-gw-ssr="none"; page fine
+  Unknown island name           -> empty island + data-gw-ssr="none" + warning
+  List omits code + detail fail -> lean record kept, island = "none"
+  Widget script throws          -> isolated gw:script-error; shell survives
+  Invalid data-gw-config JSON   -> mounts with {} + warn + gw:app-error
+  Widget reads private type     -> 403 (publicAccess 'no'); unknown -> 404
+  Widget waits on data          -> empty/loading state (mock gw.db in the
+                                   builder preview; real APIs on publish)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. VERSIONING AND REPUBLISH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  - One gwAppName = one ACTIVE catalog record (the renderer catalog
+    dedupes first-wins). Republish the same name to update the widget.
+  - Pages do NOT need republishing: the catalog is fetched at render time.
+  - Invalidation: none for widgets. DECIDED (SSOT Q-10, D-WFLOW-22): the
+    store will NOT call /api/revalidate after a widget publish - widget
+    usage is fan-out across sites and untracked, so per-publish page
+    invalidation is impractical. The 5-minute catalog TTL is the accepted
+    propagation window; /api/revalidate remains in the contract for PAGE
+    publishes only.
+  - Do not rename gwAppName casually: every page referencing the old name
+    renders data-gw-ssr="none" until updated.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. PUBLISH CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [ ] record is contract-shaped: gwAppName + code.{html,css,js} or ssrHtml
+      (flat tool* fields alone will never render on the website)
+  [ ] [HTML] is a body fragment (or uses SHELL-START/SHELL-END markers)
+  [ ] configSchema is valid draft-07 subset JSON with defaults
+  [ ] code.js is plain JS: no ES modules, no top-level await, no external
+      script src, no frameworks, no raw </script in strings
+  [ ] gw.apps.register(name, factory) is idempotent and re-mountable
+  [ ] factory replaces the SSR placeholder inside el ({ el, config, gw })
+  [ ] CSS is class-prefixed; no gw-* collisions; no global/chrome styles
+  [ ] empty-data state renders gracefully (the preview mock serves none)
+  [ ] widget works with the page's SPA navigation (window-level registries)
+  [ ] tested in the builder preview AND on a published page
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. PROVENANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  First version created 2026-10-09 from the VERIFIED cross-project SSOT
+  webpage-widget-flow-ssot.html v0.9 (renderer facts: lib/render/
+  widget-islands.ts, normalize.ts, lib/contracts/site-settings.ts,
+  components/ContentMount.tsx, lib/gw-sdk/sdk-source.ts; builder facts:
+  HTMLBasedTools app/WebpageBuilder.js build 2026-10-09-3; CMS facts:
+  sitepoicms). Open items that affect widgets: ssrHtml generation (Q-07,
+  answered - dual-mode), version retirement (Q-08, answered - none in the
+  store), revalidate webhook (Q-10, answered - not used for widgets),
+  catalog record shape / enrichment (Q-22/23/25) and the store-side key
+  (Q-11, answered - GW_APP_STORE_API_KEY created & delivered to the
+  publicwebsite env). Remaining: catalog enrichment + store publish
+  conversion, both owned by the store deployment. SSOT version 0.17.
