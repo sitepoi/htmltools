@@ -171,6 +171,75 @@ images, fonts, API data — MUST come through the PARENT CMS. Two channels:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GLOBAL REQUIREMENT - HELPER APPLICATION IDS (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every cmsObjectType / mainObjectType a tool READS or WRITES must belong to a
+PLATFORM-PROVIDED HELPER APPLICATION. Those applications are defined in the
+`uniconbaseapps` tenant and published in the application store; their type ids
+ALWAYS end with `-uniconbaseapps`.
+
+  1. EXACT NAMING — the suffix `-uniconbaseapps` is RESERVED for platform
+     helper applications. Reference the exact ids, e.g.
+       website-builder-uniconbaseapps
+       website-html-tools-local-uniconbaseapps
+       ai-chat-sessions-uniconbaseapps
+       webpagebuilder-history-uniconbaseapps
+     Never abbreviate, rename, pluralize or re-case them. The `gw` prefix
+     belongs to the PAGE RUNTIME namespace (window.gw, the data-gw-*
+     attributes, the reserved gw-* CSS prefix) — NEVER put `gw` in a type id
+     (the former `gw-widgets` also collided with the platform asset
+     /gw-widgets.js).
+
+  2. NEVER INVENT A TYPE ID. Do not mint a new bare id for platform/helper
+     data (e.g. `my-history`) and do not create a `-uniconbaseapps` id
+     yourself. If a type you need does not exist yet, ASK for it to be added
+     to the platform helper application and then use the declared id.
+
+  3. TENANT/LOCAL TYPES MUST NOT USE THE SUFFIX. A type that is not part of a
+     platform helper application stays bare/camelCase with NO
+     `-uniconbaseapps` suffix. The suffix therefore ALWAYS means "platform
+     application id" — never a customer's own type.
+
+  4. TYPES EXIST INDEPENDENTLY OF INSTALL. The platform registers the helper
+     types so a tool can read/write them even when the tenant has NOT
+     installed the helper application's UI. Therefore:
+       - the tool MUST work when only the types exist (reads/writes succeed);
+       - the tool MUST fail SOFT and informatively when a type is not
+         registered or not allowed ("Object CRUD is not enabled…", permission
+         errors): user-friendly message in the UI, technical detail in
+         console.log/warn ONLY;
+       - never assume the tenant installed anything.
+
+  5. DECLARE YOUR TYPE USES. A tool MUST list every helper type it touches
+     with its intent (read | create | update | delete) in its own
+     documentation / param hints — the consuming app's config must allow each
+     one (`settings.allowObjectCRUD: 'yes'` + a `settings.allowedObjectTypes[]`
+     entry per type, and `rules.publicAccess` on the owning application for
+     cross-application reads). An undeclared type = a feature that silently
+     fails on every tenant.
+
+  6. ROUTING FAMILIES — the suffix decides WHERE a type resolves, so two
+     families must NEVER share a name:
+       *-applicationstore  -> the applicationstore deployment (a ROUTING KEY:
+                              the CMS relay routes those ids to the store host)
+       *-uniconbaseapps    -> a platform-provided type resolved in the CURRENT
+                              tenant's CMS
+       bare / camelCase    -> the tenant's own type (never given a reserved
+                              suffix)
+     A tenant-local type MUST NEVER end with `-applicationstore` and MUST
+     NEVER carry a store type's name — reads would be routed to the store and
+     the local objects would silently never appear.
+
+  WHY THIS IS MANDATORY: type ids are permanent keys. Choosing them before any
+  tenant holds data costs nothing; renaming a type that already contains
+  objects is a data migration. This rule keeps every helper id stable,
+  unambiguous and publishable/upgradable from ONE place (the platform tenant +
+  the application store).
+
+  Applies to ALL tool types.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 HOW THE SYSTEM WORKS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 The system wraps your three files into a full HTML page and injects the `window.tool`
@@ -198,8 +267,12 @@ CMS TYPE CATALOG FOR THIS TENANT
      • fieldId  (type)  "Field Label"
      • fieldId2  (type)  "Field Label2" [options: opt1, opt2]
 
-If NO catalog is provided, assume no pre-existing types. New types will be
-auto-created on first use. Name new types with descriptive lowercase camelCase IDs.]
+If NO catalog is provided, assume no pre-existing types. A type the tool needs
+must be declared in the platform helper application (see GLOBAL REQUIREMENT -
+HELPER APPLICATION IDS above) and then used by its EXACT id — platform helper
+ids always end with `-uniconbaseapps`. NEVER mint a bare type id and NEVER
+create a `-uniconbaseapps` id yourself. Tenant-local types stay bare/camelCase
+and are not used for platform/tool-to-tool data.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FULL SDK REFERENCE  (window.tool)
@@ -213,12 +286,40 @@ tool.onValueChange(cb)       → cb(newValue) — fires when the value is update
                                externally by another user or the CMS system
 
 ── Sibling fields in the same form ────────────────────
-tool.getFields()             → { fieldId: value } snapshot of all sibling field
-                               values at call time
+tool.getFields()             → READ-ONLY snapshot of the WHOLE OBJECT RECORD at
+                               call time: the object SHELL (id, name, slug,
+                               contentId, seo, meta.*, typeId, cmsObjectType,
+                               parentId) PLUS the sibling field values
+                               ({ fieldId: value }). Older docs described only
+                               the field values — the real return is the full
+                               record (formalized 2026-10-10). Read shell
+                               fields freely (slug/name/seo/ids); NEVER mutate
+                               the snapshot — write with setField/setValue.
+                               WEBSITE NOTE: on the PUBLISHED WEBSITE the
+                               window.tool shim returns the mounted ISLAND's
+                               config (data-gw-config), NOT the page record.
 tool.watchField(id, cb)      → cb(newVal, allFields) — fires when one specific
                                field changes. Use for reacting to another field.
-tool.setField(id, value)     → write a value to another field in the same form
-tool.setFields({id:v, …})   → write multiple fields at once (single save)
+tool.setField(id, value)     → write a value to a UI-EDITABLE field of the PARENT
+                               OBJECT (allowlist): name, slug, contentId,
+                               seo.*, meta.{language, status, pageOrder,
+                               category1..3}. meta.status NOTE: it IS the publish
+                               gate the platform reads ('disabled' hides the
+                               object; anything else = enabled) — a tool MAY set
+                               it deliberately (e.g. its own publish toggle), but
+                               always write THIS field, never the retired
+                               data.status.
+                               REFUSED — never user-editable:
+                               the document id, typeId, cmsObjectType, parentId,
+                               tenant/ownership, permissions, create/update
+                               dates, productData and the field-value bags.
+                               The write acts AS THE CALLER: it needs edit
+                               rights on that object and is ignored in
+                               read-only mode — and a refusal is REPORTED
+                               (never a silent no-op). Folder-config fields are
+                               NOT writable from a tool.
+tool.setFields({id:v, …})   → write multiple fields at once (single save) —
+                               same allowlist and same rules as setField.
 tool.onFieldsChange(cb)      → cb(allFields) — fires when ANY sibling field
                                changes. Useful for cross-field validation.
 
@@ -1227,7 +1328,7 @@ MANDATORY JS BOILERPLATE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 tool.onReady((val, fields) => {
-  render(val, fields)               // initial draw — value + all sibling fields
+  render(val, fields)               // initial draw — value + the full object record (getFields)
   if (tool.isReadOnly()) lockUI()   // read-only may be active on first load
 
   tool.onValueChange(v  => render(v))

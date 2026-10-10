@@ -1,5 +1,5 @@
-<!-- build 2026-10-10-3 -->
-<div id="js-boot-banner" role="alert">⚠ WebpageBuilder JS NOT running — HTML build 2026-10-10-3 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).</div>
+<!-- build 2026-10-10-4 -->
+<div id="js-boot-banner" role="alert">⚠ WebpageBuilder JS NOT running — HTML build 2026-10-10-4 loaded but the [JS] block never booted. Update and re-save the JS block in the CMS Tool Builder; the JS field must END with WEBPAGEBUILDER-JS-END (self-contained — no CDN/external scripts allowed).</div>
 <div id="app">
   <!-- NO EXTERNAL SCRIPTS: self-contained line diff in WebpageBuilder.js.
        An external <script src> blocks every later inline script until it
@@ -18,7 +18,7 @@
       <button class="btn btn-sm btn-ghost" id="btn-config" title="Settings &amp; Export">⚙️ Settings</button>
       <button class="btn btn-sm btn-ghost" id="btn-history" title="Generation History">📋 History</button>
       <button class="btn btn-sm btn-ghost" id="btn-export" title="Download full webpage (.html)">📥 Export</button>
-      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-10-3</span>
+      <span class="tool-build" id="tool-build" title="Tool CODE build — increments on every code change. Page version is the saved data version.">tool build 2026-10-10-4</span>
       <span class="version-badge" id="tool-version" title="Page version — the generated page's version (click to change, increment only)">v1.0.0</span>
       <button class="btn btn-sm btn-ghost" id="btn-theme" title="Toggle Theme">🌓</button>
     </div>
@@ -213,21 +213,12 @@
           </div>
         </div>
 
-        <!-- Add-ons: shared sources + widgets & forms -->
+        <!-- Add-ons: widgets & forms -->
         <div class="advpanel" id="editor-addons">
           <div class="config-scroll">
             <div class="config-header">
               <h2>🧩 Add-ons</h2>
-              <p>Add shared content and widgets to this page.</p>
-            </div>
-
-            <div class="config-section">
-              <h3>🔗 Shared Sources</h3>
-              <div id="shared-picker-list"><div class="picker-empty">Loading shared sources…</div></div>
-              <div class="picker-actions">
-                <button class="btn btn-sm btn-outline" id="btn-shared-refresh">↻ Refresh</button>
-              </div>
-              <p class="gen-hint">Optional sources are added to this page. Site-wide ones are automatic.</p>
+              <p>Add widgets and forms to this page.</p>
             </div>
 
             <div class="config-section">
@@ -462,7 +453,6 @@ contract applies everywhere except where noted:
 CAPABILITY MAP (how to reach every platform feature):
   Static content      -&gt; htmlPage.code html/css on any page object
   Site chrome         -&gt; default-header / default-footer objects
-  Reusable blocks     -&gt; data.sections referencing shared objects
   Templates           -&gt; template page + data.templateContentType
                          -&gt; /t/&lt;T&gt;/&lt;contentId&gt;
   Object detail pages -&gt; object's own htmlPage -&gt; /&lt;type&gt;/&lt;id&gt;
@@ -484,11 +474,12 @@ CAPABILITY MAP (how to reach every platform feature):
   Theme               -&gt; --gw-color-* CSS vars + sharedCss (admin-owned)
   SEO / discovery     -&gt; seo section; /sitemap.xml, /robots.txt, /llms.txt
   Analytics           -&gt; site plugins (admin-owned); gw.track in pages
-  Shared sources      -&gt; shared-sources objects + data.sections
-                         (WebsiteSharedSourceBuilder, Section 12.6)
+  Shared content      -&gt; reserved-slug chrome objects (default-header /
+                         default-footer, Section 12.6) — mandatory-only
   Widget library      -&gt; website-html-tool-library-applicationstore catalog
-                         (applicationstore.uniconhub.com) + gw-widgets
-                         registry + [data-gw-app] islands (Section 11.1)
+                         (applicationstore.uniconhub.com) + site-local
+                         website-html-tools-local-uniconbaseapps objects
+                         + [data-gw-app] islands (Section 11.1)
 
 If the page needs an operation, a flow or an email template that the user
 has not confirmed exists, still generate the page but append:
@@ -522,8 +513,9 @@ has not confirmed exists, still generate the page but append:
 - Object detail pages and template pages: full contracts in Section 12.1
   (object pages render their own htmlPage at `/&lt;type&gt;/&lt;id&gt;`; templates
   route content objects through `/t/&lt;T&gt;/&lt;contentId&gt;`).
-- Reusable sections: `data.sections` composes shared objects into the page
-  before the page's own content (full contract in Section 12.3).
+- Shared content is mandatory-only: the platform composes the reserved-slug
+  chrome objects (Section 12.4) around your fragment. There is no per-page
+  section list — per-page reusable blocks are widgets (Section 11).
 
 ----------------------------------------------------------------------------
 2. PAGE OBJECT SCHEMA
@@ -1029,18 +1021,20 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
 - Search and pagination over the catalog are CLIENT-SIDE over the returned
   list (server-side filters/sort/limit are not implemented in the public
   API yet — CMS Application System Reference 7.2).
-- Widget code lives in `gw-widgets` objects (Section 12.6): the object's
-  data.gwApp declares the island name and a config schema; its
-  data.htmlPage.code.{html,css,js} must call gw.apps.register once.
-- The registry (all active gw-widgets objects) is loaded site-wide as a
-  MANDATORY shared source, so islands mount on every page that uses them.
+- Widget code lives in objects of type `website-html-tools-local-uniconbaseapps`
+  (Section 12.6): the object carries the island name (field value gwAppName)
+  and a config schema; its data.htmlPage.code.{html,css,js} must call
+  gw.apps.register once.
+- The platform reads this site's widget objects (together with the
+  application-store catalog), so islands mount on every page that uses them;
+  a site-local widget WINS a name collision with a catalog widget.
 - Pages NEVER copy widget code; they only embed the island div with a
   config built from the widget's configSchema.
 - SSR: the platform server-renders page HTML+CSS. Widgets mount
-  client-side after hydration; for SEO-relevant widgets the gw-widgets
-  object should provide data.ssrHtml (initial server-rendered markup that
-  the widget replaces/hydrates). Without data.ssrHtml the island renders
-  as an empty placeholder until hydrated.
+  client-side after hydration — there is NO ssrHtml record field, so an
+  SEO-relevant widget renders its own static markup from its factory.
+  Without rendered markup the island stays an empty placeholder until the
+  widget mounts.
 
 ----------------------------------------------------------------------------
 12. TEMPLATES AND REUSABLE CONTENT (build flexible pages)
@@ -1078,16 +1072,12 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
   === CMS CONFIG NEEDED === asks for an email hook, also output
   === EMAIL TEMPLATE === { templateId, subject, html }.
 
-12.3 Reusable sections (data.sections)
-- A page may carry `data.sections`: an ordered, FLAT list (max 20) of
-  { cmsObjectType, objectId } references to shared objects whose own
-  htmlPage.code is composed into the page BEFORE the page's own content.
-- Sections inside sections are ignored; missing, private or draft section
-  objects are skipped silently.
-- Sections contribute html/css/js ONLY — no SEO, no chrome. Editing a
-  section object updates every page referencing it.
-- Use for shared strips: promo bars, CTAs, social proof, disclaimer
-  blocks. Scope each section's CSS under its own wrapper class.
+12.3 Per-page reusable sections — RETIRED (2026-10-10)
+- There is NO per-page section list any more: `data.sections` is retired and
+  nothing writes it (the renderer ignores it if it is ever present).
+- Site-wide shared content -> the reserved-slug chrome objects (Section 12.4).
+- Per-page reusable blocks -> WIDGETS (Section 11): island divs with per-page
+  config, resolved from the widget catalog.
 
 12.4 Site chrome (default-header / default-footer)
 - Same htmlPage.code contract; rendered by the platform on EVERY page,
@@ -1107,29 +1097,28 @@ Custom islands: in your js, BEFORE or independent of auto-mount:
 - Generate one page object per language when text differs; all variants
   share the same contentId (siblings — see Section 1).
 
-12.6 Shared sources (shared-sources objects)
-- A shared source is an object of type `shared-sources` carrying the SAME
-  three-block contract as a page: data.htmlPage.code.{html,css,js}.
-- Two modes, declared in data.sharedMode:
-  * "mandatory" — the platform injects this source into EVERY page of the
-    site automatically: its html is composed before the page content, its
-    css after default-settings.sharedCss but before page css, its js
-    before page js. Use for site-wide behavior (widget registries, common
-    helpers, announcement strips).
-  * "optional" — pages opt in by adding
-    { cmsObjectType: "shared-sources", objectId } to their data.sections
-    (Section 12.3 — same composition rules: ordered, flat, max 20,
-    composed before the page's own content).
-- Shared sources contribute html/css/js ONLY — no SEO, no chrome. Editing
-  a shared source updates every page using it.
-- Scope each shared source's CSS under its own wrapper class (the gw-
-  prefix stays reserved — Section 3.4). Its JS must be idempotent and
-  guarded (it runs on every page and every SPA navigation).
-- Mandatory sources must stay LIGHT (they run site-wide on every page).
-- Shared sources are authored with the WebsiteSharedSourceBuilder
-  html-tool (or any tool writing the same object shape). Pages created
-  with the Webpage Builder pick optional sources via their "Shared
-  Sources" setting (data.sections).
+12.6 Shared content + widget objects (mandatory-only)
+- Shared content is MANDATORY-ONLY and lives in RESERVED-SLUG objects — the
+  platform looks the object up by slug, so nothing per page opts in:
+  * default-header / default-footer — the site chrome (Section 12.4).
+  * (optional, deferred) default-codes — head/body code slots; the site
+    folder already carries those slots, so prefer the folder.
+- RETIRED — do not author or emit: the `shared-sources` object type, the
+  `data.sharedMode` flag (mandatory | optional) and the per-page
+  `data.sections` list.
+- SITE-LOCAL WIDGETS are objects of type
+  `website-html-tools-local-uniconbaseapps` (RENAMED from the old
+  `gw-widgets` id — "gw" is the page-runtime namespace and must never appear
+  in a type id). One object per widget carries the island name plus its
+  data.htmlPage.code.{html,css,js}, which must call gw.apps.register once.
+  The platform reads them for this site next to the application-store
+  catalog; on a NAME COLLISION the SITE-LOCAL widget wins.
+- Every shared object must scope its CSS under its own wrapper class (the
+  gw- prefix stays reserved — Section 3.4), stay LIGHT (it runs on every
+  page) and keep its JS idempotent and guarded.
+- Shared content and widget objects are authored with the
+  WebsiteSharedSourceBuilder html-tool (or any tool writing the same object
+  shape).
 
 ----------------------------------------------------------------------------
 13. PAGE STRUCTURE + COOKBOOK (compose, don't invent)
@@ -1271,7 +1260,6 @@ Rules:
     honeypots, published status).
 [ ] Page helpers live on gw.ns, not hoisted window functions.
 [ ] All writes go through operations/flows/forms/cart; gw.db is read-only.
-[ ] data.sections (if used) is flat, ordered, and tolerates skipped objects.
 [ ] gw.forms.bind() called if the page has data-gw-form forms.
 [ ] User/data content rendered with textContent or gw.sanitize.
 [ ] SEO section filled (title/description/schema at minimum).
@@ -1281,11 +1269,11 @@ Rules:
 [ ] Chrome (header/footer) is light, scoped, idempotent, SPA-nav links.
 [ ] Email templates use {{key}} placeholders (full document allowed there).
 [ ] Language variants share contentId; text branched on gw.language.
-[ ] Shared sources referenced via data.sections are flat/ordered/max 20
-    (shared-sources objects, Section 12.6).
-[ ] Widget islands come from built-ins or the widget library
-    (applicationstore.uniconhub.com); widget code is never copied into
-    pages; SEO-relevant widgets provide data.ssrHtml (Section 11.1).
+[ ] No data.sections emitted (retired); site-wide shared content stays in the
+    reserved-slug chrome objects (Section 12.6).
+[ ] Widget islands come from built-ins, the store catalog or this site's
+    website-html-tools-local-uniconbaseapps objects; widget code is never
+    copied into pages (Section 11.1).
 [ ] No analytics/CDN scripts in page code (admin site settings only).
 [ ] Output is deterministic and version-stamped (SSR/caching, Section 18).
 

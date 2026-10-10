@@ -1,4 +1,4 @@
-/* build 2026-10-10-3 */
+/* build 2026-10-10-4 */
 /* ── Webpage Builder ──
    AI-first single-page website design studio.
    Chat-left + Studio-right. Chat handles initial design & iterative refinement.
@@ -8,7 +8,7 @@
 /* Tool build stamp — MANDATORY (html-tool-rules GLOBAL REQUIREMENT):
    visible in the UI badge (#tool-build), logged on boot, and stamped as a
    comment at the top of all three files. INCREMENT on EVERY code change. */
-var TOOL_BUILD = '2026-10-10-3';
+var TOOL_BUILD = '2026-10-10-4';
 
 /* INLINE-SAFETY RULE (CMS): the platform INLINES this file into one script
    element. The HTML tokenizer treats the sequence '\u003C!--' (HTML comment
@@ -78,7 +78,6 @@ var DB = {
   emailTemplate: '',  // === EMAIL TEMPLATE === artifact (for email hooks)
   activeSessionId: '',
   version: '1.0.0',
-  sharedCatalog: [],  // known shared-sources objects (in-memory + localStorage fallback)
   widgetCatalog: [],  // known library widgets from the application store (in-memory + localStorage fallback)
   widgets: []         // widgets added to THIS page (name + config + placement) — rendered in preview & publish, never in the HTML editor
 };
@@ -123,10 +122,16 @@ var HISTORY_MAX = 50;
 var _historyMigrated = false; // one-shot migration of legacy `history` arrays found inside the saved value
 var _imagesUpgraded = false; // one-shot: random picsum placeholders → concept-relevant keyword images
 
-/* ── Shared sources + widget library types ── */
-var SHARED_TYPE = 'shared-sources';
-var WIDGET_TYPE = 'gw-widgets';
-var SHARED_LS = 'webpagebuilder_shared_cache_v1';
+/* ── Widget library types (D-WFLOW-38) ──
+   The site-local widget channel is the object type
+   website-html-tools-local-uniconbaseapps - RENAMED from the old "gw-widgets"
+   id because "gw" is the page-runtime namespace (window.gw, data-gw-*, the
+   reserved gw-* CSS prefix) and must never appear in a type id; the old id also
+   collided with the platform asset /gw-widgets.js. Per-page shared sources are
+   RETIRED (D-WFLOW-31): the shared-sources type, its sharedMode flag and its
+   localStorage cache are gone - shared content is MANDATORY-only and lives in
+   reserved-slug chrome objects (default-header / default-footer). ── */
+var WIDGET_TYPE = 'website-html-tools-local-uniconbaseapps';
 var WIDGET_LS = 'webpagebuilder_widget_cache_v2'; // v2: fixed code classification (js-as-html text bug)
 
 /* ── Rules text — loaded from embedded DOM element ──
@@ -228,12 +233,11 @@ function _parentSeo() {
   };
 }
 
-/* ── Shared sources (shared-sources objects) + widget library (gw-widgets) ──
-   The Shared Sources picker writes pageMeta.data.sections; the Widgets picker
-   inserts data-gw-app islands; the forms builder generates data-gw-form
-   fragments. Catalogs load via tool.requestObjects with a localStorage
-   fallback so preview works even when object CRUD is unavailable. ── */
-var _previewShared = { html: '', css: '', js: '' };
+/* ── Widget library (website-html-tools-local-uniconbaseapps) + forms ──
+   The Widgets picker inserts data-gw-app islands; the forms builder generates
+   data-gw-form fragments. Catalogs load via tool.requestObjects with a
+   localStorage fallback so preview works even when object CRUD is
+   unavailable. Per-page shared sources are RETIRED (D-WFLOW-31). ── */
 var _widgetDialogName = '';
 var _widgetEditIndex = -1;  // -1 = ADD mode; >= 0 = edit that DB.widgets entry (config + placement)
 var _formFields = [];
@@ -244,124 +248,9 @@ var WIDGET_PAGE_SIZE = 100;      // reveal step for client-side paging
 var WIDGET_INITIAL_PAGES = 2;    // how many reveal steps show initially
 // NOTE: no built-in platform widgets are listed in the UI — the widget
 // library comes from the application store (widgetCatalogUrl API) with a
-// fallback to site gw-widgets objects. (D-WB-08)
+// fallback to site-local widget objects of type WIDGET_TYPE. (D-WB-08, D-WFLOW-38)
 function _lsGet(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
 function _lsSet(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
-
-function _sectionPicks() {
-  var pm = DB.pageMeta;
-  var secs = (pm && pm.data && Array.isArray(pm.data.sections)) ? pm.data.sections : [];
-  var picks = [];
-  for (var i = 0; i < secs.length; i++) {
-    if (secs[i] && secs[i].cmsObjectType === SHARED_TYPE && secs[i].objectId) picks.push(secs[i].objectId);
-  }
-  return picks;
-}
-function _setSectionPicks(picks) {
-  if (!DB.pageMeta) DB.pageMeta = {};
-  if (!DB.pageMeta.data) DB.pageMeta.data = {};
-  var existing = Array.isArray(DB.pageMeta.data.sections) ? DB.pageMeta.data.sections : [];
-  var kept = [];
-  for (var i = 0; i < existing.length; i++) {
-    if (!(existing[i] && existing[i].cmsObjectType === SHARED_TYPE)) kept.push(existing[i]);
-  }
-  for (var j = 0; j < picks.length; j++) kept.push({ cmsObjectType: SHARED_TYPE, objectId: picks[j] });
-  DB.pageMeta.data.sections = kept.slice(0, 20);
-}
-
-function loadSharedCatalog(cb) {
-  function finish(list) {
-    DB.sharedCatalog = list || [];
-    var ls = _lsGet(SHARED_LS) || {};
-    ls.catalog = DB.sharedCatalog;
-    _lsSet(SHARED_LS, ls);
-    if (cb) cb(DB.sharedCatalog);
-  }
-  try {
-    tool.requestObjects('query', { mainObjectType: SHARED_TYPE }, function(err, result) {
-      var list = [];
-      if (!err && result && result.objects) {
-        for (var i = 0; i < result.objects.length; i++) {
-          var o = result.objects[i];
-          var dcb = (o.productData && o.productData.data_categoriesBased) || {};
-          var code = (dcb.code && typeof dcb.code === 'object') ? dcb.code : {};
-          var item = {
-            objectId: String(o.id || ''),
-            name: String((dcb.meta && dcb.meta.name) || o.name || 'Shared source'),
-            mode: String((dcb.meta && dcb.meta.sharedMode) || 'optional'),
-            code: { html: code.html || '', css: code.css || '', js: code.js || '' }
-          };
-          if (item.objectId) list.push(item);
-        }
-      }
-      finish(list);
-    });
-  } catch (e) {
-    finish((_lsGet(SHARED_LS) || {}).catalog || []);
-  }
-}
-function _cachedSharedCodes() {
-  var ls = _lsGet(SHARED_LS) || {};
-  var codes = {};
-  if (DB.sharedCatalog) {
-    for (var i = 0; i < DB.sharedCatalog.length; i++) {
-      var it = DB.sharedCatalog[i];
-      if (it && it.objectId && it.code) codes[it.objectId] = it.code;
-    }
-  }
-  if (ls.codes) for (var k in ls.codes) if (Object.prototype.hasOwnProperty.call(ls.codes, k)) codes[k] = ls.codes[k];
-  return codes;
-}
-function _composePreviewShared() {
-  var picks = _sectionPicks();
-  var codes = _cachedSharedCodes();
-  var out = { html: '', css: '', js: '' };
-  for (var i = 0; i < picks.length; i++) {
-    var c = codes[picks[i]];
-    if (!c) continue;
-    out.html += (out.html ? '\n' : '') + (c.html || '');
-    out.css += (out.css ? '\n' : '') + (c.css || '');
-    out.js += (out.js ? '\n' : '') + (c.js || '');
-  }
-  return out;
-}
-function renderSharedPickerLoading() {
-  var l = el('shared-picker-list');
-  if (l) l.innerHTML = '<div class="picker-empty">Loading shared sources…</div>';
-}
-function renderSharedPicker() {
-  var list = el('shared-picker-list');
-  if (!list) return;
-  if (!DB.sharedCatalog || !DB.sharedCatalog.length) {
-    list.innerHTML = '<div class="picker-empty">No shared sources yet — create them with the <b>WebsiteSharedSourceBuilder</b> tool.</div>';
-    return;
-  }
-  var picks = _sectionPicks();
-  var h = '';
-  for (var i = 0; i < DB.sharedCatalog.length; i++) {
-    var it = DB.sharedCatalog[i];
-    var on = picks.indexOf(it.objectId) !== -1;
-    var badge = it.mode === 'mandatory'
-      ? '<span class="picker-badge mandatory" title="Injected into every page automatically — no need to select">site-wide</span>'
-      : '<span class="picker-badge optional">optional</span>';
-    h += '<label class="picker-row"><input type="checkbox" data-shared-id="' + esc(it.objectId) + '"' + (on ? ' checked' : '') + ' />' +
-      '<span class="picker-name">' + esc(it.name) + '</span>' + badge + '</label>';
-  }
-  list.innerHTML = h;
-  var boxes = list.querySelectorAll('[data-shared-id]');
-  for (var j = 0; j < boxes.length; j++) {
-    boxes[j].onchange = function() {
-      var picks2 = [];
-      var all = list.querySelectorAll('[data-shared-id]:checked');
-      for (var p = 0; p < all.length; p++) picks2.push(all[p].getAttribute('data-shared-id'));
-      _setSectionPicks(picks2);
-      persist();
-      _previewShared = _composePreviewShared();
-      updatePreview();
-      showToast('Shared sources updated — ' + picks2.length + ' selected (data.sections).', 'success');
-    };
-  }
-}
 
 function _normPick(d, keys) {
   for (var i = 0; i < keys.length; i++) {
@@ -539,23 +428,6 @@ function _widgetStatusLine(source, list) {
   st.textContent = '🧩 ' + (list ? list.length : 0) + ' widgets' + label + ' · ' + new Date().toLocaleTimeString();
   st.className = 'widget-lib-source ' + (source === 'application store' ? 'ok' : 'warn');
 }
-function _v2Base() {
-  // UniconHub Public API v2 base (CMS Application System Reference §8).
-  // Prefer the explicit apiV2BaseUrl param; applicationStoreHost (legacy) is
-  // only used as the host when apiV2BaseUrl is empty (base = <host>/api/v2).
-  var explicit = String(_p('apiV2BaseUrl', '') || '').trim().replace(/\/+$/, '');
-  if (explicit) return explicit;
-  var host = String(_p('applicationStoreHost', 'https://applicationstore.uniconhub.com') || '').trim().replace(/\/+$/, '');
-  if (!host) return '';
-  return host + '/api/v2';
-}
-function _v2Headers() {
-  // Public API v2 auth: x-api-key header (CMS Application System Reference §8).
-  var h = { 'Accept': 'application/json' };
-  var key = String(_p('apiV2Key', '') || '').trim();
-  if (key) h['x-api-key'] = key;
-  return h;
-}
 function _widgetCatalogTypeName() {
   return String(_p('widgetCatalogType', 'website-html-tool-library-applicationstore') || '').trim();
 }
@@ -594,7 +466,7 @@ function loadWidgetCatalog(cb) {
               objectType: String(o.cmsObjectType || WIDGET_TYPE),
               name: gwa,
               title: String(meta.name || o.name || gwa),
-              desc: String(meta.description || 'Site widget (gw-widgets object).'),
+              desc: String(meta.description || 'Site widget (website-html-tools-local-uniconbaseapps object).'),
               category: String(meta.category || 'site widgets'),
               configSchema: (dcb.gwApp && dcb.gwApp.configSchema) || null,
               ssrHtml: String(meta.ssrHtml || dcb.ssrHtml || ''),
@@ -611,26 +483,28 @@ function loadWidgetCatalog(cb) {
     }
   }
   function fromOverrideUrl() {
+    // D-WFLOW-36 (relay-only): the URL is fetched THROUGH THE PARENT CMS when
+    // tool.requestFetch exists (the host performs the request — no direct
+    // network from the sandboxed iframe). The raw fetch branch below exists
+    // ONLY for the standalone test harness, which has no parent CMS.
+    var relay = null;
+    try { if (typeof tool.requestFetch === 'function') relay = tool.requestFetch; } catch (e) { relay = null; }
+    if (relay) {
+      try {
+        relay(url, { method: 'GET', timeoutMs: 8000 }, function(err, res) {
+          if (err) { fromObjects(); return; }
+          var json = (res && (res.json !== undefined ? res.json : res.body)) || null;
+          if (typeof json === 'string') { try { json = JSON.parse(json); } catch (e) { json = null; } }
+          if (!json) { fromObjects(); return; }
+          _storeTotal = 0;
+          finish(_normalizeStoreCatalog(json), 'application store', 0);
+        });
+      } catch (e) { fromObjects(); }
+      return;
+    }
     fetchWithTimeout(url)
       .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
       .then(function(json) { _storeTotal = 0; finish(_normalizeStoreCatalog(json), 'application store', 0); })
-      .catch(function() { fromObjects(); });
-  }
-  function fromStoreApi() {
-    // DIRECT fetch fallback — UniconHub Public API v2 objects resource:
-    // GET {base}/objects/{mainObjectType} returns the catalog ObjectRecords.
-    // Search/filter/pagination are CLIENT-SIDE (documented "query semantics
-    // TODAY", CMS Application System Reference §7.2).
-    var base = _v2Base();
-    if (!base) { fromObjects(); return; }
-    var endpoint = base + '/objects/' + encodeURIComponent(_widgetCatalogTypeName());
-    fetchWithTimeout(endpoint, { method: 'GET', headers: _v2Headers() })
-      .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-      .then(function(json) {
-        var list = _normalizeStoreCatalog(json);
-        if (list.length) finish(list, 'application store', list.length);
-        else fromObjects();
-      })
       .catch(function() { fromObjects(); });
   }
   function fromApplicationStoreObjects() {
@@ -640,17 +514,16 @@ function loadWidgetCatalog(cb) {
     // No direct network from the sandboxed iframe; auth is the host's job.
     try {
       tool.requestObjects('query', { mainObjectType: _widgetCatalogTypeName() }, function(err, result) {
-        if (err || !result || !result.objects) { fromStoreApi(); return; }
+        if (err || !result || !result.objects) { fromObjects(); return; }
         var list = _normalizeStoreCatalog(result.objects);
         if (list.length) finish(list, 'application store', list.length);
-        else fromStoreApi();
+        else fromObjects();
       });
-    } catch (e) { fromStoreApi(); }
+    } catch (e) { fromObjects(); }
   }
   var url = String(_p('widgetCatalogUrl', '') || '').trim();
-  if (url && typeof fetch === 'function') fromOverrideUrl();
-  else if (typeof fetch === 'function') fromApplicationStoreObjects();
-  else fromObjects();
+  if (url) fromOverrideUrl();
+  else fromApplicationStoreObjects();
 }
 
 function loadMoreWidgets() {
@@ -780,7 +653,7 @@ function renderWidgetLibraryList(filter) {
       return;
     }
     // USER-FACING: keep it simple. Developer details go to the console only.
-    console.warn('[WEBPAGEBUILDER:STORE] widget catalog empty — developer check: (1) parent CMS must resolve the platform-owned type ' + _widgetCatalogTypeName() + ' by default (no per-tenant config); (2) direct fallback GET ' + _v2Base() + '/objects/' + _widgetCatalogTypeName() + ' with x-api-key = apiV2Key; (3) site gw-widgets fallback; (4) localStorage cache.');
+    console.warn('[WEBPAGEBUILDER:STORE] widget catalog empty — developer check: (1) the parent CMS must resolve the platform-owned type ' + _widgetCatalogTypeName() + ' by default (no per-tenant config); (2) the site-local widget type ' + WIDGET_TYPE + ' must resolve in this tenant; (3) the relay must be available (tool.requestObjects / tool.requestFetch — relay-only, D-WFLOW-36); (4) localStorage cache webpagebuilder_widget_cache_v2.');
     list.innerHTML = '<div class="picker-empty">😕 Library unavailable.<br><br>Tap <b>↻ Refresh</b> to try again.</div>';
     _updateWidgetMoreButton();
     _updateWidgetCount();
@@ -3434,10 +3307,8 @@ function buildSettingsSummary() {
     '- The platform injects your output into a page container between the site header/footer — output a BODY FRAGMENT only. Never emit <html>/<head>/<body>/<!DOCTYPE> tags.',
     '- Site chrome (header/footer) is platform-rendered — never generate your own global nav/header/footer.',
     '- Page sections are decided per request in chat — never apply a fixed default section list.',
-    '- REUSABLE SECTIONS: a page may declare data.sections (flat, ordered, max 20) of {cmsObjectType, objectId} refs — the platform composes them BEFORE the page\'s own html. Use for shared strips (promo bars, CTAs, social proof, disclaimers). Sections contribute html/css/js only — no SEO, no chrome.',
     '- TEMPLATE PAGES: for one-template-many-objects flows, set data.templateContentType in === PAGE META ===. LAYOUT lives in the template page, DATA in content objects (read via gw.getPageParams() + gw.db.get). Content objects may override with their own htmlPage.',
     '- WIDGETS: the user adds library widgets from the application store as data-gw-app islands (Add-ons tab). You may also build custom islands with gw.apps.register when asked — keep their data-gw-config valid JSON.',
-    '- SHARED SOURCES: the user may pick OPTIONAL shared sources in Settings → Shared Sources; they appear in === PAGE META === as data.sections (shared-sources objects, composed before page content). MANDATORY shared sources (site-wide) are injected automatically by the platform — never re-emit them.',
     '- WIDGET LIBRARY: library widgets from applicationstore.uniconhub.com can be added via Settings → Widgets (data-gw-app islands). Reference widget names only — never inline widget code into pages.',
     '- CSS is injected GLOBALLY: scope EVERY rule under one unique page class (e.g. .shop-home). The gw- prefix is RESERVED for the platform/sharedCss — you may USE --gw-color-* variables and gw-shared-* classes but NEVER define gw-* rules. Never style bare html/body/*/a/button/h1.',
     '- JS re-runs on every visit and every SPA navigation: idempotent (IIFE + guards for window/document listeners), vanilla only, no top-level await, no external <script src>. Attach page helpers to gw.ns (fresh per visit) — never rely on hoisted window functions.',
@@ -3543,8 +3414,6 @@ function buildChatPrompt(userMsg) {
   parts.push('  - No external <script src> libraries. No hardcoded host domains in canonical URLs. No secrets.');
   parts.push('  - Forms: data-gw-form + gw.forms.bind() + honeypot (names gw_hp/website/company reserved) + [data-gw-form-status]. Never auto-submit on load.');
   parts.push('  - data-gw-config attributes must be VALID JSON (no comments, no trailing commas). Prefer built-in islands (menu, cart, checkout-flow, slot-picker, search-box, list…).');
-  parts.push('  - data.sections (when used): flat, ordered, max 20, each {cmsObjectType, objectId}.');
-  parts.push('  - SHARED SOURCES: user-selected shared sources already live in data.sections — never duplicate their html/css/js into the page; mandatory site-wide sources are injected automatically.');
   parts.push('  - WIDGET LIBRARY: islands come from the application store (applicationstore.uniconhub.com) via data-gw-app + valid JSON data-gw-config — never inline widget code. Custom islands use gw.apps.register.');
   parts.push('  - EMBEDS: <iframe> with absolute https URLs is allowed; script-based embeds and external <script src> are banned.');
   parts.push('  - SSR/CACHE: output must stay deterministic (no Math.random at top level) — pages are SSR-rendered and cached in Redis/CDN keyed by the page version.');
@@ -3575,8 +3444,8 @@ function buildMinimalPrompt(userMsg) {
     'images via https://loremflickr.com/<width>/<height>/<keywords> where the keywords describe the photo (food, people, city, technology…); keep alt/width/height/loading;',
     _thinkingDirective(),
     'JS idempotent (IIFE + guard), helpers on gw.ns, no top-level await; use window.gw SDK for reads/forms/operations/widgets (incl. the no-code list island); forms need data-gw-form + honeypot.',
-    'Reusable shared strips via data.sections (flat, max 20); template pages via data.templateContentType when asked.',
-    'Widgets: library widgets come from applicationstore.uniconhub.com as data-gw-app islands; custom islands use gw.apps.register — never inline widget code. Shared sources selected by the user are in data.sections — never duplicate them.',
+    'Template pages via data.templateContentType when asked.',
+    'Widgets: library widgets come from applicationstore.uniconhub.com as data-gw-app islands; custom islands use gw.apps.register — never inline widget code.',
     'Embeds: <iframe> with absolute https URLs allowed; script embeds banned. Output must stay deterministic (SSR + Redis/CDN caching).',
     'If a needed operation/flow/email hook is missing, append === CMS CONFIG NEEDED === (+ === EMAIL TEMPLATE === with {{key}} placeholders for email hooks).',
     'Real copy, no lorem ipsum. No placeholders, no TODOs.',
@@ -4561,12 +4430,11 @@ function _widgetHudScript() {
 }
 function buildPreviewDoc() {
   var lang = _p('lang', 'en');
-  // Compose islands into the PAGE html FIRST, then prepend shared html — so
-  // ":iN" section-index anchors always match the sections the user saw in
-  // the placement dropdown.
-  var html = (_previewShared.html || '') + '\n' + _composeIslandsInto(DB.code.html || '');
-  var css = (_previewShared.css || '') + '\n' + (DB.code.css || '');
-  var jsSan = _sanitizeJs((_previewShared.js || '') + '\n' + (DB.code.js || ''));
+  // Compose islands into the PAGE html — the ":iN" section-index anchors must
+  // always match the sections the user saw in the placement dropdown.
+  var html = _composeIslandsInto(DB.code.html || '');
+  var css = DB.code.css || '';
+  var jsSan = _sanitizeJs(DB.code.js || '');
   _lastJsFixCount = jsSan.fixed;
   var js = _escapeScriptEnd(jsSan.code); // same guard as island scripts
   // ── ISLAND PREVIEW PIPELINE (mirrors the publish contract):
@@ -4836,7 +4704,6 @@ function updatePreview() {
   if (fw) fw.classList.add('has-content');
   if (pe) pe.style.display = 'none';
   _applyDeviceClass();
-  _previewShared = _composePreviewShared();
   _fetchMissingIslandCodes(_composeIslandsInto(html)); // async: fills code for islands that lack it, then re-renders
   try {
     // Unique build stamp + a FRESH iframe node every render: Chromium can fail
@@ -5427,22 +5294,6 @@ function gwChecks() {
       }
     },
     {
-      id: 'sections-valid', section: '12.3', label: 'data.sections flat & ordered (max 20)',
-      run: function() {
-        var pm = DB.pageMeta;
-        var secs = pm && pm.data && pm.data.sections;
-        if (!secs) return { status: 'pass', detail: 'No reusable sections declared.' };
-        if (!Array.isArray(secs)) return { status: 'warn', detail: 'data.sections must be an array of {cmsObjectType, objectId}.' };
-        if (secs.length > 20) return { status: 'fail', detail: 'data.sections has ' + secs.length + ' entries — the platform limit is 20 (flat, ordered).' };
-        var bad = 0;
-        for (var i = 0; i < secs.length; i++) {
-          if (!secs[i] || typeof secs[i] !== 'object' || !secs[i].cmsObjectType || !secs[i].objectId) bad++;
-        }
-        if (bad) return { status: 'fail', detail: bad + ' section reference(s) missing cmsObjectType/objectId.' };
-        return { status: 'pass', detail: secs.length + ' reusable section reference(s) — flat and valid.' };
-      }
-    },
-    {
       id: 'js-idempotent', section: '3.3', label: 'JS idempotent (SPA re-runs)',
       run: function(h, c, j) {
         if (!j.trim()) return { status: 'pass', detail: 'No JavaScript needed.' };
@@ -5529,24 +5380,6 @@ function gwChecks() {
         var bad = h.match(/<iframe\b[^>]*src=["'](?!https?:\/\/)/gi) || [];
         if (bad.length) return { status: 'warn', detail: bad.length + ' iframe(s) without an absolute https URL — embeds need absolute URLs.' };
         return { status: 'pass', detail: iframes + ' iframe embed(s) with absolute URLs — allowed (script-based embeds stay banned).' };
-      }
-    },
-    {
-      id: 'shared-sections-known', section: '12.6', label: 'Shared sources resolve to known objects',
-      run: function() {
-        var picks = _sectionPicks();
-        if (!picks.length) return { status: 'pass', detail: 'No shared sources selected.' };
-        if (!DB.sharedCatalog || !DB.sharedCatalog.length) return { status: 'warn', detail: picks.length + ' shared source(s) selected but the catalog is empty — refresh Settings → Shared Sources (object CRUD may be disabled).' };
-        var unknown = [];
-        for (var i = 0; i < picks.length; i++) {
-          var found = false;
-          for (var j = 0; j < DB.sharedCatalog.length; j++) {
-            if (DB.sharedCatalog[j].objectId === picks[i]) { found = true; break; }
-          }
-          if (!found) unknown.push(picks[i]);
-        }
-        if (unknown.length) return { status: 'warn', detail: unknown.length + ' selected shared source id(s) not in the catalog — the platform skips missing/draft sections silently.' };
-        return { status: 'pass', detail: picks.length + ' shared source(s) resolved and composed before page content.' };
       }
     },
     {
@@ -5905,9 +5738,6 @@ function buildPageObjectJson() {
   };
   if (pm.data && pm.data.requireAuth) obj.data.requireAuth = pm.data.requireAuth;
   if (pm.data && pm.data.templateContentType) obj.data.templateContentType = pm.data.templateContentType;
-  if (pm.data && Array.isArray(pm.data.sections) && pm.data.sections.length) {
-    obj.data.sections = pm.data.sections.slice(0, 20); // flat, ordered, max 20
-  }
   return JSON.stringify(obj, null, 2);
 }
 function copyGeneratorOutput() {
@@ -6236,7 +6066,6 @@ function switchAdvTab(name) {
     else if (name === 'js') { var bj = el('btn-copy-js'); if (bj) bj.style.display = ''; }
     if (name === 'console') renderConsole();
     if (name === 'settings') renderParamsSummary();
-    if (name === 'addons') { renderSharedPicker(); }
     if (name === 'compliance') renderCompliance();
     _resize();
   } catch (e) {
@@ -6455,7 +6284,6 @@ function bindEvents() {
   _bind('btn-ai-review', runAiReview);
   _bind('btn-compliance-fix', fixWithAi);
   _bind('btn-console-clear', clearConsole);
-  _bind('btn-shared-refresh', function() { renderSharedPickerLoading(); loadSharedCatalog(function() { renderSharedPicker(); updatePreview(); }); });
   _bind('btn-widget-refresh', function() {
     showToast('Reloading widget list…', 'info');
     loadWidgetCatalog(function() {
@@ -6572,7 +6400,7 @@ var _initialized = false;
 try { tool.onReady(function(val, fields) {
   if (_initialized) { console.warn('[WEBPAGEBUILDER:INIT] Already initialized — skipping'); return; }
   _initialized = true;
-  console.log('[WEBPAGEBUILDER] build ' + TOOL_BUILD + ' — application store integration: widget catalog via parent CMS relay (tool.requestObjects on ' + _widgetCatalogTypeName() + ') with direct API v2 GET + gw-widgets fallbacks');
+  console.log('[WEBPAGEBUILDER] build ' + TOOL_BUILD + ' — widget catalog via the parent CMS relay only (tool.requestObjects on ' + _widgetCatalogTypeName() + '; tool.requestFetch for the URL override) with site-local ' + WIDGET_TYPE + ' + localStorage fallbacks (D-WFLOW-36/38)');
 
   // 1) UI events are ALREADY bound by the early DOM boot above (before this
   //    callback) — tab switching works even if this SDK callback is delayed
@@ -6619,12 +6447,9 @@ try { tool.onReady(function(val, fields) {
     { name: 'allowUpload', label: 'Enable File Upload', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Lets users attach reference images or spec docs for the AI to use as design references.' },
     { name: 'allowFileContent', label: 'Enable File Content Extraction', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Extracts text from uploaded PDFs/DOCX to include in AI prompts.' },
     { name: 'allowExportPdf', label: 'Enable PDF Export', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Enables the Export PDF button in Settings → Export.' },
-    { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'Chat history is stored in CMS type ai-chat-sessions-uniconbaseapps. Add it to allowedObjectTypes with role: editor, scope: instance.' },
+    { name: 'allowObjectCRUD', label: 'Enable Object CRUD (chat history)', type: 'toggle', default: 'yes', severity: 'goodToHave', hint: 'This tool stores chat transcripts and version snapshots as CMS objects. Add these to allowedObjectTypes: ai-chat-sessions-uniconbaseapps (role: editor, scope: instance), webpagebuilder-history-uniconbaseapps (role: editor, scope: instance) and website-html-tools-local-uniconbaseapps (role: viewer — read the site-local widget catalog).' },
     { name: 'pageRules', label: 'Page Rules Override', type: 'text', default: '', severity: 'optional', hint: 'Optional: paste the full public-website-page-rules.txt (v2.0) text here to override the built-in rules for every instance of this tool.' },
-    { name: 'widgetCatalogUrl', label: 'Widget Catalog URL (override)', type: 'text', default: '', severity: 'optional', hint: 'Optional FULL override for the catalog list (e.g. a proxy endpoint returning the v2 objects list: bare array or { items: [...] }). Leave empty — the tool first asks the parent CMS (tool.requestObjects) for the catalog.' },
-    { name: 'apiV2BaseUrl', label: 'Application Store API v2 Base URL', type: 'text', default: 'https://applicationstore.uniconhub.com/api/v2', severity: 'optional', hint: 'Fallback/diagnostics only: direct API v2 base used when the parent CMS relay returns no catalog. The parent-CMS path is primary and handles auth itself.' },
-    { name: 'apiV2Key', label: 'API v2 Key (x-api-key)', type: 'text', default: '', severity: 'optional', hint: 'Public API v2 key for the DIRECT-fetch fallback only (sent as the x-api-key header). The parent CMS handles authentication for the primary path. Leave empty for public/readable endpoints.' },
-    { name: 'applicationStoreHost', label: 'Application Store Host (legacy)', type: 'text', default: 'https://applicationstore.uniconhub.com', severity: 'optional', hint: 'Legacy host parameter — only used when apiV2BaseUrl is empty (the base becomes <host>/api/v2).' },
+    { name: 'widgetCatalogUrl', label: 'Widget Catalog URL (override)', type: 'text', default: '', severity: 'optional', hint: 'Optional FULL override for the catalog list. The request is relayed through the parent CMS (tool.requestFetch, D-WFLOW-36). Leave empty — the tool asks the parent CMS (tool.requestObjects) for the catalog first.' },
     { name: 'widgetCatalogType', label: 'Widget Catalog Object Type', type: 'text', default: 'website-html-tool-library-applicationstore', severity: 'optional', hint: 'cmsObjectType of the published website html tool library on the application store — a platform-owned public type the parent CMS resolves by default (no per-tenant setup).' },
     { name: 'colorScheme', label: 'Color Scheme', type: 'text', default: 'indigo', severity: 'optional', hint: 'Site-wide palette shared across pages. Options: emerald | blue | indigo | violet | rose | amber | teal | ocean | forest | sunset | mono.' },
     { name: 'typography', label: 'Typography', type: 'text', default: 'modern-sans', severity: 'optional', hint: 'Site-wide font pairing: modern-sans | elegant-serif | friendly-rounded | tech-mono | editorial.' },
@@ -6690,11 +6515,6 @@ try { tool.onReady(function(val, fields) {
   switchTab('preview');
   try { renderSections(); } catch (e) {}
   try { if (hasCode) runComplianceChecks(); } catch (e) {}
-  loadSharedCatalog(function() {
-    renderSharedPicker();
-    _previewShared = _composePreviewShared();
-    updatePreview(); // saved data.sections picks now have their code — refresh
-  });
   loadWidgetCatalog();
   _resize();
 }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReady registration failed: ' + (e && e.message ? e.message : e)); }
@@ -6704,4 +6524,4 @@ try { tool.onFieldsChange(function(f) {}); } catch (e) { console.warn('[WEBPAGEB
 try { tool.onReadonlyChange(function(ro) { lockUI(ro); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onReadonlyChange failed: ' + (e && e.message ? e.message : e)); }
 try { tool.onUserChange(function() { updateDeveloperUI(); }); } catch (e) { console.warn('[WEBPAGEBUILDER:REG] onUserChange failed: ' + (e && e.message ? e.message : e)); }
 try { window.__wbJsEnd = true; } catch (e) {}
-/* WEBPAGEBUILDER-JS-END build 2026-10-10-3 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */
+/* WEBPAGEBUILDER-JS-END build 2026-10-10-4 — if this line is MISSING in the CMS Tool Builder JS field, the JS was truncated or not saved */

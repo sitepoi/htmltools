@@ -1,0 +1,164 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CMS FEATURE REQUEST — APP-DECLARED DEFAULT OBJECTS, PROVISIONED PER FOLDER
+──────────────────────────────────────────────────────────────────────────────
+Target: sitepoicms (this repo). Scope: object system + app definition + admin UI.
+Deliverable: a generic capability. No website-specific code, no new object type,
+no renderer/publicwebsite change (that repo is NOT in scope and must not be touched).
+
+WHY THIS EXISTS (the problem)
+─────────────────────────────
+Several platform features expect certain objects to EXIST in a folder / site tree,
+identified by a RESERVED SLUG. Today those objects exist only by convention:
+nothing creates them, nothing protects them, nothing warns when they are missing,
+misspelled or renamed.
+
+Known examples (website app, for context only — do not hardcode):
+  • default-header, default-footer  → the renderer mounts them around every page
+  • home-page                       → the renderer serves it at "/"
+  • (later) default-codes           → site-wide head/body code slots
+Renderers/consumers look these up BY SLUG inside the folder tree. If the object is
+missing or the slug is wrong, the feature silently does nothing and no one knows.
+
+Result today: a broken site with no error anywhere, and a set of platform
+requirements that live in documentation instead of in the system.
+
+WHAT TO BUILD (one capability, declarative)
+──────────────────────────────────────────
+An APPLICATION declares the objects it needs; the CMS PROVISIONS and protects them
+inside the app's folders.
+
+1) DECLARATION (in the application definition, stored in cms-settings, edited via
+   App Designer — the same place that already holds objectTypes[], rules.publicAccess
+   and the folder config section):
+
+   defaultObjects: [
+     {
+       slug:          "default-header",        // THE CONTRACT — unique per app
+       scope:         "rootFolder",            // rootFolder | subFolder | anyFolder
+       typeId:        "<object type id to instantiate>",   // e.g. the app's page-like type
+       cmsObjectType: "<cmsObjectType value>",             // written on the created object
+       fieldGroupId:  "<field group>",         // so a tool can be attached to it
+       name:          "Site header",           // object name (title)
+       meta:        { language: "<from folder defaultLanguage if available>" },
+       seedValue:     { ... },                 // OPTIONAL initial field values (may be empty)
+       protected:     true,                    // lock slug/id/type for the user
+       autoCreate:    "onFolderCreate+onOpen"  // provisioning triggers
+     }, ...
+   ]
+
+   Keep the declaration small: this is for platform-owned defaults, not a
+   general-purpose scaffolding engine. A starter set is ~3–5 entries per app.
+
+2) SCOPE SEMANTICS
+   • rootFolder : provision in the app's ROOT folder only (the site's root).
+   • subFolder  : provision in every non-root folder of the app's tree.
+   • anyFolder  : provision in every folder of the app's tree.
+   A folder belongs to an app through its cmsObjectType / typeId (as today).
+
+3) PROVISIONING (idempotent, never destructive)
+   Create the declared object when it is MISSING:
+   • when a folder of the app is created;
+   • when the application/site is first opened (catches pre-existing folders);
+   • create it with: name, slug, typeId, cmsObjectType, parentId = the folder,
+     meta.language (from the folder's default language when available),
+     and the field group / seed value declared.
+   NEVER overwrite an existing object's content. Provisioning only fills gaps.
+
+4) UNIQUENESS
+   One object per declared slug per folder scope, unique per app. Enforce on the
+   save path (this is the same class of check as the reserved-slug uniqueness
+   requirement already planned for the website app — reuse the generic mechanism,
+   do not add website-specific names to CMS code). Where language siblings are
+   intended, key uniqueness by slug + meta.language.
+
+5) PROTECTION (system-owned)
+   For objects created from a declaration:
+   • slug, id and typeId cannot be changed by the user (UI + save path reject it);
+   • deletion requires an explicit confirmation and warns that the platform feature
+     will stop working;
+   • renaming is refused (the slug is the contract — a later field-based role is
+     NOT part of this feature);
+   • the object manager shows a "platform default" marker/badge and which app
+     declared it.
+
+6) RESTORE
+   A deliberate "Restore platform defaults" action re-provisions missing declared
+   objects for a folder/subtree. Nothing is auto-recreated after an intentional
+   delete unless that action is used (state the chosen behaviour explicitly in the
+   UI copy and in the docs).
+
+7) CHANGE MANAGEMENT OF THE DECLARATION
+   • Adding a new entry → provisioned on the next folder create / app open.
+   • Removing an entry → existing objects stay, protection is lifted (or a warning
+     is shown); nothing is deleted.
+   • A BACKFILL path is required for folders that already exist (a one-off run +
+     the on-open provisioning).
+
+8) CONSUMERS
+   Consumers keep looking objects up BY SLUG in the folder (unchanged). No consumer
+   change, no renderer change. This feature only guarantees existence + protection.
+
+IMPLEMENTATION NOTES (where this lands, as far as it is known today)
+──────────────────────────────────────────────────────────────────
+• Folder creation path: data/firebase/objectTypes.js
+• Object save / uniqueness / field-value writes: data/firebase/objects.js
+• App definition load + App Designer form:
+  PageBlocks/admin/settings/EditCmsObjectType/formDefinition.js (add a
+  defaultObjects repeater/editor with slug, scope, type, field group, name,
+  protection, seed value; manager-only)
+• Object manager / folder UI for the protection + "restore defaults" action:
+  PageBlocks/object-manager/** and PageBlocks/forms/EditObjectFolder.js
+• Objects are ordinary objects (om_objects / om_private_objects) with field values
+  under productData.data_categoriesBased.{fieldId} — create them through the
+  existing object-creation code path, not by raw Firestore writes.
+• Multi-tenant safe; app definitions are global, objects are tenant/folder scoped.
+
+OUT OF SCOPE / NON-GOALS
+────────────────────────
+• No changes to publicwebsite (the renderer) or HTMLBasedTools.
+• No new object type, no new field type, no systemRole field.
+• Not a general "template/scaffold" system for user content — platform-owned
+  defaults only.
+• Do not hardcode any slug (default-header/home-page/...) in CMS core code.
+
+ACCEPTANCE CRITERIA
+───────────────────
+1. An app can declare default objects (incl. scope) in App Designer and the
+   declaration persists in cms-settings.
+2. Creating a folder of that app provisions all matching, missing declared objects
+   with parentId = that folder; a second run creates nothing (idempotent).
+3. Opening an app/site that has pre-existing folders also provisions missing
+   declared objects.
+4. Existing objects are never modified or overwritten by provisioning.
+5. A second object with the same declared slug in the same scope is refused.
+6. Protection: slug/id/type edits and deletion of a platform-default object are
+   refused with a clear message; the UI marks them as platform defaults.
+7. "Restore platform defaults" recreates a deleted declared object.
+8. Adding/removing a declaration behaves as described in §7 (no destructive edits).
+9. A backfill run provisions defaults for all existing folders of the app.
+10. No website-specific slug appears in CMS core code; only the app declaration
+    names app-specific slugs.
+11. Feature is covered by tests: provisioning, idempotency, uniqueness, protection,
+    restore, backfill.
+
+DELIVERABLES
+────────────
+• Declaration schema + validation (with a clear error when a declaration is
+  incomplete or duplicates a slug within the same scope).
+• Provisioning service (folder create + app/site open) + backfill script.
+• Save-path edits: uniqueness + protection.
+• App Designer UI for defaultObjects.
+• Object-manager UI: platform-default badge, locked fields, confirmation on delete,
+  restore action.
+• Documentation: how an app declares defaults, scope semantics, protection
+  behaviour, restore behaviour, backfill instructions, and the boundary rule:
+    FOLDER / FOLDER CONFIG = the site's config VALUES
+    DEFAULT OBJECTS       = the app's platform-owned CONTENT
+  (nothing may live in both).
+
+PROCESS
+───────
+First reply with a short implementation PLAN: files to touch, the declaration
+schema you propose, the provisioning trigger points you will use, the protection
+mechanism you will implement, and the backfill approach — plus any question where
+the CMS reality forces a different design. Wait for approval before coding.
