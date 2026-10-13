@@ -1,4 +1,4 @@
-/* build 2026-10-05-3 */
+/* build 2026-10-12-1 */
 
 /* ── CSS Custom Properties ── */
 :root {
@@ -334,6 +334,24 @@ input, select, textarea { font-family: inherit; }
 .badge-recur { background: var(--primary-light); color: var(--primary); }
 .badge-conflict { background: var(--red-bg); color: var(--red-text); }
 .badge-cancelled { background: var(--bg4); color: var(--text3); text-decoration: line-through; }
+.badge-private { background: var(--amber-bg); color: var(--amber-text); }
+
+/* ── Visibility picker (event modal) ── */
+.vis-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vis-opt {
+	display: flex; flex-direction: column; gap: 3px; align-items: flex-start; text-align: left;
+	background: var(--bg2); border: 1.5px solid var(--border2); border-radius: var(--radius-sm);
+	padding: 9px 11px; cursor: pointer; transition: all var(--transition);
+}
+.vis-opt:hover { border-color: var(--primary); }
+.vis-opt.sel { border-color: var(--primary); background: var(--primary-light); }
+.vis-opt-head { font-size: 13px; font-weight: 700; color: var(--text); }
+.vis-opt-desc { font-size: 11px; color: var(--text2); line-height: 1.35; }
+@media (max-width: 520px) { .vis-options { grid-template-columns: 1fr; } }
+
+/* private markers on the calendar */
+.chip.chip-private { border: 1px dashed rgba(255,255,255,.75); }
+.ev-card.private { border-left-style: dashed; }
 
 /* ── Cards grid (departments / locations) ── */
 .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }

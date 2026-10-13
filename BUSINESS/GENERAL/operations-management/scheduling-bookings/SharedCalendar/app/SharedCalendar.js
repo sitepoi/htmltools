@@ -1,4 +1,4 @@
-/* build 2026-10-05-3 */
+/* build 2026-10-12-1 */
 /* ── SharedCal ─ Shared Calendar ──
    One shared calendar for every department: one-time + recurring
    events, location planning, and always-visible conflict flags.
@@ -6,7 +6,7 @@
 (function () {
 	"use strict";
 
-	var TOOL_BUILD = '2026-10-05-3';
+	var TOOL_BUILD = '2026-10-12-1';
 
 	/* ── SDK handle + fallback shim ── */
 	var tool = (typeof window !== "undefined" && window.tool) ? window.tool : null;
@@ -66,6 +66,11 @@
 	];
 	var DEPT_COLORS = ["#5b4bd6", "#0ea5e9", "#16a34a", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#be185d", "#4f46e5", "#059669", "#e11d48", "#ca8a04"];
 	var LOC_TYPES = ["Room", "Hall", "Lab", "Auditorium", "Outdoor", "Online", "Other"];
+	/* Public = every user sees it. Private = only the author (and admins) see it until published. */
+	var VISIBILITIES = [
+		{ v: "public", label: "Public", icon: "🌐", desc: "Everyone sharing this calendar can see it" },
+		{ v: "private", label: "Private", icon: "🔒", desc: "Only you (and admins) can see it for now" }
+	];
 
 	/* ── State ── */
 	var DB = {
@@ -80,6 +85,7 @@
 	var calView = "month";
 	var currentUser = null;
 	var isReadOnly = false;
+	var _noIdentity = false;   // true when the host exposes no user/session API (host enforces permissions)
 	var conflictKeySet = {};   // keys of occurrences currently in conflict (calendar range)
 	var filteredOccs = [];     // occurrences currently shown in calendar
 
@@ -99,12 +105,13 @@
 	}
 
 	function updateNavBadges() {
-		var cal = $("#nav-cal-count"); if (cal) cal.textContent = DB.events.length;
-		var ev = $("#nav-events-count"); if (ev) ev.textContent = DB.events.length;
+		var visible = visibleEvents();
+		var cal = $("#nav-cal-count"); if (cal) cal.textContent = visible.length;
+		var ev = $("#nav-events-count"); if (ev) ev.textContent = visible.length;
 		var dp = $("#nav-dept-count"); if (dp) dp.textContent = DB.departments.length;
 		var lc = $("#nav-loc-count"); if (lc) lc.textContent = DB.locations.length;
 		var cf = $("#nav-conflict-count"); if (cf) {
-			var c = computeConflicts(DB.events, todayISO(), toISO(addDays(new Date(), 365)));
+			var c = visibleConflicts(todayISO(), toISO(addDays(new Date(), 365)));
 			cf.textContent = c.length;
 		}
 	}
@@ -257,9 +264,9 @@
 		} else title.textContent = calDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 
 		var range = calRange();
-		var all = occurrencesInRange(range.from, range.to, DB.events);
+		var all = visibleOccurrences(range.from, range.to);
 		filteredOccs = applyCalendarFilters(all);
-		var conflicts = computeConflicts(DB.events, range.from, range.to);
+		var conflicts = visibleConflicts(range.from, range.to);
 		conflictKeySet = {};
 		conflicts.forEach(function (c) { conflictKeySet[occKey(c.a)] = 1; conflictKeySet[occKey(c.b)] = 1; });
 
@@ -277,6 +284,7 @@
 			return '<span class="legend-chip"><span class="legend-dot" style="background:' + esc(d.color) + '"></span>' + esc(d.name) + '</span>';
 		}).join("");
 		chips += '<span class="legend-note">⚠ outlined = conflicting</span>';
+		chips += '<span class="legend-note">🔒 = private (only you)</span>';
 		legend.innerHTML = chips || '<span class="legend-note">Add departments to color-code the calendar</span>';
 	}
 
@@ -321,8 +329,9 @@
 	function chipHtml(o) {
 		var ev = o.event;
 		var conflicted = conflictKeySet[occKey(o)] ? true : false;
-		var label = ev.allDay ? ev.title : (fmtTime(ev.startTime) ? fmtTime(ev.startTime) + " " : "") + ev.title;
-		return '<div class="chip' + (conflicted ? ' chip-conflict' : '') + '" data-occ="' + esc(occKey(o)) + '" style="--c:' + esc(deptColor(ev.deptId)) + '" title="' + esc(ev.title + (ev.allDay ? "" : " · " + fmtRange(ev))) + '">' + (conflicted ? "⚠ " : "") + esc(label) + '</div>';
+		var isPrivate = isPrivateEvent(ev);
+		var label = (isPrivate ? "🔒 " : "") + (ev.allDay ? ev.title : (fmtTime(ev.startTime) ? fmtTime(ev.startTime) + " " : "") + ev.title);
+		return '<div class="chip' + (conflicted ? ' chip-conflict' : '') + (isPrivate ? ' chip-private' : '') + '" data-occ="' + esc(occKey(o)) + '" style="--c:' + esc(deptColor(ev.deptId)) + '" title="' + esc(ev.title + (isPrivate ? " · private" : "") + (ev.allDay ? "" : " · " + fmtRange(ev))) + '">' + (conflicted ? "⚠ " : "") + esc(label) + '</div>';
 	}
 
 	function monthMarkup(range) {
@@ -381,12 +390,14 @@
 	function evCardHtml(o) {
 		var ev = o.event;
 		var conflicted = conflictKeySet[occKey(o)] ? true : false;
+		var isPrivate = isPrivateEvent(ev);
 		var meta = [];
 		if (!ev.allDay) meta.push(fmtRange(ev));
 		if (ev.locationId) meta.push("📍 " + locName(ev.locationId));
 		meta.push(deptName(ev.deptId));
-		return '<div class="ev-card' + (conflicted ? ' conflict' : '') + '" data-occ="' + esc(occKey(o)) + '" style="--c:' + esc(deptColor(ev.deptId)) + '">' +
-			'<div class="ec-title">' + (conflicted ? "⚠ " : "") + esc(ev.title) + '</div>' +
+		if (isPrivate) meta.push("🔒 private");
+		return '<div class="ev-card' + (conflicted ? ' conflict' : '') + (isPrivate ? ' private' : '') + '" data-occ="' + esc(occKey(o)) + '" style="--c:' + esc(deptColor(ev.deptId)) + '">' +
+			'<div class="ec-title">' + (conflicted ? "⚠ " : "") + (isPrivate ? "🔒 " : "") + esc(ev.title) + '</div>' +
 			'<div class="ec-meta">' + esc(meta.filter(Boolean).join(" · ")) + '</div>' +
 			'</div>';
 	}
@@ -437,11 +448,12 @@
 		var cat = $("#events-category") ? $("#events-category").value : "";
 		var kind = $("#events-kind") ? $("#events-kind").value : "all";
 
-		var conflicts = computeConflicts(DB.events, todayISO(), toISO(addDays(new Date(), 365)));
+		var visible = visibleEvents();
+		var conflicts = visibleConflicts(todayISO(), toISO(addDays(new Date(), 365)));
 		var conflictEventIds = {};
 		conflicts.forEach(function (c) { conflictEventIds[c.a.event.id] = 1; conflictEventIds[c.b.event.id] = 1; });
 
-		var list = DB.events.slice().filter(function (ev) {
+		var list = visible.filter(function (ev) {
 			if (dept && ev.deptId !== dept) return false;
 			if (loc && ev.locationId !== loc) return false;
 			if (cat && ev.category !== cat) return false;
@@ -456,7 +468,7 @@
 		list.sort(function (a, b) { return (a.date || "").localeCompare(b.date || ""); });
 
 		var box = $("#events-list");
-		if (!DB.events.length) {
+		if (!visible.length) {
 			box.innerHTML = '<div class="empty-state"><div class="empty-icon">🗓</div><h3>No events yet</h3><p>Start by adding a one-time or recurring entry to the shared calendar.</p>' + (locked() ? '' : '<button class="btn btn-primary" id="btn-add-event-empty">+ New Event</button>') + '</div>';
 			var b = $("#btn-add-event-empty"); if (b) b.onclick = function () { openEventModal(null, todayISO()); };
 			return;
@@ -476,6 +488,7 @@
 				'<div class="event-sub">' +
 				'<span class="badge badge-dept" style="--c:' + esc(deptColor(ev.deptId)) + '">' + esc(deptName(ev.deptId)) + '</span>' +
 				(ev.repeat !== "none" ? '<span class="badge badge-recur">🔁 ' + esc(repeatLabel(ev)) + '</span>' : '') +
+				(isPrivateEvent(ev) ? '<span class="badge badge-private">🔒 Private</span>' : '') +
 				(conflicted ? '<span class="badge badge-conflict">Conflict</span>' : '') +
 				(ev.status === "cancelled" ? '<span class="badge badge-cancelled">Cancelled</span>' : '') +
 				'<span>' + esc(fmtDateShort(ev.date)) + (ev.allDay ? " · All day" : (ev.startTime ? " · " + fmtRange(ev) : "")) + '</span>' +
@@ -515,7 +528,7 @@
 			return;
 		}
 		box.innerHTML = DB.departments.map(function (d) {
-			var count = DB.events.filter(function (e) { return e.deptId === d.id; }).length;
+			var count = DB.events.filter(function (e) { return e.deptId === d.id && canSeeEvent(e); }).length;
 			return '<div class="card" data-id="' + d.id + '">' +
 				'<div class="card-swatch" style="--c:' + esc(d.color) + '"></div>' +
 				'<div class="card-title">' + esc(d.name) + '</div>' +
@@ -540,7 +553,7 @@
 		}
 		var upcoming = DB.events.filter(function (e) { return e.date >= todayISO() && e.status !== "cancelled"; }).length;
 		box.innerHTML = DB.locations.map(function (l) {
-			var count = DB.events.filter(function (e) { return e.locationId === l.id; }).length;
+			var count = DB.events.filter(function (e) { return e.locationId === l.id && canSeeEvent(e); }).length;
 			return '<div class="card" data-id="' + l.id + '">' +
 				'<div class="card-swatch" style="--c:var(--primary)"></div>' +
 				'<div class="card-title">📍 ' + esc(l.name) + '</div>' +
@@ -560,7 +573,7 @@
 		var box = $("#conflicts-list");
 		var from = todayISO();
 		var to = toISO(addDays(new Date(), 365));
-		var conflicts = computeConflicts(DB.events, from, to);
+		var conflicts = visibleConflicts(from, to);
 		if (!conflicts.length) {
 			box.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><h3>No conflicts</h3><p>No overlapping entries found in the next 12 months.</p></div>';
 			return;
@@ -624,6 +637,7 @@
 		var repeatUntil = ev ? (ev.repeatUntil || "") : "";
 		var description = ev ? esc(ev.description || "") : "";
 		var status = ev ? (ev.status || "active") : "active";
+		var visibility = ev ? visibilityOf(ev) : defaultVisibility();
 
 		var deptOptions = DB.departments.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === deptId ? " selected" : "") + '>' + esc(d.name) + '</option>'; }).join("");
 		var locOptions = '<option value="">No location</option>' + DB.locations.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === locationId ? " selected" : "") + '>' + esc(l.name) + '</option>'; }).join("");
@@ -644,6 +658,14 @@
 			'<div class="form-field"><label class="form-label">Repeat every (n)</label><input type="number" class="text-input" id="f-every" min="1" value="' + repeatEvery + '"></div>' +
 			'<div class="form-field"><label class="form-label">Repeat until</label><input type="date" class="text-input" id="f-until" value="' + repeatUntil + '"></div>' +
 			'<div class="form-field"><label class="form-label">Status</label><select class="select-input" id="f-status"><option value="active"' + (status === "active" ? " selected" : "") + '>Active</option><option value="cancelled"' + (status === "cancelled" ? " selected" : "") + '>Cancelled</option></select></div>' +
+			'<div class="form-field full"><label class="form-label">Visibility</label>' +
+			'<div class="vis-options" id="f-visibility">' +
+			VISIBILITIES.map(function (v) {
+				return '<button type="button" class="vis-opt' + (v.v === visibility ? ' sel' : '') + '" data-vis="' + v.v + '"><span class="vis-opt-head">' + v.icon + ' ' + v.label + '</span><span class="vis-opt-desc">' + esc(v.desc) + '</span></button>';
+			}).join("") +
+			'</div>' +
+			'<span class="form-hint">Private entries stay visible only to you (and admins) until you publish them to everyone.</span>' +
+			'</div>' +
 			'<div class="form-field full"><label class="form-label">Description / content</label><textarea class="textarea-input" id="f-desc" rows="3" placeholder="Agenda, notes, links…">' + description + '</textarea></div>' +
 			'</div>' +
 			(ev ? '<div class="owner-note">Created by ' + esc(ev.createdByName || "unknown") + (ev.updatedByName ? " · last edited by " + esc(ev.updatedByName) : "") + '</div>' : "");
@@ -651,7 +673,15 @@
 		var footer = confirmFooter("f-save", existing ? "Save Changes" : "Add to Calendar", "Cancel", false);
 		openModal(existing ? "Edit Event" : "New Event", body, footer);
 
-		$("#f-save").onclick = function () { submitEventForm(existing); };
+		var selectedVisibility = visibility;
+		$$("#f-visibility .vis-opt").forEach(function (b) {
+			b.onclick = function () {
+				selectedVisibility = b.dataset.vis;
+				$$("#f-visibility .vis-opt").forEach(function (x) { x.classList.toggle("sel", x === b); });
+			};
+		});
+
+		$("#f-save").onclick = function () { submitEventForm(existing, selectedVisibility); };
 		$("#modal-cancel").onclick = closeModal;
 
 		// toggle time fields with all-day
@@ -667,7 +697,7 @@
 		syncTimeFields();
 	}
 
-	function submitEventForm(existing) {
+	function submitEventForm(existing, visibility) {
 		var title = ($("#f-title").value || "").trim();
 		var deptId = $("#f-dept").value;
 		var category = $("#f-category").value;
@@ -681,6 +711,7 @@
 		var repeatUntil = $("#f-until").value;
 		var description = $("#f-desc").value.trim();
 		var status = $("#f-status").value;
+		visibility = (visibility === "public") ? "public" : (visibility === "private" ? "private" : defaultVisibility());
 
 		if (!title) { notify("Please enter a title.", "warning"); return; }
 		if (!deptId) { notify("Please choose a department.", "warning"); return; }
@@ -706,6 +737,7 @@
 			repeatUntil: repeat !== "none" ? (repeatUntil || "") : "",
 			description: description,
 			status: status,
+			visibility: visibility,
 			createdBy: existing ? existing.createdBy : stamp.id,
 			createdByName: existing ? existing.createdByName : stamp.name,
 			updatedBy: stamp.id,
@@ -713,8 +745,8 @@
 			updatedAt: now.toISOString()
 		};
 
-		// conflict check for the new/edited event
-		var others = DB.events.filter(function (e) { return e.id !== ev.id && e.status !== "cancelled"; });
+		// conflict check for the new/edited event (only against entries this user can see)
+		var others = visibleEvents().filter(function (e) { return e.id !== ev.id && e.status !== "cancelled"; });
 		var from = date < todayISO() ? date : todayISO();
 		var to = toISO(addDays(parseISO(date), 420));
 		var all = others.concat([ev]);
@@ -792,16 +824,28 @@
 			'<span style="color:var(--text3);font-weight:700">Time</span><span>' + esc(fmtRange(ev)) + '</span>' +
 			'<span style="color:var(--text3);font-weight:700">Location</span><span>' + (ev.locationId ? "📍 " + esc(locName(ev.locationId)) : "—") + '</span>' +
 			'<span style="color:var(--text3);font-weight:700">Category</span><span>' + esc(ev.category || "—") + '</span>' +
+			'<span style="color:var(--text3);font-weight:700">Visibility</span><span>' + (isPrivateEvent(ev) ? '🔒 Private — only you (and admins)' : '🌐 Public — everyone') + '</span>' +
 			'<span style="color:var(--text3);font-weight:700">Status</span><span>' + (ev.status === "cancelled" ? "Cancelled" : "Active") + '</span>' +
 			'<span style="color:var(--text3);font-weight:700">Created by</span><span>' + esc(ev.createdByName || "unknown") + '</span>' +
 			(ev.description ? '<span style="color:var(--text3);font-weight:700">Details</span><span style="white-space:pre-wrap">' + esc(ev.description) + '</span>' : '') +
 			'</div>';
+		var publishBtn = (canEditEvent(ev) && isPrivateEvent(ev)) ? '<button class="btn btn-primary" id="dt-publish">🌐 Publish to everyone</button>' : '';
 		var footer = canEditEvent(ev)
-			? '<button class="btn btn-outline" id="dt-edit">✏️ Edit</button><button class="btn btn-ghost" id="dt-close">Close</button>'
+			? publishBtn + '<button class="btn btn-outline" id="dt-edit">✏️ Edit</button><button class="btn btn-ghost" id="dt-close">Close</button>'
 			: '<button class="btn btn-ghost" id="dt-close">Close</button>';
 		openModal("Event Details", body, footer);
 		$("#dt-close").onclick = closeModal;
 		var ed = $("#dt-edit"); if (ed) ed.onclick = function () { openEventModal(ev.id, null); };
+		var pb = $("#dt-publish"); if (pb) pb.onclick = function () {
+			ev.visibility = "public";
+			ev.updatedBy = currentUser ? currentUser.id : "local";
+			ev.updatedByName = currentUser ? currentUser.name : "Local User";
+			ev.updatedAt = new Date().toISOString();
+			persist();
+			closeModal();
+			renderCurrentPage();
+			notify("Event published — now visible to everyone ✓", "success");
+		};
 	}
 
 	/* ══════════════════════════════════════════════
@@ -905,20 +949,52 @@
 	}
 
 	/* ══════════════════════════════════════════════
-	   PERMISSIONS
+	   IDENTITY + PERMISSIONS + VISIBILITY
 	   ══════════════════════════════════════════════ */
-	function roles() { return (currentUser && currentUser.roles) ? currentUser.roles : []; }
+	function hasUserApi() { return typeof tool.getUser === "function"; }
+	function getUserSafe() { try { return hasUserApi() ? tool.getUser() : null; } catch (e) { return null; } }
+	function roles() {
+		if (currentUser && currentUser.roles && currentUser.roles.length) return currentUser.roles;
+		var ea = (currentUser && currentUser.effectiveAccess) || {};
+		var out = [];
+		if (ea.isManager) out.push("admin");
+		if (ea.isEditor) out.push("editor");
+		if (ea.isViewer) out.push("viewer");
+		if (out.length) return out;
+		return (currentUser && currentUser.roles) ? currentUser.roles : [];
+	}
 	function isAdmin() {
+		if (_noIdentity) return !isReadOnly; // host enforces real permissions server-side
 		var r = roles();
 		return r.indexOf("admin") > -1 || r.indexOf("owner") > -1 || r.indexOf("developer") > -1 || r.indexOf("user-manager") > -1;
 	}
-	function canWrite() { return isAdmin() || roles().indexOf("editor") > -1; }
+	function canWrite() { return !isReadOnly && (_noIdentity || isAdmin() || roles().indexOf("editor") > -1); }
 	function locked() { return isReadOnly || !canWrite(); }
-	function canEditEvent(ev) {
-		if (!canWrite()) return false;
-		if (isAdmin()) return true;
+
+	function defaultVisibility() {
+		var v = tool.param ? tool.param("defaultVisibility", "private") : "private";
+		return v === "public" ? "public" : "private";
+	}
+	function visibilityOf(ev) { return (ev && ev.visibility === "private") ? "private" : "public"; }
+	function isPrivateEvent(ev) { return visibilityOf(ev) === "private"; }
+	function ownsEvent(ev) {
 		var uid2 = currentUser ? currentUser.id : null;
-		return !ev.createdBy || ev.createdBy === uid2;
+		return !!(ev && ev.createdBy && uid2 && ev.createdBy === uid2);
+	}
+	/* Public entries are visible to everyone; private ones only to their author (and admins). */
+	function canSeeEvent(ev) {
+		if (!ev) return false;
+		if (_noIdentity || isAdmin()) return true;
+		if (!isPrivateEvent(ev)) return true;
+		return ownsEvent(ev);
+	}
+	function visibleEvents(list) { return (list || DB.events).filter(canSeeEvent); }
+	function visibleOccurrences(from, to) { return occurrencesInRange(from, to, visibleEvents()); }
+	function visibleConflicts(from, to) { return computeConflicts(visibleEvents(), from, to); }
+	function canEditEvent(ev) {
+		if (!ev || !canWrite()) return false;
+		if (isAdmin() || _noIdentity) return true;
+		return ownsEvent(ev) || !ev.createdBy;
 	}
 	function canDeleteShared() { return isAdmin(); }
 
@@ -948,13 +1024,14 @@
 	   EXPORT / PRINT
 	   ══════════════════════════════════════════════ */
 	function exportCSV() {
-		if (!DB.events.length) { notify("Nothing to export yet.", "warning"); return; }
-		var rows = [["Title", "Department", "Category", "Location", "Date", "Start", "End", "All day", "Repeats", "Repeat until", "Status", "Created by", "Description"]];
-		DB.events.slice().sort(function (a, b) { return (a.date || "").localeCompare(b.date || ""); }).forEach(function (ev) {
+		var visible = visibleEvents();
+		if (!visible.length) { notify("Nothing to export yet.", "warning"); return; }
+		var rows = [["Title", "Department", "Category", "Location", "Date", "Start", "End", "All day", "Repeats", "Repeat until", "Visibility", "Status", "Created by", "Description"]];
+		visible.slice().sort(function (a, b) { return (a.date || "").localeCompare(b.date || ""); }).forEach(function (ev) {
 			rows.push([
 				ev.title, deptName(ev.deptId), ev.category || "", locName(ev.locationId),
 				ev.date, ev.allDay ? "" : (ev.startTime || ""), ev.allDay ? "" : (ev.endTime || ""),
-				ev.allDay ? "Yes" : "No", ev.repeat === "none" ? "" : repeatLabel(ev), ev.repeatUntil || "", ev.status || "active",
+				ev.allDay ? "Yes" : "No", ev.repeat === "none" ? "" : repeatLabel(ev), ev.repeatUntil || "", visibilityOf(ev), ev.status || "active",
 				ev.createdByName || "", ev.description || ""
 			]);
 		});
@@ -1032,7 +1109,11 @@
 			if (value._view === "month" || value._view === "week" || value._view === "day") { DB._view = value._view; calView = value._view; }
 		}
 		applyTheme(DB._theme);
-		try { tool.declareParams([]); } catch (e) { }
+		try {
+			tool.declareParams([
+				{ name: "defaultVisibility", label: "Default visibility for new events", type: "text", default: "private", hint: "Use 'private' (author only until published) or 'public' (everyone sharing the calendar).", severity: "optional" }
+			]);
+		} catch (e) { }
 		$("#build-badge").textContent = "tool build " + TOOL_BUILD;
 		wireStatic();
 		renderUserBadge();
@@ -1041,7 +1122,7 @@
 		persist();
 
 		tool.onReadonlyChange(function (ro) { isReadOnly = !!ro; refreshPermissionUI(); });
-		tool.onUserChange(function (u) { currentUser = u; refreshPermissionUI(); });
+		tool.onUserChange(function (u) { currentUser = u || getUserSafe(); if (currentUser) _noIdentity = false; refreshPermissionUI(); });
 		tool.onValueChange(function (v) {
 			if (v && typeof v === "object") {
 				if (Array.isArray(v.departments)) DB.departments = v.departments;
@@ -1051,8 +1132,26 @@
 			renderCurrentPage();
 		});
 
-		currentUser = tool.getUser();
+		currentUser = getUserSafe();
 		isReadOnly = tool.isReadOnly();
 		refreshPermissionUI();
+		startUserPolling();
 	});
+
+	/* ── Identity bootstrap (the session may arrive after onReady) ── */
+	function startUserPolling() {
+		if (!hasUserApi()) { _noIdentity = true; refreshPermissionUI(); return; }
+		var immediateUser = getUserSafe();
+		if (immediateUser) { currentUser = immediateUser; _noIdentity = false; refreshPermissionUI(); return; }
+		var delays = [400, 1200, 2600, 5000];
+		var attempt = 0;
+		function step() {
+			var u = getUserSafe();
+			if (u) { currentUser = u; _noIdentity = false; refreshPermissionUI(); return; }
+			attempt++;
+			if (attempt < delays.length) setTimeout(step, delays[attempt]);
+			else { _noIdentity = true; refreshPermissionUI(); }
+		}
+		setTimeout(step, delays[0]);
+	}
 })();

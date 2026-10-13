@@ -209,7 +209,7 @@ var EMBEDDED_HTML = '<div id="app"><aside class="sidebar"><div class="sidebar-br
 
     var events = [];
     function ev(o) {
-      var base = { id: uid(), title: "", deptId: deptReg, locationId: null, category: "Meeting", date: iso(today), allDay: false, startTime: "09:00", endTime: "10:00", repeat: "none", repeatEvery: 1, repeatUntil: "", description: "", status: "active", createdBy: "u-admin", createdByName: "Alex Admin" };
+      var base = { id: uid(), title: "", deptId: deptReg, locationId: null, category: "Meeting", date: iso(today), allDay: false, startTime: "09:00", endTime: "10:00", repeat: "none", repeatEvery: 1, repeatUntil: "", description: "", status: "active", visibility: "public", createdBy: "u-admin", createdByName: "Alex Admin" };
       for (var k in o) base[k] = o[k];
       events.push(base);
     }
@@ -236,6 +236,9 @@ var EMBEDDED_HTML = '<div id="app"><aside class="sidebar"><div class="sidebar-br
 
     // Student life club fair
     ev({ title: "Club Fair", deptId: deptLife, locationId: locGym, category: "Event", date: iso(addDays(today, 10)), startTime: "11:00", endTime: "15:00" });
+
+    // PRIVATE event — only its author (Bob) and admins should see it (hidden from Alice and Carol)
+    ev({ title: "Sciences Budget Draft", deptId: deptSci, locationId: null, category: "Other", date: iso(addDays(today, 6)), startTime: "15:00", endTime: "16:00", visibility: "private", description: "Private draft — not published to everyone yet.", createdBy: "u-bob", createdByName: "Bob Sciences" });
 
     return { departments: departments, locations: locations, events: events, _theme: "light", _view: "month" };
   }
