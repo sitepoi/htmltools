@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restaurant Order Manager - Test Harness</title>
+<link rel="stylesheet" href="RestaurantOrderManager.css">
+<style>
+  body { padding: 0; margin: 0; background: #eef1f5; }
+  #th-bar { position: fixed; top: 0; left: 0; right: 0; height: 30px; z-index: 9999; background: #0f172a; color: #e6edf5; font-family: system-ui, sans-serif; font-size: 11px; padding: 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap; overflow-x: auto; }
+  #th-bar strong { color: #f59e0b; letter-spacing: 0.5px; white-space: nowrap; }
+  #th-bar .sep { color: #475569; }
+  #th-bar button { border: none; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 10px; font-family: system-ui, sans-serif; font-weight: 600; white-space: nowrap; }
+  #th-bar .btn-load { background: #d97706; color: #fff; }
+  #th-bar .btn-clear { background: #dc2626; color: #fff; }
+  #th-bar .btn-reload { background: #16a34a; color: #fff; }
+  #th-bar .btn-dump { background: #0d9488; color: #fff; }
+  #th-bar .btn-ext { background: #7c3aed; color: #fff; }
+  #th-bar .btn-ro { background: #16a34a; color: #fff; }
+  #th-bar .btn-ro.on { background: #dc2626; }
+  #th-bar .hint { color: #94a3b8; font-size: 10px; white-space: nowrap; }
+  body { padding-top: 30px; }
+</style>
+</head>
+<body>
+
+<div id="th-bar">
+  <strong>TEST HARNESS - Restaurant Order Manager</strong><span class="sep">|</span>
+  <button class="btn-load" id="th-load-sample">Load Sample Order</button>
+  <button class="btn-clear" id="th-clear">Clear</button>
+  <button class="btn-reload" id="th-reload">Reload</button>
+  <button class="btn-dump" id="th-dump">Dump</button>
+  <button class="btn-ext" id="th-external">Simulate External Change</button>
+  <span class="sep">|</span>
+  <button class="btn-ro" id="th-toggle-ro">RO: OFF</button>
+  <button class="btn-dump" id="th-role">Role: admin</button>
+  <span class="sep">|</span>
+  <span class="hint" id="th-status">Ready</span>
+</div>
+
+<!-- ===== TOOL MARKUP INLINED ===== -->
+<!-- build 2026-10-10-1 -->
+<div class="rom" id="rom-root">
+  <div class="rom-ticket">
+
+    <header class="rom-head">
+      <div class="rom-head-main">
+        <div class="rom-head-top">
+          <span class="rom-channel" id="rom-channel-badge">-</span>
+          <span class="rom-order-number" id="rom-order-number">-</span>
+        </div>
+        <div class="rom-head-sub">
+          <span id="rom-placed-at"></span>
+          <span class="rom-sep" id="rom-sep-placed">|</span>
+          <span class="rom-waiting" id="rom-waiting"></span>
+        </div>
+      </div>
+      <div class="rom-status" id="rom-status-badge">-</div>
+    </header>
+
+    <div class="rom-warning" id="rom-warning" style="display:none;">
+      <span class="rom-warning-icon">&#9888;</span>
+      <span id="rom-warning-text"></span>
+    </div>
+
+    <div class="rom-readonly" id="rom-readonly" style="display:none;"></div>
+
+    <div class="rom-empty" id="rom-empty" style="display:none;">
+      No order data is attached to this record yet.
+    </div>
+
+    <div class="rom-body" id="rom-body">
+      <div class="rom-col rom-col-side">
+        <section class="rom-block" id="rom-customer"></section>
+        <section class="rom-block" id="rom-zone"></section>
+        <section class="rom-block" id="rom-schedule"></section>
+        <section class="rom-block" id="rom-payment"></section>
+      </div>
+      <div class="rom-col rom-col-main">
+        <section class="rom-block">
+          <h3 class="rom-block-title">Order lines</h3>
+          <div class="rom-lines" id="rom-lines"></div>
+        </section>
+        <section class="rom-block">
+          <div class="rom-totals" id="rom-totals"></div>
+        </section>
+        <section class="rom-block">
+          <h3 class="rom-block-title">Internal note</h3>
+          <textarea class="rom-note" id="rom-note" rows="3" placeholder="Add a note for the kitchen or a colleague (saved on the order record)"></textarea>
+          <div class="rom-note-actions">
+            <button type="button" class="rom-btn rom-btn-ghost rom-btn-small" id="rom-note-save">Save note</button>
+            <span class="rom-note-status" id="rom-note-status"></span>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <section class="rom-actions" id="rom-actions"></section>
+
+    <footer class="rom-foot">
+      <span class="rom-build" id="rom-build">tool build</span>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ===== MOCK SDK ===== -->
+<script>
+(function () {
+  var RECORD_KEY = 'rom_test_record';
+  var listeners = { value: [], fields: [], readonly: [], user: [] };
+  var _readOnly = false;
+  var _record = null;
+  var _roleIndex = 0;
+  var ROLES = ['admin', 'editor', 'viewer', 'none'];
+
+  var query = {};
+  window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+    if (!pair) return;
+    var bits = pair.split('=');
+    query[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+  });
+
+  _record = loadRecord();
+  if (!_record && query.sample === '1') { _record = buildSampleOrder(); saveRecord(_record); }
+  if (query.sample === '1' && _record && !query.keep) { _record = buildSampleOrder(); saveRecord(_record); }
+
+  function status(msg) {
+    var el = document.getElementById('th-status');
+    if (el) el.textContent = msg;
+  }
+
+  function loadRecord() {
+    try {
+      var raw = localStorage.getItem(RECORD_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (err) { return null; }
+  }
+
+  function saveRecord(record) {
+    _record = record;
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(record)); } catch (err) { status('Save failed'); }
+  }
+
+  function currentUser() {
+    var role = ROLES[_roleIndex];
+    if (role === 'none') return null;
+    var user = { id: 'u-' + role, name: 'Test ' + role, email: role + '@example.com', roles: [role], locale: 'en' };
+    if (role === 'admin') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: true };
+    if (role === 'editor') user.effectiveAccess = { isViewer: true, isEditor: true, isManager: false };
+    if (role === 'viewer') user.effectiveAccess = { isViewer: true, isEditor: false, isManager: false };
+    return user;
+  }
+
+  window.tool = {
+    getValue: function () { return null; },
+    setValue: function () { status('setValue called'); },
+    onValueChange: function (cb) { listeners.value.push(cb); },
+    getFields: function () { return _record || {}; },
+    setField: function (id, value) { window.tool.setFields((function () { var o = {}; o[id] = value; return o; })()); },
+    setFields: function (patch) {
+      if (!_record) _record = { id: 'order-1', name: 'Order' };
+      Object.keys(patch).forEach(function (key) { _record[key] = patch[key]; });
+      saveRecord(_record);
+      status('setFields: ' + Object.keys(patch).join(', '));
+      listeners.fields.forEach(function (cb) { try { cb(_record); } catch (err) {} });
+    },
+    watchField: function () {},
+    onFieldsChange: function (cb) { listeners.fields.push(cb); },
+    param: function (name, fallback) {
+      var overrides = {
+        currencyCode: query.currency || 'TRY',
+        restaurantTimezone: query.tz || 'Europe/Istanbul',
+        newOrderWarningMinutes: query.warn || '10'
+      };
+      if (overrides[name] !== undefined && overrides[name] !== '') return overrides[name];
+      return fallback;
+    },
+    isReadOnly: function () { return _readOnly; },
+    onReadonlyChange: function (cb) { listeners.readonly.push(cb); },
+    getUser: function () { return currentUser(); },
+    onUserChange: function (cb) { listeners.user.push(cb); },
+    getPermittedUsers: function () { return []; },
+    getParentPageUrl: function () { return 'https://demo.uniconhub.com/admin/objects/restaurant-orders/order-1'; },
+    reportValid: function () {},
+    notify: function (message, severity) {
+      severity = severity || 'info';
+      var colors = { info: '#6366f1', success: '#10b981', warning: '#f59e0b', error: '#ef4444' };
+      var toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;background:' + (colors[severity] || '#333') +
+        ';color:#fff;padding:10px 20px;border-radius:6px;font-family:system-ui;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.3);max-width:420px;';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(function () { toast.remove(); }, 3000);
+    },
+    resize: function () {},
+    declareOutput: function () {},
+    declareParams: function () {},
+    reportMissingParams: function () {},
+    openUrl: function (url) { status('openUrl: ' + url); },
+    requestSave: function (cb) { if (cb) cb(null, true); },
+    requestObjects: function (action, params, cb) { if (cb) cb('Object CRUD not configured in the harness', null); },
+    onReady: function (cb) { cb(null, _record || {}); },
+    _dump: function () { console.log('RestaurantOrderManager harness record:', JSON.parse(JSON.stringify(_record || {}))); status('Dumped to console'); },
+    _setReadOnly: function (v) {
+      _readOnly = v;
+      listeners.readonly.forEach(function (cb) { try { cb(v); } catch (err) {} });
+      var btn = document.getElementById('th-toggle-ro');
+      if (btn) { btn.textContent = v ? 'RO: ON' : 'RO: OFF'; btn.classList.toggle('on', v); }
+    },
+    _cycleRole: function () {
+      _roleIndex = (_roleIndex + 1) % ROLES.length;
+      var user = currentUser();
+      listeners.user.forEach(function (cb) { try { cb(user); } catch (err) {} });
+      var btn = document.getElementById('th-role');
+      if (btn) btn.textContent = 'Role: ' + ROLES[_roleIndex];
+      status('Role: ' + ROLES[_roleIndex]);
+    },
+    _externalChange: function () {
+      if (!_record) return;
+      _record.status = 'accepted';
+      _record.statusChangedAt = new Date().toISOString();
+      _record.internalNote = (_record.internalNote || '') + ' [updated by another manager]';
+      saveRecord(_record);
+      listeners.fields.forEach(function (cb) { try { cb(_record); } catch (err) {} });
+      status('External change applied');
+    }
+  };
+})();
+
+/* ---------------------------------------------------------- sample order */
+
+function buildSampleOrder() {
+  var now = Date.now();
+  return {
+    id: 'order-EFOC-KX3P9AB',
+    name: 'Order EFOC-KX3P9AB',
+    cmsObjectType: 'restaurant-orders',
+    typeId: 'restaurant-orders',
+    orderNumber: 'EFOC-KX3P9AB',
+    placedAt: new Date(now - 14 * 60 * 1000).toISOString(),
+    channel: 'delivery',
+    customer: { fullName: 'Ayse Yilmaz', phone: '+90 532 123 45 67' },
+    address: {
+      street: 'Bagdat Caddesi 145 D:6',
+      city: 'Istanbul',
+      postal_code: '34710',
+      block: 'A',
+      intercom: '45',
+      parking_info: 'Street parking after 20:00',
+      additional_info: 'Ring twice, third floor'
+    },
+    customAddressFields: { 'Building name': 'Marmara Apartments' },
+    tableNumber: '',
+    deliveryZone: { id: 'zone-kadikoy', name: 'Kadikoy Center' },
+    scheduledFor: null,
+    paymentMethod: 'card',
+    paymentDetails: {
+      provider: 'Stripe',
+      card: { brand: 'Visa', last4: '4242', expMonth: 8, expYear: 2027, number: '4242424242424242', cvc: '123' }
+    },
+    lines: [
+      {
+        itemId: 'item-3',
+        itemName: 'Grilled Sea Bass',
+        internalName: 'SEA-BASS',
+        sizeLabel: 'Regular',
+        modifierEntries: [
+          { groupId: 'g-sides', groupName: 'Side dish', optionId: 'o-rice', optionName: 'Butter rice', priceAdjustment: 3.5, quantity: 1, taxCategoryName: 'Food & Beverage', internalName: 'RICE' },
+          { groupId: 'g-sauce', groupName: 'Sauce', optionId: 'o-garlic', optionName: 'Garlic butter', priceAdjustment: 1.0, quantity: 2, taxCategoryName: 'Food & Beverage', internalName: '' }
+        ],
+        quantity: 1,
+        instructions: 'No salt on the fish',
+        unitPrice: 28.99
+      },
+      {
+        itemId: 'item-6',
+        itemName: 'Baklava Trio',
+        internalName: '',
+        sizeLabel: 'Large',
+        modifierEntries: [],
+        quantity: 2,
+        instructions: '',
+        unitPrice: 13.99
+      },
+      {
+        itemId: 'item-7',
+        itemName: 'House Lemonade',
+        internalName: 'LEMONADE',
+        sizeLabel: '',
+        modifierEntries: [
+          { groupId: 'g-ice', groupName: 'Ice', optionId: 'o-less', optionName: 'Less ice', priceAdjustment: 0, quantity: 1, taxCategoryName: 'Food & Beverage', internalName: '' }
+        ],
+        quantity: 3,
+        instructions: '',
+        unitPrice: 6.99
+      }
+    ],
+    totals: {
+      subtotal: 76.94,
+      tax: 6.16,
+      deliveryFee: 2.5,
+      deliveryFeeTax: 0.2,
+      total: 85.8,
+      minOrder: 15,
+      remainingToMinimum: 0
+    },
+    status: 'new',
+    statusChangedAt: '',
+    internalNote: ''
+  };
+}
+
+/* ---------------------------------------------------------- harness wire */
+
+document.getElementById('th-load-sample').addEventListener('click', function () {
+  localStorage.setItem('rom_test_record', JSON.stringify(buildSampleOrder()));
+  window.location.reload();
+});
+document.getElementById('th-clear').addEventListener('click', function () {
+  localStorage.removeItem('rom_test_record');
+  window.location.reload();
+});
+document.getElementById('th-reload').addEventListener('click', function () { window.location.reload(); });
+document.getElementById('th-dump').addEventListener('click', function () { window.tool._dump(); });
+document.getElementById('th-external').addEventListener('click', function () { window.tool._externalChange(); });
+document.getElementById('th-toggle-ro').addEventListener('click', function () { window.tool._setReadOnly(!document.getElementById('th-toggle-ro').classList.contains('on')); });
+document.getElementById('th-role').addEventListener('click', function () { window.tool._cycleRole(); });
+
+document.addEventListener('keydown', function (event) {
+  if (event.ctrlKey && event.shiftKey && event.key === 'R') { event.preventDefault(); window.tool._setReadOnly(true); }
+});
+
+/* QA shortcuts: ?sample=1&ro=1&role=viewer&warn=5&tz=...&currency=... */
+(function () {
+  var query = {};
+  window.location.search.replace(/^\?/, '').split('&').forEach(function (pair) {
+    if (!pair) return;
+    var bits = pair.split('=');
+    query[decodeURIComponent(bits[0])] = decodeURIComponent(bits[1] || '');
+  });
+  if (query.role) {
+    var order = ['admin', 'editor', 'viewer', 'none'];
+    var index = order.indexOf(query.role);
+    while (index > 0) { window.tool._cycleRole(); index--; }
+  }
+  if (query.ro === '1') window.tool._setReadOnly(true);
+
+  /* ?auto=apply  -> click the primary status button shortly after boot */
+  if (query.auto === 'apply') {
+    setTimeout(function () {
+      var btn = document.querySelector('#rom-actions .rom-btn-primary');
+      if (btn) btn.click();
+    }, 1500);
+  }
+  /* ?auto=note  -> type into the note and save */
+  if (query.auto === 'note') {
+    setTimeout(function () {
+      var area = document.getElementById('rom-note');
+      var save = document.getElementById('rom-note-save');
+      if (area) area.value = 'Rush order - customer waiting';
+      if (save) save.click();
+    }, 1500);
+  }
+
+  /* ?measure=1 -> report layout widths in the document title */
+  if (query.measure === '1') {
+    setTimeout(function () {
+      var doc = document.documentElement;
+      var ticket = document.querySelector('.rom-ticket');
+      document.title = 'VP=' + doc.clientWidth + ' SW=' + doc.scrollWidth +
+        ' TICKET=' + (ticket ? Math.round(ticket.getBoundingClientRect().width) : -1);
+    }, 1200);
+  }
+})();
+</script>
+
+<script src="RestaurantOrderManager.js"></script>
+</body>
+</html>

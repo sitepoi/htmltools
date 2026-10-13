@@ -1,0 +1,513 @@
+/* build 2026-10-10-1 */
+
+/* =====================================================================
+   RestaurantOrderManager - kitchen order ticket styles
+   Theme tokens fall back to the UniconHub palette, but every color is
+   read through a CSS custom property so a hosting application that
+   provides its own theme variables (--primary, --bg, --text, --border,
+   --radius, ...) re-skins the ticket automatically.
+   ===================================================================== */
+
+.rom {
+  --rom-accent: var(--primary, #b45309);
+  --rom-accent-ink: #ffffff;
+  --rom-paper: var(--surface, #ffffff);
+  --rom-paper-soft: var(--surface-2, #fbf8f3);
+  --rom-ink: var(--text, #1f2937);
+  --rom-ink-strong: var(--text-strong, #111827);
+  --rom-muted: var(--text-muted, #6b7280);
+  --rom-line: var(--border, #e5e7eb);
+  --rom-radius: var(--radius, 12px);
+  --rom-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --rom-new: #b45309;
+  --rom-new-bg: #fef3c7;
+  --rom-accepted: #1d4ed8;
+  --rom-accepted-bg: #dbeafe;
+  --rom-prep: #c2410c;
+  --rom-prep-bg: #ffedd5;
+  --rom-ready: #15803d;
+  --rom-ready-bg: #dcfce7;
+  --rom-done: #166534;
+  --rom-done-bg: #f0fdf4;
+  --rom-declined: #b91c1c;
+  --rom-declined-bg: #fee2e2;
+  --rom-cancelled: #475569;
+  --rom-cancelled-bg: #f1f5f9;
+
+  box-sizing: border-box;
+  color: var(--rom-ink);
+  font-family: var(--font, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 14px;
+}
+
+.rom *,
+.rom *::before,
+.rom *::after { box-sizing: border-box; }
+
+/* ---------------------------------------------------------------- ticket */
+
+.rom-ticket {
+  max-width: 1020px;
+  margin: 0 auto;
+  background: var(--rom-paper);
+  border: 1px solid var(--rom-line);
+  border-radius: var(--rom-radius);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ head */
+
+.rom-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px 14px;
+  border-bottom: 2px dashed var(--rom-line);
+  background: var(--rom-paper-soft);
+}
+
+.rom-head-main { min-width: 0; }
+
+.rom-head-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rom-order-number {
+  font-family: var(--rom-mono);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--rom-ink-strong);
+  word-break: break-word;
+}
+
+.rom-head-sub {
+  margin-top: 5px;
+  font-size: 12.5px;
+  color: var(--rom-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rom-sep { color: var(--rom-line); }
+.rom-waiting { font-family: var(--rom-mono); }
+
+.rom-channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rom-ink);
+  background: var(--rom-paper);
+  border: 1px solid var(--rom-line);
+}
+
+.rom-status {
+  padding: 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 2px solid currentColor;
+  background: transparent;
+}
+
+.rom-status.st-new { color: var(--rom-new); background: var(--rom-new-bg); }
+.rom-status.st-accepted { color: var(--rom-accepted); background: var(--rom-accepted-bg); }
+.rom-status.st-prep { color: var(--rom-prep); background: var(--rom-prep-bg); }
+.rom-status.st-ready { color: var(--rom-ready); background: var(--rom-ready-bg); }
+.rom-status.st-done { color: var(--rom-done); background: var(--rom-done-bg); }
+.rom-status.st-declined { color: var(--rom-declined); background: var(--rom-declined-bg); }
+.rom-status.st-cancelled { color: var(--rom-cancelled); background: var(--rom-cancelled-bg); }
+
+/* --------------------------------------------------------------- banners */
+
+.rom-warning {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 18px 0;
+  padding: 10px 14px;
+  background: var(--rom-new-bg);
+  border: 1px solid var(--rom-new);
+  border-left-width: 4px;
+  border-radius: 8px;
+  color: #7c2d12;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rom-warning-icon { font-size: 16px; flex: 0 0 auto; }
+
+.rom-readonly {
+  margin: 12px 18px 0;
+  padding: 8px 14px;
+  background: var(--rom-paper-soft);
+  border: 1px solid var(--rom-line);
+  border-radius: 8px;
+  color: var(--rom-muted);
+  font-size: 12.5px;
+}
+
+.rom-empty {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--rom-muted);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------------------------ body */
+
+.rom-body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+}
+
+.rom-col { padding: 16px 18px; }
+.rom-col-side { border-right: 2px dashed var(--rom-line); background: var(--rom-paper); }
+.rom-col-main { min-width: 0; }
+
+.rom-block + .rom-block { margin-top: 18px; }
+
+.rom-block-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rom-muted);
+}
+
+.rom-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.rom-row-block { align-items: flex-start; }
+
+.rom-k {
+  color: var(--rom-muted);
+  flex: 0 0 auto;
+  font-size: 12.5px;
+}
+
+.rom-v {
+  text-align: right;
+  font-weight: 600;
+  color: var(--rom-ink-strong);
+  word-break: break-word;
+}
+
+.rom-row-block .rom-v { text-align: right; }
+
+.rom-v.warn { color: var(--rom-new); }
+
+.rom-addr { font-weight: 500; line-height: 1.45; }
+
+.rom-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--rom-accent);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.rom-link:hover { text-decoration: underline solid; }
+
+.rom-empty-inline {
+  padding: 12px;
+  color: var(--rom-muted);
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed var(--rom-line);
+  border-radius: 8px;
+}
+
+/* ----------------------------------------------------------------- lines */
+
+.rom-lines { border-top: 1px dashed var(--rom-line); }
+
+.rom-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--rom-line);
+}
+
+.rom-line-main { min-width: 0; flex: 1 1 auto; }
+
+.rom-line-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rom-qty {
+  font-family: var(--rom-mono);
+  font-weight: 800;
+  color: var(--rom-accent);
+  font-size: 14px;
+}
+
+.rom-item { font-weight: 700; color: var(--rom-ink-strong); }
+
+.rom-size {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rom-muted);
+  border: 1px solid var(--rom-line);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.rom-line-internal {
+  font-size: 11.5px;
+  color: var(--rom-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.rom-mods {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.rom-mods li {
+  font-size: 12.5px;
+  color: var(--rom-ink);
+  padding: 1px 0;
+}
+
+.rom-mod-qty { font-family: var(--rom-mono); font-weight: 700; color: var(--rom-muted); }
+.rom-mod-price { font-family: var(--rom-mono); font-weight: 700; color: var(--rom-accent); }
+.rom-mod-group { color: var(--rom-muted); font-size: 11.5px; }
+
+.rom-instr {
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #7c2d12;
+  background: var(--rom-new-bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+  display: inline-block;
+}
+
+.rom-line-price {
+  flex: 0 0 auto;
+  text-align: right;
+  font-family: var(--rom-mono);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 86px;
+}
+
+.rom-unit { font-size: 12px; color: var(--rom-muted); }
+.rom-unit-note { font-size: 11.5px; color: var(--rom-accent); }
+.rom-line-total { font-size: 15px; font-weight: 800; color: var(--rom-ink-strong); }
+
+/* ---------------------------------------------------------------- totals */
+
+.rom-totals {
+  background: var(--rom-paper-soft);
+  border: 1px solid var(--rom-line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.rom-totals-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rom-muted);
+  margin-bottom: 8px;
+}
+
+.rom-total-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding: 2px 0;
+  color: var(--rom-ink);
+}
+
+.rom-total-row span:last-child { font-family: var(--rom-mono); font-weight: 600; }
+
+.rom-total-grand {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 9px;
+  border-top: 2px solid var(--rom-ink-strong);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--rom-ink-strong);
+}
+
+.rom-total-grand span:last-child { font-family: var(--rom-mono); }
+
+/* ------------------------------------------------------------------ note */
+
+.rom-note {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--rom-ink);
+  background: var(--rom-paper);
+  border: 1px solid var(--rom-line);
+  border-radius: 8px;
+  min-height: 66px;
+}
+
+.rom-note:focus { outline: 2px solid var(--rom-accent); outline-offset: 1px; }
+.rom-note:disabled { background: var(--rom-paper-soft); color: var(--rom-muted); }
+
+.rom-note-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.rom-note-status { font-size: 12px; color: var(--rom-ready); font-weight: 600; }
+
+/* --------------------------------------------------------------- actions */
+
+.rom-actions {
+  border-top: 2px dashed var(--rom-line);
+  padding: 14px 18px;
+  background: var(--rom-paper-soft);
+}
+
+.rom-actions-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.rom-actions-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rom-muted);
+}
+
+.rom-select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 10px;
+  border: 1px solid var(--rom-line);
+  border-radius: 8px;
+  background: var(--rom-paper);
+  color: var(--rom-ink);
+}
+
+.rom-actions-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.rom-btn {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+
+.rom-btn:hover { filter: brightness(0.95); }
+.rom-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.rom-btn-primary { background: var(--rom-ready); color: #ffffff; }
+.rom-btn-danger { background: var(--rom-declined); color: #ffffff; }
+.rom-btn-ghost {
+  background: var(--rom-paper);
+  color: var(--rom-ink);
+  border-color: var(--rom-line);
+}
+.rom-btn-small { font-size: 12.5px; padding: 6px 12px; }
+
+.rom-actions-note { font-size: 13px; color: var(--rom-muted); }
+
+.rom-armed {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--rom-declined);
+}
+
+/* ------------------------------------------------------------------ foot */
+
+.rom-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 18px 10px;
+  border-top: 1px solid var(--rom-line);
+}
+
+.rom-build {
+  font-family: var(--rom-mono);
+  font-size: 10.5px;
+  color: var(--rom-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ----------------------------------------------------------- responsive */
+
+@media (max-width: 820px) {
+  .rom { padding: 8px; }
+  .rom-body { grid-template-columns: 1fr; }
+  .rom-col-side { border-right: none; border-bottom: 2px dashed var(--rom-line); }
+  .rom-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .rom-status { align-self: flex-start; }
+  .rom-order-number { font-size: 19px; }
+}
+
+@media print {
+  .rom { padding: 0; }
+  .rom-ticket { box-shadow: none; border: none; }
+  .rom-actions { display: none; }
+}
