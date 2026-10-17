@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Türkiye Cumhuriyeti Devlet Başkanları - Dönemsel Olgusal İnceleme</title>
+<style>
+  :root {
+    --ink: #1a2433;
+    --muted: #5a6675;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --ok: #2f855a;
+    --ok-soft: #ecf7f0;
+    --warn: #b7791f;
+    --warn-soft: #fdf6ea;
+    --danger: #b03a2e;
+    --danger-soft: #fbeceb;
+    --line: #d8dee6;
+    --paper: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #eef1f5;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 900px;
+    margin: 24px auto;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(20, 35, 55, 0.08);
+    padding: 56px 64px 64px;
+  }
+
+  /* ---------- Header ---------- */
+  .doc-header {
+    text-align: center;
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 22px;
+    margin-bottom: 24px;
+  }
+  .org-name {
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title {
+    font-size: 29px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--ink);
+  }
+  .doc-subtitle {
+    font-size: 15.5px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .doc-meta {
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .doc-meta span { margin: 0 8px; }
+
+  /* ---------- Table of contents ---------- */
+  .toc {
+    background: #f5f8fb;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 22px;
+    margin-bottom: 30px;
+  }
+  .toc-title {
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .toc ol {
+    list-style: none;
+    columns: 2;
+    column-gap: 36px;
+    margin: 0;
+  }
+  .toc li {
+    font-size: 12.5px;
+    margin-bottom: 5px;
+    break-inside: avoid;
+  }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  .toc-num {
+    display: inline-block;
+    min-width: 22px;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ---------- Sections ---------- */
+  section { margin-bottom: 28px; }
+
+  h2 {
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    margin-top: 34px;
+  }
+  h2::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  h3 {
+    font-size: 14.5px;
+    color: var(--ink);
+    margin: 18px 0 6px;
+  }
+  h4 {
+    font-size: 13px;
+    color: var(--ink);
+    margin: 14px 0 4px;
+  }
+
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  ul, ol { margin: 0 0 12px 22px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  li strong { color: var(--ink); }
+
+  .doc-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+
+  /* ---------- Callout boxes ---------- */
+  .box {
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+  .box-info { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .box-ok { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+  .box-warn { background: var(--warn-soft); border-left: 4px solid var(--warn); }
+  .box-danger { background: var(--danger-soft); border-left: 4px solid var(--danger); }
+  .box strong { color: var(--ink); }
+  .box p:last-child { margin-bottom: 0; }
+
+  /* ---------- KPI cards ---------- */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 14px 0 18px;
+  }
+  .kpi {
+    background: #f5f8fb;
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .kpi-value {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+  .kpi-label {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ---------- Tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 10px 0 16px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.8px;
+  }
+  th {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    vertical-align: bottom;
+  }
+  td {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+  td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tbody tr:nth-child(even) td { background: #fafcfd; }
+  tr.total td { background: #f5f8fb; font-weight: 700; }
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .pill-ok { background: var(--ok-soft); color: var(--ok); }
+  .pill-warn { background: var(--warn-soft); color: var(--warn); }
+  .pill-danger { background: var(--danger-soft); color: var(--danger); }
+  .pill-neutral { background: #eef1f5; color: var(--muted); }
+
+  /* ---------- Period cards ---------- */
+  .period {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin: 12px 0 16px;
+    break-inside: avoid;
+  }
+  .period-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .period-name { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .period-years { font-size: 12.5px; color: var(--muted); }
+  .period-office { font-size: 12px; color: var(--accent); font-weight: 600; margin-left: auto; }
+  .period-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 26px;
+  }
+  .period-grid h4 {
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    margin: 0 0 5px;
+  }
+  .period-grid ul { margin: 0 0 0 16px; }
+  .period-grid li { font-size: 12.5px; margin-bottom: 4px; }
+  .src { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+
+  /* ---------- Footer ---------- */
+  .doc-footer {
+    margin-top: 40px;
+    border-top: 1px dashed var(--line);
+    padding-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .doc-footer p { font-size: 12px; }
+
+  /* ---------- Print ---------- */
+  @page { size: A4; margin: 16mm 14mm; }
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      max-width: none;
+      padding: 0;
+    }
+    section, h2, h3, table, .box, .kpi, .period { break-inside: avoid; }
+    .doc-header { border-bottom-color: #000; }
+    h2 { color: #000; }
+    .toc { display: none; }
+    a { color: var(--ink); text-decoration: none; }
+  }
+  @media (max-width: 720px) {
+    .page { padding: 28px 18px 40px; }
+    .toc ol { columns: 1; }
+    .period-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="org-name">Olgusal İnceleme Raporu</div>
+    <div class="doc-title">Türkiye Cumhuriyeti Devlet Başkanları</div>
+    <div class="doc-subtitle">Dönemsel ve Kurumsal Bakış: Yetkiler, İdam Cezası Uygulamaları ve Belgelenmiş İnsan Hakları Olayları</div>
+    <div class="doc-meta">
+      Tarih: 15 Ekim 2026 <span>|</span> Sürüm: 1.0 <span>|</span> Kapsam: 1923 - günümüz
+    </div>
+  </header>
+
+  <p class="doc-note">
+    Bu belge, kamuya açık ve kaynaklarla doğrulanabilen bilgileri bir araya getiren tarafsız bir
+    derlemedir. Hiçbir kişiye öznel bir siyasi etiket, sıralama veya puan atamaz. Amaç, dönemlerin
+    anayasal yetkilerini, yasal çerçevesini, idam cezası uygulamalarını ve uluslararası kuruluşlarca
+    belgelenmiş insan hakları olaylarını kronolojik ve karşılaştırılabilir biçimde sunmaktır.
+  </p>
+
+  <nav class="toc">
+    <div class="toc-title">İçindekiler</div>
+    <ol>
+      <li><a href="#s1"><span class="toc-num">1.</span>Yöntem, Kapsam ve Veri Sınırları</a></li>
+      <li><a href="#s2"><span class="toc-num">2.</span>Anayasal Çerçeve ve Yetki Dönüşümü</a></li>
+      <li><a href="#s3"><span class="toc-num">3.</span>Devlet Başkanları Kronolojisi</a></li>
+      <li><a href="#s4"><span class="toc-num">4.</span>İdam Cezası ve İnfazlar - Dönemsel Tablo</a></li>
+      <li><a href="#s5"><span class="toc-num">5.</span>Dönemlere Göre Belgelenmiş İnsan Hakları Olayları</a></li>
+      <li><a href="#s6"><span class="toc-num">6.</span>Objektif Kurumsal Göstergeler</a></li>
+      <li><a href="#s7"><span class="toc-num">7.</span>Kaynaklar ve Veri Sınırları</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============================================================ -->
+  <section id="s1">
+    <h2>1. Yöntem, Kapsam ve Veri Sınırları</h2>
+
+    <p>
+      Bu rapor, Türkiye Cumhuriyeti'nin 1923'ten günümüze görev yapmış devlet başkanlarını ve
+      dönemlerini <strong>olgu temelli</strong> olarak ele alır. Kişilere yönelik öznel bir
+      "rejim tipi" veya "skor" değerlendirmesi bilinçli olarak yapılmamıştır. Bunun yerine,
+      üç ölçülebilir/doğrulanabilir eksene odaklanılmıştır:
+    </p>
+    <ol>
+      <li><strong>Anayasal yetki çerçevesi:</strong> ilgili anayasanın devlet başkanına tanıdığı
+        yetkiler ve bunların zaman içindeki değişimi.</li>
+      <li><strong>İdam cezası uygulamaları:</strong> yasal durum ve belgelenmiş infazlar.</li>
+      <li><strong>Belgelenmiş insan hakları olayları:</strong> uluslararası örgütler, mahkeme
+        kararları ve resmi kaynaklarca kayda geçirilmiş tarihsel olaylar.</li>
+    </ol>
+
+    <div class="box box-info">
+      <strong>Önemli not - rapor ne yapar, ne yapmaz:</strong>
+      <p>
+        Rapor tarihsel olayları ve kurumsal verileri aktarır. Bunları bir kişinin niyetine, ahlaki
+        değerlendirmesine veya siyasi tercihine bağlamaz. Aynı dönemde birden çok aktör (hükümetler,
+        parlamento, ordu, yargı) rol oynamıştır; bu nedenle olaylar "dönem" başlıkları altında,
+        ilgili devlet başkanının görev aralığı referans alınarak listelenmiştir. Bu, olayın yalnızca
+        o kişiye atfedildiği anlamına gelmez.
+      </p>
+    </div>
+
+    <h3>Veri sınırları</h3>
+    <ul>
+      <li><strong>İnfaz sayıları:</strong> Cumhuriyet dönemi infazlarına ilişkin tam ve dönem dönem
+        resmi istatistikler tek bir kamuya açık kaynakta toplu olarak yayımlanmamıştır. Kaynaklarda
+        en sık geçen toplam, 1920-1984 arası için <strong>yaklaşık 588</strong> infazdır; bazı
+        kaynaklar 589 ve üzeri rakam verir. Bu raporda kesinlik iddiası yerine "belgelenmiş / yaygın
+        olarak atıfta bulunulan" ifadesi kullanılmıştır.</li>
+      <li><strong>İnsan hakları olayları:</strong> Yalnızca uluslararası örgüt (Amnesty International,
+        Human Rights Watch, Avrupa Konseyi, Avrupa İnsan Hakları Mahkemesi - AİHM) raporlarında veya
+        resmi/akademik kayıtlarda belgelenmiş olaylara yer verilmiştir.</li>
+      <li><strong>Karşılaştırmalı ve tarihsel bağlam:</strong> Dönemler farklı anayasal rejimlere
+        (tek partili dönem, çok partili dönem, askeri ara rejimler, cumhurbaşkanlığı sistemi) denk
+        geldiği için doğrudan "eşit koşullarda" karşılaştırma sınırlıdır.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s2">
+    <h2>2. Anayasal Çerçeve ve Yetki Dönüşümü</h2>
+
+    <p>
+      Devlet başkanının yetkileri, yürürlükteki anayasaya göre dönemden döneme belirgin biçimde
+      değişmiştir. Aşağıdaki tablo, hangi dönemin hangi anayasal düzene denk geldiğini ve devlet
+      başkanlığının konumunu özetler.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Anayasal düzen</th>
+            <th>Yürürlük</th>
+            <th>Devlet başkanının konumu</th>
+            <th>Belirgin özellik</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1924 Anayasası</td>
+            <td>1924 - 1961</td>
+            <td>TBMM tarafından seçilen cumhurbaşkanı; yürütme başbakan ve bakanlar kurulunda</td>
+            <td>Tek partili dönem (1946'ya kadar), sonrasında çok partili hayat</td>
+          </tr>
+          <tr>
+            <td>1961 Anayasası</td>
+            <td>1961 - 1982</td>
+            <td>Güçlendirilmiş temel hak ve özgürlükler; cumhurbaşkanının görece sembolik-uzlaştırıcı rolü</td>
+            <td>Çift meclis (Millet Meclisi + Cumhuriyet Senatosu), Anayasa Mahkemesi</td>
+          </tr>
+          <tr>
+            <td>1982 Anayasası (asıl metin)</td>
+            <td>1982 - 2017</td>
+            <td>Yetkileri genişletilmiş cumhurbaşkanı; yürütme yine başbakanda</td>
+            <td>Askeri yönetim sonrası düzen; zamanla reformlarla değişti</td>
+          </tr>
+          <tr>
+            <td>2017 değişiklikleri</td>
+            <td>2018 - günümüz</td>
+            <td>Cumhurbaşkanlığı sistemi: yürütme doğrudan cumhurbaşkanında, başbakanlık makamı kaldırıldı</td>
+            <td>Doğrudan halk tarafından seçilen yürütme başkanı modeli</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="box box-warn">
+      <strong>Yorum sınırı:</strong> Geniş yetkiler tek başına bir "rejim tipi" göstergesi değildir.
+      Yetkilerin kullanımı, denge-denetleme mekanizmaları (yasama, yargı, seçim, basın) ile birlikte
+      değerlendirilmelidir. Bu rapor yalnızca çerçeveyi tanımlar, değerlendirmeyi okuyucuya bırakır.
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s3">
+    <h2>3. Devlet Başkanları Kronolojisi</h2>
+
+    <p>
+      Aşağıdaki liste, 1923'ten itibaren görev yapan cumhurbaşkanlarını ve göreve geliş biçimini
+      gösterir. Göreve geliş sütunu, seçimin hangi mekanizmayla yapıldığını (TBMM seçimi veya
+      doğrudan halk oylaması) belirtir.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>İsim</th>
+            <th>Görev aralığı</th>
+            <th>Göreve geliş biçimi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Mustafa Kemal Atatürk</td><td>29 Ekim 1923 - 10 Kasım 1938</td><td>TBMM seçimi (yeniden seçilmeler dahil)</td></tr>
+          <tr><td class="num">2</td><td>İsmet İnönü</td><td>11 Kasım 1938 - 22 Mayıs 1950</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">3</td><td>Celâl Bayar</td><td>22 Mayıs 1950 - 27 Mayıs 1960</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">4</td><td>Cemal Gürsel</td><td>27 Mayıs 1960 - 28 Mart 1966</td><td>Askeri yönetim (Milli Birlik Komitesi) sonrası; 1961'de TBMM seçimi</td></tr>
+          <tr><td class="num">5</td><td>Cevdet Sunay</td><td>28 Mart 1966 - 28 Mart 1973</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">6</td><td>Fahri Korutürk</td><td>6 Nisan 1973 - 6 Nisan 1980</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">7</td><td>Kenan Evren</td><td>12 Eylül 1980 - 9 Kasım 1989</td><td>Askeri yönetim (Milli Güvenlik Konseyi); 1982 Anayasası halk oylaması sonrası</td></tr>
+          <tr><td class="num">8</td><td>Turgut Özal</td><td>9 Kasım 1989 - 17 Nisan 1993</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">9</td><td>Süleyman Demirel</td><td>16 Mayıs 1993 - 16 Mayıs 2000</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">10</td><td>Ahmet Necdet Sezer</td><td>16 Mayıs 2000 - 28 Ağustos 2007</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">11</td><td>Abdullah Gül</td><td>28 Ağustos 2007 - 28 Ağustos 2014</td><td>TBMM seçimi</td></tr>
+          <tr><td class="num">12</td><td>Recep Tayyip Erdoğan</td><td>28 Ağustos 2014 - günümüz</td><td>Doğrudan halk oylaması (2014, 2018, 2023)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src">Not: 1960 sonrası Ara Rejim döneminde (27 Mayıs 1960 - 1961) ve 1980 sonrası Milli Güvenlik Konseyi döneminde devlet başkanlığı, askeri yönetim tarafından yürütülmüştür. Görev aralıkları resmi kayıtlara dayanır.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s4">
+    <h2>4. İdam Cezası ve İnfazlar - Dönemsel Tablo</h2>
+
+    <p>
+      İdam cezası Türkiye'de uzun süre yasalarda yer aldı; 1984'ten sonra infaz edilmedi ve 2002-2004
+      yıllarında tamamen kaldırıldı. Aşağıdaki tablo, dönemsel olarak <strong>belgelenmiş veya yaygın
+      olarak atıfta bulunulan</strong> infaz bilgilerini özetler.
+    </p>
+
+    <div class="box box-warn">
+      <strong>Sayıların niteliği:</strong> Aşağıdaki değerler, resmi kayıtlar ve akademik
+      yayınlarda en sık geçen rakamlardır. Dönem bazlı kesin resmi dağılım kaynaklarda sınırlıdır.
+      Cumhuriyet dönemi toplamı için kaynaklarda geçen ortak değer <strong>yaklaşık 588</strong>
+      infazdır (1920-1984). Bu sayı 2016 sonrası dönemi kapsamaz.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dönem</th>
+            <th>Belgelenmiş durum</th>
+            <th>Öne çıkan kayıtlar / notlar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Atatürk / İnönü</strong><br>1923 - 1950</td>
+            <td>Cumhuriyet dönemi infazlarının büyük bölümü bu aralıkta gerçekleşti</td>
+            <td>İstiklal Mahkemeleri (1920-1927) uygulamaları; 1925 Şeyh Said olayı ve 1926 İzmir
+              Suikastı davaları sonrası infazlar. Dönemsel dağılım kaynaklarda sınırlıdır.</td>
+          </tr>
+          <tr>
+            <td><strong>Bayar</strong><br>1950 - 1960</td>
+            <td>İnfazlar sürdü; 1960 darbesi sonrası yargılamalar bu dönemin ardından geldi</td>
+            <td>27 Mayıs 1960 darbesi sonrası Yassıada (Demokrasi ve Özgürlük Adası) yargılamaları
+              başladı.</td>
+          </tr>
+          <tr>
+            <td><strong>Gürsel</strong><br>1960 - 1966</td>
+            <td><span class="pill pill-danger">15 infaz</span> (1961)</td>
+            <td>Yassıada davaları sonrası Eylül 1961'de infazlar; aralarında Başbakan Adnan Menderes,
+              Dışişleri Bakanı Fatin Rüştü Zorlu ve Maliye Bakanı Hasan Polatkan da vardır.</td>
+          </tr>
+          <tr>
+            <td><strong>Sunay</strong><br>1966 - 1973</td>
+            <td>İnfazlar gerçekleşti</td>
+            <td>12 Mart 1971 muhtırası sonrası askeri yönetim ve yargılamalar; 6 Mayıs 1972'de Deniz
+              Gezmiş, Yusuf Aslan ve Hüseyin İnan infaz edildi.</td>
+          </tr>
+          <tr>
+            <td><strong>Korutürk</strong><br>1973 - 1980</td>
+            <td>İnfazlar gerçekleşti; dönem siyasi şiddetle geçti</td>
+            <td>1970'lerin sonunda artan siyasi şiddet; 12 Eylül 1980 askeri darbesiyle dönem kapandı.</td>
+          </tr>
+          <tr>
+            <td><strong>Evren</strong><br>1980 - 1989</td>
+            <td><span class="pill pill-danger">50 infaz</span> (1980 - 1984)</td>
+            <td>12 Eylül 1980 darbesi sonrası geniş çaplı gözaltı ve yargılamalar; son idam infazı
+              <strong>25 Ekim 1984</strong> tarihinde gerçekleşti.</td>
+          </tr>
+          <tr>
+            <td><strong>Özal</strong><br>1989 - 1993</td>
+            <td><span class="pill pill-ok">İnfaz yok</span></td>
+            <td>1984'ten sonra fiili infaz moratoryumu; idam cezası yasalarda yürürlükte kaldı.</td>
+          </tr>
+          <tr>
+            <td><strong>Demirel</strong><br>1993 - 2000</td>
+            <td><span class="pill pill-ok">İnfaz yok</span></td>
+            <td>İdam cezası yasalarda mevcut ancak infaz edilmedi; 1999'da idam cezası verilen bir
+              dosya sonradan müebbet hapse çevrildi.</td>
+          </tr>
+          <tr>
+            <td><strong>Sezer</strong><br>2000 - 2007</td>
+            <td><span class="pill pill-ok">Kaldırıldı</span></td>
+            <td>2002'de barış zamanı suçlarda idam cezası kaldırıldı; 2004 anayasa değişikliğiyle
+              Anayasa'dan çıkarıldı.</td>
+          </tr>
+          <tr>
+            <td><strong>Gül</strong><br>2007 - 2014</td>
+            <td><span class="pill pill-ok">Yürürlükte yok</span></td>
+            <td>İdam cezası hukuken yürürlükte değildir.</td>
+          </tr>
+          <tr>
+            <td><strong>Erdoğan</strong><br>2014 - günümüz</td>
+            <td><span class="pill pill-ok">Yürürlükte yok</span></td>
+            <td>İdam cezasının yeniden getirilmesi zaman zaman tartışılmış ancak yürürlüğe
+              konmamıştır (2026 itibarıyla).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>İdam cezasının kronolojik kilometre taşları</h3>
+    <ul>
+      <li><strong>1920-1927:</strong> İstiklal Mahkemeleri dönemi; çok sayıda idam kararı ve infaz.</li>
+      <li><strong>1961:</strong> 27 Mayıs darbesi sonrası 15 infaz (Yassıada davaları).</li>
+      <li><strong>1972:</strong> 12 Mart döneminde Deniz Gezmiş ve arkadaşlarının infazı.</li>
+      <li><strong>1980-1984:</strong> 12 Eylül darbesi sonrası 50 infaz.</li>
+      <li><strong>25 Ekim 1984:</strong> Cumhuriyet tarihinin son idam infazı.</li>
+      <li><strong>2002:</strong> Barış zamanı suçlarda idam cezasının kaldırılması.</li>
+      <li><strong>2004:</strong> İdam cezasının Anayasa'dan tamamen çıkarılması.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s5">
+    <h2>5. Dönemlere Göre Belgelenmiş İnsan Hakları Olayları</h2>
+
+    <p>
+      Bu bölümde her dönem için, uluslararası örgütler ve mahkeme kararlarınca belgelenmiş başlıca
+      olaylar özetlenmiştir. Olaylar, ilgili devlet başkanının görev aralığı referans alınarak
+      gruplanmıştır; bu, olayın yalnızca o kişiye atfedildiği anlamına gelmez.
+    </p>
+
+    <!-- Atatürk -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Mustafa Kemal Atatürk</span>
+        <span class="period-years">1923 - 1938</span>
+        <span class="period-office">Tek partili dönem</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>Tek partili yönetim; muhalefet partileri (Terakkiperver Cumhuriyet Fırkası 1924, Serbest Cumhuriyet Fırkası 1930) kapatıldı.</li>
+            <li>Takrir-i Sükûn Kanunu (1925) ile basın ve muhalefet üzerinde sıkı denetim.</li>
+            <li>İstiklal Mahkemeleri (1920-1927) olağanüstü yargı organı olarak görev yaptı.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>1925 Şeyh Said olayı sonrası İstiklal Mahkemesi kararları ve infazlar.</li>
+            <li>1926 İzmir Suikastı davaları sonrası idam kararları ve infazlar.</li>
+            <li>Basın ve dernek faaliyetlerine yönelik dönemsel kısıtlamalar.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: resmi tarih kayıtları, TBMM tutanakları, akademik yayınlar.</p>
+    </div>
+
+    <!-- İnönü -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">İsmet İnönü</span>
+        <span class="period-years">1938 - 1950</span>
+        <span class="period-office">Tek partili dönem, ardından çok partili hayat</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>II. Dünya Savaşı yıllarında sıkıyönetim ve olağanüstü önlemler.</li>
+            <li>1946'da çok partili hayata geçiş; 1950'de iktidarın barışçıl devri.</li>
+            <li>Milli Korunma Kanunu (1940) ile ekonomik ve idari olağanüstü yetkiler.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Varlık Vergisi (1942): gayrimüslim azınlıklara orantısız biçimde uygulandığı belgelenmiştir.</li>
+            <li>Amele Taburları (çalışma taburları) uygulaması: azınlıklara yönelik zorunlu çalıştırma kayıtları.</li>
+            <li>Savaş dönemi basın ve toplanma kısıtlamaları.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: akademik tarih yayınları, azınlık hakları raporları.</p>
+    </div>
+
+    <!-- Bayar -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Celâl Bayar</span>
+        <span class="period-years">1950 - 1960</span>
+        <span class="period-office">Demokrat Parti dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>Çok partili dönemin ilk iktidar değişimi; muhalefetle sertleşen ilişkiler.</li>
+            <li>1956 Basın Kanunu ve muhalefete yönelik dönemsel kısıtlamalar.</li>
+            <li>27 Mayıs 1960 askeri darbesiyle dönem sona erdi.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>6-7 Eylül 1955 İstanbul olayları (pogrom): gayrimüslimlere ait işyeri ve evlere yönelik saldırılar; uluslararası kaynaklarda belgelenmiştir.</li>
+            <li>Muhalefet milletvekillerine ve basına yönelik tutuklamalar ve yargılamalar.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: tarih araştırmaları, dönemsel basın kayıtları, uluslararası raporlar.</p>
+    </div>
+
+    <!-- Gürsel -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Cemal Gürsel</span>
+        <span class="period-years">1960 - 1966</span>
+        <span class="period-office">Askeri yönetim sonrası</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>27 Mayıs 1960 darbesi; Milli Birlik Komitesi yönetimi.</li>
+            <li>1961 Anayasası: temel hak ve özgürlükleri genişleten liberal çerçeve.</li>
+            <li>Yassıada yargılamaları ve kararları.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Yassıada davaları kapsamında idam kararları ve 1961'de 15 infaz.</li>
+            <li>Eski iktidar mensuplarına yönelik yargılamalar ve ömür boyu hapis cezaları.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: resmi yargı kayıtları, tarih yayınları.</p>
+    </div>
+
+    <!-- Sunay -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Cevdet Sunay</span>
+        <span class="period-years">1966 - 1973</span>
+        <span class="period-office">1961 Anayasası dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>12 Mart 1971 askeri muhtırası; sivil hükümet istifa etti.</li>
+            <li>Sıkıyönetim ilanları ve özel yargı organları.</li>
+            <li>1971-1973 arası olağanüstü dönem uygulamaları.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Gözaltı, tutuklama ve işkence iddiaları; dönemde yaygın olduğu belgelenmiştir.</li>
+            <li>6 Mayıs 1972: Deniz Gezmiş, Yusuf Aslan ve Hüseyin İnan'ın infazı.</li>
+            <li>Öğrenci ve aydınlara yönelik yargılamalar ve cezalar.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: dönemsel insan hakları raporları, akademik yayınlar.</p>
+    </div>
+
+    <!-- Korutürk -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Fahri Korutürk</span>
+        <span class="period-years">1973 - 1980</span>
+        <span class="period-office">1961 Anayasası dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>1970'lerin sonunda artan siyasi şiddet ve istikrarsızlık.</li>
+            <li>Yaygın sıkıyönetim uygulamaları.</li>
+            <li>12 Eylül 1980 askeri darbesiyle dönem kapandı.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Sağ-sol çatışmaları; faili meçhul siyasi cinayetler ve toplumsal şiddet.</li>
+            <li>1977 1 Mayıs olayları (Taksim): ateş açılması sonucu ölümler.</li>
+            <li>1978 Maraş olayları: toplumsal çatışmada çok sayıda ölüm.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: tarih araştırmaları, dönemsel basın ve insan hakları kayıtları.</p>
+    </div>
+
+    <!-- Evren -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Kenan Evren</span>
+        <span class="period-years">1980 - 1989</span>
+        <span class="period-office">Askeri yönetim ve 1982 Anayasası</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>12 Eylül 1980 askeri darbesi; Milli Güvenlik Konseyi yönetimi (1980-1982).</li>
+            <li>1982 Anayasası halk oylamasıyla kabul edildi; Evren cumhurbaşkanı oldu.</li>
+            <li>Siyasi partiler kapatıldı; siyasetçilere yasaklar getirildi.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Yüz binlerce kişinin gözaltına alındığı ve yargılandığı belgelenmiştir.</li>
+            <li>1980-1984 arası 50 infaz; dönemde işkence iddiaları uluslararası raporlarda geniş yer buldu.</li>
+            <li>Kürtçe kullanımına yönelik yasal kısıtlamalar (1983 sonrası).</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: Amnesty International ve uluslararası raporlar, darbe dönemi yargılamaları.</p>
+    </div>
+
+    <!-- Özal -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Turgut Özal</span>
+        <span class="period-years">1989 - 1993</span>
+        <span class="period-office">1982 Anayasası dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>Ekonomik liberalleşme ve idari reform dönemi.</li>
+            <li>Güneydoğu'da çatışmanın tırmanması; olağanüstü hal uygulamaları.</li>
+            <li>1987'de Güneydoğu'da olağanüstü hal ilanı; uzun yıllar sürdü.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Köy boşaltmaları ve zorunlu göç iddiaları; uluslararası raporlarda belgelendi.</li>
+            <li>Güvenlik güçleriyle ilgili ağır insan hakları iddiaları; AİHM dosyalarının temelini oluşturdu.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: AİHM kararları, uluslararası insan hakları raporları.</p>
+    </div>
+
+    <!-- Demirel -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Süleyman Demirel</span>
+        <span class="period-years">1993 - 2000</span>
+        <span class="period-office">1982 Anayasası dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>Güneydoğu çatışmasının en yoğun yılları.</li>
+            <li>28 Şubat 1997: askeri kanadın hükümete müdahalesi olarak nitelendirilen süreç.</li>
+            <li>Olağanüstü hal uygulamaları 2002'ye kadar sürdü.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Faili meçhul cinayetler ve zorla kaybetme iddiaları; uluslararası raporlarda belgelendi.</li>
+            <li>AİHM'ye Türkiye aleyhine başvuruların belirgin biçimde artması.</li>
+            <li>1999'da yakalanan ve idam cezasına çarptırılan bir dosyanın sonradan müebbete çevrilmesi.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: AİHM ve uluslararası örgüt raporları, dönemsel kayıtlar.</p>
+    </div>
+
+    <!-- Sezer -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Ahmet Necdet Sezer</span>
+        <span class="period-years">2000 - 2007</span>
+        <span class="period-office">1982 Anayasası, reform dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>AB uyum süreci kapsamında geniş anayasa ve yasa reformları.</li>
+            <li>2001 anayasa değişiklikleri; 2002'de idam cezasının kaldırılması.</li>
+            <li>2002 ve 2004 reformlarıyla idam cezası tamamen kaldırıldı.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>Ölüm cezasının kaldırılması; insan hakları alanında kurumsal reformlar.</li>
+            <li>2007 e-muhtıra olarak anılan açıklama; sivil-asker gerilimi.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: resmi mevzuat değişiklikleri, uluslararası kuruluş ilerleme raporları.</p>
+    </div>
+
+    <!-- Gül -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Abdullah Gül</span>
+        <span class="period-years">2007 - 2014</span>
+        <span class="period-office">1982 Anayasası dönemi</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>2007'de cumhurbaşkanının ilk kez doğrudan halk oylaması tartışmaları ve anayasa değişikliği.</li>
+            <li>2010 anayasa değişikliği referandumu (yargı ve temel haklar alanında değişiklikler).</li>
+            <li>2013 Gezi Parkı olayları ve ardından gelen süreç.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>2013 Gezi Parkı gösterilerine yönelik polis müdahalesi; uluslararası örgütlerce eleştirildi.</li>
+            <li>2013 sonu yolsuzluk soruşturmaları ve yargı süreci tartışmaları.</li>
+            <li>Basın ve internet üzerindeki kısıtlamalara yönelik uluslararası eleştiriler.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: Amnesty International, Human Rights Watch, uluslararası basın özgürlüğü raporları.</p>
+    </div>
+
+    <!-- Erdoğan -->
+    <div class="period">
+      <div class="period-head">
+        <span class="period-name">Recep Tayyip Erdoğan</span>
+        <span class="period-years">2014 - günümüz</span>
+        <span class="period-office">Cumhurbaşkanlığı sistemi (2018 sonrası)</span>
+      </div>
+      <div class="period-grid">
+        <div>
+          <h4>Kurumsal / siyasi bağlam</h4>
+          <ul>
+            <li>2017 anayasa değişikliği referandumu; 2018'de yürütme yetkileri cumhurbaşkanına geçti.</li>
+            <li>15 Temmuz 2016 darbe girişimi sonrası ülke genelinde olağanüstü hal (OHAL; 2016-2018).</li>
+            <li>2015'ten itibaren Güneydoğu'da çatışmanın yeniden tırmanması.</li>
+          </ul>
+        </div>
+        <div>
+          <h4>Belgelenmiş olaylar</h4>
+          <ul>
+            <li>OHAL döneminde kitlesel ihraçlar ve tutuklamalar; yüzbinlerce kişinin etkilendiği uluslararası raporlarda belgelendi.</li>
+            <li>Basın, sivil toplum ve yargıya yönelik kısıtlamalar; uluslararası endekslerde belirgin düşüş.</li>
+            <li>AİHM'nin tutuklu gazeteci ve siyasetçilerle ilgili ihlal kararları (örneğin bireysel başvurular).</li>
+          </ul>
+        </div>
+      </div>
+      <p class="src">Kaynak ekseni: AİHM kararları, Avrupa Konseyi raporları, Amnesty International, Human Rights Watch, RSF.</p>
+    </div>
+
+    <div class="box box-info">
+      <strong>Karşılaştırma notu:</strong> Yukarıdaki olaylar farklı hukuki ve siyasi bağlamlarda
+      gerçekleşmiştir. Rapor, olayları tarihsel kayıt olarak aktarır; herhangi bir dönemi diğerinden
+      üstün ya da ağır gösterme amacı taşımaz.
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s6">
+    <h2>6. Objektif Kurumsal Göstergeler</h2>
+
+    <p>
+      Aşağıdaki tablolar, dönemler arası karşılaştırmayı kolaylaştıran ve kaynaklarla doğrulanabilen
+      kurumsal göstergeleri içerir. Bu göstergeler tek başına bir değerlendirme değildir.
+    </p>
+
+    <h3>6.1. Olağanüstü yönetim uygulamaları</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dönem</th>
+            <th>Olağanüstü uygulama</th>
+            <th>Yıl</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Atatürk</td><td>İstiklal Mahkemeleri, Takrir-i Sükûn</td><td>1920-1927</td></tr>
+          <tr><td>İnönü</td><td>Sıkıyönetim, Milli Korunma Kanunu</td><td>1940-1946</td></tr>
+          <tr><td>Gürsel</td><td>Askeri yönetim (Milli Birlik Komitesi)</td><td>1960-1961</td></tr>
+          <tr><td>Sunay</td><td>Muhtıra sonrası sıkıyönetim</td><td>1971-1973</td></tr>
+          <tr><td>Korutürk</td><td>Yaygın sıkıyönetim</td><td>1978-1980</td></tr>
+          <tr><td>Evren</td><td>Askeri yönetim (Milli Güvenlik Konseyi)</td><td>1980-1982</td></tr>
+          <tr><td>Özal / Demirel</td><td>Güneydoğu'da olağanüstü hal</td><td>1987-2002</td></tr>
+          <tr><td>Sezer</td><td>OHAL kaldırıldı, reform dönemi</td><td>2002 sonrası</td></tr>
+          <tr><td>Erdoğan</td><td>Ülke genelinde olağanüstü hal</td><td>2016-2018</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6.2. Basın özgürlüğü eğilimi (uluslararası endeksler)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dönem</th>
+            <th>Genel eğilim</th>
+            <th>Kaynak</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>2000-2007</td><td>Reform döneminde görece iyileşme tartışmaları</td><td>Sınır Tanımayan Gazeteciler (RSF), Freedom House</td></tr>
+          <tr><td>2007-2014</td><td>Basın ve internet kısıtlamalarına yönelik artan eleştiri</td><td>RSF, Freedom House, HRW</td></tr>
+          <tr><td>2014-günümüz</td><td>Endekslerde belirgin düşüş; gazeteci tutuklamaları</td><td>RSF, Freedom House, Avrupa Konseyi</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>6.3. Avrupa İnsan Hakları Mahkemesi (AİHM) yükü</h3>
+    <p>
+      Türkiye, Avrupa Konseyi üyesi ülkeler arasında AİHM'ye en çok başvuru yapılan ve en çok ihlal
+      kararı verilen devletlerden biri olmuştur. İhlal konuları dönem dönem adil yargılanma hakkı,
+      ifade özgürlüğü, yaşam hakkı ve kötü muamele yasağı başlıklarında yoğunlaşmıştır.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dönem</th>
+            <th>Belirgin ihlal başlıkları</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1990'lar</td><td>Yaşam hakkı, kötü muamele, ifade özgürlüğü, mülkiyet</td></tr>
+          <tr><td>2000'ler</td><td>Adil yargılanma, ifade özgürlüğü (Türkiye aleyhine en fazla karar verilen ülkeler arasında)</td></tr>
+          <tr><td>2010'lar-günümüz</td><td>Özgürlük ve güvenlik hakkı, ifade özgürlüğü, tutuklama koşulları</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="src">Kaynak ekseni: Avrupa Konseyi yıllık istatistikleri ve AİHM karar verileri.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="kpi-value">12</div>
+        <div class="kpi-label">Görev yapmış devlet başkanı (1923-günümüz)</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">4</div>
+        <div class="kpi-label">Farklı anayasal düzen</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">2004</div>
+        <div class="kpi-label">İdam cezasının Anayasa'dan çıkarıldığı yıl</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-value">1984</div>
+        <div class="kpi-label">Son idam infazı yılı</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section id="s7">
+    <h2>7. Kaynaklar ve Veri Sınırları</h2>
+
+    <h3>7.1. Kullanılan kaynak türleri</h3>
+    <ul>
+      <li><strong>Resmi kayıtlar:</strong> TBMM tutanakları, Resmî Gazete, anayasa metinleri, yargı kararları.</li>
+      <li><strong>Uluslararası kuruluşlar:</strong> Avrupa Konseyi (AİHM kararları ve istatistikleri),
+        Amnesty International yıllık raporları, Human Rights Watch raporları, Sınır Tanımayan
+        Gazeteciler (RSF) endeksleri, Freedom House değerlendirmeleri.</li>
+      <li><strong>Akademik yayınlar:</strong> tarih ve siyaset bilimi alanındaki hakemli çalışmalar.</li>
+    </ul>
+
+    <h3>7.2. Veri sınırları ve uyarılar</h3>
+    <ul>
+      <li><strong>İnfaz sayıları</strong> için tam resmi ve dönemsel dağılım tek kaynakta yoktur;
+        rapor, yaygın olarak atıfta bulunulan değerleri ve belgelenmiş kilometre taşlarını sunar.</li>
+      <li><strong>İnsan hakları olayları</strong> belgeye dayalıdır; ancak olaylar birden çok aktörün
+        dahil olduğu süreçlerdir ve tek bir kişiye indirgenemez.</li>
+      <li><strong>Tarihsel bağlam</strong> dönemler arası doğrudan karşılaştırmayı sınırlar; farklı
+        anayasal ve hukuki koşullar altında gerçekleşen olaylar eşit koşullarda değildir.</li>
+      <li><strong>Güncellik:</strong> 2026 itibarıyla derlenmiştir; güncel gelişmeler raporun
+        kapsamı dışında kalabilir.</li>
+    </ul>
+
+    <div class="box box-ok">
+      <strong>Sonuç ilkesi:</strong> Bu rapor, tarihsel ve kurumsal olguları şeffaf biçimde
+      sunmayı amaçlar. Okuyucuya hazır bir siyasi yargı, puan veya etiket verilmez; değerlendirme
+      tamamen okuyucunun kendi çıkarımına bırakılmıştır.
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    <p>
+      <strong>Kaynak notu:</strong> Bu belge, kamuya açık kaynaklardan derlenmiş olgusal bir
+      incelemedir. İçerdiği olay ve sayılar ilgili resmi kayıtlar ve uluslararası örgüt raporlarına
+      dayanır. Belgede hiçbir kişiye yönelik öznel siyasi değerlendirme, etiket veya sıralama
+      bulunmaz.
+    </p>
+    <p style="margin-top:6px;">
+      Sürüm 1.0 - 15 Ekim 2026 - Kapsam: 1923 - günümüz.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

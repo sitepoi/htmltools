@@ -1,0 +1,719 @@
+<!--
+  =========================================================================
+  JOIN - fragment for the academy website (join.html)
+  - Everything lives inside ONE parent <div class="fba-page fba-join">
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - The shortest possible sign up: parent name, email, student grade, subject,
+    preferred time, optional note (SSOT section 10, page 40)
+  - Platform form contract: <form data-gw-form>, hidden honeypot named
+    "website", [data-gw-form-status] live region, gw.forms.bind() guarded
+
+  CMS CONFIG NEEDED (checklist for the CMS author, see SSOT section 13):
+  - bind this form to a form-type-definition so sign ups are stored and the
+    notification reaches the programme inbox (info@futurebridgeacademy.ca)
+  - the thank-you behaviour is inline confirmation today; the separate thank-you
+    page is only phase 4, so do not wire a redirect yet
+  =========================================================================
+-->
+<div class="fba-page fba-join">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-join-hero">
+		<div class="fba-wrap">
+			<p class="fba-kicker">Join a free online lesson</p>
+			<h1 class="fba-join-title">Two minutes now,<br><span class="fba-join-hl">free lesson next</span></h1>
+			<p class="fba-join-lede">
+				Tell us your child's grade and the topic their class is on. We send the joining details for the next
+				lesson, and nothing else is expected of you afterwards.
+			</p>
+			<ul class="fba-pills">
+				<li class="fba-pill">Free</li>
+				<li class="fba-pill">No obligation</li>
+				<li class="fba-pill">Grades 4-12</li>
+				<li class="fba-pill">Mathematics now</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="fba-join-form-sec">
+		<div class="fba-wrap fba-join-grid">
+
+			<form class="fba-join-form" data-gw-form data-gw-form-type="free-lesson-signup">
+				<div class="fba-join-form-head">
+					<h2>Your child's free lesson</h2>
+					<p>Four quick fields. The note at the end is optional.</p>
+				</div>
+
+				<div class="fba-join-fields">
+					<label class="fba-join-field">
+						<span class="fba-join-label">Parent or guardian name <em>required</em></span>
+						<input type="text" name="parent_name" autocomplete="name" required>
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Email <em>required</em></span>
+						<input type="email" name="email" autocomplete="email" required>
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Student grade <em>required</em></span>
+						<select name="student_grade" required>
+							<option value="">Choose a grade</option>
+							<option value="4">Grade 4</option>
+							<option value="5">Grade 5</option>
+							<option value="6">Grade 6</option>
+							<option value="7">Grade 7</option>
+							<option value="8">Grade 8</option>
+							<option value="9">Grade 9</option>
+							<option value="10">Grade 10</option>
+							<option value="11">Grade 11</option>
+							<option value="12">Grade 12</option>
+							<option value="other">Other or not sure</option>
+						</select>
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Subject <em>required</em></span>
+						<select name="subject" required>
+							<option value="mathematics">Mathematics - running now</option>
+							<option value="english">English and writing - opens with the centre</option>
+							<option value="both">Both</option>
+							<option value="advise">Help me choose</option>
+						</select>
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Preferred time</span>
+						<input type="text" name="preferred_time" placeholder="For example: weekday evenings, weekend mornings">
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Topic the class is on now <em>optional</em></span>
+						<input type="text" name="topic" placeholder="For example: linear equations, fractions">
+					</label>
+				</div>
+
+				<label class="fba-join-field fba-join-field-wide">
+					<span class="fba-join-label">Anything else? <em>optional</em></span>
+					<textarea name="note" rows="3"></textarea>
+				</label>
+
+				<!-- honeypot: hidden from view and from screen readers, never a real field -->
+				<input class="fba-join-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+					aria-hidden="true">
+
+				<div class="fba-join-actions">
+					<button class="fba-join-submit" type="submit">Join a free online lesson</button>
+					<div class="fba-join-status" data-gw-form-status role="status"></div>
+				</div>
+
+				<p class="fba-join-consent">We use these details only to arrange lessons and to tell you about the next
+					one. We do not pass them to anyone else, and you can ask us to delete them at any time.</p>
+			</form>
+
+			<aside class="fba-join-aside">
+				<div class="fba-join-card fba-reveal">
+					<p class="fba-kicker">What happens next</p>
+					<h3>Three steps, none of them a sales call</h3>
+					<ol class="fba-join-steps">
+						<li><span>01</span>You get the joining details for the next lesson.</li>
+						<li><span>02</span>Your child joins the lesson, and you can sit in.</li>
+						<li><span>03</span>Afterwards you decide whether to come back. No obligation either way.</li>
+					</ol>
+				</div>
+
+				<div class="fba-join-card fba-join-card-light fba-reveal">
+					<p class="fba-kicker">What is free</p>
+					<ul class="fba-ticks">
+						<li>Weekly online maths lessons</li>
+						<li>The monthly mock exam, in person</li>
+						<li>Scholarship and parent seminars</li>
+						<li>The community and the mentor network</li>
+					</ul>
+					<p class="fba-join-note">We never publish prices, and where something carries an optional fee we
+						explain it before you agree to anything.</p>
+				</div>
+
+				<div class="fba-join-card fba-join-card-quiet fba-reveal">
+					<p class="fba-kicker">Rather ask first?</p>
+					<p>Send a question instead of a sign up, and we answer it honestly - including when we are not the
+						right fit.</p>
+					<a class="fba-join-card-link" href="/contact">Ask a question &#8594;</a>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ========================== BEFORE YOU SEND ======================= -->
+	<section class="fba-join-before">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Before you send it</p>
+				<h2>What we will and will not do with your details</h2>
+			</div>
+			<ul class="fba-points">
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#128231;</span>
+					<div>
+						<strong>Only lesson contact</strong>
+						<p>We use your email to send the lesson details and the schedule. Nothing else, and no list
+							sold or shared.</p>
+					</div>
+				</li>
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#128274;</span>
+					<div>
+						<strong>Only what we need</strong>
+						<p>A parent's name, an email, a grade and a subject. No student surnames, no school names, no
+							documents.</p>
+					</div>
+				</li>
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#9995;</span>
+					<div>
+						<strong>Leaving is easy</strong>
+						<p>One message and you are off the list, with everything deleted. No exit interview, no
+							reminder sequence.</p>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</section>
+
+	<!-- ============================== CTA =============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Want to see the lesson first?</h2>
+			<p>Read what a lesson covers and what your child needs, or check when the next mock exam runs.</p>
+			<div class="fba-actions fba-actions-center">
+				<a class="fba-btn fba-btn-primary" href="/free-lessons">What a lesson looks like</a>
+				<a class="fba-btn fba-btn-ghost" href="/mock-exams">The monthly mock exam</a>
+			</div>
+			<p class="fba-cta-links">
+				<span>Read next:</span>
+				<a href="/faq">Questions and answers</a>
+				<a href="/volunteer">Volunteer with us</a>
+				<a href="/about-us">About us</a>
+				<a href="/contact">Contact us</a>
+			</p>
+		</div>
+	</section>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* Shared design system lives centrally in header-footer/header.html.
+		   Everything below is layout for this page only, scoped to .fba-join. */
+
+		/* ---------- hero ---------- */
+		.fba-join .fba-join-hero {
+			position: relative;
+			padding: 62px 0 54px;
+			background:
+				radial-gradient(circle at 14% 14%, rgba(255, 210, 63, 0.3) 0%, transparent 55%),
+				radial-gradient(circle at 88% 84%, rgba(255, 107, 53, 0.16) 0%, transparent 55%),
+				linear-gradient(140deg, #FFF9F5 0%, #F2F8FF 58%, #F7F9FC 100%);
+			overflow: hidden;
+		}
+
+		.fba-join .fba-join-title {
+			font-size: clamp(2rem, 4.4vw, 3.05rem);
+			max-width: 720px;
+		}
+
+		.fba-join .fba-join-hl {
+			background: linear-gradient(135deg, var(--fba-primary), var(--fba-accent));
+			-webkit-background-clip: text;
+			background-clip: text;
+			-webkit-text-fill-color: transparent;
+		}
+
+		.fba-join .fba-join-lede {
+			margin-top: 18px;
+			font-size: 1.1rem;
+			color: var(--fba-muted);
+			max-width: 640px;
+		}
+
+		.fba-join .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 24px;
+		}
+
+		/* ---------- form ---------- */
+		.fba-join .fba-join-form-sec {
+			padding: 68px 0 72px;
+			background: #fff;
+		}
+
+		.fba-join .fba-join-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+			gap: 42px;
+			align-items: start;
+		}
+
+		.fba-join .fba-join-form {
+			background: linear-gradient(180deg, #fff, var(--fba-light));
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 32px 32px 26px;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-join .fba-join-form-head h2 {
+			font-size: clamp(1.5rem, 3vw, 2rem);
+			margin-bottom: 6px;
+		}
+
+		.fba-join .fba-join-form-head p {
+			color: var(--fba-muted);
+			font-size: 0.96rem;
+			margin-bottom: 22px;
+		}
+
+		.fba-join .fba-join-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 18px;
+		}
+
+		.fba-join .fba-join-field {
+			display: grid;
+			gap: 7px;
+		}
+
+		.fba-join .fba-join-field-wide {
+			margin-top: 18px;
+		}
+
+		.fba-join .fba-join-label {
+			font-size: 0.86rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-join .fba-join-label em {
+			font-style: normal;
+			font-weight: 600;
+			color: var(--fba-muted);
+			font-size: 0.78rem;
+		}
+
+		.fba-join .fba-join-field input,
+		.fba-join .fba-join-field select,
+		.fba-join .fba-join-field textarea {
+			font-family: inherit;
+			font-size: 0.97rem;
+			color: var(--fba-text);
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: 12px;
+			padding: 12px 14px;
+			width: 100%;
+			transition: border-color 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.fba-join .fba-join-field textarea {
+			resize: vertical;
+			min-height: 96px;
+		}
+
+		.fba-join .fba-join-field input:focus,
+		.fba-join .fba-join-field select:focus,
+		.fba-join .fba-join-field textarea:focus {
+			outline: none;
+			border-color: var(--fba-secondary);
+			box-shadow: 0 0 0 3px rgba(0, 78, 137, 0.14);
+		}
+
+		.fba-join .fba-join-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.fba-join .fba-join-actions {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 16px;
+			margin-top: 22px;
+		}
+
+		.fba-join .fba-join-submit {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 1rem;
+			font-weight: 700;
+			color: #fff;
+			background: var(--fba-primary);
+			border: 2px solid transparent;
+			border-radius: 999px;
+			padding: 14px 30px;
+			box-shadow: 0 10px 26px rgba(255, 107, 53, 0.3);
+			transition: background 0.25s ease, transform 0.25s ease;
+		}
+
+		.fba-join .fba-join-submit:hover {
+			background: var(--fba-primary-dark);
+			transform: translateY(-2px);
+		}
+
+		.fba-join .fba-join-submit:focus-visible {
+			outline: 3px solid rgba(0, 78, 137, 0.35);
+			outline-offset: 2px;
+		}
+
+		.fba-join .fba-join-status {
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--fba-secondary);
+			min-height: 20px;
+		}
+
+		.fba-join .fba-join-consent {
+			margin-top: 16px;
+			font-size: 0.84rem;
+			color: var(--fba-muted);
+		}
+
+		/* ---------- aside ---------- */
+		.fba-join .fba-join-aside {
+			display: grid;
+			gap: 18px;
+		}
+
+		.fba-join .fba-join-card {
+			background: linear-gradient(150deg, var(--fba-secondary) 0%, var(--fba-secondary-deep) 100%);
+			border-radius: var(--fba-radius);
+			padding: 26px 26px 22px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-join .fba-join-card h3 {
+			color: #fff;
+			font-size: 1.18rem;
+			margin-bottom: 12px;
+		}
+
+		.fba-join .fba-join-card .fba-kicker {
+			color: var(--fba-accent);
+		}
+
+		.fba-join .fba-join-card .fba-kicker::before {
+			background: var(--fba-accent);
+		}
+
+		.fba-join .fba-join-steps {
+			display: grid;
+			gap: 12px;
+		}
+
+		.fba-join .fba-join-steps li {
+			display: flex;
+			gap: 12px;
+			align-items: baseline;
+			font-size: 0.94rem;
+			color: rgba(255, 255, 255, 0.86);
+		}
+
+		.fba-join .fba-join-steps span {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.82rem;
+			font-weight: 800;
+			color: var(--fba-accent);
+			min-width: 24px;
+		}
+
+		.fba-join .fba-join-card-light {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+		}
+
+		.fba-join .fba-join-card-light h3,
+		.fba-join .fba-join-card-light .fba-kicker {
+			color: var(--fba-secondary);
+		}
+
+		.fba-join .fba-join-card-light .fba-kicker::before {
+			background: var(--fba-primary);
+		}
+
+		.fba-join .fba-join-note {
+			margin-top: 18px;
+			padding-top: 14px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.86rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-join .fba-join-card-quiet {
+			background: #fff;
+			border: 1px dashed var(--fba-line);
+			box-shadow: none;
+		}
+
+		.fba-join .fba-join-card-quiet p {
+			color: var(--fba-muted);
+			font-size: 0.94rem;
+		}
+
+		.fba-join .fba-join-card-quiet .fba-kicker {
+			color: var(--fba-primary);
+		}
+
+		.fba-join .fba-join-card-quiet .fba-kicker::before {
+			background: var(--fba-primary);
+		}
+
+		.fba-join .fba-join-card-link {
+			display: inline-block;
+			margin-top: 12px;
+			font-size: 0.93rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		/* ---------- before you send ---------- */
+		.fba-join .fba-join-before {
+			padding: 68px 0 74px;
+			background: var(--fba-light);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.fba-join .fba-join-grid {
+				grid-template-columns: 1fr;
+				gap: 30px;
+			}
+
+			.fba-join .fba-join-aside {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-join .fba-join-hero {
+				padding: 48px 0 44px;
+			}
+
+			.fba-join .fba-join-form-sec,
+			.fba-join .fba-join-before {
+				padding: 50px 0 48px;
+			}
+
+			.fba-join .fba-join-form {
+				padding: 24px 20px 22px;
+			}
+
+			.fba-join .fba-join-fields,
+			.fba-join .fba-join-aside {
+				grid-template-columns: 1fr;
+			}
+
+			.fba-join .fba-join-submit {
+				width: 100%;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-join');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!root || root.getAttribute('data-fba-join-ready') === '1') { return; }
+			root.setAttribute('data-fba-join-ready', '1');
+			root.classList.add('fba-js');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (err) { reduceMotion = false; }
+
+			/* ---------------------- forms ---------------------- */
+			/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.md at the workspace
+			   root: one POST of JSON to the CMS, then read the status and show a message. There is
+			   no second call and no read access.
+			   Set formApiEndpoint to the CMS host, for example
+			   'https://cms.example.com/api/public/forms/submit'. A form may override it with
+			   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+			   submission belongs to one specific application (leave it empty to use the CMS
+			   default, form-submission-uniconbaseapps). While the endpoint is still the
+			   placeholder the page falls back to the CMS platform bind, and in a local preview it
+			   says the service is not connected instead of losing what the visitor typed. */
+			var formApiEndpoint = 'https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'registration-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this entry. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@futurebridgeacademy.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@futurebridgeacademy.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (err) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your details are with the programme team, and we reply to every one.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(root);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(root.querySelectorAll('.fba-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

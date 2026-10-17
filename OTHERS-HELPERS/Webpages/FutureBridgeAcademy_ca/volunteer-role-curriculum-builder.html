@@ -1,0 +1,135 @@
+<!-- =============================================================================
+     Volunteer role page: Curriculum builder
+     CMS fragment (route /volunteer-role-curriculum-builder). No doctype, html, head,
+     body or chrome tags; one root div, one h1, no .html links, no libraries.
+     Owner-confirmed facts only: atomic tasks from our task list, completely self
+     paced, from 1 hour a week. The .fba-role CSS lives in the central stylesheet.
+     ============================================================================= -->
+<div class="fba-page fba-role">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-role-hero">
+		<div class="fba-wrap">
+			<p class="fba-kicker">Volunteer role</p>
+			<h1>Curriculum builder</h1>
+			<p class="fba-role-lede">
+				Build the material one atomic task at a time: take a task from our list, finish it properly, mark it
+				done and take the next. How much you take on is completely up to you.
+			</p>
+			<ul class="fba-pills">
+				<li class="fba-pill">From 1 hour a week</li>
+				<li class="fba-pill">Your own pace</li>
+				<li class="fba-pill">Remote</li>
+			</ul>
+			<div class="fba-actions">
+				<a class="fba-btn fba-btn-primary" href="/volunteer#fba-volunteer-form">Apply for this role</a>
+				<a class="fba-btn fba-btn-ghost" href="/volunteer#fba-volunteer-positions">All volunteer roles</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== BODY ============================== -->
+	<section class="fba-role-body">
+		<div class="fba-wrap fba-role-grid fba-reveal">
+			<div>
+				<h2>What you do</h2>
+				<ul class="fba-ticks">
+					<li>Take one task at a time from our long task list.</li>
+					<li>Write or check the material that task asks for.</li>
+					<li>Keep the quality the same as the tasks around yours.</li>
+					<li>Mark the task done and take the next one whenever you have time.</li>
+					<li>Ask when a task is unclear, instead of guessing.</li>
+				</ul>
+
+				<h2>What you need</h2>
+				<ul class="fba-ticks">
+					<li>Solid in the subject you want to build for.</li>
+					<li>Able to write accurate material, not just fix what is already there.</li>
+					<li>Comfortable working from a list, with no one chasing you.</li>
+					<li>Careful with detail: a wrong answer in a worksheet reaches students.</li>
+				</ul>
+			</div>
+
+			<aside class="fba-role-side">
+				<div class="fba-role-box">
+					<p class="fba-kicker">Time required</p>
+					<p class="fba-role-time">Completely up to you - from 1 hour a week</p>
+					<p>More if you want it. The task list is long, so you never run out of work.</p>
+				</div>
+				<div class="fba-role-box">
+					<p class="fba-kicker">What you get</p>
+					<ul class="fba-ticks">
+						<li>Training for the role, before you start</li>
+						<li>Your hours in writing, whenever you need them</li>
+						<li>A reference that names the material you built</li>
+						<li>A letter of support on request</li>
+						<li>A review at the end of your term</li>
+					</ul>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ============================== APPLY ============================= -->
+	<section class="fba-role-apply">
+		<div class="fba-wrap fba-reveal">
+			<h2>How to apply</h2>
+			<ol class="fba-role-steps">
+				<li>Send the volunteer form and choose this role, saying which subject you want to build for.</li>
+				<li>Short interview, then a work sample: we send you one real task from the list and you complete it.</li>
+				<li>We contact the two references you named, then tell you the decision either way.</li>
+			</ol>
+			<p class="fba-note">Training is provided for this role before you start. Roles with a heavier training
+				load ask for a longer commitment, and we tell you what that is before you agree to it.</p>
+			<div class="fba-actions">
+				<a class="fba-btn fba-btn-primary" href="/volunteer#fba-volunteer-form">Apply for this role</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== NEXT ============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Not the only role we need</h2>
+			<p>You can apply for one role, or say you are flexible. The volunteer page lists all ten positions, the time
+				each one really takes and how we select.</p>
+			<p class="fba-cta-links">
+				<span>Related:</span>
+				<a href="/volunteer-role-online-maths-teacher">Online maths teacher</a>
+				<a href="/volunteer-role-mock-exam-organiser">Mock exam organiser</a>
+				<a href="/volunteer">All volunteer roles</a>
+				<a href="/volunteer#fba-volunteer-form">Apply</a>
+			</p>
+		</div>
+	</section>
+
+	<script>
+	(function () {
+		'use strict';
+
+		var root = document.querySelector('.fba-role');
+		if (!root || root.getAttribute('data-fba-role-ready') === '1') { return; }
+		root.setAttribute('data-fba-role-ready', '1');
+		root.classList.add('fba-js');
+
+		var reveals = root.querySelectorAll('.fba-reveal');
+		if (!reveals.length) { return; }
+
+		if (!('IntersectionObserver' in window)) {
+			Array.prototype.forEach.call(reveals, function (node) { node.classList.add('is-in'); });
+			return;
+		}
+
+		var observer = new IntersectionObserver(function (entries) {
+			entries.forEach(function (entry) {
+				if (entry.isIntersecting) {
+					entry.target.classList.add('is-in');
+					observer.unobserve(entry.target);
+				}
+			});
+		}, { threshold: 0.12 });
+
+		Array.prototype.forEach.call(reveals, function (node) { observer.observe(node); });
+	})();
+	</script>
+</div>

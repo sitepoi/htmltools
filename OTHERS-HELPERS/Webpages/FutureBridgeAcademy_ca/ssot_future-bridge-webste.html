@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Future Bridge Academy - Website SSOT (plan, company info, page inventory, tasks)</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #1e293b;
+    --muted: #5a6675;
+    --line: #d8dee6;
+    --panel: #f8fafc;
+    --panel2: #f1f5f9;
+    --accent: #0f5c8a;
+    --accent-soft: #eaf2f8;
+    --ok: #2f855a;
+    --ok-soft: #ecf7f0;
+    --warn: #b7791f;
+    --warn-soft: #fdf6ea;
+    --stop: #b23b30;
+    --stop-soft: #fdeeec;
+    --brand-1: #FF6B35;
+    --brand-2: #004E89;
+    --brand-3: #FFD23F;
+    --brand-4: #06D6A0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 44px 40px 80px;
+    background: var(--bg);
+  }
+
+  /* ---------- header ---------- */
+  .doc-header {
+    border-bottom: 3px solid var(--accent);
+    padding-bottom: 20px;
+    margin-bottom: 26px;
+  }
+  .doc-org {
+    font-size: 12px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .doc-title { font-size: 28px; font-weight: 700; letter-spacing: 0.2px; }
+  .doc-sub { font-size: 15px; color: var(--accent); font-weight: 600; margin-top: 6px; }
+  .doc-meta { margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+  .doc-meta span { margin-right: 14px; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ---------- structure ---------- */
+  section { margin-bottom: 30px; }
+
+  h2 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1.1px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 34px 0 14px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  h3 { font-size: 14.5px; margin: 20px 0 8px; }
+  h4 { font-size: 13px; margin: 14px 0 6px; }
+  p { font-size: 13.5px; margin-bottom: 10px; }
+  ul, ol { margin: 0 0 12px 22px; }
+  li { font-size: 13.5px; margin-bottom: 5px; }
+  a { color: var(--accent); }
+
+  code {
+    background: var(--code, #f1f5f9);
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  pre {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12.5px;
+    margin: 8px 0 14px;
+  }
+
+  .doc-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 14px;
+  }
+
+  /* ---------- TOC ---------- */
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+  }
+  .toc-title {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .toc ol { list-style: none; columns: 2; column-gap: 34px; margin: 0; }
+  .toc li { font-size: 12.5px; margin-bottom: 4px; break-inside: avoid; }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  .toc-num { display: inline-block; min-width: 26px; color: var(--accent); font-weight: 700; }
+
+  /* ---------- boxes ---------- */
+  .box {
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13.5px;
+    margin-bottom: 12px;
+  }
+  .box-info { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .box-ok { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+  .box-warn { background: var(--warn-soft); border-left: 4px solid var(--warn); }
+  .box-stop { background: var(--stop-soft); border-left: 4px solid var(--stop); }
+  .box strong { color: var(--text); }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; margin: 10px 0 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.8px; }
+  th {
+    background: var(--accent-soft);
+    color: var(--accent);
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    vertical-align: bottom;
+  }
+  td { padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: var(--panel); }
+  td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.mono { font-family: Consolas, "Courier New", monospace; font-size: 12px; white-space: nowrap; }
+  tr.group-row td {
+    background: var(--panel2);
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11.5px;
+    letter-spacing: 0.6px;
+  }
+
+  /* ---------- pills ---------- */
+  .pill {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 9px;
+    white-space: nowrap;
+  }
+  .p-done { background: var(--ok-soft); color: var(--ok); }
+  .p-wip { background: var(--warn-soft); color: var(--warn); }
+  .p-todo { background: var(--accent-soft); color: var(--accent); }
+  .p-later { background: var(--panel2); color: var(--muted); }
+  .p-block { background: var(--stop-soft); color: var(--stop); }
+  .p-parked { background: var(--panel2); color: var(--stop); }
+  .p-free { background: var(--ok-soft); color: var(--ok); }
+  .p-paid { background: var(--panel2); color: var(--muted); }
+
+  /* ---------- colour chips ---------- */
+  .swatches { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 18px; }
+  .swatch {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+    min-width: 150px;
+    font-size: 12px;
+  }
+  .swatch .chip { display: block; width: 100%; height: 22px; border-radius: 3px; margin-bottom: 7px; }
+  .swatch b { display: block; font-size: 12.5px; }
+  .swatch span { color: var(--muted); }
+
+  /* ---------- task lists ---------- */
+  .tasks { margin: 10px 0 18px; }
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13.2px;
+    padding: 6px 10px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .task:last-child { border-bottom: none; }
+  .task input { margin-top: 3px; width: 15px; height: 15px; flex: 0 0 auto; }
+  .task.done span.task-text { color: var(--muted); text-decoration: line-through; }
+  .task .task-text { flex: 1 1 auto; }
+  .task .task-meta { flex: 0 0 auto; font-size: 11.5px; color: var(--muted); }
+  .phase-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--panel2);
+    border-left: 4px solid var(--accent);
+    padding: 9px 14px;
+    margin: 22px 0 6px;
+  }
+  .phase-head h3 { margin: 0; font-size: 13.5px; text-transform: uppercase; letter-spacing: 0.9px; color: var(--accent); }
+  .phase-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .taskbar { height: 6px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin: 6px 0 10px; }
+  .taskbar > span { display: block; height: 100%; width: 0; background: var(--ok); transition: width 0.25s ease; }
+
+  .doc-footer {
+    margin-top: 44px;
+    border-top: 1px dashed var(--line);
+    padding-top: 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { padding: 0; max-width: none; }
+    .toc { break-inside: avoid; }
+    section, table, .box, .phase-head { break-inside: avoid; }
+    a { color: var(--text); text-decoration: none; }
+    .no-print { display: none; }
+  }
+  @media (max-width: 720px) {
+    .page { padding: 26px 18px 50px; }
+    .toc ol { columns: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="doc-header">
+    <div class="doc-org">Future Bridge Academy - internal website documentation</div>
+    <div class="doc-title">Website SSOT: plan, company info, page inventory and task list</div>
+    <div class="doc-sub">Single source of truth for every public website page, claim and link</div>
+    <div class="doc-meta">
+      <span>Version: 1.18</span>
+      <span>Date: 16 October 2026</span>
+      <span class="badge">Living document</span>
+    </div>
+  </header>
+
+  <p class="doc-note">
+    This document is the single source of truth for the Future Bridge Academy website. Every page, button label,
+    claim and link must agree with it. It is built on top of the internal business plan (Turkish, v2.11):
+    <code>OTHERS-HELPERS/Documents/Dersane/dersane-is-plani.html</code>. When the plan changes, this document is
+    updated first, then the pages. Anything not listed here as "live today" must not be presented as running.
+  </p>
+
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s1"><span class="toc-num">1.</span>How to use this document</a></li>
+      <li><a href="#s2"><span class="toc-num">2.</span>Company snapshot (public-safe)</a></li>
+      <li><a href="#s3"><span class="toc-num">3.</span>Company and contact facts</a></li>
+      <li><a href="#s4"><span class="toc-num">4.</span>What is live, what is coming</a></li>
+      <li><a href="#s5"><span class="toc-num">5.</span>Content rules and banned claims</a></li>
+      <li><a href="#s6"><span class="toc-num">6.</span>Website plan: objectives and phases</a></li>
+      <li><a href="#s7"><span class="toc-num">7.</span>Audiences, funnel and calls to action</a></li>
+      <li><a href="#s8"><span class="toc-num">8.</span>Brand, design system and tone</a></li>
+      <li><a href="#s9"><span class="toc-num">9.</span>Technical contract and conventions</a></li>
+      <li><a href="#s10"><span class="toc-num">10.</span>Site map and page inventory</a></li>
+      <li><a href="#s11"><span class="toc-num">11.</span>Core page briefs</a></li>
+      <li><a href="#s12"><span class="toc-num">12.</span>Programme page template</a></li>
+      <li><a href="#s13"><span class="toc-num">13.</span>Forms and data capture</a></li>
+      <li><a href="#s14"><span class="toc-num">14.</span>SEO, analytics and measurement</a></li>
+      <li><a href="#s15"><span class="toc-num">15.</span>Task list (all pages)</a></li>
+      <li><a href="#s16"><span class="toc-num">16.</span>Open questions and decisions</a></li>
+      <li><a href="#s17"><span class="toc-num">17.</span>Current file state and change log</a></li>
+    </ol>
+  </nav>
+
+  <!-- ================= 1 ================= -->
+  <section id="s1">
+    <h2>1. How to use this document</h2>
+    <ul>
+      <li><strong>Order of truth:</strong> business plan (facts about the company) &rarr; this SSOT (what we say publicly and how) &rarr; page code.</li>
+      <li><strong>Before writing any page copy:</strong> check sections 4 and 5. If a service is not in the "live today" table, it must be labelled as coming.</li>
+      <li><strong>Before building a page:</strong> check section 10 for its slug, phase and status, and section 11 or 12 for its required sections.</li>
+      <li><strong>Before shipping a page:</strong> run the definition of done in section 15.0 (tick every box for that page).</li>
+      <li><strong>When something changes:</strong> update this document in the same session, bump the version, and add a change log row (section 17).</li>
+      <li><strong>Task checkboxes</strong> below are live: they save in your browser (localStorage) so you can use this file as the working board.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>Hard rules that never bend:</strong> no prices on the website; no invented numbers, results or
+      testimonials; nothing described as running unless it is in the "live today" table; no student names or photos
+      without written parental consent.
+    </div>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section id="s2">
+    <h2>2. Company snapshot (public-safe)</h2>
+    <p class="doc-note">Facts below may be used in public copy. Anything marked internal-only lives in section 4.3.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Item</th><th>What we say publicly</th></tr>
+        <tr><td><strong>What it is</strong></td><td>A non-profit academic support programme for families in Canada, combining free online lessons with a physical learning centre.</td></tr>
+        <tr><td><strong>Model</strong></td><td>Hybrid: online teaching plus a real place to study. Three legs: academic support, pathway guidance, and an environment where study actually happens.</td></tr>
+        <tr><td><strong>Subjects</strong></td><td>Mathematics first, English second. Science is not offered for now.</td></tr>
+        <tr><td><strong>Who it is for</strong></td><td>Students from grade 4 to grade 12, including families new to the Canadian school system. Also students heading to college, trades or IB and AP programmes.</td></tr>
+        <tr><td><strong>Core promise</strong></td><td>Every student gets a plan of their own: work matched to the topic they are studying at school right now, measured every month, reported to parents in plain language.</td></tr>
+        <tr><td><strong>What is free</strong></td><td>Weekly online lessons, monthly online mock exams, monthly in-person mock exams, monthly scholarship seminars, parent seminars, and the community.</td></tr>
+        <tr><td><strong>Progress reporting</strong></td><td>A short weekly summary, a monthly growth report, and a term report. Mock exam results feed back into the plan.</td></tr>
+        <tr><td><strong>Languages</strong></td><td>Website in English. The community is largely Turkish-speaking, so Turkish pages are planned (section 15, phase 3).</td></tr>
+        <tr><td><strong>Data and privacy</strong></td><td>Student data is handled under PIPEDA-aligned practice; parent consent is required before any student data or image is used.</td></tr>
+        <tr><td><strong>Rollout</strong></td><td>The Vancouver area is the pilot and the only city with a confirmed venue today. Partner organisations in other cities join as each one is ready; public wording for naming the cities is still open (section 16).</td></tr>
+        <tr><td><strong>Brand</strong></td><td>FUTURE BRIDGE ACADEMY wordmark, supplied as artwork. See section 8 for the logo URL and colours.</td></tr>
+      </table>
+    </div>
+
+    <div class="box box-info">
+      <strong>Positioning sentence (use as the anchor for all copy):</strong> free to start, honest about progress,
+      and built around the decisions that actually shape a student's options after high school.
+    </div>
+
+    <h3>2.1 Who runs the programme</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Role</th><th>Organisation</th><th>How it is described publicly</th></tr>
+        <tr><td>Lead entity</td><td>CentreCanada Newcomer Services Society</td><td>A registered charity in the Vancouver area. It leads the programme.</td></tr>
+        <tr><td>Programme name</td><td>Future Bridge Academy</td><td>The programme trading name, used in the header, footer, titles and all copy. Always described as a programme, never as a company.</td></tr>
+        <tr><td>Partners</td><td>Non-profits and charities working in Calgary, Edmonton, Toronto, Ottawa, Kitchener, London, Hamilton and Montreal</td><td>"Delivered with partner organisations in each city." Names, logos and websites are collected for the partners page (section 10, page 51).</td></tr>
+        <tr><td>Vancouver area venue</td><td>93 6th St, New Westminster, BC V3L 2Z8</td><td>Published on contact, locations and event pages. Venue name and opening hours still to confirm.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section id="s3">
+    <h2>3. Company and contact facts</h2>
+    <p>Confirmed by the owner. Anything not listed here is still open (section 3.2) and must never be invented.</p>
+    <h3>3.1 Confirmed</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Item</th><th>Confirmed fact</th><th>Used on</th></tr>
+        <tr><td>Lead legal entity</td><td>CentreCanada Newcomer Services Society, a registered charity in the Vancouver area. It is the leading entity of several non-profits and charities working together.</td><td>Footer, about, partners, privacy</td></tr>
+        <tr><td>Programme trading name</td><td>Future Bridge Academy - the programme name served by partner legal entities in each city. Written as a programme, never as a company.</td><td>Header, footer, about, SEO titles</td></tr>
+        <tr><td>Partner organisations</td><td>Calgary, Edmonton, Toronto, Ottawa, Kitchener, London, Hamilton and Montreal. Names, logos and websites to be collected for the partners page.</td><td>Partners, locations, about</td></tr>
+        <tr><td>Programme inbox</td><td class="mono">info@futurebridgeacademy.ca</td><td>Contact, footer, join, volunteer and every form</td></tr>
+        <tr><td>Other inboxes</td><td>None. The site publishes ONE email address; the general inbox that was considered earlier is not used.</td><td>-</td></tr>
+        <tr><td>Phone</td><td>None published. The site carries no phone number.</td><td>Contact, footer</td></tr>
+        <tr><td>Vancouver area venue</td><td>93 6th St, New Westminster, BC V3L 2Z8</td><td>Contact, locations/vancouver, event pages</td></tr>
+      </table>
+    </div>
+
+    <h3>3.2 Still needed</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Item</th><th>Used on</th><th>Status</th></tr>
+        <tr><td>Charity registration number</td><td>Footer, about, donate, privacy</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Website domain for publishing and canonical links</td><td>All pages, SEO</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Venue name and opening hours for New Westminster</td><td>Locations/vancouver, contact, events</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Venue name, address and hours for the other partner cities</td><td>Locations, contact, events</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Confirm the programme inbox is live and tested, and the response time we publish</td><td>Contact, all forms</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Social profiles to link (and whether to link them at all)</td><td>Footer</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Written consent process for student photos and quotes</td><td>Results, about, programme pages</td><td><span class="pill p-block">Needed</span></td></tr>
+        <tr><td>Public wording for naming the partner cities on the site</td><td>Home, about, locations</td><td><span class="pill p-block">Needed</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section id="s4">
+    <h2>4. What is live, what is coming, what never to publish</h2>
+
+    <h3>4.1 Live today (safe to present as running)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Service</th><th>Free?</th><th>How it runs</th><th>Where it is used on the site</th></tr>
+        <tr><td>Free online lessons (mathematics)</td><td><span class="pill p-free">Free</span></td><td>Live online, weekly, open to the community</td><td>Home hero, free-lessons page, programmes, how it works, footer, header strip</td></tr>
+        <tr><td>Monthly mock exam (in person)</td><td><span class="pill p-free">Free</span></td><td>Real exam conditions at a community venue, run by volunteers, every month, on the topic the student is studying right now</td><td>Home, mock-exams page, programmes, how it works</td></tr>
+        <tr><td>Scholarship seminars</td><td><span class="pill p-free">Free</span></td><td>Monthly; university volunteers present the scholarships opening next month</td><td>Home, programmes, seminars page</td></tr>
+        <tr><td>Parent seminars</td><td><span class="pill p-free">Free</span></td><td>Regular sessions on how the Canadian system works and how to support study at home</td><td>Home, programmes, seminars page</td></tr>
+        <tr><td>Community (WhatsApp groups, parent bulletin)</td><td><span class="pill p-free">Free</span></td><td>Ongoing information channel for families</td><td>Home, footer, join page</td></tr>
+        <tr><td>Volunteer mentor network</td><td><span class="pill p-free">Free</span></td><td>Volunteers teach the free lessons, write and mark the monthly exams and present at the seminars, and earn documented volunteer hours</td><td>Home, programmes, volunteer page</td></tr>
+        <tr><td>Drone pilot certificate course (RPAS, Transport Canada preparation)</td><td><span class="pill p-paid">Optional fee</span></td><td>Our own curriculum, delivered online, running now</td><td>Home, programmes, drone page</td></tr>
+        <tr><td>Curriculum and study-tracking platform (internal)</td><td><span class="pill p-free">Internal</span></td><td>Under development; underpins teaching quality and reporting</td><td>Not marketed as a product yet</td></tr>
+      </table>
+    </div>
+
+    <h3>4.2 Opening with the centre (must be labelled as coming)</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Service</th><th>What it is</th><th>Site treatment</th></tr>
+        <tr><td>Small-group lessons</td><td>Maths and English in small groups at the centre</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>One-to-one mentoring and monthly growth reports</td><td>Regular one-to-one check-ins plus the written monthly report</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>Pathway guidance</td><td>University, college, trades, IB or AP decisions, from grade 8</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>Application portfolio tracking</td><td>A file that opens in grade 8 and grows every year</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>CEMC contest club</td><td>Gauss, Pascal, Cayley, Fermat, Euclid preparation as its own track</td><td>Tagged "Coming with the centre" and always described as separate from the free monthly mock exam</td></tr>
+        <tr><td>IB and AP preparation</td><td>Focused programme preparation</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>Trades preparation</td><td>Apprenticeship, college trades and Red Seal maths support</td><td>Tagged "Coming with the centre"</td></tr>
+        <tr><td>Admissions process</td><td>Assessment, goal conversation, accept / conditional / redirect</td><td>Described as the way in, without publishing criteria detail</td></tr>
+      </table>
+    </div>
+
+    <h3>4.3 Internal only - never published in this form</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Item</th><th>Rule</th></tr>
+        <tr><td>All fees, packages, modules, ARPU and budgets</td><td>Never published. Pages say what is free and that we explain fees before anything is agreed.</td></tr>
+        <tr><td>Group sizes and mentor ratios</td><td>Internal targets. Public copy says "small groups" and "mentors who know your child", never a number.</td></tr>
+        <tr><td>Admission criteria, level bands and test mechanics</td><td>Described in outline only ("a short assessment and a goal conversation").</td></tr>
+        <tr><td>Charity revenue flow, surplus and bursary mechanics</td><td>Not published until the disclosure decision in section 16 is taken.</td></tr>
+        <tr><td>Volunteer coordination ratios, internal systems and tool names</td><td>Internal.</td></tr>
+        <tr><td>Any comparative pricing table against competitors</td><td>Internal planning only.</td></tr>
+      </table>
+    </div>
+
+    <h3>4.4 Parked - must not appear on any page yet</h3>
+    <p class="doc-note">Removed from the pages on 16 October 2026 at the owner's request. Do not put these back until the condition in the last column is met.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Item</th><th>Why it is parked</th><th>Condition to publish</th></tr>
+        <tr><td>Online mock exam</td><td>There is no online mock exam. Only the monthly in-person exam runs.</td><td>An online exam that really runs, with marking and results</td></tr>
+        <tr><td>Study hall</td><td>Not real yet. It needs the physical centre and supervision.</td><td>Centre open, hours and supervision confirmed</td></tr>
+        <tr><td>Summer programme and camps</td><td>Not ready.</td><td>Dates, format and staffing confirmed</td></tr>
+        <tr><td>Our own books and materials</td><td>Nothing published yet.</td><td>First book finished and distribution decided</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section id="s5">
+    <h2>5. Content rules and banned claims</h2>
+    <ol>
+      <li><strong>No prices anywhere.</strong> No numbers, no currency symbols, no "from $X", no package tables. Free things carry the word "Free". Paid things are described and the page says we explain costs before anything is agreed.</li>
+      <li><strong>Live means live.</strong> A service may only be presented as running if it appears in table 4.1. Everything else carries a "Coming with the centre" style label.</li>
+      <li><strong>No invented evidence.</strong> No made-up statistics, no percentages of students who improved, no testimonials, no ratings, no awards, no partner logos, no dates that are not confirmed.</li>
+      <li><strong>No invented sizes.</strong> No group size, class size, ratio, lesson length or number of students.</li>
+      <li><strong>No free assessment promise.</strong> The way in is described as "a short assessment and a goal conversation". Do not call it free.</li>
+      <li><strong>Two processes stay separate.</strong> The free monthly mock exams and the CEMC contest track are never mixed in one sentence as if they were the same thing.</li>
+      <li><strong>Language:</strong> plain English, short sentences, no hype, no exclamation marks, hyphens rather than long dashes.</li>
+      <li><strong>Every page ends with one call to action</strong> that leads to the free funnel (join a free lesson, come to a free mock exam, join the community) or to contact.</li>
+      <li><strong>Consent first.</strong> No student name, photo, quote or work sample without written parental consent on file.</li>
+      <li><strong>Accessibility:</strong> alt text on every image, readable contrast, keyboard reachable controls, motion respecting the system setting.</li>
+    </ol>
+
+    <div class="box box-stop">
+      <strong>Removed claims - do not reintroduce:</strong> "six learners per lesson"; "free assessment"; "60 minute
+      small-group lesson"; "fortnightly one-to-one mentor session"; "termly showcase"; parent testimonial quotes;
+      confidence and habit percentage bars presented as real data; essay competition preparation and software club
+      presented as currently running; any fixed group size; any price. Also parked and removed on 16 October 2026:
+      <strong>online mock exam</strong> (it does not exist), <strong>study hall</strong>, <strong>summer programme</strong>
+      and <strong>books and materials</strong> - see section 4.4 before putting any of them back.
+    </div>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section id="s6">
+    <h2>6. Website plan: objectives and phases</h2>
+
+    <h3>6.1 Objectives (in priority order)</h3>
+    <ol>
+      <li><strong>Fill the free funnel.</strong> Turn visitors into free-lesson attendees, mock exam participants and community members.</li>
+      <li><strong>Be honest and clear.</strong> A parent must be able to tell in ten seconds what is free, what is coming, and what happens next.</li>
+      <li><strong>Build trust for the centre.</strong> Show that a real programme with a real plan is behind the free offer.</li>
+      <li><strong>Be findable locally.</strong> Rank for city and subject searches once city pages exist.</li>
+      <li><strong>Recruit volunteers and mentors.</strong> A second audience that the site serves deliberately, not by accident.</li>
+    </ol>
+
+    <h3>6.2 Phases and gates</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Phase</th><th>Scope</th><th>Goal</th><th>Gate to leave the phase</th></tr>
+        <tr>
+          <td><strong>0 - Foundations</strong></td>
+          <td>This SSOT, design tokens locked, central header and footer, page slugs reserved, SEO defaults, form endpoint, analytics events, real contact details</td>
+          <td>One consistent shell and one source of truth</td>
+          <td>Header, footer and home live; contact details real; form endpoint receiving submissions</td>
+        </tr>
+        <tr>
+          <td><strong>1 - Free first</strong></td>
+          <td>Pages for everything running today: programmes overview, free lessons, mock exams, seminars, what is free, about, contact, volunteer, join</td>
+          <td>Every live service has a page a parent can land on and act from</td>
+          <td>All phase 1 pages published, linked from header and footer, no page contradicts section 4</td>
+        </tr>
+        <tr>
+          <td><strong>2 - Centre ready</strong></td>
+          <td>Programme pages for centre-era services, the programme page template, admissions, Vancouver location page</td>
+          <td>The site is ready for the day the centre opens</td>
+          <td>Every centre service has a page, all labelled correctly, admissions flow tested</td>
+        </tr>
+        <tr>
+          <td><strong>3 - Trust and growth</strong></td>
+          <td>Results page (when real data exists), guides and articles, events calendar, team, careers, resources, Turkish pages, second and third city pages</td>
+          <td>Organic reach and social proof that is genuinely earned</td>
+          <td>First article set published, results page backed by real reporting data</td>
+        </tr>
+        <tr>
+          <td><strong>4 - Legal and care</strong></td>
+          <td>Privacy, terms, accessibility statement, thank-you and 404 pages, partner and donate pages</td>
+          <td>Nothing embarrassing or non-compliant in the footer</td>
+          <td>Legal pages published and linked; cookies and consent handled</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>6.3 What is already built</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>File</th><th>What it is</th><th>Status</th></tr>
+        <tr><td class="mono">home-page.html</td><td>Home page fragment (hero, stats, programme cards with filters, 4 step strip, approach with "where we are today" card, call to action). Renamed from <code>index.html</code> on 16 October 2026</td><td><span class="pill p-done">Built</span></td></tr>
+        <tr><td class="mono">volunteer-role-*.html</td><td>Ten volunteer role definition pages, one per position (template 11.13), at <code>/volunteer-role-&lt;role&gt;</code> - root level, no folder</td><td><span class="pill p-done">Built</span></td></tr>
+        <tr><td class="mono">how-it-works.html</td><td>Journey explanation (5 step stepper, month rhythm, tracks, sample growth report, 8 question FAQ, call to action)</td><td><span class="pill p-done">Built</span></td></tr>
+        <tr><td class="mono">header-footer/header.html</td><td>Central sticky header: announcement strip, logo from storage URL, nav with active page highlight, mobile menu</td><td><span class="pill p-done">Built</span></td></tr>
+        <tr><td class="mono">header-footer/footer.html</td><td>Central footer: brand column, explore links, running-now list, call to action, back to top</td><td><span class="pill p-done">Built</span></td></tr>
+        <tr><td class="mono">formpages/career-fair-entry-registration-2026-10-17.html</td><td>Career fair entry registration page (route /career-fair-entry-registration-2026-10-17)</td><td><span class="pill p-done">Built</span> First name, last name, phone, email and the consent box; posts to <code>event-entry-registraton-uniconbaseapps</code> with the label <code>career-fair-entry</code></td></tr>
+        <tr><td class="mono">ssot_future-bridge-webste.html</td><td>This document</td><td><span class="pill p-done">Built</span></td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section id="s7">
+    <h2>7. Audiences, funnel and calls to action</h2>
+
+    <h3>7.1 Audiences</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Audience</th><th>What they need from the site</th><th>Where they land</th></tr>
+        <tr><td>Parents of grade 4 to 8 students</td><td>Reassurance, a low-risk way to start, evidence of habit building</td><td>Home, free lessons, mock exams</td></tr>
+        <tr><td>Parents of grade 9 to 12 students</td><td>Grades, prerequisites, pathway clarity, urgent honesty about deadlines</td><td>Home, pathway guidance, portfolio, how it works</td></tr>
+        <tr><td>Families new to the Canadian system</td><td>Plain explanations of how admission and options work</td><td>Guides and articles, parent seminars</td></tr>
+        <tr><td>Volunteers and mentors</td><td>What the role is, what they get back, documented hours</td><td>Volunteer, careers</td></tr>
+        <tr><td>Potential teachers</td><td>Role, expectations, how to apply</td><td>Careers</td></tr>
+        <tr><td>Charity partners and donors</td><td>What the programme does with support</td><td>Partners, donate, about</td></tr>
+      </table>
+    </div>
+
+    <h3>7.2 The funnel and the call to action ladder</h3>
+    <ol>
+      <li><strong>Free entry:</strong> "Join a free online lesson" - the single primary call to action for the whole site.</li>
+      <li><strong>Free participation:</strong> "Come to the next free mock exam", "Join the community", "Come to a seminar".</li>
+      <li><strong>Conversation:</strong> "Ask about the assessment" - the assessment and goal conversation, described without a price.</li>
+      <li><strong>Enrolment:</strong> "Ask about a place" once the centre opens.</li>
+      <li><strong>Give time:</strong> "Volunteer with us".</li>
+    </ol>
+    <div class="box box-info">
+      <strong>Rule:</strong> a page may carry at most two buttons, and the first is always the free entry rung.
+      The header carries exactly one call to action: "Join a free online lesson".
+    </div>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section id="s8">
+    <h2>8. Brand, design system and tone</h2>
+
+    <h3>8.1 Logo</h3>
+    <ul>
+      <li>Artwork: "FUTURE BRIDGE ACADEMY" wordmark, 400 x 189, pure black on transparency, served from the storage URL used in the header and footer.</li>
+      <li>Header: shown as-is at 46px tall (38px when compact). Footer: inverted to white with a CSS filter because the artwork is black.</li>
+      <li>Needed later: a light-on-dark asset and a square mark, so the filter hack can be removed.</li>
+    </ul>
+
+    <h3>8.2 Colours</h3>
+    <div class="swatches">
+      <div class="swatch"><span class="chip" style="background:#FF6B35"></span><b>#FF6B35</b><span>Primary - buttons, accents</span></div>
+      <div class="swatch"><span class="chip" style="background:#004E89"></span><b>#004E89</b><span>Secondary - headings, dark bands</span></div>
+      <div class="swatch"><span class="chip" style="background:#FFD23F"></span><b>#FFD23F</b><span>Accent - highlights on dark</span></div>
+      <div class="swatch"><span class="chip" style="background:#06D6A0"></span><b>#06D6A0</b><span>Success - live and free markers</span></div>
+      <div class="swatch"><span class="chip" style="background:#1A1A2E"></span><b>#1A1A2E</b><span>Text</span></div>
+      <div class="swatch"><span class="chip" style="background:#F7F9FC"></span><b>#F7F9FC</b><span>Page background</span></div>
+    </div>
+
+    <h3>8.3 Typography and components</h3>
+    <ul>
+      <li>Headings: Bricolage Grotesque (700 or 800). Body: DM Sans. Both loaded by the CMS or the page, with system fallbacks.</li>
+      <li>Recurring components: kicker label, section header, pill list, card grid, dark band, ticks list, FAQ accordion, sample report card, call to action band.</li>
+      <li>Every page fragment is one root div with a page prefix class, and all CSS is scoped to it.</li>
+    </ul>
+
+    <h3>8.4 Tone of voice</h3>
+    <ul>
+      <li>Plain, warm, direct. A parent should never have to decode a sentence.</li>
+      <li>Say what is free, say what is coming, say what we do not know yet.</li>
+      <li>No pressure language, no countdowns, no "limited places" unless it is literally true and confirmed.</li>
+      <li>Short sentences. Concrete nouns. Hyphens, not long dashes.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section id="s9">
+    <h2>9. Technical contract and conventions</h2>
+
+    <h3>9.1 Page fragment rules (CMS embed)</h3>
+    <ul>
+      <li>One parent <code>&lt;div&gt;</code> per page, carrying the shared class <code>fba-page</code> plus its own page class (for example <code>class="fba-page fba-home"</code>).</li>
+      <li>No <code>&lt;!DOCTYPE&gt;</code>, <code>&lt;html&gt;</code>, <code>&lt;head&gt;</code> or <code>&lt;body&gt;</code> tags. No document-level scripts or stylesheets.</li>
+      <li>No <code>&lt;header&gt;</code>, <code>&lt;footer&gt;</code> or <code>&lt;nav&gt;</code> element tags anywhere in a page. The central header and footer components own that.</li>
+      <li>No footer, no second call to action band duplicated from another page: shared components come from the central stylesheet (next item).</li>
+      <li><strong>Central stylesheet:</strong> the shared design system lives in <code>header-footer/header.html</code>, which is loaded on every page. It holds the colour tokens on <code>:root</code>, the page base styles, every shared component (wrap, kicker, section head, buttons and button row, pills, tags, ticked list, highlighted list with icon tile, note callout, call to action band, scroll reveal and the small-screen button rules) and the whole header chrome including the mega menu panels. Pages must NOT repeat any of those rules.</li>
+      <li><strong>Page CSS</strong> keeps only layout specific to that page (hero, card grids, steppers, report card, FAQ layout, section paddings).</li>
+      <li><strong>Reset specificity rule:</strong> the shared reset uses <code>:where()</code> so it carries zero specificity. That is what lets a component rule set its own margin and padding. Never reintroduce a reset like <code>.fba-page p { margin: 0 }</code>, which silently overrides every component that is a paragraph or a list.</li>
+      <li>All page CSS scoped to the page prefix. No global selectors, no bare element styling outside the scope.</li>
+      <li>Vanilla JavaScript only, in one IIFE, idempotent, no external libraries, no top-level await, reduced motion respected. Page scripts add the shared class <code>fba-js</code> to their root.</li>
+      <li>Page must still read correctly with JavaScript disabled (tabs and filters degrade to visible content).</li>
+      <li>Tokens are the only colour source: use <code>var(--fba-...)</code>, never a hard-coded hex in a page.</li>
+      <li>No prices, no student data, no third-party trackers embedded in page code.</li>
+    </ul>
+
+    <h3>9.2 Slugs and routes</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Route</th><th>Page</th><th>Notes</th></tr>
+        <tr><td class="mono">/</td><td>Home</td><td>Reserved slug home-page</td></tr>
+        <tr><td class="mono">/how-it-works</td><td>How it works</td><td>Built</td></tr>
+        <tr><td class="mono">/programs</td><td>Programmes overview</td><td>Built. The header nav item points here</td></tr>
+        <tr><td class="mono">/programs/&lt;programme&gt;</td><td>Programme detail pages</td><td>Template in section 12</td></tr>
+        <tr><td class="mono">/free-lessons</td><td>Free online lessons</td><td>Built. Primary call to action target until the join page exists</td></tr>
+        <tr><td class="mono">/mock-exams</td><td>Monthly mock exams</td><td>Built. In person only: there is no online mock exam</td></tr>
+        <tr><td class="mono">/seminars</td><td>Scholarship and parent seminars</td><td>Add events page later if a calendar is needed</td></tr>
+        <tr><td class="mono">/whats-free</td><td>What is free</td><td>Trust page, no prices, explicit list</td></tr>
+        <tr><td class="mono">/about-us</td><td>About us</td><td>Built. Never <code>/about</code>, never <code>about.html</code></td></tr>
+        <tr><td class="mono">/contact</td><td>Contact</td><td>Built: form plus both confirmed inboxes and the New Westminster venue</td></tr>
+        <tr><td class="mono">/volunteer</td><td>Volunteer with us</td><td>Built as the recruitment page: the ten positions with the time each one takes, career ladder, five step selection process, application form. The form anchor is <code>#fba-volunteer-form</code>, the position list anchor is <code>#fba-volunteer-positions</code></td></tr>
+        <tr><td class="mono">/volunteer-role-online-maths-teacher</td><td>Role definition: online maths teacher</td><td>Built. Root level slug, no folder: every page on this site is one CMS entry under the root. One short job definition page per position, template is 11.13</td></tr>
+        <tr><td class="mono">/volunteer-role-mock-exam-organiser</td><td>Role definition: mock exam organiser</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-seminar-presenter-english</td><td>Role definition: scholarship volunteer (English)</td><td>Built. Covers research and data work as well as presenting; a volunteer may take either part or both</td></tr>
+        <tr><td class="mono">/volunteer-role-seminar-presenter-other-languages</td><td>Role definition: scholarship volunteer (other languages)</td><td>Built. Same two parts as the English role. Seminars are online and can reach hundreds of families</td></tr>
+        <tr><td class="mono">/volunteer-role-self-paced-course-assistant</td><td>Role definition: self-paced course assistant</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-curriculum-builder</td><td>Role definition: curriculum builder</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-online-lessons-helper</td><td>Role definition: online lessons helper</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-academic-writing-guide</td><td>Role definition: academic writing guide</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-career-coach</td><td>Role definition: career coach</td><td>Built</td></tr>
+        <tr><td class="mono">/volunteer-role-career-path-presenter</td><td>Role definition: career path presenter</td><td>Built. Professionals only</td></tr>
+        <tr><td class="mono">/join</td><td>Join (form page)</td><td>Built. The header and footer buttons and every "join a free lesson" call to action point here</td></tr>
+        <tr><td class="mono">/career-fair-entry-registration-2026-10-17</td><td>Career fair entry registration</td><td>Built as a standalone form page (formpages folder). Not in the header or footer: it is shared as a direct link for the event</td></tr>
+        <tr><td class="mono">/faq</td><td>FAQ hub</td><td>Built. 24 questions in five categories, linkable by category anchor</td></tr>
+        <tr><td class="mono">/locations/&lt;city&gt;</td><td>City pages</td><td>Only after the city naming decision</td></tr>
+      </table>
+    </div>
+
+    <h3>9.3 Links, forms and data</h3>
+    <ul>
+      <li><strong>Internal links use the route form only:</strong> <code>/</code> for the home page, <code>/how-it-works</code>, <code>/about-us</code>, <code>/contact</code> for the rest. No <code>.html</code> in any link, no relative file paths, and no link to a page that is not reserved in section 9.2. A link to a section of another page is written <code>/#fba-programs</code>; a link inside the same page is written <code>#fba-journey</code>.</li>
+      <li>Every form uses the CMS form contract (form marker, honeypot field, status message, bound handler) and posts to the CMS form endpoint.</li>
+      <li>Form submissions notify a real inbox and are stored in the CMS, so nothing depends on a personal email account.</li>
+      <li>No student data is collected on public pages beyond what a form genuinely needs.</li>
+    </ul>
+
+    <h3>9.4 Quality gate before publishing any page</h3>
+    <ul>
+      <li><strong>Preview it locally first:</strong> open <code>test-harness.html</code> (built by <code>build-test-harness.js</code>) and check the page with the central header and footer around it, at full width and at 1024, 768 and 390 px.</li>
+      <li>Link check: every internal link uses the route form from section 9.2 and points at a page that exists or is planned. The harness maps those routes back to the local files, so links stay clickable before the CMS pages exist.</li>
+      <li>Structure check: no document tags, no chrome tags, balanced markup, every CSS selector scoped.</li>
+      <li>Script check: syntax valid, idempotent, no console errors on load or on re-navigation.</li>
+      <li>Responsive check: 1440px, 1024px, 500px, and a narrow phone width.</li>
+      <li>Accessibility: keyboard path through every control, focus visible, alt text, contrast, reduced motion.</li>
+      <li>Accuracy: every claim traced to section 4 of this document.</li>
+      <li>Link check: no link to a page that does not exist, or to a placeholder file.</li>
+    </ul>
+    <h3>9.5 Header navigation, the mobile drawer and the footer (built 16 October 2026)</h3>
+    <ul>
+      <li><strong>The header is a mega menu.</strong> Six top level items only - Home, Start here, Programmes, Volunteer, About, Contact - plus the "Join a free lesson" button, so the bar stays scannable. Four of them open a full width panel: Start here, Programmes, Volunteer, About.</li>
+      <li><strong>The panels carry the depth.</strong> The ten core pages sit inside the panels with a one line description each, and the Volunteer panel lists all ten role pages in two columns. Every page stays reachable from the header, and no panel links to a page that does not exist (the "everything we run" material stays on the programmes page).</li>
+      <li><strong>Every panel ends with a feature tile:</strong> a dark card with a tag, a title, one line of copy and an arrow, used for the one action we most want from that section (volunteer, start a free lesson, apply to volunteer, see all programmes).</li>
+      <li><strong>Panel visuals:</strong> every panel opens as a light rounded surface (white fading to very light blue, bottom corners 26px) with a four pixel brand gradient rule along its top edge and a faded dot pattern behind the content. Each link is a card holding an icon tile (36px, 34px in the Volunteer panel and the three column panel), a bold label and one short description line; on hover the card lifts, gains a soft shadow and the icon tile fills with the brand gradient. Every panel's feature tile carries a free stock photo (Pexels licence, hotlinked from images.pexels.com at width 600 and recorded in changelog 1.16) under a dark brand wash, so the copy stays readable and a photo that never loads degrades to the brand gradient; the tile keeps generous padding (30px sides, up to 18px between copy blocks) because the panel column is narrow. If the photo is ever removed, the wash alone still looks intentional. The icons are 22 inline SVG symbols in a hidden sprite inside the header (<code>fba-hd-sprite</code> with <code>fba-i-*</code> ids), so there is still no library, no icon font and no extra request; the three column panel uses slightly smaller type so its titles stay on one line.</li>
+      <li><strong>Behaviour:</strong> hover opens on desktop after a short delay and closes on leave; click, Enter or Space toggles; the trigger carries aria-expanded and aria-controls and the panel is a role="region" with an aria-label; Escape closes the open panel first and then the drawer; a click outside or focus leaving the panel closes it; the script is idempotent and its window listeners are bound once.</li>
+      <li><strong>Mobile:</strong> below 1120px the same markup becomes an accordion inside the drawer - each panel is a tappable row with a rotating caret that expands in place, and every row keeps its icon tile with a hairline divider between rows; the drawer scrolls (max-height calc(100vh - 96px)) because it now holds twenty links, and it closes on any link tap, on Escape and when the viewport goes back to desktop.</li>
+      <li><strong>Current page highlight:</strong> every link carries <code>data-page</code>; the active link is styled and marked <code>aria-current="page"</code>, and the trigger of the section the visitor is in gets the same active underline through <code>data-mega-pages</code>.</li>
+      <li><strong>Footer:</strong> a volunteer band at the top ("Volunteers run this programme", the any city in Canada and training facts, Apply to volunteer, See the ten roles), then five columns - brand, Explore (all ten pages), Volunteer (apply, all ten roles, and four popular role definitions), Running now, and Start here with the join button and the programme inbox - then the bottom bar. The grid drops to two columns at 1180px and one at 600px.</li>
+      <li><strong>CMS menu JSON:</strong> <code>main-menu.json</code> in this folder mirrors the header exactly for the CMS mobile menu: one <code>menus</code> array of six top level items (id, label, url) where four carry a <code>children</code> array, giving 33 links over 20 unique routes. Ids are unique slugs (children are namespaced <code>&lt;parent&gt;-&lt;slug&gt;</code>), every url is in route form (never <code>.html</code>), and the two volunteer anchors <code>#fba-volunteer-positions</code> and <code>#fba-volunteer-form</code> are included. When the header changes, this file changes with it: a script check asserts that every route in the header appears in the JSON and the other way round.</li>
+    </ul>
+
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section id="s10">
+    <h2>10. Site map and page inventory (all possible pages)</h2>
+    <p class="doc-note">
+      Phase 0 to 4 match section 6.2. Status: built, in progress, to build, later. Pages marked "depends" cannot be
+      finished until the dependency is resolved.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>#</th><th>Page</th><th>Slug</th><th>Phase</th><th>Status</th><th>Purpose and must-have content</th><th>Depends on</th></tr>
+
+        <tr class="group-row"><td colspan="7">Core pages</td></tr>
+        <tr><td>1</td><td>Home</td><td class="mono">index</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Free-first positioning, live versus coming cards, 4 step journey, approach, one call to action</td><td>-</td></tr>
+        <tr><td>2</td><td>How it works</td><td class="mono">how-it-works</td><td>1</td><td><span class="pill p-done">Built</span></td><td>The 5 step journey, month rhythm, tracks, sample growth report, FAQ, call to action</td><td>-</td></tr>
+        <tr><td>3</td><td>Programmes overview</td><td class="mono">programs</td><td>1</td><td><span class="pill p-done">Built</span></td><td>All live and coming services in one grid, filterable. Cards link only to pages that exist, so no dead links</td><td>-</td></tr>
+        <tr><td>4</td><td>Free online lessons</td><td class="mono">free-lessons</td><td>1</td><td><span class="pill p-done">Built</span></td><td>What a lesson looks like, who it is for, how to join, what you need. Next dates are shared through the community until a schedule is published</td><td>Lesson schedule</td></tr>
+        <tr><td>5</td><td>Monthly mock exams</td><td class="mono">mock-exams</td><td>1</td><td><span class="pill p-done">Built</span></td><td>The monthly in-person exam only (there is no online exam): how topic-based testing works, why it is free, how to register. Dates confirmed at registration</td><td>Exam dates</td></tr>
+        <tr><td>6</td><td>Seminars (scholarship and parent)</td><td class="mono">seminars</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>What each seminar covers, who presents, how to attend, past topics</td><td>Schedule</td></tr>
+        <tr><td>7</td><td>What is free</td><td class="mono">whats-free</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Explicit free list, what carries an optional fee, the promise to explain costs first</td><td>Fee policy wording</td></tr>
+        <tr><td>8</td><td>About us</td><td class="mono">about-us</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Why the programme exists, the three legs, the lead charity and the partners, today versus the centre, three promises. The charity registration number is deliberately absent until it is confirmed</td><td>Charity registration number, surplus wording</td></tr>
+        <tr><td>9</td><td>Contact</td><td class="mono">contact</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Form with topic routing, the programme inbox, the New Westminster venue, four link cards to the deeper pages</td><td>Response time wording</td></tr>
+        <tr><td>10</td><td>Volunteer with us</td><td class="mono">volunteer</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Recruitment page: hero pitch, four reasons, career ladder, the ten confirmed positions with the time each one really takes, what you leave with against what we expect, five step selection process, application form, six volunteer questions</td><td>-</td></tr>
+        <tr><td>11</td><td>Join (registration)</td><td class="mono">join</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Shortest possible sign up plus what happens next, what is free, and a plain statement of what happens to the details</td><td>Form endpoint</td></tr>
+        <tr><td>12</td><td>FAQ hub</td><td class="mono">faq</td><td>1</td><td><span class="pill p-done">Built</span></td><td>24 questions in five categories with jump links, expanded from the questions written for the how it works page</td><td>-</td></tr>
+
+        <tr class="group-row"><td colspan="7">Volunteer role pages (phase 1)</td></tr>
+        <tr><td>12a</td><td>Ten volunteer role definitions</td><td class="mono">/volunteer-role-&lt;role&gt;</td><td>1</td><td><span class="pill p-done">Built</span></td><td>One short page per position (template in 11.13): what you do, what you need, the time it takes, what you get and how to apply. Linked from every position card on the volunteer page; no page carries its own form</td><td>-</td></tr>
+
+        <tr class="group-row"><td colspan="7">Programme pages</td></tr>
+        <tr><td>13</td><td>Maths</td><td class="mono">programs/math</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>The live free lessons, topics covered, how practice matches school, how it is measured</td><td>-</td></tr>
+        <tr><td>14</td><td>English and writing</td><td class="mono">programs/english</td><td>2</td><td><span class="pill p-later">Later</span></td><td>The track as it opens: reading, structure, editing; clearly labelled if not yet running</td><td>English lessons starting</td></tr>
+        <tr><td>15</td><td>Drone pilot certificate</td><td class="mono">programs/drone-pilot</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>What the course covers, who it suits, delivery online, what the certificate involves</td><td>-</td></tr>
+        <tr><td>16</td><td>Small-group lessons</td><td class="mono">programs/small-groups</td><td>2</td><td><span class="pill p-later">Later</span></td><td>How groups work and why they are small, without publishing sizes</td><td>Centre opening</td></tr>
+        <tr><td>17</td><td>Study hall</td><td class="mono">programs/study-hall</td><td>-</td><td><span class="pill p-parked">Parked</span></td><td>Not real yet. Do not build or mention until the centre is open with confirmed hours and supervision (section 4.4)</td><td>Centre opening</td></tr>
+        <tr><td>18</td><td>One-to-one mentoring and growth reports</td><td class="mono">programs/mentoring</td><td>2</td><td><span class="pill p-later">Later</span></td><td>How mentoring works, the monthly report explained with the sample card</td><td>Centre opening</td></tr>
+        <tr><td>19</td><td>Pathway guidance</td><td class="mono">programs/pathway-guidance</td><td>2</td><td><span class="pill p-later">Later</span></td><td>University, college, trades, IB and AP decisions; what a written pathway plan contains</td><td>Centre opening</td></tr>
+        <tr><td>20</td><td>Application portfolio</td><td class="mono">programs/application-portfolio</td><td>2</td><td><span class="pill p-later">Later</span></td><td>What goes in the file, year by year, from grade 8</td><td>Centre opening</td></tr>
+        <tr><td>21</td><td>CEMC contest club</td><td class="mono">programs/cemc</td><td>2</td><td><span class="pill p-later">Later</span></td><td>Contest ladder, how the club runs, always described as separate from the free mock exams</td><td>Club starting</td></tr>
+        <tr><td>22</td><td>IB and AP preparation</td><td class="mono">programs/ib-ap</td><td>2</td><td><span class="pill p-later">Later</span></td><td>Who it is for, how preparation is structured</td><td>Centre opening</td></tr>
+        <tr><td>23</td><td>Trades preparation</td><td class="mono">programs/trades</td><td>2</td><td><span class="pill p-later">Later</span></td><td>Apprenticeship, college trades and Red Seal maths support</td><td>Centre opening</td></tr>
+        <tr><td>24</td><td>Summer programme</td><td class="mono">programs/summer</td><td>-</td><td><span class="pill p-parked">Parked</span></td><td>Not ready. Do not mention until dates, format and staffing are confirmed (section 4.4)</td><td>Dates confirmed</td></tr>
+        <tr><td>25</td><td>Our books and materials</td><td class="mono">books</td><td>-</td><td><span class="pill p-parked">Parked</span></td><td>Not published yet. No mention until the first book exists (section 4.4)</td><td>First book published</td></tr>
+        <tr><td>26</td><td>Admissions</td><td class="mono">admissions</td><td>2</td><td><span class="pill p-later">Later</span></td><td>The way in: assessment, goal conversation, what happens next; no criteria detail</td><td>Admission wording approved</td></tr>
+
+        <tr class="group-row"><td colspan="7">Trust, growth and community</td></tr>
+        <tr><td>27</td><td>Results and success stories</td><td class="mono">results</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Only with real, consented data from the tracking system; until then the page does not exist</td><td>Real reporting data, consents</td></tr>
+        <tr><td>28</td><td>Guides and articles index</td><td class="mono">guides</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Hub for parent guides and explainers</td><td>-</td></tr>
+        <tr><td>29</td><td>Article template</td><td class="mono">guides/&lt;slug&gt;</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Reusable long form layout with a call to action</td><td>Index built</td></tr>
+        <tr><td>30</td><td>Events calendar</td><td class="mono">events</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Mock exams, seminars and workshops in one dated list</td><td>Dates being kept current</td></tr>
+        <tr><td>31</td><td>Team and mentors</td><td class="mono">team</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Who teaches and mentors, with consent for photos and names</td><td>Consents</td></tr>
+        <tr><td>32</td><td>Careers (teach with us)</td><td class="mono">careers</td><td>2</td><td><span class="pill p-later">Later</span></td><td>Teacher roles, expectations, how to apply</td><td>Hiring wording</td></tr>
+        <tr><td>33</td><td>Resources for families</td><td class="mono">resources</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Curated links and downloads that genuinely help (system explainers, timelines)</td><td>-</td></tr>
+        <tr><td>34</td><td>Scholarship list</td><td class="mono">scholarships</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Running list from the monthly seminars, kept current</td><td>Owner for updates</td></tr>
+        <tr><td>35</td><td>Turkish pages</td><td class="mono">/tr/...</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Key pages mirrored for the Turkish-speaking community, linked as language siblings</td><td>Translation capacity</td></tr>
+
+        <tr class="group-row"><td colspan="7">Locations</td></tr>
+        <tr><td>36</td><td>Locations overview</td><td class="mono">locations</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Where the programme runs and what is available in each city</td><td>City naming decision</td></tr>
+        <tr><td>37</td><td>Vancouver</td><td class="mono">locations/vancouver</td><td>2</td><td><span class="pill p-later">Later</span></td><td>Pilot city: the New Westminster venue, what runs there, local mock exam dates</td><td>Venue name and hours</td></tr>
+        <tr><td>38</td><td>Edmonton</td><td class="mono">locations/edmonton</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Second phase city page</td><td>Decision and venue</td></tr>
+        <tr><td>39</td><td>Toronto</td><td class="mono">locations/toronto</td><td>3</td><td><span class="pill p-later">Later</span></td><td>Second phase city page</td><td>Decision and venue</td></tr>
+
+        <tr class="group-row"><td colspan="7">Forms</td></tr>
+        <tr><td>40</td><td>Join a free lesson</td><td class="mono">join</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Shortest possible form, one field per question</td><td>Form endpoint</td></tr>
+        <tr><td>41</td><td>Contact and questions</td><td class="mono">contact</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Name, email, question, optional phone</td><td>-</td></tr>
+        <tr><td>42</td><td>Mock exam registration</td><td class="mono">mock-exams</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Student grade, subject, city</td><td>Exam dates</td></tr>
+        <tr><td>43</td><td>Seminar RSVP</td><td class="mono">seminars</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Which seminar, how many attending</td><td>Schedule</td></tr>
+        <tr><td>44</td><td>Volunteer application</td><td class="mono">volunteer</td><td>1</td><td><span class="pill p-todo">To build</span></td><td>Subject, city, availability, references</td><td>-</td></tr>
+        <tr><td>45</td><td>Career fair registration</td><td class="mono">/career-fair-entry-registration-2026-10-17</td><td>1</td><td><span class="pill p-done">Built</span></td><td>Standalone entry form for the career fair: first and last name, phone, email and consent to be contacted by email and phone. No date, venue or price is stated until they are confirmed</td><td>-</td></tr>
+
+        <tr class="group-row"><td colspan="7">Legal, utility and platform</td></tr>
+        <tr><td>46</td><td>Privacy policy</td><td class="mono">privacy</td><td>4</td><td><span class="pill p-later">Later</span></td><td>What data is collected, why, how long, consent and contact</td><td>Legal review</td></tr>
+        <tr><td>47</td><td>Terms of use</td><td class="mono">terms</td><td>4</td><td><span class="pill p-later">Later</span></td><td>Programme terms, cancellation, code of conduct</td><td>Legal review</td></tr>
+        <tr><td>48</td><td>Accessibility statement</td><td class="mono">accessibility</td><td>4</td><td><span class="pill p-later">Later</span></td><td>What we target and how to report a problem</td><td>-</td></tr>
+        <tr><td>49</td><td>Thank-you page</td><td class="mono">thank-you</td><td>4</td><td><span class="pill p-later">Later</span></td><td>Post form confirmation with next steps</td><td>Forms live</td></tr>
+        <tr><td>50</td><td>Not found page</td><td class="mono">404</td><td>4</td><td><span class="pill p-later">Later</span></td><td>Helpful links back to the free funnel</td><td>-</td></tr>
+        <tr><td>51</td><td>Partners</td><td class="mono">partners</td><td>3</td><td><span class="pill p-later">Later</span></td><td>The lead charity, the partner organisations in each city with their logos and website links, and what a partnership involves</td><td>Partner logos and website links</td></tr>
+        <tr><td>52</td><td>Donate and bursary fund</td><td class="mono">donate</td><td>4</td><td><span class="pill p-later">Later</span></td><td>What donations fund, how to give, receipting</td><td>Charity process</td></tr>
+        <tr><td>53</td><td>Sitemap, robots and AI discovery files</td><td class="mono">platform</td><td>4</td><td><span class="pill p-later">Later</span></td><td>Platform level files generated from published pages</td><td>Pages published</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 11 ================= -->
+  <section id="s11">
+    <h2>11. Core page briefs (phase 1)</h2>
+    <p class="doc-note">Each brief is the specification for the page. Build the sections in the order listed.</p>
+
+    <h3>11.1 Home (built - keep in sync)</h3>
+    <ul>
+      <li>Badge: free online lessons, open to every family. Headline: where curious children become confident learners.</li>
+      <li>Lede: free online maths lessons, free monthly mock exams, volunteer mentor community, pathway guidance.</li>
+      <li>Trust row: free to join, maths and English first, run by mentors and volunteers.</li>
+      <li>Stat strip in words: free, monthly, grades 4 to 12, volunteer run.</li>
+      <li>Programme grid: 15 cards, each tagged "Free to join", "Certificate", "Volunteer" or "With the centre", with filters.</li>
+      <li>Journey strip: join free, get a reading, learn weekly, measure monthly.</li>
+      <li>Approach plus the "where we are today" card: running now and free, versus opening with the centre.</li>
+      <li>Final call to action: join a free online lesson, or read how it works.</li>
+    </ul>
+
+    <h3>11.2 How it works (built - keep in sync)</h3>
+    <ul>
+      <li>Five steps: join free, get a reading, learn weekly, measure and compete, review and advance.</li>
+      <li>Month rhythm: lesson, practice and mentor check-in, mock exam, seminar and growth report.</li>
+      <li>Tracks: maths first, English and writing, innovation and technology.</li>
+      <li>Sample growth report, clearly labelled as a sample.</li>
+      <li>Eight honest questions, including "are the online lessons really free".</li>
+    </ul>
+
+    <h3>11.3 Programmes overview (built - keep in sync)</h3>
+    <ul>
+      <li>Card grid and filters reused from the home page, in the order free and running, then optional and running, then coming with the centre.</li>
+      <li>Only the cards whose page exists are links (free lessons, mock exams); the rest are plain cards with a tag, so no dead links.</li>
+      <li>Closing note: we never publish prices, and we explain any optional fee before anything is agreed.</li>
+    </ul>
+
+    <h3>11.4 Free online lessons (built - keep in sync)</h3>
+    <ul>
+      <li>What happens in a lesson in five steps, plus what a family needs (device, quiet spot, paper and pencil; camera never required).</li>
+      <li>Who it suits: grades 4 to 12, any level, behind or ahead, no preparation required.</li>
+      <li>How to join in three steps through the contact page, with the note that dates come through the community until a schedule is published.</li>
+      <li>Five honest FAQ answers and a cross-link to the mock exam page.</li>
+    </ul>
+
+    <h3>11.5 Monthly mock exams (built - keep in sync)</h3>
+    <ul>
+      <li>Topic-based testing explained: every student is tested on the topic they are studying, so it measures the teaching, not memory.</li>
+      <li>Format stated plainly: in person, at a community venue, run by volunteers, once a month. The page also says there is no online version.</li>
+      <li>Free, and kept visibly separate from the CEMC contest track in its own section and in the FAQ.</li>
+      <li>What a family receives afterwards, and three registration steps with the details confirmed when you register.</li>
+    </ul>
+
+    <h3>11.6 Seminars (to build)</h3>
+    <ul>
+      <li>Two tracks in one page: scholarship seminars (monthly, university volunteers) and parent seminars.</li>
+      <li>What a typical session covers, how long it runs, how to attend, and whether it is online.</li>
+      <li>RSVP form and the current schedule.</li>
+    </ul>
+
+    <h3>11.7 What is free (to build)</h3>
+    <ul>
+      <li>Explicit list of the free items from table 4.1, with no prices anywhere.</li>
+      <li>Clear statement about optional programmes: they may carry a fee and we explain costs before anything is agreed.</li>
+      <li>This page exists to remove doubt and to answer the most common objection honestly.</li>
+    </ul>
+
+    <h3>11.8 About us (built - keep in sync)</h3>
+    <ul>
+      <li>Why the programme exists: the gap between free material and paid tutoring, a school system that is hard to read, and support that disappears when a student needs it most.</li>
+      <li>The three legs: academic support, pathway guidance, and a place where study happens.</li>
+      <li>Who is behind it: CentreCanada Newcomer Services Society leads, with partner organisations delivering in other cities (section 2.1). The registration number is not published until it is confirmed.</li>
+      <li>Today versus the centre, with the honest note that no opening date is published until it is confirmed.</li>
+      <li>Three promises: no prices on the site, nothing described as running unless it is, student information protected.</li>
+    </ul>
+
+    <h3>11.9 Contact (built - keep in sync)</h3>
+    <ul>
+      <li>One short form, plus the programme inbox and the New Westminster address.</li>
+      <li>Written in plain website language: no phone number is mentioned at all, and nothing is said about who reads which mailbox.</li>
+      <li>No prices. Response time stays out of the page until section 16 question 5 is answered.</li>
+    </ul>
+
+    <h3>11.10 Volunteer with us (built - recruitment page, keep in sync)</h3>
+    <p class="doc-note">
+      This page is a recruitment page, not a description page. It has to make a good candidate want the role and still
+      be honest about what the role is. The owner confirmed that the selection process is real (application, interview,
+      teaching sample, references, decision) and that applications can be declined.
+    </p>
+    <ul>
+      <li>Hero sells the opportunity: "Teach something real. Grow while you do it." with real students, training and feedback, documented hours and a reference as the four promises, plus a card showing what volunteering actually looks like.</li>
+      <li>Four reasons with substance (you actually teach, you are trained and reviewed, you leave with proof, you join a small serious team), then a four step ladder: volunteer mentor, session lead, subject lead, paid teaching role at the centre.</li>
+      <li>The ten positions, every card stating the work, the time it really takes and who fits it:
+        <ul>
+          <li><strong>Online maths teacher</strong> - 1 hour a week, at least one lesson every week.</li>
+          <li><strong>Mock exam organiser</strong> - about 6 to 8 hours per exam, and never more than one exam every two months; the work is printing the papers, managing the online registrations, classroom help on exam day, collecting the answer papers, checking them against the answer key, entering the results into the system and emailing or WhatsApp-ing parents and students.</li>
+          <li><strong>Scholarship seminar presenter (English)</strong> and <strong>scholarship seminar presenter (other languages)</strong> - one role with two parts, and a volunteer may take either part or both, as their time allows: (1) research the scholarships that are open or opening soon from official sources and add each one to our system as a record holding every detail that matters (value, eligibility, documents, deadlines, essays or references, official link), and (2) build the pages of a shared presentation from those records and present the seminar. Research is self paced; presenting hours are agreed with the programme lead. Seminars run online as video calls and can reach hundreds of students and parents at once, so the requirement is comfortable presenting online. The other-languages version does the same work and presents in that language.</li>
+          <li><strong>Self-paced course assistant</strong> - online in a WhatsApp group on the volunteer's own schedule: guide the students, supervise how they move through the subjects, and accept them for the next subject when the current one is finished.</li>
+          <li><strong>Curriculum builder</strong> - completely up to the volunteer, from 1 hour a week: one atomic task at a time from the long task list, finish it, take the next.</li>
+          <li><strong>Online lessons helper</strong> - one or more lessons, the volunteer decides how many they manage: helping the teacher inside the live lesson and messaging students and parents.</li>
+          <li><strong>Academic writing guide</strong> - hours agreed with the programme lead: set the subjects, give the writing tasks to the students, monitor progress through the system.</li>
+          <li><strong>Career coach</strong> - hours agreed with the programme lead: one-to-one guidance for a high-school student, set the goal, create the file, work the defined tasks until the file is complete and the student is ready to apply.</li>
+          <li><strong>Career path presenter (professionals only)</strong> - hours agreed with the programme lead: someone who works in the profession presents it from every angle (the day to day, the pay and the growth, the courses and licences, how long they take, what gets you hired, the honest trade-offs, where the field is heading). This role is only open to people working in the profession today, not to students describing it.</li>
+        </ul>
+      </li>
+      <li>What you leave with (documented hours, a specific reference, a letter of support, a review at the end of the term) beside what we expect (the standards that make a reference mean something).</li>
+      <li>Five step selection process, the same for every applicant, with the honest note that a small team means some good applicants are not taken in a given round.</li>
+      <li>Application form: name, email, city, position, subjects, availability, references, message, consent, on the same platform form contract as the other pages.</li>
+      <li>No invented time commitment anywhere: the only hours and cadences on the page came from the owner (1 hour a week, about 6 to 8 hours per exam, never more than one exam every two months, from 1 hour a week). Every other position says the hours are agreed with the programme lead instead of inventing a number.</li>
+      <li>Six volunteer questions answered beside the form, including pay (volunteer roles are unpaid; paid teaching roles are at the centre) and what happens if you are not selected.</li>
+      <li>All ten positions are stated as ACTIVELY recruited (never a waiting list), and applicants can come from any city in Canada: the page says most of the work is online and that the roles with an in-person day say so on their card.</li>
+      <li>Training and commitment: everyone gets the training their role needs before they start (onboarding, how we run lessons and exams, the systems, the standard), with support afterwards, and the roles with a heavier training load ask for a LONGER commitment - told to the volunteer, in writing, before they accept. Also answered in the FAQ ("How long do I need to commit for?"). No number of months is published yet.</li>
+    </ul>
+
+    <h3>11.11 Join (built - keep in sync)</h3>
+    <ul>
+      <li>The shortest sign up on the site: parent name, email, grade, subject, preferred time, optional topic and note.</li>
+      <li>Beside it: what happens next in three steps, what is free, and a card for families who would rather ask first.</li>
+      <li>Closes with a plain statement about the details: lesson contact only, nothing sensitive asked for, easy to leave.</li>
+    </ul>
+
+    <h3>11.12 FAQ hub (built - keep in sync)</h3>
+    <ul>
+      <li>Five categories with jump links: money and what is free, lessons and learning, the monthly mock exam, joining and progress, who runs the programme.</li>
+      <li>Expands the eight questions from the how it works page into 24 answers, all in plain details elements so the page works without JavaScript.</li>
+      <li>Ends with four link cards to join, free lessons, mock exams and contact.</li>
+    </ul>
+
+    <h3>11.13 Volunteer role pages (built - one per position)</h3>
+    <p class="doc-note">
+      One short job definition page per position, so a candidate can read exactly what the role is before applying.
+      Every page uses the same six parts and carries no form of its own: the buttons link to the application form on
+      <code>/volunteer</code>. Nothing is stated on a role page that the position list does not already claim.
+    </p>
+    <ol>
+      <li><strong>Hero:</strong> kicker "Volunteer role", the position name as h1, one line saying what the volunteer does, and three pills with the confirmed facts (hours, online or in person, who it is for).</li>
+      <li><strong>What you do:</strong> four to six lines, the actual tasks in the order they happen.</li>
+      <li><strong>What you need:</strong> three to four lines, the real requirements, including the uncomfortable ones.</li>
+      <li><strong>Side boxes:</strong> time required (the owner-given number, or "hours agreed with the programme lead") and what you get (documented hours, a reference, a letter of support, a review).</li>
+      <li><strong>How to apply:</strong> three steps, the same selection process as the volunteer page, with the work sample written for that role.</li>
+      <li><strong>Closing band:</strong> links to two related roles, the full position list and the application form.</li>
+    </ol>
+    <p class="doc-note">CSS note: the <code>.fba-role</code> block lives ONCE in the central stylesheet (header-footer/header.html), so all ten pages share it and carry markup plus a small reveal script only. A new role page needs one entry in section 9.2 and one row in the harness PAGES list.</p>
+    <p class="doc-note">A role that covers more than one kind of work says so and lets the volunteer choose the part: the two scholarship roles have a research and data part and a presenting part, listed separately, with a note that either part or both is fine. Never state a format the programme does not use - the scholarship seminars run online as video calls, not in a room.</p>
+    <p class="doc-note">Every role page states the same two programme facts: training is provided for the role before you start, and roles with a heavier training load ask for a longer commitment (told before the volunteer agrees). "Training for the role" is the first item in the What you get box on all ten pages.</p>
+    <h3>11.14 Career fair entry registration (built - standalone form page)</h3>
+    <p class="doc-note">
+      An event form, not a navigation page: it is shared as a direct link and lives in the <code>formpages</code>
+      folder so event forms never clutter the site tree. Same fragment contract as every other page.
+    </p>
+    <ul>
+      <li>Hero states what it is and that entry is free, with the route <code>/career-fair-entry-registration-2026-10-17</code>.</li>
+      <li>The form asks for exactly five things: first name, last name, phone, email and a required consent checkbox to be contacted by email and phone. Nothing else is collected.</li>
+      <li>Consent is a required checkbox stored as <code>consent: "yes"</code>, and the line under the form says what the details are used for and that deletion can be requested.</li>
+      <li>Submits over the CMS API with the label <code>career-fair-entry</code> to <code>event-entry-registraton-uniconbaseapps</code> (name as given by the CMS side).</li>
+      <li>NO date, venue or price appears on the page: none of them is confirmed for publishing. The copy says the entry details follow by email and that the phone number is used only if something changes.</li>
+      <li>A new event form = a copy of this page with its own slug, its own label and its own <code>cmsObjectType</code>, added to the harness PAGES list and one row here.</li>
+    </ul>
+
+  </section>
+
+  <!-- ================= 12 ================= -->
+  <section id="s12">
+    <h2>12. Programme page template</h2>
+    <p class="doc-note">Every page under <code>/programs/</code> uses this structure so families learn the same way each time.</p>
+    <ol>
+      <li><strong>Hero:</strong> programme name, one line on who it is for, one line on what changes for the student, and a status tag (running now, free, or coming with the centre).</li>
+      <li><strong>What it is:</strong> three to five short paragraphs, no jargon.</li>
+      <li><strong>Who it is for:</strong> grades and situations, including who it is not for.</li>
+      <li><strong>How it runs:</strong> session shape, frequency and delivery (online, in person, or both).</li>
+      <li><strong>What is free and what is optional:</strong> plainly stated, no prices.</li>
+      <li><strong>How it is measured:</strong> how progress is tracked and what the family receives.</li>
+      <li><strong>Questions:</strong> four to six specific questions for this programme.</li>
+      <li><strong>Call to action:</strong> join a free lesson, come to a mock exam, or ask a question.</li>
+      <li><strong>Internal links:</strong> how it works, programmes overview, and the two closest programmes.</li>
+    </ol>
+  </section>
+
+  <!-- ================= 13 ================= -->
+  <section id="s13">
+    <h2>13. Forms and data capture</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Form</th><th>Fields</th><th>Goes to</th><th>Success behaviour</th></tr>
+        <tr><td>Join a free lesson</td><td>Parent name, email, student grade, subject, preferred time, optional note</td><td class="mono">registration-forms-uniconbaseapps</td><td>Inline confirmation plus the thank-you page and next steps</td></tr>
+        <tr><td>Contact</td><td>Name, email, message, optional phone</td><td class="mono">contact-us-forms-uniconbaseapps</td><td>Inline confirmation; response time added once agreed (section 16)</td></tr>
+        <tr><td>Mock exam registration</td><td>Student grade, subject, city, parent email</td><td class="mono">not built yet</td><td>Confirmation with the exam date and what to bring</td></tr>
+        <tr><td>Seminar RSVP</td><td>Which seminar, name, email, number attending</td><td class="mono">not built yet</td><td>Confirmation with joining details</td></tr>
+        <tr><td>Volunteer application</td><td>Name, email, city, subject strengths, availability, references</td><td class="mono">apply-position-forms-uniconbaseapps</td><td>Confirmation plus next step explanation</td></tr>
+        <tr><td>Career fair registration</td><td>First name, last name, phone, email, consent to be contacted by email and phone</td><td class="mono">event-entry-registraton-uniconbaseapps</td><td>Inline confirmation plus the entry details by email</td></tr>
+      </table>
+    </div>
+    <p>Every accepted submission is stored inside the CMS and appears under <b>Form Submissions</b> in the CMS admin; whether the team also receives an email is a CMS setting, not a page concern.</p>
+    <p>All three built forms follow the platform contract: <code>&lt;form data-gw-form&gt;</code>, a hidden honeypot field named <code>website</code>, a <code>[data-gw-form-status]</code> live region, and a guarded bind.</p>
+    <p>Submitting is done over the CMS public API, and the contract is the CMS team's own integration guide (<code>PUBLICWEBSITE-GUIDE--form-submission.txt</code> in the workspace root), not a website design: one JSON POST to <code>https://&lt;CMS-HOST&gt;/api/public/forms/submit</code>, no auth, body at most 256 KB and 4000 characters per field, then read the status and show a message. There is no second call and no read access. <code>cmsObjectType</code> names the application that holds the submission and may be omitted, in which case the CMS default <code>form-submission-uniconbaseapps</code> is used; <code>formTypeId</code> is only a label and is never a destination; the honeypot travels as <code>gw_hp</code> at the root of the payload and never inside <code>values</code>, which is a flat map of field name to text. Only 200 means accepted (400 validation, 403 origin not allowed, 429 rate limited, 500 storage failed). This site contributes only its own facts: the per-form label and the fields each form sends.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Built form</th><th>data-gw-form-type (label)</th><th>Fields sent in values</th></tr>
+        <tr><td>Contact</td><td class="mono">contact-message</td><td>name, email, phone (optional), topic (optional: free-lesson, mock-exam, seminar, volunteering, partnership, something-else), message</td></tr>
+        <tr><td>Volunteer application</td><td class="mono">volunteer-application</td><td>name, email, city, role (one of the eleven options), subjects, availability, references, message</td></tr>
+        <tr><td>Join a free lesson</td><td class="mono">free-lesson-signup</td><td>parent_name, email, student_grade (4-12 or other), subject (mathematics, english, both, advise), preferred_time, topic, note</td></tr>
+      </table>
+    </div>
+    <p>Each page script holds <code>formApiEndpoint</code> (<code>https://&lt;CMS-HOST&gt;/api/public/forms/submit</code>, still a placeholder until the CMS host is confirmed) and posts <code>{ cmsObjectType?, formTypeId, page, submittedAt, gw_hp, values }</code> as JSON, capping every value at 4000 characters and showing sending, success and error states. <code>data-gw-form-endpoint</code> overrides the endpoint for one form, <code>data-gw-cms-object-type</code> names the destination application per form, and a placeholder or empty endpoint falls back to the CMS platform bind. What remains is configuration, not code: set the CMS host, choose whether these three forms belong to a specific application or the default one, and put the site origin on the CMS allowlist (task p1-24).</p>
+    <div class="box box-info">
+      <strong>Consent line on every form:</strong> a short sentence stating what the submitted data will be used for,
+      with a link to the privacy policy once it exists. No student data beyond what the form needs.
+    </div>
+  </section>
+
+  <!-- ================= 14 ================= -->
+  <section id="s14">
+    <h2>14. SEO, analytics and measurement</h2>
+
+    <h3>14.1 Search basics</h3>
+    <ul>
+      <li>Title pattern: page topic plus city or audience, kept under about 60 characters. Description under about 155 characters, written to be read, not stuffed.</li>
+      <li>One clear heading per page, logical heading order, descriptive link text, images with alt text.</li>
+      <li>Structured data where it is honest: organisation, FAQ on the FAQ page, event entries once dates exist, course entries for programme pages.</li>
+      <li>Target queries by phase: free maths help, monthly mock exam, scholarship seminar, university pathway guidance, trades maths support, city plus subject once city pages exist.</li>
+      <li>Every programme page links back to how it works and to the programmes overview.</li>
+    </ul>
+
+    <h3>14.2 Analytics events to define</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Event</th><th>Fires when</th><th>Why it matters</th></tr>
+        <tr><td class="mono">cta_join_free</td><td>Any "join a free online lesson" button is used</td><td>The primary conversion</td></tr>
+        <tr><td class="mono">form_start / form_submit</td><td>Any form is started or submitted, with the form name</td><td>Shows which offer attracts families</td></tr>
+        <tr><td class="mono">programs_filter</td><td>A programme filter chip is used</td><td>Which services people look for</td></tr>
+        <tr><td class="mono">faq_open</td><td>An FAQ item is opened</td><td>What parents are unsure about</td></tr>
+        <tr><td class="mono">volunteer_apply</td><td>Volunteer form submitted</td><td>Recruitment performance</td></tr>
+      </table>
+    </div>
+
+    <h3>14.3 Reporting rhythm</h3>
+    <ul>
+      <li>Monthly: form submissions by type, free lesson sign ups, mock exam registrations, seminar attendance, volunteer applications.</li>
+      <li>Quarterly: which pages bring form submissions, which questions appear in forms and FAQ use, what content to add next.</li>
+      <li>Each quarter, re-read section 4 and move any newly live service out of the "coming" list, updating every page that mentions it.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 15 ================= -->
+  <section id="s15">
+    <h2>15. Task list (all pages)</h2>
+    <p class="doc-note">
+      Tick boxes as you go - they are saved in this browser. The boxes ticked in this file are the work already recorded
+      as done in the change log (section 17.2), and the phase counters and bars follow them. Every page task uses the
+      same definition of done below.
+      "Page tasks" means the per page work: copy, build, links, SEO, QA, publish.
+    </p>
+
+    <div class="box box-info" id="s15-0">
+      <strong>15.0 Definition of done for one page:</strong>
+      copy written and fact-checked against section 4 - sections built to the brief - images and alt text in place -
+      title and description written - links wired both ways (nav, footer, in page calls to action) - form or call to
+      action target verified - quality gate in section 9.4 passed on desktop and phone - page published at its slug -
+      recorded in the change log.
+    </div>
+
+    <div class="phase-head">
+      <h3>Phase 0 - Foundations</h3>
+      <span class="phase-count" data-count="p0">0 / 0</span>
+    </div>
+    <div class="taskbar"><span data-bar="p0"></span></div>
+    <div class="tasks" data-phase="p0">
+      <label class="task"><input type="checkbox" data-task="p0-1"><span class="task-text">Close the remaining company info gaps in section 3.2 (charity registration number, website domain, venue names and hours, socials, photo consent process)</span><span class="task-meta">blocking</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-2"><span class="task-text">Confirm the public wording for naming the partner cities and for what surplus supports (section 16)</span><span class="task-meta">blocking</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-3"><span class="task-text">Confirm the final free list so every page says the same thing (table 4.1)</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-4"><span class="task-text">Reserve CMS page objects and slugs for the phase 1 pages (section 9.2)</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-5"><span class="task-text">Set up the form endpoint and spam protection, then test that the programme inbox in section 3.1 receives a submission</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-6"><span class="task-text">Set SEO defaults: title pattern, description pattern, sharing image, organisation schema</span></label>
+      <label class="task"><input type="checkbox" data-task="p0-7"><span class="task-text">Define and verify the analytics events in section 14.2</span></label>
+      <label class="task done"><input type="checkbox" data-task="p0-8" checked><span class="task-text">Quality gate pass on the central header and footer at three viewport widths, including the mobile menu</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p0-9" checked><span class="task-text">Add the real page links to the header nav and footer once each page exists (no dead links)</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p0-10" checked><span class="task-text">Keep <code>build-test-harness.js</code> PAGES list current: every new page gets a row and the harness is rebuilt, so every page stays previewable before the CMS</span><span class="task-meta">done</span></label>
+    </div>
+
+    <div class="phase-head">
+      <h3>Phase 1 - Free first (pages for everything running today)</h3>
+      <span class="phase-count" data-count="p1">0 / 0</span>
+    </div>
+    <div class="taskbar"><span data-bar="p1"></span></div>
+    <div class="tasks" data-phase="p1">
+      <label class="task done"><input type="checkbox" data-task="p1-1" checked><span class="task-text">Home - built. Re-verify copy against section 4 after every business change</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-2" checked><span class="task-text">How it works - built. Re-verify copy after every business change</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-3" checked><span class="task-text">Programmes overview page (programs) - built. Re-verify copy against section 4 after every business change</span><span class="task-meta">done</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-4"><span class="task-text">Maths programme page (programs/math) - page tasks</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-5" checked><span class="task-text">Free online lessons page (free-lessons) - built. Add the real schedule when it is published</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-6" checked><span class="task-text">Monthly mock exams page (mock-exams) - built, in-person exam only with no online claim. The registration form lives on the contact page, so wire it there</span><span class="task-meta">done</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-7"><span class="task-text">Seminars page (seminars) with RSVP form</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-8"><span class="task-text">Drone pilot certificate page (programs/drone-pilot) - page tasks</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-9"><span class="task-text">What is free page (whats-free) - page tasks</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-10" checked><span class="task-text">About us page (about-us) - built. Add the charity registration number when it is confirmed</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-11" checked><span class="task-text">Contact page (contact) with form - built, the single programme inbox named on the page</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-12" checked><span class="task-text">Volunteer page (volunteer) rebuilt as a recruitment page - ten positions with the time each one really takes, career ladder, five step selection process, application form</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-13" checked><span class="task-text">Join page (join) - built, and every "join a free lesson" call to action now points at it</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-14" checked><span class="task-text">Career fair entry registration page: built as a standalone form page (first name, last name, phone, email, required consent), posting to the CMS; date, venue and price stay off the page until confirmed</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-15" checked><span class="task-text">Header nav and footer links updated to the real pages, no dead links anywhere - done for the ten built pages</span><span class="task-meta">done</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-16"><span class="task-text">Full site pass: every page checked against section 4 and section 5, in one sitting, including the parked list in 4.4</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-17" checked><span class="task-text">Wire the confirmed contact facts into the header, footer and contact page: the programme inbox from section 3.1 and the New Westminster venue</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-18" checked><span class="task-text">Owner confirmed the volunteer position list on 16 October 2026: ten roles, listed in brief 11.10 with the hours each one really takes</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-19" checked><span class="task-text">Ten volunteer role definition pages (one per position, template 11.13) - built, each linked from its position card on the volunteer page</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-21" checked><span class="task-text">Header rebuilt as a mega menu (four panels carrying all ten pages and all ten role pages, hover/click/keyboard, mobile accordion drawer) and the footer gained the volunteer band and a volunteer column</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-22" checked><span class="task-text">Mega menu visual upgrade: inline SVG icon sprite (22 icons) on every panel link, icon tiles, patterned and rounded panel surface with a brand accent rule, free stock photo tiles with real padding, and matching styling for the mobile accordion rows</span><span class="task-meta">done</span></label>
+      <label class="task done"><input type="checkbox" data-task="p1-23" checked><span class="task-text">Volunteer role pages moved to root level routes (<code>/volunteer-role-&lt;role&gt;</code>, no folder) in the header, the footer, the volunteer page, all ten role pages and the CMS menu JSON; the two scholarship roles rewritten around the research and data part plus the presenting part, with online seminars stated</span><span class="task-meta">done</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-24"><span class="task-text">Allow the site origin in the CMS so the forms can post: the endpoint (<code>https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit</code>) and the four destinations are already wired in the pages, and a preflight from <code>https://futurebridgeacademy.ca</code> currently answers 403 <code>ORIGIN_NOT_ALLOWED</code>. Add the site origin to <code>websiteConfig.hostNames</code> or <code>formIntake.allowedOrigins</code> in the CMS site configuration, then submit one test entry and delete it under Form Submissions</span><span class="task-meta">open</span></label>
+      <label class="task"><input type="checkbox" data-task="p1-20"><span class="task-text">Revisit the deferred volunteer questions (section 16, 13 to 15): which roles carry the heavier training load and how long the longer commitment is, whether the writing guide and career coach role pages need a "opens with the centre" note, and whether career talks become a public service</span><span class="task-meta">deferred</span></label>
+    </div>
+
+    <div class="phase-head">
+      <h3>Phase 2 - Centre ready</h3>
+      <span class="phase-count" data-count="p2">0 / 0</span>
+    </div>
+    <div class="taskbar"><span data-bar="p2"></span></div>
+    <div class="tasks" data-phase="p2">
+      <label class="task"><input type="checkbox" data-task="p2-1"><span class="task-text">Build and reuse the programme page template (section 12) before writing any programme page</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-2"><span class="task-text">English and writing page (programs/english)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-3"><span class="task-text">Small-group lessons page (programs/small-groups)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-4"><span class="task-text">Study hall page (programs/study-hall) - PARKED, do not build or mention until it is real (section 4.4)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-5"><span class="task-text">Mentoring and growth reports page (programs/mentoring)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-6"><span class="task-text">Pathway guidance page (programs/pathway-guidance)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-7"><span class="task-text">Application portfolio page (programs/application-portfolio)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-8"><span class="task-text">CEMC contest club page (programs/cemc), keeping the free mock exams clearly separate</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-9"><span class="task-text">IB and AP page (programs/ib-ap)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-10"><span class="task-text">Trades preparation page (programs/trades)</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-11"><span class="task-text">Admissions page (admissions), without publishing criteria detail</span></label>
+      <label class="task done"><input type="checkbox" data-task="p2-12" checked><span class="task-text">FAQ hub page (faq) - built early in phase 1: 24 questions in five categories</span><span class="task-meta">done</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-13"><span class="task-text">Careers page (careers) for teacher recruitment</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-14"><span class="task-text">Vancouver location page (locations/vancouver) with venue and local dates</span></label>
+      <label class="task"><input type="checkbox" data-task="p2-15"><span class="task-text">Move every newly live service out of the "coming" list on all pages, then re-run the site pass</span></label>
+    </div>
+
+    <div class="phase-head">
+      <h3>Phase 3 - Trust and growth</h3>
+      <span class="phase-count" data-count="p3">0 / 0</span>
+    </div>
+    <div class="taskbar"><span data-bar="p3"></span></div>
+    <div class="tasks" data-phase="p3">
+      <label class="task"><input type="checkbox" data-task="p3-1"><span class="task-text">Results page (results) - only once the tracking system holds real data and consents are on file</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-2"><span class="task-text">Guides and articles index (guides) plus the first three articles: how admission works, how grades shape options, how to help study at home</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-3"><span class="task-text">Article template (guides/slug) with a call to action at the end</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-4"><span class="task-text">Events calendar (events) covering mock exams, seminars and workshops</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-5"><span class="task-text">Team and mentors page (team), with consent for every name and photo</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-6"><span class="task-text">Resources for families page (resources)</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-7"><span class="task-text">Scholarship list page (scholarships), kept current by a named owner</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-8"><span class="task-text">Summer programme page (programs/summer) - PARKED until dates, format and staffing are confirmed (section 4.4)</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-9"><span class="task-text">Books and materials page (books) - PARKED until the first book exists (section 4.4)</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-10"><span class="task-text">Locations overview plus Edmonton and Toronto pages, once the cities are public</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-11"><span class="task-text">Turkish versions of the key pages, linked as language siblings</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-12"><span class="task-text">Internal linking pass: every programme page links to how it works, programmes and its two nearest siblings</span></label>
+      <label class="task"><input type="checkbox" data-task="p3-13"><span class="task-text">Partners page (partners): the lead charity, the partner organisation in each city with its logo and website link, and the programme-versus-partner explanation</span></label>
+    </div>
+
+    <div class="phase-head">
+      <h3>Phase 4 - Legal, utility and care</h3>
+      <span class="phase-count" data-count="p4">0 / 0</span>
+    </div>
+    <div class="taskbar"><span data-bar="p4"></span></div>
+    <div class="tasks" data-phase="p4">
+      <label class="task"><input type="checkbox" data-task="p4-1"><span class="task-text">Privacy policy page (privacy) with the data and consent wording used on every form</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-2"><span class="task-text">Terms of use page (terms)</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-3"><span class="task-text">Accessibility statement page (accessibility)</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-4"><span class="task-text">Thank-you page (thank-you) and not found page (404)</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-5"><span class="task-text">Donate page (donate) once the charity receipting process is settled</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-6"><span class="task-text">Legal links, cookie or consent handling, sitemap, robots and AI discovery files wired to published pages</span></label>
+      <label class="task"><input type="checkbox" data-task="p4-7"><span class="task-text">Set the quarterly review routine: re-read section 4, update pages, bump this document version</span></label>
+    </div>
+
+    <div class="box box-warn">
+      <strong>Standing maintenance tasks:</strong> after every business change (a service starts, a service pauses,
+      a fee changes, a city is added), update section 4 of this document first, then every page that mentions it.
+      A page that contradicts this document is a bug, not a copy issue.
+    </div>
+  </section>
+
+  <!-- ================= 16 ================= -->
+  <section id="s16">
+    <h2>16. Open questions and decisions</h2>
+    <p class="doc-note">Questions the owner has already answered are recorded as facts in 2.1 and 3.1, not repeated here.</p>
+    <p class="doc-note">Questions 13 to 15 are volunteer programme details deliberately parked by the owner on 16 October 2026: finish the base of the website first, then come back to them. Nothing on the site is blocked by them, and the pages say only what is confirmed. Task p1-20 tracks the revisit.</p>
+    <div class="table-wrap">
+      <table>
+        <tr><th>#</th><th>Question</th><th>Blocks</th><th>Decision</th></tr>
+        <tr><td>1</td><td>Do we name the partner cities publicly now, or say "the cities we serve" until each partner is ready to be named?</td><td>Home, about, locations, footer</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>2</td><td>Do we publish what surplus supports? (The entity structure itself is confirmed publishable in 2.1.)</td><td>About, donate, partners, footer</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>3</td><td>Are English lessons running yet, or still to start? (Affects the free lessons wording.)</td><td>Home, free-lessons, programmes, how it works</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>4</td><td>Do we ever publish fees, or keep the site price-free permanently?</td><td>What is free, all programme pages</td><td><span class="pill p-block">Open</span> (current rule: price-free)</td></tr>
+        <tr><td>5</td><td>What response time do we publish for email and forms?</td><td>Contact, all forms</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>6</td><td>How do we collect photo and quote consent, and who keeps the record?</td><td>Results, team, about, programme pages</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>7</td><td>Do we run a public events calendar, or keep dates inside the community?</td><td>Events, mock exams, seminars</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>8</td><td>What is the priority and timeline for Turkish pages?</td><td>Phase 3 language work</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>9</td><td>Which social profiles exist, and do we link them from the footer?</td><td>Footer, sharing</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>10</td><td>Who owns the website after launch, and who approves page copy?</td><td>Everything</td><td><span class="pill p-block">Open</span></td></tr>
+        <tr><td>11</td><td>Is the volunteer position list correct and complete, and which positions should be added as the centre opens?</td><td>Volunteer page, programmes page</td><td><span class="pill p-done">Answered 16 Oct 2026</span> the owner confirmed the roles (11.10, ten including the professionals-only career path presenter); revisit when the centre opens</td></tr>
+        <tr><td>12</td><td>Do we publish a start date or a recruitment window for volunteer applications, or keep applications always open?</td><td>Volunteer page</td><td><span class="pill p-done">Answered 16 Oct 2026</span> always open and actively recruited, no waiting list, applicants from any city in Canada</td></tr>
+        <tr><td>13</td><td>Which roles carry the heavier training load, and how long is the longer commitment they ask for? (The volunteer page and the role pages say only that those roles ask for longer and that the commitment is written down before acceptance.)</td><td>Volunteer page, role pages</td><td><span class="pill p-block">Open - deferred</span> revisit after the site base is complete</td></tr>
+        <tr><td>14</td><td>Do the academic writing guide and career coach role pages need a note saying the service they support opens with the centre? They describe the role honestly today, but the writing and pathway services are still shown elsewhere as coming with the centre.</td><td>Role pages, programmes page</td><td><span class="pill p-block">Open - deferred</span> revisit after the site base is complete</td></tr>
+        <tr><td>15</td><td>Do career path talks become a public service on the programmes page (students and parents attend), or stay a volunteer role only?</td><td>Programmes page, role page</td><td><span class="pill p-block">Open - deferred</span> revisit after the site base is complete</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 17 ================= -->
+  <section id="s17">
+    <h2>17. Current file state and change log</h2>
+
+    <h3>17.1 Files in this folder</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>File</th><th>Role</th><th>Notes</th></tr>
+        <tr><td class="mono">ssot_future-bridge-webste.html</td><td>This SSOT document</td><td>Filename carries a typo ("webste") - rename to <code>ssot-future-bridge-website.html</code> when convenient</td></tr>
+        <tr><td class="mono">home-page.html</td><td>Home page fragment</td><td>Renamed from <code>index.html</code> on 16 October 2026; built from the business plan facts, no prices, programme cards, page-specific CSS only</td></tr>
+        <tr><td class="mono">how-it-works.html</td><td>Journey page fragment</td><td>Built, includes the 8 question FAQ, page-specific CSS only</td></tr>
+        <tr><td class="mono">about-us.html</td><td>About us fragment</td><td>Built: why, the three legs, who runs it, today versus the centre, three promises</td></tr>
+        <tr><td class="mono">contact.html</td><td>Contact fragment</td><td>Built: form (platform protocol), the programme inbox, venue and link cards</td></tr>
+        <tr><td class="mono">volunteer.html</td><td>Volunteer fragment</td><td>Built as the recruitment page: hero pitch, four reasons, career ladder, the ten confirmed positions with their real time commitments, five step selection process, application form</td></tr>
+        <tr><td class="mono">volunteer-role-*.html</td><td>Ten volunteer role definition fragments</td><td>One per position (maths teacher, exam organiser, seminar presenter English and other languages, self-paced assistant, curriculum builder, lessons helper, writing guide, career coach, career path presenter). Markup plus a reveal script only: the shared <code>.fba-role</code> CSS is in <code>header-footer/header.html</code>. Routes in 9.2</td></tr>
+        <tr><td class="mono">join.html</td><td>Join fragment</td><td>Built: the shortest sign up, what happens next, what is free, data statement</td></tr>
+        <tr><td class="mono">faq.html</td><td>FAQ hub fragment</td><td>Built: 24 questions in five categories with jump links, plain details elements</td></tr>
+        <tr><td class="mono">programs.html</td><td>Programmes overview fragment</td><td>Built: 13 programme cards with the same filters as the home page, links only to pages that exist, closing note about money</td></tr>
+        <tr><td class="mono">free-lessons.html</td><td>Free online lessons fragment</td><td>Built: five step lesson walkthrough, who it is for, what is needed, three join steps, five FAQ answers</td></tr>
+        <tr><td class="mono">mock-exams.html</td><td>Monthly mock exams fragment</td><td>Built: topic-based testing, in person only (stated twice), why it is free, CEMC kept separate, three registration steps</td></tr>
+        <tr><td class="mono">main-menu.json</td><td>CMS menu source for the mobile menu</td><td>Six top level items, four with children: 33 links over 20 unique routes, ids unique, urls in route form, includes the two volunteer anchors. Mirrors the header mega menu (section 9.5)</td></tr>
+        <tr><td class="mono">check-menu.js</td><td>Menu guard (dev tool, never published)</td><td>Run <code>node check-menu.js</code> after any navigation or page change: it asserts the menu JSON parses, ids are unique, every url is a reserved route in route form, and that the menu and the header cover each other both ways</td></tr>
+        <tr><td class="mono">header-footer/header.html</td><td>Central header component <strong>plus the central site stylesheet</strong></td><td>Owns the brand tokens on <code>:root</code> and every shared component (section 9.1). Logo from the storage URL, nav with active page highlight</td></tr>
+        <tr><td class="mono">header-footer/footer.html</td><td>Central footer component</td><td>Reads its colours from the central tokens; logo inverted with a CSS filter because the artwork is black</td></tr>
+        <tr><td class="mono">test-harness.html</td><td>Local page preview (dev tool, never published)</td><td>Renders the central header, the chosen page and the central footer together, with page tabs, a width switcher and error capture. Internal links stay inside the harness: route links from the pages are mapped back to the local files, and a route with no page yet shows a note instead of navigating away</td></tr>
+        <tr><td class="mono">build-test-harness.js</td><td>Harness generator</td><td>Run <code>node build-test-harness.js</code> after editing pages or adding a page to the PAGES list. Opening the folder through a local server lets the harness read the files live instead of using the embedded snapshot</td></tr>
+        <tr><td class="mono">formpages/</td><td>Standalone form pages (event and campaign forms that are shared by link)</td><td>Career fair entry registration page is built here; one form per page, same CMS submission contract as the core pages</td></tr>
+      </table>
+    </div>
+
+    <h3>17.2 Change log</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Version</th><th>Date</th><th>Change</th></tr>
+        <tr><td>1.18</td><td>17 October 2026</td><td>Forms connected to the live CMS and a new event form page. The endpoint is now <code>https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit</code> and each page carries its destination application: contact to <code>contact-us-forms-uniconbaseapps</code>, volunteer to <code>apply-position-forms-uniconbaseapps</code>, join to <code>registration-forms-uniconbaseapps</code>. New page <code>formpages/career-fair-entry-registration-2026-10-17.html</code> at route <code>/career-fair-entry-registration-2026-10-17</code>: first name, last name, phone, email and a required consent box, label <code>career-fair-entry</code>, destination <code>event-entry-registraton-uniconbaseapps</code> (name exactly as supplied by the CMS side), no date, venue or price stated. The page is a standalone event form, so it is not in the header or footer; it is in the harness and reserved in 9.2. A preflight check against the live endpoint from the production origin answers 403 <code>ORIGIN_NOT_ALLOWED</code> while the CMS host origin answers 204, so the remaining step is the origin allowlist (task p1-24). Section 10 row 45, 11.14, 13, 17.1 and task p1-14 updated.</td></tr>
+        <tr><td>1.17</td><td>17 October 2026</td><td>Form submission switched to the CMS public API that the CMS team implemented, which differs from the earlier draft: the endpoint is <code>https://&lt;CMS-HOST&gt;/api/public/forms/submit</code> on the CMS host (not a relative path), the payload gains an optional <code>cmsObjectType</code> that names the destination application (default <code>form-submission-uniconbaseapps</code>) while <code>formTypeId</code> is only a label and never a destination, the honeypot is now <code>name="gw_hp"</code> and always travels at the root of the payload, and the answers are 200 accepted, 400 validation, 403 <code>ORIGIN_NOT_ALLOWED</code>, 429 <code>RATE_LIMIT_EXCEEDED</code>, 500 <code>STORAGE_FAILED</code>. The three page scripts now cap every value at 4000 characters, add <code>cmsObjectType</code> only when configured, treat anything but a 2xx with <code>ok != false</code> as a failure, and show a status-specific message (400 retry, 403 contact, 429 wait). The earlier draft documents were deleted and replaced by the CMS team's own integration guide, <code>PUBLICWEBSITE-GUIDE--form-submission.txt</code>, which is now the contract; section 13 records the site's own labels and fields against it. Remaining work is configuration only: the real CMS host, the <code>cmsObjectType</code> decision and the origin allowlist (task p1-24).</td></tr>
+        <tr><td>1.16</td><td>16 October 2026</td><td>Routes, tiles and forms. (1) ROOT LEVEL ROUTES: the ten volunteer role pages moved from <code>/volunteer/&lt;role&gt;</code> to <code>/volunteer-role-&lt;role&gt;</code> everywhere - header panel, footer column, the ten position cards on the volunteer page, the related-role links on every role page, the doc comments and <code>main-menu.json</code> - because the CMS has no folders: every page is one entry under the root. (2) FEATURE TILES: every panel tile now carries a free stock photo (Pexels, hotlinked at width 600) under a dark brand wash, the padding grew to 30px sides with wider spacing between tag, title, copy and the call to action, and the logo watermark was dropped because the photo replaced it. (3) SCHOLARSHIP ROLE: both scholarship roles now describe two parts - research scholarships from official sources and keep a complete record in our system, and build the pages of a shared presentation from those records then present - with a note that a volunteer may take either part or both, on the volunteer page cards and role pages. (4) SEMINAR FORMAT: the false "in front of a room" requirement is gone; the scholarship seminars run online as video calls and can reach hundreds of students and parents at once, stated on both role pages. (5) FORMS TO API: all three forms now POST <code>{ formTypeId, page, submittedAt, gw_hp, values }</code> as JSON to <code>formApiEndpoint</code> (placeholder <code>/api/forms/submit</code>), with a calling state, success and error messages, a shared status style, <code>data-gw-form-type</code> on each form and a per-form <code>data-gw-form-endpoint</code> override. The capability itself is GENERIC, so its contract is filed as a platform request rather than a site document - <code>PUBLICWEBSITE-REQUEST--form-submit-api.txt</code> at the workspace root (attributes, JSON request and response, guardrails, and three ways the platform could expose it) - while this site keeps only its own facts in section 13: the three form type ids and the fields each one sends. Section 9.5 and the field captions in 11.10 and 11.13 updated, task p1-22 reworded and p1-23 (done) plus p1-24 (open API integration) added.</td></tr>
+        <tr><td>1.15</td><td>16 October 2026</td><td>Mega menu visual upgrade. The header now carries a hidden inline SVG sprite with 22 icons (<code>fba-hd-sprite</code> / <code>fba-i-*</code>), used on the Home and Contact links, on all four panel triggers and on every one of the 24 panel links, so each link is now an icon tile plus label plus one short description line. Panels became light rounded surfaces (gradient white to very light blue, 26px bottom corners) with a four pixel brand gradient rule along the top, a faded dot pattern behind the content, section heads with a gradient rule, hover lift on the cards and a gradient-filled icon tile on hover. Every feature tile keeps the academy logo as a faint watermark (real logo image, <code>brightness(0) invert(1)</code> at 11% opacity) with a green corner glow. In the mobile drawer the accordion rows keep their icon tiles with hairline dividers, the trigger label sits next to its icon and the caret is pushed right. Copy trimmed to short description lines so no panel title wraps, and the three column panel uses slightly smaller type. No page fragment changed; section 9.5 gained the panel visual and mobile row rules.</td></tr>
+        <tr><td>1.14</td><td>16 October 2026</td><td>CMS mobile menu source: new <code>main-menu.json</code> in this folder, in the CMS format (id, name, menus with id, label, url and a children array), generated for the WHOLE navigation - six top level items with four nested panels, 33 links over 20 unique routes, all ids unique (children namespaced as parent-slug) and every url in route form including the two volunteer anchors. The file mirrors the header mega menu and a check asserts the two stay in step in both directions. While verifying, the missing <code>/faq</code> row was added to the slug table in 9.2 (it was built in phase 1 but never reserved). Section 9.5 gained the menu JSON rule and 17.1 the file row.</td></tr>
+        <tr><td>1.13</td><td>16 October 2026</td><td>Chrome upgrade. The header is now a MEGA MENU: six top level items (Home, Start here, Programmes, Volunteer, About, Contact) plus the join button, with four full width panels carrying all ten core pages (each with a one line description), all ten volunteer role pages in the Volunteer panel, a feature tile per panel and the current section marked active. Behaviour is hover, click, keyboard (aria-expanded, aria-controls, role=region), Escape, outside click and focus out, with the same markup turning into an accordion inside the mobile drawer, which now scrolls. The footer gained a volunteer band ("Volunteers run this programme" with the any-city and training facts plus Apply to volunteer and See the ten roles) and a Volunteer column (apply, all ten roles, four popular role definitions), and its grid now drops to two columns at 1180px. New navigation rules recorded as section 9.5, the central stylesheet note updated, task p1-21 added as done. No page fragment changed.</td></tr>
+        <tr><td>1.12</td><td>16 October 2026</td><td>Volunteer programme details PARKED as open questions instead of being decided now (owner: add them to the SSOT for now, we will revisit after the website base is complete). Section 16 gained questions 14 (do the academic writing guide and career coach role pages need an "opens with the centre" note?) and 15 (do career path talks become a public service on the programmes page?), question 13 was reworded and marked deferred, and the section carries a note that 13 to 15 are deliberately parked and block nothing. New task p1-20 tracks the revisit; the task list now reads 12 of 19 done in phase 1.</td></tr>
+        <tr><td>1.11</td><td>16 October 2026</td><td>Volunteer recruitment made explicit on the two content points the owner raised. (1) All ten positions are now stated as ACTIVELY recruited - "nothing here is a waiting list" - and applicants can come from any city in Canada: a "From any city in Canada" pill and a sentence in the hero, a line in the position list intro, a note after the training block, and the FAQ answer about remote work now starts from the same fact (the roles with an in-person day are flagged on their cards). (2) NEW training and commitment block on the volunteer page: everyone gets the training their role needs before they start, with support afterwards, and the roles with a heavier training load ask for a longer commitment - written down and told to the volunteer before they accept. The FAQ gained "How long do I need to commit for?", "Complete the training for your role" was added to what we expect, and all ten role pages now lead their What you get box with "Training for the role" plus a training and longer-commitment note in the How to apply block. Open question 12 answered; new open question 13 (which roles carry the heavier load and how long the longer commitment is).</td></tr>
+        <tr><td>1.10</td><td>16 October 2026</td><td>Job definitions for every volunteer position: ten short role pages, one per position, at <code>/volunteer/&lt;role&gt;</code> (new template 11.13). Each page states what you do, what you need, the time required, what you get and how to apply, with the work sample written for that role; none of them carries a form, they all link to the application form on the volunteer page. Every one of the ten position cards on <code>/volunteer</code> now links to its role page. The shared <code>.fba-role</code> CSS was added ONCE to the central stylesheet, so the ten pages stay in step; the local preview harness grew to twenty pages. Routed in 9.2, inventoried in 10, recorded in 17.1, task p1-19.</td></tr>
+        <tr><td>1.9</td><td>16 October 2026</td><td>Volunteer positions reorganised to the owner's final list: ten roles, each with the real time it takes (online maths teacher 1 hour a week; mock exam organiser about 6 to 8 hours per exam and never more than one exam every two months, with the full task list; scholarship seminar presenter in English and in other languages; self-paced course assistant; curriculum builder; online lessons helper; academic writing guide; career coach; and career path presenter, open to professionals only, who presents their own profession and how to reach it from every angle). The two-group split is gone. The application form lists the ten positions plus a flexible choice, and the FAQ hours answer uses the real numbers. Task list (section 15): the boxes for the work already recorded as done are now ticked in this file, so the phase counters and bars read correctly on opening, the counters now follow the file's own ticks, and the browser storage key moved to <code>fba_web_ssot_v2</code>. Open question 11 answered and task p1-18 closed.</td></tr>
+        <tr><td>1.8</td><td>16 October 2026</td><td>Volunteer page rebuilt as a real recruitment page, on the owner's instruction. It now sells the opportunity ("Teach something real. Grow while you do it.") with real students, training and feedback, documented hours and a reference; gives four substantive reasons to join plus a four step ladder from volunteer mentor to a paid teaching role at the centre; lists 12 positions in two groups (nine running now, three opening with the centre), each card stating the work and who fits it; sets what you leave with against what we expect; documents the five step selection process the owner confirmed (apply, short interview, teaching sample, references, decision) including the honest note that some good applicants are not taken in a round; and keeps the no-invented-hours rule. The application form now asks for a position (13 options including a flexible choice) and the sidebar answers six volunteer questions honestly, pay included. Sections 11.10, 10, 6.1, 9.2, 16 and 17 updated; two new open questions (position list confirmation, recruitment window).</td></tr>
+        <tr><td>1.7</td><td>16 October 2026</td><td>Navigation and contact corrections from the owner. ONE email address only: <code>info@futurebridgeacademy.ca</code> replaces the general inbox everywhere (contact page, footer, forms table and section 3.1), and the old spelling warning box is gone. Pages now avoid internal-style detail that does not belong on a public website: the contact page no longer mentions inbox counts, who monitors what or the absence of a phone number, the FAQ no longer asks about a phone, and both pages use plain website wording instead. The header nav now links all ten pages (Home, How it works, Programmes, Free lessons, Mock exams, About, Volunteer, FAQ, Contact) with a tighter nav style and the mobile menu appearing below 1120px, and the footer lists all ten too. Every page gained a "Read next" link row in its closing band, the home page live programme cards link to their pages, and a new link points from the home page to the full programme list. New shared component: <code>.fba-cta-links</code> in the central stylesheet.</td></tr>
+        <tr><td>1.6</td><td>16 October 2026</td><td>Built the remaining phase 1 pages: <code>about-us.html</code>, <code>contact.html</code>, <code>volunteer.html</code>, <code>join.html</code> and <code>faq.html</code> (the FAQ hub came forward from phase 2). Together they close the trust and action gap: about explains the three legs and names the charity and partners, contact carries the form plus both confirmed inboxes and the New Westminster venue, volunteer carries three roles with documented hours and an application form, join is the shortest sign up on the site, and the FAQ hub expands the eight how it works questions into 24 answers in five categories. All three forms follow the platform contract (data-gw-form, honeypot, status region, guarded gw.forms.bind) and say so honestly when the platform is absent. Every "join a free online lesson" call to action across the site now points at <code>/join</code>, the header button and announcement link included, and the footer lists the new pages and shows both email addresses. Preview harness now carries ten pages.</td></tr>
+        <tr><td>1.5</td><td>16 October 2026</td><td>Built the next three core pages: <code>programs.html</code>, <code>free-lessons.html</code> and <code>mock-exams.html</code>, all as CMS fragments with every CSS rule scoped to the page root and an idempotent script. Programmes overview reuses the home card grid and filters and links only to pages that exist; free lessons covers the lesson, who it is for, what is needed and how to join; mock exams covers topic-based testing, in-person only, why it is free and keeps CEMC visibly separate. The header nav item now points at <code>/programs</code> and the footer links the three new pages, so nothing dead-ended. Preview harness PAGES extended and rebuilt. Corrections found while verifying: the old "online or in person" mock exam line was removed from how it works, the English track is now labelled as opening with the centre, and the footer mission line no longer implies English lessons run today. Sections 9.2, 10, 11.3 to 11.5, 17.1 and the phase 1 task list updated.</td></tr>
+        <tr><td>1.4</td><td>16 October 2026</td><td>Company facts confirmed by the owner and recorded: new section 2.1 "Who runs the programme" (CentreCanada Newcomer Services Society as the lead charity in the Vancouver area, Future Bridge Academy as the programme trading name served by partner legal entities, partner organisations in Calgary, Edmonton, Toronto, Ottawa, Kitchener, London, Hamilton and Montreal, and the New Westminster venue at 93 6th St). Section 3 split into 3.1 confirmed (both inboxes, who monitors the general inbox, no phone published, Vancouver area venue) and 3.2 still needed. Section 13 form destinations now name the real inboxes, and the stale "online or in person" mock exam option was removed. Page dependencies, the phase 0 and phase 4 tasks and open questions 1 to 6 updated (12 questions became 10). Partners page moved to phase 3 with a logo and website task (p3-13), plus a new task to wire the confirmed contact facts into the chrome (p1-17).</td></tr>
+        <tr><td>1.3</td><td>16 October 2026</td><td>Links are now CMS ready. Every internal link in the header, the footer and the built pages uses the route form with no <code>.html</code> extension (<code>/</code>, <code>/how-it-works</code>, <code>/about-us</code>, <code>/contact</code>, <code>/#fba-programs</code>). The about route is <code>/about-us</code>, not <code>/about</code>, in the slug table, the page inventory and the task list. New link rules in section 9.3 and a link check in the quality gate (9.4). The test harness now keeps internal links inside the preview: it maps route links back to the local files, scrolls to the anchor when a link points at a section, and shows a blue note for a route whose page does not exist yet.</td></tr>
+        <tr><td>1.2</td><td>16 October 2026</td><td>Added the local preview test harness: <code>test-harness.html</code> plus its generator <code>build-test-harness.js</code>. It renders the central header, the chosen page fragment and the central footer together, with page tabs, a width switcher, a reload button, script error capture and deep links (<code>?page=</code> or <code>#hash</code>). Opened from disk it uses an embedded snapshot; served over http it reads the real files. Quality gate (9.4), file state (17.1) and the phase 0 task list updated.</td></tr>
+        <tr><td>1.1</td><td>16 October 2026</td><td>Corrections from the owner. Removed from all pages and parked in section 4.4: online mock exam (it does not exist), study hall, summer programme, books and materials. Mock exam wording now says in person only. Content rules box and page briefs updated. Also added: central stylesheet note (site design system now lives in <code>header-footer/header.html</code>) and the CSS specificity fix for the reset rules.</td></tr>
+        <tr><td>1.0</td><td>16 October 2026</td><td>First version. Company snapshot, live versus coming services, content rules and banned claims, website plan with five phases, full page inventory of 53 pages, core page briefs, programme page template, form plan, SEO and analytics plan, task list with live checkboxes, open questions, file state.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    Future Bridge Academy - Website SSOT, version 1.18, 17 October 2026. Internal document. Facts trace back to the
+    business plan (dersane-is-plani.html, v2.11). No prices, no invented claims, no student data without consent.
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    'use strict';
+
+    var STORAGE_KEY = 'fba_web_ssot_v2';
+    var boxes = document.querySelectorAll('.task input[type=checkbox]');
+    if (!boxes.length) { return; }
+
+    var saved = {};
+    try {
+      saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}') || {};
+    } catch (err) { saved = {}; }
+
+    function save() {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      } catch (err) { /* storage unavailable: ticks are session only */ }
+    }
+
+    function refreshCounters() {
+      var phases = document.querySelectorAll('.tasks[data-phase]');
+      var totalDone = 0;
+      var totalAll = 0;
+
+      Array.prototype.forEach.call(phases, function (group) {
+        var phase = group.getAttribute('data-phase');
+        var list = group.querySelectorAll('input[type=checkbox]');
+        var done = 0;
+
+        Array.prototype.forEach.call(list, function (box) {
+          if (box.checked) { done++; }
+        });
+
+        totalDone += done;
+        totalAll += list.length;
+
+        var label = document.querySelector('.phase-count[data-count="' + phase + '"]');
+        if (label) { label.textContent = done + ' / ' + list.length; }
+
+        var bar = document.querySelector('.taskbar span[data-bar="' + phase + '"]');
+        if (bar) { bar.style.width = (list.length ? (done / list.length) * 100 : 0) + '%'; }
+      });
+
+      var first = document.querySelector('.phase-count');
+      if (first && totalAll) {
+        first.setAttribute('title', 'Overall: ' + totalDone + ' of ' + totalAll + ' tasks done');
+      }
+    }
+
+    Array.prototype.forEach.call(boxes, function (box) {
+      var id = box.getAttribute('data-task');
+      var row = box.closest ? box.closest('.task') : null;
+
+      // The file records the work that is done; a tick or untick in this browser wins over it.
+      if (id && typeof saved[id] === 'boolean') { box.checked = saved[id]; }
+      if (row) { row.classList.toggle('done', box.checked); }
+
+      box.addEventListener('change', function () {
+        if (id) { saved[id] = box.checked; save(); }
+        if (row) { row.classList.toggle('done', box.checked); }
+        refreshCounters();
+      });
+    });
+
+    refreshCounters();
+  })();
+</script>
+</body>
+</html>

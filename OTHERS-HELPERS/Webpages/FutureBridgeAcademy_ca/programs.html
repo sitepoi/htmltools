@@ -1,0 +1,568 @@
+<!--
+  =========================================================================
+  PROGRAMMES OVERVIEW - fragment for the academy website (programs.html)
+  - Everything lives inside ONE parent <div class="fba-page fba-programs">
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - Design tokens and shared components live in header-footer/header.html
+  - Only page layout is written here, and every rule is scoped to .fba-programs
+  - Without JS every programme card stays visible and every filter is ignored
+  =========================================================================
+-->
+<div class="fba-page fba-programs">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-prog-hero">
+		<div class="fba-wrap fba-prog-hero-grid">
+			<div>
+				<p class="fba-kicker">Programmes</p>
+				<h1 class="fba-prog-title">Everything we run,<br><span class="fba-prog-hl">free first and honest</span></h1>
+				<p class="fba-prog-lede">
+					Free online lessons, free monthly mock exams and free seminars are running today. Small-group
+					lessons, mentoring, pathway guidance and the rest open with the centre. We never blur the two.
+				</p>
+				<ul class="fba-pills">
+					<li class="fba-pill">Free to join</li>
+					<li class="fba-pill">Grades 4-12</li>
+					<li class="fba-pill">Mathematics first</li>
+					<li class="fba-pill">Run by volunteers</li>
+				</ul>
+				<div class="fba-actions">
+					<a class="fba-btn fba-btn-primary" href="/join">Join a free online lesson</a>
+					<a class="fba-btn fba-btn-ghost" href="/how-it-works">See how it works</a>
+				</div>
+			</div>
+
+			<div class="fba-prog-hero-card">
+				<p class="fba-prog-hero-card-title">Running today, at no cost</p>
+				<ul class="fba-ticks fba-ticks-light">
+					<li>A free online lesson cycle every week</li>
+					<li>A free mock exam every month, in person</li>
+					<li>Scholarship and parent seminars</li>
+					<li>The volunteer mentor community</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- =========================== PROGRAMMES =========================== -->
+	<section class="fba-prog-list" id="fba-prog-list">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">All programmes</p>
+				<h2>Start with what is free, add what fits</h2>
+				<p class="fba-sec-sub">Filter the list to see what is free, what is running now, and what opens with
+					the centre. Asking a question costs nothing and commits you to nothing.</p>
+			</div>
+
+			<div class="fba-prog-filters" role="group" aria-label="Filter programmes">
+				<button type="button" class="fba-prog-chip is-on" data-track="all">All programmes</button>
+				<button type="button" class="fba-prog-chip" data-track="free">Free to join</button>
+				<button type="button" class="fba-prog-chip" data-track="now">Running now</button>
+				<button type="button" class="fba-prog-chip" data-track="soon">Coming with the centre</button>
+			</div>
+
+			<div class="fba-prog-grid">
+				<article class="fba-prog-card fba-reveal" data-phase="now" data-free="1">
+					<p class="fba-prog-icon" aria-hidden="true">&#128290;</p>
+					<h3>Free online math lessons</h3>
+					<p>A live lesson every week on the topic your child is studying at school right now, with practice
+						that follows the same thread instead of a random worksheet.</p>
+					<span class="fba-tag">Free to join</span>
+					<a class="fba-prog-link" href="/free-lessons">See what a lesson looks like &#8594;</a>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="now" data-free="1">
+					<p class="fba-prog-icon" aria-hidden="true">&#128203;</p>
+					<h3>Free monthly mock exam</h3>
+					<p>Held in person at a community venue, under real exam conditions and run by volunteers. Every
+						month, on the topic your child is studying, free for every family.</p>
+					<span class="fba-tag">Free to join</span>
+					<a class="fba-prog-link" href="/mock-exams">How the monthly exam works &#8594;</a>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="now" data-free="1">
+					<p class="fba-prog-icon" aria-hidden="true">&#127891;</p>
+					<h3>Scholarship seminars</h3>
+					<p>University volunteers gather the scholarships opening next month and walk families through
+						eligibility and applications, with concrete next steps rather than vague advice.</p>
+					<span class="fba-tag">Free to join</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="now" data-free="1">
+					<p class="fba-prog-icon" aria-hidden="true">&#128106;</p>
+					<h3>Parent seminars</h3>
+					<p>How the Canadian system actually works: which grades shape which options, what prerequisites
+						mean, and how to support study at home without turning it into a fight.</p>
+					<span class="fba-tag">Free to join</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="now" data-free="1">
+					<p class="fba-prog-icon" aria-hidden="true">&#129309;</p>
+					<h3>Volunteer mentor community</h3>
+					<p>University students and high-school volunteers support learners and earn documented volunteer
+						hours, trained through our own mentor ladder.</p>
+					<span class="fba-tag">Volunteer</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="now">
+					<p class="fba-prog-icon" aria-hidden="true">&#128641;</p>
+					<h3>Drone pilot certificate course</h3>
+					<p>Preparation for the Transport Canada drone pilot (RPAS) certificate, taught online from a
+						curriculum our own team wrote.</p>
+					<span class="fba-tag">Certificate</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#9997;&#65039;</p>
+					<h3>English and writing</h3>
+					<p>Reading, structure and editing, taught the same way as maths: matched to what the class is
+						doing, with writing that gets read and improved.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#128101;</p>
+					<h3>Small-group lessons</h3>
+					<p>Math and English in small groups at the centre, working alongside the free online lessons, close
+						enough that nobody can hide at the back.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#128200;</p>
+					<h3>One-to-one mentoring and growth reports</h3>
+					<p>Regular one-to-one check-ins plus a monthly growth report covering topics, work habits and the
+						next goal, written so a parent can read it in five minutes.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#129517;</p>
+					<h3>Pathway guidance</h3>
+					<p>From grade 8: university, college, trades, IB or AP, the prerequisites each one depends on, and a
+						written plan the family can actually use.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#128193;</p>
+					<h3>Application portfolio tracking</h3>
+					<p>A file that opens in grade 8 and grows every year: grades and prerequisites, volunteer hours,
+						certificates, activities and drafts, so nothing is scrambled together in grade 12.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#127942;</p>
+					<h3>CEMC contest club</h3>
+					<p>Gauss, Pascal, Cayley, Fermat and Euclid preparation, run as its own separate track for students
+						who want contest maths. It never replaces the core programme.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+
+				<article class="fba-prog-card fba-reveal" data-phase="soon">
+					<p class="fba-prog-icon" aria-hidden="true">&#128736;</p>
+					<h3>IB, AP and trades preparation</h3>
+					<p>Focused preparation for IB and AP coursework, and maths support for students heading into
+						apprenticeships, college trades and Red Seal pathways.</p>
+					<span class="fba-tag">With the centre</span>
+				</article>
+			</div>
+
+			<p class="fba-note">
+				<strong>How we talk about money:</strong> we never publish prices. The programmes marked free stay
+				free, and where something carries an optional fee we explain it before you agree to anything.
+			</p>
+		</div>
+	</section>
+
+	<!-- ========================= WHERE TO START ======================== -->
+	<section class="fba-prog-start">
+		<div class="fba-wrap fba-prog-start-grid">
+			<div>
+				<p class="fba-kicker">Where to start</p>
+				<h2>Most families begin with one free lesson</h2>
+				<p>Come to a free online lesson, or sit a free mock exam. Nothing is measured against anyone else and
+					nothing is expected of you afterwards.</p>
+				<ul class="fba-points">
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#128640;</span>
+						<div>
+							<strong>Start free, tonight</strong>
+							<p>The free lessons and the monthly mock exams are open to every family, whether or not
+								you join anything else.</p>
+						</div>
+					</li>
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#128172;</span>
+						<div>
+							<strong>Ask first, decide later</strong>
+							<p>Send one message with your child's grade and the topic they are on. We answer honestly,
+								including when we are not the right fit.</p>
+						</div>
+					</li>
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#128197;</span>
+						<div>
+							<strong>Add the rest when it opens</strong>
+							<p>Small groups, mentoring and pathway guidance arrive with the centre. Families in the
+								community hear about each one first.</p>
+						</div>
+					</li>
+				</ul>
+			</div>
+
+			<aside class="fba-prog-side fba-reveal">
+				<p class="fba-kicker">Already running</p>
+				<h3>Two pages worth reading next</h3>
+				<ul class="fba-ticks">
+					<li><a class="fba-prog-side-link" href="/free-lessons">What a free online lesson looks like</a></li>
+					<li><a class="fba-prog-side-link" href="/mock-exams">How the monthly mock exam works</a></li>
+				</ul>
+				<p class="fba-prog-side-note">Both are free, both run every month, and neither asks you to commit to
+					anything.</p>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ============================== CTA =============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Join a free online lesson</h2>
+			<p>Tell us your child's grade and the topic they are working on. We will send the next lesson details and
+				answer anything you want to ask first.</p>
+			<div class="fba-actions fba-actions-center">
+				<a class="fba-btn fba-btn-primary" href="/join">Join a free online lesson</a>
+				<a class="fba-btn fba-btn-ghost" href="/how-it-works">Read how it works</a>
+			</div>
+			<p class="fba-cta-links">
+				<span>Read next:</span>
+				<a href="/free-lessons">Free online lessons</a>
+				<a href="/mock-exams">Monthly mock exams</a>
+				<a href="/volunteer">Volunteer with us</a>
+				<a href="/faq">Questions and answers</a>
+			</p>
+		</div>
+	</section>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* Shared design system lives centrally in header-footer/header.html.
+		   Everything below is layout for this page only, scoped to .fba-programs. */
+
+		/* ---------- hero ---------- */
+		.fba-programs .fba-prog-hero {
+			position: relative;
+			padding: 66px 0 62px;
+			background:
+				radial-gradient(circle at 88% 12%, rgba(255, 107, 53, 0.18) 0%, transparent 55%),
+				radial-gradient(circle at 6% 92%, rgba(6, 214, 160, 0.16) 0%, transparent 52%),
+				linear-gradient(140deg, #FFF8F4 0%, #F3F8FF 60%, #F7F9FC 100%);
+			overflow: hidden;
+		}
+
+		.fba-programs .fba-prog-hero-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+			gap: 46px;
+			align-items: center;
+		}
+
+		.fba-programs .fba-prog-title {
+			font-size: clamp(2.05rem, 4.6vw, 3.2rem);
+		}
+
+		.fba-programs .fba-prog-hl {
+			background: linear-gradient(135deg, var(--fba-primary), var(--fba-accent));
+			-webkit-background-clip: text;
+			background-clip: text;
+			-webkit-text-fill-color: transparent;
+		}
+
+		.fba-programs .fba-prog-lede {
+			margin-top: 18px;
+			font-size: 1.1rem;
+			color: var(--fba-muted);
+			max-width: 620px;
+		}
+
+		.fba-programs .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 24px;
+		}
+
+		.fba-programs .fba-prog-hero-card {
+			background: linear-gradient(150deg, var(--fba-secondary) 0%, var(--fba-secondary-deep) 100%);
+			border-radius: var(--fba-radius);
+			padding: 28px 26px 24px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-programs .fba-prog-hero-card-title {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.12rem;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.fba-programs .fba-prog-hero-card .fba-ticks {
+			margin-top: 14px;
+		}
+
+		/* ---------- programme list ---------- */
+		.fba-programs .fba-prog-list {
+			padding: 74px 0 70px;
+			background: linear-gradient(180deg, #fff, var(--fba-light));
+		}
+
+		.fba-programs .fba-prog-filters {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-bottom: 28px;
+		}
+
+		.fba-programs .fba-prog-chip {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 0.88rem;
+			font-weight: 700;
+			color: var(--fba-muted);
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: 999px;
+			padding: 9px 18px;
+			transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+		}
+
+		.fba-programs .fba-prog-chip:hover {
+			transform: translateY(-2px);
+			border-color: var(--fba-secondary);
+		}
+
+		.fba-programs .fba-prog-chip:focus-visible {
+			outline: 3px solid rgba(0, 78, 137, 0.35);
+			outline-offset: 2px;
+		}
+
+		.fba-programs .fba-prog-chip.is-on {
+			background: var(--fba-secondary);
+			border-color: var(--fba-secondary);
+			color: #fff;
+		}
+
+		.fba-programs .fba-prog-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+			gap: 22px;
+		}
+
+		.fba-programs .fba-prog-card {
+			display: flex;
+			flex-direction: column;
+			position: relative;
+			background: #fff;
+			border: 2px solid transparent;
+			border-radius: var(--fba-radius);
+			padding: 28px 26px;
+			box-shadow: var(--fba-shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+		}
+
+		.fba-programs .fba-prog-card:hover {
+			transform: translateY(-6px);
+			box-shadow: var(--fba-shadow-lg);
+			border-color: rgba(255, 107, 53, 0.35);
+		}
+
+		.fba-programs .fba-prog-icon {
+			width: 56px;
+			height: 56px;
+			border-radius: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.6rem;
+			margin-bottom: 14px;
+			background: linear-gradient(135deg, rgba(0, 78, 137, 0.1), rgba(255, 107, 53, 0.14));
+		}
+
+		.fba-programs .fba-prog-card h3 {
+			font-size: 1.2rem;
+			margin-bottom: 10px;
+		}
+
+		.fba-programs .fba-prog-card p {
+			color: var(--fba-muted);
+			font-size: 0.96rem;
+		}
+
+		.fba-programs .fba-prog-card .fba-tag {
+			align-self: flex-start;
+			margin-top: auto;
+		}
+
+		.fba-programs .fba-prog-link {
+			display: inline-block;
+			margin-top: 12px;
+			font-size: 0.92rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		.fba-programs .fba-prog-link:hover,
+		.fba-programs .fba-prog-link:focus-visible {
+			color: var(--fba-primary-dark);
+		}
+
+		/* JS-enabled filtering: without JS every card stays visible */
+		.fba-programs.fba-js .fba-prog-card.is-hidden {
+			display: none;
+		}
+
+		/* ---------- where to start ---------- */
+		.fba-programs .fba-prog-start {
+			padding: 72px 0 76px;
+			background: #fff;
+		}
+
+		.fba-programs .fba-prog-start-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+			gap: 46px;
+			align-items: start;
+		}
+
+		.fba-programs .fba-prog-start-grid > div > p {
+			color: var(--fba-muted);
+			max-width: 600px;
+		}
+
+		.fba-programs .fba-prog-side {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 30px 30px 26px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-programs .fba-prog-side h3 {
+			font-size: 1.22rem;
+			margin-bottom: 6px;
+		}
+
+		.fba-programs .fba-prog-side .fba-ticks {
+			margin-top: 14px;
+		}
+
+		.fba-programs .fba-prog-side-link {
+			font-weight: 700;
+			color: var(--fba-secondary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		.fba-programs .fba-prog-side-note {
+			margin-top: 20px;
+			padding-top: 16px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.88rem;
+			font-weight: 600;
+			color: var(--fba-secondary);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.fba-programs .fba-prog-hero-grid,
+			.fba-programs .fba-prog-start-grid {
+				grid-template-columns: 1fr;
+				gap: 34px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-programs .fba-prog-hero {
+				padding: 50px 0 46px;
+			}
+
+			.fba-programs .fba-prog-list,
+			.fba-programs .fba-prog-start {
+				padding: 54px 0 52px;
+			}
+
+			.fba-programs .fba-prog-card {
+				padding: 24px 22px;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-programs');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!root || root.getAttribute('data-fba-programs-ready') === '1') { return; }
+			root.setAttribute('data-fba-programs-ready', '1');
+			root.classList.add('fba-js');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (err) { reduceMotion = false; }
+
+			/* ------------------ programme filtering ------------------ */
+			var chips = Array.prototype.slice.call(root.querySelectorAll('.fba-prog-chip'));
+			var cards = Array.prototype.slice.call(root.querySelectorAll('.fba-prog-card'));
+
+			function applyFilter(group) {
+				chips.forEach(function (chip) {
+					var on = chip.getAttribute('data-track') === group;
+					chip.classList.toggle('is-on', on);
+					chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+				});
+				cards.forEach(function (card) {
+					var phase = card.getAttribute('data-phase') || 'now';
+					var isFree = card.getAttribute('data-free') === '1';
+					var match = group === 'all' ||
+						(group === 'free' && isFree) ||
+						(group === 'now' && phase === 'now') ||
+						(group === 'soon' && phase === 'soon');
+					card.classList.toggle('is-hidden', !match);
+				});
+			}
+
+			chips.forEach(function (chip) {
+				chip.addEventListener('click', function () {
+					applyFilter(chip.getAttribute('data-track') || 'all');
+				});
+			});
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(root.querySelectorAll('.fba-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>

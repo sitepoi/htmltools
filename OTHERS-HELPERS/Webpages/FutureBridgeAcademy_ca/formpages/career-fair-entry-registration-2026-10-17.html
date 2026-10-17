@@ -1,0 +1,567 @@
+<!-- =============================================================================
+     Career fair entry registration - CMS fragment for a public website page
+     Route /career-fair-entry-registration-2026-10-17
+     - No doctype, html, head, body or chrome tags: the CMS owns the page shell.
+     - One parent div (.fba-page .fba-career), one h1, one form, no .html links.
+     - Submits over the CMS public API (PUBLICWEBSITE-GUIDE--form-submission.txt):
+       destination cmsObjectType event-entry-registraton-uniconbaseapps,
+       label formTypeId career-fair-entry.
+     - Fields: first name, last name, phone, email, consent. Nothing else is asked.
+     - No date, venue or price is stated: none of them is confirmed for publishing.
+     - Mobile first: one column of four full-width fields, 16px text so phones do
+       not zoom on focus, 54px tall inputs and a 56px tall submit button, and the
+       form is the first block after the short hero.
+     - No decorative sections: the page has one job, take the entry quickly.
+     ============================================================================= -->
+<div class="fba-page fba-career">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-career-hero">
+		<div class="fba-wrap">
+			<p class="fba-kicker">Career fair</p>
+			<h1 class="fba-career-title">Register your entry</h1>
+			<p class="fba-career-lede">
+				Four details, under a minute. Free entry, one entry per person.
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="fba-career-form-sec">
+		<div class="fba-wrap fba-career-grid">
+
+			<form class="fba-career-form" data-gw-form data-gw-form-type="career-fair-entry">
+				<div class="fba-career-form-head">
+					<h2>Your details</h2>
+					<p>All four fields are required.</p>
+				</div>
+
+				<div class="fba-career-fields">
+					<label class="fba-career-field">
+						<span class="fba-career-label">First name</span>
+						<input type="text" name="first_name" autocomplete="given-name" autocapitalize="words"
+							enterkeyhint="next" required>
+					</label>
+					<label class="fba-career-field">
+						<span class="fba-career-label">Last name</span>
+						<input type="text" name="last_name" autocomplete="family-name" autocapitalize="words"
+							enterkeyhint="next" required>
+					</label>
+					<label class="fba-career-field">
+						<span class="fba-career-label">Phone</span>
+						<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="next" required>
+						<span class="fba-career-hint">Only used to reach you on the day.</span>
+					</label>
+					<label class="fba-career-field">
+						<span class="fba-career-label">Email</span>
+						<input type="email" name="email" inputmode="email" autocomplete="email"
+							autocapitalize="none" spellcheck="false" enterkeyhint="send" required>
+					</label>
+				</div>
+
+				<label class="fba-career-consent-field">
+					<input type="checkbox" name="consent" value="yes" required>
+					<span>I agree to be contacted by email or phone about this career fair.</span>
+				</label>
+
+				<!-- honeypot: hidden from view and from screen readers, never a real field -->
+				<input class="fba-career-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+					aria-hidden="true">
+
+				<div class="fba-career-actions">
+					<div class="fba-career-status" data-gw-form-status role="status"></div>
+					<button class="fba-career-submit" type="submit">Register my entry</button>
+				</div>
+
+				<p class="fba-career-note">We keep these details only to run the fair and to contact you about it. We
+					do not pass them to anyone else, and you can ask us to delete them at any time.</p>
+			</form>
+
+			<aside class="fba-career-aside">
+				<div class="fba-career-card">
+					<p class="fba-kicker">What happens next</p>
+					<h3>Three short steps</h3>
+					<ol class="fba-career-steps">
+						<li><span>01</span>We receive your entry and check it is complete.</li>
+						<li><span>02</span>We send the entry details to your email.</li>
+						<li><span>03</span>You come to the fair and check in with our team.</li>
+					</ol>
+				</div>
+
+				<div class="fba-career-card fba-career-card-quiet">
+					<p class="fba-kicker">Questions?</p>
+					<p>Ask us before you register and we answer honestly.</p>
+					<a class="fba-career-card-link" href="/contact">Ask a question &#8594;</a>
+				</div>
+			</aside>
+		</div>
+	</section>
+
+	<style>
+		/* ---------- career fair entry registration (page scoped) ---------- */
+		.fba-career .fba-career-hero {
+			padding: 76px 0 54px;
+			background:
+				radial-gradient(circle at 82% 8%, rgba(6, 214, 160, 0.14) 0%, transparent 46%),
+				linear-gradient(180deg, #f7fafc 0%, #ffffff 100%);
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-career .fba-career-title {
+			margin: 14px 0 18px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: clamp(2rem, 4.4vw, 3.1rem);
+			line-height: 1.06;
+			letter-spacing: -0.02em;
+			color: var(--fba-secondary);
+		}
+
+		.fba-career .fba-career-lede {
+			max-width: 62ch;
+			font-size: 1.05rem;
+			line-height: 1.65;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 22px;
+		}
+
+		.fba-career .fba-career-form-sec {
+			padding: 56px 0 64px;
+		}
+
+		.fba-career .fba-career-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+			gap: 40px;
+			align-items: start;
+		}
+
+		.fba-career .fba-career-form {
+			padding: 30px;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			background: #fff;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-career .fba-career-form-head h2 {
+			margin: 0 0 6px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.4rem;
+			color: var(--fba-secondary);
+		}
+
+		.fba-career .fba-career-form-head p {
+			margin: 0 0 22px;
+			font-size: 0.94rem;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 16px 18px;
+		}
+
+		.fba-career .fba-career-field {
+			display: flex;
+			flex-direction: column;
+			gap: 7px;
+		}
+
+		.fba-career .fba-career-label {
+			font-size: 0.84rem;
+			font-weight: 700;
+			color: var(--fba-text);
+		}
+
+		.fba-career .fba-career-label em {
+			margin-left: 4px;
+			font-style: normal;
+			font-weight: 600;
+			font-size: 0.74rem;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-field input {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1px solid var(--fba-line);
+			border-radius: 12px;
+			background: #fff;
+			font: inherit;
+			font-size: 0.96rem;
+			color: var(--fba-text);
+		}
+
+		.fba-career .fba-career-field input:focus {
+			outline: 3px solid rgba(0, 78, 137, 0.16);
+			outline-offset: 1px;
+			border-color: rgba(0, 78, 137, 0.45);
+		}
+
+		.fba-career .fba-career-consent-field {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			margin-top: 20px;
+			font-size: 0.88rem;
+			line-height: 1.5;
+			color: var(--fba-text);
+		}
+
+		.fba-career .fba-career-consent-field input {
+			flex: 0 0 auto;
+			width: 18px;
+			height: 18px;
+			margin-top: 2px;
+			accent-color: var(--fba-primary);
+		}
+
+		.fba-career .fba-career-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.fba-career .fba-career-actions {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 14px 18px;
+			margin-top: 24px;
+		}
+
+		.fba-career .fba-career-submit {
+			padding: 14px 26px;
+			border: 0;
+			border-radius: 999px;
+			background: var(--fba-primary);
+			color: #fff;
+			font: inherit;
+			font-size: 0.96rem;
+			font-weight: 700;
+			cursor: pointer;
+			box-shadow: 0 12px 24px rgba(255, 107, 53, 0.28);
+			transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+		}
+
+		.fba-career .fba-career-submit:hover,
+		.fba-career .fba-career-submit:focus-visible {
+			background: var(--fba-primary-dark);
+			transform: translateY(-1px);
+			box-shadow: 0 16px 30px rgba(255, 107, 53, 0.32);
+		}
+
+		.fba-career .fba-career-status {
+			font-size: 0.9rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-note {
+			margin-top: 18px;
+			padding-top: 16px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.82rem;
+			line-height: 1.55;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-aside {
+			display: grid;
+			gap: 16px;
+		}
+
+		.fba-career .fba-career-card {
+			padding: 24px;
+			border-radius: var(--fba-radius);
+			background: var(--fba-secondary);
+			color: #fff;
+		}
+
+		.fba-career .fba-career-card h3 {
+			margin: 10px 0 14px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.15rem;
+			color: #fff;
+		}
+
+		.fba-career .fba-career-card .fba-kicker {
+			color: var(--fba-accent);
+		}
+
+		.fba-career .fba-career-steps {
+			display: grid;
+			gap: 12px;
+			counter-reset: none;
+		}
+
+		.fba-career .fba-career-steps li {
+			display: flex;
+			gap: 12px;
+			font-size: 0.9rem;
+			line-height: 1.5;
+			color: rgba(255, 255, 255, 0.88);
+		}
+
+		.fba-career .fba-career-steps span {
+			flex: 0 0 auto;
+			font-weight: 800;
+			font-size: 0.78rem;
+			letter-spacing: 0.08em;
+			color: var(--fba-accent);
+		}
+
+		.fba-career .fba-career-card-light {
+			background: var(--fba-light);
+			color: var(--fba-text);
+		}
+
+		.fba-career .fba-career-card-light h3,
+		.fba-career .fba-career-card-light .fba-kicker {
+			color: var(--fba-secondary);
+		}
+
+		.fba-career .fba-career-card-light p {
+			font-size: 0.9rem;
+			line-height: 1.6;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-card-quiet {
+			border: 1px solid var(--fba-line);
+			background: #fff;
+			color: var(--fba-text);
+		}
+
+		.fba-career .fba-career-card-quiet h3,
+		.fba-career .fba-career-card-quiet .fba-kicker {
+			color: var(--fba-secondary);
+		}
+
+		.fba-career .fba-career-card-quiet p {
+			font-size: 0.9rem;
+			line-height: 1.6;
+			color: var(--fba-muted);
+		}
+
+		.fba-career .fba-career-card-link {
+			display: inline-block;
+			margin-top: 12px;
+			font-weight: 700;
+			font-size: 0.9rem;
+			color: var(--fba-primary);
+			border-bottom: 1px solid currentColor;
+			padding-bottom: 1px;
+		}
+
+		@media (max-width: 980px) {
+			.fba-career .fba-career-grid {
+				grid-template-columns: 1fr;
+				gap: 28px;
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-career .fba-career-hero {
+				padding: 54px 0 40px;
+			}
+
+			.fba-career .fba-career-form {
+				padding: 22px 18px;
+			}
+
+			.fba-career .fba-career-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.fba-career .fba-career-actions {
+				align-items: stretch;
+			}
+
+			.fba-career .fba-career-submit {
+				width: 100%;
+			}
+		}
+	</style>
+
+	<script>
+	(function () {
+		'use strict';
+
+		var root = document.querySelector('.fba-career');
+		if (!root || root.getAttribute('data-fba-career-ready') === '1') { return; }
+		root.setAttribute('data-fba-career-ready', '1');
+		root.classList.add('fba-js');
+
+		/* ---------------------- forms ---------------------- */
+		/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.txt at the workspace
+		   root: one POST of JSON to the CMS, then read the status and show a message. There is
+		   no second call and no read access.
+		   Set formApiEndpoint to the CMS host, for example
+		   'https://cms.example.com/api/public/forms/submit'. A form may override it with
+		   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+		   submission belongs to one specific application (leave it empty to use the CMS
+		   default, form-submission-uniconbaseapps). While the endpoint is still the
+		   placeholder the page falls back to the CMS platform bind, and in a local preview it
+		   says the service is not connected instead of losing what the visitor typed. */
+		var formApiEndpoint = 'https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit';
+		var formDefaultCmsObjectType = 'event-entry-registraton-uniconbaseapps';
+		var formFieldMaxLength = 4000;
+
+		var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+
+		function setFormStatus(form, message, state) {
+			var status = form.querySelector('[data-gw-form-status]');
+			if (!status) { return; }
+			status.textContent = message || '';
+			status.classList.remove('is-ok', 'is-error');
+			if (state) { status.classList.add('is-' + state); }
+		}
+
+		function cleanFieldValue(value) {
+			var text = value === null || value === undefined ? '' : String(value);
+			return text.trim().slice(0, formFieldMaxLength);
+		}
+
+		function collectFormValues(form) {
+			var values = {};
+
+			Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+				var fieldType = field.type;
+				if (!field.name || field.disabled) { return; }
+				if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+					fieldType === 'reset') { return; }
+				if (fieldType === 'checkbox') {
+					if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+					return;
+				}
+				if (fieldType === 'radio') {
+					if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+					return;
+				}
+				values[field.name] = cleanFieldValue(field.value);
+			});
+
+			return values;
+		}
+
+		function endpointForForm(form) {
+			var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+			var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+			/* an empty value or an unreplaced placeholder means "not configured" */
+			if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+			return endpoint;
+		}
+
+		function cmsObjectTypeForForm(form) {
+			var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+			return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+		}
+
+		function formErrorMessage(statusCode) {
+			if (statusCode === 400) {
+				return 'We could not accept this entry. Please check the fields and try again.';
+			}
+			if (statusCode === 403) {
+				return 'This site is not allowed to send forms yet. Please email info@futurebridgeacademy.ca.';
+			}
+			if (statusCode === 429) {
+				return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+			}
+			return 'We could not send this just now. Please try again, or email info@futurebridgeacademy.ca.';
+		}
+
+		function sendFormToApi(form, endpoint) {
+			var values = collectFormValues(form);
+			var honeypotValue = values.gw_hp || values.website || values.company || '';
+			var cmsObjectType = cmsObjectTypeForForm(form);
+			var submitButton = form.querySelector('[type="submit"]');
+
+			/* the honeypot travels at the root of the payload, never inside values */
+			delete values.gw_hp;
+			delete values.website;
+			delete values.company;
+
+			var payload = {
+				formTypeId: form.getAttribute('data-gw-form-type') || '',
+				page: window.location.pathname,
+				submittedAt: new Date().toISOString(),
+				gw_hp: honeypotValue,
+				values: values
+			};
+
+			if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+			form.classList.add('gw-busy');
+			if (submitButton) { submitButton.disabled = true; }
+			setFormStatus(form, 'Sending...');
+
+			window.fetch(endpoint, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+				body: JSON.stringify(payload)
+			}).then(function (response) {
+				return response.text().then(function (bodyText) {
+					var body = {};
+					try { body = bodyText ? JSON.parse(bodyText) : {}; }
+					catch (err) { body = {}; }
+					return { status: response.status, body: body };
+				});
+			}).then(function (result) {
+				var accepted = result.status >= 200 && result.status < 300 &&
+					!(result.body && result.body.ok === false);
+
+				if (!accepted) {
+					setFormStatus(form, formErrorMessage(result.status), 'error');
+					return;
+				}
+
+				form.reset();
+				setFormStatus(form, 'Thank you. Your entry is registered, and the details follow by email.', 'ok');
+			}).catch(function () {
+				setFormStatus(form, formErrorMessage(0), 'error');
+			}).then(function () {
+				form.classList.remove('gw-busy');
+				if (submitButton) { submitButton.disabled = false; }
+			});
+		}
+
+		if (forms.length) {
+			var platform = window.gw;
+			var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+			if (usesApi) {
+				forms.forEach(function (form) {
+					form.addEventListener('submit', function (event) {
+						event.preventDefault();
+						var endpoint = endpointForForm(form);
+						if (!endpoint || form.classList.contains('gw-busy')) { return; }
+						sendFormToApi(form, endpoint);
+					});
+				});
+			} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+				platform.forms.bind(root);
+			} else {
+				forms.forEach(function (form) {
+					form.addEventListener('submit', function (event) {
+						event.preventDefault();
+						setFormStatus(form, 'The form service is not connected in this preview.');
+					});
+				});
+			}
+		}
+	})();
+	</script>
+
+</div>

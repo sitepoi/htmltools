@@ -1,0 +1,199 @@
+PUBLIC FORM SUBMISSION - INTEGRATION GUIDE
+==========================================
+
+STATUS: this is the implemented contract. It supersedes the earlier draft that
+lived in PUBLICWEBSITE-REQUEST--form-submit-api.txt and
+CMS-PROMPT--save-form-submissions.md (both removed).
+
+THE URL
+-------
+  https://<CMS-HOST>/api/public/forms/submit
+
+  <CMS-HOST> = the hostname of the CMS (the tenant's own domain,
+  for example cms.example.com). It is NOT the website domain,
+  unless both are served from the same host.
+
+  Method : POST only
+  Format : JSON
+  Auth   : NONE - no login, no API key
+  Limit  : body maximum 256 KB, maximum 4000 characters per field
+
+
+PROCEDURE
+---------
+  1. Send one JSON POST to the URL.
+  2. Read the HTTP status.
+  3. Show the visitor a success or an error message.
+  4. Done - there is no second call and no read access.
+
+
+1. THE REQUEST
+--------------
+  fetch('https://<CMS-HOST>/api/public/forms/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      cmsObjectType: 'contact-requests',   // OPTIONAL
+      formTypeId: 'contact-form',          // OPTIONAL (label only)
+      page: '/contact',                    // OPTIONAL
+      submittedAt: new Date().toISOString(), // OPTIONAL
+      gw_hp: '',                           // honeypot, keep empty
+      values: {                            // REQUIRED
+        name: 'Ada',
+        email: 'ada@example.com',
+        message: 'Hello'
+      }
+    })
+  })
+
+
+2. THE ANSWER
+-------------
+  200  {"ok":true,"id":"..."}    stored (or silently dropped as spam)
+  400  {"ok":false,"error":...} validation problem, invalid destination
+  403  {"ok":false,"error":"ORIGIN_NOT_ALLOWED"}
+  429  {"ok":false,"error":"RATE_LIMIT_EXCEEDED"}
+  500  {"ok":false,"error":"STORAGE_FAILED"}
+
+  Only 200 means the submission was accepted.
+  The response never returns the submitted data.
+
+
+FIELD RULES
+-----------
+  cmsObjectType  optional. The application (cmsObjectType) that should
+                 hold the submission. Send it only when the data belongs
+                 to a specific application.
+                 When omitted, the submission goes to the shared default
+                 application: form-submission-uniconbaseapps
+
+  formTypeId     optional. Human label of the form. It is stored with the
+                 submission. It is NEVER a destination.
+
+  page           optional. Path of the page that produced the form.
+
+  submittedAt    optional. ISO date. The server writes its own time when
+                 it is missing.
+
+  gw_hp          optional honeypot. It must stay empty. A non-empty value
+                 means a bot: the answer is 200 and NOTHING is stored.
+
+  values         required. A flat object of fieldName: textValue.
+                 Every value is stored as text.
+                 Do not nest objects inside values.
+
+  Field names inside values are free. They become the field names of the
+  stored submission.
+
+
+HONEYPOT MARKUP (recommended)
+-----------------------------
+  <form id="contact">
+    <input name="name" required>
+    <input name="email" type="email" required>
+    <textarea name="message"></textarea>
+
+    <input name="gw_hp" tabindex="-1" autocomplete="off"
+           aria-hidden="true"
+           style="position:absolute;left:-9999px">
+  </form>
+
+  When submitting with JavaScript, read the form, move gw_hp to the
+  payload root and keep it out of values:
+
+  const formData = Object.fromEntries(new FormData(form).entries())
+  const honeypotValue = formData.gw_hp || ''
+  delete formData.gw_hp
+
+  body: JSON.stringify({
+    page: window.location.pathname,
+    gw_hp: honeypotValue,
+    values: formData
+  })
+
+
+ONE THING TO CONFIRM BEFORE GOING LIVE
+--------------------------------------
+  If the website runs on a DIFFERENT domain than the CMS, that domain
+  must be on the CMS origin allowlist. Otherwise every submission gets
+  403 ORIGIN_NOT_ALLOWED.
+
+  Give the CMS side the exact site origin, for example
+  https://www.example.com
+  and it is added to the site configuration (websiteConfig.hostNames or
+  formIntake.allowedOrigins).
+
+  If the page is served from the CMS host itself, nothing has to be
+  configured.
+
+
+TEST BEFORE GOING LIVE
+----------------------
+  curl -i -X POST https://<CMS-HOST>/api/public/forms/submit \
+    -H "Content-Type: application/json" \
+    -d '{"page":"/test","values":{"name":"Ada","email":"ada@example.com"}}'
+
+  Expected: 200 {"ok":true,"id":"..."}
+
+  Then open "Form Submissions" in the CMS:
+  the application appears with one row and all submitted values.
+  Delete the test row afterwards.
+
+
+ERRORS AND WHAT THEY MEAN
+-------------------------
+  ORIGIN_NOT_ALLOWED      the website domain is not allowlisted
+  RATE_LIMIT_EXCEEDED     too many submissions from this visitor
+  UNKNOWN_DESTINATION     the cmsObjectType you sent does not exist
+  DESTINATION_DISABLED    that application refuses public submissions
+  BODY_TOO_LARGE          the payload is bigger than 256 KB
+  STORAGE_FAILED          the CMS could not store it, contact the CMS side
+
+
+WHAT NOT TO DO
+--------------
+  - Do not put an API key in the page.
+  - Do not call any read endpoint to confirm the submission.
+  - Do not send a nested object inside values.
+  - Do not name the destination with formTypeId.
+
+
+WHERE THIS IS WIRED IN THIS REPO
+--------------------------------
+  The shared snippet lives in each public page that has a form (the
+  contact, volunteer and join pages). It implements exactly the procedure
+  above:
+
+    var formApiEndpoint = 'https://<CMS-HOST>/api/public/forms/submit';
+
+  Page attributes it understands:
+    data-gw-form              marks the form (required)
+    data-gw-form-type         sent as formTypeId (label only)
+    data-gw-cms-object-type   sent as cmsObjectType (optional; when absent
+                              the CMS default application is used)
+    data-gw-form-endpoint     overrides the endpoint for that one form
+    data-gw-form-status       the live region the message is written into
+
+  It keeps the honeypot out of values, caps every value at 4000 characters,
+  adds .gw-busy while sending, and writes is-ok / is-error into the status
+  element. With no endpoint configured it falls back to the CMS platform
+  bind, and in a local preview it says the service is not connected.
+
+  Remaining setup on a site: put the real CMS host in formApiEndpoint, set
+  cmsObjectType if the submissions belong to one application, and make sure
+  the site origin is on the CMS allowlist.
+
+  Wired today: endpoint
+  https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit, with one
+  destination per page - contact-us-forms-uniconbaseapps (contact),
+  apply-position-forms-uniconbaseapps (volunteer),
+  registration-forms-uniconbaseapps (join) and
+  event-entry-registraton-uniconbaseapps (career fair entry).
+
+  Still open: the site origin allowlist. Checked on 17 Oct 2026 - a preflight
+  from https://futurebridgeacademy.ca answers 403 ORIGIN_NOT_ALLOWED while the
+  CMS host origin answers 204, so the public origin has to be added
+  (websiteConfig.hostNames or formIntake.allowedOrigins).

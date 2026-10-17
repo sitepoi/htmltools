@@ -1,0 +1,563 @@
+<!--
+  =========================================================================
+  SITE FOOTER - central chrome component for the academy website
+  - Mounted centrally by the CMS on EVERY page (do NOT paste into page bodies)
+  - One parent <div class="fba-footer">; no document tags, no libraries
+  - All CSS is scoped under .fba-footer so it cannot leak into page content
+  - No <footer> / <nav> / <header> element tags (plain divs + ARIA roles)
+  - Brand = the academy logo image loaded directly from its storage URL; the
+    black artwork is inverted with a CSS filter so it reads on the dark footer
+  - Contact details: the programme email address is real and in place below; no
+    phone number or address is published here (the address lives on the contact
+    page), and social profiles go in the commented slot when they exist
+  =========================================================================
+-->
+<div class="fba-footer" data-fba-footer>
+
+	<div class="fba-ft-wrap">
+
+		<!-- ------------------------ volunteer band ------------------------ -->
+		<div class="fba-ft-vol">
+			<div class="fba-ft-vol-copy">
+				<p class="fba-ft-vol-kicker">Volunteers run this programme</p>
+				<p class="fba-ft-vol-text">Ten roles are open right now: teach a lesson, organise an exam, build the
+					curriculum, guide a student, or present your own profession. Apply from any city in Canada and we
+					train you for the role.</p>
+			</div>
+			<div class="fba-ft-vol-actions">
+				<a class="fba-ft-btn" href="/volunteer#fba-volunteer-form">Apply to volunteer</a>
+				<a class="fba-ft-btn-ghost" href="/volunteer">See the ten roles</a>
+			</div>
+		</div>
+
+		<div class="fba-ft-grid">
+
+			<!-- ------------------------- brand ------------------------- -->
+			<div class="fba-ft-brand">
+				<a class="fba-ft-logo" href="/">
+					<img class="fba-ft-logo-img"
+						src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&amp;token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd"
+						alt="Future Bridge Academy" width="400" height="189" loading="lazy" decoding="async">
+				</a>
+				<p class="fba-ft-mission">
+					Free online lessons, free monthly mock exams and a volunteer mentor community - maths now,
+					English as it opens, and help with the decisions that come after.
+				</p>
+
+				<!-- Social profiles: add real links here when they exist, e.g.
+				<p class="fba-ft-social">
+					<a href="https://...">Instagram</a><a href="https://...">YouTube</a>
+				</p>
+				-->
+			</div>
+
+			<!-- ------------------------ explore ------------------------ -->
+			<div class="fba-ft-col">
+				<p class="fba-ft-head">Explore</p>
+				<ul class="fba-ft-links">
+					<li><a href="/">Home</a></li>
+					<li><a href="/how-it-works">How it works</a></li>
+					<li><a href="/programs">Programmes</a></li>
+					<li><a href="/free-lessons">Free online lessons</a></li>
+					<li><a href="/mock-exams">Monthly mock exams</a></li>
+					<li><a href="/about-us">About us</a></li>
+					<li><a href="/volunteer">Volunteer with us</a></li>
+					<li><a href="/faq">Questions and answers</a></li>
+					<li><a href="/join">Join a free lesson</a></li>
+					<li><a href="/contact">Contact</a></li>
+				</ul>
+			</div>
+
+			<!-- ------------------------ volunteer ----------------------- -->
+			<div class="fba-ft-col">
+				<p class="fba-ft-head">Volunteer</p>
+				<ul class="fba-ft-links">
+					<li><a href="/volunteer">Volunteer with us</a></li>
+					<li><a href="/volunteer#fba-volunteer-positions">All ten roles</a></li>
+					<li><a href="/volunteer#fba-volunteer-form">Apply to volunteer</a></li>
+					<li><a href="/volunteer-role-online-maths-teacher">Online maths teacher</a></li>
+					<li><a href="/volunteer-role-mock-exam-organiser">Mock exam organiser</a></li>
+					<li><a href="/volunteer-role-curriculum-builder">Curriculum builder</a></li>
+					<li><a href="/volunteer-role-career-path-presenter">Career path presenter</a></li>
+				</ul>
+			</div>
+
+			<!-- ------------------------ programs ----------------------- -->
+			<div class="fba-ft-col">
+				<p class="fba-ft-head">Running now</p>
+				<ul class="fba-ft-plain">
+					<li>Free online math lessons</li>
+					<li>Free monthly mock exams</li>
+					<li>Scholarship seminars</li>
+					<li>Parent seminars</li>
+					<li>Drone pilot certificate course</li>
+					<li>Volunteer mentor community</li>
+				</ul>
+			</div>
+
+			<!-- ------------------------ start here --------------------- -->
+			<div class="fba-ft-col fba-ft-col-cta">
+				<p class="fba-ft-head">Start here</p>
+				<p class="fba-ft-note">
+					Join a free online lesson and see how we teach. Nothing to pay, nothing to commit to - we say
+					clearly what is free and what is not.
+				</p>
+				<a class="fba-ft-btn" href="/join">Join a free online lesson</a>
+
+				<p class="fba-ft-contact">
+					<a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a>
+				</p>
+			</div>
+
+		</div>
+
+		<!-- --------------------------- bottom bar --------------------------- -->
+		<div class="fba-ft-bottom">
+			<p class="fba-ft-copy">
+				&copy; <span class="fba-ft-year">2026</span> Future Bridge Academy. All rights reserved.
+			</p>
+			<div class="fba-ft-bottom-side">
+				<!-- Privacy / Terms: add links here once those pages exist. -->
+				<p class="fba-ft-legal">Built for curious learners and the families who back them.</p>
+				<button type="button" class="fba-ft-top">
+					<span aria-hidden="true">&uarr;</span> Back to top
+				</button>
+			</div>
+		</div>
+	</div>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* ---------- footer chrome (shared tokens come from the central block in header.html) ---------- */
+		.fba-footer {
+			position: relative;
+			width: 100%;
+			color: #fff;
+			background: linear-gradient(150deg, var(--fba-secondary) 0%, var(--fba-secondary-deep) 100%);
+			font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+			font-size: 16px;
+			line-height: 1.6;
+			overflow: hidden;
+			isolation: isolate;
+		}
+
+		.fba-footer,
+		.fba-footer *,
+		.fba-footer *::before,
+		.fba-footer *::after {
+			box-sizing: border-box;
+		}
+
+		.fba-footer p,
+		.fba-footer ul,
+		.fba-footer li {
+			margin: 0;
+			padding: 0;
+		}
+
+		.fba-footer ul {
+			list-style: none;
+		}
+
+		.fba-footer a {
+			text-decoration: none;
+			color: inherit;
+		}
+
+		.fba-footer::before {
+			content: '';
+			position: absolute;
+			top: -160px;
+			right: -120px;
+			width: 420px;
+			height: 420px;
+			border-radius: 50%;
+			background: radial-gradient(circle, rgba(255, 107, 53, 0.28) 0%, transparent 68%);
+			pointer-events: none;
+		}
+
+		.fba-ft-wrap {
+			position: relative;
+			max-width: 1180px;
+			margin: 0 auto;
+			padding: 62px 5% 0;
+		}
+
+		.fba-ft-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.85fr) minmax(0, 0.9fr) minmax(0, 0.85fr) minmax(0, 1.1fr);
+			gap: 30px;
+			padding-bottom: 46px;
+		}
+
+		/* ---------- volunteer band ---------- */
+		.fba-ft-vol {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 22px;
+			margin-bottom: 46px;
+			padding: 26px 28px;
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			border-radius: 20px;
+			background: linear-gradient(120deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%);
+		}
+
+		.fba-ft-vol-copy {
+			max-width: 640px;
+		}
+
+		.fba-ft-vol-kicker {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.05rem;
+			font-weight: 800;
+			color: #fff;
+			margin-bottom: 6px;
+		}
+
+		.fba-ft-vol-text {
+			font-size: 0.93rem;
+			color: rgba(255, 255, 255, 0.78);
+		}
+
+		.fba-ft-vol-actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+		}
+
+		.fba-ft-btn-ghost {
+			display: inline-block;
+			padding: 13px 24px;
+			border-radius: 999px;
+			border: 1px solid rgba(255, 255, 255, 0.35);
+			background: rgba(255, 255, 255, 0.06);
+			color: #fff;
+			font-size: 0.93rem;
+			font-weight: 700;
+			transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+		}
+
+		.fba-ft-btn-ghost:hover,
+		.fba-ft-btn-ghost:focus-visible {
+			background: rgba(255, 255, 255, 0.16);
+			border-color: rgba(255, 255, 255, 0.55);
+			transform: translateY(-2px);
+		}
+
+		/* ---------- brand column ---------- */
+		.fba-ft-logo {
+			display: inline-flex;
+			align-items: center;
+			gap: 12px;
+		}
+
+		.fba-ft-logo-img {
+			display: block;
+			height: 54px;
+			width: auto;
+			max-width: 100%;
+			/* the supplied logo is pure black artwork, so it is inverted to read on the dark footer */
+			filter: brightness(0) invert(1);
+			transition: transform 0.3s ease, opacity 0.25s ease;
+		}
+
+		.fba-ft-logo:hover .fba-ft-logo-img,
+		.fba-ft-logo:focus-visible .fba-ft-logo-img {
+			transform: scale(1.03);
+			opacity: 0.9;
+		}
+
+		.fba-ft-mission {
+			margin-top: 16px;
+			max-width: 320px;
+			font-size: 0.94rem;
+			color: rgba(255, 255, 255, 0.76);
+		}
+
+		.fba-ft-social {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 16px;
+			margin-top: 18px;
+		}
+
+		.fba-ft-social a {
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--fba-accent);
+			border-bottom: 1px solid transparent;
+			transition: border-color 0.25s ease;
+		}
+
+		.fba-ft-social a:hover,
+		.fba-ft-social a:focus-visible {
+			border-color: var(--fba-accent);
+		}
+
+		/* ---------- link columns ---------- */
+		.fba-ft-head {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.79rem;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--fba-accent);
+			margin-bottom: 16px;
+		}
+
+		.fba-ft-links li+li,
+		.fba-ft-plain li+li {
+			margin-top: 10px;
+		}
+
+		.fba-ft-links a {
+			position: relative;
+			display: inline-block;
+			font-size: 0.95rem;
+			color: rgba(255, 255, 255, 0.8);
+			transition: color 0.25s ease, transform 0.25s ease;
+		}
+
+		.fba-ft-links a::before {
+			content: '';
+			position: absolute;
+			left: -14px;
+			top: 50%;
+			width: 6px;
+			height: 6px;
+			margin-top: -3px;
+			border-radius: 50%;
+			background: var(--fba-primary);
+			opacity: 0;
+			transition: opacity 0.25s ease;
+		}
+
+		.fba-ft-links a:hover,
+		.fba-ft-links a:focus-visible {
+			color: #fff;
+			transform: translateX(6px);
+		}
+
+		.fba-ft-links a:hover::before,
+		.fba-ft-links a:focus-visible::before {
+			opacity: 1;
+		}
+
+		.fba-ft-plain li {
+			font-size: 0.95rem;
+			color: rgba(255, 255, 255, 0.72);
+		}
+
+		.fba-footer a:focus-visible,
+		.fba-footer button:focus-visible {
+			outline: 3px solid var(--fba-accent);
+			outline-offset: 3px;
+			border-radius: 6px;
+		}
+
+		/* ---------- CTA column ---------- */
+		.fba-ft-note {
+			font-size: 0.94rem;
+			color: rgba(255, 255, 255, 0.76);
+			margin-bottom: 18px;
+			max-width: 300px;
+		}
+
+		.fba-ft-btn {
+			display: inline-block;
+			padding: 13px 26px;
+			border-radius: 999px;
+			background: var(--fba-primary);
+			color: #fff;
+			font-size: 0.93rem;
+			font-weight: 700;
+			box-shadow: 0 10px 24px rgba(255, 107, 53, 0.3);
+			transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.fba-ft-btn:hover,
+		.fba-ft-btn:focus-visible {
+			background: var(--fba-primary-dark);
+			transform: translateY(-2px);
+			box-shadow: 0 14px 30px rgba(255, 107, 53, 0.38);
+		}
+
+		.fba-ft-contact {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			margin-top: 18px;
+		}
+
+		.fba-ft-contact a {
+			font-size: 0.93rem;
+			font-weight: 600;
+			color: rgba(255, 255, 255, 0.85);
+			transition: color 0.25s ease;
+		}
+
+		.fba-ft-contact a:hover,
+		.fba-ft-contact a:focus-visible {
+			color: var(--fba-accent);
+		}
+
+		/* ---------- bottom bar ---------- */
+		.fba-ft-bottom {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			flex-wrap: wrap;
+			gap: 16px;
+			padding: 20px 0 26px;
+			border-top: 1px solid rgba(255, 255, 255, 0.14);
+		}
+
+		.fba-ft-copy {
+			font-size: 0.87rem;
+			color: rgba(255, 255, 255, 0.7);
+		}
+
+		.fba-ft-bottom-side {
+			display: flex;
+			align-items: center;
+			flex-wrap: wrap;
+			gap: 18px;
+		}
+
+		.fba-ft-legal {
+			font-size: 0.85rem;
+			color: rgba(255, 255, 255, 0.6);
+		}
+
+		.fba-ft-top {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 0.85rem;
+			font-weight: 700;
+			color: #fff;
+			background: rgba(255, 255, 255, 0.1);
+			border: 1px solid rgba(255, 255, 255, 0.22);
+			border-radius: 999px;
+			padding: 9px 18px;
+			transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+		}
+
+		.fba-ft-top:hover {
+			background: rgba(255, 255, 255, 0.18);
+			border-color: rgba(255, 255, 255, 0.4);
+			transform: translateY(-2px);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 1180px) {
+			.fba-ft-grid {
+				grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+				gap: 30px;
+			}
+
+			.fba-ft-brand {
+				grid-column: 1 / -1;
+			}
+
+			.fba-ft-mission {
+				max-width: 520px;
+			}
+		}
+
+		@media (max-width: 600px) {
+			.fba-ft-wrap {
+				padding-top: 48px;
+			}
+
+			.fba-ft-vol {
+				padding: 22px 20px;
+				margin-bottom: 34px;
+			}
+
+			.fba-ft-vol-actions,
+			.fba-ft-btn-ghost {
+				display: block;
+				text-align: center;
+			}
+
+			.fba-ft-vol-actions {
+				width: 100%;
+			}
+
+			.fba-ft-grid {
+				grid-template-columns: 1fr;
+				gap: 28px;
+				padding-bottom: 34px;
+			}
+
+			.fba-ft-bottom {
+				flex-direction: column;
+				align-items: flex-start;
+			}
+
+			.fba-ft-btn {
+				display: block;
+				text-align: center;
+			}
+
+			.fba-ft-note {
+				max-width: none;
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+
+			.fba-footer *,
+			.fba-footer *::before,
+			.fba-footer *::after {
+				animation-duration: 0.001ms !important;
+				animation-iteration-count: 1 !important;
+				transition-duration: 0.001ms !important;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-footer');
+			if (!root) { return; }
+
+			/* ------------------------ copyright year ------------------------ */
+			var year = root.querySelector('.fba-ft-year');
+			if (year) {
+				try {
+					year.textContent = String(new Date().getFullYear());
+				} catch (err) { /* keep the static fallback */ }
+			}
+
+			/* ------------------------ back to top --------------------------- */
+			if (root.getAttribute('data-fba-footer-ready') !== '1') {
+				root.setAttribute('data-fba-footer-ready', '1');
+
+				var toTop = root.querySelector('.fba-ft-top');
+				if (toTop) {
+					toTop.addEventListener('click', function () {
+						var reduce = false;
+						try {
+							reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+						} catch (err) { reduce = false; }
+						try {
+							window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+						} catch (err) {
+							window.scrollTo(0, 0);
+						}
+					});
+				}
+			}
+		})();
+	</script>
+
+</div>

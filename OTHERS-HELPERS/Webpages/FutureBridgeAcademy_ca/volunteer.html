@@ -1,0 +1,1327 @@
+<!--
+  =========================================================================
+  VOLUNTEER WITH US - fragment for the academy website (volunteer.html)
+  - Everything lives inside ONE parent <div class="fba-page fba-volunteer">
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - The form follows the platform contract: <form data-gw-form>, hidden
+    honeypot named "website", [data-gw-form-status] live region, and
+    gw.forms.bind() called once from this page script when the platform exists
+  - No invented time commitments: the page publishes only the hours the owner
+    confirmed (SSOT 11.10)
+  - This is the recruitment page: it lists every position we need, sells the
+    opportunity honestly, and states the real selection process (application,
+    interview, teaching sample, references, decision) confirmed by the owner
+  - All ten positions are ACTIVELY recruited (never a waiting list) and
+    applicants can come from any city in Canada: most of the work is online, and
+    the roles with an in-person day say so on the card
+  - Training is provided for every role, and the roles with a heavier training
+    load ask for a longer commitment - stated before the volunteer commits
+
+  CMS CONFIG NEEDED (checklist for the CMS author, see SSOT section 13):
+  - bind this form to a form-type-definition so applications are stored and the
+    notification reaches the volunteer inbox (info@futurebridgeacademy.ca)
+  - volunteer applications are personal data: keep them inside the CMS record
+    handling, not in a personal mailbox export
+  =========================================================================
+-->
+<div class="fba-page fba-volunteer">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-volunteer-hero">
+		<div class="fba-wrap fba-volunteer-hero-grid">
+			<div>
+				<p class="fba-kicker">Volunteer with us</p>
+				<h1 class="fba-volunteer-title">Teach something real.<br><span class="fba-volunteer-hl">Grow while you do it.</span></h1>
+				<p class="fba-volunteer-lede">
+					Future Bridge Academy runs on volunteers: university students, high-school students and teachers who
+					teach the free online lessons, run the monthly exams, guide families through the school system and
+					build the curriculum behind it. You get real students, a real curriculum, training, honest feedback
+					and a reference that says exactly what you did. All ten positions are open now, and you can volunteer
+					from any city in Canada.
+				</p>
+				<ul class="fba-pills">
+					<li class="fba-pill">Real students</li>
+					<li class="fba-pill">Training and feedback</li>
+					<li class="fba-pill">Documented hours</li>
+					<li class="fba-pill">Reference and letter</li>
+					<li class="fba-pill">From any city in Canada</li>
+				</ul>
+				<div class="fba-actions">
+					<a class="fba-btn fba-btn-primary" href="#fba-volunteer-form">Apply to volunteer</a>
+					<a class="fba-btn fba-btn-ghost" href="#fba-volunteer-positions">See the open positions</a>
+				</div>
+			</div>
+
+			<div class="fba-volunteer-hero-card">
+				<p class="fba-volunteer-hero-card-title">What volunteering looks like</p>
+				<ul class="fba-ticks fba-ticks-light">
+					<li>Teach a weekly online maths lesson</li>
+					<li>Organise the monthly mock exam</li>
+					<li>Present a scholarship seminar</li>
+					<li>Guide a self-paced course group</li>
+					<li>Present your own profession to students</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================ WHY =============================== -->
+	<section class="fba-volunteer-why">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Why volunteer here</p>
+				<h2>A real role, with real students, that looks good on paper because it is real</h2>
+				<p class="fba-sec-sub">Teaching is the fastest way to master a subject, and here you teach something
+					that changes what a family can do next. One reliable volunteer changes what a whole group of
+					students gets.</p>
+			</div>
+
+			<ul class="fba-points">
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#127891;</span>
+					<div>
+						<strong>You actually teach</strong>
+						<p>Your own students, a real curriculum and work matched to what their class is doing at school
+							right now. No filing, no photocopying, no watching from the back.</p>
+					</div>
+				</li>
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#128200;</span>
+					<div>
+						<strong>You are trained and reviewed</strong>
+						<p>Onboarding, session plans, feedback after your sessions and a proper review at the end of
+							your term. You finish better at explaining things than you started.</p>
+					</div>
+				</li>
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#128203;</span>
+					<div>
+						<strong>You leave with proof</strong>
+						<p>Documented hours, a reference that says what you actually taught and how you handled it, and
+							a letter of support for university, scholarship or job applications on request.</p>
+					</div>
+				</li>
+				<li>
+					<span class="fba-point-icon" aria-hidden="true">&#129309;</span>
+					<div>
+						<strong>You join a small, serious team</strong>
+						<p>We run this like a job: clear roles, real expectations, honest feedback. Volunteers hear about
+							teaching roles when the centre opens, before anyone else.</p>
+					</div>
+				</li>
+			</ul>
+
+			<div class="fba-volunteer-ladder fba-reveal">
+				<p class="fba-volunteer-ladder-title">Where this can take you</p>
+				<ol class="fba-volunteer-ladder-list">
+					<li><span>01</span>Volunteer mentor</li>
+					<li><span>02</span>Session lead</li>
+					<li><span>03</span>Subject lead</li>
+					<li><span>04</span>Paid teaching role at the centre</li>
+				</ol>
+			</div>
+		</div>
+	</section>
+
+	<!-- ========================== OPEN POSITIONS ======================== -->
+	<section class="fba-volunteer-positions" id="fba-volunteer-positions">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Open positions</p>
+				<h2>Every role we need, and the time each one really takes</h2>
+				<p class="fba-sec-sub">We are actively recruiting for all ten positions, so nothing here is a waiting
+					list. Apply for one position, or say you are flexible and we will suggest where you fit. You can apply
+					from any city in Canada: every role below is work we genuinely need done, the time stated is what it
+					really takes, and the roles that include an in-person day say so on the card.</p>
+			</div>
+
+			<div class="fba-volunteer-pos-grid">
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Online maths teacher</h3>
+					<p class="fba-volunteer-pos-time">1 hour a week - at least one lesson every week</p>
+					<p>Teach the weekly free online maths lesson: prepare the topic with our lesson plan, explain it a
+						second way when a student is stuck, and keep the group practising on the work their class is
+						doing right now.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: know maths to grade 12 level, can hold a fixed
+						weekly slot, and stay patient with someone who is stuck.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-online-maths-teacher">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Mock exam organiser</h3>
+					<p class="fba-volunteer-pos-time">About 6 to 8 hours per exam, and never more than one exam every two
+						months</p>
+					<p>Run a monthly exam with the exam team from start to finish: print the papers, manage the online
+						registrations, help in the classroom on exam day, collect the answer papers, check them against
+						the answer key, enter the results into the system, then email and WhatsApp the families.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: are organised, comfortable working in the
+						registration system, and free on the exam day you take.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-mock-exam-organiser">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Scholarship seminar presenter (English)</h3>
+					<p class="fba-volunteer-pos-time">Research at your own pace; presenting hours agreed</p>
+					<p>Find the scholarships that are really open, add every detail to our system, build the pages of our
+						shared presentation, then present them in English. Take the research and data part, the presenting
+						part, or both.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: read the official page rather than a summary, and you
+						either enjoy turning that into clear slides - or you are happy presenting them to a large online
+						audience.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-seminar-presenter-english">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Scholarship seminar presenter (other languages)</h3>
+					<p class="fba-volunteer-pos-time">Research at your own pace; presenting hours agreed</p>
+					<p>Keep the scholarship records complete and translate the presentation pages, then present the
+						seminars in your language for families who are more comfortable outside English. Take the research
+						and data part, the presenting part, or both.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: speak fluent English and one other language, are
+						careful with dates and numbers in both, and are comfortable presenting online.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-seminar-presenter-other-languages">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Self-paced course assistant</h3>
+					<p class="fba-volunteer-pos-time">Online in a WhatsApp group, on your own schedule</p>
+					<p>Guide a group of students through a self-paced course: answer questions in the group, supervise
+						how each student is moving through the subjects, and accept them for the next subject once the
+						current one is finished.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: reply quickly on WhatsApp, keep track of who has
+						fallen behind, and like explaining the same idea in more than one way.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-self-paced-course-assistant">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Curriculum builder</h3>
+					<p class="fba-volunteer-pos-time">Completely up to you - from 1 hour a week, more if you want it</p>
+					<p>Work from our long task list: pick one atomic task, finish it, then pick the next. Every task is
+						small enough to complete in one sitting, so you always know what is done and what is left.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: know the subject well enough to write accurate
+						material, like clear self-contained work, and can carry on without being chased.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-curriculum-builder">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Online lessons helper</h3>
+					<p class="fba-volunteer-pos-time">One or more lessons - you decide how many you manage</p>
+					<p>Sit in the live lesson with the teacher: answer student questions in the chat, look after the
+						students the teacher cannot reach in the moment, and message students and parents about dates and
+						follow-up.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: are comfortable in a live session, quick to reply,
+						and good at noticing the student who went quiet.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-online-lessons-helper">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Academic writing guide</h3>
+					<p class="fba-volunteer-pos-time">Hours agreed with the programme lead</p>
+					<p>Set the subjects, give the writing tasks to the students, and follow how each one is doing through
+						the platform so your feedback lands where it is needed.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: write well yourself and can coach structure and
+						editing without rewriting the student's work.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-academic-writing-guide">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Career coach</h3>
+					<p class="fba-volunteer-pos-time">Hours agreed with the programme lead</p>
+					<p>Guide one high-school student at a time: set the goal together, open their file, then work the
+						defined tasks with them until the file is complete and they are ready to apply to their target or
+						take the next step.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: have walked a university, college or trades path
+						yourself, and can keep a student honest about deadlines without nagging.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-career-coach">Full role definition</a></p>
+				</article>
+
+				<article class="fba-volunteer-pos fba-reveal">
+					<h3>Career path presenter (professionals only)</h3>
+					<p class="fba-volunteer-pos-time">Hours agreed with the programme lead</p>
+					<p>If you already work in a profession, present it to students and parents from every angle: what the
+						job is really like day to day, what you actually do, how the pay and the career grow, which
+						courses, licences or certifications are required and how long they take, what gets you hired, what
+						to prepare at school now, and where the field is heading - the honest version, not the brochure.</p>
+					<p class="fba-volunteer-pos-fit">Good fit if you: work in the profession today rather than having
+						only studied it, can talk plainly about the entry requirements and the trade-offs, and are happy to
+						take questions from the room.</p>
+					<p class="fba-volunteer-pos-more"><a href="/volunteer-role-career-path-presenter">Full role definition</a></p>
+				</article>
+			</div>
+
+			<p class="fba-note">
+				<strong>Not listed?</strong> Tell us what you are good at on the form. If there is no position for it
+				above, we will tell you honestly whether we have a real place for you.
+			</p>
+		</div>
+	</section>
+
+	<!-- =========================== WHAT YOU GET ========================= -->
+	<section class="fba-volunteer-get">
+		<div class="fba-wrap fba-volunteer-get-grid">
+			<div>
+				<p class="fba-kicker">What you leave with</p>
+				<h2>Proof you can hand to an employer, a university or a scholarship board</h2>
+				<p>Volunteering is only worth the time if it shows somewhere. Everything below is written down,
+					checkable and yours whenever you ask for it.</p>
+				<ul class="fba-points">
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#128203;</span>
+						<div>
+							<strong>Documented hours</strong>
+							<p>A record of the hours you actually gave, in writing, whenever you need it for a form or
+								an application.</p>
+						</div>
+					</li>
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#9993;&#65039;</span>
+						<div>
+							<strong>A reference that says something specific</strong>
+							<p>What you taught, how many sessions you ran, how you handled a student who was losing
+								confidence. Not a line about being nice.</p>
+						</div>
+					</li>
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#127891;</span>
+						<div>
+							<strong>A letter of support</strong>
+							<p>On request, for a university application, a scholarship or a job, written by the person
+								who watched you teach.</p>
+						</div>
+					</li>
+					<li>
+						<span class="fba-point-icon" aria-hidden="true">&#128200;</span>
+						<div>
+							<strong>A review at the end of your term</strong>
+							<p>What you did well and what to work on next, so the next application you make is stronger
+								than this one.</p>
+						</div>
+					</li>
+				</ul>
+			</div>
+
+			<aside class="fba-volunteer-side fba-reveal">
+				<p class="fba-kicker">What we expect</p>
+				<h3>The standard that makes a reference mean something</h3>
+				<ul class="fba-ticks">
+					<li>Prepare before every session</li>
+					<li>Arrive on time, or tell us early if you cannot</li>
+					<li>Keep student information private</li>
+					<li>Take feedback and act on it</li>
+					<li>Complete the training for your role</li>
+					<li>Finish the term you commit to</li>
+					<li>Tell us when something is not working</li>
+				</ul>
+				<p class="fba-volunteer-side-note">Every position states what it really takes. We would rather have one
+					reliable hour a week than a promise of ten.</p>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ========================= TRAINING ============================== -->
+	<section class="fba-volunteer-training">
+		<div class="fba-wrap">
+			<div class="fba-sec-head">
+				<p class="fba-kicker">Training and commitment</p>
+				<h2>Everyone gets the training their role needs</h2>
+				<p class="fba-sec-sub">You are not dropped into a role and left to work it out. Training takes time
+					though, and some roles carry a heavier training load than others, so those ask for a longer
+					commitment. You are told which before you agree to anything.</p>
+			</div>
+
+			<ul class="fba-ticks">
+				<li>Training before you start: onboarding, how we run lessons and exams, the systems we use and the
+					standard we hold.</li>
+				<li>Support after it: session plans, feedback after your sessions and someone to ask when you are not
+					sure.</li>
+				<li>A longer commitment where the training load is heavier, so the time spent training is worth it for
+					you as well as for the students.</li>
+				<li>The exact commitment, written down, before you accept a role.</li>
+			</ul>
+
+			<p class="fba-note">
+				<strong>Applying from another city?</strong> Most of the work is online, so you can volunteer from
+				anywhere in Canada. The roles that include an in-person day say so on their card above.
+			</p>
+		</div>
+	</section>
+
+	<!-- ========================== HOW IT WORKS ========================== -->
+	<section class="fba-volunteer-how">
+		<div class="fba-wrap">
+			<div class="fba-sec-head fba-sec-head-light">
+				<p class="fba-kicker">How we select volunteers</p>
+				<h2>Five steps, the same ones every applicant goes through</h2>
+				<p class="fba-sec-sub">We treat this like a real job, because our students only get one chance at a
+					good teacher. Everyone who applies gets an answer, and everyone who goes through the process gets
+					a reason.</p>
+			</div>
+
+			<div class="fba-volunteer-how-grid">
+				<div class="fba-volunteer-how-step fba-reveal">
+					<p class="fba-volunteer-how-num">01</p>
+					<h3>Apply</h3>
+					<p>Fill in the form below: the position you want, your subject strengths, when you are genuinely
+						free, and two people we may contact.</p>
+				</div>
+				<div class="fba-volunteer-how-step fba-reveal">
+					<p class="fba-volunteer-how-num">02</p>
+					<h3>Short interview</h3>
+					<p>A conversation by video: your experience, why this role, and what you are comfortable doing in front
+						of a group of students.</p>
+				</div>
+				<div class="fba-volunteer-how-step fba-reveal">
+					<p class="fba-volunteer-how-num">03</p>
+					<h3>Teaching sample</h3>
+					<p>You teach us something. Choose a topic you know well and explain it as if we were the students,
+						and we ask the awkward questions a real student would ask.</p>
+				</div>
+				<div class="fba-volunteer-how-step fba-reveal">
+					<p class="fba-volunteer-how-num">04</p>
+					<h3>References</h3>
+					<p>We contact the people you named and ask them the things a reference should actually answer:
+						reliability, how you work with people, how you take feedback.</p>
+				</div>
+				<div class="fba-volunteer-how-step fba-reveal">
+					<p class="fba-volunteer-how-num">05</p>
+					<h3>Decision</h3>
+					<p>Accepted, accepted with a training plan, or declined. You hear either way, and if it is a no you
+						hear why and what would make the next application stronger.</p>
+				</div>
+			</div>
+
+			<div class="fba-volunteer-look fba-reveal">
+				<div>
+					<p class="fba-volunteer-look-title">What we are looking for</p>
+					<ul class="fba-ticks fba-ticks-light">
+						<li>Clarity: can you explain a hard idea without showing off?</li>
+						<li>Patience: what do you do when a student still does not get it?</li>
+						<li>Reliability: will you be there next week without being chased?</li>
+						<li>Coachability: how do you take feedback that is not a compliment?</li>
+						<li>Judgement: do you treat a student's mistakes and their privacy properly?</li>
+					</ul>
+				</div>
+				<p class="fba-volunteer-look-note">We would rather run a small, strong team than a large, unreliable one.
+					Applying is not a formality: the interview and the teaching sample decide the outcome. A no is a no for
+					this round, not forever - if you work on what we tell you, you are welcome to apply again.</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="fba-volunteer-form-sec" id="fba-volunteer-form">
+		<div class="fba-wrap fba-volunteer-form-grid">
+			<div>
+				<div class="fba-sec-head">
+					<p class="fba-kicker">Application</p>
+					<h2>Apply for a position</h2>
+					<p class="fba-sec-sub">It takes a few minutes. Tell us which position you want and when you are
+						genuinely free, and we will come back to you about the interview and the teaching sample.</p>
+				</div>
+
+				<form class="fba-volunteer-form" data-gw-form data-gw-form-type="volunteer-application">
+					<div class="fba-volunteer-fields">
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">Your name <em>required</em></span>
+							<input type="text" name="name" autocomplete="name" required>
+						</label>
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">Email <em>required</em></span>
+							<input type="email" name="email" autocomplete="email" required>
+						</label>
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">City <em>required</em></span>
+							<input type="text" name="city" autocomplete="address-level2" required>
+						</label>
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">Which position? <em>required</em></span>
+							<select name="role" required>
+								<option value="maths-teacher">Online maths teacher (weekly lesson)</option>
+								<option value="mock-exam-organiser">Mock exam organiser</option>
+								<option value="seminar-presenter-en">Scholarship seminar presenter (English)</option>
+								<option value="seminar-presenter-other">Scholarship seminar presenter (other languages)</option>
+								<option value="self-paced-assistant">Self-paced course assistant</option>
+								<option value="curriculum-builder">Curriculum builder</option>
+								<option value="lesson-helper">Online lessons helper</option>
+								<option value="academic-writing-guide">Academic writing guide</option>
+								<option value="career-coach">Career coach</option>
+								<option value="career-path-presenter">Career path presenter (professionals only)</option>
+								<option value="flexible">I am flexible - suggest a position for me</option>
+							</select>
+						</label>
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">Subject strengths</span>
+							<input type="text" name="subjects" placeholder="For example: grade 9 maths, essay writing">
+						</label>
+						<label class="fba-volunteer-field">
+							<span class="fba-volunteer-label">Availability</span>
+							<input type="text" name="availability" placeholder="For example: weekday evenings, one exam day a month">
+						</label>
+					</div>
+
+					<label class="fba-volunteer-field fba-volunteer-field-wide">
+						<span class="fba-volunteer-label">References</span>
+						<input type="text" name="references" placeholder="One or two people we may contact, with how you know them">
+					</label>
+
+					<label class="fba-volunteer-field fba-volunteer-field-wide">
+						<span class="fba-volunteer-label">Anything else we should know?</span>
+						<textarea name="message" rows="4"></textarea>
+					</label>
+
+					<!-- honeypot: hidden from view and from screen readers, never a real field -->
+					<input class="fba-volunteer-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
+						aria-hidden="true">
+
+					<div class="fba-volunteer-actions">
+						<button class="fba-volunteer-submit" type="submit">Send application</button>
+						<div class="fba-volunteer-status" data-gw-form-status role="status"></div>
+					</div>
+
+					<p class="fba-volunteer-consent">We use these details only to consider your application and organise
+						your volunteering. References are contacted at the interview stage, and only with your agreement.</p>
+				</form>
+			</div>
+
+			<aside class="fba-volunteer-aside fba-reveal">
+				<p class="fba-kicker">Good to know</p>
+				<h3>Questions volunteers always ask</h3>
+				<details class="fba-volunteer-faq">
+					<summary>Do I need teaching experience?</summary>
+					<p>No. Some positions need a subject you know well, others are organisation and guidance, and the career
+						path talk is for people already working in their profession. You are trained, and you are never left
+						alone with a session at the start. What matters is that you can explain something calmly to someone
+						who is stuck, and that you turn up when you said you would.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>What happens after I apply?</summary>
+					<p>A short interview, a teaching sample where you explain a topic you choose, and reference checks.
+						Then we tell you the decision and the next steps. You hear back either way.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>How many hours is it?</summary>
+					<p>It depends on the position, and we state the real number on each one above: an online maths teacher
+						gives at least one 1-hour lesson a week, a mock exam organiser gives about 6 to 8 hours on an exam
+						and never takes more than one exam every two months, and a curriculum builder gives whatever they
+						can, from an hour a week.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>How long do I need to commit for?</summary>
+					<p>Long enough to be trained and to finish what you started. Some roles carry a heavier training load,
+						so they ask for a longer commitment than others. We tell you what a role needs before you accept
+						it, and we never ask you to guess.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>Is it remote?</summary>
+					<p>Most of it. You can volunteer from any city in Canada: lessons, self-paced course support, writing
+						guidance and curriculum work are all online. Exam days, seminars and career talks happen in person at
+						community venues, so those roles need you to be able to attend.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>Is there any pay?</summary>
+					<p>Volunteer roles are unpaid and we say so plainly. Teaching roles at the centre, when they open,
+						are paid roles, and volunteers hear about them first.</p>
+				</details>
+				<details class="fba-volunteer-faq">
+					<summary>What if I am not selected?</summary>
+					<p>We tell you why, and what would make the next application stronger. A no here is a no for this round,
+						not a door closed on you.</p>
+				</details>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ============================== CTA =============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Apply, or watch a session first</h2>
+			<p>Sit in on a free online lesson as an observer, see how a session runs, then apply knowing exactly what
+				the role involves. We are actively recruiting for all ten positions, and you can apply from any city in
+				Canada.</p>
+			<div class="fba-actions fba-actions-center">
+				<a class="fba-btn fba-btn-primary" href="#fba-volunteer-form">Apply to volunteer</a>
+				<a class="fba-btn fba-btn-ghost" href="/contact">Ask a question first</a>
+			</div>
+			<p class="fba-cta-links">
+				<span>Read next:</span>
+				<a href="/free-lessons">Free online lessons</a>
+				<a href="/faq">Questions and answers</a>
+				<a href="/programs">All programmes</a>
+				<a href="/about-us">About us</a>
+			</p>
+		</div>
+	</section>
+
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* Shared design system lives centrally in header-footer/header.html.
+		   Everything below is layout for this page only, scoped to .fba-volunteer. */
+
+		/* ---------- hero ---------- */
+		.fba-volunteer .fba-volunteer-hero {
+			position: relative;
+			padding: 66px 0 62px;
+			background:
+				radial-gradient(circle at 88% 16%, rgba(6, 214, 160, 0.2) 0%, transparent 55%),
+				radial-gradient(circle at 8% 90%, rgba(0, 78, 137, 0.14) 0%, transparent 55%),
+				linear-gradient(140deg, #F6FFFB 0%, #F2F8FF 58%, #F7F9FC 100%);
+			overflow: hidden;
+		}
+
+		.fba-volunteer .fba-volunteer-hero-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+			gap: 46px;
+			align-items: center;
+		}
+
+		.fba-volunteer .fba-volunteer-title {
+			font-size: clamp(2rem, 4.4vw, 3.05rem);
+		}
+
+		.fba-volunteer .fba-volunteer-hl {
+			background: linear-gradient(135deg, var(--fba-success), var(--fba-secondary));
+			-webkit-background-clip: text;
+			background-clip: text;
+			-webkit-text-fill-color: transparent;
+		}
+
+		.fba-volunteer .fba-volunteer-lede {
+			margin-top: 18px;
+			font-size: 1.1rem;
+			color: var(--fba-muted);
+			max-width: 620px;
+		}
+
+		.fba-volunteer .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 24px;
+		}
+
+		.fba-volunteer .fba-volunteer-hero-card {
+			background: linear-gradient(150deg, var(--fba-secondary) 0%, var(--fba-secondary-deep) 100%);
+			border-radius: var(--fba-radius);
+			padding: 28px 26px 24px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-volunteer .fba-volunteer-hero-card-title {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.12rem;
+			font-weight: 800;
+			color: #fff;
+		}
+
+		.fba-volunteer .fba-volunteer-hero-card .fba-ticks {
+			margin-top: 14px;
+		}
+
+		/* ---------- why volunteer here ---------- */
+		.fba-volunteer .fba-volunteer-why {
+			padding: 74px 0 70px;
+			background: linear-gradient(180deg, #fff, var(--fba-light));
+		}
+
+		.fba-volunteer .fba-volunteer-ladder {
+			margin-top: 34px;
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 24px 26px 22px;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-volunteer .fba-volunteer-ladder-title {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.05rem;
+			font-weight: 800;
+			color: var(--fba-secondary);
+			margin-bottom: 16px;
+		}
+
+		.fba-volunteer .fba-volunteer-ladder-list {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 16px;
+		}
+
+		.fba-volunteer .fba-volunteer-ladder-list li {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			padding-top: 12px;
+			border-top: 3px solid rgba(255, 107, 53, 0.35);
+			font-size: 0.95rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-volunteer .fba-volunteer-ladder-list span {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.8rem;
+			font-weight: 800;
+			letter-spacing: 0.1em;
+			color: var(--fba-primary);
+		}
+
+		/* ---------- open positions ---------- */
+		.fba-volunteer .fba-volunteer-positions {
+			padding: 72px 0 74px;
+			background: #fff;
+			border-top: 1px solid var(--fba-line);
+			scroll-margin-top: 110px;
+		}
+
+		.fba-volunteer .fba-volunteer-pos-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 20px;
+		}
+
+		.fba-volunteer .fba-volunteer-pos {
+			display: flex;
+			flex-direction: column;
+			background: linear-gradient(180deg, #fff, var(--fba-light));
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 26px 24px;
+			box-shadow: var(--fba-shadow);
+			transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+		}
+
+		.fba-volunteer .fba-volunteer-pos:hover {
+			transform: translateY(-6px);
+			box-shadow: var(--fba-shadow-lg);
+			border-color: rgba(255, 107, 53, 0.35);
+		}
+
+		.fba-volunteer .fba-volunteer-pos h3 {
+			font-size: 1.16rem;
+			margin-bottom: 10px;
+		}
+
+		.fba-volunteer .fba-volunteer-pos p {
+			color: var(--fba-muted);
+			font-size: 0.95rem;
+		}
+
+		.fba-volunteer .fba-volunteer-pos-time {
+			margin-bottom: 12px;
+			font-size: 0.86rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+		}
+
+		.fba-volunteer .fba-volunteer-pos .fba-volunteer-pos-fit {
+			margin-top: auto;
+			padding-top: 14px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.88rem;
+			font-weight: 600;
+			color: var(--fba-secondary);
+		}
+
+		.fba-volunteer .fba-volunteer-pos .fba-volunteer-pos-more {
+			margin-top: 12px;
+			font-size: 0.9rem;
+			font-weight: 600;
+		}
+
+		.fba-volunteer .fba-volunteer-pos-more a {
+			color: var(--fba-primary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		/* ---------- what you get ---------- */
+		.fba-volunteer .fba-volunteer-get {
+			padding: 72px 0 76px;
+			background: #fff;
+		}
+
+		.fba-volunteer .fba-volunteer-get-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+			gap: 46px;
+			align-items: start;
+		}
+
+		.fba-volunteer .fba-volunteer-get-grid > div > p {
+			color: var(--fba-muted);
+			max-width: 620px;
+		}
+
+		.fba-volunteer .fba-volunteer-side {
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 30px 30px 26px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-volunteer .fba-volunteer-side h3 {
+			font-size: 1.22rem;
+			margin-bottom: 6px;
+		}
+
+		.fba-volunteer .fba-volunteer-side-note {
+			margin-top: 20px;
+			padding-top: 16px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.88rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		/* ---------- training and commitment ---------- */
+		.fba-volunteer .fba-volunteer-training {
+			padding: 72px 0 74px;
+			background: var(--fba-light);
+		}
+
+		.fba-volunteer .fba-volunteer-training .fba-ticks {
+			max-width: 860px;
+		}
+
+		/* ---------- how it works ---------- */
+		.fba-volunteer .fba-volunteer-how {
+			position: relative;
+			padding: 76px 0 78px;
+			background: linear-gradient(150deg, var(--fba-secondary) 0%, var(--fba-secondary-deep) 100%);
+			color: #fff;
+			overflow: hidden;
+		}
+
+		.fba-volunteer .fba-volunteer-how::before {
+			content: '';
+			position: absolute;
+			bottom: -160px;
+			right: -130px;
+			width: 430px;
+			height: 430px;
+			border-radius: 50%;
+			background: radial-gradient(circle, rgba(6, 214, 160, 0.24) 0%, transparent 68%);
+		}
+
+		.fba-volunteer .fba-volunteer-how-grid {
+			position: relative;
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 20px;
+		}
+
+		.fba-volunteer .fba-volunteer-how-step {
+			background: rgba(255, 255, 255, 0.07);
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			border-radius: 18px;
+			padding: 26px 24px;
+			transition: transform 0.3s ease, background 0.3s ease;
+		}
+
+		.fba-volunteer .fba-volunteer-how-step:hover {
+			transform: translateY(-6px);
+			background: rgba(255, 255, 255, 0.12);
+		}
+
+		.fba-volunteer .fba-volunteer-how-num {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.4rem;
+			font-weight: 800;
+			color: var(--fba-accent);
+		}
+
+		.fba-volunteer .fba-volunteer-how-step h3 {
+			color: #fff;
+			font-size: 1.14rem;
+			margin: 8px 0 8px;
+		}
+
+		.fba-volunteer .fba-volunteer-how-step p {
+			font-size: 0.94rem;
+			color: rgba(255, 255, 255, 0.82);
+		}
+
+		.fba-volunteer .fba-volunteer-look {
+			position: relative;
+			display: grid;
+			grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+			gap: 30px;
+			align-items: start;
+			margin-top: 34px;
+			background: rgba(255, 255, 255, 0.07);
+			border: 1px solid rgba(255, 255, 255, 0.16);
+			border-radius: var(--fba-radius);
+			padding: 28px 28px 24px;
+		}
+
+		.fba-volunteer .fba-volunteer-look-title {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.1rem;
+			font-weight: 800;
+			color: var(--fba-accent);
+		}
+
+		.fba-volunteer .fba-volunteer-look .fba-ticks {
+			margin-top: 14px;
+		}
+
+		.fba-volunteer .fba-volunteer-look-note {
+			padding-left: 22px;
+			border-left: 1px solid rgba(255, 255, 255, 0.2);
+			font-size: 0.93rem;
+			color: rgba(255, 255, 255, 0.82);
+		}
+
+		/* ---------- form ---------- */
+		.fba-volunteer .fba-volunteer-form-sec {
+			padding: 74px 0 78px;
+			background: var(--fba-light);
+			scroll-margin-top: 110px;
+		}
+
+		.fba-volunteer .fba-volunteer-form-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+			gap: 46px;
+			align-items: start;
+		}
+
+		.fba-volunteer .fba-volunteer-form {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 30px 30px 26px;
+			box-shadow: var(--fba-shadow);
+		}
+
+		.fba-volunteer .fba-volunteer-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 18px;
+		}
+
+		.fba-volunteer .fba-volunteer-field {
+			display: grid;
+			gap: 7px;
+		}
+
+		.fba-volunteer .fba-volunteer-field-wide {
+			margin-top: 18px;
+		}
+
+		.fba-volunteer .fba-volunteer-label {
+			font-size: 0.86rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-volunteer .fba-volunteer-label em {
+			font-style: normal;
+			font-weight: 600;
+			color: var(--fba-muted);
+			font-size: 0.78rem;
+		}
+
+		.fba-volunteer .fba-volunteer-field input,
+		.fba-volunteer .fba-volunteer-field select,
+		.fba-volunteer .fba-volunteer-field textarea {
+			font-family: inherit;
+			font-size: 0.97rem;
+			color: var(--fba-text);
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: 12px;
+			padding: 12px 14px;
+			width: 100%;
+			transition: border-color 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.fba-volunteer .fba-volunteer-field textarea {
+			resize: vertical;
+			min-height: 110px;
+		}
+
+		.fba-volunteer .fba-volunteer-field input:focus,
+		.fba-volunteer .fba-volunteer-field select:focus,
+		.fba-volunteer .fba-volunteer-field textarea:focus {
+			outline: none;
+			border-color: var(--fba-secondary);
+			box-shadow: 0 0 0 3px rgba(0, 78, 137, 0.14);
+		}
+
+		.fba-volunteer .fba-volunteer-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+
+		.fba-volunteer .fba-volunteer-actions {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 16px;
+			margin-top: 22px;
+		}
+
+		.fba-volunteer .fba-volunteer-submit {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 1rem;
+			font-weight: 700;
+			color: #fff;
+			background: var(--fba-primary);
+			border: 2px solid transparent;
+			border-radius: 999px;
+			padding: 14px 30px;
+			box-shadow: 0 10px 26px rgba(255, 107, 53, 0.3);
+			transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+		}
+
+		.fba-volunteer .fba-volunteer-submit:hover {
+			background: var(--fba-primary-dark);
+			transform: translateY(-2px);
+		}
+
+		.fba-volunteer .fba-volunteer-submit:focus-visible {
+			outline: 3px solid rgba(0, 78, 137, 0.35);
+			outline-offset: 2px;
+		}
+
+		.fba-volunteer .fba-volunteer-status {
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--fba-secondary);
+			min-height: 20px;
+		}
+
+		.fba-volunteer .fba-volunteer-consent {
+			margin-top: 16px;
+			font-size: 0.84rem;
+			color: var(--fba-muted);
+		}
+
+		/* ---------- aside faq ---------- */
+		.fba-volunteer .fba-volunteer-aside {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 30px 28px 22px;
+			box-shadow: var(--fba-shadow-lg);
+		}
+
+		.fba-volunteer .fba-volunteer-aside h3 {
+			font-size: 1.2rem;
+			margin-bottom: 10px;
+		}
+
+		.fba-volunteer .fba-volunteer-faq {
+			border-top: 1px solid var(--fba-line);
+			padding: 14px 0 4px;
+		}
+
+		.fba-volunteer .fba-volunteer-faq summary {
+			cursor: pointer;
+			list-style: none;
+			position: relative;
+			padding-right: 26px;
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+
+		.fba-volunteer .fba-volunteer-faq summary::-webkit-details-marker {
+			display: none;
+		}
+
+		.fba-volunteer .fba-volunteer-faq summary::after {
+			content: '+';
+			position: absolute;
+			right: 0;
+			top: 50%;
+			transform: translateY(-50%);
+			font-size: 1.25rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+			line-height: 1;
+		}
+
+		.fba-volunteer .fba-volunteer-faq[open] summary::after {
+			content: '\2212';
+		}
+
+		.fba-volunteer .fba-volunteer-faq summary:focus-visible {
+			outline: 3px solid rgba(0, 78, 137, 0.35);
+			outline-offset: 2px;
+			border-radius: 8px;
+		}
+
+		.fba-volunteer .fba-volunteer-faq p {
+			padding: 10px 0 6px;
+			font-size: 0.92rem;
+			color: var(--fba-muted);
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.fba-volunteer .fba-volunteer-hero-grid,
+			.fba-volunteer .fba-volunteer-get-grid,
+			.fba-volunteer .fba-volunteer-form-grid {
+				grid-template-columns: 1fr;
+				gap: 34px;
+			}
+
+			.fba-volunteer .fba-volunteer-pos-grid,
+			.fba-volunteer .fba-volunteer-how-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.fba-volunteer .fba-volunteer-ladder-list {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+
+			.fba-volunteer .fba-volunteer-look {
+				grid-template-columns: 1fr;
+				gap: 20px;
+			}
+
+			.fba-volunteer .fba-volunteer-look-note {
+				padding-left: 0;
+				padding-top: 16px;
+				border-left: 0;
+				border-top: 1px solid rgba(255, 255, 255, 0.2);
+			}
+		}
+
+		@media (max-width: 640px) {
+			.fba-volunteer .fba-volunteer-hero {
+				padding: 50px 0 46px;
+			}
+
+			.fba-volunteer .fba-volunteer-why,
+			.fba-volunteer .fba-volunteer-positions,
+			.fba-volunteer .fba-volunteer-get,
+			.fba-volunteer .fba-volunteer-training,
+			.fba-volunteer .fba-volunteer-how,
+			.fba-volunteer .fba-volunteer-form-sec {
+				padding: 54px 0 52px;
+			}
+
+			.fba-volunteer .fba-volunteer-pos-grid,
+			.fba-volunteer .fba-volunteer-how-grid,
+			.fba-volunteer .fba-volunteer-ladder-list,
+			.fba-volunteer .fba-volunteer-fields {
+				grid-template-columns: 1fr;
+			}
+
+			.fba-volunteer .fba-volunteer-form {
+				padding: 24px 20px 22px;
+			}
+
+			.fba-volunteer .fba-volunteer-submit {
+				width: 100%;
+			}
+		}
+	</style>
+
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-volunteer');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!root || root.getAttribute('data-fba-volunteer-ready') === '1') { return; }
+			root.setAttribute('data-fba-volunteer-ready', '1');
+			root.classList.add('fba-js');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (err) { reduceMotion = false; }
+
+			/* ---------------------- forms ---------------------- */
+			/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.md at the workspace
+			   root: one POST of JSON to the CMS, then read the status and show a message. There is
+			   no second call and no read access.
+			   Set formApiEndpoint to the CMS host, for example
+			   'https://cms.example.com/api/public/forms/submit'. A form may override it with
+			   data-gw-form-endpoint, and data-gw-cms-object-type is sent as cmsObjectType when a
+			   submission belongs to one specific application (leave it empty to use the CMS
+			   default, form-submission-uniconbaseapps). While the endpoint is still the
+			   placeholder the page falls back to the CMS platform bind, and in a local preview it
+			   says the service is not connected instead of losing what the visitor typed. */
+			var formApiEndpoint = 'https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'apply-position-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			var forms = Array.prototype.slice.call(root.querySelectorAll('form[data-gw-form]'));
+
+			function setFormStatus(form, message, state) {
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues(form) {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					var fieldType = field.type;
+					if (!field.name || field.disabled) { return; }
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+					if (fieldType === 'checkbox') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value || 'yes'); }
+						return;
+					}
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm(form) {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm(form) {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this entry. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@futurebridgeacademy.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@futurebridgeacademy.ca.';
+			}
+
+			function sendFormToApi(form, endpoint) {
+				var values = collectFormValues(form);
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm(form);
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus(form, 'Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (err) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(form, formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					setFormStatus(form, 'Thank you. Your details are with the programme team, and we reply to every one.', 'ok');
+				}).catch(function () {
+					setFormStatus(form, formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (forms.length) {
+				var platform = window.gw;
+				var usesApi = forms.some(function (form) { return Boolean(endpointForForm(form)); });
+
+				if (usesApi) {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							var endpoint = endpointForForm(form);
+							if (!endpoint || form.classList.contains('gw-busy')) { return; }
+							sendFormToApi(form, endpoint);
+						});
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(root);
+				} else {
+					forms.forEach(function (form) {
+						form.addEventListener('submit', function (event) {
+							event.preventDefault();
+							setFormStatus(form, 'The form service is not connected in this preview.');
+						});
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(root.querySelectorAll('.fba-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
