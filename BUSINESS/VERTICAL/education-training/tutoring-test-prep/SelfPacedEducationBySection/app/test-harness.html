@@ -237,6 +237,22 @@ body.th-bare #app { min-height: 100vh; }
     config: { curriculumSourceId: 'cur-sample-1', builderFieldName: 'toolData' },
     progress: {}
   };
+  // ?progress=sample seeds a realistic mid-course record (screenshots and demos)
+  if (new URLSearchParams(window.location.search).get('progress') === 'sample') {
+    var currentTimeMs = Date.now();
+    saveData({
+      config: { curriculumSourceId: 'cur-sample-1', builderFieldName: 'toolData' },
+      progress: {
+        'sec-fractions': {
+          'les-intro': { status: 'completed', score: 92, completedAt: new Date(currentTimeMs - 3 * 86400000).toISOString(), quizPassed: true, quizSubmitted: true, quizAttempts: 1, currentSet: 0, flashcardMastered: [] },
+          'les-add': { status: 'completed', score: 78, completedAt: new Date(currentTimeMs - 2 * 86400000).toISOString(), quizPassed: true, quizSubmitted: true, quizAttempts: 2, currentSet: 0, flashcardMastered: [] }
+        },
+        'sec-multiply': {
+          'les-mult': { status: 'in_progress', score: 0, quizAttempts: 0, currentSet: 0, flashcardMastered: [] }
+        }
+      }
+    });
+  }
   if (!localStorage.getItem(STORAGE_DATA)) {
     saveData(DEFAULT_DATA);
   }

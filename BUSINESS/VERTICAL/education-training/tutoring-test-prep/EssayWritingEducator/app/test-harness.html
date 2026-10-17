@@ -20,6 +20,10 @@ body { padding-top: 34px !important; margin: 0; }
 #th-bar .btn-role { background: #334155; color: #e2e8f0; }
 #th-bar .btn-role.active { background: #4f46e5; color: #fff; }
 #th-bar .hint { color: #64748b; font-size: 10px; }
+/* ?bare=1 - hide the harness bar for clean screenshots */
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none; }
+body.th-bare #app-container { height: 100vh; }
 @keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
@@ -47,6 +51,13 @@ body { padding-top: 34px !important; margin: 0; }
 <div id="app-container"></div>
 
 <script>
+/* ?bare=1 - hide the harness bar for clean screenshots */
+(function() {
+  if (new URLSearchParams(window.location.search).get('bare') === '1') {
+    document.body.className = 'th-bare';
+  }
+})();
+
 /* ── Mock tool SDK ── */
 (function() {
   var STORAGE_KEY = 'essay_writing_educator_test_db';
@@ -393,6 +404,8 @@ var EMBEDDED_HTML = "\u003cdiv id=\"ewe-app\" class=\"ewe-app\">\r\n  \u003cdiv 
           window.versionMenuOpen = true;
           window.renderEvaluationPanel();
         }
+        // Screenshot mode: opening the panel scrolls the page, so put the topbar back in view.
+        window.scrollTo(0, 0);
       } catch (error) {}
     }, 700);
   }

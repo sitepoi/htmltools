@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Future Bridge Academy - Every Service, One System</title>
+<style>
+  :root {
+    --ink: #1f2a3a;
+    --muted: #52627a;
+    --accent: #0f5c8a;
+    --accent-dark: #0a4166;
+    --accent-2: #c2703d;
+    --soft: #f4f7fa;
+    --soft-warm: #fdf6ee;
+    --line: #dfe6ec;
+    --good: #1d7a36;
+    --warn-bg: #fdf0e0;
+    --warn-line: #d99a2b;
+    --tip-bg: #eaf3fa;
+    --tip-line: #2f78a8;
+    --safe-bg: #edf7ef;
+    --safe-line: #1d7a36;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #e8edf2;
+    overflow: hidden;
+  }
+  .deck-stage { position: relative; height: 100%; width: 100%; }
+  .deck-slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    padding: 52px 64px 90px;
+    overflow-y: auto;
+    background: #ffffff;
+  }
+  .deck-slide.deck-active { display: flex; flex-direction: column; }
+  .deck-slide-inner { width: 100%; max-width: 1120px; margin: auto; }
+  .deck-kicker {
+    display: inline-block;
+    font-size: 17px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .deck-illustration { text-align: center; margin-bottom: 10px; }
+  .deck-illustration svg { height: 66px; width: auto; }
+  .deck-slide h1, .deck-slide h2 { margin: 0 0 18px; line-height: 1.18; color: var(--ink); }
+  .deck-slide h1 { font-size: clamp(38px, 5.2vw, 58px); }
+  .deck-slide h2 { font-size: clamp(30px, 4.2vw, 46px); }
+  .deck-slide h3 { font-size: 22px; margin: 0 0 8px; color: var(--accent); }
+  .deck-slide p { font-size: 21px; line-height: 1.5; margin: 10px 0; }
+  .deck-slide ul, .deck-slide ol { font-size: 21px; line-height: 1.5; padding-left: 28px; margin: 10px 0; }
+  .deck-slide li { margin: 10px 0; }
+  .deck-slide strong { color: var(--accent-dark); }
+  .deck-lead { font-size: 22px; color: var(--muted); }
+  .deck-note {
+    font-size: 16.5px;
+    color: var(--muted);
+    border-left: 4px solid var(--line);
+    padding: 6px 14px;
+    margin-top: 18px;
+  }
+  .deck-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0; }
+  .deck-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin: 18px 0; }
+  .deck-card {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .deck-card.warm { background: var(--soft-warm); border-color: #ecdcc8; }
+  .deck-card h3 { margin-top: 0; }
+  .deck-card p { font-size: 18.5px; margin: 6px 0; }
+  .deck-big-number { font-size: 44px; font-weight: 800; color: var(--accent); display: block; margin-bottom: 4px; }
+  .deck-recipe {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 22px 0;
+  }
+  .deck-recipe-step {
+    background: var(--soft);
+    border-radius: 14px;
+    padding: 18px;
+    border-top: 5px solid var(--accent);
+  }
+  .deck-recipe-step.warm { border-top-color: var(--accent-2); }
+  .deck-recipe-step .step-no {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--accent-2);
+    font-weight: 700;
+  }
+  .deck-recipe-step h3 { font-size: 21px; margin: 8px 0 6px; color: var(--ink); }
+  .deck-recipe-step p { font-size: 17px; margin: 0; color: var(--muted); }
+  .deck-prompt-box {
+    background: var(--soft-warm);
+    border: 1px solid #ecdcc8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .deck-prompt-box .deck-prompt-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--accent-2);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .deck-prompt-box.strong { background: var(--safe-bg); border-color: var(--safe-line); }
+  .deck-prompt-box.strong .deck-prompt-label { color: var(--good); }
+  .deck-title-slide {
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 55%, #174f7d 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-title-slide h1 { color: #ffffff; font-size: clamp(40px, 6vw, 66px); }
+  .deck-title-slide .deck-sub { color: #dce8f2; font-size: 24px; max-width: 820px; margin: 0 auto; }
+  .deck-title-slide .deck-chips { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 28px; }
+  .deck-title-slide .deck-chip {
+    background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 999px;
+    padding: 8px 20px;
+    font-size: 18px;
+  }
+  .deck-closing-slide {
+    background: linear-gradient(135deg, #a85e31 0%, var(--accent-2) 60%, #d68a55 100%);
+    color: #ffffff;
+    text-align: center;
+    justify-content: center;
+  }
+  .deck-closing-slide h2 { color: #ffffff; font-size: clamp(34px, 4.6vw, 52px); }
+  .deck-closing-slide .deck-sub { color: #fcefe2; font-size: 23px; max-width: 780px; margin: 0 auto; }
+  .deck-closing-slide .deck-chip {
+    display: inline-block;
+    margin-top: 26px;
+    background: #ffffff;
+    color: var(--accent-2);
+    border-radius: 999px;
+    padding: 14px 34px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .deck-closing-slide .deck-note { color: #f8e3d2; border-left-color: rgba(255,255,255,.5); }
+  .deck-controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: #f2f5f8;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+    z-index: 10;
+  }
+  .deck-btn {
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    font-size: 17px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+  .deck-btn:hover { background: var(--tip-bg); }
+  .deck-btn:disabled { opacity: .4; cursor: default; }
+  .deck-counter { font-size: 16px; color: var(--muted); font-weight: 700; min-width: 70px; }
+  .deck-dots { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; justify-content: center; }
+  .deck-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: #ffffff;
+    cursor: pointer;
+    padding: 0;
+  }
+  .deck-dot.deck-dot-active { background: var(--accent); }
+  .deck-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 6px;
+    background: var(--accent);
+    width: 0;
+    z-index: 11;
+    transition: width .25s ease;
+  }
+  .deck-help { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+
+  /* ---------- service-specific blocks ---------- */
+  .deck-tag {
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: var(--accent-2);
+    border-radius: 999px;
+    padding: 4px 14px;
+    margin-bottom: 10px;
+  }
+  .deck-tag.soft { background: var(--tip-bg); color: var(--accent); }
+  .deck-flow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin: 22px 0;
+  }
+  .deck-flow-step {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .deck-flow-step b {
+    display: block;
+    color: var(--accent-2);
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .deck-flow-step span { display: block; font-size: 16.5px; line-height: 1.4; }
+  .deck-table { width: 100%; border-collapse: collapse; font-size: 17.5px; margin: 18px 0; }
+  .deck-table th, .deck-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .deck-table th { color: var(--accent); font-size: 13.5px; text-transform: uppercase; letter-spacing: .08em; }
+  .deck-split { display: grid; grid-template-columns: 1.05fr .95fr; gap: 28px; align-items: start; }
+  .deck-split .deck-card p { font-size: 18px; }
+
+  /* ---------- Product screenshots ---------- */
+  .deck-shot {
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .10);
+  }
+  .deck-shot img { display: block; width: 100%; height: auto; }
+  .deck-shot figcaption {
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--muted);
+    padding: 9px 12px;
+    background: var(--soft);
+    border-top: 1px solid var(--line);
+  }
+  .deck-shots-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+    margin-top: 18px;
+  }
+  .deck-shot-split {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    align-items: start;
+    margin-top: 18px;
+  }
+  .deck-shot-points { list-style: none; padding: 0; margin: 0; }
+  .deck-shot-points li {
+    position: relative;
+    font-size: 17.5px;
+    line-height: 1.45;
+    margin: 0 0 12px;
+    padding-left: 26px;
+  }
+  .deck-shot-points li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-2);
+  }
+
+  /* ---------- Hands-on interactions ---------- */
+  .deck-reveal {
+    background: var(--soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin: 14px 0;
+  }
+  .deck-reveal summary {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 13px 18px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .deck-reveal summary::-webkit-details-marker { display: none; }
+  .deck-reveal summary::before {
+    content: "+";
+    font-size: 24px;
+    font-weight: 800;
+    width: 24px;
+    text-align: center;
+    color: var(--accent-2);
+    flex: 0 0 24px;
+  }
+  .deck-reveal[open] summary::before { content: "-"; }
+  .deck-reveal-body { padding: 2px 18px 16px; }
+  .deck-reveal-body p { font-size: 18.5px; }
+  .deck-reveal .deck-prompt-box { font-size: 17.5px; }
+
+  /* ---------- Small interactive questions ---------- */
+  .deck-question {
+    background: #eef6fd;
+    border: 2px solid var(--accent);
+    border-radius: 14px;
+    padding: 12px 16px 14px;
+    margin: 16px 0 4px;
+  }
+  .deck-question-prompt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .deck-question-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-2);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    flex: 0 0 26px;
+  }
+  .deck-question-options { display: flex; flex-wrap: wrap; gap: 8px; }
+  .deck-choice {
+    border: 2px solid var(--accent);
+    background: #ffffff;
+    color: var(--accent);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: 16.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .deck-choice:hover { background: var(--tip-bg); }
+  .deck-choice.deck-choice-picked { background: var(--accent); color: #ffffff; }
+
+  @media print {
+    body { overflow: visible; background: #ffffff; }
+    .deck-stage { position: static; height: auto; }
+    .deck-slide {
+      display: flex !important;
+      position: relative;
+      inset: auto;
+      height: auto;
+      min-height: 0;
+      page-break-after: always;
+      overflow: visible;
+      padding: 30px 40px;
+    }
+    .deck-slide:last-child { page-break-after: auto; }
+    .deck-controls, .deck-progress { display: none; }
+    .deck-title-slide, .deck-closing-slide { background: #ffffff !important; color: var(--ink); }
+    .deck-title-slide h1, .deck-closing-slide h2 { color: var(--ink) !important; }
+    .deck-title-slide .deck-sub, .deck-closing-slide .deck-sub { color: var(--muted) !important; }
+    .deck-title-slide .deck-kicker { color: var(--accent-2) !important; }
+    .deck-closing-slide .deck-kicker, .deck-closing-slide .deck-note { color: var(--muted) !important; }
+    .deck-chip { background: none !important; border: 0.3mm solid var(--accent-2); color: var(--accent-2) !important; }
+    .deck-card, .deck-card.warm,
+    .deck-recipe-step, .deck-prompt-box, .deck-prompt-box.strong,
+    .deck-reveal, .deck-question, .deck-flow-step,
+    table.deck-table th, table.deck-table tr:nth-child(even) td { background: none; }
+    .deck-shot { box-shadow: none; }
+    .deck-shot figcaption { background: none; }
+    .deck-recipe-step { border-top: 1mm solid var(--accent); }
+    .deck-big-number { color: var(--accent); }
+    .deck-question-mark { background: none; border: 0.4mm solid var(--accent-2); color: var(--accent-2); }
+    .deck-choice.deck-choice-picked { background: none; border: 0.4mm solid var(--accent); color: var(--accent); }
+    .deck-tag { background: none; border: 0.3mm solid var(--accent-2); color: var(--accent-2); }
+  }
+  @media (max-width: 900px) {
+    .deck-slide { padding: 32px 24px 80px; }
+    .deck-grid-2, .deck-grid-3, .deck-recipe, .deck-flow, .deck-split,
+    .deck-shots-2, .deck-shot-split { grid-template-columns: 1fr; }
+    .deck-slide p, .deck-slide li { font-size: 18px; }
+    .deck-help { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck-progress" id="deck-progress"></div>
+
+<div class="deck-stage" id="deck-stage">
+
+  <!-- 1 · Title -->
+  <section class="deck-slide deck-title-slide" data-slide-number="1">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#f0c9a8;">Future Bridge Academy - services overview</div>
+      <h1>Every service we run, one clear system</h1>
+      <p class="deck-sub">The free programmes families already know, and three new services built on tools made for this platform.</p>
+      <div class="deck-chips">
+        <span class="deck-chip">All services</span>
+        <span class="deck-chip">Three new services</span>
+        <span class="deck-chip">Five supporting tools</span>
+        <span class="deck-chip">No jargon</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Services today -->
+  <section class="deck-slide" data-slide-number="2">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">What we already run</span>
+      <h2>Six free programmes, one front door</h2>
+      <p class="deck-lead">Everything below is open to families in the community today.</p>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Free online lessons</h3><p>Weekly public maths lessons for grades 4-12, taught online by volunteer mentors.</p></div>
+        <div class="deck-card"><h3>Monthly mock exams</h3><p>A free in-person mock exam with results, so students practise under real conditions.</p></div>
+        <div class="deck-card"><h3>Seminars</h3><p>Scholarship and parent seminars, online, with practical next steps.</p></div>
+        <div class="deck-card warm"><h3>Community and mentors</h3><p>Updates, encouragement, and a place to ask questions between lessons.</p></div>
+        <div class="deck-card warm"><h3>Volunteering</h3><p>Ten roles that run the programme, with training before a volunteer starts.</p></div>
+        <div class="deck-card"><h3>Career fair and events</h3><p>Registration for events, shared by direct link, with on-screen confirmation.</p></div>
+      </div>
+      <p class="deck-note">All free. No price is published anywhere on the website.</p>
+    </div>
+  </section>
+
+  <!-- 3 · The gap -->
+  <section class="deck-slide" data-slide-number="3">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Why we added three services</span>
+      <h2>Free lessons serve everyone at once</h2>
+      <p class="deck-lead">Some families need a path, a file and practice that fits one student. That is the gap.</p>
+      <div class="deck-grid-3">
+        <div class="deck-card">
+          <span class="deck-big-number">1</span>
+          <h3>Pace and proof</h3>
+          <p>A student moves section by section, and the supervisor sees real progress instead of guessing.</p>
+        </div>
+        <div class="deck-card">
+          <span class="deck-big-number">2</span>
+          <h3>Applications and coaching</h3>
+          <p>One file holds grades, achievements, references and deadlines, and a mentor works from it.</p>
+        </div>
+        <div class="deck-card">
+          <span class="deck-big-number">3</span>
+          <h3>Writing quality</h3>
+          <p>A student writes, gets scored on a clear rubric, and improves without anyone rewriting the work.</p>
+        </div>
+      </div>
+      <p class="deck-note">Same families, same team - three new structured services that do not replace the free programmes.</p>
+    </div>
+  </section>
+
+  <!-- 4 · The three services -->
+  <section class="deck-slide" data-slide-number="4">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">The new line-up</span>
+      <h2>Three services, each with its own tool</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card warm">
+          <span class="deck-tag">New</span>
+          <h3>Self-Paced Courses</h3>
+          <p>A curriculum becomes a personal path: sections unlock in order, quizzes check understanding, and progress is visible.</p>
+        </div>
+        <div class="deck-card warm">
+          <span class="deck-tag">New</span>
+          <h3>Student Files - Career and Academic Coaching</h3>
+          <p>One file per student, with a mentor: applications, portfolio, references and deadlines in one place.</p>
+        </div>
+        <div class="deck-card warm">
+          <span class="deck-tag">New</span>
+          <h3>English Article Writing</h3>
+          <p>A focused writing surface with rubric-based evaluation and next steps - the essay is never edited for the student.</p>
+        </div>
+      </div>
+      <div class="deck-question">
+        <div class="deck-question-prompt"><span class="deck-question-mark">?</span> A parent says: "We need a plan for next year." Which service do you open first?</div>
+        <div class="deck-question-options">
+          <button type="button" class="deck-choice">Self-Paced Courses</button>
+          <button type="button" class="deck-choice">Student Files</button>
+          <button type="button" class="deck-choice">English Article Writing</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Self-paced what -->
+  <section class="deck-slide" data-slide-number="5">
+    <div class="deck-slide-inner">
+      <span class="deck-tag">New service 1 of 3</span>
+      <span class="deck-kicker">Self-Paced Courses</span>
+      <h2>A curriculum becomes a path</h2>
+      <p class="deck-lead">Built for the student who wants to move faster, catch up, or keep learning between live lessons.</p>
+      <ul>
+        <li>A course is written as <strong>sections</strong>; each section holds lessons; sections unlock in order.</li>
+        <li>The student works at their own pace against a <strong>recommended end date</strong>.</li>
+        <li>A supervisor follows progress and approves work - <strong>no spreadsheets, no chasing</strong>.</li>
+        <li>Every quiz answer, status and setting is kept in <strong>one saved record for that student</strong>.</li>
+      </ul>
+      <p class="deck-note">The course content is authored once. Each student's record is separate, so changing the course never erases a student's progress.</p>
+    </div>
+  </section>
+
+  <!-- 6 · Self-paced screens -->
+  <section class="deck-slide" data-slide-number="6">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Inside the tool</span>
+      <h2>Two views of the same progress</h2>
+      <div class="deck-shots-2">
+        <figure class="deck-shot">
+          <img src="screenshots/sp-student.png" alt="Student course view with one completed section and one section in progress" />
+          <figcaption>Course view: sections unlock in order, with completion and quiz average.</figcaption>
+        </figure>
+        <figure class="deck-shot">
+          <img src="screenshots/sp-supervisor.png" alt="Supervisor dashboard with 67 percent complete, average score and per-lesson status" />
+          <figcaption>Supervisor view: 67% complete, an 85% average, and every lesson's status.</figcaption>
+        </figure>
+      </div>
+      <p class="deck-note">Screens from the working build, with a sample student loaded. No spreadsheet sits behind this page - it reads the saved record.</p>
+    </div>
+  </section>
+
+  <!-- 7 · Self-paced lesson flow -->
+  <section class="deck-slide" data-slide-number="7">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Inside a lesson</span>
+      <h2>One lesson, several ways to learn</h2>
+      <div class="deck-grid-3">
+        <div class="deck-card"><h3>Lesson content</h3><p>The explanation, written for the level the student is actually at.</p></div>
+        <div class="deck-card"><h3>Quiz sets</h3><p>Scored answers with a pass score, attempts and score recovery.</p></div>
+        <div class="deck-card"><h3>Flashcards</h3><p>Quick recall practice between lessons.</p></div>
+        <div class="deck-card warm"><h3>Presentation view</h3><p>The same material as slides, for review before a quiz.</p></div>
+        <div class="deck-card warm"><h3>PDF and video</h3><p>Read it or watch it - the material is available in more than one form.</p></div>
+        <div class="deck-card"><h3>Submission for review</h3><p>Work a supervisor can approve in place, without email.</p></div>
+      </div>
+      <p class="deck-note">A lesson is not a page to read once. It is a set of steps with a score at the end.</p>
+    </div>
+  </section>
+
+  <!-- 8 · Self-paced progress and reports -->
+  <section class="deck-slide" data-slide-number="8">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">The control room</span>
+      <h2>Progress you can see, and send home</h2>
+      <div class="deck-shot-split">
+        <figure class="deck-shot">
+          <img src="screenshots/sp-report.png" alt="Activity report listing lesson completions by date with scores" />
+          <figcaption>Every completion is kept with its date and score.</figcaption>
+        </figure>
+        <ul class="deck-shot-points">
+          <li><strong>Status per lesson:</strong> not started, in progress, completed, or waiting for review.</li>
+          <li><strong>Pace:</strong> week number, and ahead, on schedule or behind.</li>
+          <li><strong>Reports:</strong> WhatsApp or email, written for the student or the parent, in <strong>nine languages</strong>.</li>
+          <li>The supervisor approves submissions in place - no chasing by email.</li>
+        </ul>
+      </div>
+      <p class="deck-note">The report is the same truth for everyone. Only the tone changes.</p>
+    </div>
+  </section>
+
+  <!-- 9 · The five tools -->
+  <section class="deck-slide" data-slide-number="9">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">What sits underneath</span>
+      <h2>Five tools, three services</h2>
+      <table class="deck-table">
+        <thead><tr><th>Tool</th><th>Service</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Curriculum Builder</strong></td><td>Self-Paced Courses</td><td>Writes the course: sections, lessons, quizzes, flashcards and resources.</td></tr>
+          <tr><td><strong>Self-Paced Education By Section</strong></td><td>Self-Paced Courses</td><td>The student studies, the supervisor follows and approves; it owns the progress record.</td></tr>
+          <tr><td><strong>Student File Builder For Applications</strong></td><td>Student Files</td><td>One file per student: profile, applications, portfolio, grades, references and requests.</td></tr>
+          <tr><td><strong>Essay Subject Builder</strong></td><td>English Article Writing</td><td>The teacher defines the assignment, the word count and the rubrics.</td></tr>
+          <tr><td><strong>Essay Writing Educator</strong></td><td>English Article Writing</td><td>The student writes, gets scored against the rubric, and revises.</td></tr>
+        </tbody>
+      </table>
+      <p class="deck-note">Roles decide access: students write, mentors and supervisors review, teachers configure. Every service opens in the browser - nothing to install.</p>
+    </div>
+  </section>
+
+  <!-- 10 · Student files -->
+  <section class="deck-slide" data-slide-number="10">
+    <div class="deck-slide-inner">
+      <span class="deck-tag">New service 2 of 3</span>
+      <span class="deck-kicker">Student Files - Career and Academic Coaching</span>
+      <h2>One student, one file, one plan</h2>
+      <div class="deck-shot-split">
+        <figure class="deck-shot">
+          <img src="screenshots/sf-dashboard.png" alt="Student file dashboard with readiness, applications and upcoming deadlines" />
+          <figcaption>Readiness, pathways and deadlines on one page.</figcaption>
+        </figure>
+        <ul class="deck-shot-points">
+          <li><strong>Readiness is 33%</strong>, calculated from the requirements that are done.</li>
+          <li>Every pathway in one place: <strong>university, college, IB, trades or high school</strong>.</li>
+          <li>Profile, applications, portfolio, achievements, grades, references and documents.</li>
+          <li>The mentor opens the same file and asks for what is missing.</li>
+        </ul>
+      </div>
+      <p class="deck-note">Built for families applying for the first time, who do not yet know what "ready" looks like.</p>
+    </div>
+  </section>
+
+  <!-- 11 · Student files applications and requests -->
+  <section class="deck-slide" data-slide-number="11">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Inside the file - the coaching loop</span>
+      <h2>Applications, requests, and the loop between them</h2>
+      <div class="deck-shots-2">
+        <figure class="deck-shot">
+          <img src="screenshots/sf-applications.png" alt="Application files for university, IB, college and trades with progress" />
+          <figcaption>Each pathway carries its own checklist, targets and completed count.</figcaption>
+        </figure>
+        <figure class="deck-shot">
+          <img src="screenshots/sf-requests.png" alt="Data requests with status, due date and replies" />
+          <figcaption>Requests carry an owner, a status, a due date and a conversation.</figcaption>
+        </figure>
+      </div>
+      <div class="deck-flow" style="margin-top:16px;">
+        <div class="deck-flow-step"><b>Step 1</b><span>Mentor reviews the file</span></div>
+        <div class="deck-flow-step"><b>Step 2</b><span>Requests the missing data</span></div>
+        <div class="deck-flow-step"><b>Step 3</b><span>Student adds it</span></div>
+        <div class="deck-flow-step"><b>Step 4</b><span>Both reply in the request</span></div>
+        <div class="deck-flow-step"><b>Step 5</b><span>Readiness rises</span></div>
+      </div>
+      <p class="deck-note">The request is where coaching happens: what is missing, who adds it, and by when. The mentor view coaches; the student view does the work.</p>
+    </div>
+  </section>
+
+  <!-- 12 · Article writing -->
+  <section class="deck-slide" data-slide-number="12">
+    <div class="deck-slide-inner">
+      <span class="deck-tag">New service 3 of 3</span>
+      <span class="deck-kicker">English Article Writing</span>
+      <h2>Write, get scored, improve</h2>
+      <div class="deck-split">
+        <div>
+          <p class="deck-lead">One focused writing surface for one essay, with rubric-based evaluation that never rewrites the student's work.</p>
+          <ul>
+            <li>The teacher defines the assignment: <strong>subject, instructions, minimum word count and rubrics</strong>.</li>
+            <li>The student writes, presses <strong>Evaluate My Essay</strong>, and gets a score plus concrete next steps.</li>
+            <li>Teachers can add rubrics - <strong>up to eight</strong> - and every class is judged the same way.</li>
+            <li>The student makes every change. The tool never edits the essay.</li>
+          </ul>
+        </div>
+        <div class="deck-card">
+          <h3>The 100-point rubric</h3>
+          <table class="deck-table" style="font-size:16.5px; margin:6px 0 0;">
+            <tbody>
+              <tr><td><strong>Content &amp; Ideas</strong></td><td>30</td></tr>
+              <tr><td><strong>Organization &amp; Structure</strong></td><td>20</td></tr>
+              <tr><td><strong>Evidence &amp; Argumentation</strong></td><td>20</td></tr>
+              <tr><td><strong>Language &amp; Style</strong></td><td>15</td></tr>
+              <tr><td><strong>Grammar &amp; Mechanics</strong></td><td>15</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <p class="deck-note">Five consistent criteria beat a vague "good essay" comment every time - and the score is feedback, not a replacement for the writing.</p>
+    </div>
+  </section>
+
+  <!-- 13 · Article writing evaluation screen -->
+  <section class="deck-slide" data-slide-number="13">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">Inside the evaluation</span>
+      <h2>83.5 out of 100, with the reasons</h2>
+      <div class="deck-shots-2">
+        <figure class="deck-shot">
+          <img src="screenshots/ew-editor.png" alt="Essay editor with the assignment, minimum length, word count and evaluation button" />
+          <figcaption>The writing surface: assignment, minimum length and live word count.</figcaption>
+        </figure>
+        <figure class="deck-shot">
+          <img src="screenshots/ew-evaluation.png" alt="Evaluation panel with score, grade band, summary, strengths and areas to improve" />
+          <figcaption>The evaluation: score, grade band, summary, strengths and what to improve.</figcaption>
+        </figure>
+      </div>
+      <p class="deck-note">The essay is unchanged on both screens - the tool scores and explains, the student rewrites.</p>
+    </div>
+  </section>
+
+  <!-- 14 · Family journey -->
+  <section class="deck-slide" data-slide-number="14">
+    <div class="deck-slide-inner">
+      <span class="deck-kicker">How a family moves through it</span>
+      <h2>One journey, five optional steps</h2>
+      <div class="deck-flow">
+        <div class="deck-flow-step"><b>Step 1</b><span>Join a free online lesson</span></div>
+        <div class="deck-flow-step"><b>Step 2</b><span>Try a free mock exam</span></div>
+        <div class="deck-flow-step"><b>Step 3</b><span>Take a self-paced course</span></div>
+        <div class="deck-flow-step"><b>Step 4</b><span>Open a student file with a coach</span></div>
+        <div class="deck-flow-step"><b>Step 5</b><span>Write and improve an article</span></div>
+      </div>
+      <ul>
+        <li>Nothing is forced: each step is optional and can stand alone.</li>
+        <li>The free programmes stay free, and no price is published.</li>
+        <li>Where a service carries a fee, it is explained before a family agrees to anything.</li>
+        <li>Anyone can ask to have their details deleted at any time.</li>
+      </ul>
+      <p class="deck-note">The journey is a menu, not a funnel. Families take the steps that fit their year.</p>
+    </div>
+  </section>
+
+  <!-- 15 · Closing -->
+  <section class="deck-slide deck-closing-slide" data-slide-number="15">
+    <div class="deck-slide-inner">
+      <div class="deck-kicker" style="color:#fde8d3;">One ecosystem</div>
+      <h2>Free programmes open the door.<br>Three tools make the next step manageable.</h2>
+      <p class="deck-sub">Self-Paced Courses, Student Files and English Article Writing - each with a tool built for it, each tracked in the CMS.</p>
+      <span class="deck-chip">Questions? Ask the programme team</span>
+      <p class="deck-note">Next: choose a first cohort for each new service, and name the mentor who owns each student file.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="deck-controls">
+  <button class="deck-btn" id="deck-prev-button" type="button">Previous</button>
+  <button class="deck-btn" id="deck-next-button" type="button">Next</button>
+  <span class="deck-counter" id="deck-counter">1 / 15</span>
+  <div class="deck-dots" id="deck-dots"></div>
+  <span class="deck-help">Arrow keys or Space to move - P to print</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var allSlides = Array.prototype.slice.call(document.querySelectorAll(".deck-slide"));
+  var currentSlideIndex = 0;
+  var progressBarElement = document.getElementById("deck-progress");
+  var slideCounterElement = document.getElementById("deck-counter");
+  var previousButton = document.getElementById("deck-prev-button");
+  var nextButton = document.getElementById("deck-next-button");
+  var dotsContainer = document.getElementById("deck-dots");
+
+  function clampSlideIndex(requestedIndex) {
+    if (requestedIndex < 0) { return 0; }
+    if (requestedIndex > allSlides.length - 1) { return allSlides.length - 1; }
+    return requestedIndex;
+  }
+
+  function buildDotNavigation() {
+    allSlides.forEach(function (slide, slideIndex) {
+      var dotButton = document.createElement("button");
+      dotButton.type = "button";
+      dotButton.className = "deck-dot";
+      dotButton.setAttribute("aria-label", "Go to slide " + (slideIndex + 1));
+      dotButton.addEventListener("click", function () { showSlideAtIndex(slideIndex); });
+      dotsContainer.appendChild(dotButton);
+    });
+  }
+
+  function updateControls() {
+    slideCounterElement.textContent = (currentSlideIndex + 1) + " / " + allSlides.length;
+    previousButton.disabled = currentSlideIndex === 0;
+    nextButton.disabled = currentSlideIndex === allSlides.length - 1;
+    var progressPercent = ((currentSlideIndex + 1) / allSlides.length) * 100;
+    progressBarElement.style.width = progressPercent + "%";
+    var allDotButtons = dotsContainer.querySelectorAll(".deck-dot");
+    allDotButtons.forEach(function (dotButton, dotIndex) {
+      dotButton.classList.toggle("deck-dot-active", dotIndex === currentSlideIndex);
+    });
+  }
+
+  function showSlideAtIndex(requestedIndex) {
+    currentSlideIndex = clampSlideIndex(requestedIndex);
+    allSlides.forEach(function (slide, slideIndex) {
+      slide.classList.toggle("deck-active", slideIndex === currentSlideIndex);
+    });
+    updateControls();
+    /* deep link: #5 opens slide 5, and the address bar follows the deck */
+    try {
+      window.history.replaceState(null, "", "#" + (currentSlideIndex + 1));
+    } catch (e) {
+      window.location.hash = String(currentSlideIndex + 1);
+    }
+  }
+
+  function goToNextSlide() { showSlideAtIndex(currentSlideIndex + 1); }
+  function goToPreviousSlide() { showSlideAtIndex(currentSlideIndex - 1); }
+
+  function handleKeyboardNavigation(event) {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+      event.preventDefault();
+      goToNextSlide();
+    } else if (event.key === "ArrowLeft" || event.key === "PageUp") {
+      event.preventDefault();
+      goToPreviousSlide();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      showSlideAtIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      showSlideAtIndex(allSlides.length - 1);
+    } else if (event.key === "p" || event.key === "P") {
+      window.print();
+    }
+  }
+
+  previousButton.addEventListener("click", goToPreviousSlide);
+  nextButton.addEventListener("click", goToNextSlide);
+  document.addEventListener("keydown", handleKeyboardNavigation);
+  window.addEventListener("beforeprint", function () {
+    document.querySelectorAll(".deck-reveal").forEach(function (revealElement) {
+      revealElement.setAttribute("open", "");
+    });
+  });
+  document.addEventListener("click", function (event) {
+    var choiceButton = event.target.closest(".deck-choice");
+    if (choiceButton) {
+      choiceButton.classList.toggle("deck-choice-picked");
+    }
+  });
+  window.addEventListener("hashchange", function () {
+    var requestedHashSlide = parseInt((window.location.hash || "").replace("#", ""), 10);
+    if (!isNaN(requestedHashSlide)) { showSlideAtIndex(requestedHashSlide - 1); }
+  });
+
+  buildDotNavigation();
+  var requestedStartSlide = parseInt((window.location.hash || "").replace("#", ""), 10);
+  showSlideAtIndex(isNaN(requestedStartSlide) ? 0 : requestedStartSlide - 1);
+})();
+</script>
+</body>
+</html>

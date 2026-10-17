@@ -19,6 +19,10 @@ body { padding-top: 28px !important; margin: 0; }
 #th-bar .btn-clear { background: #dc2626; color: #fff; }
 #th-bar .btn-reload { background: #16a34a; color: #fff; }
 #th-bar .hint { color: #64748b; font-size: 10px; }
+/* ?bare=1 - hide the harness bar for clean screenshots */
+body.th-bare { padding-top: 0 !important; }
+body.th-bare #th-bar { display: none; }
+body.th-bare #app-container { min-height: 100vh; }
 @keyframes toolFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
@@ -38,6 +42,13 @@ body { padding-top: 28px !important; margin: 0; }
 <div id="app-container"></div>
 
 <script>
+/* ?bare=1 - hide the harness bar for clean screenshots */
+(function() {
+  if (new URLSearchParams(window.location.search).get('bare') === '1') {
+    document.body.className = 'th-bare';
+  }
+})();
+
 /* ── Mock tool SDK ── */
 (function() {
   var STORAGE_KEY = 'student_file_builder_test_db';
@@ -562,6 +573,34 @@ var EMBEDDED_HTML = `<div id="app">
   document.getElementById('th-reload').addEventListener('click', function() {
     window.location.reload();
   });
+
+  /* QA/screenshot helper: ?sample=1 loads the sample once. The stored value
+     stops a reload loop after _loadSampleData reloads the page. */
+  if (new URLSearchParams(window.location.search).get('sample') === '1' &&
+      !localStorage.getItem('student_file_builder_test_db')) {
+    window.tool._loadSampleData(generateSampleData());
+  }
+})();
+</script>
+
+<script>
+/* QA/screenshot views: ?page=<nav> and ?view=<student|mentor> switch the app
+   after it boots. Unknown values keep the default dashboard. */
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var requestedPage = params.get('page') || '';
+  var requestedView = params.get('view') || '';
+  if (!requestedPage && !requestedView) { return; }
+  setTimeout(function () {
+    if (requestedView) {
+      var viewButton = document.querySelector('#view-toggle [data-view="' + requestedView + '"]');
+      if (viewButton) { viewButton.click(); }
+    }
+    if (requestedPage) {
+      var navItem = document.querySelector('.nav-item[data-page="' + requestedPage + '"]');
+      if (navItem) { navItem.click(); }
+    }
+  }, 2200);
 })();
 </script>
 </body>
