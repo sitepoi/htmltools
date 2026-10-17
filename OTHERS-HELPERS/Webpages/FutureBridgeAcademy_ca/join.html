@@ -3,8 +3,16 @@
   JOIN - fragment for the academy website (join.html)
   - Everything lives inside ONE parent <div class="fba-page fba-join">
   - No html / head / body tags, no header or footer (the CMS provides them)
-  - The shortest possible sign up: parent name, email, student grade, subject,
-    preferred time, optional note (SSOT section 10, page 40)
+  - WHAT THIS PAGE REGISTERS FOR: the PUBLIC weekly online lessons - one class
+    open to every family in the community, run by volunteer mentors. It is NOT
+    a private lesson and NOT one-to-one tutoring. The academy does not offer
+    private lessons, so no copy on this page may promise or imply one.
+  - The shortest possible sign up: parent name, student name, email, student
+    grade, subject, optional current topic, optional note (SSOT section 10,
+    page 40)
+  - NO PREFERRED TIME is asked. This is a registration list, not a booking: the
+    team checks capacity and emails families later when the next public lesson
+    has a place, so the page must not suggest the family picks a slot or time.
   - Platform form contract: <form data-gw-form>, hidden honeypot named
     "website", [data-gw-form-status] live region, gw.forms.bind() guarded
 
@@ -20,15 +28,16 @@
 	<!-- ============================== HERO ============================== -->
 	<section class="fba-join-hero">
 		<div class="fba-wrap">
-			<p class="fba-kicker">Join a free online lesson</p>
-			<h1 class="fba-join-title">Two minutes now,<br><span class="fba-join-hl">free lesson next</span></h1>
+			<p class="fba-kicker">Free public online lessons</p>
+			<h1 class="fba-join-title">Two minutes now,<br><span class="fba-join-hl">a public lesson next</span></h1>
 			<p class="fba-join-lede">
-				Tell us your child's grade and the topic their class is on. We send the joining details for the next
-				lesson, and nothing else is expected of you afterwards.
+				Our free lessons are public online classes, open to every family in the community. Register your
+				child here and we will email you when the next lesson has space. Nothing else is expected of you
+				afterwards.
 			</p>
 			<ul class="fba-pills">
 				<li class="fba-pill">Free</li>
-				<li class="fba-pill">No obligation</li>
+				<li class="fba-pill">Public group lesson</li>
 				<li class="fba-pill">Grades 4-12</li>
 				<li class="fba-pill">Mathematics now</li>
 			</ul>
@@ -41,14 +50,19 @@
 
 			<form class="fba-join-form" data-gw-form data-gw-form-type="free-lesson-signup">
 				<div class="fba-join-form-head">
-					<h2>Your child's free lesson</h2>
-					<p>Four quick fields. The note at the end is optional.</p>
+					<h2>Register for the next free lesson</h2>
+					<p>These are our public group lessons, not private tutoring. Register once, and we will email you
+						when the next lesson has space.</p>
 				</div>
 
 				<div class="fba-join-fields">
 					<label class="fba-join-field">
 						<span class="fba-join-label">Parent or guardian name <em>required</em></span>
 						<input type="text" name="parent_name" autocomplete="name" required>
+					</label>
+					<label class="fba-join-field">
+						<span class="fba-join-label">Student name <em>required</em></span>
+						<input type="text" name="student_name" autocapitalize="words" required>
 					</label>
 					<label class="fba-join-field">
 						<span class="fba-join-label">Email <em>required</em></span>
@@ -80,12 +94,8 @@
 						</select>
 					</label>
 					<label class="fba-join-field">
-						<span class="fba-join-label">Preferred time</span>
-						<input type="text" name="preferred_time" placeholder="For example: weekday evenings, weekend mornings">
-					</label>
-					<label class="fba-join-field">
-						<span class="fba-join-label">Topic the class is on now <em>optional</em></span>
-						<input type="text" name="topic" placeholder="For example: linear equations, fractions">
+						<span class="fba-join-label">Topic your child is on now <em>optional</em></span>
+						<input type="text" name="topic" placeholder="For example: fractions">
 					</label>
 				</div>
 
@@ -99,12 +109,12 @@
 					aria-hidden="true">
 
 				<div class="fba-join-actions">
-					<button class="fba-join-submit" type="submit">Join a free online lesson</button>
+					<button class="fba-join-submit" type="submit">Register for the next lesson</button>
 					<div class="fba-join-status" data-gw-form-status role="status"></div>
 				</div>
 
-				<p class="fba-join-consent">We use these details only to arrange lessons and to tell you about the next
-					one. We do not pass them to anyone else, and you can ask us to delete them at any time.</p>
+				<p class="fba-join-consent">We use these details to contact you about the next public lesson. We do
+					not pass them to anyone else, and you can ask us to delete them at any time.</p>
 			</form>
 
 			<aside class="fba-join-aside">
@@ -112,16 +122,18 @@
 					<p class="fba-kicker">What happens next</p>
 					<h3>Three steps, none of them a sales call</h3>
 					<ol class="fba-join-steps">
-						<li><span>01</span>You get the joining details for the next lesson.</li>
-						<li><span>02</span>Your child joins the lesson, and you can sit in.</li>
-						<li><span>03</span>Afterwards you decide whether to come back. No obligation either way.</li>
+						<li><span>01</span>You register your child once on this page.</li>
+						<li><span>02</span>We check capacity and email you when the next public lesson has a place, with
+							the joining details.</li>
+						<li><span>03</span>Your child joins from any device, and afterwards you decide whether to come
+							back.</li>
 					</ol>
 				</div>
 
 				<div class="fba-join-card fba-join-card-light fba-reveal">
 					<p class="fba-kicker">What is free</p>
 					<ul class="fba-ticks">
-						<li>Weekly online maths lessons</li>
+						<li>Weekly public online maths lessons</li>
 						<li>The monthly mock exam, in person</li>
 						<li>Scholarship and parent seminars</li>
 						<li>The community and the mentor network</li>
@@ -152,16 +164,16 @@
 					<span class="fba-point-icon" aria-hidden="true">&#128231;</span>
 					<div>
 						<strong>Only lesson contact</strong>
-						<p>We use your email to send the lesson details and the schedule. Nothing else, and no list
-							sold or shared.</p>
+						<p>We use your email to tell you when the next lesson has space and to send the joining details.
+							Nothing else, and no list sold or shared.</p>
 					</div>
 				</li>
 				<li>
 					<span class="fba-point-icon" aria-hidden="true">&#128274;</span>
 					<div>
 						<strong>Only what we need</strong>
-						<p>A parent's name, an email, a grade and a subject. No student surnames, no school names, no
-							documents.</p>
+						<p>A parent's name, the student's name, an email, a grade and a subject, plus an optional topic.
+							No school names, no documents.</p>
 					</div>
 				</li>
 				<li>
@@ -179,8 +191,8 @@
 	<!-- ============================== CTA =============================== -->
 	<section class="fba-cta">
 		<div class="fba-wrap fba-cta-inner">
-			<h2>Want to see the lesson first?</h2>
-			<p>Read what a lesson covers and what your child needs, or check when the next mock exam runs.</p>
+			<h2>Want to see what a public lesson looks like?</h2>
+			<p>Read how a lesson runs and what your child needs, or check the monthly mock exam.</p>
 			<div class="fba-actions fba-actions-center">
 				<a class="fba-btn fba-btn-primary" href="/free-lessons">What a lesson looks like</a>
 				<a class="fba-btn fba-btn-ghost" href="/mock-exams">The monthly mock exam</a>
@@ -540,7 +552,7 @@
 			} catch (err) { reduceMotion = false; }
 
 			/* ---------------------- forms ---------------------- */
-			/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.md at the workspace
+			/* Public form submission, per PUBLICWEBSITE-GUIDE--form-submission.txt at the workspace
 			   root: one POST of JSON to the CMS, then read the status and show a message. There is
 			   no second call and no read access.
 			   Set formApiEndpoint to the CMS host, for example
@@ -663,7 +675,7 @@
 					}
 
 					form.reset();
-					setFormStatus(form, 'Thank you. Your details are with the programme team, and we reply to every one.', 'ok');
+					setFormStatus(form, 'Thank you. Your registration is with the programme team, and we will email you when the next lesson has space.', 'ok');
 				}).catch(function () {
 					setFormStatus(form, formErrorMessage(0), 'error');
 				}).then(function () {

@@ -6,34 +6,50 @@
      - Submits over the CMS public API (PUBLICWEBSITE-GUIDE--form-submission.txt):
        destination cmsObjectType event-entry-registraton-uniconbaseapps,
        label formTypeId career-fair-entry.
-     - Fields: first name, last name, phone, email, consent. Nothing else is asked.
-     - No date, venue or price is stated: none of them is confirmed for publishing.
-     - Mobile first: one column of four full-width fields, 16px text so phones do
-       not zoom on focus, 54px tall inputs and a 56px tall submit button, and the
-       form is the first block after the short hero.
-     - No decorative sections: the page has one job, take the entry quickly.
+     - Fields: first name, last name, phone, email, consent, future_services_consent.
+       Nothing else is asked. The four details are required; BOTH consent boxes are
+       OPTIONAL (no required attribute), independent and worded as EMAIL OPT-INS, not
+       as "I agree to be contacted": email is the lighter ask and the one people say
+       yes to, and it keeps the phone number for event day only.
+         consent                 - keep me posted by email about the fair
+         future_services_consent - email me about free lessons, mock exams and seminars
+       Each one travels as "yes" only when ticked, so an unticked box sends no value
+       and never blocks the entry. Boxes are NEVER pre-ticked: consent has to be a
+       positive action. The CMS stores free field names, so the second consent needs
+       no CMS schema change.
+     - THIS IS AN ON-SITE DOOR FORM: the visitor is already at the event and fills
+       it in as they come in, usually on a phone while standing at the entrance.
+       So there is no "we will email you the date and place" copy and no waiting:
+       the confirmation appears on the screen the moment the entry is accepted.
+       The page never promises an email, a ticket or anything to print.
+     - No date, venue or price is stated as a fact: none of them is confirmed for
+       publishing.
+     - SIMPLE BY DESIGN: a short centred hero, ONE centred form card, a three item
+       fact strip and one help line. No side column, no About section, no cards
+       competing with the form. Nothing sits between the visitor and the fields.
+     - Mobile first: the four fields are 16px text and 54px tall so phones do not
+       zoom or mis-tap, every field is full width in one column, and the submit
+       button is full width and 56px tall.
      ============================================================================= -->
 <div class="fba-page fba-career">
 
 	<!-- ============================== HERO ============================== -->
 	<section class="fba-career-hero">
 		<div class="fba-wrap">
-			<p class="fba-kicker">Career fair</p>
-			<h1 class="fba-career-title">Register your entry</h1>
-			<p class="fba-career-lede">
-				Four details, under a minute. Free entry, one entry per person.
-			</p>
+			<p class="fba-kicker">Future Bridge Academy</p>
+			<h1 class="fba-career-title">Career Fair 2026</h1>
+			<p class="fba-career-lede">Register your entry as you arrive. It takes under a minute.</p>
 		</div>
 	</section>
 
 	<!-- ============================== FORM ============================== -->
 	<section class="fba-career-form-sec">
-		<div class="fba-wrap fba-career-grid">
+		<div class="fba-wrap">
 
 			<form class="fba-career-form" data-gw-form data-gw-form-type="career-fair-entry">
 				<div class="fba-career-form-head">
-					<h2>Your details</h2>
-					<p>All four fields are required.</p>
+					<h2>Register your entry</h2>
+					<p>Four details, and email only if you want it.</p>
 				</div>
 
 				<div class="fba-career-fields">
@@ -49,20 +65,33 @@
 					</label>
 					<label class="fba-career-field">
 						<span class="fba-career-label">Phone</span>
-						<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="next" required>
-						<span class="fba-career-hint">Only used to reach you on the day.</span>
+						<input type="tel" name="phone" inputmode="tel" autocomplete="tel" enterkeyhint="next"
+							aria-describedby="fba-career-phone-hint" required>
+						<span class="fba-career-hint" id="fba-career-phone-hint">Only used if we need to reach you
+							during the event.</span>
 					</label>
 					<label class="fba-career-field">
 						<span class="fba-career-label">Email</span>
 						<input type="email" name="email" inputmode="email" autocomplete="email"
-							autocapitalize="none" spellcheck="false" enterkeyhint="send" required>
+							autocapitalize="none" spellcheck="false" enterkeyhint="send"
+							aria-describedby="fba-career-email-hint" required>
+						<span class="fba-career-hint" id="fba-career-email-hint">We only email you about what you
+							ask for below.</span>
 					</label>
 				</div>
 
-				<label class="fba-career-consent-field">
-					<input type="checkbox" name="consent" value="yes" required>
-					<span>I agree to be contacted by email or phone about this career fair.</span>
-				</label>
+				<div class="fba-career-consent">
+					<label class="fba-career-consent-field">
+						<input type="checkbox" name="consent" value="yes">
+						<span>Keep me posted by email about the fair.
+							<em class="fba-career-optional">(optional)</em></span>
+					</label>
+					<label class="fba-career-consent-field">
+						<input type="checkbox" name="future_services_consent" value="yes">
+						<span>Email me about free lessons, mock exams and seminars.
+							<em class="fba-career-optional">(optional)</em></span>
+					</label>
+				</div>
 
 				<!-- honeypot: hidden from view and from screen readers, never a real field -->
 				<input class="fba-career-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off"
@@ -73,76 +102,59 @@
 					<button class="fba-career-submit" type="submit">Register my entry</button>
 				</div>
 
-				<p class="fba-career-note">We keep these details only to run the fair and to contact you about it. We
-					do not pass them to anyone else, and you can ask us to delete them at any time.</p>
+				<p class="fba-career-note">We use these details to run the fair. We only email you about the fair or
+					about free services if you tick a box. We do not pass them to anyone else, and you can ask us to delete
+					them at any time.</p>
 			</form>
 
-			<aside class="fba-career-aside">
-				<div class="fba-career-card">
-					<p class="fba-kicker">What happens next</p>
-					<h3>Three short steps</h3>
-					<ol class="fba-career-steps">
-						<li><span>01</span>We receive your entry and check it is complete.</li>
-						<li><span>02</span>We send the entry details to your email.</li>
-						<li><span>03</span>You come to the fair and check in with our team.</li>
-					</ol>
-				</div>
+			<!-- three plain facts, one line, below the form -->
+			<ul class="fba-career-quick">
+				<li>Free entry</li>
+				<li>One entry per person</li>
+				<li>Confirmation on screen</li>
+			</ul>
 
-				<div class="fba-career-card fba-career-card-quiet">
-					<p class="fba-kicker">Questions?</p>
-					<p>Ask us before you register and we answer honestly.</p>
-					<a class="fba-career-card-link" href="/contact">Ask a question &#8594;</a>
-				</div>
-			</aside>
+			<p class="fba-career-help">
+				Need help? Ask a member of our team at the entrance, or write to
+				<a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a>.
+			</p>
 		</div>
 	</section>
 
 	<style>
 		/* ---------- career fair entry registration (page scoped) ---------- */
 		.fba-career .fba-career-hero {
-			padding: 76px 0 54px;
-			background:
-				radial-gradient(circle at 82% 8%, rgba(6, 214, 160, 0.14) 0%, transparent 46%),
-				linear-gradient(180deg, #f7fafc 0%, #ffffff 100%);
+			padding: 40px 0 30px;
+			background: linear-gradient(180deg, #f7fafc 0%, #ffffff 100%);
 			border-bottom: 1px solid var(--fba-line);
+			text-align: center;
 		}
 
 		.fba-career .fba-career-title {
-			margin: 14px 0 18px;
+			margin: 10px 0 10px;
 			font-family: 'Bricolage Grotesque', sans-serif;
-			font-size: clamp(2rem, 4.4vw, 3.1rem);
-			line-height: 1.06;
+			font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+			line-height: 1.08;
 			letter-spacing: -0.02em;
 			color: var(--fba-secondary);
 		}
 
 		.fba-career .fba-career-lede {
-			max-width: 62ch;
-			font-size: 1.05rem;
-			line-height: 1.65;
+			max-width: 52ch;
+			margin: 0 auto;
+			font-size: 1rem;
+			line-height: 1.55;
 			color: var(--fba-muted);
 		}
 
-		.fba-career .fba-pills {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 10px;
-			margin-top: 22px;
-		}
-
 		.fba-career .fba-career-form-sec {
-			padding: 56px 0 64px;
-		}
-
-		.fba-career .fba-career-grid {
-			display: grid;
-			grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-			gap: 40px;
-			align-items: start;
+			padding: 32px 0 40px;
 		}
 
 		.fba-career .fba-career-form {
-			padding: 30px;
+			max-width: 620px;
+			margin: 0 auto;
+			padding: 28px;
 			border: 1px solid var(--fba-line);
 			border-radius: var(--fba-radius);
 			background: #fff;
@@ -150,22 +162,23 @@
 		}
 
 		.fba-career .fba-career-form-head h2 {
-			margin: 0 0 6px;
+			margin: 0 0 4px;
 			font-family: 'Bricolage Grotesque', sans-serif;
-			font-size: 1.4rem;
+			font-size: 1.3rem;
 			color: var(--fba-secondary);
 		}
 
 		.fba-career .fba-career-form-head p {
-			margin: 0 0 22px;
-			font-size: 0.94rem;
+			margin: 0 0 20px;
+			font-size: 0.93rem;
+			line-height: 1.55;
 			color: var(--fba-muted);
 		}
 
 		.fba-career .fba-career-fields {
 			display: grid;
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-			gap: 16px 18px;
+			grid-template-columns: minmax(0, 1fr);
+			gap: 16px;
 		}
 
 		.fba-career .fba-career-field {
@@ -175,30 +188,30 @@
 		}
 
 		.fba-career .fba-career-label {
-			font-size: 0.84rem;
+			font-size: 0.9rem;
 			font-weight: 700;
 			color: var(--fba-text);
 		}
 
-		.fba-career .fba-career-label em {
-			margin-left: 4px;
-			font-style: normal;
-			font-weight: 600;
-			font-size: 0.74rem;
-			text-transform: uppercase;
-			letter-spacing: 0.08em;
+		.fba-career .fba-career-hint {
+			font-size: 0.82rem;
+			line-height: 1.45;
 			color: var(--fba-muted);
 		}
 
 		.fba-career .fba-career-field input {
 			width: 100%;
-			padding: 12px 14px;
+			min-height: 54px;
+			padding: 15px 16px;
 			border: 1px solid var(--fba-line);
-			border-radius: 12px;
+			border-radius: 14px;
 			background: #fff;
 			font: inherit;
-			font-size: 0.96rem;
+			/* 16px or more: below that, phones zoom in when a field is focused */
+			font-size: 1rem;
 			color: var(--fba-text);
+			-webkit-appearance: none;
+			appearance: none;
 		}
 
 		.fba-career .fba-career-field input:focus {
@@ -207,22 +220,42 @@
 			border-color: rgba(0, 78, 137, 0.45);
 		}
 
+		.fba-career .fba-career-consent {
+			display: grid;
+			margin-top: 18px;
+			padding: 4px 16px;
+			border: 1px solid var(--fba-line);
+			border-radius: 14px;
+			background: var(--fba-light);
+		}
+
 		.fba-career .fba-career-consent-field {
 			display: flex;
 			align-items: flex-start;
-			gap: 10px;
-			margin-top: 20px;
-			font-size: 0.88rem;
+			gap: 12px;
+			padding: 12px 0;
+			font-size: 0.95rem;
 			line-height: 1.5;
 			color: var(--fba-text);
+			cursor: pointer;
+		}
+
+		.fba-career .fba-career-consent-field + .fba-career-consent-field {
+			border-top: 1px solid var(--fba-line);
 		}
 
 		.fba-career .fba-career-consent-field input {
 			flex: 0 0 auto;
-			width: 18px;
-			height: 18px;
-			margin-top: 2px;
+			width: 22px;
+			height: 22px;
+			margin: 0;
 			accent-color: var(--fba-primary);
+		}
+
+		.fba-career .fba-career-optional {
+			font-style: normal;
+			font-weight: 500;
+			color: var(--fba-muted);
 		}
 
 		.fba-career .fba-career-hp {
@@ -234,21 +267,21 @@
 		}
 
 		.fba-career .fba-career-actions {
-			display: flex;
-			flex-wrap: wrap;
-			align-items: center;
-			gap: 14px 18px;
-			margin-top: 24px;
+			display: grid;
+			gap: 14px;
+			margin-top: 22px;
 		}
 
 		.fba-career .fba-career-submit {
-			padding: 14px 26px;
+			width: 100%;
+			min-height: 56px;
+			padding: 16px 24px;
 			border: 0;
-			border-radius: 999px;
+			border-radius: 14px;
 			background: var(--fba-primary);
 			color: #fff;
 			font: inherit;
-			font-size: 0.96rem;
+			font-size: 1rem;
 			font-weight: 700;
 			cursor: pointer;
 			box-shadow: 0 12px 24px rgba(255, 107, 53, 0.28);
@@ -263,134 +296,112 @@
 		}
 
 		.fba-career .fba-career-status {
-			font-size: 0.9rem;
+			font-size: 0.95rem;
 			line-height: 1.5;
 			color: var(--fba-muted);
 		}
 
+		.fba-career .fba-career-status:empty {
+			display: none;
+		}
+
+		.fba-career .fba-career-status.is-ok {
+			padding: 12px 16px;
+			border: 1px solid #b7ebd8;
+			border-radius: 12px;
+			background: #eefbf5;
+			font-weight: 600;
+			color: #067a5b;
+		}
+
+		.fba-career .fba-career-status.is-error {
+			padding: 12px 16px;
+			border: 1px solid #f5c2bb;
+			border-radius: 12px;
+			background: #fef3f1;
+			font-weight: 600;
+			color: #b42318;
+		}
+
 		.fba-career .fba-career-note {
-			margin-top: 18px;
-			padding-top: 16px;
+			margin-top: 16px;
+			padding-top: 14px;
 			border-top: 1px solid var(--fba-line);
-			font-size: 0.82rem;
+			font-size: 0.86rem;
 			line-height: 1.55;
 			color: var(--fba-muted);
 		}
 
-		.fba-career .fba-career-aside {
-			display: grid;
-			gap: 16px;
-		}
-
-		.fba-career .fba-career-card {
-			padding: 24px;
-			border-radius: var(--fba-radius);
-			background: var(--fba-secondary);
-			color: #fff;
-		}
-
-		.fba-career .fba-career-card h3 {
-			margin: 10px 0 14px;
-			font-family: 'Bricolage Grotesque', sans-serif;
-			font-size: 1.15rem;
-			color: #fff;
-		}
-
-		.fba-career .fba-career-card .fba-kicker {
-			color: var(--fba-accent);
-		}
-
-		.fba-career .fba-career-steps {
-			display: grid;
-			gap: 12px;
-			counter-reset: none;
-		}
-
-		.fba-career .fba-career-steps li {
+		.fba-career .fba-career-quick {
 			display: flex;
-			gap: 12px;
-			font-size: 0.9rem;
-			line-height: 1.5;
-			color: rgba(255, 255, 255, 0.88);
+			flex-wrap: wrap;
+			justify-content: center;
+			max-width: 620px;
+			margin: 18px auto 0;
+			font-size: 0.88rem;
+			line-height: 1.6;
+			color: var(--fba-muted);
+			text-align: center;
 		}
 
-		.fba-career .fba-career-steps span {
-			flex: 0 0 auto;
-			font-weight: 800;
-			font-size: 0.78rem;
-			letter-spacing: 0.08em;
-			color: var(--fba-accent);
+		.fba-career .fba-career-quick li {
+			padding: 0 10px;
 		}
 
-		.fba-career .fba-career-card-light {
-			background: var(--fba-light);
-			color: var(--fba-text);
+		.fba-career .fba-career-quick li + li::before {
+			content: '\00b7';
+			margin-right: 8px;
 		}
 
-		.fba-career .fba-career-card-light h3,
-		.fba-career .fba-career-card-light .fba-kicker {
-			color: var(--fba-secondary);
-		}
-
-		.fba-career .fba-career-card-light p {
+		.fba-career .fba-career-help {
+			max-width: 620px;
+			margin: 18px auto 0;
 			font-size: 0.9rem;
 			line-height: 1.6;
 			color: var(--fba-muted);
+			text-align: center;
 		}
 
-		.fba-career .fba-career-card-quiet {
-			border: 1px solid var(--fba-line);
-			background: #fff;
-			color: var(--fba-text);
-		}
-
-		.fba-career .fba-career-card-quiet h3,
-		.fba-career .fba-career-card-quiet .fba-kicker {
-			color: var(--fba-secondary);
-		}
-
-		.fba-career .fba-career-card-quiet p {
-			font-size: 0.9rem;
-			line-height: 1.6;
-			color: var(--fba-muted);
-		}
-
-		.fba-career .fba-career-card-link {
-			display: inline-block;
-			margin-top: 12px;
-			font-weight: 700;
-			font-size: 0.9rem;
+		.fba-career .fba-career-help a {
+			font-weight: 600;
 			color: var(--fba-primary);
 			border-bottom: 1px solid currentColor;
-			padding-bottom: 1px;
-		}
-
-		@media (max-width: 980px) {
-			.fba-career .fba-career-grid {
-				grid-template-columns: 1fr;
-				gap: 28px;
-			}
 		}
 
 		@media (max-width: 640px) {
 			.fba-career .fba-career-hero {
-				padding: 54px 0 40px;
+				padding: 30px 0 24px;
+			}
+
+			.fba-career .fba-career-lede {
+				font-size: 0.96rem;
+			}
+
+			.fba-career .fba-career-form-sec {
+				padding: 20px 0 32px;
 			}
 
 			.fba-career .fba-career-form {
-				padding: 22px 18px;
+				padding: 20px 16px 22px;
+				border-radius: 18px;
 			}
 
-			.fba-career .fba-career-fields {
-				grid-template-columns: 1fr;
+			.fba-career .fba-career-note {
+				font-size: 0.82rem;
 			}
 
-			.fba-career .fba-career-actions {
-				align-items: stretch;
+			.fba-career .fba-career-quick {
+				display: grid;
+				gap: 2px;
+				font-size: 0.84rem;
 			}
 
-			.fba-career .fba-career-submit {
-				width: 100%;
+			.fba-career .fba-career-quick li {
+				padding: 0;
+			}
+
+			.fba-career .fba-career-quick li + li::before {
+				content: none;
 			}
 		}
 	</style>
@@ -427,6 +438,10 @@
 			status.textContent = message || '';
 			status.classList.remove('is-ok', 'is-error');
 			if (state) { status.classList.add('is-' + state); }
+			/* keep the answer in sight, especially on a phone with the keyboard open */
+			if (state && status.scrollIntoView) {
+				status.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			}
 		}
 
 		function cleanFieldValue(value) {
@@ -474,12 +489,12 @@
 				return 'We could not accept this entry. Please check the fields and try again.';
 			}
 			if (statusCode === 403) {
-				return 'This site is not allowed to send forms yet. Please email info@futurebridgeacademy.ca.';
+				return 'The entry service is not available right now. Please tell a member of our team at the entrance.';
 			}
 			if (statusCode === 429) {
-				return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				return 'Too many attempts from this connection. Please wait a minute and try again, or ask a member of our team for help.';
 			}
-			return 'We could not send this just now. Please try again, or email info@futurebridgeacademy.ca.';
+			return 'We could not send this just now. Please try again. If it still fails, tell a member of our team at the entrance.';
 		}
 
 		function sendFormToApi(form, endpoint) {
@@ -504,6 +519,7 @@
 			if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
 
 			form.classList.add('gw-busy');
+			form.setAttribute('aria-busy', 'true');
 			if (submitButton) { submitButton.disabled = true; }
 			setFormStatus(form, 'Sending...');
 
@@ -528,11 +544,12 @@
 				}
 
 				form.reset();
-				setFormStatus(form, 'Thank you. Your entry is registered, and the details follow by email.', 'ok');
+				setFormStatus(form, 'Thank you. Your entry is registered. Enjoy the fair.', 'ok');
 			}).catch(function () {
 				setFormStatus(form, formErrorMessage(0), 'error');
 			}).then(function () {
 				form.classList.remove('gw-busy');
+				form.removeAttribute('aria-busy');
 				if (submitButton) { submitButton.disabled = false; }
 			});
 		}
