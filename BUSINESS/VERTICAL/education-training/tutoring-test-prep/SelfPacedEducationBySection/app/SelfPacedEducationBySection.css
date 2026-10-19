@@ -1,3 +1,4 @@
+/* css build 2026-10-18-1 */
 /* ── Self-Paced Education (Student Tool) v2 ── */
 
 /* ── Reset & Base ── */
@@ -1242,3 +1243,35 @@ body.dark .pres-fullscreen { background: #0f172a !important; }
 
 /* ── Slim utility header (title, dashboard & change-course buttons removed) ── */
 .app-header.app-header-util { padding: 6px 16px; box-shadow: none; }
+/* ── Study Guide components (Curriculum Builder studyHtmlData / htmlCode) ── */
+.study-guide { line-height: 1.8; font-size: 15px; color: #1e293b; }
+.study-guide a[rel="noopener"]:hover { background: #f8fafc; border-color: #818cf8; }
+/* Interactive study quiz (radio-reveal) */
+.sg-q-opt { transition: all 0.15s ease; }
+.sg-q-opt:hover { border-color: #818cf8; background: #eef2ff; }
+.sg-q-radio:checked + .sg-q-opt { border-color: #4f46e5; background: #eef2ff; font-weight: 600; box-shadow: 0 0 0 1px #4f46e5; }
+.sg-q-correct:checked ~ .sg-q-feedback { display: block; }
+@keyframes sgFadeSlide { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.sg-q-correct:checked ~ .sg-q-feedback { animation: sgFadeSlide 0.3s ease; }
+/* Self-assessment stars */
+.sa-radio:checked + .sa-star { filter: none !important; opacity: 1 !important; transform: scale(1.15); }
+.sa-star:hover { filter: none !important; opacity: 0.8 !important; }
+/* Flip cards (flip-card / flashcards-inline) */
+.sg-flip-front, .sg-flip-back { -webkit-backface-visibility: hidden; }
+/* Spotlight pulse */
+@keyframes sgSpotlightPulse { 0%, 100% { box-shadow: 0 0 10px rgba(79,70,229,0.15); transform: scale(1); } 50% { box-shadow: 0 0 25px rgba(79,70,229,0.35); transform: scale(1.01); } }
+.study-guide .sg-spotlight { animation: sgSpotlightPulse 2.5s ease-in-out infinite; }
+
+/* Tool build badge (visible build identifier - html-tool-rules.txt) */
+.tool-build-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  margin-left: 6px;
+  white-space: nowrap;
+}

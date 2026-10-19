@@ -1,8 +1,13 @@
+/* js build 2026-10-18-1 */
 /* ── Curriculum Builder ──
    Manager tool for creating and editing curriculum sections & lessons.
    Stores ONE master curriculum object in CMS.
    Built for UniconHub CMS html-tool system.
 ────────────────────────────────────────── */
+
+/* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
+var TOOL_BUILD = '2026-10-18-1';
+console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 
 /* ── Helpers ── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -2413,6 +2418,35 @@ function getStudyHtmlForPreview() {
   return editingHtmlCode || '';
 }
 
+/** Detect AI component JSON ({ "components": [...] }) sitting in the study
+ *  content Code textarea and render it to real HTML. This is the bridge for
+ *  content that arrives by PASTE (or an older save path) instead of the
+ *  built-in AI generator: the JSON is kept as studyHtmlData (source of
+ *  truth) and htmlCode becomes the rendered HTML both the builder preview
+ *  and the student tool can display. Returns true when a conversion ran. */
+function normalizeStudyContentInput(notifyUser) {
+  var raw = '';
+  var v2 = el('edit-html-code-v2');
+  var v1 = el('edit-html-code');
+  if (v2 && v2.value) raw = v2.value;
+  else if (v1 && v1.value) raw = v1.value;
+  else raw = editingHtmlCode || '';
+  var trimmed = String(raw).trim();
+  if (trimmed.charAt(0) !== '{') return false;
+  try {
+    var obj = JSON.parse(trimmed);
+    if (!obj || !Array.isArray(obj.components)) return false;
+    editingStudyHtmlData = obj;
+    var rendered = renderComponentsToHtml(obj.components);
+    editingHtmlCode = rendered;
+    if (v1) v1.value = rendered;
+    if (v2) v2.value = rendered;
+    if (notifyUser) tool.notify('✨ AI component JSON detected — rendered to HTML. Preview now shows the study guide.', 'info');
+    return true;
+  } catch (e) { /* not valid JSON - leave the text alone */ }
+  return false;
+}
+
 /* ── YouTube ID extraction ── */
 function extractYouTubeId(url) {
   if (!url) return null;
@@ -2951,6 +2985,11 @@ function populateEditorFromLesson(les) {
   updateAllVisToggles();
   if (el('edit-html-code')) el('edit-html-code').value = editingHtmlCode;
   if (el('edit-html-code-v2')) el('edit-html-code-v2').value = editingHtmlCode;
+  // Repair lessons whose htmlCode holds raw component JSON (pasted or saved
+  // by an older flow): re-render it so the preview and the student tool work.
+  // Runs AFTER the textareas are filled so the check reads THIS lesson's
+  // content, never a stale value from the previously edited lesson.
+  normalizeStudyContentInput(false);
   updateHtmlPreview();
   setHtmlContent(les.content || '');
   var srcVal = les.sourceUrls;
@@ -2991,6 +3030,9 @@ function saveLessonFromEditor() {
   // Sync HTML code from textarea (v2 takes priority, fall back to v1)
   if (el('edit-html-code-v2')) editingHtmlCode = el('edit-html-code-v2').value;
   else if (el('edit-html-code')) editingHtmlCode = el('edit-html-code').value;
+  // Pasted AI component JSON is rendered to HTML before saving, so the
+  // student tool can display it (it renders htmlCode, not studyHtmlData).
+  normalizeStudyContentInput(true);
 
   var lessonData = {
     id: genId(),
@@ -3173,6 +3215,9 @@ function autoSaveCurrentLesson() {
 
   targetLesson = targetArray[editingLessonIdx];
   if (!targetLesson) return;
+
+  // Pasted AI component JSON is rendered to HTML before persisting.
+  normalizeStudyContentInput(false);
 
   // Sync current editor state into the lesson object
   targetLesson.htmlCode = editingHtmlCode || null;
@@ -4659,6 +4704,8 @@ function updateHtmlPreview() {
 /** Debounced preview update on typing */
 var _htmlPreviewTimer = null;
 function onHtmlCodeInput() {
+  // A pasted AI component JSON is converted to rendered HTML on the fly.
+  normalizeStudyContentInput(false);
   if (_htmlPreviewTimer) clearTimeout(_htmlPreviewTimer);
   _htmlPreviewTimer = setTimeout(updateHtmlPreview, 400);
 }
@@ -4864,6 +4911,7 @@ function bindEvents() {
    ═══════════════════════════════════════════ */
 
 tool.onReady(function(val, fields) {
+  if (el('tool-build-badge')) el('tool-build-badge').textContent = 'tool build ' + TOOL_BUILD;
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') {
       el('loading-overlay').style.display = 'none';

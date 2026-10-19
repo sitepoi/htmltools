@@ -45,11 +45,16 @@ Every tool MUST carry a visible build identifier that changes on EVERY code
 change, so anyone can tell at a glance whether the CMS is running the latest
 upload (old uploads/caches are the #1 cause of "nothing responds to clicks"):
 
-  1. Define a build string in the [JS] block, e.g.
+The versioning is TWO LAYERS so an update re-uploads ONLY the files that
+actually changed - one tool version (rule 1) + one freshness stamp per file
+(rule 4):
+
+  1. TOOL BUILD - the tool version. ONE number, lives ONLY in the [JS] block:
        var TOOL_BUILD = '2026-10-04-1';
      Format: YYYY-MM-DD-rN — date + revision counter of the day.
-     INCREMENT it on EVERY single code change of the [HTML], [CSS] or [JS]
-     block. Never leave it unchanged after an edit.
+     INCREMENT it on EVERY update of the tool, no matter which of the three
+     files changed. It answers "which tool version is this?" and is the ONLY
+     number shown in the UI. Never leave it unchanged after an update.
 
   2. Render it in the VISIBLE UI (a small badge in the tool header):
        "tool build 2026-10-04-1"
@@ -60,16 +65,30 @@ upload (old uploads/caches are the #1 cause of "nothing responds to clicks"):
        console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
      so the browser console proves which build is actually running.
 
-  4. Stamp the SAME build string as a comment at the top of ALL THREE files:
-       [HTML] <!-- build 2026-10-04-1 -->
-       [CSS]  /* build 2026-10-04-1 */
-       [JS]   /* build 2026-10-04-1 */
-     This lets the admin open each uploaded file in the CMS Tool Builder and
-     verify the uploaded code matches the running build.
+  4. PER-FILE STAMPS - the FIRST LINE of each file is a comment carrying the
+     file kind + the tool build at which THAT file's content last changed:
+       [HTML] <!-- html build 2026-10-04-1 -->
+       [CSS]  /* css build 2026-10-04-1 */
+       [JS]   /* js build 2026-10-04-1 */
+     On an update: bump TOOL_BUILD once (rule 1), then move the stamp ONLY in
+     the files whose CONTENT actually changed. The [JS] stamp always moves
+     because TOOL_BUILD lives in it. Untouched files keep their old stamp.
+     EXAMPLES - update to build 2026-10-04-2:
+       only JS changed   → JS stamp -2, HTML and CSS stay -1
+       only CSS changed  → CSS stamp -2, JS stamp -2 (build line), HTML -1
+       HTML + JS changed → HTML and JS stamps -2, CSS stays -1
 
-  5. Verification: if the CMS badge/log shows an OLD build number while the
-     files contain a new one, the CMS is serving a stale upload/cache —
-     re-save/re-upload the tool in the CMS and check again.
+  5. RE-UPLOAD ONLY THE CHANGED FILES - compare per file, FIRST LINE against
+     FIRST LINE: the workspace file vs the same file in the CMS Tool Builder.
+       • stamp equal   → content is current → do NOT re-paste
+       • stamp differs → re-paste THAT ONE file only
+     A stamp OLDER than the badge is EXPECTED for files the latest update did
+     not touch - that is not staleness. Only a stamp that differs from the
+     WORKSPACE file's own stamp means the CMS copy is outdated.
+
+  6. Verification: if the CMS badge/log shows an OLD build number, the CMS
+     is serving a stale upload/cache (most often the JS) - re-save/re-upload
+     the tool in the CMS and check again.
 
   Applies to ALL tool types. WebpageBuilder is the first tool using it.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

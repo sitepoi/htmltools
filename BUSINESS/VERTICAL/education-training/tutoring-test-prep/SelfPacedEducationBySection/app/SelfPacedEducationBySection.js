@@ -1,8 +1,13 @@
+/* js build 2026-10-18-1 */
 /* ── Self-Paced Education by Section (STUDENT TOOL) ──
    Reads curriculum from a Curriculum Builder CMS object.
    Progress stored locally per student via tool.setValue().
    Built for UniconHub CMS html-tool system.
 ────────────────────────────────────────── */
+
+/* Tool build identifier - see html-tool-rules.txt "VISIBLE TOOL BUILD NUMBER". */
+var TOOL_BUILD = '2026-10-18-1';
+console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...');
 
 /* ── Helpers ── */
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -1513,6 +1518,668 @@ function renderFinishSummary(prog, hasQuiz, hasFlashcards, flashcards) {
 }
 
 /* ═══════════════════════════════════════════
+   STUDY GUIDE COMPONENTS (from Curriculum Builder's studyHtmlData)
+   The Curriculum Builder stores AI study content two ways: `htmlCode`
+   (pre-rendered HTML - preferred) and `studyHtmlData` (raw component JSON:
+   { components: [{type, data}, ...] }). This renderer displays the raw
+   component JSON so lessons never show unreadable JSON text, and repairs
+   htmlCode fields that were saved with JSON instead of HTML.
+   ═══════════════════════════════════════════ */
+
+/** Parse study component data from an object or a JSON string. */
+function parseStudyComponents(value) {
+  if (!value) return null;
+  var obj = value;
+  if (typeof value === 'string') {
+    try { obj = JSON.parse(value); } catch (e) { return null; }
+  }
+  if (obj && Array.isArray(obj.components) && obj.components.length > 0) {
+    return obj.components;
+  }
+  return null;
+}
+
+/** True when a string looks like JSON components text (starts with '{'). */
+function looksLikeComponentsJson(text) {
+  var trimmed = String(text || '').trim();
+  return trimmed.charAt(0) === '{' && trimmed.indexOf('"components"') !== -1;
+}
+
+/** Render a components array into inline-styled HTML (compact subset of the
+ *  builder's 101-type library - the most-used types, with a readable
+ *  fallback for the rest so no content is ever lost). */
+function renderStudyComponentsToHtml(components) {
+  if (!components || !components.length) return '';
+  var h = '<div class="study-guide">';
+
+  function dataOf(comp) { return comp.data || comp || {}; }
+  function itemText(v) {
+    if (typeof v === 'string') return esc(v);
+    if (v && typeof v === 'object') return esc(v.text || v.label || v.title || v.desc || v.value || '');
+    return esc(String(v === undefined || v === null ? '' : v));
+  }
+  function fallbackBox(d, typeLabel) {
+    // Readable fallback for component types without a dedicated renderer:
+    // show the type and every plain-text field, so nothing disappears.
+    var lines = [];
+    var keys = Object.keys(d || {});
+    for (var k = 0; k < keys.length; k++) {
+      var key = keys[k];
+      var val = d[key];
+      if (val === undefined || val === null || val === false) continue;
+      if (typeof val === 'string') lines.push('<strong>' + esc(key) + ':</strong> ' + esc(val));
+      else if (typeof val === 'number') lines.push('<strong>' + esc(key) + ':</strong> ' + String(val));
+    }
+    var inner = lines.length
+      ? lines.map(function(l) { return '<li>' + l + '</li>'; }).join('')
+      : '<li><em>' + esc(typeLabel) + '</em></li>';
+    return '<div style="border:1px dashed #cbd5e1;background:#f8fafc;border-radius:10px;padding:14px 18px;margin:14px 0"><div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:8px">' + esc(typeLabel) + '</div><ul style="margin:0;padding-left:18px;color:#475569;line-height:1.7;font-size:14px">' + inner + '</ul></div>';
+  }
+
+  for (var i = 0; i < components.length; i++) {
+    var comp = components[i];
+    var type = comp.type || comp.component || '';
+    var d = dataOf(comp);
+
+    if (type === 'paragraph') {
+      var ps = { normal: 'font-size:15px;color:#1e293b;line-height:1.85;margin:0 0 14px', lead: 'font-size:17px;color:#334155;line-height:1.85;margin:0 0 16px;font-weight:500', small: 'font-size:13px;color:#64748b;line-height:1.65;margin:0 0 10px', muted: 'font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 8px;font-style:italic' };
+      h += '<p style="' + (ps[d.variant || 'normal']) + '">' + esc(d.text || d.body || '') + '</p>';
+    } else if (type === 'heading') {
+      var isSub = d.level === 'subsection';
+      h += isSub
+        ? '<h3 style="font-size:17px;font-weight:700;color:#1e293b;margin:22px 0 10px">' + esc(d.text || d.title || '') + '</h3>'
+        : '<h2 style="font-size:22px;font-weight:800;color:#3730a3;margin:32px 0 14px;padding-bottom:10px;border-bottom:2px solid #eef2ff">' + esc(d.text || d.title || '') + '</h2>';
+    } else if (type === 'intro-hero') {
+      h += '<div style="text-align:center;padding:32px 24px;background:linear-gradient(135deg,#eef2ff,#f0f4ff);border-radius:16px;margin-bottom:24px;border:1px solid #818cf8">';
+      if (d.icon) h += '<div style="font-size:56px;margin-bottom:12px">' + esc(d.icon) + '</div>';
+      h += '<h1 style="font-size:26px;font-weight:800;color:#3730a3;margin-bottom:8px">' + esc(d.heading || '') + '</h1>';
+      if (d.description) h += '<p style="font-size:15px;color:#64748b;max-width:620px;margin:0 auto 14px">' + esc(d.description) + '</p>';
+      if (d.objectives && d.objectives.length) {
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center">';
+        for (var oj = 0; oj < d.objectives.length; oj++) h += '<span style="display:inline-flex;align-items:center;gap:4px;background:#d1fae5;color:#065f46;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">✅ ' + itemText(d.objectives[oj]) + '</span>';
+        h += '</div>';
+      }
+      h += '</div>';
+    } else if (type === 'quote') {
+      h += '<blockquote style="border-left:4px solid #818cf8;margin:20px 0;padding:16px 24px;background:linear-gradient(135deg,#eef2ff,#f8fafc);border-radius:0 12px 12px 0">' +
+        '<div style="font-size:24px;margin-bottom:8px">' + esc(d.icon || '💬') + '</div>' +
+        '<p style="margin:0;font-style:italic;color:#475569;font-size:15px">' + esc(d.text || d.quote || '') + '</p>' +
+        (d.attribution ? '<footer style="margin-top:10px;font-weight:600;color:#4f46e5;font-size:13px">- ' + esc(d.attribution) + '</footer>' : '') +
+        '</blockquote>';
+    } else if (type === 'callout') {
+      var cc = { info: ['#3b82f6', '#eff6ff', 'ℹ️'], tip: ['#059669', '#ecfdf5', '💡'], key: ['#d97706', '#fef3c7', '🔑'], warn: ['#dc2626', '#fee2e2', '⚠️'] }[d.variant] || ['#3b82f6', '#eff6ff', 'ℹ️'];
+      h += '<div style="border-left:4px solid ' + cc[0] + ';background:' + cc[1] + ';padding:14px 18px;margin:16px 0;border-radius:0 8px 8px 0">' +
+        '<div style="font-weight:700;color:' + cc[0] + ';margin-bottom:4px">' + cc[2] + ' ' + esc(d.title || '') + '</div>' +
+        '<p style="color:#1e293b;margin:0">' + esc(d.body || d.text || '') + '</p></div>';
+    } else if (type === 'highlight-box') {
+      var hb = { idea: ['💡', '#eef2ff', '#4f46e5', '#818cf8'], important: ['⭐', '#fef3c7', '#92400e', '#fcd34d'], discover: ['🔍', '#f0fdf4', '#065f46', '#6ee7b7'], challenge: ['🎯', '#fee2e2', '#991b1b', '#fca5a5'] }[d.variant] || ['💡', '#eef2ff', '#4f46e5', '#818cf8'];
+      h += '<div style="background:' + hb[1] + ';border:2px solid ' + hb[3] + ';border-radius:12px;padding:20px 22px;margin:18px 0">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">' + hb[0] + '</span><strong style="color:' + hb[2] + ';font-size:16px">' + esc(d.title || '') + '</strong></div>' +
+        '<p style="color:#475569;margin:0;font-size:15px">' + esc(d.body || d.text || '') + '</p></div>';
+    } else if (type === 'spotlight') {
+      var spColor = d.color && /^#[0-9a-fA-F]{3,8}$/.test(d.color) ? d.color : '#4f46e5';
+      h += '<div class="sg-spotlight" style="border:2px solid ' + spColor + ';background:#fff;border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center;box-shadow:0 0 20px ' + spColor + '33">' +
+        '<div style="font-size:28px;margin-bottom:6px">' + esc(d.icon || '💡') + '</div>' +
+        '<p style="color:#1e293b;font-weight:600;font-size:16px;margin:0">' + esc(d.text || d.body || '') + '</p></div>';
+    } else if (type === 'curiosity-hook') {
+      h += '<div style="border:2px dashed #818cf8;background:linear-gradient(135deg,#eef2ff,#fafbff);border-radius:12px;padding:18px 22px;margin:18px 0">' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">' + esc(d.icon || '🤔') + '</span><strong style="color:#4f46e5;font-size:16px">' + esc(d.title || 'Have You Ever Wondered?') + '</strong></div>' +
+        '<p style="color:#1e293b;font-size:16px;font-weight:500;margin:0;line-height:1.7">' + esc(d.hook || d.question || '') + '</p>' +
+        (d.reveal ? '<details style="margin-top:12px"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:14px">👁️ Reveal the answer</summary><p style="color:#475569;margin:8px 0 0;line-height:1.7">' + esc(d.reveal) + '</p></details>' : '') +
+        '</div>';
+    } else if (type === 'reveal') {
+      h += '<details style="border:2px dashed #818cf8;background:linear-gradient(135deg,#eef2ff,#fafbff);border-radius:10px;padding:16px 20px;margin:14px 0"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:14px;list-style:none">' + esc(d.icon || '👁️') + ' ' + esc(d.teaser || d.label || 'Click to reveal') + '</summary>' +
+        '<div style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;line-height:1.7;color:#475569">' + (d.content || d.body || '') + '</div></details>';
+    } else if (type === 'checklist') {
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:10px;font-weight:700">✅ ' + esc(d.title) + '</h3>';
+      for (var ck = 0; ck < (d.items || []).length; ck++) {
+        var ckItem = d.items[ck];
+        var ckTxt = typeof ckItem === 'string' ? ckItem : (ckItem.text || '');
+        var ckChecked = ckItem && ckItem.checked ? ' checked' : '';
+        h += '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0"><input type="checkbox"' + ckChecked + ' style="margin-top:3px;accent-color:#4f46e5"><span style="color:#475569">' + esc(ckTxt) + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'summary-box') {
+      h += '<div style="background:linear-gradient(135deg,#fef3c7,#fff7ed);border:2px solid #fcd34d;border-radius:12px;padding:22px 24px;margin:24px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:22px">📝</span><strong style="color:#92400e;font-size:17px">' + esc(d.title || 'Summary') + '</strong></div>' +
+        (d.body ? '<p style="color:#64748b;margin:0 0 12px">' + esc(d.body) + '</p>' : '');
+      if (d.points && d.points.length) {
+        h += '<ul style="margin:0;padding-left:20px">';
+        for (var sp2 = 0; sp2 < d.points.length; sp2++) h += '<li style="color:#475569;margin-bottom:6px">' + itemText(d.points[sp2]) + '</li>';
+        h += '</ul>';
+      }
+      h += '</div>';
+    } else if (type === 'memory-box') {
+      h += '<div style="background:linear-gradient(135deg,#fef3c7,#fef9e7);border:1px solid #fcd34d;border-radius:12px;padding:20px 24px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:20px">📌</span><strong style="color:#92400e;font-size:16px">' + esc(d.title || 'Key Takeaways') + '</strong></div>';
+      for (var mb = 0; mb < (d.rows || []).length; mb++) {
+        var mbRow = d.rows[mb];
+        h += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #fde68a"><strong style="color:#b45309">' + esc(mbRow.key || '') + '</strong><span style="color:#64748b">' + esc(mbRow.value || '') + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'definition-list') {
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:10px;font-weight:700">📖 ' + esc(d.title) + '</h3>';
+      for (var dl = 0; dl < (d.terms || []).length; dl++) {
+        var dlTerm = d.terms[dl];
+        h += '<div style="display:flex;gap:16px;padding:10px 14px;background:' + (dl % 2 === 0 ? '#f8fafc' : '#fff') + ';border-radius:6px"><strong style="min-width:140px;text-align:right;color:#4f46e5">' + esc(dlTerm.term || '') + '</strong><span style="color:#64748b">' + esc(dlTerm.definition || '') + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'fact-grid') {
+      var fgCols = { '2': '1fr 1fr', '3': '1fr 1fr 1fr', '4': '1fr 1fr 1fr 1fr' }[d.cols] || '1fr 1fr';
+      h += '<div style="display:grid;grid-template-columns:' + fgCols + ';gap:12px;margin:16px 0">';
+      for (var fg = 0; fg < (d.items || []).length; fg++) {
+        var fgItem = d.items[fg];
+        h += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center"><div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;margin-bottom:4px">' + esc(fgItem.label || '') + '</div><div style="font-size:22px;font-weight:700;color:#1e293b">' + esc(fgItem.value || '') + '</div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'key-numbers') {
+      h += '<div style="display:flex;flex-wrap:wrap;gap:24px;justify-content:center;margin:24px 0">';
+      for (var kn = 0; kn < (d.items || []).length; kn++) {
+        var knItem = d.items[kn];
+        h += '<div style="text-align:center;min-width:120px"><div style="font-size:36px;font-weight:800;color:#4f46e5">' + esc(knItem.value || '') + (knItem.unit ? '<span style="font-size:18px;color:#818cf8">' + esc(knItem.unit) + '</span>' : '') + '</div><div style="font-size:13px;color:#64748b;margin-top:4px">' + esc(knItem.label || '') + '</div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'stat-row' || type === 'metric-card' || type === 'dashboard-grid') {
+      var stCards = type === 'dashboard-grid' ? (d.cards || []) : (d.items || []);
+      if (type === 'metric-card') stCards = [d];
+      h += '<div style="display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;justify-content:center">';
+      for (var st = 0; st < stCards.length; st++) {
+        var stItem = stCards[st];
+        h += '<div style="min-width:130px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center">' +
+          (stItem.icon ? '<div style="font-size:26px;margin-bottom:6px">' + esc(stItem.icon) + '</div>' : (stItem.emoji ? '<div style="font-size:26px;margin-bottom:6px">' + esc(stItem.emoji) + '</div>' : '')) +
+          '<div style="font-size:24px;font-weight:700;color:#1e293b">' + esc(stItem.value || '') + '</div>' +
+          '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + esc(stItem.label || '') + '</div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'icon-grid') {
+      var igCols = { '2': '1fr 1fr', '3': '1fr 1fr 1fr', '4': '1fr 1fr 1fr 1fr' }[d.cols] || '1fr 1fr 1fr';
+      h += '<div style="display:grid;grid-template-columns:' + igCols + ';gap:12px;margin:16px 0">';
+      for (var ig = 0; ig < (d.items || []).length; ig++) {
+        var igItem = d.items[ig];
+        h += '<div style="background:#fff;border:' + (igItem.highlight === 'yes' ? '2px solid #4f46e5' : '1px solid #e2e8f0') + ';border-radius:10px;padding:20px 12px;text-align:center"><div style="font-size:32px;margin-bottom:8px">' + esc(igItem.emoji || '📌') + '</div><div style="font-weight:600;color:#1e293b">' + esc(igItem.name || '') + '</div>' + (igItem.subtitle ? '<div style="font-size:12px;color:#94a3b8;margin-top:4px">' + esc(igItem.subtitle) + '</div>' : '') + '</div>';
+      }
+      h += '</div>';
+    } else if (type === 'steps' || type === 'process-flow') {
+      var stSteps = type === 'process-flow' ? (d.steps || []) : (d.steps || []);
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:16px;font-weight:700">📋 ' + esc(d.title) + '</h3>';
+      h += '<div style="display:flex;flex-wrap:wrap;gap:12px">';
+      for (var pw = 0; pw < stSteps.length; pw++) {
+        var pwStep = stSteps[pw];
+        h += '<div style="flex:1;min-width:150px;background:#fff;border:2px solid #4f46e5;border-radius:12px;padding:14px 10px;text-align:center;box-shadow:0 2px 8px rgba(79,70,229,0.10)">' +
+          (pwStep.icon ? '<div style="font-size:24px;margin-bottom:4px">' + esc(pwStep.icon) + '</div>' : '') +
+          '<div style="font-weight:700;color:#4f46e5;font-size:12px;margin-bottom:2px">Step ' + (pw + 1) + '</div>' +
+          '<div style="font-weight:600;color:#1e293b;font-size:14px">' + esc(pwStep.label || pwStep.title || '') + '</div>' +
+          (pwStep.description ? '<div style="font-size:11px;color:#64748b;margin-top:4px;line-height:1.3">' + esc(pwStep.description) + '</div>' : '') +
+          '</div>';
+      }
+      h += '</div></div>';
+    } else if (type === 'timeline') {
+      h += '<div style="margin:16px 0">';
+      for (var tl = 0; tl < (d.events || []).length; tl++) {
+        var tlEvent = d.events[tl];
+        h += '<div style="display:flex;gap:14px;margin-bottom:16px;align-items:flex-start"><div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px">' + esc(tlEvent.icon || '●') + '</div><div><div style="font-size:11px;color:#94a3b8">' + esc(tlEvent.date || '') + '</div><div style="font-weight:600;color:#1e293b;font-size:14px">' + esc(tlEvent.title || '') + '</div>' + (tlEvent.description ? '<div style="font-size:12px;color:#64748b;margin-top:4px">' + esc(tlEvent.description) + '</div>' : '') + '</div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'pros-cons') {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0">' +
+        '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:16px"><h3 style="color:#065f46;margin-bottom:8px;font-size:15px">✅ ' + esc(d.prosTitle || 'Pros') + '</h3><ul style="list-style:none;padding:0;margin:0">';
+      for (var pc1 = 0; pc1 < (d.pros || []).length; pc1++) h += '<li style="padding:4px 0;color:#475569;font-size:14px">➕ ' + itemText(d.pros[pc1]) + '</li>';
+      h += '</ul></div><div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:16px"><h3 style="color:#991b1b;margin-bottom:8px;font-size:15px">❌ ' + esc(d.consTitle || 'Cons') + '</h3><ul style="list-style:none;padding:0;margin:0">';
+      for (var pc2 = 0; pc2 < (d.cons || []).length; pc2++) h += '<li style="padding:4px 0;color:#475569;font-size:14px">➖ ' + itemText(d.cons[pc2]) + '</li>';
+      h += '</ul></div></div>';
+    } else if (type === 'comparison') {
+      h += '<div style="overflow-x:auto;margin:16px 0"><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' +
+        '<th style="padding:10px 14px;background:#f1f5f9;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0;width:30%">Dimension</th>' +
+        '<th style="padding:10px 14px;background:#eef2ff;text-align:left;font-weight:600;border-bottom:2px solid #818cf8;color:#4f46e5">' + esc(d.aLabel || 'A') + '</th>' +
+        '<th style="padding:10px 14px;background:#fef3c7;text-align:left;font-weight:600;border-bottom:2px solid #fcd34d;color:#92400e">' + esc(d.bLabel || 'B') + '</th></tr></thead><tbody>';
+      for (var cm = 0; cm < (d.rows || []).length; cm++) {
+        var cmRow = d.rows[cm];
+        var cmBg = cm % 2 === 0 ? '#fff' : '#fafbfc';
+        h += '<tr><td style="padding:10px 14px;background:' + cmBg + ';font-weight:600;color:#1e293b;border-bottom:1px solid #e2e8f0">' + esc(cmRow.dimension || cmRow.label || '') + '</td><td style="padding:10px 14px;background:' + cmBg + ';color:#64748b;border-bottom:1px solid #e2e8f0">' + esc(cmRow.a || '') + '</td><td style="padding:10px 14px;background:' + cmBg + ';color:#64748b;border-bottom:1px solid #e2e8f0">' + esc(cmRow.b || '') + '</td></tr>';
+      }
+      h += '</tbody></table></div>';
+    } else if (type === 'contrast') {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">' +
+        '<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:14px 16px"><div style="font-weight:700;color:#4f46e5;margin-bottom:6px">🔵 ' + esc((d.a || {}).label || 'A') + '</div><p style="color:#475569;margin:0;font-size:14px">' + esc((d.a || {}).desc || '') + '</p></div>' +
+        '<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 16px"><div style="font-weight:700;color:#d97706;margin-bottom:6px">🟠 ' + esc((d.b || {}).label || 'B') + '</div><p style="color:#475569;margin:0;font-size:14px">' + esc((d.b || {}).desc || '') + '</p></div></div>';
+    } else if (type === 'before-after' || type === 'slider-compare') {
+      h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0">' +
+        '<div style="background:' + (d.leftColor || d.beforeColor || '#fef2f2') + ';border:2px solid #fca5a5;border-radius:10px;padding:16px"><div style="font-weight:700;color:#991b1b;margin-bottom:8px;font-size:14px">❌ ' + esc(d.leftTitle || d.beforeTitle || 'Before') + '</div><p style="color:#475569;margin:0;font-size:14px">' + esc(d.leftContent || d.beforeBody || d.before || '') + '</p></div>' +
+        '<div style="background:' + (d.rightColor || d.afterColor || '#ecfdf5') + ';border:2px solid #6ee7b7;border-radius:10px;padding:16px"><div style="font-weight:700;color:#065f46;margin-bottom:8px;font-size:14px">✅ ' + esc(d.rightTitle || d.afterTitle || 'After') + '</div><p style="color:#475569;margin:0;font-size:14px">' + esc(d.rightContent || d.afterBody || d.after || '') + '</p></div></div>';
+    } else if (type === 'analogy' || type === 'visual-metaphor') {
+      var anConcept = d.concept || '';
+      var anBridge = type === 'analogy' ? d.analogy : d.metaphor;
+      h += '<div style="border:2px solid #a78bfa;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:20px;margin:16px 0;text-align:center">' +
+        '<div style="font-size:28px;margin-bottom:8px">' + esc(d.icon || (type === 'analogy' ? '🌉' : '🔍')) + '</div>' +
+        '<div style="font-weight:700;color:#6d28d9;font-size:15px;margin-bottom:10px">Think of it like this...</div>' +
+        '<div style="display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">' +
+        '<span style="background:#fff;border:2px solid #7c3aed;border-radius:8px;padding:8px 16px;font-weight:700;color:#5b21b6">' + esc(anConcept) + '</span><span style="font-size:20px;color:#a78bfa">≣</span>' +
+        '<span style="background:#fef3c7;border:2px solid #fcd34d;border-radius:8px;padding:8px 16px;font-weight:700;color:#92400e">' + esc(anBridge || '') + '</span></div>' +
+        (d.explanation ? '<p style="color:#64748b;margin:0;font-size:14px">' + esc(d.explanation) + '</p>' : '') + '</div>';
+    } else if (type === 'worked-example') {
+      h += '<div style="border:2px solid #a7f3d0;border-radius:12px;overflow:hidden;margin:16px 0"><div style="background:linear-gradient(135deg,#d1fae5,#ecfdf5);padding:14px 20px;font-weight:700;color:#065f46">✏️ Worked Example</div><div style="padding:20px">' +
+        '<div style="margin-bottom:16px"><strong style="color:#1e293b">Problem:</strong> <span style="color:#64748b">' + esc(d.problem || '') + '</span></div>';
+      if (d.steps && d.steps.length) {
+        h += '<div style="margin-bottom:16px"><strong style="color:#1e293b">Solution Steps:</strong><ol style="margin:8px 0 0 18px;color:#64748b">';
+        for (var we = 0; we < d.steps.length; we++) h += '<li style="margin-bottom:6px">' + itemText(d.steps[we]) + '</li>';
+        h += '</ol></div>';
+      }
+      h += '<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:12px 16px"><strong style="color:#065f46">✅ Answer:</strong> <span style="color:#1e293b">' + esc(d.answer || '') + '</span></div>' +
+        (d.note ? '<div style="margin-top:12px;font-size:13px;color:#94a3b8">💡 ' + esc(d.note) + '</div>' : '') + '</div></div>';
+    } else if (type === 'common-mistake') {
+      h += '<div style="border-left:4px solid #dc2626;background:linear-gradient(135deg,#fef2f2,#fee2e2);padding:16px 20px;margin:16px 0;border-radius:0 10px 10px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">⚠️</span><strong style="color:#991b1b">' + esc(d.title || 'Common Mistake') + '</strong></div>' +
+        '<p style="color:#475569;margin:0 0 8px"><strong>❌ Wrong:</strong> ' + esc(d.mistake || '') + '</p>' +
+        (d.correct ? '<p style="color:#065f46;margin:0 0 8px"><strong>✅ Correct:</strong> ' + esc(d.correct) + '</p>' : '') +
+        (d.explanation ? '<p style="color:#475569;margin:0;font-size:13px">💡 ' + esc(d.explanation) + '</p>' : '') + '</div>';
+    } else if (type === 'exam-hint') {
+      h += '<div style="border:2px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:10px;padding:18px 20px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">🎯</span><strong style="color:#6d28d9">' + esc(d.title || 'Exam Focus') + '</strong></div>' +
+        (d.body ? '<p style="color:#475569;margin:0 0 10px;font-size:14px">' + esc(d.body) + '</p>' : '');
+      if (d.tips && d.tips.length) { h += '<ul style="margin:0;padding-left:18px">'; for (var eh = 0; eh < d.tips.length; eh++) h += '<li style="color:#475569;margin-bottom:4px">' + itemText(d.tips[eh]) + '</li>'; h += '</ul>'; }
+      h += '</div>';
+    } else if (type === 'study-tip') {
+      h += '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:10px;padding:18px 20px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">📚</span><strong style="color:#92400e">' + esc(d.title || 'Study Smart') + '</strong></div>' +
+        '<p style="color:#475569;margin:0">' + esc(d.tip || d.body || '') + '</p>' +
+        (d.method ? '<div style="margin-top:10px;padding:10px 14px;background:#fff;border-radius:6px;font-size:13px"><strong style="color:#4f46e5">🧠 ' + esc(d.method) + '</strong></div>' : '') + '</div>';
+    } else if (type === 'did-you-know') {
+      h += '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fef9e7);border-radius:12px;padding:16px 20px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:22px">' + esc(d.icon || '💡') + '</span><strong style="color:#92400e;font-size:15px">' + esc(d.title || 'Did You Know?') + '</strong></div>' +
+        '<p style="color:#475569;margin:0;font-size:15px;line-height:1.7">' + esc(d.fact || d.body || '') + '</p>' +
+        (d.source ? '<div style="font-size:11px;color:#a8a29e;margin-top:6px">📖 ' + esc(d.source) + '</div>' : '') + '</div>';
+    } else if (type === 'story-box') {
+      h += '<div style="border:2px solid #c084fc;background:linear-gradient(135deg,#faf5ff,#f3e8ff);border-radius:12px;overflow:hidden;margin:16px 0">' +
+        '<div style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:10px 20px;color:#fff;font-weight:700;font-size:14px">📖 ' + esc(d.title || 'Story Time') + (d.character ? ' - with ' + esc(d.character) : '') + '</div>' +
+        '<div style="padding:18px 20px"><p style="color:#475569;margin:0;line-height:1.8;font-size:15px">' + esc(d.story || d.body || '') + '</p>' +
+        (d.moral ? '<div style="margin-top:14px;padding:10px 14px;background:#fff;border-radius:8px;border:1px solid #c084fc"><strong style="color:#7c3aed">🌟 Moral:</strong> <span style="color:#475569">' + esc(d.moral) + '</span></div>' : '') + '</div></div>';
+    } else if (type === 'tip-jar') {
+      h += '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:12px;padding:18px 20px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:24px">' + esc(d.icon || '🫙') + '</span><strong style="color:#92400e;font-size:16px">' + esc(d.title || 'Quick Tips') + '</strong></div>';
+      for (var tj = 0; tj < (d.tips || []).length; tj++) {
+        h += '<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #fde68a"><span style="color:#f59e0b;font-weight:700;flex-shrink:0">' + (tj + 1) + '.</span><span style="color:#475569">' + itemText(d.tips[tj]) + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'try-it') {
+      h += '<div style="border:2px dashed #06b6d4;background:linear-gradient(135deg,#ecfeff,#cffafe);border-radius:12px;padding:20px;margin:16px 0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:24px">🧪</span><strong style="color:#0e7490;font-size:16px">' + esc(d.title || 'Try It Yourself') + '</strong>' +
+        (d.timeEstimate ? '<span style="font-size:11px;color:#0891b2;margin-left:auto">⏱️ ~' + esc(d.timeEstimate) + '</span>' : '') + '</div>' +
+        '<p style="color:#155e75;margin:0;font-size:15px;line-height:1.7">' + esc(d.instruction || d.body || '') + '</p>' +
+        (d.hint ? '<details style="margin-top:12px"><summary style="cursor:pointer;color:#0891b2;font-weight:600;font-size:13px">💡 Need a hint?</summary><p style="color:#475569;margin:8px 0 0;font-size:14px">' + esc(d.hint) + '</p></details>' : '') + '</div>';
+    } else if (type === 'word-bank') {
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:10px;font-weight:700">📝 ' + esc(d.title || 'Word Bank') + '</h3>';
+      h += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+      for (var wb = 0; wb < (d.words || []).length; wb++) {
+        var wbWord = d.words[wb];
+        var wbTxt = typeof wbWord === 'string' ? wbWord : (wbWord.word || '');
+        h += '<span style="display:inline-flex;align-items:center;gap:4px;background:#eef2ff;color:#4f46e5;border:1px solid #4f46e5;border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600">' + esc(wbTxt) + (wbWord && wbWord.hint ? '<span style="font-size:10px;opacity:0.6">(' + esc(wbWord.hint) + ')</span>' : '') + '</span>';
+      }
+      h += '</div></div>';
+    } else if (type === 'vocab-card') {
+      var vcColor = d.color || '#4f46e5';
+      h += '<div style="border:2px solid ' + vcColor + ';border-radius:12px;overflow:hidden;margin:12px 0;background:#fff;max-width:500px"><div style="background:' + vcColor + ';padding:12px 18px;display:flex;align-items:center;gap:10px">' +
+        '<span style="color:#fff;font-weight:800;font-size:18px">' + esc(d.word || '') + '</span>' +
+        (d.partOfSpeech ? '<span style="margin-left:auto;background:rgba(255,255,255,0.2);color:#fff;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600">' + esc(d.partOfSpeech) + '</span>' : '') + '</div>' +
+        '<div style="padding:16px 18px"><p style="color:#475569;margin:0 0 10px;font-size:14px"><strong style="color:#1e293b">Definition:</strong> ' + esc(d.definition || '') + '</p>' +
+        (d.example ? '<p style="color:#64748b;margin:0;font-size:13px;font-style:italic">💬 ' + esc(d.example) + '</p>' : '') + '</div></div>';
+    } else if (type === 'formula') {
+      var fBg = d.variant === 'highlight' ? 'background:linear-gradient(135deg,#eef2ff,#f0f4ff);border:1px solid #818cf8;' : 'background:#f8fafc;border:1px solid #e2e8f0;';
+      h += '<div style="' + fBg + 'border-radius:10px;padding:20px;margin:16px 0;text-align:center"><div style="font-size:20px;color:#1e293b;letter-spacing:1px">' + esc(d.formula || d.equation || '') + '</div>' +
+        (d.caption ? '<div style="font-size:12px;color:#94a3b8;margin-top:8px">' + esc(d.caption) + '</div>' : '') + '</div>';
+    } else if (type === 'separator') {
+      h += d.label
+        ? '<div style="display:flex;align-items:center;gap:12px;margin:24px 0"><div style="flex:1;height:1px;background:#e2e8f0"></div><span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;white-space:nowrap">' + esc(d.label) + '</span><div style="flex:1;height:1px;background:#e2e8f0"></div></div>'
+        : '<div style="height:1px;background:#e2e8f0;margin:28px 0"></div>';
+    } else if (type === 'info-card') {
+      h += '<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:14px 0;background:#fff"><div style="padding:12px 18px;background:#f1f5f9;font-weight:700;border-bottom:1px solid #e2e8f0">' + esc(d.icon || '📋') + ' ' + esc(d.title || '') + '</div><div style="padding:16px 18px">' + (d.body || d.content || '') + '</div></div>';
+    } else if (type === 'accordion') {
+      h += '<div style="margin:16px 0">';
+      for (var ac = 0; ac < (d.items || []).length; ac++) {
+        var acItem = d.items[ac];
+        h += '<details style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:8px;overflow:hidden"' + (acItem.open ? ' open' : '') + '><summary style="padding:12px 16px;background:#f8fafc;cursor:pointer;font-weight:600;color:#1e293b;user-select:none">' + esc(acItem.icon || '📂') + ' ' + esc(acItem.title || '') + '</summary><div style="padding:14px 16px;color:#475569;line-height:1.7">' + (acItem.content || acItem.body || '') + '</div></details>';
+      }
+      h += '</div>';
+    } else if (type === 'image-block') {
+      h += '<div style="text-align:center;margin:20px 0"><img src="' + esc(d.url || '') + '" alt="' + esc(d.alt || '') + '" style="max-width:100%;max-height:' + (d.maxHeight || 400) + 'px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1)">' +
+        (d.caption ? '<p style="font-style:italic;color:#64748b;margin-top:8px">' + esc(d.caption) + '</p>' : '') + '</div>';
+    } else if (type === 'video-embed') {
+      var vidId = extractYouTubeId(d.url || '');
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<p style="font-weight:600;color:#1e293b;margin-bottom:8px">🎬 ' + esc(d.title) + '</p>';
+      h += vidId
+        ? '<div class="embed-container youtube-container"><iframe src="https://www.youtube.com/embed/' + vidId + '" frameborder="0" allowfullscreen></iframe></div>'
+        : '<div class="embed-container"><iframe src="' + esc(d.url || '') + '" frameborder="0" allowfullscreen></iframe></div>';
+      h += '</div>';
+    } else if (type === 'code-block') {
+      h += '<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin:16px 0"><div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#1e293b;color:#e2e8f0;font-size:12px"><span>' + esc(d.language || d.filename || 'Code') + '</span></div>' +
+        '<pre style="margin:0;padding:16px 18px;background:#0f172a;color:#e2e8f0;font-family:Consolas,monospace;font-size:13px;line-height:1.6;overflow-x:auto"><code>' + esc(d.code || d.text || '') + '</code></pre></div>';
+    } else if (type === 'resource-links') {
+      var rlIcons = { video: '🎬', article: '📄', book: '📚', tool: '🔧', pdf: '📎' };
+      h += '<div style="margin:16px 0">';
+      if (d.title) h += '<h3 style="color:#4f46e5;margin-bottom:12px;font-weight:700">📖 ' + esc(d.title) + '</h3>';
+      for (var rl = 0; rl < (d.links || []).length; rl++) {
+        var rlLink = d.links[rl];
+        h += '<a href="' + esc(rlLink.url || '') + '" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;margin-bottom:8px;background:#fff"><span style="font-size:22px">' + (rlIcons[rlLink.type] || '🔗') + '</span><div style="flex:1;min-width:0"><div style="font-weight:600;color:#1e293b">' + esc(rlLink.label || '') + '</div>' + (rlLink.description ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px">' + esc(rlLink.description) + '</div>' : '') + '</div><span style="color:#818cf8;font-size:18px">↗</span></a>';
+      }
+      h += '</div>';
+    } else if (type === 'prerequisites') {
+      h += '<div style="border:2px dashed #818cf8;border-radius:10px;padding:18px 22px;margin:16px 0;background:#fafbff"><div style="font-weight:700;color:#4f46e5;margin-bottom:10px">📋 ' + esc(d.title || 'Before You Begin') + '</div>' +
+        (d.body ? '<p style="color:#64748b;margin:0 0 10px;font-size:14px">' + esc(d.body) + '</p>' : '');
+      if (d.items && d.items.length) { h += '<ul style="margin:0;padding-left:20px">'; for (var pq = 0; pq < d.items.length; pq++) h += '<li style="color:#475569;margin-bottom:4px">' + itemText(d.items[pq]) + '</li>'; h += '</ul>'; }
+      h += '</div>';
+    } else if (type === 'encouragement') {
+      var enThemes = { cheer: ['🎉', '#ecfdf5', '#059669'], persist: ['💪', '#eef2ff', '#4f46e5'], celebrate: ['🏆', '#fef3c7', '#d97706'], believe: ['🌟', '#fdf2f8', '#db2777'] };
+      var enT = enThemes[d.variant] || enThemes.believe;
+      h += '<div style="text-align:center;padding:20px 24px;margin:20px 0;background:' + enT[1] + ';border-radius:16px;border:2px solid ' + enT[2] + '"><div style="font-size:40px;margin-bottom:8px">' + esc(d.icon || enT[0]) + '</div><p style="color:' + enT[2] + ';font-weight:700;font-size:18px;margin:0">' + esc(d.message || '') + '</p></div>';
+    } else if (type === 'character-guide') {
+      var chThemes = { kid: ['🦊', '#fef3c7', '#92400e'], teacher: ['👩‍🏫', '#eef2ff', '#3730a3'], expert: ['🧑‍🔬', '#f0fdf4', '#065f46'], coach: ['💪', '#fee2e2', '#991b1b'] };
+      var chT = chThemes[d.variant] || chThemes.teacher;
+      h += '<div style="display:flex;gap:14px;align-items:flex-start;margin:16px 0;padding:16px 20px;background:' + chT[1] + ';border-radius:14px;border:2px solid ' + chT[2] + '"><div style="font-size:40px;flex-shrink:0;line-height:1">' + esc(d.emoji || chT[0]) + '</div><div><div style="font-weight:700;color:' + chT[2] + ';margin-bottom:4px">' + esc(d.character || 'Guide') + ' says...</div><p style="color:#475569;margin:0;font-size:15px;line-height:1.7">' + esc(d.message || d.body || '') + '</p></div></div>';
+    } else if (type === 'insight') {
+      h += '<div style="border:2px solid #8b5cf6;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:12px;padding:18px 22px;margin:18px 0;text-align:center"><div style="font-size:28px;margin-bottom:6px">' + esc(d.icon || '💎') + '</div><div style="font-weight:700;color:#6d28d9;font-size:14px;margin-bottom:8px">' + esc(d.title || 'Key Insight') + '</div><p style="color:#475569;font-size:17px;font-weight:600;margin:0;line-height:1.7">' + esc(d.insight || d.body || '') + '</p></div>';
+    } else if (type === 'rule-of-thumb') {
+      h += '<div style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:10px;padding:16px 20px;margin:16px 0;display:flex;align-items:center;gap:12px"><span style="font-size:32px;flex-shrink:0">' + esc(d.icon || '👍') + '</span><div><div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:4px">' + esc(d.title || 'Rule of Thumb') + '</div><p style="color:#475569;margin:0;font-size:15px;font-weight:600">' + esc(d.rule || d.body || '') + '</p></div></div>';
+    } else if (type === 'common-question') {
+      h += '<div style="border:1px solid #cbd5e1;background:#fafbfc;border-radius:10px;padding:16px 20px;margin:14px 0"><div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:22px;flex-shrink:0">' + esc(d.icon || '❓') + '</span><div><div style="font-weight:700;color:#1e293b;margin-bottom:6px">Students often ask: <span style="color:#4f46e5">' + esc(d.question || '') + '</span></div><p style="color:#475569;margin:0;font-size:14px;line-height:1.7">' + esc(d.answer || d.body || '') + '</p></div></div></div>';
+    } else if (type === 'pause-point') {
+      h += '<div style="border:2px solid #fbbf24;background:linear-gradient(135deg,#fffbeb,#fefce8);border-radius:12px;padding:18px 22px;margin:20px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="font-size:24px">' + esc(d.icon || '🛑') + '</span><strong style="color:#92400e;font-size:16px">' + esc(d.title || 'Pause & Check Yourself') + '</strong></div><ol style="margin:0;padding-left:20px">';
+      for (var pp = 0; pp < (d.checks || d.items || []).length; pp++) h += '<li style="color:#475569;margin-bottom:6px"><input type="checkbox" style="margin-right:8px;accent-color:#f59e0b">' + itemText((d.checks || d.items)[pp]) + '</li>';
+      h += '</ol></div>';
+    } else if (type === 'speed-run') {
+      h += '<div style="border:2px solid #14b8a6;background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border-radius:12px;overflow:hidden;margin:18px 0"><div style="background:linear-gradient(135deg,#0d9488,#14b8a6);padding:8px 18px;color:#fff;font-weight:700;font-size:14px">⚡ ' + esc(d.title || 'Speed Run') + '</div><div style="padding:14px 18px">';
+      for (var sr = 0; sr < (d.points || d.items || []).length; sr++) h += '<div style="display:flex;gap:8px;padding:4px 0;font-size:13px;color:#0f766e"><span style="color:#14b8a6;font-weight:700">▸</span><span>' + itemText((d.points || d.items)[sr]) + '</span></div>';
+      h += '</div></div>';
+    } else if (type === 'expert-voice') {
+      h += '<div style="border-left:4px solid #0891b2;background:linear-gradient(135deg,#fafdfe,#ecfeff);padding:16px 20px;margin:18px 0;border-radius:0 10px 10px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:22px">' + esc(d.icon || '🎙️') + '</span><strong style="color:#0e7490">' + esc(d.expertName || 'Expert') + '</strong>' + (d.expertRole ? '<span style="color:#94a3b8;font-size:12px">- ' + esc(d.expertRole) + '</span>' : '') + '</div><p style="color:#164e63;margin:0;font-style:italic;font-size:15px;line-height:1.7">"' + esc(d.quote || d.body || '') + '"</p></div>';
+    } else if (type === 'real-world') {
+      h += '<div style="border:2px solid #059669;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:10px;padding:18px 20px;margin:16px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:20px">' + esc(d.icon || '🌍') + '</span><strong style="color:#065f46">' + esc(d.title || 'Real-World Application') + '</strong></div><p style="color:#475569;margin:0 0 8px;font-weight:500">' + esc(d.example || d.body || '') + '</p></div>';
+    } else if (type === 'reflection-prompt') {
+      h += '<div style="border:2px dashed #fbbf24;border-radius:12px;padding:20px 22px;margin:16px 0;background:linear-gradient(135deg,#fffbeb,#fef3c7)"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:26px">' + esc(d.icon || '🤔') + '</span><strong style="color:#92400e;font-size:16px">' + esc(d.title || 'Pause & Reflect') + '</strong></div>';
+      if (d.questions && d.questions.length) { h += '<ol style="margin:0;padding-left:20px">'; for (var rf = 0; rf < d.questions.length; rf++) h += '<li style="color:#475569;margin-bottom:8px;font-weight:500">' + itemText(d.questions[rf]) + '</li>'; h += '</ol>'; }
+      h += '</div>';
+    } else if (type === 'flip-card') {
+      var fcId = 'sgfc-' + i + '-' + Date.now();
+      h += '<div style="perspective:800px;margin:16px 0">' +
+        '<label for="' + fcId + '" style="cursor:pointer;display:block">' +
+        '<input type="checkbox" id="' + fcId + '" style="position:absolute;opacity:0;pointer-events:none">' +
+        '<div class="sg-flip-card" style="position:relative;width:100%;min-height:140px;transition:transform 0.6s cubic-bezier(0.4,0,0.2,1);transform-style:preserve-3d">' +
+        '<div class="sg-flip-front" style="position:absolute;inset:0;backface-visibility:hidden;background:#eef2ff;border:2px solid #c7d2fe;border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><div style="font-size:13px;color:#6366f1;margin-bottom:8px;font-weight:600">🧠 KEY CONCEPT</div><div style="font-size:17px;font-weight:700;color:#1e293b">' + esc(d.front || d.q || '') + '</div><div style="font-size:12px;color:#94a3b8;margin-top:10px">👆 Click to reveal</div></div>' +
+        '<div class="sg-flip-back" style="position:absolute;inset:0;backface-visibility:hidden;transform:rotateY(180deg);background:#ecfdf5;border:2px solid #a7f3d0;border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center"><div style="font-size:13px;color:#059669;margin-bottom:8px;font-weight:600">💡 ANSWER</div><div style="font-size:16px;color:#1e293b;line-height:1.6">' + esc(d.back || d.a || '') + '</div><div style="font-size:12px;color:#94a3b8;margin-top:10px">👆 Click to flip back</div></div>' +
+        '</div></label>' +
+        '<style>#' + fcId + ':checked+.sg-flip-card{transform:rotateY(180deg)}</style></div>';
+    } else if (type === 'quiz') {
+      h += '<div class="sg-quiz-section" style="margin:24px 0">';
+      for (var qz = 0; qz < (d.items || []).length; qz++) {
+        var qzQ = d.items[qz];
+        var qzId = 'sgq-' + i + '-' + qz;
+        h += '<div class="sg-quiz-item-v3" style="border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:12px;background:#fff"><div style="font-weight:700;font-size:15px;margin-bottom:12px">' + (qz + 1) + '. ' + esc(qzQ.question || '') + '</div><div style="position:relative">';
+        for (var qo = 0; qo < (qzQ.options || []).length; qo++) {
+          var qzCorrect = qo === (qzQ.correct || 0);
+          h += '<input type="radio" class="sg-q-radio' + (qzCorrect ? ' sg-q-correct' : '') + '" name="' + qzId + '" id="' + qzId + '-' + qo + '" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0">' +
+            '<label class="sg-q-opt" for="' + qzId + '-' + qo + '" style="display:block;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#fafbfc;font-size:14px">' + esc(qzQ.options[qo]) + '</label>';
+        }
+        h += '<div class="sg-q-feedback" style="display:none;margin-top:12px;padding:14px 16px;background:linear-gradient(135deg,#d1fae5,#ecfdf5);border:1px solid #6ee7b7;border-radius:12px"><div style="font-size:15px;margin-bottom:6px;color:#065f46">✅ ' + esc((qzQ.options || [])[qzQ.correct || 0] || '') + '</div>' + (qzQ.explanation ? '<div style="font-size:14px;color:#64748b;line-height:1.7;margin-top:6px">' + esc(qzQ.explanation) + '</div>' : '') + '</div>';
+        h += '</div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'self-assessment') {
+      var saId = 'sgsa-' + i;
+      h += '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:16px 0;background:#fff"><div style="font-weight:700;color:#1e293b;margin-bottom:14px">📊 ' + esc(d.question || 'How well do you understand this topic?') + '</div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px">';
+      for (var sa = 1; sa <= 5; sa++) {
+        h += '<label style="cursor:pointer;text-align:center;flex:1"><input type="radio" name="' + saId + '" value="' + sa + '" class="sa-radio" style="display:none"><div class="sa-star" style="font-size:28px;filter:grayscale(100%);opacity:0.4">⭐</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">' + sa + '</div></label>';
+      }
+      h += '</div><div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-top:4px"><span>' + esc(d.lowLabel || 'Not yet') + '</span><span>' + esc(d.highLabel || 'Got it!') + '</span></div></div>';
+    } else if (type === 'ordered-list') {
+      h += '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0"><div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">🔢 ' + esc(d.title || 'Put These in Order') + '</div><div style="padding:14px 18px"><ol style="margin:0 0 12px 20px;color:#475569;line-height:1.8">';
+      for (var ol = 0; ol < (d.items || []).length; ol++) h += '<li style="margin-bottom:4px">' + itemText(d.items[ol]) + '</li>';
+      h += '</ol><details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;list-style:none">✅ Reveal correct order</summary><div style="margin-top:10px;padding:12px 14px;background:#ecfdf5;border-radius:8px;line-height:1.8;color:#065f46;font-weight:500"><ol style="margin:0 0 0 18px">';
+      var olOrder = d.correctOrder || d.items || [];
+      for (var oc = 0; oc < olOrder.length; oc++) {
+        var ocVal = olOrder[oc];
+        h += '<li>' + (typeof ocVal === 'number' ? itemText((d.items || [])[ocVal]) : itemText(ocVal)) + '</li>';
+      }
+      h += '</ol></div></details></div></div>';
+    } else if (type === 'match') {
+      var mtPairs = (d.pairs || []).slice();
+      if (!mtPairs.length && d.left && d.right) {
+        var mtLen = Math.min(d.left.length, d.right.length);
+        for (var mtk = 0; mtk < mtLen; mtk++) mtPairs.push({ a: itemText(d.left[mtk]), b: itemText(d.right[mtk]) });
+      }
+      h += '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0"><div style="background:#f1f5f9;padding:10px 18px;font-weight:700;color:#1e293b">🔗 ' + esc(d.title || 'Match the Pairs') + '</div><div style="padding:14px 18px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+      for (var mt = 0; mt < mtPairs.length; mt++) {
+        h += '<div style="padding:8px 12px;background:#fafbfc;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">' + itemText(mtPairs[mt].a) + '</div><div style="padding:8px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;color:#475569">' + itemText(mtPairs[mt].b) + '</div>';
+      }
+      h += '</div><details><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;list-style:none">✅ Reveal matches</summary><div style="margin-top:10px;padding:12px 14px;background:#ecfdf5;border-radius:8px;line-height:1.8;color:#065f46">';
+      for (var mt2 = 0; mt2 < mtPairs.length; mt2++) h += '<div style="padding:4px 0">' + (mt2 + 1) + '. <strong>' + itemText(mtPairs[mt2].a) + '</strong> ↔ <strong>' + itemText(mtPairs[mt2].b) + '</strong></div>';
+      h += '</div></details></div></div>';
+    } else if (type === 'fill-blank') {
+      h += '<div style="margin:16px 0">';
+      for (var fb = 0; fb < (d.items || []).length; fb++) {
+        var fbItem = d.items[fb];
+        h += '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;margin-bottom:10px;background:#fff"><p style="color:#1e293b;margin:0 0 8px">' + (fb + 1) + '. ' + esc(fbItem.prompt || fbItem.text || '') + '</p>' +
+          '<input type="text" style="border:none;border-bottom:2px dashed #4f46e5;padding:4px 8px;font-size:14px;color:#1e293b;min-width:200px;outline:none;background:transparent;font-family:inherit" placeholder="type your answer...">' +
+          '<details style="display:inline-block;margin-left:8px"><summary style="cursor:pointer;color:#4f46e5;font-weight:600;font-size:13px;display:inline;list-style:none">👁️ Reveal</summary><span style="color:#059669;font-weight:700;font-size:15px;margin-left:6px">' + esc(fbItem.answer || '') + '</span></details></div>';
+      }
+      h += '</div>';
+    } else if (type === 'next-steps') {
+      var nsIcons = { next: '➡️', review: '🔄', practice: '✏️', explore: '🔍', action: '✍️' };
+      h += '<div style="border:2px solid #4f46e5;border-radius:12px;overflow:hidden;margin:20px 0"><div style="background:linear-gradient(135deg,#4f46e5,#6366f1);padding:14px 20px;color:#fff;font-weight:700;font-size:16px">🚀 ' + esc(d.title || 'Next Steps') + '</div><div style="padding:16px 20px;background:#fff">';
+      for (var ns = 0; ns < (d.steps || []).length; ns++) {
+        var nsStep = d.steps[ns];
+        h += '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9"><span style="font-size:22px">' + (nsIcons[nsStep.type] || '➡️') + '</span><div><strong style="color:#1e293b">' + esc(nsStep.label || '') + '</strong>' + (nsStep.description ? '<div style="font-size:12px;color:#64748b;margin-top:2px">' + esc(nsStep.description) + '</div>' : '') + '</div></div>';
+      }
+      h += '</div></div>';
+    } else if (type === 'typewriter') {
+      var twId = 'sgtw-' + i;
+      var twText = String(d.text || '');
+      h += '<div style="text-align:center;margin:24px 0;padding:20px;background:#1e293b;color:#f1f5f9;border-radius:12px">' +
+        '<style>@keyframes ' + twId + '{from{width:0}to{width:100%}}@keyframes ' + twId + '-blink{0%,100%{border-color:transparent}50%{border-color:#f1f5f9}}</style>' +
+        '<div style="display:inline-block;overflow:hidden;white-space:nowrap;border-right:3px solid #f1f5f9;max-width:100%;animation:' + twId + ' 3s steps(' + Math.max(20, twText.length) + ') forwards,' + twId + '-blink 0.7s step-end 5;font-size:17px;line-height:1.6">' + esc(twText) + '</div>' +
+        (d.label ? '<div style="margin-top:10px;font-size:12px;color:#94a3b8">⌨️ ' + esc(d.label) + '</div>' : '') + '</div>';
+    } else if (type === 'pyramid') {
+      var pyLevels = d.levels || [];
+      h += '<div style="margin:24px auto;max-width:500px">';
+      for (var py = pyLevels.length - 1; py >= 0; py--) {
+        var pyLvl = pyLevels[py];
+        var pyColors = ['#3b82f6', '#4f46e5', '#7c3aed', '#a855f7', '#d946ef'];
+        h += '<div style="margin:0 auto 4px;width:' + Math.round(50 + ((py + 1) / pyLevels.length) * 50) + '%;background:' + (pyLvl.color || pyColors[py % pyColors.length]) + ';color:#fff;text-align:center;padding:12px 10px;border-radius:6px;font-weight:600;font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">' + esc(pyLvl.label || '') +
+          (pyLvl.description ? '<div style="font-size:11px;opacity:0.85;font-weight:400;margin-top:2px">' + esc(pyLvl.description) + '</div>' : '') + '</div>';
+      }
+      h += '</div>';
+    } else if (type === 'mind-map' || type === 'concept-map') {
+      var mmCentral = type === 'mind-map' ? d.central : { label: d.central || d.topic };
+      var mmNodes = d.nodes || [];
+      h += '<div style="margin:24px 0;text-align:center"><div style="display:inline-block;background:#4f46e5;color:#fff;border-radius:50%;width:90px;height:90px;line-height:90px;text-align:center;font-weight:700;font-size:14px;margin-bottom:18px;box-shadow:0 4px 16px rgba(79,70,229,0.27)">' + esc((mmCentral && mmCentral.label) || mmCentral || '') + '</div>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;max-width:700px;margin:0 auto">';
+      for (var mm = 0; mm < mmNodes.length; mm++) {
+        var mmNode = mmNodes[mm];
+        h += '<div style="background:#fff;border:2px solid rgba(79,70,229,0.2);border-radius:12px;padding:14px 12px;text-align:center"><div style="font-size:24px;margin-bottom:4px">' + esc(mmNode.icon || '•') + '</div><div style="font-weight:700;color:#1e293b;font-size:14px">' + esc(mmNode.label || '') + '</div>' + (mmNode.description ? '<div style="font-size:12px;color:#64748b;margin-top:4px;line-height:1.4">' + esc(mmNode.description) + '</div>' : '') + '</div>';
+      }
+      h += '</div>' + (d.title ? '<div style="margin-top:12px;font-size:13px;color:#64748b;font-weight:600">' + esc(d.title) + '</div>' : '') + '</div>';
+    } else if (type === 'count-up') {
+      h += '<div style="text-align:center;margin:20px 0;padding:24px;background:linear-gradient(135deg,rgba(79,70,229,0.03),rgba(79,70,229,0.08));border-radius:16px;border:1px solid rgba(79,70,229,0.13)">' +
+        (d.icon ? '<div style="font-size:36px;margin-bottom:6px">' + esc(d.icon) + '</div>' : '') +
+        '<div style="font-size:42px;font-weight:900;color:#4f46e5;line-height:1.1">' + esc(d.prefix || '') + esc(d.value || '') + esc(d.suffix || '') + '</div>' +
+        (d.label ? '<div style="font-size:14px;color:#64748b;margin-top:6px;font-weight:500">' + esc(d.label) + '</div>' : '') + '</div>';
+    } else if (type === 'progress-ring') {
+      var prPct = Math.min(100, Math.max(0, parseFloat(d.percent) || 0));
+      var prSize = d.size || 120;
+      var prR = (prSize / 2) - 10;
+      var prCirc = 2 * Math.PI * prR;
+      var prOffset = prCirc * (1 - prPct / 100);
+      h += '<div style="text-align:center;margin:20px 0"><svg width="' + prSize + '" height="' + prSize + '" style="display:inline-block"><circle cx="' + (prSize / 2) + '" cy="' + (prSize / 2) + '" r="' + prR + '" fill="none" stroke="#e2e8f0" stroke-width="8"/><circle cx="' + (prSize / 2) + '" cy="' + (prSize / 2) + '" r="' + prR + '" fill="none" stroke="' + (d.color || '#4f46e5') + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + prCirc + '" stroke-dashoffset="' + prOffset + '" style="transform:rotate(-90deg);transform-origin:' + (prSize / 2) + 'px ' + (prSize / 2) + 'px"/><text x="' + (prSize / 2) + '" y="' + (prSize / 2) + '" text-anchor="middle" dominant-baseline="central" style="font-size:' + Math.round(prSize * 0.2) + 'px;font-weight:800;fill:' + (d.color || '#4f46e5') + '">' + Math.round(prPct) + '%</text></svg>' +
+        (d.label ? '<div style="margin-top:8px;font-weight:600;color:#1e293b;font-size:14px">' + esc(d.label) + '</div>' : '') + '</div>';
+    } else if (type === 'hierarchy-tree') {
+      function treeNodeHtml(node, depth) {
+        var th = '<div style="text-align:center"><div style="display:inline-block;background:#fff;border:2px solid #4f46e5;border-radius:10px;padding:10px 16px;font-weight:600;font-size:13px;color:#1e293b;white-space:nowrap">' + (node.icon ? '<span style="margin-right:4px">' + esc(node.icon) + '</span>' : '') + esc(node.label || '') + '</div></div>';
+        if (node.children && node.children.length) {
+          th += '<div style="height:18px;border-left:2px solid rgba(79,70,229,0.33);margin:0 auto;width:0"></div>';
+          th += '<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;position:relative"><div style="position:absolute;top:0;left:15%;right:15%;height:2px;background:rgba(79,70,229,0.33)"></div>';
+          for (var tn = 0; tn < node.children.length; tn++) {
+            th += '<div style="position:relative;padding-top:8px"><div style="height:10px;border-left:2px solid rgba(79,70,229,0.33);margin:0 auto;width:0"></div>' + treeNodeHtml(node.children[tn], depth + 1) + '</div>';
+          }
+          th += '</div>';
+        }
+        return th;
+      }
+      h += '<div style="margin:20px 0;overflow-x:auto;padding:10px 0">' + (d.title ? '<div style="text-align:center;font-weight:700;color:#1e293b;margin-bottom:14px;font-size:15px">🌳 ' + esc(d.title) + '</div>' : '') + treeNodeHtml(d.root || { label: d.label || 'Root' }, 0) + '</div>';
+    } else if (type === 'bar-chart') {
+      var bcItems = d.items || [];
+      var bcMax = d.maxValue || 0;
+      if (!bcMax) { for (var bci = 0; bci < bcItems.length; bci++) { var bcv = parseFloat(bcItems[bci].value) || 0; if (bcv > bcMax) bcMax = bcv; } }
+      if (bcMax === 0) bcMax = 100;
+      var bcColors = ['#4f46e5', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#ca8a04'];
+      h += '<div style="margin:16px 0">' + (d.title ? '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">📊 ' + esc(d.title) + '</h3>' : '');
+      for (var bcr = 0; bcr < bcItems.length; bcr++) {
+        var bcItem = bcItems[bcr];
+        var bcPct = Math.round(((parseFloat(bcItem.value) || 0) / bcMax) * 100);
+        h += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="min-width:100px;font-size:13px;color:#475569;text-align:right">' + esc(bcItem.label || '') + '</span><div style="flex:1;background:#f1f5f9;border-radius:4px;height:24px;overflow:hidden"><div style="width:' + bcPct + '%;height:100%;background:' + (bcItem.color || bcColors[bcr % bcColors.length]) + ';border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px"><span style="font-size:10px;color:#fff;font-weight:700">' + esc(bcItem.value || '') + '</span></div></div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'pie-chart') {
+      var pieSegs = d.segments || [];
+      var pieTotal = 0;
+      for (var pie = 0; pie < pieSegs.length; pie++) pieTotal += parseFloat(pieSegs[pie].value) || 0;
+      if (pieTotal > 0) {
+        var pieColors = ['#4f46e5', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+        var pieParts = [];
+        var pieCum = 0;
+        for (var pie2 = 0; pie2 < pieSegs.length; pie2++) {
+          var piePct = ((parseFloat(pieSegs[pie2].value) || 0) / pieTotal) * 100;
+          pieParts.push((pieSegs[pie2].color || pieColors[pie2 % pieColors.length]) + ' ' + pieCum + '% ' + (pieCum + piePct) + '%');
+          pieCum += piePct;
+        }
+        var pieSize = (d.size || 200) + 'px';
+        var pieDonut = d.donut !== false;
+        h += '<div style="margin:16px 0;text-align:center">' + (d.title ? '<h3 style="color:#1e293b;margin-bottom:12px;font-weight:700">🥧 ' + esc(d.title) + '</h3>' : '') +
+          '<div style="display:inline-block;position:relative;width:' + pieSize + ';height:' + pieSize + '"><div style="width:100%;height:100%;border-radius:50%;background:conic-gradient(' + pieParts.join(',') + ')"></div>' +
+          (pieDonut ? '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:45%;height:45%;background:#fff;border-radius:50%"></div>' : '') + '</div></div>';
+      } else {
+        h += fallbackBox(d, 'pie-chart');
+      }
+    } else if (type === 'gauge' || type === 'bullet-chart') {
+      var gVal = parseFloat(d.value) || 0;
+      var gMax = parseFloat(d.max) || 100;
+      var gPct = Math.max(0, Math.min(100, Math.round((gVal / gMax) * 100)));
+      var gColor = d.color || '#4f46e5';
+      h += '<div style="margin:12px 0">' + (d.label ? '<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-weight:600;color:#1e293b;font-size:13px">' + esc(d.label) + '</span><span style="color:#64748b;font-size:12px">' + esc(d.value) + ' / ' + esc(d.max || 100) + '</span></div>' : '') +
+        '<div style="position:relative;height:22px;background:#f1f5f9;border-radius:4px;overflow:hidden"><div style="position:absolute;left:0;top:0;height:100%;width:' + gPct + '%;background:' + gColor + ';border-radius:4px"></div>' +
+        (d.target !== undefined ? '<div style="position:absolute;left:' + Math.min(100, Math.round((parseFloat(d.target) || 0) / gMax * 100)) + '%;top:-2px;height:26px;width:3px;background:#dc2626;border-radius:2px"></div>' : '') + '</div></div>';
+    } else if (type === 'funnel') {
+      var fuStages = d.stages || [];
+      var fuColors = ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];
+      var fuMax = 0;
+      for (var fu = 0; fu < fuStages.length; fu++) { var fuv = parseFloat(fuStages[fu].value) || 0; if (fuv > fuMax) fuMax = fuv; }
+      h += '<div style="margin:16px 0;text-align:center">' + (d.title ? '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">🔽 ' + esc(d.title) + '</h3>' : '');
+      for (var fu2 = 0; fu2 < fuStages.length; fu2++) {
+        var fuStage = fuStages[fu2];
+        var fuPct = fuMax > 0 ? Math.max(15, Math.round(((parseFloat(fuStage.value) || 0) / fuMax) * 100)) : 100;
+        h += '<div style="margin:0 auto 4px;width:' + fuPct + '%;background:' + (fuStage.color || fuColors[fu2 % fuColors.length]) + ';color:#fff;padding:8px 16px;font-weight:600;font-size:13px;min-width:60px">' + esc(fuStage.label || '') + ' - ' + esc(fuStage.value || '') + '</div>';
+      }
+      h += '</div>';
+    } else if (type === 'ranked-list') {
+      var rkItems = (d.items || []).slice();
+      h += '<div style="margin:16px 0;max-width:500px">' + (d.title ? '<h3 style="color:#1e293b;margin-bottom:10px;font-weight:700">📊 ' + esc(d.title) + '</h3>' : '');
+      for (var rk = 0; rk < rkItems.length; rk++) {
+        var rkItem = rkItems[rk];
+        h += '<div style="display:flex;align-items:center;padding:8px 14px;background:' + (rk % 2 === 0 ? '#fafbfc' : '#fff') + ';border-radius:6px;margin-bottom:4px"><span style="font-size:14px;width:36px;text-align:center;color:#94a3b8">#' + (rk + 1) + '</span><span style="flex:1;font-weight:500;color:#1e293b">' + esc(rkItem.label || '') + '</span><span style="font-weight:700;color:#4f46e5">' + esc(rkItem.value || '') + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'sparkline') {
+      var slVals = d.values || [];
+      var slMax = -Infinity, slMin = Infinity;
+      for (var sl = 0; sl < slVals.length; sl++) { var slv = parseFloat(slVals[sl]) || 0; if (slv > slMax) slMax = slv; if (slv < slMin) slMin = slv; }
+      var slRange = slMax - slMin || 1;
+      h += '<div style="margin:8px 0;display:inline-flex;align-items:flex-end;gap:2px;height:' + (d.height || 40) + 'px;padding:4px 0;vertical-align:middle">';
+      for (var sl2 = 0; sl2 < slVals.length; sl2++) {
+        var slb = parseFloat(slVals[sl2]) || 0;
+        var slH = Math.max(2, ((slb - slMin) / slRange) * (d.height || 40));
+        h += '<div style="width:6px;height:' + slH + 'px;background:' + (d.color || '#4f46e5') + ';border-radius:2px 2px 0 0" title="' + esc(slb) + '"></div>';
+      }
+      h += '</div>';
+    } else if (type === 'waterfall') {
+      var wfItems = d.items || [];
+      var wfMax = 0, wfRun = 0;
+      for (var wf = 0; wf < wfItems.length; wf++) { wfRun += parseFloat(wfItems[wf].value) || 0; wfMax = Math.max(wfMax, Math.abs(wfRun), Math.abs(parseFloat(wfItems[wf].value) || 0)); }
+      if (wfMax === 0) wfMax = 100;
+      wfRun = 0;
+      h += '<div style="margin:16px 0">' + (d.title ? '<h3 style="color:#1e293b;margin-bottom:14px;font-weight:700">🌊 ' + esc(d.title) + '</h3>' : '');
+      for (var wf2 = 0; wf2 < wfItems.length; wf2++) {
+        var wfItem = wfItems[wf2];
+        var wfVal = parseFloat(wfItem.value) || 0;
+        var wfStart = wfRun;
+        wfRun += wfVal;
+        var wfClr = wfItem.isTotal ? '#4f46e5' : (wfVal >= 0 ? '#059669' : '#dc2626');
+        h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="min-width:90px;font-size:12px;color:#475569;text-align:right">' + esc(wfItem.label || '') + '</span><div style="flex:1;height:18px;position:relative">' +
+          '<div style="position:absolute;left:' + Math.round((Math.min(wfStart, wfRun) / wfMax) * 100) + '%;top:2px;width:' + Math.max(2, Math.round((Math.abs(wfVal) / wfMax) * 100)) + '%;height:14px;background:' + wfClr + ';border-radius:3px"></div></div><span style="min-width:50px;font-size:12px;font-weight:600;color:#1e293b;text-align:right">' + esc(wfVal) + '</span></div>';
+      }
+      h += '</div>';
+    } else if (type === 'stat-chart') {
+      var scTotal = 0;
+      for (var sc = 0; sc < (d.options || []).length; sc++) scTotal += parseFloat(d.options[sc].value || d.options[sc].votes) || 0;
+      h += '<div style="border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin:16px 0;background:#fff"><div style="font-weight:700;color:#1e293b;margin-bottom:12px">📊 ' + esc(d.title || d.question || 'Statistics') + '</div>';
+      for (var sc2 = 0; sc2 < (d.options || []).length; sc2++) {
+        var scOpt = d.options[sc2];
+        var scVal = parseFloat(scOpt.value || scOpt.votes) || 0;
+        var scPct = scTotal > 0 ? Math.round((scVal / scTotal) * 100) : 0;
+        h += '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:13px"><span style="color:#475569">' + esc(scOpt.label || '') + '</span><span style="color:#94a3b8;font-weight:600">' + scPct + '%</span></div><div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden"><div style="height:100%;width:' + scPct + '%;background:' + (scOpt.color || '#4f46e5') + ';border-radius:4px"></div></div></div>';
+      }
+      h += '</div>';
+    } else if (type === 'progress-tracker') {
+      var ptPct = Math.min(100, Math.max(0, parseInt(d.percent) || 0));
+      h += '<div style="margin:16px 0">' + (d.label ? '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-weight:600;color:#1e293b;font-size:14px">' + esc(d.label) + '</span><span style="color:' + (d.color || '#4f46e5') + ';font-weight:700;font-size:14px">' + ptPct + '%</span></div>' : '') +
+        '<div style="width:100%;height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden"><div style="width:' + ptPct + '%;height:100%;background:' + (d.color || '#4f46e5') + ';border-radius:6px"></div></div>' +
+        (d.steps && d.steps.length ? '<div style="display:flex;justify-content:space-between;margin-top:8px">' + d.steps.map(function(ptS) { return '<span style="font-size:11px;color:' + (ptS.done ? '#059669' : '#94a3b8') + '">' + (ptS.done ? '✅' : '⬜') + ' ' + esc(ptS.label || '') + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    } else if (type === 'star-award') {
+      var stStars = Math.min(5, Math.max(1, parseInt(d.stars) || 3));
+      h += '<div style="display:inline-block;background:linear-gradient(135deg,#fef3c7,#fff7ed);border:2px solid #fcd34d;border-radius:16px;padding:16px 24px;margin:12px 0;text-align:center;min-width:160px"><div style="font-size:32px;margin-bottom:6px">' + esc(d.icon || '🏆') + '</div><div style="font-weight:800;color:#92400e;font-size:16px">' + esc(d.title || 'Achievement Unlocked') + '</div>' + (d.subtitle ? '<div style="color:#b45309;font-size:13px;margin-top:4px">' + esc(d.subtitle) + '</div>' : '') + '<div style="margin-top:8px;font-size:24px;letter-spacing:2px">';
+      for (var sa2 = 0; sa2 < 5; sa2++) h += sa2 < stStars ? '⭐' : '☆';
+      h += '</div></div>';
+    } else if (type === 'gallery') {
+      var glCols = { '2': '1fr 1fr', '3': '1fr 1fr 1fr', '4': '1fr 1fr 1fr 1fr' }[d.cols] || '1fr 1fr 1fr';
+      h += '<div style="display:grid;grid-template-columns:' + glCols + ';gap:12px;margin:16px 0">';
+      for (var gl = 0; gl < (d.images || []).length; gl++) {
+        var glImg = d.images[gl];
+        h += '<div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;background:#fff"><img src="' + esc(glImg.url || glImg.src || '') + '" alt="' + esc(glImg.alt || '') + '" style="width:100%;height:180px;object-fit:cover;display:block" loading="lazy">' + (glImg.caption ? '<div style="padding:8px 12px;font-size:12px;color:#64748b;text-align:center">' + esc(glImg.caption) + '</div>' : '') + '</div>';
+      }
+      h += '</div>';
+    } else if (type === 'columns-2') {
+      h += '<div style="display:grid;grid-template-columns:' + (d.leftWidth || '1fr') + ' ' + (d.rightWidth || '1fr') + ';gap:20px;margin:16px 0"><div>' + (d.left || '') + '</div><div>' + (d.right || '') + '</div></div>';
+    } else if (type === 'perspectives') {
+      var pvA = d.viewA || d.positionA || {};
+      var pvB = d.viewB || d.positionB || {};
+      h += '<div style="border:2px solid #e2e8f0;border-radius:12px;overflow:hidden;margin:16px 0"><div style="background:#f1f5f9;padding:12px 20px;font-weight:700;color:#1e293b;text-align:center">🔍 ' + esc(d.topic || 'Two Perspectives') + '</div><div style="display:grid;grid-template-columns:1fr 1fr">' +
+        '<div style="padding:16px;border-right:1px solid #e2e8f0"><div style="font-weight:700;color:#4f46e5;margin-bottom:10px">🔵 ' + esc(pvA.label || 'View A') + '</div>' + (pvA.points || []).map(function(pvAp, pvI) { return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#4f46e5;font-weight:700">' + (pvI + 1) + '.</span><span style="color:#475569">' + itemText(pvAp) + '</span></div>'; }).join('') + '</div>' +
+        '<div style="padding:16px"><div style="font-weight:700;color:#d97706;margin-bottom:10px">🟠 ' + esc(pvB.label || 'View B') + '</div>' + (pvB.points || []).map(function(pvBp, pvI2) { return '<div style="display:flex;gap:8px;margin-bottom:6px;font-size:14px"><span style="color:#d97706;font-weight:700">' + (pvI2 + 1) + '.</span><span style="color:#475569">' + itemText(pvBp) + '</span></div>'; }).join('') + '</div></div></div>';
+    } else if (type === 'myth-buster') {
+      h += '<div style="border:2px solid #f97316;background:linear-gradient(135deg,#fff7ed,#fffbeb);border-radius:12px;padding:18px 22px;margin:18px 0"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">' + esc(d.icon || '💥') + '</span><strong style="color:#c2410c;font-size:16px">' + esc(d.title || 'Myth Buster') + '</strong></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+        '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px"><strong style="color:#991b1b">❌ Myth:</strong><p style="color:#475569;margin:4px 0 0;font-size:14px">' + esc(d.myth || '') + '</p></div>' +
+        '<div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 14px"><strong style="color:#065f46">✅ Reality:</strong><p style="color:#475569;margin:4px 0 0;font-size:14px">' + esc(d.reality || '') + '</p></div></div></div>';
+    } else if (type === 'imagine' || type === 'scenario') {
+      var scIcon = type === 'imagine' ? (d.icon || '🎬') : '🎬';
+      h += '<div style="border:2px solid #06b6d4;background:linear-gradient(135deg,#ecfeff,#f0f9ff);border-radius:12px;overflow:hidden;margin:18px 0"><div style="background:linear-gradient(135deg,#0891b2,#06b6d4);padding:10px 20px;color:#fff;font-weight:700;font-size:14px">' + esc(scIcon) + ' ' + esc(d.title || (type === 'imagine' ? 'Put Yourself Here' : 'Scenario')) + '</div><div style="padding:18px 20px"><p style="color:#155e75;margin:0;line-height:1.8;font-size:15px">' + esc(d.scenario || d.context || d.situation || d.body || '') + '</p>' +
+        (d.question ? '<p style="color:#0891b2;font-weight:600;margin:12px 0 0;font-size:15px">🤔 ' + esc(d.question) + '</p>' : '') +
+        (d.debrief || d.reveal ? '<details style="margin-top:10px"><summary style="cursor:pointer;color:#0891b2;font-weight:600;font-size:13px">👁️ Reveal</summary><p style="color:#475569;margin:8px 0 0;font-size:14px">' + esc(d.debrief || d.reveal || '') + '</p></details>' : '') + '</div></div>';
+    } else if (type === 'joke') {
+      h += '<div style="border:2px dashed #a78bfa;background:linear-gradient(135deg,#faf5ff,#fefce8);border-radius:10px;padding:14px 20px;margin:16px 0;text-align:center"><div style="font-size:28px;margin-bottom:4px">' + esc(d.icon || '😄') + '</div><p style="color:#475569;font-style:italic;margin:0;font-size:15px">' + esc(d.joke || d.body || '') + '</p>' + (d.punchline ? '<p style="color:#475569;font-weight:700;margin:4px 0 0;font-size:14px">' + esc(d.punchline) + '</p>' : '') + '</div>';
+    } else if (type === 'reading-time') {
+      h += '<p style="color:#94a3b8;font-size:13px;margin:8px 0 16px">⏱️ ' + esc(d.label || 'Estimated Reading Time') + ': ' + esc(d.minutes || '5-10') + ' min</p>';
+    } else if (type === 'html') {
+      var safeHtml = (d.html || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      h += '<div>' + safeHtml + '</div>';
+    } else {
+      h += fallbackBox(d, type);
+    }
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ═══════════════════════════════════════════
    RENDER: LESSON DETAIL (Step-by-Step Flow)
    ═══════════════════════════════════════════ */
 
@@ -1602,8 +2269,20 @@ function renderLessonDetail() {
   if (worksheetPdfs.length > 0 && !isHidden('worksheets')) { stepNum++; steps.push({ num: stepNum, icon: '📝', title: 'Worksheet', type: 'pdfs', pdfUrls: worksheetPdfs, label: 'Worksheet', hasContent: true }); }
   if (answerKeyPdfs.length > 0 && !isHidden('answerKeys')) { stepNum++; steps.push({ num: stepNum, icon: '🔑', title: 'Answers', type: 'pdfs', pdfUrls: answerKeyPdfs, label: 'Answer Key', hasContent: true }); }
   if (htmlDocs.length > 0 && !isHidden('webDocs')) { stepNum++; steps.push({ num: stepNum, icon: '🌐', title: 'Web Doc', type: 'htmlDoc', htmlDocUrls: htmlDocs, label: 'Web Doc', hasContent: true }); }
+  // Study guide content: prefer the builder's pre-rendered htmlCode; fall
+  // back to the raw component JSON (studyHtmlData) - and repair htmlCode
+  // fields that were saved with JSON text instead of HTML.
   var htmlCode = lesson.htmlCode || '';
+  var studyComponents = null;
+  if (htmlCode && looksLikeComponentsJson(htmlCode)) {
+    studyComponents = parseStudyComponents(htmlCode);
+    if (studyComponents) htmlCode = '';
+  }
+  if (!htmlCode && lesson.studyHtmlData) {
+    studyComponents = parseStudyComponents(lesson.studyHtmlData);
+  }
   if (htmlCode && htmlCode.length > 20 && !isHidden('studyContent')) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'htmlCode', htmlCode: htmlCode, hasContent: true }); }
+  else if (studyComponents && studyComponents.length > 0 && !isHidden('studyContent')) { stepNum++; steps.push({ num: stepNum, icon: '📖', title: 'Study Guide', type: 'studyComponents', components: studyComponents, hasContent: true }); }
   // Presentation slides tab
   var presHtml = lesson.presentationHtml || '';
   if (presHtml && presHtml.length > 50 && !isHidden('presentation')) { stepNum++; steps.push({ num: stepNum, icon: '🎞️', title: 'Presentation', type: 'presentation', presHtml: presHtml, hasContent: true }); }
@@ -1633,6 +2312,7 @@ function renderLessonDetail() {
       else if (stp.type === 'pdfs') stpSub = stp.pdfUrls.length + ' file' + (stp.pdfUrls.length !== 1 ? 's' : '');
       else if (stp.type === 'htmlDoc') stpSub = stp.htmlDocUrls.length + ' web doc' + (stp.htmlDocUrls.length !== 1 ? 's' : '');
       else if (stp.type === 'htmlCode') stpSub = 'Study guide';
+      else if (stp.type === 'studyComponents') stpSub = 'Study guide';
       else if (stp.type === 'presentation') stpSub = 'Slideshow';
       else if (stp.type === 'flashcards') stpSub = (stp.flashcards ? stp.flashcards.length : 0) + ' cards';
       else if (stp.type === 'html') stpSub = 'Reading notes';
@@ -1699,6 +2379,8 @@ function renderLessonDetail() {
         }
       } else if (step.type === 'htmlCode') {
         html += '<div class="detail-content">' + step.htmlCode + '</div>';
+      } else if (step.type === 'studyComponents') {
+        html += '<div class="detail-content study-guide">' + renderStudyComponentsToHtml(step.components) + '</div>';
       } else if (step.type === 'presentation') {
         html += renderPresentationInFlow(step.presHtml);
       } else if (step.type === 'flashcards') {
@@ -5266,6 +5948,7 @@ function toggleDarkMode() {
    ═══════════════════════════════════════════ */
 
 tool.onReady(function(val, fields) {
+  if (el('tool-build-badge')) el('tool-build-badge').textContent = 'tool build ' + TOOL_BUILD;
   setTimeout(function() {
     if (el('loading-overlay').style.display !== 'none') el('loading-overlay').style.display = 'none';
   }, 12000);
