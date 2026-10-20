@@ -1,3 +1,4 @@
+/* js build 2026-10-19-1 */
 // ── Meeting Notes - meeting minutes tool for the UniconHub CMS html-tool system ──
 // Class prefix mtn-. Everything is stored in tool.setValue() (no requestObjects).
 // Value shape:
@@ -7,6 +8,10 @@
 //     rawnotes, ai{summary,minutesDraft} }
 (function () {
   'use strict'
+
+  // ── tool build (shown in the header badge + boot log) ──
+  var TOOL_BUILD = '2026-10-19-1'
+  console.log('[TOOL:BOOT] build ' + TOOL_BUILD + ' ...')
 
   // ── small helpers ──
   function byId(id) { return document.getElementById(id) }
@@ -812,6 +817,9 @@
     var elapsed = now - _lastTickAt
     _lastTickAt = now
     if (elapsed <= 0) return
+    // read-only sessions never bank/persist time - writes must stay behind
+    // explicit user actions or page exit, not the ticking clock.
+    if (!canWrite()) return
     if (_projectionWaiting) {
       DB.meeting.waitingMs = (DB.meeting.waitingMs || 0) + elapsed
       persistSoon()
@@ -830,10 +838,13 @@
     var elapsed = now - _lastTickAt
     _lastTickAt = now
     if (elapsed <= 0) return
+    // repaint-only tick: never persist from the timer. Persisting here ran
+    // setValue()/requestSave() every ~500ms while Meeting Mode was open,
+    // bumping the CMS version continuously and tripping the host's
+    // multi-user "newer version" guard in an endless reload loop.
     if (_projectionWaiting) {
       DB.meeting.waitingMs = (DB.meeting.waitingMs || 0) + elapsed
       renderWaitingDisplay()
-      persistSoon()
       return
     }
     var subject = DB.subjects[_projectionIndex]
@@ -847,7 +858,6 @@
     // repaint on every tick so the Spent readout is live even before Start
     renderTimerDisplay(subject, state)
     renderChipTimes()
-    persistSoon()
   }
   function renderTimerDisplay(subject, state) {
     var timeEl = byId('mtn-proj-timer-time')
@@ -2319,6 +2329,9 @@
   tool.onReady(function (value) {
     DB = normalizeDatabase(value)
     _lastStagedJson = JSON.stringify(DB)
+
+    var buildBadge = byId('mtn-build-badge')
+    if (buildBadge) buildBadge.textContent = 'tool build ' + TOOL_BUILD
 
     bindEvents()
     declareToolParams()

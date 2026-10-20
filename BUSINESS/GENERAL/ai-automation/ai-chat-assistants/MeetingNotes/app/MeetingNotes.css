@@ -1,3 +1,4 @@
+/* css build 2026-10-19-1 */
 /* Meeting Notes - boardroom style tool CSS (class prefix mtn-) */
 
 :root {
@@ -74,8 +75,14 @@
   text-align: center;
 }
 
-.mtn-ro-badge {
+.mtn-tab-badges {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mtn-ro-badge {
   padding: 3px 12px;
   border-radius: 999px;
   background: #fef3c7;
@@ -83,6 +90,17 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
+}
+
+.mtn-build-badge {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 /* ── Stage + panes ── */
@@ -1343,6 +1361,7 @@
   .mtn-tabs::-webkit-scrollbar { display: none; }
   .mtn-tab { padding: 12px 10px 10px; font-size: 13px; }
   .mtn-ro-badge { font-size: 10px; padding: 2px 8px; }
+  .mtn-build-badge { font-size: 10px; padding: 2px 8px; }
 
   /* finger-friendly targets + no iOS auto-zoom */
   .mtn-btn { min-height: 40px; padding: 8px 12px; }
