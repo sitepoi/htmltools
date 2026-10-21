@@ -295,6 +295,26 @@
     display: block; margin-top: 14px; font-size: 12.5px; font-weight: 800;
     letter-spacing: 0.02em; color: var(--brand-2-deep); text-decoration: none;
   }
+  /* volunteer network signature: a quiet issuer stamp under the closing copy */
+  .net-lockup {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+    margin-top: 12px; padding: 6px 14px;
+    border: 1px solid rgba(0, 54, 95, 0.26);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+  .net-lockup b {
+    font-size: 13px; font-weight: 900; letter-spacing: 0.18em;
+    color: var(--brand-2-deep); text-transform: uppercase; line-height: 1.1;
+  }
+  .net-lockup span {
+    font-size: 7.5px; font-weight: 700; letter-spacing: 0.13em;
+    text-transform: uppercase; color: rgba(0, 54, 95, 0.70); line-height: 1.2;
+  }
+  @media (max-width: 639px) {
+    .net-lockup { margin-top: 9px; padding: 5px 11px; }
+    .net-lockup b { font-size: 12px; }
+  }
   @media (max-width: 639px) {
     .cta-giant { padding: 22px 16px; }
     .cta-giant h2 { font-size: 24px; }
@@ -304,7 +324,7 @@
   .page { display: flex; flex-direction: column; }
   .page > * { flex: 0 0 auto; }
   .page > .footer { margin-top: auto; }
-  .steps .inner { padding-top: 10mm; padding-bottom: 10mm; }
+  .steps .inner { padding-top: 9mm; padding-bottom: 9mm; }
   .steps .step { padding: 13px 12px; }
   .steps .step .num { width: 22px; height: 22px; font-size: 11px; margin-bottom: 6px; }
   .steps .step strong { font-size: 12.5px; margin-bottom: 2px; }
@@ -450,7 +470,7 @@
   }
 
   /* ---- page 2: pasted statement note ---- */
-  .statement { background: var(--paper-soft); padding: 13mm 10mm; border: 0; }
+  .statement { background: var(--paper-soft); padding: 11mm 10mm; border: 0; }
   .statement p {
     display: inline-block; text-align: left; max-width: 34ch;
     background: #fff; padding: 20px 24px; border-radius: 14px;
@@ -482,7 +502,7 @@
 
   /* ---- page 2: final band ---- */
   .cta-logo { height: 30px; width: auto; display: block; margin: 0 auto 14px; }
-  .cta-giant { padding: 13mm 10mm 12mm; }
+  .cta-giant { padding: 12mm 10mm 11mm; }
 
   /* =========================================================================
      EXPORT BAR (screen only)
@@ -565,7 +585,11 @@
 
   html[data-format="mobile"] .steps .inner { padding-top: 5mm; padding-bottom: 5mm; }
   html[data-format="mobile"] .steps-grid { grid-template-columns: 1fr; gap: 12px; }
-  html[data-format="mobile"] .steps-grid::before { display: none; }
+  html[data-format="mobile"] .steps-grid::before {
+    display: block; content: "";
+    top: 12px; bottom: 12px; left: 16px; right: auto;
+    border-top: 0; border-left: 2px dashed #cfdbe7;
+  }
   html[data-format="mobile"] .steps .step { padding: 0 0 0 44px; position: relative; }
   html[data-format="mobile"] .steps .step .num { position: absolute; left: 0; top: 0; margin: 0; box-shadow: none; }
   html[data-format="mobile"] .steps .step strong { font-size: 13px; }
@@ -636,7 +660,7 @@
       linear-gradient(100deg, rgba(0,34,60,0.94) 0%, rgba(0,44,78,0.78) 46%, rgba(0,54,95,0.16) 100%),
       radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.42) 0%, rgba(255,107,53,0) 62%);
   }
-  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 26px 6mm 28px; }
+  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 50px 6mm 54px; }
 
   .role-hours {
     display: inline-flex; align-items: center; gap: 8px;
@@ -664,6 +688,31 @@
   html[data-format="mobile"] .fit .inner { padding-top: 5mm; padding-bottom: 6mm; }
   html[data-format="mobile"] .fit-item { font-size: 12px; }
 
+  /* how to join, as one compact strip so sheet two holds the whole story */
+  .steps-strip { background: var(--paper); }
+  .steps-strip .inner { padding-top: 6mm; padding-bottom: 6mm; }
+  .strip-list {
+    display: flex; flex-wrap: wrap; gap: 8px 7px;
+    margin-top: 10px; list-style: none; counter-reset: strip;
+  }
+  .strip-list li {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 11px; border-radius: 999px;
+    background: var(--paper-soft); border: 1px solid var(--line);
+    color: var(--ink); font-size: 11.5px; font-weight: 700;
+  }
+  .strip-list li::before {
+    counter-increment: strip; content: counter(strip);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--brand-1); color: #fff; font-size: 9px; font-weight: 900;
+  }
+  html[data-format="mobile"] .steps-strip .inner { padding-top: 5mm; padding-bottom: 5mm; }
+  html[data-format="mobile"] .strip-list { gap: 6px; }
+  html[data-format="mobile"] .strip-list li { font-size: 11px; padding: 5px 9px; }
+
+  html[data-format="mobile"] .role-flyer .cta-giant.has-lockup { padding-top: 5mm; padding-bottom: 5mm; }
+
   /* desktop sheets: the hero and the closing block take the leftover height */
   @media print {
     html[data-format="desktop"] .role-flyer .page-1 .hero { flex: 1 1 auto; }
@@ -671,15 +720,16 @@
       flex: 1 1 auto;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    /* mobile sheets: proof + steps open sheet 2, the gold block closes sheet 3 */
+    /* mobile sheets: proof and the joining strip share sheet 2 with the gold block */
     html[data-format="mobile"] .role-flyer .why,
     html[data-format="mobile"] .role-flyer .statement,
-    html[data-format="mobile"] .role-flyer .steps { page-break-before: auto; break-before: auto; }
+    html[data-format="mobile"] .role-flyer .steps-strip { page-break-before: auto; break-before: auto; }
     html[data-format="mobile"] .role-flyer .leave { page-break-before: always; break-before: page; }
     html[data-format="mobile"] .role-flyer .statement { min-height: 0; }
     html[data-format="mobile"] .role-flyer .positions { min-height: 0; }
-    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 400px); }
-    html[data-format="mobile"] .role-flyer .fit { page-break-inside: avoid; break-inside: avoid; }
+    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 534px); }
+    html[data-format="mobile"] .role-flyer .fit,
+    html[data-format="mobile"] .role-flyer .steps-strip { page-break-inside: avoid; break-inside: avoid; }
   }
 </style>
 </head>
@@ -807,26 +857,26 @@
       </div>
     </section>
 
-    <section class="steps">
+    <section class="steps-strip">
       <div class="inner">
-        <p class="kicker">How to join</p>
-        <h2 class="big-h2">Five steps.</h2>
-        <div class="steps-grid">
-          <div class="step"><span class="num">1</span><strong>Apply</strong><p>Three minutes, one form.</p></div>
-          <div class="step"><span class="num">2</span><strong>Interview</strong><p>A short video chat.</p></div>
-          <div class="step"><span class="num">3</span><strong>Sample</strong><p>Show the work once.</p></div>
-          <div class="step"><span class="num">4</span><strong>References</strong><p>We make the calls.</p></div>
-          <div class="step"><span class="num">5</span><strong>Decision</strong><p>Role and start date.</p></div>
-        </div>
+        <p class="fit-head">How to join</p>
+        <ol class="strip-list">
+          <li>Apply</li>
+          <li>Interview</li>
+          <li>Sample</li>
+          <li>References</li>
+          <li>Decision</li>
+        </ol>
       </div>
     </section>
 
-    <section class="cta-giant">
+    <section class="cta-giant has-lockup">
       <img class="cta-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
       <h2>Apply for Scholarship presenter (English)</h2>
-      <p>One form, three minutes. Choose this role and tell us when you are genuinely free.</p>
+      <p>Apply for a role, and you join the Future Bridge Volunteer Network when you start.</p>
       <a class="btn" href="https://futurebridgeacademy.ca/volunteer">Start my application <span class="arrow">→</span></a>
       <a class="cta-url-big" href="https://futurebridgeacademy.ca/volunteer-role-seminar-presenter-english">futurebridgeacademy.ca/volunteer-role-seminar-presenter-english</a>
+      <div class="net-lockup"><b>FBVN</b><span>Future Bridge Volunteer Network</span></div>
     </section>
 
     <div class="footer">

@@ -330,7 +330,7 @@ var TYPE_MESSAGES   = 'vm.messages-uniconbaseapps';
   <h3>8.4 Firestore size budget (per document, 1 MB cap)</h3>
   <table>
     <tr><th>Where</th><th>What is stored</th><th>Typical size</th><th>Cap risk</th></tr>
-    <tr><td><code>tool.setValue()</code> (one doc)</td><td>UI preferences only: <code>{ lastTab }</code></td><td>~0.1 KB</td><td>None - records are FORBIDDEN here (D-VM-04)</td></tr>
+    <tr><td><code>tool.setValue()</code> (one doc)</td><td>UI preferences only: <code>{ lastTab, currentEventId }</code></td><td>~0.1 KB</td><td>None - records are FORBIDDEN here (D-VM-04)</td></tr>
     <tr><td>Registry profile doc</td><td>one volunteer profile</td><td>≤ 2 KB</td><td>None - fixed small shape</td></tr>
     <tr><td>Application doc</td><td>one event application</td><td>≤ 1 KB</td><td>None</td></tr>
     <tr><td>Task doc</td><td>one task</td><td>≤ 2 KB</td><td>None</td></tr>
@@ -405,7 +405,7 @@ Admin tool per event object ──▶ vm.eventApplications / eventTasks / eventH
     </tr>
     <tr>
       <td>D-VM-04</td><td>2026-09-29</td>
-      <td><code>tool.setValue()</code> stores ONLY UI preferences (currently <code>{ lastTab }</code>). All records go through <code>tool.requestObjects()</code>. The message body input is capped at 8,000 characters.</td>
+      <td><code>tool.setValue()</code> stores ONLY UI preferences (currently <code>{ lastTab, currentEventId }</code>). All records go through <code>tool.requestObjects()</code>. The message body input is capped at 8,000 characters.</td>
       <td>setValue is one Firestore document (1 MB) - records there would eventually break the field. Per-record documents scale without limit.</td>
       <td class="status-adopted">Adopted</td>
     </tr>

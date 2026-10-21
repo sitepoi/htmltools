@@ -92,7 +92,7 @@
     </div>
     <nav id="sidebar-toc" aria-label="Table of contents"></nav>
     <div class="sidebar-footer">
-      <span>v0.1</span>
+      <span>v0.12</span>
       <span id="sidebar-progress"></span>
     </div>
   </aside>
@@ -128,25 +128,28 @@
   <div id="view-document" class="view">
   <h1>Restaurant And Menu Manager</h1>
   <p class="meta">
-    SINGLE SOURCE OF TRUTH for every decision about [short description of what
-    this tool owns - e.g. report rendering, AI chat memory, file upload
-    storage]. Every decision made for this tool is logged in section 11 and
-    this document is updated in the same change as the code. When this
-    document or the code disagree, this document is the tiebreaker - it is
-    updated to capture the final decision, never silently left divergent.
-    [Optional: Companion document: <code>other-document.html</code> - explain
-    the relationship and which sections are superseded here.]
+    SINGLE SOURCE OF TRUTH for this tool: the restaurant profile, service
+    settings, delivery zones, menu authoring, and the presentation sections
+    (deals, campaigns, hero, promotions) that the customer website reads from
+    the same document. Every decision made for this tool is logged in
+    section 11 and this document is updated in the same change as the code.
+    When this document and the code disagree, this document is the
+    tiebreaker - it is updated to capture the final decision, never silently
+    left divergent. Companion document: <code>docs/client-data-contract.html</code>
+    - the customer-side contract that defines the exact shape this tool must
+    publish. The contract owns the shape; this SSOT owns how the admin tool
+    produces it.
   </p>
   <table>
-    <tr><th>Document version</th><td>0.1</td></tr>
-    <tr><th>Last updated</th><td>2026-09-21</td></tr>
+    <tr><th>Document version</th><td>0.12</td></tr>
+    <tr><th>Last updated</th><td>2026-10-21</td></tr>
     <!-- TEMPLATE: pick one class - status-active (work in progress),
          status-implemented (shipped), status-proposal (plan not approved). -->
     <tr><th>Status</th><td><span class="doc-status status-active">ACTIVE DOCUMENT</span></td></tr>
     <tr><th>Applies to</th><td>The app/ part(s) of this tool folder (RestaurantAndMenuManager).</td></tr>
     <tr><th>Primary code areas</th><td><code>app/gloria-migration-report-v2.html</code>, <code>app/gloria-migration-report.html</code>, <code>app/RestaurantAndMenuManager.css</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/sample-gloria-json.json</code>, <code>app/sample-menu-data-1.json</code>, <code>app/sample-menu-data-2.json</code>, <code>app/test-harness.html</code></td></tr>
-    <tr><th>Explicitly out of scope</th><td>[what this document does NOT decide - UI styling, other features, etc.]</td></tr>
-    <tr><th>Companion documents</th><td>Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
+    <tr><th>Explicitly out of scope</th><td>Website rendering and cart behavior, the order detail tool (<code>RestaurantOrderManager</code>), the platform write-back relay, styling decisions, and any field the customer contract does not define.</td></tr>
+    <tr><th>Companion documents</th><td><strong>Authoritative companion:</strong> <code>docs/client-data-contract.html</code> (customer-side contract, version 3.3, 2026-10-21). Satellites generated from this SSOT: <code>webpage.html</code> (marketing page), <code>help.html</code> (user help), <code>presentation.html</code> (marketing deck), <code>social.html</code> (share content), <code>updates.html</code> (release history, maintained by npm run rel)</td></tr>
   </table>
 
   <!-- ── At-a-glance summary (auto-filled by ssot.js) ── -->
@@ -170,8 +173,9 @@
   </div>
 
   <h2 id="sec-purpose">1. Purpose and governance</h2>
-  <p>This document defines one tool and one set of invariants around
-  [what the tool does] - and it is the <strong>single source of truth for
+  <p>This document defines one tool and one set of invariants around the
+  restaurant document the customer website reads - and it is the
+  <strong>single source of truth for
   every decision we make</strong> about this tool, now and in the future.
   No decision is considered made until it is written here. Rules of use:</p>
   <ul>
@@ -195,193 +199,478 @@
     <li><strong>Acronyms are always expanded</strong> next to every use - in
     prose, tables, and headings. Literal identifiers stay as they are.</li>
   </ul>
-  <p class="ok"><strong>Core guarantee.</strong> [One sentence: the property
-  this document exists to protect - e.g. "A stale browser session can NEVER
-  silently revert a record to an older state." Everything below serves this
-  one sentence.]</p>
+  <p class="ok"><strong>Core guarantee.</strong> No customer-facing deal,
+  campaign, hero image or promotion reaches the website in a shape the
+  contract does not define, and no save can silently break an existing menu
+  reference. Everything below serves this one sentence.</p>
 
   <h2 id="sec-files">2. Related files</h2>
   <p>Every file involved in this tool: what it is for, and exactly which
-  parts of it belong to this tool (write "whole file" when everything
-  applies). Links open the file in VS Code. Keep this block in sync with the
-  <code>Primary code areas</code> row above.</p>
+  parts of it belong to this tool. Links open the file in VS Code.</p>
   <table>
     <tr><th>File</th><th>What it is for</th><th>Parts related to this tool</th></tr>
-    <!-- TEMPLATE: one row per file. Link format:
-         vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path]  (append
-         #L123 to jump to a specific line). -->
     <tr>
-      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/[path/to/file.js]"><code>[path/to/file.js]</code></a></td>
-      <td>[What this file does overall - one line]</td>
-      <td>[Which function or section belongs to this tool - "whole file" when everything applies]</td>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/RestaurantAndMenuManager.js"><code>app/RestaurantAndMenuManager.js</code></a></td>
+      <td>All tool logic: document defaults, load and save, renderers and editors.</td>
+      <td>Whole file. Key entry points: <code>DEFAULTS</code> (line 5), <code>deepMerge</code> (line 248), <code>scheduleSave</code> (line 565).</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/RestaurantAndMenuManager.html"><code>app/RestaurantAndMenuManager.html</code></a></td>
+      <td>Markup shell: tab bar and every tab panel.</td>
+      <td>Whole file. The Deals tab panel is added here (T-06).</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/RestaurantAndMenuManager.css"><code>app/RestaurantAndMenuManager.css</code></a></td>
+      <td>Layout and theme for the tool.</td>
+      <td>Whole file. New styles are additive; existing selectors are not renamed.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/test-harness.html"><code>app/test-harness.html</code></a></td>
+      <td>Local CMS SDK mock with a sample record and QA switches.</td>
+      <td>Whole file. Deal, campaign, hero and promotion fixtures are added here (T-05).</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/docs/client-data-contract.html"><code>docs/client-data-contract.html</code></a></td>
+      <td>Customer-side contract, version 3.3: the exact document shape the website reads.</td>
+      <td>Sections 20 to 23 - write-back, hero, promotions, campaigns, cache and deals. Authoritative for every key named in this SSOT.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-menu-data-1.json"><code>app/sample-menu-data-1.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-menu-data-2.json"><code>app/sample-menu-data-2.json</code></a>, <a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager/app/sample-gloria-json.json"><code>app/sample-gloria-json.json</code></a></td>
+      <td>Sample menu documents and a sample import payload.</td>
+      <td>Whole files. Used to verify that a record without presentation sections still loads.</td>
+    </tr>
+    <tr>
+      <td><a href="vscode://file/d:/PROJECTS/UNICONHUB/CODE/HTMLBasedTools/BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantOrderManager/app/RestaurantOrderManager.js"><code>../../RestaurantOrderManager/app/RestaurantOrderManager.js</code></a></td>
+      <td>Separate order detail tool that displays a placed order.</td>
+      <td>Order line rendering and totals only - deal fields and the discount row (T-21 to T-23).</td>
     </tr>
   </table>
 
   <h2 id="sec-capabilities">3. Existing capabilities - in effect today</h2>
-  <p>The starting picture of this tool: what is <strong>already
-  developed, shipped and in effect right now</strong>, before any new work.
-  This section is the factual baseline - when a planned change (sections
-  5-8) ships, its result moves here, and the release log (section 19) keeps
-  the full history. Planned work never appears in this table - planned work
-  belongs in the task list (section 15) and the ideas backlog (section 16).</p>
+  <p>The baseline before the deals work: what is already developed, shipped
+  and in effect right now. The deal, campaign, hero and promotion sections
+  are NOT in this table because they do not exist yet - they are the subject
+  of sections 5 to 8 and the tasks from T-01 onward.</p>
   <table>
     <tr><th>ID</th><th>Capability</th><th>Where it lives</th><th>In effect since</th><th>Known from</th></tr>
-    <!-- TEMPLATE: one row per capability that is ALREADY developed and in
-         effect today. "Where it lives" = the code path or file that
-         implements it. "In effect since" = the version or date it shipped.
-         "Known from" = the evidence - decision ID (section 11), release-log
-         row (section 19), or code verified on a date. When a capability
-         ships, move its finished task here from section 15. -->
-    <tr>
-      <td>C-01</td>
-      <td>[What already works - a user-visible or system behavior]</td>
-      <td><code>[file-or-function that implements it]</code></td>
-      <td>[vX.Y.Z or YYYY-MM-DD]</td>
-      <td>D-RAMM-NN / release-log row / verified in code on YYYY-MM-DD]</td>
-    </tr>
+    <tr><td>C-01</td><td>Restaurant profile editor: identity, contact, address, coordinates, legal data</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>general_info</code> defaults and renderers</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-02</td><td>Service settings: service toggles, opening hours, scheduled orders, reservation and on-premise settings</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>service_settings</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-03</td><td>Taxation and currency settings</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>taxation_currency</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-04</td><td>Payment methods</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>payment_methods</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-05</td><td>Delivery zones and delivery form settings</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>delivery_zones</code>, <code>delivery_form_settings</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-06</td><td>Menu authoring: categories, items and modifier groups</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>menu.categories</code>, <code>menu.items</code>, <code>menu.modifier_groups</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-07</td><td>Category and item photo pools: <code>photos[]</code>, <code>primary_photo_url</code>, upload, set primary, reorder</td><td><code>app/RestaurantAndMenuManager.js</code> - menu tab photo controls</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-08</td><td>Menu visibility per category and item: <code>visibility_mode</code> show, scheduled or hide</td><td><code>app/RestaurantAndMenuManager.js</code> - menu visibility controls</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-09</td><td>Alert settings, social links and device connections</td><td><code>app/RestaurantAndMenuManager.js</code> - <code>alert_settings</code>, <code>social_links</code>, <code>device_connections</code></td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-10</td><td>Gloria menu import</td><td><code>app/RestaurantAndMenuManager.js</code> - import modal and mapping logic</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-11</td><td>Persistence through the tool SDK only: 500 ms debounced <code>tool.setValue</code>, merge with <code>DEFAULTS</code>, re-render on <code>tool.onValueChange</code></td><td><code>app/RestaurantAndMenuManager.js</code> - <code>scheduleSave</code> (line 565), <code>deepMerge</code> (line 248)</td><td>Baseline</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-12</td><td>Deals admin tab: list grouped by section with drag-and-drop ordering, deal editor dialog, four rule editors with live match preview, duplicate and delete</td><td><code>app/RestaurantAndMenuManager.js</code> - deals tab section (T-01 to T-16)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-13</td><td>Campaign editor: list, editor with read-only <code>most_expensive</code> pricing, and the duplicate-as-deal action</td><td><code>app/RestaurantAndMenuManager.js</code> - campaigns section (T-17, T-18)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-14</td><td>Hero editor: direct image upload or URL with preview and clear; preset gallery shown only when the platform supplies presets</td><td><code>app/RestaurantAndMenuManager.js</code> - hero section (T-19)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
+    <tr><td>C-15</td><td>Promotions editor: list with drag-to-reorder, image per promotion, and the four-entry storage limit</td><td><code>app/RestaurantAndMenuManager.js</code> - promotions section (T-20)</td><td>2026-10-21</td><td>verified in code on 2026-10-21</td></tr>
   </table>
-  <p class="note">When adopting this template for an existing tool, fill
-  this section first: the current behavior is the baseline that the next
-  sections verify and improve. Capabilities listed here are in effect and
-  must keep working unless a decision in section 11 reverses them.</p>
+  <p class="note">Capabilities listed here are in effect and must keep working
+  unless a decision in section 11 reverses them.</p>
 
   <h2 id="sec-glossary">4. Glossary</h2>
-  <p>Terms used in this document, with the exact meaning used here. Add a row
-  whenever a discussion introduces a term - one meaning per term, so every
-  reader and every AI sees the same definition.</p>
+  <p>Terms used in this document, with the exact meaning used here. The
+  shape of every field named below is owned by
+  <code>docs/client-data-contract.html</code> version 3.3.</p>
   <table>
     <tr><th>Term</th><th>Meaning</th></tr>
-    <!-- TEMPLATE: one row per term. -->
-    <tr><td>[Term]</td><td>[Exact meaning used in this document]</td></tr>
+    <tr><td>Deal</td><td>One entry in the top-level <code>deals</code> array: a priced offer built from menu categories, items and sizes.</td></tr>
+    <tr><td>Deal section</td><td>Free-text grouping label in <code>deal.section</code>. The website groups deal cards by it; array order is the order inside a section.</td></tr>
+    <tr><td>Rule type</td><td>How a deal is assembled: the four original types (<code>bundle</code>, <code>min_quantity</code>, <code>tiered</code>, <code>two_for_one</code>) plus the extended set from contract section 23.1 (<code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>, <code>volume_pricing</code>, <code>free_modifier</code> plus the optional <code>schedule</code> block), authorable since 2026-10-21 (T-30 to T-42, D-RAMM-18). No other value may be written.</td></tr>
+    <tr><td>Option group</td><td>A bundle group WITHOUT <code>item_ids</code>. The customer picks items that match the category, size and name filters.</td></tr>
+    <tr><td>Fixed extra</td><td>A bundle group WITH a non-empty <code>item_ids</code>. It ships with the deal, needs no picking, and its category filters are ignored.</td></tr>
+    <tr><td>Pick</td><td>One menu item the customer chooses for an option group slot. The same product may be picked twice inside one group.</td></tr>
+    <tr><td>Category filter</td><td>The <code>category_ids</code> array. The picker only offers items from those categories.</td></tr>
+    <tr><td>Size label</td><td>The optional <code>size_label</code> string that restricts a group or deal to items of that size.</td></tr>
+    <tr><td>Name filter</td><td>The optional <code>name_filter</code> substring used by a bundle group to narrow the option pool.</td></tr>
+    <tr><td>Bundle</td><td>Deal with a fixed total price, made of one or more groups.</td></tr>
+    <tr><td>Min quantity deal</td><td>Deal with a per-unit price that requires at least <code>min_quantity</code> matching items.</td></tr>
+    <tr><td>Tiered deal</td><td>Deal over a fixed <code>item_ids</code> list with quantity and price tiers. The deal itself carries <code>price: null</code>.</td></tr>
+    <tr><td>Two-for-one deal</td><td>Deal where the customer picks a required number of items and the cheapest is free. The deal carries <code>price: null</code>.</td></tr>
+    <tr><td>Campaign</td><td>Legacy entry in the top-level <code>campaigns</code> array. It is rendered as a two-for-one card, and new offers should be authored as deals.</td></tr>
+    <tr><td>Hero</td><td>The top-level <code>hero</code> object: one <code>image_url</code> plus the preset list it was chosen from.</td></tr>
+    <tr><td>Promotion</td><td>One entry in the top-level <code>promotions</code> array. The website renders at most the first four.</td></tr>
+    <tr><td>Deal description groups</td><td>The label and quantity recap sent with an order line in <code>dealDescriptionGroups</code>.</td></tr>
+    <tr><td>Deal discount</td><td>The <code>totals.dealDiscount</code> amount the website cart computes for an order that contains deals.</td></tr>
+    <tr><td>Write gate</td><td>The CMS publish step that stores the document. Out of scope for this tool.</td></tr>
   </table>
 
   <h2 id="sec-problem">5. Verified problem and root cause</h2>
   <h3>5.1 Verified evidence</h3>
-  <!-- TEMPLATE: list concrete observed behaviors with dates, NOT guesses. -->
   <ul>
-    <li>[Observed behavior 1 - with where/when it was seen]</li>
-    <li>[Observed behavior 2]</li>
-    <li>[Result of the behavior - what the user experiences]</li>
+    <li>The customer contract (<code>docs/client-data-contract.html</code>, version 3.3, 2026-10-21, sections 21 and 23) defines <code>hero</code>, <code>promotions</code>, <code>campaigns</code>, <code>deals</code> and <code>promo_codes</code> as OPTIONAL top-level sections of the very document this tool publishes.</li>
+    <li>Verified 2026-10-21: <code>app/RestaurantAndMenuManager.js</code> contains zero occurrences of <code>deals</code>, <code>promotions</code>, <code>campaigns</code> or <code>hero</code> (grep count 0).</li>
+    <li>Verified 2026-10-21: the <code>DEFAULTS</code> object (line 5) defines ten top-level keys - <code>general_info</code>, <code>service_settings</code>, <code>taxation_currency</code>, <code>payment_methods</code>, <code>delivery_zones</code>, <code>delivery_form_settings</code>, <code>menu</code>, <code>alert_settings</code>, <code>social_links</code>, <code>device_connections</code>. No presentation key exists.</li>
+    <li>Result: no tenant document can contain deals, so the website Deals page and every deal card stay empty, and the only way to publish a deal today is to hand-edit the stored JSON document.</li>
   </ul>
   <h3>5.2 Current implementation (verified in code)</h3>
-  <!-- TEMPLATE: paste the exact current code that causes the problem. -->
-  <pre>
-// [file path] - [function name], current logic
-[the actual code]
-  </pre>
+  <ul>
+    <li><code>app/RestaurantAndMenuManager.js</code> - <code>DEFAULTS</code> (line 5) is the whole document shape. Anything absent here never appears in a new record.</li>
+    <li><code>app/RestaurantAndMenuManager.js</code> - <code>scheduleSave()</code> (line 565) debounces for 500 ms and calls <code>tool.setValue(JSON.parse(JSON.stringify(data)))</code> (line 568). Whatever is in <code>data</code> is published verbatim.</li>
+    <li><code>app/RestaurantAndMenuManager.js</code> - <code>deepMerge(DEFAULTS, incoming)</code> (line 248) copies unknown incoming keys through untouched, so a hand-edited presentation key would survive a load - but nothing in the UI can create, validate or edit it.</li>
+  </ul>
   <h3>5.3 Structural flaws</h3>
-  <!-- TEMPLATE: numbered list - each flaw explains WHY the current code
-       fails, not just that it fails. -->
   <ol>
-    <li><strong>[Flaw name].</strong> [Why this flaw allows the bad outcome.]</li>
+    <li><strong>No presentation authoring surface.</strong> The contract expects four optional sections; the tool has no control that can produce any of them.</li>
+    <li><strong>No shape validation.</strong> Any object placed in <code>data</code> is published, so a malformed deal would reach the website without a warning.</li>
+    <li><strong>No reference integrity.</strong> Deals point at categories, items and size labels; the menu editor can delete them without knowing a deal depends on them.</li>
+    <li><strong>No preview surface.</strong> The owner cannot see what the Deals page will render, so errors are only discovered on the live site.</li>
   </ol>
-  <p class="risk"><strong>Root cause:</strong> [one paragraph that reduces all
-  the flaws to the single underlying cause].</p>
+  <p class="risk"><strong>Root cause:</strong> the tool was built as a menu authoring tool for one fixed document shape. The presentation sections were added to the customer contract later, so the document can describe them but the admin tool can never write them.</p>
 
   <h2 id="sec-requirements">6. Requirements</h2>
   <ol>
-    <li>[Requirement 1 - measurable, testable]</li>
-    <li>[Requirement 2]</li>
-    <li>[Requirement 3 - e.g. multi-tenant, no custom security rules, cost]</li>
-    <li>[Requirement 4 - UX behavior on failure]</li>
-    <li>[Requirement 5 - no loops, no unbounded growth, no polling]</li>
+    <li><strong>R-01 - Placement.</strong> Deal management is reachable from one top-level tab at the same level as Menu, without opening the Menu tab.</li>
+    <li><strong>R-02 - Contract shape.</strong> Every saved deal, campaign, hero object, promotion and promo code matches contract version 3.3 exactly: same key names, same value types, no unknown keys.</li>
+    <li><strong>R-03 - Rule types.</strong> Exactly four rule types can be authored today: <code>bundle</code>, <code>min_quantity</code>, <code>tiered</code>, <code>two_for_one</code>. The extended set in contract section 23.1 is authorable since 2026-10-21 (T-30 to T-42, D-RAMM-18). No UI path can produce any value outside the contract set.</li>
+    <li><strong>R-04 - References.</strong> Every category, item and size reference resolves to a current menu entry, and every picker offers only existing entries with their real names.</li>
+    <li><strong>R-05 - Save gate.</strong> A deal cannot be saved when its rule filters match zero menu items, or when a required key is missing or of the wrong type.</li>
+    <li><strong>R-06 - Pricing.</strong> Bundle price is a fixed total; min quantity price is per unit with <code>min_quantity</code> of at least 2; tiered and two-for-one carry <code>price: null</code>.</li>
+    <li><strong>R-07 - Images.</strong> A deal image is optional. An empty <code>image_url</code> is valid and the website shows its placeholder.</li>
+    <li><strong>R-08 - Sections and order.</strong> Deals carry an optional section label; the list groups by section and the array order is the display order. The owner reorders deals by drag and drop, both inside a section and across sections (D-RAMM-16).</li>
+    <li><strong>R-09 - Campaigns.</strong> The campaign editor can only write <code>"pricing": "most_expensive"</code>, shown read-only.</li>
+    <li><strong>R-10 - Presentation.</strong> The hero supports a direct image plus a preset gallery; promotions are limited to four stored entries in the chosen order.</li>
+    <li><strong>R-11 - Persistence.</strong> Saving uses the existing debounced <code>tool.setValue</code> path. No direct database, REST or network call is introduced.</li>
+    <li><strong>R-12 - Regression.</strong> Existing menu, photo, visibility and import behavior keeps working unchanged, and no existing top-level key changes shape.</li>
+    <li><strong>R-13 - Legacy records.</strong> Records written before this feature (without presentation keys) load without error and are published unchanged until the owner edits them.</li>
+    <li><strong>R-14 - Lifecycle.</strong> A deal can be created, edited, duplicated and deleted; deleting a deal never alters menu data.</li>
+    <li><strong>R-15 - Governance.</strong> Every decision taken here is recorded in section 11 in the same change as the code.</li>
+    <li><strong>R-16 - Active flag.</strong> Every deal stores a boolean <code>active</code> flag (default true). The website honors it since 2026-10-21: a deal with <code>active: false</code> is hidden from the Deals page. The editor label states exactly that (D-RAMM-15, D-RAMM-19).</li>
+    <li><strong>R-17 - Safe delete.</strong> A category that still contains items cannot be deleted. Deleting an item or category used by a deal is blocked with a message naming the deals that use it (D-RAMM-17).</li>
+    <li><strong>R-18 - Extended rule types.</strong> The deal editor can author every rule type in contract section 23.1: <code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>, <code>volume_pricing</code> and <code>free_modifier</code>, plus the optional <code>schedule</code> block on any deal. The discount types (<code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_modifier</code>) carry <code>price: null</code> - the website computes the discount line (D-RAMM-18).</li>
+    <li><strong>R-19 - Promo codes.</strong> The top-level <code>promo_codes</code> array is authorable: a normalized code string, a title, one of the three supported rule types (<code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>) with its matching rule, and an optional <code>max_uses</code> (D-RAMM-18).</li>
   </ol>
 
   <h2 id="sec-options">7. Option evaluation and decision</h2>
   <table>
     <tr><th>Option</th><th>Description</th><th>Fixes the problem?</th><th>Churn</th><th>Verdict</th></tr>
-    <!-- TEMPLATE: one row per considered option; keep the VERDICT cells with
-         one of: ADOPTED / REJECTED (reason) / DEFERRED (decision ID). -->
     <tr>
-      <td><strong>A. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
-      <td class="status-adopted">ADOPTED</td>
+      <td><strong>A. Top-level tab next to Menu</strong></td>
+      <td>New tab with Deal, Campaign, Hero and Promotion sub-tabs; deals reference menu data but are edited in their own area.</td>
+      <td>Yes - one surface for all four contract sections, independent of menu editing.</td>
+      <td>Medium - new tab, list, editor drawer and four rule editors.</td>
+      <td class="status-adopted">ADOPTED (D-RAMM-01)</td>
     </tr>
     <tr>
-      <td><strong>B. [Option name]</strong></td>
-      <td>[How it works]</td>
-      <td>[Yes / Partially / No - why]</td>
-      <td>[Low / Medium / High - what it touches]</td>
-      <td class="status-rejected">REJECTED ([reason or decision ID])</td>
+      <td><strong>B. Deals inside the Menu tab</strong></td>
+      <td>A fourth column or sub-tab inside the existing three-column menu editor.</td>
+      <td>Partially - it works, but it mixes menu structure with offers and makes the menu tab heavier.</td>
+      <td>Medium - touches the existing menu layout.</td>
+      <td class="status-rejected">REJECTED (D-RAMM-01)</td>
+    </tr>
+    <tr>
+      <td><strong>C. Separate tool for deals</strong></td>
+      <td>A second CMS html-tool that writes the same restaurant record.</td>
+      <td>No - two writers to one record create lost-update risk, and the contract expects one document.</td>
+      <td>High - new tool, new deploy, new permissions.</td>
+      <td class="status-rejected">REJECTED (D-RAMM-02)</td>
+    </tr>
+    <tr>
+      <td><strong>D. Hand-edited JSON document</strong></td>
+      <td>The owner edits the stored document directly.</td>
+      <td>No - no validation, no reference safety, no preview.</td>
+      <td>Low - but it is what exists today, and it is the problem.</td>
+      <td class="status-rejected">REJECTED (the current state)</td>
     </tr>
   </table>
-  <p><strong>Decision: [chosen option(s) and why].</strong> [What happens to
-  the rejected ideas - dropped, deferred, or reused in a smaller role.]</p>
+  <p><strong>Decision: option A.</strong> The rejected options are dropped; nothing from them is reused.</p>
+
   <h3>7.1 Answers to open questions</h3>
-  <!-- TEMPLATE: every open question raised during evaluation becomes a dated
-       answer here, and later a row in section 11. -->
+  <p>Answers verified against <code>docs/client-data-contract.html</code> version 3.3 on 2026-10-21.</p>
   <table>
     <tr><th>Question</th><th>Answer</th></tr>
-    <tr><td>[Question]</td><td>[Answer with decision ID when logged]</td></tr>
+    <tr><td>Is a <code>schema_version</code> key needed?</td><td>No. The contract defines none. The website caches the document for one hour under <code>efoc-menu-cache-v1</code> and refreshes on <code>tool.onValueChange</code> - D-RAMM-04.</td></tr>
+    <tr><td>May a bundle option group pick the same product twice?</td><td>Yes. The contract order example lists the same dip twice in one four-pick group, so validation only requires at least one match - D-RAMM-05.</td></tr>
+    <tr><td>Does <code>item_ids</code> win over the category filters?</td><td>Yes. A non-empty <code>item_ids</code> makes the group a fixed extra and the filters are ignored - D-RAMM-06.</td></tr>
+    <tr><td>What price does a two-for-one deal store?</td><td><code>null</code>. The website charges the paid price computed from the picks - D-RAMM-07.</td></tr>
+    <tr><td>What values can campaign <code>pricing</code> take?</td><td>Only <code>"most_expensive"</code>. It is read-only in the editor - D-RAMM-08.</td></tr>
+    <tr><td>Which order app or type id is authoritative?</td><td><code>restaurant-order-manager-easyorder</code>, named in contract sections 20 and 23 - D-RAMM-11.</td></tr>
+    <tr><td>Do deals have channel or tax fields?</td><td>No. Tax appears only in the order totals; there is no channel field on a deal - D-RAMM-10.</td></tr>
+    <tr><td>Should new promotions be campaigns or deals?</td><td>Deals. Campaigns are legacy and are rendered as two-for-one cards - D-RAMM-09.</td></tr>
+    <tr><td>Where are deal lines displayed?</td><td>In the separate <code>RestaurantOrderManager</code> tool, from the order payload fields - D-RAMM-12.</td></tr>
+    <tr><td>Is a show or hide flag needed on a deal?</td><td>Yes, as an extension: store a boolean <code>active</code> (default true). The website honors it since 2026-10-21, so the editor label now states the deal is hidden when the flag is off - D-RAMM-15, D-RAMM-19.</td></tr>
+    <tr><td>How does the owner order deals?</td><td>Drag and drop, inside a section and across sections; the resulting array order is the published order - D-RAMM-16.</td></tr>
+    <tr><td>What happens when a referenced category or item is deleted?</td><td>A category that still contains items cannot be deleted, and a category or item used by a deal is blocked with a message naming the deals - D-RAMM-17.</td></tr>
   </table>
 
   <h2 id="sec-design">8. Solution design</h2>
-  <!-- TEMPLATE: the core of the document. Split into sub-sections as the
-       tool needs - invariants, server logic, client contract, callers
-       table, edge cases. Use <h3> per topic. -->
   <h3>8.1 Core invariant</h3>
-  <p class="note"><strong>Invariant [short-code].</strong> [The most important
-  rule of the tool - stated so precisely that a code reviewer can check any
-  call site against it in one look.]</p>
-  <h3>8.2 [Main implementation piece]</h3>
+  <p class="note"><strong>Invariant DEAL-SHAPE.</strong> Every presentation
+  value this tool writes matches the shape in
+  <code>docs/client-data-contract.html</code> version 3.3, sections 21 and 23
+  - same key names, same value types, no extra keys. A field the website does
+  not read is never written, and a field the contract requires is never
+  omitted. The deal <code>active</code> flag started as an exception
+  (D-RAMM-15); the contract documents it since version 3.1 and the website
+  honors it since 2026-10-21, so the editor label now describes the real
+  behavior (D-RAMM-19).</p>
+
+  <h3>8.2 Document schema - the five optional sections</h3>
   <pre>
-// [file path] - [function name], new logic
-[the authoritative code snippet]
+{
+  "hero": { "image_url": "", "preset_images": [] },
+  "promotions": [
+    { "id": "promo-1", "title": "", "description": "", "image_url": "" }
+  ],
+  "campaigns": [
+    { "id": "", "title": "", "description": "", "required_item_count": 2,
+      "same_size": true, "category_ids": [], "item_ids": [],
+      "pricing": "most_expensive" }
+  ],
+  "deals": [
+    { "id": "", "section": "", "title": "", "description": "", "price": 0,
+      "image_url": "", "active": true, "rule_type": "bundle", "rule": { } }
+  ],
+  "promo_codes": [
+    { "code": "SAVE10", "title": "", "rule_type": "percentage_discount",
+      "rule": { "percent": 10 }, "max_uses": null }
+  ]
+}
   </pre>
   <ul>
-    <li>[Key behavior bullet]</li>
-    <li>[Key behavior bullet]</li>
+    <li>All five sections are optional. Omitted means absent, and the website renders nothing for it.</li>
+    <li>The <code>deals</code> array order is the display order; <code>section</code> groups the cards.</li>
+    <li>There is no <code>schema_version</code> key. Do not add one.</li>
+    <li>The website caches the document for one hour and refreshes on <code>tool.onValueChange</code>, so the next save is visible to an open page immediately.</li>
   </ul>
-  <h3>8.3 Caller contract table</h3>
+
+  <h3>8.3 Rule shapes per rule type</h3>
   <table>
-    <tr><th>Caller</th><th>Required change</th></tr>
-    <tr><td><code>[file path]</code> ([call site])</td>
-    <td>[exact obligation of this caller]</td></tr>
+    <tr><th>rule_type</th><th>rule keys</th><th>deal price</th><th>Who sets the charged price</th></tr>
+    <tr><td><code>bundle</code></td><td><code>groups[]</code></td><td>number</td><td>The deal price is the fixed total.</td></tr>
+    <tr><td><code>min_quantity</code></td><td><code>category_ids[]</code>, optional <code>size_label</code>, <code>min_quantity</code></td><td>number, per unit</td><td>Deal price multiplied by the chosen quantity.</td></tr>
+    <tr><td><code>tiered</code></td><td><code>item_ids[]</code>, <code>tiers[]</code> of <code>quantity</code>, <code>price</code>, <code>label</code></td><td><code>null</code></td><td>The matching tier price.</td></tr>
+    <tr><td><code>two_for_one</code></td><td><code>required_item_count</code>, <code>category_ids[]</code>, <code>same_size</code></td><td><code>null</code></td><td>Most expensive pick charged, cheapest pick free.</td></tr>
+  </table>
+
+  <h3>8.4 Bundle group keys</h3>
+  <table>
+    <tr><th>Key</th><th>Meaning</th><th>Editor rule</th></tr>
+    <tr><td><code>group_id</code></td><td>Stable identifier</td><td>Generated, not shown to the owner.</td></tr>
+    <tr><td><code>label</code></td><td>Shown to the customer</td><td>Required.</td></tr>
+    <tr><td><code>quantity</code></td><td>How many picks</td><td>Positive integer.</td></tr>
+    <tr><td><code>category_ids[]</code></td><td>Option pool</td><td>Used only when <code>item_ids</code> is empty.</td></tr>
+    <tr><td><code>size_label</code></td><td>Size restriction</td><td>Optional; only sizes that exist in the menu are offered.</td></tr>
+    <tr><td><code>name_filter</code></td><td>Substring filter</td><td>Optional.</td></tr>
+    <tr><td><code>item_ids[]</code></td><td>Fixed extra</td><td>Non-empty makes the group fixed; filters are ignored and hidden.</td></tr>
+  </table>
+
+  <h3>8.5 Editor surface</h3>
+  <table>
+    <tr><th>Sub-tab</th><th>Writes</th><th>Editor behavior</th></tr>
+    <tr><td>Deals</td><td><code>deals[]</code></td><td>List grouped by section, array order with drag and drop. Editor dialog with identity, image, section, the active switch, price and the rule editor selected by rule type. Live match preview under every filter.</td></tr>
+    <tr><td>Campaigns</td><td><code>campaigns[]</code></td><td>Legacy list and editor. Pricing read-only. Offers a duplicate-as-deal action.</td></tr>
+    <tr><td>Hero</td><td><code>hero</code></td><td>Direct image upload or URL, plus the preset gallery that fills <code>preset_images</code>.</td></tr>
+    <tr><td>Promotions</td><td><code>promotions[]</code></td><td>List limited to four entries; Add is disabled at four.</td></tr>
+  </table>
+
+  <h3>8.6 Read, write and publish path</h3>
+  <ol>
+    <li><strong>Read.</strong> <code>tool.onReady(value)</code> merges the document with <code>DEFAULTS</code> through <code>deepMerge</code>, then normalizes the four presentation sections to the expected array or object types.</li>
+    <li><strong>Write.</strong> <code>scheduleSave()</code> debounces 500 ms and calls <code>tool.setValue</code> with a deep copy of <code>data</code>. No direct database or REST access.</li>
+    <li><strong>Publish.</strong> The CMS stores the document unchanged. The website reads it, caches for one hour and refreshes on <code>tool.onValueChange</code>.</li>
+    <li><strong>Order path.</strong> The website builds the order line fields; this tool never writes orders.</li>
+  </ol>
+
+  <h3>8.7 Consumer contract</h3>
+  <table>
+    <tr><th>Consumer</th><th>Obligation</th></tr>
+    <tr><td>Website food ordering widget</td><td>Reads <code>deals</code>, <code>hero</code>, <code>promotions</code> and <code>campaigns</code>; enforces the rule inside the deal popup; computes <code>totals.dealDiscount</code>.</td></tr>
+    <tr><td><code>RestaurantOrderManager</code></td><td>Displays <code>dealId</code>, <code>dealTitle</code>, <code>dealDescription</code>, <code>dealDescriptionGroups</code>, <code>dealPicks</code>, <code>dealFullPrice</code> and <code>totals.dealDiscount</code> on deal lines.</td></tr>
+    <tr><td>This tool</td><td>Writes only the contract shape and blocks a save that would break it.</td></tr>
+    <tr><td>CMS publish step</td><td>Stores the document as-is; performs no transformation.</td></tr>
+  </table>
+
+  <h3>8.8 Ordering and delete safety</h3>
+  <table>
+    <tr><th>Action</th><th>Behavior</th></tr>
+    <tr><td>Order inside a section</td><td>Drag a deal up or down. The <code>deals</code> array is reordered and that order is published.</td></tr>
+    <tr><td>Order across sections</td><td>Drag a deal onto another section. Its <code>section</code> value changes and it moves to the drop position in the array (D-RAMM-16).</td></tr>
+    <tr><td>Delete a category</td><td>Blocked while the category still contains items; a message states the item count. This behavior already exists and is kept (D-RAMM-17).</td></tr>
+    <tr><td>Delete an item listed in a deal</td><td>Blocked with a message naming the deals that list it (tiered <code>item_ids</code> or a bundle fixed extra). Implemented (T-29, 2026-10-21).</td></tr>
+    <tr><td>Delete a category or item filtered by a deal</td><td>A saved deal can only reference a category that contains items, so the category rule protects it. Deleting a single item from a filtered category only shrinks the choice, which is allowed.</td></tr>
   </table>
 
   <h2 id="sec-matrix">9. Failure matrix - deterministic outcomes</h2>
   <table>
     <tr><th>Scenario</th><th>Outcome</th></tr>
-    <!-- TEMPLATE: every scenario has exactly ONE outcome. "Sometimes" is not
-         an acceptable cell value. -->
-    <tr><td>[Scenario]</td><td>[Deterministic outcome]</td></tr>
-    <tr><td>[Failure scenario]</td><td>[How it resolves - which dialog, which retry, which log]</td></tr>
+    <tr><td>A rule filter matches zero menu items</td><td>Save is blocked; an inline error names the empty filter; nothing is written.</td></tr>
+    <tr><td>A required key is missing or has the wrong type</td><td>Save is blocked with a field-level message; the previous document stays in place.</td></tr>
+    <tr><td>A deal has an empty <code>image_url</code></td><td>Saved. The website renders its placeholder image.</td></tr>
+    <tr><td>A new deal would reuse an existing id</td><td>Ids are generated by the tool; a duplicate cannot be created. On load, a duplicated id is re-generated for the later entry and a warning note is shown.</td></tr>
+    <tr><td>A record written before this feature (no presentation keys)</td><td>Loads normally; the four sections are normalized to empty; the document is published unchanged until the owner edits it.</td></tr>
+    <tr><td>A bundle group has both <code>item_ids</code> and category filters</td><td><code>item_ids</code> wins; the group is treated as a fixed extra; the filters are hidden and not written.</td></tr>
+    <tr><td>A record carries an unknown <code>rule_type</code> (hand-edited)</td><td>Loaded as read-only "unsupported rule"; it cannot be edited, only deleted or converted to a supported type.</td></tr>
+    <tr><td>More than four promotions are stored</td><td>The editor blocks adding a fifth and shows the limit. The website renders the first four.</td></tr>
+    <tr><td>A referenced category or item is about to be deleted</td><td>The delete is blocked with a message naming the deals that use it; nothing changes (D-RAMM-17). Legacy broken references, which can only come from hand-edited data, show a broken-reference badge.</td></tr>
+    <tr><td>A deal is marked inactive (<code>active: false</code>)</td><td>Saved and published as false. The website hides the deal from the Deals page since 2026-10-21, and the editor label states that (D-RAMM-15, D-RAMM-19).</td></tr>
+    <tr><td><code>price</code> is null on a bundle or min quantity deal</td><td>Save is blocked; those two types require a number.</td></tr>
+    <tr><td>A campaign has a pricing value other than most_expensive</td><td>The editor cannot produce it. On load it is shown read-only and flagged, and the stored value is not rewritten automatically.</td></tr>
   </table>
 
   <h2 id="sec-limitations">10. Known limitations and deferred work</h2>
   <table>
     <tr><th>ID</th><th>Limitation</th><th>Impact</th><th>Status</th></tr>
-    <tr><td>L-01</td><td>[What is NOT covered]</td><td>[What can go wrong because of it]</td><td>[Accepted / deferred to task T-xx / decision ID]</td></tr>
+    <tr><td>L-01</td><td>No scheduling or time window on a deal</td><td>The owner must add and remove a deal manually until T-38 ships.</td><td>Done - T-38 (schedule editor shipped 2026-10-21)</td></tr>
+    <tr><td>L-02</td><td>No channel targeting</td><td>Every deal appears on every ordering channel; there is no field to restrict it.</td><td>Deferred - D-RAMM-10</td></tr>
+    <tr><td>L-03</td><td>The <code>active</code> flag is stored; the website honors it since 2026-10-21</td><td>A deal marked inactive is hidden from the Deals page. Only the editor label still needs the update (T-41).</td><td>Solved - T-41 (2026-10-21)</td></tr>
+    <tr><td>L-04</td><td>No per-deal analytics</td><td>The owner cannot see how often a deal was ordered from this tool.</td><td>Idea I-03</td></tr>
+    <tr><td>L-05</td><td>No visual preview of the customer Deals page</td><td>Only a textual match preview exists; the real card layout is seen on the website.</td><td>Idea I-05</td></tr>
+    <tr><td>L-06</td><td>Campaign editing is intentionally minimal</td><td>Legacy entries can be edited, but new offers should be created as deals.</td><td>Accepted - D-RAMM-09</td></tr>
+    <tr><td>L-07</td><td>The item-level delete guard is not built yet</td><td>Deleting an item listed in a tiered deal or a fixed extra can still break that deal until T-29 ships.</td><td>Done - T-29 (D-RAMM-17)</td></tr>
+    <tr><td>L-08</td><td>No platform write-back relay</td><td>Publishing relies on the existing tool.setValue path only.</td><td>Out of scope - platform task T-43</td></tr>
   </table>
 
   <h2 id="sec-decisions">11. Decision register</h2>
-  <!-- TEMPLATE: replace D-RAMM below with the tool's unique prefix once,
-       then number rows 01, 02, 03... forever. Rows are APPEND-ONLY. -->
+  <!-- APPEND-ONLY. Rows are never deleted; a reversed decision is marked
+       "Reversed (date)" with the reason. -->
   <table>
     <tr><th>ID</th><th>Date</th><th>Decision</th><th>Rationale / risk</th><th>Status</th></tr>
-    <!--
     <tr>
-      <td>D-RAMM-01</td><td>YYYY-MM-DD</td>
-      <td>[The decision - what is decided and how it will be implemented]</td>
-      <td>[Why this choice; what risk it trades away]</td>
+      <td>D-RAMM-01</td><td>2026-10-20</td>
+      <td>Deals are managed in a new top-level tab at the same level as Menu, not inside the Menu tab and not in a second tool.</td>
+      <td>The four contract sections are top-level document keys with their own lifecycle. A second writer to one record would risk lost updates.</td>
       <td class="status-adopted">Adopted</td>
     </tr>
-    -->
+    <tr>
+      <td>D-RAMM-02</td><td>2026-10-21</td>
+      <td><code>deals</code>, <code>hero</code>, <code>promotions</code> and <code>campaigns</code> are written as top-level siblings of <code>menu</code>.</td>
+      <td>Contract version 3.3, section 23 states the deal array is top-level; sections 21.1 to 21.3 do the same for the other three.</td></td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-03</td><td>2026-10-21</td>
+      <td>Only four rule types are authored: <code>bundle</code>, <code>min_quantity</code>, <code>tiered</code>, <code>two_for_one</code>.</td>
+      <td>Contract section 23.1 lists further types as backlog. Writing them now would produce deals the website cannot enforce.</td>
+      <td class="status-adopted">Adopted; superseded by D-RAMM-18 (2026-10-21) - the extended set becomes authorable</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-04</td><td>2026-10-21</td>
+      <td>No <code>schema_version</code> key is added to the document.</td>
+      <td>The contract defines none. Freshness comes from the one-hour cache plus <code>tool.onValueChange</code>.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-05</td><td>2026-10-21</td>
+      <td>A bundle option group may contain the same product more than once; validation requires at least one matching item, not a set number of distinct items.</td>
+      <td>The contract order example lists one dip twice inside a four-pick group.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-06</td><td>2026-10-21</td>
+      <td>A non-empty <code>item_ids</code> makes a bundle group a fixed extra; category and size filters are ignored.</td>
+      <td>Contract section 23 defines item_ids groups as fixed extras that need no picking.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-07</td><td>2026-10-21</td>
+      <td><code>two_for_one</code> and <code>tiered</code> deals store <code>price: null</code>; the charged price is computed from the picks.</td>
+      <td>Contract section 23 defines tiered price as null and two-for-one unit price as the paid price only.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-08</td><td>2026-10-21</td>
+      <td>Campaign <code>pricing</code> is displayed read-only with the value <code>most_expensive</code>.</td>
+      <td>It is the only value the contract defines and describes; a free-text field would let the owner write an unsupported rule.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-09</td><td>2026-10-21</td>
+      <td>Campaigns are treated as legacy; new offers are authored as two-for-one deals, and the campaign editor offers a duplicate-as-deal action.</td>
+      <td>Contract section 21.3 states campaigns are surfaced as two-for-one deal cards and that new campaign-style promotions should be deals.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-10</td><td>2026-10-21</td>
+      <td>Deals carry no channel and no tax field.</td>
+      <td>The contract deal shape defines neither; tax appears only in the order totals.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-11</td><td>2026-10-21</td>
+      <td>The authoritative order app or type id for this feature is <code>restaurant-order-manager-easyorder</code>.</td>
+      <td>Contract sections 20 and 23 name it. The value must still be verified against the CMS app configuration before the order tool is wired.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-12</td><td>2026-10-21</td>
+      <td>Deal detail display lives in <code>RestaurantOrderManager</code>, not in this tool.</td>
+      <td>This tool writes the menu-side document; order records and printed tickets belong to the order tool.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-13</td><td>2026-10-21</td>
+      <td>All saving continues through the 500 ms debounced <code>tool.setValue</code> path; no direct database or REST call is added.</td>
+      <td>The CMS tool SDK is the only supported write path, and the existing merge behavior already preserves unknown keys.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-14</td><td>2026-10-21</td>
+      <td>Plans, tasks and open questions for this tool live in this SSOT only. No side planning document is kept.</td>
+      <td>A second document duplicates decisions and drifts. A decision that is not in this register did not happen.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-15</td><td>2026-10-21</td>
+      <td>Every deal stores a boolean <code>active</code> flag, default true, and the editor labels it "not yet honored by the website".</td>
+      <td>Owner decision. The flag is the only key outside the contract shape; keeping it isolated to deals means the rest of the document stays contract-exact. The label prevents the owner from believing a deal is hidden when the website still shows it.</td>
+      <td class="status-adopted">Adopted; label part reversed by D-RAMM-19 (2026-10-21)</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-16</td><td>2026-10-21</td>
+      <td>Deals are ordered by drag and drop, both inside a section and across sections; the resulting array order is published.</td>
+      <td>Owner decision. The contract has no section-order field, so the array must carry both intra-section order and section grouping.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-17</td><td>2026-10-21</td>
+      <td>A category that still contains items cannot be deleted, and deleting a category or item used by a deal is blocked with a message naming the deals.</td>
+      <td>Owner decision. Blocking is safer than warn-and-allow, because a broken deal can still be shown to customers with missing options or prices.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-18</td><td>2026-10-21</td>
+      <td>The manager adds admin editors for the rule types the website implemented on 2026-10-21 (contract section 23.1): <code>percentage_discount</code>, <code>subtotal_threshold</code>, <code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>, <code>volume_pricing</code>, <code>free_modifier</code> and the optional <code>schedule</code> block, plus the top-level <code>promo_codes</code> section.</td>
+      <td>The website is the consumer that enforces every rule. With its D-EFOC-29 release these shapes are no longer backlog, so authoring them is safe and owners can finally configure them. The four original types stay supported unchanged (D-RAMM-03).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-19</td><td>2026-10-21</td>
+      <td>The deal editor label changes from "not yet honored by the website" to a label that states the flag hides the deal from the website when off.</td>
+      <td>Contract section 23 documents that the website honors <code>active</code> since 2026-10-21, so the old label would actively mislead the owner. The flag itself is unchanged (D-RAMM-15).</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
+    <tr>
+      <td>D-RAMM-20</td><td>2026-10-21</td>
+      <td>Sample data for every deal rule type ships as JSON files next to the tool, importable from the Deals tab (append with fresh ids or replace), validated by the same save gate as manual edits.</td>
+      <td>Owner request: testing every rule type by hand takes too long. The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings); importing into a different menu is blocked with the validation errors shown.</td>
+      <td class="status-adopted">Adopted</td>
+    </tr>
   </table>
 
   <h2 id="sec-maintenance">12. Maintenance rules</h2>
   <ol>
     <li><strong>This document is the single source of truth for every decision
-    about this tool.</strong> Every decision is recorded in section 11 with
-    a date, and the affected section is updated in the same change as the
-    code. A decision that is not in the register did not happen.</li>
-    <li>Rollback of a decision = mark it "Reversed (date)" with reason; never
+    about this tool.</strong> Every decision is recorded in section 11 with a
+    date, and the affected section is updated in the same change as the code.
+    A decision that is not in the register did not happen.</li>
+    <li>Rollback of a decision = mark it "Reversed (date)" with a reason; never
     delete rows.</li>
-    <li>[Tool-specific rule: the invariant from section 8.1 - review every
-    new call site against it.]</li>
-    <li>Never introduce a path that bypasses [the tool's core mechanism].</li>
+    <li><strong>Presentation keys never change shape.</strong> The only keys
+    this tool may add are <code>deals</code>, <code>hero</code>,
+    <code>promotions</code> and <code>campaigns</code>, and each must match
+    <code>docs/client-data-contract.html</code>. If the contract changes, update
+    the contract first, then this document, then the code.</li>
+    <li><strong>Never introduce a rule type the website cannot enforce.</strong>
+    The authorable set is contract sections 23 and 23.1: all eleven rule types
+    plus the <code>schedule</code> block and the <code>promo_codes</code> array
+    (D-RAMM-03, D-RAMM-18, T-30 to T-42).</li>
+    <li><strong>Never add <code>schema_version</code></strong> or any other
+    undocumented key (D-RAMM-04).</li>
     <li>Global naming rule: any update - code or documentation - MUST use
     understandable, self-explanatory names. No cryptic abbreviations. Existing
     misleading names are renamed when their code is touched.</li>
@@ -390,18 +679,54 @@
   <h2 id="sec-checklist">13. Implementation checklist</h2>
   <table>
     <tr><th>#</th><th>Change</th><th>File</th></tr>
-    <tr><td>1</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
-    <tr><td>2</td><td>[Change description]</td><td><code>[file]</code> - DONE / PENDING</td></tr>
+    <tr><td>1</td><td>Add the four empty presentation sections to the document defaults</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE</td></tr>
+    <tr><td>2</td><td>Normalize legacy records to empty presentation sections on load</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE</td></tr>
+    <tr><td>3</td><td>Deal validation module and save gate</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE</td></tr>
+    <tr><td>4</td><td>Deals tab shell and sub-tabs</td><td><code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (label still open in Q-02)</td></tr>
+    <tr><td>5</td><td>Deal list, editor dialog and duplicate and delete actions</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE</td></tr>
+    <tr><td>6</td><td>Four rule editors with live match preview</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE</td></tr>
+    <tr><td>7</td><td>Campaign editor and duplicate-as-deal action</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21)</td></tr>
+    <tr><td>8</td><td>Hero and promotions editors</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21)</td></tr>
+    <tr><td>9</td><td>Test harness fixtures for every rule type and every failure case</td><td><code>app/test-harness.html</code> - DONE</td></tr>
+    <tr><td>10</td><td>Deal fields on order lines and printed tickets</td><td><code>../../RestaurantOrderManager/app/RestaurantOrderManager.js</code> - PENDING</td></tr>
+    <tr><td>11</td><td>Contract document gaps (sections 3, table of contents, example) and the <code>active</code> flag note</td><td><code>docs/client-data-contract.html</code> - DONE (2026-10-21, contract version 3.3)</td></tr>
+    <tr><td>12</td><td>Editors for the extended rule types (contract 23.1), the schedule block and the promo codes section</td><td><code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code> - DONE (2026-10-21, T-30 to T-42)</td></tr>
+    <tr><td>13</td><td>Active-flag label update - the website honors the flag since 2026-10-21</td><td><code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-41)</td></tr>
+    <tr><td>14</td><td>Tabbed deal editor (Basics / Offer rule / Schedule) and fixed modal wiring</td><td><code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-43, T-45)</td></tr>
+    <tr><td>15</td><td>Sample data generator files and the Deals tab import feature</td><td><code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/RestaurantAndMenuManager.js</code> - DONE (2026-10-21, T-44)</td></tr>
   </table>
 
-  <h2 id="sec-questions">14. Open questions</h2>
+    <h2 id="sec-questions">14. Open questions</h2>
   <p>Decision points we resolve together before or during implementation.
-  Every answer becomes a dated row in section 11.</p>
+  Every answer becomes a dated row in section 11 and is removed from this
+  list. Q-01, Q-03 and Q-05 were answered on 2026-10-21 (D-RAMM-15 to
+  D-RAMM-17).</p>
   <ol>
-    <li><strong>[Question].</strong> [Context and options under discussion.]</li>
+    <li><strong>Q-01 - Where do the hero preset images come from?</strong>
+    A preset is a ready-made hosted image URL the owner can pick with one
+    click, so no upload is needed. <code>hero.image_url</code> is the image
+    shown; <code>hero.preset_images</code> is the list offered in the
+    manager. Contract section 21.1 says the owner picks a preset in the
+    manager tool and the widget falls back to the first
+    <code>preset_images</code> entry, but it never says who supplies those
+    URLs. Options: (a) a fixed list built into the tool, (b) a tool parameter
+    (<code>heroPresetImages</code>) that can differ per tenant, (c) only
+    images the owner uploaded earlier. Recommendation: (b) with a small
+    built-in fallback. Risk of guessing: an empty gallery means only direct
+    uploads work, and a wrong list shows another tenant's photos.</li>
+    <li><strong>Q-02 - What is the tab called and how is it split?</strong>
+    The four contract sections are different things: deals are priced offers
+    the customer builds, campaigns are legacy offers shown as two-for-one
+    cards, the hero is the top image, and promotions are the text and image
+    strip under it. Options: (a) one tab named <code>Deals</code> with four
+    sub-tabs (Deals, Campaigns, Hero, Promotions), (b) the same four
+    sub-tabs under the name <code>Deals &amp; Promotions</code>, (c) two
+    tabs, one for offers (Deals, Campaigns) and one for presentation (Hero,
+    Promotions). Recommendation: (a), because the owner manages all four as
+    one customer-facing surface.</li>
   </ol>
 
-  <h2 id="sec-tasklist">15. Development task list</h2>
+<h2 id="sec-tasklist">15. Development task list</h2>
   <p>Ordered backlog, developed one by one. Tasks are grouped into
   <strong>release groups</strong>: a group either ships in ONE push (the badge
   says so) or is a related set that must not be broken across releases.
@@ -440,62 +765,908 @@
     unclear benefit or a product decision is required; see section 14.</li>
   </ul>
 
-  <!-- Auto-updated by ssot.js: done / waiting percentages of ALL tasks below. -->
   <div class="task-stats-bar">
     <div class="task-stats-progress"><div id="task-stats-fill"></div></div>
     <span id="task-stats-label">Tasks: 0 done (0%) - 0 waiting (0%)</span>
   </div>
 
-  <!-- TEMPLATE: copy one .task-group block per release group. The group name,
-       the "ships together" reason, and the tasks inside form one unit.
-       Badge variants: "ONE PUSH - do not split" for groups that must ship in
-       a single push, or "RELATED - do not split" for groups that must not be
-       broken across releases.
-       data-group-status: planned | in-progress | testing | pushed.
-       PUSH READY is computed automatically by ssot.js. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy a sample,
-       uncomment it, and edit).
-  <section class="task-group" data-release-group="[GROUP-KEY]" data-group-status="planned">
+  <section class="task-group" data-release-group="deals-admin-foundation" data-group-status="planned">
     <header class="task-group-header">
-      <span class="task-group-name">Group: [Group name]</span>
+      <span class="task-group-name">Group: Deals admin foundation</span>
       <span class="group-status-chip" data-group-status-chip></span>
       <span class="task-group-badge">ONE PUSH - do not split</span>
-      <span class="task-group-progress" data-group-progress="[GROUP-KEY]">0/0</span>
+      <span class="task-group-progress" data-group-progress="deals-admin-foundation">0/0</span>
     </header>
-    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="[GROUP-KEY]"></div></div>
-    <p class="task-group-note">Why these belong together: [the shared dependency -
-    e.g. "T-01 changes the protocol; T-02 and T-03 adapt every caller.
-    Publishing T-01 alone breaks all writers."]</p>
-
-    TEMPLATE (inside the commented sample): one .task-item block per task.
-    data-task-id must be unique across the whole document; data-group matches
-    the group key above. data-task-status: not-started | in-progress | ignored.
-    Done is the checkbox. The status chip is rendered by ssot.js.
-    PERMANENT DONE: write data-task-status="done" on the task div (or
-    checked="checked" on the checkbox) to mark it done for every browser;
-    npm run rel does this for pushed groups.
-    <div class="task-item" data-task-id="T-01" data-group="[GROUP-KEY]" data-task-status="not-started">
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-admin-foundation"></div></div>
+    <p class="task-group-note">Why these belong together: the defaults, the legacy normalization and the validation layer must ship in one push. Writing the new keys without validation would publish malformed deals on the first save.</p>
+    <div class="task-item" data-task-id="T-01" data-group="deals-admin-foundation" data-task-status="done">
       <details>
         <summary>
           <span class="task-id">T-01</span>
-          <span class="task-title">[Short task name - the main name]</span>
+          <span class="task-title">Add the four presentation sections to the document defaults</span>
           <span class="task-status-chip" data-task-status-chip></span>
           <span class="task-priority status-mandatory">Mandatory</span>
-          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" />
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-01 as done" checked="checked" />
         </summary>
         <div class="task-details">
-          <p><strong>Problem it solves:</strong> [why this task exists]</p>
-          <p><strong>How we will solve it:</strong> [approach, files]</p>
-          <p><strong>Benefit:</strong> [what the user or system gains]</p>
-          <p><strong>Files:</strong> <code>[file paths]</code></p>
-          <p><strong>Status:</strong> [edit data-task-status above - the chip updates automatically]</p>
+          <p><strong>Problem it solves:</strong> A new record never contains deals, hero, promotions or campaigns, so the website has nothing to render.</p>
+          <p><strong>How we will solve it:</strong> Extend the DEFAULTS object with empty arrays and an empty hero object, without touching existing keys.</p>
+          <p><strong>Benefit:</strong> Every new record publishes a valid, empty presentation set instead of nothing.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the four empty sections are in DEFAULTS and every new record publishes them.</p>
         </div>
       </details>
     </div>
-
-    TEMPLATE (inside the commented sample): duplicate the .task-item block above for T-02, T-03, ...
+    <div class="task-item" data-task-id="T-02" data-group="deals-admin-foundation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-02</span>
+          <span class="task-title">Normalize legacy records on load</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-02 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Records saved before this feature have no presentation keys, and a missing array breaks the list renderers.</p>
+          <p><strong>How we will solve it:</strong> After deepMerge, coerce each section to the expected type, generate a missing id, and re-generate duplicated ids.</p>
+          <p><strong>Benefit:</strong> Old records open without errors and publish unchanged until the owner edits them (R-13).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: normalizePresentationSections runs on every load, generates missing ids and flags unsupported rule types.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-03" data-group="deals-admin-foundation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-03</span>
+          <span class="task-title">Build a menu reference index</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-03 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Every rule editor needs resolved category names, item names and size labels from the menu.</p>
+          <p><strong>How we will solve it:</strong> Create one helper that returns categories, items, sizes and name lookups, refreshed when the menu changes.</p>
+          <p><strong>Benefit:</strong> Reference pickers show real names, and ranges can be validated before save.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: buildMenuReferenceIndex resolves categories, items and size labels.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-04" data-group="deals-admin-foundation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-04</span>
+          <span class="task-title">Add the deal validation module and save gate</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-04 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Without validation, any shape the UI produces is published verbatim to the website.</p>
+          <p><strong>How we will solve it:</strong> Implement validateDeal, validateCampaign and validatePresentation with the rules in section 8.3 and 8.4, and block scheduleSave on failure.</p>
+          <p><strong>Benefit:</strong> Malformed or empty deals never reach the customer page (R-02, R-05).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: validateDeal, validateCampaign and validatePromotions run inside scheduleSave and block on errors.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-05" data-group="deals-admin-foundation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-05</span>
+          <span class="task-title">Add harness fixtures</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-05 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The harness has no deal data, so none of the editors can be exercised locally.</p>
+          <p><strong>How we will solve it:</strong> Add one valid deal per rule type, one campaign, one hero and two promotions, plus the invalid cases from section 9.</p>
+          <p><strong>Benefit:</strong> Every editor and every failure path can be tested without touching a real record.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: harness buttons load valid fixtures, broken fixtures and a validation report.</p>
+        </div>
+      </details>
+    </div>
   </section>
-  END OF TEMPLATE SAMPLE -->
+
+  <section class="task-group" data-release-group="deals-admin-editors" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Deal editors</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-admin-editors">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-admin-editors"></div></div>
+    <p class="task-group-note">Why these belong together: the tab shell, the list, the drawer and the four rule editors share one selection state and one serializer. Shipping the shell without an editor leaves a dead tab.</p>
+    <div class="task-item" data-task-id="T-06" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-06</span>
+          <span class="task-title">Add the Deals tab shell and sub-tabs</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-06 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> There is no surface in the tool where presentation data can be edited.</p>
+          <p><strong>How we will solve it:</strong> Add a top-level tab at Menu level with Deals, Campaigns, Hero and Promotions sub-tabs (final naming is Q-04).</p>
+          <p><strong>Benefit:</strong> All four contract sections become reachable from one place (R-01).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.html, app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: Deals tab at Menu level with four sub-tabs; campaigns, hero and promotions show a short placeholder until their group ships.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-07" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-07</span>
+          <span class="task-title">Build the deal list grouped by section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-07 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Deals have no overview, so duplicates and ordering problems are invisible.</p>
+          <p><strong>How we will solve it:</strong> Render one group per section in array order with image, title, price label, rule type and a broken-reference badge.</p>
+          <p><strong>Benefit:</strong> The owner sees every deal and its order at a glance (R-08).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: renderDeals groups cards by section in array order and shows image, rule summary, price, active and check badges.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-08" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-08</span>
+          <span class="task-title">Build the deal editor drawer</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-08 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A deal cannot be created or edited without a form for its identity, section, price and image.</p>
+          <p><strong>How we will solve it:</strong> Drawer with id, title, description, section, price and image fields, plus a rule editor swapped by rule type.</p>
+          <p><strong>Benefit:</strong> Deals can be authored end to end (R-14).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: editor dialog with title, description, section, price, image, active switch and rule type.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-09" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-09</span>
+          <span class="task-title">Add deal image upload and clear</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-09 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Deal cards look empty without an image, but the contract allows an empty URL.</p>
+          <p><strong>How we will solve it:</strong> Use tool.requestUpload for the image, allow a pasted URL, and allow clearing back to an empty string.</p>
+          <p><strong>Benefit:</strong> Cards can carry artwork while empty images remain valid (R-07).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: upload, URL entry, preview and clear for the deal image.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-10" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-10</span>
+          <span class="task-title">Build the bundle rule editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-10 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Bundle deals need groups with quantity, filters and fixed extras, and the two modes must not mix.</p>
+          <p><strong>How we will solve it:</strong> Group rows with label, quantity, category multi-select, size and name filters, and an item multi-select that switches the group to a fixed extra.</p>
+          <p><strong>Benefit:</strong> The most common deal type can be authored correctly (D-RAMM-05, D-RAMM-06).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: bundle groups with label, quantity, category chips, size and name filters, and a fixed-extra item picker.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-11" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-11</span>
+          <span class="task-title">Build the min quantity rule editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-11 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Threshold deals need a category filter, an optional size and a minimum quantity with a per-unit price.</p>
+          <p><strong>How we will solve it:</strong> Category and size pickers, a minimum quantity field with a floor of 2, and a per-unit price field.</p>
+          <p><strong>Benefit:</strong> Threshold offers are authored without hand-editing the document (R-06).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: min quantity editor with category chips, size filter, minimum of 2 and a per-unit price.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-12" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-12</span>
+          <span class="task-title">Build the tiered rule editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-12 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Tiered deals need a fixed item list and ordered quantity and price tiers.</p>
+          <p><strong>How we will solve it:</strong> Item multi-select plus repeatable tier rows with quantity, price and label, ordered by quantity.</p>
+          <p><strong>Benefit:</strong> Quantity pricing deals can be authored with a null deal price (D-RAMM-07).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: tiered editor with an item list and repeatable quantity, price and label tiers.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-13" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-13</span>
+          <span class="task-title">Build the two-for-one rule editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-13 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Two-for-one deals need a required item count, a category filter and a same-size switch.</p>
+          <p><strong>How we will solve it:</strong> Numeric required count, category multi-select and a same-size checkbox; the deal price stays null.</p>
+          <p><strong>Benefit:</strong> Legacy campaign behavior can be recreated as a first-class deal (D-RAMM-07, D-RAMM-09).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: two-for-one editor with required count, category chips and same-size switch.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-14" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-14</span>
+          <span class="task-title">Add the live match preview</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-14 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A filter that matches nothing produces a deal the customer can never complete.</p>
+          <p><strong>How we will solve it:</strong> Under every filter, count matching menu items and show a short sample; block the save at zero.</p>
+          <p><strong>Benefit:</strong> Empty deals are caught while editing, not on the live site (R-05).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: live match preview under every rule editor, naming the matched items or stating that nothing matches.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-15" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-15</span>
+          <span class="task-title">Serialize only contract keys</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-15 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Editors accumulate helper state, and writing it would publish unknown keys the website ignores.</p>
+          <p><strong>How we will solve it:</strong> One serializer per section that emits only the documented keys and omits empty optional values.</p>
+          <p><strong>Benefit:</strong> The published document matches the contract exactly (R-02).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: serializeDealDraft emits only contract keys, omits an empty section, and forces price null for tiered and two-for-one.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-16" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-16</span>
+          <span class="task-title">Add duplicate and delete deal actions</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-16 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Rebuilding a similar deal by hand is slow and error-prone, and unused deals cannot be removed.</p>
+          <p><strong>How we will solve it:</strong> Duplicate copies the deal with a new id and a title suffix; delete asks for confirmation and never touches menu data.</p>
+          <p><strong>Benefit:</strong> Fast iteration on offers with no risk to the menu (R-14).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: duplicate inserts a copy with a new id, delete asks for confirmation, and drag and drop reorders inside and across sections.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-29" data-group="deals-admin-editors" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-29</span>
+          <span class="task-title">Block deleting an item that a deal lists</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-29 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Deleting an item that a tiered deal or a bundle fixed extra lists leaves the deal incomplete.</p>
+          <p><strong>How we will solve it:</strong> Before deleting an item, scan deals for its id in rule.item_ids and in bundle group item_ids; block with the deal titles when found.</p>
+          <p><strong>Benefit:</strong> A saved deal can never be broken from the menu side (D-RAMM-17).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: deleteItem blocks when the item appears in a tiered deal's item_ids or in a bundle group's item_ids (fixed extras), naming up to three deal titles and the count of any more.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-admin-presentation" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Campaigns, hero and promotions</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-admin-presentation">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-admin-presentation"></div></div>
+    <p class="task-group-note">Why these belong together: the four sub-tabs are presented as one feature. A half-finished presentation tab shows empty panels.</p>
+    <div class="task-item" data-task-id="T-17" data-group="deals-admin-presentation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-17</span>
+          <span class="task-title">Build the campaign list and editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-17 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Legacy campaigns exist in the contract but have no editing surface.</p>
+          <p><strong>How we will solve it:</strong> List and editor for id, title, description, required count, same size, categories and items, with pricing read-only.</p>
+          <p><strong>Benefit:</strong> Legacy campaigns can be corrected without hand-editing the document (D-RAMM-08).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: campaign list with validation badges, editor with category chips, item picker, read-only most_expensive pricing and a live eligible-item preview; save is blocked on validation errors.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-18" data-group="deals-admin-presentation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-18</span>
+          <span class="task-title">Add the duplicate-as-deal action</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-18 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Campaigns are legacy and new offers should be deals, but rewriting one by hand is tedious.</p>
+          <p><strong>How we will solve it:</strong> Convert a campaign into a two-for-one deal with the same categories, items and count, then open it in the deal editor.</p>
+          <p><strong>Benefit:</strong> Old campaigns migrate to the supported path in one click (D-RAMM-09).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the campaign card copy action creates a two_for_one deal (required count, categories and same-size copied), saves it and opens the deal editor.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-19" data-group="deals-admin-presentation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-19</span>
+          <span class="task-title">Build the hero editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-19 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The hero area above the restaurant name has no way to receive an image.</p>
+          <p><strong>How we will solve it:</strong> Direct upload or pasted URL, a preview, a clear action, and a preset gallery that fills preset_images.</p>
+          <p><strong>Benefit:</strong> The hero renders on the website and stays editable (R-10).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: direct upload and URL editing with preview and clear save to hero.image_url; preset_images are preserved unchanged and the preset gallery renders only when the platform supplies presets (Q-01 still open).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-20" data-group="deals-admin-presentation" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-20</span>
+          <span class="task-title">Build the promotions editor with the four-entry limit</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-20 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The website renders at most four promotions, so extra entries would be invisible.</p>
+          <p><strong>How we will solve it:</strong> List editor with title, description and image per promotion, reorder controls, and Add disabled at four.</p>
+          <p><strong>Benefit:</strong> Every stored promotion is actually visible (R-10).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: promotion list with image, edit and delete, drag-to-reorder, and the Add button disabled at four entries; the save path also refuses a fifth promotion.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-order-display" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Deal display in the order tool</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-order-display">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-order-display"></div></div>
+    <p class="task-group-note">Why these belong together: a line without the discount row shows the wrong amount due, and a ticket without deal text hides what was ordered. All three changes ship in the same release of the order tool.</p>
+    <div class="task-item" data-task-id="T-21" data-group="deals-order-display" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-21</span>
+          <span class="task-title">Render deal fields on order lines</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-21 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Orders that contain deals currently lose the deal identity, description and picks in the order tool.</p>
+          <p><strong>How we will solve it:</strong> Render dealId, dealTitle, dealDescription, dealDescriptionGroups, dealPicks and dealFullPrice, and use the deal title when itemId is empty.</p>
+          <p><strong>Benefit:</strong> Staff see exactly what was ordered and what was discounted.</p>
+          <p><strong>Files:</strong> <code>RestaurantOrderManager/app/RestaurantOrderManager.js</code></p>
+          <p><strong>Status:</strong> Not started. Separate tool (D-RAMM-12).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-22" data-group="deals-order-display" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-22</span>
+          <span class="task-title">Add the deal discount row to the totals</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-22 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Without totals.dealDiscount the ticket overstates the amount due.</p>
+          <p><strong>How we will solve it:</strong> Render the discount line between subtotal and total when the value is present and non-zero.</p>
+          <p><strong>Benefit:</strong> Totals on the ticket match the customer cart.</p>
+          <p><strong>Files:</strong> <code>RestaurantOrderManager/app/RestaurantOrderManager.js</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-23" data-group="deals-order-display" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-23</span>
+          <span class="task-title">Add a printed ticket layout for deals</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-23 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The kitchen ticket has no layout for deal lines, so the crew reads a flat item list.</p>
+          <p><strong>How we will solve it:</strong> Add a print stylesheet variant that shows the deal title, group labels, picks and the discount row.</p>
+          <p><strong>Benefit:</strong> The kitchen can assemble deal orders from the paper ticket.</p>
+          <p><strong>Files:</strong> <code>RestaurantOrderManager/app/RestaurantOrderManager.css, RestaurantOrderManager/app/RestaurantOrderManager.js</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-contract-docs" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Contract documentation</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-contract-docs">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-contract-docs"></div></div>
+    <p class="task-group-note">Why these belong together: the shape, the navigation and the example must describe the same contract version. Updating one without the others leaves a misleading document.</p>
+    <div class="task-item" data-task-id="T-24" data-group="deals-contract-docs" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-24</span>
+          <span class="task-title">List the four sections in contract section 3</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-24 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Contract section 3 still shows the old top-level shape, so a reader believes deals are not part of the document.</p>
+          <p><strong>How we will solve it:</strong> Add hero, promotions, campaigns and deals to the top-level shape, marked optional.</p>
+          <p><strong>Benefit:</strong> The contract describes the document the tool actually writes.</p>
+          <p><strong>Files:</strong> <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the four presentation keys are listed in contract section 3 as OPTIONAL with an explicit treat-absent-as-empty note.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-25" data-group="deals-contract-docs" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-25</span>
+          <span class="task-title">Add sections 20 to 23 to the contract table of contents</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-25 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The sidebar stops at section 19, so the write-back, presentation, cache and deal sections are unreachable from the navigation.</p>
+          <p><strong>How we will solve it:</strong> Add the four missing entries with their anchors.</p>
+          <p><strong>Benefit:</strong> Every section is reachable from the navigation.</p>
+          <p><strong>Files:</strong> <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the table of contents lists sections 20 to 23 with their anchors.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-26" data-group="deals-contract-docs" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-26</span>
+          <span class="task-title">Extend the contract complete example</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-26 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The complete example document shows no presentation data, so implementers have no reference.</p>
+          <p><strong>How we will solve it:</strong> Add one hero, one promotion, one campaign and one deal of each rule type to the example.</p>
+          <p><strong>Benefit:</strong> A single copyable example covers the whole shape.</p>
+          <p><strong>Files:</strong> <code>docs/client-data-contract.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the example now carries one hero, two promotions, one campaign and four deals (one per rule type), each with the active flag.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-widget-acceptance" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Website acceptance</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">RELATED - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-widget-acceptance">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-widget-acceptance"></div></div>
+    <p class="task-group-note">Why these belong together: authoring, cart behavior and the order payload are one loop. Passing one stage does not prove the next.</p>
+    <div class="task-item" data-task-id="T-27" data-group="deals-widget-acceptance" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-27</span>
+          <span class="task-title">Verify the Deals page and rule enforcement on the website</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-27 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The admin tool can look correct while the customer page renders nothing or enforces the rule differently.</p>
+          <p><strong>How we will solve it:</strong> Create one deal of each type, open the website, and check card grouping, picker filters, same-size rules and tier prices.</p>
+          <p><strong>Benefit:</strong> The written shape is proven against the real consumer.</p>
+          <p><strong>Files:</strong> <code>Website food ordering widget (separate repository)</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-28" data-group="deals-widget-acceptance" data-task-status="not-started">
+      <details>
+        <summary>
+          <span class="task-id">T-28</span>
+          <span class="task-title">Verify cart rows, deal discount and the order payload</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-28 as done" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A deal can be authored correctly and still arrive wrong in the order record.</p>
+          <p><strong>How we will solve it:</strong> Place one order per rule type and check the Paid and FREE rows, totals.dealDiscount and every deal field in the order record.</p>
+          <p><strong>Benefit:</strong> The full loop from authoring to kitchen ticket is proven.</p>
+          <p><strong>Files:</strong> <code>Website cart, RestaurantOrderManager</code></p>
+          <p><strong>Status:</strong> Not started.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-extended-types" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Extended deal rule types</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-extended-types">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-extended-types"></div></div>
+    <p class="task-group-note">Why these belong together: the website implemented the extended rule types on 2026-10-21 (contract 23.1, D-EFOC-29). The defaults, normalization and validation must land with the editors, otherwise the first save could rewrite or publish malformed shapes that the website totals engine then misprices.</p>
+    <div class="task-item" data-task-id="T-30" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-30</span>
+          <span class="task-title">Extend the document defaults and the normalization for the new keys</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-30 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> <code>DEFAULTS</code> has no <code>promo_codes</code> key and <code>normalizeDealEntry</code> does not know the new rule keys, so a record authored by the website could be rewritten without them on the next admin save.</p>
+          <p><strong>How we will solve it:</strong> Add <code>promo_codes: []</code> to <code>DEFAULTS</code>; extend <code>DEAL_RULE_TYPES</code> with the eight new names; let normalization pass the <code>schedule</code> block and every documented 23.1 rule key through untouched; normalize promo code entries (uppercase code, trimmed title, generated id).</p>
+          <p><strong>Benefit:</strong> Website-authored records survive an admin save unchanged (R-13), and new records publish an empty <code>promo_codes</code> array.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: <code>promo_codes: []</code> is in <code>DEFAULTS</code>, <code>DEAL_RULE_TYPES</code> lists all eleven types, and normalization passes the <code>schedule</code> block and every 23.1 rule key through.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-31" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-31</span>
+          <span class="task-title">Validate every extended shape and keep the save gate closed</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-31 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Without validation a malformed discount rule would be published, and the website totals engine could mischarge the customer.</p>
+          <p><strong>How we will solve it:</strong> <code>validateDeal</code> gains per-type checks: <code>percent</code> between 1 and 100; <code>min_subtotal</code> at least 0 and <code>discount</code> not above it; <code>free_item_with_purchase</code> needs at least one paid and one free group; positive counts; <code>volume_pricing</code> bands with ascending unique <code>min_quantity</code>; <code>schedule</code> coherence (date_from not after date_until, time_from before time_until, weekdays within 1..7). A new <code>validatePromoCodes</code> checks a non-empty normalized code, uniqueness, and a supported rule type. <code>validatePresentationDocument</code> blocks the save with the first error (R-05).</p>
+          <p><strong>Benefit:</strong> A malformed offer can never reach the website (R-05, R-18, R-19).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: <code>validateDeal</code> covers every extended shape, <code>validateDealSchedule</code> checks window coherence, and <code>validatePromoCodes</code> feeds the save gate.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-32" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-32</span>
+          <span class="task-title">Build the percentage_discount editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-32 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The website offers percent-off deals but the manager cannot author them, so the owner cannot run a percent campaign without hand-editing JSON.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with a percent field (1 to 100) and the eligible-products restriction: none (whole order), <code>category_ids</code> or <code>item_ids</code>; deal stores <code>price: null</code>; the deal card shows "-N%" as its price tag.</p>
+          <p><strong>Benefit:</strong> Percent campaigns are authorable, validated and visible in the admin list (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: percent field (1-100) with an optional category or item restriction; the card shows the -N% tag.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-33" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-33</span>
+          <span class="task-title">Build the subtotal_threshold editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-33 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> "Spend X, save Y" offers cannot be authored in the manager.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with <code>min_subtotal</code> and a fixed <code>discount</code> (validated to not exceed the threshold); deal stores <code>price: null</code>; the card price tag shows the discount amount.</p>
+          <p><strong>Benefit:</strong> Threshold offers are authorable and validated (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: <code>min_subtotal</code> and <code>discount</code> fields; validation rejects a discount above the threshold.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-34" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-34</span>
+          <span class="task-title">Build the free_delivery editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-34 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Free-delivery offers cannot be authored in the manager.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with an optional <code>min_subtotal</code> and an <code>always</code> switch; deal stores <code>price: null</code>; the deal card price tag shows "Free delivery" instead of a price.</p>
+          <p><strong>Benefit:</strong> Delivery offers are authorable and clearly labeled in the admin list (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: optional <code>min_subtotal</code> and an <code>always</code> switch; the card shows "Free delivery".</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-35" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-35</span>
+          <span class="task-title">Build the free_item_with_purchase editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-35 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> "Buy a pizza, get garlic bread free" offers cannot be authored.</p>
+          <p><strong>How we will solve it:</strong> Reuse the bundle group editor with a per-group <code>charge</code> picker (<code>paid</code> / <code>free</code>); validation requires at least one group of each charge; deal stores <code>price: null</code>.</p>
+          <p><strong>Benefit:</strong> Paid-plus-free compositions are authorable and validated (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the group editor reuses the bundle card with a paid/free charge picker; validation requires at least one group of each charge.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-36" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-36</span>
+          <span class="task-title">Build the buy_n_get_m editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-36 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> "Buy 3 get 1 free" offers cannot be authored in the manager.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with <code>required_item_count</code>, <code>free_item_count</code>, the optional <code>category_ids</code> / <code>item_ids</code> restriction and a <code>same_size</code> switch; deal stores <code>price: null</code>.</p>
+          <p><strong>Benefit:</strong> N-paid-plus-M-free offers are authorable and validated (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: paid and free counts, a same-size switch and a category or item restriction with match preview.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-37" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-37</span>
+          <span class="task-title">Build the volume_pricing editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-37 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Quantity-band offers ("6 cans for $1 each") cannot be authored.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with a bands table (<code>min_quantity</code> + <code>unit_price</code> per band, add/remove/reorder), plus the <code>category_ids</code> and <code>name_filter</code> restriction; bands validated ascending and unique; deal stores <code>price: null</code>; the card price tag shows "from" the first band price.</p>
+          <p><strong>Benefit:</strong> Volume pricing is authorable and validated (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: bands table with ascending-unique validation, category and name filter; the card shows "From" the first band price.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-38" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-38</span>
+          <span class="task-title">Add the schedule editor to every deal</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-38 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> A weekend or happy-hour offer must be added and removed by hand, and a forgotten deal keeps selling (idea I-01).</p>
+          <p><strong>How we will solve it:</strong> Optional <code>schedule</code> block on any deal: <code>date_from</code> / <code>date_until</code> (ISO dates), <code>weekdays</code> (1=Monday..7=Sunday), <code>time_from</code> / <code>time_until</code> (restaurant-timezone HH:mm), all optional but validated coherent together; scheduled deals show a badge with the window on the card.</p>
+          <p><strong>Benefit:</strong> Offers start and expire on their own (I-01 moved here).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: date, weekday and time inputs on every deal with a coherence check; scheduled cards carry a 🕐 badge and the preview shows the window.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-39" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-39</span>
+          <span class="task-title">Build the free_modifier editor</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-39 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> "Free extra topping" offers cannot be authored in the manager.</p>
+          <p><strong>How we will solve it:</strong> Rule editor with a modifier-group picker (<code>modifier_group_ids</code>), an <code>option_count</code> field (cheapest selected options become free) and the optional <code>category_ids</code> restriction; deal stores <code>price: null</code>.</p>
+          <p><strong>Benefit:</strong> Modifier-based offers are authorable and validated (R-18).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: modifier-group chips, a free option count and an optional category filter; missing groups are reported as warnings.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-40" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-40</span>
+          <span class="task-title">Build the promo codes admin section</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-40 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The website accepts promo codes typed at checkout, but the manager cannot author the top-level <code>promo_codes</code> array.</p>
+          <p><strong>How we will solve it:</strong> New Deals sub-tab with a promo-code list and editor: code (uppercase, spaces to dashes), title, <code>rule_type</code> limited to <code>percentage_discount</code>, <code>subtotal_threshold</code> and <code>free_delivery</code> (reusing the matching rule editors), and an optional <code>max_uses</code> (null = unlimited).</p>
+          <p><strong>Benefit:</strong> Codes are authorable, validated and published through the normal save path (R-19).</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the Deals tab gained the Promo Codes sub-tab with list, editor and delete; codes are normalized uppercase, uniqueness is checked and <code>max_uses</code> is optional.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-41" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-41</span>
+          <span class="task-title">Update the active-flag label - the website honors it now</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-small">Very small thing</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-41 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The editor still labels <code>active</code> "not yet honored by the website", but the website honors it since 2026-10-21 - the label now misleads.</p>
+          <p><strong>How we will solve it:</strong> Change the label to state the current behavior: the deal is hidden from the website when the flag is off (D-RAMM-19).</p>
+          <p><strong>Benefit:</strong> The owner knows exactly what the switch does today.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: the editor labels <code>active</code> "Hidden from the website when off" and the deals notice matches (D-RAMM-19).</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-42" data-group="deals-extended-types" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-42</span>
+          <span class="task-title">Add harness fixtures and failure cases for the new shapes</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-42 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The harness cannot exercise the new editors or the new save gate locally.</p>
+          <p><strong>How we will solve it:</strong> One valid fixture per new rule type plus a promo code, and failure fixtures for: a percent outside 1..100, a discount above the threshold, a free_item_with_purchase with no free group, reversed schedule dates, and a promo code with an unsupported rule type.</p>
+          <p><strong>Benefit:</strong> Every new editor and every validation path is testable without a real record.</p>
+          <p><strong>Files:</strong> <code>app/test-harness.html</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: one valid fixture per new rule type plus a promo code and a modifier group, and six failure fixtures reachable through the new "Extended failures" button.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="task-group" data-release-group="deals-ux-tools" data-group-status="planned">
+    <header class="task-group-header">
+      <span class="task-group-name">Group: Deal editor UX and sample data tools</span>
+      <span class="group-status-chip" data-group-status-chip></span>
+      <span class="task-group-badge">ONE PUSH - do not split</span>
+      <span class="task-group-progress" data-group-progress="deals-ux-tools">0/0</span>
+    </header>
+    <div class="task-group-progress-bar"><div class="task-group-progress-fill" data-group-progress-fill="deals-ux-tools"></div></div>
+    <p class="task-group-note">Why these belong together: the long deal form needed a layout split, the import feature needed sample files, and the broken modal wiring blocked every one of these from being reachable.</p>
+    <div class="task-item" data-task-id="T-43" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-43</span>
+          <span class="task-title">Split the deal editor into Basics, Offer rule and Schedule tabs</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-43 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> The single scroll body mixes identity fields with a long rule editor, so editing a bundle with many groups is tedious.</p>
+          <p><strong>How we will solve it:</strong> Three tabs inside the modal: Basics (title, description, section, price, image, active), Offer rule (deal type, rule editor, match preview) and Schedule (the optional validity window, common to every rule type), with "Next" step buttons and the editor always opening on Basics.</p>
+          <p><strong>Benefit:</strong> Same functionality, shorter scroll, clearer flow, and the schedule lives where every deal type can reach it.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.html</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>app/RestaurantAndMenuManager.css</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: three tabs shipped in the production file and the test harness; the Schedule tab keeps its values when the rule type changes and shows a dot when set.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-44" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-44</span>
+          <span class="task-title">Sample data generator files and the Deals tab import feature</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-valuable">Very valuable</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-44 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> Testing every rule type by hand means creating dozens of deals manually.</p>
+          <p><strong>How we will solve it:</strong> Two JSON files ship with the tool (all valid possibilities; broken save-gate cases). A "Samples" button opens an import modal: bundled file or pasted JSON, section pickers, append (fresh ids) or replace, full validation before applying.</p>
+          <p><strong>Benefit:</strong> One click loads 22 deals, 2 campaigns, 4 promotions, 4 promo codes and a hero - or demos every save-gate failure.</p>
+          <p><strong>Files:</strong> <code>app/sample-deals-data.json</code>, <code>app/sample-deals-broken.json</code>, <code>app/RestaurantAndMenuManager.js</code>, <code>scripts/ship-cms.js</code> (ships JSON with the tool)</p>
+          <p><strong>Status:</strong> Done 2026-10-21: valid sample imports with 0 errors; broken sample blocks with 6 expected errors.</p>
+        </div>
+      </details>
+    </div>
+    <div class="task-item" data-task-id="T-45" data-group="deals-ux-tools" data-task-status="done">
+      <details>
+        <summary>
+          <span class="task-id">T-45</span>
+          <span class="task-title">Fix the broken deal modal wiring</span>
+          <span class="task-status-chip" data-task-status-chip></span>
+          <span class="task-priority status-mandatory">Mandatory</span>
+          <input type="checkbox" class="task-done-checkbox" aria-label="Mark T-45 as done" checked="checked" />
+        </summary>
+        <div class="task-details">
+          <p><strong>Problem it solves:</strong> An orphaned event-handler fragment inside <code>wireDealEditor</code> referenced <code>event</code> outside any handler, throwing at boot: the deal popup opened but Cancel and X did nothing, and the Campaign, Promotion and Promo Code Add buttons never got wired.</p>
+          <p><strong>How we will solve it:</strong> Remove the orphaned fragment and place the weekday / modifier-group / band handlers inside the editor body click handler where they belong.</p>
+          <p><strong>Benefit:</strong> Every modal opens, closes and saves again.</p>
+          <p><strong>Files:</strong> <code>app/RestaurantAndMenuManager.js</code></p>
+          <p><strong>Status:</strong> Done 2026-10-21: all three wiring functions complete without throwing and every referenced element id exists in both HTML files.</p>
+        </div>
+      </details>
+    </div>
+  </section>
 
   <h2 id="sec-ideas">16. Ideas - discussion backlog</h2>
   <p>Future ideas live here until they are decided. We discuss each idea and
@@ -504,53 +1675,161 @@
   reason. Tick the checkbox when an idea is done - progress is remembered by
   the browser per document.</p>
 
-  <!-- Auto-updated by ssot.js: done / waiting / ignored percentages. -->
   <div class="idea-stats-bar">
     <div class="idea-stats-progress"><div id="idea-stats-fill"></div></div>
     <span id="idea-stats-label">Ideas: 0 done (0%) - 0 waiting (0%) - 0 ignored</span>
   </div>
 
-  <!-- TEMPLATE: one .idea-item per idea. data-idea-id must be unique;
-       data-idea-status: new | discussing | ignored. Done = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
-  <div class="idea-item" data-idea-id="I-01" data-idea-status="new">
+  <div class="idea-item" data-idea-id="I-01" data-idea-status="ignored">
     <details>
       <summary>
         <span class="idea-id">I-01</span>
-        <span class="idea-title">[Short idea name]</span>
+        <span class="idea-title">Deal availability windows</span>
         <span class="idea-status-chip" data-idea-status-chip></span>
         <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-01 as done" />
       </summary>
       <div class="idea-details">
-        <p><strong>Idea:</strong> [what the idea is]</p>
-        <p><strong>Why:</strong> [what it would improve]</p>
-        <p><strong>Discussion / outcome:</strong> [notes and decisions; or "Ignored - reason"]</p>
+        <p><strong>Idea:</strong> Give a deal a start and end date and time, so a weekend offer starts and expires on its own.</p>
+        <p><strong>Why:</strong> The owner currently must add and remove the deal by hand, and a forgotten deal keeps selling.</p>
+        <p><strong>Discussion / outcome:</strong> Moved to the task list on 2026-10-21: contract section 23.1 now defines an optional <code>schedule</code> block on any deal and the website implements it. Tracked as task T-38, not here.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
+
+  <div class="idea-item" data-idea-id="I-02" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-02</span>
+        <span class="idea-title">Channel targeting per deal</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-02 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Choose whether a deal appears in delivery, pickup or on-premise ordering.</p>
+        <p><strong>Why:</strong> Some offers make sense only for one channel, and today every deal appears everywhere.</p>
+        <p><strong>Discussion / outcome:</strong> Blocked by the contract: no channel field exists (L-02, D-RAMM-10).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-03" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-03</span>
+        <span class="idea-title">Deal performance reporting</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-03 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Show how many orders used each deal over a date range, read from the order records.</p>
+        <p><strong>Why:</strong> The owner cannot tell which deals earn money and which are ignored.</p>
+        <p><strong>Discussion / outcome:</strong> Needs an order-side data source; this tool only reads and writes the menu document.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-04" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-04</span>
+        <span class="idea-title">Duplicate offer detection</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-04 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Flag two deals that match the same categories and items at a similar price.</p>
+        <p><strong>Why:</strong> Overlapping offers confuse customers and can stack discounts in unexpected ways.</p>
+        <p><strong>Discussion / outcome:</strong> Not started. Would run over the deals array on save.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-05" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-05</span>
+        <span class="idea-title">Visual preview of the customer Deals page</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-05 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Render a read-only preview of the deals grid inside the admin tool, using the same card rules as the website.</p>
+        <p><strong>Why:</strong> Errors such as a missing image or a long title are only visible on the live site today (L-05).</p>
+        <p><strong>Discussion / outcome:</strong> The card layout lives in the website repository, so a faithful preview would need shared styling. Waiting for a decision on how much duplication is acceptable.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-06" data-idea-status="new">
+    <details>
+      <summary>
+        <span class="idea-id">I-06</span>
+        <span class="idea-title">Multi-language deal copy</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-06 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Store a title and description per language and let the website pick the active one.</p>
+        <p><strong>Why:</strong> Tenants serving more than one language retype offers or accept one language for all customers.</p>
+        <p><strong>Discussion / outcome:</strong> Blocked by the contract: the deal shape has a single title and description.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="idea-item" data-idea-id="I-07" data-idea-status="discussing">
+    <details>
+      <summary>
+        <span class="idea-id">I-07</span>
+        <span class="idea-title">One-click migration of all campaigns to deals</span>
+        <span class="idea-status-chip" data-idea-status-chip></span>
+        <input type="checkbox" class="idea-done-checkbox" aria-label="Mark I-07 as done" />
+      </summary>
+      <div class="idea-details">
+        <p><strong>Idea:</strong> Convert every legacy campaign into an equivalent two-for-one deal and empty the campaigns array.</p>
+        <p><strong>Why:</strong> Two parallel offer systems are hard to reason about, and campaigns are legacy (D-RAMM-09).</p>
+        <p><strong>Discussion / outcome:</strong> Needs a safe rollback story, because the conversion is not lossless for hand-edited campaign fields.</p>
+      </div>
+    </details>
+  </div>
 
   <h2 id="sec-testplan">17. Test plan - step by step</h2>
-  <p>[Preparation: what accounts, tenants, browsers, and test data the pass
-  needs. Keep the browser console open and filter by [trace keyword] - every
-  [operation] writes a trace line.]</p>
+  <p>Preparation: open <code>app/test-harness.html</code> with a record that
+  contains the fixtures from T-05. Keep the browser console open. Two roles
+  are needed: an owner who can edit, and a read-only viewer. Every scenario
+  below is repeated after a reload, because the published document is the only
+  state that matters.</p>
   <h3>17.1 Scenarios</h3>
   <ol>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
-    <li><strong>[Scenario ID] - [name].</strong> Steps: [exact clicks].
-    PASS if: [observable result].</li>
+    <li><strong>S-01 - Empty state.</strong> Open a record with no presentation sections. PASS if all four sub-tabs render an empty list with an add action and no errors.</li>
+    <li><strong>S-02 - Legacy record.</strong> Open a record saved before this feature. PASS if it loads, publishes unchanged, and shows empty presentation sections.</li>
+    <li><strong>S-03 - Bundle deal.</strong> Create a bundle with two groups, one option group and one fixed extra, then save. PASS if the document contains exactly the contract keys and no filters on the fixed extra.</li>
+    <li><strong>S-04 - Duplicate picks.</strong> Set an option group to quantity 4 over a category with 3 items and confirm the save is allowed. PASS if no distinct-item error appears (D-RAMM-05).</li>
+    <li><strong>S-05 - Min quantity deal.</strong> Create a deal with minimum 2 and a per-unit price. PASS if the price is a number and the minimum is stored as 2.</li>
+    <li><strong>S-06 - Tiered deal.</strong> Create two tiers for three items. PASS if <code>price</code> is null and the tiers keep their order.</li>
+    <li><strong>S-07 - Two-for-one deal.</strong> Create a two-for-one with the same-size switch on. PASS if <code>price</code> is null and the switch is stored as a boolean.</li>
+    <li><strong>S-08 - Empty filter.</strong> Point a group at a category with no items. PASS if the save is blocked and the message names that filter.</li>
+    <li><strong>S-09 - Unknown rule type.</strong> Load a hand-edited record with an unsupported type. PASS if the deal opens read-only, cannot be edited and can be deleted.</li>
+    <li><strong>S-10 - Broken reference.</strong> Delete a category used by a deal. PASS if the deal list shows the broken-reference badge and the deal still loads.</li>
+    <li><strong>S-11 - Duplicate and delete.</strong> Duplicate a deal, then delete the copy. PASS if the copy has a new id and the menu data is unchanged.</li>
+    <li><strong>S-12 - Hero and promotions.</strong> Set a hero image, add four promotions and try a fifth. PASS if the fifth is blocked and the four stored entries keep their order.</li>
+    <li><strong>S-13 - Read-only role.</strong> Open as a viewer. PASS if every add, edit and delete control is hidden or disabled and no write occurs.</li>
+    <li><strong>S-14 - Website loop.</strong> Place one order per rule type on the website. PASS if the cart shows the Paid and FREE rows, the deal discount is correct, and the order record carries every deal field.</li>
   </ol>
   <h3>17.2 Recording and publish gate</h3>
   <table>
     <tr><th>Scenario</th><th>Result (PASS / FAIL)</th><th>Notes</th></tr>
-    <tr><td>[Group of scenarios]</td><td></td><td></td></tr>
+    <tr><td>S-01 to S-02</td><td></td><td>Empty state and legacy record</td></tr>
+    <tr><td>S-03 to S-04</td><td></td><td>Bundle and duplicate picks</td></tr>
+    <tr><td>S-05 to S-07</td><td></td><td>Min quantity, tiered, two-for-one</td></tr>
+    <tr><td>S-08 to S-11</td><td></td><td>Failure paths and lifecycle</td></tr>
+    <tr><td>S-12 to S-13</td><td></td><td>Presentation and read-only role</td></tr>
+    <tr><td>S-14</td><td></td><td>Website acceptance loop</td></tr>
   </table>
-  <p><strong>Publish gate:</strong> [the exact condition under which this
-  tool is allowed to be published - e.g. "publish only when every MUST
-  scenario PASSES and T-01..T-03 ship in the same release"].</p>
-  <p><strong>Progress log:</strong> [append one line per completed scenario
-  with the date and the observed evidence - keep this a running history.]</p>
+  <p><strong>Publish gate:</strong> ship only when S-01 to S-13 PASS in the
+  harness and the foundation group has no open risk. S-14 is the gate for the
+  website release, not for this tool alone.</p>
+  <p><strong>Progress log:</strong> no scenario has been run yet. Add one dated
+  line per completed scenario with the observed result.</p>
 
   <h2 id="sec-risks">18. Risk and side-effect register - push gate</h2>
   <p>Every risk or side effect of a change that is NOT pushed yet lives here,
@@ -562,42 +1841,227 @@
   push-ready when its tasks are done AND it has no OPEN risks - the task
   panel shows a PUSH READY badge per group and the open-risk count.</p>
 
-  <!-- Auto-updated by ssot.js: open / solved / accepted counts. -->
   <div class="risk-stats-bar">
     <div class="risk-stats-progress"><div id="risk-stats-fill"></div></div>
     <span id="risk-stats-label">Risks: 0 open - 0 solved - 0 accepted (0% solved)</span>
   </div>
 
-  <!-- TEMPLATE: one .risk-item per risk or side effect. data-risk-id unique;
-       data-group = the release group it belongs to (must match a
-       data-release-group in section 15; leave empty for cross-cutting risks).
-       data-risk-level: critical (mandatory - blocks every push until solved)
-       | high (blocks unless accepted) | medium (warns) | low (nice-to-have,
-       reported only).
-       data-risk-status: open | accepted. Solved = the checkbox. -->
-  <!-- TEMPLATE SAMPLE (commented out - fresh SSOTs start EMPTY; copy, uncomment and edit).
-  <div class="risk-item" data-risk-id="R-01" data-group="[GROUP-KEY]" data-risk-level="high" data-risk-status="open">
+  <div class="risk-item" data-risk-id="R-01" data-group="deals-admin-foundation" data-risk-level="high" data-risk-status="open">
     <details>
       <summary>
         <span class="risk-id">R-01</span>
-        <span class="risk-title">[Risk or side effect name]</span>
+        <span class="risk-title">Malformed hand-edited data is republished</span>
         <span class="risk-severity-chip" data-risk-severity-chip></span>
         <span class="risk-status-chip" data-risk-status-chip></span>
         <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-01 as solved" />
       </summary>
       <div class="risk-details">
-        <p><strong>Applies to:</strong> [task T-xx / whole group]</p>
-        <p><strong>What can go wrong:</strong> [the side effect if this ships wrong]</p>
-        <p><strong>Likelihood / impact:</strong> [how likely, how bad]</p>
-        <p><strong>Mitigation:</strong> [what we do about it]</p>
-        <p><strong>Last re-evaluation:</strong> [date + result - update before every push]</p>
+        <p><strong>Applies to:</strong> T-01, T-02, T-04</p>
+        <p><strong>What can go wrong:</strong> An old record with a hand-edited deal survives normalization and is published again on the first unrelated save, so a broken deal reaches customers.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, high impact - the record looks fine in the editor while the website shows nothing.</p>
+        <p><strong>Mitigation:</strong> Normalization runs on load and validation runs on save (implemented 2026-10-21), so a broken entry is either repaired or blocks the save with a visible message.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
       </div>
     </details>
   </div>
-  END OF TEMPLATE SAMPLE -->
 
-  <p class="ok"><strong>Overall verdict.</strong> [One paragraph: is it safe to
-  test locally, is it safe to publish, and under which condition.]</p>
+  <div class="risk-item" data-risk-id="R-02" data-group="deals-admin-foundation" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-02</span>
+        <span class="risk-title">New empty sections change every published document</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-02 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-01</p>
+        <p><strong>What can go wrong:</strong> The first save after release adds empty presentation keys to records that never had them, so every tenant document changes shape at once.</p>
+        <p><strong>Likelihood / impact:</strong> Certain to happen, low impact - the widget treats empty sections as absent.</p>
+        <p><strong>Mitigation:</strong> Verify on the website that empty arrays and an empty hero render exactly like a missing section before the foundation group ships.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-03" data-group="deals-admin-editors" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-03</span>
+        <span class="risk-title">Deleting a referenced category or item breaks a deal</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-03 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-03, T-10, T-11, T-13</p>
+        <p><strong>What can go wrong:</strong> A category or item is deleted in the menu tab while a deal still references it, so the deal popup offers fewer options or nothing at all.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, high impact - the deal stays visible but cannot be completed.</p>
+        <p><strong>Mitigation:</strong> Deleting a category that still contains items is already blocked, and the item guard ships with T-29 (D-RAMM-17). Legacy broken references show a badge.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - T-29 implemented: deleteItem blocks when the item is listed in a tiered deal's item_ids or in a bundle fixed extra, naming the deals. The risk is solved for the admin-tool side.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-04" data-group="deals-admin-editors" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-04</span>
+        <span class="risk-title">Stale deals after a save</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-04 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-06 to T-16</p>
+        <p><strong>What can go wrong:</strong> An open customer page keeps the one-hour cached document, so a price change is not visible immediately.</p>
+        <p><strong>Likelihood / impact:</strong> Low likelihood on the same device because of tool.onValueChange, medium impact on a already-open page.</p>
+        <p><strong>Mitigation:</strong> Documented in the contract section 22. The admin tool shows a hint that the customer page may need a refresh.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-05" data-group="deals-admin-editors" data-risk-level="low" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-05</span>
+        <span class="risk-title">Owners misread duplicate picks</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-05 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-10, T-14</p>
+        <p><strong>What can go wrong:</strong> An owner expects four different products in a four-pick group and is surprised that two identical picks are allowed.</p>
+        <p><strong>Likelihood / impact:</strong> Low impact - the resulting deal is still valid.</p>
+        <p><strong>Mitigation:</strong> The match preview shows the matching item count and a short help line beside the quantity field.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-06" data-group="deals-admin-presentation" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-06</span>
+        <span class="risk-title">Campaigns and deals duplicate the same offer</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-06 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-17, T-18</p>
+        <p><strong>What can go wrong:</strong> The same offer exists once as a legacy campaign and once as a deal, so the Deals page shows it twice and the cart may apply both.</p>
+        <p><strong>Likelihood / impact:</strong> Medium likelihood, medium impact - pricing and trust.</p>
+        <p><strong>Mitigation:</strong> The campaign editor shows a warning when a matching two-for-one deal exists, and I-07 offers a one-click migration. The duplicate-as-deal action ships with T-18.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - T-17 and T-18 implemented; the duplicate-as-deal action is available on every campaign card. Risk remains open for the one-click full migration (I-07).</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-07" data-group="deals-admin-presentation" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-07</span>
+        <span class="risk-title">The hero preset gallery ships empty</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-07 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-19</p>
+        <p><strong>What can go wrong:</strong> No preset URLs are defined yet, so the gallery renders nothing and the hero can only be set by a direct upload.</p>
+        <p><strong>Likelihood / impact:</strong> High likelihood until Q-02 is answered, low impact - direct upload still works.</p>
+        <p><strong>Mitigation:</strong> Ship the direct image first; the gallery is hidden while the preset list is empty.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - T-19 implemented with the mitigation: the preset gallery renders only when preset_images has entries, and it is hidden otherwise. Q-01 (preset source) is still open.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-08" data-group="deals-order-display" data-risk-level="high" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-08</span>
+        <span class="risk-title">The order tool drops deal information</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-08 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-21 to T-23</p>
+        <p><strong>What can go wrong:</strong> Deal orders reach the kitchen without the deal title, picks or the discount row, so staff assemble the wrong items and the ticket shows the wrong total.</p>
+        <p><strong>Likelihood / impact:</strong> Certain until T-21 and T-22 ship, high impact on fulfillment.</p>
+        <p><strong>Mitigation:</strong> The order tool changes ship in the same release as the website acceptance pass (S-14), before any deal goes live for a real tenant.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-09" data-group="deals-contract-docs" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-09</span>
+        <span class="risk-title">The contract and the tool drift apart</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-09 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-24 to T-26</p>
+        <p><strong>What can go wrong:</strong> The contract keeps an incomplete top-level shape while the tool writes four new sections, so the next implementer builds against a stale description.</p>
+        <p><strong>Likelihood / impact:</strong> Certain today, medium impact on future work.</p>
+        <p><strong>Mitigation:</strong> Close T-24 to T-26 with the same release that introduces the sections.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - solved: T-24, T-25 and T-26 are done and the contract is now version 3.3 with the presentation sections, the updated table of contents, the extended example, the promo codes section and the active-flag note.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-10" data-group="deals-widget-acceptance" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-10</span>
+        <span class="risk-title">The website enforces a rule differently</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-10 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-27, T-28</p>
+        <p><strong>What can go wrong:</strong> The admin tool writes a valid shape while the website computes tiers, same-size filtering or the free item differently, so the customer pays a different price than expected.</p>
+        <p><strong>Likelihood / impact:</strong> Low likelihood, high impact - money.</p>
+        <p><strong>Mitigation:</strong> S-14 places one real order per rule type and compares the cart and the order record before release.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - opened with the plan, not yet implemented.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="risk-item" data-risk-id="R-11" data-group="deals-extended-types" data-risk-level="medium" data-risk-status="open">
+    <details>
+      <summary>
+        <span class="risk-id">R-11</span>
+        <span class="risk-title">The manager validates an extended rule differently than the website enforces it</span>
+        <span class="risk-severity-chip" data-risk-severity-chip></span>
+        <span class="risk-status-chip" data-risk-status-chip></span>
+        <input type="checkbox" class="risk-solved-checkbox" aria-label="Mark R-11 as solved" />
+      </summary>
+      <div class="risk-details">
+        <p><strong>Applies to:</strong> T-30 to T-42</p>
+        <p><strong>What can go wrong:</strong> The new shapes touch money directly (percent off, thresholds, free delivery). A shape the manager accepts but the website totals engine reads differently mischarges the customer.</p>
+        <p><strong>Likelihood / impact:</strong> Low likelihood, high impact - money.</p>
+        <p><strong>Mitigation:</strong> Every editor validates against contract section 23.1 shapes, and T-31 keeps the save gate closed. The website acceptance pass extends T-27 and T-28 with one order per new rule type before the group is pushed.</p>
+        <p><strong>Last re-evaluation:</strong> 2026-10-21 - T-30 to T-42 implemented: the editors validate against contract section 23.1 and the save gate is closed. The acceptance pass (T-27, T-28) is still pending before the group is pushed.</p>
+      </div>
+    </details>
+  </div>
+
+
+  <p class="ok"><strong>Overall verdict.</strong> It is safe to develop and
+  test this feature locally in the harness: no existing document key changes
+  shape and the new sections are optional. It is NOT safe to publish a deal to
+  a real tenant until the foundation group and the deal editors group have no
+  open risk, S-01 to S-13 pass, and the order tool group ships with them so
+  deal orders reach the kitchen correctly.</p>
 
   <h2 id="sec-releases">19. Release log</h2>
   <p>One row per published release. The <code>npm run rel</code> script appends
@@ -612,7 +2076,7 @@
 
   <div class="footer">
     Restaurant And Menu Manager - single source of truth for all decisions about this
-    tool. Version 0.1, 2026-09-21.
+    tool. Version 0.4, 2026-10-21.
     Keep in sync with code; when in doubt, update this document in the same
     change as the code.
   </div>

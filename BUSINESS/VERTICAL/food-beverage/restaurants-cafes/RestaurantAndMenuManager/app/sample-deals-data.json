@@ -1,0 +1,362 @@
+{
+  "deals": [
+    {
+      "id": "smp-bundle-basic",
+      "section": "Bundles",
+      "title": "Bundle: 2 Medium Pizzas + 4 Dips",
+      "description": "Pick two medium pizzas and four dips at one fixed price.",
+      "price": 29.99,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-pizzas", "label": "2 Medium Pizzas", "quantity": 2, "category_ids": ["cat-pizza"], "size_label": "M" },
+          { "group_id": "smp-g-dips", "label": "4 Dips", "quantity": 4, "category_ids": ["cat-dips"] }
+        ]
+      }
+    },
+    {
+      "id": "smp-bundle-fixed-extra",
+      "section": "Bundles",
+      "title": "Bundle: Pizza + fixed free dip",
+      "description": "One pizza and a fixed garlic dip included.",
+      "price": 16.5,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-pizza", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat-pizza"] },
+          { "group_id": "smp-g-fixed", "label": "Garlic Dip", "quantity": 1, "item_ids": ["item-garlic-dip"] }
+        ]
+      }
+    },
+    {
+      "id": "smp-bundle-name-filter",
+      "section": "Bundles",
+      "title": "Bundle: wings + drink by name filter",
+      "description": "Any ten wings plus a drink whose name contains Cola.",
+      "price": 18.9,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-wings", "label": "10 Wings", "quantity": 10, "category_ids": ["cat-wings"] },
+          { "group_id": "smp-g-cola", "label": "Cola", "quantity": 1, "category_ids": ["cat-drinks"], "name_filter": "Cola" }
+        ]
+      }
+    },
+    {
+      "id": "smp-min-quantity-sized",
+      "section": "Quantity",
+      "title": "Minimum 6 medium pizzas, per unit",
+      "description": "Any six medium pizzas at a per-unit price.",
+      "price": 12.99,
+      "image_url": "",
+      "active": true,
+      "rule_type": "min_quantity",
+      "rule": { "category_ids": ["cat-pizza"], "size_label": "M", "min_quantity": 6 }
+    },
+    {
+      "id": "smp-min-quantity-any",
+      "section": "Quantity",
+      "title": "Minimum 10 wings, any size",
+      "description": "Ten wings at a per-unit price.",
+      "price": 1.4,
+      "image_url": "",
+      "active": true,
+      "rule_type": "min_quantity",
+      "rule": { "category_ids": ["cat-wings"], "min_quantity": 10 }
+    },
+    {
+      "id": "smp-tiered",
+      "section": "Quantity",
+      "title": "Tiered: pizza party",
+      "description": "Two or three pizzas at a tier price.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "tiered",
+      "rule": {
+        "item_ids": ["item-margherita", "item-pepperoni", "item-veggie"],
+        "tiers": [
+          { "quantity": 2, "price": 24, "label": "2 pizzas for 24" },
+          { "quantity": 3, "price": 33, "label": "3 pizzas for 33" }
+        ]
+      }
+    },
+    {
+      "id": "smp-two-for-one-same-size",
+      "section": "Buy one get one",
+      "title": "2 for 1 pizza, same size",
+      "description": "The cheaper pizza is free; both picks must share a size.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "two_for_one",
+      "rule": { "required_item_count": 2, "category_ids": ["cat-pizza"], "same_size": true }
+    },
+    {
+      "id": "smp-two-for-one-mixed",
+      "section": "Buy one get one",
+      "title": "2 for 1 wings, any size",
+      "description": "The cheaper box is free; sizes may differ.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "two_for_one",
+      "rule": { "required_item_count": 2, "category_ids": ["cat-wings"], "same_size": false }
+    },
+    {
+      "id": "smp-percent-restricted",
+      "section": "Discounts",
+      "title": "10% off pizzas",
+      "description": "Percent discount restricted to the pizza category.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 10, "category_ids": ["cat-pizza"] }
+    },
+    {
+      "id": "smp-percent-item",
+      "section": "Discounts",
+      "title": "15% off margherita",
+      "description": "Percent discount restricted to one item.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 15, "item_ids": ["item-margherita"] }
+    },
+    {
+      "id": "smp-percent-whole-order",
+      "section": "Discounts",
+      "title": "5% off the whole order",
+      "description": "No restriction - applies to the entire order.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 5 }
+    },
+    {
+      "id": "smp-subtotal-threshold",
+      "section": "Discounts",
+      "title": "Spend 50, save 10",
+      "description": "A fixed discount over a minimum subtotal.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "subtotal_threshold",
+      "rule": { "min_subtotal": 50, "discount": 10 }
+    },
+    {
+      "id": "smp-free-delivery-threshold",
+      "section": "Delivery",
+      "title": "Free delivery over 30",
+      "description": "The delivery fee is dropped above the threshold.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_delivery",
+      "rule": { "min_subtotal": 30, "always": false }
+    },
+    {
+      "id": "smp-free-delivery-always",
+      "section": "Delivery",
+      "title": "Free delivery always",
+      "description": "Delivery is always free.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_delivery",
+      "rule": { "always": true }
+    },
+    {
+      "id": "smp-free-item-with-purchase",
+      "section": "Buy one get one",
+      "title": "Pizza + free garlic dip",
+      "description": "Buy a pizza and the garlic dip comes free.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_item_with_purchase",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-paid-pizza", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat-pizza"], "charge": "paid" },
+          { "group_id": "smp-g-free-dip", "label": "Garlic Dip", "quantity": 1, "item_ids": ["item-garlic-dip"], "charge": "free" }
+        ]
+      }
+    },
+    {
+      "id": "smp-buy-n-get-m",
+      "section": "Buy one get one",
+      "title": "Buy 3 get 1 wings",
+      "description": "Three paid wings and one free, any size.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "buy_n_get_m",
+      "rule": { "required_item_count": 3, "free_item_count": 1, "category_ids": ["cat-wings"], "same_size": false }
+    },
+    {
+      "id": "smp-volume-bands",
+      "section": "Quantity",
+      "title": "Volume: wings by the box",
+      "description": "Unit price drops at higher quantities.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "volume_pricing",
+      "rule": {
+        "category_ids": ["cat-wings"],
+        "bands": [
+          { "min_quantity": 5, "unit_price": 1.0 },
+          { "min_quantity": 10, "unit_price": 0.9 },
+          { "min_quantity": 20, "unit_price": 0.8 }
+        ]
+      }
+    },
+    {
+      "id": "smp-volume-name-filter",
+      "section": "Quantity",
+      "title": "Volume: cola by name filter",
+      "description": "Unit price drops by band for drinks named Cola.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "volume_pricing",
+      "rule": {
+        "category_ids": ["cat-drinks"],
+        "name_filter": "Cola",
+        "bands": [
+          { "min_quantity": 3, "unit_price": 2.0 },
+          { "min_quantity": 6, "unit_price": 1.8 }
+        ]
+      }
+    },
+    {
+      "id": "smp-free-modifier",
+      "section": "Modifiers",
+      "title": "Free extra topping",
+      "description": "The cheapest topping option comes free on pizzas.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_modifier",
+      "rule": { "modifier_group_ids": ["mg-toppings"], "option_count": 1, "category_ids": ["cat-pizza"] }
+    },
+    {
+      "id": "smp-scheduled-bundle",
+      "section": "Weekend",
+      "title": "Scheduled: weekend pizza night",
+      "description": "Visible only Friday-Saturday evenings in November.",
+      "price": 24.99,
+      "image_url": "",
+      "active": true,
+      "schedule": { "date_from": "2026-11-01", "date_until": "2026-11-30", "weekdays": [5, 6], "time_from": "17:00", "time_until": "22:00" },
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-wkd-pizza", "label": "2 Pizzas", "quantity": 2, "category_ids": ["cat-pizza"] }
+        ]
+      }
+    },
+    {
+      "id": "smp-scheduled-time-only",
+      "section": "Happy hour",
+      "title": "Happy hour: 20% off dips",
+      "description": "Weekday afternoons only.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "schedule": { "weekdays": [1, 2, 3, 4, 5], "time_from": "14:00", "time_until": "17:00" },
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 20, "category_ids": ["cat-dips"] }
+    },
+    {
+      "id": "smp-inactive-deal",
+      "section": "Paused",
+      "title": "Inactive: hidden from the website",
+      "description": "The active flag is off, so the website hides this deal.",
+      "price": 9.99,
+      "image_url": "",
+      "active": false,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "smp-g-hidden", "label": "1 Pizza", "quantity": 1, "category_ids": ["cat-pizza"] }
+        ]
+      }
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "smp-campaign-category",
+      "title": "Legacy 2x pizza",
+      "description": "Old campaign kept for editing; surfaces as a two-for-one deal.",
+      "required_item_count": 2,
+      "same_size": true,
+      "category_ids": ["cat-pizza"],
+      "item_ids": [],
+      "pricing": "most_expensive"
+    },
+    {
+      "id": "smp-campaign-items",
+      "title": "Legacy wing pair",
+      "description": "Campaign restricted to specific items.",
+      "required_item_count": 2,
+      "same_size": false,
+      "category_ids": [],
+      "item_ids": ["item-wings-classic", "item-wings-hot"],
+      "pricing": "most_expensive"
+    }
+  ],
+  "promotions": [
+    { "id": "smp-promo-free-delivery", "title": "Free delivery over 30", "description": "Downtown area only", "image_url": "" },
+    { "id": "smp-promo-weekend", "title": "Weekend family bundles", "description": "Fri-Sun", "image_url": "" },
+    { "id": "smp-promo-loyalty", "title": "Loyalty 10%", "description": "Members only", "image_url": "" },
+    { "id": "smp-promo-new-menu", "title": "New winter menu", "description": "Available now", "image_url": "" }
+  ],
+  "hero": {
+    "image_url": "https://cdn.example.com/hero.jpg",
+    "preset_images": ["https://cdn.example.com/hero-1.jpg", "https://cdn.example.com/hero-2.jpg"]
+  },
+  "promo_codes": [
+    {
+      "id": "smp-code-save10",
+      "code": "SAVE10",
+      "title": "10% off everything",
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 10 },
+      "max_uses": 500
+    },
+    {
+      "id": "smp-code-spend50",
+      "code": "SPEND50",
+      "title": "Save 10 over 50",
+      "rule_type": "subtotal_threshold",
+      "rule": { "min_subtotal": 50, "discount": 10 },
+      "max_uses": 100
+    },
+    {
+      "id": "smp-code-freedelivery",
+      "code": "FREEDELIVERY",
+      "title": "Free delivery",
+      "rule_type": "free_delivery",
+      "rule": { "always": true },
+      "max_uses": null
+    },
+    {
+      "id": "smp-code-delivery30",
+      "code": "DELIVERY30",
+      "title": "Free delivery over 30",
+      "rule_type": "free_delivery",
+      "rule": { "min_subtotal": 30, "always": false },
+      "max_uses": 25
+    }
+  ]
+}

@@ -295,6 +295,26 @@
     display: block; margin-top: 14px; font-size: 12.5px; font-weight: 800;
     letter-spacing: 0.02em; color: var(--brand-2-deep); text-decoration: none;
   }
+  /* volunteer network signature: a quiet issuer stamp under the closing copy */
+  .net-lockup {
+    display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+    margin-top: 12px; padding: 6px 14px;
+    border: 1px solid rgba(0, 54, 95, 0.26);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.72);
+  }
+  .net-lockup b {
+    font-size: 13px; font-weight: 900; letter-spacing: 0.18em;
+    color: var(--brand-2-deep); text-transform: uppercase; line-height: 1.1;
+  }
+  .net-lockup span {
+    font-size: 7.5px; font-weight: 700; letter-spacing: 0.13em;
+    text-transform: uppercase; color: rgba(0, 54, 95, 0.70); line-height: 1.2;
+  }
+  @media (max-width: 639px) {
+    .net-lockup { margin-top: 9px; padding: 5px 11px; }
+    .net-lockup b { font-size: 12px; }
+  }
   @media (max-width: 639px) {
     .cta-giant { padding: 22px 16px; }
     .cta-giant h2 { font-size: 24px; }
@@ -304,7 +324,7 @@
   .page { display: flex; flex-direction: column; }
   .page > * { flex: 0 0 auto; }
   .page > .footer { margin-top: auto; }
-  .steps .inner { padding-top: 10mm; padding-bottom: 10mm; }
+  .steps .inner { padding-top: 9mm; padding-bottom: 9mm; }
   .steps .step { padding: 13px 12px; }
   .steps .step .num { width: 22px; height: 22px; font-size: 11px; margin-bottom: 6px; }
   .steps .step strong { font-size: 12.5px; margin-bottom: 2px; }
@@ -450,7 +470,7 @@
   }
 
   /* ---- page 2: pasted statement note ---- */
-  .statement { background: var(--paper-soft); padding: 13mm 10mm; border: 0; }
+  .statement { background: var(--paper-soft); padding: 11mm 10mm; border: 0; }
   .statement p {
     display: inline-block; text-align: left; max-width: 34ch;
     background: #fff; padding: 20px 24px; border-radius: 14px;
@@ -482,7 +502,7 @@
 
   /* ---- page 2: final band ---- */
   .cta-logo { height: 30px; width: auto; display: block; margin: 0 auto 14px; }
-  .cta-giant { padding: 13mm 10mm 12mm; }
+  .cta-giant { padding: 12mm 10mm 11mm; }
 
   /* =========================================================================
      EXPORT BAR (screen only)
@@ -565,7 +585,11 @@
 
   html[data-format="mobile"] .steps .inner { padding-top: 5mm; padding-bottom: 5mm; }
   html[data-format="mobile"] .steps-grid { grid-template-columns: 1fr; gap: 12px; }
-  html[data-format="mobile"] .steps-grid::before { display: none; }
+  html[data-format="mobile"] .steps-grid::before {
+    display: block; content: "";
+    top: 12px; bottom: 12px; left: 16px; right: auto;
+    border-top: 0; border-left: 2px dashed #cfdbe7;
+  }
   html[data-format="mobile"] .steps .step { padding: 0 0 0 44px; position: relative; }
   html[data-format="mobile"] .steps .step .num { position: absolute; left: 0; top: 0; margin: 0; box-shadow: none; }
   html[data-format="mobile"] .steps .step strong { font-size: 13px; }
@@ -781,9 +805,10 @@
     <section class="cta-giant">
       <img class="cta-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
       <h2>Apply in 3 minutes</h2>
-      <p>Pick a role, tell us when you are genuinely free. Interview, sample, decision.</p>
+      <p>Apply for a role, and you join the Future Bridge Volunteer Network when you start.</p>
       <a class="btn" href="https://futurebridgeacademy.ca/volunteer">Start my application <span class="arrow">→</span></a>
       <a class="cta-url-big" href="https://futurebridgeacademy.ca/volunteer">futurebridgeacademy.ca/volunteer</a>
+      <div class="net-lockup"><b>FBVN</b><span>Future Bridge Volunteer Network</span></div>
     </section>
 
     <div class="footer">

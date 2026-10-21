@@ -12,6 +12,7 @@
   <button type="button" class="main-tab" data-tab="taxpay">💰 Tax & Pay</button>
   <button type="button" class="main-tab" data-tab="delivery">🚚 Delivery</button>
   <button type="button" class="main-tab" data-tab="menu">🍽️ Menu</button>
+  <button type="button" class="main-tab" data-tab="deals">🏷️ Deals</button>
   <button type="button" class="main-tab" data-tab="alerts">🔔 Alerts</button>
   <button type="button" class="main-tab" data-tab="devices">📱 Devices</button>
 </nav>
@@ -946,6 +947,396 @@
 <!-- ===================================================================== -->
 <!-- TAB 6: ALERTS & SOCIAL -->
 <!-- ===================================================================== -->
+<!-- ===== DEALS TAB ===== -->
+<section class="tab-panel" data-tab="deals">
+  <nav class="sub-tabs" id="deals-subtabs">
+    <button type="button" class="sub-tab active" data-subtab="deals-list">🏷️ Deals</button>
+    <button type="button" class="sub-tab" data-subtab="deals-campaigns">📣 Campaigns</button>
+    <button type="button" class="sub-tab" data-subtab="deals-hero">🖼️ Hero</button>
+    <button type="button" class="sub-tab" data-subtab="deals-promotions">📌 Promotions</button>
+    <button type="button" class="sub-tab" data-subtab="deals-promo-codes">🎟️ Promo Codes</button>
+  </nav>
+
+  <div class="subtab-panel active" data-subtab="deals-list">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Customer deals</span>
+        <span class="deals-toolbar-hint">Drag a deal to reorder it inside a section, or onto another section to move it.</span>
+      </div>
+      <div class="deals-toolbar-actions">
+        <button type="button" class="btn btn-sm btn-outline" id="deals-import-btn">📥 Samples</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deals-add-btn">+ Add Deal</button>
+      </div>
+    </div>
+    <div class="deals-scroll">
+      <div id="deals-list"></div>
+      <p class="deals-active-notice"><strong>Active</strong> is honored by the website: a deal switched off here is hidden from the customer Deals page.</p>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-campaigns">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Legacy campaigns</span>
+        <span class="deals-toolbar-hint">Campaigns appear on the website as two-for-one deals. Create new offers as Deals instead.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="campaigns-add-btn">+ Add Campaign</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="campaigns-list"></div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-hero">
+    <div class="deals-scroll">
+      <div class="card">
+        <div class="card-header"><span class="card-icon">🖼️</span> Hero image</div>
+        <div class="card-body">
+          <div class="hero-image-preview" id="hero-image-preview"></div>
+          <div class="deal-image-row">
+            <button type="button" class="btn btn-sm btn-outline" id="hero-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="hero-image-clear">✕ Remove</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Image URL</label>
+            <input type="text" class="form-input" id="hero-image-url" placeholder="https://...">
+            <span class="field-hint">The website renders this image above the restaurant name.</span>
+          </div>
+          <div class="form-group" id="hero-preset-group" style="display:none;">
+            <label class="form-label">Presets</label>
+            <div class="hero-preset-grid" id="hero-preset-grid"></div>
+            <span class="field-hint">Preset images are provided by the platform. Pick one to use it as the hero image.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-promotions">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Promotions</span>
+        <span class="deals-toolbar-hint">The website shows at most the first four promotions. Drag a promotion to reorder.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="promotions-add-btn">+ Add Promotion</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="promotions-list"></div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-promo-codes">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Promo codes</span>
+        <span class="deals-toolbar-hint">Codes customers type at checkout. Supported offers: percent off, subtotal discount and free delivery.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="promo-codes-add-btn">+ Add Code</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="promo-codes-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CAMPAIGN EDITOR MODAL ===== -->
+<div class="modal-overlay" id="campaign-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="campaign-editor-title">New Campaign</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="campaign-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="campaign-editor-body">
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="campaign-title" placeholder="e.g. 2x Pizza"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" id="campaign-description" rows="2" placeholder="Pick two pizzas - pay only for the more expensive one."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Required item count</label><input type="number" class="form-input" id="campaign-required-count" min="2" step="1" value="2"></div>
+        <div class="form-group"><label class="form-label">Same size only</label><label class="switch" style="margin-top:6px;"><input type="checkbox" id="campaign-same-size" checked><span class="slider"></span></label></div>
+      </div>
+      <div class="form-group"><label class="form-label">Categories</label><div id="campaign-categories"></div></div>
+      <div class="form-group"><label class="form-label">Items</label><div id="campaign-items"></div></div>
+      <div class="form-group">
+        <label class="form-label">Pricing</label>
+        <input type="text" class="form-input" id="campaign-pricing" value="most_expensive" disabled>
+        <span class="field-hint">Read-only - the website charges the most expensive pick and the cheapest pick is free.</span>
+      </div>
+      <div id="campaign-match-preview" class="deal-match-preview"></div>
+      <div id="campaign-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="campaign-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="campaign-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="campaign-save-btn">Save Campaign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CAMPAIGN DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="campaign-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Campaign?</div>
+    <div class="modal-body">This will permanently delete <strong id="campaign-delete-modal-name">this campaign</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="campaign-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="campaign-delete-confirm-btn">Delete Campaign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMOTION EDITOR MODAL ===== -->
+<div class="modal-overlay" id="promotion-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="promotion-editor-title">New Promotion</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="promotion-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="promotion-editor-body">
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="promotion-title" placeholder="e.g. Free delivery over $30"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" id="promotion-description" rows="2" placeholder="e.g. Downtown area only"></textarea></div>
+      <div class="form-group">
+        <label class="form-label">Promotion image</label>
+        <div class="deal-image-row">
+          <div class="deal-image-preview" id="promotion-image-preview"></div>
+          <div class="deal-image-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="promotion-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="promotion-image-clear">✕ Remove</button>
+          </div>
+        </div>
+        <input type="text" class="form-input form-input-sm" id="promotion-image-url" placeholder="https://... (optional)">
+      </div>
+      <div id="promotion-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="promotion-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="promotion-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="promotion-save-btn">Save Promotion</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMOTION DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="promotion-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Promotion?</div>
+    <div class="modal-body">This will permanently delete <strong id="promotion-delete-modal-name">this promotion</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="promotion-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="promotion-delete-confirm-btn">Delete Promotion</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMO CODE EDITOR MODAL ===== -->
+<div class="modal-overlay" id="promo-code-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="promo-code-editor-title">New Promo Code</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="promo-code-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="promo-code-editor-body">
+      <div class="form-group"><label class="form-label">Code *</label><input type="text" class="form-input" id="promo-code-code" placeholder="e.g. SAVE10"><span class="field-hint">Typed by the customer at checkout; stored uppercase.</span></div>
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="promo-code-title" placeholder="e.g. 10% off everything"></div>
+      <div class="form-group">
+        <label class="form-label">Offer type *</label>
+        <select class="form-input" id="promo-code-rule-type">
+          <option value="percentage_discount">Percent off</option>
+          <option value="subtotal_threshold">Save a fixed amount over a subtotal</option>
+          <option value="free_delivery">Free delivery</option>
+        </select>
+      </div>
+      <div id="promo-code-rule-editor"></div>
+      <div class="form-group"><label class="form-label">Max uses</label><input type="number" class="form-input" id="promo-code-max-uses" min="1" step="1" placeholder="Empty = unlimited"></div>
+      <div id="promo-code-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="promo-code-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="promo-code-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="promo-code-save-btn">Save Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMO CODE DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="promo-code-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Promo Code?</div>
+    <div class="modal-body">This will permanently delete <strong id="promo-code-delete-modal-name">this promo code</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="promo-code-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="promo-code-delete-confirm-btn">Delete Code</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SAMPLE DATA IMPORT MODAL ===== -->
+<div class="modal-overlay" id="deals-import-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title">📥 Import sample deals data</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="deals-import-close">✕</button>
+    </div>
+    <div class="deal-editor-body">
+      <fieldset class="settings-group">
+        <legend>Source</legend>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-bundled" checked> Bundled sample file</label>
+          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-paste"> Paste JSON</label>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <select class="form-input" id="deals-import-file"></select>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes"'></textarea>
+        </div>
+        <span class="field-hint">The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings). Importing into a menu without those categories is blocked and the validation errors are shown.</span>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Sections to import</legend>
+        <div class="deal-import-checks">
+          <label class="radio-label"><input type="checkbox" id="deals-import-deals" checked> Deals</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-campaigns" checked> Campaigns</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-promotions" checked> Promotions</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-hero" checked> Hero</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-promo-codes" checked> Promo codes</label>
+        </div>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Mode</legend>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="deals-import-mode" id="deals-import-append" checked> Append - add next to what exists (new ids)</label>
+          <label class="radio-label"><input type="radio" name="deals-import-mode" id="deals-import-replace"> Replace - overwrite the selected sections</label>
+        </div>
+        <span class="field-hint">The hero image is only applied in Replace mode.</span>
+      </fieldset>
+      <div id="deals-import-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="deals-import-cancel">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deals-import-run">📥 Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEAL EDITOR MODAL ===== -->
+<div class="modal-overlay" id="deal-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="deal-editor-title">New Deal</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="deal-editor-close">✕</button>
+    </div>
+    <div class="deal-modal-tabs" id="deal-editor-tabs">
+      <button type="button" class="deal-modal-tab active" data-deal-tab="basics">1 · Basics</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="rule">2 · Offer rule</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="schedule">3 · Schedule</button>
+    </div>
+    <div class="deal-editor-body" id="deal-editor-body">
+      <div class="deal-tab-content-wrap">
+      <div class="deal-tab-content active" id="deal-tab-basics">
+      <div class="form-group">
+        <label class="form-label">Title *</label>
+        <input type="text" class="form-input" id="deal-title" placeholder="e.g. 2 Pizzas + 4 Dips">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input form-textarea" id="deal-description" rows="2" placeholder="What the customer gets"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          <input type="text" class="form-input" id="deal-section" list="deal-section-options" placeholder="e.g. Weekend">
+          <datalist id="deal-section-options"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <input type="number" class="form-input" id="deal-price" min="0" step="0.01" placeholder="0.00">
+          <span class="field-hint" id="deal-price-hint"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deal image</label>
+        <div class="deal-image-row">
+          <div class="deal-image-preview" id="deal-image-preview"></div>
+          <div class="deal-image-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="deal-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="deal-image-clear">✕ Remove</button>
+          </div>
+        </div>
+        <input type="text" class="form-input form-input-sm" id="deal-image-url" placeholder="https://... (optional)">
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-label">Active</span>
+          <span class="toggle-desc">Hidden from the website when off. The website honors this flag since 2026-10-21.</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="deal-active" checked><span class="slider"></span></label>
+      </div>
+      <div class="deal-tab-next-row">
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="rule">Next: Offer rule →</button>
+      </div>
+      </div>
+      <div class="deal-tab-content" id="deal-tab-rule">
+      <div class="form-group">
+        <label class="form-label">Deal type *</label>
+        <select class="form-input" id="deal-rule-type">
+          <option value="bundle">Bundle - one fixed total price</option>
+          <option value="min_quantity">Minimum quantity - price per unit</option>
+          <option value="tiered">Tiered - price depends on quantity</option>
+          <option value="two_for_one">Two for one - cheapest item free</option>
+          <option value="percentage_discount">Percent off - discount line</option>
+          <option value="subtotal_threshold">Subtotal threshold - save a fixed amount</option>
+          <option value="free_delivery">Free delivery</option>
+          <option value="free_item_with_purchase">Free item with purchase</option>
+          <option value="buy_n_get_m">Buy N get M free</option>
+          <option value="volume_pricing">Volume pricing - quantity bands</option>
+          <option value="free_modifier">Free modifier options</option>
+        </select>
+      </div>
+      <div id="deal-rule-editor"></div>
+      <div id="deal-match-preview" class="deal-match-preview"></div>
+      <div class="deal-tab-next-row">
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="schedule">Next: Schedule →</button>
+      </div>
+      </div>
+      <div class="deal-tab-content" id="deal-tab-schedule">
+        <div id="deal-schedule-editor"></div>
+      </div>
+      </div>
+      <div id="deal-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="deal-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="deal-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deal-save-btn">Save Deal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEAL DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="deal-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Deal?</div>
+    <div class="modal-body">This will permanently delete <strong id="deal-delete-modal-name">this deal</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="deal-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="deal-delete-confirm-btn">Delete Deal</button>
+    </div>
+  </div>
+</div>
+
 <section class="tab-panel" data-tab="alerts">
   <div class="tab-scroll">
 

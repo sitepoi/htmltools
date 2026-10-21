@@ -40,6 +40,11 @@ body { padding: 0 !important; margin: 0 !important; }
   <button class="btn-reload" id="th-reload">🔄 Reload</button>
   <button class="btn-dump" id="th-dump">📋 Dump DB</button>
   <span class="sep">|</span>
+  <button class="btn-dump" id="th-deals-fixtures">🍕 Deal fixtures</button>
+  <button class="btn-clear" id="th-deals-failures">⚠️ Deal failures</button>
+  <button class="btn-clear" id="th-extended-failures">⚠️ Extended failures</button>
+  <button class="btn-reload" id="th-validate-deals">✅ Validate deals</button>
+  <span class="sep">|</span>
   <button class="btn-ro" id="th-toggle-ro">🔒 RO: OFF</button>
   <span class="sep">|</span>
   <span class="hint">Ctrl+Shift+R = RO toggle</span> <span class="sep">|</span>
@@ -60,6 +65,7 @@ body { padding: 0 !important; margin: 0 !important; }
   <button type="button" class="main-tab" data-tab="taxpay">💰 Tax &amp; Pay</button>
   <button type="button" class="main-tab" data-tab="delivery">🚚 Delivery</button>
   <button type="button" class="main-tab" data-tab="menu">🍽️ Menu</button>
+  <button type="button" class="main-tab" data-tab="deals">🏷️ Deals</button>
   <button type="button" class="main-tab" data-tab="alerts">🔔 Alerts</button>
   <button type="button" class="main-tab" data-tab="devices">📱 Devices</button>
 </nav>
@@ -586,6 +592,396 @@ body { padding: 0 !important; margin: 0 !important; }
     </div>
   </div>
 
+<!-- ===== DEALS TAB ===== -->
+<section class="tab-panel" data-tab="deals">
+  <nav class="sub-tabs" id="deals-subtabs">
+    <button type="button" class="sub-tab active" data-subtab="deals-list">🏷️ Deals</button>
+    <button type="button" class="sub-tab" data-subtab="deals-campaigns">📣 Campaigns</button>
+    <button type="button" class="sub-tab" data-subtab="deals-hero">🖼️ Hero</button>
+    <button type="button" class="sub-tab" data-subtab="deals-promotions">📌 Promotions</button>
+    <button type="button" class="sub-tab" data-subtab="deals-promo-codes">🎟️ Promo Codes</button>
+  </nav>
+
+  <div class="subtab-panel active" data-subtab="deals-list">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Customer deals</span>
+        <span class="deals-toolbar-hint">Drag a deal to reorder it inside a section, or onto another section to move it.</span>
+      </div>
+      <div class="deals-toolbar-actions">
+        <button type="button" class="btn btn-sm btn-outline" id="deals-import-btn">📥 Samples</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deals-add-btn">+ Add Deal</button>
+      </div>
+    </div>
+    <div class="deals-scroll">
+      <div id="deals-list"></div>
+      <p class="deals-active-notice"><strong>Active</strong> is honored by the website: a deal switched off here is hidden from the customer Deals page.</p>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-campaigns">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Legacy campaigns</span>
+        <span class="deals-toolbar-hint">Campaigns appear on the website as two-for-one deals. Create new offers as Deals instead.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="campaigns-add-btn">+ Add Campaign</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="campaigns-list"></div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-hero">
+    <div class="deals-scroll">
+      <div class="card">
+        <div class="card-header"><span class="card-icon">🖼️</span> Hero image</div>
+        <div class="card-body">
+          <div class="hero-image-preview" id="hero-image-preview"></div>
+          <div class="deal-image-row">
+            <button type="button" class="btn btn-sm btn-outline" id="hero-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="hero-image-clear">✕ Remove</button>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Image URL</label>
+            <input type="text" class="form-input" id="hero-image-url" placeholder="https://...">
+            <span class="field-hint">The website renders this image above the restaurant name.</span>
+          </div>
+          <div class="form-group" id="hero-preset-group" style="display:none;">
+            <label class="form-label">Presets</label>
+            <div class="hero-preset-grid" id="hero-preset-grid"></div>
+            <span class="field-hint">Preset images are provided by the platform. Pick one to use it as the hero image.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-promotions">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Promotions</span>
+        <span class="deals-toolbar-hint">The website shows at most the first four promotions. Drag a promotion to reorder.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="promotions-add-btn">+ Add Promotion</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="promotions-list"></div>
+    </div>
+  </div>
+
+  <div class="subtab-panel" data-subtab="deals-promo-codes">
+    <div class="deals-toolbar">
+      <div class="deals-toolbar-info">
+        <span class="panel-label">Promo codes</span>
+        <span class="deals-toolbar-hint">Codes customers type at checkout. Supported offers: percent off, subtotal discount and free delivery.</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-primary" id="promo-codes-add-btn">+ Add Code</button>
+    </div>
+    <div class="deals-scroll">
+      <div id="promo-codes-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CAMPAIGN EDITOR MODAL ===== -->
+<div class="modal-overlay" id="campaign-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="campaign-editor-title">New Campaign</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="campaign-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="campaign-editor-body">
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="campaign-title" placeholder="e.g. 2x Pizza"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" id="campaign-description" rows="2" placeholder="Pick two pizzas - pay only for the more expensive one."></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Required item count</label><input type="number" class="form-input" id="campaign-required-count" min="2" step="1" value="2"></div>
+        <div class="form-group"><label class="form-label">Same size only</label><label class="switch" style="margin-top:6px;"><input type="checkbox" id="campaign-same-size" checked><span class="slider"></span></label></div>
+      </div>
+      <div class="form-group"><label class="form-label">Categories</label><div id="campaign-categories"></div></div>
+      <div class="form-group"><label class="form-label">Items</label><div id="campaign-items"></div></div>
+      <div class="form-group">
+        <label class="form-label">Pricing</label>
+        <input type="text" class="form-input" id="campaign-pricing" value="most_expensive" disabled>
+        <span class="field-hint">Read-only - the website charges the most expensive pick and the cheapest pick is free.</span>
+      </div>
+      <div id="campaign-match-preview" class="deal-match-preview"></div>
+      <div id="campaign-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="campaign-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="campaign-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="campaign-save-btn">Save Campaign</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CAMPAIGN DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="campaign-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Campaign?</div>
+    <div class="modal-body">This will permanently delete <strong id="campaign-delete-modal-name">this campaign</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="campaign-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="campaign-delete-confirm-btn">Delete Campaign</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMOTION EDITOR MODAL ===== -->
+<div class="modal-overlay" id="promotion-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="promotion-editor-title">New Promotion</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="promotion-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="promotion-editor-body">
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="promotion-title" placeholder="e.g. Free delivery over $30"></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input form-textarea" id="promotion-description" rows="2" placeholder="e.g. Downtown area only"></textarea></div>
+      <div class="form-group">
+        <label class="form-label">Promotion image</label>
+        <div class="deal-image-row">
+          <div class="deal-image-preview" id="promotion-image-preview"></div>
+          <div class="deal-image-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="promotion-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="promotion-image-clear">✕ Remove</button>
+          </div>
+        </div>
+        <input type="text" class="form-input form-input-sm" id="promotion-image-url" placeholder="https://... (optional)">
+      </div>
+      <div id="promotion-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="promotion-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="promotion-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="promotion-save-btn">Save Promotion</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMOTION DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="promotion-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Promotion?</div>
+    <div class="modal-body">This will permanently delete <strong id="promotion-delete-modal-name">this promotion</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="promotion-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="promotion-delete-confirm-btn">Delete Promotion</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMO CODE EDITOR MODAL ===== -->
+<div class="modal-overlay" id="promo-code-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="promo-code-editor-title">New Promo Code</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="promo-code-editor-close">✕</button>
+    </div>
+    <div class="deal-editor-body" id="promo-code-editor-body">
+      <div class="form-group"><label class="form-label">Code *</label><input type="text" class="form-input" id="promo-code-code" placeholder="e.g. SAVE10"><span class="field-hint">Typed by the customer at checkout; stored uppercase.</span></div>
+      <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="promo-code-title" placeholder="e.g. 10% off everything"></div>
+      <div class="form-group">
+        <label class="form-label">Offer type *</label>
+        <select class="form-input" id="promo-code-rule-type">
+          <option value="percentage_discount">Percent off</option>
+          <option value="subtotal_threshold">Save a fixed amount over a subtotal</option>
+          <option value="free_delivery">Free delivery</option>
+        </select>
+      </div>
+      <div id="promo-code-rule-editor"></div>
+      <div class="form-group"><label class="form-label">Max uses</label><input type="number" class="form-input" id="promo-code-max-uses" min="1" step="1" placeholder="Empty = unlimited"></div>
+      <div id="promo-code-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="promo-code-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="promo-code-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="promo-code-save-btn">Save Code</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PROMO CODE DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="promo-code-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Promo Code?</div>
+    <div class="modal-body">This will permanently delete <strong id="promo-code-delete-modal-name">this promo code</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="promo-code-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="promo-code-delete-confirm-btn">Delete Code</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SAMPLE DATA IMPORT MODAL ===== -->
+<div class="modal-overlay" id="deals-import-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title">📥 Import sample deals data</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="deals-import-close">✕</button>
+    </div>
+    <div class="deal-editor-body">
+      <fieldset class="settings-group">
+        <legend>Source</legend>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-bundled" checked> Bundled sample file</label>
+          <label class="radio-label"><input type="radio" name="deals-import-source" id="deals-import-paste"> Paste JSON</label>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <select class="form-input" id="deals-import-file"></select>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <textarea class="form-input form-textarea" id="deals-import-json" rows="8" style="display:none;" placeholder='Paste a JSON object with any of: "deals", "campaigns", "promotions", "hero", "promo_codes"'></textarea>
+        </div>
+        <span class="field-hint">The samples reference the demo menu (Pizza / Dips / Wings / Drinks + Toppings). Importing into a menu without those categories is blocked and the validation errors are shown.</span>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Sections to import</legend>
+        <div class="deal-import-checks">
+          <label class="radio-label"><input type="checkbox" id="deals-import-deals" checked> Deals</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-campaigns" checked> Campaigns</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-promotions" checked> Promotions</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-hero" checked> Hero</label>
+          <label class="radio-label"><input type="checkbox" id="deals-import-promo-codes" checked> Promo codes</label>
+        </div>
+      </fieldset>
+      <fieldset class="settings-group">
+        <legend>Mode</legend>
+        <div class="radio-row">
+          <label class="radio-label"><input type="radio" name="deals-import-mode" id="deals-import-append" checked> Append - add next to what exists (new ids)</label>
+          <label class="radio-label"><input type="radio" name="deals-import-mode" id="deals-import-replace"> Replace - overwrite the selected sections</label>
+        </div>
+        <span class="field-hint">The hero image is only applied in Replace mode.</span>
+      </fieldset>
+      <div id="deals-import-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="deals-import-cancel">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deals-import-run">📥 Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEAL EDITOR MODAL ===== -->
+<div class="modal-overlay" id="deal-editor-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-deal">
+    <div class="deal-editor-header">
+      <div class="modal-title" id="deal-editor-title">New Deal</div>
+      <button type="button" class="btn btn-sm btn-ghost" id="deal-editor-close">✕</button>
+    </div>
+    <div class="deal-modal-tabs" id="deal-editor-tabs">
+      <button type="button" class="deal-modal-tab active" data-deal-tab="basics">1 · Basics</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="rule">2 · Offer rule</button>
+      <button type="button" class="deal-modal-tab" data-deal-tab="schedule">3 · Schedule</button>
+    </div>
+    <div class="deal-editor-body" id="deal-editor-body">
+      <div class="deal-tab-content-wrap">
+      <div class="deal-tab-content active" id="deal-tab-basics">
+      <div class="form-group">
+        <label class="form-label">Title *</label>
+        <input type="text" class="form-input" id="deal-title" placeholder="e.g. 2 Pizzas + 4 Dips">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input form-textarea" id="deal-description" rows="2" placeholder="What the customer gets"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Section</label>
+          <input type="text" class="form-input" id="deal-section" list="deal-section-options" placeholder="e.g. Weekend">
+          <datalist id="deal-section-options"></datalist>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Price</label>
+          <input type="number" class="form-input" id="deal-price" min="0" step="0.01" placeholder="0.00">
+          <span class="field-hint" id="deal-price-hint"></span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deal image</label>
+        <div class="deal-image-row">
+          <div class="deal-image-preview" id="deal-image-preview"></div>
+          <div class="deal-image-actions">
+            <button type="button" class="btn btn-sm btn-outline" id="deal-image-upload">📷 Upload</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="deal-image-clear">✕ Remove</button>
+          </div>
+        </div>
+        <input type="text" class="form-input form-input-sm" id="deal-image-url" placeholder="https://... (optional)">
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-label">Active</span>
+          <span class="toggle-desc">Hidden from the website when off. The website honors this flag since 2026-10-21.</span>
+        </div>
+        <label class="switch"><input type="checkbox" id="deal-active" checked><span class="slider"></span></label>
+      </div>
+      <div class="deal-tab-next-row">
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="rule">Next: Offer rule →</button>
+      </div>
+      </div>
+      <div class="deal-tab-content" id="deal-tab-rule">
+      <div class="form-group">
+        <label class="form-label">Deal type *</label>
+        <select class="form-input" id="deal-rule-type">
+          <option value="bundle">Bundle - one fixed total price</option>
+          <option value="min_quantity">Minimum quantity - price per unit</option>
+          <option value="tiered">Tiered - price depends on quantity</option>
+          <option value="two_for_one">Two for one - cheapest item free</option>
+          <option value="percentage_discount">Percent off - discount line</option>
+          <option value="subtotal_threshold">Subtotal threshold - save a fixed amount</option>
+          <option value="free_delivery">Free delivery</option>
+          <option value="free_item_with_purchase">Free item with purchase</option>
+          <option value="buy_n_get_m">Buy N get M free</option>
+          <option value="volume_pricing">Volume pricing - quantity bands</option>
+          <option value="free_modifier">Free modifier options</option>
+        </select>
+      </div>
+      <div id="deal-rule-editor"></div>
+      <div id="deal-match-preview" class="deal-match-preview"></div>
+      <div class="deal-tab-next-row">
+        <button type="button" class="btn btn-sm btn-outline" data-deal-tab-goto="schedule">Next: Schedule →</button>
+      </div>
+      </div>
+      <div class="deal-tab-content" id="deal-tab-schedule">
+        <div id="deal-schedule-editor"></div>
+      </div>
+      </div>
+      <div id="deal-editor-errors" class="deal-editor-errors" style="display:none;"></div>
+    </div>
+    <div class="deal-editor-actions">
+      <button type="button" class="btn btn-sm btn-danger-outline" id="deal-delete-btn" style="display:none;">🗑 Delete</button>
+      <div class="deal-editor-actions-right">
+        <button type="button" class="btn btn-sm btn-ghost" id="deal-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" id="deal-save-btn">Save Deal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEAL DELETE CONFIRMATION ===== -->
+<div class="modal-overlay" id="deal-delete-modal" style="display:none;">
+  <div class="modal-dialog modal-dialog-sm">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete Deal?</div>
+    <div class="modal-body">This will permanently delete <strong id="deal-delete-modal-name">this deal</strong>. This action cannot be undone.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="deal-delete-cancel-btn">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="deal-delete-confirm-btn">Delete Deal</button>
+    </div>
+  </div>
+</div>
+
 <section class="tab-panel" data-tab="alerts">
   <div class="tab-scroll">
     <div class="card">
@@ -690,6 +1086,18 @@ body { padding: 0 !important; margin: 0 !important; }
     },
     _toggleReadOnly: function() { this._setReadOnly(!_readOnly); },
     _dump: function() { console.log('🍽️ Restaurant & Menu Manager DB:', JSON.parse(JSON.stringify(_value))); updateStatus('Dumped to console'); },
+    _validatePresentation: function() {
+      var report = window.rammDeals.validatePresentationDocument(_value || {});
+      console.log('Deals validation', report);
+      if (report.errors.length > 0) {
+        updateStatus('Deal errors: ' + report.errors.length + ' (see console)');
+      } else if (report.warnings.length > 0) {
+        updateStatus('Deals valid with ' + report.warnings.length + ' warning(s)');
+      } else {
+        updateStatus('Deals valid');
+      }
+      return report;
+    },
     _loadSampleData: function(data) { save(data); window.location.reload(); },
     _clearData: function() { localStorage.removeItem(STORAGE_KEY); window.location.reload(); }
   };
@@ -770,9 +1178,294 @@ document.getElementById('th-load-sample').addEventListener('click', function() {
   window.tool._loadSampleData(sample);
 });
 
+/* ── Deal fixtures (T-05) ── */
+function createFixtureItem(itemId, categoryId, itemName, price, sizes) {
+  return {
+    id: itemId, category_id: categoryId, item_name: itemName, slug: itemId,
+    description: '', price: price, sale_price: null,
+    primary_photo_url: null, photos: [],
+    allergens: [], dietary_marks: [],
+    is_vegetarian: false, is_vegan: false, is_gluten_free: false,
+    spice_level: 0, calories: null, prep_time_minutes: null,
+    ingredients: '', additives: '', nutrition_per: 'serving', nutrition: [],
+    tags: [], modifier_group_ids: [], modifier_group_overrides: {},
+    sizes: sizes || [], visibility_mode: 'show', availability: 'available',
+    show_on_channels: ['pickup', 'delivery'],
+    show_internal_name: false, internal_name: '', hide_instructions: false
+  };
+}
+
+function buildDealFixtureMenu() {
+  return {
+    categories: [
+      { id: 'cat-pizza', name: 'Pizza' },
+      { id: 'cat-dips', name: 'Dips' },
+      { id: 'cat-wings', name: 'Wings' },
+      { id: 'cat-drinks', name: 'Drinks' }
+    ],
+    items: [
+      createFixtureItem('item-margherita', 'cat-pizza', 'Margherita', 0, [
+        { id: 'size-marg-s', label: 'S', price: 9.99, modifier_group_ids: [] },
+        { id: 'size-marg-m', label: 'M', price: 12.99, modifier_group_ids: [] },
+        { id: 'size-marg-l', label: 'L', price: 15.99, modifier_group_ids: [] }
+      ]),
+      createFixtureItem('item-pepperoni', 'cat-pizza', 'Pepperoni', 0, [
+        { id: 'size-pep-s', label: 'S', price: 10.99, modifier_group_ids: [] },
+        { id: 'size-pep-m', label: 'M', price: 13.99, modifier_group_ids: [] },
+        { id: 'size-pep-l', label: 'L', price: 16.99, modifier_group_ids: [] }
+      ]),
+      createFixtureItem('item-veggie', 'cat-pizza', 'Veggie', 0, [
+        { id: 'size-veg-m', label: 'M', price: 12.49, modifier_group_ids: [] },
+        { id: 'size-veg-l', label: 'L', price: 15.49, modifier_group_ids: [] }
+      ]),
+      createFixtureItem('item-garlic-dip', 'cat-dips', 'Garlic Dip', 1.5, []),
+      createFixtureItem('item-bbq-dip', 'cat-dips', 'BBQ Dip', 1.5, []),
+      createFixtureItem('item-ranch-dip', 'cat-dips', 'Ranch Dip', 1.5, []),
+      createFixtureItem('item-wings-classic', 'cat-wings', 'Classic Wings', 1.25, []),
+      createFixtureItem('item-wings-hot', 'cat-wings', 'Hot Wings', 1.35, []),
+      createFixtureItem('item-cola', 'cat-drinks', 'Cola', 2.5, [])
+    ],
+    modifier_groups: [
+      {
+        id: 'mg-toppings', group_name: 'Toppings', selection_type: 'multi', allow_duplicates: false,
+        is_required: false, force_min: 0, force_max: 0, tax_category_id: null, photo_url: null,
+        options: [
+          { id: 'opt-mozz', option_name: 'Extra Mozzarella', price_adjustment: 2.0, is_default: false, is_available: true },
+          { id: 'opt-mush', option_name: 'Mushrooms', price_adjustment: 1.5, is_default: false, is_available: true }
+        ]
+      }
+    ]
+  };
+}
+
+function buildValidDealFixtures() {
+  return [
+    {
+      id: 'deal-two-pizzas-dips', section: 'Family', title: '2 Pizzas + 4 Dips',
+      description: 'Pick two medium pizzas and four dips.', price: 29.99, image_url: '',
+      active: true, rule_type: 'bundle',
+      schedule: { date_from: '2026-11-01', date_until: '2026-11-30', weekdays: [5, 6], time_from: '17:00', time_until: '22:00' },
+      rule: {
+        groups: [
+          { group_id: 'group-pizzas', label: 'Pizzas', quantity: 2, category_ids: ['cat-pizza'], size_label: 'M' },
+          { group_id: 'group-dips', label: 'Dips', quantity: 4, category_ids: ['cat-dips'] }
+        ]
+      }
+    },
+    {
+      id: 'deal-ten-wings', section: 'Sharing', title: 'Wings by the ten',
+      description: 'Any ten wings at one low unit price.', price: 1.4, image_url: '',
+      active: true, rule_type: 'min_quantity',
+      rule: { category_ids: ['cat-wings'], min_quantity: 10 }
+    },
+    {
+      id: 'deal-pizza-party', section: 'Weekend', title: 'Pizza party tiers',
+      description: 'Two or three pizzas at a tier price.', price: null, image_url: '',
+      active: true, rule_type: 'tiered',
+      rule: {
+        item_ids: ['item-margherita', 'item-pepperoni', 'item-veggie'],
+        tiers: [
+          { quantity: 2, price: 24, label: '2 pizzas for 24' },
+          { quantity: 3, price: 33, label: '3 pizzas for 33' }
+        ]
+      }
+    },
+    {
+      id: 'deal-two-for-one-pizza', section: 'Weekend', title: '2 for 1 pizza',
+      description: 'The cheaper pizza is free.', price: null, image_url: '',
+      active: true, rule_type: 'two_for_one',
+      rule: { required_item_count: 2, category_ids: ['cat-pizza'], same_size: true }
+    },
+    {
+      id: 'deal-ten-percent-pizza', section: 'Online', title: '10% off pizzas',
+      description: 'Ten percent off every pizza.', price: null, image_url: '',
+      active: true, rule_type: 'percentage_discount',
+      rule: { percent: 10, category_ids: ['cat-pizza'] }
+    },
+    {
+      id: 'deal-spend-save', section: 'Online', title: 'Spend 50, save 10',
+      description: 'A fixed saving over the minimum subtotal.', price: null, image_url: '',
+      active: true, rule_type: 'subtotal_threshold',
+      rule: { min_subtotal: 50, discount: 10 }
+    },
+    {
+      id: 'deal-free-delivery', section: 'Online', title: 'Free delivery over 30',
+      description: 'The delivery fee is dropped.', price: null, image_url: '',
+      active: true, rule_type: 'free_delivery',
+      rule: { min_subtotal: 30, always: false }
+    },
+    {
+      id: 'deal-pizza-plus-bread', section: 'Family', title: 'Pizza + free garlic dip',
+      description: 'Buy a pizza and the garlic dip is free.', price: null, image_url: '',
+      active: true, rule_type: 'free_item_with_purchase',
+      rule: { groups: [
+        { group_id: 'group-paid-pizza', label: 'Pizza', quantity: 1, category_ids: ['cat-pizza'], charge: 'paid' },
+        { group_id: 'group-free-dip', label: 'Garlic dip', quantity: 1, item_ids: ['item-garlic-dip'], charge: 'free' }
+      ] }
+    },
+    {
+      id: 'deal-buy3-get1-wings', section: 'Sharing', title: 'Buy 3 get 1 wings',
+      description: 'Three paid wings and one free.', price: null, image_url: '',
+      active: true, rule_type: 'buy_n_get_m',
+      rule: { required_item_count: 3, free_item_count: 1, category_ids: ['cat-wings'], same_size: false }
+    },
+    {
+      id: 'deal-wing-volume', section: 'Sharing', title: 'Wings volume bands',
+      description: 'Cheaper wings by the box.', price: null, image_url: '',
+      active: true, rule_type: 'volume_pricing',
+      rule: { category_ids: ['cat-wings'], bands: [
+        { min_quantity: 5, unit_price: 1.0 },
+        { min_quantity: 10, unit_price: 0.9 }
+      ] }
+    },
+    {
+      id: 'deal-free-topping', section: 'Online', title: 'Free extra topping',
+      description: 'The cheapest topping is free.', price: null, image_url: '',
+      active: true, rule_type: 'free_modifier',
+      rule: { modifier_group_ids: ['mg-toppings'], option_count: 1, category_ids: ['cat-pizza'] }
+    }
+  ];
+}
+
+function buildBrokenDealFixtures() {
+  return [
+    {
+      id: 'deal-ghost-filter', section: 'Broken', title: 'Ghost filter',
+      description: '', price: 9.99, image_url: '', active: true, rule_type: 'bundle',
+      rule: { groups: [ { group_id: 'group-ghost', label: 'Ghost items', quantity: 2, category_ids: ['cat-missing'] } ] }
+    },
+    {
+      id: 'deal-minimum-one', section: 'Broken', title: 'Minimum one',
+      description: '', price: 2, image_url: '', active: true, rule_type: 'min_quantity',
+      rule: { category_ids: ['cat-wings'], min_quantity: 1 }
+    },
+    {
+      id: 'deal-unsupported-rule', section: 'Broken', title: 'Mystery deal',
+      description: '', price: null, image_url: '', active: true, rule_type: 'buy_x_get_y', rule: {}
+    }
+  ];
+}
+
+/* Extended rule type failure fixtures (T-42) */
+function buildExtendedBrokenDealFixtures() {
+  return [
+    {
+      id: 'deal-percent-zero', section: 'Broken', title: 'Percent out of range',
+      description: '', price: null, image_url: '', active: true, rule_type: 'percentage_discount',
+      rule: { percent: 0, category_ids: ['cat-pizza'] }
+    },
+    {
+      id: 'deal-discount-above-threshold', section: 'Broken', title: 'Discount above threshold',
+      description: '', price: null, image_url: '', active: true, rule_type: 'subtotal_threshold',
+      rule: { min_subtotal: 20, discount: 30 }
+    },
+    {
+      id: 'deal-no-free-group', section: 'Broken', title: 'No free group',
+      description: '', price: null, image_url: '', active: true, rule_type: 'free_item_with_purchase',
+      rule: { groups: [
+        { group_id: 'group-paid-a', label: 'Pizza', quantity: 1, category_ids: ['cat-pizza'], charge: 'paid' },
+        { group_id: 'group-paid-b', label: 'Dips', quantity: 2, category_ids: ['cat-dips'], charge: 'paid' }
+      ] }
+    },
+    {
+      id: 'deal-reversed-schedule', section: 'Broken', title: 'Reversed schedule',
+      description: '', price: 29.99, image_url: '', active: true, rule_type: 'bundle',
+      schedule: { date_from: '2026-12-01', date_until: '2026-11-01' },
+      rule: { groups: [
+        { group_id: 'group-sched', label: 'Pizzas', quantity: 1, category_ids: ['cat-pizza'] }
+      ] }
+    },
+    {
+      id: 'deal-descending-bands', section: 'Broken', title: 'Descending bands',
+      description: '', price: null, image_url: '', active: true, rule_type: 'volume_pricing',
+      rule: { category_ids: ['cat-wings'], bands: [
+        { min_quantity: 10, unit_price: 1.0 },
+        { min_quantity: 5, unit_price: 1.2 }
+      ] }
+    },
+    {
+      id: 'deal-bngm-no-restriction', section: 'Broken', title: 'Buy N get M without restriction',
+      description: '', price: null, image_url: '', active: true, rule_type: 'buy_n_get_m',
+      rule: { required_item_count: 3, free_item_count: 1, same_size: false }
+    }
+  ];
+}
+
+function buildDealFixtureDocument(includeBrokenDeals) {
+  return {
+    general_info: { restaurant_name: 'Deal Fixture Kitchen', timezone: 'America/New_York' },
+    service_settings: { service_toggles: { pickup_enabled: true, delivery_enabled: true } },
+    menu: buildDealFixtureMenu(),
+    deals: includeBrokenDeals ? buildBrokenDealFixtures() : buildValidDealFixtures(),
+    hero: {
+      image_url: 'https://example.com/hero.jpg',
+      preset_images: ['https://example.com/hero-1.jpg', 'https://example.com/hero-2.jpg']
+    },
+    promotions: [
+      { id: 'promo-free-delivery', title: 'Free delivery over 30', description: 'Downtown area only', image_url: '' },
+      { id: 'promo-new-menu', title: 'New winter menu', description: 'Available now', image_url: '' }
+    ],
+    campaigns: [
+      {
+        id: 'campaign-legacy-2x-pizza', title: 'Legacy 2x pizza',
+        description: 'Old campaign kept for editing.', required_item_count: 2, same_size: true,
+        category_ids: ['cat-pizza'], item_ids: [], pricing: 'most_expensive'
+      }
+    ],
+    promo_codes: [
+      {
+        id: 'code-save10', code: 'SAVE10', title: '10% off everything',
+        rule_type: 'percentage_discount', rule: { percent: 10 }, max_uses: 500
+      }
+    ]
+  };
+}
+
+function buildExtendedBrokenFixtureDocument() {
+  var document = buildDealFixtureDocument(false);
+  document.deals = buildExtendedBrokenDealFixtures();
+  document.promo_codes = [
+    {
+      id: 'code-unsupported', code: 'BADTYPE', title: 'Unsupported offer type',
+      rule_type: 'tiered', rule: {}, max_uses: null
+    }
+  ];
+  return document;
+}
+
+document.getElementById('th-deals-fixtures').addEventListener('click', function() {
+  window.tool._loadSampleData(buildDealFixtureDocument(false));
+});
+
+document.getElementById('th-deals-failures').addEventListener('click', function() {
+  window.tool._loadSampleData(buildDealFixtureDocument(true));
+});
+
+document.getElementById('th-extended-failures').addEventListener('click', function() {
+  window.tool._loadSampleData(buildExtendedBrokenFixtureDocument());
+});
+
+document.getElementById('th-validate-deals').addEventListener('click', function() {
+  window.tool._validatePresentation();
+});
+
 document.getElementById('th-clear').addEventListener('click', function() {
   if (confirm('Clear ALL restaurant data? This cannot be undone.')) { window.tool._clearData(); }
 });
+
+/* QA deep links: #deal-fixtures, #deal-failures, #deal-editor. The fixtures are
+   seeded once, then the page reloads so the tool boots with real data. */
+(function () {
+  var presetHashes = {
+    '#deal-fixtures': false,
+    '#deal-failures': true,
+    '#deal-save-gate': true,
+    '#deal-editor': false
+  };
+  if (!(location.hash in presetHashes)) return;
+  if (localStorage.getItem('restaurant_menu_mgr_test_db')) return;
+  window.tool._loadSampleData(buildDealFixtureDocument(presetHashes[location.hash]));
+})();
 
 document.getElementById('th-reload').addEventListener('click', function() { window.location.reload(); });
 document.getElementById('th-dump').addEventListener('click', function() { window.tool._dump(); });
@@ -781,5 +1474,16 @@ document.getElementById('th-toggle-ro').addEventListener('click', function() { w
 
 <!-- Load the tool JS -->
 <script src="RestaurantAndMenuManager.js"></script>
+<script>
+/* QA deep link: open the first fixture deal in the editor after boot. */
+if (location.hash === '#deal-editor' && window.rammDeals && typeof data !== 'undefined' && data.deals && data.deals.length > 0) {
+  openDealEditor(data.deals[0].id);
+}
+
+/* QA deep link: run the save path so the gate can be observed in the console. */
+if (location.hash === '#deal-save-gate' && typeof scheduleSave === 'function') {
+  scheduleSave();
+}
+</script>
 </body>
 </html>

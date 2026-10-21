@@ -15,7 +15,7 @@
 // Usage:
 //   npm run ship:cms -- <ToolName>
 //   npm run ship:cms -- --all
-const { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } = require('fs')
+const { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } = require('fs')
 const { join } = require('path')
 const context = require('./releaseContext')
 
@@ -80,6 +80,21 @@ function bundleTool(tool, config) {
   if (existsSync(join(appDirectory, 'test-harness.html'))) {
     copyFileSync(join(appDirectory, 'test-harness.html'), join(outputDirectory, 'code', 'test-harness.html'))
   }
+
+  // tool data files (bundled sample datasets for the in-tool import feature)
+  let dataFiles = []
+  try { dataFiles = readdirSync(appDirectory).filter((fileName) => fileName.endsWith('.json')) } catch (_e) { /* app dir missing */ }
+  dataFiles.forEach((fileName) => {
+    copyFileSync(join(appDirectory, fileName), join(outputDirectory, 'code', fileName))
+    targets.push({
+      file: 'code/' + fileName,
+      cmsTarget: 'html tool library - tool data',
+      objectType: toolOverrides.toolDataObjectType || objectTypes.toolData || '',
+      objectId: '',
+      field: 'data',
+      action: 'upsert',
+    })
+  })
 
   let version = '0.0.0'
   try { version = require('../package.json').version } catch (_e) { /* package.json missing */ }

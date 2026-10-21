@@ -933,29 +933,12 @@
 		}
 
 		/* ---------- volunteer role definition pages (shared by the ten role pages) ---------- */
-		.fba-role .fba-role-hero {
-			padding: 66px 0 54px;
-			background: linear-gradient(160deg, #fff 0%, var(--fba-light) 100%);
-			border-bottom: 1px solid var(--fba-line);
-		}
-
-		.fba-role .fba-role-hero h1 {
-			font-size: clamp(1.9rem, 4vw, 2.6rem);
-			margin-bottom: 14px;
-		}
-
 		.fba-role .fba-role-lede {
-			max-width: 720px;
+			max-width: 600px;
 			margin-bottom: 18px;
 			font-size: 1.05rem;
+			line-height: 1.6;
 			color: var(--fba-muted);
-		}
-
-		.fba-role .fba-role-hero .fba-pills {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 10px;
-			margin-top: 24px;
 		}
 
 		.fba-role .fba-role-body {
@@ -977,6 +960,27 @@
 
 		.fba-role .fba-role-grid h2 + .fba-ticks {
 			margin-bottom: 30px;
+		}
+
+		/* the two main lists read as cards, like the flyer blocks */
+		.fba-role .fba-role-grid > div > .fba-ticks {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 12px;
+			margin-top: 18px;
+		}
+
+		.fba-role .fba-role-grid > div > .fba-ticks li {
+			padding: 15px 18px 15px 44px;
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: 16px;
+			font-size: 0.94rem;
+			line-height: 1.5;
+		}
+
+		.fba-role .fba-role-grid > div > .fba-ticks li::before {
+			left: 16px;
+			top: 18px;
 		}
 
 		.fba-role .fba-role-side {
@@ -1014,28 +1018,319 @@
 			margin-bottom: 14px;
 		}
 
+		/* the steps read as a row of numbered cards, like the flyer strip */
 		.fba-role .fba-role-steps {
 			display: grid;
-			gap: 12px;
+			grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+			gap: 14px;
 			counter-reset: role;
 			margin-bottom: 22px;
 		}
 
 		.fba-role .fba-role-steps li {
 			position: relative;
-			padding-left: 40px;
+			padding: 20px;
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: 16px;
+			font-size: 0.94rem;
+			line-height: 1.5;
 			color: var(--fba-muted);
 		}
 
 		.fba-role .fba-role-steps li::before {
 			counter-increment: role;
 			content: counter(role, decimal-leading-zero);
-			position: absolute;
-			left: 0;
-			top: 1px;
+			position: static;
+			display: block;
+			margin-bottom: 8px;
 			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.78rem;
 			font-weight: 800;
+			letter-spacing: 0.16em;
 			color: var(--fba-primary);
+		}
+
+		/* the honesty statement band, straight from the flyer */
+		.fba-role .fba-role-statement {
+			padding: 56px 0;
+			background: linear-gradient(135deg, var(--fba-secondary-deep) 0%, var(--fba-secondary) 100%);
+			text-align: center;
+		}
+
+		.fba-role .fba-role-statement-line {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+			font-weight: 800;
+			line-height: 1.2;
+			letter-spacing: -0.01em;
+			color: #FFFFFF;
+		}
+
+		.fba-role .fba-role-statement-sub {
+			max-width: 60ch;
+			margin: 14px auto 0;
+			font-size: 1rem;
+			line-height: 1.6;
+			color: rgba(255, 255, 255, 0.82);
+		}
+
+		/* volunteer network signature, as on the flyers */
+		.fba-role .fba-role-network {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+			width: fit-content;
+			margin: 30px auto 0;
+			padding: 14px 22px;
+			background: #FFFFFF;
+			border: 1px solid rgba(0, 78, 137, 0.22);
+			border-radius: 16px;
+		}
+
+		.fba-role .fba-role-network-mark {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 1.05rem;
+			font-weight: 900;
+			letter-spacing: 0.2em;
+			color: var(--fba-secondary);
+		}
+
+		.fba-role .fba-role-network-name {
+			font-size: 0.66rem;
+			font-weight: 700;
+			letter-spacing: 0.15em;
+			text-transform: uppercase;
+			color: var(--fba-muted);
+		}
+
+		.fba-role .fba-role-network-line {
+			max-width: 40ch;
+			margin-top: 6px;
+			font-size: 0.88rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+			text-align: center;
+		}
+
+		/* ---------- role hero, split variant ----------
+		   Editorial hero used by one role page while the design is being agreed:
+		   breadcrumb, copy column with a spec row of practical facts, and the role
+		   photo in its own framed panel. Nothing here touches the plain hero. */
+		.fba-role .fba-role-hero-split {
+			padding: 26px 0 0;
+			background:
+				radial-gradient(circle at 92% 0%, rgba(255, 107, 53, 0.10) 0%, rgba(255, 107, 53, 0) 46%),
+				radial-gradient(circle at 2% 96%, rgba(6, 214, 160, 0.08) 0%, rgba(6, 214, 160, 0) 44%),
+				linear-gradient(180deg, #FFFFFF 0%, var(--fba-light) 100%);
+			border-bottom: 1px solid var(--fba-line);
+		}
+
+		.fba-role .fba-role-crumbs {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 30px;
+			font-size: 0.78rem;
+			font-weight: 600;
+			color: var(--fba-muted);
+		}
+
+		.fba-role .fba-role-crumbs a {
+			color: var(--fba-muted);
+			text-decoration: none;
+			transition: color 0.16s ease;
+		}
+
+		.fba-role .fba-role-crumbs a:hover,
+		.fba-role .fba-role-crumbs a:focus-visible {
+			color: var(--fba-primary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		.fba-role .fba-role-crumbs span[aria-current] {
+			color: var(--fba-secondary);
+			font-weight: 700;
+		}
+
+		.fba-role .fba-role-hero-split-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.04fr) minmax(0, 0.96fr);
+			gap: 58px;
+			align-items: center;
+			padding-bottom: 56px;
+		}
+
+		.fba-role .fba-role-hero-split-copy {
+			min-width: 0;
+		}
+
+		.fba-role .fba-role-hero-split-copy h1 {
+			margin-bottom: 16px;
+			font-size: clamp(2rem, 3.9vw, 3.05rem);
+			line-height: 1.04;
+			letter-spacing: -0.028em;
+			color: var(--fba-secondary-deep);
+		}
+
+		.fba-role .fba-role-hero-split-copy .fba-role-lede {
+			max-width: 50ch;
+			margin-bottom: 22px;
+			font-size: 1.06rem;
+			line-height: 1.62;
+			color: var(--fba-muted);
+		}
+
+		.fba-role .fba-role-hero-split-copy .fba-pills {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: 0 0 28px;
+		}
+
+		.fba-role .fba-role-hero-split-copy .fba-actions {
+			margin-top: 0;
+		}
+
+		/* practical facts as a spec row under the buttons */
+		.fba-role .fba-role-hero-meta {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			margin-top: 34px;
+			padding-top: 22px;
+			border-top: 1px solid var(--fba-line);
+		}
+
+		.fba-role .fba-role-hero-meta li {
+			padding-right: 18px;
+			border-right: 1px solid var(--fba-line);
+		}
+
+		.fba-role .fba-role-hero-meta li + li {
+			padding-left: 18px;
+		}
+
+		.fba-role .fba-role-hero-meta li:last-child {
+			padding-right: 0;
+			border-right: 0;
+		}
+
+		.fba-role .fba-role-hero-meta-key {
+			display: block;
+			margin-bottom: 6px;
+			font-size: 0.66rem;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: var(--fba-primary);
+		}
+
+		.fba-role .fba-role-hero-meta-value {
+			display: block;
+			font-size: 0.9rem;
+			font-weight: 600;
+			line-height: 1.4;
+			color: var(--fba-secondary-deep);
+		}
+
+		.fba-role .fba-role-hero-split-figure {
+			position: relative;
+			margin: 0;
+			aspect-ratio: 4 / 4.4;
+			border-radius: 26px;
+			overflow: hidden;
+			background: var(--fba-secondary-deep);
+			box-shadow: 0 30px 70px rgba(0, 50, 90, 0.20);
+		}
+
+		.fba-role .fba-role-hero-split-figure img {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		.fba-role .fba-role-hero-split-figure::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: inherit;
+			background: linear-gradient(180deg, rgba(0, 50, 90, 0) 60%, rgba(0, 50, 90, 0.38) 100%);
+			box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+			pointer-events: none;
+		}
+
+		.fba-role .fba-role-hero-chip {
+			position: absolute;
+			left: 18px;
+			bottom: 18px;
+			z-index: 1;
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			padding: 9px 16px;
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.95);
+			color: var(--fba-secondary-deep);
+			font-size: 0.7rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+
+		.fba-role .fba-role-hero-chip-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: #06D6A0;
+			box-shadow: 0 0 0 3px rgba(6, 214, 160, 0.28);
+		}
+
+		@media (max-width: 1020px) {
+			.fba-role .fba-role-hero-split {
+				padding: 18px 0 0;
+			}
+
+			.fba-role .fba-role-crumbs {
+				margin-bottom: 22px;
+			}
+
+			.fba-role .fba-role-hero-split-grid {
+				grid-template-columns: 1fr;
+				gap: 30px;
+				padding-bottom: 44px;
+			}
+
+			.fba-role .fba-role-hero-split-figure {
+				order: -1;
+				aspect-ratio: auto;
+				width: 100%;
+				height: clamp(220px, 34vw, 340px);
+				border-radius: 20px;
+			}
+
+			.fba-role .fba-role-hero-meta {
+				grid-template-columns: 1fr;
+				margin-top: 28px;
+				padding-top: 0;
+			}
+
+			.fba-role .fba-role-hero-meta li {
+				padding: 14px 0;
+				border-right: 0;
+				border-bottom: 1px solid var(--fba-line);
+			}
+
+			.fba-role .fba-role-hero-meta li + li {
+				padding-left: 0;
+			}
+
+			.fba-role .fba-role-hero-meta li:last-child {
+				border-bottom: 0;
+			}
 		}
 
 		/* ---------- small screens ---------- */
@@ -1050,10 +1345,6 @@
 				text-align: center;
 			}
 
-			.fba-role .fba-role-hero {
-				padding: 46px 0 40px;
-			}
-
 			.fba-role .fba-role-body,
 			.fba-role .fba-role-apply {
 				padding: 40px 0;
@@ -1062,9 +1353,21 @@
 
 		/* ---------- role pages on small screens ---------- */
 		@media (max-width: 900px) {
+			.fba-role .fba-role-hero-split-copy h1 {
+				font-size: clamp(1.8rem, 7vw, 2.4rem);
+			}
+
+			.fba-role .fba-role-lede {
+				font-size: 1rem;
+			}
+
 			.fba-role .fba-role-grid {
 				grid-template-columns: 1fr;
 				gap: 26px;
+			}
+
+			.fba-role .fba-role-grid > div > .fba-ticks {
+				grid-template-columns: 1fr;
 			}
 
 			.fba-role .fba-role-grid h2 {

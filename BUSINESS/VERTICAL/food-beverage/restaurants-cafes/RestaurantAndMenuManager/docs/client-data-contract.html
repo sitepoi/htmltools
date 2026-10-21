@@ -1,230 +1,603 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Restaurant &amp; Menu Manager — Client Data Contract &amp; Integration Guide</title>
-<style>
-  :root {
-    --ink: #0f172a; --text: #1e293b; --muted: #64748b;
-    --accent: #4f46e5; --accent-2: #7c3aed;
-    --line: #e2e8f0; --soft: #f8fafc; --soft-2: #f1f5f9;
-    --code-bg: #0f172a; --code-fg: #e2e8f0;
-    --green: #15803d; --green-bg: #dcfce7;
-    --amber: #b45309; --amber-bg: #fef3c7;
-    --red: #b91c1c; --red-bg: #fee2e2;
-    --blue-bg: #dbeafe; --blue: #1e40af;
-    --font: 'Segoe UI', system-ui, sans-serif;
-    --mono: 'Cascadia Code', 'Fira Code', Consolas, monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: var(--font); background: #f6f8fb; color: var(--text);
-    line-height: 1.65; display: flex; min-height: 100vh;
-  }
-  /* ── Sidebar TOC ── */
-  nav.toc {
-    width: 280px; flex-shrink: 0; background: #ffffff; border-right: 1px solid var(--line);
-    position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 16px;
-    font-size: 0.82rem;
-  }
-  nav.toc .toc-title { font-size: 0.7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 12px; }
-  nav.toc ol { list-style: none; }
-  nav.toc a { display: block; color: var(--text); text-decoration: none; padding: 4px 10px; border-radius: 6px; }
-  nav.toc a:hover { background: var(--soft-2); }
-  nav.toc a.active { background: #eef2ff; color: var(--accent); font-weight: 600; }
-  nav.toc .toc-l2 a { padding-left: 26px; font-size: 0.78rem; color: var(--muted); }
-  /* ── Main ── */
-  main { flex: 1; min-width: 0; padding: 40px 48px 120px; max-width: 980px; }
-  h1 { font-size: 1.9rem; color: var(--ink); letter-spacing: -0.02em; margin-bottom: 4px; }
-  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 8px; }
-  .meta { font-size: 0.75rem; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 28px; }
-  h2 { font-size: 1.35rem; color: var(--ink); margin: 48px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--line); scroll-margin-top: 24px; }
-  h3 { font-size: 1.05rem; color: var(--ink); margin: 28px 0 10px; scroll-margin-top: 24px; }
-  h4 { font-size: 0.92rem; color: var(--text); margin: 18px 0 8px; }
-  p { margin: 10px 0; font-size: 0.92rem; }
-  ul, ol { margin: 8px 0 8px 24px; font-size: 0.92rem; }
-  li { margin: 5px 0; }
-  code {
-    font-family: var(--mono); font-size: 0.8em;
-    background: var(--soft-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
-    color: #7c3aed; white-space: nowrap;
-  }
-  pre {
-    background: var(--code-bg); color: var(--code-fg); padding: 18px 20px;
-    border-radius: 10px; overflow-x: auto; font-family: var(--mono);
-    font-size: 0.76rem; line-height: 1.55; margin: 14px 0;
-  }
-  pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; white-space: pre; }
-  /* ── Tables ── */
-  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 14px 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-  th { background: var(--soft-2); text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 9px 12px; border-bottom: 1px solid var(--line); }
-  td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  td code { white-space: normal; word-break: break-word; }
-  /* ── Callouts ── */
-  .callout { border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 0.88rem; }
-  .callout-note { background: var(--blue-bg); color: #1e3a8a; border-left: 4px solid #2563eb; }
-  .callout-warn { background: var(--amber-bg); color: #78350f; border-left: 4px solid #d97706; }
-  .callout-danger { background: var(--red-bg); color: #7f1d1d; border-left: 4px solid #dc2626; }
-  .callout-ok { background: var(--green-bg); color: #14532d; border-left: 4px solid #16a34a; }
-  .callout code { background: rgba(255,255,255,.5); }
-  /* ── Field spec rows ── */
-  .field { display: grid; grid-template-columns: 240px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 0.84rem; }
-  .field:last-child { border-bottom: none; }
-  .field .fname { font-family: var(--mono); font-size: 0.78rem; color: #6d28d9; word-break: break-word; }
-  .field .fdesc { color: var(--text); }
-  .field .fdesc .fdim { color: var(--muted); font-size: 0.78rem; }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; }
-  .pill-req { background: var(--red-bg); color: var(--red); }
-  .pill-opt { background: var(--soft-2); color: var(--muted); }
-  .pill-str { background: var(--blue-bg); color: var(--blue); }
-  .pill-num { background: var(--green-bg); color: var(--green); }
-  .pill-bool { background: var(--amber-bg); color: var(--amber); }
-  .pill-arr { background: #ede9fe; color: #6d28d9; }
-  .pill-obj { background: #e0f2fe; color: #075985; }
-  .schema-title { display: flex; align-items: center; gap: 10px; }
-  .schema-title .path { font-family: var(--mono); font-size: 0.8rem; background: var(--soft-2); border: 1px solid var(--line); padding: 3px 10px; border-radius: 6px; color: var(--accent); }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 900px) {
-    body { flex-direction: column; }
-    nav.toc { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--line); }
-    main { padding: 24px 18px 80px; }
-    .field { grid-template-columns: 1fr; gap: 2px; }
-    .grid-2 { grid-template-columns: 1fr; }
-  }
-</style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Restaurant &amp; Menu Manager — Client Data Contract &amp; Integration Guide</title>
+	<style>
+		:root {
+			--ink: #0f172a;
+			--text: #1e293b;
+			--muted: #64748b;
+			--accent: #4f46e5;
+			--accent-2: #7c3aed;
+			--line: #e2e8f0;
+			--soft: #f8fafc;
+			--soft-2: #f1f5f9;
+			--code-bg: #0f172a;
+			--code-fg: #e2e8f0;
+			--green: #15803d;
+			--green-bg: #dcfce7;
+			--amber: #b45309;
+			--amber-bg: #fef3c7;
+			--red: #b91c1c;
+			--red-bg: #fee2e2;
+			--blue-bg: #dbeafe;
+			--blue: #1e40af;
+			--font: 'Segoe UI', system-ui, sans-serif;
+			--mono: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+		}
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		html {
+			scroll-behavior: smooth;
+		}
+
+		body {
+			font-family: var(--font);
+			background: #f6f8fb;
+			color: var(--text);
+			line-height: 1.65;
+			display: flex;
+			min-height: 100vh;
+		}
+
+		/* ── Sidebar TOC ── */
+		nav.toc {
+			width: 280px;
+			flex-shrink: 0;
+			background: #ffffff;
+			border-right: 1px solid var(--line);
+			position: sticky;
+			top: 0;
+			height: 100vh;
+			overflow-y: auto;
+			padding: 24px 16px;
+			font-size: 0.82rem;
+		}
+
+		nav.toc .toc-title {
+			font-size: 0.7rem;
+			letter-spacing: .12em;
+			text-transform: uppercase;
+			color: var(--muted);
+			font-weight: 700;
+			margin-bottom: 12px;
+		}
+
+		nav.toc ol {
+			list-style: none;
+		}
+
+		nav.toc a {
+			display: block;
+			color: var(--text);
+			text-decoration: none;
+			padding: 4px 10px;
+			border-radius: 6px;
+		}
+
+		nav.toc a:hover {
+			background: var(--soft-2);
+		}
+
+		nav.toc a.active {
+			background: #eef2ff;
+			color: var(--accent);
+			font-weight: 600;
+		}
+
+		nav.toc .toc-l2 a {
+			padding-left: 26px;
+			font-size: 0.78rem;
+			color: var(--muted);
+		}
+
+		/* ── Main ── */
+		main {
+			flex: 1;
+			min-width: 0;
+			padding: 40px 48px 120px;
+			max-width: 980px;
+		}
+
+		h1 {
+			font-size: 1.9rem;
+			color: var(--ink);
+			letter-spacing: -0.02em;
+			margin-bottom: 4px;
+		}
+
+		.subtitle {
+			color: var(--muted);
+			font-size: 0.95rem;
+			margin-bottom: 8px;
+		}
+
+		.meta {
+			font-size: 0.75rem;
+			color: var(--muted);
+			border-bottom: 1px solid var(--line);
+			padding-bottom: 16px;
+			margin-bottom: 28px;
+		}
+
+		h2 {
+			font-size: 1.35rem;
+			color: var(--ink);
+			margin: 48px 0 14px;
+			padding-bottom: 8px;
+			border-bottom: 2px solid var(--line);
+			scroll-margin-top: 24px;
+		}
+
+		h3 {
+			font-size: 1.05rem;
+			color: var(--ink);
+			margin: 28px 0 10px;
+			scroll-margin-top: 24px;
+		}
+
+		h4 {
+			font-size: 0.92rem;
+			color: var(--text);
+			margin: 18px 0 8px;
+		}
+
+		p {
+			margin: 10px 0;
+			font-size: 0.92rem;
+		}
+
+		ul,
+		ol {
+			margin: 8px 0 8px 24px;
+			font-size: 0.92rem;
+		}
+
+		li {
+			margin: 5px 0;
+		}
+
+		code {
+			font-family: var(--mono);
+			font-size: 0.8em;
+			background: var(--soft-2);
+			border: 1px solid var(--line);
+			border-radius: 4px;
+			padding: 1px 5px;
+			color: #7c3aed;
+			white-space: nowrap;
+		}
+
+		pre {
+			background: var(--code-bg);
+			color: var(--code-fg);
+			padding: 18px 20px;
+			border-radius: 10px;
+			overflow-x: auto;
+			font-family: var(--mono);
+			font-size: 0.76rem;
+			line-height: 1.55;
+			margin: 14px 0;
+		}
+
+		pre code {
+			background: none;
+			border: none;
+			padding: 0;
+			color: inherit;
+			font-size: inherit;
+			white-space: pre;
+		}
+
+		/* ── Tables ── */
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.82rem;
+			margin: 14px 0;
+			background: #fff;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			overflow: hidden;
+		}
+
+		th {
+			background: var(--soft-2);
+			text-align: left;
+			font-size: 0.7rem;
+			text-transform: uppercase;
+			letter-spacing: .05em;
+			color: var(--muted);
+			padding: 9px 12px;
+			border-bottom: 1px solid var(--line);
+		}
+
+		td {
+			padding: 9px 12px;
+			border-bottom: 1px solid var(--line);
+			vertical-align: top;
+		}
+
+		tr:last-child td {
+			border-bottom: none;
+		}
+
+		td code {
+			white-space: normal;
+			word-break: break-word;
+		}
+
+		/* ── Callouts ── */
+		.callout {
+			border-radius: 8px;
+			padding: 12px 16px;
+			margin: 14px 0;
+			font-size: 0.88rem;
+		}
+
+		.callout-note {
+			background: var(--blue-bg);
+			color: #1e3a8a;
+			border-left: 4px solid #2563eb;
+		}
+
+		.callout-warn {
+			background: var(--amber-bg);
+			color: #78350f;
+			border-left: 4px solid #d97706;
+		}
+
+		.callout-danger {
+			background: var(--red-bg);
+			color: #7f1d1d;
+			border-left: 4px solid #dc2626;
+		}
+
+		.callout-ok {
+			background: var(--green-bg);
+			color: #14532d;
+			border-left: 4px solid #16a34a;
+		}
+
+		.callout code {
+			background: rgba(255, 255, 255, .5);
+		}
+
+		/* ── Field spec rows ── */
+		.field {
+			display: grid;
+			grid-template-columns: 240px 1fr;
+			gap: 12px;
+			padding: 8px 0;
+			border-bottom: 1px dashed var(--line);
+			font-size: 0.84rem;
+		}
+
+		.field:last-child {
+			border-bottom: none;
+		}
+
+		.field .fname {
+			font-family: var(--mono);
+			font-size: 0.78rem;
+			color: #6d28d9;
+			word-break: break-word;
+		}
+
+		.field .fdesc {
+			color: var(--text);
+		}
+
+		.field .fdesc .fdim {
+			color: var(--muted);
+			font-size: 0.78rem;
+		}
+
+		.pill {
+			display: inline-block;
+			padding: 1px 8px;
+			border-radius: 999px;
+			font-size: 0.7rem;
+			font-weight: 700;
+		}
+
+		.pill-req {
+			background: var(--red-bg);
+			color: var(--red);
+		}
+
+		.pill-opt {
+			background: var(--soft-2);
+			color: var(--muted);
+		}
+
+		.pill-str {
+			background: var(--blue-bg);
+			color: var(--blue);
+		}
+
+		.pill-num {
+			background: var(--green-bg);
+			color: var(--green);
+		}
+
+		.pill-bool {
+			background: var(--amber-bg);
+			color: var(--amber);
+		}
+
+		.pill-arr {
+			background: #ede9fe;
+			color: #6d28d9;
+		}
+
+		.pill-obj {
+			background: #e0f2fe;
+			color: #075985;
+		}
+
+		.schema-title {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.schema-title .path {
+			font-family: var(--mono);
+			font-size: 0.8rem;
+			background: var(--soft-2);
+			border: 1px solid var(--line);
+			padding: 3px 10px;
+			border-radius: 6px;
+			color: var(--accent);
+		}
+
+		.grid-2 {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 16px;
+		}
+
+		@media (max-width: 900px) {
+			body {
+				flex-direction: column;
+			}
+
+			nav.toc {
+				width: 100%;
+				height: auto;
+				position: static;
+				border-right: none;
+				border-bottom: 1px solid var(--line);
+			}
+
+			main {
+				padding: 24px 18px 80px;
+			}
+
+			.field {
+				grid-template-columns: 1fr;
+				gap: 2px;
+			}
+
+			.grid-2 {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
 </head>
+
 <body>
 
-<nav class="toc" id="toc">
-  <div class="toc-title">Contents</div>
-  <ol>
-    <li><a href="#overview">1. Overview</a></li>
-    <li><a href="#embedding">2. Embedding &amp; SDK Contract</a></li>
-    <li class="toc-l2"><a href="#sdk-ready">2.1 tool.onReady / onValueChange</a></li>
-    <li class="toc-l2"><a href="#sdk-save">2.2 tool.setValue</a></li>
-    <li class="toc-l2"><a href="#sdk-upload">2.3 tool.requestUpload</a></li>
-    <li class="toc-l2"><a href="#sdk-misc">2.4 notify / resize / read-only</a></li>
-    <li><a href="#root">3. Top-Level Document Shape</a></li>
-    <li><a href="#general">4. general_info</a></li>
-    <li><a href="#services">5. service_settings</a></li>
-    <li class="toc-l2"><a href="#svc-toggles">5.1 Service channels</a></li>
-    <li class="toc-l2"><a href="#svc-hours">5.2 Opening hours</a></li>
-    <li class="toc-l2"><a href="#svc-sched">5.3 Scheduled orders</a></li>
-    <li class="toc-l2"><a href="#svc-res">5.4 Reservations</a></li>
-    <li><a href="#tax">6. taxation_currency (Tax Categories)</a></li>
-    <li><a href="#payments">7. payment_methods</a></li>
-    <li><a href="#zones">8. delivery_zones</a></li>
-    <li><a href="#deliveryform">9. delivery_form_settings</a></li>
-    <li><a href="#menu">10. menu — The Core Data</a></li>
-    <li class="toc-l2"><a href="#cat">10.1 Categories</a></li>
-    <li class="toc-l2"><a href="#item">10.2 Items (Products)</a></li>
-    <li class="toc-l2"><a href="#sizes">10.3 Sizes</a></li>
-    <li class="toc-l2"><a href="#modgroups">10.4 Modifier Groups</a></li>
-    <li class="toc-l2"><a href="#modopts">10.5 Modifier Options</a></li>
-    <li class="toc-l2"><a href="#nutrition">10.6 Nutrition Table</a></li>
-    <li><a href="#visibility">11. Visibility Rules (Show / Scheduled / Hide)</a></li>
-    <li><a href="#availability">12. Availability &amp; Out-of-Stock Rules</a></li>
-    <li><a href="#channels">13. Channel Filtering</a></li>
-    <li><a href="#pricing">14. Client-Side Price Resolution</a></li>
-    <li><a href="#modifier-logic">15. Modifier Selection Logic (Validation Rules)</a></li>
-    <li><a href="#tax-calc">16. Client-Side Tax Calculation</a></li>
-    <li><a href="#misc-sections">17. alert_settings, social_links, device_connections</a></li>
-    <li><a href="#example">18. Complete Example Document</a></li>
-    <li><a href="#migration">19. Legacy &amp; Migration Notes</a></li>
-  </ol>
-</nav>
+	<nav class="toc" id="toc">
+		<div class="toc-title">Contents</div>
+		<ol>
+			<li><a href="#overview">1. Overview</a></li>
+			<li><a href="#embedding">2. Embedding &amp; SDK Contract</a></li>
+			<li class="toc-l2"><a href="#sdk-ready">2.1 tool.onReady / onValueChange</a></li>
+			<li class="toc-l2"><a href="#sdk-save">2.2 tool.setValue</a></li>
+			<li class="toc-l2"><a href="#sdk-upload">2.3 tool.requestUpload</a></li>
+			<li class="toc-l2"><a href="#sdk-misc">2.4 notify / resize / read-only</a></li>
+			<li><a href="#root">3. Top-Level Document Shape</a></li>
+			<li><a href="#general">4. general_info</a></li>
+			<li><a href="#services">5. service_settings</a></li>
+			<li class="toc-l2"><a href="#svc-toggles">5.1 Service channels</a></li>
+			<li class="toc-l2"><a href="#svc-hours">5.2 Opening hours</a></li>
+			<li class="toc-l2"><a href="#svc-sched">5.3 Scheduled orders</a></li>
+			<li class="toc-l2"><a href="#svc-res">5.4 Reservations</a></li>
+			<li><a href="#tax">6. taxation_currency (Tax Categories)</a></li>
+			<li><a href="#payments">7. payment_methods</a></li>
+			<li><a href="#zones">8. delivery_zones</a></li>
+			<li><a href="#deliveryform">9. delivery_form_settings</a></li>
+			<li><a href="#menu">10. menu — The Core Data</a></li>
+			<li class="toc-l2"><a href="#cat">10.1 Categories</a></li>
+			<li class="toc-l2"><a href="#item">10.2 Items (Products)</a></li>
+			<li class="toc-l2"><a href="#sizes">10.3 Sizes</a></li>
+			<li class="toc-l2"><a href="#modgroups">10.4 Modifier Groups</a></li>
+			<li class="toc-l2"><a href="#modopts">10.5 Modifier Options</a></li>
+			<li class="toc-l2"><a href="#nutrition">10.6 Nutrition Table</a></li>
+			<li><a href="#visibility">11. Visibility Rules (Show / Scheduled / Hide)</a></li>
+			<li><a href="#availability">12. Availability &amp; Out-of-Stock Rules</a></li>
+			<li><a href="#channels">13. Channel Filtering</a></li>
+			<li><a href="#pricing">14. Client-Side Price Resolution</a></li>
+			<li><a href="#modifier-logic">15. Modifier Selection Logic (Validation Rules)</a></li>
+			<li><a href="#tax-calc">16. Client-Side Tax Calculation</a></li>
+			<li><a href="#misc-sections">17. alert_settings, social_links, device_connections</a></li>
+			<li><a href="#example">18. Complete Example Document</a></li>
+			<li><a href="#migration">19. Legacy &amp; Migration Notes</a></li>
+			<li><a href="#write-back">20. Platform Write-Back (Orders)</a></li>
+			<li><a href="#hero-promos-campaigns">21. Hero, Promotions &amp; Campaigns</a></li>
+			<li><a href="#caching">22. Local Menu Cache</a></li>
+			<li><a href="#deals">23. Deals</a></li>
+		</ol>
+	</nav>
 
-<main>
+	<main>
 
-<h1>Restaurant &amp; Menu Manager — Client Data Contract</h1>
-<p class="subtitle">The complete data structure consumed and produced by the Restaurant &amp; Menu Manager tool, for building the customer-facing (client-side) website around it.</p>
-<p class="meta">Version 2.1 · 2026-09-29 · Document of record for the embedded tool at <code>BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager</code></p>
+		<h1>Restaurant &amp; Menu Manager — Client Data Contract</h1>
+		<p class="subtitle">The complete data structure consumed and produced by the Restaurant &amp; Menu Manager tool,
+			for building the customer-facing (client-side) website around it.</p>
+		<p class="meta">Version 3.3 · 2026-10-21 · Document of record for the embedded tool at
+			<code>BUSINESS/VERTICAL/food-beverage/restaurants-cafes/RestaurantAndMenuManager</code>
+		</p>
+		<p class="meta">v3.3 changes: the manager tool now authors every extended rule type and
+			<code>promo_codes</code> as well (tool SSOT tasks T-30..T-42): the top-level shape and the complete example
+			now list <code>promo_codes</code>, and section 23.1 states the manager editors exist. v3.2 changes: the website
+			now honors the deal <code>active</code> flag and implements all
+			backlog rule types (23.1) - <code>percentage_discount</code>, <code>subtotal_threshold</code>,
+			<code>free_delivery</code>, <code>free_item_with_purchase</code>, <code>buy_n_get_m</code>,
+			<code>volume_pricing</code>, a <code>schedule</code> block on any deal, <code>free_modifier</code> and
+			<code>promo_codes</code>. v3.1 changes: the manager tool now authors
+			ALL presentation sections (deals, campaigns, hero,
+			promotions - tool SSOT tasks T-17..T-20 and T-29). The top-level shape (section 3), the table of contents
+			and the complete example now include them. The deal shape documents the <code>active</code> flag, which the
+			manager stores but the website does not honor yet (see section 23). v3.0 changes: new section 23 Deals (rule
+			types bundle, min_quantity, tiered, two_for_one + proposed backlog types 23.1), section 21 updated
+			(campaigns surface as two_for_one deals, new 21.4 category/item photos), order payload deal fields (dealId,
+			dealTitle, dealDescriptionGroups, dealPicks, dealFullPrice) and the totals field dealDiscount.
+		</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="overview">1. Overview</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="overview">1. Overview</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>The <strong>Restaurant &amp; Menu Manager</strong> is a single-page management tool that a restaurant owner uses to configure everything the public website needs to operate online ordering:</p>
-<ul>
-  <li><strong>Menu structure</strong> — categories, products (items), sizes, and modifier groups with options.</li>
-  <li><strong>Visibility scheduling</strong> — products and categories can be always-visible, hidden, or shown only during time windows / date ranges.</li>
-  <li><strong>Availability</strong> — items and individual modifier options can be marked out of stock (until tomorrow, a date, or indefinitely).</li>
-  <li><strong>Channel filtering</strong> — each product declares on which service channels it appears (pickup, delivery, on-premise).</li>
-  <li><strong>Taxation</strong> — tax categories with per-channel rates, referenced from categories, products, and modifier groups.</li>
-  <li><strong>Rich content</strong> — photos (galleries on products/categories, single photos on modifier groups/options), dietary marks, allergens, ingredients, additives, and a full nutrition table.</li>
-  <li><strong>Supporting config</strong> — opening hours, delivery zones (geofences), payment methods, reservation settings, and more.</li>
-</ul>
+		<p>The <strong>Restaurant &amp; Menu Manager</strong> is a single-page management tool that a restaurant owner
+			uses to configure everything the public website needs to operate online ordering:</p>
+		<ul>
+			<li><strong>Menu structure</strong> — categories, products (items), sizes, and modifier groups with options.
+			</li>
+			<li><strong>Visibility scheduling</strong> — products and categories can be always-visible, hidden, or shown
+				only during time windows / date ranges.</li>
+			<li><strong>Availability</strong> — items and individual modifier options can be marked out of stock (until
+				tomorrow, a date, or indefinitely).</li>
+			<li><strong>Channel filtering</strong> — each product declares on which service channels it appears (pickup,
+				delivery, on-premise).</li>
+			<li><strong>Taxation</strong> — tax categories with per-channel rates, referenced from categories, products,
+				and modifier groups.</li>
+			<li><strong>Rich content</strong> — photos (galleries on products/categories, single photos on modifier
+				groups/options), dietary marks, allergens, ingredients, additives, and a full nutrition table.</li>
+			<li><strong>Supporting config</strong> — opening hours, delivery zones (geofences), payment methods,
+				reservation settings, and more.</li>
+		</ul>
 
-<div class="callout callout-note">
-  <strong>One JSON document.</strong> The tool stores <em>everything</em> as a single JSON object — the same object is both the tool's input (loaded on start) and its output (saved on every edit, debounced by 500&nbsp;ms). The client website reads this same object to render the public menu.
-</div>
+		<div class="callout callout-note">
+			<strong>One JSON document.</strong> The tool stores <em>everything</em> as a single JSON object — the same
+			object is both the tool's input (loaded on start) and its output (saved on every edit, debounced by
+			500&nbsp;ms). The client website reads this same object to render the public menu.
+		</div>
 
-<p>This document is organized top-down: the embedding contract (§2), the top-level shape (§3), every section in detail (§4–§10), then the <em>interpretation rules</em> the client must implement (§11–§16) and a complete example (§18).</p>
+		<p>This document is organized top-down: the embedding contract (§2), the top-level shape (§3), every section in
+			detail (§4–§10), then the <em>interpretation rules</em> the client must implement (§11–§16) and a complete
+			example (§18).</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="embedding">2. Embedding &amp; SDK Contract</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="embedding">2. Embedding &amp; SDK Contract</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>The tool runs inside a sandboxed iframe. The host page must inject a single global object, <code>window.tool</code>, before the tool's scripts execute. The tool never calls any other browser/network API for data — all persistence and file uploads go through this object.</p>
+		<p>The tool runs inside a sandboxed iframe. The host page must inject a single global object,
+			<code>window.tool</code>, before the tool's scripts execute. The tool never calls any other browser/network
+			API for data — all persistence and file uploads go through this object.
+		</p>
 
-<div class="schema-title"><span class="path">window.tool</span><span>— the complete SDK surface used by the tool</span></div>
+		<div class="schema-title"><span class="path">window.tool</span><span>— the complete SDK surface used by the
+				tool</span></div>
 
-<table>
-  <tr><th>Method</th><th>Signature</th><th>Used for</th></tr>
-  <tr>
-    <td><code>onReady</code></td>
-    <td><code>tool.onReady(function(value) { … })</code></td>
-    <td>Fires <strong>once</strong> at startup with the currently stored document (the full JSON below, or <code>{}</code> if none). The host must call the callback — this is how the tool boots.</td>
-  </tr>
-  <tr>
-    <td><code>onValueChange</code></td>
-    <td><code>tool.onValueChange(function(value) { … })</code></td>
-    <td>Fires whenever the document changes <em>outside</em> the tool (another admin tab, CMS sync). The tool re-renders from the new value. Optional but recommended for multi-tab consistency.</td>
-  </tr>
-  <tr>
-    <td><code>setValue</code></td>
-    <td><code>tool.setValue(jsonObject)</code></td>
-    <td>The tool's save path. Called on every edit, debounced 500&nbsp;ms, always with a full deep-cloned copy of the document. The host persists this object verbatim and later returns it via <code>onReady</code>/<code>onValueChange</code>.</td>
-  </tr>
-  <tr>
-    <td><code>requestUpload</code></td>
-    <td><code>tool.requestUpload('image/*', function(err, file) { … })</code></td>
-    <td>Opens the host's file picker for images. On success the callback receives <code>file</code> with at least <code>{ url, name }</code>. <code>file.url</code> is the string the tool stores in every <code>photos[]</code> / <code>photo_url</code> field. On failure pass a non-null <code>err</code>.</td>
-  </tr>
-  <tr>
-    <td><code>notify</code></td>
-    <td><code>tool.notify(message, type)</code></td>
-    <td>Toast notifications. <code>type</code> is one of <code>'success'</code>, <code>'warning'</code>, <code>'error'</code>, <code>'info'</code>.</td>
-  </tr>
-  <tr>
-    <td><code>resize</code></td>
-    <td><code>tool.resize()</code></td>
-    <td>Requests the host to re-measure the iframe (the tool's height changes constantly while editing).</td>
-  </tr>
-  <tr>
-    <td><code>isReadOnly</code></td>
-    <td><code>tool.isReadOnly()</code> → <code>boolean</code></td>
-    <td>If <code>true</code>, the tool disables every input on boot.</td>
-  </tr>
-  <tr>
-    <td><code>onReadonlyChange</code></td>
-    <td><code>tool.onReadonlyChange(function(ro) { … })</code></td>
-    <td>Fires when the host toggles read-only mode; the tool locks/unlocks all inputs.</td>
-  </tr>
-</table>
+		<table>
+			<tr>
+				<th>Method</th>
+				<th>Signature</th>
+				<th>Used for</th>
+			</tr>
+			<tr>
+				<td><code>onReady</code></td>
+				<td><code>tool.onReady(function(value) { … })</code></td>
+				<td>Fires <strong>once</strong> at startup with the currently stored document (the full JSON below, or
+					<code>{}</code> if none). The host must call the callback — this is how the tool boots.
+				</td>
+			</tr>
+			<tr>
+				<td><code>onValueChange</code></td>
+				<td><code>tool.onValueChange(function(value) { … })</code></td>
+				<td>Fires whenever the document changes <em>outside</em> the tool (another admin tab, CMS sync). The
+					tool re-renders from the new value. Optional but recommended for multi-tab consistency.</td>
+			</tr>
+			<tr>
+				<td><code>setValue</code></td>
+				<td><code>tool.setValue(jsonObject)</code></td>
+				<td>The tool's save path. Called on every edit, debounced 500&nbsp;ms, always with a full deep-cloned
+					copy of the document. The host persists this object verbatim and later returns it via
+					<code>onReady</code>/<code>onValueChange</code>.
+				</td>
+			</tr>
+			<tr>
+				<td><code>requestUpload</code></td>
+				<td><code>tool.requestUpload('image/*', function(err, file) { … })</code></td>
+				<td>Opens the host's file picker for images. On success the callback receives <code>file</code> with at
+					least <code>{ url, name }</code>. <code>file.url</code> is the string the tool stores in every
+					<code>photos[]</code> / <code>photo_url</code> field. On failure pass a non-null <code>err</code>.
+				</td>
+			</tr>
+			<tr>
+				<td><code>notify</code></td>
+				<td><code>tool.notify(message, type)</code></td>
+				<td>Toast notifications. <code>type</code> is one of <code>'success'</code>, <code>'warning'</code>,
+					<code>'error'</code>, <code>'info'</code>.
+				</td>
+			</tr>
+			<tr>
+				<td><code>resize</code></td>
+				<td><code>tool.resize()</code></td>
+				<td>Requests the host to re-measure the iframe (the tool's height changes constantly while editing).
+				</td>
+			</tr>
+			<tr>
+				<td><code>isReadOnly</code></td>
+				<td><code>tool.isReadOnly()</code> → <code>boolean</code></td>
+				<td>If <code>true</code>, the tool disables every input on boot.</td>
+			</tr>
+			<tr>
+				<td><code>onReadonlyChange</code></td>
+				<td><code>tool.onReadonlyChange(function(ro) { … })</code></td>
+				<td>Fires when the host toggles read-only mode; the tool locks/unlocks all inputs.</td>
+			</tr>
+		</table>
 
-<div class="callout callout-danger">
-  <strong>Strict equality on save.</strong> The value your host receives from <code>setValue</code> is a <em>complete</em> document — always store and return it whole. The tool merges the stored value over its internal defaults (<code>deepMerge(DEFAULTS, incoming)</code>), so partial documents are tolerated on load, but missing arrays are re-created and default values are injected on the next save. Never hand-modify the stored JSON while the tool is open in another tab without broadcasting an <code>onValueChange</code>.
-</div>
+		<div class="callout callout-note">
+			<strong>UniconHub platform mode.</strong> On the UniconHub publicwebsite
+			renderer, <code>tool.onReady</code> delivers the island CONFIG
+			(<code>{cmsObjectType, filters, pageSize, channel, mode, themeToggle}</code>)
+			instead of the document. In that case the widget queries the platform's
+			read-only data relay itself - <code>tool.requestObjects('query', params)</code>,
+			then <code>tool.requestObjects(params)</code>, then
+			<code>window.gw.db.query(params)</code> - using <code>cmsObjectType</code>,
+			<code>filters</code> and <code>pageSize</code> from the config, unwraps
+			whatever response shape comes back, and applies the config's
+			<code>channel</code> / <code>mode</code> / <code>themeToggle</code> display
+			hints. Every other embedding mode keeps the document-through-onReady
+			contract described below.
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="root">3. Top-Level Document Shape</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="callout callout-danger">
+			<strong>Strict equality on save.</strong> The value your host receives from <code>setValue</code> is a
+			<em>complete</em> document — always store and return it whole. The tool merges the stored value over its
+			internal defaults (<code>deepMerge(DEFAULTS, incoming)</code>), so partial documents are tolerated on load,
+			but missing arrays are re-created and default values are injected on the next save. Never hand-modify the
+			stored JSON while the tool is open in another tab without broadcasting an <code>onValueChange</code>.
+		</div>
 
-<pre><code>{
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="root">3. Top-Level Document Shape</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<pre><code>{
   "general_info":         { … },   // §4  Restaurant identity, contact, legal
   "service_settings":     { … },   // §5  Channels, hours, reservations
   "taxation_currency":    { … },   // §6  Currency + tax categories
@@ -232,106 +605,155 @@
   "delivery_zones":       { … },   // §8  Geofenced delivery zones
   "delivery_form_settings": { … }, // §9  Customer address form config
   "menu":                 { … },   // §10 THE MENU — categories, items, modifier groups
+  "deals":                [ … ],   // §23 OPTIONAL — customer offers (bundle, min_quantity, tiered, two_for_one)
+  "hero":                 { … },   // §21 OPTIONAL — hero image above the restaurant name
+  "promotions":           [ … ],   // §21 OPTIONAL — at most 4 promo entries under the hero
+  "campaigns":            [ … ],   // §21 OPTIONAL — legacy offers, surfaced as two_for_one deals
+  "promo_codes":          [ … ],   // §23.1 OPTIONAL — checkout codes (percent off, subtotal discount, free delivery)
   "alert_settings":       { … },   // §17 Admin alerts (not customer-facing)
   "social_links":         { … },   // §17 Public links
   "device_connections":   [ … ]    // §17 Admin-only device registry
 }</code></pre>
 
-<p>Every string field that contains free text from the admin is plain UTF-8. All date-times the <em>client</em> needs are ISO-8601: either <code>YYYY-MM-DDTHH:mm</code> (local wall-clock, used in schedules and OOS "until" values) or full ISO strings. All currency amounts are decimals (floats) in the restaurant's chosen <code>taxation_currency.currency</code>.</p>
+		<div class="callout callout-note">
+			<strong>The five presentation keys are OPTIONAL.</strong> <code>deals</code>, <code>hero</code>,
+			<code>promotions</code>, <code>campaigns</code> and <code>promo_codes</code> may be absent from older
+			records - treat an absent key exactly like an empty one, and render nothing for that section. The manager
+			tool writes all five on every new record and on every save after an edit.
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="general">4. general_info</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<p>Every string field that contains free text from the admin is plain UTF-8. All date-times the <em>client</em>
+			needs are ISO-8601: either <code>YYYY-MM-DDTHH:mm</code> (local wall-clock, used in schedules and OOS
+			"until" values) or full ISO strings. All currency amounts are decimals (floats) in the restaurant's chosen
+			<code>taxation_currency.currency</code>.
+		</p>
 
-<div class="schema-title"><span class="path">data.general_info</span></div>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="general">4. general_info</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<div class="field">
-  <div class="fname">restaurant_name <span class="pill pill-str">string</span></div>
-  <div class="fdesc">Public display name of the restaurant.</div>
-</div>
-<div class="field">
-  <div class="fname">brand_name <span class="pill pill-str">string</span></div>
-  <div class="fdesc">Optional brand/trading name (may differ from legal name).</div>
-</div>
-<div class="field">
-  <div class="fname">cuisine_types <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Slug IDs from a fixed list (<code>italian</code>, <code>turkish</code>, <code>vegan</code>, <code>steakhouse</code>, …). Custom cuisines are also slug strings. Use for filtering/search labels.</div>
-</div>
-<div class="field">
-  <div class="fname">logo_url <span class="pill pill-str">string</span></div>
-  <div class="fdesc">Public URL of the restaurant logo (host-uploaded or manual).</div>
-</div>
-<div class="field">
-  <div class="fname">website_url · phone · email <span class="pill pill-str">string</span></div>
-  <div class="fdesc">Public website, main phone, email.</div>
-</div>
-<div class="field">
-  <div class="fname">additional_phones <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Extra phone numbers.</div>
-</div>
-<div class="field">
-  <div class="fname">address <span class="pill pill-obj">object</span></div>
-  <div class="fdesc"><code>{ street, city, state, zip, country }</code>. <code>state</code> holds a US-state or CA-province <em>code</em> (e.g. <code>NY</code>, <code>QC</code>) when the country is US/CA, otherwise free text. <code>country</code> is an ISO 3166-1 alpha-2 code.</div>
-</div>
-<div class="field">
-  <div class="fname">coordinates <span class="pill pill-obj">object</span></div>
-  <div class="fdesc"><code>{ lat, lng }</code> — map center for the delivery map.</div>
-</div>
-<div class="field">
-  <div class="fname">timezone <span class="pill pill-str">string</span></div>
-  <div class="fdesc">IANA name, e.g. <code>America/New_York</code>. <strong>Client rule:</strong> interpret all <code>HH:mm</code> time values in this zone.</div>
-</div>
-<div class="field">
-  <div class="fname">legal <span class="pill pill-obj">object</span></div>
-  <div class="fdesc"><code>{ entity_name, vat_tax_number, entity_type, registration_number, dpo_name, account_status, legal_address: { street, city, state, zip, country } }</code>. Used on invoices/footer; not needed for menu rendering.</div>
-</div>
+		<div class="schema-title"><span class="path">data.general_info</span></div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="services">5. service_settings</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<div class="field">
+			<div class="fname">restaurant_name <span class="pill pill-str">string</span></div>
+			<div class="fdesc">Public display name of the restaurant.</div>
+		</div>
+		<div class="field">
+			<div class="fname">brand_name <span class="pill pill-str">string</span></div>
+			<div class="fdesc">Optional brand/trading name (may differ from legal name).</div>
+		</div>
+		<div class="field">
+			<div class="fname">cuisine_types <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Slug IDs from a fixed list (<code>italian</code>, <code>turkish</code>,
+				<code>vegan</code>, <code>steakhouse</code>, …). Custom cuisines are also slug strings. Use for
+				filtering/search labels.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">logo_url <span class="pill pill-str">string</span></div>
+			<div class="fdesc">Public URL of the restaurant logo (host-uploaded or manual).</div>
+		</div>
+		<div class="field">
+			<div class="fname">website_url · phone · email <span class="pill pill-str">string</span></div>
+			<div class="fdesc">Public website, main phone, email.</div>
+		</div>
+		<div class="field">
+			<div class="fname">additional_phones <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Extra phone numbers.</div>
+		</div>
+		<div class="field">
+			<div class="fname">address <span class="pill pill-obj">object</span></div>
+			<div class="fdesc"><code>{ street, city, state, zip, country }</code>. <code>state</code> holds a US-state
+				or CA-province <em>code</em> (e.g. <code>NY</code>, <code>QC</code>) when the country is US/CA,
+				otherwise free text. <code>country</code> is an ISO 3166-1 alpha-2 code.</div>
+		</div>
+		<div class="field">
+			<div class="fname">coordinates <span class="pill pill-obj">object</span></div>
+			<div class="fdesc"><code>{ lat, lng }</code> — map center for the delivery map.</div>
+		</div>
+		<div class="field">
+			<div class="fname">timezone <span class="pill pill-str">string</span></div>
+			<div class="fdesc">IANA name, e.g. <code>America/New_York</code>. <strong>Client rule:</strong> interpret
+				all <code>HH:mm</code> time values in this zone.</div>
+		</div>
+		<div class="field">
+			<div class="fname">legal <span class="pill pill-obj">object</span></div>
+			<div class="fdesc">
+				<code>{ entity_name, vat_tax_number, entity_type, registration_number, dpo_name, account_status, legal_address: { street, city, state, zip, country } }</code>.
+				Used on invoices/footer; not needed for menu rendering.
+			</div>
+		</div>
 
-<h3 id="svc-toggles">5.1 Service channels — <code>service_settings.service_toggles</code></h3>
-<p>These three flags define the channel vocabulary used everywhere else in the menu (<code>show_on_channels</code>, tax rates, payment methods):</p>
-<div class="field"><div class="fname">pickup_enabled</div><div class="fdesc">Channel id <code>"pickup"</code> is active.</div></div>
-<div class="field"><div class="fname">delivery_enabled</div><div class="fdesc">Channel id <code>"delivery"</code> is active.</div></div>
-<div class="field"><div class="fname">on_premise_enabled</div><div class="fdesc">Channel id <code>"on_premise"</code> is active (dine-in / counter).</div></div>
-<div class="field"><div class="fname">anonymous_ordering_allowed</div><div class="fdesc">Guests may order without an account.</div></div>
-<div class="field"><div class="fname">table_reservation_enabled</div><div class="fdesc">Table reservations are offered.</div></div>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="services">5. service_settings</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<div class="callout callout-warn">
-  A product can be configured with channels that are currently disabled in <code>service_toggles</code>. The client should intersect the product's <code>show_on_channels</code> with the enabled channels before showing availability.
-</div>
+		<h3 id="svc-toggles">5.1 Service channels — <code>service_settings.service_toggles</code></h3>
+		<p>These three flags define the channel vocabulary used everywhere else in the menu
+			(<code>show_on_channels</code>, tax rates, payment methods):</p>
+		<div class="field">
+			<div class="fname">pickup_enabled</div>
+			<div class="fdesc">Channel id <code>"pickup"</code> is active.</div>
+		</div>
+		<div class="field">
+			<div class="fname">delivery_enabled</div>
+			<div class="fdesc">Channel id <code>"delivery"</code> is active.</div>
+		</div>
+		<div class="field">
+			<div class="fname">on_premise_enabled</div>
+			<div class="fdesc">Channel id <code>"on_premise"</code> is active (dine-in / counter).</div>
+		</div>
+		<div class="field">
+			<div class="fname">anonymous_ordering_allowed</div>
+			<div class="fdesc">Guests may order without an account.</div>
+		</div>
+		<div class="field">
+			<div class="fname">table_reservation_enabled</div>
+			<div class="fdesc">Table reservations are offered.</div>
+		</div>
 
-<h3 id="svc-hours">5.2 Opening hours — <code>service_settings.opening_hours</code></h3>
-<pre><code>"opening_hours": [
+		<div class="callout callout-warn">
+			A product can be configured with channels that are currently disabled in <code>service_toggles</code>. The
+			client should intersect the product's <code>show_on_channels</code> with the enabled channels before showing
+			availability.
+		</div>
+
+		<h3 id="svc-hours">5.2 Opening hours — <code>service_settings.opening_hours</code></h3>
+		<pre><code>"opening_hours": [
   { "day": 0, "ranges": [{ "open": "09:00", "close": "17:00" }], "is_closed": false },
   // day 1 … day 6
 ]</code></pre>
-<ul>
-  <li><code>day</code>: <strong>0 = Monday … 6 = Sunday</strong> (Monday-first).</li>
-  <li><code>ranges[]</code>: one or more <code>open</code>/<code>close</code> <code>HH:mm</code> windows per day (multi-shift supported).</li>
-  <li><code>is_closed</code>: <code>true</code> = closed all day, ranges ignored.</li>
-</ul>
+		<ul>
+			<li><code>day</code>: <strong>0 = Monday … 6 = Sunday</strong> (Monday-first).</li>
+			<li><code>ranges[]</code>: one or more <code>open</code>/<code>close</code> <code>HH:mm</code> windows per
+				day (multi-shift supported).</li>
+			<li><code>is_closed</code>: <code>true</code> = closed all day, ranges ignored.</li>
+		</ul>
 
-<h3 id="svc-sched">5.3 Scheduled orders — <code>service_settings.scheduled_orders</code></h3>
-<pre><code>{ "enabled": false, "pickup_min_advance": 30, "pickup_max_advance": 1440,
+		<h3 id="svc-sched">5.3 Scheduled orders — <code>service_settings.scheduled_orders</code></h3>
+		<pre><code>{ "enabled": false, "pickup_min_advance": 30, "pickup_max_advance": 1440,
   "delivery_min_advance": 45, "delivery_max_advance": 1440,
   "time_slot_interval": 15 }</code></pre>
-<p>Advance values are <strong>minutes</strong>. Clients offering pre-order pickers should clamp the selectable lead time to these bounds and round to <code>time_slot_interval</code>.</p>
+		<p>Advance values are <strong>minutes</strong>. Clients offering pre-order pickers should clamp the selectable
+			lead time to these bounds and round to <code>time_slot_interval</code>.</p>
 
-<h3 id="svc-res">5.4 Reservations — <code>service_settings.reservation_settings</code></h3>
-<pre><code>{ "min_guests": 1, "max_guests": 10,
+		<h3 id="svc-res">5.4 Reservations — <code>service_settings.reservation_settings</code></h3>
+		<pre><code>{ "min_guests": 1, "max_guests": 10,
   "min_advance_minutes": 60, "max_advance_days": 30,
   "late_hold_minutes": 15, "pre_order_enabled": false,
   "deposit_enabled": false, "deposit_amount": 0 }</code></pre>
 
-<div class="field"><div class="fname">on_premise_settings</div><div class="fdesc"><code>{ min_advance_value, min_advance_unit: 'minutes', max_advance_days }</code> — lead-time rules for dine-in ordering.</div></div>
+		<div class="field">
+			<div class="fname">on_premise_settings</div>
+			<div class="fdesc"><code>{ min_advance_value, min_advance_unit: 'minutes', max_advance_days }</code> —
+				lead-time rules for dine-in ordering.</div>
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="tax">6. taxation_currency — Tax Categories</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="tax">6. taxation_currency — Tax Categories</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<pre><code>"taxation_currency": {
+		<pre><code>"taxation_currency": {
   "currency": "USD",
   "tax_mode": "exclusive",
   "tax_name": "Tax",
@@ -342,29 +764,47 @@
   "delivery_fee_tax_rate": 0
 }</code></pre>
 
-<div class="field"><div class="fname">tax_categories[].name</div><div class="fdesc">The <strong>reference key</strong> used by <code>tax_category_id</code> fields on categories, items, and modifier groups. Free text entered by the admin — treat as an opaque key.</div></div>
-<div class="field"><div class="fname">tax_categories[].pickup / delivery / in_restaurant</div><div class="fdesc">Percentage rate (0–100, decimals allowed) per channel. Same channel ids as §5.1.</div></div>
-<div class="field"><div class="fname">tax_mode</div><div class="fdesc">Currently always <code>"exclusive"</code> — rates are applied <em>on top of</em> menu prices. See §16.</div></div>
-<div class="field"><div class="fname">delivery_fee_tax_rate</div><div class="fdesc">Extra tax % applied to the delivery fee.</div></div>
+		<div class="field">
+			<div class="fname">tax_categories[].name</div>
+			<div class="fdesc">The <strong>reference key</strong> used by <code>tax_category_id</code> fields on
+				categories, items, and modifier groups. Free text entered by the admin — treat as an opaque key.</div>
+		</div>
+		<div class="field">
+			<div class="fname">tax_categories[].pickup / delivery / in_restaurant</div>
+			<div class="fdesc">Percentage rate (0–100, decimals allowed) per channel. Same channel ids as §5.1.</div>
+		</div>
+		<div class="field">
+			<div class="fname">tax_mode</div>
+			<div class="fdesc">Currently always <code>"exclusive"</code> — rates are applied <em>on top of</em> menu
+				prices. See §16.</div>
+		</div>
+		<div class="field">
+			<div class="fname">delivery_fee_tax_rate</div>
+			<div class="fdesc">Extra tax % applied to the delivery fee.</div>
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="payments">7. payment_methods</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="payments">7. payment_methods</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>Flat boolean flags. The naming pattern is <code>&lt;method&gt;_&lt;channel&gt;</code>:</p>
-<ul>
-  <li>Methods: <code>cash</code>, <code>card</code>, <code>interac</code>, plus <code>online_payment</code> (global).</li>
-  <li>Channels: <code>delivery</code>, <code>pickup</code>, <code>on_premise</code>, <code>reservation</code>.</li>
-  <li>Examples: <code>cash_delivery: true</code>, <code>card_pickup: true</code>, <code>interac_on_premise: false</code>.</li>
-  <li><code>call_for_card_&lt;channel&gt;</code> — card details are taken by phone, not online.</li>
-</ul>
-<p>The client shows/hides payment options at checkout based on these flags for the active channel.</p>
+		<p>Flat boolean flags. The naming pattern is <code>&lt;method&gt;_&lt;channel&gt;</code>:</p>
+		<ul>
+			<li>Methods: <code>cash</code>, <code>card</code>, <code>interac</code>, plus <code>online_payment</code>
+				(global).</li>
+			<li>Channels: <code>delivery</code>, <code>pickup</code>, <code>on_premise</code>, <code>reservation</code>.
+			</li>
+			<li>Examples: <code>cash_delivery: true</code>, <code>card_pickup: true</code>,
+				<code>interac_on_premise: false</code>.
+			</li>
+			<li><code>call_for_card_&lt;channel&gt;</code> — card details are taken by phone, not online.</li>
+		</ul>
+		<p>The client shows/hides payment options at checkout based on these flags for the active channel.</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="zones">8. delivery_zones</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="zones">8. delivery_zones</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<pre><code>"delivery_zones": {
+		<pre><code>"delivery_zones": {
   "zones": [
     {
       "id": "uuid",
@@ -383,18 +823,29 @@
   ]
 }</code></pre>
 
-<div class="field"><div class="fname">shapes[].type</div><div class="fdesc"><code>"Polygon"</code> (GeoJSON-style <code>coordinates</code>, first ring = outer) or <code>"Circle"</code> (<code>center: [lng, lat]</code> + <code>radius</code> in <strong>meters</strong>).</div></div>
-<div class="field"><div class="fname">min_order / fee</div><div class="fdesc">Minimum order value and delivery fee for this zone, in the configured currency.</div></div>
+		<div class="field">
+			<div class="fname">shapes[].type</div>
+			<div class="fdesc"><code>"Polygon"</code> (GeoJSON-style <code>coordinates</code>, first ring = outer) or
+				<code>"Circle"</code> (<code>center: [lng, lat]</code> + <code>radius</code> in
+				<strong>meters</strong>).
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">min_order / fee</div>
+			<div class="fdesc">Minimum order value and delivery fee for this zone, in the configured currency.</div>
+		</div>
 
-<div class="callout callout-note">
-  <strong>Point-in-zone:</strong> a delivery address is inside a zone if it falls inside <em>any</em> shape of that zone. Overlapping zones: pick the first zone in array order (or the cheapest fee — decide and document it client-side).
-</div>
+		<div class="callout callout-note">
+			<strong>Point-in-zone:</strong> a delivery address is inside a zone if it falls inside <em>any</em> shape of
+			that zone. Overlapping zones: pick the first zone in array order (or the cheapest fee — decide and document
+			it client-side).
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="deliveryform">9. delivery_form_settings</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="deliveryform">9. delivery_form_settings</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<pre><code>"delivery_form_settings": {
+		<pre><code>"delivery_form_settings": {
   "address_fields": {
     "street":        { "enabled": true,  "required": true },
     "city":          { "enabled": true,  "required": true },
@@ -407,66 +858,75 @@
   "custom_fields": [ { "label": "Gate code", "required": false } ],
   "accept_orders_outside_zone": false
 }</code></pre>
-<ul>
-  <li><code>address_fields.*.enabled</code> — show the field; <code>required</code> — mandatory (implies enabled).</li>
-  <li><code>custom_fields[]</code> — extra admin-defined fields; render as free text inputs.</li>
-  <li><code>accept_orders_outside_zone</code> — allow checkout when no zone contains the address (warn the customer when <code>false</code>).</li>
-</ul>
+		<ul>
+			<li><code>address_fields.*.enabled</code> — show the field; <code>required</code> — mandatory (implies
+				enabled).</li>
+			<li><code>custom_fields[]</code> — extra admin-defined fields; render as free text inputs.</li>
+			<li><code>accept_orders_outside_zone</code> — allow checkout when no zone contains the address (warn the
+				customer when <code>false</code>).</li>
+		</ul>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="menu">10. menu — The Core Data</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="menu">10. menu — The Core Data</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<pre><code>"menu": {
+		<pre><code>"menu": {
   "categories":      [ … ],   // §10.1 — flat list, ordered
   "items":           [ … ],   // §10.2 — flat list, each references a category by id
   "modifier_groups": [ … ]    // §10.4 — global groups, referenced by id from items/sizes
 }</code></pre>
 
-<div class="callout callout-ok">
-  <strong>Ordering = array order.</strong> There are no sort fields. Categories appear in the order of <code>categories[]</code>; items in the order of <code>items[]</code>; options in the order of <code>modifier_groups[].options[]</code>; photos in the order of <code>photos[]</code>. The admin reorders by drag &amp; drop; the client must render in array order.
-</div>
+		<div class="callout callout-ok">
+			<strong>Ordering = array order.</strong> There are no sort fields. Categories appear in the order of
+			<code>categories[]</code>; items in the order of <code>items[]</code>; options in the order of
+			<code>modifier_groups[].options[]</code>; photos in the order of <code>photos[]</code>. The admin reorders
+			by drag &amp; drop; the client must render in array order.
+		</div>
 
-<h3 id="cat">10.1 Categories</h3>
+		<h3 id="cat">10.1 Categories</h3>
 
-<div class="field">
-  <div class="fname">id <span class="pill pill-req">required</span></div>
-  <div class="fdesc">UUID string. Referenced by <code>item.category_id</code>.</div>
-</div>
-<div class="field">
-  <div class="fname">name <span class="pill pill-req">required</span></div>
-  <div class="fdesc">Display name, max 80 chars.</div>
-</div>
-<div class="field">
-  <div class="fname">description</div>
-  <div class="fdesc">Optional, max 200 chars.</div>
-</div>
-<div class="field">
-  <div class="fname">visibility_mode</div>
-  <div class="fdesc"><code>"show" | "scheduled" | "hide"</code> — see §11.</div>
-</div>
-<div class="field">
-  <div class="fname">hide_until_date</div>
-  <div class="fdesc">ISO datetime. Only relevant when <code>visibility_mode="hide"</code> and "hide until" was chosen.</div>
-</div>
-<div class="field">
-  <div class="fname">schedule_type · schedule_time_windows · schedule_from · schedule_until</div>
-  <div class="fdesc">Only relevant when <code>visibility_mode="scheduled"</code> — see §11 for the exact shapes.</div>
-</div>
-<div class="field">
-  <div class="fname">photos <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Ordered image URLs. Multiple allowed.</div>
-</div>
-<div class="field">
-  <div class="fname">primary_photo_url</div>
-  <div class="fdesc">Explicit primary. When <code>null</code>/missing, the first entry of <code>photos[]</code> is primary.</div>
-</div>
-<div class="field">
-  <div class="fname">tax_category_id</div>
-  <div class="fdesc">Tax category <code>name</code> from §6, or <code>null</code> (default tax).</div>
-</div>
+		<div class="field">
+			<div class="fname">id <span class="pill pill-req">required</span></div>
+			<div class="fdesc">UUID string. Referenced by <code>item.category_id</code>.</div>
+		</div>
+		<div class="field">
+			<div class="fname">name <span class="pill pill-req">required</span></div>
+			<div class="fdesc">Display name, max 80 chars.</div>
+		</div>
+		<div class="field">
+			<div class="fname">description</div>
+			<div class="fdesc">Optional, max 200 chars.</div>
+		</div>
+		<div class="field">
+			<div class="fname">visibility_mode</div>
+			<div class="fdesc"><code>"show" | "scheduled" | "hide"</code> — see §11.</div>
+		</div>
+		<div class="field">
+			<div class="fname">hide_until_date</div>
+			<div class="fdesc">ISO datetime. Only relevant when <code>visibility_mode="hide"</code> and "hide until" was
+				chosen.</div>
+		</div>
+		<div class="field">
+			<div class="fname">schedule_type · schedule_time_windows · schedule_from · schedule_until</div>
+			<div class="fdesc">Only relevant when <code>visibility_mode="scheduled"</code> — see §11 for the exact
+				shapes.</div>
+		</div>
+		<div class="field">
+			<div class="fname">photos <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Ordered image URLs. Multiple allowed.</div>
+		</div>
+		<div class="field">
+			<div class="fname">primary_photo_url</div>
+			<div class="fdesc">Explicit primary. When <code>null</code>/missing, the first entry of
+				<code>photos[]</code> is primary.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">tax_category_id</div>
+			<div class="fdesc">Tax category <code>name</code> from §6, or <code>null</code> (default tax).</div>
+		</div>
 
-<pre><code>{
+		<pre><code>{
   "id": "cat_lunch",
   "name": "Lunch Specials",
   "description": "Weekday lunch menu",
@@ -480,110 +940,138 @@
   "tax_category_id": "Reduced"
 }</code></pre>
 
-<h3 id="item">10.2 Items (Products)</h3>
+		<h3 id="item">10.2 Items (Products)</h3>
 
-<p>Items are flat; the category link is <code>category_id</code>. Below is the complete field reference.</p>
+		<p>Items are flat; the category link is <code>category_id</code>. Below is the complete field reference.</p>
 
-<div class="field">
-  <div class="fname">id · category_id <span class="pill pill-req">required</span></div>
-  <div class="fdesc">UUID; FK to a category id (may be empty string for uncategorized).</div>
-</div>
-<div class="field">
-  <div class="fname">item_name · slug <span class="pill pill-req">required</span></div>
-  <div class="fdesc">Public name; URL-safe slug (auto-generated from name).</div>
-</div>
-<div class="field">
-  <div class="fname">description</div>
-  <div class="fdesc">Free text description.</div>
-</div>
-<div class="field">
-  <div class="fname">price · sale_price</div>
-  <div class="fdesc"><strong>Numbers.</strong> <code>price</code> is <code>null</code> when the item has sizes (pricing is per-size, §14). <code>sale_price</code> may be <code>null</code>.</div>
-</div>
-<div class="field">
-  <div class="fname">primary_photo_url · photos</div>
-  <div class="fdesc">Same semantics as categories: ordered gallery, first = primary unless <code>primary_photo_url</code> is set.</div>
-</div>
-<div class="field">
-  <div class="fname">allergens <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Contains values from the standard list (<code>Gluten, Dairy, Nuts, Soy, Eggs, Shellfish, Sulfites, Sesame, Mustard, Celery</code>) plus any admin-entered custom strings. Match case-sensitively.</div>
-</div>
-<div class="field">
-  <div class="fname">dietary_marks <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Subset of <code>Hot, Vegan, Vegetarian, Gluten Free, Halal, Dairy Free, Raw, Nut Free</code>.</div>
-</div>
-<div class="field">
-  <div class="fname">is_vegetarian · is_vegan · is_gluten_free</div>
-  <div class="fdesc"><strong>Legacy mirrors</strong> kept in sync with <code>dietary_marks</code>. Prefer <code>dietary_marks</code>; use these only for backward compatibility.</div>
-</div>
-<div class="field">
-  <div class="fname">spice_level <span class="pill pill-num">number 0–5</span></div>
-  <div class="fdesc">0 = Not Spicy … 5 = Extra Hot.</div>
-</div>
-<div class="field">
-  <div class="fname">calories · prep_time_minutes</div>
-  <div class="fdesc">Optional numbers (<code>null</code> when unset).</div>
-</div>
-<div class="field">
-  <div class="fname">ingredients · additives</div>
-  <div class="fdesc">Free-text multiline strings, e.g. <code>"Tomatoes\nBasil\nOlive oil"</code>. Render as-is (line breaks preserved).</div>
-</div>
-<div class="field">
-  <div class="fname">nutrition_per · nutrition</div>
-  <div class="fdesc">Nutrition facts — see §10.6.</div>
-</div>
-<div class="field">
-  <div class="fname">tags <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Marketing labels: <code>Popular, New, Chef Special, Spicy, Bestseller, Limited, Seasonal</code>.</div>
-</div>
-<div class="field">
-  <div class="fname">modifier_group_ids <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">FKs to <code>modifier_groups[].id</code> — groups offered with this item at the item level.</div>
-</div>
-<div class="field">
-  <div class="fname">modifier_group_overrides <span class="pill pill-obj">object</span></div>
-  <div class="fdesc"><code>{ "&lt;groupId&gt;": { "is_required": true, "allow_duplicates": false } }</code> — per-assignment overrides; fall back to the group's own values (§15).</div>
-</div>
-<div class="field">
-  <div class="fname">sizes <span class="pill pill-arr">object[]</span></div>
-  <div class="fdesc">See §10.3.</div>
-</div>
-<div class="field">
-  <div class="fname">visibility_mode · hide_until_date · schedule_type · schedule_time_windows · schedule_from · schedule_until</div>
-  <div class="fdesc">Same system as categories — §11.</div>
-</div>
-<div class="field">
-  <div class="fname">availability · oos_type · oos_until</div>
-  <div class="fdesc">Out-of-stock system — §12.</div>
-</div>
-<div class="field">
-  <div class="fname">show_on_channels <span class="pill pill-arr">string[]</span></div>
-  <div class="fdesc">Subset of <code>["pickup","delivery","on_premise"]</code> — §13.</div>
-</div>
-<div class="field">
-  <div class="fname">tax_category_id</div>
-  <div class="fdesc">Tax category name or <code>null</code> (= inherit category's tax, then default). §16.</div>
-</div>
-<div class="field">
-  <div class="fname">show_internal_name · internal_name</div>
-  <div class="fdesc">Kitchen-ticket display name. When <code>show_internal_name=true</code>, <code>internal_name</code> (e.g. <code>"CHIX-WRAP"</code>) is what goes on kitchen receipts/tickets instead of <code>item_name</code>.</div>
-</div>
-<div class="field">
-  <div class="fname">hide_instructions <span class="pill pill-bool">boolean</span></div>
-  <div class="fdesc"><code>true</code> = the client must <em>not</em> show the customer a "special instructions" free-text field for this item.</div>
-</div>
+		<div class="field">
+			<div class="fname">id · category_id <span class="pill pill-req">required</span></div>
+			<div class="fdesc">UUID; FK to a category id (may be empty string for uncategorized).</div>
+		</div>
+		<div class="field">
+			<div class="fname">item_name · slug <span class="pill pill-req">required</span></div>
+			<div class="fdesc">Public name; URL-safe slug (auto-generated from name).</div>
+		</div>
+		<div class="field">
+			<div class="fname">description</div>
+			<div class="fdesc">Free text description.</div>
+		</div>
+		<div class="field">
+			<div class="fname">price · sale_price</div>
+			<div class="fdesc"><strong>Numbers.</strong> <code>price</code> is <code>null</code> when the item has sizes
+				(pricing is per-size, §14). <code>sale_price</code> may be <code>null</code>.</div>
+		</div>
+		<div class="field">
+			<div class="fname">primary_photo_url · photos</div>
+			<div class="fdesc">Same semantics as categories: ordered gallery, first = primary unless
+				<code>primary_photo_url</code> is set.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">allergens <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Contains values from the standard list
+				(<code>Gluten, Dairy, Nuts, Soy, Eggs, Shellfish, Sulfites, Sesame, Mustard, Celery</code>) plus any
+				admin-entered custom strings. Match case-sensitively.</div>
+		</div>
+		<div class="field">
+			<div class="fname">dietary_marks <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Subset of
+				<code>Hot, Vegan, Vegetarian, Gluten Free, Halal, Dairy Free, Raw, Nut Free</code>.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">is_vegetarian · is_vegan · is_gluten_free</div>
+			<div class="fdesc"><strong>Legacy mirrors</strong> kept in sync with <code>dietary_marks</code>. Prefer
+				<code>dietary_marks</code>; use these only for backward compatibility.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">spice_level <span class="pill pill-num">number 0–5</span></div>
+			<div class="fdesc">0 = Not Spicy … 5 = Extra Hot.</div>
+		</div>
+		<div class="field">
+			<div class="fname">calories · prep_time_minutes</div>
+			<div class="fdesc">Optional numbers (<code>null</code> when unset).</div>
+		</div>
+		<div class="field">
+			<div class="fname">ingredients · additives</div>
+			<div class="fdesc">Free-text multiline strings, e.g. <code>"Tomatoes\nBasil\nOlive oil"</code>. Render as-is
+				(line breaks preserved).</div>
+		</div>
+		<div class="field">
+			<div class="fname">nutrition_per · nutrition</div>
+			<div class="fdesc">Nutrition facts — see §10.6.</div>
+		</div>
+		<div class="field">
+			<div class="fname">tags <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Marketing labels:
+				<code>Popular, New, Chef Special, Spicy, Bestseller, Limited, Seasonal</code>.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">modifier_group_ids <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">FKs to <code>modifier_groups[].id</code> — groups offered with this item at the item
+				level.</div>
+		</div>
+		<div class="field">
+			<div class="fname">modifier_group_overrides <span class="pill pill-obj">object</span></div>
+			<div class="fdesc"><code>{ "&lt;groupId&gt;": { "is_required": true, "allow_duplicates": false } }</code> —
+				per-assignment overrides; fall back to the group's own values (§15).</div>
+		</div>
+		<div class="field">
+			<div class="fname">sizes <span class="pill pill-arr">object[]</span></div>
+			<div class="fdesc">See §10.3.</div>
+		</div>
+		<div class="field">
+			<div class="fname">visibility_mode · hide_until_date · schedule_type · schedule_time_windows · schedule_from
+				· schedule_until</div>
+			<div class="fdesc">Same system as categories — §11.</div>
+		</div>
+		<div class="field">
+			<div class="fname">availability · oos_type · oos_until</div>
+			<div class="fdesc">Out-of-stock system — §12.</div>
+		</div>
+		<div class="field">
+			<div class="fname">show_on_channels <span class="pill pill-arr">string[]</span></div>
+			<div class="fdesc">Subset of <code>["pickup","delivery","on_premise"]</code> — §13.</div>
+		</div>
+		<div class="field">
+			<div class="fname">tax_category_id</div>
+			<div class="fdesc">Tax category name or <code>null</code> (= inherit category's tax, then default). §16.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">show_internal_name · internal_name</div>
+			<div class="fdesc">Kitchen-ticket display name. When <code>show_internal_name=true</code>,
+				<code>internal_name</code> (e.g. <code>"CHIX-WRAP"</code>) is what goes on kitchen receipts/tickets
+				instead of <code>item_name</code>.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">hide_instructions <span class="pill pill-bool">boolean</span></div>
+			<div class="fdesc"><code>true</code> = the client must <em>not</em> show the customer a "special
+				instructions" free-text field for this item.</div>
+		</div>
 
-<h3 id="sizes">10.3 Sizes</h3>
-<pre><code>"sizes": [
+		<h3 id="sizes">10.3 Sizes</h3>
+		<pre><code>"sizes": [
   { "id": "uuid", "label": "Medium (12\")",
     "price": 16.0,
     "modifier_group_ids": ["mg-crust", "mg-toppings"] }
 ]</code></pre>
-<div class="field"><div class="fname">id · label · price</div><div class="fdesc">UUID; display label; the size's own price (this <em>is</em> the price when selected, §14).</div></div>
-<div class="field"><div class="fname">modifier_group_ids</div><div class="fdesc">Groups offered <em>for this size</em>. When a size is selected, the customer sees the union of item-level and size-level groups (deduplicated).</div></div>
+		<div class="field">
+			<div class="fname">id · label · price</div>
+			<div class="fdesc">UUID; display label; the size's own price (this <em>is</em> the price when selected,
+				§14).</div>
+		</div>
+		<div class="field">
+			<div class="fname">modifier_group_ids</div>
+			<div class="fdesc">Groups offered <em>for this size</em>. When a size is selected, the customer sees the
+				union of item-level and size-level groups (deduplicated).</div>
+		</div>
 
-<h3 id="modgroups">10.4 Modifier Groups</h3>
-<pre><code>{
+		<h3 id="modgroups">10.4 Modifier Groups</h3>
+		<pre><code>{
   "id": "mg-toppings",
   "group_name": "Extra Toppings",
   "selection_type": "multi",
@@ -595,14 +1083,32 @@
   "photo_url": null,
   "options": [ … ]
 }</code></pre>
-<div class="field"><div class="fname">selection_type</div><div class="fdesc"><code>"single"</code> = pick exactly one option; <code>"multi"</code> = pick any number (bounded by force_min/force_max).</div></div>
-<div class="field"><div class="fname">allow_duplicates</div><div class="fdesc"><code>true</code> = the same option may be added multiple times (e.g. "double cheese").</div></div>
-<div class="field"><div class="fname">is_required</div><div class="fdesc"><code>true</code> = customer must make a selection before adding to cart.</div></div>
-<div class="field"><div class="fname">force_min · force_max</div><div class="fdesc">Min/max number of <em>selections</em> (quantity counts). <code>0</code> = no limit (force_max) or optional (force_min). Full validation rules in §15.</div></div>
-<div class="field"><div class="fname">tax_category_id · photo_url</div><div class="fdesc">Tax category name; single group photo URL (may be null).</div></div>
+		<div class="field">
+			<div class="fname">selection_type</div>
+			<div class="fdesc"><code>"single"</code> = pick exactly one option; <code>"multi"</code> = pick any number
+				(bounded by force_min/force_max).</div>
+		</div>
+		<div class="field">
+			<div class="fname">allow_duplicates</div>
+			<div class="fdesc"><code>true</code> = the same option may be added multiple times (e.g. "double cheese").
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">is_required</div>
+			<div class="fdesc"><code>true</code> = customer must make a selection before adding to cart.</div>
+		</div>
+		<div class="field">
+			<div class="fname">force_min · force_max</div>
+			<div class="fdesc">Min/max number of <em>selections</em> (quantity counts). <code>0</code> = no limit
+				(force_max) or optional (force_min). Full validation rules in §15.</div>
+		</div>
+		<div class="field">
+			<div class="fname">tax_category_id · photo_url</div>
+			<div class="fdesc">Tax category name; single group photo URL (may be null).</div>
+		</div>
 
-<h3 id="modopts">10.5 Modifier Options</h3>
-<pre><code>{
+		<h3 id="modopts">10.5 Modifier Options</h3>
+		<pre><code>{
   "id": "opt-pepperoni",
   "option_name": "Pepperoni",
   "price_adjustment": 2.0,
@@ -615,14 +1121,30 @@
   "show_internal_name": false,
   "internal_name": ""
 }</code></pre>
-<div class="field"><div class="fname">price_adjustment</div><div class="fdesc">Amount <strong>added</strong> to the item/size price when selected. May be negative.</div></div>
-<div class="field"><div class="fname">is_default</div><div class="fdesc">Pre-select this option for the customer (typically one per single-selection group).</div></div>
-<div class="field"><div class="fname">is_available</div><div class="fdesc">Legacy boolean; keep honoring it (false = hide option entirely).</div></div>
-<div class="field"><div class="fname">availability · oos_type · oos_until</div><div class="fdesc">Per-option out-of-stock — same semantics as items, §12.</div></div>
-<div class="field"><div class="fname">photo_url · show_internal_name · internal_name</div><div class="fdesc">Single option photo; kitchen-ticket internal name behavior identical to items.</div></div>
+		<div class="field">
+			<div class="fname">price_adjustment</div>
+			<div class="fdesc">Amount <strong>added</strong> to the item/size price when selected. May be negative.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">is_default</div>
+			<div class="fdesc">Pre-select this option for the customer (typically one per single-selection group).</div>
+		</div>
+		<div class="field">
+			<div class="fname">is_available</div>
+			<div class="fdesc">Legacy boolean; keep honoring it (false = hide option entirely).</div>
+		</div>
+		<div class="field">
+			<div class="fname">availability · oos_type · oos_until</div>
+			<div class="fdesc">Per-option out-of-stock — same semantics as items, §12.</div>
+		</div>
+		<div class="field">
+			<div class="fname">photo_url · show_internal_name · internal_name</div>
+			<div class="fdesc">Single option photo; kitchen-ticket internal name behavior identical to items.</div>
+		</div>
 
-<h3 id="nutrition">10.6 Nutrition Table</h3>
-<pre><code>"nutrition_per": "serving",          // or "100g"
+		<h3 id="nutrition">10.6 Nutrition Table</h3>
+		<pre><code>"nutrition_per": "serving",          // or "100g"
 "nutrition": [
   { "name": "Total Calories", "unit": "kcal",
     "value": "320",
@@ -631,155 +1153,221 @@
     "value": "",
     "size_values": { "size-id-a": "42", "size-id-b": "58" } }
 ]</code></pre>
-<ul>
-  <li>Fixed nutrient rows: <code>Total Calories</code> (kcal), <code>Carbohydrate</code>, <code>Total Fat</code>, <code>Protein</code>, <code>Sugar</code>, <code>Salt</code>, <code>Saturated Fat</code>, <code>Fiber</code> (all g), <code>Sodium</code> (mg).</li>
-  <li><code>value</code> is a <strong>string</strong> (may be <code>""</code>). For items <em>without</em> sizes, display <code>value</code>.</li>
-  <li>For items <em>with</em> sizes, <code>size_values</code> maps each <code>size.id</code> → value. Display the column for the selected size; <code>value</code> is the "default" column.</li>
-  <li>Prefix the label with "Per serving" or "Per 100 g" from <code>nutrition_per</code>.</li>
-</ul>
+		<ul>
+			<li>Fixed nutrient rows: <code>Total Calories</code> (kcal), <code>Carbohydrate</code>,
+				<code>Total Fat</code>, <code>Protein</code>, <code>Sugar</code>, <code>Salt</code>,
+				<code>Saturated Fat</code>, <code>Fiber</code> (all g), <code>Sodium</code> (mg).
+			</li>
+			<li><code>value</code> is a <strong>string</strong> (may be <code>""</code>). For items <em>without</em>
+				sizes, display <code>value</code>.</li>
+			<li>For items <em>with</em> sizes, <code>size_values</code> maps each <code>size.id</code> → value. Display
+				the column for the selected size; <code>value</code> is the "default" column.</li>
+			<li>Prefix the label with "Per serving" or "Per 100 g" from <code>nutrition_per</code>.</li>
+		</ul>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="visibility">11. Visibility Rules (Show / Scheduled / Hide)</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="visibility">11. Visibility Rules (Show / Scheduled / Hide)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>Both categories and items carry the same visibility system. Compute "is this visible right now?" as follows:</p>
+		<p>Both categories and items carry the same visibility system. The public widget enforces it on
+			<strong>items</strong>; categories are always rendered and a category simply disappears when it has no
+			visible items (D-EFOC-17 - live easyorder records mark every category hide or scheduled, which must not
+			blank the whole menu). Compute "is this item visible right now?" as follows:
+		</p>
 
-<ol>
-  <li><code>visibility_mode: "show"</code> → visible always.</li>
-  <li><code>visibility_mode: "hide"</code> → hidden. If <code>hide_until_date</code> is set, it becomes visible again <em>after</em> that datetime; otherwise hidden permanently.</li>
-  <li><code>visibility_mode: "scheduled"</code> → visible only during the configured schedule:
-    <ul>
-      <li><code>schedule_type: "time_windows"</code> — <code>schedule_time_windows</code> is an array of
-        <code>{ days: number[], start_time: "HH:mm", end_time: "HH:mm" }</code>.
-        <strong><code>days</code>: 1 = Monday … 7 = Sunday</strong> (note: different convention than <code>opening_hours</code>!).
-        Visible iff today's number is in <code>days</code> and the current time (restaurant timezone) is within <code>start_time</code>–<code>end_time</code> of <em>any</em> window.</li>
-      <li><code>schedule_type: "date_range"</code> — <code>schedule_from</code> / <code>schedule_until</code> are ISO datetimes. Visible iff now is within the range.</li>
-    </ul>
-  </li>
-</ol>
+		<ol>
+			<li><code>visibility_mode: "show"</code> → visible always.</li>
+			<li><code>visibility_mode: "hide"</code> → hidden. If <code>hide_until_date</code> is set, it becomes
+				visible again <em>after</em> that datetime; otherwise hidden permanently.</li>
+			<li><code>visibility_mode: "scheduled"</code> → visible only during the configured schedule:
+				<ul>
+					<li><code>schedule_type: "time_windows"</code> — <code>schedule_time_windows</code> is an array of
+						<code>{ days: number[], start_time: "HH:mm", end_time: "HH:mm" }</code>.
+						<strong><code>days</code>: 1 = Monday … 7 = Sunday</strong> (note: different convention than
+						<code>opening_hours</code>!).
+						Visible iff today's number is in <code>days</code> and the current time (restaurant timezone) is
+						within <code>start_time</code>–<code>end_time</code> of <em>any</em> window.
+					</li>
+					<li><code>schedule_type: "date_range"</code> — <code>schedule_from</code> /
+						<code>schedule_until</code> are ISO datetimes. Visible iff now is within the range.
+					</li>
+				</ul>
+			</li>
+		</ol>
 
-<div class="callout callout-danger">
-  <strong>Day-number conventions differ:</strong> <code>opening_hours[].day</code> is 0=Mon…6=Sun, but <code>schedule_time_windows[].days</code> is 1=Mon…7=Sun. Do not mix them.
-</div>
+		<div class="callout callout-danger">
+			<strong>Day-number conventions differ:</strong> <code>opening_hours[].day</code> is 0=Mon…6=Sun, but
+			<code>schedule_time_windows[].days</code> is 1=Mon…7=Sun. Do not mix them.
+		</div>
 
-<p>A hidden category hides <em>all</em> of its items, regardless of item-level visibility. A hidden item is hidden even in a visible category. Effective item visibility = item rule AND category rule.</p>
+		<p>Category-level visibility is <strong>not enforced</strong> on the public widget (D-EFOC-17): a category
+			renders whenever at least one of its items is visible. A hidden item is hidden even in a visible category.
+			Effective item visibility = item rule only; the category contributes its grouping, not its visibility.</p>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="availability">12. Availability &amp; Out-of-Stock Rules</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="availability">12. Availability &amp; Out-of-Stock Rules</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>Items <em>and</em> modifier options use the same three fields:</p>
-<table>
-  <tr><th>Field</th><th>Values</th><th>Meaning</th></tr>
-  <tr>
-    <td><code>availability</code></td>
-    <td><code>"available"</code> · <code>"out_of_stock"</code></td>
-    <td>Current availability state.</td>
-  </tr>
-  <tr>
-    <td><code>oos_type</code></td>
-    <td><code>"tomorrow"</code> · <code>"date"</code> · <code>"undetermined"</code> · <code>null</code></td>
-    <td>Only meaningful when out of stock:
-      <code>tomorrow</code> = back after tonight; <code>date</code> = back at <code>oos_until</code>; <code>undetermined</code> = no return time known.</td>
-  </tr>
-  <tr>
-    <td><code>oos_until</code></td>
-    <td>ISO datetime · <code>null</code></td>
-    <td>Return-to-stock time for <code>oos_type:"date"</code>. For <code>"tomorrow"</code> the tool stores a computed midnight timestamp; clients may compute their own.</td>
-  </tr>
-</table>
+		<p>Items <em>and</em> modifier options use the same three fields:</p>
+		<table>
+			<tr>
+				<th>Field</th>
+				<th>Values</th>
+				<th>Meaning</th>
+			</tr>
+			<tr>
+				<td><code>availability</code></td>
+				<td><code>"available"</code> · <code>"out_of_stock"</code></td>
+				<td>Current availability state.</td>
+			</tr>
+			<tr>
+				<td><code>oos_type</code></td>
+				<td><code>"tomorrow"</code> · <code>"date"</code> · <code>"undetermined"</code> · <code>null</code></td>
+				<td>Only meaningful when out of stock:
+					<code>tomorrow</code> = back after tonight; <code>date</code> = back at <code>oos_until</code>;
+					<code>undetermined</code> = no return time known.
+				</td>
+			</tr>
+			<tr>
+				<td><code>oos_until</code></td>
+				<td>ISO datetime · <code>null</code></td>
+				<td>Return-to-stock time for <code>oos_type:"date"</code>. For <code>"tomorrow"</code> the tool stores a
+					computed midnight timestamp; clients may compute their own.</td>
+			</tr>
+		</table>
 
-<ul>
-  <li>Show "Out of stock" on the card; allow <em>no</em> ordering of the item / selection of the option while <code>availability === "out_of_stock"</code>.</li>
-  <li>Option-level OOS only disables that option — the rest of the group remains selectable.</li>
-  <li><code>oos_until</code> in the past ⇒ treat as available again.</li>
-</ul>
+		<ul>
+			<li>Show "Out of stock" on the card; allow <em>no</em> ordering of the item / selection of the option while
+				<code>availability === "out_of_stock"</code>.
+			</li>
+			<li>Option-level OOS only disables that option — the rest of the group remains selectable.</li>
+			<li><code>oos_until</code> in the past ⇒ treat as available again.</li>
+		</ul>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="channels">13. Channel Filtering</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="channels">13. Channel Filtering</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>Every item declares <code>show_on_channels</code> — the subset of <code>["pickup","delivery","on_premise"]</code> where the item may be ordered. Rules for the client:</p>
-<ol>
-  <li>Determine the <strong>active channel</strong> of the current user session (pickup / delivery / dine-in).</li>
-  <li>Only show/order items whose <code>show_on_channels</code> contains that channel.</li>
-  <li>Intersect with <code>service_settings.service_toggles</code> — if the channel itself is disabled in settings, it is closed regardless of item config.</li>
-</ol>
+		<p>Every item declares <code>show_on_channels</code> — the subset of
+			<code>["pickup","delivery","on_premise"]</code> where the item may be ordered. Rules for the client:
+		</p>
+		<ol>
+			<li>Determine the <strong>active channel</strong> of the current user session (pickup / delivery / dine-in).
+			</li>
+			<li>Only show/order items whose <code>show_on_channels</code> contains that channel.</li>
+			<li>Intersect with <code>service_settings.service_toggles</code> — if the channel itself is disabled in
+				settings, it is closed regardless of item config.</li>
+		</ol>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="pricing">14. Client-Side Price Resolution</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="pricing">14. Client-Side Price Resolution</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<ol>
-  <li><strong>No sizes:</strong> base price = <code>item.price</code> (guaranteed non-null). Display <code>sale_price</code> when present as the struck-through comparison price.</li>
-  <li><strong>With sizes:</strong> the customer must pick a size. Base price = selected size's <code>price</code>. <code>item.price</code> is <code>null</code> in this case.</li>
-  <li><strong>Modifiers:</strong> cart line total = base price + Σ selected option <code>price_adjustment</code> × quantity.</li>
-  <li>All prices are in <code>taxation_currency.currency</code> and <strong>exclude</strong> tax (<code>tax_mode:"exclusive"</code>) — add tax per §16.</li>
-</ol>
+		<ol>
+			<li><strong>No sizes:</strong> base price = <code>item.price</code> (guaranteed non-null). Display
+				<code>sale_price</code> when present as the struck-through comparison price.
+			</li>
+			<li><strong>With sizes:</strong> the customer must pick a size. Base price = selected size's
+				<code>price</code>. <code>item.price</code> is <code>null</code> in this case.
+			</li>
+			<li><strong>Modifiers:</strong> cart line total = base price + Σ selected option
+				<code>price_adjustment</code> × quantity.
+			</li>
+			<li>All prices are in <code>taxation_currency.currency</code> and <strong>exclude</strong> tax
+				(<code>tax_mode:"exclusive"</code>) — add tax per §16.</li>
+		</ol>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="modifier-logic">15. Modifier Selection Logic (Validation Rules)</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="modifier-logic">15. Modifier Selection Logic (Validation Rules)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>For each modifier group attached to an item or to the selected size, first resolve the <em>effective</em> settings: start from the group's own fields, then apply <code>modifier_group_overrides[groupId]</code> if present (overrides <code>is_required</code> and <code>allow_duplicates</code>). Then enforce:</p>
+		<p>For each modifier group attached to an item or to the selected size, first resolve the <em>effective</em>
+			settings: start from the group's own fields, then apply <code>modifier_group_overrides[groupId]</code> if
+			present (overrides <code>is_required</code> and <code>allow_duplicates</code>). Then enforce:</p>
 
-<table>
-  <tr><th>Rule</th><th>Enforcement</th></tr>
-  <tr>
-    <td><code>selection_type: "single"</code></td>
-    <td>At most one option may be chosen. (Tool also sets force_min/force_max=1 for its own single groups, but do not rely on that — honor <code>selection_type</code> first.)</td>
-  </tr>
-  <tr>
-    <td><code>selection_type: "multi"</code></td>
-    <td>Any number of options; same option repeatable only if effective <code>allow_duplicates</code> is <code>true</code>.</td>
-  </tr>
-  <tr>
-    <td>effective <code>is_required</code></td>
-    <td>At least one selection is mandatory before add-to-cart.</td>
-  </tr>
-  <tr>
-    <td><code>force_min</code> &gt; 0</td>
-    <td>Customer must select at least <code>force_min</code> options (count repeats as separate selections when duplicates allowed). Implies required.</td>
-  </tr>
-  <tr>
-    <td><code>force_max</code> &gt; 0</td>
-    <td>Customer may select at most <code>force_max</code> options. <code>0</code> = unlimited.</td>
-  </tr>
-  <tr>
-    <td>Option out-of-stock</td>
-    <td>OOS options are displayed but disabled (per §12).</td>
-  </tr>
-  <tr>
-    <td><code>is_default</code></td>
-    <td>Pre-check defaults on load; still let the customer change them.</td>
-  </tr>
-</table>
+		<table>
+			<tr>
+				<th>Rule</th>
+				<th>Enforcement</th>
+			</tr>
+			<tr>
+				<td><code>selection_type: "single"</code></td>
+				<td>At most one option may be chosen. (Tool also sets force_min/force_max=1 for its own single groups,
+					but do not rely on that — honor <code>selection_type</code> first.)</td>
+			</tr>
+			<tr>
+				<td><code>selection_type: "multi"</code></td>
+				<td>Any number of options; same option repeatable only if effective <code>allow_duplicates</code> is
+					<code>true</code>.
+				</td>
+			</tr>
+			<tr>
+				<td>effective <code>is_required</code></td>
+				<td>At least one selection is mandatory before add-to-cart.</td>
+			</tr>
+			<tr>
+				<td><code>force_min</code> &gt; 0</td>
+				<td>Customer must select at least <code>force_min</code> options (count repeats as separate selections
+					when duplicates allowed). Implies required.</td>
+			</tr>
+			<tr>
+				<td><code>force_max</code> &gt; 0</td>
+				<td>Customer may select at most <code>force_max</code> options. <code>0</code> = unlimited.</td>
+			</tr>
+			<tr>
+				<td>Option out-of-stock</td>
+				<td>OOS options are displayed but disabled (per §12).</td>
+			</tr>
+			<tr>
+				<td><code>is_default</code></td>
+				<td>Pre-check defaults on load; still let the customer change them.</td>
+			</tr>
+		</table>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="tax-calc">16. Client-Side Tax Calculation</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="tax-calc">16. Client-Side Tax Calculation</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<ol>
-  <li>For an item, find its tax category: <code>item.tax_category_id</code> → else <code>category.tax_category_id</code> → else no category (0% / default).</li>
-  <li>Look up that name in <code>taxation_currency.tax_categories</code>. Take the rate for the active channel: <code>pickup</code>, <code>delivery</code>, or <code>in_restaurant</code>.</li>
-  <li><code>tax = round(subtotal × rate / 100, currency)</code> — rates are exclusive percentages.</li>
-  <li>Modifier groups carry their own <code>tax_category_id</code> when their options must be taxed differently — apply it to the modifier line amounts.</li>
-  <li>Delivery fee tax: <code>fee × delivery_fee_tax_rate / 100</code>.</li>
-</ol>
+		<ol>
+			<li>For an item, find its tax category: <code>item.tax_category_id</code> → else
+				<code>category.tax_category_id</code> → else no category (0% / default).
+			</li>
+			<li>Look up that name in <code>taxation_currency.tax_categories</code>. Take the rate for the active
+				channel: <code>pickup</code>, <code>delivery</code>, or <code>in_restaurant</code>.</li>
+			<li><code>tax = round(subtotal × rate / 100, currency)</code> — rates are exclusive percentages.</li>
+			<li>Modifier groups carry their own <code>tax_category_id</code> when their options must be taxed
+				differently — apply it to the modifier line amounts.</li>
+			<li>Delivery fee tax: <code>fee × delivery_fee_tax_rate / 100</code>.</li>
+		</ol>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="misc-sections">17. alert_settings · social_links · device_connections</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="misc-sections">17. alert_settings · social_links · device_connections</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<div class="field"><div class="fname">alert_settings</div><div class="fdesc"><code>{ failed_push_alert: bool, sound: "default|bell|ding|buzz|silent", supervisor_phone: string }</code> — admin operational alerts; not needed by the public site.</div></div>
-<div class="field"><div class="fname">social_links</div><div class="fdesc"><code>{ facebook_url, smart_menu_link, website_enabled, website_domain, ios_app_enabled, android_app_enabled }</code> — render social/website links in the footer.</div></div>
-<div class="field"><div class="fname">device_connections</div><div class="fdesc">Admin-only array of connected POS/tablet/KDS devices. Ignore on the client.</div></div>
+		<div class="field">
+			<div class="fname">alert_settings</div>
+			<div class="fdesc">
+				<code>{ failed_push_alert: bool, sound: "default|bell|ding|buzz|silent", supervisor_phone: string }</code>
+				— admin operational alerts; not needed by the public site.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">social_links</div>
+			<div class="fdesc">
+				<code>{ facebook_url, smart_menu_link, website_enabled, website_domain, ios_app_enabled, android_app_enabled }</code>
+				— render social/website links in the footer.
+			</div>
+		</div>
+		<div class="field">
+			<div class="fname">device_connections</div>
+			<div class="fdesc">Admin-only array of connected POS/tablet/KDS devices. Ignore on the client.</div>
+		</div>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="example">18. Complete Example Document</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="example">18. Complete Example Document</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<pre><code>{
+		<pre><code>{
   "general_info": {
     "restaurant_name": "Bella Cucina",
     "cuisine_types": ["italian", "pizza"],
@@ -904,30 +1492,437 @@
       }
     ]
   },
+  "deals": [
+    {
+      "id": "deal-2medium",
+      "section": "Online Only Deals",
+      "title": "Any 2 Medium Pizzas + 2 Cans of Pop + 4 Dips",
+      "description": "Two medium pizzas, two cans and four dips.",
+      "price": 34.99,
+      "image_url": "https://cdn.example.com/deal-2medium.jpg",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "g-pizzas", "label": "2 Medium Pizzas", "quantity": 2,
+            "category_ids": ["cat-pizzas"], "size_label": "Medium" },
+          { "group_id": "g-pop", "label": "2L Bottle of Pop", "quantity": 1,
+            "category_ids": ["cat-pops"], "name_filter": "2L" },
+          { "group_id": "g-dips", "label": "4 Dips", "quantity": 4,
+            "category_ids": ["cat-dips"] },
+          { "group_id": "g-fries", "label": "Fries", "quantity": 1,
+            "item_ids": ["item-fries"] }
+        ]
+      }
+    },
+    {
+      "id": "deal-mix6",
+      "section": "Mix & Match",
+      "title": "Any 6 Medium Pizzas",
+      "description": "Mix any six medium pizzas.",
+      "price": 12.99,
+      "image_url": "",
+      "active": true,
+      "rule_type": "min_quantity",
+      "rule": { "category_ids": ["cat-pizzas"], "size_label": "Medium", "min_quantity": 6 }
+    },
+    {
+      "id": "deal-lahmacun",
+      "title": "Lahmacun Party Pack",
+      "description": "Tiers of lahmacun and cola.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "tiered",
+      "rule": {
+        "item_ids": ["item-lahmacun", "item-cola-2l"],
+        "tiers": [
+          { "quantity": 5, "price": 49.90, "label": "5 Lahmacuns + 2L Coca-Cola" },
+          { "quantity": 10, "price": 89.90, "label": "10 Lahmacuns + 2L Coca-Cola" }
+        ]
+      }
+    },
+    {
+      "id": "deal-bogo",
+      "section": "Online Only Deals",
+      "title": "Buy 1 Get 1 Free Pizza",
+      "description": "Pick two pizzas - the cheaper one is free.",
+      "price": null,
+      "image_url": "https://cdn.example.com/deal-bogo.jpg",
+      "active": true,
+      "rule_type": "two_for_one",
+      "rule": { "required_item_count": 2, "category_ids": ["cat-pizzas"], "same_size": true }
+    }
+  ],
+  "hero": {
+    "image_url": "https://cdn.example.com/hero.jpg",
+    "preset_images": ["https://cdn.example.com/preset-1.jpg", "https://cdn.example.com/preset-2.jpg"]
+  },
+  "promotions": [
+    { "id": "promo-1", "title": "Free delivery over $30",
+      "description": "Downtown area only", "image_url": "" },
+    { "id": "promo-2", "title": "10% off on weekdays",
+      "description": "Mon-Fri, dine-in only", "image_url": "https://cdn.example.com/promo-2.jpg" }
+  ],
+  "campaigns": [
+    {
+      "id": "camp-2xpizza",
+      "title": "2x Pizza",
+      "description": "Pick two pizzas - pay only for the more expensive one.",
+      "required_item_count": 2,
+      "same_size": true,
+      "category_ids": ["cat-pizzas"],
+      "item_ids": [],
+      "pricing": "most_expensive"
+    }
+  ],
+  "promo_codes": [
+    {
+      "id": "code-save10",
+      "code": "SAVE10",
+      "title": "10% off everything",
+      "rule_type": "percentage_discount",
+      "rule": { "percent": 10 },
+      "max_uses": 500
+    }
+  ],
   "alert_settings": { "failed_push_alert": false, "sound": "default", "supervisor_phone": "" },
   "social_links": { "facebook_url": "", "smart_menu_link": "https://menu.example.com",
     "website_enabled": false, "website_domain": "", "ios_app_enabled": false, "android_app_enabled": false },
   "device_connections": []
 }</code></pre>
 
-<!-- ══════════════════════════════════════════════════════════════ -->
-<h2 id="migration">19. Legacy &amp; Migration Notes</h2>
-<!-- ══════════════════════════════════════════════════════════════ -->
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="migration">19. Legacy &amp; Migration Notes</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
 
-<p>The tool itself auto-migrates older stored documents on load. The client should defensively handle these legacy shapes:</p>
-<ul>
-  <li><code>category.visible</code> (boolean) → normalized to <code>visibility_mode</code> by the tool; treat <code>false</code> as hidden if ever encountered.</li>
-  <li><code>item.is_available</code> (boolean) → same; legacy availability flag, prefer <code>visibility_mode</code> + <code>availability</code>.</li>
-  <li><code>is_vegetarian / is_vegan / is_gluten_free</code> → legacy dietary booleans, now mirrored from <code>dietary_marks</code>.</li>
-  <li>Delivery zones may historically be stored as a GeoJSON <code>features[]</code> array — the tool migrates these to <code>zones[]</code> on load.</li>
-  <li><code>option.price</code> / <code>option.name</code> exist only in the Gloria import source; in UniconHub storage they are always <code>price_adjustment</code> / <code>option_name</code>.</li>
-  <li><code>tax_category_id</code> values are category <strong>names</strong> (strings), not numeric ids.</li>
-</ul>
+		<p>The tool itself auto-migrates older stored documents on load. The client should defensively handle these
+			legacy shapes:</p>
+		<ul>
+			<li><code>category.visible</code> (boolean) → normalized to <code>visibility_mode</code> by the tool; treat
+				<code>false</code> as hidden if ever encountered.
+			</li>
+			<li><code>item.is_available</code> (boolean) → same; legacy availability flag, prefer
+				<code>visibility_mode</code> + <code>availability</code>.
+			</li>
+			<li><code>is_vegetarian / is_vegan / is_gluten_free</code> → legacy dietary booleans, now mirrored from
+				<code>dietary_marks</code>.
+			</li>
+			<li>Delivery zones may historically be stored as a GeoJSON <code>features[]</code> array — the tool migrates
+				these to <code>zones[]</code> on load.</li>
+			<li><code>option.price</code> / <code>option.name</code> exist only in the Gloria import source; in
+				UniconHub storage they are always <code>price_adjustment</code> / <code>option_name</code>.</li>
+			<li><code>tax_category_id</code> values are category <strong>names</strong> (strings), not numeric ids.</li>
+		</ul>
 
-<div class="callout callout-ok">
-  <strong>Summary for the client developer:</strong> load the document once via <code>tool.onReady</code>, render <code>menu.categories</code> in array order, join <code>menu.items</code> on <code>category_id</code>, apply visibility (§11) + channel (§13) + OOS (§12) filters, resolve prices (§14), validate modifier selections (§15), and compute tax per channel (§16). Everything else is supporting configuration.
-</div>
+		<div class="callout callout-ok">
+			<strong>Summary for the client developer:</strong> load the document once via <code>tool.onReady</code>,
+			render <code>menu.categories</code> in array order, join <code>menu.items</code> on
+			<code>category_id</code>, apply visibility (§11) + channel (§13) + OOS (§12) filters, resolve prices (§14),
+			validate modifier selections (§15), and compute tax per channel (§16). Render the presentation sections when
+			present: <code>hero</code> above the restaurant name (§21), at most the first four <code>promotions</code>
+			under it, <code>campaigns</code> surfaced as two_for_one deal cards, and the <code>deals</code> array
+			grouped by <code>section</code> (§23). Everything else is supporting configuration.
+		</div>
 
-</main>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="write-back">20. Platform Write-Back (Orders)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>The widget's only write on the UniconHub platform is the placed ORDER (intent: <strong>create</strong> only -
+			no update, no delete). It follows the website-html-tool write-back contract
+			(<code>html-website-tool-rules.txt</code> section 14, SSOT section 8.9): <code>gw.db.create</code> →
+			same-origin renderer relay → CMS v2 <code>POST /api/v2/objects/{type}</code> with
+			<code>Idempotency-Key</code> and header <code>x-unicon-write-source: public-website</code>.
+		</p>
+		<ul>
+			<li><strong>Written type:</strong> <code>restaurant-order-manager-easyorder</code> (intent: create).</li>
+			<li><strong>Required key setup:</strong> the site's write relay key must carry scope
+				<code>objects:write</code> and list the type in <code>allowedObjectTypes</code> - the key allowlist IS
+				the write surface (no app-level opt-in field exists).
+			</li>
+			<li><strong>Idempotency:</strong> <code>Idempotency-Key = 'order-' + orderNumber</code> - retries never
+				duplicate a create.</li>
+			<li><strong>Payload:</strong> the full order object (orderNumber, placedAt, channel, customer, address,
+				customAddressFields, tableNumber, deliveryZone, scheduledFor, paymentMethod, paymentDetails, lines,
+				totals); identity/audit keys are stripped server-side and <code>_writeSource: 'public-website'</code> is
+				stamped.</li>
+			<li><strong>Errors:</strong> 403 <code>OBJECT_TYPE_NOT_ALLOWED</code> / <code>MISSING_SCOPE</code> (key
+				gate), <code>PUBLIC_WRITE_OWNERSHIP</code>, <code>PUBLIC_WRITE_DELETE_NOT_ALLOWED</code>, 409
+				<code>CAS_CONFLICT</code>, 429 rate/quota - all surface as the order-failure toast.
+			</li>
+			<li><strong>Until the renderer relay ships (task T-43):</strong> the platform branch confirms locally with a
+				console warning - nothing is stored.</li>
+		</ul>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="hero-promos-campaigns">21. Hero, Promotions and Campaigns (decided 2026-10-14)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>The customer-side sections below were decided in the 2026-10-14 product
+			meeting (tool SSOT decisions D-EFOC-22..D-EFOC-24). All three are OPTIONAL
+			document sections - the widget renders each only when present.</p>
+
+		<h3>21.1 <code>hero</code></h3>
+		<p>The hero image area above the restaurant name. The owner replaces the
+			image or picks one of the presets in the manager tool; the widget renders
+			<code>image_url</code> (fallback: the first <code>preset_images</code>
+			entry).
+		</p>
+		<pre><code>"hero": {
+  "image_url": "https://cdn.example.com/hero.jpg",
+  "preset_images": ["https://cdn.example.com/preset-1.jpg", "..."]
+}</code></pre>
+
+		<h3>21.2 <code>promotions</code></h3>
+		<p>A list of promotions shown under the hero. The widget renders AT MOST the
+			first 4 entries in a one- or two-row layout and hides the whole strip when
+			the list is empty.</p>
+		<pre><code>"promotions": [
+  { "id": "promo-1", "title": "Free delivery over $30",
+    "description": "Downtown area only", "image_url": "" }
+]</code></pre>
+
+		<h3>21.3 <code>campaigns</code></h3>
+		<p>Legacy campaigns (e.g. 2x pizza) are surfaced on the Deals page as
+			<code>two_for_one</code> deal cards (section 23). The customer picks the
+			required products INSIDE the deal popup - the picker enforces the
+			same-category / same-size rules slot by slot - and the deal is added as ONE
+			cart line: the more expensive product's price is charged, the cheaper one is
+			free (pairs sorted by unit price, cheapest free), shown with Paid/FREE rows
+			and a Deal discount row in the totals. New campaign-style promotions should
+			be created as DEALS of type two_for_one.
+		</p>
+		<pre><code>"campaigns": [
+  {
+    "id": "camp-2xpizza",
+    "title": "2x Pizza",
+    "description": "Pick two pizzas - pay only for the more expensive one.",
+    "required_item_count": 2,
+    "same_size": true,
+    "category_ids": ["cat-pizzas"],
+    "item_ids": [],
+    "pricing": "most_expensive"
+  }
+]</code></pre>
+		<ul>
+			<li><code>required_item_count</code> - how many campaign products the order needs (default 2).</li>
+			<li><code>same_size</code> - true = every further pick must match the first campaign line's size label.</li>
+			<li><code>category_ids</code> / <code>item_ids</code> - optional restrictions; empty = every item is
+				eligible.</li>
+		</ul>
+
+		<h3>21.4 Category and item photos on the menu (decided 2026-10-21)</h3>
+		<p>Categories render ONE big photo banner under their title
+			(<code>primary_photo_url</code> or the first <code>photos[]</code> entry -
+			see section 10); items render a small circular thumbnail using the same
+			fields. When a photo is missing the widget shows a placeholder pizza photo
+			(no data change is required).</p>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="caching">22. Local Menu Cache (decided 2026-10-14)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>Menus change rarely, so the widget caches the last loaded restaurant
+			document in localStorage (<code>efoc-menu-cache-v1</code>) for ONE HOUR and
+			renders it immediately on the next load while refreshing in the background.
+			Document updates delivered through <code>tool.onValueChange</code> still
+			refresh instantly.</p>
+
+		<!-- ══════════════════════════════════════════════════════════════ -->
+		<h2 id="deals">23. Deals (decided 2026-10-21, D-EFOC-26..28)</h2>
+		<!-- ══════════════════════════════════════════════════════════════ -->
+
+		<p>The document carries an optional top-level <code>deals</code> array. The
+			widget shows a Menu | Deals page switch; every deal is a card with a photo,
+			a price tag, a description and a CUSTOMIZE button. Legacy
+			<code>campaigns</code> entries are surfaced as <code>two_for_one</code>
+			deals, so the deals page is the single place for promotions. Deal management
+			lives in the CMS (<code>restaurant-order-manager-easyorder</code>, task
+			T-64); the widget only consumes this contract.
+		</p>
+
+		<pre><code>"deals": [
+  {
+    "id": "deal-2medium",               // unique id
+    "section": "Online Only Deals",     // optional group header on the deals page
+    "title": "Any 2 Medium Pizzas + 2 Cans of Pop + 4 Dips",
+    "description": "Two medium pizzas, two cans and four dips.",
+    "price": 34.99,                     // bundle: fixed total; min_quantity: per-unit; tiered: null
+    "image_url": "https://...",         // optional; placeholder shown when empty
+    "active": true,                     // stored by the manager - NOT yet honored by the website (see note)
+    "rule_type": "bundle",              // bundle | min_quantity | tiered | two_for_one
+    "rule": { ... }                     // see the rule shapes below
+  }
+]</code></pre>
+
+		<div class="callout callout-ok">
+			<strong>The <code>active</code> flag is honored since 2026-10-21.</strong>
+			The manager writes <code>active</code> (boolean, default true) on every deal.
+			<code>active: false</code> hides the deal from the website's Deals page;
+			a missing flag means active (backward compatible). The website is the
+			current release that reads it.
+		</div>
+
+		<p><strong>Rule shapes (one per rule_type):</strong></p>
+
+		<pre><code>// bundle - fixed groups + included extras, one fixed total price
+// a group WITHOUT item_ids is an option group: the customer picks the
+// required quantity from the matching products
+"rule": {
+  "groups": [
+    { "group_id": "pizzas", "label": "2 Large Pizzas", "quantity": 2,
+      "category_ids": ["cat-pizzas"], "size_label": "Large" },   // pick 2
+    { "group_id": "pop", "label": "2L Bottle of Pop", "quantity": 1,
+      "category_ids": ["cat-pops"], "name_filter": "2L" },       // pick 1 from 2L options
+    { "group_id": "dips", "label": "4 Dips", "quantity": 4,
+      "category_ids": ["cat-dips"] },                            // pick 4 from dip options
+    { "group_id": "extra", "label": "Fries", "quantity": 1,
+      "item_ids": ["item-fries"] }                               // fixed included extra
+  ]
+}
+
+// min_quantity - one picked product, minimum N units, every unit = deal price
+"rule": {
+  "category_ids": ["cat-pizzas"],
+  "size_label": "Medium",
+  "min_quantity": 2
+}
+
+// tiered - pre-defined quantity tiers, each with its own total
+"rule": {
+  "item_ids": ["item-lahmacun", "item-cola-2l"],
+  "tiers": [
+    { "quantity": 5,  "price": 49.90, "label": "5 Lahmacuns + 2L Coca-Cola" },
+    { "quantity": 10, "price": 89.90, "label": "10 Lahmacuns + 2L Coca-Cola" }
+  ]
+}
+
+// two_for_one = "Buy 1 Get 1 Free": the customer picks TWO SEPARATE
+// products INSIDE the deal popup; the more expensive pick's price is
+// charged and the cheaper pick is free. Legacy campaigns are surfaced as
+// this type automatically.
+"rule": {
+  "required_item_count": 2,
+  "category_ids": ["cat-pizzas"],
+  "same_size": true
+}</code></pre>
+
+		<ul>
+			<li><code>size_label</code> matches size labels by substring, so
+				<code>"Medium"</code> matches <code>"Medium (12\")"</code>. A sized group
+				excludes items without a matching size.
+			</li>
+			<li><code>name_filter</code> (optional) matches the item name by
+				substring, case-insensitive - use it to narrow an option group (e.g.
+				<code>"2L"</code> for the 2-litre pop options, <code>"Can"</code> for
+				cans).
+			</li>
+			<li>Groups WITHOUT <code>item_ids</code> are option groups: the customer
+				picks the required quantity from the eligible products (category +
+				optional size_label/name_filter). Groups WITH <code>item_ids</code> are
+				fixed extras that come with the deal and need no picking.</li>
+			<li>Rule enforcement happens at selection time: the deal's CUSTOMIZE modal
+				keeps its "Add deal to order" button disabled until every required group is
+				complete - an incomplete deal can never reach the cart.</li>
+			<li><code>two_for_one</code> is Buy 1 Get 1 Free, picked entirely inside
+				the deal popup (one slot per required product; when <code>same_size</code>
+				is true later slots only offer the first pick's size) and added as ONE
+				cart line: the line price is the most expensive pick, the full price is
+				struck through on the line, Paid/FREE rows list the picks, and the totals
+				show a "Deal discount" row under subtotal. Remove deletes the whole deal;
+				Edit reopens the popup with both picks - the pair can never be broken
+				apart.</li>
+			<li>Bundle, tiered and two_for_one lines are fixed compositions - no
+				quantity stepper in the cart (remove and re-pick to change). min_quantity
+				lines use a normal quantity stepper with the minimum as its floor.</li>
+		</ul>
+
+		<p><strong>Order payload for deal lines</strong> - the order's
+			<code>lines[]</code> entries carry these extra fields for deal lines:
+		</p>
+
+		<pre><code>{
+  "itemId": "item-margherita",          // bundle: first pick; tiered/two_for_one: ""
+  "itemName": "Any 2 Medium Pizzas ...",// deal title (tiered: tier label)
+  "quantity": 1,                        // bundle/tiered/two_for_one: 1; min_quantity: N units
+  "unitPrice": 34.99,                   // bundle: deal price; tiered: tier price; min_quantity: per-unit deal price; two_for_one: PAID price only
+  "dealId": "deal-2medium",
+  "dealTitle": "Any 2 Medium Pizzas + 2 Cans of Pop + 4 Dips",
+  "dealDescription": "2 Medium Pizzas: Margherita, Pepperoni; 2x Cans of Pop; 4x Garlic Dips",
+  "dealDescriptionGroups": [
+    { "label": "2 Medium Pizzas", "items": ["Margherita (Medium (12\"))", "Pepperoni (Medium (12\"))"] },
+    { "label": "2x Cans of Pop", "items": [] },
+    { "label": "4 Dips", "items": ["Garlic Dip", "BBQ Dip", "Ranch Dip", "Garlic Dip"] }
+  ],
+  "dealFullPrice": 51.49,               // two_for_one only: sum of all picks BEFORE the discount
+  "dealPicks": [
+    { "itemId": "item-margherita", "itemName": "Margherita", "sizeId": "size-margherita-m", "sizeLabel": "Medium (12\")" }
+  ]
+}</code></pre>
+
+		<p>Order <code>totals</code> carry <code>dealDiscount</code> - the sum of
+			all deal discounts (campaign pairs + line-level deal discounts), shown to
+			the customer as the "Deal discount" row under subtotal. The admin order
+			view can recompute the paid total as subtotal + tax + fees -
+			dealDiscount.</p>
+
+		<h3>23.1 Additional rule types (implemented in the widget and the manager 2026-10-21)</h3>
+		<p>Implemented on the website (tool SSOT D-EFOC-29) and authorable in the manager since 2026-10-21 (tool SSOT
+			tasks T-30 to T-42): the deal editor, the optional <code>schedule</code> block and the promo codes
+			sub-tab produce exactly the shapes below.</p>
+		<pre><code>// percentage_discount - percent off eligible products (T-65)
+"rule": { "percent": 10, "category_ids": ["cat-pizzas"] }   // item_ids alternative; empty = whole order
+
+// subtotal_threshold - fixed save over a minimum order (T-66)
+"rule": { "min_subtotal": 50, "discount": 10 }
+
+// free_delivery - zeroes the delivery fee (T-67)
+"rule": { "min_subtotal": 30, "always": false }
+
+// free_item_with_purchase - paid + free groups (T-68)
+"rule": { "groups": [
+  { "group_id": "paid-pizza", "label": "1 Pizza", "quantity": 1,
+    "category_ids": ["cat-pizzas"], "charge": "paid" },
+  { "group_id": "free-bread", "label": "Garlic Bread", "quantity": 1,
+    "item_ids": ["item-garlic-bread"], "charge": "free" }
+] }
+
+// buy_n_get_m - N paid + M free slots (T-69)
+"rule": { "required_item_count": 3, "free_item_count": 1,
+  "category_ids": ["cat-pizzas"], "same_size": false }
+
+// volume_pricing - unit price by quantity band (T-70)
+"rule": { "category_ids": ["cat-pops"], "name_filter": "Can",
+  "bands": [ { "min_quantity": 3, "unit_price": 1.25 },
+             { "min_quantity": 6, "unit_price": 1.0 } ] }
+
+// schedule - optional validity window on ANY deal (T-71/T-72)
+// (date_from / date_until are ISO dates or datetimes; weekdays 1=Monday..7=Sunday;
+// time_from / time_until are restaurant-timezone wall-clock HH:mm)
+"schedule": { "date_from": "2026-11-01", "date_until": "2026-11-30",
+  "weekdays": [2, 3, 4], "time_from": "17:00", "time_until": "22:00" }
+
+// free_modifier - cheapest selected option(s) free (T-73)
+"rule": { "modifier_group_ids": ["mg-toppings"], "option_count": 1,
+  "category_ids": ["cat-pizzas"] }
+
+// promo_codes - top-level array, codes typed at checkout (T-74); supported
+// rule types for codes: percentage_discount, subtotal_threshold, free_delivery
+"promo_codes": [
+  { "code": "SAVE10", "title": "10% off everything",
+    "rule_type": "percentage_discount", "rule": { "percent": 10 },
+    "max_uses": 500 }
+]</code></pre>
+		<p>Discount-type deals (percentage_discount, subtotal_threshold, free_delivery,
+			free_modifier) add a discount LINE to the customer's cart; the website's
+			totals engine evaluates each applied rule against the rest of the order and
+			shows a green "- amount" on the line plus the Deal discount row under
+			subtotal. Free delivery shows "Delivery: Free" instead of the fee row.
+			The order payload carries <code>promoCode</code> when a code is applied.
+		</p>
+
+	</main>
 </body>
+
 </html>

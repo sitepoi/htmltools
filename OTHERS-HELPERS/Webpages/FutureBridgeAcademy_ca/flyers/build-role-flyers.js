@@ -34,16 +34,16 @@ const SITE = 'https://futurebridgeacademy.ca';
 /* one photo per role; focus is the object-position that keeps the subject
    clear of the dark wash and the title on the left */
 const PHOTOS = {
-  'curriculum-builder': { id: '4990545', focus: '42% 32%' },
-  'career-coach': { id: '5816300', focus: '50% 30%' },
-  'self-paced-course-assistant': { id: '16420237', focus: '50% 30%' },
-  'online-maths-teacher': { id: '5212321', focus: '50% 20%' },
+  'curriculum-builder': { id: '39190907', focus: '50% 35%' },
+  'career-coach': { id: '5940706', focus: '50% 35%' },
+  'self-paced-course-assistant': { id: '8926900', focus: '50% 30%' },
+  'online-maths-teacher': { id: '8192244', focus: '55% 30%' },
   'seminar-presenter-english': { id: '8424451', focus: '50% 30%' },
-  'career-path-presenter': { id: '38081093', focus: '50% 30%' },
-  'academic-writing-guide': { id: '5756573', focus: '50% 50%' },
-  'mock-exam-organiser': { id: '7092523', focus: '50% 35%' },
-  'online-lessons-helper': { id: '4314216', focus: '50% 30%' },
-  'seminar-presenter-other-languages': { id: '14814047', focus: '50% 50%' }
+  'career-path-presenter': { id: '8199134', focus: '50% 40%' },
+  'academic-writing-guide': { id: '5676746', focus: '50% 40%' },
+  'mock-exam-organiser': { id: '8423075', focus: '50% 35%' },
+  'online-lessons-helper': { id: '5905749', focus: '50% 45%' },
+  'seminar-presenter-other-languages': { id: '6150530', focus: '50% 30%' }
 };
 
 function photoFor(slug) {
@@ -66,6 +66,10 @@ const ICONS = {
   people: '<circle cx="9" cy="8.4" r="3"/><path d="M3.6 19.2c0-2.9 2.4-4.8 5.4-4.8s5.4 1.9 5.4 4.8"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M17.4 14.6c1.9.6 3 2.2 3 4.6"/>',
   card: '<rect x="3.4" y="6" width="17.2" height="12" rx="2"/><path d="M3.8 10.4h16.4"/><path d="M7 14.4h4"/>'
 };
+
+/* every role flyer carries the volunteer-network signature; the styles live in
+   volunteers-flyer.html so both the main flyer and the role flyers share one copy */
+const SHOW_NETWORK = true;
 
 const ROLES = [
   {
@@ -204,7 +208,7 @@ const EXTRA_CSS = `
       linear-gradient(100deg, rgba(0,34,60,0.94) 0%, rgba(0,44,78,0.78) 46%, rgba(0,54,95,0.16) 100%),
       radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.42) 0%, rgba(255,107,53,0) 62%);
   }
-  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 26px 6mm 28px; }
+  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 50px 6mm 54px; }
 
   .role-hours {
     display: inline-flex; align-items: center; gap: 8px;
@@ -232,6 +236,31 @@ const EXTRA_CSS = `
   html[data-format="mobile"] .fit .inner { padding-top: 5mm; padding-bottom: 6mm; }
   html[data-format="mobile"] .fit-item { font-size: 12px; }
 
+  /* how to join, as one compact strip so sheet two holds the whole story */
+  .steps-strip { background: var(--paper); }
+  .steps-strip .inner { padding-top: 6mm; padding-bottom: 6mm; }
+  .strip-list {
+    display: flex; flex-wrap: wrap; gap: 8px 7px;
+    margin-top: 10px; list-style: none; counter-reset: strip;
+  }
+  .strip-list li {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 11px; border-radius: 999px;
+    background: var(--paper-soft); border: 1px solid var(--line);
+    color: var(--ink); font-size: 11.5px; font-weight: 700;
+  }
+  .strip-list li::before {
+    counter-increment: strip; content: counter(strip);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--brand-1); color: #fff; font-size: 9px; font-weight: 900;
+  }
+  html[data-format="mobile"] .steps-strip .inner { padding-top: 5mm; padding-bottom: 5mm; }
+  html[data-format="mobile"] .strip-list { gap: 6px; }
+  html[data-format="mobile"] .strip-list li { font-size: 11px; padding: 5px 9px; }
+
+  html[data-format="mobile"] .role-flyer .cta-giant.has-lockup { padding-top: 5mm; padding-bottom: 5mm; }
+
   /* desktop sheets: the hero and the closing block take the leftover height */
   @media print {
     html[data-format="desktop"] .role-flyer .page-1 .hero { flex: 1 1 auto; }
@@ -239,15 +268,16 @@ const EXTRA_CSS = `
       flex: 1 1 auto;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
-    /* mobile sheets: proof + steps open sheet 2, the gold block closes sheet 3 */
+    /* mobile sheets: proof and the joining strip share sheet 2 with the gold block */
     html[data-format="mobile"] .role-flyer .why,
     html[data-format="mobile"] .role-flyer .statement,
-    html[data-format="mobile"] .role-flyer .steps { page-break-before: auto; break-before: auto; }
+    html[data-format="mobile"] .role-flyer .steps-strip { page-break-before: auto; break-before: auto; }
     html[data-format="mobile"] .role-flyer .leave { page-break-before: always; break-before: page; }
     html[data-format="mobile"] .role-flyer .statement { min-height: 0; }
     html[data-format="mobile"] .role-flyer .positions { min-height: 0; }
-    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 400px); }
-    html[data-format="mobile"] .role-flyer .fit { page-break-inside: avoid; break-inside: avoid; }
+    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 534px); }
+    html[data-format="mobile"] .role-flyer .fit,
+    html[data-format="mobile"] .role-flyer .steps-strip { page-break-inside: avoid; break-inside: avoid; }
   }
 `;
 
@@ -273,6 +303,13 @@ function renderPage(role) {
   const applyUrl = `${SITE}/volunteer`;
   const { reasons, fitItems } = renderSections(role);
   const photo = photoFor(role.slug);
+  const showsNetwork = SHOW_NETWORK;
+  const ctaText = showsNetwork
+    ? 'Apply for a role, and you join the Future Bridge Volunteer Network when you start.'
+    : 'One form, three minutes. Choose this role and tell us when you are genuinely free.';
+  const ctaLockup = showsNetwork
+    ? `<div class="net-lockup"><b>FBVN</b><span>Future Bridge Volunteer Network</span></div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -392,26 +429,26 @@ ${fitItems}
       </div>
     </section>
 
-    <section class="steps">
+    <section class="steps-strip">
       <div class="inner">
-        <p class="kicker">How to join</p>
-        <h2 class="big-h2">Five steps.</h2>
-        <div class="steps-grid">
-          <div class="step"><span class="num">1</span><strong>Apply</strong><p>Three minutes, one form.</p></div>
-          <div class="step"><span class="num">2</span><strong>Interview</strong><p>A short video chat.</p></div>
-          <div class="step"><span class="num">3</span><strong>Sample</strong><p>Show the work once.</p></div>
-          <div class="step"><span class="num">4</span><strong>References</strong><p>We make the calls.</p></div>
-          <div class="step"><span class="num">5</span><strong>Decision</strong><p>Role and start date.</p></div>
-        </div>
+        <p class="fit-head">How to join</p>
+        <ol class="strip-list">
+          <li>Apply</li>
+          <li>Interview</li>
+          <li>Sample</li>
+          <li>References</li>
+          <li>Decision</li>
+        </ol>
       </div>
     </section>
 
-    <section class="cta-giant">
+    <section class="cta-giant${showsNetwork ? ' has-lockup' : ''}">
       <img class="cta-logo" src="${LOGO}" alt="Future Bridge Academy">
       <h2>Apply for ${role.name}</h2>
-      <p>One form, three minutes. Choose this role and tell us when you are genuinely free.</p>
+      <p>${ctaText}</p>
       <a class="btn" href="${applyUrl}">Start my application <span class="arrow">\u2192</span></a>
       <a class="cta-url-big" href="${roleUrl}">${roleUrl.replace('https://', '')}</a>
+      ${ctaLockup}
     </section>
 
     <div class="footer">

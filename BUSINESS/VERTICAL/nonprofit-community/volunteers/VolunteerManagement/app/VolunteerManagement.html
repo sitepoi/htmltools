@@ -1,28 +1,48 @@
 <!-- ── Volunteer Management ── -->
 <!-- Top Bar -->
-<div class="top-bar">
+<header class="top-bar">
   <div class="top-bar-left">
-    <div class="top-bar-logo">🤝</div>
-    <div>
+    <div class="top-bar-logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M15.5 19v-1.4a3.6 3.6 0 0 0-3.6-3.6H7.1A3.6 3.6 0 0 0 3.5 17.6V19"></path>
+        <circle cx="9.5" cy="7.4" r="3.4"></circle>
+        <path d="M16.5 11.4a3.4 3.4 0 0 0 0-6.7"></path>
+        <path d="M20.5 19v-1.4a3.6 3.6 0 0 0-2.7-3.5"></path>
+      </svg>
+    </div>
+    <div class="top-bar-heading">
       <div class="top-bar-title">Volunteer Management</div>
       <div class="top-bar-subtitle" id="topEventName">Loading event...</div>
     </div>
   </div>
   <div class="top-bar-right">
+    <span class="top-bar-avatar" id="topUserAvatar" aria-hidden="true"></span>
     <span class="top-bar-user" id="topUserName"></span>
     <span class="top-bar-role" id="topRoleBadge"></span>
   </div>
-</div>
+</header>
 
-<!-- Tab Navigation -->
-<div class="tab-nav" id="tabNav">
+<div class="app-layout">
+
+<!-- Side Menu -->
+<nav class="tab-nav" id="tabNav">
   <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+  <button class="tab-btn" data-tab="events" data-manager-only="1">📅 Events</button>
+  <button class="tab-sub-btn" id="eventSubNavBtn" style="display:none;" onclick="openSelectedEventManager()" title="Open the selected event">
+    <span class="tab-sub-dot"></span>
+    <span class="tab-sub-name" id="eventSubNavName"></span>
+  </button>
   <button class="tab-btn" data-tab="volunteers">👥 Volunteers <span class="tab-badge" id="badgeVolunteers">0</span></button>
+  <button class="tab-sub-btn" id="volunteerSubNavBtn" style="display:none;" onclick="openSelectedVolunteerDetail()" title="Open the selected volunteer">
+    <span class="tab-sub-dot"></span>
+    <span class="tab-sub-name" id="volunteerSubNavName"></span>
+  </button>
   <button class="tab-btn" data-tab="tasks">📋 Tasks <span class="tab-badge" id="badgeTasks">0</span></button>
   <button class="tab-btn" data-tab="hours">⏱️ Hours</button>
+  <button class="tab-btn" data-tab="reports">📈 Reports</button>
   <button class="tab-btn" data-tab="messages">💬 Messages <span class="tab-badge" id="badgeMessages">0</span></button>
   <button class="tab-btn" data-tab="certificate">📜 Certificate</button>
-</div>
+</nav>
 
 <!-- Main Content -->
 <div class="main-content">
@@ -38,7 +58,7 @@
 
     <div class="card" id="dashPendingApprovals" style="display:none;">
       <div class="card-header">
-        <h3>⏳ Pending Approvals</h3>
+        <h3>⏳ Pending Event Requests</h3>
         <button class="btn btn-sm btn-outline" onclick="switchTab('volunteers')">View All</button>
       </div>
       <div class="card-body" id="dashPendingApprovalsBody"></div>
@@ -55,23 +75,68 @@
     </div>
   </div>
 
+  <!-- ═══ EVENTS ═══ -->
+  <div class="tab-panel" id="panel-events">
+
+    <div id="eventBrowseView">
+      <div class="quick-actions" id="eventActions"></div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Event Definitions</h3>
+            <div class="list-count" id="eventListCount"></div>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="reloadAndRender()">🔄 Refresh</button>
+        </div>
+        <div class="card-body table-flush" id="eventList"></div>
+      </div>
+    </div>
+
+    <div id="eventManageView" style="display:none;">
+      <div class="event-manage-head" id="eventManageHead"></div>
+      <div class="seg-nav" id="eventManageNav"></div>
+      <div id="eventManageBody"></div>
+    </div>
+  </div>
+
   <!-- ═══ VOLUNTEERS ═══ -->
   <div class="tab-panel" id="panel-volunteers">
-    <div class="quick-actions" id="volActions"></div>
+    <div id="volBrowseView">
+      <div class="quick-actions" id="volActions"></div>
     <div class="card">
       <div class="card-header">
-        <h3 id="volListTitle">All Volunteers</h3>
-        <div style="display:flex;gap:8px;">
-          <select class="form-select" id="volFilterStatus" style="width:auto;" onchange="renderVolunteers()">
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="withdrawn">Withdrawn</option>
-          </select>
+        <div>
+          <h3 id="volListTitle">Volunteers &amp; Candidates</h3>
+          <div class="list-count" id="volListCount"></div>
         </div>
+        <button class="btn btn-sm btn-outline" onclick="reloadAndRender()">🔄 Refresh</button>
       </div>
-      <div class="card-body" id="volList"></div>
+      <div class="list-toolbar" id="volToolbar">
+        <input type="search" class="form-input" id="volSearch" placeholder="Search name, email or skills" oninput="renderVolunteers()">
+        <select class="form-select" id="volFilterNetwork" onchange="renderVolunteers()">
+          <option value="all">All network statuses</option>
+          <option value="candidate">Network candidates</option>
+          <option value="active">Approved volunteers</option>
+          <option value="inactive">Inactive</option>
+          <option value="banned">Banned</option>
+        </select>
+        <select class="form-select" id="volFilterStatus" onchange="renderVolunteers()">
+          <option value="all">All event statuses</option>
+          <option value="pending">Pending event requests</option>
+          <option value="approved">Approved for this event</option>
+          <option value="rejected">Rejected for this event</option>
+          <option value="withdrawn">Withdrawn</option>
+          <option value="not-applied">Not linked to this event</option>
+        </select>
+      </div>
+      <div class="card-body table-flush" id="volList"></div>
+    </div>
+    </div>
+
+    <div id="volunteerDetailView" style="display:none;">
+      <div class="event-manage-head" id="volunteerDetailHead"></div>
+      <div class="seg-nav" id="volunteerDetailNav"></div>
+      <div id="volunteerDetailBody"></div>
     </div>
   </div>
 
@@ -128,6 +193,12 @@
     </div>
   </div>
 
+  <!-- ═══ REPORTS ═══ -->
+  <div class="tab-panel" id="panel-reports">
+    <div class="quick-actions" id="reportActions"></div>
+    <div id="reportBody"></div>
+  </div>
+
   <!-- ═══ MESSAGES ═══ -->
   <div class="tab-panel" id="panel-messages">
     <div class="quick-actions" id="msgActions"></div>
@@ -147,6 +218,7 @@
       <div class="card-body" id="certBody"></div>
     </div>
   </div>
+</div>
 </div>
 
 <!-- ═══════════════ MODALS ═══════════════ -->
@@ -171,13 +243,6 @@
         <label class="form-label">Why do you want to volunteer?</label>
         <textarea class="form-textarea" id="regMotivation" placeholder="A brief note about your motivation..."></textarea>
       </div>
-      <div class="form-group" id="regUserPickerGroup" style="display:none;">
-        <label class="form-label">Volunteer (permitted user)</label>
-        <select class="form-select" id="regUserPicker">
-          <option value="">-- Select a permitted user --</option>
-        </select>
-        <div class="form-hint">Only users with permission on this event are listed.</div>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('modalRegister')">Cancel</button>
@@ -186,7 +251,183 @@
   </div>
 </div>
 
+<!-- Event Modal -->
+<div class="modal-overlay" id="modalEvent">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="eventModalTitle">📅 New Event</h3>
+      <button class="modal-close" onclick="closeModal('modalEvent')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Event name</label>
+        <input type="text" class="form-input" id="eventName" placeholder="e.g. Community Food Drive">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="eventDescription" placeholder="What is this event about?"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="eventStatus">
+            <option value="draft">Draft</option>
+            <option value="open">Open for volunteers</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Capacity</label>
+          <input type="number" class="form-input" id="eventCapacity" min="0" step="1" placeholder="e.g. 20">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start date</label>
+          <input type="date" class="form-input" id="eventStartDate">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End date</label>
+          <input type="date" class="form-input" id="eventEndDate">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Start time</label>
+          <input type="time" class="form-input" id="eventStartTime">
+        </div>
+        <div class="form-group">
+          <label class="form-label">End time</label>
+          <input type="time" class="form-input" id="eventEndTime">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Venue</label>
+        <input type="text" class="form-input" id="eventLocation" placeholder="Venue name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input type="text" class="form-input" id="eventAddress">
+        </div>
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" class="form-input" id="eventCity">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Contact person</label>
+          <input type="text" class="form-input" id="eventContactName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact phone</label>
+          <input type="tel" class="form-input" id="eventContactPhone">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contact email</label>
+        <input type="email" class="form-input" id="eventContactEmail">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="eventNotes" placeholder="Internal notes for managers"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="eventDeleteBtn" style="display:none;margin-right:auto;" onclick="confirmDeleteEvent()">Delete</button>
+      <button class="btn btn-outline" onclick="closeModal('modalEvent')">Cancel</button>
+      <button class="btn btn-primary" id="eventSaveBtn" onclick="saveEvent()">Create Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Volunteer Modal -->
+<div class="modal-overlay" id="modalEditVolunteer">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="editVolunteerTitle">✏️ Edit Volunteer</h3>
+      <button class="modal-close" onclick="closeModal('modalEditVolunteer')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First name</label>
+          <input type="text" class="form-input" id="evFirstName">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last name</label>
+          <input type="text" class="form-input" id="evLastName">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="evEmail">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="tel" class="form-input" id="evPhone">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input type="text" class="form-input" id="evCity">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Availability</label>
+          <input type="text" class="form-input" id="evAvailability" placeholder="e.g. Weekends, weekday evenings">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Skills &amp; experience</label>
+        <textarea class="form-textarea" id="evSkills"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Network status</label>
+        <select class="form-select" id="evProfileStatus">
+          <option value="candidate">Candidate (waiting to join the volunteer network)</option>
+          <option value="active">Approved volunteer</option>
+          <option value="inactive">Inactive</option>
+          <option value="banned">Banned</option>
+        </select>
+        <div class="form-hint">Network approval is separate from approval for a specific event.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modalEditVolunteer')">Cancel</button>
+      <button class="btn btn-primary" id="editVolunteerSaveBtn" onclick="saveVolunteerEdits()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Create Task Modal -->
+<!-- Add Volunteers to Event Modal -->
+<div class="modal-overlay" id="modalPickVolunteers">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3>👥 Add Volunteers</h3>
+        <div class="list-count" id="pickVolEventName"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modalPickVolunteers')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="list-toolbar" style="border:0;padding:0 0 10px;">
+        <input type="search" class="form-input" id="pickVolSearch" placeholder="Search name, email or skills" oninput="renderVolunteerPicker()">
+      </div>
+      <div id="pickVolList"></div>
+    </div>
+    <div class="modal-footer">
+      <span class="form-hint" id="pickVolCount" style="margin-right:auto;"></span>
+      <button class="btn btn-outline" onclick="closeModal('modalPickVolunteers')">Cancel</button>
+      <button class="btn btn-primary" id="pickVolSaveBtn" onclick="saveVolunteerPicker()">Add Selected</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalTask">
   <div class="modal">
     <div class="modal-header">
@@ -248,6 +489,13 @@
     </div>
     <div class="modal-body">
       <input type="hidden" id="editHourId">
+      <div class="form-group" id="hourVolunteerGroup" style="display:none;">
+        <label class="form-label">Volunteer</label>
+        <select class="form-select" id="hourVolunteer">
+          <option value="">-- Select Volunteer --</option>
+        </select>
+        <div class="form-hint">Only volunteers approved for this event can receive hours.</div>
+      </div>
       <div class="form-group">
         <label class="form-label">Task</label>
         <select class="form-select" id="hourTaskId">

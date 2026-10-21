@@ -1,0 +1,96 @@
+{
+  "deals": [
+    {
+      "id": "bad-bundle-no-groups",
+      "section": "Broken",
+      "title": "Bundle without any group",
+      "description": "Validation: a bundle needs at least one group.",
+      "price": 9.99,
+      "image_url": "",
+      "active": true,
+      "rule_type": "bundle",
+      "rule": { "groups": [] }
+    },
+    {
+      "id": "bad-discount-above-threshold",
+      "section": "Broken",
+      "title": "Discount above threshold (30 over 20)",
+      "description": "Validation: discount cannot be higher than the minimum subtotal.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "subtotal_threshold",
+      "rule": { "min_subtotal": 20, "discount": 30 }
+    },
+    {
+      "id": "bad-no-free-group",
+      "section": "Broken",
+      "title": "No free group",
+      "description": "Validation: free_item_with_purchase needs at least one free group.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "free_item_with_purchase",
+      "rule": {
+        "groups": [
+          { "group_id": "bad-g-paid-a", "label": "Pizza", "quantity": 1, "category_ids": ["cat-pizza"], "charge": "paid" },
+          { "group_id": "bad-g-paid-b", "label": "Dips", "quantity": 2, "category_ids": ["cat-dips"], "charge": "paid" }
+        ]
+      }
+    },
+    {
+      "id": "bad-reversed-schedule",
+      "section": "Broken",
+      "title": "Reversed schedule dates",
+      "description": "Validation: the start date cannot be after the end date.",
+      "price": 29.99,
+      "image_url": "",
+      "active": true,
+      "schedule": { "date_from": "2026-12-01", "date_until": "2026-11-01" },
+      "rule_type": "bundle",
+      "rule": {
+        "groups": [
+          { "group_id": "bad-g-sched", "label": "Pizzas", "quantity": 1, "category_ids": ["cat-pizza"] }
+        ]
+      }
+    },
+    {
+      "id": "bad-descending-bands",
+      "section": "Broken",
+      "title": "Descending volume bands",
+      "description": "Validation: bands must start at increasing quantities.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "volume_pricing",
+      "rule": {
+        "category_ids": ["cat-wings"],
+        "bands": [
+          { "min_quantity": 10, "unit_price": 1.0 },
+          { "min_quantity": 5, "unit_price": 1.2 }
+        ]
+      }
+    },
+    {
+      "id": "bad-bngm-no-restriction",
+      "section": "Broken",
+      "title": "Buy N get M without restriction",
+      "description": "Validation: choose at least one category or item.",
+      "price": null,
+      "image_url": "",
+      "active": true,
+      "rule_type": "buy_n_get_m",
+      "rule": { "required_item_count": 3, "free_item_count": 1, "same_size": false }
+    }
+  ],
+  "promo_codes": [
+    {
+      "id": "bad-code-unsupported-type",
+      "code": "BADTYPE",
+      "title": "Unsupported offer type",
+      "rule_type": "tiered",
+      "rule": {},
+      "max_uses": null
+    }
+  ]
+}
