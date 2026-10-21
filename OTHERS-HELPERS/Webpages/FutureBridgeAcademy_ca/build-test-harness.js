@@ -34,6 +34,8 @@ const PAGES = [
 	{ file: 'about-us.html', label: 'About us', slug: 'about-us', route: '/about-us' },
 	{ file: 'contact.html', label: 'Contact', slug: 'contact', route: '/contact' },
 	{ file: 'volunteer.html', label: 'Volunteer', slug: 'volunteer', route: '/volunteer' },
+	{ file: 'volunteer-apply.html', label: 'Apply form', slug: 'volunteer-apply', route: '/volunteer-apply' },
+	{ file: 'volunteer-positions.html', label: 'Open positions', slug: 'volunteer-positions', route: '/volunteer-positions' },
 	{ file: 'volunteer-role-online-maths-teacher.html', label: 'Role: Maths teacher', slug: 'volunteer-role-online-maths-teacher', route: '/volunteer-role-online-maths-teacher' },
 	{ file: 'volunteer-role-mock-exam-organiser.html', label: 'Role: Exam organiser', slug: 'volunteer-role-mock-exam-organiser', route: '/volunteer-role-mock-exam-organiser' },
 	{ file: 'volunteer-role-seminar-presenter-english.html', label: 'Role: Seminar (EN)', slug: 'volunteer-role-seminar-presenter-english', route: '/volunteer-role-seminar-presenter-english' },

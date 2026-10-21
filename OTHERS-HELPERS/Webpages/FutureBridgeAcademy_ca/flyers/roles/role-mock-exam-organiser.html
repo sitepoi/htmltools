@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock exam organiser - volunteer flyer | Future Bridge Academy</title>
+<style>
+  /* =========================================================================
+     FUTURE BRIDGE ACADEMY — VOLUNTEER FLYER
+     Two A4 pages, print-ready + mobile readable.
+     Brand colours (SSOT): #FF6B35 primary · #004E89 secondary · #FFD23F accent · #06D6A0 teal
+     Registration: https://futurebridgeacademy.ca/volunteer
+     ========================================================================= */
+  :root {
+    --brand-1: #FF6B35;
+    --brand-1-deep: #E8541F;
+    --brand-2: #004E89;
+    --brand-2-deep: #00365F;
+    --brand-3: #FFD23F;
+    --brand-4: #06D6A0;
+    --ink: #102A43;
+    --muted: #486581;
+    --line: #E2E8F0;
+    --paper: #FFFFFF;
+    --paper-soft: #F5F8FC;
+    --radius: 14px;
+    --shadow: 0 10px 30px rgba(16, 42, 67, 0.08);
+    --grad: linear-gradient(135deg, var(--brand-2) 0%, var(--brand-2-deep) 60%, #00294a 100%);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    background: #DCE4EE;
+    line-height: 1.45;
+  }
+
+  /* ============ A4 print: exactly two pages ============ */
+  @page { size: A4; margin: 0; }
+
+  @media print {
+    html, body { background: #fff !important; }
+    /* flat print: mobile PDF viewers (WhatsApp, Quick Look) paint a blurred
+       shadow as a solid grey box, so paper drops every shadow */
+    *, *::before, *::after { box-shadow: none !important; text-shadow: none !important; }
+    .flyer { max-width: none !important; margin: 0 !important; padding: 0 !important; gap: 0 !important; }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: hidden;
+      page-break-after: always;
+      break-after: page;
+    }
+    .page-2 { page-break-after: auto; break-after: auto; }
+    .no-print { display: none !important; }
+    a { text-decoration: none; color: inherit; }
+  }
+
+  /* ============ screen ============ */
+  .flyer {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 18px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .page {
+    width: 100%;
+    background: var(--paper);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  @media (min-width: 800px) {
+    .page { border-radius: 8px; }
+  }
+
+  .inner { padding: 8mm 10mm 8mm; }
+  @media (max-width: 639px) {
+    .inner { padding: 14px 12px; }
+  }
+
+  /* ============ shared ============ */
+  .kicker {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 9.5px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--brand-1); margin-bottom: 4px;
+  }
+  .kicker::before { content: ""; width: 18px; height: 2px; border-radius: 2px; background: var(--brand-1); }
+  .kicker.gold { color: #FFD23F; }
+  .kicker.gold::before { background: #FFD23F; }
+
+  h1 { font-size: 22px; line-height: 1.12; letter-spacing: -0.01em; }
+  h2 { font-size: 16px; line-height: 1.18; letter-spacing: -0.01em; }
+  h3 { font-size: 13.5px; line-height: 1.2; }
+  .hl { color: var(--brand-3); }
+  .sec-head { margin-bottom: 8px; }
+  .sec-head .sub { color: var(--muted); font-size: 11px; max-width: 90ch; margin-top: 4px; }
+
+  /* ============ header ============ */
+  .header { background: var(--grad); color: #fff; }
+  .header-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 9px 10mm;
+  }
+  @media (max-width: 639px) { .header-bar { padding: 9px 12px; } }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 14px; }
+  .brand-mark {
+    width: 27px; height: 27px; border-radius: 7px; flex: 0 0 auto;
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-3));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12.5px; font-weight: 900; color: #fff;
+  }
+  .brand small { display: block; font-weight: 500; font-size: 8.5px; opacity: 0.8; letter-spacing: 0.13em; text-transform: uppercase; }
+  .brand-tag { font-size: 10px; opacity: 0.9; text-align: right; line-height: 1.4; }
+  .brand-tag strong { display: block; font-size: 11.5px; }
+  @media (max-width: 639px) { .brand-tag { display: none; } }
+
+  /* ============ hero ============ */
+  .hero { background: var(--grad); color: #fff; }
+  .hero .inner { padding-top: 6mm; padding-bottom: 6mm; }
+  @media (max-width: 639px) { .hero .inner { padding-top: 14px; padding-bottom: 14px; } }
+  .hero h1 { margin-bottom: 6px; }
+  .hero-lede { font-size: 11.5px; color: rgba(255,255,255,0.9); max-width: 64ch; }
+
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-weight: 800; font-size: 11.5px;
+    padding: 8px 14px; border-radius: 8px;
+    text-decoration: none;
+  }
+  .btn .arrow { font-size: 13px; }
+  .btn.ghost { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.55); }
+  .btn.solid { background: var(--brand-1); color: #fff; }
+
+  /* ============ positions ============ */
+  .positions { background: var(--paper-soft); }
+
+  /* ============ steps ============ */
+  .steps-grid { display: grid; gap: 6px; margin-top: 2px; }
+  @media (min-width: 640px) { .steps-grid { grid-template-columns: repeat(5, 1fr); } }
+  .step { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px 9px; box-shadow: var(--shadow); }
+  .step .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-3));
+    color: #fff; font-weight: 900; font-size: 10px; margin-bottom: 4px;
+  }
+  .step strong { display: block; font-size: 10.5px; margin-bottom: 1px; }
+  .step p { font-size: 9.5px; color: var(--muted); }
+
+  /* ============ cta ============ */
+
+  /* ============ footer ============ */
+  .footer { background: var(--brand-2-deep); color: rgba(255,255,255,0.85); font-size: 9.5px; }
+  .footer .inner { padding-top: 9px; padding-bottom: 9px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+  .footer a { color: var(--brand-3); text-decoration: none; font-weight: 700; }
+
+  /* =========================================================================
+     FLYER v2 - poster first: one idea per block, one clear action
+     ========================================================================= */
+
+  /* ---- hero ---- */
+  .hero { position: relative; overflow: hidden; }
+  .hero-pattern {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(255,255,255,0.20) 1px, transparent 1.3px);
+    background-size: 15px 15px;
+    -webkit-mask-image: radial-gradient(130% 100% at 92% 0%, #000 0%, rgba(0,0,0,0.4) 48%, transparent 78%);
+    mask-image: radial-gradient(130% 100% at 92% 0%, #000 0%, rgba(0,0,0,0.4) 48%, transparent 78%);
+  }
+  .hero .hero-inner { position: relative; z-index: 1; padding-top: 18mm; padding-bottom: 18mm; }
+  .hero .hero-title {
+    font-size: 44px; line-height: 0.97; letter-spacing: -0.026em; font-weight: 800;
+    margin-top: 4px;
+  }
+  .hero .hero-title .hl { display: block; color: var(--brand-3); }
+  .hero .hero-lede {
+    margin-top: 14px; font-size: 14px; line-height: 1.45;
+    color: rgba(255,255,255,0.9); max-width: 40ch;
+  }
+  .hero .hero-cta { margin-top: 18px; padding-right: 122px; }
+  .btn-xl { font-size: 15px; padding: 13px 22px; border-radius: 12px; box-shadow: 0 12px 26px rgba(0,0,0,0.22); }
+  .hero-badge {
+    position: absolute; right: 10mm; bottom: 10mm; z-index: 2;
+    width: 100px; height: 100px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--brand-1); color: #fff;
+    border: 3px solid rgba(255,255,255,0.9);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+    transform: rotate(8deg);
+  }
+  .hero-badge strong { font-size: 34px; line-height: 1; letter-spacing: -0.03em; }
+  .hero-badge span { font-size: 8.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
+  @media (max-width: 639px) {
+    .hero .hero-inner { padding-top: 18px; padding-bottom: 20px; }
+    .hero .hero-title { font-size: 27px; max-width: none; }
+    .hero .hero-lede { font-size: 12px; }
+    .hero .hero-cta { padding-right: 0; }
+    .hero-badge { display: none; }
+  }
+
+  /* ---- three reasons ---- */
+  .reasons { display: grid; gap: 10px; }
+  @media (min-width: 640px) { .reasons { grid-template-columns: repeat(3, 1fr); } }
+  .reason {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper-soft); border: 1px solid var(--line); border-left: 3px solid var(--brand-1);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .reason:nth-child(2) { border-left-color: var(--brand-2); }
+  .reason:nth-child(3) { border-left-color: var(--brand-4); }
+  .reason-ico { font-size: 26px; line-height: 1; flex: 0 0 auto; }
+  .reason-txt { font-size: 11px; color: var(--muted); line-height: 1.35; }
+  .reason-txt strong { display: block; font-size: 13px; color: var(--ink); line-height: 1.2; margin-bottom: 2px; }
+
+  /* ---- headings ---- */
+  .big-h2 { font-size: 27px; line-height: 1.04; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .big-h2 .hl2 { color: var(--brand-1); }
+  .why .inner { padding-top: 7mm; padding-bottom: 7mm; }
+  .positions .inner { padding-top: 7mm; padding-bottom: 7mm; }
+  .big-h2-light { color: #fff; }
+  .big-h2-light .hl2 { color: var(--brand-3); }
+
+  /* ---- the ten roles ---- */
+  .role-grid { display: grid; gap: 9px; }
+  @media (min-width: 640px) { .role-grid { grid-template-columns: 1fr 1fr; } }
+  .role {
+    display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+    background: #fff; border: 1px solid var(--line); border-radius: 11px;
+    padding: 13px 13px; box-shadow: 0 4px 12px rgba(16, 42, 67, 0.06);
+  }
+  .role-num {
+    flex: 0 0 auto; width: 29px; height: 29px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--brand-1), var(--brand-3));
+    color: #fff; font-size: 12px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .role-name { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; line-height: 1.2; }
+  .role-time {
+    flex: 0 0 auto; font-size: 9.5px; font-weight: 800; letter-spacing: 0.02em;
+    color: var(--brand-1-deep); background: #FFF1EA;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .role-foot { margin-top: 11px; font-size: 11.5px; color: var(--muted); text-align: center; }
+  .role-foot strong { color: var(--brand-2); }
+
+  /* ---- what you leave with ---- */
+  .leave { background: var(--grad); color: #fff; }
+  .leave .inner { padding-top: 12mm; padding-bottom: 12mm; }
+  .leave-grid { display: grid; gap: 10px; }
+  @media (min-width: 640px) { .leave-grid { grid-template-columns: repeat(4, 1fr); } }
+  .leave-item {
+    text-align: center; background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 13px; padding: 16px 10px;
+  }
+  .leave-ico { display: block; font-size: 28px; line-height: 1; margin-bottom: 8px; }
+  .leave-item strong { display: block; font-size: 12.5px; line-height: 1.2; }
+  .leave-item span { font-size: 10.5px; color: rgba(255,255,255,0.8); }
+
+  /* ---- single statement band ---- */
+  .statement {
+    padding: 14mm 10mm; text-align: center;
+    background: var(--paper-soft);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .statement p {
+    font-size: 21px; line-height: 1.22; font-weight: 800; letter-spacing: -0.016em;
+    color: var(--brand-2-deep); max-width: 32ch; margin: 0 auto;
+  }
+  .statement em { font-style: normal; color: var(--brand-1); }
+
+  /* ---- giant call to action ---- */
+  .cta-giant { background: var(--brand-3); color: var(--brand-2-deep); text-align: center; padding: 18mm 12mm; }
+  .cta-giant .kicker { display: flex; justify-content: center; color: var(--brand-2-deep); }
+  .cta-giant .kicker::before { background: var(--brand-2-deep); }
+  .cta-giant h2 { font-size: 30px; line-height: 1; letter-spacing: -0.026em; }
+  .cta-giant p { font-size: 12.5px; margin: 8px auto 16px; max-width: 40ch; color: rgba(0, 50, 90, 0.78); }
+  .cta-giant .btn {
+    background: var(--brand-2); color: #fff; font-size: 16px;
+    padding: 15px 26px; border-radius: 12px;
+    box-shadow: 0 14px 26px rgba(0, 54, 95, 0.28);
+  }
+  .cta-url-big {
+    display: block; margin-top: 14px; font-size: 12.5px; font-weight: 800;
+    letter-spacing: 0.02em; color: var(--brand-2-deep); text-decoration: none;
+  }
+  @media (max-width: 639px) {
+    .cta-giant { padding: 22px 16px; }
+    .cta-giant h2 { font-size: 24px; }
+  }
+
+  /* ---- page fill + step sizing ---- */
+  .page { display: flex; flex-direction: column; }
+  .page > * { flex: 0 0 auto; }
+  .page > .footer { margin-top: auto; }
+  .steps .inner { padding-top: 10mm; padding-bottom: 10mm; }
+  .steps .step { padding: 13px 12px; }
+  .steps .step .num { width: 22px; height: 22px; font-size: 11px; margin-bottom: 6px; }
+  .steps .step strong { font-size: 12.5px; margin-bottom: 2px; }
+  .steps .step p { font-size: 10.5px; }
+
+  /* =========================================================================
+     FLYER v3 - photographic poster: logo lock-up, ribbon, angled edges,
+     medallions, ticket call to action, timeline
+     ========================================================================= */
+
+  /* ---- brand bar with logo ---- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    background: var(--brand-2-deep); padding: 11px 10mm; position: relative; z-index: 5;
+  }
+  .topbar-logo { height: 42px; width: auto; display: block; filter: brightness(0) invert(1); }
+  .topbar-tag {
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(255,255,255,0.8); text-align: right; line-height: 1.55;
+    border-left: 1px solid rgba(255,255,255,0.22); padding-left: 14px;
+  }
+
+  /* ---- photographic hero ---- */
+  .hero {
+    position: relative; overflow: hidden; background: var(--brand-2-deep);
+    clip-path: polygon(0 0, 100% 0, 100% 94%, 0 100%);
+  }
+  .hero-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 6%; }
+  .hero-wash {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(100deg, rgba(0,34,60,0.95) 0%, rgba(0,54,95,0.86) 42%, rgba(0,54,95,0.26) 100%),
+      radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.55) 0%, rgba(255,107,53,0) 62%);
+  }
+  .hero .hero-inner { position: relative; z-index: 2; padding: 13mm 10mm 13mm; }
+  .hero .hero-title { font-size: 38px; max-width: 88%; }
+  .hero .hero-lede { max-width: 44ch; margin-top: 14px; }
+  .hero .hero-cta { margin-top: 20px; padding-right: 0; }
+
+  /* thin colour slash that closes the photo like a printed edge */
+  .slash {
+    height: 9px; margin-top: -5px; position: relative; z-index: 4;
+    background: linear-gradient(90deg, var(--brand-1) 0%, var(--brand-3) 68%, var(--brand-4) 100%);
+    transform: rotate(-1.3deg) scaleX(1.04);
+    box-shadow: 0 6px 16px rgba(16, 42, 67, 0.12);
+  }
+
+  /* corner ribbon */
+  .ribbon { position: absolute; top: 0; right: 0; width: 138px; height: 138px; overflow: hidden; z-index: 3; }
+  .ribbon span {
+    position: absolute; top: 32px; right: -42px; width: 196px;
+    transform: rotate(45deg);
+    background: var(--brand-1); color: #fff; text-align: center;
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.13em; text-transform: uppercase;
+    padding: 7px 0; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+  }
+  @media (max-width: 639px) {
+    .ribbon { width: 96px; height: 96px; }
+    .ribbon span { top: 22px; right: -54px; width: 168px; font-size: 7.5px; }
+    .hero .hero-title { font-size: 28px; max-width: none; }
+    .hero .hero-inner { padding: 20px 14px 24px; }
+  }
+
+  /* ---- reasons as dashed medallions ---- */
+  .why .inner { padding-top: 8mm; padding-bottom: 8mm; }
+  .reason {
+    background: transparent; border: 0; border-radius: 0; padding: 0; gap: 12px;
+  }
+  .reason-ico {
+    width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand-1); background: #fff; border: 2px dashed var(--brand-1);
+    box-shadow: 0 6px 14px rgba(16, 42, 67, 0.08);
+  }
+  .reason-ico svg { width: 24px; height: 24px; display: block; }
+  .reason:nth-child(2) .reason-ico { color: var(--brand-2); border-color: var(--brand-2); }
+  .reason:nth-child(3) .reason-ico { color: var(--brand-4); border-color: var(--brand-4); }
+
+  /* ---- taped section label ---- */
+  .tape {
+    display: inline-block; background: var(--brand-1); color: #fff;
+    font-size: 8.5px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 12px; margin-bottom: 10px;
+    transform: rotate(-2deg);
+    box-shadow: 0 6px 14px rgba(232, 84, 31, 0.3);
+  }
+
+  /* ---- role rows ---- */
+  .positions .inner { padding-top: 9mm; padding-bottom: 9mm; }
+  .role { border: 0; box-shadow: 0 6px 14px rgba(16, 42, 67, 0.07); }
+  /* roles we need most right now: the first rows of the list */
+  a.role.is-hot { background: #FFF6E2; box-shadow: inset 4px 0 0 var(--brand-3); }
+  a.role.is-hot .role-name { font-weight: 800; }
+  .role-name { font-size: 12px; }
+  .role-time { font-size: 9px; padding: 3px 7px; }
+  /* each tile is a link to that role's page on the website */
+  a.role { color: var(--ink); text-decoration: none; }
+  a.role:hover { box-shadow: 0 10px 20px rgba(16, 42, 67, 0.12); }
+  a.role:hover .role-name { color: var(--brand-2); text-decoration: underline; }
+  a.role:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }
+  .role-num { border-radius: 50%; }
+  .role:nth-child(3n+2) .role-num { background: linear-gradient(135deg, var(--brand-2), #0a7bc4); }
+  .role:nth-child(3n) .role-num { background: linear-gradient(135deg, var(--brand-4), #04a97e); }
+
+  /* ---- ticket call to action ---- */
+  .ticket-wrap { padding: 0 10mm 5mm; background: var(--paper); }
+  .ticket {
+    position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap;
+    background: var(--brand-2-deep); color: #fff;
+    border: 1px dashed rgba(255, 255, 255, 0.35); border-radius: 14px;
+    padding: 16px 22px;
+    transform: rotate(-1deg);
+    box-shadow: 0 18px 34px rgba(0, 54, 95, 0.24);
+  }
+  .ticket::before, .ticket::after {
+    content: ""; position: absolute; top: 50%; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--paper); transform: translateY(-50%);
+  }
+  .ticket::before { left: -11px; }
+  .ticket::after { right: -11px; }
+  .ticket-strong { display: block; font-size: 16px; font-weight: 900; letter-spacing: -0.01em; }
+  .ticket span { font-size: 10.5px; color: rgba(255, 255, 255, 0.78); }
+  .ticket-btn {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand-3); color: var(--brand-2-deep);
+    font-size: 12px; font-weight: 900; padding: 11px 18px; border-radius: 999px;
+    text-decoration: none; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22);
+  }
+
+  /* ---- page 2: medallion band ---- */
+  .leave-item { background: transparent; border: 0; border-radius: 0; padding: 0; }
+  .leave-ico {
+    width: 58px; height: 58px; border-radius: 50%; margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.10); border: 2px dashed rgba(255, 255, 255, 0.55);
+  }
+  .leave-item .leave-ico { color: var(--brand-3); }
+  .leave-ico svg { width: 27px; height: 27px; display: block; }
+  @media (max-width: 639px) {
+    .leave-ico { width: 48px; height: 48px; }
+    .leave-ico svg { width: 22px; height: 22px; }
+  }
+
+  /* ---- page 2: pasted statement note ---- */
+  .statement { background: var(--paper-soft); padding: 13mm 10mm; border: 0; }
+  .statement p {
+    display: inline-block; text-align: left; max-width: 34ch;
+    background: #fff; padding: 20px 24px; border-radius: 14px;
+    border-left: 6px solid var(--brand-1);
+    transform: rotate(-1.2deg);
+    box-shadow: 0 18px 32px rgba(16, 42, 67, 0.12);
+  }
+
+  /* ---- page 2: timeline steps ---- */
+  .steps { background: var(--paper); }
+  .steps-grid { position: relative; }
+  .steps-grid::before {
+    content: ""; position: absolute; top: 17px; left: 7%; right: 7%;
+    border-top: 2px dashed #cfdbe7; z-index: 0;
+  }
+  .steps .step {
+    background: transparent; border: 0; box-shadow: none; padding: 0;
+    position: relative; z-index: 1;
+  }
+  .steps .step .num {
+    width: 34px; height: 34px; border-radius: 50%; font-size: 13px;
+    background: var(--brand-2); margin-bottom: 10px;
+    box-shadow: 0 0 0 5px var(--paper);
+  }
+  @media (max-width: 639px) {
+    .steps-grid::before { display: none; }
+    .steps .step .num { margin-bottom: 7px; }
+  }
+
+  /* ---- page 2: final band ---- */
+  .cta-logo { height: 30px; width: auto; display: block; margin: 0 auto 14px; }
+  .cta-giant { padding: 13mm 10mm 12mm; }
+
+  /* =========================================================================
+     EXPORT BAR (screen only)
+     ========================================================================= */
+  .export-bar {
+    max-width: 210mm; margin: 0 auto 12px; padding: 10px 12px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 8px 22px rgba(16, 42, 67, 0.10);
+    font-size: 12px; color: var(--ink);
+  }
+  .export-bar .export-label { font-weight: 800; color: var(--brand-2-deep); }
+  .export-bar button {
+    font: inherit; font-size: 12px; font-weight: 800; cursor: pointer;
+    background: var(--brand-2); color: #fff;
+    border: 0; border-radius: 8px; padding: 8px 14px;
+  }
+  .export-bar button:hover { background: var(--brand-2-deep); }
+  .export-bar button.is-on { background: var(--brand-1); }
+  .export-bar .export-hint { flex: 1 1 240px; color: var(--muted); font-size: 11px; }
+
+  /* =========================================================================
+     MOBILE PDF FORMAT
+     A narrow page (105mm) with one column and larger relative type, so a
+     phone shows the page at full width and the text is readable without zoom.
+     Activated by the export bar or by .html?format=mobile
+     ========================================================================= */
+  html[data-format="mobile"] .flyer { max-width: 105mm; padding: 10px; gap: 12px; }
+  html[data-format="mobile"] .export-bar { max-width: 105mm; }
+  html[data-format="mobile"] .page { width: 100%; }
+
+  html[data-format="mobile"] .inner,
+  html[data-format="mobile"] .topbar,
+  html[data-format="mobile"] .ticket-wrap,
+  html[data-format="mobile"] .statement,
+  html[data-format="mobile"] .cta-giant { padding-left: 6mm; padding-right: 6mm; }
+
+  html[data-format="mobile"] .topbar { padding-top: 10px; padding-bottom: 10px; }
+  html[data-format="mobile"] .topbar-logo { height: 30px; }
+  html[data-format="mobile"] .topbar-tag { font-size: 8px; }
+
+  html[data-format="mobile"] .hero { clip-path: none; }
+  html[data-format="mobile"] .hero .hero-inner { padding: 16px 6mm 18px; }
+  html[data-format="mobile"] .hero .hero-title { font-size: 27px; max-width: none; }
+  html[data-format="mobile"] .hero .hero-lede { font-size: 13px; max-width: none; }
+  html[data-format="mobile"] .hero .hero-cta { padding-right: 0; margin-top: 16px; }
+  html[data-format="mobile"] .btn-xl { font-size: 14px; padding: 12px 18px; }
+  html[data-format="mobile"] .ribbon { width: 96px; height: 96px; }
+  html[data-format="mobile"] .ribbon span { top: 22px; right: -54px; width: 168px; font-size: 7.5px; }
+  html[data-format="mobile"] .slash { height: 7px; }
+
+  html[data-format="mobile"] .why .inner { padding-top: 5mm; padding-bottom: 5mm; }
+  html[data-format="mobile"] .reasons { grid-template-columns: 1fr; gap: 6px; }
+  html[data-format="mobile"] .reason { padding: 8px 11px; }
+  html[data-format="mobile"] .reason-txt { font-size: 12px; }
+  html[data-format="mobile"] .reason-txt strong { font-size: 13px; }
+
+  html[data-format="mobile"] .positions .inner { padding-top: 6mm; padding-bottom: 6mm; }
+  html[data-format="mobile"] .big-h2 { font-size: 22px; margin-bottom: 10px; }
+  html[data-format="mobile"] .role-grid { grid-template-columns: 1fr; gap: 6px; }
+  html[data-format="mobile"] .role { padding: 6px 11px; gap: 8px; }
+  html[data-format="mobile"] .role-time { display: none; }
+  html[data-format="mobile"] .role-name { font-size: 12.5px; }
+  html[data-format="mobile"] .role-num { width: 20px; height: 20px; font-size: 10px; }
+  html[data-format="mobile"] .role-foot { font-size: 11.5px; }
+
+  html[data-format="mobile"] .ticket-wrap { padding-bottom: 7mm; }
+  html[data-format="mobile"] .ticket { transform: none; padding: 13px 15px; }
+  html[data-format="mobile"] .ticket-strong { font-size: 14.5px; }
+  html[data-format="mobile"] .ticket-btn { font-size: 11px; padding: 9px 14px; }
+
+  html[data-format="mobile"] .leave .inner { padding-top: 4mm; padding-bottom: calc(4mm + 7px); }
+  html[data-format="mobile"] .leave-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+  html[data-format="mobile"] .leave-item { padding: 12px 10px; }
+  html[data-format="mobile"] .leave-item strong { font-size: 12.5px; }
+  html[data-format="mobile"] .leave-item span { font-size: 10.5px; }
+
+  html[data-format="mobile"] .statement { padding-top: 4mm; padding-bottom: 4mm; }
+  html[data-format="mobile"] .statement p { font-size: 18px; max-width: none; }
+
+  html[data-format="mobile"] .steps .inner { padding-top: 5mm; padding-bottom: 5mm; }
+  html[data-format="mobile"] .steps-grid { grid-template-columns: 1fr; gap: 12px; }
+  html[data-format="mobile"] .steps-grid::before { display: none; }
+  html[data-format="mobile"] .steps .step { padding: 0 0 0 44px; position: relative; }
+  html[data-format="mobile"] .steps .step .num { position: absolute; left: 0; top: 0; margin: 0; box-shadow: none; }
+  html[data-format="mobile"] .steps .step strong { font-size: 13px; }
+  html[data-format="mobile"] .steps .step p { font-size: 11.5px; }
+
+  html[data-format="mobile"] .cta-giant { padding-top: 7mm; padding-bottom: 7mm; }
+  html[data-format="mobile"] .cta-logo { height: 24px; margin-bottom: 10px; }
+  html[data-format="mobile"] .cta-giant h2 { font-size: 25px; }
+  html[data-format="mobile"] .cta-giant p { font-size: 12.5px; }
+  html[data-format="mobile"] .cta-giant .btn { font-size: 14px; padding: 13px 20px; }
+  html[data-format="mobile"] .cta-url-big { font-size: 11.5px; }
+  html[data-format="mobile"] .footer { font-size: 9px; }
+
+  @media print {
+    /* full bleed: the sheet is the page, so nothing may be inset, otherwise
+       Chrome leaves a white sliver on the right edge */
+    html[data-format="mobile"] .flyer {
+      display: block; width: 100%; max-width: none; margin: 0; padding: 0; gap: 0;
+    }
+    html[data-format="mobile"] .page {
+      display: block; width: 100%; height: auto; overflow: visible;
+      border-radius: 0; box-shadow: none;
+      page-break-after: auto; break-after: auto;
+    }
+    /* the second brand bar is a page-2 header; in a flowing layout it would
+       land mid-page, so the mobile export drops it */
+    html[data-format="mobile"] .page-2 .topbar { display: none; }
+
+    /* sheet 1 = concept + the ten roles. Sheet 2 opens on the reasons,
+       sheet 3 on the five steps. */
+    html[data-format="mobile"] .why,
+    html[data-format="mobile"] .steps {
+      page-break-before: always; break-before: page;
+    }
+
+    /* each sheet ends on the block that closes it, so no white strip is left */
+    html[data-format="mobile"] .positions { min-height: calc(230mm - 266px); }
+    html[data-format="mobile"] .statement { min-height: calc(230mm - 691px); }
+
+    /* the closing gold block owns what is left of the last sheet */
+    html[data-format="mobile"] .cta-giant {
+      min-height: calc(230mm - 376px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+
+    html[data-format="mobile"] .role,
+    html[data-format="mobile"] .reason,
+    html[data-format="mobile"] .leave-item,
+    html[data-format="mobile"] .step,
+    html[data-format="mobile"] .ticket,
+    html[data-format="mobile"] .statement p {
+      page-break-inside: avoid; break-inside: avoid;
+    }
+  }
+</style>
+<style id="fba-page-size"></style>
+<style>
+  /* =========================================================================
+     ROLE FLYER - one page per idea, tuned on top of the shared flyer styles
+     ========================================================================= */
+  .role-flyer .hero .hero-title { font-size: 40px; max-width: 92%; }
+  html[data-format="mobile"] .role-flyer .hero .hero-title { font-size: 26px; }
+
+  /* the role photo carries the poster, so the wash is a little lighter than
+     the main flyer and the hero keeps a bit more height */
+  .role-flyer .hero-wash {
+    background:
+      linear-gradient(100deg, rgba(0,34,60,0.94) 0%, rgba(0,44,78,0.78) 46%, rgba(0,54,95,0.16) 100%),
+      radial-gradient(120% 90% at 98% 4%, rgba(255,107,53,0.42) 0%, rgba(255,107,53,0) 62%);
+  }
+  html[data-format="mobile"] .role-flyer .hero .hero-inner { padding: 26px 6mm 28px; }
+
+  .role-hours {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 12px; padding: 6px 13px; border-radius: 999px;
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.30);
+    color: #fff; font-size: 11.5px; font-weight: 700;
+  }
+  .role-hours::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-3);
+  }
+  html[data-format="mobile"] .role-hours { margin-top: 10px; padding: 5px 10px; font-size: 10.5px; }
+
+  .fit .inner { padding-top: 6mm; padding-bottom: 7mm; }
+  .fit-head { font-size: 12px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brand-1); }
+  .fit-list { display: grid; gap: 8px; margin-top: 10px; }
+  @media (min-width: 640px) { .fit-list { grid-template-columns: 1fr 1fr; gap: 10px 22px; } }
+  .fit-item {
+    display: flex; align-items: flex-start; gap: 9px;
+    font-size: 12.5px; line-height: 1.35; color: var(--muted); font-weight: 600;
+  }
+  .fit-item::before {
+    content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin-top: 5px;
+    border-radius: 2px; background: var(--brand-4);
+  }
+  html[data-format="mobile"] .fit .inner { padding-top: 5mm; padding-bottom: 6mm; }
+  html[data-format="mobile"] .fit-item { font-size: 12px; }
+
+  /* desktop sheets: the hero and the closing block take the leftover height */
+  @media print {
+    html[data-format="desktop"] .role-flyer .page-1 .hero { flex: 1 1 auto; }
+    html[data-format="desktop"] .role-flyer .cta-giant {
+      flex: 1 1 auto;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    /* mobile sheets: proof + steps open sheet 2, the gold block closes sheet 3 */
+    html[data-format="mobile"] .role-flyer .why,
+    html[data-format="mobile"] .role-flyer .statement,
+    html[data-format="mobile"] .role-flyer .steps { page-break-before: auto; break-before: auto; }
+    html[data-format="mobile"] .role-flyer .leave { page-break-before: always; break-before: page; }
+    html[data-format="mobile"] .role-flyer .statement { min-height: 0; }
+    html[data-format="mobile"] .role-flyer .positions { min-height: 0; }
+    html[data-format="mobile"] .role-flyer .cta-giant { min-height: calc(230mm - 400px); }
+    html[data-format="mobile"] .role-flyer .fit { page-break-inside: avoid; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="export-bar no-print">
+  <span class="export-label">Save as PDF:</span>
+  <button type="button" data-export="desktop">Desktop (A4)</button>
+  <button type="button" data-export="mobile">Mobile (phone)</button>
+  <span class="export-hint">In the print dialog choose Destination "Save as PDF", Margins "None" and turn Background graphics on.</span>
+</div>
+
+<div class="flyer role-flyer">
+
+  <!-- ============================ PAGE 1 ============================ -->
+  <div class="page page-1">
+    <div class="topbar">
+      <img class="topbar-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
+      <span class="topbar-tag">Volunteer<br>role</span>
+    </div>
+
+    <section class="hero">
+      <img class="hero-photo" src="https://images.pexels.com/photos/7092523/pexels-photo-7092523.jpeg?auto=compress&cs=tinysrgb&w=1400" alt="" style="object-position:50% 35%">
+      <div class="hero-wash" aria-hidden="true"></div>
+      <div class="inner hero-inner">
+        <p class="kicker gold">Volunteer role</p>
+        <h1 class="hero-title">Mock exam organiser</h1>
+        <p class="hero-lede">Run the monthly mock exam with the exam team: print the papers, manage the registrations, help on the day, then check and enter the results.</p>
+        <p class="role-hours">6 to 8 hours per exam · at most one every two months</p>
+        <div class="hero-cta">
+          <a class="btn btn-xl" href="https://futurebridgeacademy.ca/volunteer">Apply for this role <span class="arrow">→</span></a>
+          <a class="btn ghost" href="https://futurebridgeacademy.ca/volunteer-role-mock-exam-organiser">Full role details</a>
+        </div>
+      </div>
+      <div class="ribbon" aria-hidden="true"><span>Open now</span></div>
+    </section>
+
+    <div class="slash" aria-hidden="true"></div>
+
+    <section class="why">
+      <div class="inner">
+        <p class="fit-head">What you would actually do</p>
+        <div class="reasons">
+          <div class="reason">
+            <span class="reason-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3.6h6.6L18 8v12.4H7z"/><path d="M13.4 3.6V8H18"/><path d="M9.6 12.4h5.4M9.6 16h3.6"/></svg>
+            </span>
+            <p class="reason-txt"><strong>Prepare the papers</strong>printed and checked before the day.</p>
+          </div>
+          <div class="reason">
+            <span class="reason-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.4" r="3"/><path d="M3.6 19.2c0-2.9 2.4-4.8 5.4-4.8s5.4 1.9 5.4 4.8"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M17.4 14.6c1.9.6 3 2.2 3 4.6"/></svg>
+            </span>
+            <p class="reason-txt"><strong>Manage registrations</strong>the list, confirmations and reminders.</p>
+          </div>
+          <div class="reason">
+            <span class="reason-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M8.3 12.3l2.6 2.6 4.9-5.1"/></svg>
+            </span>
+            <p class="reason-txt"><strong>Run exam day</strong>then mark against the key and enter results.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="fit">
+      <div class="inner">
+        <p class="fit-head">You would be good at this if</p>
+        <ul class="fit-list">
+          <li class="fit-item">Organised with dates, lists and follow-ups</li>
+          <li class="fit-item">Free on the exam day you take</li>
+        </ul>
+      </div>
+    </section>
+
+    <div class="ticket-wrap">
+      <div class="ticket">
+        <div>
+          <strong class="ticket-strong">Apply in 3 minutes</strong>
+          <span>futurebridgeacademy.ca/volunteer</span>
+        </div>
+        <a class="ticket-btn" href="https://futurebridgeacademy.ca/volunteer">Apply <span>→</span></a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ PAGE 2 ============================ -->
+  <div class="page page-2">
+
+    <div class="topbar">
+      <img class="topbar-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
+      <span class="topbar-tag">Apply<br>today</span>
+    </div>
+
+    <section class="leave">
+      <div class="inner">
+        <p class="kicker gold">What you leave with</p>
+        <h2 class="big-h2 big-h2-light">Proof you can hand to <span class="hl2">anyone.</span></h2>
+        <div class="leave-grid">
+          <div class="leave-item">
+            <span class="leave-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3.3 2"/></svg>
+            </span>
+            <strong>Documented hours</strong><span>A written record</span>
+          </div>
+          <div class="leave-item">
+            <span class="leave-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.4" y="5.6" width="17.2" height="12.8" rx="2.2"/><path d="M3.9 6.8 12 12.7l8.1-5.9"/></svg>
+            </span>
+            <strong>Specific reference</strong><span>What you did</span>
+          </div>
+          <div class="leave-item">
+            <span class="leave-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 9.3 12 5.1l9.4 4.2-9.4 4.2z"/><path d="M6.6 11.4v4.1c0 1.4 2.4 2.4 5.4 2.4s5.4-1 5.4-2.4v-4.1"/><path d="M21.4 9.3v5.2"/></svg>
+            </span>
+            <strong>Support letter</strong><span>Uni or scholarship</span>
+          </div>
+          <div class="leave-item">
+            <span class="leave-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.4h16"/><path d="M7 19.4v-5.2M12 19.4V7.2M17 19.4v-8.4"/></svg>
+            </span>
+            <strong>Term review</strong><span>What to work on</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps">
+      <div class="inner">
+        <p class="kicker">How to join</p>
+        <h2 class="big-h2">Five steps.</h2>
+        <div class="steps-grid">
+          <div class="step"><span class="num">1</span><strong>Apply</strong><p>Three minutes, one form.</p></div>
+          <div class="step"><span class="num">2</span><strong>Interview</strong><p>A short video chat.</p></div>
+          <div class="step"><span class="num">3</span><strong>Sample</strong><p>Show the work once.</p></div>
+          <div class="step"><span class="num">4</span><strong>References</strong><p>We make the calls.</p></div>
+          <div class="step"><span class="num">5</span><strong>Decision</strong><p>Role and start date.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-giant">
+      <img class="cta-logo" src="https://firebasestorage.googleapis.com/v0/b/websites-a0e13.appspot.com/o/IBAP%2FCMS_CONTENT%2FMEDIA%2Fwebsite%2F2025-09-22-Y29G6FKM7K-ibap%2FLogoFull-400-CMMY.webp?alt=media&token=0b0e973f-f3de-4f7e-9abf-d94c5871a9cd" alt="Future Bridge Academy">
+      <h2>Apply for Mock exam organiser</h2>
+      <p>One form, three minutes. Choose this role and tell us when you are genuinely free.</p>
+      <a class="btn" href="https://futurebridgeacademy.ca/volunteer">Start my application <span class="arrow">→</span></a>
+      <a class="cta-url-big" href="https://futurebridgeacademy.ca/volunteer-role-mock-exam-organiser">futurebridgeacademy.ca/volunteer-role-mock-exam-organiser</a>
+    </section>
+
+    <div class="footer">
+      <div class="inner">
+        <span>© 2026 Future Bridge Academy · All rights reserved.</span>
+        <span>Questions? <a href="mailto:info@futurebridgeacademy.ca">info@futurebridgeacademy.ca</a></span>
+        <span><a href="https://futurebridgeacademy.ca/volunteer-positions">All ten roles →</a></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* Export switch: one document, two page formats.
+     Desktop keeps the A4 poster (2 sheets). Mobile prints a 105mm wide sheet
+     with a one-column layout, so a phone shows the page at full width and the
+     text stays readable without zooming (3 sheets). .html?format=mobile opens
+     straight in the mobile preview. */
+  (function () {
+    'use strict';
+
+    var html = document.documentElement;
+    var pageStyle = document.getElementById('fba-page-size');
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('.export-bar [data-export]'));
+
+    function applyFormat(format) {
+      var isMobile = format === 'mobile';
+      html.setAttribute('data-format', isMobile ? 'mobile' : 'desktop');
+
+      if (pageStyle) {
+        /* 105mm is the phone-reading width: the PDF fits a phone screen at
+            full width, so 13-18px type stays readable with no zooming. */
+        pageStyle.textContent = isMobile
+          ? '@page { size: 105mm 230mm; margin: 0; }'
+          : '@page { size: A4; margin: 0; }';
+      }
+
+      buttons.forEach(function (button) {
+        button.classList.toggle('is-on', button.getAttribute('data-export') === format);
+      });
+    }
+
+    var requested = '';
+    try {
+      requested = new URLSearchParams(window.location.search).get('format') || '';
+    } catch (err) {
+      requested = '';
+    }
+    applyFormat(requested === 'mobile' ? 'mobile' : 'desktop');
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        applyFormat(button.getAttribute('data-export'));
+        /* let the new page size and layout settle before the print dialog */
+        window.setTimeout(function () { window.print(); }, 80);
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

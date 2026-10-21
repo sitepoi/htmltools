@@ -1,0 +1,851 @@
+<!--
+  =========================================================================
+  VOLUNTEER APPLICATION - fragment for the academy website (volunteer-apply.html)
+  - Everything lives inside ONE parent <div class="fba-page fba-apply">
+  - No html / head / body tags, no header or footer (the CMS provides them)
+  - Design tokens and shared components live in header-footer/header.html
+  - THIS PAGE HOLDS THE ONLY COPY OF THE APPLICATION FORM. Every other page
+    links here instead of embedding a second form, so there is nothing to keep
+    in sync. See the note at the bottom of this file for the alternatives if
+    the form ever has to appear inline on several pages.
+  - One position per submission: volunteers who want two roles send the form
+    twice, and the page says so in plain words
+  - The form follows the platform contract: <form data-gw-form>, hidden
+    honeypot named "gw_hp", [data-gw-form-status] live region, one JSON POST
+    to the CMS form endpoint (PUBLICWEBSITE-GUIDE--form-submission.txt)
+  - The selected position shows a link to that role's own description page,
+    opened in a new tab
+  =========================================================================
+-->
+<div class="fba-page fba-apply">
+
+	<!-- ============================== HERO ============================== -->
+	<section class="fba-apply-hero">
+		<div class="fba-wrap">
+			<p class="fba-kicker">Volunteer application</p>
+			<h1 class="fba-apply-title">Apply for a position</h1>
+			<p class="fba-apply-lede">
+				One form, one position, a few minutes: the role, the subjects you know, when you are free,
+				and two references.
+			</p>
+			<p class="fba-note fba-apply-note">
+				<strong>More than one role?</strong> Send the form once per position.
+			</p>
+			<div class="fba-actions">
+				<a class="fba-btn fba-btn-ghost" href="/volunteer-positions">See the ten positions</a>
+				<a class="fba-btn fba-btn-ghost" href="/volunteer">How volunteering works</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- ============================== FORM ============================== -->
+	<section class="fba-apply-body">
+		<div class="fba-wrap fba-apply-grid">
+			<form class="fba-apply-form" data-gw-form data-gw-form-type="volunteer-application">
+
+				<div class="fba-apply-fields">
+					<label class="fba-apply-field">
+						<span class="fba-apply-label">Your name <em>required</em></span>
+						<input type="text" name="name" autocomplete="name" required>
+					</label>
+
+					<label class="fba-apply-field">
+						<span class="fba-apply-label">Email <em>required</em></span>
+						<input type="email" name="email" autocomplete="email" required>
+						<span class="fba-apply-help">Use an address you check. This is how we reply.</span>
+					</label>
+
+					<label class="fba-apply-field">
+						<span class="fba-apply-label">City <em>required</em></span>
+						<input type="text" name="city" autocomplete="address-level2" required>
+						<span class="fba-apply-help">Where you live, because some roles include an in-person day.</span>
+					</label>
+
+					<label class="fba-apply-field">
+						<span class="fba-apply-label">Which position? <em>required</em></span>
+						<select name="role" id="fba-apply-role" required>
+							<option value="maths-teacher">Online maths teacher (weekly lesson)</option>
+							<option value="mock-exam-organiser">Mock exam organiser</option>
+							<option value="seminar-presenter-en">Scholarship seminar presenter (English)</option>
+							<option value="seminar-presenter-other">Scholarship seminar presenter (other languages)</option>
+							<option value="self-paced-assistant">Self-paced course assistant</option>
+							<option value="curriculum-builder">Curriculum builder</option>
+							<option value="lesson-helper">Online lessons helper</option>
+							<option value="academic-writing-guide">Academic writing guide</option>
+							<option value="career-coach">Career coach</option>
+							<option value="career-path-presenter">Career path presenter (professionals only)</option>
+							<option value="flexible">I am flexible - suggest a position for me</option>
+						</select>
+						<span class="fba-apply-help">One position per form. For a second role, send it again.</span>
+						<a class="fba-apply-rolelink" id="fba-apply-role-link" href="/volunteer-role-online-maths-teacher" target="_blank" rel="noopener">
+							<span id="fba-apply-role-link-text">Read the full role description</span> <span aria-hidden="true">&rarr;</span>
+						</a>
+					</label>
+				</div>
+
+				<label class="fba-apply-field fba-apply-wide">
+					<span class="fba-apply-label">Subject strengths</span>
+					<textarea name="subjects" rows="3" placeholder="For example: grade 9 maths, grade 11 physics, essay writing in English"></textarea>
+					<span class="fba-apply-help">Subjects you can explain, with the level. One per line.</span>
+				</label>
+
+				<fieldset class="fba-apply-field fba-apply-wide fba-apply-availability">
+					<legend class="fba-apply-label">When are you free?</legend>
+					<span class="fba-apply-help">Tick everything that genuinely works for this role.</span>
+					<div class="fba-apply-checks">
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekday mornings"> Weekday mornings</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekday afternoons"> Weekday afternoons</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekday evenings"> Weekday evenings</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekend mornings"> Weekend mornings</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekend afternoons"> Weekend afternoons</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Weekend evenings"> Weekend evenings</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Exam days only"> Exam days only</label>
+						<label class="fba-apply-check"><input type="checkbox" name="availability" value="Other" id="fba-apply-avail-other"> Other - I will explain</label>
+					</div>
+					<label class="fba-apply-field fba-apply-other" id="fba-apply-other-field" hidden>
+						<span class="fba-apply-label">Tell us when you are free</span>
+						<input type="text" name="availability_other" id="fba-apply-other-input" placeholder="For example: every second Tuesday after 6pm, or school holidays only" disabled>
+					</label>
+				</fieldset>
+
+				<fieldset class="fba-apply-field fba-apply-wide">
+					<legend class="fba-apply-label">References</legend>
+					<span class="fba-apply-help">People who can speak to how you work. We contact them at interview stage.</span>
+					<div class="fba-apply-refs" id="fba-apply-refs">
+						<div class="fba-apply-ref">
+							<p class="fba-apply-ref-no">Reference 1</p>
+							<label class="fba-apply-field">
+								<span class="fba-apply-label">Name</span>
+								<input type="text" data-ref="name" name="reference_name_1" autocomplete="off">
+							</label>
+							<label class="fba-apply-field">
+								<span class="fba-apply-label">How do you know them?</span>
+								<input type="text" data-ref="info" name="reference_info_1" autocomplete="off" placeholder="For example: my maths teacher at ...">
+							</label>
+							<button type="button" class="fba-apply-ref-remove" hidden>Remove</button>
+						</div>
+						<div class="fba-apply-ref">
+							<p class="fba-apply-ref-no">Reference 2</p>
+							<label class="fba-apply-field">
+								<span class="fba-apply-label">Name</span>
+								<input type="text" data-ref="name" name="reference_name_2" autocomplete="off">
+							</label>
+							<label class="fba-apply-field">
+								<span class="fba-apply-label">How do you know them?</span>
+								<input type="text" data-ref="info" name="reference_info_2" autocomplete="off" placeholder="For example: my coach at ...">
+							</label>
+							<button type="button" class="fba-apply-ref-remove">Remove</button>
+						</div>
+					</div>
+					<button type="button" class="fba-apply-add" id="fba-apply-add">+ Add another reference</button>
+				</fieldset>
+
+				<label class="fba-apply-field fba-apply-wide">
+					<span class="fba-apply-label">Anything else we should know?</span>
+					<textarea name="message" rows="4"></textarea>
+					<span class="fba-apply-help">Optional. Anything the form does not cover.</span>
+				</label>
+
+				<!-- honeypot: hidden from view and from screen readers, never a real field -->
+				<input class="fba-apply-hp" type="text" name="gw_hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+				<div class="fba-apply-submit-row">
+					<button class="fba-apply-submit" type="submit">Send application</button>
+					<div class="fba-apply-status" data-gw-form-status role="status"></div>
+				</div>
+
+				<p class="fba-apply-consent">We use these details only to consider your application. References are
+					contacted only with your agreement.</p>
+			</form>
+
+			<aside class="fba-apply-aside fba-reveal">
+				<p class="fba-kicker">Before you send it</p>
+				<h2 class="fba-apply-aside-title">What happens next</h2>
+				<ol class="fba-apply-steps">
+					<li><span>01</span>We check it against the role you chose.</li>
+					<li><span>02</span>A short video interview.</li>
+					<li><span>03</span>A small work sample for the role.</li>
+					<li><span>04</span>Reference checks.</li>
+					<li><span>05</span>A decision either way, with a reason.</li>
+				</ol>
+				<p class="fba-apply-aside-note">Two roles, two forms. The interview and references happen once.</p>
+				<p class="fba-apply-aside-links">
+					<a href="/volunteer-positions">All ten positions</a>
+					<a href="/volunteer">About volunteering</a>
+					<a href="/faq">Questions and answers</a>
+				</p>
+			</aside>
+		</div>
+	</section>
+
+	<!-- ============================== CTA =============================== -->
+	<section class="fba-cta">
+		<div class="fba-wrap fba-cta-inner">
+			<h2>Not sure which role fits?</h2>
+			<p>Read the ten descriptions, or choose "I am flexible" on the form.</p>
+			<div class="fba-actions fba-actions-center">
+				<a class="fba-btn fba-btn-primary" href="/volunteer-positions">See the ten positions</a>
+				<a class="fba-btn fba-btn-ghost" href="/contact">Ask a question first</a>
+			</div>
+			<p class="fba-cta-links">
+				<span>Read next:</span>
+				<a href="/volunteer">Volunteer with us</a>
+				<a href="/free-lessons">Free online lessons</a>
+				<a href="/mock-exams">Monthly mock exams</a>
+				<a href="/faq">Questions and answers</a>
+			</p>
+		</div>
+	</section>
+
+	<!-- ============================= STYLES ============================= -->
+	<style>
+		/* Shared design system lives centrally in header-footer/header.html.
+		   Everything below is layout for this page only, scoped to .fba-apply. */
+
+		/* a hidden attribute must win over the field display rules */
+		.fba-apply [hidden] { display: none !important; }
+
+		/* ---------- hero ---------- */
+		.fba-apply .fba-apply-hero {
+			padding: 62px 0 50px;
+			background:
+				radial-gradient(circle at 88% 14%, rgba(6, 214, 160, 0.18) 0%, transparent 55%),
+				radial-gradient(circle at 8% 92%, rgba(0, 78, 137, 0.14) 0%, transparent 55%),
+				linear-gradient(140deg, #F6FFFB 0%, #F2F8FF 58%, #F7F9FC 100%);
+		}
+		.fba-apply .fba-apply-title {
+			font-size: clamp(2rem, 4.2vw, 3rem);
+			line-height: 1.05;
+			letter-spacing: -0.02em;
+			color: var(--fba-secondary-deep);
+			margin: 6px 0 14px;
+		}
+		.fba-apply .fba-apply-lede {
+			max-width: 64ch;
+			font-size: 1.05rem;
+			line-height: 1.6;
+			color: var(--fba-muted);
+		}
+		.fba-apply .fba-apply-note {
+			max-width: 70ch;
+			margin: 20px 0 24px;
+		}
+		.fba-apply .fba-actions { gap: 12px; }
+
+		/* ---------- layout ---------- */
+		.fba-apply .fba-apply-body {
+			padding: 8px 0 74px;
+			background: var(--fba-light);
+			border-top: 1px solid var(--fba-line);
+		}
+		.fba-apply .fba-apply-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr);
+			gap: 44px;
+			align-items: start;
+			padding-top: 48px;
+		}
+
+		/* ---------- form shell ---------- */
+		.fba-apply .fba-apply-form {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 32px 32px 26px;
+			box-shadow: var(--fba-shadow);
+		}
+		.fba-apply .fba-apply-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 20px;
+		}
+		.fba-apply .fba-apply-field {
+			display: grid;
+			align-content: start;
+			gap: 7px;
+			min-width: 0;
+		}
+		.fba-apply .fba-apply-wide { margin-top: 22px; }
+		.fba-apply .fba-apply-label {
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+			padding: 0;
+		}
+		.fba-apply .fba-apply-label em {
+			font-style: normal;
+			font-weight: 600;
+			font-size: 0.78rem;
+			color: var(--fba-muted);
+		}
+		.fba-apply .fba-apply-help {
+			font-size: 0.82rem;
+			line-height: 1.5;
+			color: var(--fba-muted);
+		}
+		.fba-apply fieldset.fba-apply-field {
+			border: 0;
+			margin: 22px 0 0;
+			padding: 0;
+			min-width: 0;
+		}
+		.fba-apply legend.fba-apply-label {
+			padding: 0;
+			margin-bottom: 4px;
+		}
+		.fba-apply .fba-apply-field input,
+		.fba-apply .fba-apply-field select,
+		.fba-apply .fba-apply-field textarea {
+			font-family: inherit;
+			font-size: 0.97rem;
+			color: var(--fba-text);
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: 12px;
+			padding: 12px 14px;
+			width: 100%;
+			transition: border-color 0.25s ease, box-shadow 0.25s ease;
+		}
+		.fba-apply .fba-apply-field textarea {
+			resize: vertical;
+			min-height: 96px;
+			line-height: 1.55;
+		}
+		.fba-apply .fba-apply-field input:focus,
+		.fba-apply .fba-apply-field select:focus,
+		.fba-apply .fba-apply-field textarea:focus {
+			outline: none;
+			border-color: var(--fba-secondary);
+			box-shadow: 0 0 0 3px rgba(0, 78, 137, 0.14);
+		}
+
+		/* ---------- role description link ---------- */
+		.fba-apply .fba-apply-rolelink {
+			justify-self: start;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			margin-top: 4px;
+			font-size: 0.88rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+		.fba-apply .fba-apply-rolelink:hover { color: var(--fba-primary-dark); }
+
+		/* ---------- availability ---------- */
+		.fba-apply .fba-apply-checks {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+			gap: 10px 18px;
+			margin-top: 12px;
+		}
+		.fba-apply .fba-apply-check {
+			display: flex;
+			align-items: center;
+			gap: 9px;
+			font-size: 0.94rem;
+			color: var(--fba-text);
+			cursor: pointer;
+		}
+		.fba-apply .fba-apply-check input {
+			width: 18px;
+			height: 18px;
+			accent-color: var(--fba-primary);
+			cursor: pointer;
+			flex: 0 0 auto;
+		}
+		.fba-apply .fba-apply-other {
+			margin-top: 14px;
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: 12px;
+			padding: 14px;
+		}
+
+		/* ---------- references ---------- */
+		.fba-apply .fba-apply-refs { display: grid; gap: 14px; margin-top: 14px; }
+		.fba-apply .fba-apply-ref {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto;
+			gap: 14px;
+			align-items: end;
+			background: var(--fba-light);
+			border: 1px solid var(--fba-line);
+			border-radius: 14px;
+			padding: 16px;
+		}
+		.fba-apply .fba-apply-ref-no {
+			grid-column: 1 / -1;
+			font-size: 0.76rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--fba-muted);
+		}
+		.fba-apply .fba-apply-ref-remove {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 0.82rem;
+			font-weight: 700;
+			color: var(--fba-primary);
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: 999px;
+			padding: 9px 14px;
+			margin-bottom: 1px;
+		}
+		.fba-apply .fba-apply-ref-remove:hover { border-color: var(--fba-primary); }
+		.fba-apply .fba-apply-add {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 0.9rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+			background: #fff;
+			border: 1px dashed var(--fba-line);
+			border-radius: 12px;
+			padding: 12px 16px;
+			margin-top: 12px;
+			width: 100%;
+		}
+		.fba-apply .fba-apply-add:hover { border-color: var(--fba-secondary); }
+
+		/* ---------- honeypot, submit ---------- */
+		.fba-apply .fba-apply-hp {
+			position: absolute;
+			left: -9999px;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+		}
+		.fba-apply .fba-apply-submit-row {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 16px;
+			margin-top: 26px;
+		}
+		.fba-apply .fba-apply-submit {
+			appearance: none;
+			cursor: pointer;
+			font-family: inherit;
+			font-size: 1rem;
+			font-weight: 700;
+			color: #fff;
+			background: var(--fba-primary);
+			border: 2px solid transparent;
+			border-radius: 999px;
+			padding: 14px 32px;
+			box-shadow: 0 10px 26px rgba(255, 107, 53, 0.3);
+			transition: background 0.25s ease, transform 0.25s ease;
+		}
+		.fba-apply .fba-apply-submit:hover { background: var(--fba-primary-dark); transform: translateY(-2px); }
+		.fba-apply .fba-apply-submit:focus-visible { outline: 3px solid rgba(0, 78, 137, 0.35); outline-offset: 2px; }
+		.fba-apply .fba-apply-status {
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--fba-secondary);
+			min-height: 20px;
+		}
+		.fba-apply .fba-apply-consent {
+			margin-top: 16px;
+			font-size: 0.84rem;
+			line-height: 1.55;
+			color: var(--fba-muted);
+		}
+
+		/* ---------- aside ---------- */
+		.fba-apply .fba-apply-aside {
+			background: #fff;
+			border: 1px solid var(--fba-line);
+			border-radius: var(--fba-radius);
+			padding: 30px 28px 24px;
+			box-shadow: var(--fba-shadow-lg);
+			position: sticky;
+			top: 110px;
+		}
+		.fba-apply .fba-apply-aside-title { font-size: 1.24rem; margin-bottom: 14px; }
+		.fba-apply .fba-apply-steps { display: grid; gap: 12px; }
+		.fba-apply .fba-apply-steps li {
+			display: grid;
+			grid-template-columns: 34px minmax(0, 1fr);
+			gap: 10px;
+			align-items: start;
+			font-size: 0.92rem;
+			color: var(--fba-muted);
+			line-height: 1.5;
+		}
+		.fba-apply .fba-apply-steps span {
+			font-family: 'Bricolage Grotesque', sans-serif;
+			font-size: 0.8rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			color: var(--fba-primary);
+			padding-top: 2px;
+		}
+		.fba-apply .fba-apply-aside-note {
+			margin-top: 18px;
+			padding-top: 16px;
+			border-top: 1px solid var(--fba-line);
+			font-size: 0.88rem;
+			font-weight: 700;
+			color: var(--fba-secondary);
+		}
+		.fba-apply .fba-apply-aside-links {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px 18px;
+			margin-top: 16px;
+			font-size: 0.88rem;
+			font-weight: 600;
+		}
+		.fba-apply .fba-apply-aside-links a {
+			color: var(--fba-secondary);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+		}
+
+		/* ---------- responsive ---------- */
+		@media (max-width: 980px) {
+			.fba-apply .fba-apply-grid { grid-template-columns: 1fr; gap: 30px; }
+			.fba-apply .fba-apply-aside { position: static; }
+		}
+		@media (max-width: 700px) {
+			.fba-apply .fba-apply-hero { padding: 44px 0 36px; }
+			.fba-apply .fba-apply-form { padding: 24px 20px 22px; }
+			.fba-apply .fba-apply-fields { grid-template-columns: 1fr; gap: 16px; }
+			.fba-apply .fba-apply-ref { grid-template-columns: 1fr; align-items: stretch; }
+			.fba-apply .fba-apply-ref-remove { justify-self: start; }
+			.fba-apply .fba-apply-submit { width: 100%; }
+		}
+	</style>
+
+	<!-- ============================== SCRIPT ============================ -->
+	<script>
+		(function () {
+			'use strict';
+
+			var root = document.querySelector('.fba-apply');
+			/* idempotent: safe on every CMS load and every SPA navigation */
+			if (!root || root.getAttribute('data-fba-apply-ready') === '1') { return; }
+			root.setAttribute('data-fba-apply-ready', '1');
+			root.classList.add('fba-js');
+
+			var reduceMotion = false;
+			try {
+				reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+			} catch (err) { reduceMotion = false; }
+
+			/* ==================== THE ONE FORM ==================== */
+			var ROLE_PAGES = {
+				'maths-teacher': '/volunteer-role-online-maths-teacher',
+				'mock-exam-organiser': '/volunteer-role-mock-exam-organiser',
+				'seminar-presenter-en': '/volunteer-role-seminar-presenter-english',
+				'seminar-presenter-other': '/volunteer-role-seminar-presenter-other-languages',
+				'self-paced-assistant': '/volunteer-role-self-paced-course-assistant',
+				'curriculum-builder': '/volunteer-role-curriculum-builder',
+				'lesson-helper': '/volunteer-role-online-lessons-helper',
+				'academic-writing-guide': '/volunteer-role-academic-writing-guide',
+				'career-coach': '/volunteer-role-career-coach',
+				'career-path-presenter': '/volunteer-role-career-path-presenter',
+				'flexible': '/volunteer-positions'
+			};
+
+			var form = root.querySelector('form[data-gw-form]');
+			var roleSelect = root.querySelector('#fba-apply-role');
+			var roleLink = root.querySelector('#fba-apply-role-link');
+			var roleLinkText = root.querySelector('#fba-apply-role-link-text');
+			var otherCheck = root.querySelector('#fba-apply-avail-other');
+			var otherField = root.querySelector('#fba-apply-other-field');
+			var otherInput = root.querySelector('#fba-apply-other-input');
+			var refsBox = root.querySelector('#fba-apply-refs');
+			var addRefButton = root.querySelector('#fba-apply-add');
+
+			/* ---- the role description link follows the select ---- */
+			function syncRoleLink() {
+				if (!roleSelect || !roleLink) { return; }
+				var target = ROLE_PAGES[roleSelect.value];
+				if (!target) { roleLink.hidden = true; return; }
+				roleLink.href = target;
+				roleLink.hidden = false;
+				if (roleLinkText) {
+					roleLinkText.textContent = roleSelect.value === 'flexible'
+						? 'See all ten positions'
+						: 'Read the full role description';
+				}
+			}
+
+			if (roleSelect) {
+				roleSelect.addEventListener('change', syncRoleLink);
+				syncRoleLink();
+			}
+
+			/* ---- availability: "Other" reveals an explanation field ---- */
+			function syncOtherField() {
+				if (!otherCheck || !otherField || !otherInput) { return; }
+				var isOther = otherCheck.checked;
+				otherField.hidden = !isOther;
+				otherInput.disabled = !isOther;
+				if (isOther) { otherInput.focus(); }
+			}
+
+			if (otherCheck) {
+				otherCheck.addEventListener('change', syncOtherField);
+				syncOtherField();
+			}
+
+			/* ---- references: add, remove, renumber ---- */
+			function refRows() {
+				return Array.prototype.slice.call(refsBox.querySelectorAll('.fba-apply-ref'));
+			}
+
+			function renumberRefs() {
+				var rows = refRows();
+				rows.forEach(function (row, index) {
+					var number = index + 1;
+					var nameField = row.querySelector('[data-ref="name"]');
+					var infoField = row.querySelector('[data-ref="info"]');
+					var label = row.querySelector('.fba-apply-ref-no');
+					var remove = row.querySelector('.fba-apply-ref-remove');
+
+					if (nameField) { nameField.name = 'reference_name_' + number; }
+					if (infoField) { infoField.name = 'reference_info_' + number; }
+					if (label) { label.textContent = 'Reference ' + number; }
+					if (remove) { remove.hidden = rows.length === 1; }
+				});
+			}
+
+			function buildRefRow() {
+				var row = document.createElement('div');
+				row.className = 'fba-apply-ref';
+				row.innerHTML =
+					'<p class="fba-apply-ref-no">Reference</p>' +
+					'<label class="fba-apply-field">' +
+						'<span class="fba-apply-label">Name</span>' +
+						'<input type="text" data-ref="name" autocomplete="off">' +
+					'</label>' +
+					'<label class="fba-apply-field">' +
+						'<span class="fba-apply-label">How do you know them?</span>' +
+						'<input type="text" data-ref="info" autocomplete="off" placeholder="For example: my employer at ...">' +
+					'</label>' +
+					'<button type="button" class="fba-apply-ref-remove">Remove</button>';
+				return row;
+			}
+
+			if (refsBox && addRefButton) {
+				addRefButton.addEventListener('click', function () {
+					var row = buildRefRow();
+					refsBox.appendChild(row);
+					renumberRefs();
+					var firstInput = row.querySelector('[data-ref="name"]');
+					if (firstInput) { firstInput.focus(); }
+				});
+
+				refsBox.addEventListener('click', function (event) {
+					var removeButton = event.target.closest ? event.target.closest('.fba-apply-ref-remove') : null;
+					if (!removeButton) { return; }
+					var row = removeButton.parentNode;
+					if (refRows().length <= 1) { return; }
+					row.parentNode.removeChild(row);
+					renumberRefs();
+				});
+
+				renumberRefs();
+			}
+
+			/* ==================== FORM SUBMISSION ==================== */
+			/* One JSON POST to the CMS endpoint, no read-back, same contract as
+			   PUBLICWEBSITE-GUIDE--form-submission.txt. */
+			var formApiEndpoint = 'https://futurebridgeacademyca.uniconhub.com/api/public/forms/submit';
+			var formDefaultCmsObjectType = 'apply-position-forms-uniconbaseapps';
+			var formFieldMaxLength = 4000;
+
+			function setFormStatus(message, state) {
+				if (!form) { return; }
+				var status = form.querySelector('[data-gw-form-status]');
+				if (!status) { return; }
+				status.textContent = message || '';
+				status.classList.remove('is-ok', 'is-error');
+				if (state) { status.classList.add('is-' + state); }
+			}
+
+			function cleanFieldValue(value) {
+				var text = value === null || value === undefined ? '' : String(value);
+				return text.slice(0, formFieldMaxLength);
+			}
+
+			function collectFormValues() {
+				var values = {};
+
+				Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+					if (!field.name || field.disabled) { return; }
+					var fieldType = field.type;
+					if (fieldType === 'file' || fieldType === 'submit' || fieldType === 'button' ||
+						fieldType === 'reset') { return; }
+
+					if (fieldType === 'checkbox') {
+						if (!field.checked) { return; }
+						var checkedValue = cleanFieldValue(field.value || 'yes');
+						values[field.name] = values[field.name]
+							? values[field.name] + ', ' + checkedValue
+							: checkedValue;
+						return;
+					}
+
+					if (fieldType === 'radio') {
+						if (field.checked) { values[field.name] = cleanFieldValue(field.value); }
+						return;
+					}
+
+					values[field.name] = cleanFieldValue(field.value);
+				});
+
+				return values;
+			}
+
+			function endpointForForm() {
+				var ownEndpoint = form.getAttribute('data-gw-form-endpoint');
+				var endpoint = ownEndpoint !== null ? ownEndpoint : formApiEndpoint;
+				/* an empty value or an unreplaced placeholder means "not configured" */
+				if (!endpoint || endpoint.indexOf('<') !== -1) { return ''; }
+				return endpoint;
+			}
+
+			function cmsObjectTypeForForm() {
+				var ownObjectType = form.getAttribute('data-gw-cms-object-type');
+				return ownObjectType !== null ? ownObjectType : formDefaultCmsObjectType;
+			}
+
+			function formErrorMessage(statusCode) {
+				if (statusCode === 400) {
+					return 'We could not accept this entry. Please check the fields and try again.';
+				}
+				if (statusCode === 403) {
+					return 'This site is not allowed to send forms yet. Please email info@futurebridgeacademy.ca.';
+				}
+				if (statusCode === 429) {
+					return 'Too many attempts from this connection. Please wait a few minutes and try again.';
+				}
+				return 'We could not send this just now. Please try again, or email info@futurebridgeacademy.ca.';
+			}
+
+			function sendFormToApi(endpoint) {
+				var values = collectFormValues();
+				var honeypotValue = values.gw_hp || values.website || values.company || '';
+				var cmsObjectType = cmsObjectTypeForForm();
+				var submitButton = form.querySelector('[type="submit"]');
+
+				/* the honeypot travels at the root of the payload, never inside values */
+				delete values.gw_hp;
+				delete values.website;
+				delete values.company;
+
+				var payload = {
+					formTypeId: form.getAttribute('data-gw-form-type') || '',
+					page: window.location.pathname,
+					submittedAt: new Date().toISOString(),
+					gw_hp: honeypotValue,
+					values: values
+				};
+
+				if (cmsObjectType) { payload.cmsObjectType = cmsObjectType; }
+
+				form.classList.add('gw-busy');
+				if (submitButton) { submitButton.disabled = true; }
+				setFormStatus('Sending...');
+
+				window.fetch(endpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+					body: JSON.stringify(payload)
+				}).then(function (response) {
+					return response.text().then(function (bodyText) {
+						var body = {};
+						try { body = bodyText ? JSON.parse(bodyText) : {}; }
+						catch (err) { body = {}; }
+						return { status: response.status, body: body };
+					});
+				}).then(function (result) {
+					var accepted = result.status >= 200 && result.status < 300 &&
+						!(result.body && result.body.ok === false);
+
+					if (!accepted) {
+						setFormStatus(formErrorMessage(result.status), 'error');
+						return;
+					}
+
+					form.reset();
+					syncRoleLink();
+					syncOtherField();
+					renumberRefs();
+					setFormStatus('Thank you. Your application is with the programme team, and we reply to every one. Applying for a second role? Send the form again for that position.', 'ok');
+				}).catch(function () {
+					setFormStatus(formErrorMessage(0), 'error');
+				}).then(function () {
+					form.classList.remove('gw-busy');
+					if (submitButton) { submitButton.disabled = false; }
+				});
+			}
+
+			if (form) {
+				var platform = window.gw;
+				var endpoint = endpointForForm();
+
+				if (endpoint) {
+					form.addEventListener('submit', function (event) {
+						event.preventDefault();
+						if (form.classList.contains('gw-busy')) { return; }
+						sendFormToApi(endpoint);
+					});
+				} else if (platform && platform.forms && typeof platform.forms.bind === 'function') {
+					platform.forms.bind(root);
+				} else {
+					form.addEventListener('submit', function (event) {
+						event.preventDefault();
+						setFormStatus('The form service is not connected in this preview.');
+					});
+				}
+			}
+
+			/* ---------------- reveal on scroll ---------------- */
+			var revealItems = Array.prototype.slice.call(root.querySelectorAll('.fba-reveal'));
+
+			if (!('IntersectionObserver' in window) || reduceMotion) {
+				revealItems.forEach(function (item) { item.classList.add('is-in'); });
+				return;
+			}
+
+			var revealObserver = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (!entry.isIntersecting) { return; }
+					entry.target.classList.add('is-in');
+					revealObserver.unobserve(entry.target);
+				});
+			}, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
+			revealItems.forEach(function (item) { revealObserver.observe(item); });
+		})();
+	</script>
+
+</div>
+
+<!--
+  ONE COPY OF THE FORM - how this is kept single-source
+
+  The site pages are CMS fragments with no server-side includes, so the form
+  lives here and every other page links to /volunteer-apply. Nothing is
+  duplicated, so there is no second copy to keep in sync.
+
+  If the form ever has to appear INLINE on several pages, there are two
+  supported routes:
+    1. Publish it as a website-html-tool in the application store and insert
+       the island on any page:  <div data-gw-app="Volunteer Application Form"
+       data-gw-config='{}'></div>. The publishing app renders and hydrates it
+       (contract: PUBLICWEBSITE-REQUEST--load-website-html-tool-widgets.txt).
+    2. Keep one fragment file (for example forms/volunteer-application.html)
+       and have a small loader fetch it into a container on each page. Simpler,
+       but adds a request and needs JavaScript.
+-->
